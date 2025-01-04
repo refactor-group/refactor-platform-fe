@@ -31,14 +31,14 @@ export default function SelectCoachingSession() {
   );
 
   return (
-    <Card>
+    <Card className="w-full min-w-0 sm:min-w-[320]">
       <CardHeader>
         <CardTitle>Join a Coaching Session</CardTitle>
         <CardDescription>
           Select current organization, relationship and session
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-6">
+      <CardContent className="grid gap-6 min-w-0">
         <div className="grid gap-2">
           <Label htmlFor="organization">Organization</Label>
           <OrganizationSelector userId={userId}></OrganizationSelector>

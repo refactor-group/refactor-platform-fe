@@ -17,6 +17,7 @@ import { DateTime } from "ts-luxon";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { fetchOverarchingGoalsByCoachingSessionId } from "@/lib/api/overarching-goals";
 import { OverarchingGoal } from "@/types/overarching-goal";
+import { CoachingSession } from "@/types/coaching-session";
 
 interface CoachingSessionsSelectorProps extends PopoverProps {
   /// The CoachingRelationship Id for which to get a list of associated CoachingSessions
@@ -75,67 +76,63 @@ function CoachingSessionsSelectItems({
   if (isErrorSessions) return <div>Error loading coaching sessions</div>;
   if (!coachingSessions?.length) return <div>No coaching sessions found</div>;
 
+  const SessionItem = ({
+    session,
+    goals,
+    sessionIndex,
+  }: {
+    session: CoachingSession;
+    goals: (OverarchingGoal[] | undefined)[];
+    sessionIndex: number;
+  }) => (
+    <SelectItem value={session.id}>
+      <div className="flex min-w-0 w-[calc(100%-20px)]">
+        <div className="min-w-0 w-full">
+          <p className="truncate text-sm font-medium">
+            {goals[sessionIndex]?.[0]?.title || "No goal set"}
+          </p>
+          <p className="truncate text-sm text-gray-400">
+            {getDateTimeFromString(session.date).toLocaleString(
+              DateTime.DATETIME_FULL
+            )}
+          </p>
+        </div>
+      </div>
+    </SelectItem>
+  );
+
   return (
     <>
-      {coachingSessions.some(
-        (session) => getDateTimeFromString(session.date) < DateTime.now()
-      ) && (
-        <SelectGroup>
-          <SelectLabel>Previous Sessions</SelectLabel>
-          {coachingSessions
-            .filter(
-              (session) => getDateTimeFromString(session.date) < DateTime.now()
-            )
-            .map((session) => {
-              const sessionIndex = coachingSessions.findIndex(
-                (s) => s.id === session.id
-              );
-              return (
-                <SelectItem value={session.id} key={session.id}>
-                  <div className="flex flex-col w-full">
-                    <span className="text-left truncate overflow-hidden">
-                      {goals[sessionIndex]?.[0]?.title || "No goal set"}
-                    </span>
-                    <span className="text-sm text-gray-400">
-                      {getDateTimeFromString(session.date).toLocaleString(
-                        DateTime.DATETIME_FULL
-                      )}
-                    </span>
-                  </div>
-                </SelectItem>
-              );
-            })}
-        </SelectGroup>
-      )}
-      {coachingSessions.some(
-        (session) => getDateTimeFromString(session.date) >= DateTime.now()
-      ) && (
-        <SelectGroup>
-          <SelectLabel>Upcoming Sessions</SelectLabel>
-          {coachingSessions
-            .filter(
-              (session) => getDateTimeFromString(session.date) >= DateTime.now()
-            )
-            .map((session) => {
-              const sessionIndex = coachingSessions.findIndex(
-                (s) => s.id === session.id
-              );
-              return (
-                <SelectItem value={session.id} key={session.id}>
-                  <div className="flex flex-col w-full">
-                    <span className="text-left truncate overflow-hidden">
-                      {goals[sessionIndex]?.[0]?.title || "No goal set"}
-                    </span>
-                    <span className="text-sm text-gray-400">
-                      {getDateTimeFromString(session.date).toLocaleString(
-                        DateTime.DATETIME_FULL
-                      )}
-                    </span>
-                  </div>
-                </SelectItem>
-              );
-            })}
-        </SelectGroup>
+      {[
+        {
+          label: "Previous Sessions",
+          condition: (date: string) =>
+            getDateTimeFromString(date) < DateTime.now(),
+        },
+        {
+          label: "Upcoming Sessions",
+          condition: (date: string) =>
+            getDateTimeFromString(date) >= DateTime.now(),
+        },
+      ].map(
+        ({ label, condition }) =>
+          coachingSessions.some((session) => condition(session.date)) && (
+            <SelectGroup key={label}>
+              <SelectLabel>{label}</SelectLabel>
+              {coachingSessions
+                .filter((session) => condition(session.date))
+                .map((session) => (
+                  <SessionItem
+                    key={session.id}
+                    session={session}
+                    goals={goals}
+                    sessionIndex={coachingSessions.findIndex(
+                      (s) => s.id === session.id
+                    )}
+                  />
+                ))}
+            </SelectGroup>
+          )
       )}
     </>
   );
@@ -188,11 +185,11 @@ export default function CoachingSessionSelector({
   };
 
   const displayValue = currentSession ? (
-    <div className="flex flex-col w-[28rem]">
+    <div className="flex flex-col w-full">
       <span className="truncate overflow-hidden text-left">
         {currentGoal?.title || "No goal set"}
       </span>
-      <span className="text-sm text-gray-500 text-left">
+      <span className="text-sm text-gray-500 text-left truncate overflow-hidden">
         {getDateTimeFromString(currentSession.date).toLocaleString(
           DateTime.DATETIME_FULL
         )}
@@ -206,12 +203,18 @@ export default function CoachingSessionSelector({
       value={currentCoachingSessionId ?? undefined}
       onValueChange={handleSetCoachingSession}
     >
-      <SelectTrigger id="coaching-session-selector">
-        <SelectValue placeholder="Select coaching session">
+      <SelectTrigger
+        className="w-full min-w-0 py-6 pr-2"
+        id="coaching-session-selector"
+      >
+        <SelectValue className="truncate" placeholder="Select coaching session">
           {displayValue}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent
+        className="w-[var(--radix-select-trigger-width)] min-w-0 max-w-full"
+        position="popper"
+      >
         <CoachingSessionsSelectItems relationshipId={relationshipId} />
       </SelectContent>
     </Select>
