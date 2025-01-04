@@ -151,7 +151,7 @@ export default function CoachingSessionsPage() {
             style={siteConfig.titleStyle}
             onRender={handleTitleRender}
           ></CoachingSessionTitle>
-          <div className="ml-auto flex w-[28rem] space-x-2 sm:justify-end">
+          <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md space-x-2 sm:justify-end md:justify-start">
             <CoachingSessionSelector
               relationshipId={currentCoachingRelationshipId}
               disabled={!currentCoachingRelationshipId}

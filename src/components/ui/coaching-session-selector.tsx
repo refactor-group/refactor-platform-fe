@@ -186,10 +186,10 @@ export default function CoachingSessionSelector({
 
   const displayValue = currentSession ? (
     <div className="flex flex-col w-full">
-      <span className="truncate overflow-hidden text-left">
+      <span className="truncate text-left">
         {currentGoal?.title || "No goal set"}
       </span>
-      <span className="text-sm text-gray-500 text-left truncate overflow-hidden">
+      <span className="text-sm text-gray-500 text-left truncate">
         {getDateTimeFromString(currentSession.date).toLocaleString(
           DateTime.DATETIME_FULL
         )}
