@@ -11,11 +11,12 @@ export interface EditorRef {
 interface CoachingNotesProps {
   value: string;
   onChange: (content: string) => void;
+  onSynced?: () => void;
   onKeyDown: () => void;
 }
 
 const CoachingNotes = forwardRef<EditorRef, CoachingNotesProps>(
-  ({ value, onChange, onKeyDown }, ref) => {
+  ({ value, onChange, onSynced, onKeyDown }, ref) => {
     const WAIT_INTERVAL = 1000;
     const timerRef = useRef<number | undefined>(undefined);
     const [note, setNote] = useState<string>(value);
@@ -43,6 +44,12 @@ const CoachingNotes = forwardRef<EditorRef, CoachingNotesProps>(
       [onKeyDown, onChange, WAIT_INTERVAL]
     );
 
+    const handleSessionNoteSynced = useCallback(() => {
+      if (onSynced) {
+        onSynced();
+      }
+    }, [onSynced]);
+
     useEffect(() => {
       return () => {
         if (timerRef.current) {
@@ -56,6 +63,7 @@ const CoachingNotes = forwardRef<EditorRef, CoachingNotesProps>(
         ref={ref}
         editorContent={note}
         onChange={handleSessionNoteChange}
+        onSynced={handleSessionNoteSynced}
       />
     );
   }

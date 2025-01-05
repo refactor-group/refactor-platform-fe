@@ -76,11 +76,11 @@ export default function CoachingSessionsPage() {
     }
   };
 
-  useEffect(() => {
-    if (!currentCoachingSessionId) return;
+  // useEffect(() => {
+  //   if (!currentCoachingSessionId) return;
 
-    fetchNoteData();
-  }, [currentCoachingSessionId]);
+  //   fetchNoteData();
+  // }, [currentCoachingSessionId]);
 
   const setEditorContent = (content: string) => {
     editorRef.current?.setContent(`${content}`);
@@ -100,33 +100,37 @@ export default function CoachingSessionsPage() {
     console.debug("value (before update/create): " + value);
     console.debug("--------------------------------");
 
-    if (!isLoading && note.id && currentCoachingSessionId && userId) {
-      updateNote(note.id, currentCoachingSessionId, userId, value)
-        .then((updatedNote) => {
-          setNote(updatedNote);
-          console.trace("Updated Note: " + noteToString(updatedNote));
-          setSyncStatus("All changes saved");
-        })
-        .catch((err) => {
-          setSyncStatus("Failed to save changes");
-          console.error("Failed to update Note: " + err);
-        });
-    } else if (!isLoading && !note.id && currentCoachingSessionId && userId) {
-      createNote(currentCoachingSessionId, userId, value)
-        .then((createdNote) => {
-          setNote(createdNote);
-          console.trace("Newly created Note: " + noteToString(createdNote));
-          setSyncStatus("All changes saved");
-        })
-        .catch((err) => {
-          setSyncStatus("Failed to save changes");
-          console.error("Failed to create new Note: " + err);
-        });
-    } else {
-      console.error(
-        "Could not update or create a Note since coachingSession.id or userId are not set."
-      );
-    }
+    // if (!isLoading && note.id && currentCoachingSessionId && userId) {
+    //   updateNote(note.id, currentCoachingSessionId, userId, value)
+    //     .then((updatedNote) => {
+    //       setNote(updatedNote);
+    //       console.trace("Updated Note: " + noteToString(updatedNote));
+    //       setSyncStatus("All changes saved");
+    //     })
+    //     .catch((err) => {
+    //       setSyncStatus("Failed to save changes");
+    //       console.error("Failed to update Note: " + err);
+    //     });
+    // } else if (!isLoading && !note.id && currentCoachingSessionId && userId) {
+    //   createNote(currentCoachingSessionId, userId, value)
+    //     .then((createdNote) => {
+    //       setNote(createdNote);
+    //       console.trace("Newly created Note: " + noteToString(createdNote));
+    //       setSyncStatus("All changes saved");
+    //     })
+    //     .catch((err) => {
+    //       setSyncStatus("Failed to save changes");
+    //       console.error("Failed to create new Note: " + err);
+    //     });
+    // } else {
+    //   console.error(
+    //     "Could not update or create a Note since coachingSession.id or userId are not set."
+    //   );
+    // }
+  };
+
+  const handleOnSynced = () => {
+    setSyncStatus("Notes synced");
   };
 
   const handleKeyDown = () => {
@@ -187,6 +191,7 @@ export default function CoachingSessionsPage() {
                     ref={editorRef}
                     value={note.body}
                     onChange={handleOnChange}
+                    onSynced={handleOnSynced}
                     onKeyDown={handleKeyDown}
                   ></CoachingNotes>
                   <p className="text-sm text-muted-foreground">{syncStatus}</p>

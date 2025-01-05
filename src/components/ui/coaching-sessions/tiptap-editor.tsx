@@ -2,6 +2,13 @@
 
 import { useEditor, EditorContent, ReactNodeViewRenderer } from "@tiptap/react";
 
+import Collaboration from "@tiptap/extension-collaboration";
+import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
+import { WebrtcProvider } from "y-webrtc";
+import * as Y from "yjs";
+
+import { TiptapCollabProvider } from "@hocuspocus/provider";
+
 import Bold from "@tiptap/extension-bold";
 import BulletList from "@tiptap/extension-bullet-list";
 import Document from "@tiptap/extension-document";
@@ -29,7 +36,7 @@ import {
   Braces,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useEffect, useImperativeHandle } from "react";
 
 import { EditorRef } from "./coaching-notes";
 
@@ -52,13 +59,20 @@ lowlight.register("css", css);
 lowlight.register("js", js);
 lowlight.register("ts", ts);
 
+const doc = new Y.Doc();
+// const collabCursorProvider = new WebrtcProvider(
+//   "tiptap-collaboration-cursor-extension",
+//   doc
+// );
+
 interface TipTapProps {
   editorContent: string;
   onChange: (content: string) => void;
+  onSynced?: () => void;
 }
 
 const TipTapEditor = forwardRef<EditorRef, TipTapProps>(
-  ({ editorContent, onChange }, ref) => {
+  ({ editorContent, onChange, onSynced }, ref) => {
     const editor = useEditor(
       {
         extensions: [
@@ -79,6 +93,16 @@ const TipTapEditor = forwardRef<EditorRef, TipTapProps>(
           Strike,
           Text,
           Underline,
+          Collaboration.configure({
+            document: doc, // Configure Y.Doc for collaboration
+          }),
+          // CollaborationCursor.configure({
+          //   provider: collabCursorProvider,
+          //   user: {
+          //     name: "Jim Hodapp",
+          //     color: "#ffcc00",
+          //   },
+          // }),
         ],
 
         autofocus: false,
@@ -99,6 +123,12 @@ const TipTapEditor = forwardRef<EditorRef, TipTapProps>(
       []
     );
 
+    // editor?.commands.updateUser({
+    //   name: "John Doe",
+    //   color: "#000000",
+    //   avatar: "https://unavatar.io/github/ueberdosis",
+    // });
+
     useImperativeHandle(ref, () => ({
       setContent: (content: string) => {
         editor?.commands.setContent(JSON.parse(content));
@@ -108,6 +138,30 @@ const TipTapEditor = forwardRef<EditorRef, TipTapProps>(
         editor?.chain().focus().run();
       },
     }));
+
+    // Connect to your Collaboration server
+    useEffect(() => {
+      const provider = new TiptapCollabProvider({
+        name: "refactor.test.document.name", // Unique document identifier for syncing. This is your document name.
+        //appId: "", // Your Cloud Dashboard AppID or ...
+        baseUrl: "ws://127.0.0.1:8080", // ... `baseURL` for on-premises
+        token: "", // Your JWT token
+        document: doc,
+        onOpen() {
+          console.log("WebSocket connection opened.");
+        },
+        onConnect() {
+          console.log("Connected to the server.");
+        },
+      });
+
+      provider.on("synced", () => {
+        console.debug("provider.on('synced')");
+        if (onSynced) {
+          onSynced();
+        }
+      });
+    }, []);
 
     if (!editor) {
       return null;
