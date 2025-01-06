@@ -21,20 +21,19 @@ body:
     attributes:
       label: What happened?
       description: Describe the issue here.
-      placeholder: Tell us what you see!
-      value: "A bug happened!"
+      placeholder: Describe the issue you are seeing
     validations:
       required: true
   - type: input
     id: version
     attributes:
       label: What is the version of refactor-platform-fe that you're seeing the problem on?
-      placeholder: ex. v0.3.0
+      placeholder: ex. 1.0-rc2
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
-      label: Any related code to produce this issue and relevant log output.
-      description: Please copy and paste any relevant code or logs to reproduce this issue. If you have your own public repository, you can link to that here. 
+      label: Any related code or configuration details to produce this issue as well as relevant log output.
+      description: Please copy and paste any relevant code, configuration details or logs to reproduce this issue. If you have your own public repository, you can link to that here. 
       render: shell
