@@ -3,6 +3,8 @@
 import { siteConfig } from "@/site.config";
 import {
   CoachingSession,
+  defaultCoachingSession,
+  isCoachingSession,
   isCoachingSessionArray,
   parseCoachingSession,
   sortCoachingSessionArray,
@@ -62,64 +64,53 @@ export function useCoachingSessions(relationshipId: Id) {
   };
 }
 
-export const fetchCoachingSessions = async (
-  coachingRelationshipId: Id
-): Promise<[CoachingSession[], string]> => {
+export const createCoachingSession = async (
+  coaching_relationship_id: Id,
+  date: string,
+): Promise<CoachingSession> => {
   const axios = require("axios");
 
-  var coaching_sessions: CoachingSession[] = [];
+  const newCoachingSessionJson = {
+    coaching_relationship_id: coaching_relationship_id,
+    date: date
+  };
+  console.debug("newCoachingSessiontJson: " + JSON.stringify(newCoachingSessionJson));
+  // A full real note to be returned from the backend with the same body
+  var createdCoachingSession: CoachingSession = defaultCoachingSession();
   var err: string = "";
 
-  console.debug("fromDate: " + fromDate);
-  console.debug("toDate: " + toDate);
-
   const data = await axios
-    .get(`${siteConfig.env.backendServiceURL}/coaching_sessions`, {
-      params: {
-        coaching_relationship_id: coachingRelationshipId,
-        from_date: fromDate,
-        to_date: toDate,
-      },
+    .post(`${siteConfig.env.backendServiceURL}/coaching_sessions`, newCoachingSessionJson, {
       withCredentials: true,
       setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
       headers: {
         "X-Version": siteConfig.env.backendApiVersion,
+        "Content-Type": "application/json",
       },
     })
     .then(function (response: AxiosResponse) {
       // handle success
-      var sessions_data = response.data.data;
-      if (isCoachingSessionArray(sessions_data)) {
-        // Sort returned sessions in ascending order by their date field
-        sessions_data = sortCoachingSessionArray(
-          sessions_data,
-          SortOrder.Ascending
-        );
-
-        sessions_data.forEach((session_data: any) => {
-          coaching_sessions.push(parseCoachingSession(session_data));
-        });
+      const coaching_session_data = response.data.data;
+      if (isCoachingSession(coaching_session_data)) {
+        createdCoachingSession = parseCoachingSession(coaching_session_data);
       }
     })
     .catch(function (error: AxiosError) {
       // handle error
       console.error(error.response?.status);
       if (error.response?.status == 401) {
-        console.error("Retrieval of CoachingSessions failed: unauthorized.");
-        err = "Retrieval of CoachingSessions failed: unauthorized.";
+        err = "Creation of Coaching Session failed: unauthorized.";
+      } else if (error.response?.status == 500) {
+        err = "Creation of Coaching Session failed: internal server error.";
       } else {
-        console.log(error);
-        console.error(
-          `Retrieval of CoachingSessions by coaching relationship Id (` +
-            coachingRelationshipId +
-            `) failed.`
-        );
-        err =
-          `Retrieval of CoachingSessions by coaching relationship Id (` +
-          coachingRelationshipId +
-          `) failed.`;
+        err = `Creation of Coaching Session failed.`;
       }
     });
 
-  return [coaching_sessions, err];
+  if (err) {
+    console.error(err);
+    throw err;
+  }
+
+  return createdCoachingSession;
 };
