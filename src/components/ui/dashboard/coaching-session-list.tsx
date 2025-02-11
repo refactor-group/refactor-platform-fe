@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import CoachingSession from "@/components/ui/coaching-session"
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider"
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider"
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { createCoachingSession, useCoachingSessions } from "@/lib/api/coaching-sessions";
 
 
 export default function CoachingSessionList() {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore((state) => state)
+  const { currentOrganizationId } = useOrganizationStateStore((state) => state)
   const {
     coachingSessions,
     isLoading: isLoadingCoachingSessions,
@@ -29,9 +31,10 @@ export default function CoachingSessionList() {
   const [newSessionDate, setNewSessionDate] = useState("")
 
   useEffect(() => {
+    console.info("useEffect called")
     if (!coachingSessions.length) return;
     setCurrentCoachingSessions(coachingSessions);
-  }, [coachingSessions]);
+  }, [coachingSessions, currentCoachingRelationshipId, currentOrganizationId]);
 
   const handleCreateSession = (e: React.FormEvent) => {
     e.preventDefault()

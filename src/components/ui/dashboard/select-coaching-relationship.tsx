@@ -6,12 +6,10 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import OrganizationSelector from "../organization-selector"
 import CoachingRelationshipSelector from "../coaching-relationship-selector"
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider"
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider"
 
 export default function SelectCoachingRelationship() {
     const { userId } = useAuthStore((state) => state)
     const { currentOrganizationId } = useOrganizationStateStore((state) => state)
-    const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore((state) => state)
 
     return (
         <Card className="w-full">
