@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { format } from 'date-fns';
 import { ArrowUpDown, CalendarPlus } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -37,11 +38,15 @@ export default function CoachingSessionList() {
   }, [coachingSessions, currentCoachingRelationshipId, currentOrganizationId]);
 
   const handleCreateSession = (e: React.FormEvent) => {
-    e.preventDefault()
-    createCoachingSession(currentCoachingRelationshipId, newSessionDate).then((createdCoachingSession) => {
-      setIsDialogOpen(false)
-      setNewSessionDate("")
-      setCurrentCoachingSessions([...coachingSessions, createdCoachingSession])
+    e.preventDefault();
+
+    // Format the date string
+    const formattedDate = format(new Date(newSessionDate), "yyyy-MM-dd'T'HH:mm:ss");
+
+    createCoachingSession(currentCoachingRelationshipId, formattedDate).then((createdCoachingSession) => {
+      setIsDialogOpen(false);
+      setNewSessionDate("");
+      setCurrentCoachingSessions([...coachingSessions, createdCoachingSession]);
     }).catch((err) => {
       console.error("Failed to create new Coaching Session: " + err);
       throw err;
