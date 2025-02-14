@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { format } from 'date-fns';
-import { ArrowUpDown, CalendarPlus } from "lucide-react"
+import { ArrowUpDown, CalendarPlus } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,9 +12,7 @@ import CoachingSession from "@/components/ui/coaching-session"
 import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider"
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider"
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { createCoachingSession, useCoachingSessions } from "@/lib/api/coaching-sessions";
-
 
 export default function CoachingSessionList() {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore((state) => state)
@@ -37,7 +35,7 @@ export default function CoachingSessionList() {
     // Format the date string
     const formattedDate = format(new Date(newSessionDate), "yyyy-MM-dd'T'HH:mm:ss");
 
-    createCoachingSession(currentCoachingRelationshipId, formattedDate).then((createdCoachingSession) => {
+    createCoachingSession(currentCoachingRelationshipId, formattedDate).then(() => {
       setIsDialogOpen(false);
       setNewSessionDate("");
 
@@ -49,11 +47,10 @@ export default function CoachingSessionList() {
     });
   }
 
-  const sortedSessions = [...coachingSessions].sort((a, b) => {
+  const sortedSessions = coachingSessions ? [...coachingSessions].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime()
-  })
+  }) : [];
 
-  if (!currentCoachingRelationshipId) return <div>Choose a Coaching Relationship to View Coaching Sessions</div>
   if (isLoadingCoachingSessions) return <div>Loading coaching sessions...</div>
   if (isErrorCoachingSessions) return <div>Error loading coaching sessions</div>
 
@@ -68,7 +65,7 @@ export default function CoachingSessionList() {
                 variant="outline"
                 size="sm"
                 className="w-full sm:w-auto"
-                disabled={!isCoach}
+                disabled={(!isCoach || !currentCoachingRelationshipId)}
               >
                 <CalendarPlus className="mr-2 h-4 w-4" />
                 Create New Coaching Session
@@ -116,11 +113,17 @@ export default function CoachingSessionList() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {sortedSessions.map((coachingSession) => (
-            <CoachingSession key={coachingSession.id} coachingSession={coachingSession} />
-          ))}
-        </div>
+        {!currentCoachingRelationshipId ? (
+          <div className="flex items-center justify-center py-8">
+            <p className="text-lg text-muted-foreground">Choose a Coaching Relationship to view Coaching Sessions</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {sortedSessions.map((coachingSession) => (
+              <CoachingSession key={coachingSession.id} coachingSession={coachingSession} />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
