@@ -50,10 +50,13 @@ export function useCoachingSessions(relationshipId: Id) {
   console.debug("fromDate: " + fromDate);
   console.debug("toDate: " + toDate);
 
-
   const { data, error, isLoading, mutate } = useSWR<CoachingSession[]>(
-    relationshipId ?
-      [`${siteConfig.env.backendServiceURL}/coaching_sessions`, relationshipId] : null,
+    relationshipId
+      ? [
+          `${siteConfig.env.backendServiceURL}/coaching_sessions`,
+          relationshipId,
+        ]
+      : null,
     ([url, _token]) => fetcher(url, relationshipId)
   );
 
@@ -63,34 +66,40 @@ export function useCoachingSessions(relationshipId: Id) {
     coachingSessions: Array.isArray(data) ? data : [],
     isLoading,
     isError: error,
-    mutate
+    mutate,
   };
 }
 
 export const createCoachingSession = async (
   coaching_relationship_id: Id,
-  date: string,
+  date: string
 ): Promise<CoachingSession> => {
   const axios = require("axios");
 
   const newCoachingSessionJson = {
     coaching_relationship_id: coaching_relationship_id,
-    date: date
+    date: date,
   };
-  console.debug("newCoachingSessiontJson: " + JSON.stringify(newCoachingSessionJson));
+  console.debug(
+    "newCoachingSessiontJson: " + JSON.stringify(newCoachingSessionJson)
+  );
   // A full real note to be returned from the backend with the same body
   var createdCoachingSession: CoachingSession = defaultCoachingSession();
   var err: string = "";
 
   const data = await axios
-    .post(`${siteConfig.env.backendServiceURL}/coaching_sessions`, newCoachingSessionJson, {
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-        "Content-Type": "application/json",
-      },
-    })
+    .post(
+      `${siteConfig.env.backendServiceURL}/coaching_sessions`,
+      newCoachingSessionJson,
+      {
+        withCredentials: true,
+        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
+        headers: {
+          "X-Version": siteConfig.env.backendApiVersion,
+          "Content-Type": "application/json",
+        },
+      }
+    )
     .then(function (response: AxiosResponse) {
       // handle success
       const coaching_session_data = response.data.data;

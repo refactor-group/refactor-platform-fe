@@ -1,15 +1,18 @@
-import type { Metadata } from "next"
-import type * as React from "react"
-import { cn } from "@/lib/utils"
-import SelectCoachingRelationship from "@/components/ui/dashboard/select-coaching-relationship"
-import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list"
+import type { Metadata } from "next";
+import type * as React from "react";
+import { cn } from "@/lib/utils";
+import SelectCoachingRelationship from "@/components/ui/dashboard/select-coaching-relationship";
+import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Coaching dashboard",
-}
+};
 
-function DashboardContainer({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+function DashboardContainer({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
@@ -21,11 +24,11 @@ function DashboardContainer({ className, ...props }: React.HTMLAttributes<HTMLDi
         "sm:grid sm:grid-cols-2",
         // Ensure full width for children
         "[&>*]:w-full",
-        className,
+        className
       )}
       {...props}
     />
-  )
+  );
 }
 
 export default function DashboardPage() {
@@ -34,5 +37,5 @@ export default function DashboardPage() {
       <SelectCoachingRelationship />
       <CoachingSessionList />
     </DashboardContainer>
-  )
+  );
 }

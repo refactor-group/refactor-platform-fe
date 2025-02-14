@@ -24,7 +24,7 @@ export const defaultInitState: AuthState = {
   userId: "",
   userSession: defaultUserSession(),
   isLoggedIn: false,
-  isCoach: false
+  isCoach: false,
 };
 
 export const createAuthStore = (initState: AuthState = defaultInitState) => {
@@ -42,7 +42,7 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
           },
           setIsCoach: (coachId) => {
             var userId = get().userId;
-            set({ isCoach: !!(userId && coachId && (userId == coachId)) })
+            set({ isCoach: !!(userId && coachId && userId == coachId) });
           },
           getIsCoach: () => {
             return get().isCoach;

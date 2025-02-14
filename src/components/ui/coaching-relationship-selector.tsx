@@ -11,7 +11,7 @@ import {
 import { Id } from "@/types/general";
 import { useCoachingRelationships } from "@/lib/api/coaching-relationships";
 import { useEffect } from "react";
-import { useAuthStore } from "@/lib/providers/auth-store-provider"
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 
@@ -29,8 +29,8 @@ function CoachingRelationshipsSelectItems({
 }: {
   organizationId: Id;
 }) {
-
-  const { relationships, isLoading, isError } = useCoachingRelationships(organizationId);
+  const { relationships, isLoading, isError } =
+    useCoachingRelationships(organizationId);
   const { setCurrentCoachingRelationships } = useCoachingRelationshipStateStore(
     (state) => state
   );
@@ -77,7 +77,7 @@ export default function CoachingRelationshipSelector({
     (action) => action
   );
 
-  const { setIsCoach } = useAuthStore((state) => state)
+  const { setIsCoach } = useAuthStore((state) => state);
 
   const handleSetCoachingRelationship = (relationshipId: Id) => {
     setCurrentCoachingRelationshipId(relationshipId);
