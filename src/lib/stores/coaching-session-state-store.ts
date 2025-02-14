@@ -47,9 +47,9 @@ export const createCoachingSessionStateStore = (
           ): CoachingSession => {
             return get().currentCoachingSessions
               ? getCoachingSessionById(
-                  coachingSessionId,
-                  get().currentCoachingSessions
-                )
+                coachingSessionId,
+                get().currentCoachingSessions
+              )
               : defaultCoachingSession();
           },
           getCurrentCoachingSessionId: () => {

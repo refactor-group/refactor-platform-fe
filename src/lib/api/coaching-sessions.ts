@@ -51,7 +51,7 @@ export function useCoachingSessions(relationshipId: Id) {
   console.debug("toDate: " + toDate);
 
 
-  const { data, error, isLoading } = useSWR<CoachingSession[]>(
+  const { data, error, isLoading, mutate } = useSWR<CoachingSession[]>(
     relationshipId ?
       [`${siteConfig.env.backendServiceURL}/coaching_sessions`, relationshipId] : null,
     ([url, _token]) => fetcher(url, relationshipId)
@@ -63,6 +63,7 @@ export function useCoachingSessions(relationshipId: Id) {
     coachingSessions: Array.isArray(data) ? data : [],
     isLoading,
     isError: error,
+    mutate
   };
 }
 

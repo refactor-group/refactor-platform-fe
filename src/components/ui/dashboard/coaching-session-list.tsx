@@ -17,26 +17,19 @@ import { createCoachingSession, useCoachingSessions } from "@/lib/api/coaching-s
 
 
 export default function CoachingSessionList() {
-  const { currentCoachingRelationshipId, getCurrentCoachingRelationship } = useCoachingRelationshipStateStore((state) => state)
+  const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore((state) => state)
   const { currentOrganizationId } = useOrganizationStateStore((state) => state)
   const { isCoach } = useAuthStore((state) => state)
   const {
     coachingSessions,
     isLoading: isLoadingCoachingSessions,
     isError: isErrorCoachingSessions,
+    mutate
   } = useCoachingSessions(currentCoachingRelationshipId);
-  const { setCurrentCoachingSessions } = useCoachingSessionStateStore(
-    (state) => state
-  );
 
   const [sortByDate, setSortByDate] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newSessionDate, setNewSessionDate] = useState("")
-
-  useEffect(() => {
-    if (!coachingSessions.length) return;
-    setCurrentCoachingSessions(coachingSessions);
-  }, [coachingSessions, currentCoachingRelationshipId, currentOrganizationId]);
 
   const handleCreateSession = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +40,9 @@ export default function CoachingSessionList() {
     createCoachingSession(currentCoachingRelationshipId, formattedDate).then((createdCoachingSession) => {
       setIsDialogOpen(false);
       setNewSessionDate("");
-      setCurrentCoachingSessions([...coachingSessions, createdCoachingSession]);
+
+      // Trigger a re-fetch of coaching sessions
+      mutate();
     }).catch((err) => {
       console.error("Failed to create new Coaching Session: " + err);
       throw err;
