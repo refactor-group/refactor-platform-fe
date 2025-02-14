@@ -39,7 +39,8 @@ export function useCoachingRelationships(organizationId: Id) {
   const { data, error, isLoading } = useSWR<
     CoachingRelationshipWithUserNames[]
   >(
-    `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
+    organizationId ?
+      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships` : null,
     fetcher
   );
 
@@ -134,8 +135,8 @@ export const fetchCoachingRelationshipsWithUserNames = async (
         relationships = response.data.data;
         console.debug(
           `CoachingRelationshipsWithUserNames: ` +
-            coachingRelationshipsWithUserNamesToString(relationships) +
-            `.`
+          coachingRelationshipsWithUserNamesToString(relationships) +
+          `.`
         );
       }
     })
@@ -152,8 +153,8 @@ export const fetchCoachingRelationshipsWithUserNames = async (
         console.log(error);
         console.error(
           `Retrieval of CoachingRelationshipsWithUserNames by organization Id (` +
-            organizationId +
-            `) failed.`
+          organizationId +
+          `) failed.`
         );
         err =
           `Retrieval of CoachingRealtionshipsWithUserNames by organization Id (` +
