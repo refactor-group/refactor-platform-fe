@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { format } from 'date-fns';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import CoachingSession from "@/components/ui/coaching-session"
+import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider"
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider"
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
@@ -16,8 +17,9 @@ import { createCoachingSession, useCoachingSessions } from "@/lib/api/coaching-s
 
 
 export default function CoachingSessionList() {
-  const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore((state) => state)
+  const { currentCoachingRelationshipId, getCurrentCoachingRelationship } = useCoachingRelationshipStateStore((state) => state)
   const { currentOrganizationId } = useOrganizationStateStore((state) => state)
+  const { isCoach } = useAuthStore((state) => state)
   const {
     coachingSessions,
     isLoading: isLoadingCoachingSessions,
@@ -32,7 +34,6 @@ export default function CoachingSessionList() {
   const [newSessionDate, setNewSessionDate] = useState("")
 
   useEffect(() => {
-    console.info("useEffect called")
     if (!coachingSessions.length) return;
     setCurrentCoachingSessions(coachingSessions);
   }, [coachingSessions, currentCoachingRelationshipId, currentOrganizationId]);
@@ -72,7 +73,7 @@ export default function CoachingSessionList() {
                 variant="outline"
                 size="sm"
                 className="w-full sm:w-auto"
-                disabled={!currentCoachingRelationshipId}
+                disabled={!isCoach}
               >
                 <CalendarPlus className="mr-2 h-4 w-4" />
                 Create New Coaching Session
