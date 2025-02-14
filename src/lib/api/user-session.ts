@@ -40,6 +40,13 @@ export const loginUser = async (
       const userSessionData = response.data.data;
       if (isUserSession(userSessionData)) {
         userSession = parseUserSession(userSessionData);
+      } else {
+        // Even if the log in is successful, if we don't have user data that we can
+        // deserialize successfully, then downstream operations will see the default
+        // userSessionData in state and we will experience subtle Bugs. We should consider
+        // how best we want to handle this. Ex. clear auth cookie?
+        console.debug("userSessionData: ", userSessionData)
+        throw { message: 'Login Failed to Produce valid User Session Data' }
       }
     })
     .catch(function (error: AxiosError) {
