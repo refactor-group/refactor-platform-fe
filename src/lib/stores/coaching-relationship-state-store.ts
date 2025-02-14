@@ -52,9 +52,9 @@ export const createCoachingRelationshipStateStore = (
           ): CoachingRelationshipWithUserNames => {
             return get().currentCoachingRelationships
               ? getCoachingRelationshipById(
-                  coachingRelationshipId,
-                  get().currentCoachingRelationships
-                )
+                coachingRelationshipId,
+                get().currentCoachingRelationships
+              )
               : defaultCoachingRelationshipWithUserNames();
           },
           setCurrentCoachingRelationshipId: (newCoachingRelationshipId) => {
@@ -63,6 +63,7 @@ export const createCoachingRelationshipStateStore = (
           setCurrentCoachingRelationship: (newCoachingRelationship) => {
             set({ currentCoachingRelationship: newCoachingRelationship });
           },
+          // Reminder: This isn't being used
           setCurrentCoachingRelationships: (
             newCoachingRelationships: CoachingRelationshipWithUserNames[]
           ) => {
