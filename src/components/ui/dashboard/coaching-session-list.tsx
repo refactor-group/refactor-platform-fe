@@ -21,6 +21,7 @@ import {
   useCoachingSessions,
 } from "@/lib/api/coaching-sessions";
 import { Calendar } from "@/components/ui/calendar";
+import { getDateTimeFromString } from "@/types/general";
 
 export default function CoachingSessionList() {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
@@ -48,7 +49,7 @@ export default function CoachingSessionList() {
 
     // Combine date and time
     const [hours, minutes] = newSessionTime.split(":").map(Number);
-    const dateTime = DateTime.fromJSDate(newSessionDate)
+    const dateTime = getDateTimeFromString(newSessionDate.toISOString())
       .set({ hour: hours, minute: minutes })
       .toFormat("yyyy-MM-dd'T'HH:mm:ss");
 
