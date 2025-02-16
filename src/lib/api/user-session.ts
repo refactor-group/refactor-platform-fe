@@ -46,7 +46,7 @@ export const loginUser = async (
         // userSessionData in state and we will experience subtle Bugs. We should consider
         // how best we want to handle this. Ex. clear auth cookie?
         console.debug("userSessionData: ", userSessionData)
-        throw { message: 'Login Failed to Produce valid User Session Data' }
+        throw { message: 'Login Failed to produce valid User Session data' }
       }
     })
     .catch(function (error: AxiosError) {
