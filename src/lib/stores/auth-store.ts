@@ -8,11 +8,14 @@ interface AuthState {
   userId: Id;
   userSession: UserSession;
   isLoggedIn: boolean;
+  isCoach: boolean;
 }
 
 interface AuthActions {
   login: (userId: Id, userSession: UserSession) => void;
   logout: () => void;
+  setIsCoach: (coachID: Id) => void;
+  getIsCoach: () => boolean;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -21,13 +24,14 @@ export const defaultInitState: AuthState = {
   userId: "",
   userSession: defaultUserSession(),
   isLoggedIn: false,
+  isCoach: false,
 };
 
 export const createAuthStore = (initState: AuthState = defaultInitState) => {
   const authStore = create<AuthStore>()(
     devtools(
       persist(
-        (set) => ({
+        (set, get) => ({
           ...initState,
 
           login: (userId, userSession) => {
@@ -35,6 +39,13 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
           },
           logout: () => {
             set(defaultInitState);
+          },
+          setIsCoach: (coachId) => {
+            var userId = get().userId;
+            set({ isCoach: !!(userId && coachId && userId == coachId) });
+          },
+          getIsCoach: () => {
+            return get().isCoach;
           },
         }),
         {

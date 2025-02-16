@@ -12,6 +12,8 @@ import { Id } from "@/types/general";
 import { useOrganizations } from "@/lib/api/organizations";
 import { useEffect } from "react";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
+import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 
 interface OrganizationSelectorProps extends PopoverProps {
   /// The User's Id for which to get a list of associated Organizations
@@ -62,9 +64,18 @@ export default function OrganizationSelector({
     setCurrentOrganizationId,
     getCurrentOrganization,
   } = useOrganizationStateStore((state) => state);
+  const { resetCoachingSessionState } = useCoachingSessionStateStore(
+    (state) => state
+  );
+  const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(
+    (state) => state
+  );
 
   const handleSetOrganization = (organizationId: Id) => {
     setCurrentOrganizationId(organizationId);
+    console.info("Resetting Coaching Session State")
+    resetCoachingRelationshipState();
+    resetCoachingSessionState();
     if (onSelect) {
       onSelect(organizationId);
     }

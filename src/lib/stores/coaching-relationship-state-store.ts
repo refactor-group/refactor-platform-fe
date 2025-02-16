@@ -63,6 +63,7 @@ export const createCoachingRelationshipStateStore = (
           setCurrentCoachingRelationship: (newCoachingRelationship) => {
             set({ currentCoachingRelationship: newCoachingRelationship });
           },
+          // Reminder: This isn't being used
           setCurrentCoachingRelationships: (
             newCoachingRelationships: CoachingRelationshipWithUserNames[]
           ) => {

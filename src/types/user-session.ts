@@ -10,7 +10,7 @@ export interface UserSession {
   display_name: string;
 }
 
-export function parseUserSession(data: any): UserSession {
+export function parseUserSession(data: unknown): UserSession {
   if (!isUserSession(data)) {
     throw new Error("Invalid UserSession object data");
   }

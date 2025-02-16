@@ -1,10 +1,8 @@
-import { Metadata } from "next";
-
-import * as React from "react";
-
+import type { Metadata } from "next";
+import type * as React from "react";
 import { cn } from "@/lib/utils";
-
-import SelectCoachingSession from "@/components/ui/dashboard/select-coaching-session";
+import SelectCoachingRelationship from "@/components/ui/dashboard/select-coaching-relationship";
+import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -18,7 +16,14 @@ function DashboardContainer({
   return (
     <div
       className={cn(
-        "flex items-center justify-center [&>div]:w-full",
+        // Base styles
+        "p-4",
+        // Mobile: stack vertically
+        "flex flex-col gap-6",
+        // Tablet and up (640px+): side by side
+        "sm:grid sm:grid-cols-2",
+        // Ensure full width for children
+        "[&>*]:w-full",
         className
       )}
       {...props}
@@ -28,10 +33,9 @@ function DashboardContainer({
 
 export default function DashboardPage() {
   return (
-    <div className="items-start justify-center gap-6 rounded-lg p-8 md:grid lg:grid-cols-2 xl:grid-cols-3">
-      <DashboardContainer>
-        <SelectCoachingSession />
-      </DashboardContainer>
-    </div>
+    <DashboardContainer>
+      <SelectCoachingRelationship />
+      <CoachingSessionList />
+    </DashboardContainer>
   );
 }

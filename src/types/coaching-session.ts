@@ -7,7 +7,6 @@ export interface CoachingSession {
   id: Id;
   coaching_relationship_id: Id;
   date: string;
-  timezone: string;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -23,7 +22,6 @@ export function parseCoachingSession(data: any): CoachingSession {
     id: data.id,
     coaching_relationship_id: data.coaching_relationship_id,
     date: data.date,
-    timezone: data.timezone,
     created_at: DateTime.fromISO(data.created_at.toString()),
     updated_at: DateTime.fromISO(data.updated_at.toString()),
   };
@@ -39,7 +37,6 @@ export function isCoachingSession(value: unknown): value is CoachingSession {
     typeof object.id === "string" &&
     typeof object.coaching_relationship_id === "string" &&
     typeof object.date === "string" &&
-    typeof object.timezone === "string" &&
     typeof object.created_at === "string" &&
     typeof object.updated_at === "string"
   );
@@ -85,7 +82,6 @@ export function defaultCoachingSession(): CoachingSession {
     id: "",
     coaching_relationship_id: "",
     date: "",
-    timezone: "",
     created_at: now,
     updated_at: now,
   };

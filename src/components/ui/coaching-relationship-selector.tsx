@@ -11,6 +11,7 @@ import {
 import { Id } from "@/types/general";
 import { useCoachingRelationships } from "@/lib/api/coaching-relationships";
 import { useEffect } from "react";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 
@@ -41,7 +42,7 @@ function CoachingRelationshipsSelectItems({
       `relationships (useEffect): ${JSON.stringify(relationships)}`
     );
     setCurrentCoachingRelationships(relationships);
-  }, [relationships]);
+  }, [relationships, setCurrentCoachingRelationships]);
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error loading coaching relationships</div>;
@@ -76,6 +77,8 @@ export default function CoachingRelationshipSelector({
     (action) => action
   );
 
+  const { setIsCoach } = useAuthStore((state) => state);
+
   const handleSetCoachingRelationship = (relationshipId: Id) => {
     setCurrentCoachingRelationshipId(relationshipId);
     // Ensure that the user doesn't see the previous (stale) list of CoachingSessions
@@ -84,6 +87,15 @@ export default function CoachingRelationshipSelector({
       onSelect(relationshipId);
     }
   };
+
+  useEffect(() => {
+    const currentRelationship = currentCoachingRelationshipId
+      ? getCurrentCoachingRelationship(currentCoachingRelationshipId)
+      : null;
+    if (currentRelationship) {
+      setIsCoach(currentRelationship.coach_id);
+    }
+  }, [currentCoachingRelationshipId]);
 
   const currentRelationship = currentCoachingRelationshipId
     ? getCurrentCoachingRelationship(currentCoachingRelationshipId)
