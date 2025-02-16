@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
+import { DateTime } from "ts-luxon";
 import { ArrowUpDown, CalendarPlus } from "lucide-react";
 import {
   Dialog,
@@ -42,8 +42,7 @@ export default function CoachingSessionList() {
     e.preventDefault();
 
     // Format the date string
-    const formattedDate = format(
-      new Date(newSessionDate),
+    const formattedDate = DateTime.fromISO(newSessionDate).toFormat(
       "yyyy-MM-dd'T'HH:mm:ss"
     );
 
