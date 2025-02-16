@@ -348,7 +348,6 @@ const ActionsList: React.FC<{
                                   ? `Due by: ${newDueBy.toLocaleString()}`
                                   : "Select a due by date."}
                               </div>
-                              autoFocus
                             />
                           </PopoverContent>
                         </Popover>
@@ -459,7 +458,6 @@ const ActionsList: React.FC<{
                     ? `Due by: ${newDueBy.toLocaleString()}`
                     : "Select a due by date."}
                 </div>
-                autoFocus
               />
             </PopoverContent>
           </Popover>

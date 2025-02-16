@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DateTime } from "ts-luxon";
-import { ArrowUpDown, CalendarPlus } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CoachingSession from "@/components/ui/coaching-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -21,6 +20,7 @@ import {
   createCoachingSession,
   useCoachingSessions,
 } from "@/lib/api/coaching-sessions";
+import { Calendar } from "@/components/ui/calendar";
 
 export default function CoachingSessionList() {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
@@ -36,20 +36,27 @@ export default function CoachingSessionList() {
 
   const [sortByDate, setSortByDate] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newSessionDate, setNewSessionDate] = useState("");
+  const [newSessionDate, setNewSessionDate] = useState<Date | undefined>(
+    undefined
+  );
+  const [newSessionTime, setNewSessionTime] = useState<string>("");
 
   const handleCreateSession = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Format the date string
-    const formattedDate = DateTime.fromISO(newSessionDate).toFormat(
-      "yyyy-MM-dd'T'HH:mm:ss"
-    );
+    if (!newSessionDate || !newSessionTime) return;
 
-    createCoachingSession(currentCoachingRelationshipId, formattedDate)
+    // Combine date and time
+    const [hours, minutes] = newSessionTime.split(":").map(Number);
+    const dateTime = DateTime.fromJSDate(newSessionDate)
+      .set({ hour: hours, minute: minutes })
+      .toFormat("yyyy-MM-dd'T'HH:mm:ss");
+
+    createCoachingSession(currentCoachingRelationshipId, dateTime)
       .then(() => {
         setIsDialogOpen(false);
-        setNewSessionDate("");
+        setNewSessionDate(undefined);
+        setNewSessionTime("");
 
         // Trigger a re-fetch of coaching sessions
         mutate();
@@ -85,7 +92,6 @@ export default function CoachingSessionList() {
                 className="w-full sm:w-auto"
                 disabled={!isCoach || !currentCoachingRelationshipId}
               >
-                <CalendarPlus className="mr-2 h-4 w-4" />
                 Create New Coaching Session
               </Button>
             </DialogTrigger>
@@ -95,13 +101,22 @@ export default function CoachingSessionList() {
               </DialogHeader>
               <form onSubmit={handleCreateSession} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="session-date">Session Date and Time</Label>
-                  <Input
-                    id="session-date"
-                    type="datetime-local"
+                  <Label htmlFor="session-date">Session Date</Label>
+                  <Calendar
+                    mode="single"
+                    selected={newSessionDate}
+                    onSelect={setNewSessionDate}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="session-time">Session Time</Label>
+                  <input
+                    type="time"
+                    id="session-time"
+                    value={newSessionTime}
+                    onChange={(e) => setNewSessionTime(e.target.value)}
+                    className="w-full border rounded p-2"
                     required
-                    value={newSessionDate}
-                    onChange={(e) => setNewSessionDate(e.target.value)}
                   />
                 </div>
                 <Button type="submit">Create Session</Button>
