@@ -27,7 +27,10 @@ const fetcher = async (
 export const useCollaborationToken = (coachingSessionId: string) => {
   const { data, error } = useSWR<Jwt>(
     coachingSessionId
-      ? [`/jwt/generate_collab_token`, coachingSessionId]
+      ? [
+          `${siteConfig.env.backendServiceURL}/jwt/generate_collab_token`,
+          coachingSessionId,
+        ]
       : null,
     ([url, id]) => fetcher(url, coachingSessionId)
   );
