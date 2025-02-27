@@ -23,7 +23,6 @@ export const Toolbar = () => {
   // export const Toolbar = ({ editor }: ToolbarProps) => {
   const { editor } = useCurrentEditor();
 
-  console.log("editor toolbar", editor);
   if (!editor) {
     return null;
   }
