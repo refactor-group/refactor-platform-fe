@@ -3,10 +3,8 @@ import useSWR from "swr";
 import { Jwt, parseJwt } from "@/types/jwt";
 import { siteConfig } from "@/site.config";
 
-const fetcher = async (
-  url: string,
-  coachingSessionId: string
-): Promise<Jwt> => {
+type FetcherArgs = [string, string];
+const fetcher = async ([url, coachingSessionId]: FetcherArgs): Promise<Jwt> => {
   const response = await axios.get(url, {
     params: { coaching_session_id: coachingSessionId },
     withCredentials: true,
@@ -15,6 +13,7 @@ const fetcher = async (
       "X-Version": siteConfig.env.backendApiVersion,
     },
   });
+
   const data = response.data.data;
   return parseJwt(data);
 };
@@ -25,15 +24,14 @@ const fetcher = async (
  * @returns An object containing the token, loading state, and error state.
  */
 export const useCollaborationToken = (coachingSessionId: string) => {
-  const { data, error } = useSWR<Jwt>(
-    coachingSessionId
-      ? [
-          `${siteConfig.env.backendServiceURL}/jwt/generate_collab_token`,
-          coachingSessionId,
-        ]
-      : null,
-    ([url, id]) => fetcher(url, coachingSessionId)
-  );
+  const requestKey = coachingSessionId
+    ? [
+        `${siteConfig.env.backendServiceURL}/jwt/generate_collab_token`,
+        coachingSessionId,
+      ]
+    : null;
+
+  const { data, error } = useSWR<Jwt>(requestKey, fetcher);
 
   return {
     jwt: data,

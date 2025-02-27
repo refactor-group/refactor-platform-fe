@@ -1,5 +1,5 @@
 import type React from "react";
-import type { Editor } from "@tiptap/react";
+import { useCurrentEditor, type Editor } from "@tiptap/react";
 import {
   Bold,
   Heading1,
@@ -19,7 +19,11 @@ interface ToolbarProps {
   editor: Editor | null;
 }
 
-export const Toolbar = ({ editor }: ToolbarProps) => {
+export const Toolbar = () => {
+  // export const Toolbar = ({ editor }: ToolbarProps) => {
+  const { editor } = useCurrentEditor();
+
+  console.log("editor toolbar", editor);
   if (!editor) {
     return null;
   }
