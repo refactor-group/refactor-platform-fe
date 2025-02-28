@@ -16,29 +16,44 @@ import { ReactNodeViewRenderer } from "@tiptap/react";
 import CodeBlock from "@/components/ui/coaching-sessions/code-block";
 import { createLowlight } from "lowlight";
 import { all } from "lowlight";
-
+import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
+import { TiptapCollabProvider } from "@hocuspocus/provider";
 // Initialize lowlight with all languages
 const lowlight = createLowlight(all);
 
-export const Extensions = (doc: any) => [
-  Document,
-  BulletList,
-  CodeBlockLowlight.extend({
-    addNodeView() {
-      return ReactNodeViewRenderer(CodeBlock);
-    },
-  }).configure({ lowlight }),
-  Bold,
-  Heading,
-  Highlight,
-  Italic,
-  ListItem,
-  OrderedList,
-  Paragraph,
-  Strike,
-  Text,
-  Underline,
-  Collaboration.configure({
-    document: doc,
-  }),
-];
+export const Extensions = (
+  doc: any,
+  displayName: string,
+  provider?: TiptapCollabProvider | null
+) => {
+  console.log(provider);
+  return [
+    Document,
+    BulletList,
+    CodeBlockLowlight.extend({
+      addNodeView() {
+        return ReactNodeViewRenderer(CodeBlock);
+      },
+    }).configure({ lowlight }),
+    Bold,
+    Heading,
+    Highlight,
+    Italic,
+    ListItem,
+    OrderedList,
+    Paragraph,
+    Strike,
+    Text,
+    Underline,
+    Collaboration.configure({
+      document: doc,
+    }),
+    CollaborationCursor.configure({
+      provider,
+      user: {
+        name: displayName,
+        color: "#ffcc00",
+      },
+    }),
+  ];
+};
