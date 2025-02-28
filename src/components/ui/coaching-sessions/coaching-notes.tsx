@@ -23,6 +23,7 @@ const useCollaborationProvider = (doc: Y.Doc) => {
     currentCoachingSessionId
   );
   const [isSyncing, setIsSyncing] = useState(true);
+  const [provider, setProvider] = useState<TiptapCollabProvider | null>(null);
   useEffect(() => {
     const tiptapAppId = siteConfig.env.tiptapAppId;
     if (!tiptapAppId) {
@@ -48,6 +49,26 @@ const useCollaborationProvider = (doc: Y.Doc) => {
 
       newProvider.on("synced", () => {
         setIsSyncing(false);
+        setProvider(newProvider);
+      });
+
+      // Set the awareness field for the current user
+      newProvider.setAwarenessField("user", {
+        name: userSession.display_name,
+        color: "#ffcc00",
+      });
+
+      newProvider.on("awarenessChange", ({ states }) => {
+        console.log(states);
+      });
+
+      document.addEventListener("mousemove", (event) => {
+        newProvider.setAwarenessField("user", {
+          name: userSession.display_name,
+          color: "#ffcc00",
+          mouseX: event.clientX,
+          mouseY: event.clientY,
+        });
       });
 
       return () => {
@@ -58,13 +79,16 @@ const useCollaborationProvider = (doc: Y.Doc) => {
 
   return {
     isLoading: isLoading || isSyncing,
+    userSession,
+    provider,
     isError,
   };
 };
 
 const CoachingNotes = () => {
   const [doc] = useState(() => new Y.Doc());
-  const { isLoading, isError } = useCollaborationProvider(doc);
+  const { isLoading, isError, provider, userSession } =
+    useCollaborationProvider(doc);
 
   if (isLoading) return <div>Loading editor...</div>;
   if (isError)
@@ -73,7 +97,7 @@ const CoachingNotes = () => {
   return (
     <div className="border rounded">
       <EditorProvider
-        extensions={Extensions(doc)}
+        extensions={Extensions(doc, userSession.display_name, provider)}
         autofocus={false}
         immediatelyRender={false}
         onContentError={(error: any) =>
