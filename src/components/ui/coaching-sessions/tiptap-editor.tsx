@@ -4,7 +4,7 @@ import { EditorProvider } from "@tiptap/react";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
 import { useEffect, useState } from "react";
-import { useCollaborationToken } from "@/lib/api/collaborationToken";
+import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { Extensions } from "@/components/ui/coaching-sessions/tiptap-editor/extensions";
