@@ -1,5 +1,5 @@
 import type React from "react";
-import type { Editor } from "@tiptap/react";
+import { useCurrentEditor } from "@tiptap/react";
 import {
   Bold,
   Heading1,
@@ -15,11 +15,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface ToolbarProps {
-  editor: Editor | null;
-}
+export const Toolbar = () => {
+  const { editor } = useCurrentEditor();
 
-export const Toolbar = ({ editor }: ToolbarProps) => {
   if (!editor) {
     return null;
   }
