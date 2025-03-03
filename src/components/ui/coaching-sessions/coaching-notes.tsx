@@ -7,8 +7,8 @@ import { useEffect, useState } from "react";
 import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
-import { Extensions } from "@/components/ui/coaching-sessions/tiptap-editor/extensions";
-import { Toolbar } from "@/components/ui/coaching-sessions/tiptap-editor/toolbar";
+import { Extensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
+import { Toolbar } from "@/components/ui/coaching-sessions/coaching-notes/toolbar";
 import { siteConfig } from "@/site.config";
 import "@/styles/styles.scss";
 
@@ -62,7 +62,7 @@ const useCollaborationProvider = (doc: Y.Doc) => {
   };
 };
 
-const TipTapEditor = () => {
+const CoachingNotes = () => {
   const [doc] = useState(() => new Y.Doc());
   const { isLoading, isError } = useCollaborationProvider(doc);
 
@@ -91,4 +91,4 @@ const TipTapEditor = () => {
   );
 };
 
-export { TipTapEditor };
+export { CoachingNotes };
