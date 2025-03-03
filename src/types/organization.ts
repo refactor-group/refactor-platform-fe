@@ -7,6 +7,7 @@ export interface Organization {
   id: Id;
   name: string;
   logo?: string;
+  slug: string;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -20,6 +21,7 @@ export function isOrganization(value: unknown): value is Organization {
   return (
     (typeof object.id === "string" &&
       typeof object.name === "string" &&
+      typeof object.slug === "string" &&
       typeof object.created_at === "string" &&
       typeof object.updated_at === "string") ||
     typeof object.logo === "string" // logo is optional
@@ -46,6 +48,7 @@ export function defaultOrganization(): Organization {
     id: "",
     name: "",
     logo: "",
+    slug: "",
     created_at: now,
     updated_at: now,
   };

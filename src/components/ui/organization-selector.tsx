@@ -9,11 +9,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Id } from "@/types/general";
-import { useOrganizations } from "@/lib/api/organizations";
+import { useOrganizationList } from "@/lib/api/organizations";
 import { useEffect } from "react";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { defaultOrganization } from "@/types/organization";
 
 interface OrganizationSelectorProps extends PopoverProps {
   /// The User's Id for which to get a list of associated Organizations
@@ -23,10 +24,24 @@ interface OrganizationSelectorProps extends PopoverProps {
 }
 
 function OrganizationsList({ userId }: { userId: Id }) {
-  const { organizations, isLoading, isError } = useOrganizations(userId);
+  // const { organizations } = useOrganizations();
+  const { organizations, isLoading, isError } = useOrganizationList(userId);
   const { setCurrentOrganizations } = useOrganizationStateStore(
     (state) => state
   );
+
+  // console.debug("*** Trying to create a new test Organization.");
+  // const testOrg = defaultOrganization();
+  // testOrg.name = "My Test Org";
+  // testOrg.slug = "my-test-org";
+  // testOrg.logo = "Logo";
+  // organizations.create(testOrg);
+
+  // const {
+  //   organizations: orgList,
+  //   isLoading,
+  //   isError,
+  // } = organizations.list(userId);
 
   // Be sure to cache the list of current organizations in the OrganizationStateStore
   useEffect(() => {
@@ -73,7 +88,7 @@ export default function OrganizationSelector({
 
   const handleSetOrganization = (organizationId: Id) => {
     setCurrentOrganizationId(organizationId);
-    console.info("Resetting Coaching Session State")
+    console.info("Resetting Coaching Session State");
     resetCoachingRelationshipState();
     resetCoachingSessionState();
     if (onSelect) {
