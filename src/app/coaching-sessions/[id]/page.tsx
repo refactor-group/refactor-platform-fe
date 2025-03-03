@@ -10,7 +10,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
 import { OverarchingGoalContainer } from "@/components/ui/coaching-sessions/overarching-goal-container";
-import { TipTapEditor } from "@/components/ui/coaching-sessions/tiptap-editor";
+import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 
 import { LockClosedIcon } from "@radix-ui/react-icons";
 import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
@@ -74,7 +74,7 @@ export default function CoachingSessionsPage() {
               </TabsList>
               <TabsContent value="notes">
                 <div className="flex-col h-full space-y-4">
-                  <TipTapEditor />
+                  <CoachingNotes />
                 </div>
               </TabsContent>
               <TabsContent value="console">
