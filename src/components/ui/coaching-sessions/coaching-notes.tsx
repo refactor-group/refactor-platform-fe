@@ -3,7 +3,7 @@
 import { EditorProvider } from "@tiptap/react";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
@@ -11,8 +11,6 @@ import { Extensions } from "@/components/ui/coaching-sessions/coaching-notes/ext
 import { Toolbar } from "@/components/ui/coaching-sessions/coaching-notes/toolbar";
 import { siteConfig } from "@/site.config";
 import "@/styles/styles.scss";
-
-const tiptapAppId = siteConfig.env.tiptapAppId;
 
 const useCollaborationProvider = (doc: Y.Doc) => {
   const { currentCoachingSessionId } = useCoachingSessionStateStore(
@@ -25,73 +23,48 @@ const useCollaborationProvider = (doc: Y.Doc) => {
     currentCoachingSessionId
   );
   const [isSyncing, setIsSyncing] = useState(true);
-  const [extensions, setExtensions] = useState<Array<any>>([]);
-  const providerRef = useRef<TiptapCollabProvider>(null);
-
   useEffect(() => {
+    const tiptapAppId = siteConfig.env.tiptapAppId;
     if (!tiptapAppId) {
       console.error("TIPTAP_APP_ID not set");
       return;
     }
 
-    if (jwt) {
-      if (!providerRef.current) {
-        // if we haven't initialize a provider yet,
-        // initialize one and update the providerRef that will persist
-        // during re-renders so we don't initialize more providers
-        providerRef.current = new TiptapCollabProvider({
-          name: jwt.sub,
-          appId: tiptapAppId,
-          token: jwt.token,
-          document: doc,
-          user: userSession.display_name,
-          connect: true,
-          broadcast: true,
-          onSynced: () => {
-            setIsSyncing(false);
-            // Setting these here with the goal of only initializing things once
-            setExtensions(Extensions(doc, providerRef.current));
-          },
-        });
-
-        providerRef.current.setAwarenessField("user", {
-          name: userSession.display_name,
-          color: "#ffcc00",
-        });
-
-        document.addEventListener("mousemove", (event) => {
-          if (providerRef.current) {
-            providerRef.current.setAwarenessField("user", {
-              name: userSession.display_name,
-              color: "#ffcc00",
-              mouseX: event.clientX,
-              mouseY: event.clientY,
-            });
+    if (!isLoading && !isError && jwt) {
+      const newProvider = new TiptapCollabProvider({
+        name: jwt.sub,
+        appId: tiptapAppId,
+        token: jwt.token,
+        document: doc,
+        user: userSession.display_name,
+        connect: true,
+        broadcast: true,
+        onSynced() {
+          if (!doc.getMap("config").get("initialContentLoaded")) {
+            doc.getMap("config").set("initialContentLoaded", true);
           }
-        });
-      } else {
-        // otherwise, reconnect the existing provider
-        providerRef.current.connect();
-      }
-    }
+        },
+      });
 
-    return () => {
-      if (providerRef.current) {
-        providerRef.current.disconnect();
-      }
-    };
-  }, [jwt, providerRef.current]);
+      newProvider.on("synced", () => {
+        setIsSyncing(false);
+      });
+
+      return () => {
+        newProvider.disconnect();
+      };
+    }
+  }, [jwt, isLoading, isError, doc, userSession.display_name]);
 
   return {
     isLoading: isLoading || isSyncing,
     isError,
-    extensions,
   };
 };
 
 const CoachingNotes = () => {
   const [doc] = useState(() => new Y.Doc());
-  const { isLoading, isError, extensions } = useCollaborationProvider(doc);
+  const { isLoading, isError } = useCollaborationProvider(doc);
 
   if (isLoading) return <div>Loading editor...</div>;
   if (isError)
@@ -100,10 +73,10 @@ const CoachingNotes = () => {
   return (
     <div className="border rounded">
       <EditorProvider
-        extensions={extensions}
+        extensions={Extensions(doc)}
         autofocus={false}
         immediatelyRender={false}
-        onContentError={(error) =>
+        onContentError={(error: any) =>
           console.error("Editor content error:", error)
         }
         editorProps={{
