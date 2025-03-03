@@ -15,6 +15,7 @@ import "@/styles/styles.scss";
 const tiptapAppId = siteConfig.env.tiptapAppId;
 
 const useCollaborationProvider = (doc: Y.Doc) => {
+  console.log("useCollaborationProvider");
   const { currentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
   );
