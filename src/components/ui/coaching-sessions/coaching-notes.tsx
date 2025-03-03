@@ -13,6 +13,7 @@ import { siteConfig } from "@/site.config";
 import "@/styles/styles.scss";
 
 const useCollaborationProvider = (doc: Y.Doc) => {
+  console.log("useCollaborationProvider");
   const { currentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
   );
@@ -31,7 +32,10 @@ const useCollaborationProvider = (doc: Y.Doc) => {
       return;
     }
 
-    if (!isLoading && !isError && jwt) {
+    console.log("checking for existing provider");
+
+    if (!isLoading && !isError && jwt && !provider) {
+      console.log("initializing new provider");
       const newProvider = new TiptapCollabProvider({
         name: jwt.sub,
         appId: tiptapAppId,
@@ -47,7 +51,10 @@ const useCollaborationProvider = (doc: Y.Doc) => {
         },
       });
 
+      console.log("newProvider", newProvider);
+
       newProvider.on("synced", () => {
+        console.log("synced");
         setIsSyncing(false);
         setProvider(newProvider);
       });
@@ -58,9 +65,9 @@ const useCollaborationProvider = (doc: Y.Doc) => {
         color: "#ffcc00",
       });
 
-      newProvider.on("awarenessChange", ({ states }) => {
-        console.log(states);
-      });
+      // newProvider.on("awarenessChange", ({ states }) => {
+      //   console.log(states);
+      // });
 
       document.addEventListener("mousemove", (event) => {
         newProvider.setAwarenessField("user", {

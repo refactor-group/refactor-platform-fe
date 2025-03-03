@@ -26,7 +26,7 @@ export const Extensions = (
   displayName: string,
   provider?: TiptapCollabProvider | null
 ) => {
-  console.log(provider);
+  console.log("EXTENSIONS", provider);
   return [
     Document,
     BulletList,
