@@ -25,6 +25,7 @@ const useCollaborationProvider = (doc: Y.Doc) => {
   );
   const [isSyncing, setIsSyncing] = useState(true);
   const [provider, setProvider] = useState<TiptapCollabProvider | null>(null);
+  const [extensions, setExtensions] = useState<Array<any>>([]);
   useEffect(() => {
     const tiptapAppId = siteConfig.env.tiptapAppId;
     if (!tiptapAppId) {
@@ -56,7 +57,9 @@ const useCollaborationProvider = (doc: Y.Doc) => {
       newProvider.on("synced", () => {
         console.log("synced");
         setIsSyncing(false);
+        // Setting these here with the goal of only initializing things once
         setProvider(newProvider);
+        setExtensions(Extensions(doc, userSession.display_name, newProvider));
       });
 
       // Set the awareness field for the current user
@@ -86,16 +89,14 @@ const useCollaborationProvider = (doc: Y.Doc) => {
 
   return {
     isLoading: isLoading || isSyncing,
-    userSession,
-    provider,
     isError,
+    extensions,
   };
 };
 
 const CoachingNotes = () => {
   const [doc] = useState(() => new Y.Doc());
-  const { isLoading, isError, provider, userSession } =
-    useCollaborationProvider(doc);
+  const { isLoading, isError, extensions } = useCollaborationProvider(doc);
 
   if (isLoading) return <div>Loading editor...</div>;
   if (isError)
@@ -104,7 +105,7 @@ const CoachingNotes = () => {
   return (
     <div className="border rounded">
       <EditorProvider
-        extensions={Extensions(doc, userSession.display_name, provider)}
+        extensions={extensions}
         autofocus={false}
         immediatelyRender={false}
         onContentError={(error: any) =>
