@@ -14,23 +14,32 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 
 ## Getting Started
 
-First, run the development server:
+### Setting Local Environment Variables
+
+When running locally on a development machine you can manually set the application's configuration through a `.env` file at the root of the source tree:
+
+```env
+NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL="http"
+NEXT_PUBLIC_BACKEND_SERVICE_PORT=4000
+NEXT_PUBLIC_BACKEND_SERVICE_HOST="localhost"
+NEXT_PUBLIC_BACKEND_API_VERSION="0.0.1"
+
+# TIPTAP_APP_ID originates from your TipTap Cloud Dashboard
+NEXT_PUBLIC_TIPTAP_APP_ID="<TIPTAP_APP_ID>"
+
+FRONTEND_SERVICE_INTERFACE=0.0.0.0
+FRONTEND_SERVICE_PORT=3000
+```
+
+**Note** that these variables get set and passed by docker-compose in the backend's `.env` file and _do not_ need to be set here in this case.
+
+### Running the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
+
+### Logging Into the Application
 
 Open [http://localhost:3000/login](http://localhost:3000/login) with your browser to log in to the platform.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
