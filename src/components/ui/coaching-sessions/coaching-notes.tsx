@@ -3,7 +3,7 @@
 import { EditorProvider } from "@tiptap/react";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
@@ -12,8 +12,9 @@ import { Toolbar } from "@/components/ui/coaching-sessions/coaching-notes/toolba
 import { siteConfig } from "@/site.config";
 import "@/styles/styles.scss";
 
+const tiptapAppId = siteConfig.env.tiptapAppId;
+
 const useCollaborationProvider = (doc: Y.Doc) => {
-  console.log("useCollaborationProvider");
   const { currentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
   );
@@ -24,68 +25,62 @@ const useCollaborationProvider = (doc: Y.Doc) => {
     currentCoachingSessionId
   );
   const [isSyncing, setIsSyncing] = useState(true);
-  const [provider, setProvider] = useState<TiptapCollabProvider | null>(null);
   const [extensions, setExtensions] = useState<Array<any>>([]);
+  const providerRef = useRef<TiptapCollabProvider>(null);
+
   useEffect(() => {
-    const tiptapAppId = siteConfig.env.tiptapAppId;
     if (!tiptapAppId) {
       console.error("TIPTAP_APP_ID not set");
       return;
     }
 
-    console.log("checking for existing provider");
+    if (jwt) {
+      if (!providerRef.current) {
+        // if we haven't initialize a provider yet,
+        // initialize one and update the providerRef that will persist
+        // during re-renders so we don't initialize more providers
+        providerRef.current = new TiptapCollabProvider({
+          name: jwt.sub,
+          appId: tiptapAppId,
+          token: jwt.token,
+          document: doc,
+          user: userSession.display_name,
+          connect: true,
+          broadcast: true,
+          onSynced: () => {
+            setIsSyncing(false);
+            // Setting these here with the goal of only initializing things once
+            setExtensions(Extensions(doc, providerRef.current));
+          },
+        });
 
-    if (!isLoading && !isError && jwt && !provider) {
-      console.log("initializing new provider");
-      const newProvider = new TiptapCollabProvider({
-        name: jwt.sub,
-        appId: tiptapAppId,
-        token: jwt.token,
-        document: doc,
-        user: userSession.display_name,
-        connect: true,
-        broadcast: true,
-        onSynced() {
-          if (!doc.getMap("config").get("initialContentLoaded")) {
-            doc.getMap("config").set("initialContentLoaded", true);
-          }
-        },
-      });
-
-      console.log("newProvider", newProvider);
-
-      newProvider.on("synced", () => {
-        console.log("synced");
-        setIsSyncing(false);
-        // Setting these here with the goal of only initializing things once
-        setProvider(newProvider);
-        setExtensions(Extensions(doc, userSession.display_name, newProvider));
-      });
-
-      // Set the awareness field for the current user
-      newProvider.setAwarenessField("user", {
-        name: userSession.display_name,
-        color: "#ffcc00",
-      });
-
-      // newProvider.on("awarenessChange", ({ states }) => {
-      //   console.log(states);
-      // });
-
-      document.addEventListener("mousemove", (event) => {
-        newProvider.setAwarenessField("user", {
+        providerRef.current.setAwarenessField("user", {
           name: userSession.display_name,
           color: "#ffcc00",
-          mouseX: event.clientX,
-          mouseY: event.clientY,
         });
-      });
 
-      return () => {
-        newProvider.disconnect();
-      };
+        document.addEventListener("mousemove", (event) => {
+          if (providerRef.current) {
+            providerRef.current.setAwarenessField("user", {
+              name: userSession.display_name,
+              color: "#ffcc00",
+              mouseX: event.clientX,
+              mouseY: event.clientY,
+            });
+          }
+        });
+      } else {
+        // otherwise, reconnect the existing provider
+        providerRef.current.connect();
+      }
     }
-  }, [jwt, isLoading, isError, doc, userSession.display_name]);
+
+    return () => {
+      if (providerRef.current) {
+        providerRef.current.disconnect();
+      }
+    };
+  }, [jwt, providerRef.current]);
 
   return {
     isLoading: isLoading || isSyncing,
@@ -108,7 +103,7 @@ const CoachingNotes = () => {
         extensions={extensions}
         autofocus={false}
         immediatelyRender={false}
-        onContentError={(error: any) =>
+        onContentError={(error) =>
           console.error("Editor content error:", error)
         }
         editorProps={{
