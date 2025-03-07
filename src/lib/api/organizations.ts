@@ -3,8 +3,7 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { Organization, defaultOrganization } from "@/types/organization";
-import { useState } from "react";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 import { EntityApi } from "./entity-api";
 
 /**
@@ -91,17 +90,18 @@ export const OrganizationAPI = {
  * * refresh: Function to manually trigger a refresh of the data
  */
 export const useOrganizationList = (userId: Id) => {
-  const { data, error, isLoading, mutate } = useSWR<Organization[]>(
-    [`${siteConfig.env.backendServiceURL}/organizations`, userId],
-    () => OrganizationAPI.list(userId),
-    { revalidateOnMount: true }
-  );
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<Organization>(
+      `${siteConfig.env.backendServiceURL}/organizations`,
+      () => OrganizationAPI.list(userId),
+      userId
+    );
 
   return {
-    organizations: Array.isArray(data) ? data : [],
+    organizations: entities,
     isLoading,
-    isError: error,
-    refresh: mutate,
+    isError,
+    refresh,
   };
 };
 
@@ -119,21 +119,19 @@ export const useOrganizationList = (userId: Id) => {
  * * refresh: Function to manually trigger a refresh of the data
  */
 export const useOrganization = (id: Id) => {
-  const { data, error, isLoading, mutate } = useSWR<Organization>(
-    id ? `${siteConfig.env.backendServiceURL}/organizations/${id}` : null,
-    () => OrganizationAPI.get(id),
-    {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
-  );
+  const url = id
+    ? `${siteConfig.env.backendServiceURL}/organizations/${id}`
+    : null;
+  const fetcher = () => OrganizationAPI.get(id);
+
+  const { entity, isLoading, isError, refresh } =
+    EntityApi.useEntity<Organization>(url, fetcher, defaultOrganization());
 
   return {
-    organization: data || defaultOrganization(),
+    organization: entity,
     isLoading,
-    isError: error,
-    refresh: mutate,
+    isError,
+    refresh,
   };
 };
 
@@ -149,73 +147,17 @@ export const useOrganization = (id: Id) => {
  * isLoading: Boolean indicating if any operation is in progress
  * error: Error object if the last operation failed, null otherwise
  */
+/**
+ * Hook for organization mutations.
+ * Provides methods to create, update, and delete organizations.
+ */
 export const useOrganizationMutation = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const { mutate } = useSWRConfig();
-
-  /**
-   * Executes an async operation while managing loading and error states.
-   * Also invalidates the organization cache after successful operations.
-   *
-   * @template T The return type of the operation
-   * @param operation A function that returns a Promise
-   * @returns A Promise that resolves to the operation result
-   * @throws The original error from the operation
-   */
-  const executeWithState = async <T>(
-    operation: () => Promise<T>
-  ): Promise<T> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await operation();
-      // Refresh organization lists
-      mutate(
-        (key) =>
-          typeof key === "string" &&
-          key.includes(`${siteConfig.env.backendServiceURL}/organizations`)
-      );
-      return result;
-    } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error("Unknown error occurred")
-      );
-      throw err;
-    } finally {
-      setIsLoading(false);
+  return EntityApi.useEntityMutation<Organization>(
+    `${siteConfig.env.backendServiceURL}/organizations`,
+    {
+      create: OrganizationAPI.create,
+      update: OrganizationAPI.update,
+      delete: OrganizationAPI.delete,
     }
-  };
-
-  return {
-    /**
-     * Creates a new organization.
-     *
-     * @param organization The organization data to create
-     * @returns Promise resolving to the created organization
-     */
-    create: (organization: Organization) =>
-      executeWithState(() => OrganizationAPI.create(organization)),
-    /**
-     * Updates an existing organization.
-     *
-     * @param id The ID of the organization to update
-     * @param organization The updated organization data
-     * @returns Promise resolving to the updated organization
-     */
-    update: (id: Id, organization: Organization) =>
-      executeWithState(() => OrganizationAPI.update(id, organization)),
-    /**
-     * Deletes an organization.
-     *
-     * @param id The ID of the organization to delete
-     * @returns Promise resolving to the deleted organization
-     */
-    delete: (id: Id) => executeWithState(() => OrganizationAPI.delete(id)),
-    /** Indicates if any operation is currently in progress */
-    isLoading,
-    /** Contains the error if the last operation failed, null otherwise */
-    error,
-  };
+  );
 };
