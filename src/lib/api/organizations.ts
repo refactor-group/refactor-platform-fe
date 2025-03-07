@@ -3,7 +3,6 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { Organization, defaultOrganization } from "@/types/organization";
-import useSWR from "swr";
 import { EntityApi } from "./entity-api";
 
 /**
