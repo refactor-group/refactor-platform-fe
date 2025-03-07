@@ -23,10 +23,8 @@ const lowlight = createLowlight(all);
 
 export const Extensions = (
   doc: any,
-  displayName: string,
   provider?: TiptapCollabProvider | null
 ) => {
-  console.log("EXTENSIONS", provider);
   return [
     Document,
     BulletList,
@@ -50,10 +48,6 @@ export const Extensions = (
     }),
     CollaborationCursor.configure({
       provider,
-      user: {
-        name: displayName,
-        color: "#ffcc00",
-      },
     }),
   ];
 };
