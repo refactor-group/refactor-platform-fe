@@ -109,7 +109,7 @@ export namespace EntityApi {
    * @returns A Promise resolving to the response of type R
    */
   export const deleteFn = async <T, R>(url: string): Promise<R> => {
-    return mutationFn<T, R>("put", url);
+    return mutationFn<T, R>("delete", url);
   };
 
   /**
