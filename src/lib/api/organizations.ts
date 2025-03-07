@@ -3,55 +3,9 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { Organization, defaultOrganization } from "@/types/organization";
-import axios from "axios";
 import { useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
-
-interface ApiResponse<T> {
-  status_code: number;
-  data: T;
-}
-
-// Generic fetcher function
-const fetcher = async <T>(url: string, config?: any): Promise<T> =>
-  axios
-    .get<ApiResponse<T>>(url, {
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-      ...config,
-    })
-    .then((res) => res.data.data);
-
-// Type-safe mutation function for manipulating Organization data
-const mutationFn = async <T, R>(
-  method: "post" | "put" | "delete",
-  url: string,
-  data?: T
-): Promise<R> => {
-  const config = {
-    withCredentials: true,
-    timeout: 5000,
-    headers: {
-      "X-Version": siteConfig.env.backendApiVersion,
-    },
-  };
-
-  let response;
-  if (method === "delete") {
-    response = await axios.delete<ApiResponse<R>>(url, config);
-  } else if (method === "put" && data) {
-    response = await axios.put<ApiResponse<R>>(url, data, config);
-  } else if (data) {
-    response = await axios.post<ApiResponse<R>>(url, data, config);
-  } else {
-    throw new Error("Invalid method or missing data");
-  }
-
-  return response.data.data;
-};
+import { EntityApi } from "./entity-api";
 
 /**
  * API client for organization-related operations.
@@ -67,7 +21,7 @@ export const OrganizationAPI = {
    * @returns Promise resolving to an array of Organization objects
    */
   list: async (userId: Id): Promise<Organization[]> =>
-    fetcher<Organization[]>(
+    EntityApi.listFn<Organization>(
       `${siteConfig.env.backendServiceURL}/organizations`,
       {
         params: { user_id: userId },
@@ -81,7 +35,7 @@ export const OrganizationAPI = {
    * @returns Promise resolving to the Organization object
    */
   get: async (id: Id): Promise<Organization> =>
-    fetcher<Organization>(
+    EntityApi.getFn<Organization>(
       `${siteConfig.env.backendServiceURL}/organizations/${id}`
     ),
 
@@ -92,8 +46,7 @@ export const OrganizationAPI = {
    * @returns Promise resolving to the created Organization object
    */
   create: async (organization: Organization): Promise<Organization> =>
-    mutationFn<Organization, Organization>(
-      "post",
+    EntityApi.createFn<Organization, Organization>(
       `${siteConfig.env.backendServiceURL}/organizations`,
       organization
     ),
@@ -106,8 +59,7 @@ export const OrganizationAPI = {
    * @returns Promise resolving to the updated Organization object
    */
   update: async (id: Id, organization: Organization): Promise<Organization> =>
-    mutationFn<Organization, Organization>(
-      "put",
+    EntityApi.updateFn<Organization, Organization>(
       `${siteConfig.env.backendServiceURL}/organizations/${id}`,
       organization
     ),
@@ -119,8 +71,7 @@ export const OrganizationAPI = {
    * @returns Promise resolving to the deleted Organization object
    */
   delete: async (id: Id): Promise<Organization> =>
-    mutationFn<null, Organization>(
-      "delete",
+    EntityApi.deleteFn<null, Organization>(
       `${siteConfig.env.backendServiceURL}/organizations/${id}`
     ),
 };
