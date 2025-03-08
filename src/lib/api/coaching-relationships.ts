@@ -1,167 +1,178 @@
 // Interacts with the coaching_relationship endpoints
 
 import { siteConfig } from "@/site.config";
+import { Id } from "@/types/general";
 import {
   CoachingRelationshipWithUserNames,
-  coachingRelationshipsWithUserNamesToString,
   defaultCoachingRelationshipWithUserNames,
-  defaultCoachingRelationshipsWithUserNames,
-  isCoachingRelationshipWithUserNames,
-  isCoachingRelationshipWithUserNamesArray,
-  parseCoachingRelationshipWithUserNames,
 } from "@/types/coaching_relationship_with_user_names";
-import { Id } from "@/types/general";
-import axios, { AxiosError, AxiosResponse } from "axios";
-import useSWR from "swr";
+import { EntityApi } from "./entity-api";
 
-interface ApiResponse {
-  status_code: number;
-  data: CoachingRelationshipWithUserNames[];
-}
-
-const fetcher = async (
-  url: string
-): Promise<CoachingRelationshipWithUserNames[]> =>
-  axios
-    .get<ApiResponse>(url, {
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then((res) => res.data.data);
-
-/// A hook to retrieve all CoachingRelationships associated with organizationId
-export function useCoachingRelationships(organizationId: Id) {
-  console.debug(`organizationId: ${organizationId}`);
-
-  const { data, error, isLoading } = useSWR<
-    CoachingRelationshipWithUserNames[]
-  >(
-    organizationId ?
-      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships` : null,
-    fetcher
-  );
-
-  console.debug(`data: ${JSON.stringify(data)}`);
-
-  return {
-    relationships: Array.isArray(data) ? data : [],
-    isLoading,
-    isError: error,
-  };
-}
-
-export const fetchCoachingRelationshipWithUserNames = async (
-  organization_id: Id,
-  relationship_id: Id
-): Promise<CoachingRelationshipWithUserNames> => {
-  const axios = require("axios");
-
-  var relationship: CoachingRelationshipWithUserNames =
-    defaultCoachingRelationshipWithUserNames();
-  var err: string = "";
-
-  const data = await axios
-    .get(
-      `${siteConfig.env.backendServiceURL}/organizations/${organization_id}/coaching_relationships/${relationship_id}`,
-      {
-        withCredentials: true,
-        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-        },
-      }
-    )
-    .then(function (response: AxiosResponse) {
-      // handle success
-      const relationshipData = response.data.data;
-      if (isCoachingRelationshipWithUserNames(relationshipData)) {
-        relationship = parseCoachingRelationshipWithUserNames(relationshipData);
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        err =
-          "Retrieval of CoachingRelationshipWithUserNames failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        err =
-          "Retrieval of CoachingRelationshipWithUserNames failed, system error: " +
-          error.response.data;
-      } else {
-        err =
-          `Retrieval of CoachingRelationshipWithUserNames(` +
-          relationship_id +
-          `) failed: ` +
-          error.response?.data;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return relationship;
-};
-
-export const fetchCoachingRelationshipsWithUserNames = async (
-  organizationId: Id
-): Promise<[CoachingRelationshipWithUserNames[], string]> => {
-  const axios = require("axios");
-
-  var relationships: CoachingRelationshipWithUserNames[] =
-    defaultCoachingRelationshipsWithUserNames();
-  var err: string = "";
-
-  const data = await axios
-    .get(
+/**
+ * API client for organization-related operations.
+ *
+ * This object provides a collection of functions for interacting with the organization endpoints
+ * on the backend service. It handles the HTTP requests and response parsing for all CRUD operations.
+ */
+export const CoachingRelationshipApi = {
+  /*
+   * Fetches a list of coaching relationships associated with a specific organization.
+   *
+   * @param organizationId The ID of the organization under which to retrieve all coaching relationships
+   * @returns Promise resolving to an array of CoachingRelationshipsWithUserNames objects
+   */
+  list: async (
+    organizationId: Id
+  ): Promise<CoachingRelationshipWithUserNames[]> =>
+    EntityApi.listFn<CoachingRelationshipWithUserNames>(
       `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
       {
-        withCredentials: true,
-        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-        },
+        params: { organization_id: organizationId },
       }
-    )
-    .then(function (response: AxiosResponse) {
-      // handle success
-      console.debug(response);
-      if (isCoachingRelationshipWithUserNamesArray(response.data.data)) {
-        relationships = response.data.data;
-        console.debug(
-          `CoachingRelationshipsWithUserNames: ` +
-          coachingRelationshipsWithUserNamesToString(relationships) +
-          `.`
-        );
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        console.error(
-          "Retrieval of CoachingRelationshipsWithUserNames failed: unauthorized."
-        );
-        err =
-          "Retrieval of CoachingRelationshipsWithUserNames failed: unauthorized.";
-      } else {
-        console.log(error);
-        console.error(
-          `Retrieval of CoachingRelationshipsWithUserNames by organization Id (` +
-          organizationId +
-          `) failed.`
-        );
-        err =
-          `Retrieval of CoachingRealtionshipsWithUserNames by organization Id (` +
-          organizationId +
-          `) failed.`;
-      }
-    });
+    ),
 
-  return [relationships, err];
+  /**
+   * Fetches a single coaching relationship by its ID.
+   *
+   * @param organizationId The ID of the organization to retrieve a relationship under
+   * @param relationshipId The ID of the coaching relationship to retrieve
+   * @returns Promise resolving to the CoachingRelationshipWithUserNames object
+   */
+  get: async (
+    organizationId: Id,
+    relationshipId: Id
+  ): Promise<CoachingRelationshipWithUserNames> =>
+    EntityApi.getFn<CoachingRelationshipWithUserNames>(
+      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships/${relationshipId}`
+    ),
+
+  /**
+   * Creates a new coaching relationship.
+   *
+   * @param organizationId The organization ID under which to create the new coaching relationship
+   * @param relationship The coaching relationship data to create
+   * @returns Promise resolving to the created CoachingRelationshipWithUserNames object
+   */
+  create: async (
+    _relationship: CoachingRelationshipWithUserNames
+  ): Promise<CoachingRelationshipWithUserNames> => {
+    throw new Error("Create operation not implemented");
+  },
+
+  createNested: async (
+    organizationId: Id,
+    entity: CoachingRelationshipWithUserNames
+  ): Promise<CoachingRelationshipWithUserNames> => {
+    return EntityApi.createFn<
+      CoachingRelationshipWithUserNames,
+      CoachingRelationshipWithUserNames
+    >(
+      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
+      entity
+    );
+  },
+
+  update: async (_id: Id, entity: CoachingRelationshipWithUserNames) => {
+    throw new Error("Update operation not implemented");
+  },
+
+  delete: async (_id: Id) => {
+    throw new Error("Delete operation not implemented");
+  },
+};
+
+/**
+ * A custom React hook that fetches a list of coaching relationships for a specific organization.
+ *
+ * This hook uses SWR to efficiently fetch, cache, and revalidate coaching relationship data.
+ * It automatically refreshes data when the component mounts.
+ *
+ * @param organizationId The ID of the organization whose coaching relationships should be fetched
+ * @returns An object containing:
+ *
+ * * relationships: Array of CoachingRelationshipWithUserNames objects (empty array if data is not yet loaded)
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useCoachingRelationshipList = (organizationId: Id) => {
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<CoachingRelationshipWithUserNames>(
+      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
+      () => CoachingRelationshipApi.list(organizationId),
+      organizationId
+    );
+
+  return {
+    relationships: entities,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * A custom React hook that fetches a single coaching relationship by its ID.
+ * This hook uses SWR to efficiently fetch and cache organization data.
+ * It does not automatically revalidate the data on window focus, reconnect, or when data becomes stale.
+ *
+ * @param organizationId The ID of the organization under which to fetch the coaching relationship. If null or undefined, no fetch will occur.
+ * @param relationshipId The ID of the coaching relationship to fetch. If null or undefined, no fetch will occur.
+ * @returns An object containing:
+ *
+ * * relationship: The fetched CoachingRelationshipWithUserNames object, or a default relationship if not yet loaded
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useCoachingRelationship = (
+  organizationId: Id,
+  relationshipId: Id
+) => {
+  const url =
+    organizationId && relationshipId
+      ? `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships/${relationshipId}`
+      : null;
+  const fetcher = () =>
+    CoachingRelationshipApi.get(organizationId, relationshipId);
+
+  const { entity, isLoading, isError, refresh } =
+    EntityApi.useEntity<CoachingRelationshipWithUserNames>(
+      url,
+      fetcher,
+      defaultCoachingRelationshipWithUserNames()
+    );
+
+  return {
+    relationship: entity,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * A custom React hook that provides mutation operations for coaching relationships with loading and error state management.
+ * This hook simplifies creating coaching relationships while handling loading states,
+ * error management, and cache invalidation automatically.
+ *
+ * @returns An object containing:
+ * create: Function to create a new coaching relationship
+ * isLoading: Boolean indicating if any operation is in progress
+ * error: Error object if the last operation failed, null otherwise
+ */
+/**
+ * Hook for coaching relationship mutations.
+ * Provides methods to create, update, and delete coaching relationships.
+ */
+export const useCoachingRelationshipMutation = (organizationId: Id) => {
+  return EntityApi.useEntityMutation<CoachingRelationshipWithUserNames>(
+    `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
+    {
+      create: CoachingRelationshipApi.create,
+      createNested: CoachingRelationshipApi.createNested,
+      update: CoachingRelationshipApi.update,
+      delete: CoachingRelationshipApi.delete,
+    }
+  );
 };
