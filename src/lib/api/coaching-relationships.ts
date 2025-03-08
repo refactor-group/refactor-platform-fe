@@ -47,11 +47,7 @@ export const CoachingRelationshipApi = {
     ),
 
   /**
-   * Creates a new coaching relationship.
-   *
-   * @param organizationId The organization ID under which to create the new coaching relationship
-   * @param relationship The coaching relationship data to create
-   * @returns Promise resolving to the created CoachingRelationshipWithUserNames object
+   * Unimplemented
    */
   create: async (
     _relationship: CoachingRelationshipWithUserNames
@@ -59,6 +55,13 @@ export const CoachingRelationshipApi = {
     throw new Error("Create operation not implemented");
   },
 
+  /**
+   * Creates a new coaching relationship.
+   *
+   * @param organizationId The organization ID under which to create the new coaching relationship
+   * @param relationship The coaching relationship data to create
+   * @returns Promise resolving to the created CoachingRelationshipWithUserNames object
+   */
   createNested: async (
     organizationId: Id,
     entity: CoachingRelationshipWithUserNames
@@ -72,10 +75,16 @@ export const CoachingRelationshipApi = {
     );
   },
 
+  /**
+   * Unimplemented
+   */
   update: async (_id: Id, entity: CoachingRelationshipWithUserNames) => {
     throw new Error("Update operation not implemented");
   },
 
+  /**
+   * Unimplemented
+   */
   delete: async (_id: Id) => {
     throw new Error("Delete operation not implemented");
   },
