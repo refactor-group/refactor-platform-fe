@@ -11,7 +11,7 @@ import { EntityApi } from "./entity-api";
  * This object provides a collection of functions for interacting with the organization endpoints
  * on the backend service. It handles the HTTP requests and response parsing for all CRUD operations.
  */
-export const OrganizationAPI = {
+export const OrganizationApi = {
   /*
    * Fetches a list of organizations associated with a specific user.
    *
@@ -48,6 +48,10 @@ export const OrganizationAPI = {
       `${siteConfig.env.backendServiceURL}/organizations`,
       organization
     ),
+
+  createNested: async (id: Id, entity: Organization): Promise<Organization> => {
+    throw new Error("Create nested operation not implemented");
+  },
 
   /**
    * Updates an existing organization.
@@ -92,7 +96,7 @@ export const useOrganizationList = (userId: Id) => {
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<Organization>(
       `${siteConfig.env.backendServiceURL}/organizations`,
-      () => OrganizationAPI.list(userId),
+      () => OrganizationApi.list(userId),
       userId
     );
 
@@ -121,7 +125,7 @@ export const useOrganization = (id: Id) => {
   const url = id
     ? `${siteConfig.env.backendServiceURL}/organizations/${id}`
     : null;
-  const fetcher = () => OrganizationAPI.get(id);
+  const fetcher = () => OrganizationApi.get(id);
 
   const { entity, isLoading, isError, refresh } =
     EntityApi.useEntity<Organization>(url, fetcher, defaultOrganization());
@@ -154,9 +158,10 @@ export const useOrganizationMutation = () => {
   return EntityApi.useEntityMutation<Organization>(
     `${siteConfig.env.backendServiceURL}/organizations`,
     {
-      create: OrganizationAPI.create,
-      update: OrganizationAPI.update,
-      delete: OrganizationAPI.delete,
+      create: OrganizationApi.create,
+      createNested: OrganizationApi.createNested,
+      update: OrganizationApi.update,
+      delete: OrganizationApi.delete,
     }
   );
 };
