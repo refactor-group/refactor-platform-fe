@@ -205,6 +205,7 @@ export namespace EntityApi {
     baseUrl: string,
     api: {
       create: (entity: T) => Promise<T>;
+      createNested: (id: Id, entity: T) => Promise<T>;
       update: (id: Id, entity: T) => Promise<T>;
       delete: (id: Id) => Promise<T>;
     }
@@ -251,6 +252,8 @@ export namespace EntityApi {
        * @returns Promise resolving to the created entity
        */
       create: (entity: T) => executeWithState(() => api.create(entity)),
+      createNested: (id: Id, entity: T) =>
+        executeWithState(() => api.createNested(id, entity)),
       /**
        * Updates an existing entity.
        *
