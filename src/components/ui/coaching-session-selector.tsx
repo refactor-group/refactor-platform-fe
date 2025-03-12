@@ -15,7 +15,7 @@ import { useCoachingSessions } from "@/lib/api/coaching-sessions";
 import { useEffect, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
-import { fetchOverarchingGoalsByCoachingSessionId } from "@/lib/api/overarching-goals";
+import { OverarchingGoalApi } from "@/lib/api/overarching-goals";
 import { OverarchingGoal } from "@/types/overarching-goal";
 import { CoachingSession } from "@/types/coaching-session";
 
@@ -56,7 +56,7 @@ function CoachingSessionsSelectItems({
       try {
         const sessionIds = coachingSessions?.map((session) => session.id) || [];
         const goalsPromises = sessionIds.map((id) =>
-          fetchOverarchingGoalsByCoachingSessionId(id)
+          OverarchingGoalApi.list(id)
         );
         const fetchedGoals = await Promise.all(goalsPromises);
         setGoals(fetchedGoals);
@@ -163,9 +163,7 @@ export default function CoachingSessionSelector({
 
       setIsLoadingGoal(true);
       try {
-        const goals = await fetchOverarchingGoalsByCoachingSessionId(
-          currentCoachingSessionId
-        );
+        const goals = await OverarchingGoalApi.list(currentCoachingSessionId);
         setCurrentGoal(goals[0]);
       } catch (error) {
         console.error("Error fetching goal:", error);
