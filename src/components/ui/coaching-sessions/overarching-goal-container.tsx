@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
 import { ItemStatus, Id } from "@/types/general";
 import { Action } from "@/types/action";
@@ -18,12 +18,10 @@ import { siteConfig } from "@/site.config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverarchingGoalComponent } from "./overarching-goal";
 import {
-  createOverarchingGoal,
-  fetchOverarchingGoalsByCoachingSessionId,
-  updateOverarchingGoal,
+  useOverarchingGoalBySession,
+  useOverarchingGoalMutation,
 } from "@/lib/api/overarching-goals";
 import {
-  defaultOverarchingGoal,
   OverarchingGoal,
   overarchingGoalToString,
 } from "@/types/overarching-goal";
@@ -33,11 +31,12 @@ const OverarchingGoalContainer: React.FC<{
   userId: Id;
 }> = ({ userId }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [goal, setGoal] = useState<OverarchingGoal>(defaultOverarchingGoal());
-  const [goalId, setGoalId] = useState<Id>("");
   const { currentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
   );
+  const { overarchingGoal, isLoading, isError, refresh } =
+    useOverarchingGoalBySession(currentCoachingSessionId);
+  const { create, update } = useOverarchingGoalMutation();
 
   const handleAgreementAdded = (body: string): Promise<Agreement> => {
     // Calls the backend endpoint that creates and stores a full Agreement entity
@@ -116,76 +115,53 @@ const OverarchingGoalContainer: React.FC<{
       });
   };
 
-  useEffect(() => {
-    async function fetchOverarchingGoal() {
-      if (!currentCoachingSessionId) return;
-
-      await fetchOverarchingGoalsByCoachingSessionId(currentCoachingSessionId)
-        .then((goals) => {
-          const goal = goals[0];
-          if (goals.length > 0) {
-            console.trace("Overarching Goal: " + overarchingGoalToString(goal));
-            setGoalId(goal.id);
-            setGoal(goal);
-          } else {
-            console.trace(
-              "No Overarching Goals associated with this coachingSessionId"
-            );
-          }
-        })
-        .catch((err) => {
-          console.error(
-            "Failed to fetch Overarching Goal for current coaching session: " +
-              err
-          );
-        });
-    }
-    fetchOverarchingGoal();
-  }, [currentCoachingSessionId]);
-
   const handleGoalChange = async (newGoal: OverarchingGoal) => {
-    console.trace("handleGoalChange (goal to set/update): " + newGoal.title);
+    // console.trace(
+    //   "handleGoalChange (goal title to set/update): " + newGoal.title
+    // );
+    // console.trace(
+    //   "handleGoalChange (goal to set/update): " +
+    //     overarchingGoalToString(newGoal)
+    // );
+    // console.trace(
+    //   "handleGoalChange (overarchingGoal.id , currentCoachingSessionId set/update): " +
+    //     overarchingGoal.id +
+    //     ", " +
+    //     currentCoachingSessionId
+    // );
 
-    if (goalId && currentCoachingSessionId) {
-      console.debug("Update existing Overarching Goal with id: " + goalId);
-      updateOverarchingGoal(
-        goalId,
-        currentCoachingSessionId,
-        newGoal.title,
-        newGoal.body,
-        newGoal.status
-      )
-        .then((responseGoal) => {
+    try {
+      if (currentCoachingSessionId) {
+        if (overarchingGoal.id) {
+          // console.debug(
+          //   "Update existing Overarching Goal with id: " + overarchingGoal.id
+          // );
+          const responseGoal = await update(overarchingGoal.id, newGoal);
           console.trace(
             "Updated Overarching Goal: " + overarchingGoalToString(responseGoal)
           );
-          setGoal(responseGoal);
-        })
-        .catch((err) => {
-          console.error("Failed to update Overarching Goal: " + err);
-        });
-    } else if (!goalId && currentCoachingSessionId) {
-      createOverarchingGoal(
-        currentCoachingSessionId,
-        newGoal.title,
-        newGoal.body,
-        newGoal.status
-      )
-        .then((responseGoal) => {
+        } else if (!overarchingGoal.id) {
+          newGoal.coaching_session_id = currentCoachingSessionId;
+          // console.trace(
+          //   "Creating new Overarching Goal: " + overarchingGoalToString(newGoal)
+          // );
+          const responseGoal = await create(newGoal);
           console.trace(
             "Newly created Overarching Goal: " +
               overarchingGoalToString(responseGoal)
           );
-          setGoal(responseGoal);
-          setGoalId(responseGoal.id);
-        })
-        .catch((err) => {
-          console.error("Failed to create new Overarching Goal: " + err);
-        });
-    } else {
-      console.error(
-        "Could not update or create a Overarching Goal since coachingSessionId or userId are not set."
-      );
+
+          // Manually trigger a local refresh of the cached OverarchingGoal data such that
+          // any other local code using the KeyedMutator will also update with this new data.
+          refresh();
+        }
+      } else {
+        console.error(
+          "Could not update or create a Overarching Goal since coachingSessionId or userId are not set."
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update or create Overarching Goal: " + err);
     }
   };
 
@@ -198,7 +174,7 @@ const OverarchingGoalContainer: React.FC<{
           className="w-full space-y-2"
         >
           <OverarchingGoalComponent
-            initialValue={goal}
+            initialValue={overarchingGoal}
             onOpenChange={(open: boolean) => setIsOpen(open)}
             onGoalChange={(goal: OverarchingGoal) => handleGoalChange(goal)}
           ></OverarchingGoalComponent>
