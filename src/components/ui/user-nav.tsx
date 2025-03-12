@@ -58,7 +58,7 @@ export function UserNav() {
     console.trace("Doing AuthStore logout");
     logout();
 
-    router.push("/login");
+    router.push("/");
   }
 
   return (
