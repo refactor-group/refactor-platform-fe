@@ -2,11 +2,8 @@
 
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
-import {
-  Agreement,
-  defaultAgreement,
-  transformAgreement,
-} from "@/types/agreement";
+import { Agreement, defaultAgreement } from "@/types/agreement";
+import { transformEntityDates } from "@/types/general";
 import { EntityApi } from "./entity-api";
 
 const AGREEMENTS_BASEURL: string = `${siteConfig.env.backendServiceURL}/agreements`;
@@ -95,7 +92,7 @@ export const useAgreementList = (coachingSessionId: Id) => {
   >(
     AGREEMENTS_BASEURL,
     () => AgreementApi.list(coachingSessionId),
-    transformAgreement,
+    transformEntityDates,
     coachingSessionId
   );
 
