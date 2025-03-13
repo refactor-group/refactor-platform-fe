@@ -1,217 +1,182 @@
 // Interacts with the agreement endpoints
 
 import { siteConfig } from "@/site.config";
+import { Id } from "@/types/general";
 import {
   Agreement,
   defaultAgreement,
-  isAgreement,
-  isAgreementArray,
-  parseAgreement,
+  transformAgreement,
 } from "@/types/agreement";
-import { Id } from "@/types/general";
-import { AxiosError, AxiosResponse } from "axios";
+import { EntityApi } from "./entity-api";
 
-export const fetchAgreementsByCoachingSessionId = async (
-  coachingSessionId: Id
-): Promise<Agreement[]> => {
-  const axios = require("axios");
+const AGREEMENTS_BASEURL: string = `${siteConfig.env.backendServiceURL}/agreements`;
 
-  var agreements: Agreement[] = [];
-  var err: string = "";
+/**
+ * API client for agreement-related operations.
+ *
+ * This object provides a collection of functions for interacting with the agreement endpoints
+ * on the backend service. It handles the HTTP requests and response parsing for all CRUD operations.
+ */
+export const AgreementApi = {
+  /*
+   * Fetches a list of agreements associated with a specific user.
+   *
+   * @param userId The ID of the user whose agreement should be retrieved
+   * @returns Promise resolving to an array of Agreement objects
+   */
+  list: async (coachingSessionId: Id): Promise<Agreement[]> =>
+    EntityApi.listFn<Agreement>(AGREEMENTS_BASEURL, {
+      params: { coaching_session_id: coachingSessionId },
+    }),
 
-  const data = await axios
-    .get(`${siteConfig.env.backendServiceURL}/agreements`, {
-      params: {
-        coaching_session_id: coachingSessionId,
-      },
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      var agreements_data = response.data.data;
-      if (isAgreementArray(agreements_data)) {
-        agreements_data.forEach((agreements_data: any) => {
-          agreements.push(parseAgreement(agreements_data));
-        });
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      if (error.response?.status == 401) {
-        err = "Retrieval of Agreements failed: unauthorized.";
-      } else if (error.response?.status == 404) {
-        err =
-          "Retrieval of Agreements failed: Agreements by coaching session Id (" +
-          coachingSessionId +
-          ") not found.";
-      } else {
-        err =
-          `Retrieval of Agreements by coaching session Id (` +
-          coachingSessionId +
-          `) failed.`;
-      }
-    });
+  /**
+   * Fetches a single agreement by its ID.
+   *
+   * @param id The ID of the agreement to retrieve
+   * @returns Promise resolving to the Agreement object
+   */
+  get: async (id: Id): Promise<Agreement> =>
+    EntityApi.getFn<Agreement>(`${AGREEMENTS_BASEURL}/${id}`),
 
-  if (err) {
-    console.error(err);
-    throw err;
-  }
+  /**
+   * Creates a new agreement.
+   *
+   * @param agreement The agreement data to create
+   * @returns Promise resolving to the created Agreement object
+   */
+  create: async (agreement: Agreement): Promise<Agreement> =>
+    EntityApi.createFn<Agreement, Agreement>(AGREEMENTS_BASEURL, agreement),
 
-  return agreements;
+  createNested: async (_id: Id, _entity: Agreement): Promise<Agreement> => {
+    throw new Error("Create nested operation not implemented");
+  },
+
+  /**
+   * Updates an existing agreement.
+   *
+   * @param id The ID of the agreement to update
+   * @param agreement The updated agreement data
+   * @returns Promise resolving to the updated Agreement object
+   */
+  update: async (id: Id, agreement: Agreement): Promise<Agreement> =>
+    EntityApi.updateFn<Agreement, Agreement>(
+      `${AGREEMENTS_BASEURL}/${id}`,
+      agreement
+    ),
+
+  /**
+   * Deletes an agreement.
+   *
+   * @param id The ID of the agreement to delete
+   * @returns Promise resolving to the deleted Agreement object
+   */
+  delete: async (id: Id): Promise<Agreement> =>
+    EntityApi.deleteFn<null, Agreement>(`${AGREEMENTS_BASEURL}/${id}`),
 };
 
-export const createAgreement = async (
-  coaching_session_id: Id,
-  user_id: Id,
-  body: string
-): Promise<Agreement> => {
-  const axios = require("axios");
+/**
+ * A custom React hook that fetches a list of agreements for a specific user.
+ *
+ * This hook uses SWR to efficiently fetch, cache, and revalidate agreement data.
+ * It automatically refreshes data when the component mounts.
+ *
+ * @param coachingSessionId The ID of the coachingSessionId whose agreements should be fetched
+ * @returns An object containing:
+ *
+ * * agreements: Array of Agreement objects (empty array if data is not yet loaded)
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useAgreementList = (coachingSessionId: Id) => {
+  const { entities, isLoading, isError, refresh } = EntityApi.useEntityList<
+    Agreement,
+    Agreement
+  >(
+    AGREEMENTS_BASEURL,
+    () => AgreementApi.list(coachingSessionId),
+    transformAgreement,
+    coachingSessionId
+  );
 
-  const newAgreementJson = {
-    coaching_session_id: coaching_session_id,
-    user_id: user_id,
-    body: body,
+  return {
+    agreements: entities,
+    isLoading,
+    isError,
+    refresh,
   };
-  console.debug("newAgreementJson: " + JSON.stringify(newAgreementJson));
-  // A full real note to be returned from the backend with the same body
-  var createdAgreement: Agreement = defaultAgreement();
-  var err: string = "";
-
-  const data = await axios
-    .post(`${siteConfig.env.backendServiceURL}/agreements`, newAgreementJson, {
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-        "Content-Type": "application/json",
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      const agreement_data = response.data.data;
-      if (isAgreement(agreement_data)) {
-        createdAgreement = parseAgreement(agreement_data);
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        err = "Creation of Agreement failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        err = "Creation of Agreement failed: internal server error.";
-      } else {
-        err = `Creation of Agreement failed.`;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return createdAgreement;
 };
 
-export const updateAgreement = async (
-  id: Id,
-  user_id: Id,
-  coaching_session_id: Id,
-  body: string
-): Promise<Agreement> => {
-  const axios = require("axios");
+/**
+ * A custom React hook that fetches a single agreement by its ID.
+ * This hook uses SWR to efficiently fetch and cache agreement data.
+ * It does not automatically revalidate the data on window focus, reconnect, or when data becomes stale.
+ *
+ * @param id The ID of the agreement to fetch. If null or undefined, no fetch will occur.
+ * @returns An object containing:
+ *
+ * * agreement: The fetched Agreement object, or a default agreement if not yet loaded
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useAgreement = (id: Id) => {
+  const url = id ? `${AGREEMENTS_BASEURL}/${id}` : null;
+  const fetcher = () => AgreementApi.get(id);
 
-  var updatedAgreement: Agreement = defaultAgreement();
-  var err: string = "";
+  const { entity, isLoading, isError, refresh } =
+    EntityApi.useEntity<Agreement>(url, fetcher, defaultAgreement());
 
-  const newAgreementJson = {
-    coaching_session_id: coaching_session_id,
-    user_id: user_id,
-    body: body,
+  return {
+    agreement: entity,
+    isLoading,
+    isError,
+    refresh,
   };
-
-  const data = await axios
-    .put(
-      `${siteConfig.env.backendServiceURL}/agreements/${id}`,
-      newAgreementJson,
-      {
-        withCredentials: true,
-        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-          "Content-Type": "application/json",
-        },
-      }
-    )
-    .then(function (response: AxiosResponse) {
-      // handle success
-      const agreement_data = response.data.data;
-      if (isAgreement(agreement_data)) {
-        updatedAgreement = parseAgreement(agreement_data);
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        err = "Update of Agreement failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        err = "Update of Agreement failed: internal server error.";
-      } else {
-        err = `Update of new Agreement failed.`;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return updatedAgreement;
 };
 
-export const deleteAgreement = async (id: Id): Promise<Agreement> => {
-  const axios = require("axios");
+/**
+ * A custom React hook that fetches a single agreement by coaching session ID.
+ * This hook uses SWR to efficiently fetch and cache agreement data.
+ * It does not automatically revalidate the data on window focus, reconnect, or when data becomes stale.
+ *
+ * @param coachingSessionId The coaching session ID of the agreement to fetch. If null or undefined, no fetch will occur.
+ * @returns An object containing:
+ *
+ * * agreement: The fetched Agreement object, or a default agreement if not yet loaded
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useAgreementBySession = (coachingSessionId: Id) => {
+  const { agreements, isLoading, isError, refresh } =
+    useAgreementList(coachingSessionId);
 
-  var deletedAgreement: Agreement = defaultAgreement();
-  var err: string = "";
+  return {
+    agreement: agreements.length ? agreements[0] : defaultAgreement(),
+    isLoading,
+    isError: isError,
+    refresh,
+  };
+};
 
-  const data = await axios
-    .delete(`${siteConfig.env.backendServiceURL}/agreements/${id}`, {
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-        "Content-Type": "application/json",
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      const agreement_data = response.data.data;
-      if (isAgreement(agreement_data)) {
-        deletedAgreement = parseAgreement(agreement_data);
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        err = "Deletion of Agreement failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        err = "Deletion of Agreement failed: internal server error.";
-      } else {
-        err = `Deletion of new Agreement failed.`;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return deletedAgreement;
+/**
+ * A custom React hook that provides mutation operations for agreements with loading and error state management.
+ * This hook simplifies creating, updating, and deleting agreements while handling loading states,
+ * error management, and cache invalidation automatically.
+ *
+ * @returns An object containing:
+ * create: Function to create a new agreement
+ * update: Function to update an existing agreement
+ * delete: Function to delete an agreement
+ * isLoading: Boolean indicating if any operation is in progress
+ * error: Error object if the last operation failed, null otherwise
+ */
+export const useAgreementMutation = () => {
+  return EntityApi.useEntityMutation<Agreement>(AGREEMENTS_BASEURL, {
+    create: AgreementApi.create,
+    createNested: AgreementApi.createNested,
+    update: AgreementApi.update,
+    delete: AgreementApi.delete,
+  });
 };
