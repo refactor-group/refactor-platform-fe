@@ -50,7 +50,7 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
         }),
         {
           name: "auth-store",
-          storage: createJSONStorage(() => sessionStorage),
+          storage: createJSONStorage(() => localStorage),
         }
       )
     )
