@@ -37,23 +37,6 @@ export const transformAgreement = (data: any): any => {
   return transformed;
 };
 
-// The main purpose of having this parsing function is to be able to parse the
-// returned DateTimeWithTimeZone (Rust type) string into something that ts-luxon
-// will agree to work with internally.
-export function parseAgreement(data: any): Agreement {
-  if (!isAgreement(data)) {
-    throw new Error("Invalid Agreement object data");
-  }
-  return {
-    id: data.id,
-    coaching_session_id: data.coaching_session_id,
-    body: data.body,
-    user_id: data.user_id,
-    created_at: DateTime.fromISO(data.created_at.toString()),
-    updated_at: DateTime.fromISO(data.updated_at.toString()),
-  };
-}
-
 export function isAgreement(value: unknown): value is Agreement {
   if (!value || typeof value !== "object") {
     return false;
