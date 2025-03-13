@@ -57,44 +57,26 @@ export default function CoachingSessionsPage() {
       <OverarchingGoalContainer userId={userId} />
 
       <div className="row-span-1 h-full py-4 px-4">
-        <div className="grid h-full items-stretch gap-6 md:grid-cols-[1fr_200px]">
-          <div className="flex-col space-y-4 sm:flex md:order-1">
-            <Tabs defaultValue="notes">
-              <TabsList className="flex w-128 grid-cols-2 justify-start">
-                <TabsTrigger value="notes">Notes</TabsTrigger>
-                <TabsTrigger value="console" className="hidden">
-                  Console
-                </TabsTrigger>
-                <TabsTrigger value="coachs_notes" className="hidden">
-                  <div className="flex gap-2 items-start">
-                    <LockClosedIcon className="mt-1" />
-                    Coach&#39;s Notes
-                  </div>
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="notes">
-                <div className="flex-col h-full space-y-4">
-                  <CoachingNotes />
+        <div className="flex-col space-y-4 sm:flex md:order-1">
+          <Tabs defaultValue="notes">
+            <TabsList className="flex w-128 grid-cols-2 justify-start">
+              <TabsTrigger value="notes">Notes</TabsTrigger>
+              <TabsTrigger value="console" className="hidden">
+                Console
+              </TabsTrigger>
+              <TabsTrigger value="coachs_notes" className="hidden">
+                <div className="flex gap-2 items-start">
+                  <LockClosedIcon className="mt-1" />
+                  Coach&#39;s Notes
                 </div>
-              </TabsContent>
-              <TabsContent value="console">
-                <div className="p-4 min-h-[400px] md:min-h-[630px] lg:min-h-[630px] bg-gray-500 text-white">
-                  Console placeholder
-                </div>
-              </TabsContent>
-              <TabsContent value="coachs_notes">
-                <div className="flex h-full flex-col space-y-4">
-                  <Textarea
-                    placeholder="Coach's notes"
-                    className="p-4 min-h-[400px] md:min-h-[630px] lg:min-h-[630px]"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-          <div className="flex-col space-y-4 sm:flex md:order-2">
-            <div className="grid gap-2 pt-2"></div>
-          </div>
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="notes">
+              <div className="flex-col h-full space-y-4">
+                <CoachingNotes />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>
