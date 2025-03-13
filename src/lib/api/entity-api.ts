@@ -2,7 +2,7 @@ import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import axios from "axios";
 import { useState } from "react";
-import useSWR, { SWRConfiguration, useSWRConfig } from "swr";
+import useSWR, { KeyedMutator, SWRConfiguration, useSWRConfig } from "swr";
 
 export namespace EntityApi {
   interface ApiResponse<T> {
@@ -10,20 +10,67 @@ export namespace EntityApi {
     data: T;
   }
 
-  // Generic fetcher function for fetching Entity data
-  const fetcher = async <T>(url: string, config?: any): Promise<T> =>
-    axios
-      .get<ApiResponse<T>>(url, {
-        withCredentials: true,
-        timeout: 5000,
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-        },
-        ...config,
-      })
-      .then((res) => res.data.data);
+  /**
+   * Core fetcher function with optional data transformation capability.
+   * Handles API requests and response processing with SWR compatibility.
+   *
+   * @template T The raw data type from the API response
+   * @template U The transformed data type (defaults to T if no transform provided)
+   * @param url The endpoint URL for the API request
+   * @param config Optional request configuration object
+   * @param transform Optional transformation function to process the response data
+   * @returns Promise resolving to either raw or transformed data of type U
+   *
+   * @remarks This function:
+   * - Implements standard API request handling with axios
+   * - Includes default configuration (credentials, timeout, headers)
+   * - Supports optional response data transformation
+   * - Maintains SWR compatibility for data fetching
+   * - Preserves type safety through generic parameters
+   *
+   * The transformation is applied to the raw data before returning, allowing
+   * for data normalization or type conversion workflows.
+   */
+  const fetcher = async <T, U = T>(
+    url: string,
+    config?: any,
+    transform?: (data: T) => U
+  ): Promise<U> => {
+    const response = await axios.get<ApiResponse<T>>(url, {
+      withCredentials: true,
+      timeout: 5000,
+      headers: {
+        "X-Version": siteConfig.env.backendApiVersion,
+      },
+      ...config,
+    });
 
-  // Type-safe mutation function for manipulating Entity data
+    const rawData = response.data.data;
+    return transform ? transform(rawData) : (rawData as unknown as U);
+  };
+
+  /**
+   * Type-safe mutation handler for executing CRUD operations via HTTP methods.
+   *
+   * @template T Type of the request payload data (optional for DELETE)
+   * @template R Type of the response data structure
+   * @param method HTTP method to execute (POST, PUT, DELETE)
+   * @param url API endpoint URL for the operation
+   * @param data Optional payload data required for POST/PUT operations
+   * @returns Promise resolving to response data of type R
+   * @throws Error for invalid methods or missing required payload data
+   *
+   * @remarks This function:
+   * - Enforces RESTful conventions for mutation operations
+   * - Handles payload data type validation through generics
+   * - Applies consistent request configuration (credentials, timeout, headers)
+   * - Extracts and returns only the data portion from API responses
+   * - Throws explicit errors for invalid method/data combinations
+   *
+   * @usage
+   * - POST/PUT: Requires data payload matching type T
+   * - DELETE: Executes without payload data
+   */
   const mutationFn = async <T, R>(
     method: "post" | "put" | "delete",
     url: string,
@@ -52,15 +99,31 @@ export namespace EntityApi {
   };
 
   /**
-   * Fetches a list of entities from the specified URL with optional parameters.
+   * Generic function to fetch and optionally transform a list of entities from an API endpoint.
    *
-   * @template R The type of entities to be returned in the array
+   * @template R The raw entity type returned by the API
+   * @template U The transformed entity type (defaults to R if no transform provided)
    * @param url The API endpoint URL to fetch data from
    * @param params Optional query parameters to include in the request
-   * @returns A Promise resolving to an array of entities of type R
+   * @param transform Optional transformation function applied to each entity in the response
+   * @returns A Promise resolving to an array of entities of type U
+   *
+   * @remarks This function:
+   * - Handles both raw and transformed data workflows
+   * - Applies transformations at the array level
+   * - Maintains type safety through generic parameters
+   * - Delegates actual fetching to the underlying fetcher utility
    */
-  export const listFn = async <R>(url: string, params: any): Promise<R[]> => {
-    return fetcher<R[]>(url, params);
+  export const listFn = async <R, U = R>(
+    url: string,
+    params: any,
+    transform?: (item: R) => U
+  ): Promise<U[]> => {
+    return fetcher<R[], U[]>(
+      url,
+      params,
+      transform ? (data) => data.map(transform) : undefined
+    );
   };
 
   /**
@@ -113,34 +176,117 @@ export namespace EntityApi {
   };
 
   /**
-   * A generic hook for fetching lists of entities.
+   * A generic React hook for fetching lists of entities using SWR.
    *
-   * @template T The entity type
-   * @param url The API endpoint URL
-   * @param fetcher Function to fetch the list of entities
-   * @param params Additional parameters for the SWR key
-   * @param options SWR configuration options
-   * @returns Object with the entity list, loading state, error state, and refresh function
+   * @template T The type of the entity being fetched
+   * @param url The API endpoint URL to fetch data from
+   * @param fetcher A function that returns a promise resolving to an array of entities
+   * @param params Optional parameters to include in the request (used as part of the SWR key)
+   * @param options Optional SWR configuration options to customize the fetching behavior
+   * @returns An object containing:
+   *   - entities: An array of fetched entities (empty array if data is not yet loaded)
+   *   - isLoading: A boolean indicating whether the data is currently being fetched
+   *   - isError: An error object if the fetch operation failed, undefined otherwise
+   *   - refresh: A function to manually trigger a refresh of the data
    */
-  export const useEntityList = <T>(
+  export function useEntityList<T>(
     url: string,
     fetcher: () => Promise<T[]>,
     params?: any,
     options?: SWRConfiguration
-  ) => {
+  ): {
+    entities: T[];
+    isLoading: boolean;
+    isError: any;
+    refresh: KeyedMutator<T[]>;
+  };
+
+  /**
+   * A generic React hook for fetching and transforming lists of entities using SWR.
+   *
+   * @template T The raw entity type returned by the API
+   * @template U The transformed entity type after applying the transformation
+   * @param url The API endpoint URL to fetch data from
+   * @param fetcher A function that returns a promise resolving to an array of raw entities
+   * @param transform A transformation function applied to each entity in the response list
+   * @param params Optional parameters to include in the request (used as part of the SWR key)
+   * @param options Optional SWR configuration options to customize fetching behavior
+   * @returns An object containing:
+   *   - entities: An array of transformed entities (empty array if data not loaded)
+   *   - isLoading: Boolean indicating if the data is currently being fetched
+   *   - isError: Error object if fetch failed, undefined otherwise
+   *   - refresh: Function to manually trigger refresh of transformed data
+   *
+   * @remarks This overload handles entity transformation workflows where each raw entity
+   * of type T is converted to type U through the provided transform function.
+   */
+  export function useEntityList<T, U>(
+    url: string,
+    fetcher: () => Promise<T[]>,
+    transform: (item: T) => U,
+    params?: any,
+    options?: SWRConfiguration
+  ): {
+    entities: U[];
+    isLoading: boolean;
+    isError: any;
+    refresh: KeyedMutator<U[]>;
+  };
+
+  /**
+   * Implementation of an overloaded entity fetching hook with optional transformation.
+   * Handles both transformed and non-transformed data fetching workflows through parameter polymorphism.
+   *
+   * @template T The raw entity type from API response
+   * @template U The transformed entity type (defaults to T if no transformer provided)
+   * @param url API endpoint URL for resource location
+   * @param fetcher Data fetching function returning raw entity arrays
+   * @param transformOrParams Either a transformation function or request parameters
+   * @param paramsOrOptions Either request parameters or SWR configuration options
+   * @param options SWR configuration options when using transformation
+   * @returns Object containing transformed entities, loading state, error state, and refresh capability
+   *
+   * @remarks The parameter order and types enable multiple calling signatures:
+   * - Without transformation: (url, fetcher, params?, options?)
+   * - With transformation: (url, fetcher, transform, params?, options?)
+   *
+   * The implementation dynamically detects parameter types to maintain backward compatibility
+   * while supporting new transformation capabilities through method overloading.
+   */
+  export function useEntityList<T, U = T>(
+    url: string,
+    fetcher: () => Promise<T[]>,
+    transformOrParams?: ((item: T) => U) | any,
+    paramsOrOptions?: any,
+    options?: SWRConfiguration
+  ) {
+    // Parameter type detection
+    const isTransform = typeof transformOrParams === "function";
+    const transform = isTransform ? transformOrParams : undefined;
+    const params = isTransform ? paramsOrOptions : transformOrParams;
+    const swrOptions = isTransform ? options : paramsOrOptions;
+
+    // SWR hook with proper typing
     const { data, error, isLoading, mutate } = useSWR<T[]>(
       params ? [url, params] : url,
       fetcher,
-      { revalidateOnMount: true, ...options }
+      { revalidateOnMount: true, ...swrOptions }
     );
 
+    // Data transformation logic
+    const entities = data
+      ? transform
+        ? data.map(transform) // Apply transformation if provided
+        : (data as unknown as U[]) // Type assertion for default case
+      : [];
+
     return {
-      entities: Array.isArray(data) ? data : [],
+      entities,
       isLoading,
       isError: error,
-      refresh: mutate,
+      refresh: mutate as unknown as KeyedMutator<U[]>,
     };
-  };
+  }
 
   /**
    * A generic hook for fetching and managing entity data.
