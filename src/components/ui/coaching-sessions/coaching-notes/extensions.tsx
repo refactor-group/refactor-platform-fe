@@ -18,6 +18,7 @@ import { createLowlight } from "lowlight";
 import { all } from "lowlight";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
+
 // Initialize lowlight with all languages
 const lowlight = createLowlight(all);
 
