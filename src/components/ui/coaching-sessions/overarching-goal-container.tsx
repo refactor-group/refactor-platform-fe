@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
 import { ItemStatus, Id } from "@/types/general";
-import { Action } from "@/types/action";
+import { Action, defaultAction } from "@/types/action";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { Agreement, defaultAgreement } from "@/types/agreement";
 import { useAgreementMutation } from "@/lib/api/agreements";
-import { createAction, deleteAction, updateAction } from "@/lib/api/actions";
+import { useActionMutation } from "@/lib/api/actions";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
@@ -40,6 +40,12 @@ const OverarchingGoalContainer: React.FC<{
     delete: deleteAgreement,
   } = useAgreementMutation();
 
+  const {
+    create: createAction,
+    update: updateAction,
+    delete: deleteAction,
+  } = useActionMutation();
+
   const handleAgreementAdded = (body: string): Promise<Agreement> => {
     const newAgreement: Agreement = {
       ...defaultAgreement(),
@@ -71,14 +77,15 @@ const OverarchingGoalContainer: React.FC<{
     dueBy: DateTime
   ): Promise<Action> => {
     // Calls the backend endpoint that creates and stores a full Action entity
-    return createAction(currentCoachingSessionId, body, status, dueBy)
-      .then((action) => {
-        return action;
-      })
-      .catch((err) => {
-        console.error("Failed to create new Action: " + err);
-        throw err;
-      });
+    const newAction: Action = {
+      ...defaultAction(),
+      coaching_session_id: currentCoachingSessionId,
+      user_id: userId,
+      body,
+      status,
+      due_by: dueBy,
+    };
+    return createAction(newAction);
   };
 
   const handleActionEdited = (
@@ -87,25 +94,20 @@ const OverarchingGoalContainer: React.FC<{
     status: ItemStatus,
     dueBy: DateTime
   ): Promise<Action> => {
-    return updateAction(id, currentCoachingSessionId, body, status, dueBy)
-      .then((action) => {
-        return action;
-      })
-      .catch((err) => {
-        console.error("Failed to update Action (id: " + id + "): " + err);
-        throw err;
-      });
+    const updatedAction: Action = {
+      ...defaultAction(),
+      id,
+      coaching_session_id: currentCoachingSessionId,
+      user_id: userId,
+      body,
+      status,
+      due_by: dueBy,
+    };
+    return updateAction(id, updatedAction);
   };
 
   const handleActionDeleted = (id: Id): Promise<Action> => {
-    return deleteAction(id)
-      .then((action) => {
-        return action;
-      })
-      .catch((err) => {
-        console.error("Failed to update Action (id: " + id + "): " + err);
-        throw err;
-      });
+    return deleteAction(id);
   };
 
   const handleGoalChange = async (newGoal: OverarchingGoal) => {
