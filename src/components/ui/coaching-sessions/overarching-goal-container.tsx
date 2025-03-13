@@ -5,12 +5,8 @@ import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
 import { ItemStatus, Id } from "@/types/general";
 import { Action } from "@/types/action";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
-import { Agreement } from "@/types/agreement";
-import {
-  createAgreement,
-  deleteAgreement,
-  updateAgreement,
-} from "@/lib/api/agreements";
+import { Agreement, defaultAgreement } from "@/types/agreement";
+import { useAgreementMutation } from "@/lib/api/agreements";
 import { createAction, deleteAction, updateAction } from "@/lib/api/actions";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { DateTime } from "ts-luxon";
@@ -36,40 +32,37 @@ const OverarchingGoalContainer: React.FC<{
   );
   const { overarchingGoal, isLoading, isError, refresh } =
     useOverarchingGoalBySession(currentCoachingSessionId);
-  const { create, update } = useOverarchingGoalMutation();
+  const { create: createOverarchingGoal, update: updateOverarchingGoal } =
+    useOverarchingGoalMutation();
+  const {
+    create: createAgreement,
+    update: updateAgreement,
+    delete: deleteAgreement,
+  } = useAgreementMutation();
 
   const handleAgreementAdded = (body: string): Promise<Agreement> => {
-    // Calls the backend endpoint that creates and stores a full Agreement entity
-    return createAgreement(currentCoachingSessionId, userId, body)
-      .then((agreement) => {
-        return agreement;
-      })
-      .catch((err) => {
-        console.error("Failed to create new Agreement: " + err);
-        throw err;
-      });
+    const newAgreement: Agreement = {
+      ...defaultAgreement(),
+      coaching_session_id: currentCoachingSessionId,
+      user_id: userId,
+      body,
+    };
+    return createAgreement(newAgreement);
   };
 
   const handleAgreementEdited = (id: Id, body: string): Promise<Agreement> => {
-    return updateAgreement(id, currentCoachingSessionId, userId, body)
-      .then((agreement) => {
-        return agreement;
-      })
-      .catch((err) => {
-        console.error("Failed to update Agreement (id: " + id + "): " + err);
-        throw err;
-      });
+    const updatedAgreement: Agreement = {
+      ...defaultAgreement(),
+      id,
+      coaching_session_id: currentCoachingSessionId,
+      user_id: userId,
+      body,
+    };
+    return updateAgreement(id, updatedAgreement);
   };
 
   const handleAgreementDeleted = (id: Id): Promise<Agreement> => {
-    return deleteAgreement(id)
-      .then((agreement) => {
-        return agreement;
-      })
-      .catch((err) => {
-        console.error("Failed to update Agreement (id: " + id + "): " + err);
-        throw err;
-      });
+    return deleteAgreement(id);
   };
 
   const handleActionAdded = (
@@ -116,36 +109,19 @@ const OverarchingGoalContainer: React.FC<{
   };
 
   const handleGoalChange = async (newGoal: OverarchingGoal) => {
-    // console.trace(
-    //   "handleGoalChange (goal title to set/update): " + newGoal.title
-    // );
-    // console.trace(
-    //   "handleGoalChange (goal to set/update): " +
-    //     overarchingGoalToString(newGoal)
-    // );
-    // console.trace(
-    //   "handleGoalChange (overarchingGoal.id , currentCoachingSessionId set/update): " +
-    //     overarchingGoal.id +
-    //     ", " +
-    //     currentCoachingSessionId
-    // );
-
     try {
       if (currentCoachingSessionId) {
         if (overarchingGoal.id) {
-          // console.debug(
-          //   "Update existing Overarching Goal with id: " + overarchingGoal.id
-          // );
-          const responseGoal = await update(overarchingGoal.id, newGoal);
+          const responseGoal = await updateOverarchingGoal(
+            overarchingGoal.id,
+            newGoal
+          );
           console.trace(
             "Updated Overarching Goal: " + overarchingGoalToString(responseGoal)
           );
         } else if (!overarchingGoal.id) {
           newGoal.coaching_session_id = currentCoachingSessionId;
-          // console.trace(
-          //   "Creating new Overarching Goal: " + overarchingGoalToString(newGoal)
-          // );
-          const responseGoal = await create(newGoal);
+          const responseGoal = await createOverarchingGoal(newGoal);
           console.trace(
             "Newly created Overarching Goal: " +
               overarchingGoalToString(responseGoal)
