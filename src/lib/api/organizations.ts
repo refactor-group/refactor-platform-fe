@@ -2,351 +2,161 @@
 
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
-import {
-  Organization,
-  defaultOrganization,
-  defaultOrganizations,
-  isOrganization,
-  isOrganizationsArray,
-  organizationToString,
-} from "@/types/organization";
-import axios from "axios";
-import { AxiosError, AxiosResponse } from "axios";
-import useSWR, { useSWRConfig } from "swr";
+import { Organization, defaultOrganization } from "@/types/organization";
+import { EntityApi } from "./entity-api";
 
-interface ApiResponseOrganizations {
-  status_code: number;
-  data: Organization[];
-}
-
-// Fetch all Organizations associated with a particular User
-const fetcherOrganizations = async (
-  url: string,
-  userId: Id
-): Promise<Organization[]> =>
-  axios
-    .get<ApiResponseOrganizations>(url, {
-      params: {
-        user_id: userId,
-      },
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then((res) => res.data.data);
-
-/// A hook to retrieve all Organizations associated with userId
-export function useOrganizations(userId: Id) {
-  const { data, error, isLoading } = useSWR<Organization[]>(
-    [`${siteConfig.env.backendServiceURL}/organizations`, userId],
-    ([url, _token]) => fetcherOrganizations(url, userId)
-  );
-  const swrConfig = useSWRConfig();
-  console.debug(`swrConfig: ${JSON.stringify(swrConfig)}`);
-
-  console.debug(`data: ${JSON.stringify(data)}`);
-
-  return {
-    organizations: Array.isArray(data) ? data : [],
-    isLoading,
-    isError: error,
-  };
-}
-
-interface ApiResponseOrganization {
-  status_code: number;
-  data: Organization;
-}
-
-// Fetcher for retrieving a single Organization by its Id
-const fetcherOrganization = async (url: string): Promise<Organization> =>
-  axios
-    .get<ApiResponseOrganization>(url, {
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then((res) => res.data.data);
-
-/// A hook to retrieve a single Organization by its Id
-export function useOrganization(organizationId: Id) {
-  const { data, error, isLoading } = useSWR<Organization>(
-    `${siteConfig.env.backendServiceURL}/organizations/${organizationId}`,
-    fetcherOrganization
-  );
-  const swrConfig = useSWRConfig();
-  console.debug(`swrConfig: ${JSON.stringify(swrConfig)}`);
-
-  console.debug(`data: ${JSON.stringify(data)}`);
-
-  return {
-    organization: data || defaultOrganization(),
-    isLoading,
-    isError: error,
-  };
-}
-
-export const fetchOrganizations = async (): Promise<
-  [Organization[], string]
-> => {
-  const axios = require("axios");
-
-  var organizations: Organization[] = defaultOrganizations();
-  var err: string = "";
-
-  const data = await axios
-    .get(`${siteConfig.env.backendServiceURL}/organizations`, {
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      if (isOrganizationsArray(response.data.data)) {
-        organizations = response.data.data;
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.log(error.response?.status);
-      if (error.response?.status == 401) {
-        console.error("Retrieval of Organization failed: unauthorized.");
-        err = "Retrieval of Organization failed: unauthorized.";
-      } else {
-        console.log(error);
-        console.error("Retrieval of Organization failed.");
-        err = "Retrieval of Organization failed.";
-      }
-    });
-
-  return [organizations, err];
-};
-
-export const fetchOrganization = async (
-  id: Id
-): Promise<[Organization, string]> => {
-  const axios = require("axios");
-
-  var organization: Organization = defaultOrganization();
-  var err: string = "";
-
-  const data = await axios
-    .get(`${siteConfig.env.backendServiceURL}/organizations/${id}`, {
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      if (isOrganization(response.data.data)) {
-        organization = response.data.data;
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        console.error("Retrieval of Organization failed: unauthorized.");
-        err = "Retrieval of Organization failed: unauthorized.";
-      } else {
-        console.log(error);
-        console.error(`Retrieval of Organization(` + id + `) failed.`);
-        err = `Retrieval of Organization(` + id + `) failed.`;
-      }
-    });
-
-  return [organization, err];
-};
-
-export const fetchOrganizationsByUserId = async (
-  userId: Id
-): Promise<[Organization[], string]> => {
-  const axios = require("axios");
-
-  var organizations: Organization[] = defaultOrganizations();
-  var err: string = "";
-
-  const data = await axios
-    .get(`${siteConfig.env.backendServiceURL}/organizations`, {
-      params: {
-        user_id: userId,
-      },
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      if (isOrganizationsArray(response.data.data)) {
-        organizations = response.data.data;
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        console.error("Retrieval of Organizations failed: unauthorized.");
-        err = "Retrieval of Organization failed: unauthorized.";
-      } else {
-        console.log(error);
-        console.error(
-          `Retrieval of Organization(s) by user Id (` + userId + `) failed.`
-        );
-        err =
-          `Retrieval of Organization(s) by user Id (` + userId + `) failed.`;
-      }
-    });
-
-  return [organizations, err];
-};
-
-export const createOrganization = async (
-  organization: Organization
-): Promise<[Organization, string]> => {
-  const axios = require("axios");
-
-  var createdOrganization: Organization = defaultOrganization();
-  var err: string = "";
-
-  var strOrganization: string = organizationToString(organization);
-  const data = await axios
-    .post(
+/**
+ * API client for organization-related operations.
+ *
+ * This object provides a collection of functions for interacting with the organization endpoints
+ * on the backend service. It handles the HTTP requests and response parsing for all CRUD operations.
+ */
+export const OrganizationAPI = {
+  /*
+   * Fetches a list of organizations associated with a specific user.
+   *
+   * @param userId The ID of the user whose organizations should be retrieved
+   * @returns Promise resolving to an array of Organization objects
+   */
+  list: async (userId: Id): Promise<Organization[]> =>
+    EntityApi.listFn<Organization>(
       `${siteConfig.env.backendServiceURL}/organizations`,
-      strOrganization,
       {
-        withCredentials: true,
-        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-          "Content-Type": "application/json",
-        },
+        params: { user_id: userId },
       }
-    )
-    .then(function (response: AxiosResponse) {
-      // handle success
-      if (isOrganization(response.data.data)) {
-        createdOrganization = response.data.data;
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        console.error("Creation of Organization failed: unauthorized.");
-        err = "Creation of Organization failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        console.error(
-          "Creation of Organization failed: internal server error."
-        );
-        err = "Creation of Organization failed: internal server error.";
-      } else {
-        console.log(error);
-        console.error(`Creation of new Organization failed.`);
-        err = `Creation of new Organization failed.`;
-      }
-    });
+    ),
 
-  return [createdOrganization, err];
-};
+  /**
+   * Fetches a single organization by its ID.
+   *
+   * @param id The ID of the organization to retrieve
+   * @returns Promise resolving to the Organization object
+   */
+  get: async (id: Id): Promise<Organization> =>
+    EntityApi.getFn<Organization>(
+      `${siteConfig.env.backendServiceURL}/organizations/${id}`
+    ),
 
-export const updateOrganization = async (
-  id: number,
-  organization: Organization
-): Promise<[Organization, string]> => {
-  const axios = require("axios");
+  /**
+   * Creates a new organization.
+   *
+   * @param organization The organization data to create
+   * @returns Promise resolving to the created Organization object
+   */
+  create: async (organization: Organization): Promise<Organization> =>
+    EntityApi.createFn<Organization, Organization>(
+      `${siteConfig.env.backendServiceURL}/organizations`,
+      organization
+    ),
 
-  var updatedOrganization: Organization = defaultOrganization();
-  var err: string = "";
-
-  var strOrganization: string = organizationToString(organization);
-  const data = await axios
-    .put(
+  /**
+   * Updates an existing organization.
+   *
+   * @param id The ID of the organization to update
+   * @param organization The updated organization data
+   * @returns Promise resolving to the updated Organization object
+   */
+  update: async (id: Id, organization: Organization): Promise<Organization> =>
+    EntityApi.updateFn<Organization, Organization>(
       `${siteConfig.env.backendServiceURL}/organizations/${id}`,
-      strOrganization,
-      {
-        withCredentials: true,
-        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-          "Content-Type": "application/json",
-        },
-      }
-    )
-    .then(function (response: AxiosResponse) {
-      // handle success
-      if (isOrganization(response.data.data)) {
-        updatedOrganization = response.data.data;
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        console.error("Update of Organization failed: unauthorized.");
-        err = "Update of Organization failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        console.error("Update of Organization failed: internal server error.");
-        err = "Update of Organization failed: internal server error.";
-      } else {
-        console.log(error);
-        console.error(`Update of new Organization failed.`);
-        err = `Update of new Organization failed.`;
-      }
-    });
+      organization
+    ),
 
-  return [updatedOrganization, err];
+  /**
+   * Deletes an organization.
+   *
+   * @param id The ID of the organization to delete
+   * @returns Promise resolving to the deleted Organization object
+   */
+  delete: async (id: Id): Promise<Organization> =>
+    EntityApi.deleteFn<null, Organization>(
+      `${siteConfig.env.backendServiceURL}/organizations/${id}`
+    ),
 };
 
-export const deleteOrganization = async (
-  id: number
-): Promise<[string, string]> => {
-  const axios = require("axios");
+/**
+ * A custom React hook that fetches a list of organizations for a specific user.
+ *
+ * This hook uses SWR to efficiently fetch, cache, and revalidate organization data.
+ * It automatically refreshes data when the component mounts.
+ *
+ * @param userId The ID of the user whose organizations should be fetched
+ * @returns An object containing:
+ *
+ * * organizations: Array of Organization objects (empty array if data is not yet loaded)
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useOrganizationList = (userId: Id) => {
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<Organization>(
+      `${siteConfig.env.backendServiceURL}/organizations`,
+      () => OrganizationAPI.list(userId),
+      userId
+    );
 
-  var deleted_id: string = "";
-  var err: string = "";
+  return {
+    organizations: entities,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
 
-  const data = await axios
-    .delete(`${siteConfig.env.backendServiceURL}/organizations/${id}`, {
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      var json = response.data;
-      if ("id" in json) {
-        deleted_id = json.id;
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        console.error("Deletion of Organization failed: unauthorized.");
-        err = "Deletion of Organization failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        console.error(
-          "Deletion of Organization failed: internal server error."
-        );
-        err = "Deletion of Organization failed: internal server error.";
-      } else {
-        console.log(error);
-        console.error(`Deletion of Organization(` + id + `) failed.`);
-        err = `Deletion of Organization(` + id + `) failed.`;
-      }
-    });
+/**
+ * A custom React hook that fetches a single organization by its ID.
+ * This hook uses SWR to efficiently fetch and cache organization data.
+ * It does not automatically revalidate the data on window focus, reconnect, or when data becomes stale.
+ *
+ * @param id The ID of the organization to fetch. If null or undefined, no fetch will occur.
+ * @returns An object containing:
+ *
+ * * organization: The fetched Organization object, or a default organization if not yet loaded
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useOrganization = (id: Id) => {
+  const url = id
+    ? `${siteConfig.env.backendServiceURL}/organizations/${id}`
+    : null;
+  const fetcher = () => OrganizationAPI.get(id);
 
-  return [deleted_id, err];
+  const { entity, isLoading, isError, refresh } =
+    EntityApi.useEntity<Organization>(url, fetcher, defaultOrganization());
+
+  return {
+    organization: entity,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * A custom React hook that provides mutation operations for organizations with loading and error state management.
+ * This hook simplifies creating, updating, and deleting organizations while handling loading states,
+ * error management, and cache invalidation automatically.
+ *
+ * @returns An object containing:
+ * create: Function to create a new organization
+ * update: Function to update an existing organization
+ * delete: Function to delete an organization
+ * isLoading: Boolean indicating if any operation is in progress
+ * error: Error object if the last operation failed, null otherwise
+ */
+/**
+ * Hook for organization mutations.
+ * Provides methods to create, update, and delete organizations.
+ */
+export const useOrganizationMutation = () => {
+  return EntityApi.useEntityMutation<Organization>(
+    `${siteConfig.env.backendServiceURL}/organizations`,
+    {
+      create: OrganizationAPI.create,
+      update: OrganizationAPI.update,
+      delete: OrganizationAPI.delete,
+    }
+  );
 };
