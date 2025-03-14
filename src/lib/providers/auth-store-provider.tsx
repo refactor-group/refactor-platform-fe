@@ -1,8 +1,16 @@
+"use client";
 // The purpose of this provider is to provide compatibility with
 // Next.js re-rendering and component caching
-"use client";
 
-import { type ReactNode, createContext, useRef, useContext } from "react";
+import {
+  type ReactNode,
+  createContext,
+  useRef,
+  useContext,
+  useMemo,
+  useEffect,
+  useState,
+} from "react";
 import { type StoreApi, useStore } from "zustand";
 
 import { type AuthStore, createAuthStore } from "@/lib/stores/auth-store";
@@ -15,9 +23,22 @@ export interface AuthStoreProviderProps {
 }
 
 export const AuthStoreProvider = ({ children }: AuthStoreProviderProps) => {
-  const storeRef = useRef<StoreApi<AuthStore>>(undefined);
-  if (!storeRef.current) {
-    storeRef.current = createAuthStore();
+  const storeRef = useRef<StoreApi<AuthStore> | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Now safe to access localStorage
+      const storedValue = localStorage.getItem("auth-store");
+      const initialState = storedValue ? JSON.parse(storedValue).state : null;
+      storeRef.current = createAuthStore(initialState);
+      setIsInitialized(true);
+    }
+  }, []);
+
+  // Ensure store is initialized before rendering the provider
+  if (!isInitialized) {
+    return null; // or return a loading component
   }
 
   return (

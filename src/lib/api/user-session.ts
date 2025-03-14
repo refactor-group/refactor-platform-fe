@@ -20,7 +20,7 @@ export const loginUser = async (
   var userSession: UserSession = defaultUserSession();
   var err: string = "";
 
-  const data = await axios
+  await axios
     .post(
       `${siteConfig.env.backendServiceURL}/login`,
       {
@@ -45,8 +45,8 @@ export const loginUser = async (
         // deserialize successfully, then downstream operations will see the default
         // userSessionData in state and we will experience subtle Bugs. We should consider
         // how best we want to handle this. Ex. clear auth cookie?
-        console.debug("userSessionData: ", userSessionData)
-        throw { message: 'Login Failed to produce valid User Session data' }
+        console.debug("userSessionData: ", userSessionData);
+        throw { message: "Login Failed to produce valid User Session data" };
       }
     })
     .catch(function (error: AxiosError) {
@@ -73,7 +73,7 @@ export const logoutUser = async (): Promise<string> => {
   const data = await axios
     .get(`${siteConfig.env.backendServiceURL}/logout`, {
       withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
+      setTimeout: 5000, // 5 seconds before timing out trying to log out with the backend
     })
     .then(function (response: AxiosResponse) {
       // handle success
