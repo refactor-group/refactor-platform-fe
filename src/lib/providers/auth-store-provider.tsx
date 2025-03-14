@@ -21,7 +21,6 @@ export const AuthStoreProvider = ({ children }: AuthStoreProviderProps) => {
   const persistedStoreOrNull = authStore ? JSON.parse(authStore).state : null;
 
   if (!storeRef.current) {
-    // storeRef.current = createAuthStore(authStore);
     storeRef.current = createAuthStore(persistedStoreOrNull);
   }
 
