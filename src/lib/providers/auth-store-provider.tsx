@@ -16,7 +16,7 @@ export interface AuthStoreProviderProps {
 
 export const AuthStoreProvider = ({ children }: AuthStoreProviderProps) => {
   const storeRef = useRef<StoreApi<AuthStore>>(undefined);
-  const authStore = window.localStorage.getItem("auth-store");
+  const authStore = localStorage.getItem("auth-store");
 
   const persistedStoreOrNull = authStore ? JSON.parse(authStore).state : null;
 
