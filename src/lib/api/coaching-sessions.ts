@@ -1,128 +1,194 @@
 // Interacts with the coaching_session endpoints
 
 import { siteConfig } from "@/site.config";
+import { Id } from "@/types/general";
 import {
   CoachingSession,
   defaultCoachingSession,
-  isCoachingSession,
-  isCoachingSessionArray,
-  parseCoachingSession,
-  sortCoachingSessionArray,
 } from "@/types/coaching-session";
-import { Id, SortOrder } from "@/types/general";
-import axios, { AxiosError, AxiosResponse } from "axios";
-import useSWR from "swr";
+import { EntityApi } from "./entity-api";
 import { DateTime } from "ts-luxon";
 
-// TODO: for now we hardcode a 2 month window centered around now,
-// eventually we want to make this be configurable somewhere
-// (either on the page or elsewhere)
-const fromDate = DateTime.now().minus({ month: 1 }).toISODate();
-const toDate = DateTime.now().plus({ month: 1 }).toISODate();
+const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
 
-interface ApiResponse {
-  status_code: number;
-  data: CoachingSession[];
-}
-
-const fetcher = async (
-  url: string,
-  relationshipId: Id
-): Promise<CoachingSession[]> =>
-  axios
-    .get<ApiResponse>(url, {
+/**
+ * API client for coaching session-related operations.
+ *
+ * This object provides a collection of functions for interacting with the coaching session endpoints
+ * on the backend service. It handles the HTTP requests and response parsing for all CRUD operations.
+ */
+export const CoachingSessionApi = {
+  /*
+   * Fetches a list of coaching sessions associated with a specific coaching relationship.
+   *
+   * @param relationshipId The ID of the coaching relationship under which the list of
+   * coaching sessions should be retrieved from.
+   * @param fromDate A date specifying the earliest coaching session date to return.
+   * @param toDate A date specifying the latest coaching session date to match.
+   * @returns Promise resolving to an array of CoachingSession objects
+   */
+  list: async (
+    relationshipId: Id,
+    fromDate: DateTime,
+    toDate: DateTime
+  ): Promise<CoachingSession[]> =>
+    EntityApi.listFn<CoachingSession>(COACHING_SESSIONS_BASEURL, {
       params: {
         coaching_relationship_id: relationshipId,
-        from_date: fromDate,
-        to_date: toDate,
+        from_date: fromDate.toISODate(),
+        to_date: toDate.toISODate(),
       },
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then((res) => res.data.data);
+    }),
 
-/// A hook to retrieve all CoachingSessions associated with relationshipId
-export function useCoachingSessions(relationshipId: Id) {
-  console.debug(`relationshipId: ${relationshipId}`);
-  console.debug("fromDate: " + fromDate);
-  console.debug("toDate: " + toDate);
+  /**
+   * Fetches a single coaching session by its ID.
+   *
+   * @param id The ID of the coaching session to retrieve
+   * @returns Promise resolving to the CoachingSession object
+   */
+  get: async (id: Id): Promise<CoachingSession> =>
+    EntityApi.getFn<CoachingSession>(`${COACHING_SESSIONS_BASEURL}/${id}`),
 
-  const { data, error, isLoading, mutate } = useSWR<CoachingSession[]>(
-    relationshipId
-      ? [
-          `${siteConfig.env.backendServiceURL}/coaching_sessions`,
-          relationshipId,
-        ]
-      : null,
-    ([url, _token]) => fetcher(url, relationshipId)
-  );
+  /**
+   * Creates a new coaching session.
+   *
+   * @param coaching session The coaching session data to create
+   * @returns Promise resolving to the created CoachingSession object
+   */
+  create: async (coachingSession: CoachingSession): Promise<CoachingSession> =>
+    EntityApi.createFn<CoachingSession, CoachingSession>(
+      COACHING_SESSIONS_BASEURL,
+      coachingSession
+    ),
 
-  console.debug(`data: ${JSON.stringify(data)}`);
+  createNested: async (
+    id: Id,
+    entity: CoachingSession
+  ): Promise<CoachingSession> => {
+    throw new Error("Create nested operation not implemented");
+  },
+
+  /**
+   * Updates an existing coaching session.
+   *
+   * @param id The ID of the coaching session to update
+   * @param coaching session The updated coaching session data
+   * @returns Promise resolving to the updated CoachingSession object
+   */
+  update: async (
+    id: Id,
+    coachingSession: CoachingSession
+  ): Promise<CoachingSession> =>
+    EntityApi.updateFn<CoachingSession, CoachingSession>(
+      `${COACHING_SESSIONS_BASEURL}/${id}`,
+      coachingSession
+    ),
+
+  /**
+   * Deletes an coaching session.
+   *
+   * @param id The ID of the coaching session to delete
+   * @returns Promise resolving to the deleted CoachingSession object
+   */
+  delete: async (id: Id): Promise<CoachingSession> =>
+    EntityApi.deleteFn<null, CoachingSession>(
+      `${COACHING_SESSIONS_BASEURL}/${id}`
+    ),
+};
+
+/**
+ * A custom React hook that fetches a list of coaching sessions for a specific user.
+ *
+ * This hook uses SWR to efficiently fetch, cache, and revalidate coaching session data.
+ * It automatically refreshes data when the component mounts.
+ *
+ * @param relationshipId The ID of the coaching relationship under which the list of
+ * coaching sessions should be fetched from.
+ * @param fromDate A date specifying the earliest coaching session date to return.
+ * @param toDate A date specifying the latest coaching session date to match.
+ * @returns An object containing:
+ *
+ * * coachingSessions: Array of CoachingSession objects (empty array if data is not yet loaded)
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useCoachingSessionList = (
+  relationshipId: Id,
+  fromDate: DateTime,
+  toDate: DateTime
+) => {
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<CoachingSession>(
+      COACHING_SESSIONS_BASEURL,
+      () => CoachingSessionApi.list(relationshipId, fromDate, toDate),
+      relationshipId
+    );
 
   return {
-    coachingSessions: Array.isArray(data) ? data : [],
+    coachingSessions: entities,
     isLoading,
-    isError: error,
-    mutate,
+    isError,
+    refresh,
   };
-}
+};
 
-export const createCoachingSession = async (
-  coaching_relationship_id: Id,
-  date: string
-): Promise<CoachingSession> => {
-  const axios = require("axios");
+/**
+ * A custom React hook that fetches a single coaching session by its ID.
+ * This hook uses SWR to efficiently fetch and cache coaching session data.
+ * It does not automatically revalidate the data on window focus, reconnect, or when data becomes stale.
+ *
+ * @param id The ID of the coaching session to fetch. If null or undefined, no fetch will occur.
+ * @returns An object containing:
+ *
+ * * coachingSession: The fetched CoachingSession object, or a default coaching session if not yet loaded
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useCoachingSession = (id: Id) => {
+  const url = id ? `${COACHING_SESSIONS_BASEURL}/${id}` : null;
+  const fetcher = () => CoachingSessionApi.get(id);
 
-  const newCoachingSessionJson = {
-    coaching_relationship_id: coaching_relationship_id,
-    date: date,
+  const { entity, isLoading, isError, refresh } =
+    EntityApi.useEntity<CoachingSession>(
+      url,
+      fetcher,
+      defaultCoachingSession()
+    );
+
+  return {
+    coachingSession: entity,
+    isLoading,
+    isError,
+    refresh,
   };
-  console.debug(
-    "newCoachingSessiontJson: " + JSON.stringify(newCoachingSessionJson)
+};
+
+/**
+ * A custom React hook that provides mutation operations for coaching sessions with loading and error state management.
+ * This hook simplifies creating, updating, and deleting coaching sessions while handling loading states,
+ * error management, and cache invalidation automatically.
+ *
+ * @returns An object containing:
+ * create: Function to create a new coaching session
+ * update: Function to update an existing coaching session
+ * delete: Function to delete an coaching session
+ * isLoading: Boolean indicating if any operation is in progress
+ * error: Error object if the last operation failed, null otherwise
+ */
+/**
+ * Hook for coaching session mutations.
+ * Provides methods to create, update, and delete coaching sessions.
+ */
+export const useCoachingSessionMutation = () => {
+  return EntityApi.useEntityMutation<CoachingSession>(
+    COACHING_SESSIONS_BASEURL,
+    {
+      create: CoachingSessionApi.create,
+      createNested: CoachingSessionApi.createNested,
+      update: CoachingSessionApi.update,
+      delete: CoachingSessionApi.delete,
+    }
   );
-  // A full real note to be returned from the backend with the same body
-  var createdCoachingSession: CoachingSession = defaultCoachingSession();
-  var err: string = "";
-
-  const data = await axios
-    .post(
-      `${siteConfig.env.backendServiceURL}/coaching_sessions`,
-      newCoachingSessionJson,
-      {
-        withCredentials: true,
-        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-          "Content-Type": "application/json",
-        },
-      }
-    )
-    .then(function (response: AxiosResponse) {
-      // handle success
-      const coaching_session_data = response.data.data;
-      if (isCoachingSession(coaching_session_data)) {
-        createdCoachingSession = parseCoachingSession(coaching_session_data);
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        err = "Creation of Coaching Session failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        err = "Creation of Coaching Session failed: internal server error.";
-      } else {
-        err = `Creation of Coaching Session failed.`;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return createdCoachingSession;
 };
