@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDateTimeFromString, Id } from "@/types/general";
-import { useCoachingSessions } from "@/lib/api/coaching-sessions";
+import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { useEffect, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
@@ -33,11 +33,18 @@ function CoachingSessionsSelectItems({
 }: {
   relationshipId: Id;
 }) {
+  // TODO: for now we hardcode a 2 month window centered around now,
+  // eventually we want to make this be configurable somewhere
+  // (either on the page or elsewhere)
+  const fromDate = DateTime.now().minus({ month: 1 });
+  const toDate = DateTime.now().plus({ month: 1 });
+
   const {
     coachingSessions,
     isLoading: isLoadingSessions,
     isError: isErrorSessions,
-  } = useCoachingSessions(relationshipId);
+    refresh,
+  } = useCoachingSessionList(relationshipId, fromDate, toDate);
 
   const { setCurrentCoachingSessions } = useCoachingSessionStateStore(
     (state) => state

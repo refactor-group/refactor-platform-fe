@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DateTime } from "ts-luxon";
 import { ArrowUpDown } from "lucide-react";
 import {
   Dialog,
@@ -13,27 +12,39 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import CoachingSession from "@/components/ui/coaching-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import {
-  createCoachingSession,
-  useCoachingSessions,
+  useCoachingSessionMutation,
+  useCoachingSessionList,
 } from "@/lib/api/coaching-sessions";
 import { Calendar } from "@/components/ui/calendar";
 import { getDateTimeFromString } from "@/types/general";
+import {
+  CoachingSession,
+  defaultCoachingSession,
+} from "@/types/coaching-session";
+import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
+import { DateTime } from "ts-luxon";
 
 export default function CoachingSessionList() {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
     (state) => state
   );
   const { isCoach } = useAuthStore((state) => state);
+  // TODO: for now we hardcode a 2 month window centered around now,
+  // eventually we want to make this be configurable somewhere
+  // (either on the page or elsewhere)
+  const fromDate = DateTime.now().minus({ month: 1 });
+  const toDate = DateTime.now().plus({ month: 1 });
   const {
     coachingSessions,
     isLoading: isLoadingCoachingSessions,
     isError: isErrorCoachingSessions,
-    mutate,
-  } = useCoachingSessions(currentCoachingRelationshipId);
+    refresh,
+  } = useCoachingSessionList(currentCoachingRelationshipId, fromDate, toDate);
+
+  const { create: createCoachingSession } = useCoachingSessionMutation();
 
   const [sortByDate, setSortByDate] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -53,14 +64,19 @@ export default function CoachingSessionList() {
       .set({ hour: hours, minute: minutes })
       .toFormat("yyyy-MM-dd'T'HH:mm:ss");
 
-    createCoachingSession(currentCoachingRelationshipId, dateTime)
+    const newCoachingSession: CoachingSession = {
+      ...defaultCoachingSession(),
+      coaching_relationship_id: currentCoachingRelationshipId,
+      date: dateTime,
+    };
+    createCoachingSession(newCoachingSession)
       .then(() => {
         setIsDialogOpen(false);
         setNewSessionDate(undefined);
         setNewSessionTime("");
 
         // Trigger a re-fetch of coaching sessions
-        mutate();
+        refresh();
       })
       .catch((err) => {
         console.error("Failed to create new Coaching Session: " + err);
@@ -156,7 +172,7 @@ export default function CoachingSessionList() {
         ) : (
           <div className="space-y-4">
             {sortedSessions.map((coachingSession) => (
-              <CoachingSession
+              <CoachingSessionComponent
                 key={coachingSession.id}
                 coachingSession={coachingSession}
               />

@@ -74,4 +74,4 @@ const OverarchingGoal: React.FC<OverarchingGoalProps> = ({
   return <div>{titleText}</div>;
 };
 
-export default CoachingSession;
+export { CoachingSession };
