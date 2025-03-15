@@ -8,6 +8,9 @@ import {
 } from "@/types/coaching_relationship_with_user_names";
 import { EntityApi } from "./entity-api";
 
+const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
+const COACHING_RELATIONSHIPS_BASEURL: string = `coaching_relationships`;
+
 /**
  * API client for organization-related operations.
  *
@@ -25,7 +28,7 @@ export const CoachingRelationshipApi = {
     organizationId: Id
   ): Promise<CoachingRelationshipWithUserNames[]> =>
     EntityApi.listFn<CoachingRelationshipWithUserNames>(
-      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
+      `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
       {
         params: { organization_id: organizationId },
       }
@@ -43,7 +46,7 @@ export const CoachingRelationshipApi = {
     relationshipId: Id
   ): Promise<CoachingRelationshipWithUserNames> =>
     EntityApi.getFn<CoachingRelationshipWithUserNames>(
-      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships/${relationshipId}`
+      `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}/${relationshipId}`
     ),
 
   /**
@@ -70,7 +73,7 @@ export const CoachingRelationshipApi = {
       CoachingRelationshipWithUserNames,
       CoachingRelationshipWithUserNames
     >(
-      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
+      `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
       entity
     );
   },
@@ -107,7 +110,7 @@ export const CoachingRelationshipApi = {
 export const useCoachingRelationshipList = (organizationId: Id) => {
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<CoachingRelationshipWithUserNames>(
-      `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
+      `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
       () => CoachingRelationshipApi.list(organizationId),
       organizationId
     );
@@ -140,7 +143,7 @@ export const useCoachingRelationship = (
 ) => {
   const url =
     organizationId && relationshipId
-      ? `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships/${relationshipId}`
+      ? `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}/${relationshipId}`
       : null;
   const fetcher = () =>
     CoachingRelationshipApi.get(organizationId, relationshipId);
@@ -176,7 +179,7 @@ export const useCoachingRelationship = (
  */
 export const useCoachingRelationshipMutation = (organizationId: Id) => {
   return EntityApi.useEntityMutation<CoachingRelationshipWithUserNames>(
-    `${siteConfig.env.backendServiceURL}/organizations/${organizationId}/coaching_relationships`,
+    `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
     {
       create: CoachingRelationshipApi.create,
       createNested: CoachingRelationshipApi.createNested,
