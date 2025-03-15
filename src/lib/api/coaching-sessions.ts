@@ -25,20 +25,24 @@ export const CoachingSessionApi = {
    * coaching sessions should be retrieved from.
    * @param fromDate A date specifying the earliest coaching session date to return.
    * @param toDate A date specifying the latest coaching session date to match.
-   * @returns Promise resolving to an array of CoachingSession objects
+   * @returns Promise resolving to an array of CoachingSession objects (empty array if data is not yet loaded or
+   *  relationshipId is null)
    */
   list: async (
-    relationshipId: Id,
+    relationshipId: Id | null,
     fromDate: DateTime,
     toDate: DateTime
-  ): Promise<CoachingSession[]> =>
-    EntityApi.listFn<CoachingSession>(COACHING_SESSIONS_BASEURL, {
+  ): Promise<CoachingSession[]> => {
+    if (!relationshipId) return [];
+
+    return EntityApi.listFn<CoachingSession>(COACHING_SESSIONS_BASEURL, {
       params: {
         coaching_relationship_id: relationshipId,
         from_date: fromDate.toISODate(),
         to_date: toDate.toISODate(),
       },
-    }),
+    });
+  },
 
   /**
    * Fetches a single coaching session by its ID.
@@ -61,10 +65,7 @@ export const CoachingSessionApi = {
       coachingSession
     ),
 
-  createNested: async (
-    id: Id,
-    entity: CoachingSession
-  ): Promise<CoachingSession> => {
+  createNested: async (): Promise<CoachingSession> => {
     throw new Error("Create nested operation not implemented");
   },
 
@@ -108,21 +109,30 @@ export const CoachingSessionApi = {
  * @param toDate A date specifying the latest coaching session date to match.
  * @returns An object containing:
  *
- * * coachingSessions: Array of CoachingSession objects (empty array if data is not yet loaded)
+ * * coachingSessions: Array of CoachingSession objects (empty array if data is not yet loaded or
+ *   relationshipId is null)
  * * isLoading: Boolean indicating if the data is currently being fetched
  * * isError: Error object if the fetch operation failed, undefined otherwise
  * * refresh: Function to manually trigger a refresh of the data
  */
 export const useCoachingSessionList = (
-  relationshipId: Id,
+  relationshipId: Id | null,
   fromDate: DateTime,
   toDate: DateTime
 ) => {
+  const params = relationshipId
+    ? {
+        coaching_relationship_id: relationshipId,
+        from_date: fromDate.toISODate(),
+        to_date: toDate.toISODate(),
+      }
+    : undefined;
+
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<CoachingSession>(
       COACHING_SESSIONS_BASEURL,
-      () => CoachingSessionApi.list(relationshipId, fromDate, toDate),
-      relationshipId
+      () => CoachingSessionApi.list(relationshipId!, fromDate, toDate),
+      params
     );
 
   return {
@@ -176,10 +186,6 @@ export const useCoachingSession = (id: Id) => {
  * delete: Function to delete an coaching session
  * isLoading: Boolean indicating if any operation is in progress
  * error: Error object if the last operation failed, null otherwise
- */
-/**
- * Hook for coaching session mutations.
- * Provides methods to create, update, and delete coaching sessions.
  */
 export const useCoachingSessionMutation = () => {
   return EntityApi.useEntityMutation<CoachingSession>(

@@ -36,6 +36,10 @@ export namespace EntityApi {
     config?: any,
     transform?: (data: T) => U
   ): Promise<U> => {
+    if (!config) {
+      return [] as unknown as U; // Return empty array if config is null
+    }
+
     const response = await axios.get<ApiResponse<T>>(url, {
       withCredentials: true,
       timeout: 5000,
@@ -57,6 +61,7 @@ export namespace EntityApi {
    * @param method HTTP method to execute (POST, PUT, DELETE)
    * @param url API endpoint URL for the operation
    * @param data Optional payload data required for POST/PUT operations
+   * @param config Optional post/put/delete configuration object
    * @returns Promise resolving to response data of type R
    * @throws Error for invalid methods or missing required payload data
    *
@@ -74,23 +79,25 @@ export namespace EntityApi {
   const mutationFn = async <T, R>(
     method: "post" | "put" | "delete",
     url: string,
-    data?: T
+    data?: T,
+    config?: any
   ): Promise<R> => {
-    const config = {
+    const combinedConfig = {
       withCredentials: true,
       timeout: 5000,
       headers: {
         "X-Version": siteConfig.env.backendApiVersion,
       },
+      ...config,
     };
 
     let response;
     if (method === "delete") {
-      response = await axios.delete<ApiResponse<R>>(url, config);
+      response = await axios.delete<ApiResponse<R>>(url, combinedConfig);
     } else if (method === "put" && data) {
-      response = await axios.put<ApiResponse<R>>(url, data, config);
+      response = await axios.put<ApiResponse<R>>(url, data, combinedConfig);
     } else if (data) {
-      response = await axios.post<ApiResponse<R>>(url, data, config);
+      response = await axios.post<ApiResponse<R>>(url, data, combinedConfig);
     } else {
       throw new Error("Invalid method or missing data");
     }
@@ -119,6 +126,10 @@ export namespace EntityApi {
     params: any,
     transform?: (item: R) => U
   ): Promise<U[]> => {
+    if (!params) {
+      return []; // Return empty array if params are null
+    }
+
     return fetcher<R[], U[]>(
       url,
       params,
@@ -144,10 +155,15 @@ export namespace EntityApi {
    * @template R The type of entity returned after creation
    * @param url The API endpoint URL to send the creation request to
    * @param entity The entity data to create
+   * @param config Optional http post configuration object
    * @returns A Promise resolving to the created entity of type R
    */
-  export const createFn = async <T, R>(url: string, entity: T): Promise<R> => {
-    return mutationFn<T, R>("post", url, entity);
+  export const createFn = async <T, R>(
+    url: string,
+    entity: T,
+    config?: any
+  ): Promise<R> => {
+    return mutationFn<T, R>("post", url, entity, config);
   };
 
   /**
@@ -157,10 +173,15 @@ export namespace EntityApi {
    * @template R The type of entity returned after update
    * @param url The API endpoint URL to send the update request to
    * @param entity The updated entity data
+   * @param config Optional http put configuration object
    * @returns A Promise resolving to the updated entity of type R
    */
-  export const updateFn = async <T, R>(url: string, entity: T): Promise<R> => {
-    return mutationFn<T, R>("put", url, entity);
+  export const updateFn = async <T, R>(
+    url: string,
+    entity: T,
+    config?: any
+  ): Promise<R> => {
+    return mutationFn<T, R>("put", url, entity, config);
   };
 
   /**
@@ -169,10 +190,14 @@ export namespace EntityApi {
    * @template T The type of entity to delete (typically not used in the function body)
    * @template R The type of response returned after deletion
    * @param url The API endpoint URL to send the deletion request to
+   * @param config Optional http delete configuration object
    * @returns A Promise resolving to the response of type R
    */
-  export const deleteFn = async <T, R>(url: string): Promise<R> => {
-    return mutationFn<T, R>("delete", url);
+  export const deleteFn = async <T, R>(
+    url: string,
+    config?: any
+  ): Promise<R> => {
+    return mutationFn<T, R>("delete", url, config);
   };
 
   /**
@@ -256,28 +281,26 @@ export namespace EntityApi {
   export function useEntityList<T, U = T>(
     url: string,
     fetcher: () => Promise<T[]>,
-    transformOrParams?: ((item: T) => U) | any,
-    paramsOrOptions?: any,
+    params?: any,
     options?: SWRConfiguration
   ) {
-    // Parameter type detection
-    const isTransform = typeof transformOrParams === "function";
-    const transform = isTransform ? transformOrParams : undefined;
-    const params = isTransform ? paramsOrOptions : transformOrParams;
-    const swrOptions = isTransform ? options : paramsOrOptions;
+    const isTransform = typeof params === "function";
+    const transform = isTransform ? params : undefined;
+    const actualParams = isTransform ? options : params;
+    const swrOptions = isTransform ? undefined : options;
 
-    // SWR hook with proper typing
-    const { data, error, isLoading, mutate } = useSWR<T[]>(
-      params ? [url, params] : url,
-      fetcher,
-      { revalidateOnMount: true, ...swrOptions }
-    );
+    // Use SWR's conditional fetching via key nullification
+    const key = actualParams ? [url, actualParams] : null;
 
-    // Data transformation logic
+    const { data, error, isLoading, mutate } = useSWR<T[]>(key, fetcher, {
+      revalidateOnMount: true,
+      ...swrOptions,
+    });
+
     const entities = data
       ? transform
-        ? data.map(transform) // Apply transformation if provided
-        : (data as unknown as U[]) // Type assertion for default case
+        ? data.map(transform)
+        : (data as unknown as U[])
       : [];
 
     return {
