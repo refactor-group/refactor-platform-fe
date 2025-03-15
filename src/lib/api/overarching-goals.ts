@@ -1,65 +1,167 @@
 // Interacts with the overarching_goal endpoints
 
+import { siteConfig } from "@/site.config";
+import { Id } from "@/types/general";
 import {
   OverarchingGoal,
   defaultOverarchingGoal,
-  isOverarchingGoal,
-  isOverarchingGoalArray,
-  parseOverarchingGoal,
 } from "@/types/overarching-goal";
-import { ItemStatus, Id } from "@/types/general";
-import axios, { AxiosError, AxiosResponse } from "axios";
-import { siteConfig } from "@/site.config";
-import useSWR, { useSWRConfig } from "swr";
+import { EntityApi } from "./entity-api";
 
-interface ApiResponseOverarchingGoals {
-  status_code: number;
-  data: OverarchingGoal[];
-}
+const OVERARCHING_GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/overarching_goals`;
 
-// Fetch all OverarchingGoals associated with a particular User
-const fetcherOverarchingGoals = async (
-  url: string,
-  coachingSessionId: Id
-): Promise<OverarchingGoal[]> =>
-  axios
-    .get<ApiResponseOverarchingGoals>(url, {
-      params: {
-        coaching_session_id: coachingSessionId,
-      },
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then((res) => res.data.data);
+/**
+ * API client for overarching-goal-related operations.
+ *
+ * This object provides a collection of functions for interacting with the overarching-goal endpoints
+ * on the backend service. It handles the HTTP requests and response parsing for all CRUD operations.
+ */
+export const OverarchingGoalApi = {
+  /*
+   * Fetches a list of overarching-goals associated with a specific user.
+   *
+   * @param userId The ID of the user whose overarching-goal should be retrieved
+   * @returns Promise resolving to an array of OverarchingGoal objects
+   */
+  list: async (coachingSessionId: Id): Promise<OverarchingGoal[]> =>
+    EntityApi.listFn<OverarchingGoal>(OVERARCHING_GOALS_BASEURL, {
+      params: { coaching_session_id: coachingSessionId },
+    }),
 
-/// A hook to retrieve all OverarchingGoals associated with coachingSessionId
-export function useOverarchingGoals(coachingSessionId: Id) {
-  const { data, error, isLoading } = useSWR<OverarchingGoal[]>(
-    [
-      `${siteConfig.env.backendServiceURL}/overarching_goals`,
-      coachingSessionId,
-    ],
-    ([url, _token]) => fetcherOverarchingGoals(url, coachingSessionId)
-  );
-  const swrConfig = useSWRConfig();
-  console.debug(`swrConfig: ${JSON.stringify(swrConfig)}`);
+  /**
+   * Fetches a single overarching-goal by its ID.
+   *
+   * @param id The ID of the overarching-goal to retrieve
+   * @returns Promise resolving to the OverarchingGoal object
+   */
+  get: async (id: Id): Promise<OverarchingGoal> =>
+    EntityApi.getFn<OverarchingGoal>(`${OVERARCHING_GOALS_BASEURL}/${id}`),
 
-  console.debug(`overarchingGoals data: ${JSON.stringify(data)}`);
+  /**
+   * Creates a new overarching-goal.
+   *
+   * @param overarchingGoal The overarching-goal data to create
+   * @returns Promise resolving to the created OverarchingGoal object
+   */
+  create: async (overarchingGoal: OverarchingGoal): Promise<OverarchingGoal> =>
+    EntityApi.createFn<OverarchingGoal, OverarchingGoal>(
+      OVERARCHING_GOALS_BASEURL,
+      overarchingGoal
+    ),
+
+  createNested: async (
+    _id: Id,
+    _entity: OverarchingGoal
+  ): Promise<OverarchingGoal> => {
+    throw new Error("Create nested operation not implemented");
+  },
+
+  /**
+   * Updates an existing overarching-goal.
+   *
+   * @param id The ID of the overarching-goal to update
+   * @param overarchingGoal The updated overarching-goal data
+   * @returns Promise resolving to the updated OverarchingGoal object
+   */
+  update: async (
+    id: Id,
+    overarchingGoal: OverarchingGoal
+  ): Promise<OverarchingGoal> =>
+    EntityApi.updateFn<OverarchingGoal, OverarchingGoal>(
+      `${OVERARCHING_GOALS_BASEURL}/${id}`,
+      overarchingGoal
+    ),
+
+  /**
+   * Deletes an overarching-goal.
+   *
+   * @param id The ID of the overarching-goal to delete
+   * @returns Promise resolving to the deleted OverarchingGoal object
+   */
+  delete: async (id: Id): Promise<OverarchingGoal> =>
+    EntityApi.deleteFn<null, OverarchingGoal>(
+      `${OVERARCHING_GOALS_BASEURL}/${id}`
+    ),
+};
+
+/**
+ * A custom React hook that fetches a list of overarching-goals for a specific user.
+ *
+ * This hook uses SWR to efficiently fetch, cache, and revalidate overarching-goal data.
+ * It automatically refreshes data when the component mounts.
+ *
+ * @param coachingSessionId The ID of the coachingSessionId whose overarching-goals should be fetched
+ * @returns An object containing:
+ *
+ * * overarchingGoals: Array of OverarchingGoal objects (empty array if data is not yet loaded)
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useOverarchingGoalList = (coachingSessionId: Id) => {
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<OverarchingGoal>(
+      OVERARCHING_GOALS_BASEURL,
+      () => OverarchingGoalApi.list(coachingSessionId),
+      coachingSessionId
+    );
 
   return {
-    overarchingGoals: Array.isArray(data) ? data : [],
+    overarchingGoals: entities,
     isLoading,
-    isError: error,
+    isError,
+    refresh,
   };
-}
+};
 
-/// A hook to retrieve a single OverarchingGoal by a coachingSessionId
-export function useOverarchingGoalByCoachingSessionId(coachingSessionId: Id) {
-  const { overarchingGoals, isLoading, isError } =
-    useOverarchingGoals(coachingSessionId);
+/**
+ * A custom React hook that fetches a single overarching-goal by its ID.
+ * This hook uses SWR to efficiently fetch and cache overarching-goal data.
+ * It does not automatically revalidate the data on window focus, reconnect, or when data becomes stale.
+ *
+ * @param id The ID of the overarching-goal to fetch. If null or undefined, no fetch will occur.
+ * @returns An object containing:
+ *
+ * * overarchingGoal: The fetched OverarchingGoal object, or a default overarching-goal if not yet loaded
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useOverarchingGoal = (id: Id) => {
+  const url = id ? `${OVERARCHING_GOALS_BASEURL}/${id}` : null;
+  const fetcher = () => OverarchingGoalApi.get(id);
+
+  const { entity, isLoading, isError, refresh } =
+    EntityApi.useEntity<OverarchingGoal>(
+      url,
+      fetcher,
+      defaultOverarchingGoal()
+    );
+
+  return {
+    overarchingGoal: entity,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * A custom React hook that fetches a single overarching-goal by coaching session ID.
+ * This hook uses SWR to efficiently fetch and cache overarching-goal data.
+ * It does not automatically revalidate the data on window focus, reconnect, or when data becomes stale.
+ *
+ * @param coachingSessionId The coaching session ID of the overarching-goal to fetch. If null or undefined, no fetch will occur.
+ * @returns An object containing:
+ *
+ * * overarchingGoal: The fetched OverarchingGoal object, or a default overarching-goal if not yet loaded
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useOverarchingGoalBySession = (coachingSessionId: Id) => {
+  const { overarchingGoals, isLoading, isError, refresh } =
+    useOverarchingGoalList(coachingSessionId);
 
   return {
     overarchingGoal: overarchingGoals.length
@@ -67,262 +169,34 @@ export function useOverarchingGoalByCoachingSessionId(coachingSessionId: Id) {
       : defaultOverarchingGoal(),
     isLoading,
     isError: isError,
+    refresh,
   };
-}
-
-interface ApiResponseOverarchingGoal {
-  status_code: number;
-  data: OverarchingGoal;
-}
-
-// Fetcher for retrieving a single OverarchingGoal by its Id
-const fetcherOverarchingGoal = async (url: string): Promise<OverarchingGoal> =>
-  axios
-    .get<ApiResponseOverarchingGoal>(url, {
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then((res) => res.data.data);
-
-/// A hook to retrieve a single OverarchingGoal by its Id
-export function useOverarchingGoal(overarchingGoalId: Id) {
-  const { data, error, isLoading } = useSWR<OverarchingGoal>(
-    `${siteConfig.env.backendServiceURL}/overarching_goals/${overarchingGoalId}`,
-    fetcherOverarchingGoal
-  );
-  const swrConfig = useSWRConfig();
-  console.debug(`swrConfig: ${JSON.stringify(swrConfig)}`);
-
-  console.debug(`overarchingGoal data: ${JSON.stringify(data)}`);
-
-  return {
-    overarchingGoal: data || defaultOverarchingGoal(),
-    isLoading,
-    isError: error,
-  };
-}
-
-export const fetchOverarchingGoalsByCoachingSessionId = async (
-  coachingSessionId: Id
-): Promise<OverarchingGoal[]> => {
-  const axios = require("axios");
-
-  var goals: OverarchingGoal[] = [];
-  var err: string = "";
-
-  await axios
-    .get(`${siteConfig.env.backendServiceURL}/overarching_goals`, {
-      params: {
-        coaching_session_id: coachingSessionId,
-      },
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      var goals_data = response.data.data;
-      if (isOverarchingGoalArray(goals_data)) {
-        goals_data.forEach((goals_data: any) => {
-          goals.push(parseOverarchingGoal(goals_data));
-        });
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      if (error.response?.status == 401) {
-        err = "Retrieval of OverarchingGoals failed: unauthorized.";
-      } else if (error.response?.status == 404) {
-        err =
-          "Retrieval of OverarchingGoals failed: OverarchingGoals by coaching session Id (" +
-          coachingSessionId +
-          ") not found.";
-      } else {
-        err =
-          `Retrieval of OverarchingGoals by coaching session Id (` +
-          coachingSessionId +
-          `) failed.`;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return goals;
 };
 
-export const createOverarchingGoal = async (
-  coaching_session_id: Id,
-  title: string,
-  body: string,
-  status: ItemStatus
-): Promise<OverarchingGoal> => {
-  const axios = require("axios");
-
-  const newOverarchingGoalJson = {
-    coaching_session_id: coaching_session_id,
-    title: title,
-    body: body,
-    status: status,
-  };
-  console.debug(
-    "newOverarchingGoalJson: " + JSON.stringify(newOverarchingGoalJson)
+/**
+ * A custom React hook that provides mutation operations for overarching-goals with loading and error state management.
+ * This hook simplifies creating, updating, and deleting overarching-goals while handling loading states,
+ * error management, and cache invalidation automatically.
+ *
+ * @returns An object containing:
+ * create: Function to create a new overarching-goal
+ * update: Function to update an existing overarching-goal
+ * delete: Function to delete an overarching-goal
+ * isLoading: Boolean indicating if any operation is in progress
+ * error: Error object if the last operation failed, null otherwise
+ */
+/**
+ * Hook for overarching-goal mutations.
+ * Provides methods to create, update, and delete overarching-goal.
+ */
+export const useOverarchingGoalMutation = () => {
+  return EntityApi.useEntityMutation<OverarchingGoal>(
+    OVERARCHING_GOALS_BASEURL,
+    {
+      create: OverarchingGoalApi.create,
+      createNested: OverarchingGoalApi.createNested,
+      update: OverarchingGoalApi.update,
+      delete: OverarchingGoalApi.delete,
+    }
   );
-  // A full real action to be returned from the backend with the same body
-  var createdOverarchingGoal: OverarchingGoal = defaultOverarchingGoal();
-  var err: string = "";
-
-  await axios
-    .post(
-      `${siteConfig.env.backendServiceURL}/overarching_goals`,
-      newOverarchingGoalJson,
-      {
-        withCredentials: true,
-        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-          "Content-Type": "application/json",
-        },
-      }
-    )
-    .then(function (response: AxiosResponse) {
-      // handle success
-      const goal_data = response.data.data;
-      if (isOverarchingGoal(goal_data)) {
-        createdOverarchingGoal = parseOverarchingGoal(goal_data);
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        err = "Creation of OverarchingGoal failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        err = "Creation of OverarchingGoal failed: internal server error.";
-      } else {
-        err = `Creation of new OverarchingGoal failed.`;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return createdOverarchingGoal;
-};
-
-export const updateOverarchingGoal = async (
-  id: Id,
-  coaching_session_id: Id,
-  title: string,
-  body: string,
-  status: ItemStatus
-): Promise<OverarchingGoal> => {
-  const axios = require("axios");
-
-  var updatedOverarchingGoal: OverarchingGoal = defaultOverarchingGoal();
-  var err: string = "";
-
-  const toUpdateOverarchingGoalJson = {
-    id: id,
-    coaching_session_id: coaching_session_id,
-    title: title,
-    body: body,
-    status: status,
-  };
-  console.debug(
-    "toUpdateOverarchingGoalJson: " +
-      JSON.stringify(toUpdateOverarchingGoalJson)
-  );
-
-  await axios
-    .put(
-      `${siteConfig.env.backendServiceURL}/overarching_goals/${id}`,
-      toUpdateOverarchingGoalJson,
-      {
-        withCredentials: true,
-        setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-          "Content-Type": "application/json",
-        },
-      }
-    )
-    .then(function (response: AxiosResponse) {
-      // handle success
-      const goal_data = response.data.data;
-      if (isOverarchingGoal(goal_data)) {
-        updatedOverarchingGoal = parseOverarchingGoal(goal_data);
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        err = "Update of OverarchingGoal failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        err = "Update of OverarchingGoal failed: internal server error.";
-      } else {
-        err = `Update of new OverarchingGoal failed: ${error.response?.statusText}`;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return updatedOverarchingGoal;
-};
-
-export const deleteOverarchingGoal = async (
-  id: Id
-): Promise<OverarchingGoal> => {
-  const axios = require("axios");
-
-  var deletedOverarchingGoal: OverarchingGoal = defaultOverarchingGoal();
-  var err: string = "";
-
-  await axios
-    .delete(`${siteConfig.env.backendServiceURL}/overarching_goals/${id}`, {
-      withCredentials: true,
-      setTimeout: 5000, // 5 seconds before timing out trying to log in with the backend
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-        "Content-Type": "application/json",
-      },
-    })
-    .then(function (response: AxiosResponse) {
-      // handle success
-      const goal_data = response.data.data;
-      if (isOverarchingGoal(goal_data)) {
-        deletedOverarchingGoal = parseOverarchingGoal(goal_data);
-      }
-    })
-    .catch(function (error: AxiosError) {
-      // handle error
-      console.error(error.response?.status);
-      if (error.response?.status == 401) {
-        err = "Deletion of OverarchingGoal failed: unauthorized.";
-      } else if (error.response?.status == 500) {
-        err = "Deletion of OverarchingGoal failed: internal server error.";
-      } else {
-        err = `Deletion of OverarchingGoal failed.`;
-      }
-    });
-
-  if (err) {
-    console.error(err);
-    throw err;
-  }
-
-  return deletedOverarchingGoal;
 };

@@ -1,10 +1,10 @@
 import { Id } from "@/types/general";
 
-// This must always reflect the Rust struct on the backend
-// controller::user_session_controller::login()'s return value
+// This must always reflect the Rust struct on the backend controller::user_session
 export interface UserSession {
   id: Id;
   email: string;
+  password?: string;
   first_name: string;
   last_name: string;
   display_name: string;
@@ -17,6 +17,7 @@ export function parseUserSession(data: unknown): UserSession {
   return {
     id: data.id,
     email: data.email,
+    password: data.password,
     first_name: data.first_name,
     last_name: data.last_name,
     display_name: data.display_name,
@@ -30,11 +31,12 @@ export function isUserSession(value: unknown): value is UserSession {
   const object = value as Record<string, unknown>;
 
   return (
-    typeof object.id === "string" &&
-    typeof object.email === "string" &&
-    typeof object.first_name === "string" &&
-    typeof object.last_name === "string" &&
-    typeof object.display_name === "string"
+    (typeof object.id === "string" &&
+      typeof object.email === "string" &&
+      typeof object.first_name === "string" &&
+      typeof object.last_name === "string" &&
+      typeof object.display_name === "string") ||
+    typeof object.password === "string" // password is optional
   );
 }
 
@@ -42,6 +44,7 @@ export function defaultUserSession(): UserSession {
   return {
     id: "",
     email: "",
+    password: "",
     first_name: "",
     last_name: "",
     display_name: "",

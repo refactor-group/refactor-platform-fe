@@ -11,11 +11,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDateTimeFromString, Id } from "@/types/general";
-import { useCoachingSessions } from "@/lib/api/coaching-sessions";
+import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { useEffect, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
-import { fetchOverarchingGoalsByCoachingSessionId } from "@/lib/api/overarching-goals";
+import { OverarchingGoalApi } from "@/lib/api/overarching-goals";
 import { OverarchingGoal } from "@/types/overarching-goal";
 import { CoachingSession } from "@/types/coaching-session";
 
@@ -33,11 +33,18 @@ function CoachingSessionsSelectItems({
 }: {
   relationshipId: Id;
 }) {
+  // TODO: for now we hardcode a 2 month window centered around now,
+  // eventually we want to make this be configurable somewhere
+  // (either on the page or elsewhere)
+  const fromDate = DateTime.now().minus({ month: 1 });
+  const toDate = DateTime.now().plus({ month: 1 });
+
   const {
     coachingSessions,
     isLoading: isLoadingSessions,
     isError: isErrorSessions,
-  } = useCoachingSessions(relationshipId);
+    refresh,
+  } = useCoachingSessionList(relationshipId, fromDate, toDate);
 
   const { setCurrentCoachingSessions } = useCoachingSessionStateStore(
     (state) => state
@@ -56,7 +63,7 @@ function CoachingSessionsSelectItems({
       try {
         const sessionIds = coachingSessions?.map((session) => session.id) || [];
         const goalsPromises = sessionIds.map((id) =>
-          fetchOverarchingGoalsByCoachingSessionId(id)
+          OverarchingGoalApi.list(id)
         );
         const fetchedGoals = await Promise.all(goalsPromises);
         setGoals(fetchedGoals);
@@ -163,9 +170,7 @@ export default function CoachingSessionSelector({
 
       setIsLoadingGoal(true);
       try {
-        const goals = await fetchOverarchingGoalsByCoachingSessionId(
-          currentCoachingSessionId
-        );
+        const goals = await OverarchingGoalApi.list(currentCoachingSessionId);
         setCurrentGoal(goals[0]);
       } catch (error) {
         console.error("Error fetching goal:", error);

@@ -6,7 +6,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
-import { useOverarchingGoalByCoachingSessionId } from "@/lib/api/overarching-goals";
+import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
 import { Id } from "@/types/general";
 
 interface CoachingSessionProps {
@@ -59,7 +59,7 @@ const OverarchingGoal: React.FC<OverarchingGoalProps> = ({
     overarchingGoal,
     isLoading: isLoadingOverarchingGoal,
     isError: isErrorOverarchingGoal,
-  } = useOverarchingGoalByCoachingSessionId(coachingSessionId);
+  } = useOverarchingGoalBySession(coachingSessionId);
 
   let titleText: string;
 
@@ -74,4 +74,4 @@ const OverarchingGoal: React.FC<OverarchingGoalProps> = ({
   return <div>{titleText}</div>;
 };
 
-export default CoachingSession;
+export { CoachingSession };

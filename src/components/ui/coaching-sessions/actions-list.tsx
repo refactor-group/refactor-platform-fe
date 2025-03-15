@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -37,7 +37,7 @@ import {
   Id,
   stringToActionStatus,
 } from "@/types/general";
-import { fetchActionsByCoachingSessionId } from "@/lib/api/actions";
+import { useActionList } from "@/lib/api/actions";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { Action, actionToString } from "@/types/action";
@@ -74,7 +74,8 @@ const ActionsList: React.FC<{
     UpdatedAt = "updated_at",
   }
 
-  const [actions, setActions] = useState<Action[]>([]);
+  const { actions, isLoading, isError, refresh } =
+    useActionList(coachingSessionId);
   const [newBody, setNewBody] = useState("");
   const [newStatus, setNewStatus] = useState<ItemStatus>(ItemStatus.NotStarted);
   const [newDueBy, setNewDueBy] = useState<DateTime>(DateTime.now());
@@ -89,26 +90,28 @@ const ActionsList: React.FC<{
   );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  const addAction = () => {
+  const addAction = async () => {
     if (newBody.trim() === "") return;
 
-    // Call the external onActionAdded handler function which should
-    // store this action in the backend database
-    onActionAdded(newBody, newStatus, newDueBy)
-      .then((action) => {
-        console.trace(
-          "Newly created Action (onActionAdded): " + actionToString(action)
-        );
-        setActions((prevActions) => [...prevActions, action]);
-      })
-      .catch((err) => {
-        console.error("Failed to create new Action: " + err);
-        throw err;
-      });
+    try {
+      // Call the external handler to create the action
+      const action = await onActionAdded(newBody, newStatus, newDueBy);
 
-    setNewBody("");
-    setNewStatus(ItemStatus.NotStarted);
-    setNewDueBy(DateTime.now());
+      console.trace(
+        "Newly created Action (onActionAdded): " + actionToString(action)
+      );
+
+      // Refresh the actions list from the hook
+      refresh();
+
+      // Clear input fields
+      setNewBody("");
+      setNewStatus(ItemStatus.NotStarted);
+      setNewDueBy(DateTime.now());
+    } catch (err) {
+      console.error("Failed to create new Action: " + err);
+      throw err;
+    }
   };
 
   const updateAction = async (
@@ -121,32 +124,18 @@ const ActionsList: React.FC<{
     if (body === "") return;
 
     try {
-      const updatedActions = await Promise.all(
-        actions.map(async (action) => {
-          if (action.id === id) {
-            // Call the external onActionEdited handler function which should
-            // update the stored version of this action in the backend database
-            action = await onActionEdited(id, body, newStatus, newDueBy)
-              .then((updatedAction) => {
-                console.trace(
-                  "Updated Action (onActionUpdated): " +
-                    actionToString(updatedAction)
-                );
+      // Call the external onActionEdited handler function which should
+      // update the stored version of this action in the backend database
+      const updatedAction = await onActionEdited(id, body, newStatus, newDueBy);
 
-                return updatedAction;
-              })
-              .catch((err) => {
-                console.error(
-                  "Failed to update Action (id: " + id + "): " + err
-                );
-                throw err;
-              });
-          }
-          return action;
-        })
+      console.trace(
+        "Updated Action (onActionUpdated): " + actionToString(updatedAction)
       );
 
-      setActions(updatedActions);
+      // Refresh the actions list from the hook
+      refresh();
+
+      // Reset editing UI state
       setEditingId(null);
       setEditBody("");
       setEditStatus(ItemStatus.NotStarted);
@@ -157,22 +146,23 @@ const ActionsList: React.FC<{
     }
   };
 
-  const deleteAction = (id: Id) => {
+  const deleteAction = async (id: Id) => {
     if (id === "") return;
 
-    // Call the external onActionDeleted handler function which should
-    // delete this action from the backend database
-    onActionDeleted(id)
-      .then((action) => {
-        console.trace(
-          "Deleted Action (onActionDeleted): " + actionToString(action)
-        );
-        setActions(actions.filter((action) => action.id !== id));
-      })
-      .catch((err) => {
-        console.error("Failed to Action (id: " + id + "): " + err);
-        throw err;
-      });
+    try {
+      // Delete action in backend
+      const deletedAction = await onActionDeleted(id);
+
+      console.trace(
+        "Deleted Action (onActionDeleted): " + actionToString(deletedAction)
+      );
+
+      // Refresh the actions list from the hook
+      refresh();
+    } catch (err) {
+      console.error("Failed to delete Action (id: " + id + "): " + err);
+      throw err;
+    }
   };
 
   const sortActions = (column: keyof Action) => {
@@ -192,27 +182,6 @@ const ActionsList: React.FC<{
     if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
     return 0;
   });
-
-  useEffect(() => {
-    async function loadActions() {
-      if (!coachingSessionId) {
-        console.error(
-          "Failed to fetch Actions since coachingSessionId is not set."
-        );
-        return;
-      }
-
-      await fetchActionsByCoachingSessionId(coachingSessionId)
-        .then((actions) => {
-          console.debug("setActions: " + JSON.stringify(actions));
-          setActions(actions);
-        })
-        .catch(([err]) => {
-          console.error("Failed to fetch Actions: " + err);
-        });
-    }
-    loadActions();
-  }, [coachingSessionId]);
 
   return (
     <div>
