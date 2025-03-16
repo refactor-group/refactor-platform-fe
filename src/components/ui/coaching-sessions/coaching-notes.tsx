@@ -94,9 +94,13 @@ const CoachingNotes = () => {
   const [doc] = useState(() => new Y.Doc());
   const { isLoading, isError, extensions } = useCollaborationProvider(doc);
 
-  if (isLoading) return <div>Loading editor...</div>;
+  if (isLoading) return <div>Loading coaching notes...</div>;
   if (isError)
-    return <div>Error initializing editor. Please try again later.</div>;
+    return (
+      <div>
+        We couldn't retrieve your coaching notes. Please try again later.
+      </div>
+    );
 
   return (
     <div className="border rounded">
