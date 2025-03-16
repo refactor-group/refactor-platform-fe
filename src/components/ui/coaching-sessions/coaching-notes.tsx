@@ -98,7 +98,7 @@ const CoachingNotes = () => {
   if (isError)
     return (
       <div>
-        We couldn't retrieve your coaching notes. Please try again later.
+        We could not retrieve your coaching notes. Please try again later.
       </div>
     );
 
