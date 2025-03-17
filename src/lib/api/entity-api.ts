@@ -420,7 +420,15 @@ export namespace EntityApi {
        * @param entity The entity data to create
        * @returns Promise resolving to the created entity
        */
+
       create: (entity: T) => executeWithState(() => api.create(entity)),
+      /**
+       * Creates a new entity nested under another entity (foreign key relationship).
+       *
+       * @param id The entity's id under which to create entity
+       * @param entity The entity data to create
+       * @returns Promise resolving to the created entity
+       */
       createNested: (id: Id, entity: T) =>
         executeWithState(() => api.createNested(id, entity)),
       /**
