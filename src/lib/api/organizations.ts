@@ -5,13 +5,15 @@ import { Id } from "@/types/general";
 import { Organization, defaultOrganization } from "@/types/organization";
 import { EntityApi } from "./entity-api";
 
+const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
+
 /**
  * API client for organization-related operations.
  *
  * This object provides a collection of functions for interacting with the organization endpoints
  * on the backend service. It handles the HTTP requests and response parsing for all CRUD operations.
  */
-export const OrganizationAPI = {
+export const OrganizationApi = {
   /*
    * Fetches a list of organizations associated with a specific user.
    *
@@ -19,12 +21,9 @@ export const OrganizationAPI = {
    * @returns Promise resolving to an array of Organization objects
    */
   list: async (userId: Id): Promise<Organization[]> =>
-    EntityApi.listFn<Organization>(
-      `${siteConfig.env.backendServiceURL}/organizations`,
-      {
-        params: { user_id: userId },
-      }
-    ),
+    EntityApi.listFn<Organization>(ORGANIZATIONS_BASEURL, {
+      params: { user_id: userId },
+    }),
 
   /**
    * Fetches a single organization by its ID.
@@ -33,9 +32,7 @@ export const OrganizationAPI = {
    * @returns Promise resolving to the Organization object
    */
   get: async (id: Id): Promise<Organization> =>
-    EntityApi.getFn<Organization>(
-      `${siteConfig.env.backendServiceURL}/organizations/${id}`
-    ),
+    EntityApi.getFn<Organization>(`${ORGANIZATIONS_BASEURL}/${id}`),
 
   /**
    * Creates a new organization.
@@ -45,9 +42,13 @@ export const OrganizationAPI = {
    */
   create: async (organization: Organization): Promise<Organization> =>
     EntityApi.createFn<Organization, Organization>(
-      `${siteConfig.env.backendServiceURL}/organizations`,
+      ORGANIZATIONS_BASEURL,
       organization
     ),
+
+  createNested: async (id: Id, entity: Organization): Promise<Organization> => {
+    throw new Error("Create nested operation not implemented");
+  },
 
   /**
    * Updates an existing organization.
@@ -58,7 +59,7 @@ export const OrganizationAPI = {
    */
   update: async (id: Id, organization: Organization): Promise<Organization> =>
     EntityApi.updateFn<Organization, Organization>(
-      `${siteConfig.env.backendServiceURL}/organizations/${id}`,
+      `${ORGANIZATIONS_BASEURL}/${id}`,
       organization
     ),
 
@@ -69,9 +70,7 @@ export const OrganizationAPI = {
    * @returns Promise resolving to the deleted Organization object
    */
   delete: async (id: Id): Promise<Organization> =>
-    EntityApi.deleteFn<null, Organization>(
-      `${siteConfig.env.backendServiceURL}/organizations/${id}`
-    ),
+    EntityApi.deleteFn<null, Organization>(`${ORGANIZATIONS_BASEURL}/${id}`),
 };
 
 /**
@@ -91,8 +90,8 @@ export const OrganizationAPI = {
 export const useOrganizationList = (userId: Id) => {
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<Organization>(
-      `${siteConfig.env.backendServiceURL}/organizations`,
-      () => OrganizationAPI.list(userId),
+      ORGANIZATIONS_BASEURL,
+      () => OrganizationApi.list(userId),
       userId
     );
 
@@ -118,10 +117,8 @@ export const useOrganizationList = (userId: Id) => {
  * * refresh: Function to manually trigger a refresh of the data
  */
 export const useOrganization = (id: Id) => {
-  const url = id
-    ? `${siteConfig.env.backendServiceURL}/organizations/${id}`
-    : null;
-  const fetcher = () => OrganizationAPI.get(id);
+  const url = id ? `${ORGANIZATIONS_BASEURL}/${id}` : null;
+  const fetcher = () => OrganizationApi.get(id);
 
   const { entity, isLoading, isError, refresh } =
     EntityApi.useEntity<Organization>(url, fetcher, defaultOrganization());
@@ -151,12 +148,10 @@ export const useOrganization = (id: Id) => {
  * Provides methods to create, update, and delete organizations.
  */
 export const useOrganizationMutation = () => {
-  return EntityApi.useEntityMutation<Organization>(
-    `${siteConfig.env.backendServiceURL}/organizations`,
-    {
-      create: OrganizationAPI.create,
-      update: OrganizationAPI.update,
-      delete: OrganizationAPI.delete,
-    }
-  );
+  return EntityApi.useEntityMutation<Organization>(ORGANIZATIONS_BASEURL, {
+    create: OrganizationApi.create,
+    createNested: OrganizationApi.createNested,
+    update: OrganizationApi.update,
+    delete: OrganizationApi.delete,
+  });
 };

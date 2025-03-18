@@ -3,20 +3,26 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { loginUser } from "@/lib/api/user-session";
+import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useRouter } from "next/navigation";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { userSessionToString } from "@/types/user-session";
+import {
+  defaultUserSession,
+  UserSession,
+  userSessionToString,
+} from "@/types/user-session";
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const router = useRouter();
   const { login } = useAuthStore((action) => action);
+
+  const { create: createUserSession } = useUserSessionMutation();
 
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [email, setEmail] = React.useState<string>("");
@@ -27,9 +33,16 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     event.preventDefault();
     setIsLoading(true);
 
-    await loginUser(email, password)
+    const userSession: UserSession = {
+      ...defaultUserSession(),
+      email,
+      password,
+    };
+
+    await createUserSession(userSession)
       .then((userSession) => {
         console.debug("userSession: " + userSessionToString(userSession));
+        // Create a new session in the auth store
         login(userSession.id, userSession);
         setIsLoading(false);
         router.push("/dashboard");

@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Id } from "@/types/general";
-import { useCoachingRelationships } from "@/lib/api/coaching-relationships";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useEffect } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
@@ -30,7 +30,7 @@ function CoachingRelationshipsSelectItems({
   organizationId: Id;
 }) {
   const { relationships, isLoading, isError } =
-    useCoachingRelationships(organizationId);
+    useCoachingRelationshipList(organizationId);
   const { setCurrentCoachingRelationships } = useCoachingRelationshipStateStore(
     (state) => state
   );

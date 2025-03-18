@@ -15,26 +15,6 @@ export interface Action {
   updated_at: DateTime;
 }
 
-// The main purpose of having this parsing function is to be able to parse the
-// returned DateTimeWithTimeZone (Rust type) string into something that ts-luxon
-// will agree to work with internally.
-export function parseAction(data: any): Action {
-  if (!isAction(data)) {
-    throw new Error("Invalid Action object data");
-  }
-  return {
-    id: data.id,
-    coaching_session_id: data.coaching_session_id,
-    body: data.body,
-    user_id: data.user_id,
-    status: data.status,
-    status_changed_at: DateTime.fromISO(data.status_changed_at.toString()),
-    due_by: DateTime.fromISO(data.due_by.toString()),
-    created_at: DateTime.fromISO(data.created_at.toString()),
-    updated_at: DateTime.fromISO(data.updated_at.toString()),
-  };
-}
-
 export function isAction(value: unknown): value is Action {
   if (!value || typeof value !== "object") {
     return false;
