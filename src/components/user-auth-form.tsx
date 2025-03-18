@@ -50,7 +50,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       .catch((err) => {
         setIsLoading(false);
         console.error("Login failed, err: " + err);
-        setError(err);
+        setError(err.message);
       });
   }
 
