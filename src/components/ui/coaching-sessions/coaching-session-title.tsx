@@ -43,14 +43,14 @@ const CoachingSessionTitle: React.FC<{
 
   if (isLoading) {
     return (
-      <h4 className="font-semibold break-words w-full px-2 md:px-4 lg:px-6 md:text-clip">
+      <h4 className="font-semibold break-words w-full md:text-clip">
         {defaultSessionTitle().title}
       </h4>
     );
   }
 
   return (
-    <h4 className="font-semibold break-words w-full px-2 md:px-4 lg:px-6 md:text-clip">
+    <h4 className="font-semibold break-words w-full md:text-clip">
       {sessionTitle ? sessionTitle.title : defaultSessionTitle().title}
     </h4>
   );
