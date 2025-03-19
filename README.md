@@ -41,5 +41,5 @@ npm run dev
 
 ### Logging Into the Application
 
-Open [http://localhost:3000/login](http://localhost:3000/login) with your browser to log in to the platform.
+Open [http://localhost:3000](http://localhost:3000) with your browser to log in to the platform.
 
