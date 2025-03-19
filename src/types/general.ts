@@ -49,3 +49,29 @@ export function getDateTimeFromString(dateTime: string): DateTime {
   const dt = dateTime.trim();
   return dt.trim().length > 0 ? DateTime.fromISO(dt) : DateTime.now();
 }
+
+// Type-safe transformation function with runtime validation that ensures
+// that raw ISO date time stamps are transformed into valid ts-luxon DateTime
+// instances.
+export const transformEntityDates = (data: any): any => {
+  // Return early for non-objects
+  if (typeof data !== "object" || data === null) return data;
+
+  // Create a new object with transformed dates
+  const transformed: Record<string, any> = { ...data };
+
+  // Helper function for safe date conversion
+  const convertDate = (field: string) => {
+    if (typeof transformed[field] === "string") {
+      const dt = DateTime.fromISO(transformed[field]);
+      transformed[field] = dt.isValid ? dt : transformed[field];
+    }
+  };
+
+  // Convert known date + time fields
+  convertDate("created_at");
+  convertDate("updated_at");
+  convertDate("due_by");
+
+  return transformed;
+};

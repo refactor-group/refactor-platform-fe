@@ -15,28 +15,6 @@ export interface CoachingRelationshipWithUserNames {
   updated_at: DateTime;
 }
 
-// The main purpose of having this parsing function is to be able to parse the
-// returned DateTimeWithTimeZone (Rust type) string into something that ts-luxon
-// will agree to work with internally.
-export function parseCoachingRelationshipWithUserNames(
-  data: any
-): CoachingRelationshipWithUserNames {
-  if (!isCoachingRelationshipWithUserNames(data)) {
-    throw new Error("Invalid CoachingRelationshipWithUserNames object data");
-  }
-  return {
-    id: data.id,
-    coach_id: data.coach_id,
-    coachee_id: data.coachee_id,
-    coach_first_name: data.coach_first_name,
-    coach_last_name: data.coach_last_name,
-    coachee_first_name: data.coachee_first_name,
-    coachee_last_name: data.coachee_last_name,
-    created_at: DateTime.fromISO(data.created_at.toString()),
-    updated_at: DateTime.fromISO(data.updated_at.toString()),
-  };
-}
-
 export function isCoachingRelationshipWithUserNames(
   value: unknown
 ): value is CoachingRelationshipWithUserNames {

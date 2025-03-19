@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { logoutUser } from "@/lib/api/user-session";
+import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
@@ -23,13 +23,11 @@ import { useRouter } from "next/navigation";
 
 export function UserNav() {
   const router = useRouter();
-
   const { logout } = useAuthStore((action) => action);
-
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
-
+  const { delete: deleteUserSession } = useUserSessionMutation();
   const { resetOrganizationState } = useOrganizationStateStore(
     (action) => action
   );
@@ -41,24 +39,26 @@ export function UserNav() {
   );
 
   async function logout_user() {
-    const err = await logoutUser();
-    if (err.length > 0) {
-      console.error("Error while logging out: " + err);
+    try {
+      console.trace("Deleting active user session: ", userSession.id);
+      await deleteUserSession(userSession.id);
+
+      console.trace("Resetting CoachingSessionStateStore state");
+      resetCoachingSessionState();
+
+      console.trace("Resetting CoachingRelationshipStateStore state");
+      resetCoachingRelationshipState();
+
+      console.trace("Resetting OrganizationStateStore state");
+      resetOrganizationState();
+
+      console.trace("Resetting AuthStore state");
+      logout();
+
+      router.push("/");
+    } catch (err) {
+      console.error("Error while logging out session: ", userSession.id, err);
     }
-
-    console.trace("Doing CoachingSessionStateStore property reset");
-    resetCoachingSessionState();
-
-    console.trace("Doing CoachingRelationshipStateStore property reset");
-    resetCoachingRelationshipState();
-
-    console.trace("Doing OrganizationStateStore property reset");
-    resetOrganizationState();
-
-    console.trace("Doing AuthStore logout");
-    logout();
-
-    router.push("/");
   }
 
   return (
@@ -66,7 +66,6 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative mx-2 h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            {/* <AvatarImage src="/avatars/03.png" alt="@jhodapp" /> */}
             <AvatarFallback>
               {userFirstLastLettersToString(
                 userSession.first_name,
@@ -91,19 +90,10 @@ export function UserNav() {
             Profile
             <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
           </DropdownMenuItem>
-          {/* <DropdownMenuItem>
-            Current Organization
-            <DropdownMenuShortcut>⌘O</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Billing
-            <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-          </DropdownMenuItem> */}
           <DropdownMenuItem>
             Settings
             <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
           </DropdownMenuItem>
-          {/* <DropdownMenuItem>New Team</DropdownMenuItem> */}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout_user}>

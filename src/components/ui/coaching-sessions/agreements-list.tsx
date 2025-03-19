@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,9 +17,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowUpDown, Save } from "lucide-react";
+import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import { Id } from "@/types/general";
-import { fetchAgreementsByCoachingSessionId } from "@/lib/api/agreements";
+import { useAgreementList } from "@/lib/api/agreements";
 import { Agreement, agreementToString } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
@@ -43,8 +43,9 @@ const AgreementsList: React.FC<{
     UpdatedAt = "updated_at",
   }
 
-  const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [newAgreement, setNewAgreement] = useState("");
+  const { agreements, isLoading, isError, refresh } =
+    useAgreementList(coachingSessionId);
   const [editingId, setEditingId] = useState<Id | null>(null);
   const [editBody, setEditBody] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof Agreement>(
@@ -52,25 +53,27 @@ const AgreementsList: React.FC<{
   );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  const addAgreement = () => {
+  const addAgreement = async () => {
     if (newAgreement.trim() === "") return;
 
-    // Call the external onAgreementAdded handler function which should
-    // store this agreement in the backend database
-    onAgreementAdded(newAgreement)
-      .then((agreement) => {
-        console.trace(
-          "Newly created Agreement (onAgreementAdded): " +
-            agreementToString(agreement)
-        );
-        setAgreements((prevAgreements) => [...prevAgreements, agreement]);
-      })
-      .catch((err) => {
-        console.error("Failed to create new Agreement: " + err);
-        throw err;
-      });
+    try {
+      // Call the external handler to create the agreement
+      const agreement = await onAgreementAdded(newAgreement);
 
-    setNewAgreement("");
+      console.trace(
+        "Newly created Agreement (onAgreementAdded): " +
+          agreementToString(agreement)
+      );
+
+      // Refresh the agreements list from the hook
+      refresh();
+
+      // Clear input field
+      setNewAgreement("");
+    } catch (err) {
+      console.error("Failed to create new Agreement: " + err);
+      throw err;
+    }
   };
 
   const updateAgreement = async (id: Id, newBody: string) => {
@@ -78,32 +81,18 @@ const AgreementsList: React.FC<{
     if (body === "") return;
 
     try {
-      const updatedAgreements = await Promise.all(
-        agreements.map(async (agreement) => {
-          if (agreement.id === id) {
-            // Call the external onAgreementEdited handler function which should
-            // update the stored version of this agreement in the backend database
-            agreement = await onAgreementEdited(id, body)
-              .then((updatedAgreement) => {
-                console.trace(
-                  "Updated Agreement (onAgreementUpdated): " +
-                    agreementToString(updatedAgreement)
-                );
+      // Update agreement in backend
+      const updatedAgreement = await onAgreementEdited(id, body);
 
-                return updatedAgreement;
-              })
-              .catch((err) => {
-                console.error(
-                  "Failed to update Agreement (id: " + id + "): " + err
-                );
-                throw err;
-              });
-          }
-          return agreement;
-        })
+      console.trace(
+        "Updated Agreement (onAgreementUpdated): " +
+          agreementToString(updatedAgreement)
       );
 
-      setAgreements(updatedAgreements);
+      // Refresh the agreements list from the hook
+      refresh();
+
+      // Reset editing UI state
       setEditingId(null);
       setEditBody("");
     } catch (err) {
@@ -112,23 +101,24 @@ const AgreementsList: React.FC<{
     }
   };
 
-  const deleteAgreement = (id: Id) => {
+  const deleteAgreement = async (id: Id) => {
     if (id === "") return;
 
-    // Call the external onAgreementDeleted handler function which should
-    // delete this agreement from the backend database
-    onAgreementDeleted(id)
-      .then((agreement) => {
-        console.trace(
-          "Deleted Agreement (onAgreementDeleted): " +
-            agreementToString(agreement)
-        );
-        setAgreements(agreements.filter((agreement) => agreement.id !== id));
-      })
-      .catch((err) => {
-        console.error("Failed to Agreement (id: " + id + "): " + err);
-        throw err;
-      });
+    try {
+      // Delete agreement in backend
+      const deletedAgreement = await onAgreementDeleted(id);
+
+      console.trace(
+        "Deleted Agreement (onAgreementDeleted): " +
+          agreementToString(deletedAgreement)
+      );
+
+      // Refresh the agreements list from the hook
+      refresh();
+    } catch (err) {
+      console.error("Failed to delete Agreement (id: " + id + "): " + err);
+      throw err;
+    }
   };
 
   const sortAgreements = (column: keyof Agreement) => {
@@ -148,27 +138,6 @@ const AgreementsList: React.FC<{
     if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
     return 0;
   });
-
-  useEffect(() => {
-    async function loadAgreements() {
-      if (!coachingSessionId) {
-        console.error(
-          "Failed to fetch Agreements since coachingSessionId is not set."
-        );
-        return;
-      }
-
-      await fetchAgreementsByCoachingSessionId(coachingSessionId)
-        .then((agreements) => {
-          console.debug("setAgreements: " + JSON.stringify(agreements));
-          setAgreements(agreements);
-        })
-        .catch(([err]) => {
-          console.error("Failed to fetch Agreements: " + err);
-        });
-    }
-    loadAgreements();
-  }, [coachingSessionId]);
 
   return (
     <div>
