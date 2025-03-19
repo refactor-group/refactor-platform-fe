@@ -3,7 +3,7 @@ export const siteConfig = {
   url: "https://refactorcoach.com",
   ogImage: "https://ui.shadcn.com/og.jpg",
   locale: "us",
-  titleStyle: SessionTitleStyle.CoachFirstCoacheeFirstDate,
+  titleStyle: SessionTitleStyle.CoachFirstLastCoacheeFirstLast,
   description: "Coaching and mentorship done right.",
   links: {
     twitter: "https://twitter.com/shadcn",
