@@ -33,13 +33,9 @@ export namespace EntityApi {
    */
   const fetcher = async <T, U = T>(
     url: string,
-    config?: any,
+    config: any,
     transform?: (data: T) => U
   ): Promise<U> => {
-    if (!config) {
-      return [] as unknown as U; // Return empty array if config is null
-    }
-
     const response = await axios.get<ApiResponse<T>>(url, {
       withCredentials: true,
       timeout: 5000,
@@ -145,7 +141,7 @@ export namespace EntityApi {
    * @returns A Promise resolving to an entity of type R
    */
   export const getFn = async <R>(url: string): Promise<R> => {
-    return fetcher<R>(url);
+    return fetcher<R>(url, {});
   };
 
   /**

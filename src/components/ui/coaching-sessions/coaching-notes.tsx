@@ -84,7 +84,6 @@ const useCollaborationProvider = (doc: Y.Doc) => {
 
   return {
     isLoading: isLoading || isSyncing,
-    userSession,
     isError,
     extensions,
   };
