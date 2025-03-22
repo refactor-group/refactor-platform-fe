@@ -50,7 +50,10 @@ export const createOrganizationStateStore = (
             set({ currentOrganizationId: newOrganizationId });
           },
           setCurrentOrganization: (newOrganization) => {
-            set({ currentOrganization: newOrganization });
+            set({
+              currentOrganization: newOrganization,
+              currentOrganizationId: newOrganization.id,
+            });
           },
           setCurrentOrganizations: (newOrganizations: Organization[]) => {
             set({ currentOrganizations: newOrganizations });

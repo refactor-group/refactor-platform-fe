@@ -41,7 +41,7 @@ import { useActionList } from "@/lib/api/actions";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { Action, actionToString } from "@/types/action";
-import { cn } from "@/lib/utils";
+import { cn } from "@/components/lib/utils";
 import { format } from "date-fns";
 
 const ActionsList: React.FC<{

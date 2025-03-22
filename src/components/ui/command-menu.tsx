@@ -13,7 +13,7 @@ import {
 import { useTheme } from "next-themes";
 
 import { docsConfig } from "@/site.config.ts";
-import { cn } from "@/lib/utils";
+import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
