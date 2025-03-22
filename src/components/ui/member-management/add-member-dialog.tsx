@@ -12,13 +12,19 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { UserCategory } from "@/types/user-category";
 
 interface AddMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  memberType: UserCategory;
 }
 
-export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
+export function AddMemberDialog({
+  open,
+  onOpenChange,
+  memberType,
+}: AddMemberDialogProps) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -54,7 +60,7 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New Coachee</DialogTitle>
+          <DialogTitle>Add New {memberType}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
@@ -103,7 +109,7 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
             />
           </div>
           <Button type="submit" className="w-full">
-            Add Coachee
+            Add {memberType}
           </Button>
         </form>
       </DialogContent>

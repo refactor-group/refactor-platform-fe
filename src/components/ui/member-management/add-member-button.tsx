@@ -2,12 +2,17 @@
 
 import { Button } from "@/components/ui/button";
 import { DialogTrigger } from "@/components/ui/dialog";
+import { UserCategory } from "@/types/user-category";
 
-export function AddMemberButton() {
+interface AddMemberButtonProps {
+  memberType: UserCategory;
+}
+
+export function AddMemberButton({ memberType }: AddMemberButtonProps) {
   return (
     <DialogTrigger asChild>
       <Button variant="outline" size="sm">
-        Add Coachee
+        Add {memberType}
       </Button>
     </DialogTrigger>
   );
