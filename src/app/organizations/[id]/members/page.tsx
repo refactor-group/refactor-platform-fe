@@ -2,25 +2,21 @@
 
 import { use, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog } from "@/components/ui/dialog";
-import { AddMemberDialog } from "@/components/ui/member-management/add-member-dialog";
-import { AddMemberButton } from "@/components/ui/member-management/add-member-button";
 import { MemberList } from "@/components/ui/member-management/member-list";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
-import { MemberCard } from "@/components/ui/member-management/member-card";
 
-export default function MemberManagementPage({
+export default function MembersPage({
   params,
 }: {
-  params: Promise<{ organization_id: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const organizationId = use(params).organization_id;
+  const organizationId = use(params).id;
   const { relationships, isLoading, isError } =
     useCoachingRelationshipList(organizationId);
   const { user } = useAuthStore((state) => ({
-    user: state.user,
+    user: state.userSession,
   }));
   const [coaches, setCoaches] = useState<CoachingRelationshipWithUserNames[]>(
     []

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "Manage coaching members",
 };
 
-export default function MemberManagementLayout({
+export default function MembersLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
