@@ -4,7 +4,7 @@ import { MemberCard } from "@/components/ui/member-management/member-card";
 import { AddMemberDialog } from "@/components/ui/member-management/add-member-dialog";
 import { AddMemberButton } from "@/components/ui/member-management/add-member-button";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
-import { UserCategory } from "@/types/user-category";
+import { UserCategory } from "@/types/user-session";
 
 interface MemberListProps {
   memberType: UserCategory;

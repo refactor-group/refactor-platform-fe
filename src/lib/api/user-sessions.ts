@@ -35,10 +35,10 @@ export const UserSessionApi = {
    *
    * This logs a user in of the system by creating a new active cookie session.
    *
-   * @param user session The user session data to create
+   * @param user_session session The user session data to create
    * @returns Promise resolving to the created UserSession object
    */
-  create: async (userSession: UserSession): Promise<UserSession> => {
+  create: async (user_session: UserSession): Promise<UserSession> => {
     const config = {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -46,7 +46,7 @@ export const UserSessionApi = {
     };
     return EntityApi.createFn<UserSession, UserSession>(
       USER_SESSIONS_LOGINURL,
-      userSession,
+      user_session,
       config
     );
   },

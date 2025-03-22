@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { DialogTrigger } from "@/components/ui/dialog";
-import { UserCategory } from "@/types/user-category";
+import { UserCategory } from "@/types/user-session";
 
 interface AddMemberButtonProps {
   memberType: UserCategory;
