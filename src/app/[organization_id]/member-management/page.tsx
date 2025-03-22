@@ -19,8 +19,8 @@ export default function MemberManagementPage({
   const organizationId = use(params).organization_id;
   const { relationships, isLoading, isError } =
     useCoachingRelationshipList(organizationId);
-  const { userSession } = useAuthStore((state) => ({
-    userSession: state.userSession,
+  const { user } = useAuthStore((state) => ({
+    user: state.user,
   }));
   const [coaches, setCoaches] = useState<CoachingRelationshipWithUserNames[]>(
     []
@@ -30,19 +30,19 @@ export default function MemberManagementPage({
   );
 
   useEffect(() => {
-    if (!relationships.length || !userSession?.id) return;
+    if (!relationships.length || !user?.id) return;
 
     // Partition relationships into coaches and coachees
     const coachRelationships = relationships.filter(
-      (rel) => rel.coach_id === userSession.id
+      (rel) => rel.coach_id === user.id
     );
     const coacheeRelationships = relationships.filter(
-      (rel) => rel.coachee_id === userSession.id
+      (rel) => rel.coachee_id === user.id
     );
 
     setCoaches(coachRelationships);
     setCoachees(coacheeRelationships);
-  }, [relationships, userSession]);
+  }, [relationships, user]);
 
   if (isError) {
     return (

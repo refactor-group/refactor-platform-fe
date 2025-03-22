@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { UserCategory } from "@/types/user-category";
+import { UserCategory } from "@/types/user-session";
 
 interface AddMemberDialogProps {
   open: boolean;
