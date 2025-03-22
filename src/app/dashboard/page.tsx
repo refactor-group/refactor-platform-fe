@@ -22,6 +22,8 @@ function DashboardContainer({
         "flex flex-col gap-6",
         // Tablet and up (640px+): side by side
         "sm:grid sm:grid-cols-2",
+        // Never grow wider than the site-header
+        "max-w-screen-2xl",
         // Ensure full width for children
         "[&>*]:w-full",
         className

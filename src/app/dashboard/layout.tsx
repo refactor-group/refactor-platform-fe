@@ -18,7 +18,7 @@ export default function DashboardLayout({
 }>) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen min-w-full">
         <AppSidebar />
         <SidebarInset>
           <SiteHeader />

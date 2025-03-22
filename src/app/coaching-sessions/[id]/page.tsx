@@ -34,6 +34,7 @@ export default function CoachingSessionsPage() {
   };
 
   return (
+    // Never grow wider than the site-header
     <div className="max-w-screen-2xl">
       <div className="flex-col h-full md:flex ">
         <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
