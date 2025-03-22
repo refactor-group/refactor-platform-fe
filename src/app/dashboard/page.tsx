@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/components/lib/utils";
 import SelectCoachingRelationship from "@/components/ui/dashboard/select-coaching-relationship";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 
