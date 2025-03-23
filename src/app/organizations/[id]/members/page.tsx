@@ -1,11 +1,11 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MemberList } from "@/components/ui/member-management/member-list";
+import { MemberList } from "@/components/ui/members/member-list";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import type { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
+import { useUserList } from "@/lib/api/organizations/users";
 
 export default function MembersPage({
   params,
@@ -13,40 +13,43 @@ export default function MembersPage({
   params: Promise<{ id: string }>;
 }) {
   const organizationId = use(params).id;
-  const { relationships, isLoading, isError } =
-    useCoachingRelationshipList(organizationId);
-  const { user } = useAuthStore((state) => ({
-    user: state.userSession,
+  const {
+    relationships,
+    isLoading: isRelationshipsLoading,
+    isError: isRelationshipsError,
+  } = useCoachingRelationshipList(organizationId);
+  const {
+    entities: users,
+    isLoading: isUsersLoading,
+    isError: isUsersError,
+  } = useUserList(organizationId);
+  const { userSession } = useAuthStore((state) => ({
+    userSession: state.userSession,
   }));
-  const [coaches, setCoaches] = useState<CoachingRelationshipWithUserNames[]>(
-    []
+
+  // Find relationships where current user is either coach or coachee
+  const userRelationships = relationships.filter(
+    (rel) =>
+      rel.coach_id === userSession.id || rel.coachee_id === userSession.id
   );
-  const [coachees, setCoachees] = useState<CoachingRelationshipWithUserNames[]>(
-    []
+
+  // Get IDs of users in these relationships
+  const associatedUserIds = new Set(
+    userRelationships.flatMap((rel) => [rel.coach_id, rel.coachee_id])
   );
 
-  useEffect(() => {
-    if (!relationships.length || !user?.id) return;
+  // Filter users to only include those in the relationships
+  const associatedUsers = users.filter((user) =>
+    associatedUserIds.has(user.id)
+  );
 
-    // Partition relationships into coaches and coachees
-    const coachRelationships = relationships.filter(
-      (rel) => rel.coach_id === user.id
-    );
-    const coacheeRelationships = relationships.filter(
-      (rel) => rel.coachee_id === user.id
-    );
-
-    setCoaches(coachRelationships);
-    setCoachees(coacheeRelationships);
-  }, [relationships, user]);
-
-  if (isError) {
+  if (isRelationshipsError || isUsersError) {
     return (
       <div className="container mx-auto p-4">
         <Card className="w-full">
           <CardContent className="p-6">
             <div className="text-center text-red-500">
-              Error loading coaching members
+              Error loading members
             </div>
           </CardContent>
         </Card>
@@ -58,20 +61,10 @@ export default function MembersPage({
     <div className="container mx-auto p-6 space-y-8">
       <h1 className="text-3xl font-bold">Member Management</h1>
 
-      {/* Coaches Section */}
-      {isLoading ? (
+      {isRelationshipsLoading || isUsersLoading ? (
         <div className="py-4 text-center text-muted-foreground">Loading...</div>
       ) : (
-        coaches.length > 0 && (
-          <MemberList memberType="coach" relationships={coaches} />
-        )
-      )}
-
-      {/* Coachees Section */}
-      {isLoading ? (
-        <div className="py-4 text-center text-muted-foreground">Loading...</div>
-      ) : (
-        <MemberList memberType="coachee" relationships={coachees} />
+        <MemberList users={associatedUsers} />
       )}
     </div>
   );

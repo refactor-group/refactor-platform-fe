@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { UserCategory } from "@/types/user-session";
+import { useUserMutation } from "@/lib/api/users";
+import { User, UserCategory } from "@/types/user";
 
 interface AddMemberDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ export function AddMemberDialog({
   onOpenChange,
   memberType,
 }: AddMemberDialogProps) {
+  const { create: createUser } = useUserMutation();
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -40,12 +42,21 @@ export function AddMemberDialog({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Here you would normally make the API call to create a new user
     console.log("Creating new user with data:", formData);
 
+    const newUser: User = {
+      id: "",
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      display_name: formData.displayName,
+      email: formData.email,
+    };
+
+    const responseUser = await createUser(newUser);
     // Reset form and close dialog
     setFormData({
       firstName: "",
