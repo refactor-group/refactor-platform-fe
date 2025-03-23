@@ -3,7 +3,7 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { EntityApi } from "./entity-api";
-import { User } from "@/types/user";
+import { User, defaultUser } from "@/types/user";
 
 const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
@@ -67,7 +67,7 @@ export const useUser = (id: Id) => {
   const { entity, isLoading, isError, refresh } = EntityApi.useEntity<User>(
     url,
     fetcher,
-    null
+    defaultUser()
   );
 
   return {
