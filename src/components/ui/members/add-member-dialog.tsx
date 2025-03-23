@@ -12,21 +12,21 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useUserMutation } from "@/lib/api/users";
-import { User, UserCategory } from "@/types/user";
+import { useUserMutation } from "@/lib/api/organizations/users";
+import { User, NewUser } from "@/types/user";
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 
 interface AddMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  memberType: UserCategory;
 }
 
-export function AddMemberDialog({
-  open,
-  onOpenChange,
-  memberType,
-}: AddMemberDialogProps) {
-  const { create: createUser } = useUserMutation();
+export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
+  const currentOrganizationId = useOrganizationStateStore(
+    (state) => state.currentOrganizationId
+  );
+
+  const { createNested: createUser } = useUserMutation(currentOrganizationId);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -45,19 +45,14 @@ export function AddMemberDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Here you would normally make the API call to create a new user
-    console.log("Creating new user with data:", formData);
-
-    const newUser: User = {
-      id: "",
+    const newUser: NewUser = {
       first_name: formData.firstName,
       last_name: formData.lastName,
       display_name: formData.displayName,
       email: formData.email,
     };
 
-    const responseUser = await createUser(newUser);
-    // Reset form and close dialog
+    await createUser(currentOrganizationId, newUser);
     setFormData({
       firstName: "",
       lastName: "",
@@ -71,7 +66,7 @@ export function AddMemberDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New {memberType}</DialogTitle>
+          <DialogTitle>Add New Member</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
@@ -120,7 +115,7 @@ export function AddMemberDialog({
             />
           </div>
           <Button type="submit" className="w-full">
-            Add {memberType}
+            Add Member
           </Button>
         </form>
       </DialogContent>

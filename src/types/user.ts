@@ -10,6 +10,14 @@ export interface User {
   display_name: string;
 }
 
+export interface NewUser {
+  email: string;
+  password?: string;
+  first_name: string;
+  last_name: string;
+  display_name: string;
+}
+
 export type UserCategory = "coach" | "coachee" | "generalUser";
 
 export function parseUser(data: unknown): User {

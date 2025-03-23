@@ -1,11 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MemberList } from "@/components/ui/members/member-list";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useUserList } from "@/lib/api/organizations/users";
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 
 export default function MembersPage({
   params,
@@ -13,6 +14,14 @@ export default function MembersPage({
   params: Promise<{ id: string }>;
 }) {
   const organizationId = use(params).id;
+  const setCurrentOrganizationId = useOrganizationStateStore(
+    (state) => state.setCurrentOrganizationId
+  );
+
+  useEffect(() => {
+    setCurrentOrganizationId(organizationId);
+  }, [organizationId, setCurrentOrganizationId]);
+
   const {
     relationships,
     isLoading: isRelationshipsLoading,

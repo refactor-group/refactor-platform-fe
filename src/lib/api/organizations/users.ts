@@ -2,7 +2,7 @@
 
 import { Id } from "@/types/general";
 import { EntityApi } from "../entity-api";
-import { User } from "@/types/user";
+import { User, NewUser } from "@/types/user";
 import { ORGANIZATIONS_BASEURL } from "../organizations";
 
 const usersBaseUrl = (organizationId: Id) =>
@@ -15,10 +15,8 @@ export const UserApi = {
   /**
    * Fetches a list of users.
    */
-  list: async (organizationId: Id): Promise<User[]> => {
-    console.info("Fetching users for organization: " + organizationId);
-    return EntityApi.listFn<User, User>(usersBaseUrl(organizationId), {});
-  },
+  list: async (organizationId: Id): Promise<User[]> =>
+    EntityApi.listFn<User, User>(usersBaseUrl(organizationId), {}),
 
   /**
    * Fetches a single user by ID.
@@ -29,15 +27,15 @@ export const UserApi = {
   /**
    * Creates a new user.
    */
-  create: async (user: User): Promise<User> => {
+  create: async (user: NewUser): Promise<User> => {
     throw new Error("Create operation not implemented");
   },
 
   /**
    * Creates a new user nested in an organization.
    */
-  createNested: async (organizationId: Id, user: User): Promise<User> =>
-    EntityApi.createFn<User, User>(usersBaseUrl(organizationId), user),
+  createNested: async (organizationId: Id, user: NewUser): Promise<User> =>
+    EntityApi.createFn<NewUser, User>(usersBaseUrl(organizationId), user),
 
   /**
    * Updates an existing user.
