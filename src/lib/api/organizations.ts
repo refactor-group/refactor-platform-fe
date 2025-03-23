@@ -5,7 +5,7 @@ import { Id } from "@/types/general";
 import { Organization, defaultOrganization } from "@/types/organization";
 import { EntityApi } from "./entity-api";
 
-const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
+export const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
 
 /**
  * API client for organization-related operations.

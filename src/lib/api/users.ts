@@ -1,9 +1,9 @@
 // Interacts with the users endpoints
 
-import { siteConfig } from "@/site/config";
+import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { EntityApi } from "./entity-api";
-import { User } from "@/types/user-session";
+import { User } from "@/types/user";
 
 const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
@@ -14,7 +14,8 @@ export const UserApi = {
   /**
    * Fetches a list of users.
    */
-  list: async (): Promise<User[]> => EntityApi.listFn<User>(USERS_BASEURL),
+  list: async (): Promise<User[]> =>
+    EntityApi.listFn<User, User>(USERS_BASEURL, {}),
 
   /**
    * Fetches a single user by ID.
