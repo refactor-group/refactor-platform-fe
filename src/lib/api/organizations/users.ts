@@ -34,13 +34,17 @@ export const UserApi = {
   /**
    * Creates a new user nested in an organization.
    */
-  createNested: async (organizationId: Id, user: NewUser): Promise<User> =>
-    EntityApi.createFn<NewUser, User>(usersBaseUrl(organizationId), user),
+  createNested: async (organizationId: Id, user: NewUser): Promise<User> => {
+    return EntityApi.createFn<NewUser, User>(
+      usersBaseUrl(organizationId),
+      user
+    );
+  },
 
   /**
    * Updates an existing user.
    */
-  update: async (id: Id, user: User): Promise<User> => {
+  update: async (id: Id, user: NewUser): Promise<User> => {
     throw new Error("Update operation not implemented");
   },
 
@@ -68,10 +72,13 @@ export const useUserList = (organizationId: Id) => {
  * Provides methods to create, update, and delete users.
  */
 export const useUserMutation = (organizationId: Id) => {
-  return EntityApi.useEntityMutation<User>(usersBaseUrl(organizationId), {
-    create: UserApi.create,
-    createNested: UserApi.createNested,
-    update: UserApi.update,
-    delete: UserApi.delete,
-  });
+  return EntityApi.useEntityMutation<NewUser, User>(
+    usersBaseUrl(organizationId),
+    {
+      create: UserApi.create,
+      createNested: UserApi.createNested,
+      update: UserApi.update,
+      delete: UserApi.delete,
+    }
+  );
 };

@@ -26,7 +26,9 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
     (state) => state.currentOrganizationId
   );
 
-  const { createNested: createUser } = useUserMutation(currentOrganizationId);
+  const { createNested: createUserNested } = useUserMutation(
+    currentOrganizationId
+  );
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -52,7 +54,7 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
       email: formData.email,
     };
 
-    await createUser(currentOrganizationId, newUser);
+    await createUserNested(currentOrganizationId, newUser);
     setFormData({
       firstName: "",
       lastName: "",

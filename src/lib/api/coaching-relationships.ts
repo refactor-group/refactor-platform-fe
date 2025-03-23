@@ -178,7 +178,10 @@ export const useCoachingRelationship = (
  * Provides methods to create, update, and delete coaching relationships.
  */
 export const useCoachingRelationshipMutation = (organizationId: Id) => {
-  return EntityApi.useEntityMutation<CoachingRelationshipWithUserNames>(
+  return EntityApi.useEntityMutation<
+    CoachingRelationshipWithUserNames,
+    CoachingRelationshipWithUserNames
+  >(
     `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
     {
       create: CoachingRelationshipApi.create,

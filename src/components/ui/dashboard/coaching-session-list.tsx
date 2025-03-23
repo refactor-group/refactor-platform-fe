@@ -78,7 +78,7 @@ export default function CoachingSessionList() {
         // Trigger a re-fetch of coaching sessions
         refresh();
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         console.error("Failed to create new Coaching Session: " + err);
         throw err;
       });

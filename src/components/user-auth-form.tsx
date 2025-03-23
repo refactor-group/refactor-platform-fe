@@ -40,7 +40,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     };
 
     await createUserSession(userSession)
-      .then((userSession) => {
+      .then((userSession: UserSession) => {
         console.debug("userSession: " + userSessionToString(userSession));
         // Create a new session in the auth store
         login(userSession.id, userSession);
