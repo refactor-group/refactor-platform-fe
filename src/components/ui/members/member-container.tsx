@@ -1,4 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
 import { User } from "@/types/user";
