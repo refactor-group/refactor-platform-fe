@@ -34,7 +34,7 @@ export const UserApi = {
    */
   createNested: async (id: Id, user: User): Promise<User> => {
     throw new Error("Create nested operation not implemented");
-  }
+  },
 
   /**
    * Updates an existing user.
