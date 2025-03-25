@@ -1,37 +1,42 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { CaretSortIcon, CheckIcon } from "@radix-ui/react-icons"
-import { PopoverProps } from "@radix-ui/react-popover"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { CaretSortIcon, CheckIcon } from "@radix-ui/react-icons";
+import { PopoverProps } from "@radix-ui/react-popover";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/components/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-} from "@/components/ui/command"
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 
-import { Preset } from "../../data/presets"
+import { Preset } from "../../data/presets";
 
 interface PresetSelectorProps extends PopoverProps {
-  current: Preset[]
-  future: Preset[]
-  past: Preset[]
+  current: Preset[];
+  future: Preset[];
+  past: Preset[];
 }
 
-export function PresetSelector({ current, future, past, ...props }: PresetSelectorProps) {
-  const [open, setOpen] = React.useState(false)
-  const [selectedPreset, setSelectedPreset] = React.useState<Preset>()
-  const router = useRouter()
+export function PresetSelector({
+  current,
+  future,
+  past,
+  ...props
+}: PresetSelectorProps) {
+  const [open, setOpen] = React.useState(false);
+  const [selectedPreset, setSelectedPreset] = React.useState<Preset>();
+  const router = useRouter();
 
   return (
     <Popover open={open} onOpenChange={setOpen} {...props}>
@@ -43,7 +48,9 @@ export function PresetSelector({ current, future, past, ...props }: PresetSelect
           aria-expanded={open}
           className="flex-1 justify-between md:max-w-[200px] lg:max-w-[300px]"
         >
-          {selectedPreset ? selectedPreset.date_time : "Select a coaching session"}
+          {selectedPreset
+            ? selectedPreset.date_time
+            : "Select a coaching session"}
           <CaretSortIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -56,8 +63,8 @@ export function PresetSelector({ current, future, past, ...props }: PresetSelect
               <CommandItem
                 key={current.id}
                 onSelect={() => {
-                  setSelectedPreset(current)
-                  setOpen(false)
+                  setSelectedPreset(current);
+                  setOpen(false);
                 }}
               >
                 {current.date_time}
@@ -77,8 +84,8 @@ export function PresetSelector({ current, future, past, ...props }: PresetSelect
               <CommandItem
                 key={future.id}
                 onSelect={() => {
-                  setSelectedPreset(future)
-                  setOpen(false)
+                  setSelectedPreset(future);
+                  setOpen(false);
                 }}
               >
                 {future.date_time}
@@ -98,17 +105,15 @@ export function PresetSelector({ current, future, past, ...props }: PresetSelect
               <CommandItem
                 key={past.id}
                 onSelect={() => {
-                  setSelectedPreset(past)
-                  setOpen(false)
+                  setSelectedPreset(past);
+                  setOpen(false);
                 }}
               >
                 {past.date_time}
                 <CheckIcon
                   className={cn(
                     "ml-auto h-4 w-4",
-                    selectedPreset?.id === past.id
-                      ? "opacity-100"
-                      : "opacity-0"
+                    selectedPreset?.id === past.id ? "opacity-100" : "opacity-0"
                   )}
                 />
               </CommandItem>
@@ -122,5 +127,5 @@ export function PresetSelector({ current, future, past, ...props }: PresetSelect
         </Command>
       </PopoverContent>
     </Popover>
-  )
+  );
 }
