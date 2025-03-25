@@ -30,6 +30,13 @@ export const UserApi = {
     EntityApi.createFn<User, User>(USERS_BASEURL, user),
 
   /**
+   * Creates a new user nested under an organization.
+   */
+  createNested: async (id: Id, user: User): Promise<User> => {
+    throw new Error("Create nested operation not implemented");
+  }
+
+  /**
    * Updates an existing user.
    */
   update: async (id: Id, user: User): Promise<User> =>
@@ -85,9 +92,7 @@ export const useUser = (id: Id) => {
 export const useUserMutation = () => {
   return EntityApi.useEntityMutation<User, User>(USERS_BASEURL, {
     create: UserApi.create,
-    createNested: async (id: Id, entity: User) => {
-      throw new Error("Create nested operation not implemented");
-    },
+    createNested: UserApi.createNested,
     update: UserApi.update,
     delete: UserApi.delete,
   });
