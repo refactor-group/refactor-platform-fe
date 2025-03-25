@@ -2,12 +2,12 @@
 
 import { use, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { MemberList } from "@/components/ui/members/member-list";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useUserList } from "@/lib/api/organizations/users";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { Id } from "@/types/general";
+import { MemberContainer } from "@/components/ui/members/member-container";
 
 export default function MembersPage({
   params,
@@ -27,31 +27,22 @@ export default function MembersPage({
     relationships,
     isLoading: isRelationshipsLoading,
     isError: isRelationshipsError,
+    refresh: refreshRelationships,
   } = useCoachingRelationshipList(organizationId);
   const {
     users,
     isLoading: isUsersLoading,
     isError: isUsersError,
+    refresh: refreshUsers,
   } = useUserList(organizationId);
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
 
-  // Find relationships where current user is either coach or coachee
-  const userRelationships = relationships.filter(
-    (rel) =>
-      rel.coach_id === userSession.id || rel.coachee_id === userSession.id
-  );
-
-  // Get IDs of users in these relationships
-  const associatedUserIds = new Set(
-    userRelationships.flatMap((rel) => [rel.coach_id, rel.coachee_id])
-  );
-
-  // Filter users to only include those in the relationships
-  const associatedUsers = users.filter((user) =>
-    associatedUserIds.has(user.id)
-  );
+  const handleRefresh = () => {
+    refreshRelationships();
+    refreshUsers();
+  };
 
   if (isRelationshipsError || isUsersError) {
     return (
@@ -69,13 +60,14 @@ export default function MembersPage({
 
   return (
     <div className="container mx-auto p-6 space-y-8">
-      <h1 className="text-3xl font-bold">Member Management</h1>
-
-      {isRelationshipsLoading || isUsersLoading ? (
-        <div className="py-4 text-center text-muted-foreground">Loading...</div>
-      ) : (
-        <MemberList users={associatedUsers} />
-      )}
+      <h1 className="text-3xl font-bold">Members</h1>
+      <MemberContainer
+        users={users}
+        relationships={relationships}
+        userSession={userSession}
+        onRefresh={handleRefresh}
+        isLoading={isRelationshipsLoading || isUsersLoading}
+      />
     </div>
   );
 }

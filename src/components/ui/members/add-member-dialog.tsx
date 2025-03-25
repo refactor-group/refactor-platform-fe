@@ -19,9 +19,14 @@ import { useOrganizationStateStore } from "@/lib/providers/organization-state-st
 interface AddMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onMemberAdded: () => void;
 }
 
-export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
+export function AddMemberDialog({
+  open,
+  onOpenChange,
+  onMemberAdded,
+}: AddMemberDialogProps) {
   const currentOrganizationId = useOrganizationStateStore(
     (state) => state.currentOrganizationId
   );
@@ -61,6 +66,8 @@ export function AddMemberDialog({ open, onOpenChange }: AddMemberDialogProps) {
       displayName: "",
       email: "",
     });
+    // SWR Refresh
+    onMemberAdded();
     onOpenChange(false);
   };
 
