@@ -5,7 +5,7 @@ import { EntityApi } from "../entity-api";
 import { User, NewUser } from "@/types/user";
 import { ORGANIZATIONS_BASEURL } from "../organizations";
 
-const usersBaseUrl = (organizationId: Id) =>
+const ORGANIZATIONS_USERS_BASEURL = (organizationId: Id) =>
   `${ORGANIZATIONS_BASEURL}/${organizationId}/users`;
 
 /**
@@ -16,13 +16,18 @@ export const UserApi = {
    * Fetches a list of users.
    */
   list: async (organizationId: Id): Promise<User[]> =>
-    EntityApi.listFn<User, User>(usersBaseUrl(organizationId), {}),
+    EntityApi.listFn<User, User>(
+      ORGANIZATIONS_USERS_BASEURL(organizationId),
+      {}
+    ),
 
   /**
    * Fetches a single user by ID.
    */
   get: async (organizationId: Id, id: Id): Promise<User> =>
-    EntityApi.getFn<User>(`${usersBaseUrl(organizationId)}/${id}`),
+    EntityApi.getFn<User>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${id}`
+    ),
 
   /**
    * Creates a new user.
@@ -36,7 +41,7 @@ export const UserApi = {
    */
   createNested: async (organizationId: Id, user: NewUser): Promise<User> => {
     return EntityApi.createFn<NewUser, User>(
-      usersBaseUrl(organizationId),
+      ORGANIZATIONS_USERS_BASEURL(organizationId),
       user
     );
   },
@@ -60,11 +65,19 @@ export const UserApi = {
  * Hook for fetching a list of users.
  */
 export const useUserList = (organizationId: Id) => {
-  return EntityApi.useEntityList<User>(
-    usersBaseUrl(organizationId),
-    () => UserApi.list(organizationId),
-    { organizationId }
-  );
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<User>(
+      ORGANIZATIONS_USERS_BASEURL(organizationId),
+      () => UserApi.list(organizationId),
+      { organizationId }
+    );
+
+  return {
+    users: entities,
+    isLoading,
+    isError,
+    refresh,
+  };
 };
 
 /**
@@ -73,7 +86,7 @@ export const useUserList = (organizationId: Id) => {
  */
 export const useUserMutation = (organizationId: Id) => {
   return EntityApi.useEntityMutation<NewUser, User>(
-    usersBaseUrl(organizationId),
+    ORGANIZATIONS_USERS_BASEURL(organizationId),
     {
       create: UserApi.create,
       createNested: UserApi.createNested,

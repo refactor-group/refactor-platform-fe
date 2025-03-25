@@ -4,7 +4,7 @@ import { User } from "@/types/user";
  * Currently, it does not add any new properties, but it can be extended in the future
  * to decorate the User type if the two types need to diverge in the future.
  */
-export type UserSession = User & {};
+export type UserSession = User;
 
 const isUserSession = (value: unknown): value is UserSession => {
   return (

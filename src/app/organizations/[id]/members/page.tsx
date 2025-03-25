@@ -7,11 +7,12 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useUserList } from "@/lib/api/organizations/users";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { Id } from "@/types/general";
 
 export default function MembersPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: Id }>;
 }) {
   const organizationId = use(params).id;
   const setCurrentOrganizationId = useOrganizationStateStore(
@@ -28,7 +29,7 @@ export default function MembersPage({
     isError: isRelationshipsError,
   } = useCoachingRelationshipList(organizationId);
   const {
-    entities: users,
+    users,
     isLoading: isUsersLoading,
     isError: isUsersError,
   } = useUserList(organizationId);

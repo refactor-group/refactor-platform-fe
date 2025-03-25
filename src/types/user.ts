@@ -18,8 +18,6 @@ export interface NewUser {
   display_name: string;
 }
 
-export type UserCategory = "coach" | "coachee" | "generalUser";
-
 export function parseUser(data: unknown): User {
   if (!isUser(data)) {
     throw new Error("Invalid User object data");
