@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { AddMemberButton } from "./add-member-button";
+import { AddMemberContainer } from "./add-member-container";
 import { User } from "@/types/user";
 
 interface MemberListProps {
@@ -12,7 +12,7 @@ export function MemberList({ users }: MemberListProps) {
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Members</h2>
-          <AddMemberButton />
+          <AddMemberContainer />
         </div>
         <div className="space-y-4">
           {users.map((user) => (

@@ -6,7 +6,7 @@ import { AddMemberDialog } from "./add-member-dialog";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 
-export function AddMemberButton() {
+export function AddMemberContainer() {
   const [open, setOpen] = useState(false);
 
   return (
