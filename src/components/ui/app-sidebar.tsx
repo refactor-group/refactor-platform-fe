@@ -20,6 +20,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 
 // Custom styles for menu buttons to ensure consistent centering
 const menuButtonStyles = {
@@ -30,6 +31,8 @@ const menuButtonStyles = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { currentOrganizationId } = useOrganizationStateStore((state) => state);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="h-16 flex flex-col justify-between pb-0">
@@ -101,7 +104,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     menuButtonStyles.buttonCollapsed
                   )}
                 >
-                  <a href="/members">
+                  <a href={`/organizations/${currentOrganizationId}/members`}>
                     <span className={menuButtonStyles.iconWrapper}>
                       <Users className="h-4 w-4" />
                     </span>
