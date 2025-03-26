@@ -1,44 +1,22 @@
-import { Id } from "@/types/general";
+import { User } from "@/types/user";
+/**
+ * This is an intersection type that combines the User type with additional properties.
+ * Currently, it does not add any new properties, but it can be extended in the future
+ * to decorate the User type if the two types need to diverge in the future.
+ */
+export type UserSession = User;
 
-// This must always reflect the Rust struct on the backend controller::user_session
-export interface UserSession {
-  id: Id;
-  email: string;
-  password?: string;
-  first_name: string;
-  last_name: string;
-  display_name: string;
-}
-
-export function parseUserSession(data: unknown): UserSession {
-  if (!isUserSession(data)) {
-    throw new Error("Invalid UserSession object data");
-  }
-  return {
-    id: data.id,
-    email: data.email,
-    password: data.password,
-    first_name: data.first_name,
-    last_name: data.last_name,
-    display_name: data.display_name,
-  };
-}
-
-export function isUserSession(value: unknown): value is UserSession {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const object = value as Record<string, unknown>;
-
+const isUserSession = (value: unknown): value is UserSession => {
   return (
-    (typeof object.id === "string" &&
-      typeof object.email === "string" &&
-      typeof object.first_name === "string" &&
-      typeof object.last_name === "string" &&
-      typeof object.display_name === "string") ||
-    typeof object.password === "string" // password is optional
+    value !== null &&
+    typeof value === "object" &&
+    "id" in value &&
+    "email" in value &&
+    "first_name" in value &&
+    "last_name" in value &&
+    "display_name" in value
   );
-}
+};
 
 export function defaultUserSession(): UserSession {
   return {
@@ -51,19 +29,19 @@ export function defaultUserSession(): UserSession {
   };
 }
 
+export function userSessionToString(
+  user_session: UserSession | undefined
+): string {
+  return JSON.stringify(user_session);
+}
+
 // Given first and last name strings, return the first letters of each as a new string
 // e.g. "John" "Smith" => "JS"
-export function userFirstLastLettersToString(
+export function userSessionFirstLastLettersToString(
   firstName: string,
   lastName: string
 ): string {
   const firstLetter = firstName.charAt(0);
   const lastLetter = lastName.charAt(0);
   return firstLetter + lastLetter;
-}
-
-export function userSessionToString(
-  userSession: UserSession | undefined
-): string {
-  return JSON.stringify(userSession);
 }

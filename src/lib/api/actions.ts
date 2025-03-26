@@ -169,7 +169,7 @@ export const useActionBySession = (coachingSessionId: Id) => {
  * error: Error object if the last operation failed, null otherwise
  */
 export const useActionMutation = () => {
-  return EntityApi.useEntityMutation<Action>(ACTIONS_BASEURL, {
+  return EntityApi.useEntityMutation<Action, Action>(ACTIONS_BASEURL, {
     create: ActionApi.create,
     createNested: ActionApi.createNested,
     update: ActionApi.update,

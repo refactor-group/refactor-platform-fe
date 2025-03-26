@@ -190,7 +190,7 @@ export const useOverarchingGoalBySession = (coachingSessionId: Id) => {
  * Provides methods to create, update, and delete overarching-goal.
  */
 export const useOverarchingGoalMutation = () => {
-  return EntityApi.useEntityMutation<OverarchingGoal>(
+  return EntityApi.useEntityMutation<OverarchingGoal, OverarchingGoal>(
     OVERARCHING_GOALS_BASEURL,
     {
       create: OverarchingGoalApi.create,

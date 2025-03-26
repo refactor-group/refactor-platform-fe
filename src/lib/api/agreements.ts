@@ -170,7 +170,7 @@ export const useAgreementBySession = (coachingSessionId: Id) => {
  * error: Error object if the last operation failed, null otherwise
  */
 export const useAgreementMutation = () => {
-  return EntityApi.useEntityMutation<Agreement>(AGREEMENTS_BASEURL, {
+  return EntityApi.useEntityMutation<Agreement, Agreement>(AGREEMENTS_BASEURL, {
     create: AgreementApi.create,
     createNested: AgreementApi.createNested,
     update: AgreementApi.update,

@@ -362,15 +362,16 @@ export namespace EntityApi {
    * and handles cache invalidation.
    *
    * @template T The entity type
+   * @template U The entity type returned by the API
    * @param baseUrl The base URL for the entity API endpoint
    * @param api Object containing CRUD operations for the entity
    * @returns Object with CRUD methods, loading state, and error state
    */
-  export const useEntityMutation = <T>(
+  export const useEntityMutation = <T, U>(
     baseUrl: string,
     api: {
-      create: (entity: T) => Promise<T>;
-      createNested: (id: Id, entity: T) => Promise<T>;
+      create: (entity: T) => Promise<U>;
+      createNested: (id: Id, entity: T) => Promise<U>;
       update: (id: Id, entity: T) => Promise<T>;
       delete: (id: Id) => Promise<T>;
     }

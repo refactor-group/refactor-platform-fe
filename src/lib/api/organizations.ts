@@ -5,7 +5,7 @@ import { Id } from "@/types/general";
 import { Organization, defaultOrganization } from "@/types/organization";
 import { EntityApi } from "./entity-api";
 
-const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
+export const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
 
 /**
  * API client for organization-related operations.
@@ -148,10 +148,13 @@ export const useOrganization = (id: Id) => {
  * Provides methods to create, update, and delete organizations.
  */
 export const useOrganizationMutation = () => {
-  return EntityApi.useEntityMutation<Organization>(ORGANIZATIONS_BASEURL, {
-    create: OrganizationApi.create,
-    createNested: OrganizationApi.createNested,
-    update: OrganizationApi.update,
-    delete: OrganizationApi.delete,
-  });
+  return EntityApi.useEntityMutation<Organization, Organization>(
+    ORGANIZATIONS_BASEURL,
+    {
+      create: OrganizationApi.create,
+      createNested: OrganizationApi.createNested,
+      update: OrganizationApi.update,
+      delete: OrganizationApi.delete,
+    }
+  );
 };

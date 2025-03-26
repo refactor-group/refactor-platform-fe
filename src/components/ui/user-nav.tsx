@@ -18,7 +18,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
-import { userFirstLastLettersToString } from "@/types/user-session";
+import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import { useRouter } from "next/navigation";
 
 export function UserNav() {
@@ -67,7 +67,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative mx-2 h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
             <AvatarFallback>
-              {userFirstLastLettersToString(
+              {userSessionFirstLastLettersToString(
                 userSession.first_name,
                 userSession.last_name
               )}
