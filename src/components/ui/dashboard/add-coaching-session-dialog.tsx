@@ -1,7 +1,6 @@
 "use client";
 
-import type React from "react";
-
+import React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,12 +23,14 @@ import {
   useCoachingSessionMutation,
 } from "@/lib/api/coaching-sessions";
 import { DateTime } from "ts-luxon";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { cn } from "@/components/lib/utils";
 
 interface AddCoachingSessionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCoachingSessionAdded: () => void;
-  dialogTrigger: React.ReactNode;
+  dialogTrigger: React.ReactElement<React.HTMLAttributes<HTMLButtonElement>>;
 }
 
 export function AddCoachingSessionDialog({
@@ -41,14 +42,8 @@ export function AddCoachingSessionDialog({
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
     (state) => state
   );
-  // TODO: for now we hardcode a 2 month window centered around now,
-  // eventually we want to make this be configurable somewhere
-  // (either on the page or elsewhere). This needs to be centralized somewhere,
-  // maybe as a user config?
   const fromDate = DateTime.now().minus({ month: 1 });
   const toDate = DateTime.now().plus({ month: 1 });
-  // We just include this hook so we can manually call refresh() and update any other
-  // components that render a list of coaching sessions on the same page
   const { refresh } = useCoachingSessionList(
     currentCoachingRelationshipId,
     fromDate,
@@ -59,13 +54,12 @@ export function AddCoachingSessionDialog({
     undefined
   );
   const [newSessionTime, setNewSessionTime] = useState<string>("");
+  const { isCoach } = useAuthStore((state) => state);
 
   const handleCreateSession = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!newSessionDate || !newSessionTime) return;
 
-    // Combine date and time
     const [hours, minutes] = newSessionTime.split(":").map(Number);
     const dateTime = getDateTimeFromString(newSessionDate.toISOString())
       .set({ hour: hours, minute: minutes })
@@ -76,9 +70,9 @@ export function AddCoachingSessionDialog({
       coaching_relationship_id: currentCoachingRelationshipId,
       date: dateTime,
     };
+
     createCoachingSession(newCoachingSession)
       .then(() => {
-        // SWR refresh
         refresh();
         onCoachingSessionAdded();
         setNewSessionDate(undefined);
@@ -92,7 +86,17 @@ export function AddCoachingSessionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
+      <DialogTrigger asChild>
+        {React.cloneElement(dialogTrigger, {
+          ...(dialogTrigger.props as React.HTMLAttributes<HTMLButtonElement>),
+          className: cn(
+            (dialogTrigger.props as React.HTMLAttributes<HTMLButtonElement>)
+              .className,
+            isCoach ? "visible" : "invisible"
+          ),
+        })}
+      </DialogTrigger>
+
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Coaching Session</DialogTitle>
@@ -103,7 +107,7 @@ export function AddCoachingSessionDialog({
             <Calendar
               mode="single"
               selected={newSessionDate}
-              onSelect={setNewSessionDate}
+              onSelect={(date) => setNewSessionDate(date)}
             />
           </div>
           <div className="space-y-2">
