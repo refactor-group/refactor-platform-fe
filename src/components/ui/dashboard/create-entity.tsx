@@ -4,12 +4,20 @@ import { useState } from "react";
 import { AddCoachingSessionDialog } from "./add-coaching-session-dialog";
 import { AddCoachingSessionButton } from "./add-coaching-session-button";
 import { AddMemberButton } from "./add-member-button";
+import { useRouter } from "next/navigation";
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 
 export default function CreateEntity() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const { currentOrganizationId } = useOrganizationStateStore((state) => state);
 
   const onCoachingSessionAdded = () => {
     setOpen(false);
+  };
+
+  const onMemberButtonClicked = () => {
+    router.push(`/organizations/${currentOrganizationId}/members`);
   };
 
   return (
@@ -23,7 +31,7 @@ export default function CreateEntity() {
           dialogTrigger={<AddCoachingSessionButton />}
         />
 
-        <AddMemberButton />
+        <AddMemberButton onClick={onMemberButtonClicked} />
       </div>
     </div>
   );
