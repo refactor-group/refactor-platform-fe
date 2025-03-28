@@ -3,6 +3,7 @@ import type * as React from "react";
 import { cn } from "@/components/lib/utils";
 import SelectCoachingRelationship from "@/components/ui/dashboard/select-coaching-relationship";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
+import CreateEntity from "@/components/ui/dashboard/create-entity";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -35,9 +36,16 @@ function DashboardContainer({
 
 export default function DashboardPage() {
   return (
-    <DashboardContainer>
-      <SelectCoachingRelationship />
-      <CoachingSessionList />
-    </DashboardContainer>
+    <>
+      <div className="p-4 max-w-screen-2xl">
+        <div className="mb-8 w-full">
+          <CreateEntity />
+        </div>
+      </div>
+      <DashboardContainer>
+        <SelectCoachingRelationship />
+        <CoachingSessionList />
+      </DashboardContainer>
+    </>
   );
 }
