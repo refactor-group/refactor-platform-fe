@@ -30,18 +30,16 @@ function OrganizationsList({ userId }: { userId: Id }) {
 
   // Be sure to cache the list of current organizations in the OrganizationStateStore
   useEffect(() => {
-    if (!organizations.length) return;
+    if (!organizations?.length) return;
     console.debug(
       `organizations (useEffect): ${JSON.stringify(organizations)}`
     );
     setCurrentOrganizations(organizations);
-  }, [organizations]);
+  }, [organizations, setCurrentOrganizations]);
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error loading organizations</div>;
   if (!organizations?.length) return <div>No organizations found</div>;
-
-  console.debug(`organizations: ${JSON.stringify(organizations)}`);
 
   return (
     <>
@@ -61,7 +59,7 @@ export default function OrganizationSelector({
 }: OrganizationSelectorProps) {
   const {
     currentOrganizationId,
-    setCurrentOrganizationId,
+    setCurrentOrganization,
     getCurrentOrganization,
   } = useOrganizationStateStore((state) => state);
   const { resetCoachingSessionState } = useCoachingSessionStateStore(
@@ -72,7 +70,8 @@ export default function OrganizationSelector({
   );
 
   const handleSetOrganization = (organizationId: Id) => {
-    setCurrentOrganizationId(organizationId);
+    const organization = getCurrentOrganization(organizationId);
+    setCurrentOrganization(organization);
     console.info("Resetting Coaching Session State");
     resetCoachingRelationshipState();
     resetCoachingSessionState();

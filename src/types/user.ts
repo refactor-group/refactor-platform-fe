@@ -11,11 +11,11 @@ export interface User {
 }
 
 export interface NewUser {
-  email: string;
-  password?: string;
   first_name: string;
   last_name: string;
   display_name: string;
+  email: string;
+  password: string;
 }
 
 export function parseUser(data: unknown): User {
