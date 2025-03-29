@@ -175,9 +175,11 @@ export function AddMemberDialog({
               <div className="text-red-500 text-sm">{passwordError}</div>
             )}
           </div>
-          <DialogFooter>
-            <Button type="submit">Create Member</Button>
-          </DialogFooter>
+          <div className="pt-4">
+            <DialogFooter>
+              <Button type="submit">Create Member</Button>
+            </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
