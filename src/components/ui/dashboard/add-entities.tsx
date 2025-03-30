@@ -33,6 +33,10 @@ export default function AddEntities() {
           dialogTrigger={<AddCoachingSessionButton />}
         />
 
+        {/* TODO: Refactor the AddMemberButton and AddMemberDialog to work just like
+            AddCoachingSessionDialog does above, where the dialog is the parent container
+            and it accepts a AddMemberButton as the dialogTrigger parameter.
+        */}
         <AddMemberButton onClick={onMemberButtonClicked} />
       </div>
     </div>
