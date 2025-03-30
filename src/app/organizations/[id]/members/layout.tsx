@@ -3,6 +3,8 @@ import "@/styles/globals.css";
 import { siteConfig } from "@/site.config.ts";
 
 import { SiteHeader } from "@/components/ui/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/ui/app-sidebar";
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: "Manage coaching members",
@@ -14,11 +16,14 @@ export default function MembersLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // Ensure that SiteHeader has enough vertical space to stay sticky at the top
-    // of the page by using "min-h-screen" in the parent div
-    <div className="min-h-screen">
-      <SiteHeader />
-      <main>{children}</main>
-    </div>
+    <SidebarProvider>
+      <div className="flex min-h-screen min-w-full">
+        <AppSidebar />
+        <SidebarInset>
+          <SiteHeader />
+          <main className="flex-1 p-6">{children}</main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }
