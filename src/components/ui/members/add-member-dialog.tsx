@@ -13,7 +13,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useUserMutation } from "@/lib/api/organizations/users";
-import { User, NewUser } from "@/types/user";
+import { NewUser } from "@/types/user";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 
 interface AddMemberDialogProps {

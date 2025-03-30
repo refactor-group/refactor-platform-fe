@@ -10,6 +10,7 @@ interface MemberContainerProps {
   userSession: UserSession;
   onRefresh: () => void;
   isLoading: boolean;
+  openAddMemberDialog: boolean;
 }
 
 export function MemberContainer({
@@ -18,6 +19,8 @@ export function MemberContainer({
   userSession,
   onRefresh,
   isLoading,
+  /// Force the AddMemberDialog to open
+  openAddMemberDialog,
 }: MemberContainerProps) {
   // Find relationships where current user is either coach or coachee
   const userRelationships = relationships.filter(
@@ -45,7 +48,10 @@ export function MemberContainer({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Members</h2>
-        <AddMemberButton onMemberAdded={onRefresh} />
+        <AddMemberButton
+          onMemberAdded={onRefresh}
+          openAddMemberDialog={openAddMemberDialog}
+        />
       </div>
       <MemberList users={associatedUsers} />
     </div>

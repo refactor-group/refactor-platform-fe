@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -14,6 +15,11 @@ export default function MembersPage({
 }: {
   params: Promise<{ id: Id }>;
 }) {
+  const searchParams = useSearchParams();
+  const [openAddMemberDialog] = useState(
+    searchParams.get("addMember") === "true"
+  );
+
   const organizationId = use(params).id;
   const setCurrentOrganizationId = useOrganizationStateStore(
     (state) => state.setCurrentOrganizationId
@@ -67,6 +73,7 @@ export default function MembersPage({
         userSession={userSession}
         onRefresh={handleRefresh}
         isLoading={isRelationshipsLoading || isUsersLoading}
+        openAddMemberDialog={openAddMemberDialog}
       />
     </div>
   );
