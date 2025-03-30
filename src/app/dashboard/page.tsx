@@ -3,7 +3,7 @@ import type * as React from "react";
 import { cn } from "@/components/lib/utils";
 import SelectCoachingRelationship from "@/components/ui/dashboard/select-coaching-relationship";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
-import CreateEntity from "@/components/ui/dashboard/create-entity";
+import AddEntities from "@/components/ui/dashboard/add-entities";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -39,7 +39,7 @@ export default function DashboardPage() {
     <>
       <div className="p-4 max-w-screen-2xl">
         <div className="mb-8 w-full">
-          <CreateEntity />
+          <AddEntities />
         </div>
       </div>
       <DashboardContainer>

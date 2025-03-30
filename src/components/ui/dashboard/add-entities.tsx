@@ -7,7 +7,7 @@ import { AddMemberButton } from "./add-member-button";
 import { useRouter } from "next/navigation";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 
-export default function CreateEntity() {
+export default function AddEntities() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const { currentOrganizationId } = useOrganizationStateStore((state) => state);
@@ -22,7 +22,9 @@ export default function CreateEntity() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold tracking-tight">Create</h2>
+      <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">
+        Add New
+      </h3>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AddCoachingSessionDialog
           open={open}
