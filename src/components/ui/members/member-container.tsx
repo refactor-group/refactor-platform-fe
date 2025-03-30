@@ -22,6 +22,11 @@ export function MemberContainer({
   /// Force the AddMemberDialog to open
   openAddMemberDialog,
 }: MemberContainerProps) {
+  // Check if current user is a coach in any relationship
+  const isCoachInAnyRelationship = relationships.some(
+    (rel) => rel.coach_id === userSession.id
+  );
+
   // Find relationships where current user is either coach or coachee
   const userRelationships = relationships.filter(
     (rel) =>
@@ -48,10 +53,15 @@ export function MemberContainer({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Members</h2>
-        <AddMemberButton
-          onMemberAdded={onRefresh}
-          openAddMemberDialog={openAddMemberDialog}
-        />
+        {/* Only show the button if user is a coach to _some_ user within the
+        scope of the organization. We may come back and add this directly to user
+        data.  */}
+        {isCoachInAnyRelationship && (
+          <AddMemberButton
+            onMemberAdded={onRefresh}
+            openAddMemberDialog={openAddMemberDialog}
+          />
+        )}
       </div>
       <MemberList users={associatedUsers} />
     </div>

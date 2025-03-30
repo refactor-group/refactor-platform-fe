@@ -372,8 +372,8 @@ export namespace EntityApi {
     api: {
       create: (entity: T) => Promise<U>;
       createNested: (id: Id, entity: T) => Promise<U>;
-      update: (id: Id, entity: T) => Promise<T>;
-      delete: (id: Id) => Promise<T>;
+      update: (id: Id, entity: T) => Promise<U>;
+      delete: (id: Id) => Promise<U>;
     }
   ) => {
     const [isLoading, setIsLoading] = useState(false);

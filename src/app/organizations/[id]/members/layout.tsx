@@ -3,8 +3,8 @@ import "@/styles/globals.css";
 import { siteConfig } from "@/site.config.ts";
 
 import { SiteHeader } from "@/components/ui/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/ui/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 export const metadata: Metadata = {
   title: siteConfig.name,
   description: "Manage coaching members",
