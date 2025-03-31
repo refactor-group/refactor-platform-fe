@@ -120,7 +120,9 @@ export function AddCoachingSessionDialog({
               required
             />
           </div>
-          <Button type="submit">Create Session</Button>
+          <Button type="submit" disabled={!newSessionDate || !newSessionTime}>
+            Create Session
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
