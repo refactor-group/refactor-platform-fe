@@ -1,16 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AddMemberDialog } from "./add-member-dialog";
 
 interface AddMemberButtonProps {
   onMemberAdded: () => void;
+  /// Force the AddMemberDialog to open
+  openAddMemberDialog: boolean;
 }
 
-export function AddMemberButton({ onMemberAdded }: AddMemberButtonProps) {
+export function AddMemberButton({
+  onMemberAdded,
+  openAddMemberDialog,
+}: AddMemberButtonProps) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setOpen(openAddMemberDialog);
+  }, [openAddMemberDialog]);
 
   return (
     <>

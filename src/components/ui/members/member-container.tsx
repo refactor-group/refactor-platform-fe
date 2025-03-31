@@ -10,6 +10,7 @@ interface MemberContainerProps {
   userSession: UserSession;
   onRefresh: () => void;
   isLoading: boolean;
+  openAddMemberDialog: boolean;
 }
 
 export function MemberContainer({
@@ -18,6 +19,8 @@ export function MemberContainer({
   userSession,
   onRefresh,
   isLoading,
+  /// Force the AddMemberDialog to open
+  openAddMemberDialog,
 }: MemberContainerProps) {
   // Check if current user is a coach in any relationship
   const isCoachInAnyRelationship = relationships.some(
@@ -54,7 +57,10 @@ export function MemberContainer({
         scope of the organization. We may come back and add this directly to user
         data.  */}
         {isCoachInAnyRelationship && (
-          <AddMemberButton onMemberAdded={onRefresh} />
+          <AddMemberButton
+            onMemberAdded={onRefresh}
+            openAddMemberDialog={openAddMemberDialog}
+          />
         )}
       </div>
       <MemberList users={associatedUsers} />
