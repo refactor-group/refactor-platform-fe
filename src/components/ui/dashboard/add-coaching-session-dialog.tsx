@@ -91,8 +91,7 @@ export function AddCoachingSessionDialog({
           ...(dialogTrigger.props as React.HTMLAttributes<HTMLButtonElement>),
           className: cn(
             (dialogTrigger.props as React.HTMLAttributes<HTMLButtonElement>)
-              .className,
-            isCoach ? "visible" : "invisible"
+              .className
           ),
         })}
       </DialogTrigger>
