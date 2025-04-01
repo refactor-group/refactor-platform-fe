@@ -47,6 +47,17 @@ export const UserApi = {
    */
   delete: async (id: Id): Promise<User> =>
     EntityApi.deleteFn<null, User>(`${USERS_BASEURL}/${id}`),
+
+  /**
+   * Deletes a user nested under another entity (foreign key relationship).
+   *
+   * @param entityId The ID of the entity under which to delete the user
+   * @param userId The ID of the user to delete
+   * @returns Promise resolving to the deleted User object
+   */
+  deleteNested: async (entityId: Id, userId: Id): Promise<User> => {
+    throw new Error("Delete nested operation not implemented");
+  },
 };
 
 /**
@@ -95,5 +106,6 @@ export const useUserMutation = () => {
     createNested: UserApi.createNested,
     update: UserApi.update,
     delete: UserApi.delete,
+    deleteNested: UserApi.deleteNested,
   });
 };

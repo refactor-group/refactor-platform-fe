@@ -82,6 +82,20 @@ export const OverarchingGoalApi = {
     EntityApi.deleteFn<null, OverarchingGoal>(
       `${OVERARCHING_GOALS_BASEURL}/${id}`
     ),
+
+  /**
+   * Deletes an overarching-goal nested under another entity (foreign key relationship).
+   *
+   * @param entityId The ID of the entity under which to delete the overarching-goal
+   * @param overarchingGoalId The ID of the overarching-goal to delete
+   * @returns Promise resolving to the deleted OverarchingGoal object
+   */
+  deleteNested: async (
+    entityId: Id,
+    overarchingGoalId: Id
+  ): Promise<OverarchingGoal> => {
+    throw new Error("Delete nested operation not implemented");
+  },
 };
 
 /**
@@ -197,6 +211,7 @@ export const useOverarchingGoalMutation = () => {
       createNested: OverarchingGoalApi.createNested,
       update: OverarchingGoalApi.update,
       delete: OverarchingGoalApi.delete,
+      deleteNested: OverarchingGoalApi.deleteNested,
     }
   );
 };

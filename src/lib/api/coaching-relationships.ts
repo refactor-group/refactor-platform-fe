@@ -91,6 +91,20 @@ export const CoachingRelationshipApi = {
   delete: async (_id: Id) => {
     throw new Error("Delete operation not implemented");
   },
+
+  /**
+   * Deletes a coaching relationship nested under another entity (foreign key relationship).
+   *
+   * @param entityId The ID of the entity under which to delete the coaching relationship
+   * @param relationshipId The ID of the coaching relationship to delete
+   * @returns Promise resolving to the deleted CoachingRelationshipWithUserNames object
+   */
+  deleteNested: async (
+    organizationId: Id,
+    relationshipId: Id
+  ): Promise<CoachingRelationshipWithUserNames> => {
+    throw new Error("Delete nested operation not implemented");
+  },
 };
 
 /**
@@ -185,6 +199,7 @@ export const useCoachingRelationshipMutation = (organizationId: Id) => {
       createNested: CoachingRelationshipApi.createNested,
       update: CoachingRelationshipApi.update,
       delete: CoachingRelationshipApi.delete,
+      deleteNested: CoachingRelationshipApi.deleteNested,
     }
   );
 };

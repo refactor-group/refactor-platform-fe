@@ -71,6 +71,20 @@ export const OrganizationApi = {
    */
   delete: async (id: Id): Promise<Organization> =>
     EntityApi.deleteFn<null, Organization>(`${ORGANIZATIONS_BASEURL}/${id}`),
+
+  /**
+   * Deletes an organization nested under another entity (foreign key relationship).
+   *
+   * @param entityId The ID of the entity under which to delete the organization
+   * @param organizationId The ID of the organization to delete
+   * @returns Promise resolving to the deleted Organization object
+   */
+  deleteNested: async (
+    entityId: Id,
+    organizationId: Id
+  ): Promise<Organization> => {
+    throw new Error("Delete nested operation not implemented");
+  },
 };
 
 /**
@@ -153,5 +167,6 @@ export const useOrganizationMutation = () => {
     createNested: OrganizationApi.createNested,
     update: OrganizationApi.update,
     delete: OrganizationApi.delete,
+    deleteNested: OrganizationApi.deleteNested,
   });
 };

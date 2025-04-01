@@ -69,6 +69,17 @@ export const AgreementApi = {
    */
   delete: async (id: Id): Promise<Agreement> =>
     EntityApi.deleteFn<null, Agreement>(`${AGREEMENTS_BASEURL}/${id}`),
+
+  /**
+   * Deletes an agreement nested under another entity (foreign key relationship).
+   *
+   * @param entityId The ID of the entity under which to delete the agreement
+   * @param agreementId The ID of the agreement to delete
+   * @returns Promise resolving to the deleted Agreement object
+   */
+  deleteNested: async (entityId: Id, agreementId: Id): Promise<Agreement> => {
+    throw new Error("Delete nested operation not implemented");
+  },
 };
 
 /**
@@ -175,5 +186,6 @@ export const useAgreementMutation = () => {
     createNested: AgreementApi.createNested,
     update: AgreementApi.update,
     delete: AgreementApi.delete,
+    deleteNested: AgreementApi.deleteNested,
   });
 };

@@ -59,6 +59,15 @@ export const UserApi = {
   delete: async (id: Id): Promise<User> => {
     throw new Error("Delete operation not implemented");
   },
+
+  /**
+   * Deletes a user nested in an organization.
+   */
+  deleteNested: async (organizationId: Id, userId: Id): Promise<User> => {
+    return EntityApi.deleteFn<null, User>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}`
+    );
+  },
 };
 
 /**
@@ -92,6 +101,7 @@ export const useUserMutation = (organizationId: Id) => {
       createNested: UserApi.createNested,
       update: UserApi.update,
       delete: UserApi.delete,
+      deleteNested: UserApi.deleteNested,
     }
   );
 };

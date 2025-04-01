@@ -63,7 +63,11 @@ export function MemberContainer({
           />
         )}
       </div>
-      <MemberList users={associatedUsers} />
+      <MemberList
+        users={associatedUsers}
+        relationships={userRelationships}
+        onRefresh={onRefresh}
+      />
     </div>
   );
 }

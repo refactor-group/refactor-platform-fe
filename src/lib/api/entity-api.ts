@@ -193,6 +193,7 @@ export namespace EntityApi {
     url: string,
     config?: any
   ): Promise<R> => {
+    console.log("deleteFn", url, config);
     return mutationFn<T, R>("delete", url, config);
   };
 
@@ -374,6 +375,7 @@ export namespace EntityApi {
       createNested: (id: Id, entity: T) => Promise<U>;
       update: (id: Id, entity: T) => Promise<U>;
       delete: (id: Id) => Promise<U>;
+      deleteNested: (entityId: Id, nestedEntityId: Id) => Promise<U>;
     }
   ) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -444,6 +446,17 @@ export namespace EntityApi {
        * @returns Promise resolving to the deleted entity
        */
       delete: (id: Id) => executeWithState(() => api.delete(id)),
+
+      /**
+       * Deletes an entity nested under another entity (foreign key relationship).
+       *
+       * @param entityId The entity's id under which to delete entity
+       * @param nestedEntityId The nested entity's id to delete
+       * @returns Promise resolving to the deleted entity
+       */
+      deleteNested: (entityId: Id, nestedEntityId: Id) =>
+        executeWithState(() => api.deleteNested(entityId, nestedEntityId)),
+
       /** Indicates if any operation is currently in progress */
       isLoading,
       /** Contains the error if the last operation failed, null otherwise */

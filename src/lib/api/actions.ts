@@ -65,6 +65,17 @@ export const ActionApi = {
    */
   delete: async (id: Id): Promise<Action> =>
     EntityApi.deleteFn<null, Action>(`${ACTIONS_BASEURL}/${id}`),
+
+  /**
+   * Deletes an action nested under another entity (foreign key relationship).
+   *
+   * @param entityId The ID of the entity under which to delete the action
+   * @param actionId The ID of the action to delete
+   * @returns Promise resolving to the deleted Action object
+   */
+  deleteNested: async (entityId: Id, actionId: Id): Promise<Action> => {
+    throw new Error("Delete nested operation not implemented");
+  },
 };
 
 /**
@@ -174,5 +185,6 @@ export const useActionMutation = () => {
     createNested: ActionApi.createNested,
     update: ActionApi.update,
     delete: ActionApi.delete,
+    deleteNested: ActionApi.deleteNested,
   });
 };
