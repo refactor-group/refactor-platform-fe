@@ -188,7 +188,7 @@ export const useCoachingSession = (id: Id) => {
  * error: Error object if the last operation failed, null otherwise
  */
 export const useCoachingSessionMutation = () => {
-  return EntityApi.useEntityMutation<CoachingSession, CoachingSession>(
+  return EntityApi.useEntityMutation<CoachingSession>(
     COACHING_SESSIONS_BASEURL,
     {
       create: CoachingSessionApi.create,

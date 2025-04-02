@@ -90,13 +90,10 @@ export const UserSessionApi = {
  * error: Error object if the last operation failed, null otherwise
  */
 export const useUserSessionMutation = () => {
-  return EntityApi.useEntityMutation<UserSession, UserSession>(
-    USER_SESSIONS_BASEURL,
-    {
-      create: UserSessionApi.create,
-      createNested: UserSessionApi.createNested,
-      update: UserSessionApi.update,
-      delete: UserSessionApi.delete,
-    }
-  );
+  return EntityApi.useEntityMutation<UserSession>(USER_SESSIONS_BASEURL, {
+    create: UserSessionApi.create,
+    createNested: UserSessionApi.createNested,
+    update: UserSessionApi.update,
+    delete: UserSessionApi.delete,
+  });
 };

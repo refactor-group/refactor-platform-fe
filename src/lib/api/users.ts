@@ -90,7 +90,7 @@ export const useUser = (id: Id) => {
  * Provides methods to create, update, and delete users.
  */
 export const useUserMutation = () => {
-  return EntityApi.useEntityMutation<User, User>(USERS_BASEURL, {
+  return EntityApi.useEntityMutation<User>(USERS_BASEURL, {
     create: UserApi.create,
     createNested: UserApi.createNested,
     update: UserApi.update,

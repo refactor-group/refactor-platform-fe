@@ -148,13 +148,10 @@ export const useOrganization = (id: Id) => {
  * Provides methods to create, update, and delete organizations.
  */
 export const useOrganizationMutation = () => {
-  return EntityApi.useEntityMutation<Organization, Organization>(
-    ORGANIZATIONS_BASEURL,
-    {
-      create: OrganizationApi.create,
-      createNested: OrganizationApi.createNested,
-      update: OrganizationApi.update,
-      delete: OrganizationApi.delete,
-    }
-  );
+  return EntityApi.useEntityMutation<Organization>(ORGANIZATIONS_BASEURL, {
+    create: OrganizationApi.create,
+    createNested: OrganizationApi.createNested,
+    update: OrganizationApi.update,
+    delete: OrganizationApi.delete,
+  });
 };
