@@ -9,7 +9,7 @@ import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-rela
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
 import { DateTime } from "ts-luxon";
-import { AddCoachingSessionDialog } from "./add-coaching-session-dialog";
+import { CoachingSessionDialog } from "./coaching-session-dialog";
 
 export default function CoachingSessionList() {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
@@ -54,10 +54,11 @@ export default function CoachingSessionList() {
           <CardTitle className="text-xl sm:text-2xl">
             Coaching Sessions
           </CardTitle>
-          <AddCoachingSessionDialog
+          <CoachingSessionDialog
+            mode="create"
             open={open}
             onOpenChange={setOpen}
-            onCoachingSessionAdded={onCoachingSessionAdded}
+            onCoachingSessionUpdated={onCoachingSessionAdded}
             dialogTrigger={
               <Button
                 variant="outline"

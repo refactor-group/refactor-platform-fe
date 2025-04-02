@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,23 @@ import Link from "next/link";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
 import { Id } from "@/types/general";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
+import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
+import { DateTime } from "ts-luxon";
 
 interface CoachingSessionProps {
   coachingSession: {
     id: Id;
     date: string;
+    coaching_relationship_id: Id;
+    created_at: DateTime;
+    updated_at: DateTime;
   };
 }
 
@@ -22,29 +34,58 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
   const { setCurrentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
   );
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
 
   return (
-    <Card>
-      <CardHeader className="p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="space-y-1">
-            <OverarchingGoal coachingSessionId={coachingSession.id} />
-            <div className="text-sm text-muted-foreground">
-              {format(new Date(coachingSession.date), "MMMM d, yyyy h:mm a")}
+    <>
+      <Card>
+        <CardHeader className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="space-y-1">
+              <OverarchingGoal coachingSessionId={coachingSession.id} />
+              <div className="text-sm text-muted-foreground">
+                {format(new Date(coachingSession.date), "MMMM d, yyyy h:mm a")}
+              </div>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={`/coaching-sessions/${coachingSession.id}`}
+                    onClick={() =>
+                      setCurrentCoachingSessionId(coachingSession.id)
+                    }
+                  >
+                    Join Session
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setUpdateDialogOpen(true)}>
+                  Update Session
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive">
+                  Delete Session
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <Link href={`/coaching-sessions/${coachingSession.id}`} passHref>
-            <Button
-              size="sm"
-              className="w-full sm:w-auto mt-2 sm:mt-0"
-              onClick={() => setCurrentCoachingSessionId(coachingSession.id)}
-            >
-              Join Session
-            </Button>
-          </Link>
-        </div>
-      </CardHeader>
-    </Card>
+        </CardHeader>
+      </Card>
+      <CoachingSessionDialog
+        open={updateDialogOpen}
+        onOpenChange={setUpdateDialogOpen}
+        onCoachingSessionUpdated={() => {
+          // Refresh the list of coaching sessions
+          window.location.reload();
+        }}
+        existingSession={coachingSession}
+        mode="update"
+      />
+    </>
   );
 };
 

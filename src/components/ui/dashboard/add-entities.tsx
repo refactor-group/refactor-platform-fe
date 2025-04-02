@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AddCoachingSessionDialog } from "./add-coaching-session-dialog";
+import { CoachingSessionDialog } from "./coaching-session-dialog";
 import { AddCoachingSessionButton } from "./add-coaching-session-button";
 import { AddMemberButton } from "./add-member-button";
 import { useRouter } from "next/navigation";
@@ -28,10 +28,11 @@ export default function AddEntities() {
         Add New
       </h3>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <AddCoachingSessionDialog
+        <CoachingSessionDialog
+          mode="create"
           open={open}
           onOpenChange={setOpen}
-          onCoachingSessionAdded={onCoachingSessionAdded}
+          onCoachingSessionUpdated={onCoachingSessionAdded}
           dialogTrigger={
             <AddCoachingSessionButton
               disabled={!isCoach || !currentOrganizationId}
