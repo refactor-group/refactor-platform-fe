@@ -55,7 +55,7 @@ export const UserApi = {
    * @param userId The ID of the user to delete
    * @returns Promise resolving to the deleted User object
    */
-  deleteNested: async (entityId: Id, userId: Id): Promise<User> => {
+  deleteNested: async (_entityId: Id, userId: Id): Promise<User> => {
     throw new Error("Delete nested operation not implemented");
   },
 };

@@ -80,8 +80,8 @@ export const OrganizationApi = {
    * @returns Promise resolving to the deleted Organization object
    */
   deleteNested: async (
-    entityId: Id,
-    organizationId: Id
+    _entityId: Id,
+    _organizationId: Id
   ): Promise<Organization> => {
     throw new Error("Delete nested operation not implemented");
   },

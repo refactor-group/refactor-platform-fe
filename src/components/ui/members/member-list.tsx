@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { User } from "@/types/user";
 import { MemberCard } from "./member-card";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
+import { Id } from "@/types/general";
 
 interface MemberListProps {
   users: User[];
@@ -15,12 +16,12 @@ export function MemberList({
   onRefresh,
 }: MemberListProps) {
   // Create a mapping of user IDs to their associated relationships
-  const userRelationshipsMap = users.reduce((acc, user) => {
-    acc[user.id] = relationships.filter(
+  const userRelationshipsMap = users.reduce((accumulator_map, user) => {
+    accumulator_map[user.id] = relationships.filter(
       (rel) => rel.coach_id === user.id || rel.coachee_id === user.id
     );
-    return acc;
-  }, {} as Record<string, CoachingRelationshipWithUserNames[]>);
+    return accumulator_map;
+  }, {} as Record<Id, CoachingRelationshipWithUserNames[]>);
 
   return (
     <Card className="w-full">

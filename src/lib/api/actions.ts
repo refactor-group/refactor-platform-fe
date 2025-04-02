@@ -73,7 +73,7 @@ export const ActionApi = {
    * @param actionId The ID of the action to delete
    * @returns Promise resolving to the deleted Action object
    */
-  deleteNested: async (entityId: Id, actionId: Id): Promise<Action> => {
+  deleteNested: async (_entityId: Id, _actionId: Id): Promise<Action> => {
     throw new Error("Delete nested operation not implemented");
   },
 };

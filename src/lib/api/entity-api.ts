@@ -193,7 +193,6 @@ export namespace EntityApi {
     url: string,
     config?: any
   ): Promise<R> => {
-    console.log("deleteFn", url, config);
     return mutationFn<T, R>("delete", url, config);
   };
 

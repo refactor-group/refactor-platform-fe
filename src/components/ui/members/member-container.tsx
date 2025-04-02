@@ -52,7 +52,6 @@ export function MemberContainer({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Members</h2>
         {/* Only show the button if user is a coach to _some_ user within the
         scope of the organization. We may come back and add this directly to user
         data.  */}

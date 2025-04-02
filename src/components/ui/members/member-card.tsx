@@ -6,12 +6,13 @@ import { Trash2 } from "lucide-react";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
 import { OrganizationStateStore } from "@/lib/stores/organization-state-store";
 import { AuthStore } from "@/lib/stores/auth-store";
+import { Id } from "@/types/general";
 
 interface MemberCardProps {
   firstName: string;
   lastName: string;
-  email?: string;
-  userId: string;
+  email: string;
+  userId: Id;
   userRelationships: CoachingRelationshipWithUserNames[];
   onRefresh: () => void;
 }
@@ -43,10 +44,10 @@ export function MemberCard({
 
     try {
       await deleteUser(currentOrganizationId, userId);
-      onRefresh(); // Call refresh after successful deletion
+      onRefresh();
     } catch (error) {
       console.error("Error deleting user:", error);
-      // You might want to show an error toast here
+      // TODO: Show an error toast here once we start using toasts for showing operation results.
     }
   };
 

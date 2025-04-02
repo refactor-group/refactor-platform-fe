@@ -91,8 +91,8 @@ export const OverarchingGoalApi = {
    * @returns Promise resolving to the deleted OverarchingGoal object
    */
   deleteNested: async (
-    entityId: Id,
-    overarchingGoalId: Id
+    _entityId: Id,
+    _overarchingGoalId: Id
   ): Promise<OverarchingGoal> => {
     throw new Error("Delete nested operation not implemented");
   },

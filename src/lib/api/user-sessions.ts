@@ -84,8 +84,8 @@ export const UserSessionApi = {
    * @returns Promise resolving to the deleted UserSession object
    */
   deleteNested: async (
-    entityId: Id,
-    userSessionId: Id
+    _entityId: Id,
+    _userSessionId: Id
   ): Promise<UserSession> => {
     throw new Error("Delete nested operation not implemented");
   },

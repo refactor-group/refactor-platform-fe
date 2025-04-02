@@ -104,7 +104,7 @@ export const CoachingSessionApi = {
    * @returns Promise resolving to the deleted CoachingSession object
    */
   deleteNested: async (
-    entityId: Id,
+    _entityId: Id,
     coachingSessionId: Id
   ): Promise<CoachingSession> => {
     throw new Error("Delete nested operation not implemented");
