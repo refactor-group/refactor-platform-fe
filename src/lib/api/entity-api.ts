@@ -367,7 +367,7 @@ export namespace EntityApi {
    * @param api Object containing CRUD operations for the entity
    * @returns Object with CRUD methods, loading state, and error state
    */
-  export const useEntityMutation = <T, U>(
+  export const useEntityMutation = <T, U = T>(
     baseUrl: string,
     api: {
       create: (entity: T) => Promise<U>;
