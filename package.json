@@ -38,6 +38,7 @@
     "@tiptap/extension-collaboration-cursor": "^2.11.5",
     "@tiptap/extension-heading": "^2.10.4",
     "@tiptap/extension-highlight": "^2.10.4",
+    "@tiptap/extension-link": "^2.11.7",
     "@tiptap/extension-list-item": "^2.10.4",
     "@tiptap/extension-ordered-list": "^2.10.4",
     "@tiptap/extension-underline": "^2.10.4",
