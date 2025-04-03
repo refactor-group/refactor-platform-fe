@@ -15,34 +15,16 @@ import {
   Link,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { LinkDialog } from "./link-dialog";
 
 export const Toolbar = () => {
   const { editor } = useCurrentEditor();
-
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
-  const [linkUrl, setLinkUrl] = useState("");
-  const [linkText, setLinkText] = useState("");
 
   if (!editor) {
     return null;
   }
-
-  const handleLinkButtonClick = () => {
-    editor.isActive("link")
-      ? editor.chain().focus().toggleLink({ href: linkUrl }).run()
-      : setIsLinkDialogOpen(true);
-  };
 
   return (
     <>
@@ -120,61 +102,18 @@ export const Toolbar = () => {
           title="Code Block"
         />
         <ToolbarButton
-          onClick={() => handleLinkButtonClick()}
+          onClick={() => setIsLinkDialogOpen(true)}
           isActive={editor.isActive("link")}
           icon={<Link className="h-4 w-4" />}
           title="Link"
         />
       </div>
 
-      <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Insert Link</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="linkText" className="text-right">
-                Text
-              </Label>
-              <Input
-                id="linkText"
-                value={linkText}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setLinkText(e.target.value)
-                }
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="url" className="text-right">
-                URL
-              </Label>
-              <Input
-                id="url"
-                value={linkUrl}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setLinkUrl(e.target.value)
-                }
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={() => {
-                editor.chain().focus().insertContent(linkText).run();
-                editor.chain().focus().toggleLink({ href: linkUrl }).run();
-                setIsLinkDialogOpen(false);
-                setLinkUrl("");
-                setLinkText("");
-              }}
-            >
-              Insert Link
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LinkDialog
+        editor={editor}
+        isOpen={isLinkDialogOpen}
+        onOpenChange={setIsLinkDialogOpen}
+      />
     </>
   );
 };
