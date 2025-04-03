@@ -11,6 +11,7 @@ import Paragraph from "@tiptap/extension-paragraph";
 import Strike from "@tiptap/extension-strike";
 import Text from "@tiptap/extension-text";
 import Underline from "@tiptap/extension-underline";
+import Link from "@tiptap/extension-link";
 import Collaboration from "@tiptap/extension-collaboration";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import CodeBlock from "@/components/ui/coaching-sessions/code-block";
@@ -43,6 +44,7 @@ export const Extensions = (
     Strike,
     Text,
     Underline,
+    Link,
     Collaboration.configure({
       document: doc,
     }),
