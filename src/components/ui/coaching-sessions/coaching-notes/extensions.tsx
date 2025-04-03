@@ -45,7 +45,7 @@ export const Extensions = (
     Text,
     Underline,
     Link.configure({
-      openOnClick: false,
+      openOnClick: true,
       autolink: true,
       defaultProtocol: "https",
       protocols: ["http", "https"],
@@ -61,33 +61,33 @@ export const Extensions = (
             return false;
           }
 
-          // disallowed protocols
-          const disallowedProtocols = ["ftp", "file", "mailto"];
-          const protocol = parsedUrl.protocol.replace(":", "");
+          // Placeholder for future disallowed domains if we want to add any
+          // const disallowedProtocols = ["ftp", "file", "mailto"];
+          // const protocol = parsedUrl.protocol.replace(":", "");
 
-          if (disallowedProtocols.includes(protocol)) {
-            return false;
-          }
+          // if (disallowedProtocols.includes(protocol)) {
+          //   return false;
+          // }
 
-          // only allow protocols specified in ctx.protocols
-          const allowedProtocols = ctx.protocols.map((p) =>
-            typeof p === "string" ? p : p.scheme
-          );
+          // // only allow protocols specified in ctx.protocols
+          // const allowedProtocols = ctx.protocols.map((p) =>
+          //   typeof p === "string" ? p : p.scheme
+          // );
 
-          if (!allowedProtocols.includes(protocol)) {
-            return false;
-          }
+          // if (!allowedProtocols.includes(protocol)) {
+          //   return false;
+          // }
 
-          // disallowed domains
-          const disallowedDomains = [
-            "example-phishing.com",
-            "malicious-site.net",
-          ];
-          const domain = parsedUrl.hostname;
+          // Placeholder for future disallowed domains if we want to add any
+          // const disallowedDomains = [
+          //   "example-phishing.com",
+          //   "malicious-site.net",
+          // ];
+          // const domain = parsedUrl.hostname;
 
-          if (disallowedDomains.includes(domain)) {
-            return false;
-          }
+          // if (disallowedDomains.includes(domain)) {
+          //   return false;
+          // }
 
           // all checks have passed
           return true;
