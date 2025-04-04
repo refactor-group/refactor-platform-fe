@@ -43,31 +43,32 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
                 {format(new Date(coachingSession.date), "MMMM d, yyyy h:mm a")}
               </div>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
+            <div className="flex items-center gap-2">
+              <Link href={`/coaching-sessions/${coachingSession.id}`} passHref>
+                <Button
+                  size="sm"
+                  className="w-full sm:w-auto mt-2 sm:mt-0 text-sm px-3 py-1"
+                  onClick={() => setCurrentCoachingSessionId(coachingSession.id)}
+                >
+                  Join Session
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link
-                    href={`/coaching-sessions/${coachingSession.id}`}
-                    onClick={() =>
-                      setCurrentCoachingSessionId(coachingSession.id)
-                    }
-                  >
-                    Join Session
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setUpdateDialogOpen(true)}>
-                  Update Session
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive">
-                  Delete Session
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setUpdateDialogOpen(true)}>
+                    Update Session
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive">
+                    Delete Session
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </CardHeader>
       </Card>
