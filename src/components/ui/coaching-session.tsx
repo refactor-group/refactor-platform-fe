@@ -17,16 +17,10 @@ import {
 import { MoreHorizontal } from "lucide-react";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
 import CoachingSessionForm, { CoachingSessionFormMode } from "@/components/ui/dashboard/coaching-session-form";
-import { DateTime } from "ts-luxon";
+import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
 
 interface CoachingSessionProps {
-  coachingSession: {
-    id: Id;
-    date: string;
-    coaching_relationship_id: Id;
-    created_at: DateTime;
-    updated_at: DateTime;
-  };
+  coachingSession: CoachingSessionType;
 }
 
 const CoachingSession: React.FC<CoachingSessionProps> = ({

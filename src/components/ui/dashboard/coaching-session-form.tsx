@@ -1,5 +1,3 @@
-
-
 import { CoachingSession } from "@/types/coaching-session";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,7 +12,6 @@ import { useState } from "react";
 import { defaultCoachingSession } from "@/types/coaching-session";
 
 export type CoachingSessionFormMode = "create" | "update";
-
 
 interface CoachingSessionFormProps {
     existingSession?: CoachingSession;
@@ -47,6 +44,30 @@ export default function CoachingSessionForm({
         existingSession ? format(new Date(existingSession.date), "HH:mm") : ""
     );
 
+    const resetForm = () => {
+        setSessionDate(undefined);
+        setSessionTime("");
+        onOpenChange(false);
+    };
+
+    const handleCreateSession = async (dateTime: string) => {
+        const newCoachingSession: CoachingSession = {
+            ...defaultCoachingSession(),
+            coaching_relationship_id: currentCoachingRelationshipId,
+            date: dateTime,
+        };
+        await createCoachingSession(newCoachingSession);
+    };
+
+    const handleUpdateSession = async (dateTime: string) => {
+        if (!existingSession) return;
+        await update(existingSession.id, {
+            ...existingSession,
+            date: dateTime,
+            updated_at: DateTime.now(),
+        });
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!sessionDate || !sessionTime) return;
@@ -56,27 +77,16 @@ export default function CoachingSessionForm({
             .set({ hour: hours, minute: minutes })
             .toFormat("yyyy-MM-dd'T'HH:mm:ss");
 
+        const handler = mode === "create" ? handleCreateSession : handleUpdateSession;
+
         try {
-            if (mode === "create") {
-                const newCoachingSession: CoachingSession = {
-                    ...defaultCoachingSession(),
-                    coaching_relationship_id: currentCoachingRelationshipId,
-                    date: dateTime,
-                };
-                await createCoachingSession(newCoachingSession);
-            } else if (existingSession) {
-                await update(existingSession.id, {
-                    ...existingSession,
-                    date: dateTime,
-                    updated_at: DateTime.now(),
-                });
-            }
+            await handler(dateTime);
             refresh();
-            setSessionDate(undefined);
-            setSessionTime("");
-            onOpenChange(false);
         } catch (error) {
+            // TODO: We might want to show a toast here if/when we get that infrastructure in place 
             console.error(`Failed to ${mode} coaching session:`, error);
+        } finally {
+            resetForm();
         }
     };
 
