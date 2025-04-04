@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
+import CoachingSessionForm, { CoachingSessionFormMode } from "@/components/ui/dashboard/coaching-session-form";
 import { DateTime } from "ts-luxon";
 
 interface CoachingSessionProps {
@@ -35,6 +36,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
     (state) => state
   );
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const mode: CoachingSessionFormMode = "update";
 
   return (
     <>
@@ -78,13 +80,14 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
       <CoachingSessionDialog
         open={updateDialogOpen}
         onOpenChange={setUpdateDialogOpen}
-        onCoachingSessionUpdated={() => {
-          // Refresh the list of coaching sessions
-          window.location.reload();
-        }}
-        existingSession={coachingSession}
-        mode="update"
-      />
+        mode={mode}
+      >
+        <CoachingSessionForm
+          existingSession={coachingSession}
+          mode={mode}
+          onOpenChange={setUpdateDialogOpen}
+        />
+      </CoachingSessionDialog>
     </>
   );
 };

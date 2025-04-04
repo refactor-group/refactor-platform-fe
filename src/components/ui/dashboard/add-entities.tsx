@@ -2,21 +2,18 @@
 
 import { useState } from "react";
 import { CoachingSessionDialog } from "./coaching-session-dialog";
-import { AddCoachingSessionButton } from "./add-coaching-session-button";
 import { AddMemberButton } from "./add-member-button";
 import { useRouter } from "next/navigation";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import CoachingSessionForm, { CoachingSessionFormMode } from "@/components/ui/dashboard/coaching-session-form";
 
 export default function AddEntities() {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const { currentOrganizationId } = useOrganizationStateStore((state) => state);
   const { isCoach } = useAuthStore((state) => state);
-
-  const onCoachingSessionAdded = () => {
-    setOpen(false);
-  };
+  const mode: CoachingSessionFormMode = "create";
+  const [open, setOpen] = useState(false);
 
   const onMemberButtonClicked = () => {
     router.push(`/organizations/${currentOrganizationId}/members`);
@@ -27,28 +24,25 @@ export default function AddEntities() {
       <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">
         Add New
       </h3>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <CoachingSessionDialog
-          mode="create"
-          open={open}
+      <CoachingSessionDialog
+        open={open}
+        onOpenChange={setOpen}
+        mode={mode}
+      >
+        <CoachingSessionForm
+          mode={mode}
           onOpenChange={setOpen}
-          onCoachingSessionUpdated={onCoachingSessionAdded}
-          dialogTrigger={
-            <AddCoachingSessionButton
-              disabled={!isCoach || !currentOrganizationId}
-            />
-          }
         />
+      </CoachingSessionDialog>
 
-        {/* TODO: Refactor the AddMemberButton and AddMemberDialog to work just like
+      {/* TODO: Refactor the AddMemberButton and AddMemberDialog to work just like
             AddCoachingSessionDialog does above, where the dialog is the parent container
             and it accepts a AddMemberButton as the dialogTrigger parameter.
         */}
-        <AddMemberButton
-          disabled={!isCoach || !currentOrganizationId}
-          onClick={onMemberButtonClicked}
-        />
-      </div>
+      <AddMemberButton
+        disabled={!isCoach || !currentOrganizationId}
+        onClick={onMemberButtonClicked}
+      />
     </div>
   );
 }

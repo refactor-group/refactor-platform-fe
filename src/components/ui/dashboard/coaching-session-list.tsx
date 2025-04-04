@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpDown } from "lucide-react";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
+
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
 import { DateTime } from "ts-luxon";
+import CoachingSessionForm, { CoachingSessionFormMode } from "@/components/ui/dashboard/coaching-session-form";
 import { CoachingSessionDialog } from "./coaching-session-dialog";
 
 export default function CoachingSessionList() {
@@ -24,24 +25,19 @@ export default function CoachingSessionList() {
     coachingSessions,
     isLoading: isLoadingCoachingSessions,
     isError: isErrorCoachingSessions,
-    refresh,
   } = useCoachingSessionList(currentCoachingRelationshipId, fromDate, toDate);
 
   const [sortByDate, setSortByDate] = useState(true);
   const [open, setOpen] = useState(false);
-  const { isCoach } = useAuthStore((state) => state);
+
 
   const sortedSessions = coachingSessions
     ? [...coachingSessions].sort((a, b) => {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      })
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    })
     : [];
 
-  const onCoachingSessionAdded = () => {
-    // SWR refresh
-    refresh();
-    setOpen(false);
-  };
+  const mode: CoachingSessionFormMode = "create";
 
   if (isLoadingCoachingSessions) return <div>Loading coaching sessions...</div>;
   if (isErrorCoachingSessions)
@@ -55,21 +51,15 @@ export default function CoachingSessionList() {
             Coaching Sessions
           </CardTitle>
           <CoachingSessionDialog
-            mode="create"
             open={open}
             onOpenChange={setOpen}
-            onCoachingSessionUpdated={onCoachingSessionAdded}
-            dialogTrigger={
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-                disabled={!isCoach || !currentCoachingRelationshipId}
-              >
-                Create New Coaching Session
-              </Button>
-            }
-          />
+            mode={mode}
+          >
+            <CoachingSessionForm
+              mode={mode}
+              onOpenChange={setOpen}
+            />
+          </CoachingSessionDialog>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <Button
