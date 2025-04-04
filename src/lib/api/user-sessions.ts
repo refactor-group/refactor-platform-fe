@@ -74,7 +74,21 @@ export const UserSessionApi = {
    * @returns Promise resolving to the deleted UserSession object
    */
   delete: async (id: Id): Promise<UserSession> =>
-    EntityApi.deleteFn<null, UserSession>(USER_SESSIONS_LOGOUTURL),
+    EntityApi.deleteFn<null, UserSession>(`${USER_SESSIONS_BASEURL}/${id}`),
+
+  /**
+   * Deletes a user session nested under another entity (foreign key relationship).
+   *
+   * @param entityId The ID of the entity under which to delete the user session
+   * @param userSessionId The ID of the user session to delete
+   * @returns Promise resolving to the deleted UserSession object
+   */
+  deleteNested: async (
+    _entityId: Id,
+    _userSessionId: Id
+  ): Promise<UserSession> => {
+    throw new Error("Delete nested operation not implemented");
+  },
 };
 
 /**
@@ -95,5 +109,6 @@ export const useUserSessionMutation = () => {
     createNested: UserSessionApi.createNested,
     update: UserSessionApi.update,
     delete: UserSessionApi.delete,
+    deleteNested: UserSessionApi.deleteNested,
   });
 };

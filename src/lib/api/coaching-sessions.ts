@@ -95,6 +95,20 @@ export const CoachingSessionApi = {
     EntityApi.deleteFn<null, CoachingSession>(
       `${COACHING_SESSIONS_BASEURL}/${id}`
     ),
+
+  /**
+   * Deletes a coaching session nested under another entity (foreign key relationship).
+   *
+   * @param entityId The ID of the entity under which to delete the coaching session
+   * @param coachingSessionId The ID of the coaching session to delete
+   * @returns Promise resolving to the deleted CoachingSession object
+   */
+  deleteNested: async (
+    _entityId: Id,
+    coachingSessionId: Id
+  ): Promise<CoachingSession> => {
+    throw new Error("Delete nested operation not implemented");
+  },
 };
 
 /**
@@ -195,6 +209,7 @@ export const useCoachingSessionMutation = () => {
       createNested: CoachingSessionApi.createNested,
       update: CoachingSessionApi.update,
       delete: CoachingSessionApi.delete,
+      deleteNested: CoachingSessionApi.deleteNested,
     }
   );
 };
