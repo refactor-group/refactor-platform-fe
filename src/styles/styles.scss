@@ -143,6 +143,21 @@
     border-top: 1px solid var(--gray-2);
     margin: 2rem 0;
   }
+
+  a {
+    color: #0000EE;
+    text-decoration: underline;
+  }
+  /* Link styles */
+  a {
+    text-decoration: underline;
+    color: #0000EE;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--purple-contrast);
+    }
+  }
 }
 
 /* Give a remote user a caret */
