@@ -17,6 +17,7 @@ interface CoachingSessionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: CoachingSessionFormMode;
+  dialogTrigger?: React.ReactElement<React.HTMLAttributes<HTMLButtonElement>>;
   children: React.ReactNode;
 }
 
@@ -24,6 +25,7 @@ export function CoachingSessionDialog({
   open,
   onOpenChange,
   mode,
+  dialogTrigger,
   children,
 }: CoachingSessionDialogProps) {
 
@@ -35,14 +37,16 @@ export function CoachingSessionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full sm:w-auto"
-          disabled={!isCoach || !currentCoachingRelationshipId}
-        >
-          Create New Coaching Session
-        </Button>
+        {dialogTrigger ?? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            disabled={!isCoach || !currentCoachingRelationshipId}
+          >
+            Create New Coaching Session
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

@@ -15,8 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
-import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
-import CoachingSessionForm, { CoachingSessionFormMode } from "@/components/ui/dashboard/coaching-session-form";
+import { CoachingSessionFormMode } from "@/components/ui/dashboard/coaching-session-form";
 import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
 
 interface CoachingSessionProps {
@@ -72,17 +71,6 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
           </div>
         </CardHeader>
       </Card>
-      <CoachingSessionDialog
-        open={updateDialogOpen}
-        onOpenChange={setUpdateDialogOpen}
-        mode={mode}
-      >
-        <CoachingSessionForm
-          existingSession={coachingSession}
-          mode={mode}
-          onOpenChange={setUpdateDialogOpen}
-        />
-      </CoachingSessionDialog>
     </>
   );
 };
