@@ -8,16 +8,23 @@ import Link from "next/link";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
 import { Id } from "@/types/general";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
+import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
 
 interface CoachingSessionProps {
-  coachingSession: {
-    id: Id;
-    date: string;
-  };
+  coachingSession: CoachingSessionType;
+  onUpdate: () => void;
 }
 
 const CoachingSession: React.FC<CoachingSessionProps> = ({
   coachingSession,
+  onUpdate,
 }) => {
   const { setCurrentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
@@ -33,15 +40,32 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
               {format(new Date(coachingSession.date), "MMMM d, yyyy h:mm a")}
             </div>
           </div>
-          <Link href={`/coaching-sessions/${coachingSession.id}`} passHref>
-            <Button
-              size="sm"
-              className="w-full sm:w-auto mt-2 sm:mt-0"
-              onClick={() => setCurrentCoachingSessionId(coachingSession.id)}
-            >
-              Join Session
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href={`/coaching-sessions/${coachingSession.id}`} passHref>
+              <Button
+                size="sm"
+                className="w-full sm:w-auto mt-2 sm:mt-0 text-sm px-3 py-1"
+                onClick={() => setCurrentCoachingSessionId(coachingSession.id)}
+              >
+                Join Session
+              </Button>
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onUpdate}>
+                  Update Session
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive">
+                  Delete Session
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
     </Card>
