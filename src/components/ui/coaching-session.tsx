@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
 import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
 interface CoachingSessionProps {
   coachingSession: CoachingSessionType;
@@ -31,6 +32,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
   const { setCurrentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
   );
+  const { isCoach } = useAuthStore((state) => state);
 
   return (
     <Card>
@@ -62,9 +64,11 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
                 <DropdownMenuItem onClick={onUpdate}>
                   Update Session
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                  Delete Session
-                </DropdownMenuItem>
+                {isCoach && (
+                  <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                    Delete Session
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
