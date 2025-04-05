@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { format } from "date-fns";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,63 +15,60 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal } from "lucide-react";
-import { CoachingSessionFormMode } from "@/components/ui/dashboard/coaching-session-form";
 import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
 
 interface CoachingSessionProps {
   coachingSession: CoachingSessionType;
+  onUpdate: () => void;
 }
 
 const CoachingSession: React.FC<CoachingSessionProps> = ({
   coachingSession,
+  onUpdate,
 }) => {
   const { setCurrentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
   );
-  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
-  const mode: CoachingSessionFormMode = "update";
 
   return (
-    <>
-      <Card>
-        <CardHeader className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="space-y-1">
-              <OverarchingGoal coachingSessionId={coachingSession.id} />
-              <div className="text-sm text-muted-foreground">
-                {format(new Date(coachingSession.date), "MMMM d, yyyy h:mm a")}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link href={`/coaching-sessions/${coachingSession.id}`} passHref>
-                <Button
-                  size="sm"
-                  className="w-full sm:w-auto mt-2 sm:mt-0 text-sm px-3 py-1"
-                  onClick={() => setCurrentCoachingSessionId(coachingSession.id)}
-                >
-                  Join Session
-                </Button>
-              </Link>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setUpdateDialogOpen(true)}>
-                    Update Session
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">
-                    Delete Session
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+    <Card>
+      <CardHeader className="p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="space-y-1">
+            <OverarchingGoal coachingSessionId={coachingSession.id} />
+            <div className="text-sm text-muted-foreground">
+              {format(new Date(coachingSession.date), "MMMM d, yyyy h:mm a")}
             </div>
           </div>
-        </CardHeader>
-      </Card>
-    </>
+          <div className="flex items-center gap-2">
+            <Link href={`/coaching-sessions/${coachingSession.id}`} passHref>
+              <Button
+                size="sm"
+                className="w-full sm:w-auto mt-2 sm:mt-0 text-sm px-3 py-1"
+                onClick={() => setCurrentCoachingSessionId(coachingSession.id)}
+              >
+                Join Session
+              </Button>
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onUpdate}>
+                  Update Session
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive">
+                  Delete Session
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </CardHeader>
+    </Card>
   );
 };
 

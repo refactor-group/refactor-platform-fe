@@ -1,62 +1,41 @@
 "use client";
 
 import React from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { CoachingSessionFormMode } from "./coaching-session-form";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import CoachingSessionForm, { CoachingSessionFormMode } from "./coaching-session-form";
+import type { CoachingSession } from "@/types/coaching-session";
 
 interface CoachingSessionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode: CoachingSessionFormMode;
-  dialogTrigger?: React.ReactElement<React.HTMLAttributes<HTMLButtonElement>>;
-  children: React.ReactNode;
+  coachingSessionToEdit?: CoachingSession;
 }
 
 export function CoachingSessionDialog({
   open,
   onOpenChange,
-  mode,
-  dialogTrigger,
-  children,
+  coachingSessionToEdit,
 }: CoachingSessionDialogProps) {
-
-  const { isCoach } = useAuthStore((state) => state);
-  const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
-    (state) => state
-  );
+  const mode: CoachingSessionFormMode = coachingSessionToEdit ? "update" : "create";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {dialogTrigger ?? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full sm:w-auto"
-            disabled={!isCoach || !currentCoachingRelationshipId}
-          >
-            Create New Coaching Session
-          </Button>
-        )}
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {mode === "create"
-              ? "Create New Coaching Session"
-              : "Update Coaching Session"}
+            {mode === "create" ? "Create New Coaching Session" : "Update Coaching Session"}
           </DialogTitle>
         </DialogHeader>
-        {children}
+        <CoachingSessionForm
+          mode={mode}
+          existingSession={coachingSessionToEdit}
+          onOpenChange={onOpenChange}
+        />
       </DialogContent>
     </Dialog>
   );

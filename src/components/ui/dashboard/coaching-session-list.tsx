@@ -4,15 +4,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpDown } from "lucide-react";
-
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
 import { DateTime } from "ts-luxon";
-import CoachingSessionForm, { CoachingSessionFormMode } from "@/components/ui/dashboard/coaching-session-form";
-import { CoachingSessionDialog } from "./coaching-session-dialog";
+import type { CoachingSession } from "@/types/coaching-session";
 
-export default function CoachingSessionList() {
+interface CoachingSessionListProps {
+  onUpdateSession: (session: CoachingSession) => void;
+}
+
+export default function CoachingSessionList({ onUpdateSession }: CoachingSessionListProps) {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
     (state) => state
   );
@@ -28,16 +30,12 @@ export default function CoachingSessionList() {
   } = useCoachingSessionList(currentCoachingRelationshipId, fromDate, toDate);
 
   const [sortByDate, setSortByDate] = useState(true);
-  const [open, setOpen] = useState(false);
-
 
   const sortedSessions = coachingSessions
     ? [...coachingSessions].sort((a, b) => {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     })
     : [];
-
-  const mode: CoachingSessionFormMode = "create";
 
   if (isLoadingCoachingSessions) return <div>Loading coaching sessions...</div>;
   if (isErrorCoachingSessions)
@@ -50,16 +48,6 @@ export default function CoachingSessionList() {
           <CardTitle className="text-xl sm:text-2xl">
             Coaching Sessions
           </CardTitle>
-          <CoachingSessionDialog
-            open={open}
-            onOpenChange={setOpen}
-            mode={mode}
-          >
-            <CoachingSessionForm
-              mode={mode}
-              onOpenChange={setOpen}
-            />
-          </CoachingSessionDialog>
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <Button
@@ -95,6 +83,7 @@ export default function CoachingSessionList() {
               <CoachingSessionComponent
                 key={coachingSession.id}
                 coachingSession={coachingSession}
+                onUpdate={() => onUpdateSession(coachingSession)}
               />
             ))}
           </div>
