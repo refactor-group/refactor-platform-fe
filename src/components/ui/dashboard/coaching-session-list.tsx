@@ -6,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpDown } from "lucide-react";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
+import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
 import { DateTime } from "ts-luxon";
 import type { CoachingSession } from "@/types/coaching-session";
+import { Id } from "@/types/general";
 
 interface CoachingSessionListProps {
   onUpdateSession: (session: CoachingSession) => void;
@@ -27,7 +29,23 @@ export default function CoachingSessionList({ onUpdateSession }: CoachingSession
     coachingSessions,
     isLoading: isLoadingCoachingSessions,
     isError: isErrorCoachingSessions,
+    refresh: refreshCoachingSessions,
   } = useCoachingSessionList(currentCoachingRelationshipId, fromDate, toDate);
+
+  const { delete: deleteCoachingSession } = useCoachingSessionMutation();
+
+  const handleDeleteCoachingSession = async (id: Id) => {
+    if (!confirm("Are you sure you want to delete this session?")) {
+      return;
+    }
+
+    try {
+      await deleteCoachingSession(id).then(() => refreshCoachingSessions());
+    } catch (error) {
+      console.error("Error deleting coaching session:", error);
+      // TODO: Show an error toast here once we start using toasts for showing operation results.
+    }
+  };
 
   const [sortByDate, setSortByDate] = useState(true);
 
@@ -84,6 +102,7 @@ export default function CoachingSessionList({ onUpdateSession }: CoachingSession
                 key={coachingSession.id}
                 coachingSession={coachingSession}
                 onUpdate={() => onUpdateSession(coachingSession)}
+                onDelete={() => handleDeleteCoachingSession(coachingSession.id)}
               />
             ))}
           </div>
