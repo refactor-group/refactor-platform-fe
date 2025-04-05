@@ -9,14 +9,20 @@ import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
 import { DateTime } from "ts-luxon";
-import type { CoachingSession } from "@/types/coaching-session";
-import { Id } from "@/types/general";
+import {
+  filterAndSortCoachingSessions,
+  type CoachingSession,
+} from "@/types/coaching-session";
+import { Id, SortOrder } from "@/types/general";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CoachingSessionListProps {
   onUpdateSession: (session: CoachingSession) => void;
 }
 
-export default function CoachingSessionList({ onUpdateSession }: CoachingSessionListProps) {
+export default function CoachingSessionList({
+  onUpdateSession,
+}: CoachingSessionListProps) {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
     (state) => state
   );
@@ -47,12 +53,18 @@ export default function CoachingSessionList({ onUpdateSession }: CoachingSession
     }
   };
 
-  const [sortByDate, setSortByDate] = useState(true);
+  // const [sortByDate, setSortByDate] = useState(true);
 
-  const sortedSessions = coachingSessions
-    ? [...coachingSessions].sort((a, b) => {
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    })
+  const upcomingSessions = coachingSessions
+    ? filterAndSortCoachingSessions(coachingSessions, SortOrder.Ascending, true)
+    : [];
+
+  const previousSessions = coachingSessions
+    ? filterAndSortCoachingSessions(
+        coachingSessions,
+        SortOrder.Descending,
+        false
+      )
     : [];
 
   if (isLoadingCoachingSessions) return <div>Loading coaching sessions...</div>;
@@ -60,33 +72,9 @@ export default function CoachingSessionList({ onUpdateSession }: CoachingSession
     return <div>Error loading coaching sessions</div>;
 
   return (
-    <Card className="flex-1">
-      <CardHeader className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <CardTitle className="text-xl sm:text-2xl">
-            Coaching Sessions
-          </CardTitle>
-        </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground w-full sm:w-auto justify-between"
-            onClick={() => setSortByDate(true)}
-          >
-            <span>Date and Time</span>
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground w-full sm:w-auto justify-between"
-            onClick={() => setSortByDate(false)}
-          >
-            <span>Overarching Goal</span>
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Coaching Sessions</CardTitle>
       </CardHeader>
       <CardContent>
         {!currentCoachingRelationshipId ? (
@@ -96,18 +84,113 @@ export default function CoachingSessionList({ onUpdateSession }: CoachingSession
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {sortedSessions.map((coachingSession) => (
-              <CoachingSessionComponent
-                key={coachingSession.id}
-                coachingSession={coachingSession}
-                onUpdate={() => onUpdateSession(coachingSession)}
-                onDelete={() => handleDeleteCoachingSession(coachingSession.id)}
-              />
-            ))}
-          </div>
+          <Tabs defaultValue="upcoming" className="w-full items-start">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="previous">Previous</TabsTrigger>
+            </TabsList>
+            <TabsContent value="upcoming" className="mt-4">
+              {/* <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground w-full sm:w-auto justify-between"
+                  onClick={() => setSortByDate(true)}
+                >
+                  <span>Date and Time</span>
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground w-full sm:w-auto justify-between"
+                  onClick={() => setSortByDate(false)}
+                >
+                  <span>Overarching Goal</span>
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </div> */}
+              <div className="space-y-4">
+                {upcomingSessions.map((coachingSession) => (
+                  <CoachingSessionComponent
+                    key={coachingSession.id}
+                    coachingSession={coachingSession}
+                    onUpdate={() => onUpdateSession(coachingSession)}
+                    onDelete={() =>
+                      handleDeleteCoachingSession(coachingSession.id)
+                    }
+                  />
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="previous" className="mt-4">
+              <div className="space-y-4">
+                {previousSessions.map((coachingSession) => (
+                  <CoachingSessionComponent
+                    key={coachingSession.id}
+                    coachingSession={coachingSession}
+                    onUpdate={() => onUpdateSession(coachingSession)}
+                    onDelete={() =>
+                      handleDeleteCoachingSession(coachingSession.id)
+                    }
+                  />
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>
   );
+  // return (
+  //   <Card className="flex-1">
+  //     <CardHeader className="space-y-4">
+  //       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+  //         <CardTitle className="text-xl sm:text-2xl">
+  //           Coaching Sessions
+  //         </CardTitle>
+  //       </div>
+  //       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+  //         <Button
+  //           variant="ghost"
+  //           size="sm"
+  //           className="text-muted-foreground w-full sm:w-auto justify-between"
+  //           onClick={() => setSortByDate(true)}
+  //         >
+  //           <span>Date and Time</span>
+  //           <ArrowUpDown className="ml-2 h-4 w-4" />
+  //         </Button>
+  //         <Button
+  //           variant="ghost"
+  //           size="sm"
+  //           className="text-muted-foreground w-full sm:w-auto justify-between"
+  //           onClick={() => setSortByDate(false)}
+  //         >
+  //           <span>Overarching Goal</span>
+  //           <ArrowUpDown className="ml-2 h-4 w-4" />
+  //         </Button>
+  //       </div>
+  //     </CardHeader>
+  //     <CardContent>
+  //       {!currentCoachingRelationshipId ? (
+  //         <div className="flex items-center justify-center py-8">
+  //           <p className="text-lg text-muted-foreground">
+  //             Choose a Relationship to view Coaching Sessions
+  //           </p>
+  //         </div>
+  //       ) : (
+  //         <div className="space-y-4">
+  //           {sortedSessions.map((coachingSession) => (
+  //             <CoachingSessionComponent
+  //               key={coachingSession.id}
+  //               coachingSession={coachingSession}
+  //               onUpdate={() => onUpdateSession(coachingSession)}
+  //               onDelete={() => handleDeleteCoachingSession(coachingSession.id)}
+  //             />
+  //           ))}
+  //         </div>
+  //       )}
+  //     </CardContent>
+  //   </Card>
+  // );
 }

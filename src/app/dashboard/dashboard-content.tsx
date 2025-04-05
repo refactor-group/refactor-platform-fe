@@ -35,7 +35,9 @@ function DashboardContainer({
 
 export function DashboardContent() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [sessionToEdit, setSessionToEdit] = useState<CoachingSession | undefined>();
+  const [sessionToEdit, setSessionToEdit] = useState<
+    CoachingSession | undefined
+  >();
 
   const handleOpenDialog = (session?: CoachingSession) => {
     setSessionToEdit(session);
@@ -54,8 +56,8 @@ export function DashboardContent() {
           <AddEntities onCreateSession={() => handleOpenDialog()} />
         </div>
       </div>
-      <DashboardContainer>
-        <SelectCoachingRelationship />
+      <DashboardContainer className="max-w-screen-2xl w-full">
+        {/* <SelectCoachingRelationship /> */}
         <CoachingSessionList onUpdateSession={handleOpenDialog} />
       </DashboardContainer>
 
