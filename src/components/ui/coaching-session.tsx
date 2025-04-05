@@ -20,11 +20,13 @@ import { CoachingSession as CoachingSessionType } from "@/types/coaching-session
 interface CoachingSessionProps {
   coachingSession: CoachingSessionType;
   onUpdate: () => void;
+  onDelete: () => void;
 }
 
 const CoachingSession: React.FC<CoachingSessionProps> = ({
   coachingSession,
   onUpdate,
+  onDelete,
 }) => {
   const { setCurrentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
@@ -60,7 +62,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
                 <DropdownMenuItem onClick={onUpdate}>
                   Update Session
                 </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive">
+                <DropdownMenuItem onClick={onDelete} className="text-destructive">
                   Delete Session
                 </DropdownMenuItem>
               </DropdownMenuContent>
