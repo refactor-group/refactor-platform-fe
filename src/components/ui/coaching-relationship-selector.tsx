@@ -49,8 +49,6 @@ function CoachingRelationshipsSelectItems({
   if (isError) return <div>Error loading coaching relationships</div>;
   if (!relationships?.length) return <div>No coaching relationships found</div>;
 
-  console.debug(`relationships: ${JSON.stringify(relationships)}`);
-
   return (
     <>
       {relationships.map((rel) => (
