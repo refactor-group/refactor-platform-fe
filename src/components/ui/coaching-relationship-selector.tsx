@@ -39,9 +39,6 @@ function CoachingRelationshipsSelectItems({
   // Be sure to cache the list of current coaching relationships in the CoachingRelationshipStateStore
   useEffect(() => {
     if (!relationships.length) return;
-    console.debug(
-      `relationships (useEffect): ${JSON.stringify(relationships)}`
-    );
     setCurrentCoachingRelationships(relationships);
   }, [relationships, setCurrentCoachingRelationships]);
 
