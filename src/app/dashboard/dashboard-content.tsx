@@ -20,8 +20,6 @@ function DashboardContainer({
         "p-4",
         // Mobile: stack vertically
         "flex flex-col gap-6",
-        // Tablet and up (640px+): side by side
-        "sm:grid sm:grid-cols-2",
         // Never grow wider than the site-header
         "max-w-screen-2xl",
         // Ensure full width for children
@@ -51,13 +49,11 @@ export function DashboardContent() {
 
   return (
     <>
-      <div className="p-4 max-w-screen-2xl">
-        <div className="mb-8 w-full">
-          <AddEntities onCreateSession={() => handleOpenDialog()} />
-        </div>
-      </div>
-      <DashboardContainer className="max-w-screen-2xl w-full">
-        {/* <SelectCoachingRelationship /> */}
+      <DashboardContainer>
+        <AddEntities
+          className="mb-8"
+          onCreateSession={() => handleOpenDialog()}
+        />
         <CoachingSessionList onUpdateSession={handleOpenDialog} />
       </DashboardContainer>
 

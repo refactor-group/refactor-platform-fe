@@ -19,18 +19,18 @@ export default async function middleware(req: NextRequest) {
 
   // 3. Get the session from the cookie
   const sessionCookie = req.cookies.get("id");
-  const session = sessionCookie?.value;
+  const validSession = sessionCookie?.value;
 
   // 4. Redirect to / if the user is not authenticated
   // 4b. TODO: Check session validity/expiration?
-  if (isProtectedRoute && !session) {
+  if (isProtectedRoute && !validSession) {
     return NextResponse.redirect(new URL("/", req.nextUrl));
   }
 
   // 5. Redirect to /dashboard if the user is authenticated
   if (
     isPublicRoute &&
-    session &&
+    validSession &&
     !req.nextUrl.pathname.startsWith("/dashboard")
   ) {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl));

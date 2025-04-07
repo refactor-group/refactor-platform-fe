@@ -16,6 +16,7 @@ import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-rela
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 
 interface CoachingRelationshipsSelectorProps extends PopoverProps {
+  className?: string;
   /// The Organization's Id for which to get a list of associated CoachingRelationships
   organizationId: Id;
   /// Disable the component from interaction with the user
@@ -63,6 +64,7 @@ function CoachingRelationshipsSelectItems({
 }
 
 export default function CoachingRelationshipSelector({
+  className,
   organizationId,
   disabled,
   onSelect,
@@ -101,29 +103,32 @@ export default function CoachingRelationshipSelector({
     ? getCurrentCoachingRelationship(currentCoachingRelationshipId)
     : null;
 
-  const displayValue = currentRelationship ? (
-    <>
-      {currentRelationship.coach_first_name}{" "}
-      {currentRelationship.coach_last_name} -&gt;{" "}
-      {currentRelationship.coachee_first_name}{" "}
-      {currentRelationship.coachee_last_name}
-    </>
-  ) : undefined;
+  const displayValue =
+    currentRelationship && currentRelationship.id ? (
+      <>
+        {currentRelationship.coach_first_name}{" "}
+        {currentRelationship.coach_last_name} -&gt;{" "}
+        {currentRelationship.coachee_first_name}{" "}
+        {currentRelationship.coachee_last_name}
+      </>
+    ) : undefined;
 
   return (
-    <Select
-      disabled={disabled}
-      value={currentCoachingRelationshipId ?? undefined}
-      onValueChange={handleSetCoachingRelationship}
-    >
-      <SelectTrigger id="coaching-relationship-selector">
-        <SelectValue placeholder="Select coaching relationship">
-          {displayValue}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        <CoachingRelationshipsSelectItems organizationId={organizationId} />
-      </SelectContent>
-    </Select>
+    <div className={className}>
+      <Select
+        disabled={disabled}
+        value={currentCoachingRelationshipId ?? undefined}
+        onValueChange={handleSetCoachingRelationship}
+      >
+        <SelectTrigger id="coaching-relationship-selector">
+          <SelectValue placeholder="Select coaching relationship">
+            {displayValue}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <CoachingRelationshipsSelectItems organizationId={organizationId} />
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
