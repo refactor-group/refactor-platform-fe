@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type * as React from "react";
 import { cn } from "@/components/lib/utils";
-import SelectCoachingRelationship from "@/components/ui/dashboard/select-coaching-relationship";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 import AddEntities from "@/components/ui/dashboard/add-entities";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";

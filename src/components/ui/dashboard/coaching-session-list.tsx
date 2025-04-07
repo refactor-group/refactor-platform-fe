@@ -68,6 +68,14 @@ export default function CoachingSessionList({
       )
     : [];
 
+  let loadingCoachingSessions = (
+    <div className="flex items-center justify-center py-8">
+      <p className="text-lg text-muted-foreground">
+        Loading your coaching sessions...
+      </p>
+    </div>
+  );
+
   let noCoachingSessions = (
     <div className="flex items-center justify-center py-8">
       <p className="text-lg text-muted-foreground">
@@ -76,9 +84,13 @@ export default function CoachingSessionList({
     </div>
   );
 
-  if (isLoadingCoachingSessions) return <div>Loading coaching sessions...</div>;
-  if (isErrorCoachingSessions)
-    return <div>Error loading coaching sessions</div>;
+  let errorLoadingCoachingSessions = (
+    <div className="flex items-center justify-center py-8">
+      <p className="text-lg font-bold">
+        There was an error trying to load your coaching sessions.
+      </p>
+    </div>
+  );
 
   return (
     <Card className={cn("min-w-96", className)}>
@@ -101,7 +113,11 @@ export default function CoachingSessionList({
             <TabsTrigger value="previous">Previous</TabsTrigger>
           </TabsList>
           <TabsContent value="upcoming" className="mt-4">
-            {!currentCoachingRelationshipId ? (
+            {isLoadingCoachingSessions ? (
+              loadingCoachingSessions
+            ) : isErrorCoachingSessions ? (
+              errorLoadingCoachingSessions
+            ) : !currentCoachingRelationshipId ? (
               noCoachingSessions
             ) : (
               <div className="space-y-4">
@@ -119,7 +135,11 @@ export default function CoachingSessionList({
             )}
           </TabsContent>
           <TabsContent value="previous" className="mt-4">
-            {!currentCoachingRelationshipId ? (
+            {isLoadingCoachingSessions ? (
+              loadingCoachingSessions
+            ) : isErrorCoachingSessions ? (
+              errorLoadingCoachingSessions
+            ) : !currentCoachingRelationshipId ? (
               noCoachingSessions
             ) : (
               <div className="space-y-4">

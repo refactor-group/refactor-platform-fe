@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
+import { cn } from "../lib/utils";
 
 interface CoachingRelationshipsSelectorProps extends PopoverProps {
   className?: string;
@@ -109,7 +110,7 @@ export default function CoachingRelationshipSelector({
     ) : undefined;
 
   return (
-    <div className={className}>
+    <div className={cn("font-normal", className)}>
       <Select
         disabled={disabled}
         value={currentCoachingRelationshipId ?? undefined}
