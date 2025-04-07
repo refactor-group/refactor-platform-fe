@@ -71,7 +71,7 @@ export default function CoachingSessionList({
   let noCoachingSessions = (
     <div className="flex items-center justify-center py-8">
       <p className="text-lg text-muted-foreground">
-        Select a coaching relationship to view Coaching Sessions
+        Select a coaching relationship to view your coaching sessions.
       </p>
     </div>
   );
