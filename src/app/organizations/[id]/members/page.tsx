@@ -66,7 +66,6 @@ export default function MembersPage({
 
   return (
     <div className="container mx-auto p-6 space-y-8">
-      <h1 className="text-3xl font-bold">Members</h1>
       <MemberContainer
         users={users}
         relationships={relationships}
