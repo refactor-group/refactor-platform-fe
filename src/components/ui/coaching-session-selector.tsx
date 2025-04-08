@@ -12,19 +12,18 @@ import {
 } from "@/components/ui/select";
 import { getDateTimeFromString, Id } from "@/types/general";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { DateTime } from "ts-luxon";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
-import { OverarchingGoalApi } from "@/lib/api/overarching-goals";
-import { OverarchingGoal } from "@/types/overarching-goal";
 import { CoachingSession } from "@/types/coaching-session";
+import {
+  useOverarchingGoalBySession,
+  useOverarchingGoalList,
+} from "@/lib/api/overarching-goals";
 
 interface CoachingSessionsSelectorProps extends PopoverProps {
-  /// The CoachingRelationship Id for which to get a list of associated CoachingSessions
   relationshipId: Id;
-  /// Disable the component from interaction with the user
   disabled: boolean;
-  /// Called when a CoachingSession is selected
   onSelect?: (coachingSessionId: Id) => void;
 }
 
@@ -33,9 +32,6 @@ function CoachingSessionsSelectItems({
 }: {
   relationshipId: Id;
 }) {
-  // TODO: for now we hardcode a 2 month window centered around now,
-  // eventually we want to make this be configurable somewhere
-  // (either on the page or elsewhere)
   const fromDate = DateTime.now().minus({ month: 1 });
   const toDate = DateTime.now().plus({ month: 1 });
 
@@ -43,70 +39,20 @@ function CoachingSessionsSelectItems({
     coachingSessions,
     isLoading: isLoadingSessions,
     isError: isErrorSessions,
-    refresh,
   } = useCoachingSessionList(relationshipId, fromDate, toDate);
 
   const { setCurrentCoachingSessions } = useCoachingSessionStateStore(
     (state) => state
   );
-  const [goals, setGoals] = useState<(OverarchingGoal[] | undefined)[]>([]);
-  const [isLoadingGoals, setIsLoadingGoals] = useState(false);
 
   useEffect(() => {
     if (!coachingSessions.length) return;
     setCurrentCoachingSessions(coachingSessions);
   }, [coachingSessions]);
 
-  useEffect(() => {
-    const fetchGoals = async () => {
-      setIsLoadingGoals(true);
-      try {
-        const sessionIds = coachingSessions?.map((session) => session.id) || [];
-        const goalsPromises = sessionIds.map((id) =>
-          OverarchingGoalApi.list(id)
-        );
-        const fetchedGoals = await Promise.all(goalsPromises);
-        setGoals(fetchedGoals);
-      } catch (error) {
-        console.error("Error fetching goals:", error);
-      } finally {
-        setIsLoadingGoals(false);
-      }
-    };
-
-    if (coachingSessions?.length) {
-      fetchGoals();
-    }
-  }, [coachingSessions]);
-
-  if (isLoadingSessions || isLoadingGoals) return <div>Loading...</div>;
+  if (isLoadingSessions) return <div>Loading...</div>;
   if (isErrorSessions) return <div>Error loading coaching sessions</div>;
   if (!coachingSessions?.length) return <div>No coaching sessions found</div>;
-
-  const SessionItem = ({
-    session,
-    goals,
-    sessionIndex,
-  }: {
-    session: CoachingSession;
-    goals: (OverarchingGoal[] | undefined)[];
-    sessionIndex: number;
-  }) => (
-    <SelectItem value={session.id}>
-      <div className="flex min-w-0 w-[calc(100%-20px)]">
-        <div className="min-w-0 w-full">
-          <p className="truncate text-sm font-medium">
-            {goals[sessionIndex]?.[0]?.title || "No goal set"}
-          </p>
-          <p className="truncate text-sm text-gray-400">
-            {getDateTimeFromString(session.date).toLocaleString(
-              DateTime.DATETIME_FULL
-            )}
-          </p>
-        </div>
-      </div>
-    </SelectItem>
-  );
 
   return (
     <>
@@ -129,19 +75,39 @@ function CoachingSessionsSelectItems({
               {coachingSessions
                 .filter((session) => condition(session.date))
                 .map((session) => (
-                  <SessionItem
-                    key={session.id}
-                    session={session}
-                    goals={goals}
-                    sessionIndex={coachingSessions.findIndex(
-                      (s) => s.id === session.id
-                    )}
-                  />
+                  <SessionItemWithGoal key={session.id} session={session} />
                 ))}
             </SelectGroup>
           )
       )}
     </>
+  );
+}
+
+// Separate component to handle individual session goal fetching
+function SessionItemWithGoal({ session }: { session: CoachingSession }) {
+  const { overarchingGoal, isLoading, isError } = useOverarchingGoalBySession(
+    session.id
+  );
+
+  if (isLoading) return <div>Loading goal...</div>;
+  if (isError) return <div>Error loading goal</div>;
+
+  return (
+    <SelectItem value={session.id}>
+      <div className="flex min-w-0">
+        <div className="min-w-0 w-full">
+          <p className="truncate text-sm font-medium">
+            {overarchingGoal.title || "No goal set"}
+          </p>
+          <p className="truncate text-sm text-gray-400">
+            {getDateTimeFromString(session.date).toLocaleString(
+              DateTime.DATETIME_FULL
+            )}
+          </p>
+        </div>
+      </div>
+    </SelectItem>
   );
 }
 
@@ -157,31 +123,15 @@ export default function CoachingSessionSelector({
     getCurrentCoachingSession,
   } = useCoachingSessionStateStore((state) => state);
 
-  const [currentGoal, setCurrentGoal] = useState<OverarchingGoal | undefined>();
-  const [isLoadingGoal, setIsLoadingGoal] = useState(false);
-
   const currentSession = currentCoachingSessionId
     ? getCurrentCoachingSession(currentCoachingSessionId)
     : null;
 
-  useEffect(() => {
-    const fetchGoal = async () => {
-      if (!currentCoachingSessionId) return;
-
-      setIsLoadingGoal(true);
-      try {
-        const goals = await OverarchingGoalApi.list(currentCoachingSessionId);
-        setCurrentGoal(goals[0]);
-      } catch (error) {
-        console.error("Error fetching goal:", error);
-      } finally {
-        setIsLoadingGoal(false);
-      }
-    };
-
-    fetchGoal();
-  }, [currentCoachingSessionId]);
-
+  const {
+    overarchingGoal,
+    isLoading: isLoadingGoal,
+    isError: isErrorGoal,
+  } = useOverarchingGoalBySession(currentCoachingSessionId);
   const handleSetCoachingSession = (coachingSessionId: Id) => {
     setCurrentCoachingSessionId(coachingSessionId);
     if (onSelect) {
@@ -192,7 +142,7 @@ export default function CoachingSessionSelector({
   const displayValue = currentSession ? (
     <div className="flex flex-col w-full">
       <span className="truncate text-left">
-        {currentGoal?.title || "No goal set"}
+        {isLoadingGoal ? "Loading..." : overarchingGoal.title || "No goal set"}
       </span>
       <span className="text-sm text-gray-500 text-left truncate">
         {getDateTimeFromString(currentSession.date).toLocaleString(

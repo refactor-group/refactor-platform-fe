@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverarchingGoalComponent } from "./overarching-goal";
 import {
   useOverarchingGoalBySession,
+  useOverarchingGoalList,
   useOverarchingGoalMutation,
 } from "@/lib/api/overarching-goals";
 import {
