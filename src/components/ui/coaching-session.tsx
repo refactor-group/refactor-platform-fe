@@ -62,11 +62,11 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={onUpdate}>
-                  Update Session
+                  Edit
                 </DropdownMenuItem>
                 {isCoach && (
                   <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                    Delete Session
+                    Delete
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
