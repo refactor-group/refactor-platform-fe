@@ -51,6 +51,7 @@ export const LinkDialog = ({
         .focus()
         .extendMarkRange("link")
         .setLink({ href: linkUrl })
+        .updateAttributes("link", { title: linkUrl })
         .run();
       setLinkUrl("");
       onOpenChange(false);
