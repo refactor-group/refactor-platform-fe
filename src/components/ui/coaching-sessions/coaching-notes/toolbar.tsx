@@ -1,4 +1,4 @@
-import type React from "react";
+import React, { useEffect } from "react";
 import { useCurrentEditor } from "@tiptap/react";
 import {
   Bold,
@@ -25,6 +25,18 @@ export const Toolbar = () => {
   if (!editor) {
     return null;
   }
+  // Add keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsLinkDialogOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <>
@@ -105,7 +117,11 @@ export const Toolbar = () => {
           onClick={() => setIsLinkDialogOpen(true)}
           isActive={editor.isActive("link")}
           icon={<Link className="h-4 w-4" />}
-          title="Link"
+          title={
+            editor.isActive("link")
+              ? "Update link (Ctrl + k)"
+              : "Insert link (Ctrl + k)"
+          }
         />
       </div>
 

@@ -45,7 +45,7 @@ export const Extensions = (
     Text,
     Underline,
     Link.configure({
-      openOnClick: true,
+      openOnClick: false,
       autolink: true,
       defaultProtocol: "https",
       protocols: ["http", "https"],
