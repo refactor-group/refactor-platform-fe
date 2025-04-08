@@ -46,12 +46,17 @@ export const LinkDialog = ({
 
     // update link
     try {
+      const linkWithProtocol = /^https?:\/\//.test(linkUrl)
+        ? linkUrl
+        : `https://${linkUrl}`;
+
+      // basic validation for a real url
+      const urlHref = new URL(linkWithProtocol).toString();
       editor
         .chain()
         .focus()
         .extendMarkRange("link")
-        .setLink({ href: linkUrl })
-        .updateAttributes("link", { title: linkUrl })
+        .setLink({ href: urlHref })
         .run();
       setLinkUrl("");
       onOpenChange(false);
@@ -65,9 +70,7 @@ export const LinkDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Insert Link</DialogTitle>
-          <DialogDescription>
-            Insert a url for a link in your document.
-          </DialogDescription>
+          <DialogDescription>Insert URL for your link</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-6 gap-4 items-center">
           <Label htmlFor="url" className="text-right">
