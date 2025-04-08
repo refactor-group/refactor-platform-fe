@@ -69,26 +69,6 @@ export function filterAndSortCoachingSessions(
   return filteredSessions;
 }
 
-// export function sortCoachingSessionArray(
-//   sessions: CoachingSession[],
-//   order: SortOrder
-// ): CoachingSession[] {
-//   if (order == SortOrder.Ascending) {
-//     sessions.sort(
-//       (a, b) =>
-//         new Date(a.date.toString()).getTime() -
-//         new Date(b.date.toString()).getTime()
-//     );
-//   } else if (order == SortOrder.Descending) {
-//     sessions.sort(
-//       (a, b) =>
-//         new Date(b.date.toString()).getTime() -
-//         new Date(a.date.toString()).getTime()
-//     );
-//   }
-//   return sessions;
-// }
-
 export function getCoachingSessionById(
   id: string,
   sessions: CoachingSession[]
