@@ -1,5 +1,5 @@
 # Stage 0: Base image
-FROM node:18-alpine AS base
+FROM node:22-alpine3.19 AS base
 
 # BuildKit Platform Context (used for metadata, not to alter FROM)
 ARG BUILDPLATFORM
@@ -10,7 +10,7 @@ RUN echo "Build Platform: ${BUILDPLATFORM} -> Target Platform: ${TARGETPLATFORM}
 
 # Stage 1: Dependencies
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk update && apk upgrade --no-cache && apk add --no-cache libc6-compat
 
 WORKDIR /app
 COPY package.json ./
