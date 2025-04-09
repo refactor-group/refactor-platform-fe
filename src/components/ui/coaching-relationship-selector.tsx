@@ -14,8 +14,10 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
+import { cn } from "../lib/utils";
 
 interface CoachingRelationshipsSelectorProps extends PopoverProps {
+  className?: string;
   /// The Organization's Id for which to get a list of associated CoachingRelationships
   organizationId: Id;
   /// Disable the component from interaction with the user
@@ -38,17 +40,12 @@ function CoachingRelationshipsSelectItems({
   // Be sure to cache the list of current coaching relationships in the CoachingRelationshipStateStore
   useEffect(() => {
     if (!relationships.length) return;
-    console.debug(
-      `relationships (useEffect): ${JSON.stringify(relationships)}`
-    );
     setCurrentCoachingRelationships(relationships);
   }, [relationships, setCurrentCoachingRelationships]);
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error loading coaching relationships</div>;
   if (!relationships?.length) return <div>No coaching relationships found</div>;
-
-  console.debug(`relationships: ${JSON.stringify(relationships)}`);
 
   return (
     <>
@@ -63,6 +60,7 @@ function CoachingRelationshipsSelectItems({
 }
 
 export default function CoachingRelationshipSelector({
+  className,
   organizationId,
   disabled,
   onSelect,
@@ -101,29 +99,32 @@ export default function CoachingRelationshipSelector({
     ? getCurrentCoachingRelationship(currentCoachingRelationshipId)
     : null;
 
-  const displayValue = currentRelationship ? (
-    <>
-      {currentRelationship.coach_first_name}{" "}
-      {currentRelationship.coach_last_name} -&gt;{" "}
-      {currentRelationship.coachee_first_name}{" "}
-      {currentRelationship.coachee_last_name}
-    </>
-  ) : undefined;
+  const displayValue =
+    currentRelationship && currentRelationship.id ? (
+      <>
+        {currentRelationship.coach_first_name}{" "}
+        {currentRelationship.coach_last_name} -&gt;{" "}
+        {currentRelationship.coachee_first_name}{" "}
+        {currentRelationship.coachee_last_name}
+      </>
+    ) : undefined;
 
   return (
-    <Select
-      disabled={disabled}
-      value={currentCoachingRelationshipId ?? undefined}
-      onValueChange={handleSetCoachingRelationship}
-    >
-      <SelectTrigger id="coaching-relationship-selector">
-        <SelectValue placeholder="Select coaching relationship">
-          {displayValue}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        <CoachingRelationshipsSelectItems organizationId={organizationId} />
-      </SelectContent>
-    </Select>
+    <div className={cn("font-normal", className)}>
+      <Select
+        disabled={disabled}
+        value={currentCoachingRelationshipId ?? undefined}
+        onValueChange={handleSetCoachingRelationship}
+      >
+        <SelectTrigger id="coaching-relationship-selector">
+          <SelectValue placeholder="Select coaching relationship">
+            {displayValue}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <CoachingRelationshipsSelectItems organizationId={organizationId} />
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

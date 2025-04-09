@@ -40,9 +40,6 @@ export function UserNav() {
 
   async function logout_user() {
     try {
-      console.trace("Deleting active user session: ", userSession.id);
-      await deleteUserSession(userSession.id);
-
       console.trace("Resetting CoachingSessionStateStore state");
       resetCoachingSessionState();
 
@@ -52,12 +49,21 @@ export function UserNav() {
       console.trace("Resetting OrganizationStateStore state");
       resetOrganizationState();
 
+      console.trace(
+        "Deleting current user session from backend: ",
+        userSession.id
+      );
+      await deleteUserSession(userSession.id);
+    } catch (err) {
+      console.warn("Error while logging out session: ", userSession.id, err);
+    } finally {
+      // Ensure we still log out of the frontend even if the backend request
+      // to delete the user session fails.
       console.trace("Resetting AuthStore state");
       logout();
-
-      router.push("/");
-    } catch (err) {
-      console.error("Error while logging out session: ", userSession.id, err);
+      console.debug("Navigating to /");
+      await router.push("/");
+      console.debug("Navigation to / completed successfully.");
     }
   }
 

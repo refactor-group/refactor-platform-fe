@@ -5,12 +5,17 @@ import { AddMemberButton } from "./add-member-button";
 import { useRouter } from "next/navigation";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { cn } from "@/components/lib/utils";
 
 interface AddEntitiesProps {
+  className?: string;
   onCreateSession: () => void;
 }
 
-export default function AddEntities({ onCreateSession }: AddEntitiesProps) {
+export default function AddEntities({
+  className,
+  onCreateSession,
+}: AddEntitiesProps) {
   const router = useRouter();
   const { currentOrganizationId } = useOrganizationStateStore((state) => state);
   const { isCoach } = useAuthStore((state) => state);
@@ -20,7 +25,7 @@ export default function AddEntities({ onCreateSession }: AddEntitiesProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", className)}>
       <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">
         Add New
       </h3>
