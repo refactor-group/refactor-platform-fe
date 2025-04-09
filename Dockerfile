@@ -76,4 +76,8 @@ ARG FRONTEND_SERVICE_PORT
 ENV HOSTNAME=$FRONTEND_SERVICE_INTERFACE
 ENV PORT=$FRONTEND_SERVICE_PORT
 
-CMD ["node", "server.js"]
+# executable that will run the application
+ENTRYPOINT ["node"]
+
+# default args to the ENTRYPOINT that can be overridden at runtime
+CMD ["server.js"]
