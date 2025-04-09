@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DashboardContent } from "./dashboard-content";
+import { DashboardContainer } from "./dashboard-container";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardPage() {
-  return <DashboardContent />;
+  return <DashboardContainer />;
 }
