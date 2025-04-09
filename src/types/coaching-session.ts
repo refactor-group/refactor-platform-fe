@@ -32,24 +32,41 @@ export function isCoachingSessionArray(
   return Array.isArray(value) && value.every(isCoachingSession);
 }
 
-export function sortCoachingSessionArray(
+export function filterAndSortCoachingSessions(
   sessions: CoachingSession[],
-  order: SortOrder
+  order: SortOrder,
+  returnUpcoming: boolean
 ): CoachingSession[] {
-  if (order == SortOrder.Ascending) {
-    sessions.sort(
+  const now = new Date();
+
+  // Filter sessions based on the `showUpcoming` parameter
+  const filteredSessions = sessions.filter((session) => {
+    const sessionDate = new Date(session.date.toString());
+    if (returnUpcoming) {
+      // Include sessions today that haven't started yet or are in the future
+      return sessionDate >= now;
+    } else {
+      // Include past sessions only
+      return sessionDate < now;
+    }
+  });
+
+  // Sort the filtered sessions based on the order parameter
+  if (order === SortOrder.Ascending) {
+    filteredSessions.sort(
       (a, b) =>
         new Date(a.date.toString()).getTime() -
         new Date(b.date.toString()).getTime()
     );
-  } else if (order == SortOrder.Descending) {
-    sessions.sort(
+  } else if (order === SortOrder.Descending) {
+    filteredSessions.sort(
       (a, b) =>
         new Date(b.date.toString()).getTime() -
         new Date(a.date.toString()).getTime()
     );
   }
-  return sessions;
+
+  return filteredSessions;
 }
 
 export function getCoachingSessionById(
