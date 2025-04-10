@@ -3,7 +3,7 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { EntityApi } from "./entity-api";
-import { User, defaultUser } from "@/types/user";
+import { User, NewUser, defaultUser } from "@/types/user";
 
 const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
