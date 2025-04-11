@@ -4,14 +4,15 @@ import { useState, type FormEvent, type ChangeEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { NewUserPassword } from "@/types/user"
 
 interface PasswordUpdateFormProps {
-    onSubmit: (currentPassword: string, newPassword: string) => Promise<void>
+    onSubmit: (updatedPassword: NewUserPassword) => Promise<void>
     isSubmitting: boolean
 }
 
 export function PasswordUpdateForm({ onSubmit, isSubmitting }: PasswordUpdateFormProps) {
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<NewUserPassword>({
         current_password: "",
         new_password: "",
         confirm_password: "",
@@ -60,7 +61,7 @@ export function PasswordUpdateForm({ onSubmit, isSubmitting }: PasswordUpdateFor
             return
         }
 
-        await onSubmit(formData.current_password, formData.new_password)
+        await onSubmit({ ...formData })
         setFormData({
             current_password: "",
             new_password: "",

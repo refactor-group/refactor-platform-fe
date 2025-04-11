@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useUser, useUserMutation } from "@/lib/api/users"
 import { ProfileInfoUpdateForm } from "@/components/ui/members/profile-info-update-form"
 import { PasswordUpdateForm } from "@/components/ui/members/password-update-form"
@@ -8,33 +9,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import { Id } from "@/types/general"
-import { User } from "@/types/user"
+import { User, NewUserPassword } from "@/types/user"
+import { useUserPasswordMutation } from "@/lib/api/users"
 
 export function MemberProfileContainer({ userId }: { userId: Id }) {
-    const { userId: currentUserId } = useAuthStore((state) => state)
+    const { userId: currentUserId, logout } = useAuthStore((state) => state)
     const { user, isLoading, refresh } = useUser(userId)
-    const { update, isLoading: isUpdating } = useUserMutation()
+    const { update: updateUser, isLoading: isUpdating } = useUserMutation()
+    const { update: updatePassword, isLoading: isUpdatingPassword } = useUserPasswordMutation()
     const [activeTab, setActiveTab] = useState("profile")
+    const router = useRouter()
 
     const handleProfileUpdate = async (
         updatedUser: User
     ) => {
         try {
-            await update(userId, updatedUser)
+            await updateUser(userId, updatedUser)
             refresh()
         } catch (error) {
             console.error("Error updating profile:", error)
         }
     }
 
-    const handlePasswordUpdate = async (currentPassword: string, newPassword: string) => {
+    const handlePasswordUpdate = async (updatedPassword: NewUserPassword) => {
         try {
-            // TODO: implement this
-            await update(userId, {
-                ...user,
-                password: newPassword,
-            })
-            refresh()
+            await updatePassword(userId, updatedPassword)
+            // Logout the user when the password is updated
+            logout()
+            router.push("/")
         } catch (error) {
             console.error("Error updating password:", error)
         }
