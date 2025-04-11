@@ -1,0 +1,99 @@
+name: Build and Push Frontend Image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build_and_push_frontend:
+    runs-on: ubuntu-22.04
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write  # Required for Cosign OIDC signing
+
+    steps:
+      # Checkout the source code
+      - uses: actions/checkout@v4
+
+      # Setup QEMU for emulating multi-arch (e.g., ARM64 on x86)
+      - uses: docker/setup-qemu-action@v2
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      # Setup Buildx for advanced Docker builds (multiarch, caching, sbom)
+      - uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+
+      # Login to GHCR (GitHub Container Registry)
+      - name: Docker login
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Dynamically generate image tag and name based on repo/org/branch
+      - name: Determine Image Tags
+        id: tags
+        run: |
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
+          ORG_NAME="refactor-group"
+          REPO_NAME="refactor-platform-fe"
+          IMAGE="${{ env.REGISTRY }}/${ORG_NAME}/${REPO_NAME}/${BRANCH_NAME}:latest"
+          echo "tag=$IMAGE" >> $GITHUB_OUTPUT
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+      # Build, SBOM, and Push the multi-arch Docker image
+      - name: Build + Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile         # Dockerfile is at the root of the repo
+          target: runner             # Your Dockerfile defines this stage
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true           # Enables provenance metadata
+          sbom: true                 # Enables SBOM generation
+          build-args: |
+            NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL=${{ secrets.BACKEND_SERVICE_PROTOCOL }}
+            NEXT_PUBLIC_BACKEND_SERVICE_HOST=${{ secrets.BACKEND_SERVICE_HOST }}
+            NEXT_PUBLIC_BACKEND_SERVICE_PORT=${{ secrets.BACKEND_PORT }}
+            NEXT_PUBLIC_BACKEND_API_VERSION=${{ secrets.BACKEND_API_VERSION }}
+            FRONTEND_SERVICE_PORT=${{ secrets.FRONTEND_SERVICE_PORT }}
+            FRONTEND_SERVICE_INTERFACE=${{ secrets.FRONTEND_SERVICE_INTERFACE }}
+          tags: ${{ steps.tags.outputs.tag }}
+          cache-from: type=gha        # GitHub-hosted build cache
+          cache-to: type=gha,mode=max
+
+      # Install Cosign CLI for image signing
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      # Sign image using GitHub OIDC token (no secrets needed)
+      - name: Sign image with Cosign
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          cosign sign --yes ${{ steps.tags.outputs.image }}
+
+      # Output usage instructions
+      - name: Print Pull & Run Instructions
+        run: |
+          echo -e "\033[1;32mFrontend Image Pushed & Signed:\033[0m"
+          echo "  docker pull ${{ steps.tags.outputs.image }}"
+          echo ""
+          echo -e "\033[1;36mRun locally or with Compose:\033[0m"
+          echo "  docker run --rm --env-file .env -p 3000:3000 ${{ steps.tags.outputs.image }}"
+          echo ""
+          echo -e "\033[1;33mSignature Verification:\033[0m"
+          echo "  cosign verify ${{ steps.tags.outputs.image }}"
