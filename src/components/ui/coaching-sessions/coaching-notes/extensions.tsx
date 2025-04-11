@@ -11,6 +11,7 @@ import Paragraph from "@tiptap/extension-paragraph";
 import Strike from "@tiptap/extension-strike";
 import Text from "@tiptap/extension-text";
 import Underline from "@tiptap/extension-underline";
+import Link from "@tiptap/extension-link";
 import Collaboration from "@tiptap/extension-collaboration";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import CodeBlock from "@/components/ui/coaching-sessions/code-block";
@@ -18,6 +19,7 @@ import { createLowlight } from "lowlight";
 import { all } from "lowlight";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
+import { ConfiguredLink } from "./extended-link-extension";
 // Initialize lowlight with all languages
 const lowlight = createLowlight(all);
 
@@ -43,6 +45,7 @@ export const Extensions = (
     Strike,
     Text,
     Underline,
+    ConfiguredLink,
     Collaboration.configure({
       document: doc,
     }),
