@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type * as React from "react";
-import { cn } from "@/components/lib/utils";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 import AddEntities from "@/components/ui/dashboard/add-entities";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
@@ -25,18 +24,7 @@ export function DashboardContainer() {
   };
 
   return (
-    <div
-      className={cn(
-        // Base styles
-        "p-4",
-        // Mobile: stack vertically
-        "flex flex-col gap-6",
-        // Never grow wider than the site-header
-        "max-w-screen-2xl",
-        // Ensure full width for children
-        "[&>*]:w-full"
-      )}
-    >
+    <>
       <AddEntities
         className="mb-8"
         onCreateSession={() => handleOpenDialog()}
@@ -47,6 +35,6 @@ export function DashboardContainer() {
         onOpenChange={handleCloseDialog}
         coachingSessionToEdit={sessionToEdit}
       />
-    </div>
+    </>
   );
 }

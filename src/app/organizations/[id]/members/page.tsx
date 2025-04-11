@@ -9,6 +9,7 @@ import { useUserList } from "@/lib/api/organizations/users";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { Id } from "@/types/general";
 import { MemberContainer } from "@/components/ui/members/member-container";
+import { PageContainer } from "@/components/ui/page-container";
 
 export default function MembersPage({
   params,
@@ -65,7 +66,7 @@ export default function MembersPage({
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <PageContainer>
       <MemberContainer
         users={users}
         relationships={relationships}
@@ -74,6 +75,6 @@ export default function MembersPage({
         isLoading={isRelationshipsLoading || isUsersLoading}
         openAddMemberDialog={openAddMemberDialog}
       />
-    </div>
+    </PageContainer>
   );
 }
