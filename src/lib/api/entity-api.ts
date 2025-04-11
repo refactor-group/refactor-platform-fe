@@ -11,6 +11,24 @@ export namespace EntityApi {
   }
 
   /**
+   * Interface defining API operations for entity management.
+   *
+   * @remarks
+   * This interface is used to define the available operations for a specific entity type.
+   * It includes optional methods for creating, updating, deleting, and nested entity operations.
+   *
+   * @template T The entity type
+   * @template U The entity type returned by the API
+   */
+  interface ApiOperations<T, U> {
+    create?: (entity: T) => Promise<U>;
+    createNested?: (id: Id, entity: T) => Promise<U>;
+    update?: (id: Id, entity: T) => Promise<U>;
+    delete?: (id: Id) => Promise<U>;
+    deleteNested?: (entityId: Id, nestedEntityId: Id) => Promise<U>;
+  }
+
+  /**
    * Core fetcher function with optional data transformation capability.
    * Handles API requests and response processing with SWR compatibility.
    *
@@ -369,13 +387,7 @@ export namespace EntityApi {
    */
   export const useEntityMutation = <T, U = T>(
     baseUrl: string,
-    api: {
-      create: (entity: T) => Promise<U>;
-      createNested: (id: Id, entity: T) => Promise<U>;
-      update: (id: Id, entity: T) => Promise<U>;
-      delete: (id: Id) => Promise<U>;
-      deleteNested: (entityId: Id, nestedEntityId: Id) => Promise<U>;
-    }
+    api: ApiOperations<T, U>
   ) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
@@ -419,7 +431,7 @@ export namespace EntityApi {
        * @returns Promise resolving to the created entity
        */
 
-      create: (entity: T) => executeWithState(() => api.create(entity)),
+      create: (entity: T) => executeWithState(() => api.create!(entity)),
       /**
        * Creates a new entity nested under another entity (foreign key relationship).
        *
@@ -428,7 +440,7 @@ export namespace EntityApi {
        * @returns Promise resolving to the created entity
        */
       createNested: (id: Id, entity: T) =>
-        executeWithState(() => api.createNested(id, entity)),
+        executeWithState(() => api.createNested!(id, entity)),
       /**
        * Updates an existing entity.
        *
@@ -437,14 +449,14 @@ export namespace EntityApi {
        * @returns Promise resolving to the updated entity
        */
       update: (id: Id, entity: T) =>
-        executeWithState(() => api.update(id, entity)),
+        executeWithState(() => api.update!(id, entity)),
       /**
        * Deletes an entity.
        *
        * @param id The ID of the entity to delete
        * @returns Promise resolving to the deleted entity
        */
-      delete: (id: Id) => executeWithState(() => api.delete(id)),
+      delete: (id: Id) => executeWithState(() => api.delete!(id)),
 
       /**
        * Deletes an entity nested under another entity (foreign key relationship).
@@ -454,7 +466,7 @@ export namespace EntityApi {
        * @returns Promise resolving to the deleted entity
        */
       deleteNested: (entityId: Id, nestedEntityId: Id) =>
-        executeWithState(() => api.deleteNested(entityId, nestedEntityId)),
+        executeWithState(() => api.deleteNested!(entityId, nestedEntityId)),
 
       /** Indicates if any operation is currently in progress */
       isLoading,
