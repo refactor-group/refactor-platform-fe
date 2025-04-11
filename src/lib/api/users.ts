@@ -3,7 +3,8 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { EntityApi } from "./entity-api";
-import { User, defaultUser } from "@/types/user";
+import { User, NewUserPassword, defaultUser } from "@/types/user";
+import { useState } from 'react';
 
 const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
@@ -107,5 +108,16 @@ export const useUserMutation = () => {
     update: UserApi.update,
     delete: UserApi.delete,
     deleteNested: UserApi.deleteNested,
+  });
+};
+
+/**
+ * Hook for user password mutations.
+ * Provides methods to update user password.
+ */
+export const useUserPasswordMutation = () => {
+  return EntityApi.useEntityMutation<NewUserPassword, User>(USERS_BASEURL, {
+    update: async (id: Id, data: NewUserPassword): Promise<User> =>
+      EntityApi.updateFn<NewUserPassword, User>(`${USERS_BASEURL}/${id}/password`, data),
   });
 };

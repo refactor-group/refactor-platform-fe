@@ -20,6 +20,7 @@ import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-s
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function UserNav() {
   const router = useRouter();
@@ -92,9 +93,11 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            Profile
-            <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+          <DropdownMenuItem asChild>
+            <Link href={`/members/${userSession.id}/profile`}>
+              Profile
+              <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
             Settings

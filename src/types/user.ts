@@ -18,6 +18,12 @@ export interface NewUser {
   password: string;
 }
 
+export interface NewUserPassword {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
 export function parseUser(data: unknown): User {
   if (!isUser(data)) {
     throw new Error("Invalid User object data");
