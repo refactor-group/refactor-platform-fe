@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DashboardContainer } from "../../components/ui/dashboard/dashboard-container";
+import { PageContainer } from "@/components/ui/page-container";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardPage() {
-  return <DashboardContainer />;
+  return (
+    <PageContainer>
+      <DashboardContainer />
+    </PageContainer>
+  );
 }
