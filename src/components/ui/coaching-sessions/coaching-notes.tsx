@@ -115,6 +115,21 @@ const CoachingNotes = () => {
             class:
               "tiptap ProseMirror shadow appearance-none lg:min-h-[440px] sm:min-h-[200px] md:min-h-[350px] rounded w-full py-2 px-3 bg-inherit text-black dark:text-white text-sm mt-0 md:mt-3 leading-tight focus:outline-none focus:shadow-outline",
           },
+          handleDOMEvents: {
+            click: (view, event) => {
+              const target = event.target as HTMLElement;
+
+              // Check if the clicked element is an <a> tag and Shift is pressed
+              if (target.tagName === "A" && event.shiftKey) {
+                event.preventDefault(); // Prevent default link behavior
+                window
+                  .open(target.getAttribute("href") || "", "_blank")
+                  ?.focus();
+                return true; // Stop event propagation
+              }
+              return false; // Allow other handlers to process the event
+            },
+          },
         }}
         slotBefore={<Toolbar />}
       />

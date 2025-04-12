@@ -119,8 +119,8 @@ export const Toolbar = () => {
           icon={<Link className="h-4 w-4" />}
           title={
             editor.isActive("link")
-              ? "Update link (Ctrl + k)"
-              : "Insert link (Ctrl + k)"
+              ? "Update Link (Ctrl + k)"
+              : "Insert Link (Ctrl + k)"
           }
         />
       </div>
