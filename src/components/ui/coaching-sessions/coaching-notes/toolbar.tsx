@@ -28,7 +28,7 @@ export const Toolbar = () => {
   // Add keyboard shortcut handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k" && editor?.isFocused) {
         e.preventDefault();
         setIsLinkDialogOpen(true);
       }
@@ -36,7 +36,7 @@ export const Toolbar = () => {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [editor]);
 
   return (
     <>
