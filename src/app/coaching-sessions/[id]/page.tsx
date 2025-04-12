@@ -2,9 +2,7 @@
 
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 
-import { useState } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
 import { siteConfig } from "@/site.config";
@@ -12,7 +10,6 @@ import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching
 import { OverarchingGoalContainer } from "@/components/ui/coaching-sessions/overarching-goal-container";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 
-import { LockClosedIcon } from "@radix-ui/react-icons";
 import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
 import { useRouter } from "next/navigation";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";

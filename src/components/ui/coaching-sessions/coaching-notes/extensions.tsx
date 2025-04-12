@@ -18,6 +18,7 @@ import { createLowlight } from "lowlight";
 import { all } from "lowlight";
 import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
+import { ConfiguredLink } from "./extended-link-extension";
 // Initialize lowlight with all languages
 const lowlight = createLowlight(all);
 
@@ -43,6 +44,7 @@ export const Extensions = (
     Strike,
     Text,
     Underline,
+    ConfiguredLink,
     Collaboration.configure({
       document: doc,
     }),
