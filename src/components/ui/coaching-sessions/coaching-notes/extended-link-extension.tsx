@@ -11,7 +11,7 @@ const LinkWithTitle = Link.extend({
             return {};
           }
           return {
-            title: `Right-click to open ${attributes.href}`,
+            title: `Shift + left-click to open ${attributes.href}`,
           };
         },
       },

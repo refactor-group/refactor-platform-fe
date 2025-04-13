@@ -118,9 +118,11 @@ const CoachingNotes = () => {
           handleDOMEvents: {
             click: (view, event) => {
               const target = event.target as HTMLElement;
-
               // Check if the clicked element is an <a> tag and Shift is pressed
-              if (target.tagName === "A" && event.shiftKey) {
+              if (
+                (target.tagName === "A" || target.parentElement?.tagName) &&
+                event.shiftKey
+              ) {
                 event.preventDefault(); // Prevent default link behavior
                 window
                   .open(target.getAttribute("href") || "", "_blank")
