@@ -37,7 +37,7 @@ export function useLogoutUser() {
         "Deleting current user session from backend: ",
         userSession.id
       );
-      await deleteUserSession();
+      await deleteUserSession(userSession.id);
     } catch (err) {
       console.warn("Error while logging out session: ", userSession.id, err);
     } finally {

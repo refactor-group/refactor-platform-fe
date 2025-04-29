@@ -72,7 +72,10 @@ export const UserSessionApi = {
    *
    * @returns Promise resolving to the deleted UserSession object
    */
-  delete: async (): Promise<UserSession> =>
+  delete: async (_id: Id): Promise<UserSession> =>
+  // TODO we are not using the id here as the backend extracts the user's ID from the session cookie
+  // at some point it may make sense to decouple user session related network operations from
+  // entity related network operations.
     EntityApi.deleteFn<null, UserSession>(`${USER_SESSIONS_LOGOUTURL}`),
 
   /**
