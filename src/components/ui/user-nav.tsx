@@ -54,7 +54,7 @@ export function UserNav() {
         "Deleting current user session from backend: ",
         userSession.id
       );
-      await deleteUserSession(userSession.id);
+      await deleteUserSession();
     } catch (err) {
       console.warn("Error while logging out session: ", userSession.id, err);
     } finally {
@@ -62,8 +62,11 @@ export function UserNav() {
       // to delete the user session fails.
       console.trace("Resetting AuthStore state");
       logout();
+      
       console.debug("Navigating to /");
-      await router.push("/");
+      await router.replace("/");
+      
+      // The backend will handle cookie deletion when the session is deleted
       console.debug("Navigation to / completed successfully.");
     }
   }

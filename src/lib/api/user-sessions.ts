@@ -73,8 +73,8 @@ export const UserSessionApi = {
    * @param id The ID of the user session to delete
    * @returns Promise resolving to the deleted UserSession object
    */
-  delete: async (id: Id): Promise<UserSession> =>
-    EntityApi.deleteFn<null, UserSession>(`${USER_SESSIONS_BASEURL}/${id}`),
+  delete: async (): Promise<UserSession> =>
+    EntityApi.deleteFn<null, UserSession>(`${USER_SESSIONS_LOGOUTURL}`),
 
   /**
    * Deletes a user session nested under another entity (foreign key relationship).

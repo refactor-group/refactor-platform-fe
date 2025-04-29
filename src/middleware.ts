@@ -17,12 +17,13 @@ export default async function middleware(req: NextRequest) {
   );
   const isPublicRoute = publicRoutes.some((route) => path === route);
 
-  // 3. Get the session from the cookie
+  // 3. Get the session cookie - we only check for existence since the cookie is
+  // http-only and managed by the backend. If it exists and is invalid, the backend
+  // API calls will fail and trigger a logout.
   const sessionCookie = req.cookies.get("id");
-  const isValidSession = sessionCookie?.value;
+  const isValidSession = !!sessionCookie;
 
   // 4. Redirect to / if the user is not authenticated
-  // 4b. TODO: Check session validity/expiration?
   if (isProtectedRoute && !isValidSession) {
     return NextResponse.redirect(new URL("/", req.nextUrl));
   }
