@@ -19,7 +19,6 @@ export function ProfileInfoUpdateForm({ user, onSubmit, isSubmitting }: ProfileI
         first_name: user.first_name,
         last_name: user.last_name,
         display_name: user.display_name,
-        password: "",
     })
     const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -58,10 +57,6 @@ export function ProfileInfoUpdateForm({ user, onSubmit, isSubmitting }: ProfileI
             newErrors.email = "Please enter a valid email address"
         }
 
-        if (!formData.password?.trim()) {
-            newErrors.password = "Current password is required for verification"
-        }
-
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
@@ -76,7 +71,7 @@ export function ProfileInfoUpdateForm({ user, onSubmit, isSubmitting }: ProfileI
         await onSubmit({
             ...formData
         })
-        setFormData((prev) => ({ ...prev, password: "" }))
+        setFormData((prev) => ({ ...prev }))
     }
 
     return (
@@ -134,22 +129,6 @@ export function ProfileInfoUpdateForm({ user, onSubmit, isSubmitting }: ProfileI
                     className={errors.email ? "border-red-500" : ""}
                 />
                 {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-            </div>
-
-            <div className="border-t pt-4 mt-6">
-                <div className="space-y-2">
-                    <Label htmlFor="password">Current Password (required to save changes)</Label>
-                    <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        value={formData.password?.trim()}
-                        onChange={handleInputChange}
-                        placeholder="Enter your current password"
-                        className={errors.password ? "border-red-500" : ""}
-                    />
-                    {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-                </div>
             </div>
 
             <div className="flex justify-end">

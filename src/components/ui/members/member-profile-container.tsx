@@ -11,14 +11,15 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import { Id } from "@/types/general"
 import { User, NewUserPassword } from "@/types/user"
 import { useUserPasswordMutation } from "@/lib/api/users"
+import { useLogoutUser } from "@/lib/hooks/use-logout-user"
 
 export function MemberProfileContainer({ userId }: { userId: Id }) {
     const { userId: currentUserId, logout } = useAuthStore((state) => state)
     const { user, isLoading, refresh } = useUser(userId)
     const { update: updateUser, isLoading: isUpdating } = useUserMutation()
-    const { update: updatePassword, isLoading: isUpdatingPassword } = useUserPasswordMutation()
+    const { update: updatePassword } = useUserPasswordMutation()
     const [activeTab, setActiveTab] = useState("profile")
-    const router = useRouter()
+    const logoutUser = useLogoutUser()
 
     const handleProfileUpdate = async (
         updatedUser: User
@@ -35,8 +36,7 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
         try {
             await updatePassword(userId, updatedPassword)
             // Logout the user when the password is updated
-            logout()
-            router.push("/")
+            logoutUser()
         } catch (error) {
             console.error("Error updating password:", error)
         }
