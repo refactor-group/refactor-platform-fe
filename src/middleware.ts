@@ -6,6 +6,7 @@ const protectedRoutes = [
   "/coaching-sessions",
   "/settings",
   "/profile",
+  "/members"
 ];
 const publicRoutes = ["/"];
 
