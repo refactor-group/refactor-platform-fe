@@ -81,6 +81,7 @@ export function PasswordUpdateForm({ onSubmit, isSubmitting }: PasswordUpdateFor
                     onChange={handleChange}
                     placeholder="Enter your current password"
                     className={errors.current_password ? "border-red-500" : ""}
+                    autoComplete="current-password"
                 />
                 {errors.current_password && <p className="text-sm text-red-500">{errors.current_password}</p>}
             </div>
@@ -95,6 +96,7 @@ export function PasswordUpdateForm({ onSubmit, isSubmitting }: PasswordUpdateFor
                     onChange={handleChange}
                     placeholder="Enter your new password"
                     className={errors.new_password ? "border-red-500" : ""}
+                    autoComplete="new-password"
                 />
                 {errors.new_password && <p className="text-sm text-red-500">{errors.new_password}</p>}
             </div>
@@ -109,6 +111,7 @@ export function PasswordUpdateForm({ onSubmit, isSubmitting }: PasswordUpdateFor
                     onChange={handleChange}
                     placeholder="Confirm your new password"
                     className={errors.confirm_password ? "border-red-500" : ""}
+                    autoComplete="new-password"
                 />
                 {errors.confirm_password && <p className="text-sm text-red-500">{errors.confirm_password}</p>}
             </div>
