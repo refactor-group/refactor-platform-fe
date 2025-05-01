@@ -47,7 +47,7 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
             <div className="flex items-center justify-center h-64">
                 <div className="text-center">
                     <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="mt-2">Loading user information...</p>
+                    <p className="mt-2">Loading user member profile...</p>
                 </div>
             </div>
         )
@@ -58,11 +58,11 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>You can only update your own profile.</CardTitle>
+                    <CardTitle><p className="text-lg font-bold">You can only update your own profile.</p></CardTitle>
                 </CardHeader>
                 <CardContent>
                     <CardDescription>
-                        To update your profile, log in as the user you want to update.
+                        <p className="text-lg font-bold">To update your profile, log in as the user you want to update.</p>
                     </CardDescription>
                 </CardContent>
             </Card>

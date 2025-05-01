@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageContainer } from "@/components/ui/page-container";
 import { MemberProfileContainer } from "@/components/ui/members/member-profile-container";
 import { Id } from "@/types/general";
 import { use } from "react";
@@ -12,7 +13,11 @@ export default function ProfilePage({
     params,
 }: {
     params: Promise<{ id: Id }>;
-}) {
+}) {    
     const userId = use(params).id;
-    return <MemberProfileContainer userId={userId} />;
+    return (
+        <PageContainer>
+            <MemberProfileContainer userId={userId} />
+        </PageContainer>
+    );
 }
