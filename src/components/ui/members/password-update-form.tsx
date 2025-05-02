@@ -42,6 +42,8 @@ export function PasswordUpdateForm({ onSubmit, isSubmitting }: PasswordUpdateFor
 
         if (!formData.new_password.trim()) {
             newErrors.new_password = "New password is required"
+        } else if (formData.new_password.length < 8) {
+            newErrors.new_password = "Password must be at least 8 characters long"
         }
 
         if (!formData.confirm_password.trim()) {
