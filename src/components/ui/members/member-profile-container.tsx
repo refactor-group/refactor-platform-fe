@@ -62,12 +62,14 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle><p className="text-lg font-bold">You can only update your own profile.</p></CardTitle>
+                    <div className="text-lg font-bold">
+                        <CardTitle>You can only update your own profile.</CardTitle>
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <CardDescription>
-                        <p className="text-lg font-bold">To update your profile, log in as the user you want to update.</p>
-                    </CardDescription>
+                    <div className="text-lg font-bold">
+                        <CardDescription>To update your profile, log in as the user you want to update.</CardDescription>
+                    </div>
                 </CardContent>
             </Card>
         )
