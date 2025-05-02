@@ -6,6 +6,7 @@ import { ProfileInfoUpdateForm } from "@/components/ui/members/profile-info-upda
 import { PasswordUpdateForm } from "@/components/ui/members/password-update-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toast } from "sonner"
 import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import { Id } from "@/types/general"
 import { User, NewUserPassword } from "@/types/user"
@@ -25,8 +26,10 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
     ) => {
         try {
             await updateUser(userId, updatedUser)
+            toast("Profile has been updated.")
             refresh()
         } catch (error) {
+            toast("Error updating profile.")
             console.error("Error updating profile:", error)
         }
     }
@@ -34,9 +37,11 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
     const handlePasswordUpdate = async (updatedPassword: NewUserPassword) => {
         try {
             await updatePassword(userId, updatedPassword)
+            toast("Password has been updated.")
             // Logout the user when the password is updated
             logoutUser()
         } catch (error) {
+            toast("Error updating password.")
             console.error("Error updating password:", error)
         }
     }
