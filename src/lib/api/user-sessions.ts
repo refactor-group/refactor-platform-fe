@@ -7,7 +7,7 @@ import { EntityApi } from "./entity-api";
 
 const USER_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/user_sessions`;
 const USER_SESSIONS_LOGINURL: string = `${siteConfig.env.backendServiceURL}/login`;
-const USER_SESSIONS_LOGOUTURL: string = `${siteConfig.env.backendServiceURL}/logout`;
+const USER_SESSIONS_LOGOUTURL: string = `${siteConfig.env.backendServiceURL}/delete`;
 
 /**
  * API client for user session-related operations.
@@ -70,11 +70,13 @@ export const UserSessionApi = {
    *
    * This logs a user out of the system by deleting the active cookie session.
    *
-   * @param id The ID of the user session to delete
    * @returns Promise resolving to the deleted UserSession object
    */
-  delete: async (id: Id): Promise<UserSession> =>
-    EntityApi.deleteFn<null, UserSession>(`${USER_SESSIONS_BASEURL}/${id}`),
+  delete: async (_id: Id): Promise<UserSession> =>
+  // TODO we are not using the id here as the backend extracts the user's ID from the session cookie
+  // at some point it may make sense to decouple user session related network operations from
+  // entity related network operations.
+    EntityApi.deleteFn<null, UserSession>(`${USER_SESSIONS_LOGOUTURL}`),
 
   /**
    * Deletes a user session nested under another entity (foreign key relationship).
