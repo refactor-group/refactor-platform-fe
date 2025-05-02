@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { useUser, useUserMutation } from "@/lib/api/users"
 import { ProfileInfoUpdateForm } from "@/components/ui/members/profile-info-update-form"
 import { PasswordUpdateForm } from "@/components/ui/members/password-update-form"
@@ -47,7 +46,7 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
             <div className="flex items-center justify-center h-64">
                 <div className="text-center">
                     <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="mt-2">Loading user member profile...</p>
+                    <p className="mt-2">Loading member profile...</p>
                 </div>
             </div>
         )
@@ -70,7 +69,6 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
     }
 
     return (
-        <div className="max-w-3xl mx-auto">
             <Card>
                 <CardHeader>
                     <CardTitle>Member Profile</CardTitle>
@@ -91,6 +89,5 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
                     </Tabs>
                 </CardContent>
             </Card>
-        </div>
     )
 }
