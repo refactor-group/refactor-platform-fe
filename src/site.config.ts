@@ -1,13 +1,13 @@
 export const siteConfig = {
-  name: "Refactor Coaching & Mentoring",
+  name: "Refactor Coaching Platform",
   url: "https://refactorcoach.com",
   ogImage: "https://ui.shadcn.com/og.jpg",
   locale: "us",
   titleStyle: SessionTitleStyle.CoachFirstLastCoacheeFirstLast,
-  description: "Coaching and mentorship done right.",
+  description: "Progress is made one powerful conversation at a time.",
   links: {
-    twitter: "https://twitter.com/shadcn",
-    github: "https://github.com/shadcn-ui/ui",
+    twitter: "https://www.linkedin.com/company/refactor-group/",
+    github: "https://github.com/refactor-group/",
   },
   // Configuration items set via environment variables
   env: {
