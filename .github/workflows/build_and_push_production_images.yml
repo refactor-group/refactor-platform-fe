@@ -1,6 +1,8 @@
-name: Build and Push Production Images  # Workflow name for GitHub Actions UI
+name: Build and Push Production Images
 # Builds the frontend into production containers for release and pushes to GitHub Container Registry with stable tag
 
+permissions:
+  contents: read       # Default to read-only permissions for all jobs
 on:
   release:
     types: [released]  # This workflow only runs when a new GitHub release is *actually* released publicly
@@ -22,7 +24,7 @@ jobs:
           cache: 'npm'                 # Enable npm caching for faster builds
 
       - name: Install dependencies
-        run: npm ci                    # Clean install of dependencies
+        run: npm run build --if-present
       - name: Run build
         run: npm run build --if-present # Build the Next.js application
       
