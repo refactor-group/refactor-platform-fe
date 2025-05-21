@@ -24,7 +24,7 @@ jobs:
           cache: 'npm'                 # Enable npm caching for faster builds
 
       - name: Install dependencies
-        run: npm run build --if-present
+        run: npm run ci                 # Clean Install of dependencies
       - name: Run build
         run: npm run build --if-present # Build the Next.js application
       
