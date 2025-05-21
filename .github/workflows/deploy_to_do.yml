@@ -1,0 +1,86 @@
+name: Deploy to DigitalOcean via Tailscale # Workflow name displayed in GitHub UI
+
+# Defines when the workflow will run
+on:
+  workflow_dispatch: # Allow manual triggering from GitHub UI
+  pull_request:
+    types: [opened, synchronize, reopened, closed] # Run on PR events
+
+jobs:
+  deploy:
+    name: Deploy Frontend to DigitalOcean # Job name for display
+    runs-on: ubuntu-24.04 # Use latest Ubuntu runner
+
+    steps:
+      # Set up Tailscale connection to securely access the droplet
+      - name: Setup Tailscale # Connect to Tailscale network
+        uses: tailscale/github-action@v3 # Use Tailscale's official action
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }} # Tailscale OAuth client ID
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }} # Tailscale OAuth secret
+          tags: tag:github-actions # Tag for this Tailscale node
+          version: latest # Use latest Tailscale version
+          use-cache: 'true' # Cache Tailscale for faster setup
+
+      # Verify SSH connection before attempting deployment
+      - name: Setup SSH Connection # Setup and verify SSH key
+        run: |
+          mkdir -p ~/.ssh # Create SSH directory
+          echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_ed25519 # Save SSH key from secrets
+          chmod 600 ~/.ssh/id_ed25519 # Set correct permissions
+          
+          # Add host key to known_hosts to prevent prompts
+          ssh-keyscan -H ${{ secrets.DO_TAILSCALE_NAME }} >> ~/.ssh/known_hosts
+          
+          # Test connection to ensure everything is working
+          ssh -o BatchMode=yes -i ~/.ssh/id_ed25519 ${{ secrets.DO_USERNAME }}@${{ secrets.DO_TAILSCALE_NAME }} 'echo "SSH connection successful"'
+
+      # Main deployment step - SSH to the server and deploy the frontend
+      - name: Deploy Frontend Container # Main deployment step
+        run: |
+          # Set up SSH connection
+          ssh -o BatchMode=yes -i ~/.ssh/id_ed25519 ${{ secrets.DO_USERNAME }}@${{ secrets.DO_TAILSCALE_NAME }} '
+            set -e # Exit on any error
+            
+            echo "📦 Starting frontend deployment..." # Announce deployment start
+            
+            # Login to GitHub Container Registry
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+            
+            # Pull the latest frontend image
+            docker pull ${{ secrets.FRONTEND_IMAGE_NAME }}
+            
+            # Stop and remove existing container if it exists
+            docker stop nextjs-app 2>/dev/null || true
+            docker rm nextjs-app 2>/dev/null || true
+            
+            # Run new container with environment variables
+            docker run -d --name nextjs-app \
+              --restart unless-stopped \
+              -p ${{ secrets.FRONTEND_SERVICE_PORT }}:${{ secrets.FRONTEND_SERVICE_PORT }} \
+              -e NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL=${{ secrets.NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL }} \
+              -e NEXT_PUBLIC_BACKEND_SERVICE_HOST=${{ secrets.NEXT_PUBLIC_BACKEND_SERVICE_HOST }} \
+              -e NEXT_PUBLIC_BACKEND_SERVICE_PORT=${{ secrets.NEXT_PUBLIC_BACKEND_SERVICE_PORT }} \
+              -e NEXT_PUBLIC_BACKEND_API_VERSION=${{ secrets.NEXT_PUBLIC_BACKEND_API_VERSION }} \
+              -e NEXT_PUBLIC_TIPTAP_APP_ID=${{ secrets.NEXT_PUBLIC_TIPTAP_APP_ID }} \
+              -e FRONTEND_SERVICE_INTERFACE=${{ secrets.FRONTEND_SERVICE_INTERFACE }} \
+              -e FRONTEND_SERVICE_PORT=${{ secrets.FRONTEND_SERVICE_PORT }} \
+              ${{ secrets.FRONTEND_IMAGE_NAME }}
+            
+            # Verify the container is running
+            echo "⏳ Waiting for container to initialize..." # Wait for startup
+            sleep 5 # Brief pause
+            
+            # Check container status
+            if docker ps | grep -q nextjs-app; then
+              echo "✅ Deployment successful! Frontend container is running."
+            else
+              echo "❌ Deployment failed. Container logs:"
+              docker logs nextjs-app
+              exit 1 # Fail the workflow
+            fi
+            
+            # Display container info
+            echo "🔍 Container details:"
+            docker ps | grep nextjs-app
+          '
