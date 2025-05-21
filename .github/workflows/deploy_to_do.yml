@@ -1,19 +1,21 @@
-name: Deploy to DigitalOcean via Tailscale # Workflow name displayed in GitHub UI
+name: Deploy to DigitalOcean via Tailscale UI
 
-# Defines when the workflow will run
+permissions:
+  contents: read # Read-only access to repository contents
 on:
-  workflow_dispatch: # Allow manual triggering from GitHub UI
-  pull_request:
-    types: [opened, synchronize, reopened, closed] # Run on PR events
+  workflow_dispatch:
 
 jobs:
   deploy:
     name: Deploy Frontend to DigitalOcean # Job name for display
     runs-on: ubuntu-24.04 # Use latest Ubuntu runner
-
+    permissions:         # job-level permissions necessary for Tailscale
+      contents: read     # Read repository contents
+      id-token: write    # Required for OIDC token operations (Tailscale)
+    
     steps:
       # Set up Tailscale connection to securely access the droplet
-      - name: Setup Tailscale # Connect to Tailscale network
+      - name: Set up Tailscale Connection # Connect to Tailscale network
         uses: tailscale/github-action@v3 # Use Tailscale's official action
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }} # Tailscale OAuth client ID
@@ -23,7 +25,7 @@ jobs:
           use-cache: 'true' # Cache Tailscale for faster setup
 
       # Verify SSH connection before attempting deployment
-      - name: Setup SSH Connection # Setup and verify SSH key
+      - name: Set up SSH Connection # Setup and verify SSH key
         run: |
           mkdir -p ~/.ssh # Create SSH directory
           echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_ed25519 # Save SSH key from secrets
