@@ -68,6 +68,7 @@ jobs:
           tags: ${{ steps.vars.outputs.tag }}
           cache-from: type=gha,scope=amd64
           cache-to: type=gha,mode=max,scope=amd64
+          outputs: type=image,name=${{ steps.vars.outputs.tag }}
 
   build_and_push_arm64:
     runs-on: ubuntu-24.04
@@ -123,6 +124,7 @@ jobs:
           tags: ${{ steps.vars.outputs.tag }}
           cache-from: type=gha,scope=arm64
           cache-to: type=gha,mode=max,scope=arm64
+          outputs: type=image,name=${{ steps.vars.outputs.tag }}
 
   create_multiarch_manifest:
     runs-on: ubuntu-24.04
