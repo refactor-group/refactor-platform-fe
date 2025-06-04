@@ -63,8 +63,8 @@ jobs:
             FRONTEND_SERVICE_PORT=${{ secrets.FRONTEND_SERVICE_PORT }}
             FRONTEND_SERVICE_INTERFACE=${{ secrets.FRONTEND_SERVICE_INTERFACE }}
           tags: ${{ steps.vars.outputs.tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: ''
+          cache-to: ''
 
   build_and_push_arm64:
     runs-on: ubuntu-22.04
@@ -116,8 +116,8 @@ jobs:
             FRONTEND_SERVICE_PORT=${{ secrets.FRONTEND_SERVICE_PORT }}
             FRONTEND_SERVICE_INTERFACE=${{ secrets.FRONTEND_SERVICE_INTERFACE }}
           tags: ${{ steps.vars.outputs.tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: ''
+          cache-to: ''
   create_multiarch_manifest:
     runs-on: ubuntu-22.04
     needs: [build_and_push_amd64, build_and_push_arm64]
