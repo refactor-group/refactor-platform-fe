@@ -27,7 +27,7 @@ jobs:
       # Setup QEMU for emulating multi-arch (e.g., ARM64 on x86)
       - uses: docker/setup-qemu-action@v2
         with:
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
       # Setup Buildx for advanced Docker builds (multiarch, caching, sbom)
       - uses: docker/setup-buildx-action@v3
@@ -60,10 +60,11 @@ jobs:
           context: .
           file: ./Dockerfile         # Dockerfile is at the root of the repo
           target: runner             # Your Dockerfile defines this stage
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           provenance: true           # Enables provenance metadata
           sbom: true                 # Enables SBOM generation
+          no-cache: true             # Disable Docker build cache
           build-args: |
             NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL=${{ secrets.BACKEND_SERVICE_PROTOCOL }}
             NEXT_PUBLIC_BACKEND_SERVICE_HOST=${{ secrets.BACKEND_SERVICE_HOST }}
@@ -72,8 +73,8 @@ jobs:
             FRONTEND_SERVICE_PORT=${{ secrets.FRONTEND_SERVICE_PORT }}
             FRONTEND_SERVICE_INTERFACE=${{ secrets.FRONTEND_SERVICE_INTERFACE }}
           tags: ${{ steps.tags.outputs.tag }}
-          cache-from: type=gha        # GitHub-hosted build cache
-          cache-to: type=gha,mode=max
+          cache-from: ''        # GitHub-hosted build cache
+          cache-to: ''
 
       # Install Cosign CLI for image signing
       - name: Install Cosign
