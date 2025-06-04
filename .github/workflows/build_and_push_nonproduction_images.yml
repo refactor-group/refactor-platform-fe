@@ -35,17 +35,24 @@ jobs:
         with:
           install: true
 
-      - name: Debug Environment Variables
-        if: ${{ inputs.enable_env_var_debugging == true }}  # Only run when debugging is enabled
-        run: |
-          echo "=== ALL BUILD ARGS ===" && env | sort
-
       - name: Docker login
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Debug Environment Variables
+        if: ${{ inputs.enable_env_var_debugging == true }}  # Only run when debugging is enabled
+        run: |
+          echo "Building with the following environment variables:" && \
+          echo "NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL: ${NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL}" && \
+          echo "NEXT_PUBLIC_BACKEND_SERVICE_HOST: ${NEXT_PUBLIC_BACKEND_SERVICE_HOST}" && \
+          echo "NEXT_PUBLIC_BACKEND_SERVICE_PORT: ${NEXT_PUBLIC_BACKEND_SERVICE_PORT}" && \
+          echo "NEXT_PUBLIC_BACKEND_API_VERSION: ${NEXT_PUBLIC_BACKEND_API_VERSION}" && \
+          echo "FRONTEND_SERVICE_INTERFACE: ${FRONTEND_SERVICE_INTERFACE}" && \
+          echo "FRONTEND_SERVICE_PORT: ${FRONTEND_SERVICE_PORT}"
+
 
       - name: Set image tag
         id: vars
