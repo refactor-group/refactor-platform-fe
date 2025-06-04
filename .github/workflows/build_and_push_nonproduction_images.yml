@@ -15,7 +15,7 @@ env:
 
 jobs:
   build_and_push_amd64:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
@@ -70,7 +70,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=amd64
 
   build_and_push_arm64:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
@@ -125,7 +125,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=arm64
 
   create_multiarch_manifest:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: [build_and_push_amd64, build_and_push_arm64]
 
     permissions:
@@ -158,7 +158,7 @@ jobs:
           docker manifest push ${{ steps.vars.outputs.multiarch }}
 
   sign_and_print:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: create_multiarch_manifest
 
     permissions:
