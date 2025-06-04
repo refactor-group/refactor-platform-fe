@@ -16,12 +16,11 @@ env:
 jobs:
   build_and_push_amd64:
     runs-on: ubuntu-22.04
+
     permissions:
       contents: read
       packages: write
       id-token: write
-    outputs:
-      tag: ${{ steps.vars.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +42,6 @@ jobs:
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
           IMAGE_BASE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME}"
           echo "tag=${IMAGE_BASE}:amd64" >> $GITHUB_OUTPUT
-          echo "multiarch=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
 
       - name: Build + Push AMD64
         id: build
@@ -69,12 +67,11 @@ jobs:
 
   build_and_push_arm64:
     runs-on: ubuntu-22.04
+
     permissions:
       contents: read
       packages: write
       id-token: write
-    outputs:
-      tag: ${{ steps.vars.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +93,6 @@ jobs:
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
           IMAGE_BASE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME}"
           echo "tag=${IMAGE_BASE}:arm64" >> $GITHUB_OUTPUT
-          echo "multiarch=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
 
       - name: Build + Push ARM64
         id: build
@@ -119,78 +115,3 @@ jobs:
           tags: ${{ steps.vars.outputs.tag }}
           cache-from: type=gha,scope=arm64
           cache-to: type=gha,mode=max,scope=arm64
-
-  create_multiarch_manifest:
-    runs-on: ubuntu-22.04
-    needs: [build_and_push_amd64, build_and_push_arm64]
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Docker login
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set image tags
-        id: vars
-        run: |
-          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
-          IMAGE_BASE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME}"
-          echo "multiarch=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
-          echo "amd64=${IMAGE_BASE}:amd64" >> $GITHUB_OUTPUT
-          echo "arm64=${IMAGE_BASE}:arm64" >> $GITHUB_OUTPUT
-
-      - name: Create and Push Multi-Arch Manifest
-        run: |
-          docker manifest create ${{ steps.vars.outputs.multiarch }} \
-            --amend ${{ steps.vars.outputs.amd64 }} \
-            --amend ${{ steps.vars.outputs.arm64 }}
-
-          docker manifest push ${{ steps.vars.outputs.multiarch }}
-
-  sign_and_print:
-    runs-on: ubuntu-22.04
-    needs: create_multiarch_manifest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-
-    steps:
-      - name: Docker login
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set image tag
-        id: vars
-        run: |
-          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
-          IMAGE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME}:latest"
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
-
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v3
-
-      - name: Sign image with Cosign
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-        run: |
-          cosign sign --yes ${{ steps.vars.outputs.image }}
-
-      - name: Print Pull & Run Instructions
-        run: |
-          echo -e "\033[1;32m Frontend Multi-Arch Image Pushed & Signed:\033[0m"
-          echo "  docker pull ${{ steps.vars.outputs.image }}"
-          echo ""
-          echo -e "\033[1;36mRun locally or with Compose:\033[0m"
-          echo "  docker run --rm --env-file .env -p 3000:3000 ${{ steps.vars.outputs.image }}"
-          echo ""
-          echo -e "\033[1;33mVerify Signature:\033[0m"
-          echo "  cosign verify ${{ steps.vars.outputs.image }}"
