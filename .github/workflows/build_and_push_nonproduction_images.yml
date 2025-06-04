@@ -22,6 +22,9 @@ jobs:
       packages: write
       id-token: write
 
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -43,15 +46,15 @@ jobs:
           IMAGE_BASE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME}"
           echo "tag=${IMAGE_BASE}:amd64" >> $GITHUB_OUTPUT
           echo "multiarch=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
-          echo "image_base=${IMAGE_BASE}" >> $GITHUB_OUTPUT
 
       - name: Build + Push AMD64
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           target: runner
-          platforms: linux/amd64              # Build only amd64
+          platforms: linux/amd64
           push: true
           provenance: true
           sbom: true
@@ -74,6 +77,9 @@ jobs:
       packages: write
       id-token: write
 
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -95,15 +101,15 @@ jobs:
           IMAGE_BASE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME}"
           echo "tag=${IMAGE_BASE}:arm64" >> $GITHUB_OUTPUT
           echo "multiarch=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
-          echo "image_base=${IMAGE_BASE}" >> $GITHUB_OUTPUT
 
       - name: Build + Push ARM64
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           target: runner
-          platforms: linux/arm64              # Build only arm64
+          platforms: linux/arm64
           push: true
           provenance: true
           sbom: true
@@ -117,6 +123,7 @@ jobs:
           tags: ${{ steps.vars.outputs.tag }}
           cache-from: type=gha,scope=arm64
           cache-to: type=gha,mode=max,scope=arm64
+
   create_multiarch_manifest:
     runs-on: ubuntu-22.04
     needs: [build_and_push_amd64, build_and_push_arm64]
@@ -133,16 +140,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image names
+      - name: Set image digests
         id: vars
         run: |
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
           IMAGE_BASE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME}"
           echo "multiarch=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
-          echo "amd64=${IMAGE_BASE}:amd64" >> $GITHUB_OUTPUT
-          echo "arm64=${IMAGE_BASE}:arm64" >> $GITHUB_OUTPUT
+          echo "amd64=${IMAGE_BASE}@${{ needs.build_and_push_amd64.outputs.digest }}" >> $GITHUB_OUTPUT
+          echo "arm64=${IMAGE_BASE}@${{ needs.build_and_push_arm64.outputs.digest }}" >> $GITHUB_OUTPUT
 
-      # Create and push multi-arch manifest referencing both arch-specific images
       - name: Create and Push Multi-Arch Manifest
         run: |
           docker manifest create ${{ steps.vars.outputs.multiarch }} \
@@ -150,6 +156,7 @@ jobs:
             --amend ${{ steps.vars.outputs.arm64 }}
 
           docker manifest push ${{ steps.vars.outputs.multiarch }}
+
   sign_and_print:
     runs-on: ubuntu-22.04
     needs: create_multiarch_manifest
@@ -166,6 +173,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set image tag
         id: vars
         run: |
