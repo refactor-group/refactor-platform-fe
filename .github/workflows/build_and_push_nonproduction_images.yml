@@ -160,6 +160,12 @@ jobs:
       id-token: write
 
     steps:
+      - name: Docker login
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set image tag
         id: vars
         run: |
