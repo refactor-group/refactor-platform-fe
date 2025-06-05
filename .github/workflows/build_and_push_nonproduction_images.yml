@@ -54,7 +54,7 @@ jobs:
           echo "FRONTEND_SERVICE_PORT: ${FRONTEND_SERVICE_PORT}"
 
 
-      - name: Set image tag
+      - name: Set Image Tag
         id: vars
         run: |
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
@@ -105,7 +105,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image tag
+      - name: Set Image Tag
         id: vars
         run: |
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
