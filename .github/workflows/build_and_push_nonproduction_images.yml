@@ -7,6 +7,12 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
+    inputs:
+      enable_env_var_debugging:  # Optional debugging parameter useful to debug the build args and env vars
+        description: 'Enable build args & env vars debugging'  # Help text shown in UI
+        required: false  # Not required to run the workflow
+        default: false   # Disabled by default
+        type: boolean    # Simple checkbox in the UI
 
 env:
   REGISTRY: ghcr.io
@@ -15,7 +21,7 @@ env:
 
 jobs:
   build_and_push_amd64:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
@@ -36,7 +42,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image tag
+      - name: Debug Environment Variables
+        if: ${{ inputs.enable_env_var_debugging == true }}  # Only run when debugging is enabled
+        run: |
+          echo "Building with the following environment variables:" && \
+          echo "NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL: ${NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL}" && \
+          echo "NEXT_PUBLIC_BACKEND_SERVICE_HOST: ${NEXT_PUBLIC_BACKEND_SERVICE_HOST}" && \
+          echo "NEXT_PUBLIC_BACKEND_SERVICE_PORT: ${NEXT_PUBLIC_BACKEND_SERVICE_PORT}" && \
+          echo "NEXT_PUBLIC_BACKEND_API_VERSION: ${NEXT_PUBLIC_BACKEND_API_VERSION}" && \
+          echo "FRONTEND_SERVICE_INTERFACE: ${FRONTEND_SERVICE_INTERFACE}" && \
+          echo "FRONTEND_SERVICE_PORT: ${FRONTEND_SERVICE_PORT}"
+
+
+      - name: Set Image Tag
         id: vars
         run: |
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
@@ -66,7 +84,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=amd64
 
   build_and_push_arm64:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
@@ -87,7 +105,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image tag
+      - name: Set Image Tag
         id: vars
         run: |
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}

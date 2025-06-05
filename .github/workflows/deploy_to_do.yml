@@ -8,10 +8,11 @@ on:
 jobs:
   deploy:
     name: Deploy Frontend to DigitalOcean # Job name for display
-    runs-on: ubuntu-24.04 # Use latest Ubuntu runner
-    permissions:         # job-level permissions necessary for Tailscale
-      contents: read     # Read repository contents
-      id-token: write    # Required for OIDC token operations (Tailscale)
+    runs-on: ubuntu-24.04
+    environment: production               # Use the production environment settings
+    permissions:                          # job-level permissions necessary for Tailscale
+      contents: read                      # Read repository contents
+      id-token: write                     # Required for OIDC token operations (Tailscale)
     
     steps:
       # Set up Tailscale connection to securely access the droplet
