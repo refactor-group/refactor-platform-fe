@@ -54,10 +54,6 @@ export namespace EntityApi {
     config: any,
     transform?: (data: T) => U
   ): Promise<U> => {
-    console.debug(
-      `siteConfig.env.backendApiVersion: ${siteConfig.env.backendApiVersion}`
-    );
-
     const response = await axios.get<ApiResponse<T>>(url, {
       withCredentials: true,
       timeout: 5000,
