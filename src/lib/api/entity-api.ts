@@ -62,7 +62,7 @@ export namespace EntityApi {
       withCredentials: true,
       timeout: 5000,
       headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
+        "X-Version": "1.0.0-beta1",
       },
       ...config,
     });
