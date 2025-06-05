@@ -13,8 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  console.info("BACKEND_API_VERSION: " + siteConfig.env.backendApiVersion);
-
   return (
     <main>
       <div className="container relative h-[800px] flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
