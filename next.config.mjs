@@ -11,14 +11,4 @@ const nextConfig = {
 	}
 };
 
-// Print environment variables at startup
-console.log('=== Environment Variables ===')
-Object.keys(process.env)
-  .filter(key => key.startsWith('NEXT_PUBLIC_'))
-  .sort()
-  .forEach(key => {
-    console.log(`${key}: ${process.env[key]}`)
-  })
-console.log('=============================')
-
 export default nextConfig;
