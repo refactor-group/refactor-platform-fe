@@ -85,12 +85,12 @@ jobs:
           provenance: true             # Enable provenance metadata
           sbom: true                   # Generate Software Bill of Materials
           build-args: |                # Environment variables for the build
-            NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL=${{ secrets.BACKEND_SERVICE_PROTOCOL }}
-            NEXT_PUBLIC_BACKEND_SERVICE_HOST=${{ secrets.BACKEND_SERVICE_HOST }}
-            NEXT_PUBLIC_BACKEND_SERVICE_PORT=${{ secrets.BACKEND_PORT }}
-            NEXT_PUBLIC_BACKEND_API_VERSION=${{ secrets.BACKEND_API_VERSION }}
-            FRONTEND_SERVICE_PORT=${{ secrets.FRONTEND_SERVICE_PORT }}
-            FRONTEND_SERVICE_INTERFACE=${{ secrets.FRONTEND_SERVICE_INTERFACE }}
+            NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL=${{ vars.BACKEND_SERVICE_PROTOCOL }}
+            NEXT_PUBLIC_BACKEND_SERVICE_HOST=${{ vars.BACKEND_SERVICE_HOST }}
+            NEXT_PUBLIC_BACKEND_SERVICE_PORT=${{ vars.BACKEND_PORT }}
+            NEXT_PUBLIC_BACKEND_API_VERSION=${{ vars.BACKEND_API_VERSION }}
+            FRONTEND_SERVICE_PORT=${{ vars.FRONTEND_SERVICE_PORT }}
+            FRONTEND_SERVICE_INTERFACE=${{ vars.FRONTEND_SERVICE_INTERFACE }}
           tags: ${{ steps.tags.outputs.frontend_tags }}  # Use "stable" tag from previous step
           cache-from: type=gha         # Use GitHub Actions cache
           cache-to: type=gha,mode=max  # Cache for future builds
