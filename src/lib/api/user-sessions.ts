@@ -7,6 +7,7 @@ import { EntityApi } from "./entity-api";
 
 const USER_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/user_sessions`;
 const USER_SESSIONS_LOGINURL: string = `${siteConfig.env.backendServiceURL}/login`;
+// const USER_SESSIONS_LOGINURL: string = `http://localhost/api/login`;
 const USER_SESSIONS_LOGOUTURL: string = `${siteConfig.env.backendServiceURL}/delete`;
 
 /**
@@ -44,6 +45,8 @@ export const UserSessionApi = {
         "Content-Type": "application/x-www-form-urlencoded",
       },
     };
+    // TODO: remove this before final commit!
+    console.debug(`USER_SESSIONS_LOGINURL: ${USER_SESSIONS_LOGINURL}`);
     return EntityApi.createFn<UserSession, UserSession>(
       USER_SESSIONS_LOGINURL,
       user_session,
@@ -73,9 +76,9 @@ export const UserSessionApi = {
    * @returns Promise resolving to the deleted UserSession object
    */
   delete: async (_id: Id): Promise<UserSession> =>
-  // TODO we are not using the id here as the backend extracts the user's ID from the session cookie
-  // at some point it may make sense to decouple user session related network operations from
-  // entity related network operations.
+    // TODO we are not using the id here as the backend extracts the user's ID from the session cookie
+    // at some point it may make sense to decouple user session related network operations from
+    // entity related network operations.
     EntityApi.deleteFn<null, UserSession>(`${USER_SESSIONS_LOGOUTURL}`),
 
   /**
