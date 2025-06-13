@@ -111,11 +111,6 @@ export enum ItemStatus {
   WontDo = "WontDo",
 }
 
-export enum Role {
-  User = "User",
-  Admin = "Admin"
-}
-
 export function stringToActionStatus(statusString: string): ItemStatus {
   const status = statusString.trim();
 

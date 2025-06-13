@@ -1,5 +1,5 @@
-import { User } from "@/types/user";
-import { Role } from "@/types/general";
+import { User, Role } from "@/types/user";
+
 /**
  * This is an intersection type that combines the User type with additional properties.
  * Currently, it does not add any new properties, but it can be extended in the future

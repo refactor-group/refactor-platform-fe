@@ -6,7 +6,8 @@ import { Trash2 } from "lucide-react";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
 import { OrganizationStateStore } from "@/lib/stores/organization-state-store";
 import { AuthStore } from "@/lib/stores/auth-store";
-import { Id, Role } from "@/types/general";
+import { Id } from "@/types/general";
+import { Role } from "@/types/user";
 
 interface MemberCardProps {
   firstName: string;
