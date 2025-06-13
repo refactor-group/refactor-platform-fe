@@ -1,4 +1,4 @@
-import { Id, Role } from "@/types/general";
+import { Id } from "@/types/general";
 
 // This must always reflect the Rust struct on the backend entity::users::Model
 export interface User {
@@ -23,6 +23,11 @@ export interface NewUserPassword {
   current_password: string;
   new_password: string;
   confirm_password: string;
+}
+
+export enum Role {
+  User = "User",
+  Admin = "Admin"
 }
 
 export function parseUser(data: unknown): User {
