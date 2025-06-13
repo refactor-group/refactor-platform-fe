@@ -8,6 +8,7 @@ export interface User {
   first_name: string;
   last_name: string;
   display_name: string;
+  role: Role;
 }
 
 export interface NewUser {
@@ -24,6 +25,11 @@ export interface NewUserPassword {
   confirm_password: string;
 }
 
+export enum Role {
+  User = "User",
+  Admin = "Admin"
+}
+
 export function parseUser(data: unknown): User {
   if (!isUser(data)) {
     throw new Error("Invalid User object data");
@@ -35,6 +41,7 @@ export function parseUser(data: unknown): User {
     first_name: data.first_name,
     last_name: data.last_name,
     display_name: data.display_name,
+    role: data.role,
   };
 }
 
@@ -62,6 +69,7 @@ export function defaultUser(): User {
     first_name: "",
     last_name: "",
     display_name: "",
+    role: Role.User,
   };
 }
 

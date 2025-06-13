@@ -7,6 +7,7 @@ import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship
 import { OrganizationStateStore } from "@/lib/stores/organization-state-store";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
+import { Role } from "@/types/user";
 
 interface MemberCardProps {
   firstName: string;
@@ -32,10 +33,10 @@ export function MemberCard({
   const { deleteNested: deleteUser } = useUserMutation(currentOrganizationId);
 
   // Check if current user is a coach in any of this user's relationships
-  // and make sure we can't delete ourselves
-  const canDeleteUser = userRelationships.some(
+  // and make sure we can't delete ourselves. Admins can delete any user.
+  const canDeleteUser = userRelationships?.some(
     (rel) => rel.coach_id === userSession.id && userId !== userSession.id
-  );
+  ) || userSession.role === Role.Admin;
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this member?")) {
