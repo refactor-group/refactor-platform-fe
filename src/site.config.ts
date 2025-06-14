@@ -20,7 +20,9 @@ export const siteConfig = {
       ":" +
       process.env.NEXT_PUBLIC_BACKEND_SERVICE_PORT +
       "/" +
-      process.env.NEXT_PUBLIC_BACKEND_SERVICE_API_PATH,
+      process.env.NEXT_PUBLIC_BACKEND_SERVICE_API_PATH
+        ? process.env.NEXT_PUBLIC_BACKEND_SERVICE_API_PATH
+        : "api", // Provide our production virtual API path that works with nginx
     backendApiVersion: process.env.NEXT_PUBLIC_BACKEND_API_VERSION,
     frontendServicePort: process.env.FRONTEND_SERVICE_PORT,
     frontendServiceInterface: process.env.FRONTEND_SERVICE_INTERFACE,
