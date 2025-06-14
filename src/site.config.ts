@@ -19,8 +19,8 @@ export const siteConfig = {
       process.env.NEXT_PUBLIC_BACKEND_SERVICE_HOST +
       ":" +
       process.env.NEXT_PUBLIC_BACKEND_SERVICE_PORT +
-      "/api", // +
-    // process.env.NEXT_PUBLIC_BACKEND_SERVICE_API_PATH,
+      "/" +
+      process.env.NEXT_PUBLIC_BACKEND_SERVICE_API_PATH,
     backendApiVersion: process.env.NEXT_PUBLIC_BACKEND_API_VERSION,
     frontendServicePort: process.env.FRONTEND_SERVICE_PORT,
     frontendServiceInterface: process.env.FRONTEND_SERVICE_INTERFACE,
