@@ -26,7 +26,11 @@ jobs:
               "event_type": "deploy-with-frontend-vars",
               "client_payload": {
                 "frontend_vars": {
-                  "NEXT_PUBLIC_API_URL": "${{ vars.NEXT_PUBLIC_API_URL }}",
+                  "NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL": "${{ vars.NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL }}",
+                  "NEXT_PUBLIC_BACKEND_SERVICE_PORT": "${{ vars.NEXT_PUBLIC_BACKEND_SERVICE_PORT }}",
+                  "NEXT_PUBLIC_BACKEND_SERVICE_HOST": "${{ vars.NEXT_PUBLIC_BACKEND_SERVICE_HOST }}",
+                  "NEXT_PUBLIC_BACKEND_SERVICE_API_PATH": "${{ vars.NEXT_PUBLIC_BACKEND_SERVICE_API_PATH }}",
+                  "NEXT_PUBLIC_BACKEND_API_VERSION": "${{ vars.NEXT_PUBLIC_BACKEND_API_VERSION }}",
                   "NEXT_PUBLIC_APP_ENV": "${{ vars.NEXT_PUBLIC_APP_ENV }}",
                   "FRONTEND_BUILD_TARGET": "${{ vars.FRONTEND_BUILD_TARGET }}"
                 },
