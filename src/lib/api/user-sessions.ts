@@ -6,9 +6,8 @@ import { UserSession } from "@/types/user-session";
 import { EntityApi } from "./entity-api";
 
 const USER_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/user_sessions`;
-// const USER_SESSIONS_LOGINURL: string = `${siteConfig.env.backendServiceURL}/login`;
-// const USER_SESSIONS_LOGINURL: string = `http://localhost/api/login`;
-const USER_SESSIONS_LOGINURL: string = `https://refactor.engineer/api/login`;
+const USER_SESSIONS_LOGINURL: string = `${siteConfig.env.backendServiceURL}/login`;
+// const USER_SESSIONS_LOGINURL: string = `https://refactor.engineer/api/login`;
 const USER_SESSIONS_LOGOUTURL: string = `${siteConfig.env.backendServiceURL}/delete`;
 
 /**
