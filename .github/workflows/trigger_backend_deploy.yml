@@ -1,0 +1,35 @@
+# This job cooperates with the platform's backend deploy_to_do.yml workflow
+# to allow for it to determine if the deployment configuration environment
+# variable values come from this frontend's vars or the backend's.
+name: Trigger Backend Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      enable_ssh_debugging:
+        description: 'Enable verbose SSH debugging'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  trigger-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Backend Deployment
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.BACKEND_REPO_PAT }}" \
+            https://api.github.com/repos/refactor-group/refactor-platform-fe/dispatches \
+            -d '{
+              "event_type": "deploy-with-frontend-vars",
+              "client_payload": {
+                "frontend_vars": {
+                  "NEXT_PUBLIC_API_URL": "${{ vars.NEXT_PUBLIC_API_URL }}",
+                  "NEXT_PUBLIC_APP_ENV": "${{ vars.NEXT_PUBLIC_APP_ENV }}",
+                  "FRONTEND_BUILD_TARGET": "${{ vars.FRONTEND_BUILD_TARGET }}"
+                },
+                "enable_ssh_debugging": "${{ inputs.enable_ssh_debugging }}"
+              }
+            }'
