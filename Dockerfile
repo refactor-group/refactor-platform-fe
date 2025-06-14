@@ -29,8 +29,7 @@ RUN npm install
 # Stage 2: Builder
 FROM base AS builder
 
-# TODO: remove everything but bash before final commit!
-RUN apk update && apk upgrade --no-cache && apk add --no-cache bash curl wget netcat-openbsd net-tools nmap vim
+RUN apk update && apk upgrade --no-cache && apk add --no-cache bash vim
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
