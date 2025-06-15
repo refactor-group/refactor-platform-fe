@@ -93,7 +93,7 @@ export default function CoachingSessionList({
   );
 
   return (
-    <Card className={cn("min-w-96", className)}>
+    <Card className={cn("min-w-64", className)}>
       <CardHeader>
         <CardTitle>
           <div className="flex justify-between flex-col lg:flex-row">
