@@ -7,7 +7,6 @@ import { EntityApi } from "./entity-api";
 
 const USER_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/user_sessions`;
 const USER_SESSIONS_LOGINURL: string = `${siteConfig.env.backendServiceURL}/login`;
-// const USER_SESSIONS_LOGINURL: string = `https://refactor.engineer/api/login`;
 const USER_SESSIONS_LOGOUTURL: string = `${siteConfig.env.backendServiceURL}/delete`;
 
 /**
@@ -45,8 +44,6 @@ export const UserSessionApi = {
         "Content-Type": "application/x-www-form-urlencoded",
       },
     };
-    // TODO: remove this before final commit!
-    console.debug(`USER_SESSIONS_LOGINURL: ${USER_SESSIONS_LOGINURL}`);
     return EntityApi.createFn<UserSession, UserSession>(
       USER_SESSIONS_LOGINURL,
       user_session,
