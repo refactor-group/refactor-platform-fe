@@ -51,7 +51,7 @@ jobs:
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
             
             # Pull the latest frontend image
-            docker pull ${{ secrets.FRONTEND_IMAGE_NAME }}
+            docker pull ${{ vars.FRONTEND_IMAGE_NAME }}
             
             # Stop and remove existing container if it exists
             docker stop nextjs-app 2>/dev/null || true
@@ -60,15 +60,15 @@ jobs:
             # Run new container with environment variables
             docker run -d --name nextjs-app \
               --restart unless-stopped \
-              -p ${{ secrets.FRONTEND_SERVICE_PORT }}:${{ secrets.FRONTEND_SERVICE_PORT }} \
-              -e NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL=${{ secrets.NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL }} \
-              -e NEXT_PUBLIC_BACKEND_SERVICE_HOST=${{ secrets.NEXT_PUBLIC_BACKEND_SERVICE_HOST }} \
-              -e NEXT_PUBLIC_BACKEND_SERVICE_PORT=${{ secrets.NEXT_PUBLIC_BACKEND_SERVICE_PORT }} \
-              -e NEXT_PUBLIC_BACKEND_API_VERSION=${{ secrets.NEXT_PUBLIC_BACKEND_API_VERSION }} \
+              -p ${{ vars.FRONTEND_SERVICE_PORT }}:${{ vars.FRONTEND_SERVICE_PORT }} \
+              -e NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL=${{ vars.NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL }} \
+              -e NEXT_PUBLIC_BACKEND_SERVICE_HOST=${{ vars.NEXT_PUBLIC_BACKEND_SERVICE_HOST }} \
+              -e NEXT_PUBLIC_BACKEND_SERVICE_PORT=${{ vars.NEXT_PUBLIC_BACKEND_SERVICE_PORT }} \
+              -e NEXT_PUBLIC_BACKEND_API_VERSION=${{ vars.NEXT_PUBLIC_BACKEND_API_VERSION }} \
               -e NEXT_PUBLIC_TIPTAP_APP_ID=${{ secrets.NEXT_PUBLIC_TIPTAP_APP_ID }} \
-              -e FRONTEND_SERVICE_INTERFACE=${{ secrets.FRONTEND_SERVICE_INTERFACE }} \
-              -e FRONTEND_SERVICE_PORT=${{ secrets.FRONTEND_SERVICE_PORT }} \
-              ${{ secrets.FRONTEND_IMAGE_NAME }}
+              -e FRONTEND_SERVICE_INTERFACE=${{ vars.FRONTEND_SERVICE_INTERFACE }} \
+              -e FRONTEND_SERVICE_PORT=${{ vars.FRONTEND_SERVICE_PORT }} \
+              ${{ vars.FRONTEND_IMAGE_NAME }}
             
             # Verify the container is running
             echo "⏳ Waiting for container to initialize..." # Wait for startup
