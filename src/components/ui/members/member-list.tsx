@@ -36,6 +36,7 @@ export function MemberList({
               userId={user.id}
               userRelationships={userRelationshipsMap[user.id]}
               onRefresh={onRefresh}
+              users={users}
             />
           ))}
         </div>
