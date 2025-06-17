@@ -1,4 +1,4 @@
-type IconProps = React.HTMLAttributes<SVGElement>
+type IconProps = React.HTMLAttributes<SVGElement>;
 
 export const Icons = {
   logo: (props: IconProps) => (
@@ -29,11 +29,20 @@ export const Icons = {
     </svg>
   ),
   refactor_logo: (props: IconProps) => (
-    <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
-    width="20" height="28" viewBox="0 0 243 256"
-    preserveAspectRatio="xMidYMid meet" {...props}>
-      <g transform="translate(0.000000,256.000000) scale(0.100000,-0.100000)"
-      fill="black" stroke="none">
+    <svg
+      version="1.0"
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="28"
+      viewBox="0 0 243 256"
+      preserveAspectRatio="xMidYMid meet"
+      {...props}
+    >
+      <g
+        transform="translate(0.000000,256.000000) scale(0.100000,-0.100000)"
+        fill="black"
+        stroke="none"
+      >
         <path
           fill="currentColor"
           d="M0 1330 l0 -1230 253 0 252 0 0 977 0 978 456 3 456 2 112 -106 111
@@ -171,4 +180,4 @@ export const Icons = {
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
   ),
-}
+};
