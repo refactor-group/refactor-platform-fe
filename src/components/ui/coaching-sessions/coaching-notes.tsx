@@ -84,7 +84,9 @@ const useCollaborationProvider = (doc: Y.Doc) => {
   }, [jwt, providerRef.current]);
 
   return {
-    isLoading: isLoading || isSyncing,
+    // isSyncing indicates whether a first handshake with the server has been established
+    // which is exactly the right thing to indicate if this hook isLoading or not.
+    isLoading: isSyncing,
     isError,
     extensions,
   };
@@ -107,7 +109,7 @@ const CoachingNotes = () => {
           }
           return prev + Math.random() * 15;
         });
-      }, 200);
+      }, 150);
 
       return () => clearInterval(interval);
     } else {
