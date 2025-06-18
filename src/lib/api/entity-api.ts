@@ -1,8 +1,11 @@
 import { siteConfig } from "@/site.config";
-import { Id } from "@/types/general";
+import { Id, EntityApiError } from "@/types/general";
 import axios from "axios";
 import { useState } from "react";
 import useSWR, { KeyedMutator, SWRConfiguration, useSWRConfig } from "swr";
+
+// Re-export EntityApiError for easy access
+export { EntityApiError } from "@/types/general";
 
 export namespace EntityApi {
   interface ApiResponse<T> {
@@ -77,7 +80,7 @@ export namespace EntityApi {
    * @param data Optional payload data required for POST/PUT operations
    * @param config Optional post/put/delete configuration object
    * @returns Promise resolving to response data of type R
-   * @throws Error for invalid methods or missing required payload data
+   * @throws EntityApiError for axios errors, Error for invalid methods or missing required payload data
    *
    * @remarks This function:
    * - Enforces RESTful conventions for mutation operations
@@ -85,6 +88,7 @@ export namespace EntityApi {
    * - Applies consistent request configuration (credentials, timeout, headers)
    * - Extracts and returns only the data portion from API responses
    * - Throws explicit errors for invalid method/data combinations
+   * - Wraps axios errors in EntityApiError for enhanced error handling
    *
    * @usage
    * - POST/PUT: Requires data payload matching type T
@@ -105,18 +109,28 @@ export namespace EntityApi {
       ...config,
     };
 
-    let response;
-    if (method === "delete") {
-      response = await axios.delete<ApiResponse<R>>(url, combinedConfig);
-    } else if (method === "put" && data) {
-      response = await axios.put<ApiResponse<R>>(url, data, combinedConfig);
-    } else if (data) {
-      response = await axios.post<ApiResponse<R>>(url, data, combinedConfig);
-    } else {
-      throw new Error("Invalid method or missing data");
-    }
+    try {
+      let response;
+      if (method === "delete") {
+        response = await axios.delete<ApiResponse<R>>(url, combinedConfig);
+      } else if (method === "put" && data) {
+        response = await axios.put<ApiResponse<R>>(url, data, combinedConfig);
+      } else if (data) {
+        response = await axios.post<ApiResponse<R>>(url, data, combinedConfig);
+      } else {
+        throw new Error("Invalid method or missing data");
+      }
 
-    return response.data.data;
+      return response.data.data;
+    } catch (error) {
+      // Wrap axios errors in EntityApiError for enhanced error handling
+      if (axios.isAxiosError(error)) {
+        throw new EntityApiError(method, url, error);
+      }
+      
+      // Re-throw non-axios errors as-is
+      throw error;
+    }
   };
 
   /**
@@ -414,9 +428,9 @@ export namespace EntityApi {
         mutate((key) => typeof key === "string" && key.includes(baseUrl));
         return result;
       } catch (err) {
-        setError(
-          err instanceof Error ? err : new Error("Unknown error occurred")
-        );
+        // Handle both EntityApiError and regular Error types
+        const error = err instanceof Error ? err : new Error("Unknown error occurred");
+        setError(error);
         throw err;
       } finally {
         setIsLoading(false);
