@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { cn } from "@/components/lib/utils";
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
+import { EntityApiError } from "@/lib/api/entity-api";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useRouter } from "next/navigation";
 import { Icons } from "@/components/ui/icons";
@@ -49,8 +50,25 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       })
       .catch((err) => {
         setIsLoading(false);
-        console.error("Login failed, err: " + err);
-        setError(err.message);
+        console.error("Login failed:", err);
+        
+        // Enhanced error handling with EntityApiError
+        if (err instanceof EntityApiError) {
+          // Handle specific HTTP status codes for better UX
+          if (err.status === 401) {
+            setError("Invalid email or password. Please try again.");
+          } else if (err.status === 429) {
+            setError("Too many login attempts. Please wait before trying again.");
+          } else if (err.isServerError()) {
+            setError("Server error occurred. Please try again later.");
+          } else if (err.isNetworkError()) {
+            setError("Network error. Please check your connection and try again.");
+          } else {
+            setError(err.message);
+          }
+        } else {
+          setError(err.message || "An unexpected error occurred");
+        }
       });
   }
 
