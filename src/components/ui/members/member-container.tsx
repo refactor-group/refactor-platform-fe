@@ -2,7 +2,7 @@ import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
 import { User } from "@/types/user";
 import { Role } from "@/types/user";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { UserSession } from "@/types/user-session";
 
 interface MemberContainerProps {

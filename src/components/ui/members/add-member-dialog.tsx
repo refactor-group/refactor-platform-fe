@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useUserMutation } from "@/lib/api/organizations/users";
 import { NewUser } from "@/types/user";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { toast } from "sonner";
 
 interface AddMemberDialogProps {
   open: boolean;
@@ -85,10 +86,11 @@ export function AddMemberDialog({
       });
       setPasswordError("");
       onMemberAdded();
+      toast.success("Member created successfully");
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating user:", error);
-      // Handle error appropriately
+      toast.error("Error creating member");
     }
   };
 
