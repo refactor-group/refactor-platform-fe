@@ -61,9 +61,9 @@ export function MemberCard({
 
   // Check if current user is a coach in any of this user's relationships
   // and make sure we can't delete ourselves. Admins can delete any user.
-  const canDeleteUser = userRelationships?.some(
+  const canDeleteUser = (userRelationships?.some(
     (rel) => rel.coach_id === userSession.id && userId !== userSession.id
-  ) || (userSession.role === Role.Admin && userSession.id !== userId);
+  ) || (userSession.role === Role.Admin)) && userSession.id !== userId;
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this member?")) {
