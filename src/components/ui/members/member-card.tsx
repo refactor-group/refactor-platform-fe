@@ -66,6 +66,8 @@ export function MemberCard({
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(currentOrganizationId);
   const { error: createError, createNested: createRelationship } = useCoachingRelationshipMutation(currentOrganizationId);
 
+  console.log("is a coach", isACoach);
+
   // Check if current user is a coach in any of this user's relationships
   // and make sure we can't delete ourselves. Admins can delete any user.
   const canDeleteUser = (userRelationships?.some(
@@ -143,7 +145,7 @@ export function MemberCard({
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
       </div>
-      {isACoach || userSession.role === Role.Admin && (
+      {(isACoach || userSession.role === Role.Admin) && (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="text-muted-foreground">

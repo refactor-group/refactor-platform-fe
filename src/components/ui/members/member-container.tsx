@@ -5,6 +5,7 @@ import { Role } from "@/types/user";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useEffect } from "react";
 
 interface MemberContainerProps {
   users: User[];
@@ -27,9 +28,11 @@ export function MemberContainer({
     const { setIsACoach, isACoach } = useAuthStore((state) => state);
 
     // Check if current user is a coach in any relationship
-    setIsACoach(relationships.some(
-      (rel) => rel.coach_id === userSession.id
-    ));
+    useEffect(() => {
+      setIsACoach(
+        relationships.some((rel) => rel.coach_id === userSession.id)
+      );
+    }, [relationships, userSession.id, setIsACoach]);
 
 
   
