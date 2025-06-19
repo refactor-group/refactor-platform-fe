@@ -14,6 +14,7 @@ import { MoreHorizontal, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogFooter,
   DialogTitle,
@@ -41,6 +42,12 @@ interface MemberCardProps {
   userRelationships: CoachingRelationshipWithUserNames[];
   onRefresh: () => void;
   users: User[];
+}
+
+interface Member {
+  id: Id;
+  first_name: string;
+  last_name: string;
 }
 
 export function MemberCard({
@@ -82,38 +89,50 @@ export function MemberCard({
     onRefresh();
   };
 
+  const handleAssignMember = (val: string) => {
+    const user = users.find((m) => m.id === val);
+    if (!user) return;
+    const member: Member = {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+    };
+    setAssignedMember(member);
+  };
+
   // Placeholder – actual UI flows will be implemented later
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignMode, setAssignMode] = useState<"coach" | "coachee">("coach");
-  const [selectedMemberId, setSelectedMemberId] = useState<Id | null>(null);
-  const [assignedMemberId, setAssignedMemberId] = useState<Id | null>(null);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [assignedMember, setAssignedMember] = useState<Member | null>(null);
 
   const handleCreateCoachingRelationship = () => {
-    if (!selectedMemberId || !assignedMemberId) return;
+    if (!selectedMember || !assignedMember) return;
 
     if (assignMode === "coach") {
-      console.log("Assign", selectedMemberId, "as coach for", userId);
+      console.log("Assign", selectedMember.id, "as coach for", userId);
       createRelationship(currentOrganizationId, {
-        coach_id: assignedMemberId,
-        coachee_id: selectedMemberId,
+        coach_id: assignedMember.id,
+        coachee_id: selectedMember.id,
       });
     } else {
-      console.log("Assign", selectedMemberId, "as coachee for", userId);
+      console.log("Assign", selectedMember.id, "as coachee for", userId);
       createRelationship(currentOrganizationId, {
-        coach_id: selectedMemberId,
-        coachee_id: assignedMemberId,
+        coach_id: selectedMember.id,
+        coachee_id: assignedMember.id,
       });
     }
 
     if (createError) {
-      toast.error("Error creating Coaching Relationship");
+      toast.error(`Error assigning ${assignMode}`);
       return;
     }
     
-    toast.success("Coaching Relationship created successfully");
+    toast.success(`Successfully assigned ${assignedMember.first_name} ${assignedMember.last_name} as ${assignMode} for ${selectedMember.first_name} ${selectedMember.last_name}`);
     onRefresh();
     setAssignDialogOpen(false);
-    setSelectedMemberId(null);
+    setSelectedMember(null);
+    setAssignedMember(null);
   };
 
   return (
@@ -137,7 +156,7 @@ export function MemberCard({
                 onClick={() => {
                   setAssignMode("coach");
                   setAssignDialogOpen(true);
-                  setSelectedMemberId(userId);
+                  setSelectedMember({id: userId, first_name: firstName, last_name: lastName});
                 }}
               >
                 Assign Coach
@@ -146,7 +165,7 @@ export function MemberCard({
                 onClick={() => {
                   setAssignMode("coachee");
                   setAssignDialogOpen(true);
-                  setSelectedMemberId(userId);
+                  setSelectedMember({id: userId, first_name: firstName, last_name: lastName});
                 }}
               >
                 Assign Coachee
@@ -174,10 +193,13 @@ export function MemberCard({
             <DialogTitle>
               {assignMode === "coach" ? "Assign Coach" : "Assign Coachee"}
             </DialogTitle>
+            <DialogDescription>
+              Select a member to be their {assignMode === "coach" ? "coach" : "coachee"}
+            </DialogDescription>
           </DialogHeader>
           <Select
-            onValueChange={(val) => setAssignedMemberId(val as Id)}
-            value={assignedMemberId ?? undefined}
+            onValueChange={(val) => handleAssignMember(val)}
+            value={assignedMember?.id?.toString()}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a member" />

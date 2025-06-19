@@ -86,11 +86,11 @@ export function AddMemberDialog({
       });
       setPasswordError("");
       onMemberAdded();
-      toast.success("Member created successfully");
+      toast.success(`New Member ${formData.firstName} ${formData.lastName} added successfully`);
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating user:", error);
-      toast.error("Error creating member");
+      toast.error("There was an error adding the member");
     }
   };
 
