@@ -62,7 +62,7 @@ export function MemberCard({
   const currentOrganizationId = useOrganizationStateStore(
     (state: OrganizationStateStore) => state.currentOrganizationId
   );
-  const { userSession } = useAuthStore((state: AuthStore) => state);
+  const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(currentOrganizationId);
   const { error: createError, createNested: createRelationship } = useCoachingRelationshipMutation(currentOrganizationId);
 
@@ -143,6 +143,7 @@ export function MemberCard({
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
       </div>
+      {isACoach || userSession.role === Role.Admin && (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="text-muted-foreground">
@@ -185,6 +186,7 @@ export function MemberCard({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+    )}
 
       {/* Assign Coach/Coachee Modal */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
