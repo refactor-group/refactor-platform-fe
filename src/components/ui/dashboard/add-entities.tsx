@@ -18,7 +18,7 @@ export default function AddEntities({
 }: AddEntitiesProps) {
   const router = useRouter();
   const { currentOrganizationId } = useOrganizationStateStore((state) => state);
-  const { isCoach } = useAuthStore((state) => state);
+  const { isCurrentCoach } = useAuthStore((state) => state);
 
   const onMemberButtonClicked = () => {
     router.push(`/organizations/${currentOrganizationId}/members`);
@@ -31,12 +31,12 @@ export default function AddEntities({
       </h3>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <AddCoachingSessionButton
-          disabled={!isCoach || !currentOrganizationId}
+          disabled={!isCurrentCoach || !currentOrganizationId}
           onClick={onCreateSession}
         />
 
         <AddMemberButton
-          disabled={!isCoach || !currentOrganizationId}
+          disabled={!isCurrentCoach || !currentOrganizationId}
           onClick={onMemberButtonClicked}
         />
       </div>

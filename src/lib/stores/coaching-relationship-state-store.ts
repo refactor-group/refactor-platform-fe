@@ -3,7 +3,7 @@ import {
   defaultCoachingRelationshipsWithUserNames,
   defaultCoachingRelationshipWithUserNames,
   getCoachingRelationshipById,
-} from "@/types/coaching_relationship_with_user_names";
+} from "@/types/coaching_relationship";
 import { Id } from "@/types/general";
 import { create } from "zustand";
 import { createJSONStorage, devtools, persist } from "zustand/middleware";

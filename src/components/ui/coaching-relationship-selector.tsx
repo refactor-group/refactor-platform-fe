@@ -75,7 +75,7 @@ export default function CoachingRelationshipSelector({
     (action) => action
   );
 
-  const { setIsCoach } = useAuthStore((state) => state);
+  const { setIsCurrentCoach } = useAuthStore((state) => state);
 
   const handleSetCoachingRelationship = (relationshipId: Id) => {
     setCurrentCoachingRelationshipId(relationshipId);
@@ -91,7 +91,7 @@ export default function CoachingRelationshipSelector({
       ? getCurrentCoachingRelationship(currentCoachingRelationshipId)
       : null;
     if (currentRelationship) {
-      setIsCoach(currentRelationship.coach_id);
+      setIsCurrentCoach(currentRelationship.coach_id);
     }
   }, [currentCoachingRelationshipId]);
 

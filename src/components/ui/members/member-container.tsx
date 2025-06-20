@@ -1,8 +1,11 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
 import { User } from "@/types/user";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
+import { Role } from "@/types/user";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { UserSession } from "@/types/user-session";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useEffect } from "react";
 
 interface MemberContainerProps {
   users: User[];
@@ -22,26 +25,33 @@ export function MemberContainer({
   /// Force the AddMemberDialog to open
   openAddMemberDialog,
 }: MemberContainerProps) {
-  // Check if current user is a coach in any relationship
-  const isCoachInAnyRelationship = relationships.some(
-    (rel) => rel.coach_id === userSession.id
-  );
+    const { setIsACoach, isACoach } = useAuthStore((state) => state);
 
-  // Find relationships where current user is either coach or coachee
-  const userRelationships = relationships.filter(
-    (rel) =>
-      rel.coach_id === userSession.id || rel.coachee_id === userSession.id
-  );
+    // Check if current user is a coach in any relationship
+    useEffect(() => {
+      setIsACoach(
+        relationships.some((rel) => rel.coach_id === userSession.id)
+      );
+    }, [relationships, userSession.id, setIsACoach]);
+
+
+  
+    // Find relationships where current user is either coach or coachee
+    const userRelationships = relationships.filter(
+      (rel) =>
+        rel.coach_id === userSession.id || rel.coachee_id === userSession.id
+    );
 
   // Get IDs of users in these relationships
   const associatedUserIds = new Set(
     userRelationships.flatMap((rel) => [rel.coach_id, rel.coachee_id])
   );
 
-  // Filter users to only include those in the relationships
-  const associatedUsers = users.filter((user) =>
-    associatedUserIds.has(user.id)
-  );
+  // If the current user is an admin, show all users. Otherwise, only show users
+  // that are associated with the current user in a coaching relationship.
+  const displayUsers = (userSession.role === Role.Admin) ? users : users.filter((user) =>
+      associatedUserIds.has(user.id)
+    );
 
   if (isLoading) {
     return (
@@ -54,9 +64,9 @@ export function MemberContainer({
       <div className="flex justify-between items-center">
         <h3 className="text-2xl font-semibold">Members</h3>
         {/* Only show the button if user is a coach to _some_ user within the
-        scope of the organization. We may come back and add this directly to user
+        scope of the organization or if user is an admin. We may come back and add this directly to user
         data.  */}
-        {isCoachInAnyRelationship && (
+        {(isACoach || userSession.role === Role.Admin) && (
           <AddMemberButton
             onMemberAdded={onRefresh}
             openAddMemberDialog={openAddMemberDialog}
@@ -64,7 +74,7 @@ export function MemberContainer({
         )}
       </div>
       <MemberList
-        users={associatedUsers}
+        users={displayUsers}
         relationships={userRelationships}
         onRefresh={onRefresh}
       />
