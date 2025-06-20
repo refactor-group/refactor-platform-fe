@@ -8,6 +8,7 @@ import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { Extensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
+import { Progress } from "@/components/ui/progress";
 import { Toolbar } from "@/components/ui/coaching-sessions/coaching-notes/toolbar";
 import { siteConfig } from "@/site.config";
 import "@/styles/styles.scss";
@@ -83,7 +84,9 @@ const useCollaborationProvider = (doc: Y.Doc) => {
   }, [jwt, providerRef.current]);
 
   return {
-    isLoading: isLoading || isSyncing,
+    // isSyncing indicates whether a first handshake with the server has been established
+    // which is exactly the right thing to indicate if this hook isLoading or not.
+    isLoading: isSyncing,
     isError,
     extensions,
   };
@@ -91,15 +94,55 @@ const useCollaborationProvider = (doc: Y.Doc) => {
 
 const CoachingNotes = () => {
   const [doc] = useState(() => new Y.Doc());
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const { isLoading, isError, extensions } = useCollaborationProvider(doc);
 
-  if (isLoading) return <div>Loading coaching notes...</div>;
-  if (isError)
+  // Simulate loading progress
+  useEffect(() => {
+    if (isLoading) {
+      setLoadingProgress(0);
+      const interval = setInterval(() => {
+        setLoadingProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(interval);
+            return 90; // Stop at 90% until actually loaded
+          }
+          return prev + Math.random() * 15;
+        });
+      }, 150);
+
+      return () => clearInterval(interval);
+    } else {
+      // Complete the progress (100%) when loading is done
+      setLoadingProgress(100);
+    }
+  }, [isLoading]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center space-y-4 p-8 min-h-[440px] lg:min-h-[440px] sm:min-h-[200px] md:min-h-[350px]">
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Loading coaching notes...
+            </span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {Math.round(loadingProgress)}%
+            </span>
+          </div>
+          <Progress value={loadingProgress} className="h-2" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
     return (
       <div>
         We could not retrieve your coaching notes. Please try again later.
       </div>
     );
+  }
 
   return (
     <div className="border rounded">

@@ -33,8 +33,6 @@ export function MemberContainer({
         relationships.some((rel) => rel.coach_id === userSession.id)
       );
     }, [relationships, userSession.id, setIsACoach]);
-
-
   
     // Find relationships where current user is either coach or coachee
     const userRelationships = relationships.filter(
