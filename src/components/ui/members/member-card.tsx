@@ -14,6 +14,7 @@ import { MoreHorizontal, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogFooter,
   DialogTitle,
@@ -25,11 +26,13 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { OrganizationStateStore } from "@/lib/stores/organization-state-store";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
 import { User, Role } from "@/types/user";
+import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
+import { toast } from "sonner";
 
 interface MemberCardProps {
   firstName: string;
@@ -39,6 +42,12 @@ interface MemberCardProps {
   userRelationships: CoachingRelationshipWithUserNames[];
   onRefresh: () => void;
   users: User[];
+}
+
+interface Member {
+  id: Id;
+  first_name: string;
+  last_name: string;
 }
 
 export function MemberCard({
@@ -53,27 +62,79 @@ export function MemberCard({
   const currentOrganizationId = useOrganizationStateStore(
     (state: OrganizationStateStore) => state.currentOrganizationId
   );
-  const { userSession } = useAuthStore((state: AuthStore) => state);
-  const { deleteNested: deleteUser } = useUserMutation(currentOrganizationId);
+  const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
+  const { error: deleteError, deleteNested: deleteUser } = useUserMutation(currentOrganizationId);
+  const { error: createError, createNested: createRelationship } = useCoachingRelationshipMutation(currentOrganizationId);
+
+  console.log("is a coach", isACoach);
 
   // Check if current user is a coach in any of this user's relationships
   // and make sure we can't delete ourselves. Admins can delete any user.
-  const canDeleteUser = userRelationships?.some(
+  const canDeleteUser = (userRelationships?.some(
     (rel) => rel.coach_id === userSession.id && userId !== userSession.id
-  ) || (userSession.role === Role.Admin && userSession.id !== userId);
+  ) || (userSession.role === Role.Admin)) && userSession.id !== userId;
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this member?")) {
       return;
     }
+    await deleteUser(currentOrganizationId, userId);
+    onRefresh();
 
-    try {
-      await deleteUser(currentOrganizationId, userId);
+    if (deleteError) {
+      console.error("Error deleting member:", deleteError);
+      toast.error("Error deleting member");
       onRefresh();
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      // TODO: Show an error toast here once we start using toasts for showing operation results.
+      return;
     }
+    toast.success("Member deleted successfully");
+    onRefresh();
+  };
+
+  const handleAssignMember = (val: string) => {
+    const user = users.find((m) => m.id === val);
+    if (!user) return;
+    const member: Member = {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+    };
+    setAssignedMember(member);
+  };
+
+  // Placeholder – actual UI flows will be implemented later
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assignMode, setAssignMode] = useState<"coach" | "coachee">("coach");
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [assignedMember, setAssignedMember] = useState<Member | null>(null);
+
+  const handleCreateCoachingRelationship = () => {
+    if (!selectedMember || !assignedMember) return;
+
+    if (assignMode === "coach") {
+      console.log("Assign", selectedMember.id, "as coach for", userId);
+      createRelationship(currentOrganizationId, {
+        coach_id: assignedMember.id,
+        coachee_id: selectedMember.id,
+      });
+    } else {
+      console.log("Assign", selectedMember.id, "as coachee for", userId);
+      createRelationship(currentOrganizationId, {
+        coach_id: selectedMember.id,
+        coachee_id: assignedMember.id,
+      });
+    }
+
+    if (createError) {
+      toast.error(`Error assigning ${assignMode}`);
+      return;
+    }
+    
+    toast.success(`Successfully assigned ${assignedMember.first_name} ${assignedMember.last_name} as ${assignMode} for ${selectedMember.first_name} ${selectedMember.last_name}`);
+    onRefresh();
+    setAssignDialogOpen(false);
+    setSelectedMember(null);
+    setAssignedMember(null);
   };
 
   // Placeholder – actual UI flows will be implemented later
@@ -101,6 +162,7 @@ export function MemberCard({
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
       </div>
+      {(isACoach || userSession.role === Role.Admin) && (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="text-muted-foreground">
@@ -114,6 +176,7 @@ export function MemberCard({
                 onClick={() => {
                   setAssignMode("coach");
                   setAssignDialogOpen(true);
+                  setSelectedMember({id: userId, first_name: firstName, last_name: lastName});
                 }}
               >
                 Assign Coach
@@ -122,6 +185,7 @@ export function MemberCard({
                 onClick={() => {
                   setAssignMode("coachee");
                   setAssignDialogOpen(true);
+                  setSelectedMember({id: userId, first_name: firstName, last_name: lastName});
                 }}
               >
                 Assign Coachee
@@ -141,6 +205,7 @@ export function MemberCard({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+    )}
 
       {/* Assign Coach/Coachee Modal */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
@@ -149,10 +214,13 @@ export function MemberCard({
             <DialogTitle>
               {assignMode === "coach" ? "Assign Coach" : "Assign Coachee"}
             </DialogTitle>
+            <DialogDescription>
+              Select a member to be their {assignMode === "coach" ? "coach" : "coachee"}
+            </DialogDescription>
           </DialogHeader>
           <Select
-            onValueChange={(val) => setSelectedMemberId(val as Id)}
-            value={selectedMemberId ?? undefined}
+            onValueChange={(val) => handleAssignMember(val)}
+            value={assignedMember?.id?.toString()}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a member" />

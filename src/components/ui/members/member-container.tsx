@@ -2,8 +2,10 @@ import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
 import { User } from "@/types/user";
 import { Role } from "@/types/user";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship_with_user_names";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { UserSession } from "@/types/user-session";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useEffect } from "react";
 
 interface MemberContainerProps {
   users: User[];
@@ -23,10 +25,14 @@ export function MemberContainer({
   /// Force the AddMemberDialog to open
   openAddMemberDialog,
 }: MemberContainerProps) {
+    const { setIsACoach, isACoach } = useAuthStore((state) => state);
+
     // Check if current user is a coach in any relationship
-    const isCoachInAnyRelationship = relationships.some(
-      (rel) => rel.coach_id === userSession.id
-    );
+    useEffect(() => {
+      setIsACoach(
+        relationships.some((rel) => rel.coach_id === userSession.id)
+      );
+    }, [relationships, userSession.id, setIsACoach]);
   
     // Find relationships where current user is either coach or coachee
     const userRelationships = relationships.filter(
@@ -58,7 +64,7 @@ export function MemberContainer({
         {/* Only show the button if user is a coach to _some_ user within the
         scope of the organization or if user is an admin. We may come back and add this directly to user
         data.  */}
-        {(isCoachInAnyRelationship || userSession.role === Role.Admin) && (
+        {(isACoach || userSession.role === Role.Admin) && (
           <AddMemberButton
             onMemberAdded={onRefresh}
             openAddMemberDialog={openAddMemberDialog}

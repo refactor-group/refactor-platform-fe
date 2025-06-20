@@ -32,7 +32,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
   const { setCurrentCoachingSessionId } = useCoachingSessionStateStore(
     (state) => state
   );
-  const { isCoach } = useAuthStore((state) => state);
+  const { isCurrentCoach } = useAuthStore((state) => state);
 
   return (
     <Card>
@@ -64,7 +64,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
                 <DropdownMenuItem onClick={onUpdate}>
                   Edit
                 </DropdownMenuItem>
-                {isCoach && (
+                {isCurrentCoach && (
                   <DropdownMenuItem onClick={onDelete} className="text-destructive">
                     Delete
                   </DropdownMenuItem>

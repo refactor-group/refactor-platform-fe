@@ -8,14 +8,17 @@ interface AuthState {
   userId: Id;
   userSession: UserSession;
   isLoggedIn: boolean;
-  isCoach: boolean;
+  isCurrentCoach: boolean;
+  isACoach: boolean;
 }
 
 interface AuthActions {
   login: (userId: Id, userSession: UserSession) => void;
   logout: () => void;
-  setIsCoach: (coachID: Id) => void;
-  getIsCoach: () => boolean;
+  setIsCurrentCoach: (coachID: Id) => void;
+  getIsCurrentCoach: () => boolean;
+  setIsACoach: (isACoach: boolean) => void;
+  getIsACoach: () => boolean;
 }
 
 export type AuthStore = AuthState & AuthActions;
@@ -24,7 +27,8 @@ export const defaultInitState: AuthState = {
   userId: "",
   userSession: defaultUserSession(),
   isLoggedIn: false,
-  isCoach: false,
+  isCurrentCoach: false,
+  isACoach: false,
 };
 
 export const createAuthStore = (initState: AuthState = defaultInitState) => {
@@ -40,12 +44,18 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
           logout: () => {
             set(defaultInitState);
           },
-          setIsCoach: (coachId) => {
+          setIsCurrentCoach: (coachId) => {
             var userId = get().userId;
-            set({ isCoach: !!(userId && coachId && userId == coachId) });
+            set({ isCurrentCoach: !!(userId && coachId && userId == coachId) });
           },
-          getIsCoach: () => {
-            return get().isCoach;
+          getIsCurrentCoach: () => {
+            return get().isCurrentCoach;
+          },
+          setIsACoach: (isACoach: boolean) => {
+            set({ isACoach });
+          },
+          getIsACoach: () => {
+            return get().isACoach;
           },
         }),
         {

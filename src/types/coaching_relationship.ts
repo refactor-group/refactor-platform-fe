@@ -1,18 +1,27 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 
-// This must always reflect the Rust struct on the backend
-// entity_api::coaching_relationship::CoachingRelationshipWithUserNames
-export interface CoachingRelationshipWithUserNames {
+export interface CoachingRelationship {
   id: Id;
   coach_id: Id;
   coachee_id: Id;
+  organization_id: Id;
+  created_at: DateTime;
+  updated_at: DateTime;
+}
+
+// This must always reflect the Rust struct on the backend
+// entity_api::coaching_relationship::CoachingRelationshipWithUserNames
+export type CoachingRelationshipWithUserNames = CoachingRelationship & {
   coach_first_name: string;
   coach_last_name: string;
   coachee_first_name: string;
   coachee_last_name: string;
-  created_at: DateTime;
-  updated_at: DateTime;
+};
+
+export interface NewCoachingRelationship {
+  coach_id: Id;
+  coachee_id: Id;
 }
 
 export function isCoachingRelationshipWithUserNames(
@@ -64,6 +73,7 @@ export function defaultCoachingRelationshipWithUserNames(): CoachingRelationship
     coachee_id: "",
     coach_first_name: "",
     coach_last_name: "",
+    organization_id: "",
     coachee_first_name: "",
     coachee_last_name: "",
     created_at: now,

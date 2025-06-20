@@ -3,9 +3,10 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import {
+  NewCoachingRelationship,
   CoachingRelationshipWithUserNames,
   defaultCoachingRelationshipWithUserNames,
-} from "@/types/coaching_relationship_with_user_names";
+} from "@/types/coaching_relationship";
 import { EntityApi } from "./entity-api";
 
 const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
@@ -53,7 +54,7 @@ export const CoachingRelationshipApi = {
    * Unimplemented
    */
   create: async (
-    _relationship: CoachingRelationshipWithUserNames
+    _relationship: NewCoachingRelationship
   ): Promise<CoachingRelationshipWithUserNames> => {
     throw new Error("Create operation not implemented");
   },
@@ -67,10 +68,10 @@ export const CoachingRelationshipApi = {
    */
   createNested: async (
     organizationId: Id,
-    entity: CoachingRelationshipWithUserNames
+    entity: NewCoachingRelationship
   ): Promise<CoachingRelationshipWithUserNames> => {
     return EntityApi.createFn<
-      CoachingRelationshipWithUserNames,
+      NewCoachingRelationship,
       CoachingRelationshipWithUserNames
     >(
       `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
@@ -81,7 +82,7 @@ export const CoachingRelationshipApi = {
   /**
    * Unimplemented
    */
-  update: async (_id: Id, entity: CoachingRelationshipWithUserNames) => {
+  update: async (_id: Id, entity: NewCoachingRelationship) => {
     throw new Error("Update operation not implemented");
   },
 
@@ -192,7 +193,7 @@ export const useCoachingRelationship = (
  * Provides methods to create, update, and delete coaching relationships.
  */
 export const useCoachingRelationshipMutation = (organizationId: Id) => {
-  return EntityApi.useEntityMutation<CoachingRelationshipWithUserNames>(
+  return EntityApi.useEntityMutation<NewCoachingRelationship, CoachingRelationshipWithUserNames>(
     `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
     {
       create: CoachingRelationshipApi.create,
