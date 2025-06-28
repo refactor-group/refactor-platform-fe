@@ -30,7 +30,7 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
-const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+const SIDEBAR_KEYBOARD_SHORTCUT = "" // Disabled - no keyboard shortcut for sidebar
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -102,10 +102,13 @@ const SidebarProvider = React.forwardRef<
         : setOpen((open) => !open)
     }, [isMobile, setOpen, setOpenMobile])
 
-    // Adds a keyboard shortcut to toggle the sidebar.
+    // Keyboard shortcut for sidebar toggle is disabled to avoid conflicts with editor shortcuts
+    // Previously used Ctrl/Cmd+B which conflicts with TipTap bold formatting
     React.useEffect(() => {
       const handleKeyDown = (event: KeyboardEvent) => {
+        // No keyboard shortcut assigned - sidebar can only be toggled via UI buttons
         if (
+          SIDEBAR_KEYBOARD_SHORTCUT && 
           event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
           (event.metaKey || event.ctrlKey)
         ) {
