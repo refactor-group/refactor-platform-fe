@@ -71,15 +71,17 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
                   <Share className="mr-2 h-4 w-4" />
                   Copy link
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onUpdate}>Edit</DropdownMenuItem>
                 {isCurrentCoach && (
-                  <DropdownMenuItem
-                    onClick={onDelete}
-                    className="text-destructive"
-                  >
-                    Delete
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={onDelete}
+                      className="text-destructive"
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
