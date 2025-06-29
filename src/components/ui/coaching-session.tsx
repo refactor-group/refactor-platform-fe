@@ -12,11 +12,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Share } from "lucide-react";
 import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { copyCoachingSessionLink } from "@/lib/functions/copy-coaching-session-link";
 
 interface CoachingSessionProps {
   coachingSession: CoachingSessionType;
@@ -33,6 +35,10 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
     (state) => state
   );
   const { isCurrentCoach } = useAuthStore((state) => state);
+
+  const handleCopyLink = async () => {
+    await copyCoachingSessionLink(coachingSession.id);
+  };
 
   return (
     <Card>
@@ -61,11 +67,17 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onUpdate}>
-                  Edit
+                <DropdownMenuItem onClick={handleCopyLink}>
+                  <Share className="mr-2 h-4 w-4" />
+                  Copy link
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onUpdate}>Edit</DropdownMenuItem>
                 {isCurrentCoach && (
-                  <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                  <DropdownMenuItem
+                    onClick={onDelete}
+                    className="text-destructive"
+                  >
                     Delete
                   </DropdownMenuItem>
                 )}
