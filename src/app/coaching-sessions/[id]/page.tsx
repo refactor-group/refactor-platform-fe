@@ -14,6 +14,7 @@ import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
 import { useRouter, useParams } from "next/navigation";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import ShareSessionLink from "@/components/ui/share-session-link";
+import { toast } from "sonner";
 
 export default function CoachingSessionsPage() {
   const router = useRouter();
@@ -32,6 +33,10 @@ export default function CoachingSessionsPage() {
     router.push(`/coaching-sessions/${coachingSessionId}`);
   };
 
+  const handleShareError = (error: Error) => {
+    toast.error("Failed to copy session link.");
+  };
+
   return (
     // Never grow wider than the site-header
     <div className="max-w-screen-2xl">
@@ -43,7 +48,7 @@ export default function CoachingSessionsPage() {
               style={siteConfig.titleStyle}
               onRender={handleTitleRender}
             ></CoachingSessionTitle>
-            <ShareSessionLink sessionId={params.id as string} />
+            <ShareSessionLink sessionId={params.id as string} onError={handleShareError} />
           </div>
           <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md space-x-2 sm:justify-end md:justify-start">
             <CoachingSessionSelector

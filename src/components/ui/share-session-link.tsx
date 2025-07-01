@@ -9,14 +9,31 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { copyCoachingSessionLink } from "@/lib/functions/copy-coaching-session-link";
+// Core copy functionality without UI feedback
+export async function copyCoachingSessionLink(sessionId: string): Promise<void> {
+  const url = `${window.location.origin}/coaching-sessions/${sessionId}`;
+  await navigator.clipboard.writeText(url);
+}
+
+// Legacy version with toast for backward compatibility
+export async function copyCoachingSessionLinkWithToast(sessionId: string): Promise<void> {
+  const { toast } = await import("sonner");
+  try {
+    await copyCoachingSessionLink(sessionId);
+    toast("Coaching session link copied successfully.");
+  } catch (error) {
+    console.error("Failed to copy link:", error);
+    throw error;
+  }
+}
 
 interface ShareSessionLinkProps {
   sessionId: string;
   className?: string;
+  onError?: (error: Error) => void;
 }
 
-export default function ShareSessionLink({ sessionId, className }: ShareSessionLinkProps) {
+export default function ShareSessionLink({ sessionId, className, onError }: ShareSessionLinkProps) {
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopyLink = async () => {
@@ -28,6 +45,7 @@ export default function ShareSessionLink({ sessionId, className }: ShareSessionL
       }, 2000);
     } catch (error) {
       console.error("Failed to copy link:", error);
+      onError?.(error as Error);
     }
   };
 

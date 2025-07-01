@@ -18,7 +18,7 @@ import {
 import { MoreHorizontal, Share } from "lucide-react";
 import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { copyCoachingSessionLink } from "@/lib/functions/copy-coaching-session-link";
+import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 
 interface CoachingSessionProps {
   coachingSession: CoachingSessionType;
@@ -37,7 +37,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
   const { isCurrentCoach } = useAuthStore((state) => state);
 
   const handleCopyLink = async () => {
-    await copyCoachingSessionLink(coachingSession.id);
+    await copyCoachingSessionLinkWithToast(coachingSession.id);
   };
 
   return (
