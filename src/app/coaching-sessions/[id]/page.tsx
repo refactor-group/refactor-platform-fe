@@ -2,6 +2,7 @@
 
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCallback } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
@@ -12,7 +13,7 @@ import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes"
 
 import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
 import { useRouter, useParams } from "next/navigation";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "sonner";
 
@@ -20,13 +21,13 @@ export default function CoachingSessionsPage() {
   const router = useRouter();
   const params = useParams();
   const { userId } = useAuthStore((state) => ({ userId: state.userId }));
-  const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
-    (state) => state
-  );
+  
+  // Get current coaching relationship from simplified store
+  const { currentCoachingRelationshipId } = useCurrentCoachingRelationship();
 
-  const handleTitleRender = (sessionTitle: string) => {
+  const handleTitleRender = useCallback((sessionTitle: string) => {
     document.title = sessionTitle;
-  };
+  }, []);
 
   const handleCoachingSessionSelect = (coachingSessionId: string) => {
     console.debug("coachingSessionId selected: " + coachingSessionId);

@@ -13,7 +13,6 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useEffect } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { cn } from "../lib/utils";
 
 interface CoachingRelationshipsSelectorProps extends PopoverProps {
@@ -63,16 +62,11 @@ export default function CoachingRelationshipSelector({
     setCurrentCoachingRelationshipId,
   } = useCurrentCoachingRelationship();
   
-  const { resetCoachingSessionState } = useCoachingSessionStateStore(
-    (action) => action
-  );
 
   const { setIsCurrentCoach } = useAuthStore((state) => state);
 
   const handleSetCoachingRelationship = (relationshipId: Id) => {
     setCurrentCoachingRelationshipId(relationshipId);
-    // Ensure that the user doesn't see the previous (stale) list of CoachingSessions
-    resetCoachingSessionState();
     if (onSelect) {
       onSelect(relationshipId);
     }

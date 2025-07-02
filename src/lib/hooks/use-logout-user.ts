@@ -1,8 +1,7 @@
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useSimpleOrganizationStateStore } from "@/lib/providers/simple-organization-state-store-provider";
+import { useSimpleCoachingRelationshipStateStore } from "@/lib/providers/simple-coaching-relationship-state-store-provider";
 import { useRouter } from "next/navigation";
 
 export function useLogoutUser() {
@@ -12,21 +11,15 @@ export function useLogoutUser() {
     userSession: state.userSession,
   }));
   const { delete: deleteUserSession } = useUserSessionMutation();
-  const { resetOrganizationState } = useOrganizationStateStore(
+  const { resetOrganizationState } = useSimpleOrganizationStateStore(
     (action) => action
   );
-  const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(
-    (action) => action
-  );
-  const { resetCoachingSessionState } = useCoachingSessionStateStore(
+  const { resetCoachingRelationshipState } = useSimpleCoachingRelationshipStateStore(
     (action) => action
   );
 
   return async () => {
     try {
-      console.trace("Resetting CoachingSessionStateStore state");
-      resetCoachingSessionState();
-
       console.trace("Resetting CoachingRelationshipStateStore state");
       resetCoachingRelationshipState();
 
