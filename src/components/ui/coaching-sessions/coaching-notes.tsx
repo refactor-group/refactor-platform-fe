@@ -6,7 +6,7 @@ import * as Y from "yjs";
 import { useEffect, useRef, useState } from "react";
 import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
+import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { Extensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
 import { Progress } from "@/components/ui/progress";
 import { Toolbar } from "@/components/ui/coaching-sessions/coaching-notes/toolbar";
@@ -16,14 +16,14 @@ import "@/styles/styles.scss";
 const tiptapAppId = siteConfig.env.tiptapAppId;
 
 const useCollaborationProvider = (doc: Y.Doc) => {
-  const { currentCoachingSessionId } = useCoachingSessionStateStore(
-    (state) => state
-  );
+  // Get coaching session ID from URL
+  const { currentCoachingSessionId } = useCurrentCoachingSession();
+  
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
   const { jwt, isLoading, isError } = useCollaborationToken(
-    currentCoachingSessionId
+    currentCoachingSessionId || ""
   );
   const [isSyncing, setIsSyncing] = useState(true);
   const [extensions, setExtensions] = useState<Array<any>>([]);
