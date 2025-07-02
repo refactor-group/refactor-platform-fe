@@ -7,8 +7,8 @@ import {
   SessionTitle,
   SessionTitleStyle,
 } from "@/types/session-title";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 
 const CoachingSessionTitle: React.FC<{
   locale: string | "us";
@@ -17,29 +17,26 @@ const CoachingSessionTitle: React.FC<{
 }> = ({ locale, style, onRender }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionTitle, setSessionTitle] = useState<SessionTitle>();
-  const { currentCoachingSessionId, getCurrentCoachingSession } =
-    useCoachingSessionStateStore((state) => state);
-  const { currentCoachingRelationshipId, getCurrentCoachingRelationship } =
-    useCoachingRelationshipStateStore((state) => state);
-
-  const coachingSession = getCurrentCoachingSession(currentCoachingSessionId);
-  const coachingRelationship = getCurrentCoachingRelationship(
-    currentCoachingRelationshipId
-  );
+  
+  // Get coaching session from URL path parameter
+  const { currentCoachingSession } = useCurrentCoachingSession();
+  
+  // Get coaching relationship from simplified store
+  const { currentCoachingRelationship } = useCurrentCoachingRelationship();
 
   useEffect(() => {
-    if (!coachingSession || !coachingRelationship) return;
+    if (!currentCoachingSession || !currentCoachingRelationship) return;
 
     setIsLoading(false);
     const title = generateSessionTitle(
-      coachingSession,
-      coachingRelationship,
+      currentCoachingSession,
+      currentCoachingRelationship,
       style,
       locale
     );
     setSessionTitle(title);
     onRender(title.title);
-  }, [coachingSession, coachingRelationship, style, locale, onRender]);
+  }, [currentCoachingSession, currentCoachingRelationship, style, locale, onRender]);
 
   if (isLoading) {
     return (
