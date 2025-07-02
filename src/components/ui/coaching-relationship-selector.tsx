@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/select";
 import { Id } from "@/types/general";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useEffect } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { cn } from "../lib/utils";
 
@@ -33,15 +33,6 @@ function CoachingRelationshipsSelectItems({
 }) {
   const { relationships, isLoading, isError } =
     useCoachingRelationshipList(organizationId);
-  const { setCurrentCoachingRelationships } = useCoachingRelationshipStateStore(
-    (state) => state
-  );
-
-  // Be sure to cache the list of current coaching relationships in the CoachingRelationshipStateStore
-  useEffect(() => {
-    if (!relationships.length) return;
-    setCurrentCoachingRelationships(relationships);
-  }, [relationships, setCurrentCoachingRelationships]);
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error loading coaching relationships</div>;
@@ -68,9 +59,10 @@ export default function CoachingRelationshipSelector({
 }: CoachingRelationshipsSelectorProps) {
   const {
     currentCoachingRelationshipId,
+    currentCoachingRelationship,
     setCurrentCoachingRelationshipId,
-    getCurrentCoachingRelationship,
-  } = useCoachingRelationshipStateStore((state) => state);
+  } = useCurrentCoachingRelationship();
+  
   const { resetCoachingSessionState } = useCoachingSessionStateStore(
     (action) => action
   );
@@ -87,25 +79,18 @@ export default function CoachingRelationshipSelector({
   };
 
   useEffect(() => {
-    const currentRelationship = currentCoachingRelationshipId
-      ? getCurrentCoachingRelationship(currentCoachingRelationshipId)
-      : null;
-    if (currentRelationship) {
-      setIsCurrentCoach(currentRelationship.coach_id);
+    if (currentCoachingRelationship) {
+      setIsCurrentCoach(currentCoachingRelationship.coach_id);
     }
-  }, [currentCoachingRelationshipId]);
-
-  const currentRelationship = currentCoachingRelationshipId
-    ? getCurrentCoachingRelationship(currentCoachingRelationshipId)
-    : null;
+  }, [currentCoachingRelationship, setIsCurrentCoach]);
 
   const displayValue =
-    currentRelationship && currentRelationship.id ? (
+    currentCoachingRelationship && currentCoachingRelationship.id ? (
       <>
-        {currentRelationship.coach_first_name}{" "}
-        {currentRelationship.coach_last_name} -&gt;{" "}
-        {currentRelationship.coachee_first_name}{" "}
-        {currentRelationship.coachee_last_name}
+        {currentCoachingRelationship.coach_first_name}{" "}
+        {currentCoachingRelationship.coach_last_name} -&gt;{" "}
+        {currentCoachingRelationship.coachee_first_name}{" "}
+        {currentCoachingRelationship.coachee_last_name}
       </>
     ) : undefined;
 

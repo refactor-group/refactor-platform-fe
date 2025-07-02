@@ -19,10 +19,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useOrganizationList } from "@/lib/api/organizations";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import type { PopoverProps } from "@radix-ui/react-popover";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { organizationToString } from "@/types/organization";
 
 const LOGO = "/placeholder.svg?height=40&width=40";
@@ -48,21 +48,21 @@ export function OrganizationSwitcher({
   // Use the API hook to fetch organizations
   const { organizations, isLoading, isError } = useOrganizationList(userId);
 
-  const { currentOrganization, setCurrentOrganization } =
-    useOrganizationStateStore((state) => state);
+  // Use simplified organization state with SWR data
+  const { currentOrganizationId, currentOrganization, setCurrentOrganizationId } = useCurrentOrganization();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   // Initialize with first organization if none is selected
   React.useEffect(() => {
-    if (!currentOrganization?.id && organizations && organizations.length > 0) {
+    if (!currentOrganizationId && organizations && organizations.length > 0) {
       console.trace(
         "Initializing current organization to: ",
         organizationToString(organizations[0])
       );
-      setCurrentOrganization(organizations[0]);
+      setCurrentOrganizationId(organizations[0].id);
     }
-  }, [organizations, currentOrganization, setCurrentOrganization]);
+  }, [organizations, currentOrganizationId, setCurrentOrganizationId]);
 
   // Filter organizations based on search query
   const filteredOrganizations = React.useMemo(() => {
@@ -169,7 +169,7 @@ export function OrganizationSwitcher({
         "Setting current organization to: ",
         organizationToString(selectedOrg)
       );
-      setCurrentOrganization(selectedOrg);
+      setCurrentOrganizationId(orgId);
       if (onSelect) onSelect(orgId);
       setOpen(false);
     }
@@ -254,7 +254,7 @@ export function OrganizationSwitcher({
                       "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
                       focusedIndex === index &&
                         "bg-accent text-accent-foreground",
-                      currentOrganization?.id === org.id
+                      currentOrganizationId === org.id
                         ? "font-medium"
                         : "font-normal",
                       "hover:bg-accent hover:text-accent-foreground"
@@ -268,7 +268,7 @@ export function OrganizationSwitcher({
                         <AvatarFallback>{SHORT_NAME}</AvatarFallback>
                       </Avatar>
                       <span>{org.name}</span>
-                      {currentOrganization?.id === org.id && (
+                      {currentOrganizationId === org.id && (
                         <Check className="ml-auto h-4 w-4" />
                       )}
                     </div>
