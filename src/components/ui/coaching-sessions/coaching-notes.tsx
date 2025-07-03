@@ -81,7 +81,7 @@ const useCollaborationProvider = (doc: Y.Doc) => {
         providerRef.current.disconnect();
       }
     };
-  }, [jwt, providerRef.current]);
+  }, [jwt, doc, userSession.display_name]);
 
   return {
     // isSyncing indicates whether a first handshake with the server has been established

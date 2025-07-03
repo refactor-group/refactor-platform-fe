@@ -23,7 +23,7 @@ export interface SimpleCoachingRelationshipStateStoreProviderProps {
 export const SimpleCoachingRelationshipStateStoreProvider = ({
   children,
 }: SimpleCoachingRelationshipStateStoreProviderProps) => {
-  const storeRef = useRef<SimpleCoachingRelationshipStateStoreApi>();
+  const storeRef = useRef<SimpleCoachingRelationshipStateStoreApi | null>(null);
   if (!storeRef.current) {
     storeRef.current = createSimpleCoachingRelationshipStateStore();
   }

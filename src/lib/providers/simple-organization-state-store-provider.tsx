@@ -23,7 +23,7 @@ export interface SimpleOrganizationStateStoreProviderProps {
 export const SimpleOrganizationStateStoreProvider = ({
   children,
 }: SimpleOrganizationStateStoreProviderProps) => {
-  const storeRef = useRef<SimpleOrganizationStateStoreApi>();
+  const storeRef = useRef<SimpleOrganizationStateStoreApi | null>(null);
   if (!storeRef.current) {
     storeRef.current = createSimpleOrganizationStateStore();
   }

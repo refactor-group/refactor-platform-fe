@@ -2,7 +2,7 @@
 
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
@@ -14,6 +14,7 @@ import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes"
 import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
 import { useRouter, useParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
+import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "sonner";
 
@@ -22,8 +23,22 @@ export default function CoachingSessionsPage() {
   const params = useParams();
   const { userId } = useAuthStore((state) => ({ userId: state.userId }));
   
+  // Get current coaching session from URL
+  const { currentCoachingSession } = useCurrentCoachingSession();
+  
   // Get current coaching relationship from simplified store
-  const { currentCoachingRelationshipId } = useCurrentCoachingRelationship();
+  const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId } = useCurrentCoachingRelationship();
+
+  // Auto-sync coaching relationship ID when opening in new tab
+  // If we have session data but no relationship ID in store, sync it from session
+  useEffect(() => {
+    if (currentCoachingSession && 
+        currentCoachingSession.coaching_relationship_id && 
+        !currentCoachingRelationshipId) {
+      console.log('[CoachingSessionPage] Auto-syncing coaching relationship ID from session data:', currentCoachingSession.coaching_relationship_id);
+      setCurrentCoachingRelationshipId(currentCoachingSession.coaching_relationship_id);
+    }
+  }, [currentCoachingSession, currentCoachingRelationshipId, setCurrentCoachingRelationshipId]);
 
   const handleTitleRender = useCallback((sessionTitle: string) => {
     document.title = sessionTitle;
