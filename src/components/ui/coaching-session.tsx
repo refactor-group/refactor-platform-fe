@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
 import { Id } from "@/types/general";
 import {
@@ -31,9 +30,6 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
   onUpdate,
   onDelete,
 }) => {
-  const { setCurrentCoachingSessionId } = useCoachingSessionStateStore(
-    (state) => state
-  );
   const { isCurrentCoach } = useAuthStore((state) => state);
 
   const handleCopyLink = async () => {
@@ -55,7 +51,6 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
               <Button
                 size="sm"
                 className="w-full sm:w-auto mt-2 sm:mt-0 text-sm px-3 py-1"
-                onClick={() => setCurrentCoachingSessionId(coachingSession.id)}
               >
                 Join Session
               </Button>

@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useUserMutation } from "@/lib/api/organizations/users";
 import { NewUser } from "@/types/user";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { toast } from "sonner";
 
 interface AddMemberDialogProps {
@@ -30,9 +30,7 @@ export function AddMemberDialog({
   onOpenChange,
   onMemberAdded,
 }: AddMemberDialogProps) {
-  const currentOrganizationId = useOrganizationStateStore(
-    (state) => state.currentOrganizationId
-  );
+  const { currentOrganizationId } = useCurrentOrganization();
 
   const { createNested: createUserNested } = useUserMutation(
     currentOrganizationId
