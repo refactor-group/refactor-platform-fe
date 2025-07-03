@@ -4,9 +4,9 @@ import { useOrganization } from "@/lib/api/organizations";
 import { useSimpleOrganizationStateStore } from "@/lib/providers/simple-organization-state-store-provider";
 
 /**
- * Hook that combines simple organization state store with SWR organization data.
- * Provides the current organization ID from the store and fetches the full organization
- * data using SWR when an ID is set.
+ * Hook that provides current organization state and data.
+ * Tracks the active organization ID and fetches the full organization
+ * data using SWR when an ID is available.
  * 
  * @returns Object containing current organization ID, full organization data, loading state, and error state
  */
@@ -18,7 +18,7 @@ export const useCurrentOrganization = () => {
   const { organization, isLoading, isError, refresh } = useOrganization(currentOrganizationId || "");
 
   return {
-    // Current organization ID from simple store
+    // Current organization ID
     currentOrganizationId,
     
     // Full organization data from SWR (null if no ID set)

@@ -5,9 +5,9 @@ import { useSimpleCoachingRelationshipStateStore } from "@/lib/providers/simple-
 import { useCurrentOrganization } from "./use-current-organization";
 
 /**
- * Hook that combines simple coaching relationship state store with SWR relationship data.
- * Provides the current coaching relationship ID from the store and fetches the full relationship
- * data using SWR when both organization ID and relationship ID are set.
+ * Hook that provides current coaching relationship state and data.
+ * Tracks the active coaching relationship ID and fetches the full relationship
+ * data using SWR when both organization ID and relationship ID are available.
  * 
  * @returns Object containing current relationship ID, full relationship data, loading state, and error state
  */
@@ -27,7 +27,7 @@ export const useCurrentCoachingRelationship = () => {
   const hasRequiredIds = !!(currentOrganizationId && currentCoachingRelationshipId);
 
   return {
-    // Current coaching relationship ID from simple store
+    // Current coaching relationship ID
     currentCoachingRelationshipId,
     
     // Full coaching relationship data from SWR (null if no IDs set)

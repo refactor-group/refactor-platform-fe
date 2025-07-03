@@ -26,11 +26,11 @@ export default function CoachingSessionsPage() {
   // Get current coaching session from URL
   const { currentCoachingSession } = useCurrentCoachingSession();
   
-  // Get current coaching relationship from simplified store
+  // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId } = useCurrentCoachingRelationship();
 
-  // Auto-sync coaching relationship ID when opening in new tab
-  // If we have session data but no relationship ID in store, sync it from session
+  // Ensure coaching relationship ID is available when opening session in new tab
+  // If session data contains relationship ID but it's missing from current state, sync it
   useEffect(() => {
     if (currentCoachingSession && 
         currentCoachingSession.coaching_relationship_id && 
