@@ -17,6 +17,8 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "sonner";
+import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
+import { EntityApiError } from "@/types/general";
 
 export default function CoachingSessionsPage() {
   const router = useRouter();
@@ -24,25 +26,37 @@ export default function CoachingSessionsPage() {
   const { userId } = useAuthStore((state) => ({ userId: state.userId }));
   
   // Get current coaching session from URL
-  const { currentCoachingSession } = useCurrentCoachingSession();
+  const { currentCoachingSession, isError } = useCurrentCoachingSession();
   
   // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId } = useCurrentCoachingRelationship();
 
-  // Ensure coaching relationship ID is available when opening session in new tab
-  // If session data contains relationship ID but it's missing from current state, sync it
-  useEffect(() => {
-    if (currentCoachingSession && 
-        currentCoachingSession.coaching_relationship_id && 
-        !currentCoachingRelationshipId) {
-      console.log('[CoachingSessionPage] Auto-syncing coaching relationship ID from session data:', currentCoachingSession.coaching_relationship_id);
-      setCurrentCoachingRelationshipId(currentCoachingSession.coaching_relationship_id);
-    }
-  }, [currentCoachingSession, currentCoachingRelationshipId, setCurrentCoachingRelationshipId]);
-
   const handleTitleRender = useCallback((sessionTitle: string) => {
     document.title = sessionTitle;
   }, []);
+
+  // Ensure coaching relationship ID is available when opening session in new tab
+  // If session data contains relationship ID but it's missing from current state, sync it
+  // BUT only if we don't have a 403 error (to prevent setting unauthorized relationship IDs)
+  useEffect(() => {
+    if (currentCoachingSession && 
+        currentCoachingSession.coaching_relationship_id && 
+        !currentCoachingRelationshipId &&
+        !(isError && isError instanceof EntityApiError && isError.status === 403)) {
+      console.log('[CoachingSessionPage] Auto-syncing coaching relationship ID from session data:', currentCoachingSession.coaching_relationship_id);
+      setCurrentCoachingRelationshipId(currentCoachingSession.coaching_relationship_id);
+    }
+  }, [currentCoachingSession, currentCoachingRelationshipId, setCurrentCoachingRelationshipId, isError]);
+
+  // Check for 403 Forbidden error AFTER all hooks are called
+  if (isError && isError instanceof EntityApiError && isError.status === 403) {
+    return (
+      <ForbiddenError 
+        title="Coaching Session Access Denied"
+        message="You don't have permission to access this coaching session. Only the coach and coachee can view this session."
+      />
+    );
+  }
 
   const handleCoachingSessionSelect = (coachingSessionId: string) => {
     console.debug("coachingSessionId selected: " + coachingSessionId);
