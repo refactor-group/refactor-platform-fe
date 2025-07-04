@@ -29,7 +29,8 @@ export default function CoachingSessionsPage() {
   }));
 
   // Get current coaching session from URL
-  const { currentCoachingSession, isError } = useCurrentCoachingSession();
+  const { currentCoachingSessionId, currentCoachingSession, isError } =
+    useCurrentCoachingSession();
 
   // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId } =
@@ -39,32 +40,19 @@ export default function CoachingSessionsPage() {
     document.title = sessionTitle;
   }, []);
 
-  // Ensure coaching relationship ID is available when opening session in new tab
-  // If session data contains relationship ID but it's missing from current state, sync it
-  // BUT only if user is logged in and we don't have a 403 error
+  // Auto-sync relationship ID when session data loads (if not already set)
   useEffect(() => {
     if (
-      isLoggedIn &&
-      currentCoachingSession &&
-      currentCoachingSession.coaching_relationship_id &&
-      !currentCoachingRelationshipId &&
-      !(isError && isError instanceof EntityApiError && isError.status === 403)
+      currentCoachingSession?.coaching_relationship_id &&
+      !currentCoachingRelationshipId
     ) {
-      console.log(
-        "[CoachingSessionPage] Auto-syncing coaching relationship Id from session data:",
-        currentCoachingSession.coaching_relationship_id
-      );
       setCurrentCoachingRelationshipId(
         currentCoachingSession.coaching_relationship_id
       );
     }
-  }, [
-    isLoggedIn,
-    currentCoachingSession,
-    currentCoachingRelationshipId,
-    setCurrentCoachingRelationshipId,
-    isError,
-  ]);
+    // setCurrentCoachingRelationshipId is stable and doesn't need to be in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCoachingSession?.coaching_relationship_id, currentCoachingRelationshipId]);
 
   // Check for 403 Forbidden error AFTER all hooks are called
   if (isError && isError instanceof EntityApiError && isError.status === 403) {

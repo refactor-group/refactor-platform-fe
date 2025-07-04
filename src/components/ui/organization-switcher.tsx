@@ -24,9 +24,10 @@ import type { PopoverProps } from "@radix-ui/react-popover";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { organizationToString } from "@/types/organization";
+import { useEffect } from "react";
 
 const LOGO = "/placeholder.svg?height=40&width=40";
-const SHORT_NAME = "RC";
+const SHORT_NAME = "RG";
 
 interface OrganizationSelectorProps extends PopoverProps {
   /// Called when an Organization is selected
@@ -49,20 +50,33 @@ export function OrganizationSwitcher({
   const { organizations, isLoading, isError } = useOrganizationList(userId);
 
   // Use simplified organization state with SWR data
-  const { currentOrganizationId, currentOrganization, setCurrentOrganizationId } = useCurrentOrganization();
+  const {
+    currentOrganizationId,
+    currentOrganization,
+    setCurrentOrganizationId,
+  } = useCurrentOrganization();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   // Initialize with first organization if none is selected (only when logged in)
-  React.useEffect(() => {
-    if (isLoggedIn && !currentOrganizationId && organizations && organizations.length > 0) {
+  //
+  // Note: This logic can and should change once we add the notion of a user having a default Organization.
+  //       When this happens, the useEffect here should be able to go away and the currentOrganizationId should
+  //       just start off being equal to their default organization's id.
+  useEffect(() => {
+    if (
+      isLoggedIn &&
+      !currentOrganizationId &&
+      organizations &&
+      organizations.length > 0
+    ) {
       console.trace(
         "Initializing current organization to: ",
         organizationToString(organizations[0])
       );
       setCurrentOrganizationId(organizations[0].id);
     }
-  }, [isLoggedIn, organizations, currentOrganizationId, setCurrentOrganizationId]);
+  }, [isLoggedIn, organizations, currentOrganizationId]);
 
   // Filter organizations based on search query
   const filteredOrganizations = React.useMemo(() => {
