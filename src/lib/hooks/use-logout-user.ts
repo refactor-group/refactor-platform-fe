@@ -20,6 +20,10 @@ export function useLogoutUser() {
 
   return async () => {
     try {
+      // Reset auth store FIRST to prevent other components from re-initializing
+      console.trace("Resetting AuthStore state");
+      logout();
+
       console.trace("Resetting CoachingRelationshipStateStore state");
       resetCoachingRelationshipState();
 
@@ -33,12 +37,9 @@ export function useLogoutUser() {
       await deleteUserSession(userSession.id);
     } catch (err) {
       console.warn("Error while logging out session: ", userSession.id, err);
-    } finally {
-      // Ensure we still log out of the frontend even if the backend request
-      // to delete the user session fails.
-      console.trace("Resetting AuthStore state");
+      // If backend delete fails, still ensure frontend logout happened
       logout();
-      
+    } finally {
       console.debug("Navigating to /");
       await router.replace("/");
     }

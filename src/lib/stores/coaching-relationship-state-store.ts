@@ -31,12 +31,14 @@ export const createCoachingRelationshipStateStore = (
             set({ currentCoachingRelationshipId: relationshipId });
           },
           resetCoachingRelationshipState(): void {
+            // Reset the in-memory state
             set(defaultInitState);
           },
         }),
         {
           name: "coaching-relationship-state-store",
           storage: createJSONStorage(() => sessionStorage),
+          version: 1, // Increment version to force clear of old incompatible data
         }
       )
     )

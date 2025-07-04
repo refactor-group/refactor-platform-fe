@@ -31,12 +31,14 @@ export const createOrganizationStateStore = (
             set({ currentOrganizationId: organizationId });
           },
           resetOrganizationState(): void {
+            // Then reset the in-memory state
             set(defaultInitState);
           },
         }),
         {
           name: "organization-state-store",
           storage: createJSONStorage(() => sessionStorage),
+          version: 1, // Increment version to force clear of old incompatible data
         }
       )
     )

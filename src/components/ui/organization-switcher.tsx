@@ -37,7 +37,7 @@ export function OrganizationSwitcher({
   onSelect,
   ...props
 }: OrganizationSelectorProps) {
-  const { userId } = useAuthStore((state) => state);
+  const { userId, isLoggedIn } = useAuthStore((state) => state);
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [focusedIndex, setFocusedIndex] = React.useState(0);
@@ -53,16 +53,16 @@ export function OrganizationSwitcher({
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
-  // Initialize with first organization if none is selected
+  // Initialize with first organization if none is selected (only when logged in)
   React.useEffect(() => {
-    if (!currentOrganizationId && organizations && organizations.length > 0) {
+    if (isLoggedIn && !currentOrganizationId && organizations && organizations.length > 0) {
       console.trace(
         "Initializing current organization to: ",
         organizationToString(organizations[0])
       );
       setCurrentOrganizationId(organizations[0].id);
     }
-  }, [organizations, currentOrganizationId, setCurrentOrganizationId]);
+  }, [isLoggedIn, organizations, currentOrganizationId, setCurrentOrganizationId]);
 
   // Filter organizations based on search query
   const filteredOrganizations = React.useMemo(() => {
