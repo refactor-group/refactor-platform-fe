@@ -57,17 +57,27 @@ export namespace EntityApi {
     config: any,
     transform?: (data: T) => U
   ): Promise<U> => {
-    const response = await axios.get<ApiResponse<T>>(url, {
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-      ...config,
-    });
+    try {
+      const response = await axios.get<ApiResponse<T>>(url, {
+        withCredentials: true,
+        timeout: 5000,
+        headers: {
+          "X-Version": siteConfig.env.backendApiVersion,
+        },
+        ...config,
+      });
 
-    const rawData = response.data.data;
-    return transform ? transform(rawData) : (rawData as unknown as U);
+      const rawData = response.data.data;
+      return transform ? transform(rawData) : (rawData as unknown as U);
+    } catch (error) {
+      // Wrap axios errors in EntityApiError for consistent error handling
+      if (axios.isAxiosError(error)) {
+        throw new EntityApiError("get", url, error);
+      }
+      
+      // Re-throw non-axios errors as-is
+      throw error;
+    }
   };
 
   /**

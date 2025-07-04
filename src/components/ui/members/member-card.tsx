@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useUserMutation } from "@/lib/api/organizations/users";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
-import { OrganizationStateStore } from "@/lib/stores/organization-state-store";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
 import { User, Role } from "@/types/user";
@@ -59,9 +58,7 @@ export function MemberCard({
   onRefresh,
   users,
 }: MemberCardProps) {
-  const currentOrganizationId = useOrganizationStateStore(
-    (state: OrganizationStateStore) => state.currentOrganizationId
-  );
+  const { currentOrganizationId } = useCurrentOrganization();
   const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
     currentOrganizationId

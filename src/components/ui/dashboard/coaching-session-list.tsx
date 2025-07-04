@@ -1,7 +1,8 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
@@ -13,7 +14,6 @@ import {
 import { Id, SortOrder } from "@/types/general";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CoachingRelationshipSelector from "../coaching-relationship-selector";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { cn } from "@/components/lib/utils";
 
 interface CoachingSessionListProps {
@@ -25,10 +25,8 @@ export default function CoachingSessionList({
   className,
   onUpdateSession,
 }: CoachingSessionListProps) {
-  const { currentOrganizationId } = useOrganizationStateStore((state) => state);
-  const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
-    (state) => state
-  );
+  const { currentOrganizationId } = useCurrentOrganization();
+  const { currentCoachingRelationshipId } = useCurrentCoachingRelationship();
   // TODO: for now we hardcode a 2 month window centered around now,
   // eventually we want to make this be configurable somewhere
   // (either on the page or elsewhere)

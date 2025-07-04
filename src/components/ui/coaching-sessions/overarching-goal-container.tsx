@@ -22,17 +22,18 @@ import {
   OverarchingGoal,
   overarchingGoalToString,
 } from "@/types/overarching-goal";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
+import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 
 const OverarchingGoalContainer: React.FC<{
   userId: Id;
 }> = ({ userId }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { currentCoachingSessionId } = useCoachingSessionStateStore(
-    (state) => state
-  );
+  
+  // Get coaching session ID from URL
+  const { currentCoachingSessionId } = useCurrentCoachingSession();
+  
   const { overarchingGoal, isLoading, isError, refresh } =
-    useOverarchingGoalBySession(currentCoachingSessionId);
+    useOverarchingGoalBySession(currentCoachingSessionId || "");
   const { create: createOverarchingGoal, update: updateOverarchingGoal } =
     useOverarchingGoalMutation();
   const {
@@ -50,7 +51,7 @@ const OverarchingGoalContainer: React.FC<{
   const handleAgreementAdded = (body: string): Promise<Agreement> => {
     const newAgreement: Agreement = {
       ...defaultAgreement(),
-      coaching_session_id: currentCoachingSessionId,
+      coaching_session_id: currentCoachingSessionId || "",
       user_id: userId,
       body,
     };
@@ -61,7 +62,7 @@ const OverarchingGoalContainer: React.FC<{
     const updatedAgreement: Agreement = {
       ...defaultAgreement(),
       id,
-      coaching_session_id: currentCoachingSessionId,
+      coaching_session_id: currentCoachingSessionId || "",
       user_id: userId,
       body,
     };
@@ -80,7 +81,7 @@ const OverarchingGoalContainer: React.FC<{
     // Calls the backend endpoint that creates and stores a full Action entity
     const newAction: Action = {
       ...defaultAction(),
-      coaching_session_id: currentCoachingSessionId,
+      coaching_session_id: currentCoachingSessionId || "",
       user_id: userId,
       body,
       status,
@@ -98,7 +99,7 @@ const OverarchingGoalContainer: React.FC<{
     const updatedAction: Action = {
       ...defaultAction(),
       id,
-      coaching_session_id: currentCoachingSessionId,
+      coaching_session_id: currentCoachingSessionId || "",
       user_id: userId,
       body,
       status,
@@ -173,7 +174,7 @@ const OverarchingGoalContainer: React.FC<{
                   <TabsContent value="agreements">
                     <div className="w-full">
                       <AgreementsList
-                        coachingSessionId={currentCoachingSessionId}
+                        coachingSessionId={currentCoachingSessionId || ""}
                         userId={userId}
                         locale={siteConfig.locale}
                         onAgreementAdded={handleAgreementAdded}
@@ -185,7 +186,7 @@ const OverarchingGoalContainer: React.FC<{
                   <TabsContent value="actions">
                     <div className="w-full">
                       <ActionsList
-                        coachingSessionId={currentCoachingSessionId}
+                        coachingSessionId={currentCoachingSessionId || ""}
                         userId={userId}
                         locale={siteConfig.locale}
                         onActionAdded={handleActionAdded}
