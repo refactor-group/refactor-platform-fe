@@ -2,26 +2,26 @@ import { Id } from "@/types/general";
 import { create } from "zustand";
 import { createJSONStorage, devtools, persist } from "zustand/middleware";
 
-interface SimpleOrganizationState {
+interface OrganizationState {
   currentOrganizationId: Id;
 }
 
-interface SimpleOrganizationStateActions {
+interface OrganizationStateActions {
   setCurrentOrganizationId: (organizationId: Id) => void;
   resetOrganizationState(): void;
 }
 
-export type SimpleOrganizationStateStore = SimpleOrganizationState &
-  SimpleOrganizationStateActions;
+export type OrganizationStateStore = OrganizationState &
+  OrganizationStateActions;
 
-export const defaultInitState: SimpleOrganizationState = {
+export const defaultInitState: OrganizationState = {
   currentOrganizationId: "",
 };
 
-export const createSimpleOrganizationStateStore = (
-  initState: SimpleOrganizationState = defaultInitState
+export const createOrganizationStateStore = (
+  initState: OrganizationState = defaultInitState
 ) => {
-  const orgStateStore = create<SimpleOrganizationStateStore>()(
+  const orgStateStore = create<OrganizationStateStore>()(
     devtools(
       persist(
         (set, get) => ({
@@ -35,7 +35,7 @@ export const createSimpleOrganizationStateStore = (
           },
         }),
         {
-          name: "simple-organization-state-store",
+          name: "organization-state-store",
           storage: createJSONStorage(() => sessionStorage),
         }
       )

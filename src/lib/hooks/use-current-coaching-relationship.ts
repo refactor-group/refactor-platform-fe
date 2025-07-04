@@ -1,7 +1,7 @@
 "use client";
 
 import { useCoachingRelationship } from "@/lib/api/coaching-relationships";
-import { useSimpleCoachingRelationshipStateStore } from "@/lib/providers/simple-coaching-relationship-state-store-provider";
+import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCurrentOrganization } from "./use-current-organization";
 
 /**
@@ -13,7 +13,7 @@ import { useCurrentOrganization } from "./use-current-organization";
  */
 export const useCurrentCoachingRelationship = () => {
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, resetCoachingRelationshipState } = 
-    useSimpleCoachingRelationshipStateStore((state) => state);
+    useCoachingRelationshipStateStore((state) => state);
 
   // Get current organization ID (needed for coaching relationship API calls)
   const { currentOrganizationId } = useCurrentOrganization();

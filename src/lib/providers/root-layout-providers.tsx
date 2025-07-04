@@ -3,8 +3,8 @@
 import { ThemeProvider } from "@/components/ui/providers";
 import { AuthStoreProvider } from "@/lib/providers/auth-store-provider";
 import { SWRConfig } from "swr";
-import { SimpleOrganizationStateStoreProvider } from "./simple-organization-state-store-provider";
-import { SimpleCoachingRelationshipStateStoreProvider } from "./simple-coaching-relationship-state-store-provider";
+import { OrganizationStateStoreProvider } from "./organization-state-store-provider";
+import { CoachingRelationshipStateStoreProvider } from "./coaching-relationship-state-store-provider";
 
 export function RootLayoutProviders({
   children,
@@ -20,8 +20,8 @@ export function RootLayoutProviders({
     >
       {/* Provides single AuthStore & AppStateStore instances to all child pages/components/functions */}
       <AuthStoreProvider>
-        <SimpleOrganizationStateStoreProvider>
-          <SimpleCoachingRelationshipStateStoreProvider>
+        <OrganizationStateStoreProvider>
+          <CoachingRelationshipStateStoreProvider>
             <SWRConfig
               value={{
                 revalidateIfStale: true,
@@ -31,8 +31,8 @@ export function RootLayoutProviders({
             >
               {children}
             </SWRConfig>
-          </SimpleCoachingRelationshipStateStoreProvider>
-        </SimpleOrganizationStateStoreProvider>
+          </CoachingRelationshipStateStoreProvider>
+        </OrganizationStateStoreProvider>
       </AuthStoreProvider>
     </ThemeProvider>
   );

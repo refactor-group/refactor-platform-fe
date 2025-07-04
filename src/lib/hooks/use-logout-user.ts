@@ -1,7 +1,7 @@
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useSimpleOrganizationStateStore } from "@/lib/providers/simple-organization-state-store-provider";
-import { useSimpleCoachingRelationshipStateStore } from "@/lib/providers/simple-coaching-relationship-state-store-provider";
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useRouter } from "next/navigation";
 
 export function useLogoutUser() {
@@ -11,10 +11,10 @@ export function useLogoutUser() {
     userSession: state.userSession,
   }));
   const { delete: deleteUserSession } = useUserSessionMutation();
-  const { resetOrganizationState } = useSimpleOrganizationStateStore(
+  const { resetOrganizationState } = useOrganizationStateStore(
     (action) => action
   );
-  const { resetCoachingRelationshipState } = useSimpleCoachingRelationshipStateStore(
+  const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(
     (action) => action
   );
 

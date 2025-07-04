@@ -2,26 +2,26 @@ import { Id } from "@/types/general";
 import { create } from "zustand";
 import { createJSONStorage, devtools, persist } from "zustand/middleware";
 
-interface SimpleCoachingRelationshipState {
+interface CoachingRelationshipState {
   currentCoachingRelationshipId: Id;
 }
 
-interface SimpleCoachingRelationshipStateActions {
+interface CoachingRelationshipStateActions {
   setCurrentCoachingRelationshipId: (relationshipId: Id) => void;
   resetCoachingRelationshipState(): void;
 }
 
-export type SimpleCoachingRelationshipStateStore = SimpleCoachingRelationshipState &
-  SimpleCoachingRelationshipStateActions;
+export type CoachingRelationshipStateStore = CoachingRelationshipState &
+  CoachingRelationshipStateActions;
 
-export const defaultInitState: SimpleCoachingRelationshipState = {
+export const defaultInitState: CoachingRelationshipState = {
   currentCoachingRelationshipId: "",
 };
 
-export const createSimpleCoachingRelationshipStateStore = (
-  initState: SimpleCoachingRelationshipState = defaultInitState
+export const createCoachingRelationshipStateStore = (
+  initState: CoachingRelationshipState = defaultInitState
 ) => {
-  const relStateStore = create<SimpleCoachingRelationshipStateStore>()(
+  const relStateStore = create<CoachingRelationshipStateStore>()(
     devtools(
       persist(
         (set, get) => ({
@@ -35,7 +35,7 @@ export const createSimpleCoachingRelationshipStateStore = (
           },
         }),
         {
-          name: "simple-coaching-relationship-state-store",
+          name: "coaching-relationship-state-store",
           storage: createJSONStorage(() => sessionStorage),
         }
       )

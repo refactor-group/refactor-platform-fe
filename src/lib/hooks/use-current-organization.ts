@@ -1,7 +1,7 @@
 "use client";
 
 import { useOrganization } from "@/lib/api/organizations";
-import { useSimpleOrganizationStateStore } from "@/lib/providers/simple-organization-state-store-provider";
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 
 /**
  * Hook that provides current organization state and data.
@@ -12,7 +12,7 @@ import { useSimpleOrganizationStateStore } from "@/lib/providers/simple-organiza
  */
 export const useCurrentOrganization = () => {
   const { currentOrganizationId, setCurrentOrganizationId, resetOrganizationState } = 
-    useSimpleOrganizationStateStore((state) => state);
+    useOrganizationStateStore((state) => state);
 
   // Fetch organization data using SWR (only if currentOrganizationId exists)
   const { organization, isLoading, isError, refresh } = useOrganization(currentOrganizationId || "");
