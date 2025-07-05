@@ -12,14 +12,14 @@ import {
 } from "@/components/ui/select";
 import { getDateTimeFromString, Id } from "@/types/general";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
-import { useEffect } from "react";
+import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { DateTime } from "ts-luxon";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { CoachingSession } from "@/types/coaching-session";
 import {
   useOverarchingGoalBySession,
   useOverarchingGoalList,
 } from "@/lib/api/overarching-goals";
+import { useRouter } from "next/navigation";
 
 interface CoachingSessionsSelectorProps extends PopoverProps {
   relationshipId: Id;
@@ -40,15 +40,6 @@ function CoachingSessionsSelectItems({
     isLoading: isLoadingSessions,
     isError: isErrorSessions,
   } = useCoachingSessionList(relationshipId, fromDate, toDate);
-
-  const { setCurrentCoachingSessions } = useCoachingSessionStateStore(
-    (state) => state
-  );
-
-  useEffect(() => {
-    if (!coachingSessions.length) return;
-    setCurrentCoachingSessions(coachingSessions);
-  }, [coachingSessions]);
 
   if (isLoadingSessions) return <div>Loading...</div>;
   if (isErrorSessions) return <div>Error loading coaching sessions</div>;
@@ -117,35 +108,33 @@ export default function CoachingSessionSelector({
   onSelect,
   ...props
 }: CoachingSessionsSelectorProps) {
-  const {
-    currentCoachingSessionId,
-    setCurrentCoachingSessionId,
-    getCurrentCoachingSession,
-  } = useCoachingSessionStateStore((state) => state);
-
-  const currentSession = currentCoachingSessionId
-    ? getCurrentCoachingSession(currentCoachingSessionId)
-    : null;
+  const router = useRouter();
+  
+  // Get current coaching session from URL
+  const { currentCoachingSessionId, currentCoachingSession } = useCurrentCoachingSession();
 
   const {
     overarchingGoal,
     isLoading: isLoadingGoal,
     isError: isErrorGoal,
-  } = useOverarchingGoalBySession(currentCoachingSessionId);
+  } = useOverarchingGoalBySession(currentCoachingSessionId || "");
+  
   const handleSetCoachingSession = (coachingSessionId: Id) => {
-    setCurrentCoachingSessionId(coachingSessionId);
+    // Navigate to the coaching session page
+    router.push(`/coaching-sessions/${coachingSessionId}`);
+    
     if (onSelect) {
       onSelect(coachingSessionId);
     }
   };
 
-  const displayValue = currentSession ? (
+  const displayValue = currentCoachingSession ? (
     <div className="flex flex-col w-full">
       <span className="truncate text-left">
         {isLoadingGoal ? "Loading..." : overarchingGoal.title || "No goal set"}
       </span>
       <span className="text-sm text-gray-500 text-left truncate">
-        {getDateTimeFromString(currentSession.date).toLocaleString(
+        {getDateTimeFromString(currentCoachingSession.date).toLocaleString(
           DateTime.DATETIME_FULL
         )}
       </span>
@@ -155,7 +144,7 @@ export default function CoachingSessionSelector({
   return (
     <Select
       disabled={disabled}
-      value={currentCoachingSessionId ?? undefined}
+      value={currentCoachingSessionId || undefined}
       onValueChange={handleSetCoachingSession}
     >
       <SelectTrigger

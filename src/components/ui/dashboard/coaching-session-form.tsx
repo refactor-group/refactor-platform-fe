@@ -2,7 +2,7 @@ import { CoachingSession } from "@/types/coaching-session";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCoachingSessionList, useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -25,9 +25,7 @@ export default function CoachingSessionForm({
     onOpenChange
 }: CoachingSessionFormProps) {
 
-    const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
-        (state) => state
-    );
+    const { currentCoachingRelationshipId } = useCurrentCoachingRelationship();
     const fromDate = DateTime.now().minus({ month: 1 });
     const toDate = DateTime.now().plus({ month: 1 });
     const { refresh } = useCoachingSessionList(

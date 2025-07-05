@@ -1,30 +1,13 @@
-import {
-  CoachingRelationshipWithUserNames,
-  defaultCoachingRelationshipsWithUserNames,
-  defaultCoachingRelationshipWithUserNames,
-  getCoachingRelationshipById,
-} from "@/types/coaching_relationship";
 import { Id } from "@/types/general";
 import { create } from "zustand";
 import { createJSONStorage, devtools, persist } from "zustand/middleware";
 
 interface CoachingRelationshipState {
   currentCoachingRelationshipId: Id;
-  currentCoachingRelationship: CoachingRelationshipWithUserNames;
-  currentCoachingRelationships: CoachingRelationshipWithUserNames[];
 }
 
 interface CoachingRelationshipStateActions {
-  getCurrentCoachingRelationship: (
-    coachingRelationshipId: Id
-  ) => CoachingRelationshipWithUserNames;
-  setCurrentCoachingRelationshipId: (newCoachingRelationshipId: Id) => void;
-  setCurrentCoachingRelationship: (
-    newCoachingRelationship: CoachingRelationshipWithUserNames
-  ) => void;
-  setCurrentCoachingRelationships: (
-    newCoachingRelationships: CoachingRelationshipWithUserNames[]
-  ) => void;
+  setCurrentCoachingRelationshipId: (relationshipId: Id) => void;
   resetCoachingRelationshipState(): void;
 }
 
@@ -33,8 +16,6 @@ export type CoachingRelationshipStateStore = CoachingRelationshipState &
 
 export const defaultInitState: CoachingRelationshipState = {
   currentCoachingRelationshipId: "",
-  currentCoachingRelationship: defaultCoachingRelationshipWithUserNames(),
-  currentCoachingRelationships: defaultCoachingRelationshipsWithUserNames(),
 };
 
 export const createCoachingRelationshipStateStore = (
@@ -46,36 +27,18 @@ export const createCoachingRelationshipStateStore = (
         (set, get) => ({
           ...initState,
 
-          // Expects the array of CoachingRelationshipsWithUserNames to be fetched and set
-          getCurrentCoachingRelationship: (
-            coachingRelationshipId: Id
-          ): CoachingRelationshipWithUserNames => {
-            return get().currentCoachingRelationships
-              ? getCoachingRelationshipById(
-                  coachingRelationshipId,
-                  get().currentCoachingRelationships
-                )
-              : defaultCoachingRelationshipWithUserNames();
-          },
-          setCurrentCoachingRelationshipId: (newCoachingRelationshipId) => {
-            set({ currentCoachingRelationshipId: newCoachingRelationshipId });
-          },
-          setCurrentCoachingRelationship: (newCoachingRelationship) => {
-            set({ currentCoachingRelationship: newCoachingRelationship });
-          },
-          // Reminder: This isn't being used
-          setCurrentCoachingRelationships: (
-            newCoachingRelationships: CoachingRelationshipWithUserNames[]
-          ) => {
-            set({ currentCoachingRelationships: newCoachingRelationships });
+          setCurrentCoachingRelationshipId: (relationshipId: Id) => {
+            set({ currentCoachingRelationshipId: relationshipId });
           },
           resetCoachingRelationshipState(): void {
+            // Reset the in-memory state
             set(defaultInitState);
           },
         }),
         {
           name: "coaching-relationship-state-store",
           storage: createJSONStorage(() => sessionStorage),
+          version: 1, // Increment version to force clear of old incompatible data
         }
       )
     )

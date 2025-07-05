@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Users } from "lucide-react";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/components/lib/utils";
@@ -14,7 +14,7 @@ interface AddMemberButtonProps {
 
 export function AddMemberButton({ disabled, onClick }: AddMemberButtonProps) {
   const router = useRouter();
-  const { currentOrganizationId } = useOrganizationStateStore((state) => state);
+  const { currentOrganizationId } = useCurrentOrganization();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const handleMouseEnter = (item: string) => {

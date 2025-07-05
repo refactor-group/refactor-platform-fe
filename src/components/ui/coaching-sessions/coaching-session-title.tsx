@@ -1,57 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   defaultSessionTitle,
   generateSessionTitle,
-  SessionTitle,
   SessionTitleStyle,
 } from "@/types/session-title";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 
 const CoachingSessionTitle: React.FC<{
   locale: string | "us";
   style: SessionTitleStyle;
   onRender: (sessionTitle: string) => void;
 }> = ({ locale, style, onRender }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [sessionTitle, setSessionTitle] = useState<SessionTitle>();
-  const { currentCoachingSessionId, getCurrentCoachingSession } =
-    useCoachingSessionStateStore((state) => state);
-  const { currentCoachingRelationshipId, getCurrentCoachingRelationship } =
-    useCoachingRelationshipStateStore((state) => state);
+  const lastRenderedTitle = useRef<string>("");
+  
+  // Get coaching session from URL path parameter
+  const { currentCoachingSession, isLoading: sessionLoading } = useCurrentCoachingSession();
+  
+  // Get coaching relationship from simplified store
+  const { currentCoachingRelationship, isLoading: relationshipLoading } = useCurrentCoachingRelationship();
 
-  const coachingSession = getCurrentCoachingSession(currentCoachingSessionId);
-  const coachingRelationship = getCurrentCoachingRelationship(
-    currentCoachingRelationshipId
-  );
+  // Compute session title - memoized to prevent unnecessary recalculations
+  const sessionTitle = useMemo(() => {
+    if (sessionLoading || relationshipLoading) return null;
+    if (!currentCoachingSession || !currentCoachingRelationship) return null;
 
-  useEffect(() => {
-    if (!coachingSession || !coachingRelationship) return;
-
-    setIsLoading(false);
-    const title = generateSessionTitle(
-      coachingSession,
-      coachingRelationship,
+    return generateSessionTitle(
+      currentCoachingSession,
+      currentCoachingRelationship,
       style,
       locale
     );
-    setSessionTitle(title);
-    onRender(title.title);
-  }, [coachingSession, coachingRelationship, style, locale, onRender]);
+  }, [currentCoachingSession, currentCoachingRelationship, style, locale, sessionLoading, relationshipLoading]);
 
-  if (isLoading) {
-    return (
-      <h4 className="font-semibold break-words w-full md:text-clip">
-        {defaultSessionTitle().title}
-      </h4>
-    );
-  }
+  // Only call onRender when the title actually changes
+  useEffect(() => {
+    if (sessionTitle && sessionTitle.title !== lastRenderedTitle.current) {
+      lastRenderedTitle.current = sessionTitle.title;
+      onRender(sessionTitle.title);
+    }
+  }, [sessionTitle, onRender]);
+
+  const displayTitle = sessionTitle?.title || defaultSessionTitle().title;
 
   return (
     <h4 className="font-semibold break-words w-full md:text-clip">
-      {sessionTitle ? sessionTitle.title : defaultSessionTitle().title}
+      {displayTitle}
     </h4>
   );
 };
