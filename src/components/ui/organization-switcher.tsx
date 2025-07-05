@@ -72,6 +72,8 @@ export function OrganizationSwitcher({
     ) {
       setCurrentOrganizationId(organizations[0].id);
     }
+    // setCurrentOrganizationId is stable and doesn't need to be in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, organizations, currentOrganizationId]);
 
   // Filter organizations based on search query
