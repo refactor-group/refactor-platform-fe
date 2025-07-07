@@ -19,14 +19,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useOrganizationList } from "@/lib/api/organizations";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import type { PopoverProps } from "@radix-ui/react-popover";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { organizationToString } from "@/types/organization";
+import { useEffect } from "react";
 
 const LOGO = "/placeholder.svg?height=40&width=40";
-const SHORT_NAME = "RC";
+const SHORT_NAME = "RG";
 
 interface OrganizationSelectorProps extends PopoverProps {
   /// Called when an Organization is selected
@@ -37,7 +38,7 @@ export function OrganizationSwitcher({
   onSelect,
   ...props
 }: OrganizationSelectorProps) {
-  const { userId } = useAuthStore((state) => state);
+  const { userId, isLoggedIn } = useAuthStore((state) => state);
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [focusedIndex, setFocusedIndex] = React.useState(0);
@@ -48,21 +49,34 @@ export function OrganizationSwitcher({
   // Use the API hook to fetch organizations
   const { organizations, isLoading, isError } = useOrganizationList(userId);
 
-  const { currentOrganization, setCurrentOrganization } =
-    useOrganizationStateStore((state) => state);
+  // Use simplified organization state with SWR data
+  const {
+    currentOrganizationId,
+    currentOrganization,
+    setCurrentOrganizationId,
+  } = useCurrentOrganization();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
-  // Initialize with first organization if none is selected
-  React.useEffect(() => {
-    if (!currentOrganization?.id && organizations && organizations.length > 0) {
+  // Initialize with first organization if none is selected (only when logged in)
+  //
+  // Note: This logic can and should change once we add the notion of a user having a default Organization.
+  //       When this happens, the useEffect here should be able to go away and the currentOrganizationId should
+  //       just start off being equal to their default organization's id.
+  useEffect(() => {
+    if (
+      isLoggedIn &&
+      !currentOrganizationId &&
+      organizations &&
+      organizations.length > 0
+    ) {
       console.trace(
         "Initializing current organization to: ",
         organizationToString(organizations[0])
       );
-      setCurrentOrganization(organizations[0]);
+      setCurrentOrganizationId(organizations[0].id);
     }
-  }, [organizations, currentOrganization, setCurrentOrganization]);
+  }, [isLoggedIn, organizations, currentOrganizationId]);
 
   // Filter organizations based on search query
   const filteredOrganizations = React.useMemo(() => {
@@ -169,7 +183,7 @@ export function OrganizationSwitcher({
         "Setting current organization to: ",
         organizationToString(selectedOrg)
       );
-      setCurrentOrganization(selectedOrg);
+      setCurrentOrganizationId(orgId);
       if (onSelect) onSelect(orgId);
       setOpen(false);
     }
@@ -254,7 +268,7 @@ export function OrganizationSwitcher({
                       "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
                       focusedIndex === index &&
                         "bg-accent text-accent-foreground",
-                      currentOrganization?.id === org.id
+                      currentOrganizationId === org.id
                         ? "font-medium"
                         : "font-normal",
                       "hover:bg-accent hover:text-accent-foreground"
@@ -268,7 +282,7 @@ export function OrganizationSwitcher({
                         <AvatarFallback>{SHORT_NAME}</AvatarFallback>
                       </Avatar>
                       <span>{org.name}</span>
-                      {currentOrganization?.id === org.id && (
+                      {currentOrganizationId === org.id && (
                         <Check className="ml-auto h-4 w-4" />
                       )}
                     </div>

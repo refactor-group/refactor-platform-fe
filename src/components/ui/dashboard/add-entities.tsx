@@ -3,7 +3,7 @@
 import { AddCoachingSessionButton } from "./add-coaching-session-button";
 import { AddMemberButton } from "./add-member-button";
 import { useRouter } from "next/navigation";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { cn } from "@/components/lib/utils";
 
@@ -17,7 +17,7 @@ export default function AddEntities({
   onCreateSession,
 }: AddEntitiesProps) {
   const router = useRouter();
-  const { currentOrganizationId } = useOrganizationStateStore((state) => state);
+  const { currentOrganizationId } = useCurrentOrganization();
   const { isCurrentCoach } = useAuthStore((state) => state);
 
   const onMemberButtonClicked = () => {

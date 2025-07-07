@@ -1,16 +1,20 @@
-// The purpose of this provider is to provide compatibility with
-// Next.js re-rendering and component caching
 "use client";
 
 import { type ReactNode, createContext, useRef, useContext } from "react";
-import { type StoreApi, useStore } from "zustand";
-import {
-  CoachingRelationshipStateStore,
-  createCoachingRelationshipStateStore,
-} from "../stores/coaching-relationship-state-store";
+import { useStore } from "zustand";
 
-export const CoachingRelationshipStateStoreContext =
-  createContext<StoreApi<CoachingRelationshipStateStore> | null>(null);
+import {
+  type CoachingRelationshipStateStore,
+  createCoachingRelationshipStateStore,
+} from "@/lib/stores/coaching-relationship-state-store";
+
+export type CoachingRelationshipStateStoreApi = ReturnType<
+  typeof createCoachingRelationshipStateStore
+>;
+
+export const CoachingRelationshipStateStoreContext = createContext<
+  CoachingRelationshipStateStoreApi | undefined
+>(undefined);
 
 export interface CoachingRelationshipStateStoreProviderProps {
   children: ReactNode;
@@ -19,7 +23,7 @@ export interface CoachingRelationshipStateStoreProviderProps {
 export const CoachingRelationshipStateStoreProvider = ({
   children,
 }: CoachingRelationshipStateStoreProviderProps) => {
-  const storeRef = useRef<StoreApi<CoachingRelationshipStateStore>>(undefined);
+  const storeRef = useRef<CoachingRelationshipStateStoreApi | null>(null);
   if (!storeRef.current) {
     storeRef.current = createCoachingRelationshipStateStore();
   }
@@ -34,15 +38,15 @@ export const CoachingRelationshipStateStoreProvider = ({
 export const useCoachingRelationshipStateStore = <T,>(
   selector: (store: CoachingRelationshipStateStore) => T
 ): T => {
-  const relStateStoreContext = useContext(
+  const coachingRelationshipStateStoreContext = useContext(
     CoachingRelationshipStateStoreContext
   );
 
-  if (!relStateStoreContext) {
+  if (!coachingRelationshipStateStoreContext) {
     throw new Error(
       `useCoachingRelationshipStateStore must be used within CoachingRelationshipStateStoreProvider`
     );
   }
 
-  return useStore(relStateStoreContext, selector);
+  return useStore(coachingRelationshipStateStoreContext, selector);
 };

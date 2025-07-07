@@ -20,7 +20,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 
 // Custom styles for menu buttons to ensure consistent centering
 const menuButtonStyles = {
@@ -31,7 +31,7 @@ const menuButtonStyles = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { currentOrganizationId } = useOrganizationStateStore((state) => state);
+  const { currentOrganizationId } = useCurrentOrganization();
 
   return (
     <Sidebar collapsible="icon" {...props}>

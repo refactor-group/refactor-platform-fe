@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useUserList } from "@/lib/api/organizations/users";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { Id } from "@/types/general";
 import { MemberContainer } from "@/components/ui/members/member-container";
 import { PageContainer } from "@/components/ui/page-container";
@@ -22,9 +22,7 @@ export default function MembersPage({
   );
 
   const organizationId = use(params).id;
-  const setCurrentOrganizationId = useOrganizationStateStore(
-    (state) => state.setCurrentOrganizationId
-  );
+  const { setCurrentOrganizationId } = useCurrentOrganization();
 
   useEffect(() => {
     setCurrentOrganizationId(organizationId);
