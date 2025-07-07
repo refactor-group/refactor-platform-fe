@@ -18,6 +18,7 @@ import { useUserMutation } from "@/lib/api/organizations/users";
 import { NewUser } from "@/types/user";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { toast } from "sonner";
+import { getBrowserTimezone } from "@/lib/timezone-utils";
 
 interface AddMemberDialogProps {
   open: boolean;
@@ -69,7 +70,8 @@ export function AddMemberDialog({
       last_name: formData.lastName,
       display_name: formData.displayName,
       email: formData.email,
-      password: formData.password, // Add password to the NewUser type
+      password: formData.password,
+      timezone: getBrowserTimezone(), // Default to browser timezone for new users
     };
 
     try {
