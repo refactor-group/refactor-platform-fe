@@ -20,6 +20,11 @@ import {
   useOverarchingGoalList,
 } from "@/lib/api/overarching-goals";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import {
+  formatDateInUserTimezone,
+  getBrowserTimezone,
+} from "@/lib/timezone-utils";
 
 interface CoachingSessionsSelectorProps extends PopoverProps {
   relationshipId: Id;
@@ -80,6 +85,7 @@ function SessionItemWithGoal({ session }: { session: CoachingSession }) {
   const { overarchingGoal, isLoading, isError } = useOverarchingGoalBySession(
     session.id
   );
+  const { userSession } = useAuthStore((state) => state);
 
   if (isLoading) return <div>Loading goal...</div>;
   if (isError) return <div>Error loading goal</div>;
@@ -92,8 +98,9 @@ function SessionItemWithGoal({ session }: { session: CoachingSession }) {
             {overarchingGoal.title || "No goal set"}
           </p>
           <p className="truncate text-sm text-gray-400">
-            {getDateTimeFromString(session.date).toLocaleString(
-              DateTime.DATETIME_FULL
+            {formatDateInUserTimezone(
+              session.date,
+              userSession.timezone || getBrowserTimezone()
             )}
           </p>
         </div>
@@ -109,33 +116,41 @@ export default function CoachingSessionSelector({
   ...props
 }: CoachingSessionsSelectorProps) {
   const router = useRouter();
-  
+
   // Get current coaching session from URL
-  const { currentCoachingSessionId, currentCoachingSession } = useCurrentCoachingSession();
+  const { currentCoachingSessionId, currentCoachingSession, isLoading: isLoadingSession } =
+    useCurrentCoachingSession();
+
+  const { userSession } = useAuthStore((state) => state);
 
   const {
     overarchingGoal,
     isLoading: isLoadingGoal,
     isError: isErrorGoal,
   } = useOverarchingGoalBySession(currentCoachingSessionId || "");
-  
+
   const handleSetCoachingSession = (coachingSessionId: Id) => {
     // Navigate to the coaching session page
     router.push(`/coaching-sessions/${coachingSessionId}`);
-    
+
     if (onSelect) {
       onSelect(coachingSessionId);
     }
   };
 
-  const displayValue = currentCoachingSession ? (
+  const displayValue = isLoadingSession ? (
+    <div className="flex flex-col w-full">
+      <span className="truncate text-left">Loading session...</span>
+    </div>
+  ) : currentCoachingSession ? (
     <div className="flex flex-col w-full">
       <span className="truncate text-left">
-        {isLoadingGoal ? "Loading..." : overarchingGoal.title || "No goal set"}
+        {isLoadingGoal ? "Loading..." : overarchingGoal?.title || "No goal set"}
       </span>
       <span className="text-sm text-gray-500 text-left truncate">
-        {getDateTimeFromString(currentCoachingSession.date).toLocaleString(
-          DateTime.DATETIME_FULL
+        {currentCoachingSession.date && formatDateInUserTimezone(
+          currentCoachingSession.date,
+          userSession.timezone || getBrowserTimezone()
         )}
       </span>
     </div>
