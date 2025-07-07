@@ -2,6 +2,7 @@ import { CoachingSession } from "@/types/coaching-session";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import {
   useCoachingSessionList,
   useCoachingSessionMutation,
@@ -11,7 +12,6 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useState } from "react";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 
 export type CoachingSessionFormMode = "create" | "update";
 
