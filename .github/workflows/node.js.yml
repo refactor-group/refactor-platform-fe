@@ -5,7 +5,6 @@ name: Build & Run Tests
 
 permissions:
   contents: read
-  actions: read
 
 on:
   push:
