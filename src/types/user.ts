@@ -8,6 +8,7 @@ export interface User {
   first_name: string;
   last_name: string;
   display_name: string;
+  timezone: string;
   role: Role;
 }
 
@@ -17,6 +18,7 @@ export interface NewUser {
   display_name: string;
   email: string;
   password: string;
+  timezone: string;
 }
 
 export interface NewUserPassword {
@@ -41,6 +43,7 @@ export function parseUser(data: unknown): User {
     first_name: data.first_name,
     last_name: data.last_name,
     display_name: data.display_name,
+    timezone: data.timezone || "UTC",
     role: data.role,
   };
 }
@@ -69,6 +72,7 @@ export function defaultUser(): User {
     first_name: "",
     last_name: "",
     display_name: "",
+    timezone: "UTC",
     role: Role.User,
   };
 }

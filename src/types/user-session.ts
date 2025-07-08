@@ -27,6 +27,7 @@ export function defaultUserSession(): UserSession {
     first_name: "",
     last_name: "",
     display_name: "",
+    timezone: "UTC",
     role: Role.User
   };
 }
