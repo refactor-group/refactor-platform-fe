@@ -1,17 +1,20 @@
-// The purpose of this provider is to provide compatibility with
-// Next.js re-rendering and component caching
 "use client";
 
 import { type ReactNode, createContext, useRef, useContext } from "react";
-import { type StoreApi, useStore } from "zustand";
+import { useStore } from "zustand";
 
 import {
   type OrganizationStateStore,
   createOrganizationStateStore,
 } from "@/lib/stores/organization-state-store";
 
-export const OrganizationStateStoreContext =
-  createContext<StoreApi<OrganizationStateStore> | null>(null);
+export type OrganizationStateStoreApi = ReturnType<
+  typeof createOrganizationStateStore
+>;
+
+export const OrganizationStateStoreContext = createContext<
+  OrganizationStateStoreApi | undefined
+>(undefined);
 
 export interface OrganizationStateStoreProviderProps {
   children: ReactNode;
@@ -20,7 +23,7 @@ export interface OrganizationStateStoreProviderProps {
 export const OrganizationStateStoreProvider = ({
   children,
 }: OrganizationStateStoreProviderProps) => {
-  const storeRef = useRef<StoreApi<OrganizationStateStore>>(undefined);
+  const storeRef = useRef<OrganizationStateStoreApi | null>(null);
   if (!storeRef.current) {
     storeRef.current = createOrganizationStateStore();
   }
@@ -35,13 +38,15 @@ export const OrganizationStateStoreProvider = ({
 export const useOrganizationStateStore = <T,>(
   selector: (store: OrganizationStateStore) => T
 ): T => {
-  const orgStateStoreContext = useContext(OrganizationStateStoreContext);
+  const organizationStateStoreContext = useContext(
+    OrganizationStateStoreContext
+  );
 
-  if (!orgStateStoreContext) {
+  if (!organizationStateStoreContext) {
     throw new Error(
       `useOrganizationStateStore must be used within OrganizationStateStoreProvider`
     );
   }
 
-  return useStore(orgStateStoreContext, selector);
+  return useStore(organizationStateStoreContext, selector);
 };

@@ -14,7 +14,7 @@ import { useUserPasswordMutation } from "@/lib/api/users"
 import { useLogoutUser } from "@/lib/hooks/use-logout-user"
 
 export function MemberProfileContainer({ userId }: { userId: Id }) {
-    const { userId: currentUserId, logout } = useAuthStore((state) => state)
+    const { userId: currentUserId, logout, setTimezone } = useAuthStore((state) => state)
     const { user, isLoading, refresh } = useUser(userId)
     const { update: updateUser, isLoading: isUpdating } = useUserMutation()
     const { update: updatePassword } = useUserPasswordMutation()
@@ -27,6 +27,12 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
         try {
             await updateUser(userId, updatedUser)
             toast("Profile has been updated.")
+            
+            // Update auth store timezone if it was changed
+            if (updatedUser.timezone) {
+                setTimezone(updatedUser.timezone)
+            }
+            
             refresh()
         } catch (error) {
             toast("Error updating profile.")

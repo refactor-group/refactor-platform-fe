@@ -42,7 +42,6 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
     await createUserSession(userSession)
       .then((userSession: UserSession) => {
-        console.debug("userSession: " + userSessionToString(userSession));
         // Create a new session in the auth store
         login(userSession.id, userSession);
         setIsLoading(false);
@@ -51,18 +50,22 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       .catch((err) => {
         setIsLoading(false);
         console.error("Login failed:", err);
-        
+
         // Enhanced error handling with EntityApiError
         if (err instanceof EntityApiError) {
           // Handle specific HTTP status codes for better UX
           if (err.status === 401) {
             setError("Invalid email or password. Please try again.");
           } else if (err.status === 429) {
-            setError("Too many login attempts. Please wait before trying again.");
+            setError(
+              "Too many login attempts. Please wait before trying again."
+            );
           } else if (err.isServerError()) {
             setError("Server error occurred. Please try again later.");
           } else if (err.isNetworkError()) {
-            setError("Network error. Please check your connection and try again.");
+            setError(
+              "Network error. Please check your connection and try again."
+            );
           } else {
             setError(err.message);
           }

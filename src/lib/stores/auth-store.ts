@@ -15,6 +15,7 @@ interface AuthState {
 interface AuthActions {
   login: (userId: Id, userSession: UserSession) => void;
   logout: () => void;
+  setTimezone: (timezone: string) => void;
   setIsCurrentCoach: (coachID: Id) => void;
   getIsCurrentCoach: () => boolean;
   setIsACoach: (isACoach: boolean) => void;
@@ -42,7 +43,13 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
             set({ isLoggedIn: true, userId, userSession });
           },
           logout: () => {
+            // Reset the in-memory state
             set(defaultInitState);
+          },
+          setTimezone: (timezone) => {
+            set((state) => ({
+              userSession: { ...state.userSession, timezone }
+            }));
           },
           setIsCurrentCoach: (coachId) => {
             var userId = get().userId;
@@ -61,6 +68,7 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
         {
           name: "auth-store",
           storage: createJSONStorage(() => localStorage),
+          version: 2, // Increment version to force rehydration with new setTimezone function
         }
       )
     )

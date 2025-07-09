@@ -1,22 +1,26 @@
 "use client";
 
 import React from "react";
-import { format } from "date-fns";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useCoachingSessionStateStore } from "@/lib/providers/coaching-session-state-store-provider";
 import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
 import { Id } from "@/types/general";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Share } from "lucide-react";
 import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
+import {
+  formatDateInUserTimezoneWithTZ,
+  getBrowserTimezone,
+} from "@/lib/timezone-utils";
 
 interface CoachingSessionProps {
   coachingSession: CoachingSessionType;
@@ -29,10 +33,11 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
   onUpdate,
   onDelete,
 }) => {
-  const { setCurrentCoachingSessionId } = useCoachingSessionStateStore(
-    (state) => state
-  );
-  const { isCurrentCoach } = useAuthStore((state) => state);
+  const { isCurrentCoach, userSession } = useAuthStore((state) => state);
+
+  const handleCopyLink = async () => {
+    await copyCoachingSessionLinkWithToast(coachingSession.id);
+  };
 
   return (
     <Card>
@@ -41,7 +46,10 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
           <div className="space-y-1">
             <OverarchingGoal coachingSessionId={coachingSession.id} />
             <div className="text-sm text-muted-foreground">
-              {format(new Date(coachingSession.date), "MMMM d, yyyy h:mm a")}
+              {formatDateInUserTimezoneWithTZ(
+                coachingSession.date,
+                userSession.timezone || getBrowserTimezone()
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -49,7 +57,6 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
               <Button
                 size="sm"
                 className="w-full sm:w-auto mt-2 sm:mt-0 text-sm px-3 py-1"
-                onClick={() => setCurrentCoachingSessionId(coachingSession.id)}
               >
                 Join Session
               </Button>
@@ -61,13 +68,21 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onUpdate}>
-                  Edit
+                <DropdownMenuItem onClick={handleCopyLink}>
+                  <Share className="mr-2 h-4 w-4" />
+                  Copy link
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={onUpdate}>Edit</DropdownMenuItem>
                 {isCurrentCoach && (
-                  <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                    Delete
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={onDelete}
+                      className="text-destructive"
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
