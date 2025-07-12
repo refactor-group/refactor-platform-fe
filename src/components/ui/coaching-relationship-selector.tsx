@@ -60,10 +60,15 @@ export default function CoachingRelationshipSelector({
     currentCoachingRelationshipId,
     currentCoachingRelationship,
     setCurrentCoachingRelationshipId,
+    resetCoachingRelationshipState,
   } = useCurrentCoachingRelationship();
-  
 
-  const { setIsCurrentCoach } = useAuthStore((state) => state);
+  const { relationships, isLoading: isLoadingRelationships } =
+    useCoachingRelationshipList(organizationId);
+
+  const { setIsCurrentCoach, isLoggedIn, userId } = useAuthStore(
+    (state) => state
+  );
 
   const handleSetCoachingRelationship = (relationshipId: Id) => {
     setCurrentCoachingRelationshipId(relationshipId);
@@ -77,6 +82,21 @@ export default function CoachingRelationshipSelector({
       setIsCurrentCoach(currentCoachingRelationship.coach_id);
     }
   }, [currentCoachingRelationship, setIsCurrentCoach]);
+
+  // Auto-select the relationship if the current user only has one coaching relationship
+  // and no prior relationship has already been selected
+  useEffect(() => {
+    if (
+      !isLoadingRelationships &&
+      relationships?.length === 1 &&
+      !currentCoachingRelationshipId
+    ) {
+      setCurrentCoachingRelationshipId(relationships[0].id);
+      if (onSelect) {
+        onSelect(relationships[0].id);
+      }
+    }
+  }, [relationships, currentCoachingRelationshipId, isLoadingRelationships]);
 
   const displayValue =
     currentCoachingRelationship && currentCoachingRelationship.id ? (

@@ -6,6 +6,7 @@ import { cn } from "@/components/lib/utils";
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { EntityApiError } from "@/lib/api/entity-api";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const router = useRouter();
   const { login } = useAuthStore((action) => action);
+  const clearCache = EntityApi.useClearCache();
 
   const { create: createUserSession } = useUserSessionMutation();
 
@@ -29,6 +31,11 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [email, setEmail] = React.useState<string>("");
   const [password, setPassword] = React.useState<string>("");
   const [error, setError] = React.useState<string>("");
+
+  // Clear SWR cache when login page first renders
+  React.useEffect(() => {
+    clearCache();
+  }, []);
 
   async function loginUserSubmit(event: React.SyntheticEvent) {
     event.preventDefault();

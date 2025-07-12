@@ -8,6 +8,7 @@ import {
   defaultCoachingRelationshipWithUserNames,
 } from "@/types/coaching_relationship";
 import { EntityApi } from "./entity-api";
+import { useSWRConfig } from "swr";
 
 const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
 const COACHING_RELATIONSHIPS_BASEURL: string = `coaching_relationships`;
@@ -204,3 +205,4 @@ export const useCoachingRelationshipMutation = (organizationId: Id) => {
     }
   );
 };
+

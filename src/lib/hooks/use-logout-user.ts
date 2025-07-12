@@ -2,6 +2,7 @@ import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
 
 export function useLogoutUser() {
@@ -14,20 +15,27 @@ export function useLogoutUser() {
   const { resetOrganizationState } = useOrganizationStateStore(
     (action) => action
   );
-  const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(
-    (action) => action
+  const { resetCoachingRelationshipState, currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
+    (state) => state
   );
+  const clearCache = EntityApi.useClearCache();
 
   return async () => {
     try {
       // Reset auth store FIRST to prevent other components from re-initializing
-      console.trace("Resetting AuthStore state");
+      console.trace("🚪 LOGOUT: Resetting AuthStore state");
       logout();
 
-      console.trace("Resetting CoachingRelationshipStateStore state");
-      resetCoachingRelationshipState();
+      console.trace("🚪 LOGOUT: Clearing SWR cache");
+      clearCache();
 
-      console.trace("Resetting OrganizationStateStore state");
+      console.trace("🚪 LOGOUT: Resetting CoachingRelationshipStateStore state - BEFORE:", {
+        currentCoachingRelationshipId
+      });
+      resetCoachingRelationshipState();
+      console.trace("🚪 LOGOUT: Resetting CoachingRelationshipStateStore state - AFTER (will check in next render)");
+
+      console.trace("🚪 LOGOUT: Resetting OrganizationStateStore state");
       resetOrganizationState();
 
       console.trace(

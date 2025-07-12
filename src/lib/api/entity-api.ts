@@ -74,7 +74,7 @@ export namespace EntityApi {
       if (axios.isAxiosError(error)) {
         throw new EntityApiError("get", url, error);
       }
-      
+
       // Re-throw non-axios errors as-is
       throw error;
     }
@@ -137,7 +137,7 @@ export namespace EntityApi {
       if (axios.isAxiosError(error)) {
         throw new EntityApiError(method, url, error);
       }
-      
+
       // Re-throw non-axios errors as-is
       throw error;
     }
@@ -439,7 +439,8 @@ export namespace EntityApi {
         return result;
       } catch (err) {
         // Handle both EntityApiError and regular Error types
-        const error = err instanceof Error ? err : new Error("Unknown error occurred");
+        const error =
+          err instanceof Error ? err : new Error("Unknown error occurred");
         setError(error);
         throw err;
       } finally {
@@ -496,6 +497,37 @@ export namespace EntityApi {
       isLoading,
       /** Contains the error if the last operation failed, null otherwise */
       error,
+    };
+  };
+
+  /**
+   * Hook to clear the entire SWR cache.
+   * Useful for clearing stale data when switching users or on logout.
+   */
+  export const useClearCache = () => {
+    const { cache } = useSWRConfig();
+
+    return () => {
+      console.trace("🧹 CACHE-CLEAR: Starting full SWR cache clear");
+      console.trace(
+        "🧹 CACHE-CLEAR: Cache keys before clear:",
+        Array.from(cache.keys())
+      );
+
+      // Clear all SWR cached data to prevent any stale data issues
+      if ("clear" in cache && typeof (cache as any).clear === "function") {
+        (cache as any).clear();
+      } else {
+        // Fallback for cache implementations without clear method
+        for (const key of cache.keys()) {
+          cache.delete(key);
+        }
+      }
+
+      console.trace(
+        "🧹 CACHE-CLEAR: Cache cleared, remaining keys:",
+        Array.from(cache.keys())
+      );
     };
   };
 }
