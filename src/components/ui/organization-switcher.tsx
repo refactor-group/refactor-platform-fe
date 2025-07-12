@@ -70,6 +70,10 @@ export function OrganizationSwitcher({
       organizations &&
       organizations.length > 0
     ) {
+      console.trace(
+        "Initializing current organization to: ",
+        organizationToString(organizations[0])
+      );
       setCurrentOrganizationId(organizations[0].id);
     }
     // setCurrentOrganizationId is stable and doesn't need to be in deps
@@ -177,6 +181,10 @@ export function OrganizationSwitcher({
 
     const selectedOrg = organizations.find((org) => org.id === orgId);
     if (selectedOrg) {
+      console.trace(
+        "Setting current organization to: ",
+        organizationToString(selectedOrg)
+      );
       setCurrentOrganizationId(orgId);
       if (onSelect) onSelect(orgId);
       setOpen(false);
