@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createLoginUrlWithCallback } from "@/lib/utils/redirect-utils";
 
 // 1. Specify protected and public routes
 const protectedRoutes = [
@@ -6,7 +7,8 @@ const protectedRoutes = [
   "/coaching-sessions",
   "/settings",
   "/profile",
-  "/members"
+  "/members",
+  "/organizations"
 ];
 const publicRoutes = ["/"];
 
@@ -24,9 +26,12 @@ export default async function middleware(req: NextRequest) {
   const sessionCookie = req.cookies.get("id");
   const isValidSession = !!sessionCookie;
 
-  // 4. Redirect to / if the user is not authenticated
+  // 4. Redirect to / with callback URL if the user is not authenticated
   if (isProtectedRoute && !isValidSession) {
-    return NextResponse.redirect(new URL("/", req.nextUrl));
+    // Preserve the original path as callback URL for post-login redirect
+    const callbackUrl = req.nextUrl.pathname + req.nextUrl.search;
+    const loginUrl = createLoginUrlWithCallback(callbackUrl);
+    return NextResponse.redirect(new URL(loginUrl, req.nextUrl));
   }
 
   // 5. Redirect to /dashboard if the user is authenticated
