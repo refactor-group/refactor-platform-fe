@@ -8,7 +8,6 @@ import {
   defaultCoachingRelationshipWithUserNames,
 } from "@/types/coaching_relationship";
 import { EntityApi } from "./entity-api";
-import { useSWRConfig } from "swr";
 
 const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
 const COACHING_RELATIONSHIPS_BASEURL: string = `coaching_relationships`;
@@ -194,7 +193,10 @@ export const useCoachingRelationship = (
  * Provides methods to create, update, and delete coaching relationships.
  */
 export const useCoachingRelationshipMutation = (organizationId: Id) => {
-  return EntityApi.useEntityMutation<NewCoachingRelationship, CoachingRelationshipWithUserNames>(
+  return EntityApi.useEntityMutation<
+    NewCoachingRelationship,
+    CoachingRelationshipWithUserNames
+  >(
     `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
     {
       create: CoachingRelationshipApi.create,
@@ -205,4 +207,3 @@ export const useCoachingRelationshipMutation = (organizationId: Id) => {
     }
   );
 };
-

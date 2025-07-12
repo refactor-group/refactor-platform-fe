@@ -8,6 +8,7 @@ import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
 import { DateTime } from "ts-luxon";
+import { useMemo } from "react";
 import {
   filterAndSortCoachingSessions,
   type CoachingSession,
@@ -69,7 +70,9 @@ export default function CoachingSessionList({
     : [];
 
   // Hide the selector if there's only one coaching relationship (but still render it for auto-selection)
-  const shouldHideSelector = relationships && relationships.length === 1;
+  const shouldHideSelector = useMemo(() => 
+    relationships?.length === 1, [relationships?.length]
+  );
 
   let loadingCoachingSessions = (
     <div className="flex items-center justify-center py-8">
