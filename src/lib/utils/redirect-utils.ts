@@ -1,56 +1,50 @@
 /**
  * Pure utility functions for handling authentication redirects
- * These functions don't depend on React and can be used anywhere
+ * Uses native URL constructor for robust security against open redirect attacks
  */
 
 /**
- * Validates if a URL is safe for redirecting
- * Prevents open redirect attacks by ensuring URL is internal
+ * Validates if a URL is safe for redirecting using native URL constructor
+ * Prevents open redirect attacks by ensuring URL is internal to the application
  */
-export function validateRedirectUrl(url: string): boolean {
+export function validateRedirectUrl(url: string, baseUrl: string = 'http://localhost:3000'): boolean {
   if (!url || typeof url !== 'string') {
     return false;
   }
 
-  // Remove leading/trailing whitespace
-  const trimmedUrl = url.trim();
-  
-  // Must start with / for relative URLs
-  if (!trimmedUrl.startsWith('/')) {
+  try {
+    // Use native URL constructor for robust parsing
+    const parsed = new URL(url, baseUrl);
+    const base = new URL(baseUrl);
+    
+    // Only allow same origin (internal) URLs
+    const isSameOrigin = parsed.origin === base.origin;
+    
+    // Must be a pathname (starts with /) and not just root
+    const isValidPath = parsed.pathname.startsWith('/') && parsed.pathname !== '/';
+    
+    // Reject dangerous protocols that URL constructor might allow
+    const isSafeProtocol = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    
+    return isSameOrigin && isValidPath && isSafeProtocol;
+  } catch (error) {
+    // Invalid URL format
     return false;
   }
-
-  // Prevent protocol-relative URLs (//example.com)
-  if (trimmedUrl.startsWith('//')) {
-    return false;
-  }
-
-  // Prevent javascript: or data: URLs
-  if (trimmedUrl.toLowerCase().includes('javascript:') || 
-      trimmedUrl.toLowerCase().includes('data:')) {
-    return false;
-  }
-
-  return true;
 }
 
 /**
- * Checks if a URL points to an internal route (starts with /)
+ * Checks if a URL points to an internal route using native URL validation
  */
-export function isInternalUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') {
-    return false;
-  }
-
-  const trimmedUrl = url.trim();
-  return trimmedUrl.startsWith('/') && !trimmedUrl.startsWith('//');
+export function isInternalUrl(url: string, baseUrl: string = 'http://localhost:3000'): boolean {
+  return validateRedirectUrl(url, baseUrl);
 }
 
 /**
  * Sanitizes and validates a callback URL for safe redirecting
  * Returns the cleaned URL if valid, null if invalid
  */
-export function sanitizeCallbackUrl(url: string | null | undefined): string | null {
+export function sanitizeCallbackUrl(url: string | null | undefined, baseUrl: string = 'http://localhost:3000'): string | null {
   if (!url) {
     return null;
   }
@@ -59,20 +53,17 @@ export function sanitizeCallbackUrl(url: string | null | undefined): string | nu
     // Decode the URL in case it's encoded
     const decodedUrl = decodeURIComponent(url);
     
-    // Validate the URL
-    if (!validateRedirectUrl(decodedUrl)) {
+    // Validate using native URL constructor
+    if (!validateRedirectUrl(decodedUrl, baseUrl)) {
       return null;
     }
 
-    // Additional check: ensure it's not just "/"
-    if (decodedUrl === '/') {
-      return null;
-    }
-
-    return decodedUrl;
+    // Extract just the pathname + search + hash for internal redirect
+    const parsed = new URL(decodedUrl, baseUrl);
+    return parsed.pathname + parsed.search + parsed.hash;
   } catch (error) {
-    // Invalid URL encoding
-    console.warn('Invalid URL encoding in callback URL:', url);
+    // Invalid URL encoding or format
+    console.warn('Invalid URL format in callback URL:', url);
     return null;
   }
 }
