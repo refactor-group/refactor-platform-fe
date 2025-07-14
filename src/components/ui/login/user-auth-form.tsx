@@ -8,6 +8,7 @@ import { EntityApiError } from "@/lib/api/entity-api";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
+import { useAuthRedirect } from "@/lib/hooks/use-auth-redirect";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +23,9 @@ import { useEffect } from "react";
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
-  const router = useRouter();
   const { login } = useAuthStore((action) => action);
   const clearCache = EntityApi.useClearCache();
+  const { redirectAfterLogin } = useAuthRedirect();
 
   const { create: createUserSession } = useUserSessionMutation();
 
@@ -53,7 +54,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         // Create a new session in the auth store
         login(userSession.id, userSession);
         setIsLoading(false);
-        router.push("/dashboard");
+        // Redirect to intended destination or fallback to dashboard
+        redirectAfterLogin("/dashboard");
       })
       .catch((err) => {
         setIsLoading(false);

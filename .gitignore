@@ -38,3 +38,8 @@ next-env.d.ts
 # environment files
 .env*
  
+# vitest test results
+test-results/
+
+# playwright test reports
+playwright-report/
