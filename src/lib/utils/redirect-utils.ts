@@ -7,8 +7,11 @@
  * Validates if a URL is safe for redirecting using native URL constructor
  * Prevents open redirect attacks by ensuring URL is internal to the application
  */
-export function validateRedirectUrl(url: string, baseUrl: string = 'http://localhost:3000'): boolean {
-  if (!url || typeof url !== 'string') {
+export function validateRedirectUrl(
+  url: string,
+  baseUrl: string = "http://localhost:3000"
+): boolean {
+  if (!url || typeof url !== "string") {
     return false;
   }
 
@@ -16,16 +19,18 @@ export function validateRedirectUrl(url: string, baseUrl: string = 'http://local
     // Use native URL constructor for robust parsing
     const parsed = new URL(url, baseUrl);
     const base = new URL(baseUrl);
-    
+
     // Only allow same origin (internal) URLs
     const isSameOrigin = parsed.origin === base.origin;
-    
+
     // Must be a pathname (starts with /) and not just root
-    const isValidPath = parsed.pathname.startsWith('/') && parsed.pathname !== '/';
-    
+    const isValidPath =
+      parsed.pathname.startsWith("/") && parsed.pathname !== "/";
+
     // Reject dangerous protocols that URL constructor might allow
-    const isSafeProtocol = parsed.protocol === 'http:' || parsed.protocol === 'https:';
-    
+    const isSafeProtocol =
+      parsed.protocol === "http:" || parsed.protocol === "https:";
+
     return isSameOrigin && isValidPath && isSafeProtocol;
   } catch (error) {
     // Invalid URL format
@@ -34,17 +39,13 @@ export function validateRedirectUrl(url: string, baseUrl: string = 'http://local
 }
 
 /**
- * Checks if a URL points to an internal route using native URL validation
- */
-export function isInternalUrl(url: string, baseUrl: string = 'http://localhost:3000'): boolean {
-  return validateRedirectUrl(url, baseUrl);
-}
-
-/**
  * Sanitizes and validates a callback URL for safe redirecting
  * Returns the cleaned URL if valid, null if invalid
  */
-export function sanitizeCallbackUrl(url: string | null | undefined, baseUrl: string = 'http://localhost:3000'): string | null {
+export function sanitizeCallbackUrl(
+  url: string | null | undefined,
+  baseUrl: string = "http://localhost:3000"
+): string | null {
   if (!url) {
     return null;
   }
@@ -52,7 +53,7 @@ export function sanitizeCallbackUrl(url: string | null | undefined, baseUrl: str
   try {
     // Decode the URL in case it's encoded
     const decodedUrl = decodeURIComponent(url);
-    
+
     // Validate using native URL constructor
     if (!validateRedirectUrl(decodedUrl, baseUrl)) {
       return null;
@@ -63,7 +64,7 @@ export function sanitizeCallbackUrl(url: string | null | undefined, baseUrl: str
     return parsed.pathname + parsed.search + parsed.hash;
   } catch (error) {
     // Invalid URL encoding or format
-    console.warn('Invalid URL format in callback URL:', url);
+    console.warn("Invalid URL format in callback URL:", url);
     return null;
   }
 }
