@@ -7,17 +7,12 @@ import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { EntityApiError } from "@/lib/api/entity-api";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
-import { useRouter } from "next/navigation";
 import { useAuthRedirect } from "@/lib/hooks/use-auth-redirect";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  defaultUserSession,
-  UserSession,
-  userSessionToString,
-} from "@/types/user-session";
+import { defaultUserSession, UserSession } from "@/types/user-session";
 import { useEffect } from "react";
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
