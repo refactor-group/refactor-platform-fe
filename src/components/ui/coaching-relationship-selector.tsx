@@ -61,7 +61,6 @@ export default function CoachingRelationshipSelector({
     currentCoachingRelationshipId,
     currentCoachingRelationship,
     setCurrentCoachingRelationshipId,
-    resetCoachingRelationshipState,
   } = useCurrentCoachingRelationship();
 
   const { relationships, isLoading: isLoadingRelationships } =

@@ -514,14 +514,9 @@ export namespace EntityApi {
         Array.from(cache.keys())
       );
 
-      // Clear all SWR cached data to prevent any stale data issues
-      if ("clear" in cache && typeof (cache as any).clear === "function") {
-        (cache as any).clear();
-      } else {
-        // Fallback for cache implementations without clear method
-        for (const key of cache.keys()) {
-          cache.delete(key);
-        }
+      // Clear all SWR cached data using the official API
+      for (const key of cache.keys()) {
+        cache.delete(key);
       }
 
       console.trace(

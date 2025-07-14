@@ -9,7 +9,7 @@ import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship
  * - User has exactly one coaching relationship
  * - No relationship is currently selected
  * - Relationships have finished loading
- * 
+ *
  * @param relationships Array of available coaching relationships
  * @param isLoading Whether relationships are currently being loaded
  * @param currentId Currently selected coaching relationship ID
@@ -24,11 +24,7 @@ export const useAutoSelectSingleRelationship = (
   onSelect?: (relationshipId: Id) => void
 ) => {
   useEffect(() => {
-    if (
-      !isLoading &&
-      relationships?.length === 1 &&
-      !currentId
-    ) {
+    if (!isLoading && relationships?.length === 1 && !currentId) {
       try {
         const relationshipId = relationships[0].id;
         setCurrentId(relationshipId);
@@ -36,7 +32,7 @@ export const useAutoSelectSingleRelationship = (
           onSelect(relationshipId);
         }
       } catch (error) {
-        console.error('Auto-selection failed:', error);
+        console.error("Auto-selection failed:", error);
         // Fail gracefully - user can still manually select
       }
     }

@@ -17,6 +17,7 @@ import {
   UserSession,
   userSessionToString,
 } from "@/types/user-session";
+import { useEffect } from "react";
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -33,7 +34,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [error, setError] = React.useState<string>("");
 
   // Clear SWR cache when login page first renders
-  React.useEffect(() => {
+  useEffect(() => {
     clearCache();
   }, []);
 
