@@ -11,6 +11,7 @@ import {
 import { Id } from "@/types/general";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
+import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
 import { useEffect } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { cn } from "../lib/utils";
@@ -21,7 +22,7 @@ interface CoachingRelationshipsSelectorProps extends PopoverProps {
   organizationId: Id;
   /// Disable the component from interaction with the user
   disabled: boolean;
-  /// Called when a CoachingRelationship is selected
+  /// Called when a CoachingRelationship is selected (required when auto-selection is enabled)
   onSelect?: (relationshipId: Id) => void;
 }
 
@@ -61,9 +62,13 @@ export default function CoachingRelationshipSelector({
     currentCoachingRelationship,
     setCurrentCoachingRelationshipId,
   } = useCurrentCoachingRelationship();
-  
 
-  const { setIsCurrentCoach } = useAuthStore((state) => state);
+  const { relationships, isLoading: isLoadingRelationships } =
+    useCoachingRelationshipList(organizationId);
+
+  const { setIsCurrentCoach, isLoggedIn, userId } = useAuthStore(
+    (state) => state
+  );
 
   const handleSetCoachingRelationship = (relationshipId: Id) => {
     setCurrentCoachingRelationshipId(relationshipId);
@@ -77,6 +82,15 @@ export default function CoachingRelationshipSelector({
       setIsCurrentCoach(currentCoachingRelationship.coach_id);
     }
   }, [currentCoachingRelationship, setIsCurrentCoach]);
+
+  // Auto-select relationship when user has exactly one and none is currently selected
+  useAutoSelectSingleRelationship(
+    relationships,
+    isLoadingRelationships,
+    currentCoachingRelationshipId,
+    setCurrentCoachingRelationshipId,
+    onSelect
+  );
 
   const displayValue =
     currentCoachingRelationship && currentCoachingRelationship.id ? (

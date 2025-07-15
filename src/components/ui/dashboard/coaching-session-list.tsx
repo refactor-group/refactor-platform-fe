@@ -5,8 +5,10 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
 import { DateTime } from "ts-luxon";
+import { useMemo } from "react";
 import {
   filterAndSortCoachingSessions,
   type CoachingSession,
@@ -27,6 +29,7 @@ export default function CoachingSessionList({
 }: CoachingSessionListProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const { currentCoachingRelationshipId } = useCurrentCoachingRelationship();
+  const { relationships } = useCoachingRelationshipList(currentOrganizationId || "");
   // TODO: for now we hardcode a 2 month window centered around now,
   // eventually we want to make this be configurable somewhere
   // (either on the page or elsewhere)
@@ -66,6 +69,11 @@ export default function CoachingSessionList({
       )
     : [];
 
+  // Hide the selector if there's only one coaching relationship (but still render it for auto-selection)
+  const shouldHideSelector = useMemo(() => 
+    relationships?.length === 1, [relationships?.length]
+  );
+
   let loadingCoachingSessions = (
     <div className="flex items-center justify-center py-8">
       <p className="text-lg text-muted-foreground">
@@ -97,7 +105,7 @@ export default function CoachingSessionList({
           <div className="flex justify-between flex-col lg:flex-row">
             <div>Coaching Sessions</div>
             <CoachingRelationshipSelector
-              className="pt-4 lg:min-w-64"
+              className={`pt-4 lg:min-w-64 ${shouldHideSelector ? 'hidden' : ''}`}
               organizationId={currentOrganizationId}
               disabled={!currentOrganizationId}
             />
