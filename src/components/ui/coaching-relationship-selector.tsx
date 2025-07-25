@@ -38,9 +38,14 @@ function CoachingRelationshipsSelectItems({
   if (isError) return <div>Error loading coaching relationships</div>;
   if (!relationships?.length) return <div>No coaching relationships found</div>;
 
+  // Sort relationships alphabetically by coachee first name
+  const sortedRelationships = [...relationships].sort((a, b) =>
+    a.coachee_first_name.localeCompare(b.coachee_first_name)
+  );
+
   return (
     <>
-      {relationships.map((rel) => (
+      {sortedRelationships.map((rel) => (
         <SelectItem value={rel.id} key={rel.id}>
           {rel.coach_first_name} {rel.coach_last_name} -&gt;{" "}
           {rel.coachee_first_name} {rel.coachee_last_name}
