@@ -1,7 +1,6 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCallback, useEffect } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -24,18 +23,17 @@ export default function CoachingSessionsPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  
+
   // Get current tab from URL parameter, default to "notes"
-  const currentTab = searchParams.get('tab') || 'notes';
-  
+  const currentTab = searchParams.get("tab") || "notes";
+
   const { userId, isLoggedIn } = useAuthStore((state) => ({
     userId: state.userId,
     isLoggedIn: state.isLoggedIn,
   }));
 
   // Get current coaching session from URL
-  const { currentCoachingSessionId, currentCoachingSession, isError } =
-    useCurrentCoachingSession();
+  const { currentCoachingSession, isError } = useCurrentCoachingSession();
 
   // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId } =
@@ -57,7 +55,10 @@ export default function CoachingSessionsPage() {
     }
     // setCurrentCoachingRelationshipId is stable and doesn't need to be in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentCoachingSession?.coaching_relationship_id, currentCoachingRelationshipId]);
+  }, [
+    currentCoachingSession?.coaching_relationship_id,
+    currentCoachingRelationshipId,
+  ]);
 
   // Check for 403 Forbidden error AFTER all hooks are called
   if (isError && isError instanceof EntityApiError && isError.status === 403) {
@@ -80,17 +81,17 @@ export default function CoachingSessionsPage() {
 
   const handleTabChange = (tabValue: string) => {
     const newSearchParams = new URLSearchParams(searchParams);
-    if (tabValue === 'notes') {
+    if (tabValue === "notes") {
       // Remove tab parameter for default tab to keep URL clean
-      newSearchParams.delete('tab');
+      newSearchParams.delete("tab");
     } else {
-      newSearchParams.set('tab', tabValue);
+      newSearchParams.set("tab", tabValue);
     }
-    
-    const newUrl = newSearchParams.toString() 
+
+    const newUrl = newSearchParams.toString()
       ? `${window.location.pathname}?${newSearchParams.toString()}`
       : window.location.pathname;
-      
+
     router.replace(newUrl, { scroll: false });
   };
 
@@ -126,8 +127,8 @@ export default function CoachingSessionsPage() {
 
       <OverarchingGoalContainer userId={userId} />
 
-      <CoachingTabsContainer 
-        userId={userId} 
+      <CoachingTabsContainer
+        userId={userId}
         defaultValue={currentTab}
         onTabChange={handleTabChange}
       />

@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 import { Id } from "@/types/general";
 import { useAgreementList } from "@/lib/api/agreements";
 import { Agreement, agreementToString } from "@/types/agreement";
@@ -44,8 +44,7 @@ const AgreementsList: React.FC<{
   }
 
   const [newAgreement, setNewAgreement] = useState("");
-  const { agreements, isLoading, isError, refresh } =
-    useAgreementList(coachingSessionId);
+  const { agreements, refresh } = useAgreementList(coachingSessionId);
   const [editingAgreementId, setEditingAgreementId] = useState<Id | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Agreement>(
     AgreementSortField.CreatedAt
@@ -55,7 +54,7 @@ const AgreementsList: React.FC<{
   // Function to render the appropriate sort arrow
   const renderSortArrow = (column: keyof Agreement) => {
     if (sortColumn !== column) return null;
-    
+
     return sortDirection === "asc" ? (
       <ArrowUp className="ml-2 h-4 w-4 inline" />
     ) : (
@@ -80,13 +79,18 @@ const AgreementsList: React.FC<{
     try {
       if (editingAgreementId) {
         // Update existing agreement
-        const agreement = await onAgreementEdited(editingAgreementId, newAgreement);
+        const agreement = await onAgreementEdited(
+          editingAgreementId,
+          newAgreement
+        );
         console.trace("Updated Agreement: " + agreementToString(agreement));
         setEditingAgreementId(null);
       } else {
         // Create new agreement
         const agreement = await onAgreementAdded(newAgreement);
-        console.trace("Newly created Agreement: " + agreementToString(agreement));
+        console.trace(
+          "Newly created Agreement: " + agreementToString(agreement)
+        );
       }
 
       // Refresh the agreements list from the hook
@@ -99,7 +103,6 @@ const AgreementsList: React.FC<{
       throw err;
     }
   };
-
 
   const deleteAgreement = async (id: Id) => {
     if (id === "") return;
@@ -170,9 +173,7 @@ const AgreementsList: React.FC<{
             <TableBody>
               {sortedAgreements.map((agreement) => (
                 <TableRow key={agreement.id}>
-                  <TableCell>
-                    {agreement.body}
-                  </TableCell>
+                  <TableCell>{agreement.body}</TableCell>
                   <TableCell className="hidden sm:table-cell">
                     {agreement.created_at
                       .setLocale(siteConfig.locale)
@@ -214,11 +215,13 @@ const AgreementsList: React.FC<{
           </Table>
         </div>
         {/* Create/Edit agreement form */}
-        <div 
+        <div
           className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0"
           onKeyDown={(e) => {
             if (e.key === "Escape") {
-              editingAgreementId ? cancelEditAgreement() : clearNewAgreementForm();
+              editingAgreementId
+                ? cancelEditAgreement()
+                : clearNewAgreementForm();
             } else if (e.key === "Enter") {
               addAgreement();
             }
@@ -228,7 +231,9 @@ const AgreementsList: React.FC<{
           <Input
             value={newAgreement}
             onChange={(e) => setNewAgreement(e.target.value)}
-            placeholder={editingAgreementId ? "Edit agreement" : "Enter new agreement"}
+            placeholder={
+              editingAgreementId ? "Edit agreement" : "Enter new agreement"
+            }
             className="w-full sm:flex-grow"
           />
           <Button onClick={addAgreement} className="w-full sm:w-auto">

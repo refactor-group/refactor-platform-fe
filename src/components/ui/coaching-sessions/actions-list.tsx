@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,7 +31,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown, CalendarClock } from "lucide-react";
+import {
+  MoreHorizontal,
+  ArrowUp,
+  ArrowDown,
+  CalendarClock,
+} from "lucide-react";
 import {
   ItemStatus,
   actionStatusToString,
@@ -74,8 +79,7 @@ const ActionsList: React.FC<{
     Assigned = "created_at",
   }
 
-  const { actions, isLoading, isError, refresh } =
-    useActionList(coachingSessionId);
+  const { actions, refresh } = useActionList(coachingSessionId);
   const [newBody, setNewBody] = useState("");
   const [newStatus, setNewStatus] = useState<ItemStatus>(ItemStatus.NotStarted);
   const [newDueBy, setNewDueBy] = useState<DateTime>(DateTime.now());
@@ -88,7 +92,7 @@ const ActionsList: React.FC<{
   // Function to render the appropriate sort arrow
   const renderSortArrow = (column: keyof Action) => {
     if (sortColumn !== column) return null;
-    
+
     return sortDirection === "asc" ? (
       <ArrowUp className="ml-2 h-4 w-4 inline" />
     ) : (
@@ -110,16 +114,25 @@ const ActionsList: React.FC<{
   };
 
   // Function to handle checkbox toggle for completion
-  const handleCompletionToggle = async (actionId: Id, currentStatus: ItemStatus) => {
+  const handleCompletionToggle = async (
+    actionId: Id,
+    currentStatus: ItemStatus
+  ) => {
     try {
-      const action = actions.find(a => a.id === actionId);
+      const action = actions.find((a) => a.id === actionId);
       if (!action) return;
 
-      const newStatus = currentStatus === ItemStatus.Completed 
-        ? ItemStatus.InProgress 
-        : ItemStatus.Completed;
+      const newStatus =
+        currentStatus === ItemStatus.Completed
+          ? ItemStatus.InProgress
+          : ItemStatus.Completed;
 
-      await onActionEdited(actionId, action.body || "", newStatus, action.due_by);
+      await onActionEdited(
+        actionId,
+        action.body || "",
+        newStatus,
+        action.due_by
+      );
       refresh();
     } catch (err) {
       console.error("Failed to update action completion status: " + err);
@@ -132,7 +145,12 @@ const ActionsList: React.FC<{
     try {
       if (editingActionId) {
         // Update existing action
-        const action = await onActionEdited(editingActionId, newBody, newStatus, newDueBy);
+        const action = await onActionEdited(
+          editingActionId,
+          newBody,
+          newStatus,
+          newDueBy
+        );
         console.trace("Updated Action: " + actionToString(action));
         setEditingActionId(null);
       } else {
@@ -151,7 +169,6 @@ const ActionsList: React.FC<{
       throw err;
     }
   };
-
 
   const deleteAction = async (id: Id) => {
     if (id === "") return;
@@ -197,7 +214,9 @@ const ActionsList: React.FC<{
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 dark:bg-gray-800/50">
-                <TableHead className="w-[120px] font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 rounded-tl-lg">Completed?</TableHead>
+                <TableHead className="w-[120px] font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 rounded-tl-lg">
+                  Completed?
+                </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.Body)}
                   className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hover:text-gray-900 dark:hover:text-gray-100"
@@ -231,12 +250,12 @@ const ActionsList: React.FC<{
                   <TableCell className="text-left">
                     <Checkbox
                       checked={action.status === ItemStatus.Completed}
-                      onCheckedChange={() => handleCompletionToggle(action.id, action.status)}
+                      onCheckedChange={() =>
+                        handleCompletionToggle(action.id, action.status)
+                      }
                     />
                   </TableCell>
-                  <TableCell>
-                    {action.body}
-                  </TableCell>
+                  <TableCell>{action.body}</TableCell>
                   <TableCell className="hidden sm:table-cell">
                     {actionStatusToString(action.status)}
                   </TableCell>
@@ -283,7 +302,7 @@ const ActionsList: React.FC<{
           </Table>
         </div>
         {/* Create/Edit action form */}
-        <div 
+        <div
           className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0"
           onKeyDown={(e) => {
             if (e.key === "Escape") {
@@ -302,9 +321,7 @@ const ActionsList: React.FC<{
           />
           <Select
             value={newStatus}
-            onValueChange={(value) =>
-              setNewStatus(stringToActionStatus(value))
-            }
+            onValueChange={(value) => setNewStatus(stringToActionStatus(value))}
           >
             <SelectTrigger className="w-full sm:w-60">
               <SelectValue placeholder="Select status" />
