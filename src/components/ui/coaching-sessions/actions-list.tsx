@@ -48,6 +48,7 @@ import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { Action, actionToString } from "@/types/action";
 import { cn } from "@/components/lib/utils";
+import { getTableRowClasses, getCompletedItemClasses } from "@/components/lib/utils/table-styling";
 import { format } from "date-fns";
 
 const ActionsList: React.FC<{
@@ -248,11 +249,10 @@ const ActionsList: React.FC<{
               {sortedActions.map((action, index) => (
                 <TableRow 
                   key={action.id}
-                  className={cn(
-                    index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800",
-                    "hover:bg-gray-50 dark:hover:bg-gray-700",
-                    action.status === ItemStatus.Completed && 
-                    "text-gray-400 dark:text-gray-400"
+                  aria-label={action.status === ItemStatus.Completed ? "Completed action" : undefined}
+                  className={getTableRowClasses(
+                    index,
+                    action.status === ItemStatus.Completed ? getCompletedItemClasses() : undefined
                   )}
                 >
                   <TableCell className="text-left">
