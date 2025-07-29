@@ -9,10 +9,10 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
 import { OverarchingGoalContainer } from "@/components/ui/coaching-sessions/overarching-goal-container";
-import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
+import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 
 import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import ShareSessionLink from "@/components/ui/share-session-link";
@@ -23,6 +23,11 @@ import { EntityApiError } from "@/types/general";
 export default function CoachingSessionsPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  
+  // Get current tab from URL parameter, default to "notes"
+  const currentTab = searchParams.get('tab') || 'notes';
+  
   const { userId, isLoggedIn } = useAuthStore((state) => ({
     userId: state.userId,
     isLoggedIn: state.isLoggedIn,
@@ -73,6 +78,22 @@ export default function CoachingSessionsPage() {
     toast.error("Failed to copy session link.");
   };
 
+  const handleTabChange = (tabValue: string) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (tabValue === 'notes') {
+      // Remove tab parameter for default tab to keep URL clean
+      newSearchParams.delete('tab');
+    } else {
+      newSearchParams.set('tab', tabValue);
+    }
+    
+    const newUrl = newSearchParams.toString() 
+      ? `${window.location.pathname}?${newSearchParams.toString()}`
+      : window.location.pathname;
+      
+    router.replace(newUrl, { scroll: false });
+  };
+
   return (
     // Never grow wider than the site-header
     <div className="max-w-screen-2xl">
@@ -105,20 +126,11 @@ export default function CoachingSessionsPage() {
 
       <OverarchingGoalContainer userId={userId} />
 
-      <div className="row-span-1 h-full py-4 px-4">
-        <div className="flex-col space-y-4 sm:flex md:order-1">
-          <Tabs defaultValue="notes">
-            <TabsList className="flex w-128 grid-cols-2 justify-start">
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-            </TabsList>
-            <TabsContent value="notes">
-              <div className="flex-col h-full space-y-4">
-                <CoachingNotes />
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+      <CoachingTabsContainer 
+        userId={userId} 
+        defaultValue={currentTab}
+        onTabChange={handleTabChange}
+      />
     </div>
   );
 }

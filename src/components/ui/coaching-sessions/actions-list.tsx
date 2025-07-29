@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -30,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowUpDown, CalendarClock } from "lucide-react";
+import { MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown, CalendarClock } from "lucide-react";
 import {
   ItemStatus,
   actionStatusToString,
@@ -70,8 +71,7 @@ const ActionsList: React.FC<{
     Body = "body",
     DueBy = "due_by",
     Status = "status",
-    CreatedAt = "created_at",
-    UpdatedAt = "updated_at",
+    Assigned = "created_at",
   }
 
   const { actions, isLoading, isError, refresh } =
@@ -79,72 +79,79 @@ const ActionsList: React.FC<{
   const [newBody, setNewBody] = useState("");
   const [newStatus, setNewStatus] = useState<ItemStatus>(ItemStatus.NotStarted);
   const [newDueBy, setNewDueBy] = useState<DateTime>(DateTime.now());
-  const [editingId, setEditingId] = useState<Id | null>(null);
-  const [editBody, setEditBody] = useState("");
-  const [editStatus, setEditStatus] = useState<ItemStatus>(
-    ItemStatus.NotStarted
-  );
-  const [editDueBy, setEditDueBy] = useState<DateTime>(DateTime.now());
+  const [editingActionId, setEditingActionId] = useState<Id | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Action>(
-    ActionSortField.CreatedAt
+    ActionSortField.DueBy
   );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  // Function to render the appropriate sort arrow
+  const renderSortArrow = (column: keyof Action) => {
+    if (sortColumn !== column) return null;
+    
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-2 h-4 w-4 inline" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4 inline" />
+    );
+  };
+
+  // Function to clear the new action form
+  const clearNewActionForm = () => {
+    setNewBody("");
+    setNewStatus(ItemStatus.NotStarted);
+    setNewDueBy(DateTime.now());
+  };
+
+  // Function to cancel editing an action
+  const cancelEditAction = () => {
+    setEditingActionId(null);
+    clearNewActionForm();
+  };
+
+  // Function to handle checkbox toggle for completion
+  const handleCompletionToggle = async (actionId: Id, currentStatus: ItemStatus) => {
+    try {
+      const action = actions.find(a => a.id === actionId);
+      if (!action) return;
+
+      const newStatus = currentStatus === ItemStatus.Completed 
+        ? ItemStatus.InProgress 
+        : ItemStatus.Completed;
+
+      await onActionEdited(actionId, action.body, newStatus, action.due_by);
+      refresh();
+    } catch (err) {
+      console.error("Failed to update action completion status: " + err);
+    }
+  };
 
   const addAction = async () => {
     if (newBody.trim() === "") return;
 
     try {
-      // Call the external handler to create the action
-      const action = await onActionAdded(newBody, newStatus, newDueBy);
-
-      console.trace(
-        "Newly created Action (onActionAdded): " + actionToString(action)
-      );
+      if (editingActionId) {
+        // Update existing action
+        const action = await onActionEdited(editingActionId, newBody, newStatus, newDueBy);
+        console.trace("Updated Action: " + actionToString(action));
+        setEditingActionId(null);
+      } else {
+        // Create new action
+        const action = await onActionAdded(newBody, newStatus, newDueBy);
+        console.trace("Newly created Action: " + actionToString(action));
+      }
 
       // Refresh the actions list from the hook
       refresh();
 
       // Clear input fields
-      setNewBody("");
-      setNewStatus(ItemStatus.NotStarted);
-      setNewDueBy(DateTime.now());
+      clearNewActionForm();
     } catch (err) {
-      console.error("Failed to create new Action: " + err);
+      console.error("Failed to save Action: " + err);
       throw err;
     }
   };
 
-  const updateAction = async (
-    id: Id,
-    newBody: string,
-    newStatus: ItemStatus,
-    newDueBy: DateTime
-  ) => {
-    const body = newBody.trim();
-    if (body === "") return;
-
-    try {
-      // Call the external onActionEdited handler function which should
-      // update the stored version of this action in the backend database
-      const updatedAction = await onActionEdited(id, body, newStatus, newDueBy);
-
-      console.trace(
-        "Updated Action (onActionUpdated): " + actionToString(updatedAction)
-      );
-
-      // Refresh the actions list from the hook
-      refresh();
-
-      // Reset editing UI state
-      setEditingId(null);
-      setEditBody("");
-      setEditStatus(ItemStatus.NotStarted);
-      setEditDueBy(DateTime.now());
-    } catch (err) {
-      console.error("Failed to update Action (id: " + id + "): ", err);
-      throw err;
-    }
-  };
 
   const deleteAction = async (id: Id) => {
     if (id === "") return;
@@ -189,155 +196,46 @@ const ActionsList: React.FC<{
         <div className="mb-4">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
+                <TableHead className="w-[120px] font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 rounded-tl-lg">Completed?</TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.Body)}
-                  className={`cursor-pointer ${
-                    sortColumn === ActionSortField.Body
-                      ? "underline"
-                      : "no-underline"
-                  }`}
+                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hover:text-gray-900 dark:hover:text-gray-100"
                 >
-                  Action <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                  Action {renderSortArrow(ActionSortField.Body)}
                 </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.Status)}
-                  className={`cursor-pointer hidden sm:table-cell ${
-                    sortColumn === ActionSortField.Status
-                      ? "underline"
-                      : "no-underline"
-                  }`}
+                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hidden sm:table-cell hover:text-gray-900 dark:hover:text-gray-100"
                 >
-                  Status <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                  Status {renderSortArrow(ActionSortField.Status)}
                 </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.DueBy)}
-                  className={`cursor-pointer hidden md:table-cell ${
-                    sortColumn === ActionSortField.DueBy
-                      ? "underline"
-                      : "no-underline"
-                  }`}
+                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hidden md:table-cell hover:text-gray-900 dark:hover:text-gray-100"
                 >
-                  Due By
-                  <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                  Due By {renderSortArrow(ActionSortField.DueBy)}
                 </TableHead>
                 <TableHead
-                  onClick={() => sortActions(ActionSortField.CreatedAt)}
-                  className={`cursor-pointer hidden md:table-cell ${
-                    sortColumn === ActionSortField.CreatedAt
-                      ? "underline"
-                      : "no-underline"
-                  }`}
+                  onClick={() => sortActions(ActionSortField.Assigned)}
+                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hidden md:table-cell hover:text-gray-900 dark:hover:text-gray-100"
                 >
-                  Created
-                  <ArrowUpDown className="ml-2 h-4 w-4 inline" />
+                  Assigned {renderSortArrow(ActionSortField.Assigned)}
                 </TableHead>
-                <TableHead
-                  className={`cursor-pointer hidden md:table-cell ${
-                    sortColumn === ActionSortField.UpdatedAt
-                      ? "underline"
-                      : "no-underline"
-                  }`}
-                  onClick={() => sortActions(ActionSortField.UpdatedAt)}
-                >
-                  Updated <ArrowUpDown className="ml-2 h-4 w-4 inline" />
-                </TableHead>
-                <TableHead className="w-[100px]"></TableHead>
+                <TableHead className="w-[100px] bg-gray-50 dark:bg-gray-800/50 rounded-tr-lg"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedActions.map((action) => (
                 <TableRow key={action.id}>
+                  <TableCell className="text-left">
+                    <Checkbox
+                      checked={action.status === ItemStatus.Completed}
+                      onCheckedChange={() => handleCompletionToggle(action.id, action.status)}
+                    />
+                  </TableCell>
                   <TableCell>
-                    {/* Edit an existing action */}
-                    {editingId === action.id ? (
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          value={editBody}
-                          onChange={(e) => setEditBody(e.target.value)}
-                          onKeyPress={(e) =>
-                            e.key === "Enter" &&
-                            updateAction(
-                              action.id,
-                              editBody,
-                              editStatus,
-                              editDueBy
-                            )
-                          }
-                          className="flex-grow"
-                        />
-                        <Select
-                          value={editStatus}
-                          onValueChange={(newStatus) =>
-                            setEditStatus(stringToActionStatus(newStatus))
-                          }
-                        >
-                          <SelectTrigger className="w-auto">
-                            <SelectValue placeholder="Select a status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.values(ItemStatus).map((s) => (
-                              <SelectItem value={s} key={s}>
-                                {actionStatusToString(s)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-[280px] justify-start text-left font-normal",
-                                !editDueBy && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarClock className="mr-2 h-4 w-4" />
-                              {editDueBy ? (
-                                format(editDueBy.toJSDate(), "PPP")
-                              ) : (
-                                <span>Pick a due date</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              defaultMonth={action.due_by.toJSDate()}
-                              selected={editDueBy.toJSDate()}
-                              onSelect={(date: Date | undefined) =>
-                                setEditDueBy(
-                                  date
-                                    ? DateTime.fromJSDate(date)
-                                    : DateTime.now()
-                                )
-                              }
-                              footer=<div className="text-sm font-medium mt-1">
-                                {newDueBy
-                                  ? `Due by: ${newDueBy.toLocaleString()}`
-                                  : "Select a due by date."}
-                              </div>
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            updateAction(
-                              action.id,
-                              editBody,
-                              editStatus,
-                              editDueBy
-                            )
-                          }
-                        >
-                          Save
-                        </Button>
-                        {/* TODO: add a circular X button to cancel updating */}
-                      </div>
-                    ) : (
-                      action.body
-                    )}
+                    {action.body}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     {actionStatusToString(action.status)}
@@ -350,12 +248,7 @@ const ActionsList: React.FC<{
                   <TableCell className="hidden md:table-cell">
                     {action.created_at
                       .setLocale(siteConfig.locale)
-                      .toLocaleString(DateTime.DATETIME_MED)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {action.updated_at
-                      .setLocale(siteConfig.locale)
-                      .toLocaleString(DateTime.DATETIME_MED)}
+                      .toLocaleString(DateTime.DATE_MED)}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -368,10 +261,10 @@ const ActionsList: React.FC<{
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={() => {
-                            setEditingId(action.id);
-                            setEditBody(action.body ?? "");
-                            setEditStatus(action.status);
-                            setEditDueBy(action.due_by);
+                            setEditingActionId(action.id);
+                            setNewBody(action.body ?? "");
+                            setNewStatus(action.status);
+                            setNewDueBy(action.due_by);
                           }}
                         >
                           Edit
@@ -389,26 +282,52 @@ const ActionsList: React.FC<{
             </TableBody>
           </Table>
         </div>
-        {/* Create a new action */}
-        <div className="flex items-center space-x-2">
+        {/* Create/Edit action form */}
+        <div 
+          className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              editingActionId ? cancelEditAction() : clearNewActionForm();
+            } else if (e.key === "Enter") {
+              addAction();
+            }
+          }}
+          tabIndex={-1}
+        >
           <Input
             value={newBody}
             onChange={(e) => setNewBody(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && addAction()}
-            placeholder="Enter new action"
-            className="flex-grow"
+            placeholder={editingActionId ? "Edit action" : "Enter new action"}
+            className="w-full sm:flex-grow"
           />
+          <Select
+            value={newStatus}
+            onValueChange={(value) =>
+              setNewStatus(stringToActionStatus(value))
+            }
+          >
+            <SelectTrigger className="w-full sm:w-60">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(ItemStatus).map((status) => (
+                <SelectItem value={status} key={status}>
+                  {actionStatusToString(status)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant={"outline"}
                 className={cn(
-                  "w-[280px] justify-start text-left font-normal",
+                  "w-full sm:w-[280px] justify-start text-left font-normal",
                   !newDueBy && "text-muted-foreground"
                 )}
               >
                 <CalendarClock className="mr-2 h-4 w-4" />
-                {editDueBy ? (
+                {newDueBy ? (
                   format(newDueBy.toJSDate(), "PPP")
                 ) : (
                   <span>Pick a due date</span>
@@ -430,7 +349,9 @@ const ActionsList: React.FC<{
               />
             </PopoverContent>
           </Popover>
-          <Button onClick={addAction}>Save</Button>
+          <Button onClick={addAction} className="w-full sm:w-auto">
+            {editingActionId ? "Update" : "Save"}
+          </Button>
         </div>
       </div>
     </div>
