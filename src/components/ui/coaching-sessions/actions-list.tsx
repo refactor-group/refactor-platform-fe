@@ -119,7 +119,7 @@ const ActionsList: React.FC<{
         ? ItemStatus.InProgress 
         : ItemStatus.Completed;
 
-      await onActionEdited(actionId, action.body, newStatus, action.due_by);
+      await onActionEdited(actionId, action.body || "", newStatus, action.due_by);
       refresh();
     } catch (err) {
       console.error("Failed to update action completion status: " + err);
