@@ -245,8 +245,16 @@ const ActionsList: React.FC<{
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedActions.map((action) => (
-                <TableRow key={action.id}>
+              {sortedActions.map((action, index) => (
+                <TableRow 
+                  key={action.id}
+                  className={cn(
+                    index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800",
+                    "hover:bg-gray-50 dark:hover:bg-gray-700",
+                    action.status === ItemStatus.Completed && 
+                    "text-gray-400 dark:text-gray-400"
+                  )}
+                >
                   <TableCell className="text-left">
                     <Checkbox
                       checked={action.status === ItemStatus.Completed}

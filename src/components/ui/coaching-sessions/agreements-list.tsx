@@ -23,6 +23,7 @@ import { useAgreementList } from "@/lib/api/agreements";
 import { Agreement, agreementToString } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
+import { cn } from "@/components/lib/utils";
 
 const AgreementsList: React.FC<{
   coachingSessionId: Id;
@@ -171,8 +172,14 @@ const AgreementsList: React.FC<{
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedAgreements.map((agreement) => (
-                <TableRow key={agreement.id}>
+              {sortedAgreements.map((agreement, index) => (
+                <TableRow 
+                  key={agreement.id}
+                  className={cn(
+                    index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-800",
+                    "hover:bg-gray-50 dark:hover:bg-gray-700"
+                  )}
+                >
                   <TableCell>{agreement.body}</TableCell>
                   <TableCell className="hidden sm:table-cell">
                     {agreement.created_at
