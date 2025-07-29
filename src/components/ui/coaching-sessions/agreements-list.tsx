@@ -24,7 +24,12 @@ import { Agreement, agreementToString } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { cn } from "@/components/lib/utils";
-import { getTableRowClasses } from "@/components/lib/utils/table-styling";
+import {
+  getTableRowClasses,
+  getTableHeaderRowClasses,
+  getTableHeaderCellClasses,
+  getTableHeaderCellClassesNonSortable,
+} from "@/components/lib/utils/table-styling";
 
 const AgreementsList: React.FC<{
   coachingSessionId: Id;
@@ -150,31 +155,43 @@ const AgreementsList: React.FC<{
         <div className="mb-4">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
+              <TableRow className={getTableHeaderRowClasses()}>
                 <TableHead
                   onClick={() => sortAgreements(AgreementSortField.Body)}
-                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hover:text-gray-900 dark:hover:text-gray-100 rounded-tl-lg"
+                  className={getTableHeaderCellClasses(true)}
                 >
                   Agreement {renderSortArrow(AgreementSortField.Body)}
                 </TableHead>
                 <TableHead
                   onClick={() => sortAgreements(AgreementSortField.CreatedAt)}
-                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hidden sm:table-cell hover:text-gray-900 dark:hover:text-gray-100"
+                  className={cn(
+                    getTableHeaderCellClasses(),
+                    "hidden sm:table-cell"
+                  )}
                 >
                   Created {renderSortArrow(AgreementSortField.CreatedAt)}
                 </TableHead>
                 <TableHead
-                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hidden md:table-cell hover:text-gray-900 dark:hover:text-gray-100"
                   onClick={() => sortAgreements(AgreementSortField.UpdatedAt)}
+                  className={cn(
+                    getTableHeaderCellClasses(),
+                    "hidden md:table-cell"
+                  )}
                 >
                   Updated {renderSortArrow(AgreementSortField.UpdatedAt)}
                 </TableHead>
-                <TableHead className="w-[100px] bg-gray-50 dark:bg-gray-800/50 rounded-tr-lg"></TableHead>
+                <TableHead
+                  className={cn(
+                    "w-[100px]",
+                    getTableHeaderRowClasses(),
+                    getTableHeaderCellClassesNonSortable(false, true)
+                  )}
+                ></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedAgreements.map((agreement, index) => (
-                <TableRow 
+                <TableRow
                   key={agreement.id}
                   className={getTableRowClasses(index)}
                 >

@@ -48,7 +48,13 @@ import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { Action, actionToString } from "@/types/action";
 import { cn } from "@/components/lib/utils";
-import { getTableRowClasses, getCompletedItemClasses } from "@/components/lib/utils/table-styling";
+import {
+  getTableRowClasses,
+  getCompletedItemClasses,
+  getTableHeaderRowClasses,
+  getTableHeaderCellClasses,
+  getTableHeaderCellClassesNonSortable,
+} from "@/components/lib/utils/table-styling";
 import { format } from "date-fns";
 
 const ActionsList: React.FC<{
@@ -214,45 +220,71 @@ const ActionsList: React.FC<{
         <div className="mb-4">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800/50">
-                <TableHead className="w-[120px] font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 rounded-tl-lg">
+              <TableRow className={getTableHeaderRowClasses()}>
+                <TableHead
+                  className={cn(
+                    "w-[120px]",
+                    getTableHeaderCellClassesNonSortable(true)
+                  )}
+                >
                   Completed?
                 </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.Body)}
-                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hover:text-gray-900 dark:hover:text-gray-100"
+                  className={getTableHeaderCellClasses()}
                 >
                   Action {renderSortArrow(ActionSortField.Body)}
                 </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.Status)}
-                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hidden sm:table-cell hover:text-gray-900 dark:hover:text-gray-100"
+                  className={cn(
+                    getTableHeaderCellClasses(),
+                    "hidden sm:table-cell"
+                  )}
                 >
                   Status {renderSortArrow(ActionSortField.Status)}
                 </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.DueBy)}
-                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hidden md:table-cell hover:text-gray-900 dark:hover:text-gray-100"
+                  className={cn(
+                    getTableHeaderCellClasses(),
+                    "hidden md:table-cell"
+                  )}
                 >
                   Due By {renderSortArrow(ActionSortField.DueBy)}
                 </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.Assigned)}
-                  className="cursor-pointer font-semibold text-gray-700 dark:text-gray-300 py-3 px-4 hidden md:table-cell hover:text-gray-900 dark:hover:text-gray-100"
+                  className={cn(
+                    getTableHeaderCellClasses(),
+                    "hidden md:table-cell"
+                  )}
                 >
                   Assigned {renderSortArrow(ActionSortField.Assigned)}
                 </TableHead>
-                <TableHead className="w-[100px] bg-gray-50 dark:bg-gray-800/50 rounded-tr-lg"></TableHead>
+                <TableHead
+                  className={cn(
+                    "w-[100px]",
+                    getTableHeaderRowClasses(),
+                    getTableHeaderCellClassesNonSortable(false, true)
+                  )}
+                ></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedActions.map((action, index) => (
-                <TableRow 
+                <TableRow
                   key={action.id}
-                  aria-label={action.status === ItemStatus.Completed ? "Completed action" : undefined}
+                  aria-label={
+                    action.status === ItemStatus.Completed
+                      ? "Completed action"
+                      : undefined
+                  }
                   className={getTableRowClasses(
                     index,
-                    action.status === ItemStatus.Completed ? getCompletedItemClasses() : undefined
+                    action.status === ItemStatus.Completed
+                      ? getCompletedItemClasses()
+                      : undefined
                   )}
                 >
                   <TableCell className="text-left">
