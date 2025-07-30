@@ -190,7 +190,14 @@ const AgreementsList: React.FC<{
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedAgreements.map((agreement, index) => (
+              {sortedAgreements.length === 0 ? (
+                <TableRow className={getTableRowClasses(0)}>
+                  <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                    No Agreements
+                  </TableCell>
+                </TableRow>
+              ) : (
+                sortedAgreements.map((agreement, index) => (
                 <TableRow
                   key={agreement.id}
                   className={getTableRowClasses(index)}
@@ -232,7 +239,8 @@ const AgreementsList: React.FC<{
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

@@ -272,7 +272,14 @@ const ActionsList: React.FC<{
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedActions.map((action, index) => (
+              {sortedActions.length === 0 ? (
+                <TableRow className={getTableRowClasses(0)}>
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                    No Actions
+                  </TableCell>
+                </TableRow>
+              ) : (
+                sortedActions.map((action, index) => (
                 <TableRow
                   key={action.id}
                   aria-label={
@@ -337,7 +344,8 @@ const ActionsList: React.FC<{
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
