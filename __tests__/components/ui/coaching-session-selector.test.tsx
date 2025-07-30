@@ -33,6 +33,7 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
   useAuthStore: vi.fn(() => ({
     userSession: { timezone: 'America/Chicago' },
   })),
+  AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 vi.mock('@/lib/timezone-utils', () => ({

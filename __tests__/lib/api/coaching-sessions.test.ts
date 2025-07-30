@@ -13,6 +13,15 @@ vi.mock('@/lib/api/entity-api', () => ({
   },
 }))
 
+// Mock site config to provide a proper base URL
+vi.mock('@/site.config', () => ({
+  siteConfig: {
+    env: {
+      backendServiceURL: 'http://localhost:3000',
+    },
+  },
+}))
+
 describe('CoachingSessionApi - Sorting Functionality', () => {
   const mockRelationshipId = 'rel-123'
   const mockFromDate = DateTime.fromISO('2025-07-01')
@@ -38,7 +47,7 @@ describe('CoachingSessionApi - Sorting Functionality', () => {
       'desc'
     )
 
-    expect(EntityApi.listFn).toHaveBeenCalledWith('/coaching_sessions', {
+    expect(EntityApi.listFn).toHaveBeenCalledWith('http://localhost:3000/coaching_sessions', {
       params: {
         coaching_relationship_id: mockRelationshipId,
         from_date: '2025-07-01',
@@ -59,7 +68,7 @@ describe('CoachingSessionApi - Sorting Functionality', () => {
       mockToDate
     )
 
-    expect(EntityApi.listFn).toHaveBeenCalledWith('/coaching_sessions', {
+    expect(EntityApi.listFn).toHaveBeenCalledWith('http://localhost:3000/coaching_sessions', {
       params: {
         coaching_relationship_id: mockRelationshipId,
         from_date: '2025-07-01',
@@ -96,7 +105,7 @@ describe('useCoachingSessionList hook - Sorting Integration', () => {
     )
 
     expect(EntityApi.useEntityList).toHaveBeenCalledWith(
-      '/coaching_sessions',
+      'http://localhost:3000/coaching_sessions',
       expect.any(Function), // fetcher function
       {
         coaching_relationship_id: 'rel-123',
