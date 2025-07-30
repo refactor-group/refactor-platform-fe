@@ -1,21 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
-import { ItemStatus, Id } from "@/types/general";
-import { Action, defaultAction } from "@/types/action";
-import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
-import { Agreement, defaultAgreement } from "@/types/agreement";
-import { useAgreementMutation } from "@/lib/api/agreements";
-import { useActionMutation } from "@/lib/api/actions";
+import { Id } from "@/types/general";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverarchingGoalComponent } from "./overarching-goal";
 import {
   useOverarchingGoalBySession,
-  useOverarchingGoalList,
   useOverarchingGoalMutation,
 } from "@/lib/api/overarching-goals";
 import {
@@ -36,81 +28,6 @@ const OverarchingGoalContainer: React.FC<{
     useOverarchingGoalBySession(currentCoachingSessionId || "");
   const { create: createOverarchingGoal, update: updateOverarchingGoal } =
     useOverarchingGoalMutation();
-  const {
-    create: createAgreement,
-    update: updateAgreement,
-    delete: deleteAgreement,
-  } = useAgreementMutation();
-
-  const {
-    create: createAction,
-    update: updateAction,
-    delete: deleteAction,
-  } = useActionMutation();
-
-  const handleAgreementAdded = (body: string): Promise<Agreement> => {
-    const newAgreement: Agreement = {
-      ...defaultAgreement(),
-      coaching_session_id: currentCoachingSessionId || "",
-      user_id: userId,
-      body,
-    };
-    return createAgreement(newAgreement);
-  };
-
-  const handleAgreementEdited = (id: Id, body: string): Promise<Agreement> => {
-    const updatedAgreement: Agreement = {
-      ...defaultAgreement(),
-      id,
-      coaching_session_id: currentCoachingSessionId || "",
-      user_id: userId,
-      body,
-    };
-    return updateAgreement(id, updatedAgreement);
-  };
-
-  const handleAgreementDeleted = (id: Id): Promise<Agreement> => {
-    return deleteAgreement(id);
-  };
-
-  const handleActionAdded = (
-    body: string,
-    status: ItemStatus,
-    dueBy: DateTime
-  ): Promise<Action> => {
-    // Calls the backend endpoint that creates and stores a full Action entity
-    const newAction: Action = {
-      ...defaultAction(),
-      coaching_session_id: currentCoachingSessionId || "",
-      user_id: userId,
-      body,
-      status,
-      due_by: dueBy,
-    };
-    return createAction(newAction);
-  };
-
-  const handleActionEdited = (
-    id: Id,
-    body: string,
-    status: ItemStatus,
-    dueBy: DateTime
-  ): Promise<Action> => {
-    const updatedAction: Action = {
-      ...defaultAction(),
-      id,
-      coaching_session_id: currentCoachingSessionId || "",
-      user_id: userId,
-      body,
-      status,
-      due_by: dueBy,
-    };
-    return updateAction(id, updatedAction);
-  };
-
-  const handleActionDeleted = (id: Id): Promise<Action> => {
-    return deleteAction(id);
-  };
 
   const handleGoalChange = async (newGoal: OverarchingGoal) => {
     try {
@@ -161,42 +78,19 @@ const OverarchingGoalContainer: React.FC<{
           <CollapsibleContent className="px-4">
             <div className="flex-col space-y-4 sm:flex">
               <div className="grid flex-1 items-start gap-4 sm:py-0 md:gap-8">
-                <Tabs defaultValue="agreements">
+                <Tabs defaultValue="subgoals">
                   <div className="flex items-center">
-                    <TabsList className="grid grid-cols-2">
-                      <TabsTrigger value="agreements">Agreements</TabsTrigger>
-                      <TabsTrigger value="actions">Actions</TabsTrigger>
-                      <TabsTrigger value="program" className="hidden">
-                        Program
-                      </TabsTrigger>
+                    <TabsList className="grid grid-cols-1">
+                      <TabsTrigger value="subgoals">Sub Goals</TabsTrigger>
                     </TabsList>
                   </div>
-                  <TabsContent value="agreements">
+                  <TabsContent value="subgoals">
                     <div className="w-full">
-                      <AgreementsList
-                        coachingSessionId={currentCoachingSessionId || ""}
-                        userId={userId}
-                        locale={siteConfig.locale}
-                        onAgreementAdded={handleAgreementAdded}
-                        onAgreementEdited={handleAgreementEdited}
-                        onAgreementDeleted={handleAgreementDeleted}
-                      ></AgreementsList>
+                      {/* Empty area for future Sub Goals implementation */}
+                      <div className="bg-inherit rounded-lg border border-gray-200 p-6">
+                        <p className="text-gray-500 text-center">Sub Goals coming soon...</p>
+                      </div>
                     </div>
-                  </TabsContent>
-                  <TabsContent value="actions">
-                    <div className="w-full">
-                      <ActionsList
-                        coachingSessionId={currentCoachingSessionId || ""}
-                        userId={userId}
-                        locale={siteConfig.locale}
-                        onActionAdded={handleActionAdded}
-                        onActionEdited={handleActionEdited}
-                        onActionDeleted={handleActionDeleted}
-                      ></ActionsList>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="program">
-                    {/* <div className="bg-blue-500 text-white">Program</div> */}
                   </TabsContent>
                 </Tabs>
               </div>
