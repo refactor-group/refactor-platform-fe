@@ -1,5 +1,6 @@
 import { DateTime } from "ts-luxon";
-import { ItemStatus, Id, SortOrder } from "@/types/general";
+import { ItemStatus, Id } from "@/types/general";
+import { SortOrder } from "@/types/sorting";
 
 // This must always reflect the Rust struct on the backend
 // entity::actions::Model
@@ -39,13 +40,13 @@ export function isActionArray(value: unknown): value is Action[] {
 }
 
 export function sortActionArray(actions: Action[], order: SortOrder): Action[] {
-  if (order == SortOrder.Ascending) {
+  if (order == SortOrder.Asc) {
     actions.sort(
       (a, b) =>
         new Date(a.updated_at.toString()).getTime() -
         new Date(b.updated_at.toString()).getTime()
     );
-  } else if (order == SortOrder.Descending) {
+  } else if (order == SortOrder.Desc) {
     actions.sort(
       (a, b) =>
         new Date(b.updated_at.toString()).getTime() -

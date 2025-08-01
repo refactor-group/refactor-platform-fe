@@ -13,7 +13,8 @@ import {
   filterAndSortCoachingSessions,
   type CoachingSession,
 } from "@/types/coaching-session";
-import { Id, SortOrder } from "@/types/general";
+import { Id } from "@/types/general";
+import { SortOrder } from "@/types/sorting";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CoachingRelationshipSelector from "../coaching-relationship-selector";
 import { cn } from "@/components/lib/utils";
@@ -58,13 +59,13 @@ export default function CoachingSessionList({
   };
 
   const upcomingSessions = coachingSessions
-    ? filterAndSortCoachingSessions(coachingSessions, SortOrder.Ascending, true)
+    ? filterAndSortCoachingSessions(coachingSessions, SortOrder.Asc, true)
     : [];
 
   const previousSessions = coachingSessions
     ? filterAndSortCoachingSessions(
         coachingSessions,
-        SortOrder.Descending,
+        SortOrder.Desc,
         false
       )
     : [];

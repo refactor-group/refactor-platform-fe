@@ -1,5 +1,6 @@
 import { DateTime } from "ts-luxon";
-import { Id, SortOrder } from "@/types/general";
+import { Id } from "@/types/general";
+import { SortOrder } from "@/types/sorting";
 
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
@@ -52,13 +53,13 @@ export function filterAndSortCoachingSessions(
   });
 
   // Sort the filtered sessions based on the order parameter
-  if (order === SortOrder.Ascending) {
+  if (order === SortOrder.Asc) {
     filteredSessions.sort(
       (a, b) =>
         new Date(a.date.toString()).getTime() -
         new Date(b.date.toString()).getTime()
     );
-  } else if (order === SortOrder.Descending) {
+  } else if (order === SortOrder.Desc) {
     filteredSessions.sort(
       (a, b) =>
         new Date(b.date.toString()).getTime() -

@@ -6,6 +6,7 @@ import {
   CoachingSession,
   defaultCoachingSession,
 } from "@/types/coaching-session";
+import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
 import { EntityApi } from "./entity-api";
 import { DateTime } from "ts-luxon";
 
@@ -25,22 +26,35 @@ export const CoachingSessionApi = {
    * coaching sessions should be retrieved from.
    * @param fromDate A date specifying the earliest coaching session date to return.
    * @param toDate A date specifying the latest coaching session date to match.
+   * @param sortBy Optional field to sort by.
+   * @param sortOrder Optional sort order.
    * @returns Promise resolving to an array of CoachingSession objects (empty array if data is not yet loaded or
    *  relationshipId is null)
    */
   list: async (
     relationshipId: Id | null,
     fromDate: DateTime,
-    toDate: DateTime
+    toDate: DateTime,
+    sortBy?: CoachingSessionSortField,
+    sortOrder?: ApiSortOrder
   ): Promise<CoachingSession[]> => {
     if (!relationshipId) return [];
 
+    const params: Record<string, string> = {
+      coaching_relationship_id: relationshipId,
+      from_date: fromDate.toISODate() || '',
+      to_date: toDate.toISODate() || '',
+    };
+
+    if (sortBy) {
+      params.sort_by = sortBy;
+    }
+    if (sortOrder) {
+      params.sort_order = sortOrder;
+    }
+
     return EntityApi.listFn<CoachingSession>(COACHING_SESSIONS_BASEURL, {
-      params: {
-        coaching_relationship_id: relationshipId,
-        from_date: fromDate.toISODate(),
-        to_date: toDate.toISODate(),
-      },
+      params,
     });
   },
 
@@ -121,6 +135,8 @@ export const CoachingSessionApi = {
  * coaching sessions should be fetched from.
  * @param fromDate A date specifying the earliest coaching session date to return.
  * @param toDate A date specifying the latest coaching session date to match.
+ * @param sortBy Optional field to sort by.
+ * @param sortOrder Optional sort order.
  * @returns An object containing:
  *
  * * coachingSessions: Array of CoachingSession objects (empty array if data is not yet loaded or
@@ -132,20 +148,24 @@ export const CoachingSessionApi = {
 export const useCoachingSessionList = (
   relationshipId: Id | null,
   fromDate: DateTime,
-  toDate: DateTime
+  toDate: DateTime,
+  sortBy?: CoachingSessionSortField,
+  sortOrder?: ApiSortOrder
 ) => {
   const params = relationshipId
     ? {
         coaching_relationship_id: relationshipId,
         from_date: fromDate.toISODate(),
         to_date: toDate.toISODate(),
+        ...(sortBy && { sort_by: sortBy }),
+        ...(sortOrder && { sort_order: sortOrder }),
       }
     : undefined;
 
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<CoachingSession>(
       COACHING_SESSIONS_BASEURL,
-      () => CoachingSessionApi.list(relationshipId!, fromDate, toDate),
+      () => CoachingSessionApi.list(relationshipId!, fromDate, toDate, sortBy, sortOrder),
       params
     );
 

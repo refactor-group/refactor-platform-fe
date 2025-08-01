@@ -3,6 +3,7 @@
 import { siteConfig } from "@/site.config";
 import { Id, transformEntityDates } from "@/types/general";
 import { Action, defaultAction } from "@/types/action";
+import { ApiSortOrder, ActionSortField } from "@/types/sorting";
 import { EntityApi } from "./entity-api";
 
 const ACTIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/actions`;
@@ -15,15 +16,31 @@ const ACTIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/actions`;
  */
 export const ActionApi = {
   /*
-   * Fetches a list of actions associated with a specific user.
+   * Fetches a list of actions associated with a specific coaching session.
    *
-   * @param userId The ID of the user whose action should be retrieved
+   * @param coachingSessionId The ID of the coaching session whose actions should be retrieved
+   * @param sortBy Optional field to sort by.
+   * @param sortOrder Optional sort order.
    * @returns Promise resolving to an array of Action objects
    */
-  list: async (coachingSessionId: Id): Promise<Action[]> =>
-    EntityApi.listFn<Action>(ACTIONS_BASEURL, {
-      params: { coaching_session_id: coachingSessionId },
-    }),
+  list: async (
+    coachingSessionId: Id,
+    sortBy?: ActionSortField,
+    sortOrder?: ApiSortOrder
+  ): Promise<Action[]> => {
+    const params: Record<string, string> = {
+      coaching_session_id: coachingSessionId,
+    };
+
+    if (sortBy) {
+      params.sort_by = sortBy;
+    }
+    if (sortOrder) {
+      params.sort_order = sortOrder;
+    }
+
+    return EntityApi.listFn<Action>(ACTIONS_BASEURL, { params });
+  },
 
   /**
    * Fetches a single action by its ID.
@@ -85,6 +102,8 @@ export const ActionApi = {
  * It automatically refreshes data when the component mounts.
  *
  * @param coachingSessionId The ID of the coachingSessionId under which actions should be fetched
+ * @param sortBy Optional field to sort by.
+ * @param sortOrder Optional sort order.
  * @returns An object containing:
  *
  * * actions: Array of Action objects (empty array if data is not yet loaded)
@@ -92,15 +111,25 @@ export const ActionApi = {
  * * isError: Error object if the fetch operation failed, undefined otherwise
  * * refresh: Function to manually trigger a refresh of the data
  */
-export const useActionList = (coachingSessionId: Id) => {
+export const useActionList = (
+  coachingSessionId: Id,
+  sortBy?: ActionSortField,
+  sortOrder?: ApiSortOrder
+) => {
+  const params = {
+    coaching_session_id: coachingSessionId,
+    ...(sortBy && { sort_by: sortBy }),
+    ...(sortOrder && { sort_order: sortOrder }),
+  };
+
   const { entities, isLoading, isError, refresh } = EntityApi.useEntityList<
     Action,
     Action
   >(
     ACTIONS_BASEURL,
-    () => ActionApi.list(coachingSessionId),
+    () => ActionApi.list(coachingSessionId, sortBy, sortOrder),
     transformEntityDates,
-    coachingSessionId
+    params
   );
 
   return {

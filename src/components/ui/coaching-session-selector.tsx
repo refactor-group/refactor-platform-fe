@@ -44,7 +44,7 @@ function CoachingSessionsSelectItems({
     coachingSessions,
     isLoading: isLoadingSessions,
     isError: isErrorSessions,
-  } = useCoachingSessionList(relationshipId, fromDate, toDate);
+  } = useCoachingSessionList(relationshipId, fromDate, toDate, 'date', 'desc');
 
   if (isLoadingSessions) return <div>Loading...</div>;
   if (isErrorSessions) return <div>Error loading coaching sessions</div>;
@@ -54,14 +54,14 @@ function CoachingSessionsSelectItems({
     <>
       {[
         {
-          label: "Previous Sessions",
-          condition: (date: string) =>
-            getDateTimeFromString(date) < DateTime.now(),
-        },
-        {
           label: "Upcoming Sessions",
           condition: (date: string) =>
             getDateTimeFromString(date) >= DateTime.now(),
+        },
+        {
+          label: "Previous Sessions",
+          condition: (date: string) =>
+            getDateTimeFromString(date) < DateTime.now(),
         },
       ].map(
         ({ label, condition }) =>
@@ -91,8 +91,8 @@ function SessionItemWithGoal({ session }: { session: CoachingSession }) {
   if (isError) return <div>Error loading goal</div>;
 
   return (
-    <SelectItem value={session.id}>
-      <div className="flex min-w-0">
+    <SelectItem value={session.id} className="pl-8">
+      <div className="flex min-w-0 ml-4">
         <div className="min-w-0 w-full">
           <p className="truncate text-sm font-medium">
             {overarchingGoal.title || "No goal set"}
