@@ -6,6 +6,7 @@ import {
   CoachingSession,
   defaultCoachingSession,
 } from "@/types/coaching-session";
+import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
 import { EntityApi } from "./entity-api";
 import { DateTime } from "ts-luxon";
 
@@ -25,8 +26,8 @@ export const CoachingSessionApi = {
    * coaching sessions should be retrieved from.
    * @param fromDate A date specifying the earliest coaching session date to return.
    * @param toDate A date specifying the latest coaching session date to match.
-   * @param sortBy Optional field to sort by (date, created_at, updated_at).
-   * @param sortOrder Optional sort order (asc, desc).
+   * @param sortBy Optional field to sort by.
+   * @param sortOrder Optional sort order.
    * @returns Promise resolving to an array of CoachingSession objects (empty array if data is not yet loaded or
    *  relationshipId is null)
    */
@@ -34,8 +35,8 @@ export const CoachingSessionApi = {
     relationshipId: Id | null,
     fromDate: DateTime,
     toDate: DateTime,
-    sortBy?: 'date' | 'created_at' | 'updated_at',
-    sortOrder?: 'asc' | 'desc'
+    sortBy?: CoachingSessionSortField,
+    sortOrder?: ApiSortOrder
   ): Promise<CoachingSession[]> => {
     if (!relationshipId) return [];
 
@@ -134,8 +135,8 @@ export const CoachingSessionApi = {
  * coaching sessions should be fetched from.
  * @param fromDate A date specifying the earliest coaching session date to return.
  * @param toDate A date specifying the latest coaching session date to match.
- * @param sortBy Optional field to sort by (date, created_at, updated_at).
- * @param sortOrder Optional sort order (asc, desc).
+ * @param sortBy Optional field to sort by.
+ * @param sortOrder Optional sort order.
  * @returns An object containing:
  *
  * * coachingSessions: Array of CoachingSession objects (empty array if data is not yet loaded or
@@ -148,8 +149,8 @@ export const useCoachingSessionList = (
   relationshipId: Id | null,
   fromDate: DateTime,
   toDate: DateTime,
-  sortBy?: 'date' | 'created_at' | 'updated_at',
-  sortOrder?: 'asc' | 'desc'
+  sortBy?: CoachingSessionSortField,
+  sortOrder?: ApiSortOrder
 ) => {
   const params = relationshipId
     ? {

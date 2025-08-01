@@ -4,6 +4,7 @@ import { CoachingSessionApi, useCoachingSessionList } from '@/lib/api/coaching-s
 import { EntityApi } from '@/lib/api/entity-api'
 import { renderHook } from '@testing-library/react'
 import { TestProviders } from '@/test-utils/providers'
+import { ApiSortOrder, CoachingSessionSortField } from '@/types/sorting'
 
 // Mock EntityApi
 vi.mock('@/lib/api/entity-api', () => ({
@@ -43,8 +44,8 @@ describe('CoachingSessionApi - Sorting Functionality', () => {
       mockRelationshipId,
       mockFromDate,
       mockToDate,
-      'date',
-      'desc'
+      'date' as CoachingSessionSortField,
+      'desc' as ApiSortOrder
     )
 
     expect(EntityApi.listFn).toHaveBeenCalledWith('http://localhost:3000/coaching_sessions', {
