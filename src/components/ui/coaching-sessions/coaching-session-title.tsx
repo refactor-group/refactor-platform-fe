@@ -8,12 +8,16 @@ import {
 } from "@/types/session-title";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
+import { isPastSession } from "@/types/coaching-session";
+import { formatDateInUserTimezoneWithTZ, getBrowserTimezone } from "@/lib/timezone-utils";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
 const CoachingSessionTitle: React.FC<{
   locale: string | "us";
   style: SessionTitleStyle;
   onRender: (sessionTitle: string) => void;
 }> = ({ locale, style, onRender }) => {
+  const { userSession } = useAuthStore((state) => state);
   const lastRenderedTitle = useRef<string>("");
   
   // Get coaching session from URL path parameter
@@ -46,9 +50,19 @@ const CoachingSessionTitle: React.FC<{
   const displayTitle = sessionTitle?.title || defaultSessionTitle().title;
 
   return (
-    <h4 className="font-semibold break-words w-full md:text-clip">
-      {displayTitle}
-    </h4>
+    <div>
+      <h4 className="font-semibold break-words w-full md:text-clip">
+        {displayTitle}
+      </h4>
+      {currentCoachingSession && isPastSession(currentCoachingSession) && (
+        <p className="text-sm text-muted-foreground mt-1">
+          This session was held on {formatDateInUserTimezoneWithTZ(
+            currentCoachingSession.date,
+            userSession?.timezone || getBrowserTimezone()
+          )}
+        </p>
+      )}
+    </div>
   );
 };
 
