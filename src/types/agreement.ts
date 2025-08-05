@@ -1,5 +1,6 @@
 import { DateTime } from "ts-luxon";
-import { Id, SortOrder } from "@/types/general";
+import { Id } from "@/types/general";
+import { SortOrder } from "@/types/sorting";
 
 // This must always reflect the Rust struct on the backend
 // entity::agreements::Model
@@ -61,13 +62,13 @@ export function sortAgreementArray(
   agreements: Agreement[],
   order: SortOrder
 ): Agreement[] {
-  if (order == SortOrder.Ascending) {
+  if (order == SortOrder.Asc) {
     agreements.sort(
       (a, b) =>
         new Date(a.updated_at.toString()).getTime() -
         new Date(b.updated_at.toString()).getTime()
     );
-  } else if (order == SortOrder.Descending) {
+  } else if (order == SortOrder.Desc) {
     agreements.sort(
       (a, b) =>
         new Date(b.updated_at.toString()).getTime() -

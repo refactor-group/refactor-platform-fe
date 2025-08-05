@@ -4,6 +4,7 @@ import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { Agreement, defaultAgreement } from "@/types/agreement";
 import { transformEntityDates } from "@/types/general";
+import { ApiSortOrder, AgreementSortField } from "@/types/sorting";
 import { EntityApi } from "./entity-api";
 
 const AGREEMENTS_BASEURL: string = `${siteConfig.env.backendServiceURL}/agreements`;
@@ -16,15 +17,31 @@ const AGREEMENTS_BASEURL: string = `${siteConfig.env.backendServiceURL}/agreemen
  */
 export const AgreementApi = {
   /*
-   * Fetches a list of agreements associated with a specific user.
+   * Fetches a list of agreements associated with a specific coaching session.
    *
-   * @param userId The ID of the user whose agreement should be retrieved
+   * @param coachingSessionId The ID of the coaching session whose agreements should be retrieved
+   * @param sortBy Optional field to sort by.
+   * @param sortOrder Optional sort order.
    * @returns Promise resolving to an array of Agreement objects
    */
-  list: async (coachingSessionId: Id): Promise<Agreement[]> =>
-    EntityApi.listFn<Agreement>(AGREEMENTS_BASEURL, {
-      params: { coaching_session_id: coachingSessionId },
-    }),
+  list: async (
+    coachingSessionId: Id,
+    sortBy?: AgreementSortField,
+    sortOrder?: ApiSortOrder
+  ): Promise<Agreement[]> => {
+    const params: Record<string, string> = {
+      coaching_session_id: coachingSessionId,
+    };
+
+    if (sortBy) {
+      params.sort_by = sortBy;
+    }
+    if (sortOrder) {
+      params.sort_order = sortOrder;
+    }
+
+    return EntityApi.listFn<Agreement>(AGREEMENTS_BASEURL, { params });
+  },
 
   /**
    * Fetches a single agreement by its ID.
@@ -96,15 +113,25 @@ export const AgreementApi = {
  * * isError: Error object if the fetch operation failed, undefined otherwise
  * * refresh: Function to manually trigger a refresh of the data
  */
-export const useAgreementList = (coachingSessionId: Id) => {
+export const useAgreementList = (
+  coachingSessionId: Id,
+  sortBy?: AgreementSortField,
+  sortOrder?: ApiSortOrder
+) => {
+  const params = {
+    coaching_session_id: coachingSessionId,
+    ...(sortBy && { sort_by: sortBy }),
+    ...(sortOrder && { sort_order: sortOrder }),
+  };
+
   const { entities, isLoading, isError, refresh } = EntityApi.useEntityList<
     Agreement,
     Agreement
   >(
     AGREEMENTS_BASEURL,
-    () => AgreementApi.list(coachingSessionId),
+    () => AgreementApi.list(coachingSessionId, sortBy, sortOrder),
     transformEntityDates,
-    coachingSessionId
+    params
   );
 
   return {
