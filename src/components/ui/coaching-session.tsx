@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Share } from "lucide-react";
-import { CoachingSession as CoachingSessionType } from "@/types/coaching-session";
+import { CoachingSession as CoachingSessionType, isPastSession } from "@/types/coaching-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import {
@@ -58,7 +58,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
                 size="sm"
                 className="w-full sm:w-auto mt-2 sm:mt-0 text-sm px-3 py-1"
               >
-                Join Session
+                {isPastSession(coachingSession) ? "View Session" : "Join Session"}
               </Button>
             </Link>
             <DropdownMenu>
