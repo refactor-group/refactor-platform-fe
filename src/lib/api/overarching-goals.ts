@@ -6,6 +6,7 @@ import {
   OverarchingGoal,
   defaultOverarchingGoal,
 } from "@/types/overarching-goal";
+import { ApiSortOrder, OverarchingGoalSortField } from "@/types/sorting";
 import { EntityApi } from "./entity-api";
 
 const OVERARCHING_GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/overarching_goals`;
@@ -18,15 +19,31 @@ const OVERARCHING_GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/o
  */
 export const OverarchingGoalApi = {
   /*
-   * Fetches a list of overarching-goals associated with a specific user.
+   * Fetches a list of overarching goals associated with a specific coaching session.
    *
-   * @param userId The ID of the user whose overarching-goal should be retrieved
+   * @param coachingSessionId The ID of the coaching session whose overarching goals should be retrieved
+   * @param sortBy Optional field to sort by.
+   * @param sortOrder Optional sort order.
    * @returns Promise resolving to an array of OverarchingGoal objects
    */
-  list: async (coachingSessionId: Id): Promise<OverarchingGoal[]> =>
-    EntityApi.listFn<OverarchingGoal>(OVERARCHING_GOALS_BASEURL, {
-      params: { coaching_session_id: coachingSessionId },
-    }),
+  list: async (
+    coachingSessionId: Id,
+    sortBy?: OverarchingGoalSortField,
+    sortOrder?: ApiSortOrder
+  ): Promise<OverarchingGoal[]> => {
+    const params: Record<string, string> = {
+      coaching_session_id: coachingSessionId,
+    };
+
+    if (sortBy) {
+      params.sort_by = sortBy;
+    }
+    if (sortOrder) {
+      params.sort_order = sortOrder;
+    }
+
+    return EntityApi.listFn<OverarchingGoal>(OVERARCHING_GOALS_BASEURL, { params });
+  },
 
   /**
    * Fetches a single overarching-goal by its ID.
