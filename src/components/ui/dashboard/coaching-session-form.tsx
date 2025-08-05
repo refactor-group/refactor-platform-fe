@@ -42,8 +42,8 @@ export default function CoachingSessionForm({
   const [sessionDate, setSessionDate] = useState<Date | undefined>(() => {
     if (!existingSession) return undefined;
     // Convert stored UTC time back to user's local timezone for editing
-    const userTimezone = userSession.timezone || getBrowserTimezone();
-    const utcDateTime = DateTime.fromISO(existingSession.date);
+    const userTimezone = userSession?.timezone || getBrowserTimezone();
+    const utcDateTime = DateTime.fromISO(existingSession.date, { zone: 'utc' });
     const localDateTime = utcDateTime.setZone(userTimezone);
     return localDateTime.toJSDate();
   });
@@ -51,8 +51,8 @@ export default function CoachingSessionForm({
   const [sessionTime, setSessionTime] = useState<string>(() => {
     if (!existingSession) return "";
     // Convert stored UTC time back to user's local timezone for editing
-    const userTimezone = userSession.timezone || getBrowserTimezone();
-    const utcDateTime = DateTime.fromISO(existingSession.date);
+    const userTimezone = userSession?.timezone || getBrowserTimezone();
+    const utcDateTime = DateTime.fromISO(existingSession.date, { zone: 'utc' });
     const localDateTime = utcDateTime.setZone(userTimezone);
     return localDateTime.toFormat("HH:mm");
   });
@@ -77,7 +77,7 @@ export default function CoachingSessionForm({
     await update(existingSession.id, {
       ...existingSession,
       date: dateTime,
-      updated_at: DateTime.now(),
+      updated_at: DateTime.now().toUTC(),
     });
   };
 
@@ -88,7 +88,7 @@ export default function CoachingSessionForm({
     const [hours, minutes] = sessionTime.split(":").map(Number);
 
     // Create datetime in user's timezone, then convert to UTC for storage
-    const userTimezone = userSession.timezone || getBrowserTimezone();
+    const userTimezone = userSession?.timezone || getBrowserTimezone();
     const localDateTime = DateTime.fromJSDate(sessionDate)
       .setZone(userTimezone)
       .set({ hour: hours, minute: minutes });
