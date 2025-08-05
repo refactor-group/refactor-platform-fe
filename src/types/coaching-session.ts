@@ -104,3 +104,21 @@ export function coachingSessionsToString(
 ): string {
   return JSON.stringify(coaching_sessions);
 }
+
+export function isPastSession(session: CoachingSession): boolean {
+  const sessionDate = DateTime.fromISO(session.date);
+  const now = DateTime.now();
+  return sessionDate < now;
+}
+
+export function isSessionToday(session: CoachingSession): boolean {
+  const sessionDate = DateTime.fromISO(session.date);
+  const today = DateTime.now();
+  return sessionDate.hasSame(today, 'day');
+}
+
+export function isFutureSession(session: CoachingSession): boolean {
+  const sessionDate = DateTime.fromISO(session.date);
+  const now = DateTime.now();
+  return sessionDate > now;
+}

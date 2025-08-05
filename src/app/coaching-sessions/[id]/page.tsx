@@ -100,23 +100,21 @@ export default function CoachingSessionsPage() {
     <div className="max-w-screen-2xl">
       <div className="flex-col h-full pl-4 md:flex ">
         <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
-          <div className="flex items-center space-x-2">
-            <CoachingSessionTitle
-              locale={siteConfig.locale}
-              style={siteConfig.titleStyle}
-              onRender={handleTitleRender}
-            ></CoachingSessionTitle>
+          <CoachingSessionTitle
+            locale={siteConfig.locale}
+            style={siteConfig.titleStyle}
+            onRender={handleTitleRender}
+          />
+          <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md items-center gap-3 sm:justify-end md:justify-start">
             <ShareSessionLink
               sessionId={params.id as string}
               onError={handleShareError}
             />
-          </div>
-          <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md space-x-2 sm:justify-end md:justify-start">
             <CoachingSessionSelector
               relationshipId={currentCoachingRelationshipId}
               disabled={!currentCoachingRelationshipId}
               onSelect={handleCoachingSessionSelect}
-            ></CoachingSessionSelector>
+            />
           </div>
         </div>
       </div>
