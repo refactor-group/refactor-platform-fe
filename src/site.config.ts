@@ -1,6 +1,6 @@
 export const siteConfig = {
   name: "Refactor Coaching Platform",
-  url: "https://refactor.engineer",
+  url: "https://myrefactor.com",
   ogImage: "https://ui.shadcn.com/og.jpg",
   locale: "us",
   titleStyle: SessionTitleStyle.CoachFirstLastCoacheeFirstLast,
