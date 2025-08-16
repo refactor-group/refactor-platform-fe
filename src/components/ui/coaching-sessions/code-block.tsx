@@ -23,7 +23,7 @@ const CodeBlock: React.FC<NodeViewProps> = ({
         }}
       ></ProgrammingLanguageSelector>
       <pre>
-        <NodeViewContent as="code" />
+        <NodeViewContent />
       </pre>
     </NodeViewWrapper>
   );

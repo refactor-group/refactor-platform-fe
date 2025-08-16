@@ -1,0 +1,520 @@
+/* Simple Editor Styles for Coaching Notes - Based on TipTap SimpleEditor */
+@use "tailwindcss/base" as *;
+@use "tailwindcss/components" as *;
+@use "tailwindcss/utilities" as *;
+
+/* CSS Variables for theming */
+:root {
+  /* TipTap SimpleEditor Variables */
+  --tt-toolbar-height: 44px;
+  --tt-theme-text: rgb(17, 24, 39); /* gray-900 */
+  --tt-bg-color: rgb(255, 255, 255);
+  --tt-scrollbar-color: rgb(209, 213, 219); /* gray-300 */
+  
+  /* Editor Colors */
+  --editor-border: rgb(229, 231, 235); /* gray-200 */
+  --editor-focus-border: rgb(59, 130, 246); /* blue-500 */
+  --editor-bg: rgb(255, 255, 255);
+  --editor-text: rgb(17, 24, 39); /* gray-900 */
+  --editor-placeholder: rgb(156, 163, 175); /* gray-400 */
+  
+  /* Code Block Colors */
+  --code-bg: rgb(31, 41, 55); /* gray-800 */
+  --code-text: rgb(255, 255, 255);
+  
+  /* Link Colors */
+  --link-color: rgb(59, 130, 246); /* blue-500 */
+  --link-hover: rgb(37, 99, 235); /* blue-600 */
+}
+
+/* Dark theme variables */
+.dark {
+  --tt-theme-text: rgb(243, 244, 246); /* gray-100 */
+  --tt-bg-color: rgb(17, 24, 39); /* gray-900 */
+  --tt-scrollbar-color: rgb(75, 85, 99); /* gray-600 */
+  
+  --editor-border: rgb(75, 85, 99); /* gray-600 */
+  --editor-focus-border: rgb(59, 130, 246); /* blue-500 */
+  --editor-bg: rgb(31, 41, 55); /* gray-800 */
+  --editor-text: rgb(243, 244, 246); /* gray-100 */
+  --editor-placeholder: rgb(107, 114, 128); /* gray-500 */
+  
+  --code-bg: rgb(17, 24, 39); /* gray-900 */
+  --code-text: rgb(243, 244, 246); /* gray-100 */
+  
+  --link-color: rgb(96, 165, 250); /* blue-400 */
+  --link-hover: rgb(59, 130, 246); /* blue-500 */
+}
+
+/* Font imports - using Inter and DM Sans like SimpleEditor */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
+/* Editor Container */
+.coaching-notes-editor {
+  font-family: "Inter", sans-serif;
+  color: var(--tt-theme-text);
+  border: 1px solid var(--editor-border);
+  border-radius: 0.5rem;
+  background-color: var(--editor-bg);
+  min-height: 200px;
+  overflow: hidden; /* Ensure clean corners */
+  
+  &:focus-within {
+    border-color: var(--editor-border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    
+    .dark & {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
+/* Toolbar Styling */
+.coaching-notes-toolbar {
+  height: var(--tt-toolbar-height);
+  border-bottom: 1px solid var(--editor-border);
+  background-color: var(--editor-bg);
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  /* No border-radius needed since parent handles it with overflow: hidden */
+}
+
+/* Content Wrapper with Custom Scrollbar */
+.coaching-notes-content {
+  height: calc(100% - var(--tt-toolbar-height));
+  min-height: 300px;
+  overflow-y: auto;
+  position: relative;
+
+  &::-webkit-scrollbar {
+    display: block;
+    width: 0.5rem;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--tt-scrollbar-color);
+    border-radius: 4px;
+  }
+
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--tt-scrollbar-color) transparent;
+}
+
+/* TipTap Editor Content Styles */
+.tiptap.ProseMirror {
+  /* Use DM Sans for content like SimpleEditor */
+  font-family: "DM Sans", sans-serif;
+  color: var(--editor-text);
+  background-color: var(--editor-bg);
+  padding: 1rem;
+  min-height: 300px;
+  outline: none;
+  line-height: 1.6;
+  font-size: 0.875rem; /* 14px */
+  /* No border-radius needed since parent handles it with overflow: hidden */
+  
+  /* Remove default margins on first child */
+  > *:first-child {
+    margin-top: 0;
+  }
+  
+  > *:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Placeholder styling */
+  p.is-empty::before {
+    content: attr(data-placeholder);
+    color: var(--editor-placeholder);
+    pointer-events: none;
+    height: 0;
+    float: left;
+  }
+
+  /* Typography - Enhanced for coaching notes */
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.2;
+    margin: 1.5rem 0 0.75rem 0;
+    font-weight: 600;
+    color: var(--editor-text);
+  }
+
+  h1 {
+    font-size: 1.875rem; /* 30px */
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 1.5rem; /* 24px */
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.25rem; /* 20px */
+    font-weight: 600;
+  }
+
+  h4 {
+    font-size: 1.125rem; /* 18px */
+    font-weight: 600;
+  }
+
+  h5, h6 {
+    font-size: 1rem; /* 16px */
+    font-weight: 600;
+  }
+
+  /* Paragraph spacing */
+  p {
+    margin: 0.75rem 0;
+    line-height: 1.6;
+  }
+
+  /* List styles */
+  ul, ol {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+    
+    li {
+      margin: 0.25rem 0;
+      
+      p {
+        margin: 0.25rem 0;
+      }
+    }
+  }
+
+  ul {
+    list-style-type: disc;
+    
+    ul {
+      list-style-type: circle;
+      
+      ul {
+        list-style-type: square;
+      }
+    }
+  }
+
+  ol {
+    list-style-type: decimal;
+    
+    ol {
+      list-style-type: lower-alpha;
+      
+      ol {
+        list-style-type: lower-roman;
+      }
+    }
+  }
+
+  /* Task lists - Enhanced for coaching */
+  ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0;
+    
+    li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      
+      > label {
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+        user-select: none;
+        
+        input[type="checkbox"] {
+          margin: 0;
+          accent-color: var(--editor-focus-border);
+        }
+      }
+      
+      > div {
+        flex: 1;
+      }
+    }
+  }
+
+  /* Blockquote - Enhanced styling */
+  blockquote {
+    border-left: 4px solid var(--editor-focus-border);
+    margin: 1.5rem 0;
+    padding: 0.75rem 0 0.75rem 1rem;
+    background-color: var(--editor-bg);
+    font-style: italic;
+    opacity: 0.8;
+    
+    p {
+      margin: 0.5rem 0;
+    }
+  }
+
+  /* Code styles */
+  code {
+    background-color: var(--editor-border);
+    color: var(--editor-text);
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.8em;
+  }
+
+  /* Code blocks - Enhanced with better syntax highlighting */
+  pre {
+    background-color: var(--code-bg);
+    color: var(--code-text);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    
+    code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    /* Syntax highlighting - Keep your existing colors */
+    .hljs-comment, .hljs-quote {
+      color: #616161;
+    }
+
+    .hljs-variable, .hljs-template-variable, .hljs-attribute,
+    .hljs-tag, .hljs-name, .hljs-regexp, .hljs-link,
+    .hljs-selector-id, .hljs-selector-class {
+      color: #f98181;
+    }
+
+    .hljs-number, .hljs-meta, .hljs-built_in, .hljs-builtin-name,
+    .hljs-literal, .hljs-type, .hljs-params {
+      color: #fbbc88;
+    }
+
+    .hljs-string, .hljs-symbol, .hljs-bullet {
+      color: #b9f18d;
+    }
+
+    .hljs-title, .hljs-section {
+      color: #faf594;
+    }
+
+    .hljs-keyword, .hljs-selector-tag {
+      color: #70cff8;
+    }
+
+    .hljs-emphasis {
+      font-style: italic;
+    }
+
+    .hljs-strong {
+      font-weight: 700;
+    }
+  }
+
+  /* Horizontal rule */
+  hr {
+    border: none;
+    border-top: 2px solid var(--editor-border);
+    margin: 2rem 0;
+  }
+
+  /* Links - Enhanced styling */
+  a {
+    color: var(--link-color);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--link-hover);
+      text-decoration-thickness: 2px;
+    }
+  }
+
+  /* Text formatting */
+  strong {
+    font-weight: 600;
+  }
+
+  em {
+    font-style: italic;
+  }
+
+  u {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  s {
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+  }
+
+  /* Highlight - Enhanced for coaching notes */
+  mark {
+    background-color: rgb(254, 240, 138); /* yellow-200 */
+    color: rgb(120, 53, 15); /* yellow-900 */
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    
+    .dark & {
+      background-color: rgb(161, 98, 7); /* yellow-600 */
+      color: rgb(254, 252, 232); /* yellow-50 */
+    }
+  }
+}
+
+/* Collaboration cursor styles - Enhanced */
+.collaboration-cursor__caret {
+  border-left: 2px solid #0d0d0d;
+  border-right: 2px solid #0d0d0d;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.collaboration-cursor__label {
+  border-radius: 0.25rem 0.25rem 0.25rem 0;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  left: -1px;
+  padding: 0.125rem 0.375rem;
+  position: absolute;
+  top: -1.5em;
+  user-select: none;
+  white-space: nowrap;
+  z-index: 10;
+  font-family: "Inter", sans-serif;
+}
+
+/* Toolbar button styling */
+.toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2rem;
+  width: 2rem;
+  border-radius: 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--editor-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: var(--editor-border);
+  }
+  
+  &.is-active {
+    background-color: var(--editor-focus-border);
+    color: white;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Dropdown menus for toolbar */
+.toolbar-dropdown {
+  background-color: var(--editor-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 0.375rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 0.25rem;
+  min-width: 8rem;
+  z-index: 50;
+}
+
+.toolbar-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: var(--editor-border);
+  }
+  
+  &.is-active {
+    background-color: var(--editor-focus-border);
+    color: white;
+  }
+}
+
+/* Loading state */
+.coaching-notes-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 1rem;
+  color: var(--editor-placeholder);
+}
+
+/* Error state */
+.coaching-notes-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: rgb(239, 68, 68); /* red-500 */
+  text-align: center;
+  padding: 2rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .coaching-notes-toolbar {
+    padding: 0.25rem;
+    gap: 0.125rem;
+  }
+  
+  .toolbar-button {
+    height: 1.75rem;
+    width: 1.75rem;
+  }
+  
+  .tiptap.ProseMirror {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Focus styles for accessibility */
+.toolbar-button:focus {
+  outline: 2px solid var(--editor-focus-border);
+  outline-offset: 2px;
+}
+
+.tiptap.ProseMirror:focus {
+  outline: none; /* Remove default outline since parent container handles focus styling */
+}
