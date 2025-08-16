@@ -1,5 +1,5 @@
 import * as React from "react"
-import { isNodeSelection, type Editor } from "@tiptap/react"
+import { isNodeSelection, type Editor, useEditorState } from "@tiptap/react"
 
 // --- Hooks ---
 import { useTiptapEditor } from "@/lib/hooks/use-tiptap-editor"
@@ -162,10 +162,23 @@ export function ListDropdownMenu({
     listInSchema,
     filteredLists,
     canToggleAny,
-    isAnyActive,
     handleOpenChange,
   } = useListDropdownState(editor, types)
 
+  // Use useEditorState to reactively track editor state changes
+  const editorState = useEditorState({
+    editor,
+    selector: ctx => {
+      if (!ctx.editor) return { canToggleAny: false, isAnyActive: false };
+      const editor = ctx.editor;
+      return {
+        canToggleAny: canToggleAnyList(editor, types),
+        isAnyActive: isAnyListActive(editor, types),
+      };
+    },
+  });
+
+  const isAnyActive = editorState?.isAnyActive ?? false;
   const getActiveIcon = useActiveListIcon(editor, filteredLists)
 
   const show = React.useMemo(() => {
