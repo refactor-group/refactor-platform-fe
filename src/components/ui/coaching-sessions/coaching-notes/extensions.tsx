@@ -44,7 +44,6 @@ export const Extensions = (
   provider?: TiptapCollabProvider | null,
   user?: { name: string; color: string }
 ): TiptapExtensions => {
-  console.log('🔧 Creating extensions with:', { hasDoc: !!doc, hasProvider: !!provider, user });
   
   try {
     // Base extensions - conditionally include history based on collaboration
@@ -102,25 +101,10 @@ export const Extensions = (
     // History is already included in StarterKit when history: true
     
     const extensions: TiptapExtensions = baseExtensions;
-    
-    console.log('✅ Base extensions created successfully:', extensions.length);
 
     // Add collaboration extensions only if doc and provider are properly initialized
     if (doc && provider && typeof doc === 'object' && typeof provider === 'object') {
       try {
-        console.log('✅ Initializing collaboration extensions with provider:', provider);
-        console.log('📄 Provider validation:', {
-          hasProvider: !!provider,
-          providerType: typeof provider,
-          hasDocument: provider && 'document' in provider,
-          documentType: provider && provider.document ? typeof provider.document : 'undefined'
-        });
-        console.log('📄 Doc object validation:', { 
-          hasDoc: !!doc, 
-          docType: typeof doc, 
-          hasClientID: 'clientID' in doc,
-          hasGetXmlFragment: typeof doc.getXmlFragment === 'function'
-        });
         
         // Validate that the Y.js document is properly initialized
         if (!doc.clientID && doc.clientID !== 0) {
@@ -136,7 +120,6 @@ export const Extensions = (
               trackedOrigins: [null],
             },
           });
-          console.log('✅ Collaboration extension created:', collaborationExt);
           extensions.push(collaborationExt);
           
           // CollaborationCaret uses the provider with enhanced styling
@@ -167,14 +150,12 @@ export const Extensions = (
               return container;
             },
           });
-          console.log('✅ Collaboration caret extension created:', collaborationCaretExt);
           extensions.push(collaborationCaretExt);
         } catch (extError) {
           console.error('❌ Error creating collaborative extensions:', extError);
           // Don't throw - fallback to non-collaborative mode
           console.warn('⚠️ Falling back to non-collaborative mode due to extension creation error');
         }
-        console.log('✅ Collaboration extensions processing completed');
       } catch (error) {
         console.error('❌ Failed to initialize collaboration extensions:', error);
         console.error('❌ Error details:', { doc, provider, user });
@@ -187,7 +168,6 @@ export const Extensions = (
       }
     }
     
-    console.log('🎯 Returning extensions:', extensions.length);
     return extensions;
     
   } catch (error) {
