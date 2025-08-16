@@ -5,11 +5,11 @@ interface FloatingToolbarProps {
   /**
    * Reference to the main editor container to detect scroll position
    */
-  editorRef: React.RefObject<HTMLElement>;
+  editorRef: React.RefObject<HTMLElement | null>;
   /**
    * Reference to the original toolbar to detect when it's out of view
    */
-  toolbarRef: React.RefObject<HTMLElement>;
+  toolbarRef: React.RefObject<HTMLElement | null>;
 }
 
 export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
