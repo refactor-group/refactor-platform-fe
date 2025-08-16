@@ -16,6 +16,7 @@ import { createLowlight } from "lowlight";
 import { all } from "lowlight";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import { ConfiguredLink } from "./extended-link-extension";
+import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
 
 // Initialize lowlight with all languages
 const lowlight = createLowlight(all);
@@ -117,12 +118,32 @@ export const Extensions = (
           console.log('✅ Collaboration extension created:', collaborationExt);
           extensions.push(collaborationExt);
           
-          // CollaborationCaret uses the provider
+          // CollaborationCaret uses the provider with enhanced styling
           const collaborationCaretExt = CollaborationCaret.configure({
             provider: provider,
             user: user || {
               name: 'Anonymous',
-              color: '#ffcc00',
+              color: generateCollaborativeUserColor(),
+            },
+            render: (user) => {
+              const container = document.createElement('span');
+              container.classList.add('collaboration-cursor__container');
+              container.style.position = 'relative';
+              container.style.display = 'inline-block';
+
+              const cursor = document.createElement('span');
+              cursor.classList.add('collaboration-cursor__caret');
+              cursor.setAttribute('style', `border-color: ${user.color}; --collaboration-user-color: ${user.color};`);
+
+              const label = document.createElement('div');
+              label.classList.add('collaboration-cursor__label');
+              label.setAttribute('style', `background-color: ${user.color}; --collaboration-user-color: ${user.color};`);
+              label.insertBefore(document.createTextNode(user.name), null);
+
+              container.appendChild(cursor);
+              container.appendChild(label);
+
+              return container;
             },
           });
           console.log('✅ Collaboration caret extension created:', collaborationCaretExt);

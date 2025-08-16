@@ -293,3 +293,30 @@ export function sanitizeUrl(
   }
   return "#"
 }
+
+/**
+ * Generates a random, visually appealing color for collaborative users
+ * Returns colors that have good contrast and are easily distinguishable
+ */
+export function generateCollaborativeUserColor(): string {
+  const colors = [
+    '#3B82F6', // Blue
+    '#EF4444', // Red
+    '#10B981', // Emerald
+    '#F59E0B', // Amber
+    '#8B5CF6', // Violet
+    '#EC4899', // Pink
+    '#06B6D4', // Cyan
+    '#84CC16', // Lime
+    '#F97316', // Orange
+    '#6366F1', // Indigo
+    '#14B8A6', // Teal
+    '#A855F7', // Purple
+    '#DC2626', // Red-600
+    '#059669', // Emerald-600
+    '#7C3AED', // Violet-600
+    '#DB2777', // Pink-600
+  ]
+  
+  return colors[Math.floor(Math.random() * colors.length)]
+}
