@@ -10,6 +10,7 @@ import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-sess
 import { Extensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
 import { Progress } from "@/components/ui/progress";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
+import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
 import { siteConfig } from "@/site.config";
 import StarterKit from "@tiptap/starter-kit";
 import "@/styles/simple-editor.scss";
@@ -246,16 +247,38 @@ const CoachingNotes = () => {
     console.log('🚀 About to initialize EditorProvider with extensions:', activeExtensions.length);
     console.log('🔍 Extension details:', activeExtensions.map(ext => ext?.name || 'unknown'));
     
+    return <CoachingNotesWithFloatingToolbar extensions={activeExtensions} />;
+  } catch (error) {
+    console.error('❌ Error initializing EditorProvider:', error);
+    console.error('❌ Active extensions:', activeExtensions);
     return (
       <div className="coaching-notes-editor">
-        <EditorProvider
-          extensions={activeExtensions}
-          autofocus={false}
-          immediatelyRender={false}
-          shouldRerenderOnTransaction={false}
-          onContentError={(error) =>
-            console.error("Editor content error:", error)
-          }
+        <div className="coaching-notes-error">
+          <div className="text-center">
+            <p className="mb-2">❌ Failed to initialize editor</p>
+            <p className="text-sm opacity-80">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+};
+
+// Wrapper component with floating toolbar functionality
+const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: any[] }> = ({ extensions }) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div ref={editorRef} className="coaching-notes-editor">
+      <EditorProvider
+        extensions={extensions}
+        autofocus={false}
+        immediatelyRender={false}
+        shouldRerenderOnTransaction={false}
+        onContentError={(error) =>
+          console.error("Editor content error:", error)
+        }
         editorProps={{
           attributes: {
             class: "tiptap ProseMirror",
@@ -280,24 +303,17 @@ const CoachingNotes = () => {
             },
           },
         }}
-        slotBefore={<SimpleToolbar />}
+        slotBefore={
+          <div ref={toolbarRef}>
+            <SimpleToolbar />
+          </div>
+        }
+        slotAfter={
+          <FloatingToolbar editorRef={editorRef} toolbarRef={toolbarRef} />
+        }
       />
     </div>
-    );
-  } catch (error) {
-    console.error('❌ Error initializing EditorProvider:', error);
-    console.error('❌ Active extensions:', activeExtensions);
-    return (
-      <div className="coaching-notes-editor">
-        <div className="coaching-notes-error">
-          <div className="text-center">
-            <p className="mb-2">❌ Failed to initialize editor</p>
-            <p className="text-sm opacity-80">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  );
 };
 
 export { CoachingNotes };

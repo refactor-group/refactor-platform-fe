@@ -587,6 +587,66 @@
   padding: 2rem;
 }
 
+/* Floating Toolbar Styles */
+.floating-toolbar {
+  position: fixed;
+  top: 5rem; /* Below the header (64px) + some margin */
+  z-index: 9999; /* Well above header z-50 */
+  background-color: var(--editor-bg);
+  border: 1px solid var(--editor-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  animation: slideInDown 0.3s ease-out;
+  backdrop-filter: blur(8px);
+  
+  .dark & {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.floating-toolbar-content {
+  height: var(--tt-toolbar-height);
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  
+  /* Apply the same styling as the original toolbar */
+  .tiptap-toolbar {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+}
+
+@keyframes slideInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure floating toolbar appears above everything */
+.floating-toolbar .toolbar-button {
+  background: var(--editor-bg);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: var(--editor-border);
+  }
+  
+  &.is-active {
+    background-color: var(--editor-focus-border);
+    color: white;
+  }
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .coaching-notes-toolbar {
@@ -602,6 +662,15 @@
   .tiptap.ProseMirror {
     padding: 0.75rem;
     font-size: 0.875rem;
+  }
+  
+  .floating-toolbar-content {
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .floating-toolbar .toolbar-button {
+    height: 1.75rem;
+    width: 1.75rem;
   }
 }
 
