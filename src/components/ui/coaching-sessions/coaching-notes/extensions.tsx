@@ -11,6 +11,7 @@ import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import type { Extensions as TiptapExtensions } from "@tiptap/core";
+import { Extension } from "@tiptap/core";
 import CodeBlock from "@/components/ui/coaching-sessions/code-block";
 import { createLowlight } from "lowlight";
 import { all } from "lowlight";
@@ -20,6 +21,23 @@ import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
 
 // Initialize lowlight with all languages
 const lowlight = createLowlight(all);
+
+// Extension to handle Tab key in code blocks
+const CodeBlockTabHandler = Extension.create({
+  name: 'codeBlockTabHandler',
+  addKeyboardShortcuts() {
+    return {
+      'Tab': () => {
+        // Only handle Tab if we're in a code block
+        if (this.editor.isActive('codeBlock')) {
+          return this.editor.commands.insertContent('    '); // 4 spaces
+        }
+        // Let other extensions handle Tab if not in code block
+        return false;
+      },
+    };
+  },
+});
 
 export const Extensions = (
   doc: any,
@@ -76,6 +94,9 @@ export const Extensions = (
       
       // Links
       ConfiguredLink,
+      
+      // Tab handling for code blocks
+      CodeBlockTabHandler,
     ];
     
     // History is already included in StarterKit when history: true
