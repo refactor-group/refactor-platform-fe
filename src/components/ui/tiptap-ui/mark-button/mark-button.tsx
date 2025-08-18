@@ -1,4 +1,4 @@
-import * as React from "react"
+import React, { useMemo, useCallback } from "react"
 import { isNodeSelection, type Editor, useEditorState } from "@tiptap/react"
 
 // --- Hooks ---
@@ -125,19 +125,22 @@ export function useMarkState(
   type: Mark,
   disabled: boolean = false
 ) {
-  const markInSchema = isMarkInSchema(type, editor)
+  const markInSchema = useMemo(
+    () => isMarkInSchema(type, editor),
+    [type, editor]
+  )
 
   // Use useEditorState to reactively track editor state changes
   const editorState = useEditorState({
     editor,
-    selector: ctx => {
+    selector: useCallback((ctx) => {
       if (!ctx.editor) return { canToggle: false, isActive: false, isInCodeBlock: false };
       return {
         canToggle: ctx.editor.can().toggleMark(type),
         isActive: ctx.editor.isActive(type),
         isInCodeBlock: ctx.editor.isActive("codeBlock"),
       };
-    },
+    }, [type]),
   });
 
   const canToggle = editorState?.canToggle ?? false;
@@ -145,7 +148,7 @@ export function useMarkState(
   const isInCodeBlock = editorState?.isInCodeBlock ?? false;
 
   // Calculate disabled state using reactive values
-  const isDisabled = React.useMemo(() => {
+  const isDisabled = useMemo(() => {
     if (!editor) return true;
     if (disabled) return true;
     if (isInCodeBlock) return true;
@@ -161,6 +164,7 @@ export function useMarkState(
     markInSchema,
     isDisabled,
     isActive,
+    canToggle,
     Icon,
     shortcutKey,
     formattedName,
@@ -188,23 +192,13 @@ export const MarkButton = React.forwardRef<HTMLButtonElement, MarkButtonProps>(
       markInSchema,
       isDisabled,
       isActive,
+      canToggle,
       Icon,
       shortcutKey,
       formattedName,
     } = useMarkState(editor, type, disabled)
 
-    // Get reactive state for show calculation
-    const editorState = useEditorState({
-      editor,
-      selector: ctx => {
-        if (!ctx.editor) return { canToggle: false };
-        return {
-          canToggle: ctx.editor.can().toggleMark(type),
-        };
-      },
-    });
-
-    const handleClick = React.useCallback(
+    const handleClick = useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
         onClick?.(e)
 
@@ -215,7 +209,7 @@ export const MarkButton = React.forwardRef<HTMLButtonElement, MarkButtonProps>(
       [onClick, isDisabled, editor, type]
     )
 
-    const show = React.useMemo(() => {
+    const show = useMemo(() => {
       if (!markInSchema || !editor) {
         return false
       }
@@ -223,14 +217,14 @@ export const MarkButton = React.forwardRef<HTMLButtonElement, MarkButtonProps>(
       if (hideWhenUnavailable) {
         if (
           isNodeSelection(editor.state.selection) ||
-          !(editorState?.canToggle ?? false)
+          !canToggle
         ) {
           return false
         }
       }
 
       return true
-    }, [editor, hideWhenUnavailable, markInSchema, editorState?.canToggle])
+    }, [editor, hideWhenUnavailable, markInSchema, canToggle])
 
     if (!show || !editor || !editor.isEditable) {
       return null

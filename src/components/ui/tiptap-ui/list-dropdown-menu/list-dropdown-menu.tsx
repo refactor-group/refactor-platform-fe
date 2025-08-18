@@ -1,4 +1,4 @@
-import * as React from "react"
+import React, { useState, useMemo, useCallback } from "react"
 import { isNodeSelection, type Editor, useEditorState } from "@tiptap/react"
 
 // --- Hooks ---
@@ -98,21 +98,35 @@ export function useListDropdownState(
   editor: Editor | null,
   availableTypes: ListType[]
 ) {
-  const [isOpen, setIsOpen] = React.useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
-  const listInSchema = availableTypes.some((type) =>
-    isNodeInSchema(type, editor)
+  const listInSchema = useMemo(
+    () => availableTypes.some((type) => isNodeInSchema(type, editor)),
+    [availableTypes, editor]
   )
 
-  const filteredLists = React.useMemo(
+  const filteredLists = useMemo(
     () => getFilteredListOptions(availableTypes),
     [availableTypes]
   )
 
-  const canToggleAny = canToggleAnyList(editor, availableTypes)
-  const isAnyActive = isAnyListActive(editor, availableTypes)
+  // Consolidate editor state tracking into a single useEditorState hook
+  const editorState = useEditorState({
+    editor,
+    selector: useCallback((ctx) => {
+      if (!ctx.editor) return { canToggleAny: false, isAnyActive: false };
+      const editor = ctx.editor;
+      return {
+        canToggleAny: canToggleAnyList(editor, availableTypes),
+        isAnyActive: isAnyListActive(editor, availableTypes),
+      };
+    }, [availableTypes]),
+  });
 
-  const handleOpenChange = React.useCallback(
+  const canToggleAny = editorState?.canToggleAny ?? false;
+  const isAnyActive = editorState?.isAnyActive ?? false;
+
+  const handleOpenChange = useCallback(
     (open: boolean, callback?: (isOpen: boolean) => void) => {
       setIsOpen(open)
       callback?.(open)
@@ -135,7 +149,7 @@ export function useActiveListIcon(
   editor: Editor | null,
   filteredLists: typeof listOptions
 ) {
-  return React.useCallback(() => {
+  return useCallback(() => {
     const activeOption = filteredLists.find((option) =>
       isListActive(editor, option.type)
     )
@@ -162,26 +176,13 @@ export function ListDropdownMenu({
     listInSchema,
     filteredLists,
     canToggleAny,
+    isAnyActive,
     handleOpenChange,
   } = useListDropdownState(editor, types)
 
-  // Use useEditorState to reactively track editor state changes
-  const editorState = useEditorState({
-    editor,
-    selector: ctx => {
-      if (!ctx.editor) return { canToggleAny: false, isAnyActive: false };
-      const editor = ctx.editor;
-      return {
-        canToggleAny: canToggleAnyList(editor, types),
-        isAnyActive: isAnyListActive(editor, types),
-      };
-    },
-  });
-
-  const isAnyActive = editorState?.isAnyActive ?? false;
   const getActiveIcon = useActiveListIcon(editor, filteredLists)
 
-  const show = React.useMemo(() => {
+  const show = useMemo(() => {
     return shouldShowListDropdown({
       editor,
       listTypes: types,
@@ -191,7 +192,7 @@ export function ListDropdownMenu({
     })
   }, [editor, types, hideWhenUnavailable, listInSchema, canToggleAny])
 
-  const handleOnOpenChange = React.useCallback(
+  const handleOnOpenChange = useCallback(
     (open: boolean) => handleOpenChange(open, onOpenChange),
     [handleOpenChange, onOpenChange]
   )
