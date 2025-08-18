@@ -3,7 +3,7 @@
 import { EditorProvider, useEditor, EditorContent } from "@tiptap/react";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
@@ -268,6 +268,11 @@ const CoachingNotes = () => {
 const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: any[] }> = ({ extensions }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const [originalToolbarVisible, setOriginalToolbarVisible] = useState(true);
+
+  const handleOriginalToolbarVisibilityChange = useCallback((visible: boolean) => {
+    setOriginalToolbarVisible(visible);
+  }, []);
 
   return (
     <div ref={editorRef} className="coaching-notes-editor">
@@ -304,7 +309,10 @@ const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: any[] }> = ({ ext
           },
         }}
         slotBefore={
-          <div ref={toolbarRef}>
+          <div 
+            ref={toolbarRef}
+            style={{ visibility: originalToolbarVisible ? 'visible' : 'hidden' }}
+          >
             <SimpleToolbar />
           </div>
         }
@@ -313,6 +321,7 @@ const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: any[] }> = ({ ext
             editorRef={editorRef} 
             toolbarRef={toolbarRef} 
             headerHeight={64} // Can be made configurable via props or site config
+            onOriginalToolbarVisibilityChange={handleOriginalToolbarVisibilityChange}
           />
         }
       />
