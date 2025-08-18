@@ -23,5 +23,14 @@
       text-overflow: clip;
       overflow: visible;
     }
+    
+    /* Responsive width for URL input */
+    @media (min-width: 640px) {
+      min-width: 20rem; /* 320px on small screens and up */
+    }
+    
+    @media (min-width: 1024px) {
+      min-width: 24rem; /* 384px on desktop */
+    }
   }
 }
