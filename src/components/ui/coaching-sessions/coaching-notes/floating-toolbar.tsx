@@ -33,6 +33,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     width: 'auto'
   });
   const floatingRef = useRef<HTMLDivElement>(null);
+  const scrollListenersRef = useRef(new Map<Element, () => void>());
 
   const checkToolbarVisibility = useCallback(() => {
     if (!toolbarRef.current || !editorRef.current || !floatingRef.current) {
@@ -68,6 +69,15 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     }
   }, [headerHeight, toolbarRef, editorRef, onOriginalToolbarVisibilityChange]);
 
+  // Cleanup function to remove all tracked listeners
+  const cleanupScrollListeners = useCallback(() => {
+    const listeners = scrollListenersRef.current;
+    listeners.forEach((handler, element) => {
+      element.removeEventListener('scroll', handler);
+    });
+    listeners.clear();
+  }, []);
+
   useEffect(() => {
     // Check on scroll
     const handleScroll = () => {
@@ -86,16 +96,21 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleResize, { passive: true });
 
+    // Clear any existing listeners from previous renders
+    cleanupScrollListeners();
+
     // Also listen to scroll events on parent containers
+    const listeners = scrollListenersRef.current;
     let currentElement = editorRef.current?.parentElement;
-    const scrollElements: Element[] = [];
     
     while (currentElement) {
       const computedStyle = window.getComputedStyle(currentElement);
       if (computedStyle.overflow === 'auto' || computedStyle.overflow === 'scroll' || 
           computedStyle.overflowY === 'auto' || computedStyle.overflowY === 'scroll') {
-        scrollElements.push(currentElement);
-        currentElement.addEventListener('scroll', handleScroll, { passive: true });
+        // Create a unique handler for each element
+        const elementHandler = () => handleScroll();
+        listeners.set(currentElement, elementHandler);
+        currentElement.addEventListener('scroll', elementHandler, { passive: true });
       }
       currentElement = currentElement.parentElement;
     }
@@ -103,11 +118,16 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleResize);
-      scrollElements.forEach(element => {
-        element.removeEventListener('scroll', handleScroll);
-      });
+      cleanupScrollListeners();
     };
-  }, [checkToolbarVisibility, editorRef]);
+  }, [checkToolbarVisibility, editorRef, cleanupScrollListeners]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanupScrollListeners();
+    };
+  }, [cleanupScrollListeners]);
 
   return (
     <div
