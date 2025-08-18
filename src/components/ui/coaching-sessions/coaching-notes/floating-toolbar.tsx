@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { SimpleToolbar } from "./simple-toolbar";
 
 interface FloatingToolbarProps {
@@ -19,41 +19,41 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const floatingRef = useRef<HTMLDivElement>(null);
 
+  const checkToolbarVisibility = useCallback(() => {
+    if (!toolbarRef.current || !editorRef.current || !floatingRef.current) {
+      return;
+    }
+
+    const toolbarRect = toolbarRef.current.getBoundingClientRect();
+    const editorRect = editorRef.current.getBoundingClientRect();
+    
+    // Site header height: h-14 (56px) + pt-2 (8px) = 64px
+    const siteHeaderHeight = 64;
+    
+    // Show floating toolbar when:
+    // 1. The original toolbar's bottom edge is above the header (completely hidden)
+    // 2. The editor is still visible (at least partially)
+    const toolbarCompletelyHidden = toolbarRect.bottom < siteHeaderHeight;
+    const editorVisible = editorRect.bottom > 0 && editorRect.top < window.innerHeight;
+    
+    const shouldShowFloating = toolbarCompletelyHidden && editorVisible;
+    setIsVisible(shouldShowFloating);
+    
+    // Hide/show the original toolbar based on floating toolbar visibility
+    if (toolbarRef.current) {
+      toolbarRef.current.style.visibility = shouldShowFloating ? 'hidden' : 'visible';
+    }
+    
+    // Position the floating toolbar to align with the editor
+    if (shouldShowFloating && floatingRef.current) {
+      const floating = floatingRef.current;
+      floating.style.left = `${editorRect.left + 16}px`; // 1rem margin
+      floating.style.right = 'auto';
+      floating.style.width = `${editorRect.width - 32}px`; // subtract 2rem for margins
+    }
+  }, [toolbarRef, editorRef, floatingRef]);
+
   useEffect(() => {
-    const checkToolbarVisibility = () => {
-      if (!toolbarRef.current || !editorRef.current || !floatingRef.current) {
-        return;
-      }
-
-      const toolbarRect = toolbarRef.current.getBoundingClientRect();
-      const editorRect = editorRef.current.getBoundingClientRect();
-      
-      // Site header height: h-14 (56px) + pt-2 (8px) = 64px
-      const siteHeaderHeight = 64;
-      
-      // Show floating toolbar when:
-      // 1. The original toolbar's bottom edge is above the header (completely hidden)
-      // 2. The editor is still visible (at least partially)
-      const toolbarCompletelyHidden = toolbarRect.bottom < siteHeaderHeight;
-      const editorVisible = editorRect.bottom > 0 && editorRect.top < window.innerHeight;
-      
-      const shouldShowFloating = toolbarCompletelyHidden && editorVisible;
-      setIsVisible(shouldShowFloating);
-      
-      // Hide/show the original toolbar based on floating toolbar visibility
-      if (toolbarRef.current) {
-        toolbarRef.current.style.visibility = shouldShowFloating ? 'hidden' : 'visible';
-      }
-      
-      // Position the floating toolbar to align with the editor
-      if (shouldShowFloating && floatingRef.current) {
-        const floating = floatingRef.current;
-        floating.style.left = `${editorRect.left + 16}px`; // 1rem margin
-        floating.style.right = 'auto';
-        floating.style.width = `${editorRect.width - 32}px`; // subtract 2rem for margins
-      }
-    };
-
     // Check on scroll
     const handleScroll = () => {
       checkToolbarVisibility();
@@ -92,7 +92,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         element.removeEventListener('scroll', handleScroll);
       });
     };
-  }, [editorRef, toolbarRef]);
+  }, [checkToolbarVisibility, editorRef]);
 
   return (
     <div
