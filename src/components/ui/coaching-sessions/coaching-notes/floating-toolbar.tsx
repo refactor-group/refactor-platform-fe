@@ -10,11 +10,16 @@ interface FloatingToolbarProps {
    * Reference to the original toolbar to detect when it's out of view
    */
   toolbarRef: React.RefObject<HTMLElement | null>;
+  /**
+   * Height of the site header in pixels. Defaults to 64px (h-14 + pt-2)
+   */
+  headerHeight?: number;
 }
 
 export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   editorRef,
   toolbarRef,
+  headerHeight = 64, // Default: h-14 (56px) + pt-2 (8px) = 64px
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const floatingRef = useRef<HTMLDivElement>(null);
@@ -27,8 +32,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     const toolbarRect = toolbarRef.current.getBoundingClientRect();
     const editorRect = editorRef.current.getBoundingClientRect();
     
-    // Site header height: h-14 (56px) + pt-2 (8px) = 64px
-    const siteHeaderHeight = 64;
+    const siteHeaderHeight = headerHeight;
     
     // Show floating toolbar when:
     // 1. The original toolbar's bottom edge is above the header (completely hidden)
@@ -51,7 +55,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
       floating.style.right = 'auto';
       floating.style.width = `${editorRect.width - 32}px`; // subtract 2rem for margins
     }
-  }, [toolbarRef, editorRef, floatingRef]);
+  }, [toolbarRef, editorRef, floatingRef, headerHeight]);
 
   useEffect(() => {
     // Check on scroll

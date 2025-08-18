@@ -309,7 +309,11 @@ const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: any[] }> = ({ ext
           </div>
         }
         slotAfter={
-          <FloatingToolbar editorRef={editorRef} toolbarRef={toolbarRef} />
+          <FloatingToolbar 
+            editorRef={editorRef} 
+            toolbarRef={toolbarRef} 
+            headerHeight={64} // Can be made configurable via props or site config
+          />
         }
       />
     </div>
