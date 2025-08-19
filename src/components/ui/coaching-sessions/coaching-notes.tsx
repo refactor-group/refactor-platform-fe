@@ -1,157 +1,31 @@
 "use client";
 
 import { EditorProvider, useEditor, EditorContent } from "@tiptap/react";
-import { TiptapCollabProvider } from "@hocuspocus/provider";
-import * as Y from "yjs";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { useCollaborationToken } from "@/lib/api/collaboration-token";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
-import { Extensions as createExtensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
 import { Progress } from "@/components/ui/progress";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
 import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
-import { siteConfig } from "@/site.config";
-import StarterKit from "@tiptap/starter-kit";
+import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import type { Extensions } from "@tiptap/core";
-import { validateExtensions } from "@/types/tiptap";
 import "@/styles/simple-editor.scss";
 
-const tiptapAppId = siteConfig.env.tiptapAppId;
-
-const useCollaborationProvider = (doc: Y.Doc) => {
-  // Get coaching session ID from URL
-  const { currentCoachingSessionId } = useCurrentCoachingSession();
-  
-  const { userSession } = useAuthStore((state) => ({
-    userSession: state.userSession,
-  }));
-  const { jwt, isLoading, isError } = useCollaborationToken(
-    currentCoachingSessionId || ""
-  );
-  const [isSyncing, setIsSyncing] = useState(true);
-  const [extensions, setExtensions] = useState<Extensions>([]);
-  const [collaborationReady, setCollaborationReady] = useState(false);
-  const providerRef = useRef<TiptapCollabProvider>(null);
-
-  useEffect(() => {
-    if (!tiptapAppId) {
-      console.error("TIPTAP_APP_ID not set");
-      return;
-    }
-
-    if (jwt) {
-      if (!providerRef.current) {
-        // if we haven't initialize a provider yet,
-        // initialize one and update the providerRef that will persist
-        // during re-renders so we don't initialize more providers
-        providerRef.current = new TiptapCollabProvider({
-          name: jwt.sub,
-          appId: tiptapAppId,
-          token: jwt.token,
-          document: doc,
-          user: userSession.display_name,
-          connect: true,
-          broadcast: true,
-          onSynced: () => {
-            console.log('🔄 TipTap Cloud collaboration synced');
-            setIsSyncing(false);
-            setCollaborationReady(true);
-            // Set extensions immediately when synced
-            if (doc && providerRef.current) {
-              console.log('🔧 Setting collaborative extensions');
-              setExtensions(createExtensions(doc, providerRef.current, {
-                name: userSession.display_name,
-                color: "#ffcc00",
-              }));
-            }
-          },
-        });
-
-        providerRef.current.setAwarenessField("user", {
-          name: userSession.display_name,
-          color: "#ffcc00",
-        });
-
-        document.addEventListener("mousemove", (event) => {
-          if (providerRef.current) {
-            providerRef.current.setAwarenessField("user", {
-              name: userSession.display_name,
-              color: "#ffcc00",
-              mouseX: event.clientX,
-              mouseY: event.clientY,
-            });
-          }
-        });
-      } else {
-        // otherwise, reconnect the existing provider
-        providerRef.current.connect();
-      }
-    }
-
-    return () => {
-      if (providerRef.current) {
-        providerRef.current.disconnect();
-      }
-    };
-  }, [jwt, doc, userSession.display_name]);
-
-  return {
-    // isSyncing indicates whether a first handshake with the server has been established
-    // which is exactly the right thing to indicate if this hook isLoading or not.
-    isLoading: isSyncing,
-    isError,
-    extensions,
-    collaborationReady,
-  };
-};
 
 const CoachingNotes = () => {
-  const [doc] = useState(() => {
-    const newDoc = new Y.Doc();
-    console.log('📄 Created Y.js document:', newDoc);
-    return newDoc;
-  });
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const { isLoading, isError, extensions, collaborationReady } = useCollaborationProvider(doc);
+  const { yDoc, extensions, isReady, isLoading, error } = useEditorCache();
   
-  // Fallback extensions for when collaboration fails - create a minimal safe version
-  const fallbackExtensions = useMemo(() => {
-    try {
-      // Explicitly pass null to ensure no collaboration extensions
-      console.log('🔧 Creating fallback extensions with no collaboration');
-      return createExtensions(null, null);
-    } catch (error) {
-      console.error('❌ Error creating fallback extensions:', error);
-      // Return absolute minimal extensions if even fallback fails
-      console.log('🔧 Falling back to minimal StarterKit only');
-      return [StarterKit];
-    }
-  }, []);
-
-  // Select appropriate extensions based on collaboration state
+  // Use extensions from cache - they're already validated and ready
   const activeExtensions = useMemo((): Extensions => {
-    try {
-      // Use collaborative extensions if they're ready and valid
-      if (collaborationReady && extensions.length > 0 && !isLoading) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔧 Using collaborative extensions:', extensions.length);
-        }
-        // TipTap's Extensions type already ensures proper validation
-        return validateExtensions(extensions);
-      }
-      
-      // Fallback to non-collaborative extensions
+    if (isReady && extensions.length > 0) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 Using fallback extensions:', fallbackExtensions.length);
+        console.log('🔧 Using cached extensions:', extensions.length);
       }
-      return validateExtensions(fallbackExtensions);
-    } catch (error) {
-      console.error('❌ Error selecting extensions:', error);
-      // Return minimal safe extensions on error
-      return fallbackExtensions.length > 0 ? fallbackExtensions : [StarterKit];
+      return extensions;
     }
-  }, [collaborationReady, extensions, fallbackExtensions, isLoading]);
+    
+    // Return empty array while loading - will show loading state
+    return [];
+  }, [isReady, extensions]);
 
   // Simulate loading progress
   useEffect(() => {
@@ -194,53 +68,62 @@ const CoachingNotes = () => {
     );
   }
 
-  if (isError) {
+  if (error) {
     return (
       <div className="coaching-notes-editor">
         <div className="coaching-notes-error">
           <div className="text-center">
             <p className="mb-2">⚠️ Could not load coaching notes</p>
-            <p className="text-sm opacity-80">Please try again later or contact support if the issue persists.</p>
+            <p className="text-sm opacity-80">
+              {error.message || 'Please try again later or contact support if the issue persists.'}
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Add safety check for extensions
-  if (!activeExtensions || activeExtensions.length === 0) {
-    console.warn('⚠️ No valid extensions available, showing minimal editor');
-    return (
-      <div className="coaching-notes-editor">
-        <div className="coaching-notes-error">
-          <div className="text-center">
-            <p className="mb-2">⚠️ Editor is loading...</p>
-            <p className="text-sm opacity-80">Please wait while extensions are initialized.</p>
+  // Show cached editor once ready
+  if (isReady && activeExtensions.length > 0) {
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚀 Rendering cached editor with extensions:', activeExtensions.length);
+      }
+      
+      return <CoachingNotesWithFloatingToolbar extensions={activeExtensions} />;
+    } catch (error) {
+      console.error('❌ Error rendering cached editor:', error);
+      return (
+        <div className="coaching-notes-editor">
+          <div className="coaching-notes-error">
+            <div className="text-center">
+              <p className="mb-2">❌ Failed to initialize editor</p>
+              <p className="text-sm opacity-80">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
-
-  try {
-    console.log('🚀 About to initialize EditorProvider with extensions:', activeExtensions.length);
-    console.log('🔍 Extension details:', activeExtensions.map(ext => ext?.name || 'unknown'));
-    
-    return <CoachingNotesWithFloatingToolbar extensions={activeExtensions} />;
-  } catch (error) {
-    console.error('❌ Error initializing EditorProvider:', error);
-    console.error('❌ Active extensions:', activeExtensions);
-    return (
-      <div className="coaching-notes-editor">
-        <div className="coaching-notes-error">
-          <div className="text-center">
-            <p className="mb-2">❌ Failed to initialize editor</p>
-            <p className="text-sm opacity-80">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+  
+  // Fallback - should rarely be seen due to loading state above
+  return (
+    <div className="coaching-notes-editor">
+      <div className="coaching-notes-loading">
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">
+              Loading coaching notes...
+            </span>
+            <span className="text-sm opacity-70">
+              90%
+            </span>
           </div>
+          <Progress value={90} className="h-2" />
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 };
 
 // Wrapper component with floating toolbar functionality
