@@ -133,7 +133,7 @@ export function useMarkState(
   // Use useEditorState to reactively track editor state changes
   const editorState = useEditorState({
     editor,
-    selector: useCallback((ctx) => {
+    selector: useCallback((ctx: { editor: Editor | null }) => {
       if (!ctx.editor) return { canToggle: false, isActive: false, isInCodeBlock: false };
       return {
         canToggle: ctx.editor.can().toggleMark(type),

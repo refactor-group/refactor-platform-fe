@@ -113,12 +113,11 @@ export function useListDropdownState(
   // Consolidate editor state tracking into a single useEditorState hook
   const editorState = useEditorState({
     editor,
-    selector: useCallback((ctx) => {
+    selector: useCallback((ctx: { editor: Editor | null }) => {
       if (!ctx.editor) return { canToggleAny: false, isAnyActive: false };
-      const editor = ctx.editor;
       return {
-        canToggleAny: canToggleAnyList(editor, availableTypes),
-        isAnyActive: isAnyListActive(editor, availableTypes),
+        canToggleAny: canToggleAnyList(ctx.editor, availableTypes),
+        isAnyActive: isAnyListActive(ctx.editor, availableTypes),
       };
     }, [availableTypes]),
   });
