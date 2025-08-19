@@ -7,12 +7,14 @@ import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
-import { Extensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
+import { Extensions as createExtensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
 import { Progress } from "@/components/ui/progress";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
 import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
 import { siteConfig } from "@/site.config";
 import StarterKit from "@tiptap/starter-kit";
+import type { Extensions } from "@tiptap/core";
+import { validateExtensions } from "@/types/tiptap";
 import "@/styles/simple-editor.scss";
 
 const tiptapAppId = siteConfig.env.tiptapAppId;
@@ -28,7 +30,7 @@ const useCollaborationProvider = (doc: Y.Doc) => {
     currentCoachingSessionId || ""
   );
   const [isSyncing, setIsSyncing] = useState(true);
-  const [extensions, setExtensions] = useState<Array<any>>([]);
+  const [extensions, setExtensions] = useState<Extensions>([]);
   const [collaborationReady, setCollaborationReady] = useState(false);
   const providerRef = useRef<TiptapCollabProvider>(null);
 
@@ -58,7 +60,7 @@ const useCollaborationProvider = (doc: Y.Doc) => {
             // Set extensions immediately when synced
             if (doc && providerRef.current) {
               console.log('🔧 Setting collaborative extensions');
-              setExtensions(Extensions(doc, providerRef.current, {
+              setExtensions(createExtensions(doc, providerRef.current, {
                 name: userSession.display_name,
                 color: "#ffcc00",
               }));
@@ -118,7 +120,7 @@ const CoachingNotes = () => {
     try {
       // Explicitly pass null to ensure no collaboration extensions
       console.log('🔧 Creating fallback extensions with no collaboration');
-      return Extensions(null, null);
+      return createExtensions(null, null);
     } catch (error) {
       console.error('❌ Error creating fallback extensions:', error);
       // Return absolute minimal extensions if even fallback fails
@@ -127,48 +129,25 @@ const CoachingNotes = () => {
     }
   }, []);
 
-  // Carefully manage collaborative vs fallback extensions
-  const activeExtensions = useMemo(() => {
+  // Select appropriate extensions based on collaboration state
+  const activeExtensions = useMemo((): Extensions => {
     try {
-      // Only use collaborative extensions if they're explicitly ready AND contain more than fallback
-      if (collaborationReady && Array.isArray(extensions) && extensions.length > fallbackExtensions.length && !isLoading) {
-        console.log('🔧 Attempting to use collaborative extensions:', extensions.length, 'vs fallback:', fallbackExtensions.length);
-        
-        // Validate each extension before using
-        const validExtensions = extensions.filter(ext => {
-          if (!ext || typeof ext !== 'object') {
-            console.warn('⚠️ Invalid extension (not object):', ext);
-            return false;
-          }
-          if (!ext.name || typeof ext.name !== 'string') {
-            console.warn('⚠️ Invalid extension (no name):', ext);
-            return false;
-          }
-          // Extra validation for collaboration extensions
-          if (ext.name === 'collaboration' || ext.name === 'collaborationCaret') {
-            console.log('🔍 Found collaborative extension:', ext.name);
-            // Allow collaborative extensions - fixed per TipTap docs
-            return true;
-          }
-          return true;
-        });
-        
-        if (validExtensions.length > 0) {
-          console.log('✅ Using validated collaborative extensions:', validExtensions.length);
-          return validExtensions;
+      // Use collaborative extensions if they're ready and valid
+      if (collaborationReady && extensions.length > 0 && !isLoading) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔧 Using collaborative extensions:', extensions.length);
         }
+        // TipTap's Extensions type already ensures proper validation
+        return validateExtensions(extensions);
       }
       
       // Fallback to non-collaborative extensions
-      console.log('🔧 Using fallback extensions:', fallbackExtensions.length);
-      const validFallbackExtensions = fallbackExtensions.filter(ext => ext != null && typeof ext === 'object' && ext.name);
-      if (validFallbackExtensions.length !== fallbackExtensions.length) {
-        console.warn('⚠️ Filtered out invalid fallback extensions:', fallbackExtensions.length - validFallbackExtensions.length);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Using fallback extensions:', fallbackExtensions.length);
       }
-      return validFallbackExtensions;
+      return validateExtensions(fallbackExtensions);
     } catch (error) {
-      console.error('❌ Error in activeExtensions useMemo:', error);
-      console.error('❌ Extensions state:', { collaborationReady, extensions, fallbackExtensions });
+      console.error('❌ Error selecting extensions:', error);
       // Return minimal safe extensions on error
       return fallbackExtensions.length > 0 ? fallbackExtensions : [StarterKit];
     }
@@ -265,7 +244,7 @@ const CoachingNotes = () => {
 };
 
 // Wrapper component with floating toolbar functionality
-const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: any[] }> = ({ extensions }) => {
+const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: Extensions }> = ({ extensions }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [originalToolbarVisible, setOriginalToolbarVisible] = useState(true);
