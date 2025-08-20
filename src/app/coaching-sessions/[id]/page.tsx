@@ -9,6 +9,7 @@ import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
 import { OverarchingGoalContainer } from "@/components/ui/coaching-sessions/overarching-goal-container";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
+import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
 import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -33,7 +34,7 @@ export default function CoachingSessionsPage() {
   }));
 
   // Get current coaching session from URL
-  const { currentCoachingSession, isError } = useCurrentCoachingSession();
+  const { currentCoachingSession, currentCoachingSessionId, isError } = useCurrentCoachingSession();
 
   // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId } =
@@ -98,38 +99,40 @@ export default function CoachingSessionsPage() {
   return (
     // Never grow wider than the site-header
     <div className="max-w-screen-2xl">
-      <div className="flex-col h-full pl-4 md:flex ">
-        <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
-          <CoachingSessionTitle
-            locale={siteConfig.locale}
-            style={siteConfig.titleStyle}
-            onRender={handleTitleRender}
-          />
-          <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md items-center gap-3 sm:justify-end md:justify-start">
-            <ShareSessionLink
-              sessionId={params.id as string}
-              onError={handleShareError}
+      <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
+        <div className="flex-col h-full pl-4 md:flex ">
+          <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
+            <CoachingSessionTitle
+              locale={siteConfig.locale}
+              style={siteConfig.titleStyle}
+              onRender={handleTitleRender}
             />
-            <CoachingSessionSelector
-              relationshipId={currentCoachingRelationshipId}
-              disabled={!currentCoachingRelationshipId}
-              onSelect={handleCoachingSessionSelect}
-            />
+            <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md items-center gap-3 sm:justify-end md:justify-start">
+              <ShareSessionLink
+                sessionId={params.id as string}
+                onError={handleShareError}
+              />
+              <CoachingSessionSelector
+                relationshipId={currentCoachingRelationshipId}
+                disabled={!currentCoachingRelationshipId}
+                onSelect={handleCoachingSessionSelect}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="px-3">
-        <Separator />
-      </div>
+        <div className="px-3">
+          <Separator />
+        </div>
 
-      <OverarchingGoalContainer userId={userId} />
+        <OverarchingGoalContainer userId={userId} />
 
-      <CoachingTabsContainer
-        userId={userId}
-        defaultValue={currentTab}
-        onTabChange={handleTabChange}
-      />
+        <CoachingTabsContainer
+          userId={userId}
+          defaultValue={currentTab}
+          onTabChange={handleTabChange}
+        />
+      </EditorCacheProvider>
     </div>
   );
 }
