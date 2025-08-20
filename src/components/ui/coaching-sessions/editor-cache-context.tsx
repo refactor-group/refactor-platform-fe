@@ -8,7 +8,6 @@ import { Extensions as createExtensions } from '@/components/ui/coaching-session
 import { useCollaborationToken } from '@/lib/api/collaboration-token';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { siteConfig } from '@/site.config';
-import StarterKit from '@tiptap/starter-kit';
 import { 
   UserPresence, 
   PresenceState, 
@@ -16,7 +15,6 @@ import {
   createDisconnectedPresence,
   toUserPresence 
 } from '@/types/presence';
-import { useCurrentCoachingRelationship } from '@/lib/hooks/use-current-coaching-relationship';
 import { useCurrentUserRole } from '@/lib/hooks/use-current-user-role';
 
 interface EditorCacheState {

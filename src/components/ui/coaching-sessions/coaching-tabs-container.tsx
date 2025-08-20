@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
+import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
 import { ItemStatus, Id } from "@/types/general";
