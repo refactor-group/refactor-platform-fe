@@ -15,6 +15,7 @@ import CodeBlock from "@/components/ui/coaching-sessions/code-block";
 import { createLowlight } from "lowlight";
 import { all } from "lowlight";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
+import * as Y from "yjs";
 import { ConfiguredLink } from "./extended-link-extension";
 import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
 
@@ -38,8 +39,17 @@ const CodeBlockTabHandler = Extension.create({
   },
 });
 
+// Type guard to check if we have valid collaboration setup
+function hasValidCollaboration(
+  doc: Y.Doc | null,
+  provider: TiptapCollabProvider | null | undefined
+): provider is TiptapCollabProvider {
+  // Provider must exist and have the document property set to our doc
+  return provider !== null && provider !== undefined && doc !== null;
+}
+
 export const Extensions = (
-  doc: any,
+  doc: Y.Doc | null,
   provider?: TiptapCollabProvider | null,
   user?: { name: string; color: string }
 ): TiptapExtensions => {
@@ -54,8 +64,8 @@ export const Extensions = (
         codeBlock: false,
         // Disable link from starter kit so we can use our custom configured link
         link: false,
-        // Only disable undoRedo when we have both provider AND doc (active collaboration)
-        undoRedo: provider && doc ? false : undefined,
+        // Only disable undoRedo when we have valid collaboration setup
+        undoRedo: hasValidCollaboration(doc, provider) ? false : undefined,
       }),
 
       // Additional text formatting
@@ -100,16 +110,11 @@ export const Extensions = (
 
     const extensions: TiptapExtensions = baseExtensions;
 
-    // Add collaboration extensions only if doc and provider are properly initialized
-    if (
-      doc &&
-      provider &&
-      typeof doc === "object" &&
-      typeof provider === "object"
-    ) {
+    // Add collaboration extensions only if we have valid collaboration setup
+    if (hasValidCollaboration(doc, provider)) {
       try {
         // Validate that the Y.js document is properly initialized
-        if (!doc.clientID && doc.clientID !== 0) {
+        if (!doc?.clientID && doc?.clientID !== 0) {
           console.warn(
             "⚠️ Y.js document missing clientID - may not be properly initialized"
           );
