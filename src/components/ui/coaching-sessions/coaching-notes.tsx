@@ -9,20 +9,19 @@ import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-c
 import type { Extensions } from "@tiptap/core";
 import "@/styles/simple-editor.scss";
 
-
 const CoachingNotes = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const { yDoc, extensions, isReady, isLoading, error } = useEditorCache();
-  
+
   // Use extensions from cache - they're already validated and ready
   const activeExtensions = useMemo((): Extensions => {
     if (isReady && extensions.length > 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 Using cached extensions:', extensions.length);
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔧 Using cached extensions:", extensions.length);
       }
       return extensions;
     }
-    
+
     // Return empty array while loading - will show loading state
     return [];
   }, [isReady, extensions]);
@@ -75,7 +74,8 @@ const CoachingNotes = () => {
           <div className="text-center">
             <p className="mb-2">⚠️ Could not load coaching notes</p>
             <p className="text-sm opacity-80">
-              {error.message || 'Please try again later or contact support if the issue persists.'}
+              {error.message ||
+                "Please try again later or contact support if the issue persists."}
             </p>
           </div>
         </div>
@@ -86,26 +86,25 @@ const CoachingNotes = () => {
   // Show cached editor once ready
   if (isReady && activeExtensions.length > 0) {
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🚀 Rendering cached editor with extensions:', activeExtensions.length);
-      }
-      
       return <CoachingNotesWithFloatingToolbar extensions={activeExtensions} />;
     } catch (error) {
-      console.error('❌ Error rendering cached editor:', error);
+      console.error("❌ Error rendering cached editor:", error);
       return (
         <div className="coaching-notes-editor">
           <div className="coaching-notes-error">
             <div className="text-center">
               <p className="mb-2">❌ Failed to initialize editor</p>
-              <p className="text-sm opacity-80">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+              <p className="text-sm opacity-80">
+                Error:{" "}
+                {error instanceof Error ? error.message : "Unknown error"}
+              </p>
             </div>
           </div>
         </div>
       );
     }
   }
-  
+
   // Fallback - should rarely be seen due to loading state above
   return (
     <div className="coaching-notes-editor">
@@ -115,9 +114,7 @@ const CoachingNotes = () => {
             <span className="text-sm font-medium">
               Loading coaching notes...
             </span>
-            <span className="text-sm opacity-70">
-              90%
-            </span>
+            <span className="text-sm opacity-70">90%</span>
           </div>
           <Progress value={90} className="h-2" />
         </div>
@@ -127,14 +124,19 @@ const CoachingNotes = () => {
 };
 
 // Wrapper component with floating toolbar functionality
-const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: Extensions }> = ({ extensions }) => {
+const CoachingNotesWithFloatingToolbar: React.FC<{
+  extensions: Extensions;
+}> = ({ extensions }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [originalToolbarVisible, setOriginalToolbarVisible] = useState(true);
 
-  const handleOriginalToolbarVisibilityChange = useCallback((visible: boolean) => {
-    setOriginalToolbarVisible(visible);
-  }, []);
+  const handleOriginalToolbarVisibilityChange = useCallback(
+    (visible: boolean) => {
+      setOriginalToolbarVisible(visible);
+    },
+    []
+  );
 
   return (
     <div ref={editorRef} className="coaching-notes-editor">
@@ -156,11 +158,14 @@ const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: Extensions }> = (
               const target = event.target as HTMLElement;
               // Check if the clicked element is an <a> tag and Shift is pressed
               if (
-                (target.tagName === "A" || target.parentElement?.tagName === "A") &&
+                (target.tagName === "A" ||
+                  target.parentElement?.tagName === "A") &&
                 event.shiftKey
               ) {
                 event.preventDefault(); // Prevent default link behavior
-                const href = target.getAttribute("href") || target.parentElement?.getAttribute("href");
+                const href =
+                  target.getAttribute("href") ||
+                  target.parentElement?.getAttribute("href");
                 if (href) {
                   window.open(href, "_blank")?.focus();
                 }
@@ -171,19 +176,23 @@ const CoachingNotesWithFloatingToolbar: React.FC<{ extensions: Extensions }> = (
           },
         }}
         slotBefore={
-          <div 
+          <div
             ref={toolbarRef}
-            style={{ visibility: originalToolbarVisible ? 'visible' : 'hidden' }}
+            style={{
+              visibility: originalToolbarVisible ? "visible" : "hidden",
+            }}
           >
             <SimpleToolbar />
           </div>
         }
         slotAfter={
-          <FloatingToolbar 
-            editorRef={editorRef} 
-            toolbarRef={toolbarRef} 
+          <FloatingToolbar
+            editorRef={editorRef}
+            toolbarRef={toolbarRef}
             headerHeight={64} // Can be made configurable via props or site config
-            onOriginalToolbarVisibilityChange={handleOriginalToolbarVisibilityChange}
+            onOriginalToolbarVisibilityChange={
+              handleOriginalToolbarVisibilityChange
+            }
           />
         }
       />
