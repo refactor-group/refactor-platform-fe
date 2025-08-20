@@ -9,6 +9,15 @@ import { useCollaborationToken } from '@/lib/api/collaboration-token';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { siteConfig } from '@/site.config';
 import StarterKit from '@tiptap/starter-kit';
+import { 
+  UserPresence, 
+  PresenceState, 
+  createConnectedPresence,
+  createDisconnectedPresence,
+  toUserPresence 
+} from '@/types/presence';
+import { useCurrentCoachingRelationship } from '@/lib/hooks/use-current-coaching-relationship';
+import { useCurrentUserRole } from '@/lib/hooks/use-current-user-role';
 
 interface EditorCacheState {
   yDoc: Y.Doc | null;
@@ -17,6 +26,7 @@ interface EditorCacheState {
   isReady: boolean;
   isLoading: boolean;
   error: Error | null;
+  presenceState: PresenceState;
 }
 
 interface EditorCacheContextType extends EditorCacheState {
@@ -47,6 +57,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   }));
   
   const { jwt, isLoading: tokenLoading, isError: tokenError } = useCollaborationToken(sessionId);
+  const { role: userRole } = useCurrentUserRole();
   
   // Store provider ref to prevent recreation
   const providerRef = useRef<TiptapCollabProvider | null>(null);
@@ -60,6 +71,11 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     isReady: false,
     isLoading: true,
     error: null,
+    presenceState: {
+      users: new Map(),
+      currentUser: null,
+      isLoading: false,
+    },
   });
 
   // Initialize or reuse Y.Doc
@@ -113,26 +129,74 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
             color: "#ffcc00",
           });
 
-          setCache({
+          setCache(prev => ({
+            ...prev,
             yDoc: doc,
             collaborationProvider: provider,
             extensions: collaborativeExtensions,
             isReady: true,
             isLoading: false,
             error: null,
-          });
+          }));
         },
         onDisconnect: () => {
           console.log('🔌 Editor cache: Collaboration disconnected');
         },
       });
 
+      // Set user awareness with presence data using centralized role logic
+      const userPresence = createConnectedPresence({
+        userId: userSession.id,
+        name: userSession.display_name,
+        role: userRole,
+        color: "#ffcc00"
+      });
+
       provider.setAwarenessField("user", {
         name: userSession.display_name,
         color: "#ffcc00",
       });
+      
+      provider.setAwarenessField("presence", userPresence);
 
       providerRef.current = provider;
+
+      // Listen for awareness changes to track presence
+      provider.on('awarenessChange', ({ states }: { states: Map<string, any> }) => {
+        const updatedUsers = new Map<string, UserPresence>();
+        
+        states.forEach((state, clientId) => {
+          if (state.presence) {
+            const presence = toUserPresence(state.presence);
+            updatedUsers.set(presence.userId, presence);
+          }
+        });
+        
+        setCache(prev => ({
+          ...prev,
+          presenceState: {
+            ...prev.presenceState,
+            users: updatedUsers,
+            currentUser: userPresence
+          }
+        }));
+      });
+
+      // Handle connection events
+      provider.on('connect', () => {
+        const connectedPresence = createConnectedPresence({
+          userId: userSession.id,
+          name: userSession.display_name,
+          role: userRole,
+          color: "#ffcc00"
+        });
+        provider.setAwarenessField("presence", connectedPresence);
+      });
+
+      provider.on('disconnect', () => {
+        const disconnectedPresence = createDisconnectedPresence(userPresence);
+        provider.setAwarenessField("presence", disconnectedPresence);
+      });
 
       // Set up mouse tracking
       const handleMouseMove = (event: MouseEvent) => {
@@ -148,9 +212,18 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
       document.addEventListener("mousemove", handleMouseMove);
 
+      // Cleanup on beforeunload
+      const handleBeforeUnload = () => {
+        const disconnectedPresence = createDisconnectedPresence(userPresence);
+        provider.setAwarenessField("presence", disconnectedPresence);
+      };
+      
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
       // Cleanup function
       return () => {
         document.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     } catch (error) {
       console.error('❌ Error initializing collaboration provider:', error);
@@ -158,16 +231,17 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       // Fallback to non-collaborative extensions
       const fallbackExtensions = createExtensions(null, null);
       
-      setCache({
+      setCache(prev => ({
+        ...prev,
         yDoc: doc,
         collaborationProvider: null,
         extensions: fallbackExtensions,
         isReady: true,
         isLoading: false,
         error: error instanceof Error ? error : new Error('Failed to initialize collaboration'),
-      });
+      }));
     }
-  }, [jwt, sessionId, userSession, getOrCreateYDoc]);
+  }, [jwt, sessionId, userSession, userRole, getOrCreateYDoc]);
 
   // Initialize provider when JWT is available
   useEffect(() => {
@@ -178,14 +252,15 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       const doc = getOrCreateYDoc();
       const fallbackExtensions = createExtensions(null, null);
       
-      setCache({
+      setCache(prev => ({
+        ...prev,
         yDoc: doc,
         collaborationProvider: null,
         extensions: fallbackExtensions,
         isReady: true,
         isLoading: false,
         error: tokenError || null,
-      });
+      }));
     }
   }, [jwt, tokenLoading, tokenError, initializeProvider, getOrCreateYDoc]);
 
@@ -219,6 +294,11 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       isReady: false,
       isLoading: true,
       error: null,
+      presenceState: {
+        users: new Map(),
+        currentUser: null,
+        isLoading: false,
+      },
     });
   }, []);
 
