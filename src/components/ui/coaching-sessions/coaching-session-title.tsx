@@ -14,6 +14,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useEditorCache } from './editor-cache-context';
 import { PresenceIndicator } from '@/components/ui/presence-indicator';
 import { UserPresence } from '@/types/presence';
+import { RelationshipRole } from '@/types/relationship-role';
 
 const CoachingSessionTitle: React.FC<{
   locale: string | "us";
@@ -56,9 +57,9 @@ const CoachingSessionTitle: React.FC<{
   const displayTitle = sessionTitle?.title || defaultSessionTitle().title;
 
   // Helper to get presence by role
-  const getPresenceByRole = (role: 'coach' | 'coachee'): UserPresence | undefined => {
+  const getPresenceByRole = (role: RelationshipRole): UserPresence | undefined => {
     if (!presenceState) return undefined;
-    return Array.from(presenceState.users.values()).find(u => u.role === role);
+    return Array.from(presenceState.users.values()).find(u => u.relationship_role === role);
   };
 
   // Enhanced title rendering with presence indicators

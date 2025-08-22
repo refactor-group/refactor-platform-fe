@@ -30,6 +30,7 @@ import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
 import { User, Role } from "@/types/user";
+import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { toast } from "sonner";
 
@@ -107,7 +108,7 @@ export function MemberCard({
 
   // Placeholder – actual UI flows will be implemented later
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [assignMode, setAssignMode] = useState<"coach" | "coachee">("coach");
+  const [assignMode, setAssignMode] = useState<RelationshipRole>("coach");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [assignedMember, setAssignedMember] = useState<Member | null>(null);
 

@@ -1,8 +1,10 @@
+import { RelationshipRole } from './relationship-role';
+
 // Modern TypeScript 5.7+ discriminated union approach (zero runtime overhead)
 interface BasePresence {
   userId: string;
   name: string;
-  role: 'coach' | 'coachee';
+  relationship_role: RelationshipRole;
   color: string;
   lastSeen: Date;
 }

@@ -6,7 +6,7 @@ describe('PresenceIndicator', () => {
   const mockConnectedPresence = createConnectedPresence({
     userId: 'user1',
     name: 'Test User',
-    role: 'coach',
+    relationship_role: 'coach',
     color: '#ffcc00'
   });
 

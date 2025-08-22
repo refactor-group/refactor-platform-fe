@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { useCurrentCoachingRelationship } from './use-current-coaching-relationship';
+import { RelationshipRole } from '@/types/relationship-role';
 
 /**
  * Centralized hook for determining the current user's role in the active coaching relationship.
@@ -22,7 +23,7 @@ export const useCurrentUserRole = () => {
     
     return {
       // Current relationship-specific role (for presence indicators, session UI)
-      role: isCoachInCurrentRelationship ? 'coach' as const : 'coachee' as const,
+      relationship_role: (isCoachInCurrentRelationship ? 'coach' : 'coachee') as RelationshipRole,
       
       // Boolean flags for current relationship context
       isCoachInCurrentRelationship,

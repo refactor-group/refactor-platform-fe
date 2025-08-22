@@ -55,7 +55,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   }));
   
   const { jwt, isLoading: tokenLoading, isError: tokenError } = useCollaborationToken(sessionId);
-  const { role: userRole } = useCurrentUserRole();
+  const { relationship_role: userRole } = useCurrentUserRole();
   
   // Store provider ref to prevent recreation
   const providerRef = useRef<TiptapCollabProvider | null>(null);
@@ -146,7 +146,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       const userPresence = createConnectedPresence({
         userId: userSession.id,
         name: userSession.display_name,
-        role: userRole,
+        relationship_role: userRole,
         color: "#ffcc00"
       });
 
@@ -185,7 +185,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         const connectedPresence = createConnectedPresence({
           userId: userSession.id,
           name: userSession.display_name,
-          role: userRole,
+          relationship_role: userRole,
           color: "#ffcc00"
         });
         provider.setAwarenessField("presence", connectedPresence);

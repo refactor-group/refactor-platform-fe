@@ -11,7 +11,7 @@ describe('Presence Types', () => {
       const base = {
         userId: 'user1',
         name: 'John Doe',
-        role: 'coach' as const,
+        relationship_role: 'coach' as const,
         color: '#ffcc00'
       };
 
@@ -21,7 +21,7 @@ describe('Presence Types', () => {
       expect(presence.isConnected).toBe(true);
       expect(presence.userId).toBe('user1');
       expect(presence.name).toBe('John Doe');
-      expect(presence.role).toBe('coach');
+      expect(presence.relationship_role).toBe('coach');
       expect(presence.color).toBe('#ffcc00');
       expect(presence.lastSeen).toBeInstanceOf(Date);
     });
@@ -30,13 +30,13 @@ describe('Presence Types', () => {
       const base = {
         userId: 'user2',
         name: 'Jane Smith',
-        role: 'coachee' as const,
+        relationship_role: 'coachee' as const,
         color: '#00ccff'
       };
 
       const presence = createConnectedPresence(base);
 
-      expect(presence.role).toBe('coachee');
+      expect(presence.relationship_role).toBe('coachee');
       expect(presence.status).toBe('connected');
     });
   });
@@ -46,7 +46,7 @@ describe('Presence Types', () => {
       const connectedPresence = createConnectedPresence({
         userId: 'user1',
         name: 'John Doe',
-        role: 'coach',
+        relationship_role: 'coach',
         color: '#ffcc00'
       });
 
@@ -56,7 +56,7 @@ describe('Presence Types', () => {
       expect(disconnectedPresence.isConnected).toBe(false);
       expect(disconnectedPresence.userId).toBe(connectedPresence.userId);
       expect(disconnectedPresence.name).toBe(connectedPresence.name);
-      expect(disconnectedPresence.role).toBe(connectedPresence.role);
+      expect(disconnectedPresence.relationship_role).toBe(connectedPresence.relationship_role);
       expect(disconnectedPresence.color).toBe(connectedPresence.color);
       expect(disconnectedPresence.lastSeen).toBeInstanceOf(Date);
       expect(disconnectedPresence.lastSeen.getTime()).toBeGreaterThanOrEqual(
@@ -70,7 +70,7 @@ describe('Presence Types', () => {
       const awarenessData = {
         userId: 'user1',
         name: 'John Doe',
-        role: 'coach',
+        relationship_role: 'coach',
         color: '#ffcc00',
         isConnected: true,
         lastSeen: new Date()
@@ -87,7 +87,7 @@ describe('Presence Types', () => {
       const awarenessData = {
         userId: 'user1',
         name: 'John Doe',
-        role: 'coach',
+        relationship_role: 'coach',
         color: '#ffcc00',
         isConnected: false,
         lastSeen: new Date()
