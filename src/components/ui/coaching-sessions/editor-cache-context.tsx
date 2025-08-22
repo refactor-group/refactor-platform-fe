@@ -11,6 +11,7 @@ import { siteConfig } from '@/site.config';
 import { 
   UserPresence, 
   PresenceState, 
+  AwarenessData,
   createConnectedPresence,
   createDisconnectedPresence,
   toUserPresence 
@@ -160,10 +161,10 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       providerRef.current = provider;
 
       // Listen for awareness changes to track presence
-      provider.on('awarenessChange', ({ states }: { states: Map<string, any> }) => {
+      provider.on('awarenessChange', ({ states }: { states: Map<string, { presence?: AwarenessData }> }) => {
         const updatedUsers = new Map<string, UserPresence>();
         
-        states.forEach((state, clientId) => {
+        states.forEach((state, _clientId) => {
           if (state.presence) {
             const presence = toUserPresence(state.presence);
             updatedUsers.set(presence.userId, presence);

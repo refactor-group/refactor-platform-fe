@@ -1,5 +1,17 @@
 import { RelationshipRole } from './relationship-role';
 
+// Presence status type
+export type PresenceStatus = 'connected' | 'disconnected';
+
+// Raw awareness data structure from collaboration provider
+export interface AwarenessData {
+  userId: string;
+  name: string;
+  relationship_role: RelationshipRole;
+  color: string;
+  isConnected: boolean;
+}
+
 // Modern TypeScript 5.7+ discriminated union approach (zero runtime overhead)
 interface BasePresence {
   userId: string;
@@ -10,12 +22,12 @@ interface BasePresence {
 }
 
 interface ConnectedPresence extends BasePresence {
-  status: 'connected';
+  status: Extract<PresenceStatus, 'connected'>;
   isConnected: true;
 }
 
 interface DisconnectedPresence extends BasePresence {
-  status: 'disconnected';
+  status: Extract<PresenceStatus, 'disconnected'>;
   isConnected: false;
 }
 
@@ -46,9 +58,11 @@ export const createDisconnectedPresence = (
   lastSeen: new Date()
 });
 
-// Simple utility for awareness data (no runtime validation needed)
-export const toUserPresence = (awarenessData: any): UserPresence => {
-  return awarenessData.isConnected
-    ? { ...awarenessData, status: 'connected' as const }
-    : { ...awarenessData, status: 'disconnected' as const };
+// Type-safe utility for awareness data transformation (zero runtime overhead)
+export const toUserPresence = (awarenessData: AwarenessData): UserPresence => {
+  const { userId, name, relationship_role, color, isConnected } = awarenessData;
+  
+  return isConnected
+    ? { userId, name, relationship_role, color, isConnected: true, status: 'connected' as const, lastSeen: new Date() }
+    : { userId, name, relationship_role, color, isConnected: false, status: 'disconnected' as const, lastSeen: new Date() };
 };
