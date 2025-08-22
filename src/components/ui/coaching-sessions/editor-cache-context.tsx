@@ -163,11 +163,17 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       // Listen for awareness changes to track presence
       provider.on('awarenessChange', ({ states }: { states: Map<string, { presence?: AwarenessData }> }) => {
         const updatedUsers = new Map<string, UserPresence>();
+        let currentUserPresence: UserPresence | null = null;
         
         states.forEach((state, _clientId) => {
           if (state.presence) {
             const presence = toUserPresence(state.presence);
             updatedUsers.set(presence.userId, presence);
+            
+            // Extract current user from live awareness data to prevent stale state
+            if (presence.userId === userSession.id) {
+              currentUserPresence = presence;
+            }
           }
         });
         
@@ -176,23 +182,31 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
           presenceState: {
             ...prev.presenceState,
             users: updatedUsers,
-            currentUser: userPresence
+            currentUser: currentUserPresence || prev.presenceState.currentUser
           }
         }));
       });
 
       // Handle connection events
       provider.on('connect', () => {
+        console.log('🔗 Editor cache: Provider connected, updating awareness');
         const connectedPresence = createConnectedPresence({
           userId: userSession.id,
           name: userSession.display_name,
           relationship_role: userRole,
           color: "#ffcc00"
         });
+        // Force awareness update on reconnection to prevent stale state
         provider.setAwarenessField("presence", connectedPresence);
+        provider.setAwarenessField("user", {
+          name: userSession.display_name,
+          color: "#ffcc00",
+        });
       });
 
       provider.on('disconnect', () => {
+        console.log('🔌 Editor cache: Provider disconnected, updating awareness');
+        // Create disconnected presence from current user data
         const disconnectedPresence = createDisconnectedPresence(userPresence);
         provider.setAwarenessField("presence", disconnectedPresence);
       });
