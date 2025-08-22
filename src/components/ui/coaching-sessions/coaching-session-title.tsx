@@ -78,7 +78,9 @@ const CoachingSessionTitle: React.FC<{
     
     // Parse the existing title format: "Coach Name <> Coachee Name" 
     const parts = displayTitle.split(' <> ');
-    if (parts.length !== 2) return displayTitle;
+    if (parts.length !== 2 || !parts[0]?.trim() || !parts[1]?.trim()) {
+      return displayTitle; // Fallback for malformed titles or default titles
+    }
     
     const [coachName, coacheeName] = parts;
     
