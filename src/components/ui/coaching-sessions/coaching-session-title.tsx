@@ -59,7 +59,14 @@ const CoachingSessionTitle: React.FC<{
   // Helper to get presence by role
   const getPresenceByRole = (role: RelationshipRole): UserPresence | undefined => {
     if (!presenceState) return undefined;
-    return Array.from(presenceState.users.values()).find(u => u.relationship_role === role);
+    
+    // Iterate Map directly without array conversion
+    for (const user of presenceState.users.values()) {
+      if (user.relationship_role === role) {
+        return user;
+      }
+    }
+    return undefined;
   };
 
   // Enhanced title rendering with presence indicators
