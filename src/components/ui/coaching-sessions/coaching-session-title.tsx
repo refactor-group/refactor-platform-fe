@@ -76,7 +76,7 @@ const CoachingSessionTitle: React.FC<{
     const coachPresence = getPresenceByRole('coach');
     const coacheePresence = getPresenceByRole('coachee');
     
-    // Parse the existing title format: "Coach Name <> Coachee Name"
+    // Parse the existing title format: "Coach Name <> Coachee Name" 
     const parts = displayTitle.split(' <> ');
     if (parts.length !== 2) return displayTitle;
     
@@ -86,7 +86,7 @@ const CoachingSessionTitle: React.FC<{
       <span className="flex items-center gap-1">
         <PresenceIndicator presence={coachPresence} />
         <span>{coachName}</span>
-        <span className="mx-2">&lt;&gt;</span>
+        <span className="mx-2">/</span>
         <PresenceIndicator presence={coacheePresence} />
         <span>{coacheeName}</span>
       </span>
