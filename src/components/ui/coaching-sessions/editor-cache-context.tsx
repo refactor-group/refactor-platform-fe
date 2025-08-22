@@ -8,13 +8,13 @@ import { Extensions as createExtensions } from '@/components/ui/coaching-session
 import { useCollaborationToken } from '@/lib/api/collaboration-token';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { siteConfig } from '@/site.config';
-import { 
-  UserPresence, 
-  PresenceState, 
+import {
+  UserPresence,
+  PresenceState,
   AwarenessData,
   createConnectedPresence,
   createDisconnectedPresence,
-  toUserPresence 
+  toUserPresence
 } from '@/types/presence';
 import { useCurrentUserRole } from '@/lib/hooks/use-current-user-role';
 
@@ -47,22 +47,22 @@ interface EditorCacheProviderProps {
   children: ReactNode;
 }
 
-export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({ 
-  sessionId, 
-  children 
+export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
+  sessionId,
+  children
 }) => {
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
-  
+
   const { jwt, isLoading: tokenLoading, isError: tokenError } = useCollaborationToken(sessionId);
   const { relationship_role: userRole } = useCurrentUserRole();
-  
+
   // Store provider ref to prevent recreation
   const providerRef = useRef<TiptapCollabProvider | null>(null);
   const yDocRef = useRef<Y.Doc | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
-  
+
   const [cache, setCache] = useState<EditorCacheState>({
     yDoc: null,
     collaborationProvider: null,
@@ -121,7 +121,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         broadcast: true,
         onSynced: () => {
           console.log('🔄 Editor cache: Collaboration synced');
-          
+
           // Create extensions with collaboration
           const collaborativeExtensions = createExtensions(doc, provider, {
             name: userSession.display_name,
@@ -155,7 +155,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         name: userSession.display_name,
         color: "#ffcc00",
       });
-      
+
       provider.setAwarenessField("presence", userPresence);
 
       providerRef.current = provider;
@@ -164,19 +164,19 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       provider.on('awarenessChange', ({ states }: { states: Map<string, { presence?: AwarenessData }> }) => {
         const updatedUsers = new Map<string, UserPresence>();
         let currentUserPresence: UserPresence | null = null;
-        
-        states.forEach((state, _clientId) => {
+
+        states.forEach((state) => {
           if (state.presence) {
             const presence = toUserPresence(state.presence);
             updatedUsers.set(presence.userId, presence);
-            
+
             // Extract current user from live awareness data to prevent stale state
             if (presence.userId === userSession.id) {
               currentUserPresence = presence;
             }
           }
         });
-        
+
         setCache(prev => ({
           ...prev,
           presenceState: {
@@ -230,7 +230,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         const disconnectedPresence = createDisconnectedPresence(userPresence);
         provider.setAwarenessField("presence", disconnectedPresence);
       };
-      
+
       window.addEventListener('beforeunload', handleBeforeUnload);
 
       // Cleanup function
@@ -240,10 +240,10 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       };
     } catch (error) {
       console.error('❌ Error initializing collaboration provider:', error);
-      
+
       // Fallback to non-collaborative extensions
       const fallbackExtensions = createExtensions(null, null);
-      
+
       setCache(prev => ({
         ...prev,
         yDoc: doc,
@@ -264,7 +264,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       // Use fallback extensions without collaboration
       const doc = getOrCreateYDoc();
       const fallbackExtensions = createExtensions(null, null);
-      
+
       setCache(prev => ({
         ...prev,
         yDoc: doc,
@@ -288,17 +288,17 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   // Reset cache function
   const resetCache = useCallback(() => {
     console.log('🔄 Resetting editor cache');
-    
+
     // Disconnect provider
     if (providerRef.current) {
       providerRef.current.disconnect();
       providerRef.current = null;
     }
-    
+
     // Clear refs
     yDocRef.current = null;
     lastSessionIdRef.current = null;
-    
+
     // Reset state
     setCache({
       yDoc: null,
