@@ -11,6 +11,17 @@
   &:focus {
     outline: none;
   }
+}
+
+// Apply min-height directly to all popover instances in this context
+.tiptap-popover {
+  min-height: 2rem; /* Prevent shrinking below minimum usable height */
+  min-width: 28rem;  /* Default minimum width for usability */
+  
+  /* Responsive width for mobile screens */
+  @media (max-width: 767px) {
+    min-width: 12rem; /* Smaller min-width on mobile screens */
+  }
 
   &-clamp {
     min-width: 12rem;

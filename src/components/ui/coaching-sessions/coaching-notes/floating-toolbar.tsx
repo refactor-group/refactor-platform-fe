@@ -141,7 +141,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
       }}
     >
       <div className="floating-toolbar-content">
-        <SimpleToolbar />
+        <SimpleToolbar containerRef={editorRef} />
       </div>
     </div>
   );

@@ -182,7 +182,7 @@ const CoachingNotesWithFloatingToolbar: React.FC<{
               visibility: originalToolbarVisible ? "visible" : "hidden",
             }}
           >
-            <SimpleToolbar />
+            <SimpleToolbar containerRef={editorRef} />
           </div>
         }
         slotAfter={
