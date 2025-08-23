@@ -178,11 +178,9 @@ const CoachingNotesWithFloatingToolbar: React.FC<{
         slotBefore={
           <div
             ref={toolbarRef}
-            style={{
-              visibility: originalToolbarVisible ? "visible" : "hidden",
-            }}
+            className={`toolbar-container ${originalToolbarVisible ? 'visible' : 'hidden'}`}
           >
-            <SimpleToolbar />
+            <SimpleToolbar containerRef={editorRef} />
           </div>
         }
         slotAfter={

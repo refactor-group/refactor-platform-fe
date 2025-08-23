@@ -6,6 +6,7 @@ import {
   offset,
   flip,
   shift,
+  size,
   useClick,
   useDismiss,
   useRole,
@@ -16,6 +17,18 @@ import {
   FloatingPortal,
 } from "@floating-ui/react"
 import "@/components/ui/tiptap-ui-primitive/popover/popover.scss"
+
+// Type-safe enums for popover configuration
+enum PopoverBoundary {
+  viewport = 'viewport',
+  scrollParent = 'scrollParent',
+  element = 'element'
+}
+
+enum PopoverRootBoundary {
+  viewport = 'viewport',
+  document = 'document'
+}
 
 type PopoverContextValue = ReturnType<typeof usePopover> & {
   setLabelId: (id: string | undefined) => void
@@ -37,6 +50,9 @@ interface PopoverOptions {
   align?: "start" | "center" | "end"
   sideOffset?: number
   alignOffset?: number
+  boundary?: HTMLElement | PopoverBoundary
+  rootBoundary?: PopoverRootBoundary
+  padding?: number
 }
 
 interface PopoverProps extends PopoverOptions {
@@ -62,6 +78,9 @@ function usePopover({
   align = "center",
   sideOffset = 4,
   alignOffset = 0,
+  boundary = PopoverBoundary.scrollParent,
+  rootBoundary = PopoverRootBoundary.viewport,
+  padding = 8,
 }: PopoverOptions = {}) {
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(initialOpen)
   const [labelId, setLabelId] = React.useState<string>()
@@ -74,6 +93,16 @@ function usePopover({
   const open = controlledOpen ?? uncontrolledOpen
   const setOpen = setControlledOpen ?? setUncontrolledOpen
 
+  // Helper function to resolve boundary for FloatingUI
+  const resolveBoundary = (boundary: HTMLElement | PopoverBoundary) => {
+    if (boundary instanceof HTMLElement) {
+      return boundary;
+    }
+    // Return undefined for enum values - FloatingUI will handle them properly
+    // Only pass HTMLElement boundaries explicitly
+    return undefined;
+  };
+
   const middleware = React.useMemo(
     () => [
       offset({
@@ -83,20 +112,51 @@ function usePopover({
       flip({
         fallbackAxisSideDirection: "end",
         crossAxis: false,
+        boundary: resolveBoundary(boundary),
+        rootBoundary,
+        padding,
       }),
       shift({
-        limiter: limitShift({ offset: offsets.sideOffset }),
+        limiter: limitShift({ 
+          offset: offsets.sideOffset,
+          crossAxis: true,
+          mainAxis: true,
+        }),
+        boundary: resolveBoundary(boundary),
+        rootBoundary,
+        padding,
+      }),
+      size({
+        boundary: resolveBoundary(boundary),
+        rootBoundary,
+        padding,
+        apply({ availableWidth, availableHeight, elements }) {
+          Object.assign(elements.floating.style, {
+            maxWidth: `${availableWidth}px`,
+            maxHeight: `${availableHeight}px`,
+          });
+        },
       }),
     ],
-    [offsets.sideOffset, offsets.alignOffset]
+    [offsets.sideOffset, offsets.alignOffset, boundary, rootBoundary, padding]
   )
 
   const floating = useFloating({
     placement: currentPlacement,
     open,
     onOpenChange: setOpen,
-    whileElementsMounted: autoUpdate,
+    whileElementsMounted: (reference, floating, update) => {
+      // Enhanced auto-update with scroll and resize detection
+      return autoUpdate(reference, floating, update, {
+        ancestorScroll: true, // Listen to all scrollable ancestors
+        ancestorResize: true,
+        elementResize: true,
+        layoutShift: true, // Handle layout shifts
+        animationFrame: false, // Use events for better performance
+      });
+    },
     middleware,
+    strategy: 'absolute', // Use absolute positioning for better container awareness
   })
 
   const interactions = useInteractions([
@@ -204,6 +264,7 @@ interface PopoverContentProps extends React.HTMLProps<HTMLDivElement> {
   portal?: boolean
   portalProps?: Omit<React.ComponentProps<typeof FloatingPortal>, "children">
   asChild?: boolean
+  container?: HTMLElement | null  // New prop for portal container
 }
 
 const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
@@ -218,6 +279,7 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
       portal = true,
       portalProps = {},
       asChild = false,
+      container = null,
       children,
       ...props
     },
@@ -235,16 +297,57 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
       context.updatePosition(side, align, sideOffset, alignOffset)
     }, [context, side, align, sideOffset, alignOffset])
 
+    // Determine portal container - prioritize passed container, then find positioned parent
+    const portalContainer = React.useMemo(() => {
+      if (!portal) return null;
+      if (container) return container;
+      
+      // Find closest positioned ancestor (not static)
+      // Handle both Element and VirtualElement references
+      const referenceElement = context.refs.reference.current;
+      if (!referenceElement) return document.body;
+      
+      // Check if it's a real DOM element with parentElement
+      if ('parentElement' in referenceElement) {
+        let element = referenceElement.parentElement;
+        while (element) {
+          const position = window.getComputedStyle(element).position;
+          if (position !== 'static') {
+            return element;
+          }
+          element = element.parentElement;
+        }
+      }
+      
+      return document.body;
+    }, [portal, container, context.refs.reference]);
+
+    // Calculate position relative to container if not body
+    const enhancedStyle = React.useMemo(() => {
+      if (!portalContainer || portalContainer === document.body) {
+        return {
+          position: context.strategy,
+          top: context.y ?? 0,
+          left: context.x ?? 0,
+          ...style,
+        };
+      }
+      
+      // Calculate relative position within container
+      const containerRect = portalContainer.getBoundingClientRect();
+      return {
+        position: 'absolute' as const,
+        top: (context.y ?? 0) - containerRect.top,
+        left: (context.x ?? 0) - containerRect.left,
+        ...style,
+      };
+    }, [context, portalContainer, style]);
+
     if (!context.context.open) return null
 
     const contentProps = {
       ref,
-      style: {
-        position: context.strategy,
-        top: context.y ?? 0,
-        left: context.x ?? 0,
-        ...style,
-      },
+      style: enhancedStyle,
       "aria-labelledby": context.labelId,
       "aria-describedby": context.descriptionId,
       className: `tiptap-popover ${className || ""}`,
@@ -270,8 +373,12 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
       </FloatingFocusManager>
     )
 
-    if (portal) {
-      return <FloatingPortal {...portalProps}>{wrappedContent}</FloatingPortal>
+    if (portal && portalContainer) {
+      return (
+        <FloatingPortal {...portalProps} root={portalContainer}>
+          {wrappedContent}
+        </FloatingPortal>
+      );
     }
 
     return wrappedContent
@@ -281,4 +388,4 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
 PopoverTrigger.displayName = "PopoverTrigger"
 PopoverContent.displayName = "PopoverContent"
 
-export { Popover, PopoverTrigger, PopoverContent }
+export { Popover, PopoverTrigger, PopoverContent, PopoverBoundary, PopoverRootBoundary }
