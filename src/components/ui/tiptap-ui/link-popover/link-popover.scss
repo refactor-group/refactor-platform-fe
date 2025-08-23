@@ -22,6 +22,11 @@
   @media (max-width: 767px) {
     min-width: 12rem; /* Smaller min-width on mobile screens */
   }
+  
+  /* Even smaller for very narrow screens */
+  @media (max-width: 350px) {
+    min-width: 8rem; /* Very small min-width for narrow screens */
+  }
 
   &-clamp {
     min-width: 12rem;
@@ -33,6 +38,15 @@
     &:focus {
       text-overflow: clip;
       overflow: visible;
+    }
+    
+    /* Responsive width for very narrow screens */
+    @media (max-width: 350px) {
+      min-width: 6rem; /* Even smaller for clamp variant on narrow screens */
+    }
+    
+    @media (max-width: 300px) {
+      min-width: 4rem; /* Ultra-narrow screens */
     }
     
     /* Responsive width for URL input */

@@ -71,7 +71,8 @@
 
 /* Toolbar Styling */
 .coaching-notes-toolbar {
-  height: var(--tt-toolbar-height);
+  min-height: var(--tt-toolbar-height);
+  height: auto; /* Allow height to grow for wrapping */
   border-bottom: 1px solid var(--editor-border);
   background-color: var(--editor-bg);
   padding: 0.5rem;
@@ -598,6 +599,7 @@
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   animation: slideInDown 0.3s ease-out;
   backdrop-filter: blur(8px);
+  max-width: calc(100vw - 2rem); /* Provide constraint for wrapping */
   
   .dark & {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
@@ -605,19 +607,21 @@
 }
 
 .floating-toolbar-content {
-  height: var(--tt-toolbar-height);
-  padding: 0.5rem 1rem;
+  min-height: var(--tt-toolbar-height);
+  height: auto;
+  padding: 0.5rem;
   display: flex;
   align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
   
-  /* Apply the same styling as the original toolbar */
   .tiptap-toolbar {
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    height: 100%;
+    all: unset;
     display: flex;
     align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    width: 100%;
   }
 }
 
@@ -665,7 +669,12 @@
   }
   
   .floating-toolbar-content {
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem;
+    gap: 0.125rem;
+    
+    .tiptap-toolbar {
+      gap: 0.125rem;
+    }
   }
   
   .floating-toolbar .toolbar-button {
@@ -682,4 +691,20 @@
 
 .tiptap.ProseMirror:focus {
   outline: none; /* Remove default outline since parent container handles focus styling */
+}
+
+/* Smooth toolbar transition */
+.toolbar-container {
+  transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+  overflow: hidden;
+  
+  &.visible {
+    max-height: 200px; /* Large enough for any toolbar height */
+    opacity: 1;
+  }
+  
+  &.hidden {
+    max-height: 0;
+    opacity: 0;
+  }
 }
