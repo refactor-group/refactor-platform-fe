@@ -7,7 +7,7 @@ export type PresenceStatus = 'connected' | 'disconnected';
 export interface AwarenessData {
   userId: string;
   name: string;
-  relationship_role: RelationshipRole;
+  relationshipRole: RelationshipRole;
   color: string;
   isConnected: boolean;
 }
@@ -16,7 +16,7 @@ export interface AwarenessData {
 interface BasePresence {
   userId: string;
   name: string;
-  relationship_role: RelationshipRole;
+  relationshipRole: RelationshipRole;
   color: string;
   lastSeen: Date;
 }
@@ -60,9 +60,9 @@ export const createDisconnectedPresence = (
 
 // Type-safe utility for awareness data transformation (zero runtime overhead)
 export const toUserPresence = (awarenessData: AwarenessData): UserPresence => {
-  const { userId, name, relationship_role, color, isConnected } = awarenessData;
-  
+  const { userId, name, relationshipRole, color, isConnected } = awarenessData;
+
   return isConnected
-    ? { userId, name, relationship_role, color, isConnected: true, status: 'connected' as const, lastSeen: new Date() }
-    : { userId, name, relationship_role, color, isConnected: false, status: 'disconnected' as const, lastSeen: new Date() };
+    ? { userId, name, relationshipRole, color, isConnected: true, status: 'connected' as const, lastSeen: new Date() }
+    : { userId, name, relationshipRole, color, isConnected: false, status: 'disconnected' as const, lastSeen: new Date() };
 };

@@ -23,13 +23,13 @@ const CoachingSessionTitle: React.FC<{
 }> = ({ locale, style, onRender }) => {
   const { userSession } = useAuthStore((state) => state);
   const lastRenderedTitle = useRef<string>("");
-  
+
   // Get coaching session from URL path parameter
   const { currentCoachingSession, isLoading: sessionLoading } = useCurrentCoachingSession();
-  
+
   // Get coaching relationship from simplified store
   const { currentCoachingRelationship, isLoading: relationshipLoading } = useCurrentCoachingRelationship();
-  
+
   // Get presence state from editor cache
   const { presenceState } = useEditorCache();
 
@@ -59,10 +59,10 @@ const CoachingSessionTitle: React.FC<{
   // Helper to get presence by role
   const getPresenceByRole = (role: RelationshipRole): UserPresence | undefined => {
     if (!presenceState) return undefined;
-    
+
     // Iterate Map directly without array conversion
     for (const user of presenceState.users.values()) {
-      if (user.relationship_role === role) {
+      if (user.relationshipRole === role) {
         return user;
       }
     }
@@ -72,18 +72,18 @@ const CoachingSessionTitle: React.FC<{
   // Enhanced title rendering with presence indicators
   const renderTitleWithPresence = () => {
     if (!sessionTitle || !currentCoachingRelationship) return displayTitle;
-    
+
     const coachPresence = getPresenceByRole(RelationshipRole.Coach);
     const coacheePresence = getPresenceByRole(RelationshipRole.Coachee);
-    
+
     // Parse the existing title format: "Coach Name <> Coachee Name" 
     const parts = displayTitle.split(' <> ');
     if (parts.length !== 2 || !parts[0]?.trim() || !parts[1]?.trim()) {
       return displayTitle; // Fallback for malformed titles or default titles
     }
-    
+
     const [coachName, coacheeName] = parts;
-    
+
     return (
       <span className="flex items-center gap-1">
         <PresenceIndicator presence={coachPresence} />

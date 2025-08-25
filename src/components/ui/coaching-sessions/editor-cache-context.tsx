@@ -149,7 +149,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       const userPresence = createConnectedPresence({
         userId: userSession.id,
         name: userSession.display_name,
-        relationship_role: userRole,
+        relationshipRole: userRole,
         color: "#ffcc00"
       });
 
@@ -195,7 +195,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         const connectedPresence = createConnectedPresence({
           userId: userSession.id,
           name: userSession.display_name,
-          relationship_role: userRole,
+          relationshipRole: userRole,
           color: "#ffcc00"
         });
         // Force awareness update on reconnection to prevent stale state
