@@ -4,6 +4,7 @@ import {
   toUserPresence,
   type UserPresence
 } from '@/types/presence';
+import { RelationshipRole } from '@/types/relationship-role';
 
 describe('Presence Types', () => {
   describe('createConnectedPresence', () => {
@@ -11,7 +12,7 @@ describe('Presence Types', () => {
       const base = {
         userId: 'user1',
         name: 'John Doe',
-        relationship_role: 'coach' as const,
+        relationship_role: RelationshipRole.Coach,
         color: '#ffcc00'
       };
 
@@ -21,7 +22,7 @@ describe('Presence Types', () => {
       expect(presence.isConnected).toBe(true);
       expect(presence.userId).toBe('user1');
       expect(presence.name).toBe('John Doe');
-      expect(presence.relationship_role).toBe('coach');
+      expect(presence.relationship_role).toBe(RelationshipRole.Coach);
       expect(presence.color).toBe('#ffcc00');
       expect(presence.lastSeen).toBeInstanceOf(Date);
     });
@@ -30,13 +31,13 @@ describe('Presence Types', () => {
       const base = {
         userId: 'user2',
         name: 'Jane Smith',
-        relationship_role: 'coachee' as const,
+        relationship_role: RelationshipRole.Coachee,
         color: '#00ccff'
       };
 
       const presence = createConnectedPresence(base);
 
-      expect(presence.relationship_role).toBe('coachee');
+      expect(presence.relationship_role).toBe(RelationshipRole.Coachee);
       expect(presence.status).toBe('connected');
     });
   });
@@ -46,7 +47,7 @@ describe('Presence Types', () => {
       const connectedPresence = createConnectedPresence({
         userId: 'user1',
         name: 'John Doe',
-        relationship_role: 'coach',
+        relationship_role: RelationshipRole.Coach,
         color: '#ffcc00'
       });
 
@@ -70,7 +71,7 @@ describe('Presence Types', () => {
       const awarenessData = {
         userId: 'user1',
         name: 'John Doe',
-        relationship_role: 'coach',
+        relationship_role: RelationshipRole.Coach,
         color: '#ffcc00',
         isConnected: true,
         lastSeen: new Date()
@@ -87,7 +88,7 @@ describe('Presence Types', () => {
       const awarenessData = {
         userId: 'user1',
         name: 'John Doe',
-        relationship_role: 'coach',
+        relationship_role: RelationshipRole.Coach,
         color: '#ffcc00',
         isConnected: false,
         lastSeen: new Date()

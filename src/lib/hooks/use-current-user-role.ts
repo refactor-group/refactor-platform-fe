@@ -23,7 +23,7 @@ export const useCurrentUserRole = () => {
     
     return {
       // Current relationship-specific role (for presence indicators, session UI)
-      relationship_role: (isCoachInCurrentRelationship ? 'coach' : 'coachee') as RelationshipRole,
+      relationship_role: isCoachInCurrentRelationship ? RelationshipRole.Coach : RelationshipRole.Coachee,
       
       // Boolean flags for current relationship context
       isCoachInCurrentRelationship,

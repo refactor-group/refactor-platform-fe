@@ -3,13 +3,16 @@
  * This is distinct from the system-level Role (Admin/User) and is
  * determined by the relationship context between two users.
  */
-export type RelationshipRole = 'coach' | 'coachee';
+export enum RelationshipRole {
+  Coach = 'coach',
+  Coachee = 'coachee'
+}
 
 /**
  * Helper to get the opposite role in a relationship
  */
 export function getOppositeRole(role: RelationshipRole): RelationshipRole {
-  return role === 'coach' ? 'coachee' : 'coach';
+  return role === RelationshipRole.Coach ? RelationshipRole.Coachee : RelationshipRole.Coach;
 }
 
 /**

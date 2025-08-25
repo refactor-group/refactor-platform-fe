@@ -108,14 +108,14 @@ export function MemberCard({
 
   // Placeholder – actual UI flows will be implemented later
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [assignMode, setAssignMode] = useState<RelationshipRole>("coach");
+  const [assignMode, setAssignMode] = useState<RelationshipRole>(RelationshipRole.Coach);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [assignedMember, setAssignedMember] = useState<Member | null>(null);
 
   const handleCreateCoachingRelationship = () => {
     if (!selectedMember || !assignedMember) return;
 
-    if (assignMode === "coach") {
+    if (assignMode === RelationshipRole.Coach) {
       console.log("Assign", selectedMember.id, "as coach for", userId);
       createRelationship(currentOrganizationId, {
         coach_id: assignedMember.id,
@@ -167,7 +167,7 @@ export function MemberCard({
               <>
                 <DropdownMenuItem
                   onClick={() => {
-                    setAssignMode("coach");
+                    setAssignMode(RelationshipRole.Coach);
                     setAssignDialogOpen(true);
                     setSelectedMember({
                       id: userId,
@@ -180,7 +180,7 @@ export function MemberCard({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    setAssignMode("coachee");
+                    setAssignMode(RelationshipRole.Coachee);
                     setAssignDialogOpen(true);
                     setSelectedMember({
                       id: userId,
@@ -213,11 +213,11 @@ export function MemberCard({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {assignMode === "coach" ? "Assign Coach" : "Assign Coachee"}
+              {assignMode === RelationshipRole.Coach ? "Assign Coach" : "Assign Coachee"}
             </DialogTitle>
             <DialogDescription>
               Select a member to be their{" "}
-              {assignMode === "coach" ? "coach" : "coachee"}
+              {assignMode === RelationshipRole.Coach ? "coach" : "coachee"}
             </DialogDescription>
           </DialogHeader>
           <Select
@@ -240,7 +240,7 @@ export function MemberCard({
           </Select>
           <DialogFooter>
             <Button onClick={handleCreateCoachingRelationship}>
-              {assignMode === "coach" ? "Assign as Coach" : "Assign as Coachee"}
+              {assignMode === RelationshipRole.Coach ? "Assign as Coach" : "Assign as Coachee"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -73,8 +73,8 @@ const CoachingSessionTitle: React.FC<{
   const renderTitleWithPresence = () => {
     if (!sessionTitle || !currentCoachingRelationship) return displayTitle;
     
-    const coachPresence = getPresenceByRole('coach');
-    const coacheePresence = getPresenceByRole('coachee');
+    const coachPresence = getPresenceByRole(RelationshipRole.Coach);
+    const coacheePresence = getPresenceByRole(RelationshipRole.Coachee);
     
     // Parse the existing title format: "Coach Name <> Coachee Name" 
     const parts = displayTitle.split(' <> ');
