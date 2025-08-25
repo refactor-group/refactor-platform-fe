@@ -14,8 +14,8 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
   useAuthStore: vi.fn()
 }))
 
-vi.mock('@/lib/hooks/use-current-user-role', () => ({
-  useCurrentUserRole: vi.fn(() => ({
+vi.mock('@/lib/hooks/use-current-relationship-role', () => ({
+  useCurrentRelationshipRole: vi.fn(() => ({
     relationship_role: 'coach',
     isCoachInCurrentRelationship: true,
     hasActiveRelationship: true,

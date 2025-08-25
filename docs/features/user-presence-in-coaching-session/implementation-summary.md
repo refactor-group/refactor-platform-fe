@@ -7,7 +7,7 @@
 - ✅ **Tests passing**: All presence unit tests (8/8) and editor cache tests (9/9) working
 - ✅ **Type-safe implementation**: Using discriminated unions for zero runtime overhead
 - ✅ **Real-time presence**: Integrated with TipTap awareness for WebSocket-based updates
-- ✅ **Centralized roles**: New `useCurrentUserRole` hook for consistent role logic
+- ✅ **Centralized roles**: New `useCurrentRelationshipRole` hook for consistent role logic
 - ✅ **Idiomatic React**: Following modern React patterns with early returns
 
 ## Core Components
@@ -31,9 +31,9 @@ export type UserPresence = ConnectedPresence | DisconnectedPresence;
 - Factory functions for controlled data creation
 - Discriminated unions prevent invalid state combinations
 
-### 2. Role Management (`src/lib/hooks/use-current-user-role.ts`)
+### 2. Role Management (`src/lib/hooks/use-current-relationship-role.ts`)
 ```typescript
-export const useCurrentUserRole = () => {
+export const useCurrentRelationshipRole = () => {
   const isCoachInCurrentRelationship = currentCoachingRelationship?.coach_id === userSession?.id;
   
   return {
@@ -98,7 +98,7 @@ const getPresenceByRole = (role: 'coach' | 'coachee'): UserPresence | undefined 
 - Better TypeScript integration
 
 ### 2. Role Centralization
-**Chosen**: New `useCurrentUserRole` hook
+**Chosen**: New `useCurrentRelationshipRole` hook
 **Reasoning**:
 - Eliminates duplicate role logic
 - Clear separation between global and relationship-specific roles
@@ -115,7 +115,7 @@ const getPresenceByRole = (role: 'coach' | 'coachee'): UserPresence | undefined 
 
 ### Core Implementation
 - `src/types/presence.ts` - New type definitions with discriminated unions
-- `src/lib/hooks/use-current-user-role.ts` - New centralized role logic
+- `src/lib/hooks/use-current-relationship-role.ts` - New centralized role logic
 - `src/components/ui/presence-indicator.tsx` - New presence indicator component
 - `src/components/ui/coaching-sessions/editor-cache-context.tsx` - Enhanced with presence state
 - `src/components/ui/coaching-sessions/coaching-session-title.tsx` - Added presence indicators

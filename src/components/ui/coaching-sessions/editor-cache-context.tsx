@@ -16,7 +16,7 @@ import {
   createDisconnectedPresence,
   toUserPresence
 } from '@/types/presence';
-import { useCurrentUserRole } from '@/lib/hooks/use-current-user-role';
+import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role';
 
 interface EditorCacheState {
   yDoc: Y.Doc | null;
@@ -56,7 +56,9 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   }));
 
   const { jwt, isLoading: tokenLoading, isError: tokenError } = useCollaborationToken(sessionId);
-  const { relationship_role: userRole } = useCurrentUserRole();
+
+
+  const { relationship_role: userRole } = useCurrentRelationshipRole();
 
   // Store provider ref to prevent recreation
   const providerRef = useRef<TiptapCollabProvider | null>(null);

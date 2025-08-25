@@ -14,7 +14,7 @@ import { RelationshipRole } from '@/types/relationship-role';
  * 
  * @returns Object containing current relationship role information
  */
-export const useCurrentUserRole = () => {
+export const useCurrentRelationshipRole = () => {
   const { userSession } = useAuthStore((state) => ({ userSession: state.userSession }));
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
   
