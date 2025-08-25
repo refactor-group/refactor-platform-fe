@@ -11,6 +11,10 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { isPastSession } from "@/types/coaching-session";
 import { formatDateInUserTimezoneWithTZ, getBrowserTimezone } from "@/lib/timezone-utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useEditorCache } from './editor-cache-context';
+import { PresenceIndicator } from '@/components/ui/presence-indicator';
+import { UserPresence } from '@/types/presence';
+import { RelationshipRole } from '@/types/relationship-role';
 
 const CoachingSessionTitle: React.FC<{
   locale: string | "us";
@@ -19,12 +23,15 @@ const CoachingSessionTitle: React.FC<{
 }> = ({ locale, style, onRender }) => {
   const { userSession } = useAuthStore((state) => state);
   const lastRenderedTitle = useRef<string>("");
-  
+
   // Get coaching session from URL path parameter
   const { currentCoachingSession, isLoading: sessionLoading } = useCurrentCoachingSession();
-  
+
   // Get coaching relationship from simplified store
   const { currentCoachingRelationship, isLoading: relationshipLoading } = useCurrentCoachingRelationship();
+
+  // Get presence state from editor cache
+  const { presenceState } = useEditorCache();
 
   // Compute session title - memoized to prevent unnecessary recalculations
   const sessionTitle = useMemo(() => {
@@ -49,10 +56,49 @@ const CoachingSessionTitle: React.FC<{
 
   const displayTitle = sessionTitle?.title || defaultSessionTitle().title;
 
+  // Helper to get presence by role
+  const getPresenceByRole = (role: RelationshipRole): UserPresence | undefined => {
+    if (!presenceState) return undefined;
+
+    // Iterate Map directly without array conversion
+    for (const user of presenceState.users.values()) {
+      if (user.relationshipRole === role) {
+        return user;
+      }
+    }
+    return undefined;
+  };
+
+  // Enhanced title rendering with presence indicators
+  const renderTitleWithPresence = () => {
+    if (!sessionTitle || !currentCoachingRelationship) return displayTitle;
+
+    const coachPresence = getPresenceByRole(RelationshipRole.Coach);
+    const coacheePresence = getPresenceByRole(RelationshipRole.Coachee);
+
+    // Parse the existing title format: "Coach Name <> Coachee Name" 
+    const parts = displayTitle.split(' <> ');
+    if (parts.length !== 2 || !parts[0]?.trim() || !parts[1]?.trim()) {
+      return displayTitle; // Fallback for malformed titles or default titles
+    }
+
+    const [coachName, coacheeName] = parts;
+
+    return (
+      <span className="flex items-center gap-1">
+        <PresenceIndicator presence={coachPresence} />
+        <span>{coachName}</span>
+        <span className="mx-2">/</span>
+        <PresenceIndicator presence={coacheePresence} />
+        <span>{coacheeName}</span>
+      </span>
+    );
+  };
+
   return (
     <div>
       <h4 className="font-semibold break-words w-full md:text-clip">
-        {displayTitle}
+        {renderTitleWithPresence()}
       </h4>
       {currentCoachingSession && isPastSession(currentCoachingSession) && (
         <p className="text-sm text-muted-foreground mt-1">
