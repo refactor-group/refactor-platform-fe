@@ -5,7 +5,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
-import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
 import { ItemStatus, Id } from "@/types/general";
@@ -110,47 +109,45 @@ const CoachingTabsContainer: React.FC<{
   return (
     <div className="row-span-1 h-full py-4 px-4">
       <div className="flex-col space-y-4 sm:flex md:order-1">
-        <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
-          <Tabs value={currentTab} onValueChange={handleTabChange}>
-            <TabsList className="flex w-128 grid-cols-3 justify-start">
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-              <TabsTrigger value="agreements">Agreements</TabsTrigger>
-              <TabsTrigger value="actions">Actions</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          {/* Always-mounted content controlled by CSS display */}
-          <div className="mt-4">
-            <div 
-              className="flex-col h-full space-y-4"
-              style={{ display: currentTab === "notes" ? "flex" : "none" }}
-            >
-              <CoachingNotes />
-            </div>
-            
-            <div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
-              <AgreementsList
-                coachingSessionId={currentCoachingSessionId || ""}
-                userId={userId}
-                locale={siteConfig.locale}
-                onAgreementAdded={handleAgreementAdded}
-                onAgreementEdited={handleAgreementEdited}
-                onAgreementDeleted={handleAgreementDeleted}
-              />
-            </div>
-            
-            <div style={{ display: currentTab === "actions" ? "block" : "none" }}>
-              <ActionsList
-                coachingSessionId={currentCoachingSessionId || ""}
-                userId={userId}
-                locale={siteConfig.locale}
-                onActionAdded={handleActionAdded}
-                onActionEdited={handleActionEdited}
-                onActionDeleted={handleActionDeleted}
-              />
-            </div>
+        <Tabs value={currentTab} onValueChange={handleTabChange}>
+          <TabsList className="flex w-128 grid-cols-3 justify-start">
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="agreements">Agreements</TabsTrigger>
+            <TabsTrigger value="actions">Actions</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        {/* Always-mounted content controlled by CSS display */}
+        <div className="mt-4">
+          <div 
+            className="flex-col h-full space-y-4"
+            style={{ display: currentTab === "notes" ? "flex" : "none" }}
+          >
+            <CoachingNotes />
           </div>
-        </EditorCacheProvider>
+          
+          <div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
+            <AgreementsList
+              coachingSessionId={currentCoachingSessionId || ""}
+              userId={userId}
+              locale={siteConfig.locale}
+              onAgreementAdded={handleAgreementAdded}
+              onAgreementEdited={handleAgreementEdited}
+              onAgreementDeleted={handleAgreementDeleted}
+            />
+          </div>
+          
+          <div style={{ display: currentTab === "actions" ? "block" : "none" }}>
+            <ActionsList
+              coachingSessionId={currentCoachingSessionId || ""}
+              userId={userId}
+              locale={siteConfig.locale}
+              onActionAdded={handleActionAdded}
+              onActionEdited={handleActionEdited}
+              onActionDeleted={handleActionDeleted}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

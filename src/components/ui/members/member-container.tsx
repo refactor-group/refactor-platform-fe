@@ -27,7 +27,7 @@ export function MemberContainer({
 }: MemberContainerProps) {
     const { setIsACoach, isACoach } = useAuthStore((state) => state);
 
-    // Check if current user is a coach in any relationship
+    // Check if current user is a coach in ANY relationship
     useEffect(() => {
       setIsACoach(
         relationships.some((rel) => rel.coach_id === userSession.id)
