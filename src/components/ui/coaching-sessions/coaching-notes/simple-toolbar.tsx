@@ -20,7 +20,14 @@ import {
   LinkPopover,
 } from "@/components/ui/tiptap-ui";
 
-export const SimpleToolbar = () => {
+interface SimpleToolbarProps {
+  /**
+   * Reference to the editor container for proper popover positioning.
+   */
+  containerRef?: React.RefObject<HTMLElement | null>;
+}
+
+export const SimpleToolbar: React.FC<SimpleToolbarProps> = ({ containerRef }) => {
   const { editor } = useCurrentEditor();
 
   // Use TipTap's official pattern for undo/redo state tracking
@@ -72,7 +79,7 @@ export const SimpleToolbar = () => {
         <MarkButton type="strike" />
         <MarkButton type="code" />
         <MarkButton type="underline" />
-        <LinkPopover hideWhenUnavailable={false} />
+        <LinkPopover hideWhenUnavailable={false} containerRef={containerRef} />
       </ToolbarGroup>
 
       <Spacer />

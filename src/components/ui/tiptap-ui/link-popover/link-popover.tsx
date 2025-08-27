@@ -20,6 +20,8 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  PopoverBoundary,
+  PopoverRootBoundary,
 } from "@/components/ui/tiptap-ui-primitive/popover"
 import { Separator } from "@/components/ui/tiptap-ui-primitive/separator"
 
@@ -232,6 +234,10 @@ export interface LinkPopoverProps extends Omit<ButtonProps, "type"> {
    * @default true
    */
   autoOpenOnLinkActive?: boolean
+  /**
+   * Reference to the editor container for boundary detection.
+   */
+  containerRef?: React.RefObject<HTMLElement | null>
 }
 
 export function LinkPopover({
@@ -239,6 +245,7 @@ export function LinkPopover({
   hideWhenUnavailable = false,
   onOpenChange,
   autoOpenOnLinkActive = true,
+  containerRef,
   ...props
 }: LinkPopoverProps) {
   const editor = useTiptapEditor(providedEditor)
@@ -300,12 +307,31 @@ export function LinkPopover({
     return true
   }, [hideWhenUnavailable, editor, canSetLink])
 
+  // Create popover props with conditional boundary
+  const popoverProps = React.useMemo(() => {
+    const baseProps = {
+      open: isOpen,
+      onOpenChange: handleOnOpenChange,
+    };
+    
+    // Only add boundary if we have a valid container
+    if (containerRef?.current) {
+      return {
+        ...baseProps,
+        boundary: containerRef.current,
+        padding: 16,
+      };
+    }
+    
+    return baseProps;
+  }, [isOpen, handleOnOpenChange, containerRef]);
+
   if (!show || !editor || !editor.isEditable) {
     return null
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={handleOnOpenChange}>
+    <Popover {...popoverProps}>
       <PopoverTrigger asChild>
         <LinkButton
           disabled={isDisabled}
@@ -315,7 +341,12 @@ export function LinkPopover({
         />
       </PopoverTrigger>
 
-      <PopoverContent>
+      <PopoverContent
+        sideOffset={8}
+        alignOffset={0}
+        side="bottom"
+        align="start"
+      >
         <LinkMain {...linkHandler} />
       </PopoverContent>
     </Popover>

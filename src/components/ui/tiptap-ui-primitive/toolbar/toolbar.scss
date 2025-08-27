@@ -50,18 +50,28 @@
     }
 
     @media (max-width: 480px) {
-      position: fixed;
-      top: auto;
-      bottom: 0;
-      height: calc(var(--tt-toolbar-height) + var(--tt-safe-area-bottom));
-      border-top: 1px solid var(--tt-toolbar-border-color);
-      border-bottom: none;
-      padding: 0 0.5rem var(--tt-safe-area-bottom);
-      flex-wrap: nowrap;
-      justify-content: flex-start;
+      width: 100%; /* Match parent container (CoachingNotes) width */
+      height: auto; /* Allow height to grow for wrapping */
+      padding: 0.5rem;
+      flex-wrap: wrap; /* Allow buttons to wrap to multiple rows */
+      justify-content: flex-start; /* Left-align toolbar content */
+      align-items: flex-start;
+      align-content: flex-start;
+      gap: 0.125rem; /* Smaller gap for tighter layout */
 
       .tiptap-toolbar-group {
         flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.125rem;
+        
+        /* Ensure groups don't center themselves */
+        justify-content: flex-start;
+      }
+
+      /* Override any separator spacing that might cause centering */
+      .tiptap-separator {
+        flex: none;
       }
     }
   }
