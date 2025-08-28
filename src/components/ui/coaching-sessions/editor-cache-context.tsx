@@ -51,12 +51,12 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   sessionId,
   children
 }) => {
-  const { userSession } = useAuthStore((state) => ({
+  const { userSession, isLoggedIn } = useAuthStore((state) => ({
     userSession: state.userSession,
+    isLoggedIn: state.isLoggedIn,
   }));
 
   const { jwt, isLoading: tokenLoading, isError: tokenError } = useCollaborationToken(sessionId);
-
 
   const { relationship_role: userRole } = useCurrentRelationshipRole();
 
@@ -64,6 +64,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   const providerRef = useRef<TiptapCollabProvider | null>(null);
   const yDocRef = useRef<Y.Doc | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
+  const wasLoggedInRef = useRef(isLoggedIn);
 
   const [cache, setCache] = useState<EditorCacheState>({
     yDoc: null,
@@ -96,53 +97,41 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       return;
     }
 
-    // Reuse existing provider if available and session hasn't changed
-    if (providerRef.current && lastSessionIdRef.current === sessionId) {
-      console.log('♻️ Reusing existing collaboration provider');
-      return;
-    }
-
-    // Clean up old provider if session changed
-    if (providerRef.current && lastSessionIdRef.current !== sessionId) {
-      console.log('🧹 Cleaning up old provider for previous session');
-      providerRef.current.disconnect();
-      providerRef.current = null;
-    }
-
     const doc = getOrCreateYDoc();
 
     try {
-      // Create new provider
+      // Create provider
       const provider = new TiptapCollabProvider({
         name: jwt.sub,
         appId: siteConfig.env.tiptapAppId,
         token: jwt.token,
         document: doc,
         user: userSession.display_name,
-        connect: true,
-        broadcast: true,
-        onSynced: () => {
-          console.log('🔄 Editor cache: Collaboration synced');
+      });
 
-          // Create extensions with collaboration
-          const collaborativeExtensions = createExtensions(doc, provider, {
-            name: userSession.display_name,
-            color: "#ffcc00",
-          });
+      // Configure provider callbacks
+      provider.on('synced', () => {
+        console.log('🔄 Editor cache: Collaboration synced');
 
-          setCache(prev => ({
-            ...prev,
-            yDoc: doc,
-            collaborationProvider: provider,
-            extensions: collaborativeExtensions,
-            isReady: true,
-            isLoading: false,
-            error: null,
-          }));
-        },
-        onDisconnect: () => {
-          console.log('🔌 Editor cache: Collaboration disconnected');
-        },
+        // Create extensions with collaboration
+        const collaborativeExtensions = createExtensions(doc, provider, {
+          name: userSession.display_name,
+          color: "#ffcc00",
+        });
+
+        setCache(prev => ({
+          ...prev,
+          yDoc: doc,
+          collaborationProvider: provider,
+          extensions: collaborativeExtensions,
+          isReady: true,
+          isLoading: false,
+          error: null,
+        }));
+      });
+
+      provider.on('disconnect', () => {
+        console.log('🔌 Editor cache: Collaboration disconnected');
       });
 
       // Set user awareness with presence data using centralized role logic
@@ -256,14 +245,14 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         error: error instanceof Error ? error : new Error('Failed to initialize collaboration'),
       }));
     }
-  }, [jwt, sessionId, userSession, userRole, getOrCreateYDoc]);
+  }, [jwt, userSession, userRole, getOrCreateYDoc]);
 
-  // Initialize provider when JWT is available
+  // Initialize provider when JWT and user session are available
   useEffect(() => {
     if (!tokenLoading && jwt && !tokenError) {
       initializeProvider();
-    } else if (!tokenLoading && !jwt) {
-      // Use fallback extensions without collaboration
+    } else if (!tokenLoading && (!jwt || tokenError)) {
+      // Use fallback extensions without collaboration (no JWT or JWT error)
       const doc = getOrCreateYDoc();
       const fallbackExtensions = createExtensions(null, null);
 
@@ -287,19 +276,56 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     }));
   }, [tokenLoading]);
 
+  // SIMPLE LOGOUT CLEANUP: Destroy provider when user logs out
+  useEffect(() => {
+    // Check if user went from logged in to logged out
+    if (wasLoggedInRef.current && !isLoggedIn) {
+      console.log('🚪 User logged out, cleaning up TipTap collaboration provider');
+      
+      if (providerRef.current) {
+        try {
+          providerRef.current.destroy();
+        } catch (error) {
+          // Don't break logout flow for TipTap cleanup errors
+          console.warn('TipTap provider cleanup failed during logout:', error);
+        }
+        providerRef.current = null;
+      }
+      
+      // Clear provider from cache
+      setCache(prev => ({
+        ...prev,
+        collaborationProvider: null,
+        presenceState: {
+          users: new Map(),
+          currentUser: null,
+          isLoading: false,
+        },
+      }));
+    }
+    
+    // Update ref for next effect run
+    wasLoggedInRef.current = isLoggedIn;
+  }, [isLoggedIn]);
+
   // Reset cache function
   const resetCache = useCallback(() => {
     console.log('🔄 Resetting editor cache');
 
-    // Disconnect provider
+    // Destroy provider (consistent with logout cleanup)
     if (providerRef.current) {
-      providerRef.current.disconnect();
+      try {
+        providerRef.current.destroy();
+      } catch (error) {
+        console.warn('TipTap provider cleanup failed during reset:', error);
+      }
       providerRef.current = null;
     }
 
     // Clear refs
     yDocRef.current = null;
     lastSessionIdRef.current = null;
+    wasLoggedInRef.current = isLoggedIn; // Reset login state tracking
 
     // Reset state
     setCache({
@@ -315,6 +341,8 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         isLoading: false,
       },
     });
+    // We intentionally omit isLoggedIn from deps to keep resetCache function stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cleanup on unmount or session change
