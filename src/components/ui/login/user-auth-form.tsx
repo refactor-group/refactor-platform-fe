@@ -30,8 +30,10 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [error, setError] = React.useState<string>("");
 
   // Clear SWR cache when login page first renders
+  // We intentionally want this to run only once on mount, not when clearCache function reference changes
   useEffect(() => {
     clearCache();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loginUserSubmit(event: React.SyntheticEvent) {
