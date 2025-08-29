@@ -23,7 +23,7 @@ function constructCoachFirstCoacheeFirstTitle(
   coach_first_name: string,
   coachee_first_name: string
 ): string {
-  return coach_first_name + " <> " + coachee_first_name;
+  return coach_first_name + " / " + coachee_first_name;
 }
 
 function constructCoachFirstLastCoacheeFirstLastTitle(
@@ -36,7 +36,7 @@ function constructCoachFirstLastCoacheeFirstLastTitle(
     coach_first_name +
     " " +
     coach_last_name +
-    " <> " +
+    " / " +
     coachee_first_name +
     " " +
     coachee_last_name
@@ -49,14 +49,14 @@ function constructCoachFirstCoacheeFirstDate(
   date: string,
   locale: string
 ): string {
-  var title = coach_first_name + " <> " + coachee_first_name;
+  var title = coach_first_name + " / " + coachee_first_name;
   var formattedDateTime =
     " @ " +
     getDateTimeFromString(date)
       .setLocale(locale)
       .toLocaleString(DateTime.DATE_MED);
 
-  return coach_first_name + " <> " + coachee_first_name + formattedDateTime;
+  return coach_first_name + " / " + coachee_first_name + formattedDateTime;
 }
 
 function constructCoachFirstCoacheeFirstDateTime(
@@ -65,14 +65,14 @@ function constructCoachFirstCoacheeFirstDateTime(
   date: string,
   locale: string
 ): string {
-  var title = coach_first_name + " <> " + coachee_first_name;
+  var title = coach_first_name + " / " + coachee_first_name;
   var formattedDateTime =
     " @ " +
     getDateTimeFromString(date)
       .setLocale(locale)
       .toLocaleString(DateTime.DATETIME_MED);
 
-  return coach_first_name + " <> " + coachee_first_name + formattedDateTime;
+  return coach_first_name + " / " + coachee_first_name + formattedDateTime;
 }
 
 export function generateSessionTitle(
