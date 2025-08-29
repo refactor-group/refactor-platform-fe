@@ -9,12 +9,15 @@ import {
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { isPastSession } from "@/types/coaching-session";
-import { formatDateInUserTimezoneWithTZ, getBrowserTimezone } from "@/lib/timezone-utils";
+import {
+  formatDateInUserTimezoneWithTZ,
+  getBrowserTimezone,
+} from "@/lib/timezone-utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useEditorCache } from './editor-cache-context';
-import { PresenceIndicator } from '@/components/ui/presence-indicator';
-import { UserPresence } from '@/types/presence';
-import { RelationshipRole } from '@/types/relationship-role';
+import { useEditorCache } from "./editor-cache-context";
+import { PresenceIndicator } from "@/components/ui/presence-indicator";
+import { UserPresence } from "@/types/presence";
+import { RelationshipRole } from "@/types/relationship-role";
 
 const CoachingSessionTitle: React.FC<{
   locale: string | "us";
@@ -25,10 +28,12 @@ const CoachingSessionTitle: React.FC<{
   const lastRenderedTitle = useRef<string>("");
 
   // Get coaching session from URL path parameter
-  const { currentCoachingSession, isLoading: sessionLoading } = useCurrentCoachingSession();
+  const { currentCoachingSession, isLoading: sessionLoading } =
+    useCurrentCoachingSession();
 
   // Get coaching relationship from simplified store
-  const { currentCoachingRelationship, isLoading: relationshipLoading } = useCurrentCoachingRelationship();
+  const { currentCoachingRelationship, isLoading: relationshipLoading } =
+    useCurrentCoachingRelationship();
 
   // Get presence state from editor cache
   const { presenceState } = useEditorCache();
@@ -44,7 +49,14 @@ const CoachingSessionTitle: React.FC<{
       style,
       locale
     );
-  }, [currentCoachingSession, currentCoachingRelationship, style, locale, sessionLoading, relationshipLoading]);
+  }, [
+    currentCoachingSession,
+    currentCoachingRelationship,
+    style,
+    locale,
+    sessionLoading,
+    relationshipLoading,
+  ]);
 
   // Only call onRender when the title actually changes
   useEffect(() => {
@@ -57,7 +69,9 @@ const CoachingSessionTitle: React.FC<{
   const displayTitle = sessionTitle?.title || defaultSessionTitle().title;
 
   // Helper to get presence by role
-  const getPresenceByRole = (role: RelationshipRole): UserPresence | undefined => {
+  const getPresenceByRole = (
+    role: RelationshipRole
+  ): UserPresence | undefined => {
     if (!presenceState) return undefined;
 
     // Iterate Map directly without array conversion
@@ -76,8 +90,8 @@ const CoachingSessionTitle: React.FC<{
     const coachPresence = getPresenceByRole(RelationshipRole.Coach);
     const coacheePresence = getPresenceByRole(RelationshipRole.Coachee);
 
-    // Parse the existing title format: "Coach Name <> Coachee Name" 
-    const parts = displayTitle.split(' <> ');
+    // Parse the existing title format: "Coach Name / Coachee Name"
+    const parts = displayTitle.split(" / ");
     if (parts.length !== 2 || !parts[0]?.trim() || !parts[1]?.trim()) {
       return displayTitle; // Fallback for malformed titles or default titles
     }
@@ -102,7 +116,8 @@ const CoachingSessionTitle: React.FC<{
       </h4>
       {currentCoachingSession && isPastSession(currentCoachingSession) && (
         <p className="text-sm text-muted-foreground mt-1">
-          This session was held on {formatDateInUserTimezoneWithTZ(
+          This session was held on{" "}
+          {formatDateInUserTimezoneWithTZ(
             currentCoachingSession.date,
             userSession?.timezone || getBrowserTimezone()
           )}
