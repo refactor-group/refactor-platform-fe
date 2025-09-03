@@ -24,7 +24,7 @@ interface SimpleToolbarProps {
   /**
    * Reference to the editor container for proper popover positioning.
    */
-  containerRef?: React.RefObject<HTMLElement | null>;
+  containerRef?: React.RefObject<HTMLDivElement>;
 }
 
 export const SimpleToolbar: React.FC<SimpleToolbarProps> = ({ containerRef }) => {

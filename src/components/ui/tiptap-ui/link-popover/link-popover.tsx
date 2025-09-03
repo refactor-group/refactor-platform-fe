@@ -237,7 +237,7 @@ export interface LinkPopoverProps extends Omit<ButtonProps, "type"> {
   /**
    * Reference to the editor container for boundary detection.
    */
-  containerRef?: React.RefObject<HTMLElement | null>
+  containerRef?: React.RefObject<HTMLDivElement>
 }
 
 export function LinkPopover({
