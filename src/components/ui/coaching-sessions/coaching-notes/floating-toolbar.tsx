@@ -5,11 +5,11 @@ interface FloatingToolbarProps {
   /**
    * Reference to the main editor container to detect scroll position
    */
-  editorRef: React.RefObject<HTMLElement | null>;
+  editorRef: React.RefObject<HTMLDivElement>;
   /**
    * Reference to the original toolbar to detect when it's out of view
    */
-  toolbarRef: React.RefObject<HTMLElement | null>;
+  toolbarRef: React.RefObject<HTMLDivElement>;
   /**
    * Height of the site header in pixels. Defaults to 64px (h-14 + pt-2)
    */
@@ -20,139 +20,211 @@ interface FloatingToolbarProps {
   onOriginalToolbarVisibilityChange?: (visible: boolean) => void;
 }
 
+// ============================================================================
+// TOP LEVEL: Story-driven main component
+// ============================================================================
+
 export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   editorRef,
   toolbarRef,
-  headerHeight = 64, // Default: h-14 (56px) + pt-2 (8px) = 64px
+  headerHeight = 64,
   onOriginalToolbarVisibilityChange,
 }) => {
+  const { isVisible, checkVisibility } = useToolbarVisibility(
+    editorRef,
+    toolbarRef,
+    headerHeight,
+    onOriginalToolbarVisibilityChange
+  );
+  
+  const { floatingRef, styles } = useToolbarPositioning(editorRef, isVisible);
+  
+  useScrollEventManagement(editorRef, checkVisibility);
+  
+  return renderFloatingToolbar(floatingRef, isVisible, styles, editorRef);
+};
+
+// ============================================================================
+// MIDDLE LEVEL: Logical operation hooks
+// ============================================================================
+
+const useToolbarVisibility = (
+  editorRef: React.RefObject<HTMLDivElement>,
+  toolbarRef: React.RefObject<HTMLDivElement>,
+  headerHeight: number,
+  onVisibilityChange?: (visible: boolean) => void
+) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [floatingStyles, setFloatingStyles] = useState({
-    left: "auto",
-    right: "auto",
-    width: "auto",
-    minWidth: "auto",
-  });
-  const floatingRef = useRef<HTMLDivElement>(null);
-  const scrollListenersRef = useRef(new Map<Element, () => void>());
+  
+  const checkVisibility = useCallback(() => {
+    const visibilityState = calculateToolbarVisibility(editorRef, toolbarRef, headerHeight);
+    updateVisibilityState(visibilityState, setIsVisible, onVisibilityChange);
+  }, [editorRef, toolbarRef, headerHeight, onVisibilityChange]);
+  
+  return { isVisible, checkVisibility };
+};
 
-  const checkToolbarVisibility = useCallback(() => {
-    if (!toolbarRef.current || !editorRef.current || !floatingRef.current) {
-      return;
-    }
-
-    const editorRect = editorRef.current.getBoundingClientRect();
-    const siteHeaderHeight = headerHeight;
-
-    // Calculate where the toolbar WOULD be if it were visible
-    // The toolbar is positioned at the top of the editor
-    const toolbarNaturalBottom = editorRect.top;
-    
-    // Show floating toolbar when:
-    // 1. The toolbar's natural position would be above the header (scrolled off)
-    // 2. The editor is still visible (at least partially)
-    const toolbarWouldBeHidden = toolbarNaturalBottom < siteHeaderHeight;
-    const editorVisible = editorRect.bottom > 0 && editorRect.top < window.innerHeight;
-
-    const shouldShowFloating = toolbarWouldBeHidden && editorVisible;
-    setIsVisible(shouldShowFloating);
-
-    // Notify parent about original toolbar visibility change
-    if (onOriginalToolbarVisibilityChange) {
-      onOriginalToolbarVisibilityChange(!shouldShowFloating);
-    }
-
-    // Update floating toolbar position
-    if (shouldShowFloating) {
-      setFloatingStyles({
-        left: `${editorRect.left + 16}px`, // 1rem margin
-        right: "auto",
-        width: `${editorRect.width - 32}px`,
-        minWidth: "250px", // Ensure toolbar is wide enough to prevent button overflow
-      });
-    }
-  }, [headerHeight, toolbarRef, editorRef, onOriginalToolbarVisibilityChange]);
-
-  // Cleanup function to remove all tracked listeners
-  const cleanupScrollListeners = useCallback(() => {
-    const listeners = scrollListenersRef.current;
-    listeners.forEach((handler, element) => {
-      element.removeEventListener("scroll", handler);
-    });
-    listeners.clear();
-  }, []);
-
+const useToolbarPositioning = (
+  editorRef: React.RefObject<HTMLDivElement>,
+  isVisible: boolean
+) => {
+  const floatingRef = useRef<HTMLDivElement>(null!);
+  const [styles, setStyles] = useState(getDefaultStyles());
+  
   useEffect(() => {
-    // Check on scroll
-    const handleScroll = () => {
-      checkToolbarVisibility();
-    };
+    if (isVisible && editorRef.current) {
+      const newStyles = calculateFloatingPosition(editorRef.current);
+      setStyles(newStyles);
+    }
+  }, [isVisible, editorRef]);
+  
+  return { floatingRef, styles };
+};
 
-    // Check on resize
-    const handleResize = () => {
-      checkToolbarVisibility();
-    };
-
+const useScrollEventManagement = (
+  editorRef: React.RefObject<HTMLDivElement>,
+  onScroll: () => void
+) => {
+  useEffect(() => {
     // Initial check
-    checkToolbarVisibility();
+    onScroll();
+    
+    // Setup event listeners
+    const cleanup = setupAllScrollListeners(editorRef, onScroll);
+    
+    // Cleanup on unmount or dependency change
+    return cleanup;
+  }, [editorRef, onScroll]);
+};
 
-    // Add event listeners
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleResize, { passive: true });
+// ============================================================================
+// LOW LEVEL: Specific implementation details
+// ============================================================================
 
-    // Clear any existing listeners from previous renders
-    cleanupScrollListeners();
+const calculateToolbarVisibility = (
+  editorRef: React.RefObject<HTMLDivElement>,
+  toolbarRef: React.RefObject<HTMLDivElement>,
+  headerHeight: number
+) => {
+  if (!toolbarRef.current || !editorRef.current) {
+    return { shouldShow: false, editorVisible: false };
+  }
+  
+  const editorRect = editorRef.current.getBoundingClientRect();
+  const toolbarNaturalBottom = editorRect.top;
+  
+  const toolbarWouldBeHidden = toolbarNaturalBottom < headerHeight;
+  const editorVisible = editorRect.bottom > 0 && editorRect.top < window.innerHeight;
+  
+  return {
+    shouldShow: toolbarWouldBeHidden && editorVisible,
+    editorVisible
+  };
+};
 
-    // Also listen to scroll events on parent containers
-    const listeners = scrollListenersRef.current;
-    let currentElement = editorRef.current?.parentElement;
+const updateVisibilityState = (
+  visibilityState: { shouldShow: boolean; editorVisible: boolean },
+  setIsVisible: React.Dispatch<React.SetStateAction<boolean>>,
+  onVisibilityChange?: (visible: boolean) => void
+) => {
+  setIsVisible(visibilityState.shouldShow);
+  
+  if (onVisibilityChange) {
+    onVisibilityChange(!visibilityState.shouldShow);
+  }
+};
 
-    while (currentElement) {
-      const computedStyle = window.getComputedStyle(currentElement);
-      if (
-        computedStyle.overflow === "auto" ||
-        computedStyle.overflow === "scroll" ||
-        computedStyle.overflowY === "auto" ||
-        computedStyle.overflowY === "scroll"
-      ) {
-        // Create a unique handler for each element
-        const elementHandler = () => handleScroll();
-        listeners.set(currentElement, elementHandler);
-        currentElement.addEventListener("scroll", elementHandler, {
-          passive: true,
-        });
-      }
-      currentElement = currentElement.parentElement;
+const getDefaultStyles = () => ({
+  left: "auto",
+  right: "auto", 
+  width: "auto",
+  minWidth: "auto",
+});
+
+const calculateFloatingPosition = (editorElement: HTMLElement) => {
+  const editorRect = editorElement.getBoundingClientRect();
+  
+  return {
+    left: `${editorRect.left + 16}px`, // 1rem margin
+    right: "auto",
+    width: `${editorRect.width - 32}px`,
+    minWidth: "250px", // Ensure toolbar is wide enough
+  };
+};
+
+const setupAllScrollListeners = (
+  editorRef: React.RefObject<HTMLDivElement>,
+  onScroll: () => void
+): (() => void) => {
+  const listeners: Array<{ element: Element | Window; handler: () => void }> = [];
+  
+  // Global listeners
+  const handleScroll = () => onScroll();
+  const handleResize = () => onScroll();
+  
+  window.addEventListener("scroll", handleScroll, { passive: true });
+  window.addEventListener("resize", handleResize, { passive: true });
+  
+  listeners.push(
+    { element: window, handler: handleScroll },
+    { element: window, handler: handleResize }
+  );
+  
+  // Parent container listeners
+  let currentElement = editorRef.current?.parentElement;
+  
+  while (currentElement) {
+    if (isScrollableElement(currentElement)) {
+      const elementHandler = () => onScroll();
+      currentElement.addEventListener("scroll", elementHandler, { passive: true });
+      listeners.push({ element: currentElement, handler: elementHandler });
     }
+    currentElement = currentElement.parentElement;
+  }
+  
+  // Return cleanup function
+  return () => {
+    // Remove window listeners
+    window.removeEventListener("scroll", handleScroll);
+    window.removeEventListener("resize", handleResize);
+    
+    // Remove element listeners
+    listeners.forEach(({ element, handler }) => {
+      if (element !== window) {
+        element.removeEventListener("scroll", handler);
+      }
+    });
+  };
+};
 
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleResize);
-      cleanupScrollListeners();
-    };
-  }, [checkToolbarVisibility, editorRef, cleanupScrollListeners]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      cleanupScrollListeners();
-    };
-  }, [cleanupScrollListeners]);
-
+const isScrollableElement = (element: Element): boolean => {
+  const computedStyle = window.getComputedStyle(element);
   return (
-    <div
-      ref={floatingRef}
-      className={`floating-toolbar ${isVisible ? "visible" : "hidden"}`}
-      role="toolbar"
-      aria-label="Floating editor toolbar"
-      style={{
-        display: isVisible ? "block" : "none",
-        ...floatingStyles,
-      }}
-    >
-      <div className="floating-toolbar-content">
-        <SimpleToolbar containerRef={editorRef} />
-      </div>
-    </div>
+    computedStyle.overflow === "auto" ||
+    computedStyle.overflow === "scroll" ||
+    computedStyle.overflowY === "auto" ||
+    computedStyle.overflowY === "scroll"
   );
 };
+
+const renderFloatingToolbar = (
+  floatingRef: React.RefObject<HTMLDivElement>,
+  isVisible: boolean,
+  styles: ReturnType<typeof getDefaultStyles>,
+  editorRef: React.RefObject<HTMLDivElement>
+) => (
+  <div
+    ref={floatingRef}
+    className={`floating-toolbar ${isVisible ? "visible" : "hidden"}`}
+    role="toolbar"
+    aria-label="Floating editor toolbar"
+    style={{
+      display: isVisible ? "block" : "none",
+      ...styles,
+    }}
+  >
+    <div className="floating-toolbar-content">
+      <SimpleToolbar containerRef={editorRef} />
+    </div>
+  </div>
+);

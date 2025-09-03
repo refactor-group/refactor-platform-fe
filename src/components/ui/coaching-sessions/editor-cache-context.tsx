@@ -247,46 +247,45 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     }
   }, [jwt, userSession, userRole, getOrCreateYDoc]);
 
-  // Initialize provider when JWT and user session are available
+  // Effect 1: Editor Lifecycle Management
   useEffect(() => {
-    if (!tokenLoading && jwt && !tokenError) {
-      initializeProvider();
-    } else if (!tokenLoading && (!jwt || tokenError)) {
-      // Use fallback extensions without collaboration (no JWT or JWT error)
-      const doc = getOrCreateYDoc();
-      const fallbackExtensions = createExtensions(null, null);
+    // Update loading state
+    setCache(prev => ({ ...prev, isLoading: tokenLoading }));
 
-      setCache(prev => ({
-        ...prev,
-        yDoc: doc,
-        collaborationProvider: null,
-        extensions: fallbackExtensions,
-        isReady: true,
-        isLoading: false,
-        error: tokenError || null,
-      }));
+    // Handle provider initialization or fallback
+    if (!tokenLoading) {
+      if (jwt && !tokenError) {
+        initializeProvider();
+      } else {
+        // Use fallback extensions without collaboration (no JWT or JWT error)
+        const doc = getOrCreateYDoc();
+        const fallbackExtensions = createExtensions(null, null);
+
+        setCache(prev => ({
+          ...prev,
+          yDoc: doc,
+          collaborationProvider: null,
+          extensions: fallbackExtensions,
+          isReady: true,
+          isLoading: false,
+          error: tokenError || null,
+        }));
+      }
     }
-  }, [jwt, tokenLoading, tokenError, initializeProvider, getOrCreateYDoc]);
+  }, [sessionId, jwt, tokenLoading, tokenError, userSession, userRole, initializeProvider, getOrCreateYDoc]);
 
-  // Update loading state
+  // Effect 2: Security Lifecycle Management (Isolated)
   useEffect(() => {
-    setCache(prev => ({
-      ...prev,
-      isLoading: tokenLoading,
-    }));
-  }, [tokenLoading]);
-
-  // SIMPLE LOGOUT CLEANUP: Destroy provider when user logs out
-  useEffect(() => {
-    // Check if user went from logged in to logged out
-    if (wasLoggedInRef.current && !isLoggedIn) {
+    const userLoggedOut = wasLoggedInRef.current && !isLoggedIn;
+    
+    if (userLoggedOut) {
       console.log('🚪 User logged out, cleaning up TipTap collaboration provider');
       
+      // Securely destroy collaboration resources
       if (providerRef.current) {
         try {
           providerRef.current.destroy();
         } catch (error) {
-          // Don't break logout flow for TipTap cleanup errors
           console.warn('TipTap provider cleanup failed during logout:', error);
         }
         providerRef.current = null;
@@ -304,7 +303,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       }));
     }
     
-    // Update ref for next effect run
+    // Update login state tracking
     wasLoggedInRef.current = isLoggedIn;
   }, [isLoggedIn]);
 
