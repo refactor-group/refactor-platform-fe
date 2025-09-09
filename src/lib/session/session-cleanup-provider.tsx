@@ -17,11 +17,13 @@ export function SessionCleanupProvider({ children }: { children: React.ReactNode
   const executeLogout = useLogoutUser();
 
   useEffect(() => {
+    console.warn('🔗 [SESSION-CLEANUP-PROVIDER] Registering session cleanup handler');
     // Register the comprehensive logout handler with session guard
     registerSessionCleanup(executeLogout);
 
     // Cleanup registration on unmount (though provider typically lives app lifetime)
     return () => {
+      console.warn('🔗 [SESSION-CLEANUP-PROVIDER] Unregistering session cleanup handler');
       registerSessionCleanup(async () => {
         console.warn('Session cleanup handler not registered');
       });

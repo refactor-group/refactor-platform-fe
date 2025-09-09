@@ -25,7 +25,9 @@ let isCleaningUp = false;
  * Called once when SessionCleanupProvider initializes
  */
 export function registerSessionCleanup(handler: () => Promise<void>): void {
+  console.warn('🔗 [SESSION-GUARD] Registering cleanup handler');
   sessionCleanupHandler = handler;
+  console.warn('🔗 [SESSION-GUARD] Handler registered:', !!sessionCleanupHandler);
 }
 
 /**
@@ -52,15 +54,25 @@ sessionGuard.interceptors.response.use(
       
       if (!isAuthEndpoint && !isCleaningUp && sessionCleanupHandler) {
         isCleaningUp = true;
-        console.warn('Session invalidated. Initiating cleanup...');
+        console.warn('🚨 [SESSION-GUARD] 401 detected - Session invalidated. Initiating cleanup...');
+        console.warn('🚨 [SESSION-GUARD] Error URL:', error.config?.url);
+        console.warn('🚨 [SESSION-GUARD] Will execute sessionCleanupHandler');
         
         try {
           await sessionCleanupHandler();
+          console.warn('✅ [SESSION-GUARD] Session cleanup completed successfully');
         } catch (cleanupError) {
-          console.error('Session cleanup failed:', cleanupError);
+          console.error('❌ [SESSION-GUARD] Session cleanup failed:', cleanupError);
         } finally {
           isCleaningUp = false;
         }
+      } else {
+        console.log('🚨 [SESSION-GUARD] 401 detected but cleanup skipped:', {
+          isAuthEndpoint,
+          isCleaningUp,
+          hasHandler: !!sessionCleanupHandler,
+          url: error.config?.url
+        });
       }
     }
     
