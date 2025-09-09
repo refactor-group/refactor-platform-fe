@@ -17,6 +17,7 @@ import {
   toUserPresence
 } from '@/types/presence';
 import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role';
+import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry';
 
 interface EditorCacheState {
   yDoc: Y.Doc | null;
@@ -64,7 +65,6 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   const providerRef = useRef<TiptapCollabProvider | null>(null);
   const yDocRef = useRef<Y.Doc | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
-  const wasLoggedInRef = useRef(isLoggedIn);
 
   const [cache, setCache] = useState<EditorCacheState>({
     yDoc: null,
@@ -90,6 +90,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     }
     return yDocRef.current;
   }, [sessionId]);
+
 
   // Initialize collaboration provider
   const initializeProvider = useCallback(async () => {
@@ -274,24 +275,51 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     }
   }, [sessionId, jwt, tokenLoading, tokenError, userSession, userRole, initializeProvider, getOrCreateYDoc]);
 
-  // Effect 2: Security Lifecycle Management (Isolated)
+  // Effect 2: Register TipTap cleanup with logout process
   useEffect(() => {
-    const userLoggedOut = wasLoggedInRef.current && !isLoggedIn;
+    console.log('🔗 [EDITOR-CACHE] Registering TipTap cleanup with logout registry');
     
-    if (userLoggedOut) {
-      console.log('🚪 User logged out, cleaning up TipTap collaboration provider');
-      
-      // Securely destroy collaboration resources
+    const cleanup = () => {
+      console.warn('🚪 [EDITOR-CACHE] Logout cleanup triggered! Cleaning up TipTap collaboration provider');
+
       if (providerRef.current) {
         try {
-          providerRef.current.destroy();
+          console.warn('🚪 [EDITOR-CACHE] Provider exists, starting cleanup sequence');
+          console.warn('🚪 [EDITOR-CACHE] Provider details:', {
+            name: (providerRef.current as any).name,
+            websocketState: (providerRef.current as any).websocket?.readyState,
+            isConnected: (providerRef.current as any).websocket?.readyState === WebSocket.OPEN
+          });
+
+          // Step 1: Clear awareness to signal user is leaving
+          // Setting to null is the standard way to remove awareness data
+          console.warn('🚪 [EDITOR-CACHE] Clearing awareness fields');
+          providerRef.current.setAwarenessField("presence", null);
+          providerRef.current.setAwarenessField("user", null);
+
+          // Step 2: Disconnect the provider
+          console.warn('🚪 [EDITOR-CACHE] Calling provider.disconnect()');
+          providerRef.current.disconnect();
+          console.warn('🚪 [EDITOR-CACHE] provider.disconnect() completed');
+
+          // Step 3: Destroy on next microtask to ensure disconnect completes
+          const providerToDestroy = providerRef.current;
+          providerRef.current = null; // Clear ref immediately to prevent double cleanup
+
+          queueMicrotask(() => {
+            console.warn('🚪 [EDITOR-CACHE] Destroying provider after disconnect');
+            providerToDestroy.destroy();
+            console.warn('🚪 [EDITOR-CACHE] provider.destroy() completed');
+          });
         } catch (error) {
-          console.warn('TipTap provider cleanup failed during logout:', error);
+          console.error('❌ [EDITOR-CACHE] TipTap provider cleanup failed during logout:', error);
+          providerRef.current = null;
         }
-        providerRef.current = null;
+      } else {
+        console.warn('🚪 [EDITOR-CACHE] No provider to cleanup');
       }
-      
-      // Clear provider from cache
+
+      // Clear provider from cache immediately
       setCache(prev => ({
         ...prev,
         collaborationProvider: null,
@@ -301,11 +329,19 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
           isLoading: false,
         },
       }));
-    }
+    };
+
+    // Register cleanup function and get unregister function
+    const unregisterCleanup = logoutCleanupRegistry.register(cleanup);
     
-    // Update login state tracking
-    wasLoggedInRef.current = isLoggedIn;
-  }, [isLoggedIn]);
+    console.log('✅ [EDITOR-CACHE] TipTap cleanup registered with logout registry');
+
+    // Unregister cleanup when component unmounts
+    return () => {
+      console.log('🔗 [EDITOR-CACHE] Unregistering TipTap cleanup from logout registry');
+      unregisterCleanup();
+    };
+  }, []); // Empty deps - register once when component mounts
 
   // Reset cache function
   const resetCache = useCallback(() => {
@@ -324,7 +360,6 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     // Clear refs
     yDocRef.current = null;
     lastSessionIdRef.current = null;
-    wasLoggedInRef.current = isLoggedIn; // Reset login state tracking
 
     // Reset state
     setCache({
@@ -340,8 +375,6 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         isLoading: false,
       },
     });
-    // We intentionally omit isLoggedIn from deps to keep resetCache function stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cleanup on unmount or session change
