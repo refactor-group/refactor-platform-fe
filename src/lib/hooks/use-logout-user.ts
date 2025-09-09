@@ -4,6 +4,7 @@ import { useOrganizationStateStore } from "@/lib/providers/organization-state-st
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
+import { logoutCleanupRegistry } from "./logout-cleanup-registry";
 
 export function useLogoutUser() {
   const router = useRouter();
@@ -21,10 +22,18 @@ export function useLogoutUser() {
   const clearCache = EntityApi.useClearCache();
 
   return async () => {
+    console.warn('🚪 [USE-LOGOUT-USER] Starting logout sequence');
+    console.warn('🚪 [USE-LOGOUT-USER] Current userSession:', userSession?.id);
     try {
       // Reset auth store FIRST to prevent other components from re-initializing
-      console.trace("🚪 LOGOUT: Resetting AuthStore state");
+      console.trace("🚪 [USE-LOGOUT-USER] Calling logout() to reset AuthStore state");
       logout();
+      console.trace("🚪 [USE-LOGOUT-USER] logout() completed - isLoggedIn should now be false");
+
+      // Execute registered cleanup functions (e.g., TipTap provider cleanup)
+      console.trace("🚪 [USE-LOGOUT-USER] Executing component cleanup functions");
+      await logoutCleanupRegistry.executeAll();
+      console.trace("🚪 [USE-LOGOUT-USER] Component cleanup completed");
 
       console.trace("🚪 LOGOUT: Clearing SWR cache");
       clearCache();
@@ -49,7 +58,7 @@ export function useLogoutUser() {
       logout();
     } finally {
       console.debug("Navigating to /");
-      await router.replace("/");
+      router.replace("/");
     }
   };
 }
