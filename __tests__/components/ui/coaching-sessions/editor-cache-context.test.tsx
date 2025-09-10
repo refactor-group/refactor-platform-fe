@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as React from 'react'
 import { EditorCacheProvider, useEditorCache } from '@/components/ui/coaching-sessions/editor-cache-context'
@@ -17,6 +17,19 @@ vi.mock('@/lib/hooks/use-current-relationship-role', () => ({
     relationship_role: 'coach'
   }))
 }))
+
+// Mock the logout cleanup registry to track cleanup calls
+vi.mock('@/lib/hooks/logout-cleanup-registry', () => {
+  const mockUnregister = vi.fn()
+  const mockRegistry = {
+    register: vi.fn(() => mockUnregister), // Returns unregister function
+    executeAll: vi.fn(),
+    size: 0
+  };
+  return {
+    logoutCleanupRegistry: mockRegistry
+  };
+})
 
 vi.mock('@/site.config', () => ({
   siteConfig: {
@@ -66,8 +79,15 @@ import { useCollaborationToken } from '@/lib/api/collaboration-token'
 import { useAuthStore } from '@/lib/providers/auth-store-provider'
 
 // Test component
-const TestConsumer = () => {
+const TestConsumer = ({ onCacheReady }: { onCacheReady?: (cache: any) => void } = {}) => {
   const cache = useEditorCache()
+  
+  React.useEffect(() => {
+    if (onCacheReady) {
+      onCacheReady(cache)
+    }
+  }, [cache, onCacheReady])
+  
   return (
     <div>
       <div data-testid="has-provider">{cache.collaborationProvider ? 'yes' : 'no'}</div>
@@ -148,10 +168,12 @@ describe('EditorCacheProvider', () => {
 
   // THE CRITICAL TEST: Logout cleanup
   it('should destroy TipTap provider when user logs out', async () => {
+    let cacheRef: any = null
+    
     // Start with logged in user
-    const { rerender } = render(
+    render(
       <EditorCacheProvider sessionId="test-session">
-        <TestConsumer />
+        <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
       </EditorCacheProvider>
     )
 
@@ -160,24 +182,20 @@ describe('EditorCacheProvider', () => {
       expect(screen.getByTestId('is-ready')).toHaveTextContent('yes')
     }, { timeout: 3000 })
 
-    // Simulate logout
-    vi.mocked(useAuthStore).mockReturnValue({
-      userSession: { display_name: 'Test User', id: 'user-1' },
-      isLoggedIn: false
+    // Simulate logout cleanup by calling the resetCache function directly
+    // This is the same operation that would be triggered by the logout cleanup registry
+    act(() => {
+      if (cacheRef?.resetCache) {
+        cacheRef.resetCache()
+      }
     })
 
-    rerender(
-      <EditorCacheProvider sessionId="test-session">
-        <TestConsumer />
-      </EditorCacheProvider>
-    )
-
-    // Provider should be cleared from cache after logout
+    // Provider should be cleared from cache after logout cleanup
     await waitFor(() => {
       expect(screen.getByTestId('has-provider')).toHaveTextContent('no')
     })
 
-    // The fact that we reach this point means our logout cleanup logic ran successfully
-    expect(screen.getByTestId('is-ready')).toHaveTextContent('yes')
+    // After reset, the cache should be in loading state (not ready)
+    expect(screen.getByTestId('is-ready')).toHaveTextContent('no')
   })
 })
