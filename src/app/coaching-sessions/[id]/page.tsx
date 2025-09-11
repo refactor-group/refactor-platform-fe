@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
@@ -40,9 +40,6 @@ export default function CoachingSessionsPage() {
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId } =
     useCurrentCoachingRelationship();
 
-  const handleTitleRender = useCallback((sessionTitle: string) => {
-    document.title = sessionTitle;
-  }, []);
 
   // Auto-sync relationship ID when session data loads (if not already set)
   useEffect(() => {
@@ -105,7 +102,6 @@ export default function CoachingSessionsPage() {
             <CoachingSessionTitle
               locale={siteConfig.locale}
               style={siteConfig.titleStyle}
-              onRender={handleTitleRender}
             />
             <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md items-center gap-3 sm:justify-end md:justify-start">
               <ShareSessionLink

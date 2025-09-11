@@ -22,8 +22,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 const CoachingSessionTitle: React.FC<{
   locale: string | "us";
   style: SessionTitleStyle;
-  onRender: (sessionTitle: string) => void;
-}> = ({ locale, style, onRender }) => {
+}> = ({ locale, style }) => {
   const { userSession } = useAuthStore((state) => state);
   const lastRenderedTitle = useRef<string>("");
 
@@ -43,12 +42,20 @@ const CoachingSessionTitle: React.FC<{
     if (sessionLoading || relationshipLoading) return null;
     if (!currentCoachingSession || !currentCoachingRelationship) return null;
 
-    return generateSessionTitle(
+    const titleData = generateSessionTitle(
       currentCoachingSession,
       currentCoachingRelationship,
       style,
       locale
     );
+
+    // Update document title directly where computed
+    if (titleData && titleData.title !== lastRenderedTitle.current) {
+      document.title = titleData.title;
+      lastRenderedTitle.current = titleData.title;
+    }
+
+    return titleData;
   }, [
     currentCoachingSession,
     currentCoachingRelationship,
@@ -57,14 +64,6 @@ const CoachingSessionTitle: React.FC<{
     sessionLoading,
     relationshipLoading,
   ]);
-
-  // Only call onRender when the title actually changes
-  useEffect(() => {
-    if (sessionTitle && sessionTitle.title !== lastRenderedTitle.current) {
-      lastRenderedTitle.current = sessionTitle.title;
-      onRender(sessionTitle.title);
-    }
-  }, [sessionTitle, onRender]);
 
   const displayTitle = sessionTitle?.title || defaultSessionTitle().title;
 
