@@ -21,25 +21,19 @@ class LogoutCleanupRegistry {
   }
 
   /**
-   * Execute all registered cleanup functions
-   * Called by the logout process
+   * Execute all registered cleanup functions during logout
+   * Ensures graceful component teardown with error isolation
    */
   async executeAll(): Promise<void> {
-    console.warn(`🧹 [LOGOUT-CLEANUP] Executing ${this.cleanupFunctions.size} cleanup functions`);
-    
     const cleanupPromises = Array.from(this.cleanupFunctions).map(async (cleanup, index) => {
       try {
-        console.warn(`🧹 [LOGOUT-CLEANUP] Executing cleanup function ${index + 1}`);
         await cleanup();
-        console.warn(`✅ [LOGOUT-CLEANUP] Cleanup function ${index + 1} completed`);
       } catch (error) {
-        console.error(`❌ [LOGOUT-CLEANUP] Cleanup function ${index + 1} failed:`, error);
-        // Don't throw - continue with other cleanups
+        console.error(`Cleanup function ${index + 1} failed:`, error);
       }
     });
 
     await Promise.allSettled(cleanupPromises);
-    console.warn('✅ [LOGOUT-CLEANUP] All cleanup functions completed');
   }
 
   /**
