@@ -43,11 +43,7 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
             set({ isLoggedIn: true, userId, userSession });
           },
           logout: () => {
-            console.warn('🚪 [AUTH-STORE] logout() called');
-            console.warn('🚪 [AUTH-STORE] Before logout - isLoggedIn:', get().isLoggedIn);
-            // Reset the in-memory state
             set(defaultInitState);
-            console.warn('🚪 [AUTH-STORE] After logout - isLoggedIn:', get().isLoggedIn);
           },
           setTimezone: (timezone) => {
             set((state) => ({

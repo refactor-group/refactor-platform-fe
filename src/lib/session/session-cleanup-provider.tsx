@@ -5,25 +5,24 @@ import { useLogoutUser } from '@/lib/hooks/use-logout-user';
 import { registerSessionCleanup } from './session-guard';
 
 /**
- * Provides session cleanup orchestration throughout the application
- * Connects the session guard with React-based cleanup logic
+ * SessionCleanupProvider: bridges session guard with React cleanup logic
  * 
- * Must be mounted inside providers that provide:
- * - Auth store access
- * - Router access 
- * - Organization/coaching relationship stores
+ * Responsibilities:
+ * - Registers comprehensive logout handler with session guard
+ * - Coordinates cleanup across all application state stores
+ * - Ensures proper provider hierarchy for cleanup dependencies
+ * 
+ * Dependencies: Auth, Router, Organization, and CoachingRelationship stores
  */
 export function SessionCleanupProvider({ children }: { children: React.ReactNode }) {
   const executeLogout = useLogoutUser();
 
   useEffect(() => {
-    console.warn('🔗 [SESSION-CLEANUP-PROVIDER] Registering session cleanup handler');
-    // Register the comprehensive logout handler with session guard
+    // Register logout handler with session guard for 401 auto-cleanup
     registerSessionCleanup(executeLogout);
 
-    // Cleanup registration on unmount (though provider typically lives app lifetime)
     return () => {
-      console.warn('🔗 [SESSION-CLEANUP-PROVIDER] Unregistering session cleanup handler');
+      // Reset handler on unmount (provider typically lives app lifetime)
       registerSessionCleanup(async () => {
         console.warn('Session cleanup handler not registered');
       });

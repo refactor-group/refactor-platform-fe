@@ -14,20 +14,16 @@ export const sessionGuard: AxiosInstance = axios.create({
 });
 
 /**
- * Session cleanup handler - set by SessionCleanupProvider
- * Encapsulates the logout sequence including store resets and navigation
+ * Session cleanup orchestration: manages logout flow coordination
+ * - Handler registered by SessionCleanupProvider on app initialization
+ * - Triggered automatically on 401 responses from protected endpoints
+ * - Prevents concurrent cleanup attempts via isCleaningUp flag
  */
 let sessionCleanupHandler: (() => Promise<void>) | null = null;
 let isCleaningUp = false;
 
-/**
- * Register the session cleanup handler
- * Called once when SessionCleanupProvider initializes
- */
 export function registerSessionCleanup(handler: () => Promise<void>): void {
-  console.warn('🔗 [SESSION-GUARD] Registering cleanup handler');
   sessionCleanupHandler = handler;
-  console.warn('🔗 [SESSION-GUARD] Handler registered:', !!sessionCleanupHandler);
 }
 
 /**
@@ -45,38 +41,26 @@ export function isSessionCleanupInProgress(): boolean {
 sessionGuard.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // Guard against invalid sessions (401 Unauthorized)
+    // Session invalidation detection: auto-logout on 401 responses
     if (error.response?.status === 401) {
-      // Skip cleanup for auth endpoints to prevent loops
       const isAuthEndpoint = 
         error.config?.url?.includes('/login') || 
         error.config?.url?.includes('/delete');
       
+      // Execute cleanup if not auth endpoint and not already cleaning up
       if (!isAuthEndpoint && !isCleaningUp && sessionCleanupHandler) {
         isCleaningUp = true;
-        console.warn('🚨 [SESSION-GUARD] 401 detected - Session invalidated. Initiating cleanup...');
-        console.warn('🚨 [SESSION-GUARD] Error URL:', error.config?.url);
-        console.warn('🚨 [SESSION-GUARD] Will execute sessionCleanupHandler');
         
         try {
           await sessionCleanupHandler();
-          console.warn('✅ [SESSION-GUARD] Session cleanup completed successfully');
         } catch (cleanupError) {
-          console.error('❌ [SESSION-GUARD] Session cleanup failed:', cleanupError);
+          console.error('Session cleanup failed:', cleanupError);
         } finally {
           isCleaningUp = false;
         }
-      } else {
-        console.log('🚨 [SESSION-GUARD] 401 detected but cleanup skipped:', {
-          isAuthEndpoint,
-          isCleaningUp,
-          hasHandler: !!sessionCleanupHandler,
-          url: error.config?.url
-        });
       }
     }
     
-    // Re-throw error for normal error handling
     return Promise.reject(error);
   }
 );
