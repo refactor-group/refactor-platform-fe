@@ -19,10 +19,9 @@ import * as Y from "yjs";
 import { ConfiguredLink } from "./extended-link-extension";
 import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
 
-// Initialize lowlight with all languages
 const lowlight = createLowlight(all);
 
-// Extension to handle Tab key in code blocks
+// Tab handler: enables proper indentation in code blocks
 const CodeBlockTabHandler = Extension.create({
   name: "codeBlockTabHandler",
   addKeyboardShortcuts() {
@@ -39,7 +38,7 @@ const CodeBlockTabHandler = Extension.create({
   },
 });
 
-// Check if we have valid collaboration setup
+// Collaboration validation: ensures both Y.Doc and provider are available
 function hasValidCollaboration(
   doc: Y.Doc | null,
   provider: TiptapCollabProvider | null | undefined
@@ -47,9 +46,7 @@ function hasValidCollaboration(
   return !!(provider && doc);
 }
 
-// ============================================================================
-// TOP LEVEL: Story-driven main function
-// ============================================================================
+// Extensions factory: creates TipTap extensions with optional collaboration
 
 export const Extensions = (
   doc: Y.Doc | null,
@@ -62,14 +59,12 @@ export const Extensions = (
     const finalExtensions = combineExtensions(baseExtensions, collaborativeExtensions);
     return validateAndReturn(finalExtensions);
   } catch (error) {
-    console.error("❌ Critical error creating extensions:", error);
-    return [StarterKit]; // Minimal safe fallback
+    console.error('Extensions creation failed:', error);
+    return [StarterKit];
   }
 };
 
-// ============================================================================
-// MIDDLE LEVEL: Logical operation functions
-// ============================================================================
+// Extension composition logic
 
 const createFoundationExtensions = (): TiptapExtensions => {
   return [
@@ -89,7 +84,6 @@ const buildCollaborationIfValid = (
   user?: { name: string; color: string }
 ): TiptapExtensions => {
   if (!hasValidCollaboration(doc, provider)) {
-    logCollaborationStatus(doc, provider);
     return [];
   }
 
@@ -100,8 +94,8 @@ const buildCollaborationIfValid = (
       createCollaborationCaret(provider!, user),
     ];
   } catch (error) {
-    console.error("❌ Error creating collaborative extensions:", error);
-    console.warn("⚠️ Falling back to non-collaborative mode due to extension creation error");
+    console.error('Collaborative extensions failed:', error);
+    console.warn('Falling back to offline editing mode');
     return [];
   }
 };
@@ -115,15 +109,13 @@ const combineExtensions = (
 
 const validateAndReturn = (extensions: TiptapExtensions): TiptapExtensions => {
   if (extensions.length === 0) {
-    console.warn("⚠️ No extensions configured, using minimal StarterKit");
+    console.warn('No extensions configured, using minimal StarterKit');
     return [StarterKit];
   }
   return extensions;
 };
 
-// ============================================================================
-// LOW LEVEL: Specific implementation details
-// ============================================================================
+// Extension configuration
 
 const configureStarterKit = () => {
   return StarterKit.configure({
@@ -136,7 +128,7 @@ const configureStarterKit = () => {
 const addFormattingExtensions = (): TiptapExtensions => {
   return [
     Highlight,
-    TextStyle, // Required for text styling in v3
+    TextStyle,
   ];
 };
 
@@ -177,16 +169,9 @@ const addCustomTabHandler = () => {
   return CodeBlockTabHandler;
 };
 
-const isCollaborationValid = (
-  doc: Y.Doc | null,
-  provider: TiptapCollabProvider | null | undefined
-): boolean => {
-  return !!(provider && doc);
-};
-
 const validateYjsDocument = (doc: Y.Doc) => {
   if (!doc?.clientID && doc?.clientID !== 0) {
-    console.warn("⚠️ Y.js document missing clientID - may not be properly initialized");
+    console.warn('Document initialization incomplete');
   }
 };
 
@@ -238,14 +223,3 @@ const createCollaborationCaret = (
   });
 };
 
-const logCollaborationStatus = (
-  doc: Y.Doc | null,
-  provider: TiptapCollabProvider | null | undefined
-) => {
-  if (doc !== null || provider !== null) {
-    console.warn(
-      "⚠️ Collaboration not initialized - missing doc or provider:",
-      { doc: !!doc, provider: !!provider }
-    );
-  }
-};

@@ -9,9 +9,7 @@ import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-c
 import type { Extensions } from "@tiptap/core";
 import "@/styles/simple-editor.scss";
 
-// ============================================================================
-// TOP LEVEL: Story-driven main component
-// ============================================================================
+// Main component: orchestrates editor state and rendering logic
 
 const CoachingNotes = () => {
   const editorState = useEditorState();
@@ -21,9 +19,7 @@ const CoachingNotes = () => {
   return renderEditorByState(renderState, editorState, loadingProgress);
 };
 
-// ============================================================================
-// MIDDLE LEVEL: Logical operation functions
-// ============================================================================
+// State management hooks
 
 const useEditorState = () => {
   const { yDoc, extensions, isReady, isLoading, error } = useEditorCache();
@@ -78,18 +74,10 @@ const renderEditorByState = (
   }
 };
 
-// ============================================================================
-// LOW LEVEL: Specific implementation details
-// ============================================================================
+// Utility functions
 
 const selectActiveExtensions = (isReady: boolean, extensions: Extensions): Extensions => {
-  if (isReady && extensions.length > 0) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("🔧 Using cached extensions:", extensions.length);
-    }
-    return extensions;
-  }
-  return [];
+  return isReady && extensions.length > 0 ? extensions : [];
 };
 
 const startProgressAnimation = (setLoadingProgress: React.Dispatch<React.SetStateAction<number>>) => {
@@ -146,7 +134,7 @@ const renderReadyEditor = (extensions: Extensions) => {
   try {
     return <CoachingNotesWithFloatingToolbar extensions={extensions} />;
   } catch (error) {
-    console.error("❌ Error rendering cached editor:", error);
+    console.error('Editor initialization failed:', error);
     return (
       <div className="coaching-notes-editor">
         <div className="coaching-notes-error">
@@ -179,9 +167,7 @@ const renderFallbackState = () => (
   </div>
 );
 
-// ============================================================================
-// FLOATING TOOLBAR COMPONENT: Composed editor with toolbar management
-// ============================================================================
+// Editor with floating toolbar: main editing interface
 
 const CoachingNotesWithFloatingToolbar: React.FC<{
   extensions: Extensions;
@@ -193,9 +179,7 @@ const CoachingNotesWithFloatingToolbar: React.FC<{
   return renderEditorWithToolbars(editorRef, extensions, editorProps, toolbarSlots);
 };
 
-// ============================================================================
-// TOOLBAR MANAGEMENT: Hook composition
-// ============================================================================
+// Toolbar state management
 
 const useToolbarManagement = () => {
   const editorRef = useRef<HTMLDivElement>(null!);
@@ -273,9 +257,7 @@ const renderEditorWithToolbars = (
   </div>
 );
 
-// ============================================================================
-// EVENT HANDLERS: Specific implementation details
-// ============================================================================
+// Event handling utilities
 
 const createLinkClickHandler = () => (_view: unknown, event: Event) => {
   const target = event.target as HTMLElement;
@@ -304,7 +286,7 @@ const openLinkInNewTab = (target: HTMLElement) => {
 };
 
 const handleEditorContentError = (error: unknown) => {
-  console.error("Editor content error:", error);
+  console.error('Editor content error:', error);
 };
 
 export { CoachingNotes };
