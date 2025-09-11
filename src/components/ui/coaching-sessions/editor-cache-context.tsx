@@ -248,32 +248,49 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     }
   }, [jwt, userSession, userRole, getOrCreateYDoc]);
 
-  // Effect 1: Editor Lifecycle Management
+  // Effect 1: Complete Provider Lifecycle Management
   useEffect(() => {
     // Update loading state
     setCache(prev => ({ ...prev, isLoading: tokenLoading }));
 
-    // Handle provider initialization or fallback
-    if (!tokenLoading) {
-      if (jwt && !tokenError) {
-        initializeProvider();
-      } else {
-        // Use fallback extensions without collaboration (no JWT or JWT error)
-        const doc = getOrCreateYDoc();
-        const fallbackExtensions = createExtensions(null, null);
-
-        setCache(prev => ({
-          ...prev,
-          yDoc: doc,
-          collaborationProvider: null,
-          extensions: fallbackExtensions,
-          isReady: true,
-          isLoading: false,
-          error: tokenError || null,
-        }));
-      }
+    // Early return if still loading
+    if (tokenLoading) {
+      return;
     }
-  }, [sessionId, jwt, tokenLoading, tokenError, userSession, userRole, initializeProvider, getOrCreateYDoc]);
+
+    // Cleanup previous provider when session changes
+    if (lastSessionIdRef.current !== sessionId && providerRef.current) {
+      console.log('🧹 Cleaning up provider on session change');
+      providerRef.current.disconnect();
+      providerRef.current = null;
+    }
+
+    // Initialize new provider or fallback
+    if (jwt && !tokenError && userSession) {
+      initializeProvider();
+    } else {
+      // Use fallback extensions without collaboration
+      const doc = getOrCreateYDoc();
+      const fallbackExtensions = createExtensions(null, null);
+
+      setCache(prev => ({
+        ...prev,
+        yDoc: doc,
+        collaborationProvider: null,
+        extensions: fallbackExtensions,
+        isReady: true,
+        isLoading: false,
+        error: tokenError || null,
+      }));
+    }
+
+    // Cleanup function for effect
+    return () => {
+      if (providerRef.current) {
+        providerRef.current.disconnect();
+      }
+    };
+  }, [sessionId, jwt, tokenLoading, tokenError, userSession]);
 
   // Effect 2: Register TipTap cleanup with logout process
   useEffect(() => {
@@ -282,33 +299,38 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     const cleanup = () => {
       console.warn('🚪 [EDITOR-CACHE] Logout cleanup triggered! Cleaning up TipTap collaboration provider');
 
-      if (providerRef.current) {
+      const provider = providerRef.current;
+      
+      if (provider) {
         try {
           console.warn('🚪 [EDITOR-CACHE] Provider exists, starting cleanup sequence');
+          const providerDetails = provider as TiptapCollabProvider & { 
+            name?: string; 
+            websocket?: WebSocket;
+          };
           console.warn('🚪 [EDITOR-CACHE] Provider details:', {
-            name: (providerRef.current as any).name,
-            websocketState: (providerRef.current as any).websocket?.readyState,
-            isConnected: (providerRef.current as any).websocket?.readyState === WebSocket.OPEN
+            name: providerDetails.name,
+            websocketState: providerDetails.websocket?.readyState,
+            isConnected: providerDetails.websocket?.readyState === WebSocket.OPEN
           });
 
           // Step 1: Clear awareness to signal user is leaving
           // Setting to null is the standard way to remove awareness data
           console.warn('🚪 [EDITOR-CACHE] Clearing awareness fields');
-          providerRef.current.setAwarenessField("presence", null);
-          providerRef.current.setAwarenessField("user", null);
+          provider.setAwarenessField("presence", null);
+          provider.setAwarenessField("user", null);
 
           // Step 2: Disconnect the provider
           console.warn('🚪 [EDITOR-CACHE] Calling provider.disconnect()');
-          providerRef.current.disconnect();
+          provider.disconnect();
           console.warn('🚪 [EDITOR-CACHE] provider.disconnect() completed');
 
           // Step 3: Destroy on next microtask to ensure disconnect completes
-          const providerToDestroy = providerRef.current;
           providerRef.current = null; // Clear ref immediately to prevent double cleanup
 
           queueMicrotask(() => {
             console.warn('🚪 [EDITOR-CACHE] Destroying provider after disconnect');
-            providerToDestroy.destroy();
+            provider.destroy();
             console.warn('🚪 [EDITOR-CACHE] provider.destroy() completed');
           });
         } catch (error) {
@@ -377,15 +399,6 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     });
   }, []);
 
-  // Cleanup on unmount or session change
-  useEffect(() => {
-    return () => {
-      if (lastSessionIdRef.current !== sessionId && providerRef.current) {
-        console.log('🧹 Cleaning up provider on session change');
-        providerRef.current.disconnect();
-      }
-    };
-  }, [sessionId]);
 
   const contextValue: EditorCacheContextType = {
     ...cache,
