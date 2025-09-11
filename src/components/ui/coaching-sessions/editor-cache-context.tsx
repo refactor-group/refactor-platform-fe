@@ -19,6 +19,14 @@ import {
 import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role';
 import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry';
 
+/**
+ * EditorCacheProvider manages TipTap collaboration lifecycle:
+ * - Y.Doc creation/reuse across session changes
+ * - Provider connection/disconnection with proper cleanup
+ * - User presence synchronization via awareness protocol
+ * - Graceful fallback to non-collaborative mode on errors
+ */
+
 interface EditorCacheState {
   yDoc: Y.Doc | null;
   collaborationProvider: TiptapCollabProvider | null;
@@ -52,9 +60,8 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   sessionId,
   children
 }) => {
-  const { userSession, isLoggedIn } = useAuthStore((state) => ({
+  const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
-    isLoggedIn: state.isLoggedIn,
   }));
 
   const { jwt, isLoading: tokenLoading, isError: tokenError } = useCollaborationToken(sessionId);
@@ -80,19 +87,17 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     },
   });
 
-  // Initialize or reuse Y.Doc
+  // Y.Doc lifecycle: create new document when session changes
   const getOrCreateYDoc = useCallback(() => {
     if (!yDocRef.current || lastSessionIdRef.current !== sessionId) {
-      // Create new Y.Doc only if we don't have one or session changed
       yDocRef.current = new Y.Doc();
       lastSessionIdRef.current = sessionId;
-      console.log('📄 Created new Y.Doc for session:', sessionId);
     }
     return yDocRef.current;
   }, [sessionId]);
 
 
-  // Initialize collaboration provider
+  // Provider initialization: sets up TipTap collaboration with awareness
   const initializeProvider = useCallback(async () => {
     if (!jwt || !siteConfig.env.tiptapAppId || !userSession) {
       return;
@@ -101,7 +106,6 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     const doc = getOrCreateYDoc();
 
     try {
-      // Create provider
       const provider = new TiptapCollabProvider({
         name: jwt.sub,
         appId: siteConfig.env.tiptapAppId,
@@ -110,11 +114,8 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         user: userSession.display_name,
       });
 
-      // Configure provider callbacks
+      // Provider event handlers: sync completion enables collaborative editing
       provider.on('synced', () => {
-        console.log('🔄 Editor cache: Collaboration synced');
-
-        // Create extensions with collaboration
         const collaborativeExtensions = createExtensions(doc, provider, {
           name: userSession.display_name,
           color: "#ffcc00",
@@ -131,11 +132,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         }));
       });
 
-      provider.on('disconnect', () => {
-        console.log('🔌 Editor cache: Collaboration disconnected');
-      });
-
-      // Set user awareness with presence data using centralized role logic
+      // Awareness initialization: establishes user presence in collaborative session
       const userPresence = createConnectedPresence({
         userId: userSession.id,
         name: userSession.display_name,
@@ -152,7 +149,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
       providerRef.current = provider;
 
-      // Listen for awareness changes to track presence
+      // Awareness synchronization: tracks all connected users for presence indicators
       provider.on('awarenessChange', ({ states }: { states: Map<string, { presence?: AwarenessData }> }) => {
         const updatedUsers = new Map<string, UserPresence>();
         let currentUserPresence: UserPresence | null = null;
@@ -162,7 +159,6 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
             const presence = toUserPresence(state.presence);
             updatedUsers.set(presence.userId, presence);
 
-            // Extract current user from live awareness data to prevent stale state
             if (presence.userId === userSession.id) {
               currentUserPresence = presence;
             }
@@ -179,16 +175,14 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         }));
       });
 
-      // Handle connection events
+      // Connection state management: maintains awareness during network changes
       provider.on('connect', () => {
-        console.log('🔗 Editor cache: Provider connected, updating awareness');
         const connectedPresence = createConnectedPresence({
           userId: userSession.id,
           name: userSession.display_name,
           relationshipRole: userRole,
           color: "#ffcc00"
         });
-        // Force awareness update on reconnection to prevent stale state
         provider.setAwarenessField("presence", connectedPresence);
         provider.setAwarenessField("user", {
           name: userSession.display_name,
@@ -197,13 +191,11 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       });
 
       provider.on('disconnect', () => {
-        console.log('🔌 Editor cache: Provider disconnected, updating awareness');
-        // Create disconnected presence from current user data
         const disconnectedPresence = createDisconnectedPresence(userPresence);
         provider.setAwarenessField("presence", disconnectedPresence);
       });
 
-      // Set up mouse tracking
+      // Mouse tracking: enables collaborative cursor positioning
       const handleMouseMove = (event: MouseEvent) => {
         if (providerRef.current) {
           providerRef.current.setAwarenessField("user", {
@@ -217,7 +209,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
       document.addEventListener("mousemove", handleMouseMove);
 
-      // Cleanup on beforeunload
+      // Graceful disconnect on page unload
       const handleBeforeUnload = () => {
         const disconnectedPresence = createDisconnectedPresence(userPresence);
         provider.setAwarenessField("presence", disconnectedPresence);
@@ -225,15 +217,14 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
       window.addEventListener('beforeunload', handleBeforeUnload);
 
-      // Cleanup function
       return () => {
         document.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     } catch (error) {
-      console.error('❌ Error initializing collaboration provider:', error);
+      console.error('Collaboration provider initialization failed:', error);
 
-      // Fallback to non-collaborative extensions
+      // Fallback to offline editing mode
       const fallbackExtensions = createExtensions(null, null);
 
       setCache(prev => ({
@@ -248,28 +239,24 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     }
   }, [jwt, userSession, userRole, getOrCreateYDoc]);
 
-  // Effect 1: Complete Provider Lifecycle Management
+  // Provider lifecycle: manages connection state across session/token changes
   useEffect(() => {
-    // Update loading state
     setCache(prev => ({ ...prev, isLoading: tokenLoading }));
 
-    // Early return if still loading
     if (tokenLoading) {
       return;
     }
 
-    // Cleanup previous provider when session changes
+    // Session change cleanup: disconnect stale provider
     if (lastSessionIdRef.current !== sessionId && providerRef.current) {
-      console.log('🧹 Cleaning up provider on session change');
       providerRef.current.disconnect();
       providerRef.current = null;
     }
 
-    // Initialize new provider or fallback
+    // Provider initialization or fallback to offline mode
     if (jwt && !tokenError && userSession) {
       initializeProvider();
     } else {
-      // Use fallback extensions without collaboration
       const doc = getOrCreateYDoc();
       const fallbackExtensions = createExtensions(null, null);
 
@@ -284,64 +271,39 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       }));
     }
 
-    // Cleanup function for effect
     return () => {
       if (providerRef.current) {
         providerRef.current.disconnect();
       }
     };
-  }, [sessionId, jwt, tokenLoading, tokenError, userSession]);
+  }, [sessionId, jwt, tokenLoading, tokenError, userSession, userRole, getOrCreateYDoc, initializeProvider]);
 
-  // Effect 2: Register TipTap cleanup with logout process
+  // Logout cleanup registration: ensures proper provider teardown on session end
   useEffect(() => {
-    console.log('🔗 [EDITOR-CACHE] Registering TipTap cleanup with logout registry');
-    
     const cleanup = () => {
-      console.warn('🚪 [EDITOR-CACHE] Logout cleanup triggered! Cleaning up TipTap collaboration provider');
-
       const provider = providerRef.current;
       
       if (provider) {
         try {
-          console.warn('🚪 [EDITOR-CACHE] Provider exists, starting cleanup sequence');
-          const providerDetails = provider as TiptapCollabProvider & { 
-            name?: string; 
-            websocket?: WebSocket;
-          };
-          console.warn('🚪 [EDITOR-CACHE] Provider details:', {
-            name: providerDetails.name,
-            websocketState: providerDetails.websocket?.readyState,
-            isConnected: providerDetails.websocket?.readyState === WebSocket.OPEN
-          });
-
-          // Step 1: Clear awareness to signal user is leaving
-          // Setting to null is the standard way to remove awareness data
-          console.warn('🚪 [EDITOR-CACHE] Clearing awareness fields');
+          // Clear user presence to signal departure
           provider.setAwarenessField("presence", null);
           provider.setAwarenessField("user", null);
 
-          // Step 2: Disconnect the provider
-          console.warn('🚪 [EDITOR-CACHE] Calling provider.disconnect()');
+          // Graceful provider shutdown
           provider.disconnect();
-          console.warn('🚪 [EDITOR-CACHE] provider.disconnect() completed');
+          providerRef.current = null;
 
-          // Step 3: Destroy on next microtask to ensure disconnect completes
-          providerRef.current = null; // Clear ref immediately to prevent double cleanup
-
+          // Async destroy to ensure disconnect completes
           queueMicrotask(() => {
-            console.warn('🚪 [EDITOR-CACHE] Destroying provider after disconnect');
             provider.destroy();
-            console.warn('🚪 [EDITOR-CACHE] provider.destroy() completed');
           });
         } catch (error) {
-          console.error('❌ [EDITOR-CACHE] TipTap provider cleanup failed during logout:', error);
+          console.error('Provider cleanup failed during logout:', error);
           providerRef.current = null;
         }
-      } else {
-        console.warn('🚪 [EDITOR-CACHE] No provider to cleanup');
       }
 
-      // Clear provider from cache immediately
+      // Reset cache state for clean logout
       setCache(prev => ({
         ...prev,
         collaborationProvider: null,
@@ -353,37 +315,27 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       }));
     };
 
-    // Register cleanup function and get unregister function
     const unregisterCleanup = logoutCleanupRegistry.register(cleanup);
-    
-    console.log('✅ [EDITOR-CACHE] TipTap cleanup registered with logout registry');
 
-    // Unregister cleanup when component unmounts
     return () => {
-      console.log('🔗 [EDITOR-CACHE] Unregistering TipTap cleanup from logout registry');
       unregisterCleanup();
     };
-  }, []); // Empty deps - register once when component mounts
+  }, []);
 
-  // Reset cache function
+  // Cache reset: clears all state for fresh initialization
   const resetCache = useCallback(() => {
-    console.log('🔄 Resetting editor cache');
-
-    // Destroy provider (consistent with logout cleanup)
     if (providerRef.current) {
       try {
         providerRef.current.destroy();
       } catch (error) {
-        console.warn('TipTap provider cleanup failed during reset:', error);
+        console.warn('Provider cleanup failed during reset:', error);
       }
       providerRef.current = null;
     }
 
-    // Clear refs
     yDocRef.current = null;
     lastSessionIdRef.current = null;
 
-    // Reset state
     setCache({
       yDoc: null,
       collaborationProvider: null,
