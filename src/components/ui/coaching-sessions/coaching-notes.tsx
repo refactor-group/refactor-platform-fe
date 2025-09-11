@@ -45,7 +45,7 @@ const useLoadingProgress = (isLoading: boolean) => {
   
   useEffect(() => {
     if (isLoading) {
-      startProgressAnimation(setLoadingProgress);
+      return startProgressAnimation(setLoadingProgress);
     } else {
       completeProgress(setLoadingProgress);
     }
