@@ -17,6 +17,7 @@ import {
   ListDropdownMenu,
   BlockquoteButton,
   CodeBlockButton,
+  HorizontalRuleButton,
   LinkPopover,
 } from "@/components/ui/tiptap-ui";
 
@@ -69,6 +70,7 @@ export const SimpleToolbar: React.FC<SimpleToolbarProps> = ({ containerRef }) =>
         <ListDropdownMenu types={["bulletList", "orderedList", "taskList"]} />
         <BlockquoteButton />
         <CodeBlockButton />
+        <HorizontalRuleButton />
       </ToolbarGroup>
 
       <ToolbarSeparator />
@@ -76,9 +78,10 @@ export const SimpleToolbar: React.FC<SimpleToolbarProps> = ({ containerRef }) =>
       <ToolbarGroup>
         <MarkButton type="bold" />
         <MarkButton type="italic" />
+        <MarkButton type="underline" />
         <MarkButton type="strike" />
         <MarkButton type="code" />
-        <MarkButton type="underline" />
+        <MarkButton type="highlight" />
         <LinkPopover hideWhenUnavailable={false} containerRef={containerRef} />
       </ToolbarGroup>
 

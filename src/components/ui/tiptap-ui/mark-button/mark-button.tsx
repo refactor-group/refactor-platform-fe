@@ -10,6 +10,7 @@ import { Code2Icon } from "@/components/ui/tiptap-icons/code2-icon"
 import { ItalicIcon } from "@/components/ui/tiptap-icons/italic-icon"
 import { StrikeIcon } from "@/components/ui/tiptap-icons/strike-icon"
 import { UnderlineIcon } from "@/components/ui/tiptap-icons/underline-icon"
+import { HighlighterIcon } from "@/components/ui/tiptap-icons/highlighter-icon"
 
 // --- Lib ---
 import { isMarkInSchema } from "@/lib/tiptap-utils"
@@ -24,6 +25,7 @@ export type Mark =
   | "strike"
   | "code"
   | "underline"
+  | "highlight"
 
 export interface MarkButtonProps extends Omit<ButtonProps, "type"> {
   /**
@@ -50,6 +52,7 @@ export const markIcons = {
   underline: UnderlineIcon,
   strike: StrikeIcon,
   code: Code2Icon,
+  highlight: HighlighterIcon,
 }
 
 export const markShortcutKeys: Partial<Record<Mark, string>> = {
@@ -58,6 +61,7 @@ export const markShortcutKeys: Partial<Record<Mark, string>> = {
   underline: "Ctrl-u",
   strike: "Ctrl-Shift-s",
   code: "Ctrl-e",
+  highlight: "Ctrl-Shift-h",
 }
 
 export function canToggleMark(editor: Editor | null, type: Mark): boolean {
