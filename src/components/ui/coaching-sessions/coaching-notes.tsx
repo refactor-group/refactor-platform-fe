@@ -7,33 +7,21 @@ import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/
 import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import type { Extensions } from "@tiptap/core";
+import * as Y from "yjs";
 import "@/styles/simple-editor.scss";
 
 // Main component: orchestrates editor state and rendering logic
 
 const CoachingNotes = () => {
-  const editorState = useEditorState();
-  const loadingProgress = useLoadingProgress(editorState.isLoading);
-  const renderState = determineRenderState(editorState);
-  
-  return renderEditorByState(renderState, editorState, loadingProgress);
-};
-
-// State management hooks
-
-const useEditorState = () => {
   const { yDoc, extensions, isReady, isLoading, error } = useEditorCache();
-  const activeExtensions = useMemo((): Extensions => {
-    return selectActiveExtensions(isReady, extensions);
-  }, [isReady, extensions]);
+  const activeExtensions = useMemo(
+    () => isReady && extensions.length > 0 ? extensions : [],
+    [isReady, extensions]
+  );
+  const loadingProgress = useLoadingProgress(isLoading);
+  const renderState = determineRenderState({ isReady, isLoading, error, extensions: activeExtensions });
   
-  return {
-    yDoc,
-    extensions: activeExtensions,
-    isReady,
-    isLoading,
-    error
-  };
+  return renderEditorByState(renderState, { yDoc, extensions: activeExtensions, isReady, isLoading, error }, loadingProgress);
 };
 
 const useLoadingProgress = (isLoading: boolean) => {
@@ -50,7 +38,7 @@ const useLoadingProgress = (isLoading: boolean) => {
   return loadingProgress;
 };
 
-const determineRenderState = (editorState: ReturnType<typeof useEditorState>) => {
+const determineRenderState = (editorState: { isReady: boolean; isLoading: boolean; error: Error | null; extensions: Extensions }) => {
   if (editorState.isLoading) return 'loading';
   if (editorState.error) return 'error';
   if (editorState.isReady && editorState.extensions.length > 0) return 'ready';
@@ -59,7 +47,7 @@ const determineRenderState = (editorState: ReturnType<typeof useEditorState>) =>
 
 const renderEditorByState = (
   renderState: string,
-  editorState: ReturnType<typeof useEditorState>,
+  editorState: { yDoc: Y.Doc | null; extensions: Extensions; isReady: boolean; isLoading: boolean; error: Error | null },
   loadingProgress: number
 ) => {
   switch (renderState) {
@@ -75,10 +63,6 @@ const renderEditorByState = (
 };
 
 // Utility functions
-
-const selectActiveExtensions = (isReady: boolean, extensions: Extensions): Extensions => {
-  return isReady && extensions.length > 0 ? extensions : [];
-};
 
 const startProgressAnimation = (setLoadingProgress: React.Dispatch<React.SetStateAction<number>>) => {
   setLoadingProgress(0);
