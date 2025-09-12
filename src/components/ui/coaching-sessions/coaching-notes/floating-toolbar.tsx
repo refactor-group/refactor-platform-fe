@@ -2,28 +2,20 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { SimpleToolbar } from "./simple-toolbar";
 
 interface FloatingToolbarProps {
-  /**
-   * Reference to the main editor container to detect scroll position
-   */
+  /** Editor container ref for scroll detection */
   editorRef: React.RefObject<HTMLDivElement>;
-  /**
-   * Reference to the original toolbar to detect when it's out of view
-   */
+  /** Original toolbar ref for visibility tracking */
   toolbarRef: React.RefObject<HTMLDivElement>;
-  /**
-   * Height of the site header in pixels. Defaults to 64px (h-14 + pt-2)
-   */
+  /** Site header height in pixels (default: 64px) */
   headerHeight?: number;
-  /**
-   * Callback to notify parent when original toolbar visibility should change
-   */
+  /** Visibility change callback */
   onOriginalToolbarVisibilityChange?: (visible: boolean) => void;
 }
 
-// ============================================================================
-// TOP LEVEL: Story-driven main component
-// ============================================================================
-
+/**
+ * FloatingToolbar manages toolbar visibility based on scroll position.
+ * Shows floating toolbar when original toolbar scrolls out of viewport.
+ */
 export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   editorRef,
   toolbarRef,
@@ -44,10 +36,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   return renderFloatingToolbar(floatingRef, isVisible, styles, editorRef);
 };
 
-// ============================================================================
-// MIDDLE LEVEL: Logical operation hooks
-// ============================================================================
-
+/** Tracks toolbar visibility state based on scroll position */
 const useToolbarVisibility = (
   editorRef: React.RefObject<HTMLDivElement>,
   toolbarRef: React.RefObject<HTMLDivElement>,
@@ -64,6 +53,7 @@ const useToolbarVisibility = (
   return { isVisible, checkVisibility };
 };
 
+/** Calculates floating toolbar position relative to editor */
 const useToolbarPositioning = (
   editorRef: React.RefObject<HTMLDivElement>,
   isVisible: boolean
@@ -81,26 +71,23 @@ const useToolbarPositioning = (
   return { floatingRef, styles };
 };
 
+/** Manages scroll event listeners for visibility updates */
 const useScrollEventManagement = (
   editorRef: React.RefObject<HTMLDivElement>,
   onScroll: () => void
 ) => {
   useEffect(() => {
-    // Initial check
+    // Initial visibility check
     onScroll();
     
-    // Setup event listeners
+    // Setup scroll listeners on window and scrollable parents
     const cleanup = setupAllScrollListeners(editorRef, onScroll);
     
-    // Cleanup on unmount or dependency change
     return cleanup;
   }, [editorRef, onScroll]);
 };
 
-// ============================================================================
-// LOW LEVEL: Specific implementation details
-// ============================================================================
-
+/** Determines if floating toolbar should be shown based on editor position */
 const calculateToolbarVisibility = (
   editorRef: React.RefObject<HTMLDivElement>,
   toolbarRef: React.RefObject<HTMLDivElement>,
@@ -152,13 +139,17 @@ const calculateFloatingPosition = (editorElement: HTMLElement) => {
   };
 };
 
+/** 
+ * Sets up scroll listeners on window and all scrollable parent elements.
+ * Tracks scroll events to update toolbar visibility when editor position changes.
+ */
 const setupAllScrollListeners = (
   editorRef: React.RefObject<HTMLDivElement>,
   onScroll: () => void
 ): (() => void) => {
   const listeners: Array<{ element: Element | Window; handler: () => void }> = [];
   
-  // Global listeners
+  // Window scroll and resize handlers
   const handleScroll = () => onScroll();
   const handleResize = () => onScroll();
   
@@ -170,7 +161,7 @@ const setupAllScrollListeners = (
     { element: window, handler: handleResize }
   );
   
-  // Parent container listeners
+  // Traverse up DOM tree to find scrollable containers
   let currentElement = editorRef.current?.parentElement;
   
   while (currentElement) {
@@ -182,13 +173,11 @@ const setupAllScrollListeners = (
     currentElement = currentElement.parentElement;
   }
   
-  // Return cleanup function
+  // Cleanup function removes all listeners
   return () => {
-    // Remove window listeners
     window.removeEventListener("scroll", handleScroll);
     window.removeEventListener("resize", handleResize);
     
-    // Remove element listeners
     listeners.forEach(({ element, handler }) => {
       if (element !== window) {
         element.removeEventListener("scroll", handler);

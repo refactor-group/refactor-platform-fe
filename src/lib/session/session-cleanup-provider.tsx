@@ -24,7 +24,7 @@ export function SessionCleanupProvider({ children }: { children: React.ReactNode
     return () => {
       // Reset handler on unmount (provider typically lives app lifetime)
       registerSessionCleanup(async () => {
-        console.warn('Session cleanup handler not registered');
+        console.warn('Session cleanup handler failed to register');
       });
     };
   }, [executeLogout]);
