@@ -7,128 +7,167 @@ import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/
 import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import type { Extensions } from "@tiptap/core";
+import * as Y from "yjs";
 import "@/styles/simple-editor.scss";
 
+// Main component: orchestrates editor state and rendering logic
+
 const CoachingNotes = () => {
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const { yDoc, extensions, isReady, isLoading, error } = useEditorCache();
+  const activeExtensions = useMemo(
+    () => isReady && extensions.length > 0 ? extensions : [],
+    [isReady, extensions]
+  );
+  const loadingProgress = useLoadingProgress(isLoading);
+  const renderState = determineRenderState({ isReady, isLoading, error, extensions: activeExtensions });
+  
+  return renderEditorByState(renderState, { yDoc, extensions: activeExtensions, isReady, isLoading, error }, loadingProgress);
+};
 
-  // Use extensions from cache - they're already validated and ready
-  const activeExtensions = useMemo((): Extensions => {
-    if (isReady && extensions.length > 0) {
-      if (process.env.NODE_ENV === "development") {
-        console.log("🔧 Using cached extensions:", extensions.length);
-      }
-      return extensions;
-    }
-
-    // Return empty array while loading - will show loading state
-    return [];
-  }, [isReady, extensions]);
-
-  // Simulate loading progress
+const useLoadingProgress = (isLoading: boolean) => {
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  
   useEffect(() => {
     if (isLoading) {
-      setLoadingProgress(0);
-      const interval = setInterval(() => {
-        setLoadingProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90; // Stop at 90% until actually loaded
-          }
-          return prev + Math.random() * 15;
-        });
-      }, 150);
-
-      return () => clearInterval(interval);
+      return startProgressAnimation(setLoadingProgress);
     } else {
-      // Complete the progress (100%) when loading is done
-      setLoadingProgress(100);
+      completeProgress(setLoadingProgress);
     }
   }, [isLoading]);
+  
+  return loadingProgress;
+};
 
-  if (isLoading) {
-    return (
-      <div className="coaching-notes-editor">
-        <div className="coaching-notes-loading">
-          <div className="w-full max-w-md">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">
-                Loading coaching notes...
-              </span>
-              <span className="text-sm opacity-70">
-                {Math.round(loadingProgress)}%
-              </span>
-            </div>
-            <Progress value={loadingProgress} className="h-2" />
-          </div>
-        </div>
-      </div>
-    );
+const determineRenderState = (editorState: { isReady: boolean; isLoading: boolean; error: Error | null; extensions: Extensions }) => {
+  if (editorState.isLoading) return 'loading';
+  if (editorState.error) return 'error';
+  if (editorState.isReady && editorState.extensions.length > 0) return 'ready';
+  return 'fallback';
+};
+
+const renderEditorByState = (
+  renderState: string,
+  editorState: { yDoc: Y.Doc | null; extensions: Extensions; isReady: boolean; isLoading: boolean; error: Error | null },
+  loadingProgress: number
+) => {
+  switch (renderState) {
+    case 'loading':
+      return renderLoadingState(loadingProgress);
+    case 'error':
+      return renderErrorState(editorState.error);
+    case 'ready':
+      return renderReadyEditor(editorState.extensions);
+    default:
+      return renderFallbackState();
   }
+};
 
-  if (error) {
+// Utility functions
+
+const startProgressAnimation = (setLoadingProgress: React.Dispatch<React.SetStateAction<number>>) => {
+  setLoadingProgress(0);
+  const interval = setInterval(() => {
+    setLoadingProgress((prev) => {
+      if (prev >= 90) {
+        clearInterval(interval);
+        return 90;
+      }
+      return prev + Math.random() * 15;
+    });
+  }, 150);
+  return () => clearInterval(interval);
+};
+
+const completeProgress = (setLoadingProgress: React.Dispatch<React.SetStateAction<number>>) => {
+  setLoadingProgress(100);
+};
+
+const renderLoadingState = (loadingProgress: number) => (
+  <div className="coaching-notes-editor">
+    <div className="coaching-notes-loading">
+      <div className="w-full max-w-md">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium">
+            Loading coaching notes...
+          </span>
+          <span className="text-sm opacity-70">
+            {Math.round(loadingProgress)}%
+          </span>
+        </div>
+        <Progress value={loadingProgress} className="h-2" />
+      </div>
+    </div>
+  </div>
+);
+
+const renderErrorState = (error: Error | null) => (
+  <div className="coaching-notes-editor">
+    <div className="coaching-notes-error">
+      <div className="text-center">
+        <p className="mb-2">⚠️ Could not load coaching notes</p>
+        <p className="text-sm opacity-80">
+          {error?.message ||
+            "Please try again later or contact support if the issue persists."}
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const renderReadyEditor = (extensions: Extensions) => {
+  try {
+    return <CoachingNotesWithFloatingToolbar extensions={extensions} />;
+  } catch (error) {
+    console.error('Editor initialization failed:', error);
     return (
       <div className="coaching-notes-editor">
         <div className="coaching-notes-error">
           <div className="text-center">
-            <p className="mb-2">⚠️ Could not load coaching notes</p>
+            <p className="mb-2">❌ Failed to initialize editor</p>
             <p className="text-sm opacity-80">
-              {error.message ||
-                "Please try again later or contact support if the issue persists."}
+              Error:{" "}
+              {error instanceof Error ? error.message : "Unknown error"}
             </p>
           </div>
         </div>
       </div>
     );
   }
-
-  // Show cached editor once ready
-  if (isReady && activeExtensions.length > 0) {
-    try {
-      return <CoachingNotesWithFloatingToolbar extensions={activeExtensions} />;
-    } catch (error) {
-      console.error("❌ Error rendering cached editor:", error);
-      return (
-        <div className="coaching-notes-editor">
-          <div className="coaching-notes-error">
-            <div className="text-center">
-              <p className="mb-2">❌ Failed to initialize editor</p>
-              <p className="text-sm opacity-80">
-                Error:{" "}
-                {error instanceof Error ? error.message : "Unknown error"}
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-  }
-
-  // Fallback - should rarely be seen due to loading state above
-  return (
-    <div className="coaching-notes-editor">
-      <div className="coaching-notes-loading">
-        <div className="w-full max-w-md">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">
-              Loading coaching notes...
-            </span>
-            <span className="text-sm opacity-70">90%</span>
-          </div>
-          <Progress value={90} className="h-2" />
-        </div>
-      </div>
-    </div>
-  );
 };
 
-// Wrapper component with floating toolbar functionality
+const renderFallbackState = () => (
+  <div className="coaching-notes-editor">
+    <div className="coaching-notes-loading">
+      <div className="w-full max-w-md">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium">
+            Loading coaching notes...
+          </span>
+          <span className="text-sm opacity-70">90%</span>
+        </div>
+        <Progress value={90} className="h-2" />
+      </div>
+    </div>
+  </div>
+);
+
+// Editor with floating toolbar: main editing interface
+
 const CoachingNotesWithFloatingToolbar: React.FC<{
   extensions: Extensions;
 }> = ({ extensions }) => {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const toolbarRef = useRef<HTMLDivElement>(null);
+  const { editorRef, toolbarRef, toolbarState, handlers } = useToolbarManagement();
+  const editorProps = buildEditorProps();
+  const toolbarSlots = buildToolbarSlots(editorRef, toolbarRef, toolbarState, handlers);
+  
+  return renderEditorWithToolbars(editorRef, extensions, editorProps, toolbarSlots);
+};
+
+// Toolbar state management
+
+const useToolbarManagement = () => {
+  const editorRef = useRef<HTMLDivElement>(null!);
+  const toolbarRef = useRef<HTMLDivElement>(null!);
   const [originalToolbarVisible, setOriginalToolbarVisible] = useState(true);
 
   const handleOriginalToolbarVisibilityChange = useCallback(
@@ -138,64 +177,100 @@ const CoachingNotesWithFloatingToolbar: React.FC<{
     []
   );
 
-  return (
-    <div ref={editorRef} className="coaching-notes-editor">
-      <EditorProvider
-        extensions={extensions}
-        autofocus={false}
-        immediatelyRender={false}
-        shouldRerenderOnTransaction={false}
-        onContentError={(error) =>
-          console.error("Editor content error:", error)
-        }
-        editorProps={{
-          attributes: {
-            class: "tiptap ProseMirror",
-            spellcheck: "true",
-          },
-          handleDOMEvents: {
-            click: (view, event) => {
-              const target = event.target as HTMLElement;
-              // Check if the clicked element is an <a> tag and Shift is pressed
-              if (
-                (target.tagName === "A" ||
-                  target.parentElement?.tagName === "A") &&
-                event.shiftKey
-              ) {
-                event.preventDefault(); // Prevent default link behavior
-                const href =
-                  target.getAttribute("href") ||
-                  target.parentElement?.getAttribute("href");
-                if (href) {
-                  window.open(href, "_blank")?.focus();
-                }
-                return true; // Stop event propagation
-              }
-              return false; // Allow other handlers to process the event
-            },
-          },
-        }}
-        slotBefore={
-          <div
-            ref={toolbarRef}
-            className={`toolbar-container ${originalToolbarVisible ? 'visible' : 'hidden'}`}
-          >
-            <SimpleToolbar containerRef={editorRef} />
-          </div>
-        }
-        slotAfter={
-          <FloatingToolbar
-            editorRef={editorRef}
-            toolbarRef={toolbarRef}
-            headerHeight={64} // Can be made configurable via props or site config
-            onOriginalToolbarVisibilityChange={
-              handleOriginalToolbarVisibilityChange
-            }
-          />
-        }
-      />
+  return {
+    editorRef,
+    toolbarRef,
+    toolbarState: { originalToolbarVisible },
+    handlers: { handleOriginalToolbarVisibilityChange }
+  };
+};
+
+const buildEditorProps = () => ({
+  attributes: {
+    class: "tiptap ProseMirror",
+    spellcheck: "true",
+  },
+  handleDOMEvents: {
+    click: createLinkClickHandler()
+  },
+});
+
+const buildToolbarSlots = (
+  editorRef: React.RefObject<HTMLDivElement>,
+  toolbarRef: React.RefObject<HTMLDivElement>,
+  toolbarState: { originalToolbarVisible: boolean },
+  handlers: { handleOriginalToolbarVisibilityChange: (visible: boolean) => void }
+) => ({
+  slotBefore: (
+    <div
+      ref={toolbarRef}
+      className={`toolbar-container ${toolbarState.originalToolbarVisible ? 'visible' : 'hidden'}`}
+    >
+      <SimpleToolbar containerRef={editorRef} />
     </div>
+  ),
+  slotAfter: (
+    <FloatingToolbar
+      editorRef={editorRef}
+      toolbarRef={toolbarRef}
+      headerHeight={64}
+      onOriginalToolbarVisibilityChange={
+        handlers.handleOriginalToolbarVisibilityChange
+      }
+    />
+  )
+});
+
+const renderEditorWithToolbars = (
+  editorRef: React.RefObject<HTMLDivElement>,
+  extensions: Extensions,
+  editorProps: ReturnType<typeof buildEditorProps>,
+  toolbarSlots: ReturnType<typeof buildToolbarSlots>
+) => (
+  <div ref={editorRef} className="coaching-notes-editor">
+    <EditorProvider
+      extensions={extensions}
+      autofocus={false}
+      immediatelyRender={false}
+      shouldRerenderOnTransaction={false}
+      onContentError={handleEditorContentError}
+      editorProps={editorProps}
+      slotBefore={toolbarSlots.slotBefore}
+      slotAfter={toolbarSlots.slotAfter}
+    />
+  </div>
+);
+
+// Event handling utilities
+
+const createLinkClickHandler = () => (_view: unknown, event: Event) => {
+  const target = event.target as HTMLElement;
+  const mouseEvent = event as MouseEvent;
+  
+  if (isShiftClickOnLink(target, mouseEvent)) {
+    event.preventDefault();
+    openLinkInNewTab(target);
+    return true;
+  }
+  return false;
+};
+
+const isShiftClickOnLink = (target: HTMLElement, event: MouseEvent): boolean => {
+  return !!(
+    (target.tagName === "A" || target.parentElement?.tagName === "A") &&
+    event.shiftKey
   );
+};
+
+const openLinkInNewTab = (target: HTMLElement) => {
+  const href = target.getAttribute("href") || target.parentElement?.getAttribute("href");
+  if (href) {
+    window.open(href, "_blank")?.focus();
+  }
+};
+
+const handleEditorContentError = (error: unknown) => {
+  console.error('Editor content error:', error);
 };
 
 export { CoachingNotes };

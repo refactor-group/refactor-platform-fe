@@ -4,6 +4,7 @@ import { useOrganizationStateStore } from "@/lib/providers/organization-state-st
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
+import { logoutCleanupRegistry } from "./logout-cleanup-registry";
 
 export function useLogoutUser() {
   const router = useRouter();
@@ -15,41 +16,32 @@ export function useLogoutUser() {
   const { resetOrganizationState } = useOrganizationStateStore(
     (action) => action
   );
-  const { resetCoachingRelationshipState, currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
+  const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(
     (state) => state
   );
   const clearCache = EntityApi.useClearCache();
 
   return async () => {
     try {
-      // Reset auth store FIRST to prevent other components from re-initializing
-      console.trace("🚪 LOGOUT: Resetting AuthStore state");
+      // Clear authentication state to prevent re-initialization
       logout();
 
-      console.trace("🚪 LOGOUT: Clearing SWR cache");
+      // Execute component cleanup (TipTap providers, etc.)
+      await logoutCleanupRegistry.executeAll();
+
+      // Clear cached data
       clearCache();
-
-      console.trace("🚪 LOGOUT: Resetting CoachingRelationshipStateStore state - BEFORE:", {
-        currentCoachingRelationshipId
-      });
       resetCoachingRelationshipState();
-      console.trace("🚪 LOGOUT: Resetting CoachingRelationshipStateStore state - AFTER (will check in next render)");
-
-      console.trace("🚪 LOGOUT: Resetting OrganizationStateStore state");
       resetOrganizationState();
 
-      console.trace(
-        "Deleting current user session from backend: ",
-        userSession.id
-      );
+      // Clean up backend session
       await deleteUserSession(userSession.id);
     } catch (err) {
-      console.warn("Error while logging out session: ", userSession.id, err);
-      // If backend delete fails, still ensure frontend logout happened
+      console.error('Logout process failed:', err);
+      // Ensure frontend state is cleared even if backend cleanup fails
       logout();
     } finally {
-      console.debug("Navigating to /");
-      await router.replace("/");
+      router.replace("/");
     }
   };
 }
