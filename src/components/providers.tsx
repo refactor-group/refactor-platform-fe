@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import { AuthStoreProvider } from '@/lib/providers/auth-store-provider';
 import { OrganizationStateStoreProvider } from '@/lib/providers/organization-state-store-provider';
 import { CoachingRelationshipStateStoreProvider } from '@/lib/providers/coaching-relationship-state-store-provider';
-import { SessionCleanupProvider } from '@/lib/session/session-cleanup-provider';
+import { SessionCleanupProvider } from '@/lib/providers/session-cleanup-provider';
 import { SWRConfig } from 'swr';
 
 interface ProvidersProps {
