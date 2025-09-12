@@ -32,39 +32,43 @@ This guide provides streamlined workflows that front-load codebase context and m
 ### Step 1: Requirements Collaboration
 ```bash
 # Start collaborative requirements session
-/design [feature-name] --type spec --format prd --interactive ask me one question at a time. The output will be a PRD located at /docs/features/[feature-name]/prd.md
+/design [feature-name] --think-hard --type spec --format prd --interactive ask me one question at a time. The output will be a PRD located at /features/[feature-name]/prd.md. Do not add timelines to PRD. current: [current system], desired: [desired state for feature]
 
 # Example
-/design user-authentication --type spec --format prd --interactive ask me one question at a time. The output will be a PRD located at /docs/features/[feature-name]/prd.md
+/design user-authentication --type spec --format prd --interactive ask me one question at a time. The output will be a PRD located at /features/[feature-name]/prd.md
 ```
 **Process:** Claude Code interviews you one question at a time to fully understand requirements, user stories, acceptance criteria, and technical constraints.
 
 ### Step 2: PRD Generation
 ```bash
 # Generate comprehensive PRD document
-# (Automatic output to /docs/features/[feature-name]-[timestamp].md)
+# (Automatic output to /features/[feature-name]-[timestamp].md)
 
-# Example output: /docs/features/user-authentication/prd.md
+# Example output: /features/user-authentication/prd.md
 ```
 **Content:** Complete Product Requirements Document with user stories, acceptance criteria, technical requirements, and success metrics.
 
 ### Step 3: Implementation Planning
 ```bash
 # Generate implementation plan from PRD
-/workflow /docs/features/[feature-name]/prd.md --strategy systematic --c7 --sequential Output plan to /docs/features/[feature-name]/implementation-plan.md. Esnure that we are using existing patterns and the most modern, idiomatic best practices.
+/workflow /features/[feature-name]/prd.md --think-hard --strategy systematic --c7 --sequential Output plan to /features/[feature-name]/implementation-plan.md. Esnure that we are using existing patterns and the most modern, idiomatic best practices.  Do not add timelines to plan.
 
 # Iterate on plan if needed
 /improve @plan --focus simplicity --preview
 
 # Example
-/workflow /docs/features/user-authentication/prd.md --strategy systematic --c7 --sequentialOutput plan to /docs/features/user-authentication/implementation-plan.md
+/workflow /features/user-authentication/prd.md --strategy systematic --c7 --sequentialOutput plan to /features/user-authentication/implementation-plan.md
 ```
 **Process:** Generate detailed implementation plan, review and iterate until approved.
 
-### Step 4: Iterative Implementation
+### Step 4: Review Implementation Plan
+
+ /analyze --from-plan /features/[feature-name]/implementation-plan.md --c7 --think-hard --focus ,simplicity (most important), patterns,existing infrastructure that can be reused,security,maintainability --interactive ask one question at at time. Update /features/[feature-name]/implementation-plan.md to reflect any updates to the implementation plan agreed on during this review process. Do not worry about time estimates.
+
+### Step 5: Iterative Implementation
 ```bash
 # Execute plan step-by-step with approval gates
-/implement --from-plan /docs/features/[feature-name]/implementation-plan.md --c7 --safe --preview --iterative --with-tests --tdd At the end of implementation, output a brief and concise implementation summary to /docs/features/[feature-name]/implementation-summary.md. This summary should include decisions that were made during implementation and how they differ from the original implementation plan.
+/implement --from-plan /features/[feature-name]/implementation-plan.md --c7 --safe --preview --focus simplicity,existing patterns, best practices --iterative At the end of implementation, output a brief and concise implementation summary to /features/[feature-name]/implementation-summary.md. This summary should include decisions that were made during implementation and how they differ from the original implementation plan.
 # [Review and approve]
 ```
 ---
@@ -212,7 +216,7 @@ This guide provides streamlined workflows that front-load codebase context and m
 ### Enforcing Correct File Paths
 ```bash
 # Always specify exact output path:
---output "/docs/features/[feature-name]/prd.md"
+--output "/features/[feature-name]/prd.md"
 
 # Verify file location before proceeding:
 "Please confirm the exact file path where you will save the PRD before we start."
