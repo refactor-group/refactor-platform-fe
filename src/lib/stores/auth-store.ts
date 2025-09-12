@@ -43,7 +43,6 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
             set({ isLoggedIn: true, userId, userSession });
           },
           logout: () => {
-            // Reset the in-memory state
             set(defaultInitState);
           },
           setTimezone: (timezone) => {

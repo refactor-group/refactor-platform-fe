@@ -1,17 +1,12 @@
-import axios from "axios";
 import useSWR from "swr";
 import { Jwt, parseJwt } from "@/types/jwt";
+import { sessionGuard } from "@/lib/session/session-guard";
 import { siteConfig } from "@/site.config";
 
 type FetcherArgs = [string, string];
 const fetcher = async ([url, coachingSessionId]: FetcherArgs): Promise<Jwt> => {
-  const response = await axios.get(url, {
+  const response = await sessionGuard.get(url, {
     params: { coaching_session_id: coachingSessionId },
-    withCredentials: true,
-    timeout: 5000,
-    headers: {
-      "X-Version": siteConfig.env.backendApiVersion,
-    },
   });
 
   const data = response.data.data;

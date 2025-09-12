@@ -1,8 +1,8 @@
-import { siteConfig } from "@/site.config";
 import { Id, EntityApiError } from "@/types/general";
-import axios from "axios";
 import { useState } from "react";
 import useSWR, { KeyedMutator, SWRConfiguration, useSWRConfig } from "swr";
+import { sessionGuard } from "@/lib/session/session-guard";
+import axios from "axios";
 
 // Re-export EntityApiError for easy access
 export { EntityApiError } from "@/types/general";
@@ -58,12 +58,7 @@ export namespace EntityApi {
     transform?: (data: T) => U
   ): Promise<U> => {
     try {
-      const response = await axios.get<ApiResponse<T>>(url, {
-        withCredentials: true,
-        timeout: 5000,
-        headers: {
-          "X-Version": siteConfig.env.backendApiVersion,
-        },
+      const response = await sessionGuard.get<ApiResponse<T>>(url, {
         ...config,
       });
 
@@ -110,23 +105,14 @@ export namespace EntityApi {
     data?: T,
     config?: any
   ): Promise<R> => {
-    const combinedConfig = {
-      withCredentials: true,
-      timeout: 5000,
-      headers: {
-        "X-Version": siteConfig.env.backendApiVersion,
-      },
-      ...config,
-    };
-
     try {
       let response;
       if (method === "delete") {
-        response = await axios.delete<ApiResponse<R>>(url, combinedConfig);
+        response = await sessionGuard.delete<ApiResponse<R>>(url, { ...config });
       } else if (method === "put" && data) {
-        response = await axios.put<ApiResponse<R>>(url, data, combinedConfig);
+        response = await sessionGuard.put<ApiResponse<R>>(url, data, { ...config });
       } else if (data) {
-        response = await axios.post<ApiResponse<R>>(url, data, combinedConfig);
+        response = await sessionGuard.post<ApiResponse<R>>(url, data, { ...config });
       } else {
         throw new Error("Invalid method or missing data");
       }
