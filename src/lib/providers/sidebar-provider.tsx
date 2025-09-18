@@ -1,6 +1,13 @@
 "use client";
 
-import { type ReactNode, createContext, useContext, forwardRef, useCallback } from "react";
+import {
+  type ReactNode,
+  createContext,
+  useContext,
+  forwardRef,
+  useCallback,
+  CSSProperties,
+} from "react";
 import {
   NavigationDrawerState,
   StateChangeSource,
@@ -10,7 +17,6 @@ import { useNavigationDrawer } from "@/lib/hooks/use-navigation-drawer";
 import { cn } from "@/components/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-// Enhanced provider props extending base props
 export interface SidebarProviderProps extends BaseSidebarProviderProps {
   children: ReactNode;
 }
@@ -55,10 +61,8 @@ export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
     },
     ref
   ) => {
-    // Use our enhanced navigation drawer hook
     const navigationDrawer = useNavigationDrawer();
 
-    // Convert enum state to boolean for legacy compatibility
     const open = navigationDrawer.state === NavigationDrawerState.Expanded;
     const setOpen = useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
@@ -72,7 +76,6 @@ export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
       [open, navigationDrawer, onStateChange]
     );
 
-    // Enhanced toggle that uses our new system with stable references
     const toggleSidebar = useCallback(() => {
       return navigationDrawer.isMobile
         ? navigationDrawer.setOpenMobile(!navigationDrawer.openMobile)
@@ -117,7 +120,7 @@ export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
                 "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
                 "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE,
                 ...style,
-              } as React.CSSProperties
+              } as CSSProperties
             }
             className={cn(
               "group/sidebar-wrapper flex h-full w-full has-[[data-variant=inset]]:bg-sidebar",
