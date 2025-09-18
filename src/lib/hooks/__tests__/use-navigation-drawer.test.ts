@@ -2,6 +2,8 @@ import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useNavigationDrawer } from '../use-navigation-drawer'
 import { NavigationDrawerState, StateChangeSource, ScreenSize } from '@/types/navigation-drawer'
+import { NavigationDrawerStorage } from '@/lib/services/navigation-drawer-storage'
+import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
 
 // Mock the storage service
 vi.mock('@/lib/services/navigation-drawer-storage', () => ({
@@ -16,6 +18,13 @@ vi.mock('@/lib/services/navigation-drawer-storage', () => ({
 // Mock the mobile hook
 vi.mock('@/components/hooks/use-mobile', () => ({
   useIsMobile: vi.fn(() => false)
+}))
+
+// Mock the logout cleanup registry
+vi.mock('@/lib/hooks/logout-cleanup-registry', () => ({
+  logoutCleanupRegistry: {
+    register: vi.fn(() => vi.fn()), // Returns unregister function
+  }
 }))
 
 // Mock window.innerWidth
@@ -137,5 +146,25 @@ describe('useNavigationDrawer', () => {
 
     expect(result.current.state).toBe(NavigationDrawerState.Expanded)
     expect(result.current.userIntent).toBe(NavigationDrawerState.Expanded)
+  })
+
+  it('should register logout cleanup function on mount', () => {
+    renderHook(() => useNavigationDrawer())
+
+    expect(logoutCleanupRegistry.register).toHaveBeenCalledWith(expect.any(Function))
+  })
+
+  it('should clear storage and reset state when logout cleanup is executed', () => {
+    renderHook(() => useNavigationDrawer())
+
+    // Get the cleanup function that was registered
+    const cleanupFunction = vi.mocked(logoutCleanupRegistry.register).mock.calls[0][0]
+
+    // Execute the cleanup function (simulating logout)
+    act(() => {
+      cleanupFunction()
+    })
+
+    expect(NavigationDrawerStorage.clearUserIntent).toHaveBeenCalled()
   })
 })

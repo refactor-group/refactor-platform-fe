@@ -9,6 +9,7 @@ import {
 import { NavigationDrawerStorage } from '@/lib/services/navigation-drawer-storage'
 import { NavigationStateCalculator } from '@/lib/services/navigation-state-calculator'
 import { useIsMobile } from '@/components/hooks/use-mobile'
+import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
 
 /**
  * Enhanced navigation drawer hook with session-only persistence and responsive behavior
@@ -118,6 +119,25 @@ export function useNavigationDrawer(): NavigationDrawerContextProps {
 
   // Mobile-specific state (for sheet overlay)
   const [openMobile, setOpenMobile] = useState(false)
+
+  // Logout cleanup registration: ensures navigation drawer state is cleared on session end
+  useEffect(() => {
+    const cleanup = () => {
+      // Immediately clear storage
+      NavigationDrawerStorage.clearUserIntent()
+
+      // Reset navigation state synchronously
+      setNavigationState(prevState =>
+        NavigationStateCalculator.handleAuthChange(prevState, false)
+      )
+    }
+
+    const unregisterCleanup = logoutCleanupRegistry.register(cleanup)
+
+    return () => {
+      unregisterCleanup()
+    }
+  }, [])
 
   return {
     // Core state
