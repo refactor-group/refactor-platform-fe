@@ -22,9 +22,13 @@ vi.mock('@/lib/api/organizations', () => ({
 }))
 
 // Mock the sidebar hook
+import { NavigationDrawerState } from '@/types/navigation-drawer'
+
 vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({
-    state: 'expanded'
+    state: NavigationDrawerState.Expanded,
+    userIntent: NavigationDrawerState.Expanded,
+    isResponsiveOverride: false
   })
 }))
 
