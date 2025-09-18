@@ -5,12 +5,9 @@ import {
   createContext,
   useContext,
   forwardRef,
-  useCallback,
   CSSProperties,
 } from "react";
 import {
-  SidebarState,
-  StateChangeSource,
   SidebarProviderProps as BaseSidebarProviderProps,
   SidebarContextProps as SidebarContextInterface,
 } from "@/types/sidebar";
@@ -36,10 +33,10 @@ function assertSidebarContext(
   }
 }
 
-// Helper functions that tell the story of what we're doing
-
-
-function buildSidebarContext(sidebarState: any, actions: ReturnType<typeof useSidebarActions>): SidebarContextProps {
+function buildSidebarContext(
+  sidebarState: any,
+  actions: ReturnType<typeof useSidebarActions>
+): SidebarContextProps {
   return {
     state: sidebarState.state,
     userIntent: sidebarState.userIntent,
