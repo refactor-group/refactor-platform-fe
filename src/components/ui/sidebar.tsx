@@ -106,21 +106,21 @@ const SidebarProvider = React.forwardRef<
       onStateChange?.(newState, StateChangeSource.UserAction)
     }, [open, navigationDrawer, onStateChange])
 
-    // Enhanced toggle that uses our new system
+    // Enhanced toggle that uses our new system with stable references
     const toggleSidebar = React.useCallback(() => {
       return navigationDrawer.isMobile
         ? navigationDrawer.setOpenMobile(!navigationDrawer.openMobile)
         : navigationDrawer.toggle(StateChangeSource.UserAction)
-    }, [navigationDrawer])
+    }, [navigationDrawer.isMobile, navigationDrawer.setOpenMobile, navigationDrawer.toggle, navigationDrawer.openMobile])
 
     // Expand/collapse helpers
     const expand = React.useCallback(() => {
       navigationDrawer.expand(StateChangeSource.UserAction)
-    }, [navigationDrawer])
+    }, [navigationDrawer.expand])
 
     const collapse = React.useCallback(() => {
       navigationDrawer.collapse(StateChangeSource.UserAction)
-    }, [navigationDrawer])
+    }, [navigationDrawer.collapse])
 
     // Keyboard shortcut for sidebar toggle is disabled to avoid conflicts with editor shortcuts
     // Previously used Ctrl/Cmd+B which conflicts with TipTap bold formatting
@@ -155,7 +155,19 @@ const SidebarProvider = React.forwardRef<
         expand,
         collapse,
       }),
-      [navigationDrawer, open, setOpen, toggleSidebar, expand, collapse]
+      [
+        navigationDrawer.state,
+        navigationDrawer.openMobile,
+        navigationDrawer.setOpenMobile,
+        navigationDrawer.isMobile,
+        navigationDrawer.isResponsiveOverride,
+        navigationDrawer.userIntent,
+        open,
+        setOpen,
+        toggleSidebar,
+        expand,
+        collapse
+      ]
     )
 
     return (

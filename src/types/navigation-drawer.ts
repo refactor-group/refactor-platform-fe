@@ -55,12 +55,6 @@ export interface NavigationState {
   lastChangeSource: StateChangeSource
 }
 
-export interface StateChangeEvent {
-  source: StateChangeSource
-  previousState: NavigationState
-  newState: NavigationState
-  shouldPersist: boolean
-}
 
 // Hook and component interfaces with enhanced type safety
 export interface NavigationDrawerContextProps {
@@ -82,28 +76,12 @@ export interface NavigationDrawerContextProps {
   handleAuthenticationChange: (isAuthenticated: boolean) => void
 }
 
-// Legacy compatibility types for migration
-export type LegacySidebarState = "expanded" | "collapsed"
-export type LegacySidebarSide = "left" | "right"
-export type LegacySidebarVariant = "sidebar" | "floating" | "inset"
-export type LegacySidebarCollapsible = "offcanvas" | "icon" | "none"
 
 // Enhanced provider props
 export interface SidebarProviderProps extends React.ComponentProps<"div"> {
-  // Legacy props (deprecated but supported during migration)
-  /** @deprecated Use defaultState instead */
-  defaultOpen?: boolean
-  /** @deprecated Use state instead */
-  open?: boolean
-  /** @deprecated Use onStateChange instead */
-  onOpenChange?: (open: boolean) => void
-
-  // New enum-based props
   defaultState?: NavigationDrawerState
   state?: NavigationDrawerState
   onStateChange?: (state: NavigationDrawerState, source: StateChangeSource) => void
-
-  // Enhanced features
   persistIntent?: boolean
   responsiveBreakpoints?: {
     mobile: number
@@ -129,8 +107,6 @@ export enum BreakpointKey {
   Mobile = 'mobile',
   Tablet = 'tablet'
 }
-
-export type ConfigKey = `nav_drawer_${string}`
 
 export interface TypedBreakpoints {
   readonly [BreakpointKey.Mobile]: number
@@ -168,12 +144,6 @@ export interface SidebarProps {
   readonly children?: React.ReactNode
 }
 
-// State transition validation
-export interface StateTransition {
-  readonly from: NavigationDrawerState
-  readonly to: NavigationDrawerState
-  readonly source: StateChangeSource
-}
 
 // Type-safe storage key factory
 export function createStorageKey<T extends string>(suffix: T): `nav_drawer_${T}` {

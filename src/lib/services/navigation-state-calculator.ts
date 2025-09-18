@@ -6,7 +6,6 @@ import {
   StateCalculationResult,
   NavigationState,
   TypedBreakpoints,
-  StateTransition,
   BreakpointKey
 } from '@/types/navigation-drawer'
 
@@ -17,30 +16,6 @@ export namespace NavigationStateCalculator {
     [BreakpointKey.Tablet]: 1024
   } as const
 
-  // Valid state transitions for type safety
-  const VALID_TRANSITIONS: readonly StateTransition[] = [
-    { from: NavigationDrawerState.Expanded, to: NavigationDrawerState.Collapsed, source: StateChangeSource.UserAction },
-    { from: NavigationDrawerState.Collapsed, to: NavigationDrawerState.Expanded, source: StateChangeSource.UserAction },
-    { from: NavigationDrawerState.Expanded, to: NavigationDrawerState.Collapsed, source: StateChangeSource.ResponsiveResize },
-    { from: NavigationDrawerState.Collapsed, to: NavigationDrawerState.Expanded, source: StateChangeSource.ResponsiveResize },
-    { from: NavigationDrawerState.Expanded, to: NavigationDrawerState.Expanded, source: StateChangeSource.SystemInitialization },
-    { from: NavigationDrawerState.Collapsed, to: NavigationDrawerState.Expanded, source: StateChangeSource.SystemInitialization },
-    { from: NavigationDrawerState.Expanded, to: NavigationDrawerState.Expanded, source: StateChangeSource.AuthenticationChange },
-    { from: NavigationDrawerState.Collapsed, to: NavigationDrawerState.Expanded, source: StateChangeSource.AuthenticationChange }
-  ] as const
-
-  export function isValidTransition(
-    from: NavigationDrawerState,
-    to: NavigationDrawerState,
-    source: StateChangeSource
-  ): boolean {
-    return VALID_TRANSITIONS.some(
-      transition =>
-        transition.from === from &&
-        transition.to === to &&
-        transition.source === source
-    )
-  }
 
   /**
    * Calculate the correct navigation drawer state based on user intent and screen size
