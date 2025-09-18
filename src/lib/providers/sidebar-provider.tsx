@@ -12,8 +12,10 @@ import {
   SidebarState,
   StateChangeSource,
   SidebarProviderProps as BaseSidebarProviderProps,
+  SidebarContextProps as SidebarContextInterface,
 } from "@/types/sidebar";
 import { useSidebarState } from "@/lib/hooks/use-sidebar-state";
+import { useSidebarActions } from "@/lib/hooks/use-sidebar-actions";
 import { cn } from "@/components/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -21,20 +23,8 @@ export interface SidebarProviderProps extends BaseSidebarProviderProps {
   children: ReactNode;
 }
 
-// Context type for sidebar state
-export type SidebarContextProps = {
-  readonly state: SidebarState;
-  readonly userIntent: SidebarState;
-  readonly isResponsiveOverride: boolean;
-  readonly open: boolean;
-  setOpen: (open: boolean) => void;
-  readonly openMobile: boolean;
-  setOpenMobile: (open: boolean) => void;
-  readonly isMobile: boolean;
-  toggleSidebar: () => void;
-  expand: () => void;
-  collapse: () => void;
-};
+// Use the interface from types file
+type SidebarContextProps = SidebarContextInterface;
 
 const SidebarContext = createContext<SidebarContextProps | null>(null);
 
@@ -46,94 +36,100 @@ function assertSidebarContext(
   }
 }
 
+// Helper functions that tell the story of what we're doing
+
+
+function buildSidebarContext(sidebarState: any, actions: ReturnType<typeof useSidebarActions>): SidebarContextProps {
+  return {
+    state: sidebarState.state,
+    userIntent: sidebarState.userIntent,
+    isResponsiveOverride: sidebarState.isResponsiveOverride,
+    screenSize: sidebarState.screenSize,
+    isMobile: sidebarState.isMobile,
+    openMobile: sidebarState.openMobile,
+    open: actions.open,
+    setUserIntent: sidebarState.setUserIntent,
+    setOpen: actions.setOpen,
+    toggle: sidebarState.toggle,
+    toggleSidebar: actions.toggleSidebar,
+    expand: actions.expand,
+    collapse: actions.collapse,
+    setOpenMobile: sidebarState.setOpenMobile,
+    handleScreenSizeChange: sidebarState.handleScreenSizeChange,
+    handleAuthenticationChange: sidebarState.handleAuthenticationChange,
+  };
+}
+
+function createContainerStyle(userStyle?: React.CSSProperties): CSSProperties {
+  const sidebarDimensions = getSidebarDimensions();
+
+  return {
+    "--sidebar-width": sidebarDimensions.width,
+    "--sidebar-width-icon": sidebarDimensions.iconWidth,
+    "--sidebar-width-mobile": sidebarDimensions.mobileWidth,
+    ...userStyle,
+  } as CSSProperties;
+}
+
+function renderSidebarProvider(
+  contextValue: SidebarContextProps,
+  style: CSSProperties,
+  props: SidebarProviderProps,
+  ref: React.Ref<HTMLDivElement>
+) {
+  return (
+    <SidebarContext.Provider value={contextValue}>
+      <TooltipProvider delayDuration={0}>
+        <div
+          style={style}
+          className={cn(
+            "group/sidebar-wrapper flex h-full w-full has-[[data-variant=inset]]:bg-sidebar",
+            props.className
+          )}
+          ref={ref}
+          {...extractContainerProps(props)}
+        >
+          {props.children}
+        </div>
+      </TooltipProvider>
+    </SidebarContext.Provider>
+  );
+}
+
+// Implementation details - utility functions for the provider
+
+function getSidebarDimensions() {
+  return {
+    width: "16rem",
+    mobileWidth: "18rem",
+    iconWidth: "3rem",
+  };
+}
+
+function extractContainerProps(props: SidebarProviderProps) {
+  const {
+    defaultState,
+    state: stateProp,
+    onStateChange,
+    persistIntent,
+    responsiveBreakpoints,
+    className,
+    style,
+    children,
+    ...containerProps
+  } = props;
+  return containerProps;
+}
+
 export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
-  (
-    {
-      defaultState,
-      state: stateProp,
-      onStateChange,
-      persistIntent = true,
-      responsiveBreakpoints,
-      className,
-      style,
-      children,
-      ...props
-    },
-    ref
-  ) => {
+  (props, ref) => {
     const sidebarState = useSidebarState();
 
-    const open = sidebarState.state === SidebarState.Expanded;
-    const setOpen = useCallback(
-      (value: boolean | ((value: boolean) => boolean)) => {
-        const openState = typeof value === "function" ? value(open) : value;
-        const newState = openState
-          ? SidebarState.Expanded
-          : SidebarState.Collapsed;
-        sidebarState.setUserIntent(newState, StateChangeSource.UserAction);
-        onStateChange?.(newState, StateChangeSource.UserAction);
-      },
-      [open, sidebarState, onStateChange]
-    );
+    const sidebarActions = useSidebarActions(sidebarState, props.onStateChange);
+    const contextValue = buildSidebarContext(sidebarState, sidebarActions);
+    const containerStyle = createContainerStyle(props.style);
 
-    const toggleSidebar = useCallback(() => {
-      return sidebarState.isMobile
-        ? sidebarState.setOpenMobile(!sidebarState.openMobile)
-        : sidebarState.toggle(StateChangeSource.UserAction);
-    }, [sidebarState]);
-
-    // Expand/collapse helpers
-    const expand = useCallback(() => {
-      sidebarState.expand(StateChangeSource.UserAction);
-    }, [sidebarState]);
-
-    const collapse = useCallback(() => {
-      sidebarState.collapse(StateChangeSource.UserAction);
-    }, [sidebarState]);
-
-    const contextValue: SidebarContextProps = {
-      state: sidebarState.state,
-      userIntent: sidebarState.userIntent,
-      isResponsiveOverride: sidebarState.isResponsiveOverride,
-      open,
-      setOpen,
-      openMobile: sidebarState.openMobile,
-      setOpenMobile: sidebarState.setOpenMobile,
-      isMobile: sidebarState.isMobile,
-      toggleSidebar,
-      expand,
-      collapse,
-    };
-
-    // Sidebar spec constants
-    const SIDEBAR_WIDTH = "16rem";
-    const SIDEBAR_WIDTH_MOBILE = "18rem";
-    const SIDEBAR_WIDTH_ICON = "3rem";
-
-    return (
-      <SidebarContext.Provider value={contextValue}>
-        <TooltipProvider delayDuration={0}>
-          <div
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH,
-                "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-                "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE,
-                ...style,
-              } as CSSProperties
-            }
-            className={cn(
-              "group/sidebar-wrapper flex h-full w-full has-[[data-variant=inset]]:bg-sidebar",
-              className
-            )}
-            ref={ref}
-            {...props}
-          >
-            {children}
-          </div>
-        </TooltipProvider>
-      </SidebarContext.Provider>
-    );
+    return renderSidebarProvider(contextValue, containerStyle, props, ref);
   }
 );
 

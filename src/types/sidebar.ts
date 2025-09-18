@@ -56,8 +56,8 @@ export interface NavigationState {
 }
 
 
-// Hook and component interfaces with enhanced type safety
-export interface NavigationDrawerContextProps {
+// Hook interface for useSidebarState
+export interface SidebarStateHookProps {
   // State properties should be readonly
   readonly state: SidebarState
   readonly userIntent: SidebarState
@@ -69,6 +69,29 @@ export interface NavigationDrawerContextProps {
   // Actions remain mutable
   setUserIntent: (intent: SidebarState, source: StateChangeSource) => void
   toggle: (source: StateChangeSource) => void
+  expand: (source: StateChangeSource) => void
+  collapse: (source: StateChangeSource) => void
+  setOpenMobile: (open: boolean) => void
+  handleScreenSizeChange: (newSize: ScreenSize) => void
+  handleAuthenticationChange: (isAuthenticated: boolean) => void
+}
+
+// Context interface for SidebarProvider
+export interface SidebarContextProps {
+  // State properties should be readonly
+  readonly state: SidebarState
+  readonly userIntent: SidebarState
+  readonly isResponsiveOverride: boolean
+  readonly screenSize: ScreenSize
+  readonly isMobile: boolean
+  readonly openMobile: boolean
+  readonly open: boolean
+
+  // Actions remain mutable
+  setUserIntent: (intent: SidebarState, source: StateChangeSource) => void
+  setOpen: (open: boolean) => void
+  toggle: (source: StateChangeSource) => void
+  toggleSidebar: () => void
   expand: (source: StateChangeSource) => void
   collapse: (source: StateChangeSource) => void
   setOpenMobile: (open: boolean) => void

@@ -4,7 +4,7 @@ import {
   ScreenSize,
   StateChangeSource,
   NavigationState,
-  NavigationDrawerContextProps,
+  SidebarStateHookProps,
   BreakpointKey
 } from '@/types/sidebar'
 import { SidebarStorage } from '@/lib/services/sidebar-storage'
@@ -22,7 +22,7 @@ import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
  * - Type-safe state management with enums
  * - Authentication lifecycle integration
  */
-export function useSidebarState(): NavigationDrawerContextProps {
+export function useSidebarState(): SidebarStateHookProps {
   const isMobile = useIsMobile()
 
   // Initialize state from storage and current screen size
