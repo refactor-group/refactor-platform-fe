@@ -1,8 +1,34 @@
-import { NavigationDrawerState, StateChangeSource } from '@/types/navigation-drawer'
+import {
+  NavigationDrawerState,
+  StateChangeSource,
+  StorageUnavailableError,
+  Result,
+  createStorageKey
+} from '@/types/navigation-drawer'
 
 export namespace NavigationDrawerStorage {
-  const STORAGE_KEY = 'nav_drawer_user_intent'
+  const STORAGE_KEY = createStorageKey('user_intent')
   const LEGACY_COOKIE_NAME = 'sidebar_state'
+
+  // Type predicates for validation
+  const VALID_STATES = Object.values(NavigationDrawerState)
+
+  export function isValidState(value: unknown): value is NavigationDrawerState {
+    return typeof value === 'string' &&
+           (VALID_STATES as readonly string[]).includes(value)
+  }
+
+  export function parseStoredState(value: string | null): NavigationDrawerState | null {
+    if (!value) return null
+
+    if (isValidState(value)) {
+      return value
+    }
+
+    // Log warning for debugging
+    console.warn(`Invalid navigation drawer state: ${value}`)
+    return null
+  }
 
   /**
    * Get the user's explicit preference from sessionStorage
@@ -11,10 +37,7 @@ export namespace NavigationDrawerStorage {
   export function getUserIntent(): NavigationDrawerState | null {
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY)
-      if (stored && isValidState(stored)) {
-        return stored as NavigationDrawerState
-      }
-      return null
+      return parseStoredState(stored)
     } catch {
       // Handle cases where sessionStorage is not available (e.g., private browsing)
       return null
@@ -22,27 +45,26 @@ export namespace NavigationDrawerStorage {
   }
 
   /**
-   * Set the user's explicit preference
+   * Set the user's explicit preference with enhanced error handling
    * Only persists user-initiated changes, ignores system/responsive changes
    * @param intent The navigation drawer state to store
    * @param source The source of the state change
-   * @returns True if successfully stored, false otherwise
+   * @returns Result indicating success or failure with specific error
    */
   export function setUserIntent(
     intent: NavigationDrawerState,
     source: StateChangeSource
-  ): boolean {
+  ): Result<boolean, StorageUnavailableError> {
     // Only persist user-initiated changes
     if (source !== StateChangeSource.UserAction) {
-      return false
+      return { success: true, data: false }
     }
 
     try {
       sessionStorage.setItem(STORAGE_KEY, intent)
-      return true
+      return { success: true, data: true }
     } catch {
-      // Handle cases where storage is full or unavailable
-      return false
+      return { success: false, error: new StorageUnavailableError() }
     }
   }
 
@@ -57,13 +79,6 @@ export namespace NavigationDrawerStorage {
     }
   }
 
-  /**
-   * Check if a value is a valid NavigationDrawerState
-   */
-  export function isValidState(value: unknown): value is NavigationDrawerState {
-    return typeof value === 'string' &&
-           Object.values(NavigationDrawerState).includes(value as NavigationDrawerState)
-  }
 
   /**
    * Check if sessionStorage is available and working

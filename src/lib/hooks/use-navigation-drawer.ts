@@ -4,7 +4,8 @@ import {
   ScreenSize,
   StateChangeSource,
   NavigationState,
-  NavigationDrawerContextProps
+  NavigationDrawerContextProps,
+  BreakpointKey
 } from '@/types/navigation-drawer'
 import { NavigationDrawerStorage } from '@/lib/services/navigation-drawer-storage'
 import { NavigationStateCalculator } from '@/lib/services/navigation-state-calculator'
@@ -41,31 +42,42 @@ export function useNavigationDrawer(): NavigationDrawerContextProps {
   const navigationStateRef = useRef(navigationState)
   navigationStateRef.current = navigationState
 
-  // Handle screen size changes - purely event-driven
-  useEffect(() => {
-    const handleResize = () => {
-      const currentState = navigationStateRef.current
-      const newScreenSize = NavigationStateCalculator.detectScreenSize(window.innerWidth)
+  // Handle screen size changes with enhanced event typing
+  const handleResize = useCallback((event: Event): void => {
+    if (!(event.target instanceof Window)) return
 
-      if (NavigationStateCalculator.shouldTriggerStateChange(currentState, {
-        userIntent: currentState.userIntent,
-        screenSize: newScreenSize,
-        source: StateChangeSource.ResponsiveResize
-      })) {
-        setNavigationState(prevState =>
-          NavigationStateCalculator.handleScreenSizeChange(prevState, newScreenSize)
-        )
-      }
+    const currentState = navigationStateRef.current
+    const newScreenSize = NavigationStateCalculator.detectScreenSize(
+      event.target.innerWidth
+    )
+
+    if (NavigationStateCalculator.shouldTriggerStateChange(currentState, {
+      userIntent: currentState.userIntent,
+      screenSize: newScreenSize,
+      source: StateChangeSource.ResponsiveResize
+    })) {
+      setNavigationState(prevState =>
+        NavigationStateCalculator.handleScreenSizeChange(prevState, newScreenSize)
+      )
     }
+  }, [])
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, []) // Empty dependency array - register once
+  useEffect(() => {
+    const controller = new AbortController()
+
+    window.addEventListener('resize', handleResize, {
+      signal: controller.signal,
+      passive: true
+    })
+
+    return () => controller.abort()
+  }, [handleResize]) // Include handleResize in dependencies
 
   // Update screen size when isMobile changes (from useIsMobile hook)
   useEffect(() => {
+    const breakpoints = NavigationStateCalculator.getBreakpoints()
     const newScreenSize = isMobile ? ScreenSize.Mobile :
-      (window.innerWidth < NavigationStateCalculator.getBreakpoints().tablet ? ScreenSize.Tablet : ScreenSize.Desktop)
+      (window.innerWidth < breakpoints[BreakpointKey.Tablet] ? ScreenSize.Tablet : ScreenSize.Desktop)
 
     if (newScreenSize !== navigationState.screenSize) {
       setNavigationState(prevState =>
@@ -79,8 +91,11 @@ export function useNavigationDrawer(): NavigationDrawerContextProps {
     setNavigationState(prevState => {
       const newState = NavigationStateCalculator.handleUserAction(prevState, intent)
 
-      // Persist to storage if it's a user action
-      NavigationDrawerStorage.setUserIntent(intent, source)
+      // Persist to storage if it's a user action with enhanced error handling
+      const result = NavigationDrawerStorage.setUserIntent(intent, source)
+      if (!result.success) {
+        console.warn('Failed to persist navigation drawer state:', result.error.message)
+      }
 
       return newState
     })

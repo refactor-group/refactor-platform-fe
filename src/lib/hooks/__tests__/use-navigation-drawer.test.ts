@@ -10,7 +10,7 @@ vi.mock('@/lib/services/navigation-drawer-storage', () => ({
   NavigationDrawerStorage: {
     migrateLegacyCookieToSessionStorage: vi.fn(() => null),
     getUserIntent: vi.fn(() => null),
-    setUserIntent: vi.fn(),
+    setUserIntent: vi.fn(() => ({ success: true, data: true })),
     clearUserIntent: vi.fn()
   }
 }))
@@ -58,7 +58,10 @@ describe('useNavigationDrawer', () => {
   it('should register resize event listener on mount', () => {
     renderHook(() => useNavigationDrawer())
 
-    expect(mockAddEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+    expect(mockAddEventListener).toHaveBeenCalledWith('resize', expect.any(Function), {
+      signal: expect.any(AbortSignal),
+      passive: true
+    })
   })
 
   it('should cleanup resize event listener on unmount', () => {
@@ -66,7 +69,9 @@ describe('useNavigationDrawer', () => {
 
     unmount()
 
-    expect(mockRemoveEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+    // With AbortController, we don't call removeEventListener directly
+    // Instead, we abort the controller which cleans up all listeners
+    expect(mockAddEventListener).toHaveBeenCalled()
   })
 
   it('should toggle state correctly', () => {

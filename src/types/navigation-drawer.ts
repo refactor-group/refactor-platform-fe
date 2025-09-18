@@ -62,28 +62,22 @@ export interface StateChangeEvent {
   shouldPersist: boolean
 }
 
-// Hook and component interfaces
+// Hook and component interfaces with enhanced type safety
 export interface NavigationDrawerContextProps {
-  // Core state with enum types
-  state: NavigationDrawerState
-  userIntent: NavigationDrawerState
-  isResponsiveOverride: boolean
+  // State properties should be readonly
+  readonly state: NavigationDrawerState
+  readonly userIntent: NavigationDrawerState
+  readonly isResponsiveOverride: boolean
+  readonly screenSize: ScreenSize
+  readonly isMobile: boolean
+  readonly openMobile: boolean
 
-  // Screen size awareness
-  screenSize: ScreenSize
-  isMobile: boolean
-
-  // Actions with typed parameters
+  // Actions remain mutable
   setUserIntent: (intent: NavigationDrawerState, source: StateChangeSource) => void
   toggle: (source: StateChangeSource) => void
   expand: (source: StateChangeSource) => void
   collapse: (source: StateChangeSource) => void
-
-  // Mobile-specific
-  openMobile: boolean
   setOpenMobile: (open: boolean) => void
-
-  // Internal handlers
   handleScreenSizeChange: (newSize: ScreenSize) => void
   handleAuthenticationChange: (isAuthenticated: boolean) => void
 }
@@ -128,4 +122,60 @@ export interface StateCalculationResult {
   currentState: NavigationDrawerState
   isResponsiveOverride: boolean
   shouldPersist: boolean
+}
+
+// Enhanced type safety for configuration
+export enum BreakpointKey {
+  Mobile = 'mobile',
+  Tablet = 'tablet'
+}
+
+export type ConfigKey = `nav_drawer_${string}`
+
+export interface TypedBreakpoints {
+  readonly [BreakpointKey.Mobile]: number
+  readonly [BreakpointKey.Tablet]: number
+}
+
+// Domain-specific error types
+export class NavigationDrawerError extends Error {
+  readonly code: string
+
+  constructor(message: string, code: string) {
+    super(message)
+    this.name = 'NavigationDrawerError'
+    this.code = code
+  }
+}
+
+export class StorageUnavailableError extends NavigationDrawerError {
+  constructor() {
+    super('Session storage is not available', 'STORAGE_UNAVAILABLE')
+  }
+}
+
+// Result type for better error handling
+export type Result<T, E = Error> =
+  | { success: true; data: T }
+  | { success: false; error: E }
+
+// Strict component prop interfaces
+export interface SidebarProps {
+  readonly side?: SidebarSide
+  readonly variant?: SidebarVariant
+  readonly collapsible?: SidebarCollapsible
+  readonly className?: string
+  readonly children?: React.ReactNode
+}
+
+// State transition validation
+export interface StateTransition {
+  readonly from: NavigationDrawerState
+  readonly to: NavigationDrawerState
+  readonly source: StateChangeSource
+}
+
+// Type-safe storage key factory
+export function createStorageKey<T extends string>(suffix: T): `nav_drawer_${T}` {
+  return `nav_drawer_${suffix}`
 }

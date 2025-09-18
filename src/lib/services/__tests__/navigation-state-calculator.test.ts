@@ -4,7 +4,8 @@ import {
   NavigationDrawerState,
   ScreenSize,
   StateChangeSource,
-  NavigationState
+  NavigationState,
+  BreakpointKey
 } from '@/types/navigation-drawer'
 
 describe('NavigationStateCalculator', () => {
@@ -309,13 +310,17 @@ describe('NavigationStateCalculator', () => {
   })
 
   describe('getBreakpoints', () => {
-    it('should return correct breakpoint values', () => {
+    it('should return correct breakpoint values with enum keys', () => {
       const breakpoints = NavigationStateCalculator.getBreakpoints()
 
       expect(breakpoints).toEqual({
         mobile: 768,
         tablet: 1024
       })
+
+      // Verify we can access via enum
+      expect(breakpoints[BreakpointKey.Mobile]).toBe(768)
+      expect(breakpoints[BreakpointKey.Tablet]).toBe(1024)
     })
   })
 })

@@ -26,7 +26,7 @@ describe('NavigationDrawerStorage', () => {
         StateChangeSource.UserAction
       )
 
-      expect(result).toBe(true)
+      expect(result).toEqual({ success: true, data: true })
       expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
         'nav_drawer_user_intent',
         'collapsed'
@@ -39,8 +39,25 @@ describe('NavigationDrawerStorage', () => {
         StateChangeSource.ResponsiveResize
       )
 
-      expect(result).toBe(false)
+      expect(result).toEqual({ success: true, data: false })
       expect(mockSessionStorage.setItem).not.toHaveBeenCalled()
+    })
+
+    it('should return error when storage is unavailable', () => {
+      mockSessionStorage.setItem.mockImplementation(() => {
+        throw new Error('Storage not available')
+      })
+
+      const result = NavigationDrawerStorage.setUserIntent(
+        NavigationDrawerState.Collapsed,
+        StateChangeSource.UserAction
+      )
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.code).toBe('STORAGE_UNAVAILABLE')
+        expect(result.error.message).toBe('Session storage is not available')
+      }
     })
   })
 

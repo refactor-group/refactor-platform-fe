@@ -34,7 +34,8 @@ import {
   SidebarMenuSize,
   SidebarMenuVariant,
   StateChangeSource,
-  SidebarProviderProps
+  SidebarProviderProps,
+  SidebarProps
 } from '@/types/navigation-drawer'
 import { useNavigationDrawer } from '@/lib/hooks/use-navigation-drawer'
 
@@ -45,14 +46,14 @@ const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "" // Disabled - no keyboard shortcut for sidebar
 
 type SidebarContextProps = {
-  state: NavigationDrawerState
-  userIntent: NavigationDrawerState
-  isResponsiveOverride: boolean
-  open: boolean
+  readonly state: NavigationDrawerState
+  readonly userIntent: NavigationDrawerState
+  readonly isResponsiveOverride: boolean
+  readonly open: boolean
   setOpen: (open: boolean) => void
-  openMobile: boolean
+  readonly openMobile: boolean
   setOpenMobile: (open: boolean) => void
-  isMobile: boolean
+  readonly isMobile: boolean
   toggleSidebar: () => void
   expand: () => void
   collapse: () => void
@@ -60,12 +61,18 @@ type SidebarContextProps = {
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
 
-function useSidebar() {
-  const context = React.useContext(SidebarContext)
+// Enhanced context assertion function
+function assertSidebarContext(
+  context: SidebarContextProps | null
+): asserts context is SidebarContextProps {
   if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.")
+    throw new Error('useSidebar must be used within SidebarProvider')
   }
+}
 
+function useSidebar(): SidebarContextProps {
+  const context = React.useContext(SidebarContext)
+  assertSidebarContext(context)
   return context
 }
 
@@ -180,11 +187,7 @@ SidebarProvider.displayName = "SidebarProvider"
 
 const Sidebar = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> & {
-    side?: SidebarSide
-    variant?: SidebarVariant
-    collapsible?: SidebarCollapsible
-  }
+  SidebarProps
 >(
   (
     {

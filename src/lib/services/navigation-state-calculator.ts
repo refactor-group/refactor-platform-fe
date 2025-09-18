@@ -4,12 +4,43 @@ import {
   StateChangeSource,
   StateCalculationInput,
   StateCalculationResult,
-  NavigationState
+  NavigationState,
+  TypedBreakpoints,
+  StateTransition,
+  BreakpointKey
 } from '@/types/navigation-drawer'
 
 export namespace NavigationStateCalculator {
-  const MOBILE_BREAKPOINT = 768
-  const TABLET_BREAKPOINT = 1024
+  // Type-safe breakpoint configuration
+  const BREAKPOINTS: TypedBreakpoints = {
+    [BreakpointKey.Mobile]: 768,
+    [BreakpointKey.Tablet]: 1024
+  } as const
+
+  // Valid state transitions for type safety
+  const VALID_TRANSITIONS: readonly StateTransition[] = [
+    { from: NavigationDrawerState.Expanded, to: NavigationDrawerState.Collapsed, source: StateChangeSource.UserAction },
+    { from: NavigationDrawerState.Collapsed, to: NavigationDrawerState.Expanded, source: StateChangeSource.UserAction },
+    { from: NavigationDrawerState.Expanded, to: NavigationDrawerState.Collapsed, source: StateChangeSource.ResponsiveResize },
+    { from: NavigationDrawerState.Collapsed, to: NavigationDrawerState.Expanded, source: StateChangeSource.ResponsiveResize },
+    { from: NavigationDrawerState.Expanded, to: NavigationDrawerState.Expanded, source: StateChangeSource.SystemInitialization },
+    { from: NavigationDrawerState.Collapsed, to: NavigationDrawerState.Expanded, source: StateChangeSource.SystemInitialization },
+    { from: NavigationDrawerState.Expanded, to: NavigationDrawerState.Expanded, source: StateChangeSource.AuthenticationChange },
+    { from: NavigationDrawerState.Collapsed, to: NavigationDrawerState.Expanded, source: StateChangeSource.AuthenticationChange }
+  ] as const
+
+  export function isValidTransition(
+    from: NavigationDrawerState,
+    to: NavigationDrawerState,
+    source: StateChangeSource
+  ): boolean {
+    return VALID_TRANSITIONS.some(
+      transition =>
+        transition.from === from &&
+        transition.to === to &&
+        transition.source === source
+    )
+  }
 
   /**
    * Calculate the correct navigation drawer state based on user intent and screen size
@@ -45,9 +76,9 @@ export namespace NavigationStateCalculator {
    * Detect screen size category based on viewport width
    */
   export function detectScreenSize(width: number): ScreenSize {
-    if (width < MOBILE_BREAKPOINT) {
+    if (width < BREAKPOINTS[BreakpointKey.Mobile]) {
       return ScreenSize.Mobile
-    } else if (width < TABLET_BREAKPOINT) {
+    } else if (width < BREAKPOINTS[BreakpointKey.Tablet]) {
       return ScreenSize.Tablet
     } else {
       return ScreenSize.Desktop
@@ -160,10 +191,7 @@ export namespace NavigationStateCalculator {
   /**
    * Get the breakpoint values for use in responsive hooks
    */
-  export function getBreakpoints() {
-    return {
-      mobile: MOBILE_BREAKPOINT,
-      tablet: TABLET_BREAKPOINT
-    }
+  export function getBreakpoints(): TypedBreakpoints {
+    return BREAKPOINTS
   }
 }
