@@ -12,8 +12,8 @@ import {
   NavigationDrawerState,
   StateChangeSource,
   SidebarProviderProps as BaseSidebarProviderProps,
-} from "@/types/navigation-drawer";
-import { useNavigationDrawer } from "@/lib/hooks/use-navigation-drawer";
+} from "@/types/sidebar";
+import { useSidebarState } from "@/lib/hooks/use-sidebar-state";
 import { cn } from "@/components/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -61,45 +61,45 @@ export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
     },
     ref
   ) => {
-    const navigationDrawer = useNavigationDrawer();
+    const sidebarState = useSidebarState();
 
-    const open = navigationDrawer.state === NavigationDrawerState.Expanded;
+    const open = sidebarState.state === NavigationDrawerState.Expanded;
     const setOpen = useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value;
         const newState = openState
           ? NavigationDrawerState.Expanded
           : NavigationDrawerState.Collapsed;
-        navigationDrawer.setUserIntent(newState, StateChangeSource.UserAction);
+        sidebarState.setUserIntent(newState, StateChangeSource.UserAction);
         onStateChange?.(newState, StateChangeSource.UserAction);
       },
-      [open, navigationDrawer, onStateChange]
+      [open, sidebarState, onStateChange]
     );
 
     const toggleSidebar = useCallback(() => {
-      return navigationDrawer.isMobile
-        ? navigationDrawer.setOpenMobile(!navigationDrawer.openMobile)
-        : navigationDrawer.toggle(StateChangeSource.UserAction);
-    }, [navigationDrawer]);
+      return sidebarState.isMobile
+        ? sidebarState.setOpenMobile(!sidebarState.openMobile)
+        : sidebarState.toggle(StateChangeSource.UserAction);
+    }, [sidebarState]);
 
     // Expand/collapse helpers
     const expand = useCallback(() => {
-      navigationDrawer.expand(StateChangeSource.UserAction);
-    }, [navigationDrawer]);
+      sidebarState.expand(StateChangeSource.UserAction);
+    }, [sidebarState]);
 
     const collapse = useCallback(() => {
-      navigationDrawer.collapse(StateChangeSource.UserAction);
-    }, [navigationDrawer]);
+      sidebarState.collapse(StateChangeSource.UserAction);
+    }, [sidebarState]);
 
     const contextValue: SidebarContextProps = {
-      state: navigationDrawer.state,
-      userIntent: navigationDrawer.userIntent,
-      isResponsiveOverride: navigationDrawer.isResponsiveOverride,
+      state: sidebarState.state,
+      userIntent: sidebarState.userIntent,
+      isResponsiveOverride: sidebarState.isResponsiveOverride,
       open,
       setOpen,
-      openMobile: navigationDrawer.openMobile,
-      setOpenMobile: navigationDrawer.setOpenMobile,
-      isMobile: navigationDrawer.isMobile,
+      openMobile: sidebarState.openMobile,
+      setOpenMobile: sidebarState.setOpenMobile,
+      isMobile: sidebarState.isMobile,
       toggleSidebar,
       expand,
       collapse,

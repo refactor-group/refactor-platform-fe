@@ -20,7 +20,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { SidebarCollapsible } from "@/types/navigation-drawer";
+import { SidebarCollapsible } from "@/types/sidebar";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 
 // Custom styles for menu buttons to ensure consistent centering

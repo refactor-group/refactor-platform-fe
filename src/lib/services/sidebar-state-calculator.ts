@@ -7,9 +7,9 @@ import {
   NavigationState,
   TypedBreakpoints,
   BreakpointKey
-} from '@/types/navigation-drawer'
+} from '@/types/sidebar'
 
-export namespace NavigationStateCalculator {
+export namespace SidebarStateCalculator {
   // Type-safe breakpoint configuration
   const BREAKPOINTS: TypedBreakpoints = {
     [BreakpointKey.Mobile]: 768,

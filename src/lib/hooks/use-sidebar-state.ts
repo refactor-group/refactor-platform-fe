@@ -6,9 +6,9 @@ import {
   NavigationState,
   NavigationDrawerContextProps,
   BreakpointKey
-} from '@/types/navigation-drawer'
-import { NavigationDrawerStorage } from '@/lib/services/navigation-drawer-storage'
-import { NavigationStateCalculator } from '@/lib/services/navigation-state-calculator'
+} from '@/types/sidebar'
+import { SidebarStorage } from '@/lib/services/sidebar-storage'
+import { SidebarStateCalculator } from '@/lib/services/sidebar-state-calculator'
 import { useIsMobile } from '@/components/hooks/use-mobile'
 import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
 
@@ -22,20 +22,20 @@ import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
  * - Type-safe state management with enums
  * - Authentication lifecycle integration
  */
-export function useNavigationDrawer(): NavigationDrawerContextProps {
+export function useSidebarState(): NavigationDrawerContextProps {
   const isMobile = useIsMobile()
 
   // Initialize state from storage and current screen size
   const [navigationState, setNavigationState] = useState<NavigationState>(() => {
     // Try to get saved user intent and migrate legacy data
-    const savedIntent = NavigationDrawerStorage.migrateLegacyCookieToSessionStorage()
-                       ?? NavigationDrawerStorage.getUserIntent()
+    const savedIntent = SidebarStorage.migrateLegacyCookieToSessionStorage()
+                       ?? SidebarStorage.getUserIntent()
 
-    const currentScreenSize = NavigationStateCalculator.detectScreenSize(
+    const currentScreenSize = SidebarStateCalculator.detectScreenSize(
       typeof window !== 'undefined' ? window.innerWidth : 1200
     )
 
-    return NavigationStateCalculator.createInitialState(savedIntent, currentScreenSize)
+    return SidebarStateCalculator.createInitialState(savedIntent, currentScreenSize)
   })
 
   // Use ref to access current state in event handlers without re-registering
@@ -47,17 +47,17 @@ export function useNavigationDrawer(): NavigationDrawerContextProps {
     if (!(event.target instanceof Window)) return
 
     const currentState = navigationStateRef.current
-    const newScreenSize = NavigationStateCalculator.detectScreenSize(
+    const newScreenSize = SidebarStateCalculator.detectScreenSize(
       event.target.innerWidth
     )
 
-    if (NavigationStateCalculator.shouldTriggerStateChange(currentState, {
+    if (SidebarStateCalculator.shouldTriggerStateChange(currentState, {
       userIntent: currentState.userIntent,
       screenSize: newScreenSize,
       source: StateChangeSource.ResponsiveResize
     })) {
       setNavigationState(prevState =>
-        NavigationStateCalculator.handleScreenSizeChange(prevState, newScreenSize)
+        SidebarStateCalculator.handleScreenSizeChange(prevState, newScreenSize)
       )
     }
   }, [])
@@ -75,13 +75,13 @@ export function useNavigationDrawer(): NavigationDrawerContextProps {
 
   // Update screen size when isMobile changes (from useIsMobile hook)
   useEffect(() => {
-    const breakpoints = NavigationStateCalculator.getBreakpoints()
+    const breakpoints = SidebarStateCalculator.getBreakpoints()
     const newScreenSize = isMobile ? ScreenSize.Mobile :
       (window.innerWidth < breakpoints[BreakpointKey.Tablet] ? ScreenSize.Tablet : ScreenSize.Desktop)
 
     if (newScreenSize !== navigationState.screenSize) {
       setNavigationState(prevState =>
-        NavigationStateCalculator.handleScreenSizeChange(prevState, newScreenSize)
+        SidebarStateCalculator.handleScreenSizeChange(prevState, newScreenSize)
       )
     }
   }, [isMobile, navigationState.screenSize])
@@ -89,10 +89,10 @@ export function useNavigationDrawer(): NavigationDrawerContextProps {
   // Actions
   const setUserIntent = useCallback((intent: NavigationDrawerState, source: StateChangeSource) => {
     setNavigationState(prevState => {
-      const newState = NavigationStateCalculator.handleUserAction(prevState, intent)
+      const newState = SidebarStateCalculator.handleUserAction(prevState, intent)
 
       // Persist to storage if it's a user action with enhanced error handling
-      const result = NavigationDrawerStorage.setUserIntent(intent, source)
+      const result = SidebarStorage.setUserIntent(intent, source)
       if (!result.success) {
         console.warn('Failed to persist navigation drawer state:', result.error.message)
       }
@@ -119,15 +119,15 @@ export function useNavigationDrawer(): NavigationDrawerContextProps {
 
   const handleScreenSizeChange = useCallback((newSize: ScreenSize) => {
     setNavigationState(prevState =>
-      NavigationStateCalculator.handleScreenSizeChange(prevState, newSize)
+      SidebarStateCalculator.handleScreenSizeChange(prevState, newSize)
     )
   }, [])
 
   const handleAuthenticationChange = useCallback((isAuthenticated: boolean) => {
     if (!isAuthenticated) {
-      NavigationDrawerStorage.clearUserIntent()
+      SidebarStorage.clearUserIntent()
       setNavigationState(prevState =>
-        NavigationStateCalculator.handleAuthChange(prevState, isAuthenticated)
+        SidebarStateCalculator.handleAuthChange(prevState, isAuthenticated)
       )
     }
   }, [])
@@ -139,11 +139,11 @@ export function useNavigationDrawer(): NavigationDrawerContextProps {
   useEffect(() => {
     const cleanup = () => {
       // Immediately clear storage
-      NavigationDrawerStorage.clearUserIntent()
+      SidebarStorage.clearUserIntent()
 
       // Reset navigation state synchronously
       setNavigationState(prevState =>
-        NavigationStateCalculator.handleAuthChange(prevState, false)
+        SidebarStateCalculator.handleAuthChange(prevState, false)
       )
     }
 

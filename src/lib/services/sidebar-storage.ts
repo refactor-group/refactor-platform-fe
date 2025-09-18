@@ -4,9 +4,9 @@ import {
   StorageUnavailableError,
   Result,
   createStorageKey
-} from '@/types/navigation-drawer'
+} from '@/types/sidebar'
 
-export namespace NavigationDrawerStorage {
+export namespace SidebarStorage {
   const STORAGE_KEY = createStorageKey('user_intent')
   const LEGACY_COOKIE_NAME = 'sidebar_state'
 

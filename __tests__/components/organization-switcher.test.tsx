@@ -22,7 +22,7 @@ vi.mock('@/lib/api/organizations', () => ({
 }))
 
 // Mock the sidebar hook
-import { NavigationDrawerState } from '@/types/navigation-drawer'
+import { NavigationDrawerState } from '@/types/sidebar'
 
 vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({

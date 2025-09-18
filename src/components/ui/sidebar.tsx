@@ -31,7 +31,7 @@ import {
   SidebarMenuSize,
   SidebarMenuVariant,
   SidebarProps,
-} from "@/types/navigation-drawer";
+} from "@/types/sidebar";
 import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { SidebarProvider } from "@/lib/providers/sidebar-provider";
 import {

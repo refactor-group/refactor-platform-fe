@@ -1,13 +1,13 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useNavigationDrawer } from '../use-navigation-drawer'
-import { NavigationDrawerState, StateChangeSource, ScreenSize } from '@/types/navigation-drawer'
-import { NavigationDrawerStorage } from '@/lib/services/navigation-drawer-storage'
+import { useSidebarState } from '../use-sidebar-state'
+import { NavigationDrawerState, StateChangeSource, ScreenSize } from '@/types/sidebar'
+import { SidebarStorage } from '@/lib/services/sidebar-storage'
 import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
 
 // Mock the storage service
-vi.mock('@/lib/services/navigation-drawer-storage', () => ({
-  NavigationDrawerStorage: {
+vi.mock('@/lib/services/sidebar-storage', () => ({
+  SidebarStorage: {
     migrateLegacyCookieToSessionStorage: vi.fn(() => null),
     getUserIntent: vi.fn(() => null),
     setUserIntent: vi.fn(() => ({ success: true, data: true })),
@@ -40,14 +40,14 @@ const mockRemoveEventListener = vi.fn()
 Object.defineProperty(window, 'addEventListener', { value: mockAddEventListener })
 Object.defineProperty(window, 'removeEventListener', { value: mockRemoveEventListener })
 
-describe('useNavigationDrawer', () => {
+describe('useSidebarState', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.innerWidth = 1200
   })
 
   it('should initialize with default expanded state on desktop', () => {
-    const { result } = renderHook(() => useNavigationDrawer())
+    const { result } = renderHook(() => useSidebarState())
 
     expect(result.current.state).toBe(NavigationDrawerState.Expanded)
     expect(result.current.userIntent).toBe(NavigationDrawerState.Expanded)
@@ -56,7 +56,7 @@ describe('useNavigationDrawer', () => {
   })
 
   it('should register resize event listener on mount', () => {
-    renderHook(() => useNavigationDrawer())
+    renderHook(() => useSidebarState())
 
     expect(mockAddEventListener).toHaveBeenCalledWith('resize', expect.any(Function), {
       signal: expect.any(AbortSignal),
@@ -65,7 +65,7 @@ describe('useNavigationDrawer', () => {
   })
 
   it('should cleanup resize event listener on unmount', () => {
-    const { unmount } = renderHook(() => useNavigationDrawer())
+    const { unmount } = renderHook(() => useSidebarState())
 
     unmount()
 
@@ -75,7 +75,7 @@ describe('useNavigationDrawer', () => {
   })
 
   it('should toggle state correctly', () => {
-    const { result } = renderHook(() => useNavigationDrawer())
+    const { result } = renderHook(() => useSidebarState())
 
     act(() => {
       result.current.toggle(StateChangeSource.UserAction)
@@ -86,7 +86,7 @@ describe('useNavigationDrawer', () => {
   })
 
   it('should expand state correctly', () => {
-    const { result } = renderHook(() => useNavigationDrawer())
+    const { result } = renderHook(() => useSidebarState())
 
     // First collapse it
     act(() => {
@@ -103,7 +103,7 @@ describe('useNavigationDrawer', () => {
   })
 
   it('should collapse state correctly', () => {
-    const { result } = renderHook(() => useNavigationDrawer())
+    const { result } = renderHook(() => useSidebarState())
 
     act(() => {
       result.current.collapse(StateChangeSource.UserAction)
@@ -114,7 +114,7 @@ describe('useNavigationDrawer', () => {
   })
 
   it('should handle mobile state correctly', () => {
-    const { result } = renderHook(() => useNavigationDrawer())
+    const { result } = renderHook(() => useSidebarState())
 
     act(() => {
       result.current.setOpenMobile(true)
@@ -130,14 +130,14 @@ describe('useNavigationDrawer', () => {
   })
 
   it('should provide screen size information', () => {
-    const { result } = renderHook(() => useNavigationDrawer())
+    const { result } = renderHook(() => useSidebarState())
 
     expect(result.current.screenSize).toBe(ScreenSize.Desktop)
     expect(result.current.isMobile).toBe(false)
   })
 
   it('should handle authentication changes', () => {
-    const { result } = renderHook(() => useNavigationDrawer())
+    const { result } = renderHook(() => useSidebarState())
 
     // Set to collapsed first
     act(() => {
@@ -154,13 +154,13 @@ describe('useNavigationDrawer', () => {
   })
 
   it('should register logout cleanup function on mount', () => {
-    renderHook(() => useNavigationDrawer())
+    renderHook(() => useSidebarState())
 
     expect(logoutCleanupRegistry.register).toHaveBeenCalledWith(expect.any(Function))
   })
 
   it('should clear storage and reset state when logout cleanup is executed', () => {
-    renderHook(() => useNavigationDrawer())
+    renderHook(() => useSidebarState())
 
     // Get the cleanup function that was registered
     const cleanupFunction = vi.mocked(logoutCleanupRegistry.register).mock.calls[0][0]
@@ -170,6 +170,6 @@ describe('useNavigationDrawer', () => {
       cleanupFunction()
     })
 
-    expect(NavigationDrawerStorage.clearUserIntent).toHaveBeenCalled()
+    expect(SidebarStorage.clearUserIntent).toHaveBeenCalled()
   })
 })

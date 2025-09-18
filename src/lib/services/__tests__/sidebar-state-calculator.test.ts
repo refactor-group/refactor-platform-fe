@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { NavigationStateCalculator } from '../navigation-state-calculator'
+import { SidebarStateCalculator } from '../sidebar-state-calculator'
 import {
   NavigationDrawerState,
   ScreenSize,
   StateChangeSource,
   NavigationState,
   BreakpointKey
-} from '@/types/navigation-drawer'
+} from '@/types/sidebar'
 
-describe('NavigationStateCalculator', () => {
+describe('SidebarStateCalculator', () => {
   describe('calculateState', () => {
     it('should collapse on mobile regardless of user intent', () => {
-      const result = NavigationStateCalculator.calculateState({
+      const result = SidebarStateCalculator.calculateState({
         userIntent: NavigationDrawerState.Expanded,
         screenSize: ScreenSize.Mobile,
         source: StateChangeSource.UserAction
@@ -25,7 +25,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should respect user intent on desktop', () => {
-      const result = NavigationStateCalculator.calculateState({
+      const result = SidebarStateCalculator.calculateState({
         userIntent: NavigationDrawerState.Collapsed,
         screenSize: ScreenSize.Desktop,
         source: StateChangeSource.UserAction
@@ -39,7 +39,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should respect user intent on tablet', () => {
-      const result = NavigationStateCalculator.calculateState({
+      const result = SidebarStateCalculator.calculateState({
         userIntent: NavigationDrawerState.Expanded,
         screenSize: ScreenSize.Tablet,
         source: StateChangeSource.UserAction
@@ -53,7 +53,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should default to expanded when no user intent', () => {
-      const result = NavigationStateCalculator.calculateState({
+      const result = SidebarStateCalculator.calculateState({
         userIntent: null,
         screenSize: ScreenSize.Desktop,
         source: StateChangeSource.SystemInitialization
@@ -67,7 +67,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should not persist non-user actions', () => {
-      const result = NavigationStateCalculator.calculateState({
+      const result = SidebarStateCalculator.calculateState({
         userIntent: NavigationDrawerState.Expanded,
         screenSize: ScreenSize.Desktop,
         source: StateChangeSource.ResponsiveResize
@@ -79,18 +79,18 @@ describe('NavigationStateCalculator', () => {
 
   describe('detectScreenSize', () => {
     it('should detect mobile screen size', () => {
-      expect(NavigationStateCalculator.detectScreenSize(400)).toBe(ScreenSize.Mobile)
-      expect(NavigationStateCalculator.detectScreenSize(767)).toBe(ScreenSize.Mobile)
+      expect(SidebarStateCalculator.detectScreenSize(400)).toBe(ScreenSize.Mobile)
+      expect(SidebarStateCalculator.detectScreenSize(767)).toBe(ScreenSize.Mobile)
     })
 
     it('should detect tablet screen size', () => {
-      expect(NavigationStateCalculator.detectScreenSize(768)).toBe(ScreenSize.Tablet)
-      expect(NavigationStateCalculator.detectScreenSize(1023)).toBe(ScreenSize.Tablet)
+      expect(SidebarStateCalculator.detectScreenSize(768)).toBe(ScreenSize.Tablet)
+      expect(SidebarStateCalculator.detectScreenSize(1023)).toBe(ScreenSize.Tablet)
     })
 
     it('should detect desktop screen size', () => {
-      expect(NavigationStateCalculator.detectScreenSize(1024)).toBe(ScreenSize.Desktop)
-      expect(NavigationStateCalculator.detectScreenSize(1920)).toBe(ScreenSize.Desktop)
+      expect(SidebarStateCalculator.detectScreenSize(1024)).toBe(ScreenSize.Desktop)
+      expect(SidebarStateCalculator.detectScreenSize(1920)).toBe(ScreenSize.Desktop)
     })
   })
 
@@ -104,7 +104,7 @@ describe('NavigationStateCalculator', () => {
     }
 
     it('should trigger change when display state changes', () => {
-      const result = NavigationStateCalculator.shouldTriggerStateChange(
+      const result = SidebarStateCalculator.shouldTriggerStateChange(
         mockCurrentState,
         {
           userIntent: NavigationDrawerState.Expanded,
@@ -117,7 +117,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should trigger change when responsive override changes', () => {
-      const result = NavigationStateCalculator.shouldTriggerStateChange(
+      const result = SidebarStateCalculator.shouldTriggerStateChange(
         mockCurrentState,
         {
           userIntent: NavigationDrawerState.Expanded,
@@ -130,7 +130,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should trigger change when screen size changes', () => {
-      const result = NavigationStateCalculator.shouldTriggerStateChange(
+      const result = SidebarStateCalculator.shouldTriggerStateChange(
         mockCurrentState,
         {
           userIntent: NavigationDrawerState.Expanded,
@@ -143,7 +143,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should not trigger change when nothing changes', () => {
-      const result = NavigationStateCalculator.shouldTriggerStateChange(
+      const result = SidebarStateCalculator.shouldTriggerStateChange(
         mockCurrentState,
         {
           userIntent: NavigationDrawerState.Expanded,
@@ -158,7 +158,7 @@ describe('NavigationStateCalculator', () => {
 
   describe('createInitialState', () => {
     it('should create initial state with saved intent', () => {
-      const result = NavigationStateCalculator.createInitialState(
+      const result = SidebarStateCalculator.createInitialState(
         NavigationDrawerState.Collapsed,
         ScreenSize.Desktop
       )
@@ -173,7 +173,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should create initial state with default intent when none saved', () => {
-      const result = NavigationStateCalculator.createInitialState(
+      const result = SidebarStateCalculator.createInitialState(
         null,
         ScreenSize.Desktop
       )
@@ -188,7 +188,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should create initial state with mobile override', () => {
-      const result = NavigationStateCalculator.createInitialState(
+      const result = SidebarStateCalculator.createInitialState(
         NavigationDrawerState.Expanded,
         ScreenSize.Mobile
       )
@@ -213,7 +213,7 @@ describe('NavigationStateCalculator', () => {
     }
 
     it('should update user intent and state', () => {
-      const result = NavigationStateCalculator.handleUserAction(
+      const result = SidebarStateCalculator.handleUserAction(
         mockCurrentState,
         NavigationDrawerState.Collapsed
       )
@@ -238,7 +238,7 @@ describe('NavigationStateCalculator', () => {
     }
 
     it('should update screen size and apply mobile override', () => {
-      const result = NavigationStateCalculator.handleScreenSizeChange(
+      const result = SidebarStateCalculator.handleScreenSizeChange(
         mockCurrentState,
         ScreenSize.Mobile
       )
@@ -260,7 +260,7 @@ describe('NavigationStateCalculator', () => {
         screenSize: ScreenSize.Mobile
       }
 
-      const result = NavigationStateCalculator.handleScreenSizeChange(
+      const result = SidebarStateCalculator.handleScreenSizeChange(
         mobileState,
         ScreenSize.Desktop
       )
@@ -285,7 +285,7 @@ describe('NavigationStateCalculator', () => {
     }
 
     it('should reset state on logout', () => {
-      const result = NavigationStateCalculator.handleAuthChange(
+      const result = SidebarStateCalculator.handleAuthChange(
         mockCurrentState,
         false
       )
@@ -300,7 +300,7 @@ describe('NavigationStateCalculator', () => {
     })
 
     it('should not change state when still authenticated', () => {
-      const result = NavigationStateCalculator.handleAuthChange(
+      const result = SidebarStateCalculator.handleAuthChange(
         mockCurrentState,
         true
       )
@@ -311,7 +311,7 @@ describe('NavigationStateCalculator', () => {
 
   describe('getBreakpoints', () => {
     it('should return correct breakpoint values with enum keys', () => {
-      const breakpoints = NavigationStateCalculator.getBreakpoints()
+      const breakpoints = SidebarStateCalculator.getBreakpoints()
 
       expect(breakpoints).toEqual({
         mobile: 768,
