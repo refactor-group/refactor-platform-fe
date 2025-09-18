@@ -9,7 +9,7 @@ import {
   CSSProperties,
 } from "react";
 import {
-  NavigationDrawerState,
+  SidebarState,
   StateChangeSource,
   SidebarProviderProps as BaseSidebarProviderProps,
 } from "@/types/sidebar";
@@ -23,8 +23,8 @@ export interface SidebarProviderProps extends BaseSidebarProviderProps {
 
 // Context type for sidebar state
 export type SidebarContextProps = {
-  readonly state: NavigationDrawerState;
-  readonly userIntent: NavigationDrawerState;
+  readonly state: SidebarState;
+  readonly userIntent: SidebarState;
   readonly isResponsiveOverride: boolean;
   readonly open: boolean;
   setOpen: (open: boolean) => void;
@@ -63,13 +63,13 @@ export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
   ) => {
     const sidebarState = useSidebarState();
 
-    const open = sidebarState.state === NavigationDrawerState.Expanded;
+    const open = sidebarState.state === SidebarState.Expanded;
     const setOpen = useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value;
         const newState = openState
-          ? NavigationDrawerState.Expanded
-          : NavigationDrawerState.Collapsed;
+          ? SidebarState.Expanded
+          : SidebarState.Collapsed;
         sidebarState.setUserIntent(newState, StateChangeSource.UserAction);
         onStateChange?.(newState, StateChangeSource.UserAction);
       },

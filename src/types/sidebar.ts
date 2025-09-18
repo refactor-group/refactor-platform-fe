@@ -1,6 +1,6 @@
-// Core navigation drawer state management types
+// Core sidebar state management types
 
-export enum NavigationDrawerState {
+export enum SidebarState {
   Expanded = 'expanded',
   Collapsed = 'collapsed'
 }
@@ -48,8 +48,8 @@ export enum SidebarMenuVariant {
 
 // Core state interfaces
 export interface NavigationState {
-  userIntent: NavigationDrawerState
-  currentState: NavigationDrawerState
+  userIntent: SidebarState
+  currentState: SidebarState
   isResponsiveOverride: boolean
   screenSize: ScreenSize
   lastChangeSource: StateChangeSource
@@ -59,15 +59,15 @@ export interface NavigationState {
 // Hook and component interfaces with enhanced type safety
 export interface NavigationDrawerContextProps {
   // State properties should be readonly
-  readonly state: NavigationDrawerState
-  readonly userIntent: NavigationDrawerState
+  readonly state: SidebarState
+  readonly userIntent: SidebarState
   readonly isResponsiveOverride: boolean
   readonly screenSize: ScreenSize
   readonly isMobile: boolean
   readonly openMobile: boolean
 
   // Actions remain mutable
-  setUserIntent: (intent: NavigationDrawerState, source: StateChangeSource) => void
+  setUserIntent: (intent: SidebarState, source: StateChangeSource) => void
   toggle: (source: StateChangeSource) => void
   expand: (source: StateChangeSource) => void
   collapse: (source: StateChangeSource) => void
@@ -79,9 +79,9 @@ export interface NavigationDrawerContextProps {
 
 // Enhanced provider props
 export interface SidebarProviderProps extends React.ComponentProps<"div"> {
-  defaultState?: NavigationDrawerState
-  state?: NavigationDrawerState
-  onStateChange?: (state: NavigationDrawerState, source: StateChangeSource) => void
+  defaultState?: SidebarState
+  state?: SidebarState
+  onStateChange?: (state: SidebarState, source: StateChangeSource) => void
   persistIntent?: boolean
   responsiveBreakpoints?: {
     mobile: number
@@ -91,13 +91,13 @@ export interface SidebarProviderProps extends React.ComponentProps<"div"> {
 
 // Storage and calculation interfaces
 export interface StateCalculationInput {
-  userIntent: NavigationDrawerState | null
+  userIntent: SidebarState | null
   screenSize: ScreenSize
   source: StateChangeSource
 }
 
 export interface StateCalculationResult {
-  currentState: NavigationDrawerState
+  currentState: SidebarState
   isResponsiveOverride: boolean
   shouldPersist: boolean
 }

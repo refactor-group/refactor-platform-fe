@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { SidebarStorage } from '../sidebar-storage'
-import { NavigationDrawerState, StateChangeSource } from '@/types/sidebar'
+import { SidebarState, StateChangeSource } from '@/types/sidebar'
 
 // Mock sessionStorage
 const mockSessionStorage = {
@@ -22,7 +22,7 @@ describe('SidebarStorage', () => {
   describe('setUserIntent', () => {
     it('should store user intent when source is UserAction', () => {
       const result = SidebarStorage.setUserIntent(
-        NavigationDrawerState.Collapsed,
+        SidebarState.Collapsed,
         StateChangeSource.UserAction
       )
 
@@ -35,7 +35,7 @@ describe('SidebarStorage', () => {
 
     it('should not store when source is not UserAction', () => {
       const result = SidebarStorage.setUserIntent(
-        NavigationDrawerState.Collapsed,
+        SidebarState.Collapsed,
         StateChangeSource.ResponsiveResize
       )
 
@@ -49,7 +49,7 @@ describe('SidebarStorage', () => {
       })
 
       const result = SidebarStorage.setUserIntent(
-        NavigationDrawerState.Collapsed,
+        SidebarState.Collapsed,
         StateChangeSource.UserAction
       )
 
@@ -67,7 +67,7 @@ describe('SidebarStorage', () => {
 
       const result = SidebarStorage.getUserIntent()
 
-      expect(result).toBe(NavigationDrawerState.Expanded)
+      expect(result).toBe(SidebarState.Expanded)
       expect(mockSessionStorage.getItem).toHaveBeenCalledWith('nav_drawer_user_intent')
     })
 

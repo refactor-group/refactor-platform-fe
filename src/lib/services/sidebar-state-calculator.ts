@@ -1,5 +1,5 @@
 import {
-  NavigationDrawerState,
+  SidebarState,
   ScreenSize,
   StateChangeSource,
   StateCalculationInput,
@@ -31,14 +31,14 @@ export namespace SidebarStateCalculator {
     // Rule 1: Mobile always collapses (responsive override)
     if (screenSize === ScreenSize.Mobile) {
       return {
-        currentState: NavigationDrawerState.Collapsed,
+        currentState: SidebarState.Collapsed,
         isResponsiveOverride: true,
         shouldPersist: false
       }
     }
 
     // Rule 2: Desktop/Tablet respects user intent
-    const resolvedIntent = userIntent ?? NavigationDrawerState.Expanded // Default to expanded
+    const resolvedIntent = userIntent ?? SidebarState.Expanded // Default to expanded
 
     return {
       currentState: resolvedIntent,
@@ -82,7 +82,7 @@ export namespace SidebarStateCalculator {
    * Handles migration from legacy cookies and sets sensible defaults
    */
   export function createInitialState(
-    savedUserIntent: NavigationDrawerState | null,
+    savedUserIntent: SidebarState | null,
     currentScreenSize: ScreenSize
   ): NavigationState {
     const result = calculateState({
@@ -92,7 +92,7 @@ export namespace SidebarStateCalculator {
     })
 
     return {
-      userIntent: savedUserIntent ?? NavigationDrawerState.Expanded,
+      userIntent: savedUserIntent ?? SidebarState.Expanded,
       currentState: result.currentState,
       isResponsiveOverride: result.isResponsiveOverride,
       screenSize: currentScreenSize,
@@ -106,7 +106,7 @@ export namespace SidebarStateCalculator {
    */
   export function handleUserAction(
     currentState: NavigationState,
-    newUserIntent: NavigationDrawerState
+    newUserIntent: SidebarState
   ): NavigationState {
     const result = calculateState({
       userIntent: newUserIntent,

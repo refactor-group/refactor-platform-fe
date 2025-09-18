@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  NavigationDrawerState,
+  SidebarState,
   ScreenSize,
   StateChangeSource,
   NavigationState,
@@ -87,7 +87,7 @@ export function useSidebarState(): NavigationDrawerContextProps {
   }, [isMobile, navigationState.screenSize])
 
   // Actions
-  const setUserIntent = useCallback((intent: NavigationDrawerState, source: StateChangeSource) => {
+  const setUserIntent = useCallback((intent: SidebarState, source: StateChangeSource) => {
     setNavigationState(prevState => {
       const newState = SidebarStateCalculator.handleUserAction(prevState, intent)
 
@@ -102,19 +102,19 @@ export function useSidebarState(): NavigationDrawerContextProps {
   }, [])
 
   const toggle = useCallback((source: StateChangeSource) => {
-    const newIntent = navigationState.userIntent === NavigationDrawerState.Expanded
-      ? NavigationDrawerState.Collapsed
-      : NavigationDrawerState.Expanded
+    const newIntent = navigationState.userIntent === SidebarState.Expanded
+      ? SidebarState.Collapsed
+      : SidebarState.Expanded
 
     setUserIntent(newIntent, source)
   }, [navigationState.userIntent, setUserIntent])
 
   const expand = useCallback((source: StateChangeSource) => {
-    setUserIntent(NavigationDrawerState.Expanded, source)
+    setUserIntent(SidebarState.Expanded, source)
   }, [setUserIntent])
 
   const collapse = useCallback((source: StateChangeSource) => {
-    setUserIntent(NavigationDrawerState.Collapsed, source)
+    setUserIntent(SidebarState.Collapsed, source)
   }, [setUserIntent])
 
   const handleScreenSizeChange = useCallback((newSize: ScreenSize) => {

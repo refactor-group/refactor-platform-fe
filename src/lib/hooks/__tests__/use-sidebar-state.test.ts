@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useSidebarState } from '../use-sidebar-state'
-import { NavigationDrawerState, StateChangeSource, ScreenSize } from '@/types/sidebar'
+import { SidebarState, StateChangeSource, ScreenSize } from '@/types/sidebar'
 import { SidebarStorage } from '@/lib/services/sidebar-storage'
 import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
 
@@ -49,8 +49,8 @@ describe('useSidebarState', () => {
   it('should initialize with default expanded state on desktop', () => {
     const { result } = renderHook(() => useSidebarState())
 
-    expect(result.current.state).toBe(NavigationDrawerState.Expanded)
-    expect(result.current.userIntent).toBe(NavigationDrawerState.Expanded)
+    expect(result.current.state).toBe(SidebarState.Expanded)
+    expect(result.current.userIntent).toBe(SidebarState.Expanded)
     expect(result.current.isResponsiveOverride).toBe(false)
     expect(result.current.screenSize).toBe(ScreenSize.Desktop)
   })
@@ -81,8 +81,8 @@ describe('useSidebarState', () => {
       result.current.toggle(StateChangeSource.UserAction)
     })
 
-    expect(result.current.state).toBe(NavigationDrawerState.Collapsed)
-    expect(result.current.userIntent).toBe(NavigationDrawerState.Collapsed)
+    expect(result.current.state).toBe(SidebarState.Collapsed)
+    expect(result.current.userIntent).toBe(SidebarState.Collapsed)
   })
 
   it('should expand state correctly', () => {
@@ -98,8 +98,8 @@ describe('useSidebarState', () => {
       result.current.expand(StateChangeSource.UserAction)
     })
 
-    expect(result.current.state).toBe(NavigationDrawerState.Expanded)
-    expect(result.current.userIntent).toBe(NavigationDrawerState.Expanded)
+    expect(result.current.state).toBe(SidebarState.Expanded)
+    expect(result.current.userIntent).toBe(SidebarState.Expanded)
   })
 
   it('should collapse state correctly', () => {
@@ -109,8 +109,8 @@ describe('useSidebarState', () => {
       result.current.collapse(StateChangeSource.UserAction)
     })
 
-    expect(result.current.state).toBe(NavigationDrawerState.Collapsed)
-    expect(result.current.userIntent).toBe(NavigationDrawerState.Collapsed)
+    expect(result.current.state).toBe(SidebarState.Collapsed)
+    expect(result.current.userIntent).toBe(SidebarState.Collapsed)
   })
 
   it('should handle mobile state correctly', () => {
@@ -149,8 +149,8 @@ describe('useSidebarState', () => {
       result.current.handleAuthenticationChange(false)
     })
 
-    expect(result.current.state).toBe(NavigationDrawerState.Expanded)
-    expect(result.current.userIntent).toBe(NavigationDrawerState.Expanded)
+    expect(result.current.state).toBe(SidebarState.Expanded)
+    expect(result.current.userIntent).toBe(SidebarState.Expanded)
   })
 
   it('should register logout cleanup function on mount', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { SidebarStateCalculator } from '../sidebar-state-calculator'
 import {
-  NavigationDrawerState,
+  SidebarState,
   ScreenSize,
   StateChangeSource,
   NavigationState,
@@ -12,13 +12,13 @@ describe('SidebarStateCalculator', () => {
   describe('calculateState', () => {
     it('should collapse on mobile regardless of user intent', () => {
       const result = SidebarStateCalculator.calculateState({
-        userIntent: NavigationDrawerState.Expanded,
+        userIntent: SidebarState.Expanded,
         screenSize: ScreenSize.Mobile,
         source: StateChangeSource.UserAction
       })
 
       expect(result).toEqual({
-        currentState: NavigationDrawerState.Collapsed,
+        currentState: SidebarState.Collapsed,
         isResponsiveOverride: true,
         shouldPersist: false
       })
@@ -26,13 +26,13 @@ describe('SidebarStateCalculator', () => {
 
     it('should respect user intent on desktop', () => {
       const result = SidebarStateCalculator.calculateState({
-        userIntent: NavigationDrawerState.Collapsed,
+        userIntent: SidebarState.Collapsed,
         screenSize: ScreenSize.Desktop,
         source: StateChangeSource.UserAction
       })
 
       expect(result).toEqual({
-        currentState: NavigationDrawerState.Collapsed,
+        currentState: SidebarState.Collapsed,
         isResponsiveOverride: false,
         shouldPersist: true
       })
@@ -40,13 +40,13 @@ describe('SidebarStateCalculator', () => {
 
     it('should respect user intent on tablet', () => {
       const result = SidebarStateCalculator.calculateState({
-        userIntent: NavigationDrawerState.Expanded,
+        userIntent: SidebarState.Expanded,
         screenSize: ScreenSize.Tablet,
         source: StateChangeSource.UserAction
       })
 
       expect(result).toEqual({
-        currentState: NavigationDrawerState.Expanded,
+        currentState: SidebarState.Expanded,
         isResponsiveOverride: false,
         shouldPersist: true
       })
@@ -60,7 +60,7 @@ describe('SidebarStateCalculator', () => {
       })
 
       expect(result).toEqual({
-        currentState: NavigationDrawerState.Expanded,
+        currentState: SidebarState.Expanded,
         isResponsiveOverride: false,
         shouldPersist: false
       })
@@ -68,7 +68,7 @@ describe('SidebarStateCalculator', () => {
 
     it('should not persist non-user actions', () => {
       const result = SidebarStateCalculator.calculateState({
-        userIntent: NavigationDrawerState.Expanded,
+        userIntent: SidebarState.Expanded,
         screenSize: ScreenSize.Desktop,
         source: StateChangeSource.ResponsiveResize
       })
@@ -96,8 +96,8 @@ describe('SidebarStateCalculator', () => {
 
   describe('shouldTriggerStateChange', () => {
     const mockCurrentState: NavigationState = {
-      userIntent: NavigationDrawerState.Expanded,
-      currentState: NavigationDrawerState.Expanded,
+      userIntent: SidebarState.Expanded,
+      currentState: SidebarState.Expanded,
       isResponsiveOverride: false,
       screenSize: ScreenSize.Desktop,
       lastChangeSource: StateChangeSource.UserAction
@@ -107,7 +107,7 @@ describe('SidebarStateCalculator', () => {
       const result = SidebarStateCalculator.shouldTriggerStateChange(
         mockCurrentState,
         {
-          userIntent: NavigationDrawerState.Expanded,
+          userIntent: SidebarState.Expanded,
           screenSize: ScreenSize.Mobile,
           source: StateChangeSource.ResponsiveResize
         }
@@ -120,7 +120,7 @@ describe('SidebarStateCalculator', () => {
       const result = SidebarStateCalculator.shouldTriggerStateChange(
         mockCurrentState,
         {
-          userIntent: NavigationDrawerState.Expanded,
+          userIntent: SidebarState.Expanded,
           screenSize: ScreenSize.Mobile,
           source: StateChangeSource.ResponsiveResize
         }
@@ -133,7 +133,7 @@ describe('SidebarStateCalculator', () => {
       const result = SidebarStateCalculator.shouldTriggerStateChange(
         mockCurrentState,
         {
-          userIntent: NavigationDrawerState.Expanded,
+          userIntent: SidebarState.Expanded,
           screenSize: ScreenSize.Tablet,
           source: StateChangeSource.ResponsiveResize
         }
@@ -146,7 +146,7 @@ describe('SidebarStateCalculator', () => {
       const result = SidebarStateCalculator.shouldTriggerStateChange(
         mockCurrentState,
         {
-          userIntent: NavigationDrawerState.Expanded,
+          userIntent: SidebarState.Expanded,
           screenSize: ScreenSize.Desktop,
           source: StateChangeSource.ResponsiveResize
         }
@@ -159,13 +159,13 @@ describe('SidebarStateCalculator', () => {
   describe('createInitialState', () => {
     it('should create initial state with saved intent', () => {
       const result = SidebarStateCalculator.createInitialState(
-        NavigationDrawerState.Collapsed,
+        SidebarState.Collapsed,
         ScreenSize.Desktop
       )
 
       expect(result).toEqual({
-        userIntent: NavigationDrawerState.Collapsed,
-        currentState: NavigationDrawerState.Collapsed,
+        userIntent: SidebarState.Collapsed,
+        currentState: SidebarState.Collapsed,
         isResponsiveOverride: false,
         screenSize: ScreenSize.Desktop,
         lastChangeSource: StateChangeSource.SystemInitialization
@@ -179,8 +179,8 @@ describe('SidebarStateCalculator', () => {
       )
 
       expect(result).toEqual({
-        userIntent: NavigationDrawerState.Expanded,
-        currentState: NavigationDrawerState.Expanded,
+        userIntent: SidebarState.Expanded,
+        currentState: SidebarState.Expanded,
         isResponsiveOverride: false,
         screenSize: ScreenSize.Desktop,
         lastChangeSource: StateChangeSource.SystemInitialization
@@ -189,13 +189,13 @@ describe('SidebarStateCalculator', () => {
 
     it('should create initial state with mobile override', () => {
       const result = SidebarStateCalculator.createInitialState(
-        NavigationDrawerState.Expanded,
+        SidebarState.Expanded,
         ScreenSize.Mobile
       )
 
       expect(result).toEqual({
-        userIntent: NavigationDrawerState.Expanded,
-        currentState: NavigationDrawerState.Collapsed,
+        userIntent: SidebarState.Expanded,
+        currentState: SidebarState.Collapsed,
         isResponsiveOverride: true,
         screenSize: ScreenSize.Mobile,
         lastChangeSource: StateChangeSource.SystemInitialization
@@ -205,8 +205,8 @@ describe('SidebarStateCalculator', () => {
 
   describe('handleUserAction', () => {
     const mockCurrentState: NavigationState = {
-      userIntent: NavigationDrawerState.Expanded,
-      currentState: NavigationDrawerState.Expanded,
+      userIntent: SidebarState.Expanded,
+      currentState: SidebarState.Expanded,
       isResponsiveOverride: false,
       screenSize: ScreenSize.Desktop,
       lastChangeSource: StateChangeSource.UserAction
@@ -215,13 +215,13 @@ describe('SidebarStateCalculator', () => {
     it('should update user intent and state', () => {
       const result = SidebarStateCalculator.handleUserAction(
         mockCurrentState,
-        NavigationDrawerState.Collapsed
+        SidebarState.Collapsed
       )
 
       expect(result).toEqual({
         ...mockCurrentState,
-        userIntent: NavigationDrawerState.Collapsed,
-        currentState: NavigationDrawerState.Collapsed,
+        userIntent: SidebarState.Collapsed,
+        currentState: SidebarState.Collapsed,
         isResponsiveOverride: false,
         lastChangeSource: StateChangeSource.UserAction
       })
@@ -230,8 +230,8 @@ describe('SidebarStateCalculator', () => {
 
   describe('handleScreenSizeChange', () => {
     const mockCurrentState: NavigationState = {
-      userIntent: NavigationDrawerState.Expanded,
-      currentState: NavigationDrawerState.Expanded,
+      userIntent: SidebarState.Expanded,
+      currentState: SidebarState.Expanded,
       isResponsiveOverride: false,
       screenSize: ScreenSize.Desktop,
       lastChangeSource: StateChangeSource.UserAction
@@ -246,7 +246,7 @@ describe('SidebarStateCalculator', () => {
       expect(result).toEqual({
         ...mockCurrentState,
         screenSize: ScreenSize.Mobile,
-        currentState: NavigationDrawerState.Collapsed,
+        currentState: SidebarState.Collapsed,
         isResponsiveOverride: true,
         lastChangeSource: StateChangeSource.ResponsiveResize
       })
@@ -255,7 +255,7 @@ describe('SidebarStateCalculator', () => {
     it('should restore user intent when returning to desktop', () => {
       const mobileState: NavigationState = {
         ...mockCurrentState,
-        currentState: NavigationDrawerState.Collapsed,
+        currentState: SidebarState.Collapsed,
         isResponsiveOverride: true,
         screenSize: ScreenSize.Mobile
       }
@@ -268,7 +268,7 @@ describe('SidebarStateCalculator', () => {
       expect(result).toEqual({
         ...mobileState,
         screenSize: ScreenSize.Desktop,
-        currentState: NavigationDrawerState.Expanded,
+        currentState: SidebarState.Expanded,
         isResponsiveOverride: false,
         lastChangeSource: StateChangeSource.ResponsiveResize
       })
@@ -277,8 +277,8 @@ describe('SidebarStateCalculator', () => {
 
   describe('handleAuthChange', () => {
     const mockCurrentState: NavigationState = {
-      userIntent: NavigationDrawerState.Collapsed,
-      currentState: NavigationDrawerState.Collapsed,
+      userIntent: SidebarState.Collapsed,
+      currentState: SidebarState.Collapsed,
       isResponsiveOverride: false,
       screenSize: ScreenSize.Desktop,
       lastChangeSource: StateChangeSource.UserAction
@@ -291,8 +291,8 @@ describe('SidebarStateCalculator', () => {
       )
 
       expect(result).toEqual({
-        userIntent: NavigationDrawerState.Expanded,
-        currentState: NavigationDrawerState.Expanded,
+        userIntent: SidebarState.Expanded,
+        currentState: SidebarState.Expanded,
         isResponsiveOverride: false,
         screenSize: ScreenSize.Desktop,
         lastChangeSource: StateChangeSource.SystemInitialization

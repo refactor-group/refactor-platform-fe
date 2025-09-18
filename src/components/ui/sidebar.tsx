@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import {
-  NavigationDrawerState,
+  SidebarState,
   SidebarSide,
   SidebarVariant,
   SidebarCollapsible,
@@ -102,7 +102,7 @@ const Sidebar = forwardRef<HTMLDivElement, SidebarProps>(
         className="group peer hidden text-sidebar-foreground md:block"
         data-state={state}
         data-collapsible={
-          state === NavigationDrawerState.Collapsed ? collapsible : ""
+          state === SidebarState.Collapsed ? collapsible : ""
         }
         data-variant={variant}
         data-side={side}
@@ -462,7 +462,7 @@ const SidebarMenuButton = forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== NavigationDrawerState.Collapsed || isMobile}
+          hidden={state !== SidebarState.Collapsed || isMobile}
           {...tooltip}
         />
       </Tooltip>

@@ -1,5 +1,5 @@
 import {
-  NavigationDrawerState,
+  SidebarState,
   StateChangeSource,
   StorageUnavailableError,
   Result,
@@ -11,14 +11,14 @@ export namespace SidebarStorage {
   const LEGACY_COOKIE_NAME = 'sidebar_state'
 
   // Type predicates for validation
-  const VALID_STATES = Object.values(NavigationDrawerState)
+  const VALID_STATES = Object.values(SidebarState)
 
-  export function isValidState(value: unknown): value is NavigationDrawerState {
+  export function isValidState(value: unknown): value is SidebarState {
     return typeof value === 'string' &&
            (VALID_STATES as readonly string[]).includes(value)
   }
 
-  export function parseStoredState(value: string | null): NavigationDrawerState | null {
+  export function parseStoredState(value: string | null): SidebarState | null {
     if (!value) return null
 
     if (isValidState(value)) {
@@ -34,7 +34,7 @@ export namespace SidebarStorage {
    * Get the user's explicit preference from sessionStorage
    * Returns null if no preference is stored or if stored value is invalid
    */
-  export function getUserIntent(): NavigationDrawerState | null {
+  export function getUserIntent(): SidebarState | null {
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY)
       return parseStoredState(stored)
@@ -52,7 +52,7 @@ export namespace SidebarStorage {
    * @returns Result indicating success or failure with specific error
    */
   export function setUserIntent(
-    intent: NavigationDrawerState,
+    intent: SidebarState,
     source: StateChangeSource
   ): Result<boolean, StorageUnavailableError> {
     // Only persist user-initiated changes
@@ -98,7 +98,7 @@ export namespace SidebarStorage {
    * Migrate existing cookie data to sessionStorage with enum types
    * This ensures a smooth transition for existing users
    */
-  export function migrateLegacyCookieToSessionStorage(): NavigationDrawerState | null {
+  export function migrateLegacyCookieToSessionStorage(): SidebarState | null {
     try {
       // Check if we already have new enum-based storage
       const existing = getUserIntent()
@@ -111,8 +111,8 @@ export namespace SidebarStorage {
       if (legacyValue) {
         // Convert legacy boolean cookie to enum
         const migratedState = legacyValue === 'true'
-          ? NavigationDrawerState.Expanded
-          : NavigationDrawerState.Collapsed
+          ? SidebarState.Expanded
+          : SidebarState.Collapsed
 
         // Clear legacy cookie
         clearLegacyCookie()
