@@ -25,21 +25,37 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state"
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+// Enhanced types and hooks
+import {
+  NavigationDrawerState,
+  SidebarSide,
+  SidebarVariant,
+  SidebarCollapsible,
+  SidebarMenuSize,
+  SidebarMenuVariant,
+  StateChangeSource,
+  SidebarProviderProps
+} from '@/types/navigation-drawer'
+import { useNavigationDrawer } from '@/lib/hooks/use-navigation-drawer'
+
+// Constants
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "" // Disabled - no keyboard shortcut for sidebar
 
 type SidebarContextProps = {
-  state: "expanded" | "collapsed"
+  state: NavigationDrawerState
+  userIntent: NavigationDrawerState
+  isResponsiveOverride: boolean
   open: boolean
   setOpen: (open: boolean) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  expand: () => void
+  collapse: () => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -55,17 +71,15 @@ function useSidebar() {
 
 const SidebarProvider = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> & {
-    defaultOpen?: boolean
-    open?: boolean
-    onOpenChange?: (open: boolean) => void
-  }
+  SidebarProviderProps
 >(
   (
     {
-      defaultOpen = true,
-      open: openProp,
-      onOpenChange: setOpenProp,
+      defaultState,
+      state: stateProp,
+      onStateChange,
+      persistIntent = true,
+      responsiveBreakpoints,
       className,
       style,
       children,
@@ -73,34 +87,33 @@ const SidebarProvider = React.forwardRef<
     },
     ref
   ) => {
-    const isMobile = useIsMobile()
-    const [openMobile, setOpenMobile] = React.useState(false)
+    // Use our enhanced navigation drawer hook
+    const navigationDrawer = useNavigationDrawer()
 
-    // This is the internal state of the sidebar.
-    // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(defaultOpen)
-    const open = openProp ?? _open
-    const setOpen = React.useCallback(
-      (value: boolean | ((value: boolean) => boolean)) => {
-        const openState = typeof value === "function" ? value(open) : value
-        if (setOpenProp) {
-          setOpenProp(openState)
-        } else {
-          _setOpen(openState)
-        }
+    // Convert enum state to boolean for legacy compatibility
+    const open = navigationDrawer.state === NavigationDrawerState.Expanded
+    const setOpen = React.useCallback((value: boolean | ((value: boolean) => boolean)) => {
+      const openState = typeof value === "function" ? value(open) : value
+      const newState = openState ? NavigationDrawerState.Expanded : NavigationDrawerState.Collapsed
+      navigationDrawer.setUserIntent(newState, StateChangeSource.UserAction)
+      onStateChange?.(newState, StateChangeSource.UserAction)
+    }, [open, navigationDrawer, onStateChange])
 
-        // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
-      },
-      [setOpenProp, open]
-    )
-
-    // Helper to toggle the sidebar.
+    // Enhanced toggle that uses our new system
     const toggleSidebar = React.useCallback(() => {
-      return isMobile
-        ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open)
-    }, [isMobile, setOpen, setOpenMobile])
+      return navigationDrawer.isMobile
+        ? navigationDrawer.setOpenMobile(!navigationDrawer.openMobile)
+        : navigationDrawer.toggle(StateChangeSource.UserAction)
+    }, [navigationDrawer])
+
+    // Expand/collapse helpers
+    const expand = React.useCallback(() => {
+      navigationDrawer.expand(StateChangeSource.UserAction)
+    }, [navigationDrawer])
+
+    const collapse = React.useCallback(() => {
+      navigationDrawer.collapse(StateChangeSource.UserAction)
+    }, [navigationDrawer])
 
     // Keyboard shortcut for sidebar toggle is disabled to avoid conflicts with editor shortcuts
     // Previously used Ctrl/Cmd+B which conflicts with TipTap bold formatting
@@ -108,7 +121,7 @@ const SidebarProvider = React.forwardRef<
       const handleKeyDown = (event: KeyboardEvent) => {
         // No keyboard shortcut assigned - sidebar can only be toggled via UI buttons
         if (
-          SIDEBAR_KEYBOARD_SHORTCUT && 
+          SIDEBAR_KEYBOARD_SHORTCUT &&
           event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
           (event.metaKey || event.ctrlKey)
         ) {
@@ -121,21 +134,21 @@ const SidebarProvider = React.forwardRef<
       return () => window.removeEventListener("keydown", handleKeyDown)
     }, [toggleSidebar])
 
-    // We add a state so that we can do data-state="expanded" or "collapsed".
-    // This makes it easier to style the sidebar with Tailwind classes.
-    const state = open ? "expanded" : "collapsed"
-
     const contextValue = React.useMemo<SidebarContextProps>(
       () => ({
-        state,
+        state: navigationDrawer.state,
+        userIntent: navigationDrawer.userIntent,
+        isResponsiveOverride: navigationDrawer.isResponsiveOverride,
         open,
         setOpen,
-        isMobile,
-        openMobile,
-        setOpenMobile,
+        openMobile: navigationDrawer.openMobile,
+        setOpenMobile: navigationDrawer.setOpenMobile,
+        isMobile: navigationDrawer.isMobile,
         toggleSidebar,
+        expand,
+        collapse,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+      [navigationDrawer, open, setOpen, toggleSidebar, expand, collapse]
     )
 
     return (
@@ -168,16 +181,16 @@ SidebarProvider.displayName = "SidebarProvider"
 const Sidebar = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
-    side?: "left" | "right"
-    variant?: "sidebar" | "floating" | "inset"
-    collapsible?: "offcanvas" | "icon" | "none"
+    side?: SidebarSide
+    variant?: SidebarVariant
+    collapsible?: SidebarCollapsible
   }
 >(
   (
     {
-      side = "left",
-      variant = "sidebar",
-      collapsible = "offcanvas",
+      side = SidebarSide.Left,
+      variant = SidebarVariant.Sidebar,
+      collapsible = SidebarCollapsible.Offcanvas,
       className,
       children,
       ...props
@@ -186,7 +199,7 @@ const Sidebar = React.forwardRef<
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
-    if (collapsible === "none") {
+    if (collapsible === SidebarCollapsible.None) {
       return (
         <div
           className={cn(
@@ -230,7 +243,7 @@ const Sidebar = React.forwardRef<
         ref={ref}
         className="group peer hidden text-sidebar-foreground md:block"
         data-state={state}
-        data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-collapsible={state === NavigationDrawerState.Collapsed ? collapsible : ""}
         data-variant={variant}
         data-side={side}
       >
@@ -529,19 +542,19 @@ const sidebarMenuButtonVariants = cva(
   {
     variants: {
       variant: {
-        default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        outline:
+        [SidebarMenuVariant.Default]: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        [SidebarMenuVariant.Outline]:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
       },
       size: {
-        default: "h-8 text-sm",
-        sm: "h-7 text-xs",
-        lg: "h-12 text-sm group-data-[collapsible=icon]:!p-0",
+        [SidebarMenuSize.Default]: "h-8 text-sm",
+        [SidebarMenuSize.Small]: "h-7 text-xs",
+        [SidebarMenuSize.Large]: "h-12 text-sm group-data-[collapsible=icon]:!p-0",
       },
     },
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: SidebarMenuVariant.Default,
+      size: SidebarMenuSize.Default,
     },
   }
 )
@@ -558,8 +571,8 @@ const SidebarMenuButton = React.forwardRef<
     {
       asChild = false,
       isActive = false,
-      variant = "default",
-      size = "default",
+      variant = SidebarMenuVariant.Default,
+      size = SidebarMenuSize.Default,
       tooltip,
       className,
       ...props
@@ -596,7 +609,7 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          hidden={state !== NavigationDrawerState.Collapsed || isMobile}
           {...tooltip}
         />
       </Tooltip>
