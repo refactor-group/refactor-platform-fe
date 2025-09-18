@@ -77,21 +77,16 @@ export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
       return navigationDrawer.isMobile
         ? navigationDrawer.setOpenMobile(!navigationDrawer.openMobile)
         : navigationDrawer.toggle(StateChangeSource.UserAction);
-    }, [
-      navigationDrawer.isMobile,
-      navigationDrawer.setOpenMobile,
-      navigationDrawer.toggle,
-      navigationDrawer.openMobile,
-    ]);
+    }, [navigationDrawer]);
 
     // Expand/collapse helpers
     const expand = useCallback(() => {
       navigationDrawer.expand(StateChangeSource.UserAction);
-    }, [navigationDrawer.expand]);
+    }, [navigationDrawer]);
 
     const collapse = useCallback(() => {
       navigationDrawer.collapse(StateChangeSource.UserAction);
-    }, [navigationDrawer.collapse]);
+    }, [navigationDrawer]);
 
     const contextValue: SidebarContextProps = {
       state: navigationDrawer.state,

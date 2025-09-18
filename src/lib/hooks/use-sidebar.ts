@@ -35,7 +35,7 @@ export const useSidebar = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [context.toggleSidebar]);
+  }, [context]);
 
   return {
     ...context,
