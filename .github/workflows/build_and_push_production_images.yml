@@ -25,13 +25,14 @@ jobs:
           node-version: 21.x           # Using Node.js 21.x as in the regular CI workflow
           cache: 'npm'                 # Enable npm caching for faster builds
 
-      # 🎯 Next.js build cache (shared key for cross-job efficiency)
+      # 🎯 Next.js build cache (production scope to prevent conflicts)
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-prod-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
           restore-keys: |
+            ${{ runner.os }}-nextjs-prod-${{ hashFiles('**/package-lock.json') }}-
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
       # 🎯 Playwright browser cache
