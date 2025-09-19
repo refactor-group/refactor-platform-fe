@@ -14,27 +14,68 @@ env:
 
 jobs:
   build_test_run:
+    name: Build & Test Frontend
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4      # Checkout the repository code
+
       - name: Set up Node.js
         uses: actions/setup-node@v3    # Set up Node.js environment
         with:
           node-version: 21.x           # Using Node.js 21.x as in the regular CI workflow
           cache: 'npm'                 # Enable npm caching for faster builds
 
+      # 🎯 Production-specific caching
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-prod-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-prod-
+            ${{ runner.os }}-node-modules-test-  # Fallback to test cache
+            ${{ runner.os }}-node-modules-lint-  # Fallback to lint cache
+            ${{ runner.os }}-node-modules-
+
+      # 🎯 Next.js build cache for production
+      - name: Cache Next.js build
+        uses: actions/cache@v3
+        with:
+          path: |
+            .next/cache
+            .next/standalone
+            .next/static
+          key: ${{ runner.os }}-nextjs-prod-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-prod-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-nextjs-prod-
+            ${{ runner.os }}-nextjs-
+
+      # 🎯 Playwright browser cache
+      - name: Cache Playwright browsers
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-prod-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-prod-
+            ${{ runner.os }}-playwright-
+
       - name: Install dependencies
         run: npm run ci                 # Clean Install of dependencies
       - name: Run build
         run: npm run build --if-present # Build the Next.js application
-      
-      # TODO Uncomment when tests are implemented
-      # - name: Run tests
-      #   run: npm test                # Run tests when they are implemented
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Run unit tests
+        run: npm run test:run
+      - name: Run E2E tests
+        run: npm run test:e2e
 
   build_and_push_docker:
+    name: Build & Push Frontend Image
     runs-on: ubuntu-24.04
-    needs: build_test_run
+    needs: build_test_run  # 🎯 Quality gate - only run after tests pass
     permissions:
       contents: read                   # Read repository contents
       packages: write                  # Write to GitHub Packages
@@ -43,7 +84,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4      # Checkout code for the Docker build
-
 
       - name: Docker login
         uses: docker/login-action@v2   # Log in to GitHub Container Registry
@@ -86,11 +126,18 @@ jobs:
             NEXT_PUBLIC_BACKEND_SERVICE_PORT=${{ vars.BACKEND_SERVICE_PORT }}
             NEXT_PUBLIC_BACKEND_SERVICE_API_PATH=${{ vars.BACKEND_SERVICE_API_PATH }}
             NEXT_PUBLIC_BACKEND_API_VERSION=${{ vars.BACKEND_API_VERSION }}
+            NEXT_PUBLIC_TIPTAP_APP_ID=${{ vars.TIPTAP_APP_ID }}
             FRONTEND_SERVICE_PORT=${{ vars.FRONTEND_SERVICE_PORT }}
             FRONTEND_SERVICE_INTERFACE=${{ vars.FRONTEND_SERVICE_INTERFACE }}
           tags: ${{ steps.tags.outputs.frontend_tags }}  # Use "stable" tag from previous step
-          cache-from: type=gha         # Use GitHub Actions cache
-          cache-to: type=gha,mode=max  # Cache for future builds
+          cache-from: type=gha,scope=frontend-prod       # Use GitHub Actions cache with production scope
+          cache-to: type=gha,mode=max,scope=frontend-prod # Cache for future builds with production scope
+          labels: |                    # Enhanced OCI labels
+            org.opencontainers.image.title=Refactor Platform Frontend
+            org.opencontainers.image.description=Next.js frontend for refactor coaching platform
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=stable
 
       - name: Show Docker Build Cache (After)
         run: |                         # Display cache info after build
@@ -119,9 +166,13 @@ jobs:
 
       - name: Print Usage Instructions
         run: |                         # Print usage instructions
-          echo "Frontend Image Pushed to ghcr.io as STABLE:"
+          echo "🎉 Build, Test & Push completed successfully!"
+          echo ""
+          echo "📦 Frontend Image Pushed to ghcr.io as STABLE:"
           echo "  docker pull ${{ steps.tags.outputs.frontend_image_name }}:stable"
-          echo "Run it locally:"
+          echo ""
+          echo "🚀 Run it locally:"
           echo "  docker run --rm --env-file .env -p 3000:3000 ${{ steps.tags.outputs.frontend_image_name }}:stable"
-          echo "Verify signature:"
+          echo ""
+          echo "🔐 Verify signature:"
           echo "  cosign verify ${{ steps.tags.outputs.frontend_image_name }}:stable"
