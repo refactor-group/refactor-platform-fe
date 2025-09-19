@@ -46,7 +46,7 @@ jobs:
             ${{ runner.os }}-playwright-  # Fallback to any playwright cache
 
       - name: Install dependencies
-        run: npm run ci                 # Clean Install of dependencies
+        run: npm ci                     # Clean Install of dependencies
       - name: Run build
         run: npm run build --if-present # Build the Next.js application
       - name: Install Playwright browsers
