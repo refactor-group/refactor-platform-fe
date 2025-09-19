@@ -44,10 +44,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4      # Checkout code for the Docker build
 
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v2  # Set up QEMU for multi-architecture builds
-        with:
-          platforms: linux/amd64,linux/arm64  # Build for both Intel/AMD and ARM architectures
 
       - name: Docker login
         uses: docker/login-action@v2   # Log in to GitHub Container Registry
@@ -80,7 +76,7 @@ jobs:
           context: .                   # Build context is repository root
           file: ./Dockerfile           # Use the Dockerfile at repository root
           target: runner               # Use the runner stage from the Dockerfile
-          platforms: linux/amd64,linux/arm64  # Multi-architecture build
+          platforms: linux/amd64      # AMD64 architecture build
           push: true                   # Push image to registry
           provenance: true             # Enable provenance metadata
           sbom: true                   # Generate Software Bill of Materials
