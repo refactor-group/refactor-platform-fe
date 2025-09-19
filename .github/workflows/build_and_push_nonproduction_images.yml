@@ -33,24 +33,16 @@ jobs:
           node-version: 21.x
           cache: 'npm'
 
-      # 🎯 Advanced dependency caching
-      - name: Cache node_modules
-        uses: actions/cache@v3
+      # 🎯 Official Next.js caching strategy
+      - name: Cache dependencies and Next.js build
+        uses: actions/cache@v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-lint-${{ hashFiles('package-lock.json') }}
+          path: |
+            ~/.npm
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-lint-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-node-modules-lint-
-            ${{ runner.os }}-node-modules-
-
-      # 🎯 Next.js build cache for lint performance
-      - name: Cache Next.js lint
-        uses: actions/cache@v3
-        with:
-          path: .next
-          key: ${{ runner.os }}-nextjs-lint-${{ hashFiles('src/**/*.js', 'src/**/*.ts', 'src/**/*.jsx', 'src/**/*.tsx', 'app/**/*', 'pages/**/*', 'components/**/*') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-lint-
+            ${{ runner.os }}-nextjs-lint-${{ hashFiles('**/package-lock.json') }}-
 
       - name: Install dependencies
         run: npm ci --prefer-offline
@@ -73,39 +65,25 @@ jobs:
           node-version: 21.x
           cache: 'npm'
 
-      # 🎯 Test-specific caching
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-test-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-test-
-            ${{ runner.os }}-node-modules-lint-  # 🎯 Fallback to lint cache
-            ${{ runner.os }}-node-modules-
-
-      # 🎯 Next.js build cache
-      - name: Cache Next.js build
-        uses: actions/cache@v3
+      # 🎯 Official Next.js caching strategy
+      - name: Cache dependencies and Next.js build
+        uses: actions/cache@v4
         with:
           path: |
-            .next/cache
-            .next/standalone
-            .next/static
-          key: ${{ runner.os }}-nextjs-test-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.js', 'src/**/*.ts', 'src/**/*.jsx', 'src/**/*.tsx', 'app/**/*', 'pages/**/*', 'components/**/*') }}
+            ~/.npm
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-test-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-test-${{ hashFiles('package-lock.json') }}-
-            ${{ runner.os }}-nextjs-test-
-            ${{ runner.os }}-nextjs-
+            ${{ runner.os }}-nextjs-test-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-lint-${{ hashFiles('**/package-lock.json') }}-  # Fallback to lint cache
 
       # 🎯 Playwright browser cache
       - name: Cache Playwright browsers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-test-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-playwright-test-
             ${{ runner.os }}-playwright-
 
       - name: Install dependencies

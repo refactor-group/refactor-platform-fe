@@ -25,43 +25,27 @@ jobs:
           node-version: 21.x           # Using Node.js 21.x as in the regular CI workflow
           cache: 'npm'                 # Enable npm caching for faster builds
 
-      # 🎯 Production-specific caching
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-prod-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-prod-
-            ${{ runner.os }}-node-modules-test-  # Fallback to test cache
-            ${{ runner.os }}-node-modules-lint-  # Fallback to lint cache
-            ${{ runner.os }}-node-modules-
-
-      # 🎯 Next.js build cache for production
-      - name: Cache Next.js build
-        uses: actions/cache@v3
+      # 🎯 Official Next.js caching strategy
+      - name: Cache dependencies and Next.js build
+        uses: actions/cache@v4
         with:
           path: |
-            .next/cache
-            .next/standalone
-            .next/static
-          key: ${{ runner.os }}-nextjs-prod-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.js', 'src/**/*.ts', 'src/**/*.jsx', 'src/**/*.tsx', 'app/**/*', 'pages/**/*', 'components/**/*') }}
+            ~/.npm
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-prod-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-prod-${{ hashFiles('package-lock.json') }}-
-            ${{ runner.os }}-nextjs-prod-
-            ${{ runner.os }}-nextjs-test-  # Fallback to test cache
-            ${{ runner.os }}-nextjs-
+            ${{ runner.os }}-nextjs-prod-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-test-${{ hashFiles('**/package-lock.json') }}-  # Fallback to test cache
 
       # 🎯 Playwright browser cache
       - name: Cache Playwright browsers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-prod-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-playwright-prod-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-playwright-prod-
-            ${{ runner.os }}-playwright-test-  # Fallback to test cache
-            ${{ runner.os }}-playwright-
+            ${{ runner.os }}-playwright-  # Fallback to any playwright cache
 
       - name: Install dependencies
         run: npm run ci                 # Clean Install of dependencies
