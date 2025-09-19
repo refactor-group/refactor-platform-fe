@@ -33,16 +33,14 @@ jobs:
           node-version: 21.x
           cache: 'npm'
 
-      # 🎯 Employs the official Next.js caching strategy
-      - name: Cache dependencies and Next.js build
+      # 🎯 Next.js build cache (fixed path for cache detection)
+      - name: Cache Next.js build
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.npm
-            ${{ github.workspace }}/.next/cache
-          key: ${{ runner.os }}-nextjs-lint-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-lint-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
       - name: Install dependencies
         run: npm ci --prefer-offline
@@ -65,17 +63,14 @@ jobs:
           node-version: 21.x
           cache: 'npm'
 
-      # 🎯 Employs the official Next.js caching strategy
-      - name: Cache dependencies and Next.js build
+      # 🎯 Next.js build cache (shared across jobs for efficiency)
+      - name: Cache Next.js build
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.npm
-            ${{ github.workspace }}/.next/cache
-          key: ${{ runner.os }}-nextjs-test-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-test-${{ hashFiles('**/package-lock.json') }}-
-            ${{ runner.os }}-nextjs-lint-${{ hashFiles('**/package-lock.json') }}-  # Fallback to lint cache
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
       # 🎯 Playwright browser cache
       - name: Cache Playwright browsers
