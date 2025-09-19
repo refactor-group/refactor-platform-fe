@@ -18,7 +18,7 @@ env:
   NODE_ENV: test
 
 jobs:
-  # === LINT JOB (Fast Feedback) ===
+  # === LINT JOB ===
   lint:
     name: Lint & Format Check
     runs-on: ubuntu-24.04
@@ -33,7 +33,7 @@ jobs:
           node-version: 21.x
           cache: 'npm'
 
-      # 🎯 Official Next.js caching strategy
+      # 🎯 Employs the official Next.js caching strategy
       - name: Cache dependencies and Next.js build
         uses: actions/cache@v4
         with:
@@ -65,7 +65,7 @@ jobs:
           node-version: 21.x
           cache: 'npm'
 
-      # 🎯 Official Next.js caching strategy
+      # 🎯 Employs the official Next.js caching strategy
       - name: Cache dependencies and Next.js build
         uses: actions/cache@v4
         with:
