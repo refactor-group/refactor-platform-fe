@@ -45,10 +45,11 @@ jobs:
             .next/cache
             .next/standalone
             .next/static
-          key: ${{ runner.os }}-nextjs-prod-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-prod-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.js', 'src/**/*.ts', 'src/**/*.jsx', 'src/**/*.tsx', 'app/**/*', 'pages/**/*', 'components/**/*') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-prod-${{ hashFiles('package-lock.json') }}-
             ${{ runner.os }}-nextjs-prod-
+            ${{ runner.os }}-nextjs-test-  # Fallback to test cache
             ${{ runner.os }}-nextjs-
 
       # 🎯 Playwright browser cache
@@ -59,6 +60,7 @@ jobs:
           key: ${{ runner.os }}-playwright-prod-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-playwright-prod-
+            ${{ runner.os }}-playwright-test-  # Fallback to test cache
             ${{ runner.os }}-playwright-
 
       - name: Install dependencies

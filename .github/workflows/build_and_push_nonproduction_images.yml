@@ -1,4 +1,4 @@
-name: Build, Test & Push Non-Production Images
+name: Build, Test & Push to GHCR
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .next
-          key: ${{ runner.os }}-nextjs-lint-${{ hashFiles('**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-lint-${{ hashFiles('src/**/*.js', 'src/**/*.ts', 'src/**/*.jsx', 'src/**/*.tsx', 'app/**/*', 'pages/**/*', 'components/**/*') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-lint-
 
@@ -92,9 +92,10 @@ jobs:
             .next/cache
             .next/standalone
             .next/static
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-test-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.js', 'src/**/*.ts', 'src/**/*.jsx', 'src/**/*.tsx', 'app/**/*', 'pages/**/*', 'components/**/*') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-nextjs-test-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-nextjs-test-
             ${{ runner.os }}-nextjs-
 
       # 🎯 Playwright browser cache
@@ -102,8 +103,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-playwright-test-${{ hashFiles('package-lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-playwright-test-
             ${{ runner.os }}-playwright-
 
       - name: Install dependencies
@@ -176,8 +178,8 @@ jobs:
             FRONTEND_SERVICE_PORT=${{ vars.FRONTEND_SERVICE_PORT }}
             FRONTEND_SERVICE_INTERFACE=${{ vars.FRONTEND_SERVICE_INTERFACE }}
           tags: ${{ steps.tags.outputs.frontend_tags }}
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
+          cache-from: type=gha,scope=frontend-nonprod
+          cache-to: type=gha,mode=max,scope=frontend-nonprod
           labels: |
             org.opencontainers.image.title=Refactor Platform Frontend
             org.opencontainers.image.description=Next.js frontend for refactor coaching platform
