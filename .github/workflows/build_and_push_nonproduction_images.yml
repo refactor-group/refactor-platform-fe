@@ -44,20 +44,20 @@ jobs:
             ${{ runner.os }}-node-modules-lint-
             ${{ runner.os }}-node-modules-
 
-      # 🎯 ESLint cache for faster subsequent runs
-      - name: Cache ESLint
+      # 🎯 Next.js build cache for lint performance
+      - name: Cache Next.js lint
         uses: actions/cache@v3
         with:
-          path: .eslintcache
-          key: ${{ runner.os }}-eslint-${{ hashFiles('**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx') }}
+          path: .next
+          key: ${{ runner.os }}-nextjs-lint-${{ hashFiles('**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx') }}
           restore-keys: |
-            ${{ runner.os }}-eslint-
+            ${{ runner.os }}-nextjs-lint-
 
       - name: Install dependencies
         run: npm ci --prefer-offline
 
       - name: Run ESLint
-        run: npm run lint -- --cache --cache-location .eslintcache
+        run: npm run lint
 
   # === TEST JOB ===
   test:
