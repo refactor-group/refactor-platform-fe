@@ -15,7 +15,6 @@ env:
   REGISTRY: ghcr.io
   ORG_NAME: refactor-group
   REPO_NAME: refactor-platform-fe
-  CARGO_TERM_COLOR: always
   NODE_ENV: test
 
 jobs:
