@@ -22,9 +22,13 @@ vi.mock('@/lib/api/organizations', () => ({
 }))
 
 // Mock the sidebar hook
+import { SidebarState } from '@/types/sidebar'
+
 vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({
-    state: 'expanded'
+    state: SidebarState.Expanded,
+    userIntent: SidebarState.Expanded,
+    isResponsiveOverride: false
   })
 }))
 

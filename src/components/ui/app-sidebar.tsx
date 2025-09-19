@@ -20,6 +20,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { SidebarCollapsible } from "@/types/sidebar";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 
 // Custom styles for menu buttons to ensure consistent centering
@@ -34,7 +35,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentOrganizationId } = useCurrentOrganization();
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible={SidebarCollapsible.Icon} {...props}>
       <SidebarHeader className="h-16 flex flex-col justify-between pb-0">
         {/* Logo and Refactor text */}
         <div className="flex items-center px-3 h-full transition-all duration-200 group-data-[collapsible=icon]:justify-center">
