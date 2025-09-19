@@ -1,0 +1,60 @@
+# Build outputs and caches
+.next/
+coverage/
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Environment and config
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Development and testing
+.eslintcache
+.nyc_output
+playwright-report/
+test-results/
+
+# Version control and CI
+.git/
+.github/
+.gitignore
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation
+README.md
+CHANGELOG.md
+docs/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
