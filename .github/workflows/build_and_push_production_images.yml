@@ -28,6 +28,7 @@ jobs:
         with:
           node-version: 24.x           # Using Node.js 24.x LTS
           cache: 'npm'                 # Enable npm caching for faster builds
+          cache-dependency-path: package-lock.json  # Explicit cache invalidation path
 
       # 🎯 Next.js build cache (production scope to prevent conflicts)
       - name: Cache Next.js build
