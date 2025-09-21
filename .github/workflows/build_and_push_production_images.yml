@@ -8,6 +8,10 @@ on:
     types: [released]  # This workflow only runs when a new GitHub release is *actually* released publicly
   workflow_dispatch:   # Also allows manual triggering from GitHub UI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }} # Repository path for the image
