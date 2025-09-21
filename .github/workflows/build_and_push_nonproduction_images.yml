@@ -28,9 +28,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: 'npm'
 
       # 🎯 Next.js build cache (job-specific to prevent race conditions)
@@ -59,9 +59,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: 'npm'
 
       # 🎯 Next.js build cache (job-specific to prevent race conditions)
