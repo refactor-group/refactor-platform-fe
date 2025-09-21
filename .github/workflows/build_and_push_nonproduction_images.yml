@@ -30,7 +30,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 21.x
+          node-version: 22.x
           cache: 'npm'
 
       # 🎯 Next.js build cache (job-specific to prevent race conditions)
@@ -61,7 +61,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 21.x
+          node-version: 22.x
           cache: 'npm'
 
       # 🎯 Next.js build cache (job-specific to prevent race conditions)

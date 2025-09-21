@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3    # Set up Node.js environment
         with:
-          node-version: 21.x           # Using Node.js 21.x as in the regular CI workflow
+          node-version: 22.x           # Using Node.js 22.x LTS
           cache: 'npm'                 # Enable npm caching for faster builds
 
       # 🎯 Next.js build cache (production scope to prevent conflicts)
