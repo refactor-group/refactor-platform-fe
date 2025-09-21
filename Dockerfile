@@ -1,5 +1,5 @@
 # Stage 0: Base image
-FROM node:22-alpine3.19 AS base
+FROM node:24-alpine AS base
 
 # BuildKit Platform Context (used for metadata, not to alter FROM)
 ARG BUILDPLATFORM

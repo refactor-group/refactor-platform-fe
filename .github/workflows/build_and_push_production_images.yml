@@ -8,33 +8,63 @@ on:
     types: [released]  # This workflow only runs when a new GitHub release is *actually* released publicly
   workflow_dispatch:   # Also allows manual triggering from GitHub UI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }} # Repository path for the image
 
 jobs:
   build_test_run:
+    name: Build & Test Frontend
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4      # Checkout the repository code
+
       - name: Set up Node.js
-        uses: actions/setup-node@v3    # Set up Node.js environment
+        uses: actions/setup-node@v5    # Set up Node.js environment
         with:
-          node-version: 21.x           # Using Node.js 21.x as in the regular CI workflow
+          node-version: 24.x           # Using Node.js 24.x LTS
           cache: 'npm'                 # Enable npm caching for faster builds
+          cache-dependency-path: package-lock.json  # Explicit cache invalidation path
+
+      # 🎯 Next.js build cache (production scope to prevent conflicts)
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-prod-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-prod-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      # 🎯 Playwright browser cache
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-prod-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-prod-
+            ${{ runner.os }}-playwright-  # Fallback to any playwright cache
 
       - name: Install dependencies
-        run: npm run ci                 # Clean Install of dependencies
+        run: npm ci                     # Clean Install of dependencies
       - name: Run build
         run: npm run build --if-present # Build the Next.js application
-      
-      # TODO Uncomment when tests are implemented
-      # - name: Run tests
-      #   run: npm test                # Run tests when they are implemented
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+      - name: Run unit tests
+        run: npm run test:run
+      - name: Run E2E tests
+        run: npm run test:e2e
 
   build_and_push_docker:
+    name: Build & Push Frontend Image
     runs-on: ubuntu-24.04
-    needs: build_test_run
+    needs: build_test_run  # 🎯 Quality gate - only run after tests pass
     permissions:
       contents: read                   # Read repository contents
       packages: write                  # Write to GitHub Packages
@@ -44,13 +74,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4      # Checkout code for the Docker build
 
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v2  # Set up QEMU for multi-architecture builds
-        with:
-          platforms: linux/amd64,linux/arm64  # Build for both Intel/AMD and ARM architectures
-
       - name: Docker login
-        uses: docker/login-action@v2   # Log in to GitHub Container Registry
+        uses: docker/login-action@v3   # Log in to GitHub Container Registry
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -80,7 +105,7 @@ jobs:
           context: .                   # Build context is repository root
           file: ./Dockerfile           # Use the Dockerfile at repository root
           target: runner               # Use the runner stage from the Dockerfile
-          platforms: linux/amd64,linux/arm64  # Multi-architecture build
+          platforms: linux/amd64      # AMD64 architecture build
           push: true                   # Push image to registry
           provenance: true             # Enable provenance metadata
           sbom: true                   # Generate Software Bill of Materials
@@ -90,11 +115,18 @@ jobs:
             NEXT_PUBLIC_BACKEND_SERVICE_PORT=${{ vars.BACKEND_SERVICE_PORT }}
             NEXT_PUBLIC_BACKEND_SERVICE_API_PATH=${{ vars.BACKEND_SERVICE_API_PATH }}
             NEXT_PUBLIC_BACKEND_API_VERSION=${{ vars.BACKEND_API_VERSION }}
+            NEXT_PUBLIC_TIPTAP_APP_ID=${{ vars.TIPTAP_APP_ID }}
             FRONTEND_SERVICE_PORT=${{ vars.FRONTEND_SERVICE_PORT }}
             FRONTEND_SERVICE_INTERFACE=${{ vars.FRONTEND_SERVICE_INTERFACE }}
           tags: ${{ steps.tags.outputs.frontend_tags }}  # Use "stable" tag from previous step
-          cache-from: type=gha         # Use GitHub Actions cache
-          cache-to: type=gha,mode=max  # Cache for future builds
+          cache-from: type=gha,scope=frontend-prod       # Use GitHub Actions cache with production scope
+          cache-to: type=gha,mode=max,scope=frontend-prod # Cache for future builds with production scope
+          labels: |                    # Enhanced OCI labels
+            org.opencontainers.image.title=Refactor Platform Frontend
+            org.opencontainers.image.description=Next.js frontend for refactor coaching platform
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=stable
 
       - name: Show Docker Build Cache (After)
         run: |                         # Display cache info after build
@@ -123,9 +155,13 @@ jobs:
 
       - name: Print Usage Instructions
         run: |                         # Print usage instructions
-          echo "Frontend Image Pushed to ghcr.io as STABLE:"
+          echo "🎉 Build, Test & Push completed successfully!"
+          echo ""
+          echo "📦 Frontend Image Pushed to ghcr.io as STABLE:"
           echo "  docker pull ${{ steps.tags.outputs.frontend_image_name }}:stable"
-          echo "Run it locally:"
+          echo ""
+          echo "🚀 Run it locally:"
           echo "  docker run --rm --env-file .env -p 3000:3000 ${{ steps.tags.outputs.frontend_image_name }}:stable"
-          echo "Verify signature:"
+          echo ""
+          echo "🔐 Verify signature:"
           echo "  cosign verify ${{ steps.tags.outputs.frontend_image_name }}:stable"
