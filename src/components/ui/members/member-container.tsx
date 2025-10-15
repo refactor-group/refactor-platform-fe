@@ -1,10 +1,10 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
-import { User } from "@/types/user";
-import { Role } from "@/types/user";
+import { User, Role } from "@/types/user";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { useEffect } from "react";
 
 interface MemberContainerProps {
@@ -26,6 +26,7 @@ export function MemberContainer({
   openAddMemberDialog,
 }: MemberContainerProps) {
     const { setIsACoach, isACoach } = useAuthStore((state) => state);
+    const currentUserRole = useCurrentUserRole();
 
     // Check if current user is a coach in ANY relationship
     useEffect(() => {
@@ -33,7 +34,7 @@ export function MemberContainer({
         relationships.some((rel) => rel.coach_id === userSession.id)
       );
     }, [relationships, userSession.id, setIsACoach]);
-  
+
     // Find relationships where current user is either coach or coachee
     const userRelationships = relationships.filter(
       (rel) =>
@@ -45,9 +46,9 @@ export function MemberContainer({
     userRelationships.flatMap((rel) => [rel.coach_id, rel.coachee_id])
   );
 
-  // If the current user is an admin, show all users. Otherwise, only show users
+  // If the current user is an Admin or SuperAdmin, show all users. Otherwise, only show users
   // that are associated with the current user in a coaching relationship.
-  const displayUsers = (userSession.role === Role.Admin) ? users : users.filter((user) =>
+  const displayUsers = (currentUserRole === Role.Admin || currentUserRole === Role.SuperAdmin) ? users : users.filter((user) =>
       associatedUserIds.has(user.id)
     );
 
@@ -62,9 +63,9 @@ export function MemberContainer({
       <div className="flex justify-between items-center">
         <h3 className="text-2xl font-semibold">Members</h3>
         {/* Only show the button if user is a coach to _some_ user within the
-        scope of the organization or if user is an admin. We may come back and add this directly to user
+        scope of the organization or if user is an Admin or SuperAdmin. We may come back and add this directly to user
         data.  */}
-        {(isACoach || userSession.role === Role.Admin) && (
+        {(isACoach || currentUserRole === Role.Admin || currentUserRole === Role.SuperAdmin) && (
           <AddMemberButton
             onMemberAdded={onRefresh}
             openAddMemberDialog={openAddMemberDialog}

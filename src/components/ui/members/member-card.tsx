@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { useUserMutation } from "@/lib/api/organizations/users";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +62,7 @@ export function MemberCard({
 }: MemberCardProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
+  const currentUserRole = useCurrentUserRole();
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
     currentOrganizationId
   );
@@ -75,7 +77,7 @@ export function MemberCard({
     (userRelationships?.some(
       (rel) => rel.coach_id === userSession.id && userId !== userSession.id
     ) ||
-      userSession.role === Role.Admin) &&
+      currentUserRole === Role.Admin) &&
     userSession.id !== userId;
 
   const handleDelete = async () => {
@@ -151,7 +153,7 @@ export function MemberCard({
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
       </div>
-      {(isACoach || userSession.role === Role.Admin) && (
+      {(isACoach || currentUserRole === Role.Admin || currentUserRole === Role.SuperAdmin) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -163,7 +165,7 @@ export function MemberCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {userSession.role === Role.Admin && (
+            {(currentUserRole === Role.Admin || currentUserRole === Role.SuperAdmin) && (
               <>
                 <DropdownMenuItem
                   onClick={() => {

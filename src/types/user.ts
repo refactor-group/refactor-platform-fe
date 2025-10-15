@@ -1,5 +1,17 @@
 import { Id } from "@/types/general";
 
+/**
+ * Represents a user role assignment within an organization or at the system level.
+ */
+export interface UserRole {
+  id: Id;
+  user_id: Id;
+  role: Role;
+  organization_id: Id | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // This must always reflect the Rust struct on the backend entity::users::Model
 export interface User {
   id: Id;
@@ -10,6 +22,7 @@ export interface User {
   display_name: string;
   timezone: string;
   role: Role;
+  roles: UserRole[];
 }
 
 export interface NewUser {
@@ -29,7 +42,8 @@ export interface NewUserPassword {
 
 export enum Role {
   User = "User",
-  Admin = "Admin"
+  Admin = "Admin",
+  SuperAdmin = "SuperAdmin"
 }
 
 export function parseUser(data: unknown): User {
@@ -45,6 +59,7 @@ export function parseUser(data: unknown): User {
     display_name: data.display_name,
     timezone: data.timezone || "UTC",
     role: data.role,
+    roles: data.roles
   };
 }
 
@@ -74,6 +89,7 @@ export function defaultUser(): User {
     display_name: "",
     timezone: "UTC",
     role: Role.User,
+    roles: [],
   };
 }
 
@@ -90,4 +106,36 @@ export function userFirstLastLettersToString(
 
 export function userToString(user: User | undefined): string {
   return JSON.stringify(user);
+}
+
+/**
+ * Determines the appropriate role for a user within a given organization context.
+ *
+ * @param roles - Array of UserRole assignments for the user
+ * @param organizationId - The current organization ID, or null for system-level context
+ * @returns The Role for the user in the given organization context
+ * @throws Error if no matching role is found for the organization
+ */
+export function getUserRoleForOrganization(
+  roles: UserRole[],
+  organizationId: Id | null
+): Role {
+  // SuperAdmin users have global access (organization_id is null)
+  const superAdminRole = roles.find(
+    (r) => r.role === Role.SuperAdmin && r.organization_id === null
+  );
+  if (superAdminRole) {
+    return Role.SuperAdmin;
+  }
+
+  // Find role matching the current organization
+  const orgRole = roles.find((r) => r.organization_id === organizationId);
+  if (orgRole) {
+    return orgRole.role;
+  }
+
+  // No matching role found
+  throw new Error(
+    `No role found for organization ${organizationId}. User may not have access to this organization.`
+  );
 }
