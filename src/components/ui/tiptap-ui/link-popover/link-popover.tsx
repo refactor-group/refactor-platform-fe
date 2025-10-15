@@ -11,7 +11,7 @@ import { LinkIcon } from "@/components/ui/tiptap-icons/link-icon"
 import { TrashIcon } from "@/components/ui/tiptap-icons/trash-icon"
 
 // --- Lib ---
-import { isMarkInSchema, sanitizeUrl } from "@/lib/tiptap-utils"
+import { sanitizeUrl } from "@/lib/tiptap-utils"
 
 // --- UI Primitives ---
 import type { ButtonProps } from "@/components/ui/tiptap-ui-primitive/button"
@@ -287,8 +287,6 @@ export function LinkPopover({
   ...props
 }: LinkPopoverProps) {
   const editor = useTiptapEditor(providedEditor)
-
-  const linkInSchema = isMarkInSchema("link", editor)
 
   const [isOpen, setIsOpen] = React.useState(false)
 
