@@ -32,6 +32,7 @@ export interface LinkHandlerProps {
   editor: Editor | null
   onSetLink?: () => void
   onLinkActive?: () => void
+  onLinkExit?: () => void
 }
 
 export interface LinkMainProps {
@@ -43,20 +44,20 @@ export interface LinkMainProps {
 }
 
 /**
- * Check if cursor is truly inside link content (not at immediate boundaries).
- * Implements Google Docs behavior: clicking inside link opens popover,
- * clicking at immediate edges (one position before/after) does not.
+ * Check if cursor is inside or touching link content.
+ * Implements modified Google Docs behavior:
+ * - Cursor just to the left of link (touching) triggers popover
+ * - Cursor inside link content triggers popover
+ * - Cursor just to the right of link (touching) triggers popover
  */
 const isCursorInsideLink = (editor: Editor): boolean => {
-  if (!editor.isActive("link")) return false
-
   const { state } = editor
   const { from, to, $from } = state.selection
 
-  // For range selections, consider it "inside"
-  if (from !== to) return true
+  // For range selections with link active, consider it "inside"
+  if (from !== to && editor.isActive("link")) return true
 
-  // For collapsed selection (cursor), check if we're at immediate boundaries
+  // For collapsed selection (cursor)
   const linkMark = state.schema.marks.link
   const resolvedPos = $from
 
@@ -64,26 +65,31 @@ const isCursorInsideLink = (editor: Editor): boolean => {
   const marksHere = resolvedPos.marks()
   const linkMarkHere = marksHere.find(m => m.type === linkMark)
 
-  if (!linkMarkHere) return false
-
-  // Check if we're at the immediate start or end boundary
+  // Check positions before and after cursor
   const beforePos = Math.max(0, from - 1)
   const afterPos = Math.min(state.doc.content.size, from + 1)
 
-  // Get marks before and after cursor
   const marksBefore = beforePos >= 0 ? state.doc.resolve(beforePos).marks() : []
   const marksAfter = afterPos <= state.doc.content.size ? state.doc.resolve(afterPos).marks() : []
 
+  // If cursor position doesn't have link mark, check if we're touching a link
+  if (!linkMarkHere) {
+    // Allow trigger if cursor is just to the left of a link (touching it)
+    const hasLinkAfter = marksAfter.some(m => m.type === linkMark)
+    return hasLinkAfter
+  }
+
+  // At this point, cursor has a link mark
   const hasLinkBefore = marksBefore.some(m => m.type === linkMark && m.attrs.href === linkMarkHere.attrs.href)
   const hasLinkAfter = marksAfter.some(m => m.type === linkMark && m.attrs.href === linkMarkHere.attrs.href)
 
-  // If we have link on EITHER side, we're inside (not at immediate boundary)
-  // Only return false if we have NEITHER (which means we're at immediate boundary)
+  // We're inside if we have link on both sides (middle of link)
+  // OR if we have link on exactly one side (start or end position after first/last char)
   return hasLinkBefore || hasLinkAfter
 }
 
 export const useLinkHandler = (props: LinkHandlerProps) => {
-  const { editor, onSetLink, onLinkActive } = props
+  const { editor, onSetLink, onLinkActive, onLinkExit } = props
   const [url, setUrl] = React.useState<string | null>(null)
   const wasInsideLink = React.useRef(false)
 
@@ -91,18 +97,32 @@ export const useLinkHandler = (props: LinkHandlerProps) => {
     if (!editor) return
 
     const handleTransaction = ({ transaction }: { transaction: any }) => {
-      // Always update URL state when on a link
+      // Update URL state when on or touching a link
       if (editor.isActive("link")) {
         const { href } = editor.getAttributes("link")
         setUrl(href || "")
+      } else {
+        // Check if we're touching a link (cursor just to the left)
+        const { state } = editor
+        const { from, $from } = state.selection
+        const afterPos = Math.min(state.doc.content.size, from + 1)
+        const marksAfter = afterPos <= state.doc.content.size ? state.doc.resolve(afterPos).marks() : []
+        const linkMarkAfter = marksAfter.find(m => m.type === state.schema.marks.link)
+
+        if (linkMarkAfter) {
+          setUrl(linkMarkAfter.attrs.href || "")
+        }
       }
 
-      // Check if cursor just entered the link (wasn't inside before, now is)
+      // Check if cursor just entered or exited the link
       const isInsideNow = isCursorInsideLink(editor)
 
       if (isInsideNow && !wasInsideLink.current) {
         // Just entered link - open popover
         onLinkActive?.()
+      } else if (!isInsideNow && wasInsideLink.current) {
+        // Just exited link - close popover
+        onLinkExit?.()
       }
 
       wasInsideLink.current = isInsideNow
@@ -112,7 +132,7 @@ export const useLinkHandler = (props: LinkHandlerProps) => {
     return () => {
       editor.off("transaction", handleTransaction)
     }
-  }, [editor, onLinkActive])
+  }, [editor, onLinkActive, onLinkExit])
 
   const setLink = React.useCallback(() => {
     if (!url || !editor) return
@@ -296,10 +316,13 @@ export function LinkPopover({
 
   const onLinkActive = () => setIsOpen(autoOpenOnLinkActive)
 
+  const onLinkExit = () => setIsOpen(false)
+
   const linkHandler = useLinkHandler({
     editor: editor,
     onSetLink,
     onLinkActive,
+    onLinkExit,
   })
 
   const isDisabled = React.useMemo(() => {
