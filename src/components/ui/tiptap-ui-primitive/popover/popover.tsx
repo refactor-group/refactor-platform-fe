@@ -264,6 +264,8 @@ interface PopoverContentProps extends React.HTMLProps<HTMLDivElement> {
   portal?: boolean
   portalProps?: Omit<React.ComponentProps<typeof FloatingPortal>, "children">
   asChild?: boolean
+  modal?: boolean
+  initialFocus?: number | React.MutableRefObject<HTMLElement | null>
 }
 
 const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
@@ -278,6 +280,8 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
       portal = true,
       portalProps = {},
       asChild = false,
+      modal,
+      initialFocus,
       children,
       ...props
     },
@@ -341,7 +345,11 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
       )
 
     const wrappedContent = (
-      <FloatingFocusManager context={context.context} modal={context.modal}>
+      <FloatingFocusManager
+        context={context.context}
+        modal={modal !== undefined ? modal : context.modal}
+        initialFocus={initialFocus}
+      >
         {content}
       </FloatingFocusManager>
     )

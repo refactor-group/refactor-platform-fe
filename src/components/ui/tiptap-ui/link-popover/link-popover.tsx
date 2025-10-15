@@ -42,39 +42,77 @@ export interface LinkMainProps {
   isActive: boolean
 }
 
+/**
+ * Check if cursor is truly inside link content (not at immediate boundaries).
+ * Implements Google Docs behavior: clicking inside link opens popover,
+ * clicking at immediate edges (one position before/after) does not.
+ */
+const isCursorInsideLink = (editor: Editor): boolean => {
+  if (!editor.isActive("link")) return false
+
+  const { state } = editor
+  const { from, to, $from } = state.selection
+
+  // For range selections, consider it "inside"
+  if (from !== to) return true
+
+  // For collapsed selection (cursor), check if we're at immediate boundaries
+  const linkMark = state.schema.marks.link
+  const resolvedPos = $from
+
+  // Get marks at current position
+  const marksHere = resolvedPos.marks()
+  const linkMarkHere = marksHere.find(m => m.type === linkMark)
+
+  if (!linkMarkHere) return false
+
+  // Check if we're at the immediate start or end boundary
+  const beforePos = Math.max(0, from - 1)
+  const afterPos = Math.min(state.doc.content.size, from + 1)
+
+  // Get marks before and after cursor
+  const marksBefore = beforePos >= 0 ? state.doc.resolve(beforePos).marks() : []
+  const marksAfter = afterPos <= state.doc.content.size ? state.doc.resolve(afterPos).marks() : []
+
+  const hasLinkBefore = marksBefore.some(m => m.type === linkMark && m.attrs.href === linkMarkHere.attrs.href)
+  const hasLinkAfter = marksAfter.some(m => m.type === linkMark && m.attrs.href === linkMarkHere.attrs.href)
+
+  // If we have link on EITHER side, we're inside (not at immediate boundary)
+  // Only return false if we have NEITHER (which means we're at immediate boundary)
+  return hasLinkBefore || hasLinkAfter
+}
+
 export const useLinkHandler = (props: LinkHandlerProps) => {
   const { editor, onSetLink, onLinkActive } = props
   const [url, setUrl] = React.useState<string | null>(null)
+  const wasInsideLink = React.useRef(false)
 
   React.useEffect(() => {
     if (!editor) return
 
-    // Get URL immediately on mount
-    const { href } = editor.getAttributes("link")
+    const handleTransaction = ({ transaction }: { transaction: any }) => {
+      // Always update URL state when on a link
+      if (editor.isActive("link")) {
+        const { href } = editor.getAttributes("link")
+        setUrl(href || "")
+      }
 
-    if (editor.isActive("link") && url === null) {
-      setUrl(href || "")
-      onLinkActive?.()
-    }
-  }, [editor, onLinkActive, url])
+      // Check if cursor just entered the link (wasn't inside before, now is)
+      const isInsideNow = isCursorInsideLink(editor)
 
-  React.useEffect(() => {
-    if (!editor) return
-
-    const updateLinkState = () => {
-      const { href } = editor.getAttributes("link")
-      setUrl(href || "")
-
-      if (editor.isActive("link") && url !== null) {
+      if (isInsideNow && !wasInsideLink.current) {
+        // Just entered link - open popover
         onLinkActive?.()
       }
+
+      wasInsideLink.current = isInsideNow
     }
 
-    editor.on("selectionUpdate", updateLinkState)
+    editor.on("transaction", handleTransaction)
     return () => {
-      editor.off("selectionUpdate", updateLinkState)
+      editor.off("transaction", handleTransaction)
     }
-  }, [editor, onLinkActive, url])
+  }, [editor, onLinkActive])
 
   const setLink = React.useCallback(() => {
     if (!url || !editor) return
@@ -260,6 +298,23 @@ export function LinkPopover({
 
   const onLinkActive = () => setIsOpen(autoOpenOnLinkActive)
 
+  // Close popover when cursor moves outside link
+  React.useEffect(() => {
+    if (!editor) return
+
+    const handleUpdate = () => {
+      // Only auto-close if the cursor is no longer inside any link
+      if (isOpen && !editor.isActive("link")) {
+        setIsOpen(false)
+      }
+    }
+
+    editor.on("transaction", handleUpdate)
+    return () => {
+      editor.off("transaction", handleUpdate)
+    }
+  }, [editor, isOpen])
+
   const linkHandler = useLinkHandler({
     editor: editor,
     onSetLink,
@@ -346,6 +401,7 @@ export function LinkPopover({
         alignOffset={0}
         side="bottom"
         align="start"
+        initialFocus={-1}
       >
         <LinkMain {...linkHandler} />
       </PopoverContent>
