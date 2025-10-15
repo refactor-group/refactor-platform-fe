@@ -298,23 +298,6 @@ export function LinkPopover({
 
   const onLinkActive = () => setIsOpen(autoOpenOnLinkActive)
 
-  // Close popover when cursor moves outside link
-  React.useEffect(() => {
-    if (!editor) return
-
-    const handleUpdate = () => {
-      // Only auto-close if the cursor is no longer inside any link
-      if (isOpen && !editor.isActive("link")) {
-        setIsOpen(false)
-      }
-    }
-
-    editor.on("transaction", handleUpdate)
-    return () => {
-      editor.off("transaction", handleUpdate)
-    }
-  }, [editor, isOpen])
-
   const linkHandler = useLinkHandler({
     editor: editor,
     onSetLink,
