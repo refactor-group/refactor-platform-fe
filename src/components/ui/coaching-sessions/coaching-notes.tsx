@@ -206,7 +206,7 @@ const buildToolbarSlots = (
       ref={toolbarRef}
       className={`toolbar-container ${toolbarState.originalToolbarVisible ? 'visible' : 'hidden'}`}
     >
-      <SimpleToolbar containerRef={editorRef} />
+      <SimpleToolbar containerRef={editorRef} isVisible={toolbarState.originalToolbarVisible} />
     </div>
   ),
   slotAfter: (

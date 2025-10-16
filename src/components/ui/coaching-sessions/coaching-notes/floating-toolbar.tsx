@@ -213,7 +213,7 @@ const renderFloatingToolbar = (
     }}
   >
     <div className="floating-toolbar-content">
-      <SimpleToolbar containerRef={editorRef} />
+      <SimpleToolbar containerRef={editorRef} isVisible={isVisible} />
     </div>
   </div>
 );
