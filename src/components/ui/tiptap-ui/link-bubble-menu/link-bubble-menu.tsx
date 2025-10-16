@@ -29,14 +29,57 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
   const editor = providedEditor || contextEditor
   const [url, setUrl] = React.useState<string>("")
 
-  // Update URL when link becomes active
+  // Track if link was active and its href value
+  const wasLinkActiveRef = React.useRef(false)
+  const lastHrefRef = React.useRef<string>("")
+
+  // Update URL when link becomes active, and clean up empty links when deactivated
   React.useEffect(() => {
     if (!editor) return
 
     const updateUrl = () => {
-      if (editor.isActive("link")) {
+      const isLinkActive = editor.isActive("link")
+
+      if (isLinkActive) {
         const { href } = editor.getAttributes("link")
         setUrl(href || "")
+        lastHrefRef.current = href || ""
+        wasLinkActiveRef.current = true
+      } else if (wasLinkActiveRef.current) {
+        // Link just became inactive (user clicked away)
+        // If the last href was empty, it means we created a zombie link - remove it
+        if (!lastHrefRef.current || lastHrefRef.current === "") {
+          // Find and remove any empty link marks in the document
+          const { state } = editor
+          let foundEmptyLink = false
+
+          state.doc.descendants((node, pos) => {
+            if (foundEmptyLink) return false
+
+            const marks = node.marks
+            const linkMark = marks.find(mark => mark.type.name === "link")
+
+            if (linkMark && (!linkMark.attrs.href || linkMark.attrs.href === "")) {
+              // Remove this empty link mark without selecting the text
+              const from = pos
+              const to = pos + node.nodeSize
+              editor
+                .chain()
+                .setTextSelection({ from, to })
+                .unsetLink()
+                .setMeta("preventAutolink", true)
+                .setTextSelection(editor.state.selection.from) // Move cursor to single position
+                .run()
+              foundEmptyLink = true
+              return false
+            }
+          })
+        }
+
+        // Reset tracking
+        wasLinkActiveRef.current = false
+        lastHrefRef.current = ""
+        setUrl("")
       }
     }
 
