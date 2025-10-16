@@ -343,19 +343,6 @@
       color: var(--link-hover);
       text-decoration-thickness: 2px;
     }
-
-    /* Hide link styling for links being created (empty href) */
-    &[href=""],
-    &:not([href]) {
-      color: inherit;
-      text-decoration: none;
-      cursor: text;
-
-      &:hover {
-        color: inherit;
-        text-decoration: none;
-      }
-    }
   }
 
   /* Text formatting */
