@@ -103,5 +103,6 @@ export const useLinkPopoverPositioning = (
     };
 
     return { positioning, virtualElement };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectionVersion is intentionally used to trigger recalculation when selection changes
   }, [editor, isOpen, selectionVersion]);
 };

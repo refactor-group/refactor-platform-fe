@@ -11,7 +11,7 @@ const nextConfig = {
 		// See: https://github.com/yjs/yjs/issues/438
 		config.resolve.alias = {
 			...config.resolve.alias,
-			yjs: require.resolve('yjs')
+			yjs: new URL('node_modules/yjs/dist/yjs.mjs', import.meta.url).pathname
 		};
 
 		return config;
