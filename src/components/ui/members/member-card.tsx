@@ -62,7 +62,7 @@ export function MemberCard({
 }: MemberCardProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
-  const currentUserRole = useCurrentUserRole();
+  const currentUserRoleState = useCurrentUserRole();
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
     currentOrganizationId
   );
@@ -74,11 +74,14 @@ export function MemberCard({
   // Check if current user is a coach in any of this user's relationships
   // and make sure we can't delete ourselves. Admins can delete any user.
   const canDeleteUser =
-    (userRelationships?.some(
-      (rel) => rel.coach_id === userSession.id && userId !== userSession.id
-    ) ||
-      currentUserRole === Role.Admin) &&
-    userSession.id !== userId;
+    currentUserRoleState.hasAccess &&
+    (
+      (userRelationships?.some(
+        (rel) => rel.coach_id === userSession.id && userId !== userSession.id
+      ) ||
+        currentUserRoleState.role === Role.Admin) &&
+      userSession.id !== userId
+    );
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this member?")) {
@@ -153,7 +156,9 @@ export function MemberCard({
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
       </div>
-      {(isACoach || currentUserRole === Role.Admin || currentUserRole === Role.SuperAdmin) && (
+      {(isACoach ||
+        (currentUserRoleState.hasAccess &&
+         (currentUserRoleState.role === Role.Admin || currentUserRoleState.role === Role.SuperAdmin))) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -165,7 +170,8 @@ export function MemberCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {(currentUserRole === Role.Admin || currentUserRole === Role.SuperAdmin) && (
+            {currentUserRoleState.hasAccess &&
+             (currentUserRoleState.role === Role.Admin || currentUserRoleState.role === Role.SuperAdmin) && (
               <>
                 <DropdownMenuItem
                   onClick={() => {

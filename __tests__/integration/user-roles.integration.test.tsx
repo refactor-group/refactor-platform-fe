@@ -2,7 +2,6 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCurrentUserRole } from '@/lib/hooks/use-current-user-role';
 import { useCurrentOrganization } from '@/lib/hooks/use-current-organization';
-import { TestProviders } from '@/test-utils/providers';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { Role } from '@/types/user';
 import type { UserRole, User } from '@/types/user';
@@ -56,12 +55,14 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       }));
 
-      const { result, rerender } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result, rerender } = renderHook(() => useCurrentUserRole());
 
       // Initially in org-1 with User role
-      expect(result.current).toBe(Role.User);
+      expect(result.current).toEqual({
+        status: 'success',
+        role: Role.User,
+        hasAccess: true
+      });
 
       // Switch to org-2
       act(() => {
@@ -76,7 +77,11 @@ describe('User Role Integration Tests', () => {
       rerender();
 
       // Should now have Admin role in org-2
-      expect(result.current).toBe(Role.Admin);
+      expect(result.current).toEqual({
+        status: 'success',
+        role: Role.Admin,
+        hasAccess: true
+      });
     });
 
     it('should handle switching between multiple organizations', () => {
@@ -124,11 +129,13 @@ describe('User Role Integration Tests', () => {
           resetOrganizationState: vi.fn()
         });
 
-        const { result } = renderHook(() => useCurrentUserRole(), {
-          wrapper: TestProviders
-        });
+        const { result } = renderHook(() => useCurrentUserRole());
 
-        expect(result.current).toBe(expectedRoles[index]);
+        expect(result.current).toEqual({
+          status: 'success',
+          role: expectedRoles[index],
+          hasAccess: true
+        });
       });
     });
   });
@@ -167,11 +174,13 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       });
 
-      const { result: result1 } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result: result1 } = renderHook(() => useCurrentUserRole());
 
-      expect(result1.current).toBe(Role.SuperAdmin);
+      expect(result1.current).toEqual({
+        status: 'success',
+        role: Role.SuperAdmin,
+        hasAccess: true
+      });
 
       // Test with org-2 (no specific role)
       mockUseCurrentOrganization.mockReturnValue({
@@ -180,11 +189,13 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       });
 
-      const { result: result2 } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result: result2 } = renderHook(() => useCurrentUserRole());
 
-      expect(result2.current).toBe(Role.SuperAdmin);
+      expect(result2.current).toEqual({
+        status: 'success',
+        role: Role.SuperAdmin,
+        hasAccess: true
+      });
     });
 
     it('should allow SuperAdmin to access organization without specific role', () => {
@@ -211,11 +222,13 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       });
 
-      const { result } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result } = renderHook(() => useCurrentUserRole());
 
-      expect(result.current).toBe(Role.SuperAdmin);
+      expect(result.current).toEqual({
+        status: 'success',
+        role: Role.SuperAdmin,
+        hasAccess: true
+      });
     });
   });
 
@@ -243,11 +256,15 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       });
 
-      expect(() => {
-        renderHook(() => useCurrentUserRole(), {
-          wrapper: TestProviders
-        });
-      }).toThrow('No role found for organization org-unauthorized. User may not have access to this organization.');
+      const { result } = renderHook(() => useCurrentUserRole());
+
+      expect(result.current).toEqual({
+        status: 'no_access',
+        role: null,
+        hasAccess: false,
+        reason: 'NO_ORG_ACCESS',
+        organizationId: 'org-unauthorized'
+      });
     });
 
     it('should allow access when user is granted role for previously unauthorized organization', () => {
@@ -283,12 +300,16 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       });
 
-      // Should throw error initially
-      expect(() => {
-        renderHook(() => useCurrentUserRole(), {
-          wrapper: TestProviders
-        });
-      }).toThrow();
+      // Should return no_access initially
+      const { result: result1 } = renderHook(() => useCurrentUserRole());
+
+      expect(result1.current).toEqual({
+        status: 'no_access',
+        role: null,
+        hasAccess: false,
+        reason: 'NO_ORG_ACCESS',
+        organizationId: 'org-2'
+      });
 
       // Grant access to org-2
       mockUseAuthStore.mockReturnValue({
@@ -299,11 +320,13 @@ describe('User Role Integration Tests', () => {
       });
 
       // Should now work
-      const { result } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result: result2 } = renderHook(() => useCurrentUserRole());
 
-      expect(result.current).toBe(Role.Admin);
+      expect(result2.current).toEqual({
+        status: 'success',
+        role: Role.Admin,
+        hasAccess: true
+      });
     });
   });
 
@@ -334,11 +357,13 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       });
 
-      const { result } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result } = renderHook(() => useCurrentUserRole());
 
-      expect(result.current).toBe(Role.User);
+      expect(result.current).toEqual({
+        status: 'success',
+        role: Role.User,
+        hasAccess: true
+      });
     });
 
     it('should handle user role update from User to Admin', () => {
@@ -364,11 +389,13 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       });
 
-      const { result: result1 } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result: result1 } = renderHook(() => useCurrentUserRole());
 
-      expect(result1.current).toBe(Role.User);
+      expect(result1.current).toEqual({
+        status: 'success',
+        role: Role.User,
+        hasAccess: true
+      });
 
       // Simulate role update
       const adminRole: UserRole = {
@@ -384,11 +411,13 @@ describe('User Role Integration Tests', () => {
         } as User
       });
 
-      const { result: result2 } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result: result2 } = renderHook(() => useCurrentUserRole());
 
-      expect(result2.current).toBe(Role.Admin);
+      expect(result2.current).toEqual({
+        status: 'success',
+        role: Role.Admin,
+        hasAccess: true
+      });
     });
 
     it('should maintain SuperAdmin role after profile update', () => {
@@ -417,11 +446,13 @@ describe('User Role Integration Tests', () => {
         resetOrganizationState: vi.fn()
       });
 
-      const { result: result1 } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result: result1 } = renderHook(() => useCurrentUserRole());
 
-      expect(result1.current).toBe(Role.SuperAdmin);
+      expect(result1.current).toEqual({
+        status: 'success',
+        role: Role.SuperAdmin,
+        hasAccess: true
+      });
 
       // Simulate profile update (name, email, etc.) but role remains
       mockUseAuthStore.mockReturnValue({
@@ -434,11 +465,13 @@ describe('User Role Integration Tests', () => {
         } as User
       });
 
-      const { result: result2 } = renderHook(() => useCurrentUserRole(), {
-        wrapper: TestProviders
-      });
+      const { result: result2 } = renderHook(() => useCurrentUserRole());
 
-      expect(result2.current).toBe(Role.SuperAdmin);
+      expect(result2.current).toEqual({
+        status: 'success',
+        role: Role.SuperAdmin,
+        hasAccess: true
+      });
     });
   });
 });

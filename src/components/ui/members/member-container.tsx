@@ -26,7 +26,7 @@ export function MemberContainer({
   openAddMemberDialog,
 }: MemberContainerProps) {
     const { setIsACoach, isACoach } = useAuthStore((state) => state);
-    const currentUserRole = useCurrentUserRole();
+    const currentUserRoleState = useCurrentUserRole();
 
     // Check if current user is a coach in ANY relationship
     useEffect(() => {
@@ -48,9 +48,12 @@ export function MemberContainer({
 
   // If the current user is an Admin or SuperAdmin, show all users. Otherwise, only show users
   // that are associated with the current user in a coaching relationship.
-  const displayUsers = (currentUserRole === Role.Admin || currentUserRole === Role.SuperAdmin) ? users : users.filter((user) =>
-      associatedUserIds.has(user.id)
-    );
+  const displayUsers = (
+    currentUserRoleState.hasAccess &&
+    (currentUserRoleState.role === Role.Admin || currentUserRoleState.role === Role.SuperAdmin)
+  )
+    ? users
+    : users.filter((user) => associatedUserIds.has(user.id));
 
   if (isLoading) {
     return (
@@ -65,7 +68,9 @@ export function MemberContainer({
         {/* Only show the button if user is a coach to _some_ user within the
         scope of the organization or if user is an Admin or SuperAdmin. We may come back and add this directly to user
         data.  */}
-        {(isACoach || currentUserRole === Role.Admin || currentUserRole === Role.SuperAdmin) && (
+        {(isACoach ||
+          (currentUserRoleState.hasAccess &&
+           (currentUserRoleState.role === Role.Admin || currentUserRoleState.role === Role.SuperAdmin))) && (
           <AddMemberButton
             onMemberAdded={onRefresh}
             openAddMemberDialog={openAddMemberDialog}

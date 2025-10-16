@@ -64,18 +64,16 @@ describe('getUserRoleForOrganization', () => {
     };
 
     const roles = [userRole];
+    const result = getUserRoleForOrganization(roles, 'org-2');
 
-    expect(() => {
-      getUserRoleForOrganization(roles, 'org-2');
-    }).toThrow('No role found for organization org-2. User may not have access to this organization.');
+    expect(result).toBeNull();
   });
 
   it('should handle empty roles array', () => {
     const roles: UserRole[] = [];
+    const result = getUserRoleForOrganization(roles, 'org-1');
 
-    expect(() => {
-      getUserRoleForOrganization(roles, 'org-1');
-    }).toThrow('No role found for organization org-1. User may not have access to this organization.');
+    expect(result).toBeNull();
   });
 
   it('should handle null organization ID', () => {
@@ -89,10 +87,9 @@ describe('getUserRoleForOrganization', () => {
     };
 
     const roles = [userRole];
+    const result = getUserRoleForOrganization(roles, null);
 
-    expect(() => {
-      getUserRoleForOrganization(roles, null);
-    }).toThrow('No role found for organization null. User may not have access to this organization.');
+    expect(result).toBeNull();
   });
 
   it('should return correct role when user has multiple org roles', () => {

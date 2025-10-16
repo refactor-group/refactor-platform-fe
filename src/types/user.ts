@@ -12,6 +12,16 @@ export interface UserRole {
   updated_at: string;
 }
 
+/**
+ * Discriminated union representing the state of a user's role for the current organization.
+ * Use this type to handle role checks with proper error handling.
+ */
+export type UserRoleState =
+  | { status: 'success'; role: Role; hasAccess: true }
+  | { status: 'no_roles'; role: null; hasAccess: false; reason: 'USER_HAS_NO_ROLES' }
+  | { status: 'no_access'; role: null; hasAccess: false; reason: 'NO_ORG_ACCESS'; organizationId: string }
+  | { status: 'no_org_selected'; role: null; hasAccess: false; reason: 'NO_ORG_SELECTED' };
+
 // This must always reflect the Rust struct on the backend entity::users::Model
 export interface User {
   id: Id;
@@ -116,13 +126,12 @@ export function userToString(user: User | undefined): string {
  *
  * @param roles - Array of UserRole assignments for the user
  * @param organizationId - The current organization ID, or null for system-level context
- * @returns The Role for the user in the given organization context
- * @throws Error if no matching role is found for the organization
+ * @returns The Role for the user in the given organization context, or null if no matching role
  */
 export function getUserRoleForOrganization(
   roles: UserRole[],
   organizationId: Id | null
-): Role {
+): Role | null {
   // SuperAdmin users have global access (organization_id is null)
   const superAdminRole = roles.find(
     (r) => r.role === Role.SuperAdmin && r.organization_id === null
@@ -133,12 +142,5 @@ export function getUserRoleForOrganization(
 
   // Find role matching the current organization
   const orgRole = roles.find((r) => r.organization_id === organizationId);
-  if (orgRole) {
-    return orgRole.role;
-  }
-
-  // No matching role found
-  throw new Error(
-    `No role found for organization ${organizationId}. User may not have access to this organization.`
-  );
+  return orgRole?.role ?? null;
 }
