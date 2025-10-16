@@ -265,6 +265,11 @@ interface PopoverContentProps extends React.HTMLProps<HTMLDivElement> {
   portalProps?: Omit<React.ComponentProps<typeof FloatingPortal>, "children">
   asChild?: boolean
   modal?: boolean
+  /**
+   * Controls which element receives focus when the popover opens.
+   * - number: Element index (-1 = no focus, 0 = first focusable, 1 = second, etc.)
+   * - React.MutableRefObject: Ref to specific element that should receive focus
+   */
   initialFocus?: number | React.MutableRefObject<HTMLElement | null>
 }
 

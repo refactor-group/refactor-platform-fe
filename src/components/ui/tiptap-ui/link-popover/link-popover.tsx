@@ -1,5 +1,6 @@
 import * as React from "react"
 import { isNodeSelection, type Editor } from "@tiptap/react"
+import type { Transaction } from "@tiptap/pm/state"
 
 // --- Hooks ---
 import { useTiptapEditor } from "@/lib/hooks/use-tiptap-editor"
@@ -96,7 +97,7 @@ export const useLinkHandler = (props: LinkHandlerProps) => {
   React.useEffect(() => {
     if (!editor) return
 
-    const handleTransaction = ({ transaction }: { transaction: any }) => {
+    const handleTransaction = ({ transaction }: { transaction: Transaction }) => {
       // Update URL state when on or touching a link
       if (editor.isActive("link")) {
         const { href } = editor.getAttributes("link")
