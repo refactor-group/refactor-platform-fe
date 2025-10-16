@@ -32,7 +32,6 @@ export function useLogoutUser() {
       // Clear cached data
       clearCache();
       resetCoachingRelationshipState();
-      resetOrganizationState();
 
       // Clean up backend session
       await deleteUserSession(userSession.id);

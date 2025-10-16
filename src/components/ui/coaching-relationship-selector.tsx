@@ -88,6 +88,12 @@ export default function CoachingRelationshipSelector({
     }
   }, [currentCoachingRelationship, setIsCurrentCoach]);
 
+  useEffect(() => {
+    if (organizationId && currentCoachingRelationshipId) {
+      setCurrentCoachingRelationshipId("");
+    }
+  }, [organizationId]);
+
   // Auto-select relationship when user has exactly one and none is currently selected
   useAutoSelectSingleRelationship(
     relationships,
