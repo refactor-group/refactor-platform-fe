@@ -45,6 +45,89 @@ export interface LinkMainProps {
 }
 
 /**
+ * Get the DOM bounding rectangle of the active link in the editor.
+ * Uses TipTap's view API to map document positions to DOM coordinates.
+ * @returns DOMRect of the link element, or null if no link is active
+ */
+const getLinkPositionInEditor = (editor: Editor): DOMRect | null => {
+  if (!editor.isActive("link")) return null
+
+  const { state, view } = editor
+  const { from, to } = state.selection
+
+  // Get the DOM node at the selection position
+  const domAtPos = view.domAtPos(from)
+  const node = domAtPos.node
+
+  // Find the actual link element
+  let linkElement: HTMLElement | null = null
+  if (node instanceof HTMLElement) {
+    linkElement = node.closest('a')
+  } else if (node.parentElement) {
+    linkElement = node.parentElement.closest('a')
+  }
+
+  if (linkElement) {
+    return linkElement.getBoundingClientRect()
+  }
+
+  // Fallback to coordsAtPos if we can't find the DOM element
+  const start = view.coordsAtPos(from)
+  const end = view.coordsAtPos(to)
+
+  return new DOMRect(
+    start.left,
+    start.top,
+    end.right - start.left,
+    end.bottom - start.top
+  )
+}
+
+/**
+ * Hook to determine dynamic popover positioning based on link location.
+ * Returns both positioning config and optional virtual element for FloatingUI.
+ * @param editor - TipTap editor instance
+ * @param isOpen - Whether the popover is currently open
+ * @returns Positioning configuration and virtual element reference
+ */
+const useLinkPopoverPositioning = (editor: Editor | null, isOpen: boolean) => {
+  const linkPosition = React.useMemo(() => {
+    if (!editor || !editor.isActive("link") || !isOpen) return null
+    return getLinkPositionInEditor(editor)
+  }, [editor, isOpen, editor?.state.selection])
+
+  // Create a virtual element for FloatingUI to position relative to the link
+  const virtualElement = React.useMemo(() => {
+    if (!linkPosition) return null
+
+    return {
+      getBoundingClientRect: () => linkPosition,
+    }
+  }, [linkPosition])
+
+  const positioning = React.useMemo(() => {
+    if (linkPosition) {
+      // Editing existing link - position near the link with smaller offset
+      return {
+        side: "bottom" as const,
+        align: "start" as const,
+        sideOffset: 4,
+        useVirtualElement: true,
+      }
+    }
+    // Creating new link - position under toolbar button with standard offset
+    return {
+      side: "bottom" as const,
+      align: "start" as const,
+      sideOffset: 8,
+      useVirtualElement: false,
+    }
+  }, [linkPosition])
+
+  return { positioning, virtualElement }
+}
+
+/**
  * Check if cursor is inside or touching link content.
  * Implements modified Google Docs behavior:
  * - Cursor just to the left of link (touching) triggers popover
@@ -166,8 +249,21 @@ export const useLinkHandler = (props: LinkHandlerProps) => {
   }
 }
 
-export const LinkButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, children, ...props }, ref) => {
+export const LinkButton = React.forwardRef<HTMLButtonElement, ButtonProps & { editor?: Editor | null }>(
+  ({ className, children, editor: providedEditor, ...props }, ref) => {
+    const editor = useTiptapEditor(providedEditor)
+    const isActive = editor?.isActive("link") ?? false
+
+    const handleClick = () => {
+      if (!editor) return
+
+      // If a link is already active, the BubbleMenu will handle editing
+      // Otherwise, toggle the link mark to trigger the BubbleMenu
+      if (!isActive) {
+        editor.chain().focus().setLink({ href: "" }).run()
+      }
+    }
+
     return (
       <Button
         type="button"
@@ -177,6 +273,8 @@ export const LinkButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
         tabIndex={-1}
         aria-label="Link"
         tooltip="Link"
+        data-active-state={isActive ? "on" : "off"}
+        onClick={handleClick}
         ref={ref}
         {...props}
       >
@@ -352,6 +450,9 @@ export function LinkPopover({
     [onOpenChange]
   )
 
+  // Get dynamic positioning based on link location
+  const { positioning: popoverPositioning, virtualElement } = useLinkPopoverPositioning(editor, isOpen)
+
   const show = React.useMemo(() => {
     // Temporarily bypass schema check - force show if editor exists
     if (!editor) {
@@ -402,10 +503,10 @@ export function LinkPopover({
       </PopoverTrigger>
 
       <PopoverContent
-        sideOffset={8}
+        sideOffset={popoverPositioning.sideOffset}
         alignOffset={0}
-        side="bottom"
-        align="start"
+        side={popoverPositioning.side}
+        align={popoverPositioning.align}
         initialFocus={-1}
       >
         <LinkMain {...linkHandler} />

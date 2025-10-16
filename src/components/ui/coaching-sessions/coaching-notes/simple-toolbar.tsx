@@ -18,22 +18,10 @@ import {
   BlockquoteButton,
   CodeBlockButton,
   HorizontalRuleButton,
-  LinkPopover,
+  LinkButton,
 } from "@/components/ui/tiptap-ui";
 
-interface SimpleToolbarProps {
-  /**
-   * Reference to the editor container for proper popover positioning.
-   */
-  containerRef?: React.RefObject<HTMLDivElement>;
-  /**
-   * Whether this toolbar is currently visible. Used to prevent duplicate popovers
-   * when both static and floating toolbars are present.
-   */
-  isVisible?: boolean;
-}
-
-export const SimpleToolbar: React.FC<SimpleToolbarProps> = ({ containerRef, isVisible = true }) => {
+export const SimpleToolbar: React.FC = () => {
   const { editor } = useCurrentEditor();
 
   // Use TipTap's official pattern for undo/redo state tracking
@@ -87,7 +75,7 @@ export const SimpleToolbar: React.FC<SimpleToolbarProps> = ({ containerRef, isVi
         <MarkButton type="strike" />
         <MarkButton type="code" />
         <MarkButton type="highlight" />
-        {isVisible && <LinkPopover hideWhenUnavailable={false} containerRef={containerRef} />}
+        <LinkButton editor={editor} />
       </ToolbarGroup>
 
       <Spacer />
