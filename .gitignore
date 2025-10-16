@@ -43,3 +43,6 @@ test-results/
 
 # playwright test reports
 playwright-report/
+
+# serena
+.serena/

@@ -33,6 +33,7 @@ export function ProfileInfoUpdateForm({
     display_name: user.display_name,
     timezone: user.timezone || getBrowserTimezone(),
     role: user.role,
+    roles: user.roles,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

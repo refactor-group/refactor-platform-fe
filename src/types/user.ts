@@ -1,5 +1,27 @@
 import { Id } from "@/types/general";
 
+/**
+ * Represents a user role assignment within an organization or at the system level.
+ */
+export interface UserRole {
+  id: Id;
+  user_id: Id;
+  role: Role;
+  organization_id: Id | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Discriminated union representing the state of a user's role for the current organization.
+ * Use this type to handle role checks with proper error handling.
+ */
+export type UserRoleState =
+  | { status: 'success'; role: Role; hasAccess: true }
+  | { status: 'no_roles'; role: null; hasAccess: false; reason: 'USER_HAS_NO_ROLES' }
+  | { status: 'no_access'; role: null; hasAccess: false; reason: 'NO_ORG_ACCESS'; organizationId: string }
+  | { status: 'no_org_selected'; role: null; hasAccess: false; reason: 'NO_ORG_SELECTED' };
+
 // This must always reflect the Rust struct on the backend entity::users::Model
 export interface User {
   id: Id;
@@ -9,7 +31,11 @@ export interface User {
   last_name: string;
   display_name: string;
   timezone: string;
+  /**
+   * @deprecated Use roles array with getUserRoleForOrganization() instead
+   */
   role: Role;
+  roles: UserRole[];
 }
 
 export interface NewUser {
@@ -29,7 +55,8 @@ export interface NewUserPassword {
 
 export enum Role {
   User = "User",
-  Admin = "Admin"
+  Admin = "Admin",
+  SuperAdmin = "SuperAdmin"
 }
 
 export function parseUser(data: unknown): User {
@@ -45,6 +72,7 @@ export function parseUser(data: unknown): User {
     display_name: data.display_name,
     timezone: data.timezone || "UTC",
     role: data.role,
+    roles: data.roles
   };
 }
 
@@ -74,6 +102,7 @@ export function defaultUser(): User {
     display_name: "",
     timezone: "UTC",
     role: Role.User,
+    roles: [],
   };
 }
 
@@ -90,4 +119,39 @@ export function userFirstLastLettersToString(
 
 export function userToString(user: User | undefined): string {
   return JSON.stringify(user);
+}
+
+/**
+ * Determines the appropriate role for a user within a given organization context.
+ *
+ * @param roles - Array of UserRole assignments for the user
+ * @param organizationId - The current organization ID, or null for system-level context
+ * @returns The Role for the user in the given organization context, or null if no matching role
+ */
+export function getUserRoleForOrganization(
+  roles: UserRole[],
+  organizationId: Id | null
+): Role | null {
+  // SuperAdmin users have global access (organization_id is null)
+  const superAdminRole = roles.find(
+    (r) => r.role === Role.SuperAdmin && r.organization_id === null
+  );
+  if (superAdminRole) {
+    return Role.SuperAdmin;
+  }
+
+  // Find role matching the current organization
+  const orgRole = roles.find((r) => r.organization_id === organizationId);
+  return orgRole?.role ?? null;
+}
+
+/**
+ * Checks if the user has administrative privileges (Admin or SuperAdmin).
+ * Note: Admin has org-scoped privileges, SuperAdmin has global privileges.
+ *
+ * @param roleState - The user's role state from useCurrentUserRole
+ * @returns true if user is Admin or SuperAdmin
+ */
+export function isAdminOrSuperAdmin(roleState: UserRoleState): boolean {
+  return roleState.hasAccess && (roleState.role === Role.Admin || roleState.role === Role.SuperAdmin);
 }

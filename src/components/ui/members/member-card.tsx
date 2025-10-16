@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { useUserMutation } from "@/lib/api/organizations/users";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +30,7 @@ import {
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
-import { User, Role } from "@/types/user";
+import { User, Role, isAdminOrSuperAdmin } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { toast } from "sonner";
@@ -61,6 +62,7 @@ export function MemberCard({
 }: MemberCardProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
+  const currentUserRoleState = useCurrentUserRole();
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
     currentOrganizationId
   );
@@ -72,11 +74,14 @@ export function MemberCard({
   // Check if current user is a coach in any of this user's relationships
   // and make sure we can't delete ourselves. Admins can delete any user.
   const canDeleteUser =
-    (userRelationships?.some(
-      (rel) => rel.coach_id === userSession.id && userId !== userSession.id
-    ) ||
-      userSession.role === Role.Admin) &&
-    userSession.id !== userId;
+    currentUserRoleState.hasAccess &&
+    (
+      (userRelationships?.some(
+        (rel) => rel.coach_id === userSession.id && userId !== userSession.id
+      ) ||
+        currentUserRoleState.role === Role.Admin) &&
+      userSession.id !== userId
+    );
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this member?")) {
@@ -151,7 +156,7 @@ export function MemberCard({
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
       </div>
-      {(isACoach || userSession.role === Role.Admin) && (
+      {(isACoach || isAdminOrSuperAdmin(currentUserRoleState)) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -163,7 +168,7 @@ export function MemberCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {userSession.role === Role.Admin && (
+            {isAdminOrSuperAdmin(currentUserRoleState) && (
               <>
                 <DropdownMenuItem
                   onClick={() => {
