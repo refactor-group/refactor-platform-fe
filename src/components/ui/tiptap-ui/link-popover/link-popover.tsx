@@ -303,7 +303,6 @@ const LinkMain: React.FC<LinkMainProps> = ({
   setLink,
   removeLink,
   isActive,
-  onClose,
 }) => {
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Enter") {
@@ -453,7 +452,7 @@ export function LinkPopover({
   )
 
   // Get dynamic positioning based on link location
-  const { positioning: popoverPositioning, virtualElement } = useLinkPopoverPositioning(editor, isOpen)
+  const { positioning: popoverPositioning } = useLinkPopoverPositioning(editor, isOpen)
 
   const show = React.useMemo(() => {
     // Temporarily bypass schema check - force show if editor exists

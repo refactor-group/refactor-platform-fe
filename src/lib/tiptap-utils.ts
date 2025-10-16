@@ -13,11 +13,14 @@ export const isMarkInSchema = (
   editor: Editor | null
 ): boolean => {
   if (!editor?.schema) return false
+
+  const marks = editor.schema.spec.marks
+
   // Try multiple ways to check for mark existence in v3
   return !!(
-    editor.schema.spec.marks.get(markName) || 
+    marks.get(markName) ||
     editor.schema.marks[markName] ||
-    (editor.schema.spec.marks as any)[markName]
+    (markName in marks && marks[markName as keyof typeof marks])
   )
 }
 
