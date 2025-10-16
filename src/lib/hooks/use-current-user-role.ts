@@ -7,13 +7,44 @@ import { getUserRoleForOrganization, UserRoleState } from '@/types/user';
 import { toast } from 'sonner';
 
 /**
- * Hook to get the current user's role for the current organization.
- * Returns a status object with role information and access state.
+ * Hook that provides the user's role for the current organization context.
+ * Returns a status object with role information and access state instead of throwing errors.
  *
- * Shows toast notifications for error cases:
- * - 'no_roles': System error, user shouldn't be logged in
- * - 'no_org_selected': User needs to select an organization
- * - 'no_access': User doesn't have access to current organization
+ * This hook automatically handles organization switching and shows appropriate toast notifications
+ * for error cases. The returned status object uses TypeScript discriminated unions for type safety.
+ *
+ * @returns {UserRoleState} A status object with one of four possible states:
+ *   - `{ status: 'success', role: Role, hasAccess: true }` - User has valid access
+ *   - `{ status: 'no_roles', role: null, hasAccess: false, reason: 'USER_HAS_NO_ROLES' }` - System error, user has no roles
+ *   - `{ status: 'no_org_selected', role: null, hasAccess: false, reason: 'NO_ORG_SELECTED' }` - No organization selected yet
+ *   - `{ status: 'no_access', role: null, hasAccess: false, reason: 'NO_ORG_ACCESS', organizationId: string }` - User lacks access to current org
+ *
+ * @remarks
+ * - Automatically displays toast notifications for error states
+ * - Updates immediately when user switches organizations
+ * - SuperAdmin users have access to all organizations
+ * - Use `hasAccess` property for quick permission checks
+ *
+ * @example
+ * ```tsx
+ * const roleState = useCurrentUserRole();
+ *
+ * // Check for successful access
+ * if (roleState.hasAccess && roleState.role === Role.Admin) {
+ *   return <AdminDashboard />;
+ * }
+ *
+ * // Handle error states
+ * if (roleState.status === 'no_access') {
+ *   return <NoAccessMessage orgId={roleState.organizationId} />;
+ * }
+ *
+ * // Type-safe role checking
+ * if (roleState.hasAccess) {
+ *   // TypeScript knows roleState.role is Role, not null
+ *   const role: Role = roleState.role;
+ * }
+ * ```
  */
 export const useCurrentUserRole = (): UserRoleState => {
   const { userSession } = useAuthStore((state) => ({ userSession: state.userSession }));
