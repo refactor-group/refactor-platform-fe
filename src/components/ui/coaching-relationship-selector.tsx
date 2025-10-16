@@ -12,7 +12,7 @@ import { Id } from "@/types/general";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { cn } from "../lib/utils";
 
@@ -75,6 +75,8 @@ export default function CoachingRelationshipSelector({
     (state) => state
   );
 
+  const prevOrganizationIdRef = useRef<Id>(organizationId);
+
   const handleSetCoachingRelationship = (relationshipId: Id) => {
     setCurrentCoachingRelationshipId(relationshipId);
     if (onSelect) {
@@ -89,10 +91,11 @@ export default function CoachingRelationshipSelector({
   }, [currentCoachingRelationship, setIsCurrentCoach]);
 
   useEffect(() => {
-    if (organizationId && currentCoachingRelationshipId) {
+    if (organizationId && prevOrganizationIdRef.current && organizationId !== prevOrganizationIdRef.current) {
       setCurrentCoachingRelationshipId("");
     }
-  }, [organizationId]);
+    prevOrganizationIdRef.current = organizationId;
+  }, [organizationId, setCurrentCoachingRelationshipId]);
 
   // Auto-select relationship when user has exactly one and none is currently selected
   useAutoSelectSingleRelationship(
