@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { Progress } from "@/components/ui/progress";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
 import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
+import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import type { Extensions } from "@tiptap/core";
 import * as Y from "yjs";
@@ -206,7 +207,7 @@ const buildToolbarSlots = (
       ref={toolbarRef}
       className={`toolbar-container ${toolbarState.originalToolbarVisible ? 'visible' : 'hidden'}`}
     >
-      <SimpleToolbar containerRef={editorRef} isVisible={toolbarState.originalToolbarVisible} />
+      <SimpleToolbar />
     </div>
   ),
   slotAfter: (
@@ -237,7 +238,9 @@ const renderEditorWithToolbars = (
       editorProps={editorProps}
       slotBefore={toolbarSlots.slotBefore}
       slotAfter={toolbarSlots.slotAfter}
-    />
+    >
+      <LinkBubbleMenu />
+    </EditorProvider>
   </div>
 );
 
