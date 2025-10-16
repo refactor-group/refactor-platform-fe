@@ -156,7 +156,7 @@ function usePopover({
       });
     },
     middleware,
-    strategy: 'absolute', // Use absolute positioning for better container awareness
+    strategy: 'fixed', // Use fixed positioning for portaling to document.body
   })
 
   const interactions = useInteractions([
@@ -264,7 +264,13 @@ interface PopoverContentProps extends React.HTMLProps<HTMLDivElement> {
   portal?: boolean
   portalProps?: Omit<React.ComponentProps<typeof FloatingPortal>, "children">
   asChild?: boolean
-  container?: HTMLElement | null  // New prop for portal container
+  modal?: boolean
+  /**
+   * Controls which element receives focus when the popover opens.
+   * - number: Element index (-1 = no focus, 0 = first focusable, 1 = second, etc.)
+   * - React.MutableRefObject: Ref to specific element that should receive focus
+   */
+  initialFocus?: number | React.MutableRefObject<HTMLElement | null>
 }
 
 const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
@@ -279,7 +285,8 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
       portal = true,
       portalProps = {},
       asChild = false,
-      container = null,
+      modal,
+      initialFocus,
       children,
       ...props
     },
@@ -297,53 +304,28 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
       context.updatePosition(side, align, sideOffset, alignOffset)
     }, [context, side, align, sideOffset, alignOffset])
 
-    // Determine portal container - prioritize passed container, then find positioned parent
+    // Determine portal container - always use document.body for portal
+    // The boundary prop handles positioning constraints, not the portal container
     const portalContainer = React.useMemo(() => {
       if (!portal) return null;
-      if (container) return container;
-      
-      // Find closest positioned ancestor (not static)
-      // Handle both Element and VirtualElement references
-      const referenceElement = context.refs.reference.current;
-      if (!referenceElement) return document.body;
-      
-      // Check if it's a real DOM element with parentElement
-      if ('parentElement' in referenceElement) {
-        let element = referenceElement.parentElement;
-        while (element) {
-          const position = window.getComputedStyle(element).position;
-          if (position !== 'static') {
-            return element;
-          }
-          element = element.parentElement;
-        }
-      }
-      
+      // Always use document.body - FloatingUI handles positioning with boundaries
       return document.body;
-    }, [portal, container, context.refs.reference]);
+    }, [portal]);
 
-    // Calculate position relative to container if not body
+    // Use FloatingUI's calculated position directly
     const enhancedStyle = React.useMemo(() => {
-      if (!portalContainer || portalContainer === document.body) {
-        return {
-          position: context.strategy,
-          top: context.y ?? 0,
-          left: context.x ?? 0,
-          ...style,
-        };
-      }
-      
-      // Calculate relative position within container
-      const containerRect = portalContainer.getBoundingClientRect();
       return {
-        position: 'absolute' as const,
-        top: (context.y ?? 0) - containerRect.top,
-        left: (context.x ?? 0) - containerRect.left,
+        position: context.strategy,
+        top: context.y ?? 0,
+        left: context.x ?? 0,
         ...style,
       };
-    }, [context, portalContainer, style]);
+    }, [context, style]);
 
-    if (!context.context.open) return null
+    // Defensive check: Don't render if we don't have valid positioning
+    // This prevents rendering at 0,0 when FloatingUI hasn't calculated position yet
+    if (!context.context.open) return null;
+    if (context.x === null || context.y === null) return null;
 
     const contentProps = {
       ref,
@@ -368,7 +350,11 @@ const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
       )
 
     const wrappedContent = (
-      <FloatingFocusManager context={context.context} modal={context.modal}>
+      <FloatingFocusManager
+        context={context.context}
+        modal={modal !== undefined ? modal : context.modal}
+        initialFocus={initialFocus}
+      >
         {content}
       </FloatingFocusManager>
     )
