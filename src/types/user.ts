@@ -21,6 +21,9 @@ export interface User {
   last_name: string;
   display_name: string;
   timezone: string;
+  /**
+   * @deprecated Use roles array with getUserRoleForOrganization() instead
+   */
   role: Role;
   roles: UserRole[];
 }
