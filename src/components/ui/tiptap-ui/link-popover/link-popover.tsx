@@ -257,9 +257,9 @@ export const LinkButton = React.forwardRef<HTMLButtonElement, ButtonProps & { ed
     const handleClick = () => {
       if (!editor) return
 
-      // If a link is already active, the BubbleMenu will handle editing
-      // Otherwise, toggle the link mark to trigger the BubbleMenu
-      if (!isActive) {
+      // Create link with empty href to trigger BubbleMenu
+      const { from, to } = editor.state.selection
+      if (from !== to) {
         editor.chain().focus().setLink({ href: "" }).run()
       }
     }
@@ -273,9 +273,10 @@ export const LinkButton = React.forwardRef<HTMLButtonElement, ButtonProps & { ed
         tabIndex={-1}
         aria-label="Link"
         tooltip="Link"
+        shortcutKeys="Ctrl-k"
         data-active-state={isActive ? "on" : "off"}
-        onClick={handleClick}
         ref={ref}
+        onClick={handleClick}
         {...props}
       >
         {children || <LinkIcon className="tiptap-button-icon" />}
@@ -302,6 +303,7 @@ const LinkMain: React.FC<LinkMainProps> = ({
   setLink,
   removeLink,
   isActive,
+  onClose,
 }) => {
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Enter") {

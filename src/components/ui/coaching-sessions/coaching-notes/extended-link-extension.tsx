@@ -25,6 +25,11 @@ export const ConfiguredLink = LinkWithTitle.configure({
   defaultProtocol: "https",
   protocols: ["http", "https"],
   isAllowedUri: (url, ctx) => {
+    // Allow empty URLs for creating new links - user will fill in the URL via BubbleMenu
+    if (!url || url === "") {
+      return true;
+    }
+
     try {
       // construct URL
       const parsedUrl = url.includes(":")
