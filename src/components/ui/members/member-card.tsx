@@ -30,7 +30,7 @@ import {
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
-import { User, Role } from "@/types/user";
+import { User, Role, isAdminOrSuperAdmin } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { toast } from "sonner";
@@ -156,9 +156,7 @@ export function MemberCard({
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
       </div>
-      {(isACoach ||
-        (currentUserRoleState.hasAccess &&
-         (currentUserRoleState.role === Role.Admin || currentUserRoleState.role === Role.SuperAdmin))) && (
+      {(isACoach || isAdminOrSuperAdmin(currentUserRoleState)) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -170,8 +168,7 @@ export function MemberCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {currentUserRoleState.hasAccess &&
-             (currentUserRoleState.role === Role.Admin || currentUserRoleState.role === Role.SuperAdmin) && (
+            {isAdminOrSuperAdmin(currentUserRoleState) && (
               <>
                 <DropdownMenuItem
                   onClick={() => {
