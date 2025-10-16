@@ -83,6 +83,18 @@ const getLinkPositionInEditor = (editor: Editor): DOMRect | null => {
   )
 }
 
+interface LinkPopoverPositioning {
+  positioning: {
+    side: "bottom"
+    align: "start"
+    sideOffset: number
+    useVirtualElement: boolean
+  }
+  virtualElement: {
+    getBoundingClientRect: () => DOMRect
+  } | null
+}
+
 /**
  * Hook to determine dynamic popover positioning based on link location.
  * Returns both positioning config and optional virtual element for FloatingUI.
@@ -90,7 +102,10 @@ const getLinkPositionInEditor = (editor: Editor): DOMRect | null => {
  * @param isOpen - Whether the popover is currently open
  * @returns Positioning configuration and virtual element reference
  */
-const useLinkPopoverPositioning = (editor: Editor | null, isOpen: boolean) => {
+const useLinkPopoverPositioning = (
+  editor: Editor | null,
+  isOpen: boolean
+): LinkPopoverPositioning => {
   const linkPosition = React.useMemo(() => {
     if (!editor || !editor.isActive("link") || !isOpen) return null
     return getLinkPositionInEditor(editor)
@@ -249,7 +264,14 @@ export const useLinkHandler = (props: LinkHandlerProps) => {
   }
 }
 
-export const LinkButton = React.forwardRef<HTMLButtonElement, ButtonProps & { editor?: Editor | null }>(
+export interface LinkButtonProps extends ButtonProps {
+  /**
+   * The TipTap editor instance (optional, will use context if not provided).
+   */
+  editor?: Editor | null
+}
+
+export const LinkButton = React.forwardRef<HTMLButtonElement, LinkButtonProps>(
   ({ className, children, editor: providedEditor, ...props }, ref) => {
     const editor = useTiptapEditor(providedEditor)
     const isActive = editor?.isActive("link") ?? false

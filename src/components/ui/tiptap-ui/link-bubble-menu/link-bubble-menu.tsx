@@ -1,6 +1,6 @@
 import * as React from "react"
 import { type Editor, useCurrentEditor } from "@tiptap/react"
-import { BubbleMenu } from "@tiptap/react/menus"
+import { BubbleMenu, type BubbleMenuProps } from "@tiptap/react/menus"
 
 // --- Icons ---
 import { CornerDownLeftIcon } from "@/components/ui/tiptap-icons/corner-down-left-icon"
@@ -111,7 +111,7 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
     setUrl("")
   }, [editor])
 
-  const handleKeyDown = (event: React.KeyboardEvent) => {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault()
       setLink()
@@ -131,26 +131,30 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
     return null
   }
 
+  const bubbleMenuOptions = {
+    placement: 'bottom-start',
+    offset: 8,
+    flip: true,
+    shift: true,
+  } as const
+
+  const shouldShow: NonNullable<BubbleMenuProps['shouldShow']> = ({ editor }) => {
+    return editor.isActive("link")
+  }
+
   return (
     <BubbleMenu
       editor={editor}
-      shouldShow={({ editor }: { editor: Editor }) => {
-        return editor.isActive("link")
-      }}
+      shouldShow={shouldShow}
       updateDelay={100}
-      options={{
-        placement: 'bottom-start',
-        offset: 8,
-        flip: true,
-        shift: true,
-      }}
+      options={bubbleMenuOptions}
     >
       <div className="link-bubble-menu">
         <input
           type="url"
           placeholder="Paste a link..."
           value={url}
-          onChange={(e) => setUrl(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUrl(e.target.value)}
           onKeyDown={handleKeyDown}
           autoComplete="off"
           autoCorrect="off"
