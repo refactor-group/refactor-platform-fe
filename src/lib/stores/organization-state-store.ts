@@ -37,8 +37,8 @@ export const createOrganizationStateStore = (
         }),
         {
           name: "organization-state-store",
-          storage: createJSONStorage(() => sessionStorage),
-          version: 1, // Increment version to force clear of old incompatible data
+          storage: createJSONStorage(() => localStorage),
+          version: 2, // Switched from sessionStorage to localStorage for cross-session persistence
         }
       )
     )
