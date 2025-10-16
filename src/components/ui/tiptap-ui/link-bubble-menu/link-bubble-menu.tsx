@@ -51,9 +51,15 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
         if (!lastHrefRef.current || lastHrefRef.current === "") {
           // Find and remove any empty link marks in the document
           const { state } = editor
+          const { from, to } = state.selection
           let foundEmptyLink = false
 
-          state.doc.descendants((node, pos) => {
+          // Use nodesBetween for better performance - only search around cursor position
+          // Expand search range slightly to catch nearby links
+          const searchFrom = Math.max(0, from - 100)
+          const searchTo = Math.min(state.doc.content.size, to + 100)
+
+          state.doc.nodesBetween(searchFrom, searchTo, (node, pos) => {
             if (foundEmptyLink) return false
 
             const marks = node.marks
@@ -61,11 +67,11 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
 
             if (linkMark && (!linkMark.attrs.href || linkMark.attrs.href === "")) {
               // Remove this empty link mark without selecting the text
-              const from = pos
-              const to = pos + node.nodeSize
+              const linkFrom = pos
+              const linkTo = pos + node.nodeSize
               editor
                 .chain()
-                .setTextSelection({ from, to })
+                .setTextSelection({ from: linkFrom, to: linkTo })
                 .unsetLink()
                 .setMeta("preventAutolink", true)
                 .setTextSelection(editor.state.selection.from) // Move cursor to single position
