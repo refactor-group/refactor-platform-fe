@@ -8,12 +8,14 @@ interface MemberListProps {
   users: User[];
   relationships: CoachingRelationshipWithUserNames[];
   onRefresh: () => void;
+  currentUserId: Id;
 }
 
 export function MemberList({
   users,
   relationships,
   onRefresh,
+  currentUserId,
 }: MemberListProps) {
   // Create a mapping of user IDs to their associated relationships
   const userRelationshipsMap = users.reduce((accumulator_map, user) => {
@@ -30,10 +32,8 @@ export function MemberList({
           {users.map((user) => (
             <MemberCard
               key={user.id}
-              firstName={user.first_name}
-              lastName={user.last_name}
-              email={user.email}
-              userId={user.id}
+              user={user}
+              currentUserId={currentUserId}
               userRelationships={userRelationshipsMap[user.id]}
               onRefresh={onRefresh}
               users={users}
