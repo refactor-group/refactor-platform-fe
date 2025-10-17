@@ -3,6 +3,7 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { useUserMutation } from "@/lib/api/organizations/users";
+import { getUserDisplayRoles, getUserCoaches } from "@/lib/utils/user-roles";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -36,10 +37,8 @@ import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationship
 import { toast } from "sonner";
 
 interface MemberCardProps {
-  firstName: string;
-  lastName: string;
-  email: string;
-  userId: Id;
+  user: User;
+  currentUserId: Id;
   userRelationships: CoachingRelationshipWithUserNames[];
   onRefresh: () => void;
   users: User[];
@@ -52,10 +51,8 @@ interface Member {
 }
 
 export function MemberCard({
-  firstName,
-  lastName,
-  email,
-  userId,
+  user,
+  currentUserId,
   userRelationships,
   onRefresh,
   users,
@@ -63,6 +60,15 @@ export function MemberCard({
   const { currentOrganizationId } = useCurrentOrganization();
   const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
   const currentUserRoleState = useCurrentUserRole();
+
+  // Extract user properties
+  const { id: userId, first_name: firstName, last_name: lastName, email } = user;
+
+  // Get display roles for this user
+  const displayRoles = getUserDisplayRoles(user, currentOrganizationId, userRelationships);
+
+  // Get coaches for this user
+  const coaches = getUserCoaches(userId, userRelationships);
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
     currentOrganizationId
   );
@@ -153,8 +159,19 @@ export function MemberCard({
       <div className="flex-1">
         <h3 className="font-medium">
           {firstName} {lastName}
+          {userId === currentUserId && " (You)"}
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
+        {displayRoles.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium">Roles:</span> {displayRoles.join(', ')}
+          </p>
+        )}
+        {coaches.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium">Coaches:</span> {coaches.join(', ')}
+          </p>
+        )}
       </div>
       {(isACoach || isAdminOrSuperAdmin(currentUserRoleState)) && (
         <DropdownMenu>
