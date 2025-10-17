@@ -5,6 +5,7 @@ import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useEffect } from "react";
 
 interface MemberContainerProps {
@@ -27,6 +28,7 @@ export function MemberContainer({
 }: MemberContainerProps) {
     const { setIsACoach, isACoach } = useAuthStore((state) => state);
     const currentUserRoleState = useCurrentUserRole();
+    const { currentOrganization } = useCurrentOrganization();
 
     // Check if current user is a coach in ANY relationship
     useEffect(() => {
@@ -48,9 +50,16 @@ export function MemberContainer({
 
   // If the current user is an Admin or SuperAdmin, show all users. Otherwise, only show users
   // that are associated with the current user in a coaching relationship.
-  const displayUsers = isAdminOrSuperAdmin(currentUserRoleState)
+  const filteredUsers = isAdminOrSuperAdmin(currentUserRoleState)
     ? users
     : users.filter((user) => associatedUserIds.has(user.id));
+
+  // Sort users to show current user first
+  const displayUsers = [...filteredUsers].sort((a, b) => {
+    if (a.id === userSession.id) return -1;
+    if (b.id === userSession.id) return 1;
+    return 0;
+  });
 
   if (isLoading) {
     return (
@@ -61,7 +70,14 @@ export function MemberContainer({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-2xl font-semibold">Members</h3>
+        <div>
+          <h3 className="text-2xl font-semibold">Members</h3>
+          {currentOrganization && (
+            <p className="text-sm text-muted-foreground">
+              of {currentOrganization.name}
+            </p>
+          )}
+        </div>
         {/* Only show the button if user is a coach to _some_ user within the
         scope of the organization or if user is an Admin or SuperAdmin. We may come back and add this directly to user
         data.  */}
@@ -76,6 +92,7 @@ export function MemberContainer({
         users={displayUsers}
         relationships={userRelationships}
         onRefresh={onRefresh}
+        currentUserId={userSession.id}
       />
     </div>
   );
