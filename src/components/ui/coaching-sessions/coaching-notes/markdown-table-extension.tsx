@@ -24,99 +24,140 @@ interface TableToken {
   [key: string]: unknown;
 }
 
-// Define parse and render functions
-const parseTableMarkdown = (token: Token, helpers: MarkdownParseHelpers) => {
-    const tableToken = token as TableToken;
-    const rows = [];
+// Markdown table parsing: Convert markdown table tokens to TipTap table structure
 
-    if (tableToken.header) {
-      const headerCells = tableToken.header.map((cell) => {
-        const cellContent = helpers.parseInline(cell.tokens || []);
-        return {
-          type: "tableHeader",
-          content: [
-            {
-              type: "paragraph",
-              content: cellContent,
-            },
-          ],
-        };
-      });
-      rows.push({
-        type: "tableRow",
-        content: headerCells,
-      });
-    }
-
-    if (tableToken.rows) {
-      tableToken.rows.forEach((row) => {
-        const cells = row.map((cell) => {
-          const cellContent = helpers.parseInline(cell.tokens || []);
-          return {
-            type: "tableCell",
-            content: [
-              {
-                type: "paragraph",
-                content: cellContent,
-              },
-            ],
-          };
-        });
-        rows.push({
-          type: "tableRow",
-          content: cells,
-        });
-      });
-    }
-
-    return {
-      type: "table",
-      content: rows,
-    };
+const createHeaderCell = (cell: TableCellToken, helpers: MarkdownParseHelpers) => {
+  const cellContent = helpers.parseInline(cell.tokens || []);
+  return {
+    type: "tableHeader",
+    content: [
+      {
+        type: "paragraph",
+        content: cellContent,
+      },
+    ],
+  };
 };
 
-const renderTableMarkdown = (node: JSONContent, helpers: MarkdownRendererHelpers) => {
-    let markdown = "";
-    const rows = node.content || [];
+const createTableCell = (cell: TableCellToken, helpers: MarkdownParseHelpers) => {
+  const cellContent = helpers.parseInline(cell.tokens || []);
+  return {
+    type: "tableCell",
+    content: [
+      {
+        type: "paragraph",
+        content: cellContent,
+      },
+    ],
+  };
+};
 
-    if (rows.length === 0) return "";
+const parseHeaderRow = (headerCells: TableCellToken[], helpers: MarkdownParseHelpers) => {
+  const cells = headerCells.map((cell) => createHeaderCell(cell, helpers));
+  return {
+    type: "tableRow",
+    content: cells,
+  };
+};
 
-    // Header row
-    const headerRow = rows[0];
-    if (headerRow?.content) {
+const parseBodyRows = (bodyRows: TableCellToken[][], helpers: MarkdownParseHelpers) => {
+  return bodyRows.map((row) => {
+    const cells = row.map((cell) => createTableCell(cell, helpers));
+    return {
+      type: "tableRow",
+      content: cells,
+    };
+  });
+};
+
+const parseTableMarkdown = (token: Token, helpers: MarkdownParseHelpers) => {
+  const tableToken = token as TableToken;
+  const rows = [];
+
+  // Parse header row if present
+  if (tableToken.header) {
+    const headerRow = parseHeaderRow(tableToken.header, helpers);
+    rows.push(headerRow);
+  }
+
+  // Parse body rows if present
+  if (tableToken.rows) {
+    const bodyRows = parseBodyRows(tableToken.rows, helpers);
+    rows.push(...bodyRows);
+  }
+
+  return {
+    type: "table",
+    content: rows,
+  };
+};
+
+// Markdown table rendering: Convert TipTap table structure to markdown
+
+const renderCellContent = (cell: JSONContent, helpers: MarkdownRendererHelpers): string => {
+  return cell.content ? helpers.renderChildren(cell.content) : "";
+};
+
+const renderHeaderRow = (headerRow: JSONContent, helpers: MarkdownRendererHelpers): string => {
+  let markdown = "| ";
+
+  headerRow.content?.forEach((cell: JSONContent) => {
+    const cellContent = renderCellContent(cell, helpers);
+    markdown += cellContent + " | ";
+  });
+
+  markdown += "\n";
+  return markdown;
+};
+
+const renderSeparatorRow = (columnCount: number): string => {
+  let markdown = "| ";
+
+  for (let i = 0; i < columnCount; i++) {
+    markdown += "--- | ";
+  }
+
+  markdown += "\n";
+  return markdown;
+};
+
+const renderBodyRows = (rows: JSONContent[], helpers: MarkdownRendererHelpers): string => {
+  let markdown = "";
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row?.content) {
       markdown += "| ";
-      headerRow.content.forEach((cell: JSONContent) => {
-        const cellContent = cell.content
-          ? helpers.renderChildren(cell.content)
-          : "";
+      row.content.forEach((cell: JSONContent) => {
+        const cellContent = renderCellContent(cell, helpers);
         markdown += cellContent + " | ";
       });
       markdown += "\n";
-
-      // Separator
-      markdown += "| ";
-      headerRow.content.forEach(() => {
-        markdown += "--- | ";
-      });
-      markdown += "\n";
     }
+  }
 
-    // Body rows
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (row?.content) {
-        markdown += "| ";
-        row.content.forEach((cell: JSONContent) => {
-          const cellContent = cell.content
-            ? helpers.renderChildren(cell.content)
-            : "";
-          markdown += cellContent + " | ";
-        });
-        markdown += "\n";
-      }
-    }
+  return markdown;
+};
 
-    return markdown;
+const renderTableMarkdown = (node: JSONContent, helpers: MarkdownRendererHelpers): string => {
+  const rows = node.content || [];
+
+  // Empty table has no markdown representation
+  if (rows.length === 0) return "";
+
+  let markdown = "";
+  const headerRow = rows[0];
+
+  // Render header row and separator
+  if (headerRow?.content) {
+    markdown += renderHeaderRow(headerRow, helpers);
+    markdown += renderSeparatorRow(headerRow.content.length);
+  }
+
+  // Render body rows
+  markdown += renderBodyRows(rows, helpers);
+
+  return markdown;
 };
 
 // Create table with markdown support using extend
