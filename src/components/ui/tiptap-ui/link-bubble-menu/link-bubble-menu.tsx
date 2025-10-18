@@ -29,11 +29,8 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
   const editor = providedEditor || contextEditor
   const [url, setUrl] = React.useState<string>("")
 
-  // Track if link was active and its href value
-  const wasLinkActiveRef = React.useRef(false)
-  const lastHrefRef = React.useRef<string>("")
-
-  // Update URL when link becomes active, and clean up empty links when deactivated
+  // Update URL when link becomes active
+  // Note: Zombie link cleanup is handled by LinkZombieCleanup extension
   React.useEffect(() => {
     if (!editor) return
 
@@ -43,48 +40,7 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
       if (isLinkActive) {
         const { href } = editor.getAttributes("link")
         setUrl(href || "")
-        lastHrefRef.current = href || ""
-        wasLinkActiveRef.current = true
-      } else if (wasLinkActiveRef.current) {
-        // Link just became inactive (user clicked away)
-        // If the last href was empty, it means we created a zombie link - remove it
-        if (!lastHrefRef.current || lastHrefRef.current === "") {
-          // Find and remove any empty link marks in the document
-          const { state } = editor
-          const { from, to } = state.selection
-          let foundEmptyLink = false
-
-          // Use nodesBetween for better performance - only search around cursor position
-          // Expand search range slightly to catch nearby links
-          const searchFrom = Math.max(0, from - 100)
-          const searchTo = Math.min(state.doc.content.size, to + 100)
-
-          state.doc.nodesBetween(searchFrom, searchTo, (node, pos) => {
-            if (foundEmptyLink) return false
-
-            const marks = node.marks
-            const linkMark = marks.find(mark => mark.type.name === "link")
-
-            if (linkMark && (!linkMark.attrs.href || linkMark.attrs.href === "")) {
-              // Remove this empty link mark without selecting the text
-              const linkFrom = pos
-              const linkTo = pos + node.nodeSize
-              editor
-                .chain()
-                .setTextSelection({ from: linkFrom, to: linkTo })
-                .unsetLink()
-                .setMeta("preventAutolink", true)
-                .setTextSelection(editor.state.selection.from) // Move cursor to single position
-                .run()
-              foundEmptyLink = true
-              return false
-            }
-          })
-        }
-
-        // Reset tracking
-        wasLinkActiveRef.current = false
-        lastHrefRef.current = ""
+      } else {
         setUrl("")
       }
     }

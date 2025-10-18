@@ -33,7 +33,7 @@ import { createLowlight } from "lowlight";
 import { all } from "lowlight";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
-import { ConfiguredLink } from "./extended-link-extension";
+import { ConfiguredLink, LinkKeyboardShortcut, LinkZombieCleanup } from "./extended-link-extension";
 import { Markdown } from "@tiptap/markdown";
 import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
 import {
@@ -230,7 +230,7 @@ const addPlaceholderConfiguration = () => {
 };
 
 const addLinksConfiguration = () => {
-  return [ConfiguredLink];
+  return [ConfiguredLink, LinkKeyboardShortcut, LinkZombieCleanup];
 };
 
 const addCustomTabHandler = () => {
