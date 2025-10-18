@@ -17,9 +17,22 @@ import { all } from "lowlight";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
 import { ConfiguredLink } from "./extended-link-extension";
+import { Markdown } from "@tiptap/markdown";
 import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
+import {
+  TableWithMarkdown,
+  TableMarkdownPasteHandler,
+  TableRow,
+  TableCell,
+  TableHeader,
+} from "./markdown-table-extension";
+import {
+  PastedMarkdownLink,
+  TypedMarkdownLink,
+} from "./markdown-link-extension";
 
 const lowlight = createLowlight(all);
+const INDENT_SIZE = 4; // Number of spaces for indentation
 
 // Tab handler: enables proper indentation in code blocks
 const CodeBlockTabHandler = Extension.create({
@@ -55,11 +68,18 @@ export const Extensions = (
 ): TiptapExtensions => {
   try {
     const baseExtensions = createFoundationExtensions();
-    const collaborativeExtensions = buildCollaborationIfValid(doc, provider, user);
-    const finalExtensions = combineExtensions(baseExtensions, collaborativeExtensions);
+    const collaborativeExtensions = buildCollaborationIfValid(
+      doc,
+      provider,
+      user
+    );
+    const finalExtensions = combineExtensions(
+      baseExtensions,
+      collaborativeExtensions
+    );
     return validateAndReturn(finalExtensions);
   } catch (error) {
-    console.error('Extensions creation failed:', error);
+    console.error("Extensions creation failed:", error);
     return [StarterKit];
   }
 };
@@ -69,6 +89,7 @@ export const Extensions = (
 const createFoundationExtensions = (): TiptapExtensions => {
   return [
     configureStarterKit(),
+    configureTableRelatedExtensions(),
     addFormattingExtensions(),
     addTaskListExtensions(),
     addCodeBlockWithSyntaxHighlighting(),
@@ -94,8 +115,8 @@ const buildCollaborationIfValid = (
       createCollaborationCaret(provider!, user),
     ];
   } catch (error) {
-    console.error('Collaborative extensions failed:', error);
-    console.warn('Falling back to offline editing mode');
+    console.error("Collaborative extensions failed:", error);
+    console.warn("Falling back to offline editing mode");
     return [];
   }
 };
@@ -109,7 +130,7 @@ const combineExtensions = (
 
 const validateAndReturn = (extensions: TiptapExtensions): TiptapExtensions => {
   if (extensions.length === 0) {
-    console.warn('No extensions configured, using minimal StarterKit');
+    console.warn("No extensions configured, using minimal StarterKit");
     return [StarterKit];
   }
   return extensions;
@@ -121,22 +142,32 @@ const configureStarterKit = () => {
   return StarterKit.configure({
     codeBlock: false, // Use custom code block
     link: false, // Use custom configured link
-    undoRedo: false, // Disabled for collaboration compatibility
+    history: false, // Disabled for collaboration compatibility
   });
+};
+
+const configureTableRelatedExtensions = () => {
+  return [
+    TableWithMarkdown,
+    TableMarkdownPasteHandler,
+    TableRow,
+    TableCell,
+    TableHeader,
+  ];
 };
 
 const addFormattingExtensions = (): TiptapExtensions => {
   return [
     Highlight,
     TextStyle,
+    Markdown.configure({
+      indentation: { style: "space", size: INDENT_SIZE },
+    }),
   ];
 };
 
 const addTaskListExtensions = (): TiptapExtensions => {
-  return [
-    TaskList,
-    TaskItem.configure({ nested: true }),
-  ];
+  return [TaskList, TaskItem.configure({ nested: true })];
 };
 
 const addCodeBlockWithSyntaxHighlighting = () => {
@@ -162,7 +193,7 @@ const addPlaceholderConfiguration = () => {
 };
 
 const addLinksConfiguration = () => {
-  return ConfiguredLink;
+  return [ConfiguredLink, PastedMarkdownLink, TypedMarkdownLink];
 };
 
 const addCustomTabHandler = () => {
@@ -171,16 +202,13 @@ const addCustomTabHandler = () => {
 
 const validateYjsDocument = (doc: Y.Doc) => {
   if (!doc?.clientID && doc?.clientID !== 0) {
-    console.warn('Document initialization incomplete');
+    console.warn("Document initialization incomplete");
   }
 };
 
 const createCollaborationExtension = (doc: Y.Doc) => {
   return Collaboration.configure({
     document: doc,
-    yUndoOptions: {
-      trackedOrigins: [null],
-    },
   });
 };
 
@@ -222,4 +250,3 @@ const createCollaborationCaret = (
     },
   });
 };
-
