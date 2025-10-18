@@ -1,5 +1,22 @@
-// TipTap v3 Extensions - Using StarterKit + additional extensions
-import StarterKit from "@tiptap/starter-kit";
+// TipTap v3 Extensions - Using individual extensions instead of StarterKit to avoid History
+import Document from "@tiptap/extension-document";
+import Paragraph from "@tiptap/extension-paragraph";
+import Text from "@tiptap/extension-text";
+import Bold from "@tiptap/extension-bold";
+import Italic from "@tiptap/extension-italic";
+import Strike from "@tiptap/extension-strike";
+import Underline from "@tiptap/extension-underline";
+import Code from "@tiptap/extension-code";
+import Heading from "@tiptap/extension-heading";
+import BulletList from "@tiptap/extension-bullet-list";
+import OrderedList from "@tiptap/extension-ordered-list";
+import ListItem from "@tiptap/extension-list-item";
+import Blockquote from "@tiptap/extension-blockquote";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
+import HardBreak from "@tiptap/extension-hard-break";
+import Dropcursor from "@tiptap/extension-dropcursor";
+import Gapcursor from "@tiptap/extension-gapcursor";
+// NOTE: Explicitly NOT importing History - Collaboration provides its own
 import Highlight from "@tiptap/extension-highlight";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -26,10 +43,6 @@ import {
   TableCell,
   TableHeader,
 } from "./markdown-table-extension";
-import {
-  PastedMarkdownLink,
-  TypedMarkdownLink,
-} from "./markdown-link-extension";
 
 const lowlight = createLowlight(all);
 const INDENT_SIZE = 4; // Number of spaces for indentation
@@ -80,15 +93,20 @@ export const Extensions = (
     return validateAndReturn(finalExtensions);
   } catch (error) {
     console.error("Extensions creation failed:", error);
-    return [StarterKit];
+    return createMinimalExtensions();
   }
 };
 
 // Extension composition logic
 
+const createMinimalExtensions = (): TiptapExtensions => {
+  // Minimal fallback extensions for error cases
+  return [Document, Paragraph, Text];
+};
+
 const createFoundationExtensions = (): TiptapExtensions => {
   return [
-    configureStarterKit(),
+    configureBaseExtensions(),
     configureTableRelatedExtensions(),
     addFormattingExtensions(),
     addTaskListExtensions(),
@@ -130,20 +148,39 @@ const combineExtensions = (
 
 const validateAndReturn = (extensions: TiptapExtensions): TiptapExtensions => {
   if (extensions.length === 0) {
-    console.warn("No extensions configured, using minimal StarterKit");
-    return [StarterKit];
+    console.warn("No extensions configured, using minimal extensions");
+    return createMinimalExtensions();
   }
   return extensions;
 };
 
 // Extension configuration
 
-const configureStarterKit = () => {
-  return StarterKit.configure({
-    codeBlock: false, // Use custom code block
-    link: false, // Use custom configured link
-    history: false, // Disabled for collaboration compatibility
-  });
+const configureBaseExtensions = () => {
+  // Return individual StarterKit extensions, excluding CodeBlock, Link, and History
+  // CodeBlock is replaced with custom CodeBlockLowlight
+  // Link is replaced with ConfiguredLink
+  // History is excluded because Collaboration provides its own
+  // Underline is added separately (not part of StarterKit)
+  return [
+    Document,
+    Paragraph,
+    Text,
+    Bold,
+    Italic,
+    Strike,
+    Underline,
+    Code,
+    Heading,
+    BulletList,
+    OrderedList,
+    ListItem,
+    Blockquote,
+    HorizontalRule,
+    HardBreak,
+    Dropcursor,
+    Gapcursor,
+  ];
 };
 
 const configureTableRelatedExtensions = () => {
@@ -193,7 +230,7 @@ const addPlaceholderConfiguration = () => {
 };
 
 const addLinksConfiguration = () => {
-  return [ConfiguredLink, PastedMarkdownLink, TypedMarkdownLink];
+  return [ConfiguredLink];
 };
 
 const addCustomTabHandler = () => {

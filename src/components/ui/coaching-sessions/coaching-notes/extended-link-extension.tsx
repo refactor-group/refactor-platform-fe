@@ -1,6 +1,9 @@
 import Link from "@tiptap/extension-link";
+import { markInputRule, markPasteRule } from "@tiptap/core";
 
-const LinkWithTitle = Link.extend({
+const LinkWithTitleAndMarkdown = Link.extend({
+  name: 'link',
+
   addAttributes() {
     return {
       ...this.parent?.(),
@@ -17,13 +20,44 @@ const LinkWithTitle = Link.extend({
       },
     };
   },
+
+  addInputRules() {
+    return [
+      // Add markdown link input rule for typing: [text](url)
+      markInputRule({
+        find: /\[([^\]]+)\]\(([^)]+)\)$/,
+        type: this.type,
+        getAttributes: (match) => {
+          return {
+            href: match[2],
+          };
+        },
+      }),
+    ];
+  },
+
+  addPasteRules() {
+    return [
+      // Add markdown link paste rule: [text](url)
+      markPasteRule({
+        find: /\[([^\]]+)\]\(([^)]+)\)/g,
+        type: this.type,
+        getAttributes: (match) => {
+          return {
+            href: match[2],
+          };
+        },
+      }),
+    ];
+  },
 });
 
-export const ConfiguredLink = LinkWithTitle.configure({
+export const ConfiguredLink = LinkWithTitleAndMarkdown.configure({
   openOnClick: false,
   autolink: true,
   defaultProtocol: "https",
-  protocols: ["http", "https"],
+  // Don't specify protocols - http/https are already registered by default
+  // Specifying them here causes linkifyjs re-initialization warnings
   isAllowedUri: (url, ctx) => {
     // Allow empty URLs for creating new links - user will fill in the URL via BubbleMenu
     if (!url || url === "") {
