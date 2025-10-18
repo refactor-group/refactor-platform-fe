@@ -2,14 +2,25 @@ import Link from "@tiptap/extension-link";
 import { markInputRule, markPasteRule } from "@tiptap/core";
 
 const LinkWithTitleAndMarkdown = Link.extend({
-  name: 'link',
+  name: "link",
 
   addAttributes() {
     return {
-      ...this.parent?.(),
+      href: {
+        default: null,
+      },
+      target: {
+        default: null,
+      },
+      rel: {
+        default: null,
+      },
+      class: {
+        default: null,
+      },
       title: {
         default: null,
-        renderHTML: (attributes) => {
+        renderHTML: (attributes: { href: any }) => {
           if (!attributes.href) {
             return {};
           }
