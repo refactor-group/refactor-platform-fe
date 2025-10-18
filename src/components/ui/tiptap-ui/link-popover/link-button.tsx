@@ -11,6 +11,9 @@ import { LinkIcon } from "@/components/ui/tiptap-icons/link-icon";
 import type { ButtonProps } from "@/components/ui/tiptap-ui-primitive/button";
 import { Button } from "@/components/ui/tiptap-ui-primitive/button";
 
+// --- Utilities ---
+import { triggerLinkCreation } from "@/components/ui/coaching-sessions/coaching-notes/extended-link-extension";
+
 export interface LinkButtonProps extends ButtonProps {
   /**
    * The TipTap editor instance (optional, will use context if not provided).
@@ -25,12 +28,7 @@ export const LinkButton = React.forwardRef<HTMLButtonElement, LinkButtonProps>(
 
     const handleClick = () => {
       if (!editor) return;
-
-      // Create link with empty href to trigger BubbleMenu
-      const { from, to } = editor.state.selection;
-      if (from !== to) {
-        editor.chain().focus().setLink({ href: "" }).run();
-      }
+      triggerLinkCreation(editor);
     };
 
     return (

@@ -1,0 +1,53 @@
+/* TipTap Table Styles */
+
+/* Table container */
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: auto;
+  width: 100%;
+  margin: 1rem 0;
+  border: 1px solid var(--editor-border);
+  border-radius: 4px;
+
+  td,
+  th {
+    border: 1px solid var(--editor-border);
+    padding: 8px 12px;
+    vertical-align: top;
+    box-sizing: border-box;
+    position: relative;
+
+    > * {
+      margin-bottom: 0;
+    }
+  }
+
+  th {
+    font-weight: 600;
+    text-align: left;
+    background-color: rgb(249, 250, 251);
+  }
+
+  .dark & th {
+    background-color: rgb(55, 65, 81);
+  }
+
+  /* Selected cell highlighting */
+  .selectedCell:after {
+    z-index: 2;
+    position: absolute;
+    content: "";
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: rgba(59, 130, 246, 0.1);
+    pointer-events: none;
+  }
+}
+
+/* Table wrapper for horizontal scrolling */
+.tableWrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
