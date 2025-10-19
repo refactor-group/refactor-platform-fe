@@ -17,6 +17,12 @@ import { Separator } from "@/components/ui/tiptap-ui-primitive/separator"
 // --- Styles ---
 import "@/components/ui/tiptap-ui/link-bubble-menu/link-bubble-menu.scss"
 
+/** Vertical offset in pixels between the bubble menu and the selected text */
+const BUBBLE_MENU_OFFSET_PX = 8;
+
+/** Delay in milliseconds before the bubble menu updates its position after selection changes */
+const BUBBLE_MENU_UPDATE_DELAY_MS = 100;
+
 export interface LinkBubbleMenuProps {
   /**
    * The TipTap editor instance (optional, will use context if not provided).
@@ -95,7 +101,7 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
 
   const bubbleMenuOptions = {
     placement: 'bottom-start',
-    offset: 8,
+    offset: BUBBLE_MENU_OFFSET_PX,
     flip: true,
     shift: true,
   } as const
@@ -108,7 +114,7 @@ export function LinkBubbleMenu({ editor: providedEditor }: LinkBubbleMenuProps) 
     <BubbleMenu
       editor={editor}
       shouldShow={shouldShow}
-      updateDelay={100}
+      updateDelay={BUBBLE_MENU_UPDATE_DELAY_MS}
       options={bubbleMenuOptions}
     >
       <div className="link-bubble-menu">

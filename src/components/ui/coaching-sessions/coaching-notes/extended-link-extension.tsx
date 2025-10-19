@@ -35,7 +35,7 @@ const LinkWithTitleAndMarkdown = Link.extend({
       },
       title: {
         default: null,
-        renderHTML: (attributes: { href: any }) => {
+        renderHTML: (attributes: { href: string | null }) => {
           if (!attributes.href) {
             return {};
           }
