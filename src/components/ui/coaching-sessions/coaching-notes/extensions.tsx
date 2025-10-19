@@ -246,6 +246,9 @@ const validateYjsDocument = (doc: Y.Doc) => {
 const createCollaborationExtension = (doc: Y.Doc) => {
   return Collaboration.configure({
     document: doc,
+    yUndoOptions: {
+      trackedOrigins: [null],
+    },
   });
 };
 
