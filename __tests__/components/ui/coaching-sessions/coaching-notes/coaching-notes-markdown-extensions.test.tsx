@@ -112,5 +112,89 @@ describe('Coaching Notes Markdown Extensions', () => {
         expect(bodyCells.length).toBe(8)
       })
     })
+
+    it('should handle malformed markdown tables gracefully', async () => {
+      const TestEditor = () => {
+        const editor = useEditor({
+          extensions: Extensions(yDoc, null),
+          content: '',
+        })
+
+        if (!editor) return null
+
+        // Missing separator row - should not crash
+        const malformedTable = `| Name | Age |
+| Alice | 30 |`
+
+        editor.commands.insertContent(malformedTable, { contentType: 'markdown' })
+
+        return <EditorContent editor={editor} />
+      }
+
+      const { container } = render(<TestEditor />)
+
+      // Should not crash - might render as paragraph or incomplete table
+      await waitFor(() => {
+        expect(container).toBeTruthy()
+      })
+    })
+
+    it('should handle tables with leading spaces', async () => {
+      const TestEditor = () => {
+        const editor = useEditor({
+          extensions: Extensions(yDoc, null),
+          content: '',
+        })
+
+        if (!editor) return null
+
+        const tableWithSpaces = `  | Name | Age |
+  | --- | --- |
+  | Alice | 30 |`
+
+        editor.commands.insertContent(tableWithSpaces, { contentType: 'markdown' })
+
+        return <EditorContent editor={editor} />
+      }
+
+      const { container } = render(<TestEditor />)
+
+      await waitFor(() => {
+        const table = container.querySelector('table')
+        expect(table).toBeTruthy()
+
+        const headerCells = container.querySelectorAll('th')
+        expect(headerCells.length).toBe(2)
+      })
+    })
+
+    it('should handle empty table cells', async () => {
+      const TestEditor = () => {
+        const editor = useEditor({
+          extensions: Extensions(yDoc, null),
+          content: '',
+        })
+
+        if (!editor) return null
+
+        const emptyTable = `| Name | Age |
+| --- | --- |
+|  |  |`
+
+        editor.commands.insertContent(emptyTable, { contentType: 'markdown' })
+
+        return <EditorContent editor={editor} />
+      }
+
+      const { container } = render(<TestEditor />)
+
+      await waitFor(() => {
+        const table = container.querySelector('table')
+        expect(table).toBeTruthy()
+
+        const bodyCells = container.querySelectorAll('td')
+        expect(bodyCells.length).toBe(2)
+      })
+    })
   })
 })

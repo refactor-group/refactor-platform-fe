@@ -1,6 +1,10 @@
 import Link from "@tiptap/extension-link";
 import { Extension, markInputRule, markPasteRule } from "@tiptap/core";
 import type { Editor } from "@tiptap/react";
+import debounce from "just-debounce-it";
+
+/** Number of characters to search before and after cursor position when looking for zombie links */
+const ZOMBIE_LINK_SEARCH_RANGE = 100;
 
 /**
  * Triggers the link creation flow by setting an empty href,
@@ -91,7 +95,9 @@ export const LinkKeyboardShortcut = Extension.create({
 
 // Extension to clean up empty/zombie links automatically
 // This ensures consistent behavior whether link was created via button or keyboard
-export const LinkZombieCleanup = Extension.create({
+export const LinkZombieCleanup = Extension.create<{
+  debouncedCleanup?: (...args: any[]) => void;
+}>({
   name: "linkZombieCleanup",
 
   onCreate() {
@@ -114,8 +120,8 @@ export const LinkZombieCleanup = Extension.create({
           let foundEmptyLink = false;
 
           // Search around cursor position for empty links
-          const searchFrom = Math.max(0, from - 100);
-          const searchTo = Math.min(state.doc.content.size, to + 100);
+          const searchFrom = Math.max(0, from - ZOMBIE_LINK_SEARCH_RANGE);
+          const searchTo = Math.min(state.doc.content.size, to + ZOMBIE_LINK_SEARCH_RANGE);
 
           state.doc.nodesBetween(searchFrom, searchTo, (node, pos) => {
             if (foundEmptyLink) return false;
@@ -146,8 +152,20 @@ export const LinkZombieCleanup = Extension.create({
       }
     };
 
-    this.editor.on("selectionUpdate", cleanupEmptyLinks);
-    this.editor.on("transaction", cleanupEmptyLinks);
+    // Debounce cleanup to reduce performance impact during rapid editor changes
+    // 50ms delay is imperceptible while preventing excessive DOM searches
+    this.options.debouncedCleanup = debounce(cleanupEmptyLinks, 50);
+
+    this.editor.on("selectionUpdate", this.options.debouncedCleanup);
+    this.editor.on("transaction", this.options.debouncedCleanup);
+  },
+
+  onDestroy() {
+    // Clean up event listeners to prevent memory leaks
+    if (this.options.debouncedCleanup) {
+      this.editor.off("selectionUpdate", this.options.debouncedCleanup);
+      this.editor.off("transaction", this.options.debouncedCleanup);
+    }
   },
 });
 

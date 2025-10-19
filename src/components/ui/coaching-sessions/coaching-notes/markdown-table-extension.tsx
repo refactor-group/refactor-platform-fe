@@ -1,4 +1,5 @@
 import type { Token } from "marked";
+import { marked } from "marked";
 import type {
   MarkdownParseHelpers,
   MarkdownRendererHelpers,
@@ -80,16 +81,6 @@ function isTableToken(token: unknown): token is TableToken {
     ('header' in token ? Array.isArray((token as { header: unknown }).header) : true) &&
     ('rows' in token ? Array.isArray((token as { rows: unknown }).rows) : true)
   );
-}
-
-/** Type guard to check if a cell is a table header cell */
-function isTableHeaderCell(cell: TableCellNode): cell is TableHeaderCell {
-  return cell.type === 'tableHeader';
-}
-
-/** Type guard to check if a cell is a table body cell */
-function isTableBodyCell(cell: TableCellNode): cell is TableBodyCell {
-  return cell.type === 'tableCell';
 }
 
 const createHeaderCell = (
@@ -232,7 +223,7 @@ const renderTableMarkdown = (
   const headerRow = rows[0];
 
   // Render header row and separator
-  if (headerRow?.content) {
+  if (headerRow?.content && headerRow.content.length > 0) {
     markdown += renderHeaderRow(headerRow, helpers);
     markdown += renderSeparatorRow(createColumnCount(headerRow.content.length));
   }
@@ -273,20 +264,29 @@ export const TableMarkdownPasteHandler = Extension.create({
             const text = event.clipboardData?.getData("text/plain");
             if (!text) return false;
 
-            // Check if the pasted text looks like a markdown table
-            // Construct regex from parts to avoid Tailwind CSS picking it up
-            const pipeChar = "|";
-            const tablePattern = new RegExp(
-              `\\${pipeChar}.*\\${pipeChar}.*\\n\\${pipeChar}[\\-:\\s${pipeChar}]+\\${pipeChar}`
-            );
-            const hasMarkdownTable = tablePattern.test(text);
+            // Use marked's tokenizer to detect tables (handles leading whitespace correctly)
+            const hasMarkdownTable = (() => {
+              try {
+                const tokens = marked.lexer(text);
+                return tokens.some(token => token.type === 'table');
+              } catch {
+                // If tokenization fails, fall back to default paste
+                return false;
+              }
+            })();
 
             if (hasMarkdownTable && this.editor.markdown) {
-              // Parse as markdown and insert
-              this.editor.commands.insertContent(text, {
-                contentType: "markdown",
-              });
-              return true; // Prevent default paste
+              try {
+                // Parse as markdown and insert
+                this.editor.commands.insertContent(text, {
+                  contentType: "markdown",
+                });
+                return true; // Prevent default paste
+              } catch (error) {
+                console.error("Failed to paste markdown table:", error);
+                // Fall through to default paste behavior
+                return false;
+              }
             }
 
             return false; // Allow default paste for non-table content
