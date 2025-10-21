@@ -123,35 +123,35 @@ export function MemberCard({
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [assignedMember, setAssignedMember] = useState<Member | null>(null);
 
-  const handleCreateCoachingRelationship = () => {
+  const handleCreateCoachingRelationship = async () => {
     if (!selectedMember || !assignedMember) return;
 
-    if (assignMode === RelationshipRole.Coach) {
-      console.log("Assign", selectedMember.id, "as coach for", userId);
-      createRelationship(currentOrganizationId, {
-        coach_id: assignedMember.id,
-        coachee_id: selectedMember.id,
-      });
-    } else {
-      console.log("Assign", selectedMember.id, "as coachee for", userId);
-      createRelationship(currentOrganizationId, {
-        coach_id: selectedMember.id,
-        coachee_id: assignedMember.id,
-      });
-    }
+    try {
+      if (assignMode === RelationshipRole.Coach) {
+        console.log("Assign", selectedMember.id, "as coach for", userId);
+        await createRelationship(currentOrganizationId, {
+          coach_id: assignedMember.id,
+          coachee_id: selectedMember.id,
+        });
+      } else {
+        console.log("Assign", selectedMember.id, "as coachee for", userId);
+        await createRelationship(currentOrganizationId, {
+          coach_id: selectedMember.id,
+          coachee_id: assignedMember.id,
+        });
+      }
 
-    if (createError) {
+      toast.success(
+        `Successfully assigned ${assignedMember.first_name} ${assignedMember.last_name} as ${assignMode} for ${selectedMember.first_name} ${selectedMember.last_name}`
+      );
+      onRefresh();
+      setAssignDialogOpen(false);
+      setSelectedMember(null);
+      setAssignedMember(null);
+    } catch (error) {
       toast.error(`Error assigning ${assignMode}`);
-      return;
+      console.error("Error creating coaching relationship:", error);
     }
-
-    toast.success(
-      `Successfully assigned ${assignedMember.first_name} ${assignedMember.last_name} as ${assignMode} for ${selectedMember.first_name} ${selectedMember.last_name}`
-    );
-    onRefresh();
-    setAssignDialogOpen(false);
-    setSelectedMember(null);
-    setAssignedMember(null);
   };
 
   return (
@@ -167,13 +167,11 @@ export function MemberCard({
             <span className="font-medium">Roles:</span> {displayRoles.join(', ')}
           </p>
         )}
-        {coaches.length > 0 && (
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium">Coaches:</span> {coaches.join(', ')}
-          </p>
-        )}
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}
+        </p>
       </div>
-      {(isACoach || isAdminOrSuperAdmin(currentUserRoleState)) && (
+      {(isAdminOrSuperAdmin(currentUserRoleState) || canDeleteUser) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

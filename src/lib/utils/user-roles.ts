@@ -1,5 +1,6 @@
-import { User } from "@/types/user";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
+import { User, Role } from "@/types/user";
+import { CoachingRelationshipWithUserNames, isUserCoach, isUserCoachee } from "@/types/coaching_relationship";
+import { RelationshipRole, formatRelationshipRole } from "@/types/relationship-role";
 import { Id } from "@/types/general";
 
 /**
@@ -16,8 +17,10 @@ export function getUserDisplayRoles(
 ): string[] {
   const roles = new Set<string>();
 
-  // Check for SuperAdmin role (organization_id is null for global roles)
-  const superAdminRole = user.roles.find(r => r.role === 'SuperAdmin' && r.organization_id === null);
+  // Add SuperAdmin role if user has it (global access)
+  const superAdminRole = user.roles.find(
+    r => r.role === Role.SuperAdmin && r.organization_id === null
+  );
   if (superAdminRole) {
     roles.add(superAdminRole.role);
   }
@@ -28,12 +31,13 @@ export function getUserDisplayRoles(
     roles.add(orgRole.role);
   }
 
-  // Add coaching roles
-  const isCoach = relationships.some(r => r.coach_id === user.id);
-  const isCoachee = relationships.some(r => r.coachee_id === user.id);
-
-  if (isCoach) roles.add('Coach');
-  if (isCoachee) roles.add('Coachee');
+  // Add coaching relationship roles
+  if (isUserCoach(user.id, relationships)) {
+    roles.add(formatRelationshipRole(RelationshipRole.Coach));
+  }
+  if (isUserCoachee(user.id, relationships)) {
+    roles.add(formatRelationshipRole(RelationshipRole.Coachee));
+  }
 
   return Array.from(roles).sort();
 }
