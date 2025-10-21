@@ -155,3 +155,24 @@ export function getUserRoleForOrganization(
 export function isAdminOrSuperAdmin(roleState: UserRoleState): boolean {
   return roleState.hasAccess && (roleState.role === Role.Admin || roleState.role === Role.SuperAdmin);
 }
+
+/**
+ * Sorts users alphabetically by name, with the option to place a specific user first.
+ *
+ * @param users - Array of users to sort
+ * @param currentUserId - Optional ID of the user to place first in the list
+ * @returns Sorted array with current user first (if provided), then alphabetically by full name
+ */
+export function sortUsersAlphabetically(users: User[], currentUserId?: Id): User[] {
+  return [...users].sort((a, b) => {
+    if (currentUserId) {
+      if (a.id === currentUserId) return -1;
+      if (b.id === currentUserId) return 1;
+    }
+    
+    // Alphabetize by full name
+    const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
+    const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+}

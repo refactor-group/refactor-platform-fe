@@ -1,6 +1,6 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
-import { User, isAdminOrSuperAdmin } from "@/types/user";
+import { User, isAdminOrSuperAdmin, sortUsersAlphabetically } from "@/types/user";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -54,12 +54,8 @@ export function MemberContainer({
     ? users
     : users.filter((user) => associatedUserIds.has(user.id));
 
-  // Sort users to show current user first
-  const displayUsers = [...filteredUsers].sort((a, b) => {
-    if (a.id === userSession.id) return -1;
-    if (b.id === userSession.id) return 1;
-    return 0;
-  });
+  // Sort users: current user first, then alphabetically by name
+  const displayUsers = sortUsersAlphabetically(filteredUsers, userSession.id);
 
   if (isLoading) {
     return (
