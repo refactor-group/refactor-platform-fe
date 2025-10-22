@@ -18,12 +18,17 @@ export function MemberList({
   currentUserId,
 }: MemberListProps) {
   // Create a mapping of user IDs to their associated relationships
-  const userRelationshipsMap = users.reduce((accumulator_map, user) => {
-    accumulator_map[user.id] = relationships.filter(
-      (rel) => rel.coach_id === user.id || rel.coachee_id === user.id
+  const userRelationshipsMap = users.reduce<Record<Id, CoachingRelationshipWithUserNames[]>>(
+  (accumulator_map, user) => {
+    const userRelationships = relationships.filter(
+      (relationship) =>
+        relationship.coach_id === user.id || relationship.coachee_id === user.id
     );
+    accumulator_map[user.id] = userRelationships;
     return accumulator_map;
-  }, {} as Record<Id, CoachingRelationshipWithUserNames[]>);
+  },
+  {}
+);
 
   return (
     <Card className="w-full">
@@ -34,7 +39,7 @@ export function MemberList({
               key={user.id}
               user={user}
               currentUserId={currentUserId}
-              userRelationships={userRelationshipsMap[user.id]}
+              userRelationships={userRelationshipsMap[user.id] ?? []}
               onRefresh={onRefresh}
               users={users}
             />

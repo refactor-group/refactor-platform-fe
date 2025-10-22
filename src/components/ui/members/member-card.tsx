@@ -237,7 +237,7 @@ export function MemberCard({
             </DialogTitle>
             <DialogDescription>
               Select a member to be their{" "}
-              {assignMode === RelationshipRole.Coach ? "coach" : "coachee"}
+              {assignMode.toLowerCase()}
             </DialogDescription>
           </DialogHeader>
           <Select

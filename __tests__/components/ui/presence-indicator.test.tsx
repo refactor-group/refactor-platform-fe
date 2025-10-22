@@ -1,12 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { PresenceIndicator } from '@/components/ui/presence-indicator';
 import { createConnectedPresence, createDisconnectedPresence } from '@/types/presence';
+import { RelationshipRole } from '@/types/relationship-role';
 
 describe('PresenceIndicator', () => {
   const mockConnectedPresence = createConnectedPresence({
     userId: 'user1',
     name: 'Test User',
-    relationship_role: 'coach',
+    relationship_role: RelationshipRole.Coach,
     color: '#ffcc00'
   });
 

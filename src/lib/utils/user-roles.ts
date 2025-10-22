@@ -1,7 +1,9 @@
 import { User, Role } from "@/types/user";
 import { CoachingRelationshipWithUserNames, isUserCoach, isUserCoachee } from "@/types/coaching_relationship";
-import { RelationshipRole, formatRelationshipRole } from "@/types/relationship-role";
+import { RelationshipRole } from "@/types/relationship-role";
 import { Id } from "@/types/general";
+
+export type DisplayRole = Role | RelationshipRole
 
 /**
  * Gets display roles for a user combining organization roles and coaching relationship roles
@@ -14,8 +16,8 @@ export function getUserDisplayRoles(
   user: User,
   organizationId: Id,
   relationships: CoachingRelationshipWithUserNames[]
-): string[] {
-  const roles = new Set<string>();
+): readonly string[] {
+  const roles = new Set<DisplayRole>();
 
   // Add SuperAdmin role if user has it (global access)
   const superAdminRole = user.roles.find(
@@ -33,13 +35,14 @@ export function getUserDisplayRoles(
 
   // Add coaching relationship roles
   if (isUserCoach(user.id, relationships)) {
-    roles.add(formatRelationshipRole(RelationshipRole.Coach));
+    roles.add(RelationshipRole.Coach);
   }
   if (isUserCoachee(user.id, relationships)) {
-    roles.add(formatRelationshipRole(RelationshipRole.Coachee));
+    roles.add(RelationshipRole.Coachee);
   }
 
-  return Array.from(roles).sort();
+  // Convert enum values to strings for display
+  return Array.from(roles).map(role => role as string).sort();
 }
 
 /**
@@ -51,7 +54,7 @@ export function getUserDisplayRoles(
 export function getUserCoaches(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
-): string[] {
+): readonly string[] {
   return relationships
     .filter(r => r.coachee_id === userId)
     .map(r => `${r.coach_first_name} ${r.coach_last_name}`);
