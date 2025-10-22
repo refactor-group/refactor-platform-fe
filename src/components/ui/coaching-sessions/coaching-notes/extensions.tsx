@@ -1,5 +1,22 @@
-// TipTap v3 Extensions - Using StarterKit + additional extensions
-import StarterKit from "@tiptap/starter-kit";
+// TipTap v3 Extensions - Using individual extensions instead of StarterKit to avoid History
+import Document from "@tiptap/extension-document";
+import Paragraph from "@tiptap/extension-paragraph";
+import Text from "@tiptap/extension-text";
+import Bold from "@tiptap/extension-bold";
+import Italic from "@tiptap/extension-italic";
+import Strike from "@tiptap/extension-strike";
+import Underline from "@tiptap/extension-underline";
+import Code from "@tiptap/extension-code";
+import Heading from "@tiptap/extension-heading";
+import BulletList from "@tiptap/extension-bullet-list";
+import OrderedList from "@tiptap/extension-ordered-list";
+import ListItem from "@tiptap/extension-list-item";
+import Blockquote from "@tiptap/extension-blockquote";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
+import HardBreak from "@tiptap/extension-hard-break";
+import Dropcursor from "@tiptap/extension-dropcursor";
+import Gapcursor from "@tiptap/extension-gapcursor";
+// NOTE: Explicitly NOT importing History - Collaboration provides its own
 import Highlight from "@tiptap/extension-highlight";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -16,10 +33,19 @@ import { createLowlight } from "lowlight";
 import { all } from "lowlight";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import * as Y from "yjs";
-import { ConfiguredLink } from "./extended-link-extension";
+import { ConfiguredLink, LinkKeyboardShortcut, LinkZombieCleanup } from "./extended-link-extension";
+import { Markdown } from "@tiptap/markdown";
 import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
+import {
+  TableWithMarkdown,
+  TableMarkdownPasteHandler,
+  TableRow,
+  TableCell,
+  TableHeader,
+} from "./markdown-table-extension";
 
 const lowlight = createLowlight(all);
+const INDENT_SIZE = 4; // Number of spaces for indentation
 
 // Tab handler: enables proper indentation in code blocks
 const CodeBlockTabHandler = Extension.create({
@@ -55,20 +81,33 @@ export const Extensions = (
 ): TiptapExtensions => {
   try {
     const baseExtensions = createFoundationExtensions();
-    const collaborativeExtensions = buildCollaborationIfValid(doc, provider, user);
-    const finalExtensions = combineExtensions(baseExtensions, collaborativeExtensions);
+    const collaborativeExtensions = buildCollaborationIfValid(
+      doc,
+      provider,
+      user
+    );
+    const finalExtensions = combineExtensions(
+      baseExtensions,
+      collaborativeExtensions
+    );
     return validateAndReturn(finalExtensions);
   } catch (error) {
-    console.error('Extensions creation failed:', error);
-    return [StarterKit];
+    console.error("Extensions creation failed:", error);
+    return createMinimalExtensions();
   }
 };
 
 // Extension composition logic
 
+const createMinimalExtensions = (): TiptapExtensions => {
+  // Minimal fallback extensions for error cases
+  return [Document, Paragraph, Text];
+};
+
 const createFoundationExtensions = (): TiptapExtensions => {
   return [
-    configureStarterKit(),
+    configureBaseExtensions(),
+    configureTableRelatedExtensions(),
     addFormattingExtensions(),
     addTaskListExtensions(),
     addCodeBlockWithSyntaxHighlighting(),
@@ -94,8 +133,8 @@ const buildCollaborationIfValid = (
       createCollaborationCaret(provider!, user),
     ];
   } catch (error) {
-    console.error('Collaborative extensions failed:', error);
-    console.warn('Falling back to offline editing mode');
+    console.error("Collaborative extensions failed:", error);
+    console.warn("Falling back to offline editing mode");
     return [];
   }
 };
@@ -109,34 +148,63 @@ const combineExtensions = (
 
 const validateAndReturn = (extensions: TiptapExtensions): TiptapExtensions => {
   if (extensions.length === 0) {
-    console.warn('No extensions configured, using minimal StarterKit');
-    return [StarterKit];
+    console.warn("No extensions configured, using minimal extensions");
+    return createMinimalExtensions();
   }
   return extensions;
 };
 
 // Extension configuration
 
-const configureStarterKit = () => {
-  return StarterKit.configure({
-    codeBlock: false, // Use custom code block
-    link: false, // Use custom configured link
-    undoRedo: false, // Disabled for collaboration compatibility
-  });
+const configureBaseExtensions = () => {
+  // Return individual StarterKit extensions, excluding CodeBlock, Link, and History
+  // CodeBlock is replaced with custom CodeBlockLowlight
+  // Link is replaced with ConfiguredLink
+  // History is excluded because Collaboration provides its own
+  // Underline is added separately (not part of StarterKit)
+  return [
+    Document,
+    Paragraph,
+    Text,
+    Bold,
+    Italic,
+    Strike,
+    Underline,
+    Code,
+    Heading,
+    BulletList,
+    OrderedList,
+    ListItem,
+    Blockquote,
+    HorizontalRule,
+    HardBreak,
+    Dropcursor,
+    Gapcursor,
+  ];
+};
+
+const configureTableRelatedExtensions = () => {
+  return [
+    TableWithMarkdown,
+    TableMarkdownPasteHandler,
+    TableRow,
+    TableCell,
+    TableHeader,
+  ];
 };
 
 const addFormattingExtensions = (): TiptapExtensions => {
   return [
     Highlight,
     TextStyle,
+    Markdown.configure({
+      indentation: { style: "space", size: INDENT_SIZE },
+    }),
   ];
 };
 
 const addTaskListExtensions = (): TiptapExtensions => {
-  return [
-    TaskList,
-    TaskItem.configure({ nested: true }),
-  ];
+  return [TaskList, TaskItem.configure({ nested: true })];
 };
 
 const addCodeBlockWithSyntaxHighlighting = () => {
@@ -162,7 +230,7 @@ const addPlaceholderConfiguration = () => {
 };
 
 const addLinksConfiguration = () => {
-  return ConfiguredLink;
+  return [ConfiguredLink, LinkKeyboardShortcut, LinkZombieCleanup];
 };
 
 const addCustomTabHandler = () => {
@@ -171,7 +239,7 @@ const addCustomTabHandler = () => {
 
 const validateYjsDocument = (doc: Y.Doc) => {
   if (!doc?.clientID && doc?.clientID !== 0) {
-    console.warn('Document initialization incomplete');
+    console.warn("Document initialization incomplete");
   }
 };
 
@@ -222,4 +290,3 @@ const createCollaborationCaret = (
     },
   });
 };
-

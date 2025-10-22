@@ -1,12 +1,45 @@
 import Link from "@tiptap/extension-link";
+import { Extension, markInputRule, markPasteRule } from "@tiptap/core";
+import type { Editor } from "@tiptap/react";
+import debounce from "just-debounce-it";
 
-const LinkWithTitle = Link.extend({
+/** Number of characters to search before and after cursor position when looking for zombie links */
+const ZOMBIE_LINK_SEARCH_RANGE = 100;
+
+/**
+ * Triggers the link creation flow by setting an empty href,
+ * which causes the LinkBubbleMenu to appear for the user to fill in the URL.
+ * Only works if there is a text selection.
+ */
+export function triggerLinkCreation(editor: Editor): boolean {
+  const { from, to } = editor.state.selection;
+  if (from !== to) {
+    editor.chain().focus().setLink({ href: "" }).run();
+    return true;
+  }
+  return false;
+}
+
+const LinkWithTitleAndMarkdown = Link.extend({
+  name: "link",
+
   addAttributes() {
     return {
-      ...this.parent?.(),
+      href: {
+        default: null,
+      },
+      target: {
+        default: null,
+      },
+      rel: {
+        default: null,
+      },
+      class: {
+        default: null,
+      },
       title: {
         default: null,
-        renderHTML: (attributes) => {
+        renderHTML: (attributes: { href: string | null }) => {
           if (!attributes.href) {
             return {};
           }
@@ -17,13 +50,131 @@ const LinkWithTitle = Link.extend({
       },
     };
   },
+
+  addInputRules() {
+    return [
+      // Add markdown link input rule for typing: [text](url)
+      markInputRule({
+        find: /\[([^\]]+)\]\(([^)]+)\)$/,
+        type: this.type,
+        getAttributes: (match) => {
+          return {
+            href: match[2],
+          };
+        },
+      }),
+    ];
+  },
+
+  addPasteRules() {
+    return [
+      // Add markdown link paste rule: [text](url)
+      markPasteRule({
+        find: /\[([^\]]+)\]\(([^)]+)\)/g,
+        type: this.type,
+        getAttributes: (match) => {
+          return {
+            href: match[2],
+          };
+        },
+      }),
+    ];
+  },
 });
 
-export const ConfiguredLink = LinkWithTitle.configure({
+// Separate extension for link keyboard shortcut (Cmd-K / Ctrl-K)
+export const LinkKeyboardShortcut = Extension.create({
+  name: "linkKeyboardShortcut",
+
+  addKeyboardShortcuts() {
+    return {
+      'Mod-k': () => triggerLinkCreation(this.editor),
+    };
+  },
+});
+
+// Extension to clean up empty/zombie links automatically
+// This ensures consistent behavior whether link was created via button or keyboard
+export const LinkZombieCleanup = Extension.create<{
+  debouncedCleanup?: (...args: any[]) => void;
+}>({
+  name: "linkZombieCleanup",
+
+  onCreate() {
+    let wasLinkActive = false;
+    let lastHref = "";
+
+    const cleanupEmptyLinks = () => {
+      const isLinkActive = this.editor.isActive("link");
+
+      if (isLinkActive) {
+        // Track active link and its href
+        const { href } = this.editor.getAttributes("link");
+        lastHref = href || "";
+        wasLinkActive = true;
+      } else if (wasLinkActive) {
+        // Link just became inactive - clean up if it had empty href
+        if (!lastHref || lastHref === "") {
+          const { state } = this.editor;
+          const { from, to } = state.selection;
+          let foundEmptyLink = false;
+
+          // Search around cursor position for empty links
+          const searchFrom = Math.max(0, from - ZOMBIE_LINK_SEARCH_RANGE);
+          const searchTo = Math.min(state.doc.content.size, to + ZOMBIE_LINK_SEARCH_RANGE);
+
+          state.doc.nodesBetween(searchFrom, searchTo, (node, pos) => {
+            if (foundEmptyLink) return false;
+
+            const marks = node.marks;
+            const linkMark = marks.find(mark => mark.type.name === "link");
+
+            if (linkMark && (!linkMark.attrs.href || linkMark.attrs.href === "")) {
+              // Remove empty link mark
+              const linkFrom = pos;
+              const linkTo = pos + node.nodeSize;
+              this.editor
+                .chain()
+                .setTextSelection({ from: linkFrom, to: linkTo })
+                .unsetLink()
+                .setMeta("preventAutolink", true)
+                .setTextSelection(this.editor.state.selection.from)
+                .run();
+              foundEmptyLink = true;
+              return false;
+            }
+          });
+        }
+
+        // Reset tracking
+        wasLinkActive = false;
+        lastHref = "";
+      }
+    };
+
+    // Debounce cleanup to reduce performance impact during rapid editor changes
+    // 50ms delay is imperceptible while preventing excessive DOM searches
+    this.options.debouncedCleanup = debounce(cleanupEmptyLinks, 50);
+
+    this.editor.on("selectionUpdate", this.options.debouncedCleanup);
+    this.editor.on("transaction", this.options.debouncedCleanup);
+  },
+
+  onDestroy() {
+    // Clean up event listeners to prevent memory leaks
+    if (this.options.debouncedCleanup) {
+      this.editor.off("selectionUpdate", this.options.debouncedCleanup);
+      this.editor.off("transaction", this.options.debouncedCleanup);
+    }
+  },
+});
+
+export const ConfiguredLink = LinkWithTitleAndMarkdown.configure({
   openOnClick: false,
   autolink: true,
   defaultProtocol: "https",
-  protocols: ["http", "https"],
+  // Don't specify protocols - http/https are already registered by default
+  // Specifying them here causes linkifyjs re-initialization warnings
   isAllowedUri: (url, ctx) => {
     // Allow empty URLs for creating new links - user will fill in the URL via BubbleMenu
     if (!url || url === "") {
