@@ -328,11 +328,7 @@ const handleEditorContentError = (error: unknown) => {
   console.error("Editor content error:", error);
 
   // Show user-friendly error message via toast
-  if (error instanceof TypeError && error.message.includes("Expected table token")) {
-    toast.error("Unable to paste table. The table format may be invalid.");
-  } else {
-    toast.error("An error occurred while editing. Please try again.");
-  }
+  toast.error("An error occurred while editing. Please try again.");
 };
 
 export { CoachingNotes };
