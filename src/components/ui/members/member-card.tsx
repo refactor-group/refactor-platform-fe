@@ -78,15 +78,15 @@ export function MemberCard({
   console.log("is a coach", isACoach);
 
   // Check if current user is a coach in any of this user's relationships
-  // and make sure we can't delete ourselves. Admins can delete any user.
+  // and make sure we can't delete ourselves. Admins and SuperAdmins can delete any user.
   const canDeleteUser =
     currentUserRoleState.hasAccess &&
+    userSession.id !== userId &&
     (
-      (userRelationships?.some(
-        (rel) => rel.coach_id === userSession.id && userId !== userSession.id
+      userRelationships?.some(
+        (rel) => rel.coach_id === userSession.id
       ) ||
-        currentUserRoleState.role === Role.Admin) &&
-      userSession.id !== userId
+      isAdminOrSuperAdmin(currentUserRoleState)
     );
 
   const handleDelete = async () => {
