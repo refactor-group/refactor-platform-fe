@@ -22,11 +22,14 @@ export default function MembersPage({
   );
 
   const organizationId = use(params).id;
-  const { setCurrentOrganizationId } = useCurrentOrganization();
+  const { currentOrganizationId, setCurrentOrganizationId } = useCurrentOrganization();
 
   useEffect(() => {
-    setCurrentOrganizationId(organizationId);
-  }, [organizationId, setCurrentOrganizationId]);
+    // Only sync if different to prevent conflicts with OrganizationSwitcher
+    if (currentOrganizationId !== organizationId) {
+      setCurrentOrganizationId(organizationId);
+    }
+  }, [organizationId, currentOrganizationId, setCurrentOrganizationId]);
 
   const {
     relationships,
