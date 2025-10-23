@@ -1,15 +1,17 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useUserList } from "@/lib/api/organizations/users";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { Id } from "@/types/general";
 import { MemberContainer } from "@/components/ui/members/member-container";
 import { PageContainer } from "@/components/ui/page-container";
+import { toast } from "sonner";
 
 export default function MembersPage({
   params,
@@ -23,6 +25,7 @@ export default function MembersPage({
 
   const organizationId = use(params).id;
   const { currentOrganizationId, setCurrentOrganizationId } = useCurrentOrganization();
+  const currentUserRoleState = useCurrentUserRole();
 
   useEffect(() => {
     // Only sync if different to prevent conflicts with OrganizationSwitcher
@@ -30,6 +33,12 @@ export default function MembersPage({
       setCurrentOrganizationId(organizationId);
     }
   }, [organizationId, currentOrganizationId, setCurrentOrganizationId]);
+
+  // Access control: redirect if user doesn't have access to this organization
+  if (currentOrganizationId === organizationId && currentUserRoleState.status === 'no_access') {
+    toast.error("You don't have access to this organization");
+    redirect('/dashboard');
+  }
 
   const {
     relationships,
