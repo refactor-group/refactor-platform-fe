@@ -49,9 +49,11 @@ vi.mock('@/components/ui/coaching-sessions/coaching-notes/extensions', () => ({
 // Mock TipTap provider with controllable event emitters
 // Support multiple handlers per event (like a real event emitter)
 const mockProviderEventHandlers = new Map<string, Function[]>()
+let mockProviderInstance: any = null
 
 const createMockProvider = () => {
   const provider = {
+    status: 'connected', // Default status
     on: vi.fn((event: string, callback: Function) => {
       const handlers = mockProviderEventHandlers.get(event) || []
       handlers.push(callback)
@@ -69,11 +71,17 @@ const createMockProvider = () => {
     disconnect: vi.fn(),
     connect: vi.fn()
   }
+  mockProviderInstance = provider
   return provider
 }
 
 vi.mock('@hocuspocus/provider', () => ({
-  TiptapCollabProvider: vi.fn(() => createMockProvider())
+  TiptapCollabProvider: vi.fn(() => createMockProvider()),
+  WebSocketStatus: {
+    Connecting: 'connecting',
+    Connected: 'connected',
+    Disconnected: 'disconnected'
+  }
 }))
 
 vi.mock('yjs', () => ({
@@ -86,6 +94,19 @@ import { useAuthStore } from '@/lib/providers/auth-store-provider'
 // Helper function to trigger provider events for all registered handlers
 const triggerProviderEvent = async (eventName: string, ...args: any[]) => {
   await act(async () => {
+    // Update provider status based on event and trigger 'status' event
+    if (mockProviderInstance) {
+      if (eventName === 'connect' || eventName === 'synced') {
+        mockProviderInstance.status = 'connected'
+      } else if (eventName === 'disconnect') {
+        mockProviderInstance.status = 'disconnected'
+      }
+
+      // Trigger 'status' event to notify listeners of status change
+      const statusHandlers = mockProviderEventHandlers.get('status') || []
+      statusHandlers.forEach(handler => handler({ status: mockProviderInstance.status }))
+    }
+
     const handlers = mockProviderEventHandlers.get(eventName) || []
     handlers.forEach(handler => handler(...args))
   })
@@ -95,6 +116,7 @@ describe('ConnectionStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockProviderEventHandlers.clear()
+    mockProviderInstance = null
 
     // Default happy path mocks
     vi.mocked(useAuthStore).mockReturnValue({

@@ -1,8 +1,7 @@
 "use client";
 
 import { EditorProvider } from "@tiptap/react";
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { Progress } from "@/components/ui/progress";
+import { useRef, useState, useMemo, useCallback } from "react";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
 import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
 import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu";
@@ -13,129 +12,28 @@ import { toast } from "sonner";
 import "@/styles/simple-editor.scss";
 import "@/styles/tiptap-table.scss";
 
-/** Maximum loading progress percentage before completion (allows room for final jump to 100%) */
-const LOADING_PROGRESS_MAX = 90;
-
-/** Maximum random increment for loading progress animation */
-const LOADING_PROGRESS_INCREMENT_MAX = 15;
-
-/** Interval in milliseconds for updating loading progress animation */
-const LOADING_PROGRESS_INTERVAL_MS = 150;
-
 /** Height of the application header in pixels (used for floating toolbar positioning) */
 const HEADER_HEIGHT_PX = 64;
 
 // Main component: orchestrates editor state and rendering logic
 
 const CoachingNotes = () => {
-  const { yDoc, extensions, isReady, isLoading, error } = useEditorCache();
-  const activeExtensions = useMemo(
-    () => (isReady && extensions.length > 0 ? extensions : []),
-    [isReady, extensions]
-  );
-  const loadingProgress = useLoadingProgress(isLoading);
-  const renderState = determineRenderState({
-    isReady,
-    isLoading,
-    error,
-    extensions: activeExtensions,
-  });
+  const { extensions, isReady, error } = useEditorCache();
 
-  return renderEditorByState(
-    renderState,
-    { yDoc, extensions: activeExtensions, isReady, isLoading, error },
-    loadingProgress
-  );
-};
-
-const useLoadingProgress = (isLoading: boolean) => {
-  const [loadingProgress, setLoadingProgress] = useState(0);
-
-  useEffect(() => {
-    if (isLoading) {
-      return startProgressAnimation(setLoadingProgress);
-    } else {
-      completeProgress(setLoadingProgress);
-    }
-  }, [isLoading]);
-
-  return loadingProgress;
-};
-
-const determineRenderState = (editorState: {
-  isReady: boolean;
-  isLoading: boolean;
-  error: Error | null;
-  extensions: Extensions;
-}) => {
-  if (editorState.isLoading) return "loading";
-  if (editorState.error) return "error";
-  if (editorState.isReady && editorState.extensions.length > 0) return "ready";
-  return "fallback";
-};
-
-const renderEditorByState = (
-  renderState: string,
-  editorState: {
-    yDoc: Y.Doc | null;
-    extensions: Extensions;
-    isReady: boolean;
-    isLoading: boolean;
-    error: Error | null;
-  },
-  loadingProgress: number
-) => {
-  switch (renderState) {
-    case "loading":
-      return renderLoadingState(loadingProgress);
-    case "error":
-      return renderErrorState(editorState.error);
-    case "ready":
-      return renderReadyEditor(editorState.extensions);
-    default:
-      return renderFallbackState();
+  // Show error state if there's an error
+  if (error) {
+    return renderErrorState(error);
   }
+
+  // Wait for extensions to be populated before rendering editor
+  // (TipTap requires at least the Document extension to create a valid schema)
+  if (extensions.length === 0) {
+    return null; // Render nothing while extensions are loading
+  }
+
+  // Render the editor (will be read-only until isReady = true)
+  return renderReadyEditor(extensions, isReady);
 };
-
-// Utility functions
-
-const startProgressAnimation = (
-  setLoadingProgress: React.Dispatch<React.SetStateAction<number>>
-) => {
-  setLoadingProgress(0);
-  const interval = setInterval(() => {
-    setLoadingProgress((prev) => {
-      if (prev >= LOADING_PROGRESS_MAX) {
-        clearInterval(interval);
-        return LOADING_PROGRESS_MAX;
-      }
-      return prev + Math.random() * LOADING_PROGRESS_INCREMENT_MAX;
-    });
-  }, LOADING_PROGRESS_INTERVAL_MS);
-  return () => clearInterval(interval);
-};
-
-const completeProgress = (
-  setLoadingProgress: React.Dispatch<React.SetStateAction<number>>
-) => {
-  setLoadingProgress(100);
-};
-
-const renderLoadingState = (loadingProgress: number) => (
-  <div className="coaching-notes-editor">
-    <div className="coaching-notes-loading">
-      <div className="w-full max-w-md">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">Loading coaching notes...</span>
-          <span className="text-sm opacity-70">
-            {Math.round(loadingProgress)}%
-          </span>
-        </div>
-        <Progress value={loadingProgress} className="h-2" />
-      </div>
-    </div>
-  </div>
-);
 
 const renderErrorState = (error: Error | null) => (
   <div className="coaching-notes-editor">
@@ -151,9 +49,9 @@ const renderErrorState = (error: Error | null) => (
   </div>
 );
 
-const renderReadyEditor = (extensions: Extensions) => {
+const renderReadyEditor = (extensions: Extensions, isReady: boolean) => {
   try {
-    return <CoachingNotesWithFloatingToolbar extensions={extensions} />;
+    return <CoachingNotesWithFloatingToolbar extensions={extensions} isReady={isReady} />;
   } catch (error) {
     console.error("Editor initialization failed:", error);
     return (
@@ -171,28 +69,15 @@ const renderReadyEditor = (extensions: Extensions) => {
   }
 };
 
-const renderFallbackState = () => (
-  <div className="coaching-notes-editor">
-    <div className="coaching-notes-loading">
-      <div className="w-full max-w-md">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">Loading coaching notes...</span>
-          <span className="text-sm opacity-70">{LOADING_PROGRESS_MAX}%</span>
-        </div>
-        <Progress value={LOADING_PROGRESS_MAX} className="h-2" />
-      </div>
-    </div>
-  </div>
-);
-
 // Editor with floating toolbar: main editing interface
 
 const CoachingNotesWithFloatingToolbar: React.FC<{
   extensions: Extensions;
-}> = ({ extensions }) => {
+  isReady: boolean;
+}> = ({ extensions, isReady }) => {
   const { editorRef, toolbarRef, toolbarState, handlers } =
     useToolbarManagement();
-  const editorProps = buildEditorProps();
+  const editorProps = buildEditorProps(isReady);
   const toolbarSlots = buildToolbarSlots(
     editorRef,
     toolbarRef,
@@ -230,11 +115,12 @@ const useToolbarManagement = () => {
   };
 };
 
-const buildEditorProps = () => ({
+const buildEditorProps = (isReady: boolean) => ({
   attributes: {
     class: "tiptap ProseMirror",
     spellcheck: "true",
   },
+  editable: () => isReady,
   handleDOMEvents: {
     click: createLinkClickHandler(),
   },
