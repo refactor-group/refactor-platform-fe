@@ -40,24 +40,19 @@ export const ConnectionStatus: React.FC = () => {
 
   // Track provider status changes to trigger re-renders
   React.useEffect(() => {
-    console.log('[ConnectionStatus] Provider changed:', collaborationProvider ? 'exists' : 'null');
-
     if (!collaborationProvider) {
       return;
     }
 
     const handleStatusChange = () => {
-      console.log('[ConnectionStatus] ⚡ Status changed to:', collaborationProvider.status);
       forceUpdate();
     };
 
-    console.log('[ConnectionStatus] Registering status listener, current status:', collaborationProvider.status);
     // Listen to status event which fires when connection status changes
     collaborationProvider.on('status', handleStatusChange);
 
     // Cleanup listener on unmount or provider change
     return () => {
-      console.log('[ConnectionStatus] Cleaning up status listener');
       collaborationProvider.off('status', handleStatusChange);
     };
   }, [collaborationProvider]);
@@ -69,15 +64,6 @@ export const ConnectionStatus: React.FC = () => {
     collaborationProvider
   );
   const statusConfig = getStatusConfig(connectionState);
-
-  console.log('[ConnectionStatus] State:', {
-    isReady,
-    isLoading,
-    hasError: !!error,
-    hasProvider: !!collaborationProvider,
-    providerStatus: collaborationProvider?.status,
-    connectionState
-  });
 
   return (
     <Badge variant={statusConfig.variant} className="ml-auto">
