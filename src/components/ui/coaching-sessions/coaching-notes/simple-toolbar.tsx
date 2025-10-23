@@ -21,6 +21,9 @@ import {
   LinkButton,
 } from "@/components/ui/tiptap-ui";
 
+// --- Coaching Notes Components ---
+import { ConnectionStatus } from "./connection-status";
+
 export const SimpleToolbar: React.FC = () => {
   const { editor } = useCurrentEditor();
 
@@ -79,6 +82,8 @@ export const SimpleToolbar: React.FC = () => {
       </ToolbarGroup>
 
       <Spacer />
+
+      <ConnectionStatus />
     </Toolbar>
   );
 };
