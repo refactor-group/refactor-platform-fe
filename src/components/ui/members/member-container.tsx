@@ -67,6 +67,7 @@ export function MemberContainer({
         relationships={relationships}
         onRefresh={onRefresh}
         currentUserId={userSession.id}
+        currentUserRoleState={currentUserRoleState}
       />
     </div>
   );

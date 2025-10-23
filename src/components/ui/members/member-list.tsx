@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { User } from "@/types/user";
+import { User, UserRoleState } from "@/types/user";
 import { MemberCard } from "./member-card";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Id } from "@/types/general";
@@ -9,6 +9,7 @@ interface MemberListProps {
   relationships: CoachingRelationshipWithUserNames[];
   onRefresh: () => void;
   currentUserId: Id;
+  currentUserRoleState: UserRoleState;
 }
 
 export function MemberList({
@@ -16,6 +17,7 @@ export function MemberList({
   relationships,
   onRefresh,
   currentUserId,
+  currentUserRoleState,
 }: MemberListProps) {
   // Create a mapping of user IDs to their associated relationships
   const userRelationshipsMap = users.reduce<Record<Id, CoachingRelationshipWithUserNames[]>>(
@@ -42,6 +44,7 @@ export function MemberList({
               userRelationships={userRelationshipsMap[user.id] ?? []}
               onRefresh={onRefresh}
               users={users}
+              currentUserRoleState={currentUserRoleState}
             />
           ))}
         </div>

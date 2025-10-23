@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { useUserMutation } from "@/lib/api/organizations/users";
 import { getUserDisplayRoles, getUserCoaches } from "@/lib/utils/user-roles";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ import {
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
-import { User, Role, isAdminOrSuperAdmin } from "@/types/user";
+import { User, isAdminOrSuperAdmin, UserRoleState } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { toast } from "sonner";
@@ -42,6 +41,7 @@ interface MemberCardProps {
   userRelationships: CoachingRelationshipWithUserNames[];
   onRefresh: () => void;
   users: User[];
+  currentUserRoleState: UserRoleState;
 }
 
 interface Member {
@@ -56,10 +56,10 @@ export function MemberCard({
   userRelationships,
   onRefresh,
   users,
+  currentUserRoleState,
 }: MemberCardProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
-  const currentUserRoleState = useCurrentUserRole();
 
   // Extract user properties
   const { id: userId, first_name: firstName, last_name: lastName, email } = user;
@@ -77,17 +77,11 @@ export function MemberCard({
 
   console.log("is a coach", isACoach);
 
-  // Check if current user is a coach in any of this user's relationships
-  // and make sure we can't delete ourselves. Admins and SuperAdmins can delete any user.
+  // Only admins and super admins can delete users (but not themselves)
   const canDeleteUser =
     currentUserRoleState.hasAccess &&
     userSession.id !== userId &&
-    (
-      userRelationships?.some(
-        (rel) => rel.coach_id === userSession.id
-      ) ||
-      isAdminOrSuperAdmin(currentUserRoleState)
-    );
+    isAdminOrSuperAdmin(currentUserRoleState);
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this member?")) {
@@ -171,7 +165,7 @@ export function MemberCard({
           <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}
         </p>
       </div>
-      {(isAdminOrSuperAdmin(currentUserRoleState) || canDeleteUser) && (
+      {isAdminOrSuperAdmin(currentUserRoleState) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -215,7 +209,7 @@ export function MemberCard({
             )}
             {canDeleteUser && (
               <>
-                <DropdownMenuSeparator />
+                {userId !== currentUserId && <DropdownMenuSeparator />}
                 <DropdownMenuItem
                   onClick={handleDelete}
                   className="text-destructive focus:text-destructive"
