@@ -36,6 +36,7 @@ interface ConnectionStatusConfig {
  */
 export const ConnectionStatus: React.FC = () => {
   const { isReady, isLoading, error, collaborationProvider } = useEditorCache();
+  // Force re-render mechanism to pick up provider.status changes (external non-React state)
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
 
   // Track provider status changes to trigger re-renders
