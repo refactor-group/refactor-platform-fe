@@ -135,13 +135,12 @@ const buildToolbarSlots = (
   }
 ) => ({
   slotBefore: (
-    <div
-      ref={toolbarRef}
-      className={`toolbar-container ${
-        toolbarState.originalToolbarVisible ? "visible" : "hidden"
-      }`}
-    >
-      <SimpleToolbar />
+    <div ref={toolbarRef} className="toolbar-container">
+      {toolbarState.originalToolbarVisible ? (
+        <SimpleToolbar />
+      ) : (
+        <div className="toolbar-spacer" aria-hidden="true" />
+      )}
     </div>
   ),
   slotAfter: (

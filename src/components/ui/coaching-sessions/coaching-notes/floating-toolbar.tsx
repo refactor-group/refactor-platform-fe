@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, startTransition } from "react";
 import { SimpleToolbar } from "./simple-toolbar";
+import { TOOLBAR_HEIGHT_PX, TOOLBAR_SHOW_THRESHOLD, TOOLBAR_HIDE_THRESHOLD } from "./constants";
 
 interface FloatingToolbarProps {
   /** Editor container ref for scroll detection */
@@ -44,12 +45,35 @@ const useToolbarVisibility = (
   onVisibilityChange?: (visible: boolean) => void
 ) => {
   const [isVisible, setIsVisible] = useState(false);
-  
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const checkVisibility = useCallback(() => {
-    const visibilityState = calculateToolbarVisibility(editorRef, toolbarRef, headerHeight);
-    updateVisibilityState(visibilityState, setIsVisible, onVisibilityChange);
-  }, [editorRef, toolbarRef, headerHeight, onVisibilityChange]);
-  
+    // Clear any pending debounced updates
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Debounce visibility state changes to prevent rapid toggling
+    debounceTimerRef.current = setTimeout(() => {
+      const visibilityState = calculateToolbarVisibility(
+        editorRef,
+        toolbarRef,
+        headerHeight,
+        isVisible
+      );
+      updateVisibilityState(visibilityState, setIsVisible, onVisibilityChange);
+    }, 10); // 10ms debounce delay
+  }, [editorRef, toolbarRef, headerHeight, isVisible, onVisibilityChange]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
   return { isVisible, checkVisibility };
 };
 
@@ -60,14 +84,38 @@ const useToolbarPositioning = (
 ) => {
   const floatingRef = useRef<HTMLDivElement>(null!);
   const [styles, setStyles] = useState(getDefaultStyles());
-  
+  const cachedStylesRef = useRef(getDefaultStyles());
+
+  // Recalculate position on resize events only
   useEffect(() => {
-    if (isVisible && editorRef.current) {
-      const newStyles = calculateFloatingPosition(editorRef.current);
-      setStyles(newStyles);
+    const updatePosition = () => {
+      if (editorRef.current) {
+        const newStyles = calculateFloatingPosition(editorRef.current);
+        cachedStylesRef.current = newStyles;
+        if (isVisible) {
+          setStyles(newStyles);
+        }
+      }
+    };
+
+    // Initial calculation
+    updatePosition();
+
+    // Listen for resize events to recalculate position
+    window.addEventListener("resize", updatePosition, { passive: true });
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [editorRef, isVisible]);
+
+  // Use cached styles when visibility changes (no recalculation needed)
+  useEffect(() => {
+    if (isVisible) {
+      setStyles(cachedStylesRef.current);
     }
-  }, [isVisible, editorRef]);
-  
+  }, [isVisible]);
+
   return { floatingRef, styles };
 };
 
@@ -87,24 +135,55 @@ const useScrollEventManagement = (
   }, [editorRef, onScroll]);
 };
 
+/** Selects appropriate threshold based on current visibility state (hysteresis) */
+const selectThresholdForTransition = (currentlyVisible: boolean): number => {
+  // Use different thresholds for showing vs hiding to prevent rapid toggling
+  // - Show at 0.75 (75% hidden) when scrolling down
+  // - Hide at 0.25 (25% hidden / 75% visible) when scrolling up
+  // This creates a stable "dead zone" between transitions
+  return currentlyVisible ? TOOLBAR_HIDE_THRESHOLD : TOOLBAR_SHOW_THRESHOLD;
+};
+
+/** Calculates the scroll position where toolbar transition should occur */
+const calculateTransitionPoint = (
+  editorTop: number,
+  threshold: number
+): number => {
+  return editorTop + (TOOLBAR_HEIGHT_PX * threshold);
+};
+
+/** Checks if threshold point has crossed below the header */
+const hasThresholdCrossedHeader = (
+  thresholdPosition: number,
+  headerHeight: number
+): boolean => {
+  return thresholdPosition < headerHeight;
+};
+
+/** Checks if editor is currently visible in viewport */
+const isEditorInViewport = (editorRect: DOMRect): boolean => {
+  return editorRect.bottom > 0 && editorRect.top < window.innerHeight;
+};
+
 /** Determines if floating toolbar should be shown based on editor position */
 const calculateToolbarVisibility = (
   editorRef: React.RefObject<HTMLDivElement>,
   toolbarRef: React.RefObject<HTMLDivElement>,
-  headerHeight: number
+  headerHeight: number,
+  currentlyVisible: boolean
 ) => {
   if (!toolbarRef.current || !editorRef.current) {
     return { shouldShow: false, editorVisible: false };
   }
-  
+
   const editorRect = editorRef.current.getBoundingClientRect();
-  const toolbarNaturalBottom = editorRect.top;
-  
-  const toolbarWouldBeHidden = toolbarNaturalBottom < headerHeight;
-  const editorVisible = editorRect.bottom > 0 && editorRect.top < window.innerHeight;
-  
+  const threshold = selectThresholdForTransition(currentlyVisible);
+  const thresholdPosition = calculateTransitionPoint(editorRect.top, threshold);
+  const thresholdCrossed = hasThresholdCrossedHeader(thresholdPosition, headerHeight);
+  const editorVisible = isEditorInViewport(editorRect);
+
   return {
-    shouldShow: toolbarWouldBeHidden && editorVisible,
+    shouldShow: thresholdCrossed && editorVisible,
     editorVisible
   };
 };
@@ -114,11 +193,15 @@ const updateVisibilityState = (
   setIsVisible: React.Dispatch<React.SetStateAction<boolean>>,
   onVisibilityChange?: (visible: boolean) => void
 ) => {
-  setIsVisible(visibilityState.shouldShow);
-  
-  if (onVisibilityChange) {
-    onVisibilityChange(!visibilityState.shouldShow);
-  }
+  // Batch state updates using startTransition to reduce rendering overhead
+  // This treats visibility changes as low-priority updates that won't block user interactions
+  startTransition(() => {
+    setIsVisible(visibilityState.shouldShow);
+
+    if (onVisibilityChange) {
+      onVisibilityChange(!visibilityState.shouldShow);
+    }
+  });
 };
 
 const getDefaultStyles = () => ({
