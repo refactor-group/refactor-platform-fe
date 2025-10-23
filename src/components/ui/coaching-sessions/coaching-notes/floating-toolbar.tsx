@@ -37,6 +37,34 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   return renderFloatingToolbar(floatingRef, isVisible, styles, editorRef);
 };
 
+/** Cancels any pending debounced visibility update */
+const cancelDebouncedUpdate = (timerRef: React.MutableRefObject<NodeJS.Timeout | null>) => {
+  if (timerRef.current) {
+    clearTimeout(timerRef.current);
+  }
+};
+
+/** Schedules a debounced visibility update after 10ms delay */
+const scheduleDebouncedUpdate = (
+  timerRef: React.MutableRefObject<NodeJS.Timeout | null>,
+  editorRef: React.RefObject<HTMLDivElement>,
+  toolbarRef: React.RefObject<HTMLDivElement>,
+  headerHeight: number,
+  isVisible: boolean,
+  setIsVisible: React.Dispatch<React.SetStateAction<boolean>>,
+  onVisibilityChange?: (visible: boolean) => void
+) => {
+  timerRef.current = setTimeout(() => {
+    const visibilityState = calculateToolbarVisibility(
+      editorRef,
+      toolbarRef,
+      headerHeight,
+      isVisible
+    );
+    updateVisibilityState(visibilityState, setIsVisible, onVisibilityChange);
+  }, 10); // 10ms debounce delay
+};
+
 /** Tracks toolbar visibility state based on scroll position */
 const useToolbarVisibility = (
   editorRef: React.RefObject<HTMLDivElement>,
@@ -48,30 +76,21 @@ const useToolbarVisibility = (
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const checkVisibility = useCallback(() => {
-    // Clear any pending debounced updates
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    // Debounce visibility state changes to prevent rapid toggling
-    debounceTimerRef.current = setTimeout(() => {
-      const visibilityState = calculateToolbarVisibility(
-        editorRef,
-        toolbarRef,
-        headerHeight,
-        isVisible
-      );
-      updateVisibilityState(visibilityState, setIsVisible, onVisibilityChange);
-    }, 10); // 10ms debounce delay
+    cancelDebouncedUpdate(debounceTimerRef);
+    scheduleDebouncedUpdate(
+      debounceTimerRef,
+      editorRef,
+      toolbarRef,
+      headerHeight,
+      isVisible,
+      setIsVisible,
+      onVisibilityChange
+    );
   }, [editorRef, toolbarRef, headerHeight, isVisible, onVisibilityChange]);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
+    return () => cancelDebouncedUpdate(debounceTimerRef);
   }, []);
 
   return { isVisible, checkVisibility };
