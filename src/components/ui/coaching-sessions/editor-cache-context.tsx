@@ -257,6 +257,9 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     if (jwt && !tokenError && userSession) {
       initializeProvider();
     } else {
+      // Fallback to offline mode when token is unavailable
+      // Note: Don't set error state for token timeouts - let SWR retry in background
+      // The editor should remain visible in read-only mode until connection is available
       const doc = getOrCreateYDoc();
       const fallbackExtensions = createExtensions(null, null);
 
@@ -267,7 +270,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         extensions: fallbackExtensions,
         isReady: true,
         isLoading: false,
-        error: tokenError || null,
+        error: null, // Don't treat token timeout as fatal error
       }));
     }
 
