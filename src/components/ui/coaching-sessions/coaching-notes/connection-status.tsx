@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect, useReducer } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
@@ -34,13 +34,23 @@ interface ConnectionStatusConfig {
  * - Offline: Provider lost connection or no collaboration provider available
  * - Error: Provider initialization or connection error
  */
-export const ConnectionStatus: React.FC = () => {
+export const ConnectionStatus = () => {
   const { isReady, isLoading, error, collaborationProvider } = useEditorCache();
-  // Force re-render mechanism to pick up provider.status changes (external non-React state)
-  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+
+  /**
+   * Force re-render mechanism for tracking external state changes.
+   *
+   * The collaboration provider's status property (provider.status) is not React state,
+   * so changes to it don't automatically trigger re-renders. We use useReducer as a
+   * "force update" function: calling forceUpdate() increments an internal counter,
+   * which causes React to re-render this component and pick up the new provider.status value.
+   *
+   * This is a standard React pattern for syncing with external (non-React) state objects.
+   */
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
 
   // Track provider status changes to trigger re-renders
-  React.useEffect(() => {
+  useEffect(() => {
     if (!collaborationProvider) {
       return;
     }
