@@ -600,7 +600,8 @@
   animation: slideInDown 0.3s ease-out;
   backdrop-filter: blur(8px);
   max-width: calc(100vw - 2rem); /* Provide constraint for wrapping */
-  
+  will-change: transform, opacity;
+
   .dark & {
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
   }
@@ -693,18 +694,24 @@
   outline: none; /* Remove default outline since parent container handles focus styling */
 }
 
-/* Smooth toolbar transition */
+/* Toolbar container maintains consistent height to prevent content jumping */
 .toolbar-container {
-  transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
-  overflow: hidden;
-  
-  &.visible {
-    max-height: 200px; /* Large enough for any toolbar height */
-    opacity: 1;
+  min-height: var(--tt-toolbar-height);
+  border-bottom: 1px solid var(--editor-border);
+  background-color: var(--editor-bg);
+
+  /* Smooth fade transition when swapping toolbar/spacer */
+  > * {
+    transition: opacity 0.3s ease-out;
+    will-change: opacity;
   }
-  
-  &.hidden {
-    max-height: 0;
-    opacity: 0;
-  }
+}
+
+/* Empty spacer that maintains toolbar height when toolbar is hidden */
+.toolbar-spacer {
+  min-height: var(--tt-toolbar-height);
+  height: auto;
+  padding: 0.5rem;
+  /* Invisible but maintains space */
+  visibility: hidden;
 }
