@@ -96,3 +96,23 @@ export function coachingRelationshipsWithUserNamesToString(
 ): string {
   return JSON.stringify(relationships);
 }
+
+/**
+ * Checks if a user is a coach in any of the provided relationships
+ */
+export function isUserCoach(
+  userId: Id,
+  relationships: CoachingRelationshipWithUserNames[]
+): boolean {
+  return relationships.some(r => r.coach_id === userId);
+}
+
+/**
+ * Checks if a user is a coachee in any of the provided relationships
+ */
+export function isUserCoachee(
+  userId: Id,
+  relationships: CoachingRelationshipWithUserNames[]
+): boolean {
+  return relationships.some(r => r.coachee_id === userId);
+}

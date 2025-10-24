@@ -2,6 +2,7 @@
 
 import type * as React from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { BarChart3, Gift, Home, Settings, Users } from "lucide-react";
 
 import { OrganizationSwitcher } from "./organization-switcher";
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarCollapsible } from "@/types/sidebar";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import type { Id } from "@/types/general";
 
 // Custom styles for menu buttons to ensure consistent centering
 const menuButtonStyles = {
@@ -33,6 +35,22 @@ const menuButtonStyles = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentOrganizationId } = useCurrentOrganization();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleOrgChange = (newOrgId: Id) => {
+    // Check if current path is organization-scoped
+    const orgRouteMatch = pathname?.match(/^\/organizations\/[^\/]+(.*)$/);
+    
+    if (orgRouteMatch) {
+      // Preserve everything after the org ID and reconstruct with new org ID
+      const routeSuffix = orgRouteMatch[1] || '';
+      router.push(`/organizations/${newOrgId}${routeSuffix}`);
+    } else {
+      // Not on an org-scoped route, go to dashboard
+      router.push('/dashboard');
+    }
+  };
 
   return (
     <Sidebar collapsible={SidebarCollapsible.Icon} {...props}>
@@ -67,7 +85,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <OrganizationSwitcher />
+                <OrganizationSwitcher onSelect={handleOrgChange} />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -88,12 +106,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     menuButtonStyles.buttonCollapsed
                   )}
                 >
-                  <a href="/dashboard">
+                  <Link href="/dashboard">
                     <span className={menuButtonStyles.iconWrapper}>
                       <Home className="h-4 w-4" />
                     </span>
                     <span>Dashboard</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -105,12 +123,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     menuButtonStyles.buttonCollapsed
                   )}
                 >
-                  <a href={`/organizations/${currentOrganizationId}/members`}>
+                  <Link href={`/organizations/${currentOrganizationId}/members`}>
                     <span className={menuButtonStyles.iconWrapper}>
                       <Users className="h-4 w-4" />
                     </span>
                     <span>Members</span>
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -130,12 +148,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   menuButtonStyles.buttonCollapsed
                 )}
               >
-                <a href="/referrals">
+                <Link href="/referrals">
                   <span className={menuButtonStyles.iconWrapper}>
                     <Gift className="h-4 w-4" />
                   </span>
                   <span>Referrals</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -147,12 +165,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   menuButtonStyles.buttonCollapsed
                 )}
               >
-                <a href="/settings">
+                <Link href="/settings">
                   <span className={menuButtonStyles.iconWrapper}>
                     <Settings className="h-4 w-4" />
                   </span>
                   <span>Organization settings</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -172,12 +190,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   menuButtonStyles.buttonCollapsed
                 )}
               >
-                <a href="/status">
+                <Link href="/status">
                   <span className={menuButtonStyles.iconWrapper}>
                     <BarChart3 className="h-4 w-4" />
                   </span>
                   <span>System status</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
