@@ -1,6 +1,17 @@
-import { useEffect, useState, useRef, useCallback, startTransition } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  startTransition,
+  RefObject,
+} from "react";
 import { SimpleToolbar } from "./simple-toolbar";
-import { TOOLBAR_HEIGHT_PX, TOOLBAR_SHOW_THRESHOLD, TOOLBAR_HIDE_THRESHOLD } from "./constants";
+import {
+  TOOLBAR_HEIGHT_PX,
+  TOOLBAR_SHOW_THRESHOLD,
+  TOOLBAR_HIDE_THRESHOLD,
+} from "./constants";
 
 interface FloatingToolbarProps {
   /** Editor container ref for scroll detection */
@@ -29,16 +40,18 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     headerHeight,
     onOriginalToolbarVisibilityChange
   );
-  
+
   const { floatingRef, styles } = useToolbarPositioning(editorRef, isVisible);
-  
+
   useScrollEventManagement(editorRef, checkVisibility);
-  
+
   return renderFloatingToolbar(floatingRef, isVisible, styles, editorRef);
 };
 
 /** Cancels any pending debounced visibility update */
-const cancelDebouncedUpdate = (timerRef: React.MutableRefObject<NodeJS.Timeout | null>) => {
+const cancelDebouncedUpdate = (
+  timerRef: RefObject<NodeJS.Timeout | null>
+) => {
   if (timerRef.current) {
     clearTimeout(timerRef.current);
   }
@@ -46,7 +59,7 @@ const cancelDebouncedUpdate = (timerRef: React.MutableRefObject<NodeJS.Timeout |
 
 /** Schedules a debounced visibility update after 10ms delay */
 const scheduleDebouncedUpdate = (
-  timerRef: React.MutableRefObject<NodeJS.Timeout | null>,
+  timerRef: React.RefObject<NodeJS.Timeout | null>,
   editorRef: React.RefObject<HTMLDivElement>,
   toolbarRef: React.RefObject<HTMLDivElement>,
   headerHeight: number,
@@ -146,10 +159,10 @@ const useScrollEventManagement = (
   useEffect(() => {
     // Initial visibility check
     onScroll();
-    
+
     // Setup scroll listeners on window and scrollable parents
     const cleanup = setupAllScrollListeners(editorRef, onScroll);
-    
+
     return cleanup;
   }, [editorRef, onScroll]);
 };
@@ -168,7 +181,7 @@ const calculateTransitionPoint = (
   editorTop: number,
   threshold: number
 ): number => {
-  return editorTop + (TOOLBAR_HEIGHT_PX * threshold);
+  return editorTop + TOOLBAR_HEIGHT_PX * threshold;
 };
 
 /** Checks if threshold point has crossed below the header */
@@ -198,12 +211,15 @@ const calculateToolbarVisibility = (
   const editorRect = editorRef.current.getBoundingClientRect();
   const threshold = selectThresholdForTransition(currentlyVisible);
   const thresholdPosition = calculateTransitionPoint(editorRect.top, threshold);
-  const thresholdCrossed = hasThresholdCrossedHeader(thresholdPosition, headerHeight);
+  const thresholdCrossed = hasThresholdCrossedHeader(
+    thresholdPosition,
+    headerHeight
+  );
   const editorVisible = isEditorInViewport(editorRect);
 
   return {
     shouldShow: thresholdCrossed && editorVisible,
-    editorVisible
+    editorVisible,
   };
 };
 
@@ -225,14 +241,14 @@ const updateVisibilityState = (
 
 const getDefaultStyles = () => ({
   left: "auto",
-  right: "auto", 
+  right: "auto",
   width: "auto",
   minWidth: "auto",
 });
 
 const calculateFloatingPosition = (editorElement: HTMLElement) => {
   const editorRect = editorElement.getBoundingClientRect();
-  
+
   return {
     left: `${editorRect.left + 16}px`, // 1rem margin
     right: "auto",
@@ -241,7 +257,7 @@ const calculateFloatingPosition = (editorElement: HTMLElement) => {
   };
 };
 
-/** 
+/**
  * Sets up scroll listeners on window and all scrollable parent elements.
  * Tracks scroll events to update toolbar visibility when editor position changes.
  */
@@ -249,37 +265,40 @@ const setupAllScrollListeners = (
   editorRef: React.RefObject<HTMLDivElement>,
   onScroll: () => void
 ): (() => void) => {
-  const listeners: Array<{ element: Element | Window; handler: () => void }> = [];
-  
+  const listeners: Array<{ element: Element | Window; handler: () => void }> =
+    [];
+
   // Window scroll and resize handlers
   const handleScroll = () => onScroll();
   const handleResize = () => onScroll();
-  
+
   window.addEventListener("scroll", handleScroll, { passive: true });
   window.addEventListener("resize", handleResize, { passive: true });
-  
+
   listeners.push(
     { element: window, handler: handleScroll },
     { element: window, handler: handleResize }
   );
-  
+
   // Traverse up DOM tree to find scrollable containers
   let currentElement = editorRef.current?.parentElement;
-  
+
   while (currentElement) {
     if (isScrollableElement(currentElement)) {
       const elementHandler = () => onScroll();
-      currentElement.addEventListener("scroll", elementHandler, { passive: true });
+      currentElement.addEventListener("scroll", elementHandler, {
+        passive: true,
+      });
       listeners.push({ element: currentElement, handler: elementHandler });
     }
     currentElement = currentElement.parentElement;
   }
-  
+
   // Cleanup function removes all listeners
   return () => {
     window.removeEventListener("scroll", handleScroll);
     window.removeEventListener("resize", handleResize);
-    
+
     listeners.forEach(({ element, handler }) => {
       if (element !== window) {
         element.removeEventListener("scroll", handler);
