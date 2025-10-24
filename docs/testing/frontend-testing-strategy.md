@@ -344,29 +344,59 @@ This testing strategy will give you the confidence to refactor state management 
 
 ## **Test Directory Structure**
 
+Tests are organized to **mirror the source code structure** for easier navigation and maintenance:
+
 ```
 refactor-platform-fe/
-├── __tests__/                          # Unit and integration tests
-│   ├── components/                     # Component tests
-│   │   └── organization-switcher.test.tsx
-│   ├── hooks/                         # Hook integration tests
-│   │   ├── use-current-organization.test.tsx
-│   │   └── use-current-coaching-relationship.test.tsx
-│   └── stores/                        # Store unit tests
-│       ├── auth-store.test.ts
-│       ├── organization-state-store.test.ts
-│       └── coaching-relationship-state-store.test.ts
-├── e2e/                               # End-to-end tests
-│   └── state-management-flows.spec.ts
-├── src/test-utils/                    # Test utilities
-│   ├── setup.ts                       # Global test setup
-│   ├── providers.tsx                  # Test provider wrapper
-│   ├── msw-handlers.ts                # API mock handlers
-│   └── msw-server.ts                  # MSW server setup
-├── vitest.config.ts                   # Vitest configuration
-├── playwright.config.ts               # Playwright configuration
-└── docs/testing/                      # Testing documentation
+├── __tests__/                                    # All tests (unit, integration, E2E)
+│   ├── components/                               # Component tests (mirrors src/components/)
+│   │   └── ui/
+│   │       ├── coaching-sessions/
+│   │       │   ├── coaching-notes/
+│   │       │   │   ├── coaching-notes-markdown-extensions.test.tsx
+│   │       │   │   ├── connection-status.test.tsx
+│   │       │   │   └── toolbar-transitions.spec.ts        # E2E test
+│   │       │   ├── editor-cache-context.test.tsx
+│   │       │   ├── actions-list-responsive.test.tsx
+│   │       │   └── agreements-list-responsive.test.tsx
+│   │       └── coaching-relationship-selector-visibility.spec.ts  # E2E test
+│   └── lib/                                      # Library tests (mirrors src/lib/)
+│       ├── hooks/                                # Hook integration tests
+│       │   ├── use-current-organization.test.tsx
+│       │   └── use-current-coaching-relationship.test.tsx
+│       └── stores/                               # Store unit tests
+│           ├── auth-store.test.ts
+│           ├── organization-state-store.test.ts
+│           ├── coaching-relationship-state-store.test.ts
+│           └── state-management-flows.spec.ts    # E2E test
+├── src/
+│   ├── components/                               # Source components
+│   │   └── ui/
+│   │       ├── coaching-sessions/
+│   │       │   └── coaching-notes/
+│   │       │       ├── coaching-notes.tsx
+│   │       │       ├── simple-toolbar.tsx
+│   │       │       ├── floating-toolbar.tsx
+│   │       │       └── constants.ts
+│   │       └── coaching-relationship-selector.tsx
+│   ├── lib/                                      # Source libraries
+│   │   ├── hooks/
+│   │   └── stores/
+│   └── test-utils/                               # Test utilities
+│       ├── setup.ts                              # Global test setup
+│       ├── providers.tsx                         # Test provider wrapper
+│       ├── msw-handlers.ts                       # API mock handlers
+│       └── msw-server.ts                         # MSW server setup
+├── vitest.config.ts                              # Vitest configuration
+├── playwright.config.ts                          # Playwright configuration
+└── docs/testing/                                 # Testing documentation
     └── frontend-testing-strategy.md
+
+**Key Conventions**:
+- Unit/integration tests: `*.test.ts` or `*.test.tsx`
+- E2E tests: `*.spec.ts` (Playwright tests)
+- Tests mirror source structure: `src/components/ui/X` → `__tests__/components/ui/X`
+- This structure makes it easy to find tests for any source file
 
 ## **Available Test Scripts**
 
