@@ -5,6 +5,7 @@ import type * as React from "react";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 import AddEntities from "@/components/ui/dashboard/add-entities";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
+import { TodaysSessions } from "@/components/ui/dashboard/todays-sessions";
 import type { CoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {
@@ -25,6 +26,7 @@ export function DashboardContainer() {
 
   return (
     <>
+      <TodaysSessions />
       <AddEntities
         className="mb-8"
         onCreateSession={() => handleOpenDialog()}
