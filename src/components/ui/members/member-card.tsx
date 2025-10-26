@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { useUserMutation } from "@/lib/api/organizations/users";
+import { getUserDisplayRoles, getUserCoaches } from "@/lib/utils/user-roles";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,19 +30,18 @@ import {
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
-import { User, Role, isAdminOrSuperAdmin } from "@/types/user";
+import { User, isAdminOrSuperAdmin, UserRoleState } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { toast } from "sonner";
 
 interface MemberCardProps {
-  firstName: string;
-  lastName: string;
-  email: string;
-  userId: Id;
+  user: User;
+  currentUserId: Id;
   userRelationships: CoachingRelationshipWithUserNames[];
   onRefresh: () => void;
   users: User[];
+  currentUserRoleState: UserRoleState;
 }
 
 interface Member {
@@ -52,17 +51,24 @@ interface Member {
 }
 
 export function MemberCard({
-  firstName,
-  lastName,
-  email,
-  userId,
+  user,
+  currentUserId,
   userRelationships,
   onRefresh,
   users,
+  currentUserRoleState,
 }: MemberCardProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
-  const currentUserRoleState = useCurrentUserRole();
+
+  // Extract user properties
+  const { id: userId, first_name: firstName, last_name: lastName, email } = user;
+
+  // Get display roles for this user
+  const displayRoles = getUserDisplayRoles(user, currentOrganizationId, userRelationships);
+
+  // Get coaches for this user
+  const coaches = getUserCoaches(userId, userRelationships);
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
     currentOrganizationId
   );
@@ -71,17 +77,11 @@ export function MemberCard({
 
   console.log("is a coach", isACoach);
 
-  // Check if current user is a coach in any of this user's relationships
-  // and make sure we can't delete ourselves. Admins can delete any user.
+  // Only admins and super admins can delete users (but not themselves)
   const canDeleteUser =
     currentUserRoleState.hasAccess &&
-    (
-      (userRelationships?.some(
-        (rel) => rel.coach_id === userSession.id && userId !== userSession.id
-      ) ||
-        currentUserRoleState.role === Role.Admin) &&
-      userSession.id !== userId
-    );
+    userSession.id !== userId &&
+    isAdminOrSuperAdmin(currentUserRoleState);
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this member?")) {
@@ -117,35 +117,35 @@ export function MemberCard({
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [assignedMember, setAssignedMember] = useState<Member | null>(null);
 
-  const handleCreateCoachingRelationship = () => {
+  const handleCreateCoachingRelationship = async () => {
     if (!selectedMember || !assignedMember) return;
 
-    if (assignMode === RelationshipRole.Coach) {
-      console.log("Assign", selectedMember.id, "as coach for", userId);
-      createRelationship(currentOrganizationId, {
-        coach_id: assignedMember.id,
-        coachee_id: selectedMember.id,
-      });
-    } else {
-      console.log("Assign", selectedMember.id, "as coachee for", userId);
-      createRelationship(currentOrganizationId, {
-        coach_id: selectedMember.id,
-        coachee_id: assignedMember.id,
-      });
-    }
+    try {
+      if (assignMode === RelationshipRole.Coach) {
+        console.log("Assign", selectedMember.id, "as coach for", userId);
+        await createRelationship(currentOrganizationId, {
+          coach_id: assignedMember.id,
+          coachee_id: selectedMember.id,
+        });
+      } else {
+        console.log("Assign", selectedMember.id, "as coachee for", userId);
+        await createRelationship(currentOrganizationId, {
+          coach_id: selectedMember.id,
+          coachee_id: assignedMember.id,
+        });
+      }
 
-    if (createError) {
+      toast.success(
+        `Successfully assigned ${assignedMember.first_name} ${assignedMember.last_name} as ${assignMode} for ${selectedMember.first_name} ${selectedMember.last_name}`
+      );
+      onRefresh();
+      setAssignDialogOpen(false);
+      setSelectedMember(null);
+      setAssignedMember(null);
+    } catch (error) {
       toast.error(`Error assigning ${assignMode}`);
-      return;
+      console.error("Error creating coaching relationship:", error);
     }
-
-    toast.success(
-      `Successfully assigned ${assignedMember.first_name} ${assignedMember.last_name} as ${assignMode} for ${selectedMember.first_name} ${selectedMember.last_name}`
-    );
-    onRefresh();
-    setAssignDialogOpen(false);
-    setSelectedMember(null);
-    setAssignedMember(null);
   };
 
   return (
@@ -153,10 +153,19 @@ export function MemberCard({
       <div className="flex-1">
         <h3 className="font-medium">
           {firstName} {lastName}
+          {userId === currentUserId && " (You)"}
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
+        {displayRoles.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium">Roles:</span> {displayRoles.join(', ')}
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}
+        </p>
       </div>
-      {(isACoach || isAdminOrSuperAdmin(currentUserRoleState)) && (
+      {isAdminOrSuperAdmin(currentUserRoleState) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -200,7 +209,7 @@ export function MemberCard({
             )}
             {canDeleteUser && (
               <>
-                <DropdownMenuSeparator />
+                {userId !== currentUserId && <DropdownMenuSeparator />}
                 <DropdownMenuItem
                   onClick={handleDelete}
                   className="text-destructive focus:text-destructive"
@@ -222,7 +231,7 @@ export function MemberCard({
             </DialogTitle>
             <DialogDescription>
               Select a member to be their{" "}
-              {assignMode === RelationshipRole.Coach ? "coach" : "coachee"}
+              {assignMode.toLowerCase()}
             </DialogDescription>
           </DialogHeader>
           <Select
