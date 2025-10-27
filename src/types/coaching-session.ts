@@ -1,6 +1,10 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
+import { CoachingRelationshipWithUsers } from "@/types/coaching_relationship";
+import { Organization } from "@/types/organization";
+import { OverarchingGoal } from "@/types/overarching-goal";
+import { Agreement } from "@/types/agreement";
 
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
@@ -10,6 +14,41 @@ export interface CoachingSession {
   date: string;
   created_at: DateTime;
   updated_at: DateTime;
+}
+
+/**
+ * Include options for fetching related coaching session data
+ * Maps to the backend IncludeParam enum
+ */
+export enum CoachingSessionInclude {
+  Relationship = "relationship",
+  Organization = "organization",
+  Goal = "goal",
+  Agreements = "agreements",
+}
+
+/**
+ * Enriched coaching session with optional related data
+ * Matches the backend EnrichedCoachingSession response
+ *
+ * This must always reflect the Rust struct on the backend
+ * web::response::coaching_session::EnrichedCoachingSession
+ *
+ * This type extends CoachingSession with optional fields that are populated
+ * based on the include parameter sent to the API.
+ */
+export interface EnrichedCoachingSession extends CoachingSession {
+  /** Relationship with coach and coachee user data (included when include=relationship) */
+  relationship?: CoachingRelationshipWithUsers;
+
+  /** Organization data (included when include=organization, requires relationship) */
+  organization?: Organization;
+
+  /** Overarching goal (included when include=goal) */
+  overarching_goal?: OverarchingGoal;
+
+  /** Agreement (included when include=agreements) */
+  agreement?: Agreement;
 }
 
 export function isCoachingSession(value: unknown): value is CoachingSession {
@@ -121,4 +160,23 @@ export function isFutureSession(session: CoachingSession): boolean {
   const sessionDate = DateTime.fromISO(session.date);
   const now = DateTime.now();
   return sessionDate > now;
+}
+
+/**
+ * Type guard to check if value is an EnrichedCoachingSession
+ */
+export function isEnrichedCoachingSession(
+  value: unknown
+): value is EnrichedCoachingSession {
+  // EnrichedCoachingSession extends CoachingSession, so just check base fields
+  return isCoachingSession(value);
+}
+
+/**
+ * Type guard array check for EnrichedCoachingSession
+ */
+export function isEnrichedCoachingSessionArray(
+  value: unknown
+): value is EnrichedCoachingSession[] {
+  return Array.isArray(value) && value.every(isEnrichedCoachingSession);
 }
