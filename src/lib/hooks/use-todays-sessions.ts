@@ -101,7 +101,7 @@ export function useTodaysSessions() {
 
         // Calculate urgency
         const urgency = calculateSessionUrgency(session);
-        const urgencyMessage = getUrgencyMessage(session, urgency);
+        const urgencyMessage = getUrgencyMessage(session, urgency, timezone);
         const isPast = urgency === SessionUrgency.Past;
 
         return {

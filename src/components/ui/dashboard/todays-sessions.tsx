@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,54 +12,9 @@ import {
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { TodaySessionCard } from "./today-session-card";
 import { cn } from "@/components/lib/utils";
-
-// Mock data for prototype
-const MOCK_SESSIONS = [
-  {
-    id: "session-1",
-    goalTitle: "Q4 Product Launch Strategy",
-    participantName: "Caleb Bourg",
-    userRole: "Coach" as const,
-    dateTime: "Today at 10:00 AM PST",
-    organizationName: "Refactor Group",
-    isPast: false,
-    urgency: {
-      type: "soon" as const,
-      message: "Next session in 2 hours",
-    },
-  },
-  {
-    id: "session-2",
-    goalTitle: "Career Development Goals",
-    participantName: "Sarah Chen",
-    userRole: "Coachee" as const,
-    dateTime: "Today at 2:30 PM PST",
-    organizationName: "Refactor Group",
-    isPast: false,
-    urgency: {
-      type: "later" as const,
-      message: "Scheduled for this afternoon",
-    },
-  },
-  {
-    id: "session-3",
-    goalTitle: "Team Leadership & Communication",
-    participantName: "Michael Rodriguez",
-    userRole: "Coach" as const,
-    dateTime: "Today at 4:00 PM PST",
-    organizationName: "Tech Innovations Inc",
-    isPast: false,
-    urgency: {
-      type: "later" as const,
-      message: "Scheduled for this evening",
-    },
-  },
-];
-
-// Mock user data - replace with actual auth store data in real implementation
-const MOCK_USER = {
-  first_name: "Jim",
-};
+import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { Spinner } from "@/components/ui/spinner";
 
 interface TodaysSessionsProps {
   className?: string;
@@ -69,26 +24,104 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+  const hasAutoScrolled = useRef(false);
 
-  // Track carousel state for dot indicators
+  // Fetch today's sessions with lazy loading
+  const { sessions, isLoading, error } = useTodaysSessions();
+
+  // Get current user for welcome message
+  const { userSession } = useAuthStore((state) => ({
+    userSession: state.userSession,
+  }));
+
+  // Reinitialize carousel when sessions change, but only auto-scroll ONCE
+  useEffect(() => {
+    if (!api || !sessions || sessions.length === 0) return;
+
+    // Reinitialize the carousel to pick up any new slides
+    api.reInit();
+
+    // Only auto-scroll to first non-past session on INITIAL load
+    if (!hasAutoScrolled.current) {
+      const currentOrNextIndex = sessions.findIndex(session => !session.isPast);
+
+      if (currentOrNextIndex !== -1 && currentOrNextIndex !== 0) {
+        hasAutoScrolled.current = true;
+        // Use setTimeout to ensure reInit completes before scrolling
+        setTimeout(() => {
+          api.scrollTo(currentOrNextIndex, false);
+        }, 50);
+      }
+    }
+  }, [api, sessions]);
+
+  // Track carousel state
   useEffect(() => {
     if (!api) return;
 
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap());
-
-    api.on("select", () => {
+    const updateCarouselState = () => {
+      setCount(api.scrollSnapList().length);
       setCurrent(api.selectedScrollSnap());
-    });
+      setCanScrollPrev(api.canScrollPrev());
+      setCanScrollNext(api.canScrollNext());
+    };
+
+    updateCarouselState();
+    api.on("select", updateCarouselState);
+    api.on("reInit", updateCarouselState);
+
+    // Cleanup: remove event listeners
+    return () => {
+      api.off("select", updateCarouselState);
+      api.off("reInit", updateCarouselState);
+    };
   }, [api]);
 
-  // Show empty state if no sessions
-  if (MOCK_SESSIONS.length === 0) {
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className={cn("space-y-4", className)}>
+        <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">
+          Welcome {userSession?.first_name}!
+        </h3>
+        <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
+        <div className="flex items-center justify-center py-12">
+          <Spinner />
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
     return (
       <Card className={cn("mb-8", className)}>
         <CardHeader>
           <CardTitle className="text-2xl font-semibold tracking-tight">
-            Welcome {MOCK_USER.first_name}!
+            Welcome {userSession?.first_name}!
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-12">
+            <p className="text-destructive">
+              Failed to load sessions. Please try again later.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show empty state if no sessions
+  if (sessions.length === 0) {
+    return (
+      <Card className={cn("mb-8", className)}>
+        <CardHeader>
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            Welcome {userSession?.first_name}!
           </CardTitle>
           <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
         </CardHeader>
@@ -107,7 +140,7 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
     <div className={cn("space-y-4", className)}>
       {/* Header Section */}
       <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">
-        Welcome {MOCK_USER.first_name}!
+        Welcome {userSession?.first_name}!
       </h3>
       <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
 
@@ -115,14 +148,21 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
       <Carousel
         setApi={setApi}
         opts={{
-          align: "start",
+          align: "center",
           loop: false,
+          slidesToScroll: 1,
+          containScroll: false,
+          dragFree: false,
         }}
       >
-        <CarouselContent className="ml-0">
-          {MOCK_SESSIONS.map((session) => (
-            <CarouselItem key={session.id} className="pl-0">
-              <TodaySessionCard session={session} />
+        <CarouselContent>
+          {sessions.map((session, index) => (
+            <CarouselItem key={session.id}>
+              <TodaySessionCard
+                session={session}
+                sessionIndex={index + 1}
+                totalSessions={sessions.length}
+              />
             </CarouselItem>
           ))}
         </CarouselContent>
@@ -136,7 +176,7 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
               variant="outline"
               size="icon"
               className="h-8 w-8 rounded-full"
-              disabled={current === 0}
+              disabled={!canScrollPrev}
               onClick={() => api?.scrollPrev()}
               aria-label="Previous session"
             >
@@ -165,7 +205,7 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
               variant="outline"
               size="icon"
               className="h-8 w-8 rounded-full"
-              disabled={current === count - 1}
+              disabled={!canScrollNext}
               onClick={() => api?.scrollNext()}
               aria-label="Next session"
             >
