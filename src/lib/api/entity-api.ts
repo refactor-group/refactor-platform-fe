@@ -1,7 +1,7 @@
 import { Id, EntityApiError } from "@/types/general";
 import { useState } from "react";
 import useSWR, { KeyedMutator, SWRConfiguration, useSWRConfig } from "swr";
-import { sessionGuard } from "@/lib/session/session-guard";
+import { sessionGuard } from "@/lib/auth/session-guard";
 import axios from "axios";
 
 // Re-export EntityApiError for easy access
@@ -239,7 +239,7 @@ export namespace EntityApi {
    *   - refresh: A function to manually trigger a refresh of the data
    */
   export function useEntityList<T>(
-    url: string,
+    url: string | null,
     fetcher: () => Promise<T[]>,
     params?: any,
     options?: SWRConfiguration
@@ -270,7 +270,7 @@ export namespace EntityApi {
    * of type T is converted to type U through the provided transform function.
    */
   export function useEntityList<T, U>(
-    url: string,
+    url: string | null,
     fetcher: () => Promise<T[]>,
     transform: (item: T) => U,
     params?: any,
@@ -303,7 +303,7 @@ export namespace EntityApi {
    * while supporting new transformation capabilities through method overloading.
    */
   export function useEntityList<T, U = T>(
-    url: string,
+    url: string | null,
     fetcher: () => Promise<T[]>,
     params?: any,
     options?: SWRConfiguration

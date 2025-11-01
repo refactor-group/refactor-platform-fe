@@ -18,7 +18,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 // Mock SessionCleanupProvider to avoid router dependency in tests
-vi.mock('@/lib/session/session-cleanup-provider', () => ({
+vi.mock('@/lib/auth/session-cleanup-provider', () => ({
   SessionCleanupProvider: ({ children }: { children: React.ReactNode }) => children
 }))
 
