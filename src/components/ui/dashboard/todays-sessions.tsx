@@ -155,9 +155,9 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
           dragFree: false,
         }}
       >
-        <CarouselContent>
+        <CarouselContent className="py-4 !ml-0">
           {sessions.map((session, index) => (
-            <CarouselItem key={session.id}>
+            <CarouselItem key={session.id} className="!pl-0 pr-4">
               <TodaySessionCard
                 session={session}
                 sessionIndex={index + 1}

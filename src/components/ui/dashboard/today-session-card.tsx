@@ -23,7 +23,7 @@ interface TodaySessionCardProps {
 export function TodaySessionCard({
   session,
   sessionIndex,
-  totalSessions
+  totalSessions,
 }: TodaySessionCardProps) {
   const {
     overarchingGoal,
@@ -58,11 +58,11 @@ export function TodaySessionCard({
   };
 
   return (
-    <Card className="border-border shadow-sm">
+    <Card className="border-border !shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]">
       {/* Status Indicator Section */}
       <div
         className={cn(
-          "px-4 py-1 rounded-t-xl border-b flex items-center justify-between bg-sidebar",
+          "px-4 py-1 rounded-t-lg border-b flex items-center justify-between bg-sidebar",
           getUrgencyStyles(session.urgency.type)
         )}
       >
