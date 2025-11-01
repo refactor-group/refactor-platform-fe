@@ -5,44 +5,94 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Share, User, Target, Calendar, Building } from "lucide-react";
+import { Share, User, Target, Building } from "lucide-react";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { cn } from "@/components/lib/utils";
+import { SessionUrgency } from "@/types/session-display";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { DateTime } from "ts-luxon";
+import { getBrowserTimezone } from "@/lib/timezone-utils";
 import {
-  EnrichedSessionDisplay,
-  SessionUrgency,
-} from "@/types/session-display";
-import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
+  calculateSessionUrgency,
+  getUrgencyMessage,
+} from "@/lib/sessions/session-utils";
 
 interface TodaySessionCardProps {
-  session: EnrichedSessionDisplay;
+  session: EnrichedCoachingSession;
   sessionIndex?: number;
   totalSessions?: number;
+  onReschedule?: () => void;
+}
+
+/**
+ * Get the participant details for display
+ * Story: "Show who the user is meeting with"
+ */
+function getParticipantInfo(session: EnrichedCoachingSession, userId: string) {
+  const relationship = session.relationship;
+  if (!relationship) return null;
+
+  const isCoach = relationship.coach_id === userId;
+  const userRole = isCoach ? "Coach" : "Coachee";
+  const participant = isCoach ? relationship.coachee : relationship.coach;
+  const participantName =
+    participant.display_name ||
+    `${participant.first_name} ${participant.last_name}`;
+
+  return { participantName, userRole, isCoach };
+}
+
+/**
+ * Format the session time for display
+ * Story: "Show when the session is happening"
+ */
+function formatSessionTime(session: EnrichedCoachingSession, timezone: string) {
+  const sessionTime = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
+    timezone
+  );
+  return sessionTime.toFormat("h:mm a ZZZZ");
+}
+
+/**
+ * Get urgency information for the session
+ * Story: "Categorize how soon the session is starting"
+ */
+function getSessionUrgencyInfo(session: EnrichedCoachingSession, timezone: string) {
+  const urgency = calculateSessionUrgency(session);
+  const urgencyMessage = getUrgencyMessage(session, urgency, timezone);
+  const isPast = urgency === SessionUrgency.Past;
+
+  return { urgency, urgencyMessage, isPast };
 }
 
 export function TodaySessionCard({
   session,
   sessionIndex,
   totalSessions,
+  onReschedule,
 }: TodaySessionCardProps) {
-  const {
-    overarchingGoal,
-    isLoading: isLoadingGoal,
-    isError: isErrorGoal,
-  } = useOverarchingGoalBySession(session.id);
+  const { isCurrentCoach, userSession } = useAuthStore((state) => state);
+
+  if (!userSession) return null;
 
   const handleCopyLink = async () => {
     await copyCoachingSessionLinkWithToast(session.id);
   };
 
-  let goalText: string;
-  if (isLoadingGoal) {
-    goalText = "Loading goal...";
-  } else if (isErrorGoal) {
-    goalText = "Error loading goal";
-  } else {
-    goalText = overarchingGoal?.title || "No goal set";
-  }
+  // Compute display values from session data
+  const participantInfo = getParticipantInfo(session, userSession.id);
+  if (!participantInfo) return null;
+
+  const timezone = userSession.timezone || getBrowserTimezone();
+  const timeStr = formatSessionTime(session, timezone);
+  const { urgency, urgencyMessage, isPast } = getSessionUrgencyInfo(
+    session,
+    timezone
+  );
+
+  const goalText = session.overarching_goal?.title || "No goal set";
+  const organizationName = session.organization?.name || "Unknown organization";
 
   const getUrgencyStyles = (urgencyType: SessionUrgency) => {
     switch (urgencyType) {
@@ -63,11 +113,11 @@ export function TodaySessionCard({
       <div
         className={cn(
           "px-4 py-1 rounded-t-lg border-b flex items-center justify-between bg-sidebar",
-          getUrgencyStyles(session.urgency.type)
+          getUrgencyStyles(urgency)
         )}
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">{session.urgency.message}</span>
+          <span className="text-sm font-medium">{urgencyMessage}</span>
           {sessionIndex !== undefined && totalSessions !== undefined && (
             <span className="text-xs opacity-70">
               ({sessionIndex} / {totalSessions} today)
@@ -76,7 +126,7 @@ export function TodaySessionCard({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="bg-background/50">
-            {session.dateTime.split(" at ")[1]}
+            {timeStr}
           </Badge>
           <div className="h-4 w-px bg-current opacity-30" />
           <Button
@@ -112,20 +162,20 @@ export function TodaySessionCard({
             <User className="h-4 w-4" />
             <span>
               Meeting with:{" "}
-              <span className="font-medium">{session.participantName}</span>
+              <span className="font-medium">{participantInfo.participantName}</span>
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Target className="h-4 w-4" />
             <span>
-              Your role: <span className="font-medium">{session.userRole}</span>
+              Your role: <span className="font-medium">{participantInfo.userRole}</span>
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Building className="h-4 w-4" />
-            <span className="font-medium">{session.organizationName}</span>
+            <span className="font-medium">{organizationName}</span>
           </div>
         </div>
 
@@ -136,13 +186,15 @@ export function TodaySessionCard({
         <div className="flex gap-2 items-center">
           <Link href={`/coaching-sessions/${session.id}`}>
             <Button size="default">
-              {session.isPast ? "View Session" : "Join Session"}
+              {isPast ? "View Session" : "Join Session"}
             </Button>
           </Link>
 
-          <Button variant="outline" size="default" onClick={() => {}}>
-            Reschedule
-          </Button>
+          {participantInfo.isCoach && (
+            <Button variant="outline" size="default" onClick={onReschedule}>
+              Reschedule
+            </Button>
+          )}
         </div>
       </div>
     </Card>

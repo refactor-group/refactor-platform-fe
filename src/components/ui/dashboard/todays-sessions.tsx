@@ -15,12 +15,17 @@ import { cn } from "@/components/lib/utils";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { Spinner } from "@/components/ui/spinner";
+import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { calculateSessionUrgency } from "@/lib/sessions/session-utils";
+import { SessionUrgency } from "@/types/session-display";
 
 interface TodaysSessionsProps {
   className?: string;
+  onRescheduleSession?: (session: EnrichedCoachingSession) => void;
+  onRefreshNeeded?: (refreshFn: () => void) => void;
 }
 
-export function TodaysSessions({ className }: TodaysSessionsProps) {
+export function TodaysSessions({ className, onRescheduleSession, onRefreshNeeded }: TodaysSessionsProps) {
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [count, setCount] = useState(0);
@@ -29,12 +34,17 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
   const hasAutoScrolled = useRef(false);
 
   // Fetch today's sessions with lazy loading
-  const { sessions, isLoading, error } = useTodaysSessions();
+  const { sessions, isLoading, error, refresh } = useTodaysSessions();
 
   // Get current user for welcome message
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
+
+  // Pass refresh function to parent (must be in useEffect to avoid setState during render)
+  useEffect(() => {
+    onRefreshNeeded?.(refresh);
+  }, [onRefreshNeeded, refresh]);
 
   // Reinitialize carousel when sessions change, but only auto-scroll ONCE
   useEffect(() => {
@@ -45,7 +55,10 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
 
     // Only auto-scroll to first non-past session on INITIAL load
     if (!hasAutoScrolled.current) {
-      const currentOrNextIndex = sessions.findIndex(session => !session.isPast);
+      const currentOrNextIndex = sessions.findIndex(session => {
+        const urgency = calculateSessionUrgency(session);
+        return urgency !== SessionUrgency.Past;
+      });
 
       if (currentOrNextIndex !== -1 && currentOrNextIndex !== 0) {
         hasAutoScrolled.current = true;
@@ -162,6 +175,7 @@ export function TodaysSessions({ className }: TodaysSessionsProps) {
                 session={session}
                 sessionIndex={index + 1}
                 totalSessions={sessions.length}
+                onReschedule={onRescheduleSession ? () => onRescheduleSession(session) : undefined}
               />
             </CarouselItem>
           ))}
