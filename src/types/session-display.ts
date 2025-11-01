@@ -3,6 +3,8 @@
  * Story: "Type-safe session display information"
  */
 
+import type { CoachingRole } from "./coaching-role";
+
 export enum SessionUrgency {
   Past = "past",
   Imminent = "imminent",
@@ -11,17 +13,17 @@ export enum SessionUrgency {
 }
 
 export interface SessionUrgencyInfo {
-  type: SessionUrgency;
-  message: string;
+  readonly type: SessionUrgency;
+  readonly message: string;
 }
 
 export interface EnrichedSessionDisplay {
-  id: string;
-  goalTitle: string;
-  participantName: string;
-  userRole: "Coach" | "Coachee";
-  dateTime: string;
-  organizationName: string;
-  isPast: boolean;
-  urgency: SessionUrgencyInfo;
+  readonly id: string;
+  readonly goalTitle: string;
+  readonly participantName: string;
+  readonly userRole: CoachingRole;
+  readonly dateTime: string;
+  readonly organizationName: string;
+  readonly isPast: boolean;
+  readonly urgency: SessionUrgencyInfo;
 }

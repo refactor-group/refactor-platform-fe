@@ -9,6 +9,7 @@ import { Share, User, Target, Building } from "lucide-react";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { cn } from "@/components/lib/utils";
 import { SessionUrgency } from "@/types/session-display";
+import { CoachingRole } from "@/types/coaching-role";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { DateTime } from "ts-luxon";
@@ -25,16 +26,22 @@ interface TodaySessionCardProps {
   onReschedule?: () => void;
 }
 
+type ParticipantInfo = {
+  readonly participantName: string;
+  readonly userRole: CoachingRole;
+  readonly isCoach: boolean;
+} | null;
+
 /**
  * Get the participant details for display
  * Story: "Show who the user is meeting with"
  */
-function getParticipantInfo(session: EnrichedCoachingSession, userId: string) {
+function getParticipantInfo(session: EnrichedCoachingSession, userId: string): ParticipantInfo {
   const relationship = session.relationship;
   if (!relationship) return null;
 
   const isCoach = relationship.coach_id === userId;
-  const userRole = isCoach ? "Coach" : "Coachee";
+  const userRole = isCoach ? CoachingRole.Coach : CoachingRole.Coachee;
   const participant = isCoach ? relationship.coachee : relationship.coach;
   const participantName =
     participant.display_name ||
@@ -47,18 +54,24 @@ function getParticipantInfo(session: EnrichedCoachingSession, userId: string) {
  * Format the session time for display
  * Story: "Show when the session is happening"
  */
-function formatSessionTime(session: EnrichedCoachingSession, timezone: string) {
+function formatSessionTime(session: EnrichedCoachingSession, timezone: string): string {
   const sessionTime = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
     timezone
   );
   return sessionTime.toFormat("h:mm a ZZZZ");
 }
 
+type SessionUrgencyInfo = {
+  readonly urgency: SessionUrgency;
+  readonly urgencyMessage: string;
+  readonly isPast: boolean;
+};
+
 /**
  * Get urgency information for the session
  * Story: "Categorize how soon the session is starting"
  */
-function getSessionUrgencyInfo(session: EnrichedCoachingSession, timezone: string) {
+function getSessionUrgencyInfo(session: EnrichedCoachingSession, timezone: string): SessionUrgencyInfo {
   const urgency = calculateSessionUrgency(session);
   const urgencyMessage = getUrgencyMessage(session, urgency, timezone);
   const isPast = urgency === SessionUrgency.Past;

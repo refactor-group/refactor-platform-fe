@@ -10,6 +10,7 @@ import { User } from "@/types/user";
  */
 
 export function createMockUser(overrides?: Partial<User>): User {
+  const now = DateTime.now();
   return {
     id: "user-1",
     email: "jim@example.com",
@@ -19,8 +20,8 @@ export function createMockUser(overrides?: Partial<User>): User {
     timezone: "America/Los_Angeles",
     role: "coach",
     roles: [],
-    created_at: DateTime.now().toISO(),
-    updated_at: DateTime.now().toISO(),
+    created_at: now.toISO() ?? '', // User expects string, handle null case
+    updated_at: now.toISO() ?? '',
     ...overrides,
   };
 }
@@ -28,12 +29,13 @@ export function createMockUser(overrides?: Partial<User>): User {
 export function createMockOrganization(
   overrides?: Partial<Organization>
 ): Organization {
+  const now = DateTime.now();
   return {
     id: "org-1",
     name: "Refactor Group",
     slug: "refactor-group",
-    created_at: DateTime.now().toISO(),
-    updated_at: DateTime.now().toISO(),
+    created_at: now, // Organization expects DateTime object
+    updated_at: now,
     ...overrides,
   };
 }
@@ -41,6 +43,7 @@ export function createMockOrganization(
 export function createMockRelationship(
   overrides?: Partial<CoachingRelationshipWithUserNames>
 ): CoachingRelationshipWithUserNames {
+  const now = DateTime.now();
   return {
     id: "rel-1",
     coach_id: "user-1",
@@ -50,8 +53,8 @@ export function createMockRelationship(
     coach_last_name: "Hodapp",
     coachee_first_name: "Caleb",
     coachee_last_name: "Bourg",
-    created_at: DateTime.now().toISO(),
-    updated_at: DateTime.now().toISO(),
+    created_at: now, // CoachingRelationship expects DateTime object
+    updated_at: now,
     ...overrides,
   };
 }
@@ -59,12 +62,13 @@ export function createMockRelationship(
 export function createMockSession(
   overrides?: Partial<CoachingSession>
 ): CoachingSession {
+  const now = DateTime.now();
   return {
     id: "session-1",
     coaching_relationship_id: "rel-1",
-    date: DateTime.now().plus({ hours: 2 }).toISO(), // 2 hours from now by default
-    created_at: DateTime.now().toISO(),
-    updated_at: DateTime.now().toISO(),
+    date: now.plus({ hours: 2 }).toISO() ?? '', // Date is ISO string
+    created_at: now, // CoachingSession expects DateTime object
+    updated_at: now,
     ...overrides,
   };
 }

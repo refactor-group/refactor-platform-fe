@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
  * @param callback Function to call on each interval
  * @param delay Delay in milliseconds, or null to pause
  */
-export function useInterval(callback: () => void, delay: number | null) {
+export function useInterval(callback: () => void, delay: number | null): void {
   const savedCallback = useRef(callback);
 
   // Remember the latest callback
