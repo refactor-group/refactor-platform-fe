@@ -1,7 +1,8 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
-import { CoachingRelationshipWithUsers } from "@/types/coaching_relationship";
+import { CoachingRelationship } from "@/types/coaching_relationship";
+import { User } from "@/types/user";
 import { Organization } from "@/types/organization";
 import { OverarchingGoal } from "@/types/overarching-goal";
 import { Agreement } from "@/types/agreement";
@@ -29,17 +30,26 @@ export enum CoachingSessionInclude {
 
 /**
  * Enriched coaching session with optional related data
- * Matches the backend EnrichedCoachingSession response
+ * Matches the backend EnrichedSession response
  *
  * This must always reflect the Rust struct on the backend
- * web::response::coaching_session::EnrichedCoachingSession
+ * entity_api::coaching_session::EnrichedSession
  *
  * This type extends CoachingSession with optional fields that are populated
  * based on the include parameter sent to the API.
+ *
+ * NOTE: The backend returns coach and coachee as TOP-LEVEL fields, not nested
+ * inside the relationship object. The relationship field only contains IDs.
  */
 export interface EnrichedCoachingSession extends CoachingSession {
-  /** Relationship with coach and coachee user data (included when include=relationship) */
-  relationship?: CoachingRelationshipWithUsers;
+  /** Relationship data with IDs only (included when include=relationship) */
+  relationship?: CoachingRelationship;
+
+  /** Coach user object (included when include=relationship) */
+  coach?: User;
+
+  /** Coachee user object (included when include=relationship) */
+  coachee?: User;
 
   /** Organization data (included when include=organization, requires relationship) */
   organization?: Organization;

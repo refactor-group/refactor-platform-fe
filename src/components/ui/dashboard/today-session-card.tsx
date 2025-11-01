@@ -42,10 +42,26 @@ function getParticipantInfo(session: EnrichedCoachingSession, userId: string): P
 
   const isCoach = relationship.coach_id === userId;
   const userRole = isCoach ? CoachingRole.Coach : CoachingRole.Coachee;
-  const participant = isCoach ? relationship.coachee : relationship.coach;
+
+  // Backend returns coach and coachee as top-level fields in EnrichedSession
+  const participant = isCoach ? session.coachee : session.coach;
+
+  // Handle missing participant data
+  if (!participant) {
+    console.warn(
+      `Session ${session.id}: Missing ${isCoach ? 'coachee' : 'coach'} user data.`,
+      'Session data:', session
+    );
+    return {
+      participantName: isCoach ? "Coachee (data not loaded)" : "Coach (data not loaded)",
+      userRole,
+      isCoach,
+    };
+  }
+
   const participantName =
-    participant.display_name ||
-    `${participant.first_name} ${participant.last_name}`;
+    `${participant.first_name} ${participant.last_name}` ||
+    participant.display_name;
 
   return { participantName, userRole, isCoach };
 }
