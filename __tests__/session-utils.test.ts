@@ -4,6 +4,8 @@ import {
   calculateSessionUrgency,
   getUrgencyMessage,
   enrichSessionForDisplay,
+  IMMINENT_SESSION_THRESHOLD_MINUTES,
+  SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/sessions/session-utils";
 import {
   getOtherParticipantName,
@@ -29,20 +31,20 @@ describe("calculateSessionUrgency", () => {
     expect(urgency).toBe(SessionUrgency.Past);
   });
 
-  it("identifies imminent sessions (starting within 30 minutes)", () => {
+  it(`identifies imminent sessions (starting within ${IMMINENT_SESSION_THRESHOLD_MINUTES} minutes)`, () => {
     const session = createSessionAt(15); // 15 minutes from now
     const urgency = calculateSessionUrgency(session);
     expect(urgency).toBe(SessionUrgency.Imminent);
   });
 
-  it("identifies soon sessions (starting within 2 hours)", () => {
+  it(`identifies soon sessions (starting within ${SOON_SESSION_THRESHOLD_MINUTES} minutes)`, () => {
     const session = createSessionAt(90); // 90 minutes from now
     const urgency = calculateSessionUrgency(session);
     expect(urgency).toBe(SessionUrgency.Soon);
   });
 
-  it("identifies later sessions (more than 2 hours away)", () => {
-    const session = createSessionAt(180); // 3 hours from now
+  it(`identifies later sessions (more than ${SOON_SESSION_THRESHOLD_MINUTES} minutes away)`, () => {
+    const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60); // Beyond threshold
     const urgency = calculateSessionUrgency(session);
     expect(urgency).toBe(SessionUrgency.Later);
   });
@@ -53,14 +55,14 @@ describe("calculateSessionUrgency", () => {
     expect(urgency).toBe(SessionUrgency.Imminent);
   });
 
-  it("treats session starting in exactly 30 minutes as imminent", () => {
-    const session = createSessionAt(30); // boundary case
+  it(`treats session starting in exactly ${IMMINENT_SESSION_THRESHOLD_MINUTES} minutes as imminent`, () => {
+    const session = createSessionAt(IMMINENT_SESSION_THRESHOLD_MINUTES); // boundary case
     const urgency = calculateSessionUrgency(session);
     expect(urgency).toBe(SessionUrgency.Imminent);
   });
 
-  it("treats session starting in exactly 120 minutes as soon", () => {
-    const session = createSessionAt(120); // boundary case
+  it(`treats session starting in exactly ${SOON_SESSION_THRESHOLD_MINUTES} minutes as soon`, () => {
+    const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES); // boundary case
     const urgency = calculateSessionUrgency(session);
     expect(urgency).toBe(SessionUrgency.Soon);
   });
@@ -74,7 +76,7 @@ describe("getUrgencyMessage", () => {
     expect(message).toContain("Ended");
   });
 
-  it("returns imminent message with exact minutes for sessions < 30 min", () => {
+  it(`returns imminent message with exact minutes for sessions < ${IMMINENT_SESSION_THRESHOLD_MINUTES} min`, () => {
     const session = createSessionAt(15);
     const urgency = calculateSessionUrgency(session);
     const message = getUrgencyMessage(session, urgency);
@@ -88,7 +90,7 @@ describe("getUrgencyMessage", () => {
     expect(message).toBe("Starting now!");
   });
 
-  it("returns soon message with hours for sessions < 2 hours", () => {
+  it(`returns soon message with hours for sessions < ${SOON_SESSION_THRESHOLD_MINUTES} minutes`, () => {
     const session = createSessionAt(90);
     const urgency = calculateSessionUrgency(session);
     const message = getUrgencyMessage(session, urgency);
@@ -96,21 +98,48 @@ describe("getUrgencyMessage", () => {
     expect(message).toContain("hour");
   });
 
-  it("returns later message for sessions > 2 hours away", () => {
-    const session = createSessionAt(180);
+  it(`returns later message for sessions > ${SOON_SESSION_THRESHOLD_MINUTES} minutes away`, () => {
+    const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60);
     const urgency = calculateSessionUrgency(session);
     const message = getUrgencyMessage(session, urgency);
     expect(message).toContain("Scheduled for");
   });
 
   it("formats time correctly in later message", () => {
-    const session = createSessionAt(180);
+    const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60);
     const urgency = calculateSessionUrgency(session);
     const message = getUrgencyMessage(session, urgency);
 
     // Should contain formatted time like "this afternoon" or specific time
     expect(message.length).toBeGreaterThan(0);
     expect(message).toContain("Scheduled for");
+  });
+
+  it("returns 'tomorrow' prefix for sessions scheduled tomorrow", () => {
+    // Create a session 24 hours from now
+    const session = createSessionAt(24 * 60);
+    const urgency = calculateSessionUrgency(session);
+    const message = getUrgencyMessage(session, urgency);
+
+    expect(message).toContain("Scheduled for tomorrow");
+  });
+
+  it("returns 'yesterday' prefix for past sessions from yesterday", () => {
+    // Create a session 24 hours ago
+    const session = createSessionAt(-24 * 60);
+    const urgency = calculateSessionUrgency(session);
+    const message = getUrgencyMessage(session, urgency);
+
+    expect(message).toContain("Ended");
+  });
+
+  it("returns 'this morning/afternoon/evening' for sessions today", () => {
+    // Create a session 3 hours from now (later urgency)
+    const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60);
+    const urgency = calculateSessionUrgency(session);
+    const message = getUrgencyMessage(session, urgency);
+
+    expect(message).toContain("Scheduled for this");
   });
 });
 

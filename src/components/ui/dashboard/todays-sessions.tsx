@@ -1,38 +1,60 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from "@/components/ui/carousel";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import React, { useEffect } from "react";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { TodaySessionCard } from "./today-session-card";
 import { cn } from "@/components/lib/utils";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { Spinner } from "@/components/ui/spinner";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import { calculateSessionUrgency } from "@/lib/sessions/session-utils";
-import { SessionUrgency } from "@/types/session-display";
+import { useCarouselState } from "@/lib/hooks/use-carousel-state";
+import { useSessionAutoScroll } from "@/lib/hooks/use-session-auto-scroll";
+import { WelcomeHeader } from "./welcome-header";
+import { SessionCarouselNavigation } from "./session-carousel-navigation";
+import { LoadingState, ErrorState, EmptyState } from "./todays-sessions-states";
 
+/**
+ * Props for the TodaysSessions component
+ */
 interface TodaysSessionsProps {
+  /** Optional CSS class name for styling the component container */
   className?: string;
+  /** Optional callback function invoked when a user requests to reschedule a session */
   onRescheduleSession?: (session: EnrichedCoachingSession) => void;
+  /** Optional callback to receive the refresh function for manually refreshing sessions */
   onRefreshNeeded?: (refreshFn: () => void) => void;
 }
 
+/**
+ * TodaysSessions Component
+ *
+ * Displays a carousel of coaching sessions scheduled for today. Features a personalized
+ * welcome message and interactive carousel navigation with automatic scrolling to the
+ * next upcoming session on initial load.
+ *
+ * Features:
+ * - Lazy-loaded session data with loading and error states
+ * - Carousel-based navigation for multiple sessions
+ * - Auto-scroll to first non-past session on initial load
+ * - Dot indicators and arrow buttons for navigation
+ * - Responsive design with accessibility support
+ * - Empty state when no sessions are scheduled
+ * - Optional reschedule callback for each session
+ * - Refresh function exposed to parent components
+ *
+ * @param props - Component props
+ * @returns The rendered sessions carousel with navigation, or loading/error/empty states
+ *
+ * @example
+ * ```tsx
+ * <TodaysSessions
+ *   className="my-4"
+ *   onRescheduleSession={(session) => handleReschedule(session)}
+ *   onRefreshNeeded={(refreshFn) => setRefreshCallback(refreshFn)}
+ * />
+ * ```
+ */
 export function TodaysSessions({ className, onRescheduleSession, onRefreshNeeded }: TodaysSessionsProps) {
-  const [api, setApi] = useState<CarouselApi>();
-  const [current, setCurrent] = useState(0);
-  const [count, setCount] = useState(0);
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
-  const hasAutoScrolled = useRef(false);
-
   // Fetch today's sessions with lazy loading
   const { sessions, isLoading, error, refresh } = useTodaysSessions();
 
@@ -41,125 +63,42 @@ export function TodaysSessions({ className, onRescheduleSession, onRefreshNeeded
     userSession: state.userSession,
   }));
 
-  // Pass refresh function to parent (must be in useEffect to avoid setState during render)
+  // Manage carousel state and behavior
+  const carousel = useCarouselState();
+  useSessionAutoScroll(carousel.api, sessions);
+
+  /**
+   * Pass refresh function to parent component
+   *
+   * Must be in useEffect to avoid calling setState during render phase.
+   * This allows the parent component to trigger a manual refresh of the sessions list.
+   */
   useEffect(() => {
     onRefreshNeeded?.(refresh);
   }, [onRefreshNeeded, refresh]);
 
-  // Reinitialize carousel when sessions change, but only auto-scroll ONCE
-  useEffect(() => {
-    if (!api || !sessions || sessions.length === 0) return;
-
-    // Reinitialize the carousel to pick up any new slides
-    api.reInit();
-
-    // Only auto-scroll to first non-past session on INITIAL load
-    if (!hasAutoScrolled.current) {
-      const currentOrNextIndex = sessions.findIndex(session => {
-        const urgency = calculateSessionUrgency(session);
-        return urgency !== SessionUrgency.Past;
-      });
-
-      if (currentOrNextIndex !== -1 && currentOrNextIndex !== 0) {
-        hasAutoScrolled.current = true;
-        // Use setTimeout to ensure reInit completes before scrolling
-        setTimeout(() => {
-          api.scrollTo(currentOrNextIndex, false);
-        }, 50);
-      }
-    }
-  }, [api, sessions]);
-
-  // Track carousel state
-  useEffect(() => {
-    if (!api) return;
-
-    const updateCarouselState = () => {
-      setCount(api.scrollSnapList().length);
-      setCurrent(api.selectedScrollSnap());
-      setCanScrollPrev(api.canScrollPrev());
-      setCanScrollNext(api.canScrollNext());
-    };
-
-    updateCarouselState();
-    api.on("select", updateCarouselState);
-    api.on("reInit", updateCarouselState);
-
-    // Cleanup: remove event listeners
-    return () => {
-      api.off("select", updateCarouselState);
-      api.off("reInit", updateCarouselState);
-    };
-  }, [api]);
-
   // Show loading state
   if (isLoading) {
-    return (
-      <div className={cn("space-y-4", className)}>
-        <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">
-          Welcome {userSession?.first_name}!
-        </h3>
-        <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
-        <div className="flex items-center justify-center py-12">
-          <Spinner />
-        </div>
-      </div>
-    );
+    return <LoadingState firstName={userSession?.first_name} className={className} />;
   }
 
   // Show error state
   if (error) {
-    return (
-      <Card className={cn("mb-8", className)}>
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold tracking-tight">
-            Welcome {userSession?.first_name}!
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-12">
-            <p className="text-destructive">
-              Failed to load sessions. Please try again later.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <ErrorState firstName={userSession?.first_name} className={className} />;
   }
 
   // Show empty state if no sessions
   if (sessions.length === 0) {
-    return (
-      <Card className={cn("mb-8", className)}>
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold tracking-tight">
-            Welcome {userSession?.first_name}!
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-12">
-            <p className="text-muted-foreground">
-              No coaching sessions scheduled for today. Enjoy your day!
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <EmptyState firstName={userSession?.first_name} className={className} />;
   }
 
+  // Render carousel with sessions
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Header Section */}
-      <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">
-        Welcome {userSession?.first_name}!
-      </h3>
-      <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
+      <WelcomeHeader firstName={userSession?.first_name} />
 
-      {/* Carousel Section */}
       <Carousel
-        setApi={setApi}
+        setApi={carousel.setApi}
         opts={{
           align: "center",
           loop: false,
@@ -182,56 +121,13 @@ export function TodaysSessions({ className, onRescheduleSession, onRefreshNeeded
         </CarouselContent>
       </Carousel>
 
-      {/* Navigation Controls Below Carousel */}
-      {count > 1 && (
-        <div className="flex items-center justify-center gap-4 mt-6">
-            {/* Previous Button */}
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              disabled={!canScrollPrev}
-              onClick={() => api?.scrollPrev()}
-              aria-label="Previous session"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-
-            {/* Dot Indicators */}
-            <div className="flex gap-2">
-              {Array.from({ length: count }).map((_, index) => (
-                <button
-                  key={index}
-                  className={cn(
-                    "h-2 rounded-full transition-all",
-                    index === current
-                      ? "bg-primary w-8"
-                      : "bg-muted-foreground/30 w-2"
-                  )}
-                  onClick={() => api?.scrollTo(index)}
-                  aria-label={`Go to session ${index + 1}`}
-                />
-              ))}
-            </div>
-
-            {/* Next Button */}
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              disabled={!canScrollNext}
-              onClick={() => api?.scrollNext()}
-              aria-label="Next session"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-        </div>
-      )}
-
-      {/* Session Counter (for accessibility) */}
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        Session {current + 1} of {count}
-      </div>
+      <SessionCarouselNavigation
+        api={carousel.api}
+        current={carousel.current}
+        count={carousel.count}
+        canScrollPrev={carousel.canScrollPrev}
+        canScrollNext={carousel.canScrollNext}
+      />
     </div>
   );
 }

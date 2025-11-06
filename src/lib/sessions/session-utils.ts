@@ -17,6 +17,21 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
  * Story: "Transform raw session data into display-ready information"
  */
 
+/** Threshold in minutes for considering a session as past (allows for execution timing) */
+export const PAST_SESSION_THRESHOLD_MINUTES = -1;
+
+/** Threshold in minutes for imminent sessions (starting very soon) */
+export const IMMINENT_SESSION_THRESHOLD_MINUTES = 30;
+
+/** Threshold in minutes for sessions starting soon */
+export const SOON_SESSION_THRESHOLD_MINUTES = 120;
+
+/** Hour when afternoon begins (12:00 PM) */
+export const AFTERNOON_START_HOUR = 12;
+
+/** Hour when evening begins (5:00 PM) */
+export const EVENING_START_HOUR = 17;
+
 /**
  * Calculate urgency level based on session timing
  * Story: "Categorize sessions by how soon they start"
@@ -29,16 +44,16 @@ export function calculateSessionUrgency(
   const sessionTime = DateTime.fromISO(session.date, { zone: 'utc' });
   const minutesUntilSession = sessionTime.diff(now, "minutes").minutes;
 
-  // Treat anything less than -1 minute as truly past (allows for execution timing)
-  if (minutesUntilSession < -1) {
+  // Treat anything less than threshold as truly past (allows for execution timing)
+  if (minutesUntilSession < PAST_SESSION_THRESHOLD_MINUTES) {
     return SessionUrgency.Past;
   }
 
-  if (minutesUntilSession <= 30) {
+  if (minutesUntilSession <= IMMINENT_SESSION_THRESHOLD_MINUTES) {
     return SessionUrgency.Imminent;
   }
 
-  if (minutesUntilSession <= 120) {
+  if (minutesUntilSession <= SOON_SESSION_THRESHOLD_MINUTES) {
     return SessionUrgency.Soon;
   }
 
@@ -115,19 +130,38 @@ export function getUrgencyMessage(
 /**
  * Get period of day for natural language
  * Story: "Describe time of day in friendly terms"
+ *
+ * Accounts for whether the session is today, tomorrow, or yesterday
+ * to generate appropriate relative time phrases.
  */
 function getPeriodOfDay(time: DateTime): string {
+  const now = DateTime.now().setZone(time.zone);
   const hour = time.hour;
 
-  if (hour < 12) {
-    return "this morning";
+  // Determine the time period (morning, afternoon, evening)
+  let period: string;
+  if (hour < AFTERNOON_START_HOUR) {
+    period = "morning";
+  } else if (hour < EVENING_START_HOUR) {
+    period = "afternoon";
+  } else {
+    period = "evening";
   }
 
-  if (hour < 17) {
-    return "this afternoon";
-  }
+  // Check if it's today, tomorrow, or yesterday
+  const daysDiff = Math.round(time.startOf('day').diff(now.startOf('day'), 'days').days);
 
-  return "this evening";
+  if (daysDiff === 0) {
+    return `this ${period}`;
+  } else if (daysDiff === 1) {
+    return `tomorrow ${period}`;
+  } else if (daysDiff === -1) {
+    return `yesterday ${period}`;
+  } else {
+    // For dates beyond tomorrow/yesterday, include the day name
+    const dayName = time.toFormat('EEEE'); // e.g., "Monday"
+    return `${dayName} ${period}`;
+  }
 }
 
 /**

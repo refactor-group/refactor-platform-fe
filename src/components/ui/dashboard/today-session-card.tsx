@@ -19,22 +19,43 @@ import {
   getUrgencyMessage,
 } from "@/lib/sessions/session-utils";
 
+/**
+ * Props for the TodaySessionCard component
+ */
 interface TodaySessionCardProps {
+  /** The enriched coaching session data to display */
   session: EnrichedCoachingSession;
+  /** Optional index of this session in the list (1-based) */
   sessionIndex?: number;
+  /** Optional total number of sessions today */
   totalSessions?: number;
+  /** Optional callback function to handle rescheduling the session */
   onReschedule?: () => void;
 }
 
+/**
+ * Information about the other participant in the coaching session
+ */
 type ParticipantInfo = {
+  /** The display name of the participant (coach or coachee) */
   readonly participantName: string;
+  /** The current user's role in the session (Coach or Coachee) */
   readonly userRole: CoachingRole;
+  /** Whether the current user is the coach in this session */
   readonly isCoach: boolean;
 } | null;
 
 /**
  * Get the participant details for display
+ *
+ * Determines the other participant in the session (coach or coachee) based on
+ * the current user's ID, and extracts their display information.
+ *
  * Story: "Show who the user is meeting with"
+ *
+ * @param session - The enriched coaching session containing relationship and participant data
+ * @param userId - The current user's ID to determine their role
+ * @returns Participant information including name, role, and coach status, or null if data is missing
  */
 function getParticipantInfo(session: EnrichedCoachingSession, userId: string): ParticipantInfo {
   const relationship = session.relationship;
@@ -68,7 +89,15 @@ function getParticipantInfo(session: EnrichedCoachingSession, userId: string): P
 
 /**
  * Format the session time for display
+ *
+ * Converts the session's UTC datetime to the user's local timezone and formats
+ * it for display (e.g., "2:30 PM PST").
+ *
  * Story: "Show when the session is happening"
+ *
+ * @param session - The coaching session containing the UTC date
+ * @param timezone - The user's timezone for display (e.g., "America/Los_Angeles")
+ * @returns Formatted time string with timezone abbreviation
  */
 function formatSessionTime(session: EnrichedCoachingSession, timezone: string): string {
   const sessionTime = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
@@ -77,15 +106,29 @@ function formatSessionTime(session: EnrichedCoachingSession, timezone: string): 
   return sessionTime.toFormat("h:mm a ZZZZ");
 }
 
+/**
+ * Information about the urgency status of a session
+ */
 type SessionUrgencyInfo = {
+  /** The urgency level of the session (Imminent, Soon, Later, or Past) */
   readonly urgency: SessionUrgency;
+  /** Human-readable message describing the urgency (e.g., "Starting in 15 minutes") */
   readonly urgencyMessage: string;
+  /** Whether the session is in the past */
   readonly isPast: boolean;
 };
 
 /**
  * Get urgency information for the session
+ *
+ * Calculates how soon the session is starting and generates appropriate
+ * urgency messaging and styling information.
+ *
  * Story: "Categorize how soon the session is starting"
+ *
+ * @param session - The coaching session to analyze
+ * @param timezone - The user's timezone for time calculations
+ * @returns Urgency information including level, message, and past status
  */
 function getSessionUrgencyInfo(session: EnrichedCoachingSession, timezone: string): SessionUrgencyInfo {
   const urgency = calculateSessionUrgency(session);
@@ -95,6 +138,35 @@ function getSessionUrgencyInfo(session: EnrichedCoachingSession, timezone: strin
   return { urgency, urgencyMessage, isPast };
 }
 
+/**
+ * TodaySessionCard Component
+ *
+ * Displays a coaching session card for sessions happening today. Shows session details
+ * including participant information, timing, urgency status, and provides action buttons
+ * for joining the session or rescheduling (coaches only).
+ *
+ * Features:
+ * - Color-coded urgency indicator based on how soon the session starts
+ * - Session time display in user's timezone
+ * - Participant information (who the user is meeting with)
+ * - Session goal and organization details
+ * - Share link functionality
+ * - Join/View session button
+ * - Reschedule option (coaches only)
+ *
+ * @param props - Component props
+ * @returns The rendered session card, or null if no user session or participant info
+ *
+ * @example
+ * ```tsx
+ * <TodaySessionCard
+ *   session={enrichedSession}
+ *   sessionIndex={1}
+ *   totalSessions={3}
+ *   onReschedule={() => handleReschedule(session.id)}
+ * />
+ * ```
+ */
 export function TodaySessionCard({
   session,
   sessionIndex,
@@ -105,6 +177,9 @@ export function TodaySessionCard({
 
   if (!userSession) return null;
 
+  /**
+   * Handles copying the session link to clipboard with a toast notification
+   */
   const handleCopyLink = async () => {
     await copyCoachingSessionLinkWithToast(session.id);
   };
@@ -123,6 +198,12 @@ export function TodaySessionCard({
   const goalText = session.overarching_goal?.title || "No goal set";
   const organizationName = session.organization?.name || "Unknown organization";
 
+  /**
+   * Returns Tailwind CSS classes for styling based on session urgency
+   *
+   * @param urgencyType - The urgency level of the session
+   * @returns CSS class string for background, text, and border colors
+   */
   const getUrgencyStyles = (urgencyType: SessionUrgency) => {
     switch (urgencyType) {
       case SessionUrgency.Imminent:
@@ -149,7 +230,7 @@ export function TodaySessionCard({
           <span className="text-sm font-medium">{urgencyMessage}</span>
           {sessionIndex !== undefined && totalSessions !== undefined && (
             <span className="text-xs opacity-70">
-              ({sessionIndex} / {totalSessions} today)
+              ({sessionIndex} / {totalSessions} sessions)
             </span>
           )}
         </div>
