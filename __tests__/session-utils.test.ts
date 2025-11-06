@@ -134,11 +134,18 @@ describe("getUrgencyMessage", () => {
   });
 
   it("returns 'this morning/afternoon/evening' for sessions today", () => {
-    // Create a session 3 hours from now (later urgency)
-    const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60);
+    // Create a session at 11:59 PM today to ensure it's still today and beyond 2 hours threshold
+    const now = DateTime.now();
+    const lateToday = now.endOf('day').minus({ minutes: 1 }); // 11:59 PM today
+
+    const session = createMockSession({
+      date: lateToday.toUTC().toISO(),
+    });
+
     const urgency = calculateSessionUrgency(session);
     const message = getUrgencyMessage(session, urgency);
 
+    // Should contain "this" for today, and either morning/afternoon/evening
     expect(message).toContain("Scheduled for this");
   });
 });
