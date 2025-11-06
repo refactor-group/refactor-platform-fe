@@ -117,12 +117,13 @@ npm run test:e2e
 
 ### Test Structure
 
-- **`__tests__/`** - Unit and integration tests
-  - `stores/` - State management logic tests
-  - `hooks/` - React hooks integration tests  
-  - `components/` - UI component tests
-- **`e2e/`** - End-to-end browser tests
+- **`__tests__/`** - Unit, integration, and E2E tests (mirrors `src/` structure)
+  - `components/ui/` - UI component tests (mirrors `src/components/ui/`)
+  - `lib/stores/` - State management logic tests (mirrors `src/lib/stores/`)
+  - `lib/hooks/` - React hooks integration tests (mirrors `src/lib/hooks/`)
 - **`src/test-utils/`** - Testing utilities and mocks
+
+**Note**: E2E tests (`.spec.ts` files) are now organized alongside unit tests in the `__tests__/` directory, mirroring the source code structure for easier navigation and maintenance.
 
 ### Debugging Tests
 
