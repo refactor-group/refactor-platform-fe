@@ -32,6 +32,7 @@ jobs:
       pr_number: ${{ github.event.pull_request.number }}
       # Branch name for image identification
       branch_name: ${{ github.head_ref }}
+    secrets: inherit
     # =========================================================================
     # NO SECRETS NEEDED!
     # =========================================================================
