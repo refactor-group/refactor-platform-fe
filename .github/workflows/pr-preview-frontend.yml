@@ -1,0 +1,85 @@
+# =============================================================================
+# Frontend PR Preview Overlay Workflow
+# =============================================================================
+# Purpose: Trigger PR preview deployments when frontend PRs are opened/updated
+# Strategy: Build frontend from PR branch, use main-arm64 backend image
+# Calls: refactor-platform-rs/ci-deploy-pr-preview.yml (reusable workflow)
+# =============================================================================
+
+name: PR Preview (Frontend)
+
+on:
+  pull_request:
+    # Trigger on PR lifecycle events
+    types: [opened, synchronize, reopened]
+    # Only run for frontend code changes
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/pr-preview-frontend.yml'
+
+# Prevent multiple deployments for the same PR
+concurrency:
+  group: pr-preview-frontend-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+  attestations: write
+  id-token: write
+
+jobs:
+  # ===========================================================================
+  # JOB: Call reusable workflow with frontend-specific configuration
+  # ===========================================================================
+  deploy-frontend-pr:
+    name: Deploy Frontend PR Preview
+    # Call the reusable workflow from backend repository
+    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main
+    with:
+      # This is a frontend PR deployment
+      repo_type: 'frontend'
+      # Use the PR number for port allocation and naming
+      pr_number: ${{ github.event.pull_request.number }}
+      # Build frontend from this PR's branch
+      branch_name: ${{ github.head_ref }}
+      # Use main branch for backend (will use main-arm64 image)
+      backend_branch: 'main'
+      # Optional: override with specific image tags if needed
+      # backend_image: ''  # Leave empty to use main-arm64
+      # frontend_image: '' # Leave empty to build from PR branch
+      # Optional: force complete rebuild
+      force_rebuild: false
+    # Pass all required secrets to the reusable workflow
+    # Frontend repo uses repository-level secrets (no pr-preview environment)
+    secrets:
+      # RPi5 SSH connection details (from frontend repo secrets)
+      RPI5_SSH_KEY: ${{ secrets.RPI5_SSH_KEY }}
+      RPI5_HOST_KEY: ${{ secrets.RPI5_HOST_KEY }}
+      RPI5_TAILSCALE_NAME: ${{ secrets.RPI5_TAILSCALE_NAME }}
+      RPI5_USERNAME: ${{ secrets.RPI5_USERNAME }}
+      # Database configuration (from frontend repo secrets)
+      PR_PREVIEW_POSTGRES_USER: ${{ secrets.PR_PREVIEW_POSTGRES_USER }}
+      PR_PREVIEW_POSTGRES_PASSWORD: ${{ secrets.PR_PREVIEW_POSTGRES_PASSWORD }}
+      PR_PREVIEW_POSTGRES_DB: ${{ secrets.PR_PREVIEW_POSTGRES_DB }}
+      PR_PREVIEW_POSTGRES_SCHEMA: ${{ secrets.PR_PREVIEW_POSTGRES_SCHEMA }}
+      # Third-party service credentials (from frontend repo secrets)
+      PR_PREVIEW_TIPTAP_APP_ID: ${{ secrets.PR_PREVIEW_TIPTAP_APP_ID }}
+      PR_PREVIEW_TIPTAP_URL: ${{ secrets.PR_PREVIEW_TIPTAP_URL }}
+      PR_PREVIEW_TIPTAP_AUTH_KEY: ${{ secrets.PR_PREVIEW_TIPTAP_AUTH_KEY }}
+      PR_PREVIEW_TIPTAP_JWT_SIGNING_KEY: ${{ secrets.PR_PREVIEW_TIPTAP_JWT_SIGNING_KEY }}
+      PR_PREVIEW_MAILERSEND_API_KEY: ${{ secrets.PR_PREVIEW_MAILERSEND_API_KEY }}
+      PR_PREVIEW_WELCOME_EMAIL_TEMPLATE_ID: ${{ secrets.PR_PREVIEW_WELCOME_EMAIL_TEMPLATE_ID }}
+      # Frontend build configuration (from frontend repo secrets/vars)
+      PR_PREVIEW_BACKEND_SERVICE_PROTOCOL: ${{ secrets.PR_PREVIEW_BACKEND_SERVICE_PROTOCOL }}
+      PR_PREVIEW_BACKEND_SERVICE_HOST: ${{ secrets.PR_PREVIEW_BACKEND_SERVICE_HOST }}
+      PR_PREVIEW_BACKEND_SERVICE_PORT: ${{ secrets.PR_PREVIEW_BACKEND_SERVICE_PORT }}
+      PR_PREVIEW_BACKEND_SERVICE_API_PATH: ${{ secrets.PR_PREVIEW_BACKEND_SERVICE_API_PATH }}
+      PR_PREVIEW_BACKEND_API_VERSION: ${{ secrets.PR_PREVIEW_BACKEND_API_VERSION }}
+      PR_PREVIEW_FRONTEND_SERVICE_PORT: ${{ secrets.PR_PREVIEW_FRONTEND_SERVICE_PORT }}
+      PR_PREVIEW_FRONTEND_SERVICE_INTERFACE: ${{ secrets.PR_PREVIEW_FRONTEND_SERVICE_INTERFACE }}
+      # GitHub token (automatically provided)
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
