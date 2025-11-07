@@ -18,6 +18,7 @@ on:
       - 'docs/**'
       - '.github/**'
       - '!.github/workflows/pr-preview-frontend.yml'
+      - '!.github/workflows/cleanup-pr-preview-frontend.yml'
 
 # Prevent multiple deployments for the same PR
 concurrency:
@@ -38,6 +39,7 @@ jobs:
   deploy-frontend-pr:
     name: Deploy Frontend PR Preview
     # Call the reusable workflow from backend repository
+    # TODO: Update to @main once backend PR #201 is merged
     uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment
     with:
       # This is a frontend PR deployment
@@ -54,12 +56,10 @@ jobs:
       # Optional: force complete rebuild
       force_rebuild: false
     # =========================================================================
-    # SECRETS - Inherited from backend repo's pr-preview environment
+    # SECRETS - Resolved from backend repo's pr-preview environment
     # =========================================================================
-    # The reusable workflow is located in the backend repo and uses its
-    # pr-preview environment for all secrets and variables. However, when
-    # calling from the frontend repo, we must explicitly pass secrets.
-    # Since this crosses repository boundaries, we use 'secrets: inherit'
-    # which makes the GITHUB_TOKEN from this repo available to the called workflow.
-    # The called workflow then uses its own environment's secrets.
+    # The reusable workflow (defined in backend repo) uses 'environment: pr-preview'
+    # which resolves to the BACKEND repo's pr-preview environment, not the frontend's.
+    # All secrets are consolidated in the backend repo's pr-preview environment.
+    # We use 'secrets: inherit' to pass GITHUB_TOKEN for cross-repo operations.
     secrets: inherit
