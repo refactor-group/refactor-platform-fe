@@ -54,8 +54,12 @@ jobs:
       # Optional: force complete rebuild
       force_rebuild: false
     # =========================================================================
-    # NO SECRETS NEEDED!
+    # SECRETS - Inherited from backend repo's pr-preview environment
     # =========================================================================
-    # The reusable workflow uses the backend repo's pr-preview environment
-    # which contains all necessary secrets and variables for deployment.
-    # This eliminates the need to duplicate secrets in the frontend repo!
+    # The reusable workflow is located in the backend repo and uses its
+    # pr-preview environment for all secrets and variables. However, when
+    # calling from the frontend repo, we must explicitly pass secrets.
+    # Since this crosses repository boundaries, we use 'secrets: inherit'
+    # which makes the GITHUB_TOKEN from this repo available to the called workflow.
+    # The called workflow then uses its own environment's secrets.
+    secrets: inherit
