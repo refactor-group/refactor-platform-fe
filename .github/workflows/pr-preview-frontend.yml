@@ -38,7 +38,7 @@ jobs:
   deploy-frontend-pr:
     name: Deploy Frontend PR Preview
     # Call the reusable workflow from backend repository
-    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main
+    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment
     with:
       # This is a frontend PR deployment
       repo_type: 'frontend'
