@@ -53,33 +53,9 @@ jobs:
       # frontend_image: '' # Leave empty to build from PR branch
       # Optional: force complete rebuild
       force_rebuild: false
-    # Pass all required secrets to the reusable workflow
-    # Frontend repo uses repository-level secrets (no pr-preview environment)
-    secrets:
-      # RPi5 SSH connection details (from frontend repo secrets)
-      RPI5_SSH_KEY: ${{ secrets.RPI5_SSH_KEY }}
-      RPI5_HOST_KEY: ${{ secrets.RPI5_HOST_KEY }}
-      RPI5_TAILSCALE_NAME: ${{ secrets.RPI5_TAILSCALE_NAME }}
-      RPI5_USERNAME: ${{ secrets.RPI5_USERNAME }}
-      # Database configuration (from frontend repo secrets)
-      PR_PREVIEW_POSTGRES_USER: ${{ secrets.PR_PREVIEW_POSTGRES_USER }}
-      PR_PREVIEW_POSTGRES_PASSWORD: ${{ secrets.PR_PREVIEW_POSTGRES_PASSWORD }}
-      PR_PREVIEW_POSTGRES_DB: ${{ secrets.PR_PREVIEW_POSTGRES_DB }}
-      PR_PREVIEW_POSTGRES_SCHEMA: ${{ secrets.PR_PREVIEW_POSTGRES_SCHEMA }}
-      # Third-party service credentials (from frontend repo secrets)
-      PR_PREVIEW_TIPTAP_APP_ID: ${{ secrets.PR_PREVIEW_TIPTAP_APP_ID }}
-      PR_PREVIEW_TIPTAP_URL: ${{ secrets.PR_PREVIEW_TIPTAP_URL }}
-      PR_PREVIEW_TIPTAP_AUTH_KEY: ${{ secrets.PR_PREVIEW_TIPTAP_AUTH_KEY }}
-      PR_PREVIEW_TIPTAP_JWT_SIGNING_KEY: ${{ secrets.PR_PREVIEW_TIPTAP_JWT_SIGNING_KEY }}
-      PR_PREVIEW_MAILERSEND_API_KEY: ${{ secrets.PR_PREVIEW_MAILERSEND_API_KEY }}
-      PR_PREVIEW_WELCOME_EMAIL_TEMPLATE_ID: ${{ secrets.PR_PREVIEW_WELCOME_EMAIL_TEMPLATE_ID }}
-      # Frontend build configuration (from frontend repo secrets/vars)
-      PR_PREVIEW_BACKEND_SERVICE_PROTOCOL: ${{ secrets.PR_PREVIEW_BACKEND_SERVICE_PROTOCOL }}
-      PR_PREVIEW_BACKEND_SERVICE_HOST: ${{ secrets.PR_PREVIEW_BACKEND_SERVICE_HOST }}
-      PR_PREVIEW_BACKEND_SERVICE_PORT: ${{ secrets.PR_PREVIEW_BACKEND_SERVICE_PORT }}
-      PR_PREVIEW_BACKEND_SERVICE_API_PATH: ${{ secrets.PR_PREVIEW_BACKEND_SERVICE_API_PATH }}
-      PR_PREVIEW_BACKEND_API_VERSION: ${{ secrets.PR_PREVIEW_BACKEND_API_VERSION }}
-      PR_PREVIEW_FRONTEND_SERVICE_PORT: ${{ secrets.PR_PREVIEW_FRONTEND_SERVICE_PORT }}
-      PR_PREVIEW_FRONTEND_SERVICE_INTERFACE: ${{ secrets.PR_PREVIEW_FRONTEND_SERVICE_INTERFACE }}
-      # GitHub token (automatically provided)
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # =========================================================================
+    # NO SECRETS NEEDED!
+    # =========================================================================
+    # The reusable workflow uses the backend repo's pr-preview environment
+    # which contains all necessary secrets and variables for deployment.
+    # This eliminates the need to duplicate secrets in the frontend repo!

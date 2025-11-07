@@ -156,3 +156,19 @@ All tests should pass before merging code. The test suite is designed to:
 For more detailed testing information, see [docs/testing/frontend-testing-strategy.md](./docs/testing/frontend-testing-strategy.md).
 
 #### For Working with and Running the Application in Docker, navigate to the [Container-README](./docs/runbooks/Container-README.md)
+
+---
+
+## PR Preview Environments
+
+This repository automatically deploys **isolated preview environments** for each pull request. When you open a PR, a complete stack (backend + frontend + database) deploys to a dedicated server on our Tailnet for testing before merge.
+
+**What happens automatically:**
+
+- ✅ PR opened → Environment deploys
+- ✅ New commits → Environment updates
+- ✅ PR closed/merged → Environment cleans up
+
+**Access:** Requires Tailscale VPN connection. Access URLs are posted as a comment on your PR in the GitHub Web UI.
+
+For detailed information, see the [PR Preview Environments Runbook](docs/runbooks/pr-preview-environments.md).
