@@ -299,30 +299,26 @@ export const useCoachingSessionMutation = () => {
  * @returns Object containing enriched sessions, loading state, error, and refresh function
  */
 export const useEnrichedCoachingSessionsForUser = (
-  userId: Id | null,
+  userId: Id,
   fromDate: DateTime,
   toDate: DateTime,
   include?: CoachingSessionInclude[],
   sortBy?: CoachingSessionSortField,
   sortOrder?: ApiSortOrder
 ) => {
-  const params = userId
-    ? {
-        from_date: fromDate.toISODate(),
-        to_date: toDate.toISODate(),
-        ...(include && include.length > 0 && { include: include.join(',') }),
-        ...(sortBy && { sort_by: sortBy }),
-        ...(sortOrder && { sort_order: sortOrder }),
-      }
-    : undefined;
+  const params = {
+    from_date: fromDate.toISODate(),
+    to_date: toDate.toISODate(),
+    ...(include && include.length > 0 && { include: include.join(',') }),
+    ...(sortBy && { sort_by: sortBy }),
+    ...(sortOrder && { sort_order: sortOrder }),
+  };
 
-  const url = userId
-    ? `${USERS_BASEURL}/${userId}/coaching_sessions`
-    : null;
+  const url = `${USERS_BASEURL}/${userId}/coaching_sessions`;
 
   const fetcher = () =>
     CoachingSessionApi.listForUser(
-      userId!,
+      userId,
       fromDate,
       toDate,
       include,

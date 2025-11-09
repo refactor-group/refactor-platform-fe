@@ -25,6 +25,12 @@ export function useTodaysSessions() {
   const userId = userSession?.id;
   const timezone = userSession?.timezone || getBrowserTimezone();
 
+  // Force re-render every 30 seconds to update urgency messages in real-time
+  const [tick, setTick] = useState(0);
+  useInterval(() => {
+    setTick(prev => prev + 1);
+  }, 30000);
+
   // Calculate today's date range in user's timezone
   const today = DateTime.now().setZone(timezone);
   const startOfDay = today.startOf("day");
@@ -36,17 +42,13 @@ export function useTodaysSessions() {
   const startOfDayUTC = startOfDay.toUTC();
   const endOfDayUTC = endOfDay.toUTC();
 
-  // Force re-render every 30 seconds to update urgency messages in real-time
-  const [tick, setTick] = useState(0);
-  useInterval(() => {
-    setTick(prev => prev + 1);
-  }, 30000);
-
   // Fetch sessions with all related data in ONE API call
   // Use UTC dates for backend filtering since backend stores timestamps in UTC
+  // TypeScript non-null assertion: middleware guarantees userId exists on protected routes
+  // If userId is briefly undefined during hydration, SWR will show loading state
   const { enrichedSessions, isLoading, isError, refresh } =
     useEnrichedCoachingSessionsForUser(
-      userId || null,
+      userId!,
       startOfDayUTC,
       endOfDayUTC,
       [
