@@ -131,6 +131,28 @@ export const CoachingSessionApi = {
   },
 
   /**
+   * Lists coaching sessions nested under a user (follows the createNested pattern).
+   *
+   * This uses the /users/{user_id}/coaching_sessions endpoint with support for
+   * query parameters like date filtering and related resource inclusion.
+   *
+   * @param userId The ID of the user (coach or coachee)
+   * @param params Query parameters for filtering, sorting, and including related data
+   * @returns Promise resolving to array of EnrichedCoachingSession objects
+   */
+  listNested: async (
+    userId: Id,
+    params?: any
+  ): Promise<EnrichedCoachingSession[]> => {
+    return EntityApi.listNestedFn<EnrichedCoachingSession>(
+      USERS_BASEURL,
+      userId,
+      'coaching_sessions',
+      params
+    );
+  },
+
+  /**
    * Fetches coaching sessions for a specific user with optional related data.
    *
    * This uses the enhanced /users/{user_id}/coaching_sessions endpoint that
@@ -168,10 +190,7 @@ export const CoachingSessionApi = {
       params.sort_order = sortOrder;
     }
 
-    return EntityApi.listFn<EnrichedCoachingSession>(
-      `${USERS_BASEURL}/${userId}/coaching_sessions`,
-      { params }
-    );
+    return CoachingSessionApi.listNested(userId, { params });
   },
 };
 
