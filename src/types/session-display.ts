@@ -3,7 +3,7 @@
  * Story: "Type-safe session display information"
  */
 
-import type { CoachingRole } from "./coaching-role";
+import type { RelationshipRole } from "./relationship-role";
 
 export enum SessionUrgency {
   Past = "past",
@@ -21,7 +21,7 @@ export interface EnrichedSessionDisplay {
   readonly id: string;
   readonly goalTitle: string;
   readonly participantName: string;
-  readonly userRole: CoachingRole;
+  readonly userRole: RelationshipRole;
   readonly dateTime: string;
   readonly organizationName: string;
   readonly isPast: boolean;

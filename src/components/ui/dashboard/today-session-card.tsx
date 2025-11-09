@@ -9,7 +9,7 @@ import { Share, User, Target, Building } from "lucide-react";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { cn } from "@/components/lib/utils";
 import { SessionUrgency } from "@/types/session-display";
-import { CoachingRole } from "@/types/coaching-role";
+import { RelationshipRole } from "@/types/relationship-role";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { DateTime } from "ts-luxon";
@@ -40,7 +40,7 @@ type ParticipantInfo = {
   /** The display name of the participant (coach or coachee) */
   readonly participantName: string;
   /** The current user's role in the session (Coach or Coachee) */
-  readonly userRole: CoachingRole;
+  readonly userRole: RelationshipRole;
   /** Whether the current user is the coach in this session */
   readonly isCoach: boolean;
 } | null;
@@ -62,7 +62,7 @@ function getParticipantInfo(session: EnrichedCoachingSession, userId: string): P
   if (!relationship) return null;
 
   const isCoach = relationship.coach_id === userId;
-  const userRole = isCoach ? CoachingRole.Coach : CoachingRole.Coachee;
+  const userRole = isCoach ? RelationshipRole.Coach : RelationshipRole.Coachee;
 
   // Backend returns coach and coachee as top-level fields in EnrichedSession
   const participant = isCoach ? session.coachee : session.coach;

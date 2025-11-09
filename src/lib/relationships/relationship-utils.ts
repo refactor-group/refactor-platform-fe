@@ -1,6 +1,6 @@
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { User } from "@/types/user";
-import { CoachingRole } from "@/types/coaching-role";
+import { RelationshipRole } from "@/types/relationship-role";
 
 /**
  * Relationship Utility Functions
@@ -71,6 +71,6 @@ export function isUserCoach(
 export function getUserRoleInRelationship(
   relationship: CoachingRelationshipWithUserNames,
   user: User
-): CoachingRole {
-  return isUserCoach(relationship, user) ? CoachingRole.Coach : CoachingRole.Coachee;
+): RelationshipRole {
+  return isUserCoach(relationship, user) ? RelationshipRole.Coach : RelationshipRole.Coachee;
 }
