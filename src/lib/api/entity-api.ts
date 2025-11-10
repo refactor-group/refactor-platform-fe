@@ -1,7 +1,7 @@
 import { Id, EntityApiError } from "@/types/general";
 import { useState } from "react";
 import useSWR, { KeyedMutator, SWRConfiguration, useSWRConfig } from "swr";
-import { sessionGuard } from "@/lib/session/session-guard";
+import { sessionGuard } from "@/lib/auth/session-guard";
 import axios from "axios";
 
 // Re-export EntityApiError for easy access
@@ -26,6 +26,7 @@ export namespace EntityApi {
   interface ApiOperations<T, U> {
     create?: (entity: T) => Promise<U>;
     createNested?: (id: Id, entity: T) => Promise<U>;
+    listNested?: (id: Id, params?: any) => Promise<U[]>;
     update?: (id: Id, entity: T) => Promise<U>;
     delete?: (id: Id) => Promise<U>;
     deleteNested?: (entityId: Id, nestedEntityId: Id) => Promise<U>;
@@ -156,6 +157,43 @@ export namespace EntityApi {
 
     return fetcher<R[], U[]>(
       url,
+      params,
+      transform ? (data) => data.map(transform) : undefined
+    );
+  };
+
+  /**
+   * Fetches a list of entities nested under a parent entity.
+   * Constructs the URL using the parent entity's ID and base URL pattern.
+   *
+   * @template R The raw entity type returned by the API
+   * @template U The transformed entity type (defaults to R if no transform provided)
+   * @param baseUrl The base URL pattern (e.g., "/users")
+   * @param id The parent entity's ID
+   * @param resourcePath The nested resource path (e.g., "coaching_sessions")
+   * @param params Optional query parameters to include in the request
+   * @param transform Optional transformation function applied to each entity in the response
+   * @returns A Promise resolving to an array of entities of type U
+   *
+   * @remarks This function:
+   * - Builds URLs for nested resources following RESTful patterns
+   * - Follows the same pattern as createNested for consistency
+   * - Handles both raw and transformed data workflows
+   * - Maintains type safety through generic parameters
+   */
+  export const listNestedFn = async <R, U = R>(
+    baseUrl: string,
+    id: Id,
+    resourcePath: string,
+    params: any,
+    transform?: (item: R) => U
+  ): Promise<U[]> => {
+    if (!params) {
+      return []; // Return empty array if params are null
+    }
+
+    return fetcher<R[], U[]>(
+      `${baseUrl}/${id}/${resourcePath}`,
       params,
       transform ? (data) => data.map(transform) : undefined
     );
@@ -452,6 +490,15 @@ export namespace EntityApi {
        */
       createNested: (id: Id, entity: T) =>
         executeWithState(() => api.createNested!(id, entity)),
+      /**
+       * Lists entities nested under a parent entity (foreign key relationship).
+       *
+       * @param id The parent entity's id under which to list entities
+       * @param params Optional query parameters for filtering and sorting
+       * @returns Promise resolving to an array of entities
+       */
+      listNested: (id: Id, params?: any) =>
+        executeWithState(() => api.listNested!(id, params)),
       /**
        * Updates an existing entity.
        *

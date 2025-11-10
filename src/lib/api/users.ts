@@ -6,7 +6,7 @@ import { EntityApi } from "./entity-api";
 import { User, NewUserPassword, defaultUser } from "@/types/user";
 import { useState } from 'react';
 
-const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
+export const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
 /**
  * API client for user-related operations.
