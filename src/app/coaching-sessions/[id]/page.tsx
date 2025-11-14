@@ -64,10 +64,13 @@ export default function CoachingSessionsPage() {
   // Auto-sync relationship ID when session data loads
   // This ensures the relationship selector always matches the current session
   useEffect(() => {
-    if (shouldSyncRelationship(
-      currentCoachingSession?.coaching_relationship_id,
-      currentCoachingRelationshipId
-    )) {
+    if (
+      currentCoachingSession?.coaching_relationship_id &&
+      shouldSyncRelationship(
+        currentCoachingSession.coaching_relationship_id,
+        currentCoachingRelationshipId
+      )
+    ) {
       setCurrentCoachingRelationshipId(
         currentCoachingSession.coaching_relationship_id
       );
