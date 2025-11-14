@@ -19,6 +19,7 @@ import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
+import { shouldSyncRelationship } from "./relationship-sync";
 
 export default function CoachingSessionsPage() {
   const router = useRouter();
@@ -39,27 +40,6 @@ export default function CoachingSessionsPage() {
   // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
     useCurrentCoachingRelationship();
-
-  /**
-   * Helper function to determine if relationship ID should be synced from session data.
-   *
-   * The URL is the source of truth for the current session. We sync the relationship ID
-   * from the session data in two cases:
-   * 1. Store is empty (e.g., new tab/window) - fixes Issue #79
-   * 2. Store has a different relationship (e.g., navigating between sessions) - fixes Bug #228
-   *
-   * @param sessionRelationshipId - The relationship ID from the current session
-   * @param currentRelationshipId - The relationship ID currently in the store
-   * @returns true if we should sync the relationship ID
-   */
-  const shouldSyncRelationship = (
-    sessionRelationshipId: string | undefined,
-    currentRelationshipId: string | null
-  ): boolean => {
-    if (!sessionRelationshipId) return false;
-    // Always sync when empty (new tab) or when different (switching sessions)
-    return !currentRelationshipId || sessionRelationshipId !== currentRelationshipId;
-  };
 
   // Auto-sync relationship ID when session data loads
   // This ensures the relationship selector always matches the current session
@@ -137,7 +117,7 @@ export default function CoachingSessionsPage() {
                 onError={handleShareError}
               />
               <CoachingSessionSelector
-                relationshipId={currentCoachingRelationshipId}
+                relationshipId={currentCoachingRelationshipId || ""}
                 disabled={!currentCoachingRelationshipId}
                 onSelect={handleCoachingSessionSelect}
               />

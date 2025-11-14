@@ -5,6 +5,7 @@ import CoachingSessionsPage from '@/app/coaching-sessions/[id]/page'
 import { TestProviders } from '@/test-utils/providers'
 import { useCurrentCoachingSession } from '@/lib/hooks/use-current-coaching-session'
 import { useCurrentCoachingRelationship } from '@/lib/hooks/use-current-coaching-relationship'
+import { createMockCoachingSession } from '../../factories/coaching-session.factory'
 
 // Mock Next.js navigation hooks
 vi.mock('next/navigation', () => ({
@@ -70,11 +71,11 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
   const mockRouter = {
     push: vi.fn(),
     replace: vi.fn(),
-  }
+  } as const
 
   const mockParams = {
     id: 'session-123'
-  }
+  } as const
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -84,11 +85,10 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
     // Set default mocks for relationship hooks
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
       currentCoachingSessionId: 'session-123',
-      currentCoachingSession: {
+      currentCoachingSession: createMockCoachingSession({
         id: 'session-123',
-        title: 'Test Session',
         coaching_relationship_id: 'rel-123'
-      } as any,
+      }),
       isError: false,
       isLoading: false,
       refresh: vi.fn(),
@@ -240,11 +240,11 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
   const mockRouter = {
     push: vi.fn(),
     replace: vi.fn(),
-  }
+  } as const
 
   const mockParams = {
     id: 'session-123'
-  }
+  } as const
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -267,10 +267,10 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     // Session has relationship ID, but store is empty (new tab scenario)
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
       currentCoachingSessionId: 'session-123',
-      currentCoachingSession: {
+      currentCoachingSession: createMockCoachingSession({
         id: 'session-123',
         coaching_relationship_id: 'rel-123'
-      } as any,
+      }),
       isError: false,
       isLoading: false,
       refresh: vi.fn(),
@@ -313,10 +313,10 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     // Session has relationship ID 'rel-456', but store has stale 'rel-123'
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
       currentCoachingSessionId: 'session-456',
-      currentCoachingSession: {
+      currentCoachingSession: createMockCoachingSession({
         id: 'session-456',
         coaching_relationship_id: 'rel-456' // Different relationship
-      } as any,
+      }),
       isError: false,
       isLoading: false,
       refresh: vi.fn(),
@@ -358,10 +358,10 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     // Session and store both have the same relationship ID
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
       currentCoachingSessionId: 'session-456',
-      currentCoachingSession: {
+      currentCoachingSession: createMockCoachingSession({
         id: 'session-456',
         coaching_relationship_id: 'rel-123' // Same relationship
-      } as any,
+      }),
       isError: false,
       isLoading: false,
       refresh: vi.fn(),
@@ -401,10 +401,10 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     // Session without relationship ID
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
       currentCoachingSessionId: 'session-123',
-      currentCoachingSession: {
+      currentCoachingSession: createMockCoachingSession({
         id: 'session-123',
-        // No coaching_relationship_id
-      } as any,
+        coaching_relationship_id: undefined as any // No coaching_relationship_id
+      }),
       isError: false,
       isLoading: false,
       refresh: vi.fn(),
@@ -446,10 +446,10 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     // But store has stale rel-123 from previous browsing
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
       currentCoachingSessionId: 'session-789',
-      currentCoachingSession: {
+      currentCoachingSession: createMockCoachingSession({
         id: 'session-789',
         coaching_relationship_id: 'rel-789'
-      } as any,
+      }),
       isError: false,
       isLoading: false,
       refresh: vi.fn(),

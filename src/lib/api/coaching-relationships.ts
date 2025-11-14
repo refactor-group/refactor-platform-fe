@@ -6,7 +6,7 @@ import {
   NewCoachingRelationship,
   CoachingRelationshipWithUserNames,
   defaultCoachingRelationshipWithUserNames,
-} from "@/types/coaching_relationship";
+} from "@/types/coaching-relationship";
 import { EntityApi } from "./entity-api";
 
 const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;

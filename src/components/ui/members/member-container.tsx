@@ -1,7 +1,7 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
 import { User, isAdminOrSuperAdmin, sortUsersAlphabetically } from "@/types/user";
-import { CoachingRelationshipWithUserNames, isUserCoach } from "@/types/coaching_relationship";
+import { CoachingRelationshipWithUserNames, isUserCoach } from "@/types/coaching-relationship";
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
