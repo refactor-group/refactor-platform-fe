@@ -395,8 +395,10 @@
   position: relative;
   word-break: normal;
   animation: blink 1.5s infinite;
-  height: 1.2em;
-  min-height: 16px;
+  /* Use line-height to match the actual text height where cursor appears */
+  height: 1em;
+  line-height: inherit;
+  vertical-align: baseline;
   display: inline-block;
 }
 
@@ -430,11 +432,11 @@
   /* Smooth transitions */
   transition: all 0.2s ease;
   transform: translateY(-2px);
-  
+
   /* CRITICAL: Prevent any animations or opacity changes */
   animation: none !important;
   opacity: 1 !important;
-  
+
   /* Pointer tail */
   &::after {
     content: '';
@@ -446,12 +448,20 @@
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
     border-top: 6px solid var(--collaboration-user-color, #6366f1);
+    transition: opacity 0.2s ease;
   }
-  
-  /* Hover effect for better visibility */
+
+  /* Hover effect - make highly transparent with enhanced shadow */
   &:hover {
+    opacity: 0.2 !important;
+    cursor: pointer;
     transform: translateY(-4px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Make tail transparent on hover too */
+  &:hover::after {
+    opacity: 0.2;
   }
   
   /* Dark theme adjustments */
@@ -488,7 +498,7 @@
 
 .ProseMirror .collaboration-cursor__label {
   z-index: 100;
-  pointer-events: none;
+  pointer-events: auto; /* Allow hover interactions */
 }
 
 /* Mobile responsiveness for collaboration carets */
