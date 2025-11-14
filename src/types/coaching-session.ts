@@ -1,7 +1,7 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
-import { CoachingRelationship } from "@/types/coaching_relationship";
+import { CoachingRelationship } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import { Organization } from "@/types/organization";
 import { OverarchingGoal } from "@/types/overarching-goal";
