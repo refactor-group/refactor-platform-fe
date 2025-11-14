@@ -198,6 +198,11 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
             const mergedUsers = new Map(prev.presenceState.users);
 
             // Mark users who disappeared from awareness as disconnected
+            // When users "disappear," it means they're no longer in the awareness states array -
+            // typically due to network disconnect, browser crash, or navigation away from the coaching
+            // session page. Without this code, disconnected users would instantly vanish from the UI,
+            // creating an unwanted UX. This preserves them as status: 'disconnected' instead, enabling
+            // smooth UX transitions (like showing grayed-out presence indicators).
             for (const [userId, oldPresence] of prev.presenceState.users) {
               if (!updatedUsers.has(userId) && oldPresence.status === 'connected') {
                 // User was connected but no longer in awareness states - mark as disconnected

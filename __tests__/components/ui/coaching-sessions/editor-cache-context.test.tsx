@@ -199,7 +199,7 @@ describe('EditorCacheProvider', () => {
     expect(screen.getByTestId('is-ready')).toHaveTextContent('no')
   })
 
-  describe('Provider Lifecycle (Issue #201 Fixes)', () => {
+  describe('Provider Lifecycle - Preventing Unnecessary Disconnections', () => {
     it('should NOT disconnect provider when re-rendering with same sessionId', async () => {
       const { TiptapCollabProvider } = await import('@hocuspocus/provider')
 
