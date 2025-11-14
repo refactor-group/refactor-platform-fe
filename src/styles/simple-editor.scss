@@ -395,8 +395,10 @@
   position: relative;
   word-break: normal;
   animation: blink 1.5s infinite;
-  height: 1.2em;
-  min-height: 16px;
+  /* Use line-height to match the actual text height where cursor appears */
+  height: 1em;
+  line-height: inherit;
+  vertical-align: baseline;
   display: inline-block;
 }
 
