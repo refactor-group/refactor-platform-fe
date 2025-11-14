@@ -141,9 +141,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
       // IMPORTANT: Only set our custom "presence" field
       // Let CollaborationCaret manage the "user" field to avoid conflicts
-      if (provider.awareness) {
-        provider.awareness.setLocalStateField("presence", userPresence);
-      }
+      provider.setAwarenessField("presence", userPresence);
 
       // Provider event handlers: sync completion enables collaborative editing
       // IMPORTANT: Track if we've already created extensions to prevent recreation
@@ -214,25 +212,18 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         });
         // Only update our custom "presence" field on reconnect
         // CollaborationCaret will handle the "user" field
-        if (provider.awareness) {
-          provider.awareness.setLocalStateField("presence", connectedPresence);
-        }
+        provider.setAwarenessField("presence", connectedPresence);
       });
 
       provider.on("disconnect", () => {
         const disconnectedPresence = createDisconnectedPresence(userPresence);
-        if (provider.awareness) {
-          provider.awareness.setLocalStateField("presence", disconnectedPresence);
-        }
+        provider.setAwarenessField("presence", disconnectedPresence);
       });
 
       // Graceful disconnect on page unload
       const handleBeforeUnload = () => {
         const disconnectedPresence = createDisconnectedPresence(userPresence);
-        // Use low-level awareness API to match CollaborationCaret
-        if (provider.awareness) {
-          provider.awareness.setLocalStateField("presence", disconnectedPresence);
-        }
+        provider.setAwarenessField("presence", disconnectedPresence);
       };
 
       window.addEventListener("beforeunload", handleBeforeUnload);
@@ -329,9 +320,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         try {
           // Clear our custom presence field on logout
           // CollaborationCaret will clean up the "user" field
-          if (provider.awareness) {
-            provider.awareness.setLocalStateField("presence", null);
-          }
+          provider.setAwarenessField("presence", null);
 
           // Graceful provider shutdown
           provider.disconnect();
