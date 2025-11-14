@@ -27,6 +27,7 @@ import {
 } from "@/types/presence";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
 import { logoutCleanupRegistry } from "@/lib/hooks/logout-cleanup-registry";
+import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
 
 /**
  * EditorCacheProvider manages TipTap collaboration lifecycle:
@@ -86,6 +87,9 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   const yDocRef = useRef<Y.Doc | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
 
+  // Generate a consistent color for this user session
+  const userColor = useMemo(() => generateCollaborativeUserColor(), []);
+
   const [cache, setCache] = useState<EditorCacheState>({
     yDoc: null,
     collaborationProvider: null,
@@ -126,11 +130,35 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         user: userSession.display_name,
       });
 
+      // Awareness initialization: establishes user presence in collaborative session
+      // IMPORTANT: Set awareness BEFORE synced event so CollaborationCaret has user data
+      const userPresence = createConnectedPresence({
+        userId: userSession.id,
+        name: userSession.display_name,
+        relationshipRole: userRole,
+        color: userColor,
+      });
+
+      // IMPORTANT: Only set our custom "presence" field
+      // Let CollaborationCaret manage the "user" field to avoid conflicts
+      if (provider.awareness) {
+        provider.awareness.setLocalStateField("presence", userPresence);
+      }
+
       // Provider event handlers: sync completion enables collaborative editing
+      // IMPORTANT: Track if we've already created extensions to prevent recreation
+      let extensionsCreated = false;
+
       provider.on("synced", () => {
+        if (extensionsCreated) {
+          return;
+        }
+
+        extensionsCreated = true;
+
         const collaborativeExtensions = createExtensions(doc, provider, {
           name: userSession.display_name,
-          color: "#ffcc00",
+          color: userColor,
         });
 
         setCache((prev) => ({
@@ -144,27 +172,12 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
         }));
       });
 
-      // Awareness initialization: establishes user presence in collaborative session
-      const userPresence = createConnectedPresence({
-        userId: userSession.id,
-        name: userSession.display_name,
-        relationshipRole: userRole,
-        color: "#ffcc00",
-      });
-
-      provider.setAwarenessField("user", {
-        name: userSession.display_name,
-        color: "#ffcc00",
-      });
-
-      provider.setAwarenessField("presence", userPresence);
-
       providerRef.current = provider;
 
       // Awareness synchronization: tracks all connected users for presence indicators
       provider.on(
         "awarenessChange",
-        ({ states }: { states: Map<string, { presence?: AwarenessData }> }) => {
+        ({ states }: { states: Array<{ clientId: number; [key: string]: any }> }) => {
           const updatedUsers = new Map<string, UserPresence>();
           let currentUserPresence: UserPresence | null = null;
 
@@ -197,44 +210,34 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
           userId: userSession.id,
           name: userSession.display_name,
           relationshipRole: userRole,
-          color: "#ffcc00",
+          color: userColor,
         });
-        provider.setAwarenessField("presence", connectedPresence);
-        provider.setAwarenessField("user", {
-          name: userSession.display_name,
-          color: "#ffcc00",
-        });
+        // Only update our custom "presence" field on reconnect
+        // CollaborationCaret will handle the "user" field
+        if (provider.awareness) {
+          provider.awareness.setLocalStateField("presence", connectedPresence);
+        }
       });
 
       provider.on("disconnect", () => {
         const disconnectedPresence = createDisconnectedPresence(userPresence);
-        provider.setAwarenessField("presence", disconnectedPresence);
-      });
-
-      // Mouse tracking: enables collaborative cursor positioning
-      const handleMouseMove = (event: MouseEvent) => {
-        if (providerRef.current) {
-          providerRef.current.setAwarenessField("user", {
-            name: userSession.display_name,
-            color: "#ffcc00",
-            mouseX: event.clientX,
-            mouseY: event.clientY,
-          });
+        if (provider.awareness) {
+          provider.awareness.setLocalStateField("presence", disconnectedPresence);
         }
-      };
-
-      document.addEventListener("mousemove", handleMouseMove);
+      });
 
       // Graceful disconnect on page unload
       const handleBeforeUnload = () => {
         const disconnectedPresence = createDisconnectedPresence(userPresence);
-        provider.setAwarenessField("presence", disconnectedPresence);
+        // Use low-level awareness API to match CollaborationCaret
+        if (provider.awareness) {
+          provider.awareness.setLocalStateField("presence", disconnectedPresence);
+        }
       };
 
       window.addEventListener("beforeunload", handleBeforeUnload);
 
       return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
         window.removeEventListener("beforeunload", handleBeforeUnload);
       };
     } catch (error) {
@@ -274,6 +277,11 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
     // Provider initialization or fallback to offline mode
     if (jwt && !tokenError && userSession) {
+      // Skip if provider already exists and session hasn't changed
+      if (providerRef.current && lastSessionIdRef.current === sessionId) {
+        return;
+      }
+
       initializeProvider();
     } else {
       // Fallback to offline mode when token is unavailable
@@ -294,8 +302,11 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     }
 
     return () => {
-      if (providerRef.current) {
+      // IMPORTANT: Only disconnect on unmount or session change
+      // Don't disconnect if dependencies change but provider should stay
+      if (providerRef.current && lastSessionIdRef.current !== sessionId) {
         providerRef.current.disconnect();
+        providerRef.current = null;
       }
     };
   }, [
@@ -316,9 +327,11 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
       if (provider) {
         try {
-          // Clear user presence to signal departure
-          provider.setAwarenessField("presence", null);
-          provider.setAwarenessField("user", null);
+          // Clear our custom presence field on logout
+          // CollaborationCaret will clean up the "user" field
+          if (provider.awareness) {
+            provider.awareness.setLocalStateField("presence", null);
+          }
 
           // Graceful provider shutdown
           provider.disconnect();
