@@ -190,15 +190,41 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
             }
           });
 
-          setCache((prev) => ({
-            ...prev,
-            presenceState: {
-              ...prev.presenceState,
-              users: updatedUsers,
-              currentUser:
-                currentUserPresence || prev.presenceState.currentUser,
-            },
-          }));
+          // IMPORTANT: Preserve previous users who are no longer in states array
+          // as disconnected instead of removing them entirely.
+          // This ensures smooth UX when users go offline (they appear as disconnected
+          // rather than disappearing completely).
+          setCache((prev) => {
+            const mergedUsers = new Map(prev.presenceState.users);
+
+            // Mark users who disappeared from awareness as disconnected
+            for (const [userId, oldPresence] of prev.presenceState.users) {
+              if (!updatedUsers.has(userId) && oldPresence.status === 'connected') {
+                // User was connected but no longer in awareness states - mark as disconnected
+                mergedUsers.set(userId, {
+                  ...oldPresence,
+                  status: 'disconnected',
+                  isConnected: false,
+                  lastSeen: new Date()
+                });
+              }
+            }
+
+            // Overlay current awareness data (takes precedence)
+            for (const [userId, presence] of updatedUsers) {
+              mergedUsers.set(userId, presence);
+            }
+
+            return {
+              ...prev,
+              presenceState: {
+                ...prev.presenceState,
+                users: mergedUsers,
+                currentUser:
+                  currentUserPresence || prev.presenceState.currentUser,
+              },
+            };
+          });
         }
       );
 
@@ -216,8 +242,10 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       });
 
       provider.on("disconnect", () => {
-        const disconnectedPresence = createDisconnectedPresence(userPresence);
-        provider.setAwarenessField("presence", disconnectedPresence);
+        // NOTE: Don't call setAwarenessField here - we're already disconnected
+        // so the message won't be delivered to other clients anyway.
+        // The awareness protocol will automatically remove our state via timeout.
+        // This event is just for local cleanup/logging if needed.
       });
 
       // Graceful disconnect on page unload

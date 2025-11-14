@@ -410,7 +410,7 @@ describe('EditorCacheProvider', () => {
       })
     })
 
-    it('should set disconnected status on disconnect event', async () => {
+    it('should NOT call setAwarenessField on disconnect event (already offline)', async () => {
       const { TiptapCollabProvider } = await import('@hocuspocus/provider')
       let disconnectCallback: (() => void) | undefined
 
@@ -449,13 +449,99 @@ describe('EditorCacheProvider', () => {
         disconnectCallback!()
       })
 
-      // Should update awareness with disconnected status
-      expect(mockProvider?.setAwarenessField).toHaveBeenCalledWith(
-        'presence',
-        expect.objectContaining({
-          status: 'disconnected'
-        })
+      // Should NOT call setAwarenessField because we're already disconnected
+      // The awareness protocol will handle removing stale clients via timeout
+      expect(mockProvider?.setAwarenessField).not.toHaveBeenCalled()
+    })
+
+    it('should mark users as disconnected when they disappear from awareness states', async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      let awarenessCallback: ((data: any) => void) | undefined
+
+      vi.mocked(TiptapCollabProvider).mockImplementationOnce(function() {
+        const provider = {
+          on: vi.fn((event, callback) => {
+            if (event === 'awarenessChange') {
+              awarenessCallback = callback
+            }
+            return provider
+          }),
+          off: vi.fn(),
+          setAwarenessField: vi.fn(),
+          destroy: vi.fn(),
+          disconnect: vi.fn(),
+          connect: vi.fn()
+        }
+        return provider as any
+      })
+
+      let cacheRef: any = null
+
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
       )
+
+      await waitFor(() => {
+        expect(awarenessCallback).toBeDefined()
+      })
+
+      // First, simulate both users being connected
+      act(() => {
+        awarenessCallback!({
+          states: [
+            {
+              clientId: 1,
+              presence: {
+                userId: 'user-1',
+                name: 'Test User',
+                relationshipRole: 'Coach',
+                color: '#ff0000',
+                isConnected: true
+              }
+            },
+            {
+              clientId: 2,
+              presence: {
+                userId: 'user-2',
+                name: 'Other User',
+                relationshipRole: 'Coachee',
+                color: '#00ff00',
+                isConnected: true
+              }
+            }
+          ]
+        })
+      })
+
+      // Verify both users are connected
+      expect(cacheRef?.presenceState.users.size).toBe(2)
+      expect(cacheRef?.presenceState.users.get('user-2')?.status).toBe('connected')
+
+      // Now simulate user-2 disappearing (network disconnect)
+      act(() => {
+        awarenessCallback!({
+          states: [
+            {
+              clientId: 1,
+              presence: {
+                userId: 'user-1',
+                name: 'Test User',
+                relationshipRole: 'Coach',
+                color: '#ff0000',
+                isConnected: true
+              }
+            }
+            // user-2 is no longer in the states array
+          ]
+        })
+      })
+
+      // User-2 should still be in the map but marked as disconnected
+      expect(cacheRef?.presenceState.users.size).toBe(2)
+      expect(cacheRef?.presenceState.users.get('user-2')?.status).toBe('disconnected')
+      expect(cacheRef?.presenceState.users.get('user-1')?.status).toBe('connected')
     })
   })
 })
