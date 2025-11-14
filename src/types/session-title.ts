@@ -1,5 +1,5 @@
 import { DateTime } from "ts-luxon";
-import { CoachingRelationshipWithUserNames } from "./coaching_relationship";
+import { CoachingRelationshipWithUserNames } from "./coaching-relationship";
 import { CoachingSession } from "./coaching-session";
 import { siteConfig } from "@/site.config";
 import { getDateTimeFromString } from "./general";

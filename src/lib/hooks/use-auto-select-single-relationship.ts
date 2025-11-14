@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Id } from "@/types/general";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 
 /**
  * Custom hook that automatically selects a coaching relationship when:
@@ -12,14 +12,14 @@ import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship
  *
  * @param relationships Array of available coaching relationships
  * @param isLoading Whether relationships are currently being loaded
- * @param currentId Currently selected coaching relationship ID
+ * @param currentId Currently selected coaching relationship ID (can be null)
  * @param setCurrentId Function to set the current coaching relationship ID
  * @param onSelect Optional callback fired when auto-selection occurs
  */
 export const useAutoSelectSingleRelationship = (
   relationships: CoachingRelationshipWithUserNames[] | undefined,
   isLoading: boolean,
-  currentId: Id,
+  currentId: Id | null,
   setCurrentId: (id: Id) => void,
   onSelect?: (relationshipId: Id) => void
 ) => {

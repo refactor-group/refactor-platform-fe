@@ -1,6 +1,6 @@
 import { DateTime } from "ts-luxon";
 import { CoachingSession } from "@/types/coaching-session";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import {
   SessionUrgency,
