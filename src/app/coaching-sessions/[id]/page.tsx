@@ -37,25 +37,50 @@ export default function CoachingSessionsPage() {
   const { currentCoachingSession, currentCoachingSessionId, isError } = useCurrentCoachingSession();
 
   // Get current coaching relationship state and data
-  const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId } =
+  const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
     useCurrentCoachingRelationship();
 
+  /**
+   * Helper function to determine if relationship ID should be synced from session data.
+   *
+   * The URL is the source of truth for the current session. We sync the relationship ID
+   * from the session data in two cases:
+   * 1. Store is empty (e.g., new tab/window) - fixes Issue #79
+   * 2. Store has a different relationship (e.g., navigating between sessions) - fixes Bug #228
+   *
+   * @param sessionRelationshipId - The relationship ID from the current session
+   * @param currentRelationshipId - The relationship ID currently in the store
+   * @returns true if we should sync the relationship ID
+   */
+  const shouldSyncRelationship = (
+    sessionRelationshipId: string | undefined,
+    currentRelationshipId: string | null
+  ): boolean => {
+    if (!sessionRelationshipId) return false;
+    // Always sync when empty (new tab) or when different (switching sessions)
+    return !currentRelationshipId || sessionRelationshipId !== currentRelationshipId;
+  };
 
-  // Auto-sync relationship ID when session data loads (if not already set)
+  // Auto-sync relationship ID when session data loads
+  // This ensures the relationship selector always matches the current session
   useEffect(() => {
-    if (
-      currentCoachingSession?.coaching_relationship_id &&
-      !currentCoachingRelationshipId
-    ) {
+    if (shouldSyncRelationship(
+      currentCoachingSession?.coaching_relationship_id,
+      currentCoachingRelationshipId
+    )) {
       setCurrentCoachingRelationshipId(
         currentCoachingSession.coaching_relationship_id
       );
+
+      // Force immediate fetch of new relationship data to prevent showing stale cached data
+      // This ensures the coaching session title shows the correct coach/coachee names
+      refresh();
     }
-    // setCurrentCoachingRelationshipId is stable and doesn't need to be in deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     currentCoachingSession?.coaching_relationship_id,
     currentCoachingRelationshipId,
+    setCurrentCoachingRelationshipId,
+    refresh,
   ]);
 
   // Check for 403 Forbidden error AFTER all hooks are called
