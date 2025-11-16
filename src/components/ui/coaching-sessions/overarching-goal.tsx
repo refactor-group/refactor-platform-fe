@@ -49,8 +49,8 @@ const OverarchingGoalComponent: React.FC<{
     <div className="flex items-center justify-between px-4">
       <div
         className={cn(
-          "relative w-full justify-start rounded-[0.5rem] bg-muted hover:bg-gray-200 text-sm font-semibold text-muted-foreground shadow-inner flex items-center pl-0 pr-2",
-          isOpen ? "h-[56px]" : "min-h-[32px] max-h-[56px] overflow-hidden"
+          "relative w-full justify-start rounded-[0.5rem] bg-muted hover:bg-gray-200 text-sm font-semibold text-muted-foreground shadow-inner flex items-center pl-0 pr-2 overflow-hidden",
+          isOpen ? "h-[56px]" : "min-h-[32px] max-h-[56px]"
         )}
         onClick={toggleDrawer}
       >
@@ -73,16 +73,10 @@ const OverarchingGoalComponent: React.FC<{
                    does not call toggleDrawer */
               <div className="ml-2 mr-2 py-2 min-w-0 flex-1">
                 <div
-                  className="hidden md:block line-clamp-2 break-words"
+                  className="line-clamp-2 break-words"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="mr-1 text-foreground">Overarching goal:</span>
-                  {overarchingGoal.title}
-                </div>
-                <div
-                  className="block md:hidden line-clamp-2 break-words"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                  <span className="mr-1 text-foreground hidden md:inline">Overarching goal:</span>
                   {overarchingGoal.title}
                 </div>
               </div>
