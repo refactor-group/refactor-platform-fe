@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -49,37 +49,36 @@ const OverarchingGoalComponent: React.FC<{
     <div className="flex items-center justify-between px-4">
       <div
         className={cn(
-          "relative h-8 w-full justify-start rounded-[0.5rem] bg-muted hover:bg-gray-200 text-sm font-semibold text-muted-foreground shadow-inner flex items-center pl-0 pr-2"
+          "relative w-full justify-start rounded-[0.5rem] bg-muted hover:bg-gray-200 text-sm font-semibold text-muted-foreground shadow-inner flex items-center pl-0 pr-2 overflow-hidden",
+          isOpen ? "h-[56px]" : "min-h-[32px] max-h-[56px]"
         )}
         onClick={toggleDrawer}
       >
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-between w-full min-w-0">
           <div id="label" className="flex w-full mr-2 min-w-0">
             {isOpen ? (
-              <Input
+              <Textarea
                 value={tempGoalTitle}
                 onChange={(e) => setTempGoalTitle(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSetGoal()}
-                onClick={(e) => e.stopPropagation()} // Ensure clicking the input component does not call toggleDrawer
-                className={cn("w-full h-6 bg-inherit border-0 px-2 py-1")}
+                onClick={(e) => e.stopPropagation()} // Ensure clicking the textarea component does not call toggleDrawer
+                className={cn(
+                  "w-full h-[40px] bg-inherit border-0 px-2 pt-5 resize-none overflow-y-auto focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 !text-sm !font-semibold"
+                )}
                 placeholder="Insert a new overarching goal"
+                rows={2}
               />
             ) : (
               /* Ensure that clicking the overarching goal text (e.g. if the user wants to highlight the text)
                    does not call toggleDrawer */
-              <div className="ml-2 mr-2">
-                <span className="hidden md:inline-flex truncate">
-                  <div className="mr-1">{"Overarching goal: "}</div>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    {overarchingGoal.title}
-                  </div>
-                </span>
-                <span
-                  className="inline-flex md:hidden"
+              <div className="ml-2 mr-2 py-2 min-w-0 flex-1">
+                <div
+                  className="line-clamp-2 break-words"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  <span className="mr-1 text-foreground hidden md:inline">Overarching goal:</span>
                   {overarchingGoal.title}
-                </span>
+                </div>
               </div>
             )}
           </div>
