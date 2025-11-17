@@ -117,7 +117,7 @@ export default function CoachingSessionsPage() {
                 onError={handleShareError}
               />
               <CoachingSessionSelector
-                relationshipId={currentCoachingRelationshipId || ""}
+                relationshipId={currentCoachingRelationshipId}
                 disabled={!currentCoachingRelationshipId}
                 onSelect={handleCoachingSessionSelect}
               />
