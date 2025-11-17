@@ -27,7 +27,7 @@ import {
 } from "@/lib/timezone-utils";
 
 interface CoachingSessionsSelectorProps extends PopoverProps {
-  relationshipId: Id;
+  relationshipId: Id | null;
   disabled: boolean;
   onSelect?: (coachingSessionId: Id) => void;
 }
@@ -35,7 +35,7 @@ interface CoachingSessionsSelectorProps extends PopoverProps {
 function CoachingSessionsSelectItems({
   relationshipId,
 }: {
-  relationshipId: Id;
+  relationshipId: Id | null;
 }) {
   const fromDate = DateTime.now().minus({ month: 1 });
   const toDate = DateTime.now().plus({ month: 1 });
@@ -45,6 +45,11 @@ function CoachingSessionsSelectItems({
     isLoading: isLoadingSessions,
     isError: isErrorSessions,
   } = useCoachingSessionList(relationshipId, fromDate, toDate, 'date', 'desc');
+
+  // Early return if no relationship - component will be disabled anyway
+  if (!relationshipId) {
+    return <div>Select a coaching relationship</div>;
+  }
 
   if (isLoadingSessions) return <div>Loading...</div>;
   if (isErrorSessions) return <div>Error loading coaching sessions</div>;

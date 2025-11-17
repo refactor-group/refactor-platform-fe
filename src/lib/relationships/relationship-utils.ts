@@ -1,4 +1,4 @@
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 

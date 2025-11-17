@@ -3,6 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import CoachingSessionsPage from '@/app/coaching-sessions/[id]/page'
 import { TestProviders } from '@/test-utils/providers'
+import { useCurrentCoachingSession } from '@/lib/hooks/use-current-coaching-session'
+import { useCurrentCoachingRelationship } from '@/lib/hooks/use-current-coaching-relationship'
+import { createMockCoachingSession } from '../../factories/coaching-session.factory'
 
 // Mock Next.js navigation hooks
 vi.mock('next/navigation', () => ({
@@ -12,24 +15,8 @@ vi.mock('next/navigation', () => ({
 }))
 
 // Mock the coaching session hooks
-vi.mock('@/lib/hooks/use-current-coaching-session', () => ({
-  useCurrentCoachingSession: vi.fn(() => ({
-    currentCoachingSessionId: 'session-123',
-    currentCoachingSession: {
-      id: 'session-123',
-      title: 'Test Session',
-      coaching_relationship_id: 'rel-123'
-    },
-    isError: false,
-  }))
-}))
-
-vi.mock('@/lib/hooks/use-current-coaching-relationship', () => ({
-  useCurrentCoachingRelationship: vi.fn(() => ({
-    currentCoachingRelationshipId: 'rel-123',
-    setCurrentCoachingRelationshipId: vi.fn(),
-  }))
-}))
+vi.mock('@/lib/hooks/use-current-coaching-session')
+vi.mock('@/lib/hooks/use-current-coaching-relationship')
 
 // Mock auth store
 vi.mock('@/lib/providers/auth-store-provider', () => ({
@@ -84,16 +71,39 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
   const mockRouter = {
     push: vi.fn(),
     replace: vi.fn(),
-  }
+  } as const
 
   const mockParams = {
     id: 'session-123'
-  }
+  } as const
 
   beforeEach(() => {
     vi.clearAllMocks()
     ;(useRouter as any).mockReturnValue(mockRouter)
     ;(useParams as any).mockReturnValue(mockParams)
+
+    // Set default mocks for relationship hooks
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: 'rel-123'
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123',
+      setCurrentCoachingRelationshipId: vi.fn(),
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: vi.fn(),
+    })
   })
 
   /**
@@ -216,5 +226,255 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
         { scroll: false }
       )
     })
+  })
+})
+
+/**
+ * Test Suite: Relationship Auto-Sync Behavior
+ *
+ * Purpose: Validates that the coaching relationship ID is correctly synced from the current
+ * session data to the store in various navigation scenarios, fixing Bug #228 while preserving
+ * the fix for Issue #79 (new tab support).
+ */
+describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
+  const mockRouter = {
+    push: vi.fn(),
+    replace: vi.fn(),
+  } as const
+
+  const mockParams = {
+    id: 'session-123'
+  } as const
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ;(useRouter as any).mockReturnValue(mockRouter)
+    ;(useParams as any).mockReturnValue(mockParams)
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+  })
+
+  /**
+   * Test: First Load with Empty Store (Issue #79)
+   *
+   * Scenario: User opens a session URL in a new tab/window with empty sessionStorage
+   * Expected: Relationship ID should be synced from session data to store AND refresh called
+   * This ensures Issue #79 (new tab support) continues to work
+   */
+  it('should sync relationship ID on first load with empty store', () => {
+    const mockSetRelationshipId = vi.fn()
+    const mockRefresh = vi.fn()
+
+    // Session has relationship ID, but store is empty (new tab scenario)
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: 'rel-123'
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: null, // Empty store
+      setCurrentCoachingRelationshipId: mockSetRelationshipId,
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: mockRefresh,
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    // Should call setCurrentCoachingRelationshipId with the session's relationship ID
+    expect(mockSetRelationshipId).toHaveBeenCalledWith('rel-123')
+    // Should call refresh to fetch the relationship data
+    expect(mockRefresh).toHaveBeenCalled()
+  })
+
+  /**
+   * Test: Switching Between Sessions with Different Relationships (Bug #228)
+   *
+   * Scenario: User navigates from Session A (rel-1) to Session B (rel-2)
+   * Expected: Relationship ID should update from rel-1 to rel-2 AND refresh called
+   * This is the primary fix for Bug #228
+   */
+  it('should update relationship ID when switching to session with different relationship', () => {
+    const mockSetRelationshipId = vi.fn()
+    const mockRefresh = vi.fn()
+
+    // Session has relationship ID 'rel-456', but store has stale 'rel-123'
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-456',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-456',
+        coaching_relationship_id: 'rel-456' // Different relationship
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123', // Stale relationship from previous session
+      setCurrentCoachingRelationshipId: mockSetRelationshipId,
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: mockRefresh,
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    // Should call setCurrentCoachingRelationshipId to update to the new relationship
+    expect(mockSetRelationshipId).toHaveBeenCalledWith('rel-456')
+    // Should call refresh to fetch the new relationship data (fixes stale cache bug)
+    expect(mockRefresh).toHaveBeenCalled()
+  })
+
+  /**
+   * Test: Same Relationship, Different Session
+   *
+   * Scenario: User navigates from Session A to Session B, both in the same relationship
+   * Expected: setCurrentCoachingRelationshipId should NOT be called (optimization)
+   * This ensures we don't trigger unnecessary updates
+   */
+  it('should not update relationship ID when switching to session with same relationship', () => {
+    const mockSetRelationshipId = vi.fn()
+
+    // Session and store both have the same relationship ID
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-456',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-456',
+        coaching_relationship_id: 'rel-123' // Same relationship
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123', // Same relationship already in store
+      setCurrentCoachingRelationshipId: mockSetRelationshipId,
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: vi.fn(),
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    // Should NOT call setCurrentCoachingRelationshipId since they match
+    expect(mockSetRelationshipId).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Test: Session Without Relationship ID
+   *
+   * Scenario: Session data is loaded but doesn't have a coaching_relationship_id
+   * Expected: setCurrentCoachingRelationshipId should NOT be called
+   * This handles edge cases where session data might be incomplete
+   */
+  it('should not update relationship ID when session has no relationship', () => {
+    const mockSetRelationshipId = vi.fn()
+
+    // Session without relationship ID
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: undefined as any // No coaching_relationship_id
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123',
+      setCurrentCoachingRelationshipId: mockSetRelationshipId,
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: vi.fn(),
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    // Should NOT call setCurrentCoachingRelationshipId
+    expect(mockSetRelationshipId).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Test: Direct URL Access with Stale Store
+   *
+   * Scenario: User manually types a session URL while store has a different relationship
+   * Expected: Relationship ID should update to match the session from the URL AND refresh called
+   * This ensures URL is always the source of truth
+   */
+  it('should handle direct URL access with stale relationship ID in store', () => {
+    const mockSetRelationshipId = vi.fn()
+    const mockRefresh = vi.fn()
+
+    // User types URL for session-789 which belongs to rel-789
+    // But store has stale rel-123 from previous browsing
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-789',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-789',
+        coaching_relationship_id: 'rel-789'
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123', // Stale from previous session
+      setCurrentCoachingRelationshipId: mockSetRelationshipId,
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: mockRefresh,
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    // Should update to match the URL-based session
+    expect(mockSetRelationshipId).toHaveBeenCalledWith('rel-789')
+    // Should call refresh to fetch the new relationship data
+    expect(mockRefresh).toHaveBeenCalled()
   })
 })

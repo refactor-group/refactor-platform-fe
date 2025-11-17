@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { User, UserRoleState } from "@/types/user";
 import { MemberCard } from "./member-card";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { Id } from "@/types/general";
 
 interface MemberListProps {
