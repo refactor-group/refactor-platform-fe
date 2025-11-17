@@ -37,11 +37,6 @@ function CoachingSessionsSelectItems({
 }: {
   relationshipId: Id | null;
 }) {
-  // Early return if no relationship - component will be disabled anyway
-  if (!relationshipId) {
-    return <div>Select a coaching relationship</div>;
-  }
-
   const fromDate = DateTime.now().minus({ month: 1 });
   const toDate = DateTime.now().plus({ month: 1 });
 
@@ -50,6 +45,11 @@ function CoachingSessionsSelectItems({
     isLoading: isLoadingSessions,
     isError: isErrorSessions,
   } = useCoachingSessionList(relationshipId, fromDate, toDate, 'date', 'desc');
+
+  // Early return if no relationship - component will be disabled anyway
+  if (!relationshipId) {
+    return <div>Select a coaching relationship</div>;
+  }
 
   if (isLoadingSessions) return <div>Loading...</div>;
   if (isErrorSessions) return <div>Error loading coaching sessions</div>;
