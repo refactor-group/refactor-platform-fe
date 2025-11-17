@@ -19,7 +19,18 @@ import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
-import { shouldSyncRelationship } from "./relationship-sync";
+
+/**
+ * Determines if coaching relationship ID should be synced from session data.
+ * Always sync when store is empty (new tab) or when IDs differ (switching sessions).
+ */
+function shouldSyncRelationship(
+  sessionRelationshipId: string | undefined,
+  currentRelationshipId: string | null
+): boolean {
+  if (!sessionRelationshipId) return false;
+  return !currentRelationshipId || sessionRelationshipId !== currentRelationshipId;
+}
 
 export default function CoachingSessionsPage() {
   const router = useRouter();
