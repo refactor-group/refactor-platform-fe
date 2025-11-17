@@ -7,9 +7,9 @@ import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relatio
 import type { EntityApiError } from "@/types/general";
 
 /**
- * Return type for the useCurrentCoachingRelationship hook.
+ * Result type for the useCurrentCoachingRelationship hook.
  */
-export interface UseCurrentCoachingRelationshipReturn {
+export interface UseCurrentCoachingRelationshipResult {
   /** Current coaching relationship ID from state store */
   currentCoachingRelationshipId: string | null;
   /** Full coaching relationship data from SWR (null if no IDs set) */
@@ -35,7 +35,7 @@ export interface UseCurrentCoachingRelationshipReturn {
  *
  * @returns Object containing current relationship ID, full relationship data, loading state, and error state
  */
-export const useCurrentCoachingRelationship = (): UseCurrentCoachingRelationshipReturn => {
+export const useCurrentCoachingRelationship = (): UseCurrentCoachingRelationshipResult => {
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, resetCoachingRelationshipState } = 
     useCoachingRelationshipStateStore((state) => state);
 

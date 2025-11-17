@@ -7,9 +7,9 @@ import type { CoachingSession } from "@/types/coaching-session";
 import type { EntityApiError } from "@/types/general";
 
 /**
- * Return type for the useCurrentCoachingSession hook.
+ * Result type for the useCurrentCoachingSession hook.
  */
-export interface UseCurrentCoachingSessionReturn {
+export interface UseCurrentCoachingSessionResult {
   /** Current coaching session ID from URL path parameter */
   currentCoachingSessionId: string | null;
   /** Full coaching session data from SWR (null if no ID in URL) */
@@ -30,7 +30,7 @@ export interface UseCurrentCoachingSessionReturn {
  *
  * @returns Object containing current session ID, full session data, loading state, and error state
  */
-export const useCurrentCoachingSession = (): UseCurrentCoachingSessionReturn => {
+export const useCurrentCoachingSession = (): UseCurrentCoachingSessionResult => {
   const params = useParams();
   
   // Extract coaching session ID from URL path params (/coaching-sessions/123)
