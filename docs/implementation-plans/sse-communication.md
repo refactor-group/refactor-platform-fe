@@ -322,11 +322,11 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 export enum SseConnectionState {
-  Disconnected = 'disconnected',
-  Connecting = 'connecting',
-  Connected = 'connected',
-  Reconnecting = 'reconnecting',
-  Error = 'error',
+  Disconnected = "Disconnected",
+  Connecting = "Connecting",
+  Connected = "Connected",
+  Reconnecting = "Reconnecting",
+  Error = "Error",
 }
 
 interface SseError {
@@ -458,21 +458,22 @@ const DEFAULT_RECONNECTION_CONFIG: ReconnectionConfig = {
  * Core SSE connection hook with automatic reconnection and exponential backoff.
  *
  * Features:
+ * - Auth-gated connection (only connects when user is authenticated)
  * - Automatic reconnection with exponential backoff
  * - Connection state management via Zustand store
- * - Graceful cleanup on unmount
+ * - Graceful cleanup on unmount and logout
  * - Event listener management
  *
+ * @param isLoggedIn - Whether the user is authenticated (gates connection establishment)
  * @returns EventSource instance or null if not connected
  */
-export function useSseConnection() {
+export function useSseConnection(isLoggedIn: boolean) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef(0);
   const mountedRef = useRef(true);
 
   const {
-    state,
-    reconnectAttempts,
     setConnecting,
     setConnected,
     setReconnecting,
@@ -480,8 +481,6 @@ export function useSseConnection() {
     setDisconnected,
     resetReconnectAttempts,
   } = useSseConnectionStore((store) => ({
-    state: store.state,
-    reconnectAttempts: store.reconnectAttempts,
     setConnecting: store.setConnecting,
     setConnected: store.setConnected,
     setReconnecting: store.setReconnecting,
@@ -511,7 +510,7 @@ export function useSseConnection() {
   }, []);
 
   const connect = useCallback(() => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || !isLoggedIn) return;
 
     // Close existing connection
     cleanup();
@@ -532,6 +531,7 @@ export function useSseConnection() {
         console.log('[SSE] Connection established');
         setConnected();
         resetReconnectAttempts();
+        reconnectAttemptsRef.current = 0;
       };
 
       es.onerror = (error) => {
@@ -541,7 +541,8 @@ export function useSseConnection() {
 
         // EventSource automatically attempts to reconnect on error
         // We handle the error state and implement our own backoff
-        const currentAttempts = reconnectAttempts + 1;
+        reconnectAttemptsRef.current += 1;
+        const currentAttempts = reconnectAttemptsRef.current;
 
         if (currentAttempts >= DEFAULT_RECONNECTION_CONFIG.maxAttempts) {
           setError(`Max reconnection attempts (${DEFAULT_RECONNECTION_CONFIG.maxAttempts}) reached`);
@@ -554,7 +555,7 @@ export function useSseConnection() {
           console.log(`[SSE] Reconnecting in ${delay}ms...`);
 
           reconnectTimeoutRef.current = setTimeout(() => {
-            if (mountedRef.current) {
+            if (mountedRef.current && isLoggedIn) {
               connect();
             }
           }, delay);
@@ -573,14 +574,20 @@ export function useSseConnection() {
     setError,
     setReconnecting,
     resetReconnectAttempts,
-    reconnectAttempts,
     calculateBackoff,
+    isLoggedIn,
   ]);
 
-  // Establish connection on mount
+  // Establish connection when logged in, disconnect when logged out
   useEffect(() => {
     mountedRef.current = true;
-    connect();
+
+    if (isLoggedIn) {
+      connect();
+    } else {
+      cleanup();
+      setDisconnected();
+    }
 
     // Cleanup on unmount
     return () => {
@@ -588,17 +595,20 @@ export function useSseConnection() {
       cleanup();
       setDisconnected();
     };
-  }, [connect, cleanup, setDisconnected]);
+  }, [isLoggedIn, connect, cleanup, setDisconnected]);
 
   return eventSourceRef.current;
 }
 ```
 
 **Why:**
+- Auth-gated connection ensures SSE only connects for authenticated users
+- Uses ref for reconnectAttempts to avoid triggering useCallback re-creation
 - Automatic reconnection prevents permanent disconnection
 - Exponential backoff prevents server overload
 - Cleanup prevents memory leaks
 - Connection state visible in DevTools
+- Responds to logout by immediately closing connection
 
 ---
 
@@ -736,27 +746,14 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
   const { mutate } = useSWRConfig();
   const baseUrl = siteConfig.env.backendServiceURL;
 
-  // Helper to build cache keys (matches EntityApi pattern)
-  const buildListKey = useCallback((endpoint: string, params: Record<string, string>) => {
-    const searchParams = new URLSearchParams(params).toString();
-    return `${baseUrl}${endpoint}?${searchParams}`;
-  }, [baseUrl]);
-
-  const buildItemKey = useCallback((endpoint: string, id: string) => {
-    return `${baseUrl}${endpoint}/${id}`;
-  }, [baseUrl]);
-
   // ==================== ACTION EVENTS ====================
 
   useSseEventHandler<ActionCreatedData>(
     eventSource,
     'action_created',
     (data) => {
-      // Invalidate action list for this session
-      const key = buildListKey('/actions', {
-        coaching_session_id: data.coaching_session_id,
-      });
-      mutate(key);
+      // Invalidate all action caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/actions`));
 
       console.log('[SSE] Revalidated actions for session:', data.coaching_session_id);
     }
@@ -766,14 +763,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     eventSource,
     'action_updated',
     (data) => {
-      // Invalidate both the list and the specific action
-      const listKey = buildListKey('/actions', {
-        coaching_session_id: data.coaching_session_id,
-      });
-      const itemKey = buildItemKey('/actions', data.action.id);
-
-      mutate(listKey);
-      mutate(itemKey);
+      // Invalidate all action caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/actions`));
 
       console.log('[SSE] Revalidated action:', data.action.id);
     }
@@ -783,11 +774,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     eventSource,
     'action_deleted',
     (data) => {
-      // Invalidate the list
-      const listKey = buildListKey('/actions', {
-        coaching_session_id: data.coaching_session_id,
-      });
-      mutate(listKey);
+      // Invalidate all action caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/actions`));
 
       console.log('[SSE] Revalidated actions after deletion:', data.action_id);
     }
@@ -799,10 +787,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     eventSource,
     'agreement_created',
     (data) => {
-      const key = buildListKey('/agreements', {
-        coaching_relationship_id: data.coaching_relationship_id,
-      });
-      mutate(key);
+      // Invalidate all agreement caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/agreements`));
 
       console.log('[SSE] Revalidated agreements for relationship:', data.coaching_relationship_id);
     }
@@ -812,13 +798,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     eventSource,
     'agreement_updated',
     (data) => {
-      const listKey = buildListKey('/agreements', {
-        coaching_relationship_id: data.coaching_relationship_id,
-      });
-      const itemKey = buildItemKey('/agreements', data.agreement.id);
-
-      mutate(listKey);
-      mutate(itemKey);
+      // Invalidate all agreement caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/agreements`));
 
       console.log('[SSE] Revalidated agreement:', data.agreement.id);
     }
@@ -828,10 +809,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     eventSource,
     'agreement_deleted',
     (data) => {
-      const listKey = buildListKey('/agreements', {
-        coaching_relationship_id: data.coaching_relationship_id,
-      });
-      mutate(listKey);
+      // Invalidate all agreement caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/agreements`));
 
       console.log('[SSE] Revalidated agreements after deletion:', data.agreement_id);
     }
@@ -843,10 +822,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     eventSource,
     'goal_created',
     (data) => {
-      const key = buildListKey('/overarching_goals', {
-        coaching_relationship_id: data.coaching_relationship_id,
-      });
-      mutate(key);
+      // Invalidate all goal caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/overarching_goals`));
 
       console.log('[SSE] Revalidated goals for relationship:', data.coaching_relationship_id);
     }
@@ -856,13 +833,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     eventSource,
     'goal_updated',
     (data) => {
-      const listKey = buildListKey('/overarching_goals', {
-        coaching_relationship_id: data.coaching_relationship_id,
-      });
-      const itemKey = buildItemKey('/overarching_goals', data.goal.id);
-
-      mutate(listKey);
-      mutate(itemKey);
+      // Invalidate all goal caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/overarching_goals`));
 
       console.log('[SSE] Revalidated goal:', data.goal.id);
     }
@@ -872,10 +844,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     eventSource,
     'goal_deleted',
     (data) => {
-      const listKey = buildListKey('/overarching_goals', {
-        coaching_relationship_id: data.coaching_relationship_id,
-      });
-      mutate(listKey);
+      // Invalidate all goal caches
+      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/overarching_goals`));
 
       console.log('[SSE] Revalidated goals after deletion:', data.goal_id);
     }
@@ -886,7 +856,8 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
 **Why:**
 - **Simplest solution** - leverages existing SWR infrastructure
 - **Zero component changes** - components using `useActionList` automatically get updated data
-- **Consistent patterns** - same cache keys as EntityApi
+- **Consistent patterns** - matches `EntityApi.useEntityMutation` cache invalidation pattern
+- **Broad invalidation** - simple `includes()` check invalidates all related caches safely
 - **Automatic deduplication** - SWR handles multiple simultaneous revalidations
 - **Built-in error handling** - SWR retry logic applies
 
@@ -1005,6 +976,7 @@ Main SSE provider that composes all hooks.
 
 import { type ReactNode } from 'react';
 import { SseConnectionStoreProvider } from './sse-connection-store-provider';
+import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { useSseConnection } from '@/lib/hooks/use-sse-connection';
 import { useSseCacheInvalidation } from '@/lib/hooks/use-sse-cache-invalidation';
 import { useSseSystemEvents } from '@/lib/hooks/use-sse-system-events';
@@ -1015,10 +987,11 @@ interface SseClientProps {
 
 /**
  * Internal component that establishes SSE connection and sets up event handlers.
- * Must be rendered inside SseConnectionStoreProvider.
+ * Must be rendered inside SseConnectionStoreProvider and AuthStoreProvider.
  */
 function SseClient({ children }: SseClientProps) {
-  const eventSource = useSseConnection();
+  const isLoggedIn = useAuthStore((store) => store.isLoggedIn);
+  const eventSource = useSseConnection(isLoggedIn);
 
   // Auto-invalidate SWR caches on events
   useSseCacheInvalidation(eventSource);
