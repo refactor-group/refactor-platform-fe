@@ -73,7 +73,7 @@ sequenceDiagram
     Backend->>SSE: SSE Event: action_created
 
     Note over SSE,Cache: Automatic Cache Invalidation
-    SSE->>Cache: mutate("/actions?session_id=...")
+    SSE->>Cache: mutate(baseUrl)
     Cache->>Backend: Refetch GET /actions
     Backend-->>Cache: Updated action list
     Cache-->>User2: Updated data via useActionList
@@ -96,25 +96,31 @@ sequenceDiagram
 - Built-in error handling and retry logic
 - Works with existing optimistic updates
 
-### 2. Strong Typing Throughout (No `any` Types)
+### 2. Strong Typing Throughout
 
 **Why:** TypeScript provides compile-time safety and IntelliSense support.
 
 **Implementation:**
 - Event types match backend exactly (`src/types/sse-events.ts`)
-- Type guards for runtime validation
-- Generic type parameters for event handlers
+- Discriminated unions for automatic type narrowing
+- No custom type helpers needed (uses standard TypeScript patterns)
 - Strict null checks
 
-### 3. Automatic Reconnection with Exponential Backoff
+### 3. Use Native EventSource API
 
-**Why:** Network failures are inevitable in production.
+**Why:** Browser native API provides all needed functionality without external dependencies.
 
-**Implementation:**
-- Exponential backoff (1s → 1.5s → 2.25s → ... → 30s max)
-- Max 10 reconnection attempts
-- Connection state tracked in Zustand store
-- Visible in DevTools for debugging
+**Native EventSource provides:**
+- Automatic reconnection (~3 seconds default)
+- Built-in Last-Event-ID support for resumable streams
+- CORS credentials mode via `withCredentials` option
+- Standard EventTarget interface for event handling
+- No external dependencies to maintain
+
+**Alignment with codebase:**
+- Uses native browser APIs (consistent with existing patterns)
+- Backend supports GET with cookie authentication (EventSource standard)
+- Simpler, more maintainable solution following web standards
 
 ### 4. Connection State Management via Zustand
 
@@ -126,14 +132,25 @@ sequenceDiagram
 - Error tracking with timestamps and attempt numbers
 - DevTools integration
 
-### 5. Provider Composition Pattern
+### 5. Single Provider Pattern
 
-**Why:** Consistent with existing provider architecture.
+**Why:** Follows existing `AuthStoreProvider` pattern exactly.
 
 **Implementation:**
-- `SseConnectionStoreProvider` - Provides connection state
-- `SseProvider` - Composes hooks and provides to app
+- Single `SseProvider` creates store AND establishes connection
+- Store creation happens inside provider (like `AuthStoreProvider`)
+- Hooks composed within provider component
 - Added to root `Providers` component
+
+### 6. Logout Cleanup Registry Integration
+
+**Why:** Follows existing cleanup pattern for proper connection teardown.
+
+**Implementation:**
+- Registers SSE cleanup with `logoutCleanupRegistry`
+- Ensures connection closed during logout flow
+- Consistent with TipTap and other provider cleanup
+- Prevents connection leaks and security issues
 
 ---
 
@@ -142,36 +159,34 @@ sequenceDiagram
 ```
 src/
 ├── types/
-│   └── sse-events.ts                         # Event type definitions
+│   └── sse-events.ts                     # Event type definitions
 │
 ├── lib/
 │   ├── stores/
-│   │   └── sse-connection-store.ts           # Connection state management
+│   │   └── sse-connection-store.ts       # Connection state management
 │   │
 │   ├── hooks/
-│   │   ├── use-sse-connection.ts             # SSE connection with reconnection
-│   │   ├── use-sse-event-handler.ts          # Type-safe event handler
-│   │   ├── use-sse-cache-invalidation.ts     # SWR cache invalidation
-│   │   └── use-sse-system-events.ts          # System events (force logout)
+│   │   ├── use-sse-connection.ts         # Native EventSource connection
+│   │   ├── use-sse-event-handler.ts      # Type-safe event handler
+│   │   ├── use-sse-cache-invalidation.ts # SWR cache invalidation
+│   │   └── use-sse-system-events.ts      # System events (force logout)
 │   │
 │   └── providers/
-│       ├── sse-connection-store-provider.tsx  # Connection store provider
-│       └── sse-provider.tsx                   # Main SSE provider
+│       └── sse-provider.tsx               # SSE provider (store + connection)
 │
 └── components/
-    ├── providers.tsx                          # Root providers (updated)
-    └── sse-connection-indicator.tsx           # Optional: UI indicator
+    └── providers.tsx                      # Root providers (updated)
 ```
 
 ---
 
 ## Implementation Phases
 
-### Phase 1: Type Definitions
+### Phase 1: Type Definitions (Discriminated Unions)
 
 **File:** `src/types/sse-events.ts`
 
-Create strongly-typed event definitions matching backend exactly.
+Create strongly-typed event definitions using discriminated unions that match the backend's Rust serialization format exactly (`#[serde(tag = "type", content = "data")]`).
 
 ```typescript
 import { Id } from './general';
@@ -180,142 +195,122 @@ import { Agreement } from './agreement';
 import { OverarchingGoal } from './overarching-goal';
 
 /**
- * SSE event types - must match backend exactly
+ * Base SSE event structure matching backend serialization
  */
-export type SseEventType =
-  | 'action_created'
-  | 'action_updated'
-  | 'action_deleted'
-  | 'agreement_created'
-  | 'agreement_updated'
-  | 'agreement_deleted'
-  | 'goal_created'
-  | 'goal_updated'
-  | 'goal_deleted'
-  | 'force_logout';
+interface BaseSseEvent<T extends string, D> {
+  type: T;
+  data: D;
+}
+
+// ==================== ACTION EVENTS (session-scoped) ====================
+
+export type ActionCreatedEvent = BaseSseEvent<
+  'action_created',
+  {
+    coaching_session_id: Id;
+    action: Action;
+  }
+>;
+
+export type ActionUpdatedEvent = BaseSseEvent<
+  'action_updated',
+  {
+    coaching_session_id: Id;
+    action: Action;
+  }
+>;
+
+export type ActionDeletedEvent = BaseSseEvent<
+  'action_deleted',
+  {
+    coaching_session_id: Id;
+    action_id: Id;
+  }
+>;
+
+// ==================== AGREEMENT EVENTS (relationship-scoped) ====================
+
+export type AgreementCreatedEvent = BaseSseEvent<
+  'agreement_created',
+  {
+    coaching_relationship_id: Id;
+    agreement: Agreement;
+  }
+>;
+
+export type AgreementUpdatedEvent = BaseSseEvent<
+  'agreement_updated',
+  {
+    coaching_relationship_id: Id;
+    agreement: Agreement;
+  }
+>;
+
+export type AgreementDeletedEvent = BaseSseEvent<
+  'agreement_deleted',
+  {
+    coaching_relationship_id: Id;
+    agreement_id: Id;
+  }
+>;
+
+// ==================== GOAL EVENTS (relationship-scoped) ====================
+
+export type GoalCreatedEvent = BaseSseEvent<
+  'goal_created',
+  {
+    coaching_relationship_id: Id;
+    goal: OverarchingGoal;
+  }
+>;
+
+export type GoalUpdatedEvent = BaseSseEvent<
+  'goal_updated',
+  {
+    coaching_relationship_id: Id;
+    goal: OverarchingGoal;
+  }
+>;
+
+export type GoalDeletedEvent = BaseSseEvent<
+  'goal_deleted',
+  {
+    coaching_relationship_id: Id;
+    goal_id: Id;
+  }
+>;
+
+// ==================== SYSTEM EVENTS ====================
+
+export type ForceLogoutEvent = BaseSseEvent<
+  'force_logout',
+  {
+    reason: string;
+  }
+>;
 
 /**
- * SSE event payload wrapper - matches backend serialization
- * Backend sends: { type: "action_created", data: { coaching_session_id, action } }
+ * Discriminated union of all SSE events
+ * TypeScript automatically narrows the type based on the 'type' property
  */
-export interface SseEventEnvelope<T> {
-  type: SseEventType;
-  data: T;
-}
-
-// Session-scoped events
-export interface ActionCreatedData {
-  coaching_session_id: Id;
-  action: Action;
-}
-
-export interface ActionUpdatedData {
-  coaching_session_id: Id;
-  action: Action;
-}
-
-export interface ActionDeletedData {
-  coaching_session_id: Id;
-  action_id: Id;
-}
-
-// Relationship-scoped events
-export interface AgreementCreatedData {
-  coaching_relationship_id: Id;
-  agreement: Agreement;
-}
-
-export interface AgreementUpdatedData {
-  coaching_relationship_id: Id;
-  agreement: Agreement;
-}
-
-export interface AgreementDeletedData {
-  coaching_relationship_id: Id;
-  agreement_id: Id;
-}
-
-export interface GoalCreatedData {
-  coaching_relationship_id: Id;
-  goal: OverarchingGoal;
-}
-
-export interface GoalUpdatedData {
-  coaching_relationship_id: Id;
-  goal: OverarchingGoal;
-}
-
-export interface GoalDeletedData {
-  coaching_relationship_id: Id;
-  goal_id: Id;
-}
-
-// System events
-export interface ForceLogoutData {
-  reason: string;
-}
-
-// Union type for all event data
-export type SseEventData =
-  | ActionCreatedData
-  | ActionUpdatedData
-  | ActionDeletedData
-  | AgreementCreatedData
-  | AgreementUpdatedData
-  | AgreementDeletedData
-  | GoalCreatedData
-  | GoalUpdatedData
-  | GoalDeletedData
-  | ForceLogoutData;
-
-/**
- * Type guards for runtime validation
- */
-export function isActionCreatedData(data: unknown): data is ActionCreatedData {
-  if (!data || typeof data !== 'object') return false;
-  const obj = data as Record<string, unknown>;
-  return (
-    typeof obj.coaching_session_id === 'string' &&
-    typeof obj.action === 'object' &&
-    obj.action !== null
-  );
-}
-
-export function isActionUpdatedData(data: unknown): data is ActionUpdatedData {
-  return isActionCreatedData(data);
-}
-
-export function isActionDeletedData(data: unknown): data is ActionDeletedData {
-  if (!data || typeof data !== 'object') return false;
-  const obj = data as Record<string, unknown>;
-  return (
-    typeof obj.coaching_session_id === 'string' &&
-    typeof obj.action_id === 'string'
-  );
-}
-
-export function isForceLogoutData(data: unknown): data is ForceLogoutData {
-  if (!data || typeof data !== 'object') return false;
-  const obj = data as Record<string, unknown>;
-  return typeof obj.reason === 'string';
-}
-
-// TODO: Add type guards for agreements, goals, etc.
+export type SseEvent =
+  | ActionCreatedEvent
+  | ActionUpdatedEvent
+  | ActionDeletedEvent
+  | AgreementCreatedEvent
+  | AgreementUpdatedEvent
+  | AgreementDeletedEvent
+  | GoalCreatedEvent
+  | GoalUpdatedEvent
+  | GoalDeletedEvent
+  | ForceLogoutEvent;
 ```
-
-**Why:**
-- Compile-time type safety
-- IntelliSense support in event handlers
-- Runtime validation via type guards
-- Single source of truth for event structure
 
 ---
 
 ### Phase 2: Connection State Store
 
 **File:** `src/lib/stores/sse-connection-store.ts`
-
-Create Zustand store for connection state management.
 
 ```typescript
 import { create } from 'zustand';
@@ -325,7 +320,6 @@ export enum SseConnectionState {
   Disconnected = "Disconnected",
   Connecting = "Connecting",
   Connected = "Connected",
-  Reconnecting = "Reconnecting",
   Error = "Error",
 }
 
@@ -338,7 +332,6 @@ interface SseError {
 interface SseConnectionStateData {
   state: SseConnectionState;
   lastError: SseError | null;
-  reconnectAttempts: number;
   lastConnectedAt: Date | null;
   lastEventAt: Date | null;
 }
@@ -346,11 +339,9 @@ interface SseConnectionStateData {
 interface SseConnectionActions {
   setConnecting: () => void;
   setConnected: () => void;
-  setReconnecting: (attempt: number) => void;
   setError: (error: string) => void;
   setDisconnected: () => void;
   recordEvent: () => void;
-  resetReconnectAttempts: () => void;
 }
 
 export type SseConnectionStore = SseConnectionStateData & SseConnectionActions;
@@ -358,7 +349,6 @@ export type SseConnectionStore = SseConnectionStateData & SseConnectionActions;
 const defaultState: SseConnectionStateData = {
   state: SseConnectionState.Disconnected,
   lastError: null,
-  reconnectAttempts: 0,
   lastConnectedAt: null,
   lastEventAt: null,
 };
@@ -377,27 +367,19 @@ export const createSseConnectionStore = () => {
           set({
             state: SseConnectionState.Connected,
             lastConnectedAt: new Date(),
-            reconnectAttempts: 0,
             lastError: null,
           });
         },
 
-        setReconnecting: (attempt: number) => {
-          set({
-            state: SseConnectionState.Reconnecting,
-            reconnectAttempts: attempt,
-          });
-        },
-
         setError: (message: string) => {
-          set((state) => ({
+          set({
             state: SseConnectionState.Error,
             lastError: {
               message,
               timestamp: new Date(),
-              attemptNumber: state.reconnectAttempts,
+              attemptNumber: 0,
             },
-          }));
+          });
         },
 
         setDisconnected: () => {
@@ -407,10 +389,6 @@ export const createSseConnectionStore = () => {
         recordEvent: () => {
           set({ lastEventAt: new Date() });
         },
-
-        resetReconnectAttempts: () => {
-          set({ reconnectAttempts: 0 });
-        },
       }),
       { name: 'sse-connection-store' }
     )
@@ -418,197 +396,78 @@ export const createSseConnectionStore = () => {
 };
 ```
 
-**Why:**
-- Follows existing Zustand store pattern
-- DevTools integration for debugging
-- Tracks connection health and errors
-- Visible in Redux DevTools
-
 ---
 
-### Phase 3: SSE Connection Hook
+### Phase 3: SSE Connection Hook (Native EventSource)
 
 **File:** `src/lib/hooks/use-sse-connection.ts`
-
-Core hook that establishes SSE connection with automatic reconnection.
 
 ```typescript
 "use client";
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { siteConfig } from '@/site.config';
-import { useSseConnectionStore } from '@/lib/providers/sse-connection-store-provider';
-import { SseConnectionState } from '@/lib/stores/sse-connection-store';
+import { useSseConnectionStore } from '@/lib/providers/sse-provider';
+import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry';
 
-interface ReconnectionConfig {
-  maxAttempts: number;
-  initialDelay: number;
-  maxDelay: number;
-  backoffMultiplier: number;
-}
-
-const DEFAULT_RECONNECTION_CONFIG: ReconnectionConfig = {
-  maxAttempts: 10,
-  initialDelay: 1000,      // 1 second
-  maxDelay: 30000,         // 30 seconds
-  backoffMultiplier: 1.5,
-};
-
-/**
- * Core SSE connection hook with automatic reconnection and exponential backoff.
- *
- * Features:
- * - Auth-gated connection (only connects when user is authenticated)
- * - Automatic reconnection with exponential backoff
- * - Connection state management via Zustand store
- * - Graceful cleanup on unmount and logout
- * - Event listener management
- *
- * @param isLoggedIn - Whether the user is authenticated (gates connection establishment)
- * @returns EventSource instance or null if not connected
- */
 export function useSseConnection(isLoggedIn: boolean) {
   const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const mountedRef = useRef(true);
 
   const {
     setConnecting,
     setConnected,
-    setReconnecting,
     setError,
     setDisconnected,
-    resetReconnectAttempts,
+    recordEvent,
   } = useSseConnectionStore((store) => ({
     setConnecting: store.setConnecting,
     setConnected: store.setConnected,
-    setReconnecting: store.setReconnecting,
     setError: store.setError,
     setDisconnected: store.setDisconnected,
-    resetReconnectAttempts: store.resetReconnectAttempts,
+    recordEvent: store.recordEvent,
   }));
 
-  const calculateBackoff = useCallback((attempt: number): number => {
-    const delay = Math.min(
-      DEFAULT_RECONNECTION_CONFIG.initialDelay *
-        Math.pow(DEFAULT_RECONNECTION_CONFIG.backoffMultiplier, attempt),
-      DEFAULT_RECONNECTION_CONFIG.maxDelay
-    );
-    return delay;
-  }, []);
-
-  const cleanup = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
+  useEffect(() => {
+    if (!isLoggedIn) {
+      eventSourceRef.current?.close();
       eventSourceRef.current = null;
+      setDisconnected();
+      return;
     }
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-  }, []);
-
-  const connect = useCallback(() => {
-    if (!mountedRef.current || !isLoggedIn) return;
-
-    // Close existing connection
-    cleanup();
 
     setConnecting();
 
-    try {
-      const es = new EventSource(
-        `${siteConfig.env.backendServiceURL}/sse`,
-        { withCredentials: true }
-      );
+    const source = new EventSource(`${siteConfig.env.backendServiceURL}/sse`, {
+      withCredentials: true,
+    });
 
-      es.onopen = () => {
-        if (!mountedRef.current) {
-          es.close();
-          return;
-        }
-        console.log('[SSE] Connection established');
-        setConnected();
-        resetReconnectAttempts();
-        reconnectAttemptsRef.current = 0;
-      };
-
-      es.onerror = (error) => {
-        if (!mountedRef.current) return;
-
-        console.error('[SSE] Connection error:', error);
-
-        // EventSource automatically attempts to reconnect on error
-        // We handle the error state and implement our own backoff
-        reconnectAttemptsRef.current += 1;
-        const currentAttempts = reconnectAttemptsRef.current;
-
-        if (currentAttempts >= DEFAULT_RECONNECTION_CONFIG.maxAttempts) {
-          setError(`Max reconnection attempts (${DEFAULT_RECONNECTION_CONFIG.maxAttempts}) reached`);
-          cleanup();
-        } else {
-          setError(`Connection error (attempt ${currentAttempts})`);
-          setReconnecting(currentAttempts);
-
-          const delay = calculateBackoff(currentAttempts);
-          console.log(`[SSE] Reconnecting in ${delay}ms...`);
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (mountedRef.current && isLoggedIn) {
-              connect();
-            }
-          }, delay);
-        }
-      };
-
-      eventSourceRef.current = es;
-    } catch (error) {
-      console.error('[SSE] Failed to create EventSource:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error');
-    }
-  }, [
-    cleanup,
-    setConnecting,
-    setConnected,
-    setError,
-    setReconnecting,
-    resetReconnectAttempts,
-    calculateBackoff,
-    isLoggedIn,
-  ]);
-
-  // Establish connection when logged in, disconnect when logged out
-  useEffect(() => {
-    mountedRef.current = true;
-
-    if (isLoggedIn) {
-      connect();
-    } else {
-      cleanup();
-      setDisconnected();
-    }
-
-    // Cleanup on unmount
-    return () => {
-      mountedRef.current = false;
-      cleanup();
-      setDisconnected();
+    source.onopen = () => {
+      console.log('[SSE] Connection established');
+      setConnected();
     };
-  }, [isLoggedIn, connect, cleanup, setDisconnected]);
+
+    source.onerror = (error) => {
+      console.error('[SSE] Connection error:', error);
+      setError('Connection error - browser will auto-reconnect');
+    };
+
+    eventSourceRef.current = source;
+
+    const unregisterCleanup = logoutCleanupRegistry.register(() => {
+      console.log('[SSE] Cleaning up connection on logout');
+      source.close();
+    });
+
+    return () => {
+      source.close();
+      setDisconnected();
+      unregisterCleanup();
+    };
+  }, [isLoggedIn, setConnecting, setConnected, setError, setDisconnected]);
 
   return eventSourceRef.current;
 }
 ```
-
-**Why:**
-- Auth-gated connection ensures SSE only connects for authenticated users
-- Uses ref for reconnectAttempts to avoid triggering useCallback re-creation
-- Automatic reconnection prevents permanent disconnection
-- Exponential backoff prevents server overload
-- Cleanup prevents memory leaks
-- Connection state visible in DevTools
-- Responds to logout by immediately closing connection
 
 ---
 
@@ -616,43 +475,22 @@ export function useSseConnection(isLoggedIn: boolean) {
 
 **File:** `src/lib/hooks/use-sse-event-handler.ts`
 
-Type-safe hook for handling SSE events.
-
 ```typescript
 "use client";
 
 import { useEffect, useRef } from 'react';
-import type { SseEventType, SseEventData } from '@/types/sse-events';
-import { useSseConnectionStore } from '@/lib/providers/sse-connection-store-provider';
+import type { SseEvent } from '@/types/sse-events';
+import { useSseConnectionStore } from '@/lib/providers/sse-provider';
 import { transformEntityDates } from '@/types/general';
 
-/**
- * Type-safe SSE event handler hook.
- *
- * Features:
- * - Strong typing (no `any` types)
- * - Automatic event listener cleanup
- * - Date transformation for consistency with REST API
- * - Connection state tracking
- * - Runtime type validation (optional)
- *
- * @template T - The expected event data type
- * @param eventSource - The EventSource instance
- * @param eventType - The SSE event type to listen for
- * @param handler - Callback function to handle the event
- * @param typeGuard - Optional runtime type guard for validation
- */
-export function useSseEventHandler<T extends SseEventData>(
+export function useSseEventHandler<T extends SseEvent['type']>(
   eventSource: EventSource | null,
-  eventType: SseEventType,
-  handler: (data: T) => void,
-  typeGuard?: (data: unknown) => data is T
+  eventType: T,
+  handler: (event: Extract<SseEvent, { type: T }>) => void
 ) {
-  // Use ref to avoid recreating listener on every render
   const handlerRef = useRef(handler);
   const recordEvent = useSseConnectionStore((store) => store.recordEvent);
 
-  // Update ref when handler changes
   useEffect(() => {
     handlerRef.current = handler;
   }, [handler]);
@@ -662,26 +500,13 @@ export function useSseEventHandler<T extends SseEventData>(
 
     const listener = (e: MessageEvent) => {
       try {
-        // Parse event data
-        const parsed = JSON.parse(e.data);
+        const parsed: SseEvent = JSON.parse(e.data);
+        const transformed = transformEntityDates(parsed) as SseEvent;
 
-        // Transform dates (consistent with REST API)
-        const transformed = transformEntityDates(parsed);
-
-        // Optional runtime validation
-        if (typeGuard && !typeGuard(transformed.data)) {
-          console.error(
-            `[SSE] Type guard failed for event ${eventType}:`,
-            transformed.data
-          );
-          return;
+        if (transformed.type === eventType) {
+          recordEvent();
+          handlerRef.current(transformed as Extract<SseEvent, { type: T }>);
         }
-
-        // Record event for connection health tracking
-        recordEvent();
-
-        // Invoke handler with typed data
-        handlerRef.current(transformed.data as T);
       } catch (error) {
         console.error(`[SSE] Failed to parse ${eventType} event:`, error, e.data);
       }
@@ -692,182 +517,79 @@ export function useSseEventHandler<T extends SseEventData>(
     return () => {
       eventSource.removeEventListener(eventType, listener);
     };
-  }, [eventSource, eventType, typeGuard, recordEvent]);
+  }, [eventSource, eventType, recordEvent]);
 }
 ```
 
-**Why:**
-- Type-safe (no `any` types)
-- Date transformation for consistency
-- Automatic cleanup prevents memory leaks
-- Optional type guards for runtime validation
-
 ---
 
-### Phase 5: SWR Cache Invalidation Hook (THE KEY IMPROVEMENT)
+### Phase 5: SWR Cache Invalidation Hook
 
 **File:** `src/lib/hooks/use-sse-cache-invalidation.ts`
-
-This is the core architectural improvement over manual state updates.
 
 ```typescript
 "use client";
 
-import { useCallback } from 'react';
 import { useSWRConfig } from 'swr';
 import { siteConfig } from '@/site.config';
 import { useSseEventHandler } from './use-sse-event-handler';
-import type {
-  ActionCreatedData,
-  ActionUpdatedData,
-  ActionDeletedData,
-  AgreementCreatedData,
-  AgreementUpdatedData,
-  AgreementDeletedData,
-  GoalCreatedData,
-  GoalUpdatedData,
-  GoalDeletedData,
-} from '@/types/sse-events';
 
-/**
- * SSE cache invalidation hook that automatically revalidates SWR caches
- * when SSE events are received.
- *
- * THIS IS THE SIMPLEST SOLUTION:
- * - Rather than manually updating component state, we invalidate SWR caches
- * - SWR automatically refetches the data
- * - Existing components using useActionList, useAction, etc. require NO changes
- * - Consistent with existing REST API patterns
- * - Automatic deduplication and batching
- *
- * @param eventSource - The SSE connection
- */
 export function useSseCacheInvalidation(eventSource: EventSource | null) {
   const { mutate } = useSWRConfig();
   const baseUrl = siteConfig.env.backendServiceURL;
 
-  // ==================== ACTION EVENTS ====================
+  useSseEventHandler(eventSource, 'action_created', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after action_created');
+  });
 
-  useSseEventHandler<ActionCreatedData>(
-    eventSource,
-    'action_created',
-    (data) => {
-      // Invalidate all action caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/actions`));
+  useSseEventHandler(eventSource, 'action_updated', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after action_updated');
+  });
 
-      console.log('[SSE] Revalidated actions for session:', data.coaching_session_id);
-    }
-  );
+  useSseEventHandler(eventSource, 'action_deleted', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after action_deleted');
+  });
 
-  useSseEventHandler<ActionUpdatedData>(
-    eventSource,
-    'action_updated',
-    (data) => {
-      // Invalidate all action caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/actions`));
+  useSseEventHandler(eventSource, 'agreement_created', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after agreement_created');
+  });
 
-      console.log('[SSE] Revalidated action:', data.action.id);
-    }
-  );
+  useSseEventHandler(eventSource, 'agreement_updated', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after agreement_updated');
+  });
 
-  useSseEventHandler<ActionDeletedData>(
-    eventSource,
-    'action_deleted',
-    (data) => {
-      // Invalidate all action caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/actions`));
+  useSseEventHandler(eventSource, 'agreement_deleted', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after agreement_deleted');
+  });
 
-      console.log('[SSE] Revalidated actions after deletion:', data.action_id);
-    }
-  );
+  useSseEventHandler(eventSource, 'goal_created', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after goal_created');
+  });
 
-  // ==================== AGREEMENT EVENTS ====================
+  useSseEventHandler(eventSource, 'goal_updated', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after goal_updated');
+  });
 
-  useSseEventHandler<AgreementCreatedData>(
-    eventSource,
-    'agreement_created',
-    (data) => {
-      // Invalidate all agreement caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/agreements`));
-
-      console.log('[SSE] Revalidated agreements for relationship:', data.coaching_relationship_id);
-    }
-  );
-
-  useSseEventHandler<AgreementUpdatedData>(
-    eventSource,
-    'agreement_updated',
-    (data) => {
-      // Invalidate all agreement caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/agreements`));
-
-      console.log('[SSE] Revalidated agreement:', data.agreement.id);
-    }
-  );
-
-  useSseEventHandler<AgreementDeletedData>(
-    eventSource,
-    'agreement_deleted',
-    (data) => {
-      // Invalidate all agreement caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/agreements`));
-
-      console.log('[SSE] Revalidated agreements after deletion:', data.agreement_id);
-    }
-  );
-
-  // ==================== GOAL EVENTS ====================
-
-  useSseEventHandler<GoalCreatedData>(
-    eventSource,
-    'goal_created',
-    (data) => {
-      // Invalidate all goal caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/overarching_goals`));
-
-      console.log('[SSE] Revalidated goals for relationship:', data.coaching_relationship_id);
-    }
-  );
-
-  useSseEventHandler<GoalUpdatedData>(
-    eventSource,
-    'goal_updated',
-    (data) => {
-      // Invalidate all goal caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/overarching_goals`));
-
-      console.log('[SSE] Revalidated goal:', data.goal.id);
-    }
-  );
-
-  useSseEventHandler<GoalDeletedData>(
-    eventSource,
-    'goal_deleted',
-    (data) => {
-      // Invalidate all goal caches
-      mutate((key) => typeof key === 'string' && key.includes(`${baseUrl}/overarching_goals`));
-
-      console.log('[SSE] Revalidated goals after deletion:', data.goal_id);
-    }
-  );
+  useSseEventHandler(eventSource, 'goal_deleted', () => {
+    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    console.log('[SSE] Revalidated caches after goal_deleted');
+  });
 }
 ```
-
-**Why:**
-- **Simplest solution** - leverages existing SWR infrastructure
-- **Zero component changes** - components using `useActionList` automatically get updated data
-- **Consistent patterns** - matches `EntityApi.useEntityMutation` cache invalidation pattern
-- **Broad invalidation** - simple `includes()` check invalidates all related caches safely
-- **Automatic deduplication** - SWR handles multiple simultaneous revalidations
-- **Built-in error handling** - SWR retry logic applies
 
 ---
 
 ### Phase 6: System Events Hook
 
 **File:** `src/lib/hooks/use-sse-system-events.ts`
-
-Handle system-level events (force logout) using existing auth infrastructure.
 
 ```typescript
 "use client";
@@ -876,76 +598,59 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { useLogoutUser } from '@/lib/hooks/use-logout-user';
 import { useSseEventHandler } from './use-sse-event-handler';
-import type { ForceLogoutData } from '@/types/sse-events';
 
-/**
- * Handle system-level SSE events (force logout, etc.)
- * Integrates with existing auth infrastructure rather than direct manipulation.
- *
- * @param eventSource - The SSE connection
- */
 export function useSseSystemEvents(eventSource: EventSource | null) {
   const router = useRouter();
   const logout = useLogoutUser();
   const isLoggedIn = useAuthStore((store) => store.isLoggedIn);
 
-  useSseEventHandler<ForceLogoutData>(
-    eventSource,
-    'force_logout',
-    async (data) => {
-      console.warn('[SSE] Force logout received:', data.reason);
+  useSseEventHandler(eventSource, 'force_logout', async (event) => {
+    console.warn('[SSE] Force logout received:', event.data.reason);
 
-      if (isLoggedIn) {
-        // Use existing logout infrastructure (cleans up stores, calls API, etc.)
-        await logout();
-
-        // Redirect with reason
-        router.push(`/login?reason=forced_logout&message=${encodeURIComponent(data.reason)}`);
-      }
+    if (isLoggedIn) {
+      await logout();
+      router.push(`/login?reason=forced_logout&message=${encodeURIComponent(event.data.reason)}`);
     }
-  );
+  });
 }
 ```
 
-**Why:**
-- Uses existing `useLogoutUser` hook (proper cleanup)
-- Integrates with auth store
-- Consistent with existing logout flow
-- Proper navigation (not `window.location.href`)
-
 ---
 
-### Phase 7: SSE Providers
+### Phase 7: SSE Provider
 
-**File:** `src/lib/providers/sse-connection-store-provider.tsx`
-
-Provider for SSE connection store (follows existing pattern).
+**File:** `src/lib/providers/sse-provider.tsx`
 
 ```typescript
 "use client";
 
-import {
-  type ReactNode,
-  createContext,
-  useRef,
-  useContext,
-} from 'react';
+import { type ReactNode, createContext, useRef, useContext } from 'react';
 import { type StoreApi, useStore } from 'zustand';
 import { type SseConnectionStore, createSseConnectionStore } from '@/lib/stores/sse-connection-store';
 import { useShallow } from 'zustand/shallow';
+import { useAuthStore } from '@/lib/providers/auth-store-provider';
+import { useSseConnection } from '@/lib/hooks/use-sse-connection';
+import { useSseCacheInvalidation } from '@/lib/hooks/use-sse-cache-invalidation';
+import { useSseSystemEvents } from '@/lib/hooks/use-sse-system-events';
 
 export const SseConnectionStoreContext = createContext<StoreApi<SseConnectionStore> | null>(null);
 
-export interface SseConnectionStoreProviderProps {
+export interface SseProviderProps {
   children: ReactNode;
 }
 
-export const SseConnectionStoreProvider = ({ children }: SseConnectionStoreProviderProps) => {
+export const SseProvider = ({ children }: SseProviderProps) => {
   const storeRef = useRef<StoreApi<SseConnectionStore>>();
 
   if (!storeRef.current) {
     storeRef.current = createSseConnectionStore();
   }
+
+  const isLoggedIn = useAuthStore((store) => store.isLoggedIn);
+  const eventSource = useSseConnection(isLoggedIn);
+
+  useSseCacheInvalidation(eventSource);
+  useSseSystemEvents(eventSource);
 
   return (
     <SseConnectionStoreContext.Provider value={storeRef.current}>
@@ -960,81 +665,18 @@ export const useSseConnectionStore = <T,>(
   const context = useContext(SseConnectionStoreContext);
 
   if (!context) {
-    throw new Error('useSseConnectionStore must be used within SseConnectionStoreProvider');
+    throw new Error('useSseConnectionStore must be used within SseProvider');
   }
 
   return useStore(context, useShallow(selector));
 };
 ```
 
-**File:** `src/lib/providers/sse-provider.tsx`
-
-Main SSE provider that composes all hooks.
-
-```typescript
-"use client";
-
-import { type ReactNode } from 'react';
-import { SseConnectionStoreProvider } from './sse-connection-store-provider';
-import { useAuthStore } from '@/lib/providers/auth-store-provider';
-import { useSseConnection } from '@/lib/hooks/use-sse-connection';
-import { useSseCacheInvalidation } from '@/lib/hooks/use-sse-cache-invalidation';
-import { useSseSystemEvents } from '@/lib/hooks/use-sse-system-events';
-
-interface SseClientProps {
-  children: ReactNode;
-}
-
-/**
- * Internal component that establishes SSE connection and sets up event handlers.
- * Must be rendered inside SseConnectionStoreProvider and AuthStoreProvider.
- */
-function SseClient({ children }: SseClientProps) {
-  const isLoggedIn = useAuthStore((store) => store.isLoggedIn);
-  const eventSource = useSseConnection(isLoggedIn);
-
-  // Auto-invalidate SWR caches on events
-  useSseCacheInvalidation(eventSource);
-
-  // Handle system events (force logout)
-  useSseSystemEvents(eventSource);
-
-  return <>{children}</>;
-}
-
-/**
- * Main SSE provider that wraps the application.
- * Establishes single app-wide SSE connection and handles all events.
- *
- * Usage:
- * ```tsx
- * <SseProvider>
- *   <YourApp />
- * </SseProvider>
- * ```
- */
-export function SseProvider({ children }: SseClientProps) {
-  return (
-    <SseConnectionStoreProvider>
-      <SseClient>{children}</SseClient>
-    </SseConnectionStoreProvider>
-  );
-}
-```
-
-**Why:**
-- Follows existing provider pattern (AuthStoreProvider, OrganizationStateStoreProvider)
-- Clean separation of concerns
-- Composes hooks cleanly
-- Single app-wide connection
-
 ---
 
 ### Phase 8: Integrate into Root Providers
 
-**File:** `src/components/providers.tsx` (updated)
-
-Add SSE provider to existing provider composition.
+**File:** `src/components/providers.tsx`
 
 ```typescript
 "use client";
@@ -1044,7 +686,7 @@ import { AuthStoreProvider } from '@/lib/providers/auth-store-provider';
 import { OrganizationStateStoreProvider } from '@/lib/providers/organization-state-store-provider';
 import { CoachingRelationshipStateStoreProvider } from '@/lib/providers/coaching-relationship-state-store-provider';
 import { SessionCleanupProvider } from '@/lib/providers/session-cleanup-provider';
-import { SseProvider } from '@/lib/providers/sse-provider'; // NEW
+import { SseProvider } from '@/lib/providers/sse-provider';
 import { SWRConfig } from 'swr';
 
 interface ProvidersProps {
@@ -1064,7 +706,6 @@ export function Providers({ children }: ProvidersProps) {
                 provider: () => new Map(),
               }}
             >
-              {/* NEW: SSE Provider establishes connection and handles events */}
               <SseProvider>
                 {children}
               </SseProvider>
@@ -1077,46 +718,25 @@ export function Providers({ children }: ProvidersProps) {
 }
 ```
 
-**Why:**
-- Consistent with existing pattern
-- SSE connection established once for entire app
-- Events handled automatically
-- Zero changes needed in existing components
-
 ---
 
 ### Phase 9 (Optional): Connection Status UI
 
 **File:** `src/components/sse-connection-indicator.tsx`
 
-Optional visual indicator for connection status.
-
 ```typescript
 "use client";
 
-import { useSseConnectionStore } from '@/lib/providers/sse-connection-store-provider';
+import { useSseConnectionStore } from '@/lib/providers/sse-provider';
 import { SseConnectionState } from '@/lib/stores/sse-connection-store';
 import { AlertCircle, Loader2, WifiOff } from 'lucide-react';
 
-/**
- * Optional UI component to display SSE connection status.
- * Non-intrusive - only shows when NOT connected.
- *
- * Can be placed in app header/status bar:
- * ```tsx
- * <Header>
- *   <SseConnectionIndicator />
- * </Header>
- * ```
- */
 export function SseConnectionIndicator() {
-  const { state, lastError, reconnectAttempts } = useSseConnectionStore((store) => ({
+  const { state, lastError } = useSseConnectionStore((store) => ({
     state: store.state,
     lastError: store.lastError,
-    reconnectAttempts: store.reconnectAttempts,
   }));
 
-  // Don't show anything when connected (non-intrusive)
   if (state === SseConnectionState.Connected) {
     return null;
   }
@@ -1124,7 +744,6 @@ export function SseConnectionIndicator() {
   const getIcon = () => {
     switch (state) {
       case SseConnectionState.Connecting:
-      case SseConnectionState.Reconnecting:
         return <Loader2 className="h-4 w-4 animate-spin" />;
       case SseConnectionState.Error:
         return <AlertCircle className="h-4 w-4" />;
@@ -1139,8 +758,6 @@ export function SseConnectionIndicator() {
     switch (state) {
       case SseConnectionState.Connecting:
         return 'Connecting to live updates...';
-      case SseConnectionState.Reconnecting:
-        return `Reconnecting (attempt ${reconnectAttempts})...`;
       case SseConnectionState.Error:
         return lastError?.message || 'Connection error';
       case SseConnectionState.Disconnected:
@@ -1153,7 +770,6 @@ export function SseConnectionIndicator() {
   const getColorClass = () => {
     switch (state) {
       case SseConnectionState.Connecting:
-      case SseConnectionState.Reconnecting:
         return 'text-yellow-600 dark:text-yellow-400';
       case SseConnectionState.Error:
         return 'text-red-600 dark:text-red-400';
@@ -1173,39 +789,16 @@ export function SseConnectionIndicator() {
 }
 ```
 
-**Usage:**
-```tsx
-// In app header or status bar
-import { SseConnectionIndicator } from '@/components/sse-connection-indicator';
-
-export function AppHeader() {
-  return (
-    <header>
-      <SseConnectionIndicator />
-      {/* other header content */}
-    </header>
-  );
-}
-```
-
-**Why:**
-- Non-intrusive (hidden when connected)
-- Visual feedback for users
-- Useful for debugging
-- Optional (not required for functionality)
-
 ---
 
 ## Testing Strategy
 
 ### Unit Tests
 
-**Test SSE Event Handler:**
 ```typescript
 // src/lib/hooks/__tests__/use-sse-event-handler.test.ts
 import { renderHook } from '@testing-library/react';
 import { useSseEventHandler } from '../use-sse-event-handler';
-import type { ActionCreatedData } from '@/types/sse-events';
 
 describe('useSseEventHandler', () => {
   it('should handle action_created events with correct typing', () => {
@@ -1213,59 +806,9 @@ describe('useSseEventHandler', () => {
     const mockHandler = jest.fn();
 
     renderHook(() =>
-      useSseEventHandler<ActionCreatedData>(
-        mockEventSource,
-        'action_created',
-        mockHandler
-      )
+      useSseEventHandler(mockEventSource, 'action_created', mockHandler)
     );
 
-    // Trigger event
-    const event = new MessageEvent('action_created', {
-      data: JSON.stringify({
-        type: 'action_created',
-        data: {
-          coaching_session_id: 'session-123',
-          action: { id: 'action-1', /* ... */ }
-        }
-      })
-    });
-
-    mockEventSource.dispatchEvent(event);
-
-    // Verify handler called with typed data
-    expect(mockHandler).toHaveBeenCalledWith(
-      expect.objectContaining({
-        coaching_session_id: 'session-123',
-        action: expect.objectContaining({ id: 'action-1' })
-      })
-    );
-  });
-});
-```
-
-**Test SWR Cache Invalidation:**
-```typescript
-// src/lib/hooks/__tests__/use-sse-cache-invalidation.test.ts
-import { renderHook, waitFor } from '@testing-library/react';
-import { useSseCacheInvalidation } from '../use-sse-cache-invalidation';
-import { useActionList } from '@/lib/api/actions';
-import { mutate } from 'swr';
-
-jest.mock('swr', () => ({
-  useSWRConfig: () => ({ mutate: jest.fn() }),
-}));
-
-describe('useSseCacheInvalidation', () => {
-  it('should revalidate action cache on action_created event', async () => {
-    const mockEventSource = new EventSource('mock-url');
-    const mockMutate = jest.fn();
-
-    (mutate as jest.Mock).mockImplementation(mockMutate);
-
-    renderHook(() => useSseCacheInvalidation(mockEventSource));
-
-    // Trigger SSE event
     const event = new MessageEvent('action_created', {
       data: JSON.stringify({
         type: 'action_created',
@@ -1278,19 +821,20 @@ describe('useSseCacheInvalidation', () => {
 
     mockEventSource.dispatchEvent(event);
 
-    // Verify SWR cache was invalidated
-    await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.stringContaining('/actions?coaching_session_id=session-123')
-      );
-    });
+    expect(mockHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'action_created',
+        data: expect.objectContaining({
+          coaching_session_id: 'session-123'
+        })
+      })
+    );
   });
 });
 ```
 
 ### Integration Tests
 
-**Test End-to-End Flow:**
 ```typescript
 // Integration test: SSE event → cache invalidation → component update
 import { render, screen, waitFor } from '@testing-library/react';
@@ -1299,17 +843,14 @@ import { CoachingSessionPage } from '@/app/coaching-sessions/[id]/page';
 
 describe('SSE Integration', () => {
   it('should update action list when action_created event received', async () => {
-    // Render component with SSE provider
     render(
       <SseProvider>
         <CoachingSessionPage sessionId="session-123" />
       </SseProvider>
     );
 
-    // Initial state: no actions
     expect(screen.queryByText('Test Action')).not.toBeInTheDocument();
 
-    // Simulate SSE event from backend
     const event = new MessageEvent('action_created', {
       data: JSON.stringify({
         type: 'action_created',
@@ -1322,7 +863,6 @@ describe('SSE Integration', () => {
 
     window.EventSource.prototype.dispatchEvent(event);
 
-    // Wait for SWR to refetch and component to update
     await waitFor(() => {
       expect(screen.getByText('Test Action')).toBeInTheDocument();
     });
@@ -1334,66 +874,36 @@ describe('SSE Integration', () => {
 
 ## Security Considerations
 
-### Authentication
 - SSE endpoint requires valid session cookie (handled by `withCredentials: true`)
 - Backend validates session via `AuthenticatedUser` extractor
-- No additional auth tokens needed
-
-### Authorization
 - Backend determines event recipients (not client-controlled)
-- Events only sent to authorized users
-- Frontend cannot request events for other users
-
-### Data Validation
 - Type guards validate event structure at runtime
-- Prevents malformed events from crashing UI
-- Console errors logged for debugging
-
-### Connection Security
 - HTTPS enforced in production (via nginx)
 - Session cookies are httpOnly and secure
-- No sensitive data in event stream (just IDs and references)
 
 ---
 
 ## Performance Considerations
 
-### Connection Overhead
-- **Single connection per user** (not per component)
+- Single connection per user (not per component)
 - Minimal bandwidth (only events for this user)
-- Keep-alive messages every 15s (small overhead)
-
-### Memory Usage
-- EventSource object: ~1KB per connection
-- Event handlers: minimal (closures with refs)
-- Zustand store: ~1KB for connection state
-
-### Network Usage
-- Events only sent when changes occur
-- No polling (reduces bandwidth vs. polling solutions)
-- Automatic reconnection prevents connection leaks
-
-### SWR Cache Behavior
-- Multiple simultaneous invalidations are deduplicated by SWR
-- SWR batches requests within 2 seconds
-- Existing SWR cache stays fresh without polling
+- Keep-alive messages every 15s prevent timeouts
+- Native browser reconnection prevents connection leaks
+- SWR deduplicates simultaneous cache invalidations
+- Broad cache invalidation leverages SWR's batching
 
 ---
 
 ## Debugging Guide
 
-### Connection Issues
-
-**Check connection state:**
+### Check connection state:
 ```typescript
-// In any component
-import { useSseConnectionStore } from '@/lib/providers/sse-connection-store-provider';
+import { useSseConnectionStore } from '@/lib/providers/sse-provider';
 
 function DebugComponent() {
   const connectionState = useSseConnectionStore((store) => ({
     state: store.state,
     lastError: store.lastError,
-    reconnectAttempts: store.reconnectAttempts,
     lastConnectedAt: store.lastConnectedAt,
     lastEventAt: store.lastEventAt,
   }));
@@ -1402,117 +912,10 @@ function DebugComponent() {
 }
 ```
 
-**Check browser DevTools:**
+### Check Redux DevTools:
 1. Open Redux DevTools → `sse-connection-store`
 2. View connection state, errors, timestamps
 3. Monitor state transitions
-
-**Check browser console:**
-```
-[SSE] Connection established
-[SSE] Revalidated actions for session: abc-123
-[SSE] Connection error: Failed to fetch
-[SSE] Reconnecting in 1500ms...
-```
-
-### Event Flow Issues
-
-**Verify events are received:**
-```typescript
-// Add debug handler
-useSseEventHandler(
-  eventSource,
-  'action_created',
-  (data) => {
-    console.log('[DEBUG] Received action_created:', data);
-  }
-);
-```
-
-**Check SWR cache keys:**
-```typescript
-// In browser console
-window.swr = useSWRConfig();
-console.log(window.swr.cache.keys());
-```
-
-**Verify cache invalidation:**
-```typescript
-// Watch for mutate calls
-const originalMutate = mutate;
-mutate = (...args) => {
-  console.log('[DEBUG] SWR mutate called:', args[0]);
-  return originalMutate(...args);
-};
-```
-
----
-
-## Migration from Polling (If Applicable)
-
-If currently using polling, migration is straightforward:
-
-**Before (Polling):**
-```typescript
-// Remove polling interval
-useEffect(() => {
-  const interval = setInterval(() => {
-    refresh(); // Manual refresh every 5 seconds
-  }, 5000);
-  return () => clearInterval(interval);
-}, [refresh]);
-```
-
-**After (SSE):**
-```typescript
-// No changes needed in component!
-// SSE automatically triggers cache invalidation
-// Components using useActionList automatically get updates
-```
-
-**Benefits:**
-- Reduced server load (no constant polling)
-- Lower latency (events arrive immediately)
-- Less bandwidth usage
-- Better battery life (mobile devices)
-
----
-
-## Future Enhancements (Out of Scope)
-
-### Advanced Features
-- **Optimistic updates**: Update UI before event arrives, rollback on error
-- **Event replay**: Persist critical events for offline users
-- **Presence indicators**: Show who's viewing a session
-- **Typing indicators**: Real-time collaboration features
-- **Conflict resolution**: Handle simultaneous edits
-
-### Additional Event Types
-- Session lifecycle: `session_started`, `session_ended`
-- User presence: `user_joined_session`, `user_left_session`
-- Notifications: `notification_created`, `notification_dismissed`
-
-### Performance Optimizations
-- **Event batching**: Group multiple events into single message
-- **Compression**: Enable gzip for event stream
-- **Selective subscriptions**: Subscribe only to relevant event types
-
----
-
-## References
-
-### Documentation
-- [MDN Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
-- [SWR Documentation](https://swr.vercel.app/)
-- [Zustand Documentation](https://docs.pmnd.rs/zustand)
-- [Next.js Client Components](https://nextjs.org/docs/app/building-your-application/rendering/client-components)
-
-### Backend Integration
-- See `docs/implementation-plans/sse-communication.md` in backend repo for:
-  - SSE event format
-  - Authentication flow
-  - Nginx configuration
-  - Message routing logic
 
 ---
 
@@ -1520,11 +923,12 @@ useEffect(() => {
 
 This implementation provides a robust, type-safe, and maintainable SSE solution that:
 
-✅ **Follows existing patterns** (SWR, Zustand, hooks, providers)
-✅ **Requires zero component changes** (automatic cache invalidation)
-✅ **Strongly typed throughout** (no `any` types)
-✅ **Handles failures gracefully** (automatic reconnection with backoff)
-✅ **Integrates seamlessly** (with existing auth, routing, caching)
-✅ **Production-ready** (error tracking, debugging, monitoring)
+✅ Uses native browser APIs (no external dependencies)
+✅ Follows existing patterns (SWR, Zustand, hooks, providers, logout cleanup)
+✅ Requires zero component changes (automatic cache invalidation)
+✅ Strongly typed throughout (discriminated unions)
+✅ Handles failures gracefully (automatic reconnection)
+✅ Integrates seamlessly (with existing auth, routing, caching)
+✅ Production-ready (error tracking, debugging, monitoring)
 
 The key insight: **leverage SWR cache invalidation instead of manual state updates**. This is simpler, more reliable, and consistent with existing codebase patterns.
