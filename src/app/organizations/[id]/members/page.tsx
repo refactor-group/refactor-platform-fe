@@ -9,9 +9,9 @@ import { useUserList } from "@/lib/api/organizations/users";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { Id } from "@/types/general";
-import { isAdminOrSuperAdmin } from "@/types/user";
 import { MemberContainer } from "@/components/ui/members/member-container";
 import { PageContainer } from "@/components/ui/page-container";
+import { shouldDenyMembersPageAccess } from "./access-control";
 
 export default function MembersPage({
   params,
@@ -34,9 +34,7 @@ export default function MembersPage({
     }
   }, [organizationId, currentOrganizationId, setCurrentOrganizationId]);
 
-  // Access control: only Admin and SuperAdmin users can access the members page
-  // Regular users will see a 404 page
-  if (currentOrganizationId === organizationId && !isAdminOrSuperAdmin(currentUserRoleState)) {
+  if (shouldDenyMembersPageAccess(currentOrganizationId, organizationId, currentUserRoleState)) {
     notFound();
   }
 
