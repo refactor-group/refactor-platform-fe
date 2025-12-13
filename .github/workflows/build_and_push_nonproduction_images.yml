@@ -124,7 +124,8 @@ jobs:
         id: tags
         run: |
           BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}
-          IMAGE_BASE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME}"
+          BRANCH_NAME_LOWER=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]')
+          IMAGE_BASE="${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.REPO_NAME }}/${BRANCH_NAME_LOWER}"
           echo "frontend_tags=$IMAGE_BASE:latest,$IMAGE_BASE:${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "frontend_image_name=$IMAGE_BASE" >> $GITHUB_OUTPUT
 
