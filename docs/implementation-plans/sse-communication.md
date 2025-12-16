@@ -672,6 +672,11 @@ export const useSseConnectionStore = <T,>(
 };
 ```
 
+**Note on Provider Initialization Order:**
+`AuthStoreProvider` returns `null` until `useEffect` hydrates from localStorage, causing two render cycles at root.
+However, `SseProvider` only mounts once (during second cycle) when `AuthStoreContext` is already available.
+This guarantees `useAuthStore((store) => store.isLoggedIn)` reads hydrated state and SSE connects safely if authenticated.
+
 ---
 
 ### Phase 8: Integrate into Root Providers
