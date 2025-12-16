@@ -165,6 +165,9 @@ src/
 │   ├── stores/
 │   │   └── sse-connection-store.ts       # Connection state management
 │   │
+│   ├── contexts/
+│   │   └── sse-connection-context.tsx    # Store context (prevents circular imports)
+│   │
 │   ├── hooks/
 │   │   ├── use-sse-connection.ts         # Native EventSource connection
 │   │   ├── use-sse-event-handler.ts      # Type-safe event handler
@@ -320,6 +323,7 @@ export enum SseConnectionState {
   Disconnected = "Disconnected",
   Connecting = "Connecting",
   Connected = "Connected",
+  Reconnecting = "Reconnecting",
   Error = "Error",
 }
 
@@ -339,6 +343,7 @@ interface SseConnectionStateData {
 interface SseConnectionActions {
   setConnecting: () => void;
   setConnected: () => void;
+  setReconnecting: () => void;
   setError: (error: string) => void;
   setDisconnected: () => void;
   recordEvent: () => void;
@@ -371,6 +376,10 @@ export const createSseConnectionStore = () => {
           });
         },
 
+        setReconnecting: () => {
+          set({ state: SseConnectionState.Reconnecting });
+        },
+
         setError: (message: string) => {
           set({
             state: SseConnectionState.Error,
@@ -398,6 +407,43 @@ export const createSseConnectionStore = () => {
 
 ---
 
+### Phase 2.5: SSE Connection Context (Prevent Circular Imports)
+
+**File:** `src/lib/contexts/sse-connection-context.tsx`
+
+Extract the context and hook to prevent circular imports between `sse-provider.tsx` and `use-sse-connection.ts`.
+
+```typescript
+"use client";
+
+import { createContext, useContext } from 'react';
+import { type StoreApi, useStore } from 'zustand';
+import { type SseConnectionStore } from '@/lib/stores/sse-connection-store';
+import { useShallow } from 'zustand/shallow';
+
+export const SseConnectionStoreContext = createContext<StoreApi<SseConnectionStore> | null>(null);
+
+export const useSseConnectionStore = <T,>(
+  selector: (store: SseConnectionStore) => T
+): T => {
+  const context = useContext(SseConnectionStoreContext);
+
+  if (!context) {
+    throw new Error('useSseConnectionStore must be used within SseProvider');
+  }
+
+  return useStore(context, useShallow(selector));
+};
+```
+
+**Why this is needed:**
+- `use-sse-connection.ts` needs `useSseConnectionStore`
+- `sse-provider.tsx` needs `useSseConnection`
+- Without this extraction, we have a circular dependency
+- Follows the same pattern as `AuthStoreProvider` / `useAuthStore`
+
+---
+
 ### Phase 3: SSE Connection Hook (Native EventSource)
 
 **File:** `src/lib/hooks/use-sse-connection.ts`
@@ -407,7 +453,7 @@ export const createSseConnectionStore = () => {
 
 import { useEffect, useRef } from 'react';
 import { siteConfig } from '@/site.config';
-import { useSseConnectionStore } from '@/lib/providers/sse-provider';
+import { useSseConnectionStore } from '@/lib/contexts/sse-connection-context';
 import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry';
 
 export function useSseConnection(isLoggedIn: boolean) {
@@ -416,12 +462,14 @@ export function useSseConnection(isLoggedIn: boolean) {
   const {
     setConnecting,
     setConnected,
+    setReconnecting,
     setError,
     setDisconnected,
     recordEvent,
   } = useSseConnectionStore((store) => ({
     setConnecting: store.setConnecting,
     setConnected: store.setConnected,
+    setReconnecting: store.setReconnecting,
     setError: store.setError,
     setDisconnected: store.setDisconnected,
     recordEvent: store.recordEvent,
@@ -448,7 +496,17 @@ export function useSseConnection(isLoggedIn: boolean) {
 
     source.onerror = (error) => {
       console.error('[SSE] Connection error:', error);
-      setError('Connection error - browser will auto-reconnect');
+
+      // Check readyState to distinguish network errors from HTTP errors
+      if (source.readyState === EventSource.CONNECTING) {
+        // Browser is attempting reconnection (network error)
+        setReconnecting();
+        console.log('[SSE] Connection lost, browser attempting reconnection...');
+      } else {
+        // EventSource.CLOSED - permanent failure (HTTP error like 401, 403, 500)
+        setError('Connection failed - check authentication or server status');
+        source.close();
+      }
     };
 
     eventSourceRef.current = source;
@@ -463,7 +521,7 @@ export function useSseConnection(isLoggedIn: boolean) {
       setDisconnected();
       unregisterCleanup();
     };
-  }, [isLoggedIn, setConnecting, setConnected, setError, setDisconnected]);
+  }, [isLoggedIn, setConnecting, setConnected, setReconnecting, setError, setDisconnected]);
 
   return eventSourceRef.current;
 }
@@ -480,7 +538,7 @@ export function useSseConnection(isLoggedIn: boolean) {
 
 import { useEffect, useRef } from 'react';
 import type { SseEvent } from '@/types/sse-events';
-import { useSseConnectionStore } from '@/lib/providers/sse-provider';
+import { useSseConnectionStore } from '@/lib/contexts/sse-connection-context';
 import { transformEntityDates } from '@/types/general';
 
 export function useSseEventHandler<T extends SseEvent['type']>(
@@ -624,16 +682,14 @@ export function useSseSystemEvents(eventSource: EventSource | null) {
 ```typescript
 "use client";
 
-import { type ReactNode, createContext, useRef, useContext } from 'react';
-import { type StoreApi, useStore } from 'zustand';
+import { type ReactNode, useRef } from 'react';
+import { type StoreApi } from 'zustand';
 import { type SseConnectionStore, createSseConnectionStore } from '@/lib/stores/sse-connection-store';
-import { useShallow } from 'zustand/shallow';
+import { SseConnectionStoreContext } from '@/lib/contexts/sse-connection-context';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { useSseConnection } from '@/lib/hooks/use-sse-connection';
 import { useSseCacheInvalidation } from '@/lib/hooks/use-sse-cache-invalidation';
 import { useSseSystemEvents } from '@/lib/hooks/use-sse-system-events';
-
-export const SseConnectionStoreContext = createContext<StoreApi<SseConnectionStore> | null>(null);
 
 export interface SseProviderProps {
   children: ReactNode;
@@ -657,18 +713,6 @@ export const SseProvider = ({ children }: SseProviderProps) => {
       {children}
     </SseConnectionStoreContext.Provider>
   );
-};
-
-export const useSseConnectionStore = <T,>(
-  selector: (store: SseConnectionStore) => T
-): T => {
-  const context = useContext(SseConnectionStoreContext);
-
-  if (!context) {
-    throw new Error('useSseConnectionStore must be used within SseProvider');
-  }
-
-  return useStore(context, useShallow(selector));
 };
 ```
 
@@ -732,7 +776,7 @@ export function Providers({ children }: ProvidersProps) {
 ```typescript
 "use client";
 
-import { useSseConnectionStore } from '@/lib/providers/sse-provider';
+import { useSseConnectionStore } from '@/lib/contexts/sse-connection-context';
 import { SseConnectionState } from '@/lib/stores/sse-connection-store';
 import { AlertCircle, Loader2, WifiOff } from 'lucide-react';
 
@@ -749,6 +793,7 @@ export function SseConnectionIndicator() {
   const getIcon = () => {
     switch (state) {
       case SseConnectionState.Connecting:
+      case SseConnectionState.Reconnecting:
         return <Loader2 className="h-4 w-4 animate-spin" />;
       case SseConnectionState.Error:
         return <AlertCircle className="h-4 w-4" />;
@@ -763,6 +808,8 @@ export function SseConnectionIndicator() {
     switch (state) {
       case SseConnectionState.Connecting:
         return 'Connecting to live updates...';
+      case SseConnectionState.Reconnecting:
+        return 'Reconnecting to live updates...';
       case SseConnectionState.Error:
         return lastError?.message || 'Connection error';
       case SseConnectionState.Disconnected:
@@ -775,6 +822,7 @@ export function SseConnectionIndicator() {
   const getColorClass = () => {
     switch (state) {
       case SseConnectionState.Connecting:
+      case SseConnectionState.Reconnecting:
         return 'text-yellow-600 dark:text-yellow-400';
       case SseConnectionState.Error:
         return 'text-red-600 dark:text-red-400';
