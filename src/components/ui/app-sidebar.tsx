@@ -30,7 +30,8 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { SidebarCollapsible } from "@/types/sidebar";
+import { SidebarCollapsible, SidebarState, StateChangeSource } from "@/types/sidebar";
+import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { isAdminOrSuperAdmin } from "@/types/user";
@@ -50,6 +51,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const router = useRouter();
   const pathname = usePathname();
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const { state: sidebarState, expand, isMobile } = useSidebar();
 
   const handleOrgChange = (newOrgId: Id) => {
     // Check if current path is organization-scoped
@@ -123,7 +125,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <span className={menuButtonStyles.iconWrapper}>
                       <Home className="h-4 w-4" />
                     </span>
-                    <span>Dashboard</span>
+                    <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -148,7 +150,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className={menuButtonStyles.iconWrapper}>
                     <Gift className="h-4 w-4" />
                   </span>
-                  <span>Referrals</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Referrals</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -166,12 +168,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         menuButtonStyles.button,
                         menuButtonStyles.buttonCollapsed
                       )}
+                      onClick={(e) => {
+                        if (!isMobile && sidebarState === SidebarState.Collapsed) {
+                          e.preventDefault();
+                          expand(StateChangeSource.UserAction);
+                          setIsAdminMenuOpen(true);
+                        }
+                      }}
                     >
                       <span className={menuButtonStyles.iconWrapper}>
                         <Settings className="h-4 w-4" />
                       </span>
-                      <span>Organization settings</span>
-                      <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        Organization settings
+                      </span>
+                      <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
@@ -210,7 +221,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <span className={menuButtonStyles.iconWrapper}>
                     <BarChart3 className="h-4 w-4" />
                   </span>
-                  <span>System status</span>
+                  <span className="group-data-[collapsible=icon]:hidden">System status</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
