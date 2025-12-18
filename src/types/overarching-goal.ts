@@ -1,3 +1,4 @@
+import { DateTime } from "ts-luxon";
 import { Id, ItemStatus } from "@/types/general";
 
 // This must always reflect the Rust struct on the backend
@@ -9,10 +10,10 @@ export interface OverarchingGoal {
   title: string;
   body: string;
   status: ItemStatus;
-  status_changed_at: string;
-  completed_at: string;
-  created_at: string;
-  updated_at: string;
+  status_changed_at: DateTime;
+  completed_at: DateTime;
+  created_at: DateTime;
+  updated_at: DateTime;
 }
 
 export function parseOverarchingGoal(data: any): OverarchingGoal {
@@ -88,6 +89,7 @@ export function getOverarchingGoalById(
 }
 
 export function defaultOverarchingGoal(): OverarchingGoal {
+  const now = DateTime.now();
   return {
     id: "",
     coaching_session_id: "",
@@ -95,10 +97,10 @@ export function defaultOverarchingGoal(): OverarchingGoal {
     title: "",
     body: "",
     status: ItemStatus.NotStarted,
-    status_changed_at: "",
-    completed_at: "",
-    created_at: "",
-    updated_at: "",
+    status_changed_at: now,
+    completed_at: now,
+    created_at: now,
+    updated_at: now,
   };
 }
 
