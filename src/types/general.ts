@@ -161,6 +161,7 @@ export const transformEntityDates = (data: any): any => {
   convertDate("updated_at");
   convertDate("due_by");
   convertDate("status_changed_at");
+  convertDate("completed_at");
 
   return transformed;
 };
