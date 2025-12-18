@@ -1,0 +1,29 @@
+"use client";
+
+import { type ReactNode, useRef } from 'react';
+import { createSseConnectionStore } from '@/lib/stores/sse-connection-store';
+import { SseConnectionStoreContext } from '@/lib/contexts/sse-connection-context';
+import { useAuthStore } from '@/lib/providers/auth-store-provider';
+import { useSseConnection } from '@/lib/hooks/use-sse-connection';
+import { useSseCacheInvalidation } from '@/lib/hooks/use-sse-cache-invalidation';
+import { useSseSystemEvents } from '@/lib/hooks/use-sse-system-events';
+
+export interface SseProviderProps {
+  children: ReactNode;
+}
+
+export const SseProvider = ({ children }: SseProviderProps) => {
+  const storeRef = useRef(createSseConnectionStore());
+
+  const isLoggedIn = useAuthStore((store) => store.isLoggedIn);
+  const eventSource = useSseConnection(isLoggedIn);
+
+  useSseCacheInvalidation(eventSource);
+  useSseSystemEvents(eventSource);
+
+  return (
+    <SseConnectionStoreContext.Provider value={storeRef.current}>
+      {children}
+    </SseConnectionStoreContext.Provider>
+  );
+};
