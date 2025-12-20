@@ -2,11 +2,28 @@ import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import { User } from "@/types/user";
 
+/**
+ * AI privacy level for coaching relationships.
+ * Controls what AI features are enabled for the relationship.
+ */
+export enum AiPrivacyLevel {
+  /** No AI recording or transcribing integration */
+  None = "none",
+  /** Text transcription only, no video/audio storage */
+  TranscribeOnly = "transcribe_only",
+  /** All AI recording and transcribing features enabled */
+  Full = "full",
+}
+
 export interface CoachingRelationship {
   id: Id;
   coach_id: Id;
   coachee_id: Id;
   organization_id: Id;
+  /** Google Meet URL for this coaching relationship */
+  meeting_url: string | null;
+  /** AI privacy level for this coaching relationship */
+  ai_privacy_level: AiPrivacyLevel;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -57,7 +74,10 @@ export function isCoachingRelationshipWithUserNames(
     typeof object.coachee_first_name === "string" &&
     typeof object.coachee_last_name === "string" &&
     typeof object.created_at === "string" &&
-    typeof object.updated_at === "string"
+    typeof object.updated_at === "string" &&
+    // New fields: meeting_url can be null or string, ai_privacy_level is required
+    (object.meeting_url === null || typeof object.meeting_url === "string") &&
+    typeof object.ai_privacy_level === "string"
   );
 }
 
@@ -82,7 +102,7 @@ export function getCoachingRelationshipById(
 }
 
 export function defaultCoachingRelationshipWithUserNames(): CoachingRelationshipWithUserNames {
-  var now = DateTime.now();
+  const now = DateTime.now();
   return {
     id: "",
     coach_id: "",
@@ -92,6 +112,8 @@ export function defaultCoachingRelationshipWithUserNames(): CoachingRelationship
     organization_id: "",
     coachee_first_name: "",
     coachee_last_name: "",
+    meeting_url: null,
+    ai_privacy_level: AiPrivacyLevel.Full,
     created_at: now,
     updated_at: now,
   };
