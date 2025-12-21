@@ -16,6 +16,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import ShareSessionLink from "@/components/ui/share-session-link";
+import { MeetingControls } from "@/components/ui/coaching-sessions/meeting-controls";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
@@ -122,7 +123,8 @@ export default function CoachingSessionsPage() {
               locale={siteConfig.locale}
               style={siteConfig.titleStyle}
             />
-            <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md items-center gap-3 sm:justify-end md:justify-start">
+            <div className="ml-auto flex w-full items-center gap-3 sm:justify-end md:justify-start flex-wrap">
+              <MeetingControls sessionId={currentCoachingSessionId || ""} />
               <ShareSessionLink
                 sessionId={params.id as string}
                 onError={handleShareError}
