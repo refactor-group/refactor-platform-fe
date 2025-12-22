@@ -10,7 +10,17 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
   const baseUrl = siteConfig.env.backendServiceURL;
 
   const invalidateAllCaches = useCallback(() => {
-    mutate((key) => typeof key === 'string' && key.includes(baseUrl));
+    mutate(
+      (key) => {
+        // Handle string keys
+        if (typeof key === 'string' && key.includes(baseUrl)) return true;
+        // Handle array keys (SWR supports both formats)
+        if (Array.isArray(key) && key[0] && key[0].includes(baseUrl)) return true;
+        return false;
+      },
+      undefined,
+      { revalidate: true }
+    );
   }, [mutate, baseUrl]);
 
   useSseEventHandler(eventSource, 'action_created', () => {
