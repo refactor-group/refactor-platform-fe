@@ -20,7 +20,7 @@ export function HeaderSessionSelector() {
   }
 
   return (
-    <div className="w-48">
+    <div className="w-64 md:w-72 lg:w-80">
       <CoachingSessionSelector
         relationshipId={currentCoachingRelationshipId}
         disabled={!currentCoachingRelationshipId}
