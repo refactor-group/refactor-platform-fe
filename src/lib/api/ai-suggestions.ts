@@ -39,18 +39,18 @@ export const AiSuggestionApi = {
    * Accepts an AI suggestion and creates the corresponding entity.
    */
   accept: async (suggestionId: Id): Promise<AcceptSuggestionResponse> =>
-    EntityApi.createFn<null, AcceptSuggestionResponse>(
+    EntityApi.createFn<Record<string, never>, AcceptSuggestionResponse>(
       `${AI_SUGGESTIONS_BASEURL}/${suggestionId}/accept`,
-      null
+      {}
     ),
 
   /**
    * Dismisses an AI suggestion.
    */
   dismiss: async (suggestionId: Id): Promise<AiSuggestedItem> =>
-    EntityApi.createFn<null, AiSuggestedItem>(
+    EntityApi.createFn<Record<string, never>, AiSuggestedItem>(
       `${AI_SUGGESTIONS_BASEURL}/${suggestionId}/dismiss`,
-      null
+      {}
     ),
 };
 

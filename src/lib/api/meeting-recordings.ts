@@ -51,18 +51,18 @@ export const MeetingRecordingApi = {
    * Starts a new recording for a coaching session.
    */
   start: async (sessionId: Id): Promise<StartRecordingResponse> =>
-    EntityApi.createFn<null, StartRecordingResponse>(
+    EntityApi.createFn<Record<string, never>, StartRecordingResponse>(
       `${COACHING_SESSIONS_BASEURL}/${sessionId}/recording/start`,
-      null
+      {}
     ),
 
   /**
    * Stops the current recording for a coaching session.
    */
   stop: async (sessionId: Id): Promise<StopRecordingResponse> =>
-    EntityApi.createFn<null, StopRecordingResponse>(
+    EntityApi.createFn<Record<string, never>, StopRecordingResponse>(
       `${COACHING_SESSIONS_BASEURL}/${sessionId}/recording/stop`,
-      null
+      {}
     ),
 
   /**
@@ -133,6 +133,7 @@ export const useMeetingRecording = (sessionId: Id) => {
 
 /**
  * Hook for fetching the transcript for a session.
+ * Polls every 5 seconds while transcription is processing.
  */
 export const useTranscript = (sessionId: Id) => {
   const url = sessionId
@@ -141,7 +142,10 @@ export const useTranscript = (sessionId: Id) => {
   const fetcher = () => MeetingRecordingApi.getTranscript(sessionId);
 
   const { entity, isLoading, isError, refresh } =
-    EntityApi.useEntity<Transcription | null>(url, fetcher, null);
+    EntityApi.useEntity<Transcription | null>(url, fetcher, null, {
+      refreshInterval: 5000, // Poll every 5 seconds for status updates
+      revalidateOnFocus: true,
+    });
 
   return {
     transcript: entity,
@@ -153,6 +157,7 @@ export const useTranscript = (sessionId: Id) => {
 
 /**
  * Hook for fetching transcript segments for a session.
+ * Polls every 5 seconds for updates.
  */
 export const useTranscriptSegments = (sessionId: Id) => {
   const url = sessionId
@@ -162,7 +167,10 @@ export const useTranscriptSegments = (sessionId: Id) => {
 
   const { entity, isLoading, isError, refresh } = EntityApi.useEntity<
     TranscriptSegment[]
-  >(url, fetcher, []);
+  >(url, fetcher, [], {
+    refreshInterval: 5000, // Poll every 5 seconds for updates
+    revalidateOnFocus: true,
+  });
 
   return {
     segments: entity,

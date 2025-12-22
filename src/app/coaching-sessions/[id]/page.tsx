@@ -123,7 +123,7 @@ export default function CoachingSessionsPage() {
               locale={siteConfig.locale}
               style={siteConfig.titleStyle}
             />
-            <div className="ml-auto flex w-full items-center gap-3 sm:justify-end md:justify-start flex-wrap">
+            <div className="ml-auto flex items-center gap-3">
               <MeetingControls sessionId={currentCoachingSessionId || ""} />
               <ShareSessionLink
                 sessionId={params.id as string}
