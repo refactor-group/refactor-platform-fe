@@ -5,7 +5,7 @@ import { type StoreApi, useStore } from 'zustand';
 import { type SseConnectionStore } from '@/lib/stores/sse-connection-store';
 import { useShallow } from 'zustand/shallow';
 
-export const SseConnectionStoreContext = createContext<StoreApi<SseConnectionStore> | undefined>(undefined);
+export const SseConnectionStoreContext = createContext<StoreApi<SseConnectionStore> | null>(null);
 
 export const useSseConnectionStore = <T,>(
   selector: (store: SseConnectionStore) => T
