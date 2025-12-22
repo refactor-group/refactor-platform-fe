@@ -168,7 +168,7 @@ export default function CoachingSessionSelector({
       onValueChange={handleSetCoachingSession}
     >
       <SelectTrigger
-        className="w-full min-w-0 py-6 pr-2"
+        className="w-full min-w-0 py-6"
         id="coaching-session-selector"
       >
         <SelectValue className="truncate" placeholder="Select coaching session">
