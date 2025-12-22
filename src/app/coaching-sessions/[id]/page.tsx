@@ -11,7 +11,6 @@ import { OverarchingGoalContainer } from "@/components/ui/coaching-sessions/over
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
-import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
@@ -88,11 +87,6 @@ export default function CoachingSessionsPage() {
     );
   }
 
-  const handleCoachingSessionSelect = (coachingSessionId: string) => {
-    console.debug("coachingSessionId selected: " + coachingSessionId);
-    router.push(`/coaching-sessions/${coachingSessionId}`);
-  };
-
   const handleShareError = (error: Error) => {
     toast.error("Failed to copy session link.");
   };
@@ -128,11 +122,6 @@ export default function CoachingSessionsPage() {
               <ShareSessionLink
                 sessionId={params.id as string}
                 onError={handleShareError}
-              />
-              <CoachingSessionSelector
-                relationshipId={currentCoachingRelationshipId}
-                disabled={!currentCoachingRelationshipId}
-                onSelect={handleCoachingSessionSelect}
               />
             </div>
           </div>

@@ -65,7 +65,10 @@ export const useAiSuggestions = (sessionId: Id) => {
 
   const { entity, isLoading, isError, refresh } = EntityApi.useEntity<
     AiSuggestedItem[]
-  >(url, fetcher, []);
+  >(url, fetcher, [], {
+    refreshInterval: 5000, // Poll every 5 seconds for new suggestions
+    revalidateOnFocus: true,
+  });
 
   return {
     suggestions: entity,
