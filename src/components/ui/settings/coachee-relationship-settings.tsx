@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Id } from "@/types/general";
 import {
@@ -35,6 +42,10 @@ export function CoacheeRelationshipSettings({
   // Filter to only show relationships where user is the coachee
   const coacheeRelationships = relationships.filter(r => r.coachee_id === userId);
 
+  const [selectedRelationshipId, setSelectedRelationshipId] = useState<string>(
+    coacheeRelationships.length > 0 ? coacheeRelationships[0].id : ""
+  );
+
   if (coacheeRelationships.length === 0) {
     return (
       <div className="text-center py-8">
@@ -44,6 +55,10 @@ export function CoacheeRelationshipSettings({
       </div>
     );
   }
+
+  const selectedRelationship = coacheeRelationships.find(
+    (r) => r.id === selectedRelationshipId
+  );
 
   return (
     <div className="space-y-6">
@@ -55,11 +70,31 @@ export function CoacheeRelationshipSettings({
         </p>
       </div>
 
-      <div className="space-y-4">
-        {coacheeRelationships.map((relationship) => (
-          <CoacheeRelationshipCard key={relationship.id} relationship={relationship} />
-        ))}
+      <div className="space-y-2">
+        <Label>Select Coach</Label>
+        <Select
+          value={selectedRelationshipId}
+          onValueChange={setSelectedRelationshipId}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a coach" />
+          </SelectTrigger>
+          <SelectContent>
+            {coacheeRelationships.map((relationship) => (
+              <SelectItem key={relationship.id} value={relationship.id}>
+                {relationship.coach_first_name} {relationship.coach_last_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
+      {selectedRelationship && (
+        <CoacheeRelationshipCard
+          key={selectedRelationship.id}
+          relationship={selectedRelationship}
+        />
+      )}
     </div>
   );
 }

@@ -4,6 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Id } from "@/types/general";
 import {
@@ -23,6 +30,10 @@ export function RelationshipSettings({
   userId,
   relationships,
 }: RelationshipSettingsProps) {
+  const [selectedRelationshipId, setSelectedRelationshipId] = useState<string>(
+    relationships.length > 0 ? relationships[0].id : ""
+  );
+
   if (relationships.length === 0) {
     return (
       <div className="text-center py-8">
@@ -33,20 +44,44 @@ export function RelationshipSettings({
     );
   }
 
+  const selectedRelationship = relationships.find(
+    (r) => r.id === selectedRelationshipId
+  );
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h3 className="text-lg font-medium">Coaching Relationships</h3>
         <p className="text-sm text-muted-foreground">
-          Configure meeting settings and AI privacy levels for each of your coachees
+          Configure meeting settings and AI privacy levels for your coachees
         </p>
       </div>
 
-      <div className="space-y-4">
-        {relationships.map((relationship) => (
-          <RelationshipCard key={relationship.id} relationship={relationship} />
-        ))}
+      <div className="space-y-2">
+        <Label>Select Coachee</Label>
+        <Select
+          value={selectedRelationshipId}
+          onValueChange={setSelectedRelationshipId}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a coachee" />
+          </SelectTrigger>
+          <SelectContent>
+            {relationships.map((relationship) => (
+              <SelectItem key={relationship.id} value={relationship.id}>
+                {relationship.coachee_first_name} {relationship.coachee_last_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
+      {selectedRelationship && (
+        <RelationshipCard
+          key={selectedRelationship.id}
+          relationship={selectedRelationship}
+        />
+      )}
     </div>
   );
 }
