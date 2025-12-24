@@ -190,7 +190,7 @@ function RelationshipCard({
         </div>
         <p className="text-xs text-muted-foreground">
           {meetingUrl
-            ? "The Google Meet link for your coaching sessions with this coachee"
+            ? `The Google Meet link for your coaching sessions with ${relationship.coachee_first_name}`
             : "Enter a URL or click 'Create Meet' to generate one with your Google account"}
         </p>
       </div>
