@@ -126,8 +126,8 @@ export function IntegrationSettings({
   };
 
   const handleConnectGoogle = () => {
-    // Redirect to Google OAuth flow
-    window.location.href = `${siteConfig.env.backendServiceURL}/oauth/google/authorize`;
+    // Redirect to Google OAuth flow with user_id parameter
+    window.location.href = `${siteConfig.env.backendServiceURL}/oauth/google/authorize?user_id=${userId}`;
   };
 
   const handleDisconnectGoogle = async () => {

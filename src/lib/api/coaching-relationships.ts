@@ -97,6 +97,22 @@ export const CoachingRelationshipApi = {
   },
 
   /**
+   * Creates a Google Meet for a coaching relationship.
+   * Uses the coach's connected Google account to create a new Meet space.
+   *
+   * @param id The ID of the coaching relationship
+   * @returns Promise resolving to the updated CoachingRelationshipWithUserNames with the new meeting URL
+   */
+  createGoogleMeet: async (
+    id: Id
+  ): Promise<CoachingRelationshipWithUserNames> => {
+    return EntityApi.createFn<
+      Record<string, never>,
+      CoachingRelationshipWithUserNames
+    >(`${siteConfig.env.backendServiceURL}/coaching_relationships/${id}/create-google-meet`, {});
+  },
+
+  /**
    * Unimplemented
    */
   delete: async (_id: Id) => {

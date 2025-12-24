@@ -18,7 +18,7 @@ import {
   AiPrivacyLevel,
 } from "@/types/coaching-relationship";
 import { CoachingRelationshipApi } from "@/lib/api/coaching-relationships";
-import { User, Video, FileText, Ban, Save, Check } from "lucide-react";
+import { User, Video, FileText, Ban, Save, Check, Plus } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 
 interface RelationshipSettingsProps {
@@ -96,6 +96,7 @@ function RelationshipCard({
     relationship.coach_ai_privacy_level
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreatingMeet, setIsCreatingMeet] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   const handleMeetingUrlChange = (value: string) => {
@@ -112,6 +113,26 @@ function RelationshipCard({
       meetingUrl !== (relationship.meeting_url || "") ||
         value !== relationship.coach_ai_privacy_level
     );
+  };
+
+  const handleCreateGoogleMeet = async () => {
+    setIsCreatingMeet(true);
+    try {
+      const updated = await CoachingRelationshipApi.createGoogleMeet(relationship.id);
+      setMeetingUrl(updated.meeting_url || "");
+      toast.success("Google Meet created successfully");
+      setHasChanges(false);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create Google Meet";
+      if (errorMessage.includes("connect your Google account")) {
+        toast.error("Please connect your Google account in the Integrations tab first");
+      } else {
+        toast.error(errorMessage);
+      }
+      console.error("Error creating Google Meet:", error);
+    } finally {
+      setIsCreatingMeet(false);
+    }
   };
 
   const handleSave = async () => {
@@ -147,15 +168,30 @@ function RelationshipCard({
 
       <div className="space-y-2">
         <Label htmlFor={`meeting-url-${relationship.id}`}>Google Meet URL</Label>
-        <Input
-          id={`meeting-url-${relationship.id}`}
-          type="url"
-          placeholder="https://meet.google.com/abc-defg-hij"
-          value={meetingUrl}
-          onChange={(e) => handleMeetingUrlChange(e.target.value)}
-        />
+        <div className="flex gap-2">
+          <Input
+            id={`meeting-url-${relationship.id}`}
+            type="url"
+            placeholder="https://meet.google.com/abc-defg-hij"
+            value={meetingUrl}
+            onChange={(e) => handleMeetingUrlChange(e.target.value)}
+            className="flex-1"
+          />
+          {!meetingUrl && (
+            <Button
+              variant="outline"
+              onClick={handleCreateGoogleMeet}
+              disabled={isCreatingMeet}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {isCreatingMeet ? "Creating..." : "Create Meet"}
+            </Button>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
-          The Google Meet link for your coaching sessions with this coachee
+          {meetingUrl
+            ? "The Google Meet link for your coaching sessions with this coachee"
+            : "Enter a URL or click 'Create Meet' to generate one with your Google account"}
         </p>
       </div>
 
