@@ -14,6 +14,17 @@ import {
 export const USER_INTEGRATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
 /**
+ * Unified update parameters for user integrations.
+ * Backend expects all fields at the same endpoint, each optional.
+ */
+export interface IntegrationUpdateParams {
+  recall_ai_api_key?: string;
+  recall_ai_region?: string;
+  assembly_ai_api_key?: string;
+  auto_approve_ai_suggestions?: boolean;
+}
+
+/**
  * API client for user integration operations.
  */
 export const UserIntegrationApi = {
@@ -24,39 +35,60 @@ export const UserIntegrationApi = {
     EntityApi.getFn<UserIntegration>(`${USER_INTEGRATIONS_BASEURL}/${userId}/integrations`),
 
   /**
+   * Updates integration settings (unified endpoint).
+   * All fields are optional - only provided fields are updated.
+   */
+  update: async (
+    userId: Id,
+    data: IntegrationUpdateParams
+  ): Promise<UserIntegration> =>
+    EntityApi.updateFn<IntegrationUpdateParams, UserIntegration>(
+      `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations`,
+      data
+    ),
+
+  /**
    * Updates Recall.ai integration settings.
+   * Uses the unified update endpoint with Recall.ai fields only.
    */
   updateRecallAi: async (
     userId: Id,
     data: RecallAiIntegrationUpdate
   ): Promise<UserIntegration> =>
-    EntityApi.updateFn<RecallAiIntegrationUpdate, UserIntegration>(
-      `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations/recall-ai`,
-      data
+    EntityApi.updateFn<IntegrationUpdateParams, UserIntegration>(
+      `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations`,
+      {
+        recall_ai_api_key: data.api_key,
+        recall_ai_region: data.region,
+      }
     ),
 
   /**
    * Updates AssemblyAI integration settings.
+   * Uses the unified update endpoint with AssemblyAI fields only.
    */
   updateAssemblyAi: async (
     userId: Id,
     data: AssemblyAiIntegrationUpdate
   ): Promise<UserIntegration> =>
-    EntityApi.updateFn<AssemblyAiIntegrationUpdate, UserIntegration>(
-      `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations/assembly-ai`,
-      data
+    EntityApi.updateFn<IntegrationUpdateParams, UserIntegration>(
+      `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations`,
+      {
+        assembly_ai_api_key: data.api_key,
+      }
     ),
 
   /**
    * Verifies a provider's API key.
+   * Sends empty object since the endpoint doesn't require a body.
    */
   verifyProvider: async (
     userId: Id,
     provider: "recall-ai" | "assembly-ai"
   ): Promise<IntegrationVerifyResponse> =>
-    EntityApi.createFn<null, IntegrationVerifyResponse>(
+    EntityApi.createFn<Record<string, never>, IntegrationVerifyResponse>(
       `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations/verify/${provider}`,
-      null
+      {}
     ),
 
   /**
@@ -65,6 +97,20 @@ export const UserIntegrationApi = {
   disconnectGoogle: async (userId: Id): Promise<void> =>
     EntityApi.deleteFn<null, void>(
       `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations/google`
+    ),
+
+  /**
+   * Updates AI settings (auto-approve toggle).
+   */
+  updateAiSettings: async (
+    userId: Id,
+    autoApprove: boolean
+  ): Promise<UserIntegration> =>
+    EntityApi.updateFn<IntegrationUpdateParams, UserIntegration>(
+      `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations`,
+      {
+        auto_approve_ai_suggestions: autoApprove,
+      }
     ),
 };
 
@@ -114,11 +160,16 @@ export const useUserIntegrationMutation = (userId: Id) => {
     return UserIntegrationApi.disconnectGoogle(userId);
   };
 
+  const updateAiSettings = async (autoApprove: boolean) => {
+    return UserIntegrationApi.updateAiSettings(userId, autoApprove);
+  };
+
   return {
     updateRecallAi,
     updateAssemblyAi,
     verifyRecallAi,
     verifyAssemblyAi,
     disconnectGoogle,
+    updateAiSettings,
   };
 };

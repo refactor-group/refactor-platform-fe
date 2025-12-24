@@ -10,9 +10,18 @@ import {
   Lock,
   Settings,
   Loader2,
+  ChevronDown,
+  ListTodo,
+  Handshake,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -23,7 +32,8 @@ import { cn } from "@/components/lib/utils";
 import { Id } from "@/types/general";
 import { AiPrivacyLevel } from "@/types/coaching-relationship";
 import { RecordingStatus, formatDuration } from "@/types/meeting-recording";
-import { useMeetingRecording, useMeetingRecordingMutation } from "@/lib/api/meeting-recordings";
+import { useMeetingRecording, useMeetingRecordingMutation, useTranscript, MeetingRecordingApi } from "@/lib/api/meeting-recordings";
+import { TranscriptionStatus } from "@/types/meeting-recording";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
 import { toast } from "sonner";
@@ -35,21 +45,26 @@ interface MeetingControlsProps {
 }
 
 /**
- * Meeting controls for joining Google Meet and managing recording.
- * Shows different states based on recording status and user role.
+ * Compact meeting controls dropdown for joining Google Meet and managing recording.
+ * Uses a dropdown menu to save header space while providing full functionality.
  */
 export function MeetingControls({ sessionId, className }: MeetingControlsProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [isExtractingActions, setIsExtractingActions] = useState(false);
+  const [isExtractingAgreements, setIsExtractingAgreements] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
 
   const { recording, isLoading: recordingLoading } = useMeetingRecording(sessionId);
+  const { transcript, isLoading: transcriptLoading } = useTranscript(sessionId);
   const { startRecording, stopRecording } = useMeetingRecordingMutation(sessionId);
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
   const { isCoachInCurrentRelationship } = useCurrentRelationshipRole();
 
   const meetingUrl = currentCoachingRelationship?.meeting_url;
-  const privacyLevel = currentCoachingRelationship?.ai_privacy_level ?? AiPrivacyLevel.Full;
+  // Use effective privacy level which is the minimum of coach and coachee consent
+  const privacyLevel = currentCoachingRelationship?.effective_ai_privacy_level ?? AiPrivacyLevel.Full;
 
   // Timer for recording duration
   useEffect(() => {
@@ -76,6 +91,7 @@ export function MeetingControls({ sessionId, className }: MeetingControlsProps) 
 
   const handleStartRecording = async () => {
     setIsStarting(true);
+    setIsOpen(false);
     try {
       await startRecording();
       toast.success("Recording started", {
@@ -92,6 +108,7 @@ export function MeetingControls({ sessionId, className }: MeetingControlsProps) 
 
   const handleStopRecording = async () => {
     setIsStopping(true);
+    setIsOpen(false);
     try {
       await stopRecording();
       toast.success("Recording stopped", {
@@ -106,6 +123,40 @@ export function MeetingControls({ sessionId, className }: MeetingControlsProps) 
     }
   };
 
+  const handleExtractActions = async () => {
+    setIsExtractingActions(true);
+    setIsOpen(false);
+    try {
+      const result = await MeetingRecordingApi.extractActions(sessionId);
+      toast.success(`Extracted ${result.actions.length} actions`, {
+        description: `Created ${result.created_count} new action items.`,
+      });
+    } catch (error) {
+      toast.error("Failed to extract actions", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsExtractingActions(false);
+    }
+  };
+
+  const handleExtractAgreements = async () => {
+    setIsExtractingAgreements(true);
+    setIsOpen(false);
+    try {
+      const result = await MeetingRecordingApi.extractAgreements(sessionId);
+      toast.success(`Extracted ${result.agreements.length} agreements`, {
+        description: `Created ${result.created_count} new agreements.`,
+      });
+    } catch (error) {
+      toast.error("Failed to extract agreements", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsExtractingAgreements(false);
+    }
+  };
+
   const isRecordingActive = recording?.status === RecordingStatus.Recording;
   const isJoining = recording?.status === RecordingStatus.Joining;
   const isProcessing = recording?.status === RecordingStatus.Processing;
@@ -113,152 +164,252 @@ export function MeetingControls({ sessionId, className }: MeetingControlsProps) 
   const isFailed = recording?.status === RecordingStatus.Failed;
   const aiDisabled = privacyLevel === AiPrivacyLevel.None;
 
-  // State A: No meeting URL configured
-  if (!meetingUrl) {
-    return (
-      <TooltipProvider>
-        <div className={cn("flex items-center gap-2", className)}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <VideoOff className="h-4 w-4" />
-                <span>No meeting link</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Configure a Google Meet URL in Settings</p>
-            </TooltipContent>
-          </Tooltip>
-          {isCoachInCurrentRelationship && (
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/settings">
-                <Settings className="h-4 w-4 mr-1" />
-                Configure
-              </Link>
-            </Button>
-          )}
-        </div>
-      </TooltipProvider>
-    );
-  }
+  // Check if we have a completed transcript for extraction
+  // LeMUR requires the AssemblyAI transcript ID to analyze the transcript
+  const hasCompletedTranscript = transcript?.status === TranscriptionStatus.Completed &&
+    transcript?.assemblyai_transcript_id != null;
 
-  // State B: AI features disabled
-  if (aiDisabled) {
+  // Debug logging for transcript detection
+  console.log("[MeetingControls] transcript:", {
+    exists: !!transcript,
+    status: transcript?.status,
+    assemblyai_transcript_id: transcript?.assemblyai_transcript_id,
+    hasCompletedTranscript,
+  });
+
+  // Determine the button appearance based on state
+  const getButtonContent = () => {
+    if (recordingLoading || isStarting || isStopping) {
+      return (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </>
+      );
+    }
+
+    if (isRecordingActive) {
+      return (
+        <>
+          <Circle className="h-3 w-3 fill-red-500 text-red-500 animate-pulse" />
+          <span className="text-red-600 font-medium">{formatDuration(elapsedSeconds)}</span>
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </>
+      );
+    }
+
+    if (isJoining) {
+      return (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-xs">Joining...</span>
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </>
+      );
+    }
+
+    if (isProcessing) {
+      return (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-xs">Processing</span>
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </>
+      );
+    }
+
+    if (!meetingUrl) {
+      return (
+        <>
+          <VideoOff className="h-4 w-4 text-muted-foreground" />
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </>
+      );
+    }
+
+    if (aiDisabled) {
+      return (
+        <>
+          <Video className="h-4 w-4" />
+          <Lock className="h-3 w-3" />
+          <ChevronDown className="h-3 w-3 ml-1" />
+        </>
+      );
+    }
+
     return (
-      <TooltipProvider>
-        <div className={cn("flex items-center gap-2", className)}>
-          <Button variant="outline" size="sm" asChild>
-            <a href={meetingUrl} target="_blank" rel="noopener noreferrer">
-              <Video className="h-4 w-4 mr-1" />
-              Join Meet
-              <ExternalLink className="h-3 w-3 ml-1" />
-            </a>
-          </Button>
-          <div className="flex items-center gap-1 text-muted-foreground text-sm">
-            <Lock className="h-3 w-3" />
-            <span>AI disabled</span>
-          </div>
-        </div>
-      </TooltipProvider>
+      <>
+        <Video className="h-4 w-4" />
+        <ChevronDown className="h-3 w-3 ml-1" />
+      </>
     );
-  }
+  };
 
   return (
     <TooltipProvider>
-      <div className={cn("flex items-center gap-2", className)}>
-        {/* Join Meet button */}
-        <Button variant="outline" size="sm" asChild>
-          <a href={meetingUrl} target="_blank" rel="noopener noreferrer">
-            <Video className="h-4 w-4 mr-1" />
-            Join Meet
-            <ExternalLink className="h-3 w-3 ml-1" />
-          </a>
-        </Button>
-
-        {/* Recording status and controls */}
-        {recordingLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        ) : isJoining ? (
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Bot joining...
-            </Badge>
-          </div>
-        ) : isRecordingActive ? (
-          <div className="flex items-center gap-2">
-            <Badge variant="destructive" className="gap-1 animate-pulse">
-              <Circle className="h-2 w-2 fill-current" />
-              Recording {formatDuration(elapsedSeconds)}
-            </Badge>
-            {isCoachInCurrentRelationship && (
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleStopRecording}
-                disabled={isStopping}
+                className={cn("gap-1", className)}
               >
-                {isStopping ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Square className="h-4 w-4 mr-1 fill-current" />
-                )}
-                Stop
+                {getButtonContent()}
               </Button>
-            )}
-          </div>
-        ) : isProcessing ? (
-          <Badge variant="secondary" className="gap-1">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Processing...
-          </Badge>
-        ) : isCompleted ? (
-          <Badge variant="secondary" className="gap-1">
-            ✓ Recorded ({formatDuration(recording?.duration_seconds ?? 0)})
-          </Badge>
-        ) : isFailed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge variant="destructive">Recording failed</Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{recording?.error_message || "An error occurred"}</p>
-            </TooltipContent>
-          </Tooltip>
-        ) : isCoachInCurrentRelationship ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleStartRecording}
-            disabled={isStarting}
-          >
-            {isStarting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Circle className="h-4 w-4 mr-1 text-red-500" />
-            )}
-            Start Recording
-          </Button>
-        ) : null}
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Meeting controls</p>
+          </TooltipContent>
+        </Tooltip>
 
-        {/* Privacy level indicator for coach */}
-        {isCoachInCurrentRelationship && !isRecordingActive && !isJoining && !isProcessing && !isCompleted && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-xs text-muted-foreground">
-                {privacyLevel === AiPrivacyLevel.TranscribeOnly ? "Transcript only" : "Full recording"}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>
+        <DropdownMenuContent align="end" className="w-56">
+          {/* Meeting URL section */}
+          {meetingUrl ? (
+            <DropdownMenuItem asChild>
+              <a
+                href={meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <Video className="h-4 w-4" />
+                Join Google Meet
+                <ExternalLink className="h-3 w-3 ml-auto" />
+              </a>
+            </DropdownMenuItem>
+          ) : (
+            <>
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                No meeting link configured
+              </div>
+              {isCoachInCurrentRelationship && (
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Configure in Settings
+                  </Link>
+                </DropdownMenuItem>
+              )}
+            </>
+          )}
+
+          {/* Recording controls (only if meeting URL exists and AI is not disabled) */}
+          {meetingUrl && !aiDisabled && (
+            <>
+              <DropdownMenuSeparator />
+
+              {isRecordingActive ? (
+                <>
+                  <div className="px-2 py-1.5 text-sm flex items-center gap-2">
+                    <Circle className="h-2 w-2 fill-red-500 text-red-500 animate-pulse" />
+                    <span className="text-red-600 font-medium">
+                      Recording {formatDuration(elapsedSeconds)}
+                    </span>
+                  </div>
+                  {isCoachInCurrentRelationship && (
+                    <DropdownMenuItem
+                      onClick={handleStopRecording}
+                      disabled={isStopping}
+                      className="text-red-600"
+                    >
+                      <Square className="h-4 w-4 mr-2 fill-current" />
+                      Stop Recording
+                    </DropdownMenuItem>
+                  )}
+                </>
+              ) : isJoining ? (
+                <div className="px-2 py-1.5 text-sm flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Bot joining meeting...
+                </div>
+              ) : isProcessing ? (
+                <div className="px-2 py-1.5 text-sm flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Processing transcript...
+                </div>
+              ) : isCompleted ? (
+                <div className="px-2 py-1.5 text-sm flex items-center gap-2 text-muted-foreground">
+                  ✓ Recorded ({formatDuration(recording?.duration_seconds ?? 0)})
+                </div>
+              ) : isFailed ? (
+                <div className="px-2 py-1.5 text-sm text-red-600">
+                  Recording failed: {recording?.error_message || "Unknown error"}
+                </div>
+              ) : isCoachInCurrentRelationship ? (
+                <DropdownMenuItem
+                  onClick={handleStartRecording}
+                  disabled={isStarting}
+                >
+                  <Circle className="h-4 w-4 mr-2 text-red-500" />
+                  Start Recording
+                </DropdownMenuItem>
+              ) : null}
+
+              {/* Privacy level indicator */}
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
                 {privacyLevel === AiPrivacyLevel.TranscribeOnly
-                  ? "Only transcript will be generated, no video storage"
-                  : "Full video recording with transcript"}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
+                  ? "📝 Transcript only (no video)"
+                  : "🎥 Full recording with transcript"}
+              </div>
+
+              {/* Manual extraction options (coach only, requires completed transcript) */}
+              {isCoachInCurrentRelationship && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleExtractActions}
+                    disabled={!hasCompletedTranscript || isExtractingActions}
+                  >
+                    {isExtractingActions ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ListTodo className="h-4 w-4 mr-2" />
+                    )}
+                    Extract Actions
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleExtractAgreements}
+                    disabled={!hasCompletedTranscript || isExtractingAgreements}
+                  >
+                    {isExtractingAgreements ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Handshake className="h-4 w-4 mr-2" />
+                    )}
+                    Extract Agreements
+                  </DropdownMenuItem>
+                  {!hasCompletedTranscript && (
+                    <div className="px-2 py-1 text-xs text-muted-foreground">
+                      Requires completed transcript
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* AI disabled message - requires mutual consent from both coach and coachee */}
+          {meetingUrl && aiDisabled && (
+            <>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs text-muted-foreground flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                AI recording requires mutual consent
+              </div>
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="flex items-center gap-2 text-xs">
+                  <Settings className="h-3 w-3" />
+                  Manage Privacy Settings
+                </Link>
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </TooltipProvider>
   );
 }

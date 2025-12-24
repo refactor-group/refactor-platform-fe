@@ -11,6 +11,51 @@ import {
   defaultTranscription,
 } from "@/types/meeting-recording";
 
+/**
+ * Extracted action from LeMUR analysis.
+ */
+export interface ExtractedAction {
+  content: string;
+  source_text: string;
+  stated_by_speaker: string;
+  assigned_to_role: string;
+  confidence: number;
+  start_time_ms: number | null;
+  end_time_ms: number | null;
+}
+
+/**
+ * Extracted agreement from LeMUR analysis.
+ */
+export interface ExtractedAgreement {
+  content: string;
+  source_text: string;
+  stated_by_speaker: string;
+  confidence: number;
+  start_time_ms: number | null;
+  end_time_ms: number | null;
+}
+
+/**
+ * Response from extracting actions via LeMUR.
+ */
+export interface ExtractActionsResponse {
+  session_id: Id;
+  transcription_id: Id;
+  actions: ExtractedAction[];
+  created_count: number;
+}
+
+/**
+ * Response from extracting agreements via LeMUR.
+ */
+export interface ExtractAgreementsResponse {
+  session_id: Id;
+  transcription_id: Id;
+  agreements: ExtractedAgreement[];
+  created_count: number;
+}
+
 export const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
 
 /**
@@ -51,18 +96,18 @@ export const MeetingRecordingApi = {
    * Starts a new recording for a coaching session.
    */
   start: async (sessionId: Id): Promise<StartRecordingResponse> =>
-    EntityApi.createFn<null, StartRecordingResponse>(
+    EntityApi.createFn<Record<string, never>, StartRecordingResponse>(
       `${COACHING_SESSIONS_BASEURL}/${sessionId}/recording/start`,
-      null
+      {}
     ),
 
   /**
    * Stops the current recording for a coaching session.
    */
   stop: async (sessionId: Id): Promise<StopRecordingResponse> =>
-    EntityApi.createFn<null, StopRecordingResponse>(
+    EntityApi.createFn<Record<string, never>, StopRecordingResponse>(
       `${COACHING_SESSIONS_BASEURL}/${sessionId}/recording/stop`,
-      null
+      {}
     ),
 
   /**
@@ -106,6 +151,26 @@ export const MeetingRecordingApi = {
       return null;
     }
   },
+
+  /**
+   * Manually triggers LeMUR to extract actions from the transcript.
+   * Creates Action entities directly.
+   */
+  extractActions: async (sessionId: Id): Promise<ExtractActionsResponse> =>
+    EntityApi.createFn<Record<string, never>, ExtractActionsResponse>(
+      `${COACHING_SESSIONS_BASEURL}/${sessionId}/transcript/extract-actions`,
+      {}
+    ),
+
+  /**
+   * Manually triggers LeMUR to extract agreements from the transcript.
+   * Creates Agreement entities directly.
+   */
+  extractAgreements: async (sessionId: Id): Promise<ExtractAgreementsResponse> =>
+    EntityApi.createFn<Record<string, never>, ExtractAgreementsResponse>(
+      `${COACHING_SESSIONS_BASEURL}/${sessionId}/transcript/extract-agreements`,
+      {}
+    ),
 };
 
 /**
@@ -133,6 +198,7 @@ export const useMeetingRecording = (sessionId: Id) => {
 
 /**
  * Hook for fetching the transcript for a session.
+ * Polls every 5 seconds while transcription is processing.
  */
 export const useTranscript = (sessionId: Id) => {
   const url = sessionId
@@ -141,7 +207,10 @@ export const useTranscript = (sessionId: Id) => {
   const fetcher = () => MeetingRecordingApi.getTranscript(sessionId);
 
   const { entity, isLoading, isError, refresh } =
-    EntityApi.useEntity<Transcription | null>(url, fetcher, null);
+    EntityApi.useEntity<Transcription | null>(url, fetcher, null, {
+      refreshInterval: 5000, // Poll every 5 seconds for status updates
+      revalidateOnFocus: true,
+    });
 
   return {
     transcript: entity,
@@ -153,6 +222,7 @@ export const useTranscript = (sessionId: Id) => {
 
 /**
  * Hook for fetching transcript segments for a session.
+ * Polls every 5 seconds for updates.
  */
 export const useTranscriptSegments = (sessionId: Id) => {
   const url = sessionId
@@ -162,7 +232,10 @@ export const useTranscriptSegments = (sessionId: Id) => {
 
   const { entity, isLoading, isError, refresh } = EntityApi.useEntity<
     TranscriptSegment[]
-  >(url, fetcher, []);
+  >(url, fetcher, [], {
+    refreshInterval: 5000, // Poll every 5 seconds for updates
+    revalidateOnFocus: true,
+  });
 
   return {
     segments: entity,

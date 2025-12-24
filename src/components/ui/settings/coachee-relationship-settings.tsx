@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Id } from "@/types/general";
@@ -14,20 +13,33 @@ import { CoachingRelationshipApi } from "@/lib/api/coaching-relationships";
 import { User, Video, FileText, Ban, Save, Check } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 
-interface RelationshipSettingsProps {
+interface CoacheeRelationshipSettingsProps {
   userId: Id;
   relationships: CoachingRelationshipWithUserNames[];
 }
 
-export function RelationshipSettings({
+/**
+ * Settings component for coachees to manage their AI privacy consent.
+ *
+ * This component shows relationships where the user is a coachee and allows
+ * them to set their own AI privacy level preference. Coachees only see their
+ * own setting, not the coach's preference (for privacy).
+ *
+ * The effective privacy level for AI features is the minimum of both the
+ * coach's and coachee's consent levels.
+ */
+export function CoacheeRelationshipSettings({
   userId,
   relationships,
-}: RelationshipSettingsProps) {
-  if (relationships.length === 0) {
+}: CoacheeRelationshipSettingsProps) {
+  // Filter to only show relationships where user is the coachee
+  const coacheeRelationships = relationships.filter(r => r.coachee_id === userId);
+
+  if (coacheeRelationships.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">
-          You don&apos;t have any coaching relationships yet.
+          You don&apos;t have any coaching relationships as a coachee.
         </p>
       </div>
     );
@@ -36,67 +48,55 @@ export function RelationshipSettings({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h3 className="text-lg font-medium">Coaching Relationships</h3>
+        <h3 className="text-lg font-medium">My Privacy Settings</h3>
         <p className="text-sm text-muted-foreground">
-          Configure meeting settings and AI privacy levels for each of your coachees
+          Control AI recording and transcription features for your coaching sessions.
+          Your coach must also consent to these features for them to be available.
         </p>
       </div>
 
       <div className="space-y-4">
-        {relationships.map((relationship) => (
-          <RelationshipCard key={relationship.id} relationship={relationship} />
+        {coacheeRelationships.map((relationship) => (
+          <CoacheeRelationshipCard key={relationship.id} relationship={relationship} />
         ))}
       </div>
     </div>
   );
 }
 
-function RelationshipCard({
+function CoacheeRelationshipCard({
   relationship,
 }: {
   relationship: CoachingRelationshipWithUserNames;
 }) {
-  const [meetingUrl, setMeetingUrl] = useState(relationship.meeting_url || "");
   const [privacyLevel, setPrivacyLevel] = useState<AiPrivacyLevel>(
-    relationship.coach_ai_privacy_level
+    relationship.coachee_ai_privacy_level
   );
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const handleMeetingUrlChange = (value: string) => {
-    setMeetingUrl(value);
-    setHasChanges(
-      value !== (relationship.meeting_url || "") ||
-        privacyLevel !== relationship.coach_ai_privacy_level
-    );
-  };
-
   const handlePrivacyLevelChange = (value: AiPrivacyLevel) => {
     setPrivacyLevel(value);
-    setHasChanges(
-      meetingUrl !== (relationship.meeting_url || "") ||
-        value !== relationship.coach_ai_privacy_level
-    );
+    setHasChanges(value !== relationship.coachee_ai_privacy_level);
   };
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await CoachingRelationshipApi.update(relationship.id, {
-        meeting_url: meetingUrl || null,
-        coach_ai_privacy_level: privacyLevel,
+        coachee_ai_privacy_level: privacyLevel,
       });
-      toast.success("Settings saved successfully");
+      toast.success("Privacy settings saved successfully");
       setHasChanges(false);
     } catch (error) {
-      toast.error("Failed to save settings");
-      console.error("Error saving relationship settings:", error);
+      toast.error("Failed to save privacy settings");
+      console.error("Error saving coachee privacy settings:", error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const coacheeName = `${relationship.coachee_first_name} ${relationship.coachee_last_name}`;
+  const coachName = `${relationship.coach_first_name} ${relationship.coach_last_name}`;
 
   return (
     <div className="border rounded-lg p-4 space-y-4">
@@ -105,27 +105,16 @@ function RelationshipCard({
           <User className="h-5 w-5 text-muted-foreground" />
         </div>
         <div>
-          <p className="font-medium">{coacheeName}</p>
-          <p className="text-sm text-muted-foreground">Coachee</p>
+          <p className="font-medium">{coachName}</p>
+          <p className="text-sm text-muted-foreground">Coach</p>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`meeting-url-${relationship.id}`}>Google Meet URL</Label>
-        <Input
-          id={`meeting-url-${relationship.id}`}
-          type="url"
-          placeholder="https://meet.google.com/abc-defg-hij"
-          value={meetingUrl}
-          onChange={(e) => handleMeetingUrlChange(e.target.value)}
-        />
-        <p className="text-xs text-muted-foreground">
-          The Google Meet link for your coaching sessions with this coachee
-        </p>
-      </div>
-
       <div className="space-y-3">
-        <Label>AI Privacy Level</Label>
+        <Label>My AI Consent Level</Label>
+        <p className="text-xs text-muted-foreground">
+          Select what AI features you consent to for sessions with this coach
+        </p>
         <div className="space-y-3">
           <PrivacyOption
             value={AiPrivacyLevel.Full}
@@ -134,7 +123,7 @@ function RelationshipCard({
             icon={<Video className="h-4 w-4 text-green-600" />}
             label="Full"
             sublabel="(Default)"
-            description="Full recording with video, transcript, and AI features"
+            description="I consent to full recording with video, transcript, and AI features"
           />
           <PrivacyOption
             value={AiPrivacyLevel.TranscribeOnly}
@@ -142,7 +131,7 @@ function RelationshipCard({
             onClick={() => handlePrivacyLevelChange(AiPrivacyLevel.TranscribeOnly)}
             icon={<FileText className="h-4 w-4 text-blue-600" />}
             label="Transcribe Only"
-            description="Text transcription only, no video/audio storage"
+            description="I consent to text transcription only, no video/audio storage"
           />
           <PrivacyOption
             value={AiPrivacyLevel.None}
@@ -150,7 +139,7 @@ function RelationshipCard({
             onClick={() => handlePrivacyLevelChange(AiPrivacyLevel.None)}
             icon={<Ban className="h-4 w-4 text-red-600" />}
             label="None"
-            description="No AI recording or transcribing for clients who prefer no AI"
+            description="I do not consent to any AI recording or transcription"
           />
         </div>
       </div>

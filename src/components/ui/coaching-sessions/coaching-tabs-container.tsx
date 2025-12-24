@@ -6,6 +6,7 @@ import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes"
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
 import { SessionSummary } from "@/components/ui/coaching-sessions/session-summary";
+import { SessionTranscript } from "@/components/ui/coaching-sessions/session-transcript";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
 import { ItemStatus, Id } from "@/types/general";
@@ -111,10 +112,11 @@ const CoachingTabsContainer: React.FC<{
     <div className="row-span-1 h-full py-4 px-4">
       <div className="flex-col space-y-4 sm:flex md:order-1">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <TabsList className="flex w-128 grid-cols-4 justify-start">
+          <TabsList className="flex w-128 grid-cols-5 justify-start">
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="agreements">Agreements</TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
+            <TabsTrigger value="transcript">Transcript</TabsTrigger>
             <TabsTrigger value="summary">Summary</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -148,6 +150,10 @@ const CoachingTabsContainer: React.FC<{
               onActionEdited={handleActionEdited}
               onActionDeleted={handleActionDeleted}
             />
+          </div>
+
+          <div style={{ display: currentTab === "transcript" ? "block" : "none" }}>
+            <SessionTranscript sessionId={currentCoachingSessionId || ""} />
           </div>
 
           <div style={{ display: currentTab === "summary" ? "block" : "none" }}>

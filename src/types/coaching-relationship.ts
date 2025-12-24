@@ -22,8 +22,12 @@ export interface CoachingRelationship {
   organization_id: Id;
   /** Google Meet URL for this coaching relationship */
   meeting_url: string | null;
-  /** AI privacy level for this coaching relationship */
-  ai_privacy_level: AiPrivacyLevel;
+  /** AI privacy level set by the coach */
+  coach_ai_privacy_level: AiPrivacyLevel;
+  /** AI privacy level set by the coachee */
+  coachee_ai_privacy_level: AiPrivacyLevel;
+  /** Computed effective level - minimum of coach and coachee consent */
+  effective_ai_privacy_level: AiPrivacyLevel;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -75,9 +79,12 @@ export function isCoachingRelationshipWithUserNames(
     typeof object.coachee_last_name === "string" &&
     typeof object.created_at === "string" &&
     typeof object.updated_at === "string" &&
-    // New fields: meeting_url can be null or string, ai_privacy_level is required
+    // meeting_url can be null or string
     (object.meeting_url === null || typeof object.meeting_url === "string") &&
-    typeof object.ai_privacy_level === "string"
+    // Privacy level fields
+    typeof object.coach_ai_privacy_level === "string" &&
+    typeof object.coachee_ai_privacy_level === "string" &&
+    typeof object.effective_ai_privacy_level === "string"
   );
 }
 
@@ -113,7 +120,9 @@ export function defaultCoachingRelationshipWithUserNames(): CoachingRelationship
     coachee_first_name: "",
     coachee_last_name: "",
     meeting_url: null,
-    ai_privacy_level: AiPrivacyLevel.Full,
+    coach_ai_privacy_level: AiPrivacyLevel.Full,
+    coachee_ai_privacy_level: AiPrivacyLevel.Full,
+    effective_ai_privacy_level: AiPrivacyLevel.Full,
     created_at: now,
     updated_at: now,
   };
