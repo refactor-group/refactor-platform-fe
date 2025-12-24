@@ -118,7 +118,14 @@ export function SettingsContainer() {
               <TabsContent value="relationships" className="mt-6">
                 <RelationshipSettings
                   userId={userId}
-                  relationships={relationships.filter(r => r.coach_id === userId)}
+                  relationships={relationships
+                    .filter(r => r.coach_id === userId)
+                    .sort((a, b) => {
+                      const lastNameCompare = a.coachee_last_name.localeCompare(b.coachee_last_name);
+                      return lastNameCompare !== 0
+                        ? lastNameCompare
+                        : a.coachee_first_name.localeCompare(b.coachee_first_name);
+                    })}
                 />
               </TabsContent>
             </>
