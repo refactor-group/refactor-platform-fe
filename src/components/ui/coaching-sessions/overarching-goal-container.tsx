@@ -15,9 +15,6 @@ import {
   overarchingGoalToString,
 } from "@/types/overarching-goal";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
-import { SessionTranscript } from "./session-transcript";
-import { useTranscript } from "@/lib/api/meeting-recordings";
-import { TranscriptionStatus } from "@/types/meeting-recording";
 
 const OverarchingGoalContainer: React.FC<{
   userId: Id;
@@ -30,9 +27,6 @@ const OverarchingGoalContainer: React.FC<{
   const { overarchingGoal, isLoading, isError, refresh } =
     useOverarchingGoalBySession(currentCoachingSessionId || "");
 
-  // Get transcript to check if one exists
-  const { transcript } = useTranscript(currentCoachingSessionId || "");
-  const hasTranscript = transcript && transcript.status === TranscriptionStatus.Completed;
   const { create: createOverarchingGoal, update: updateOverarchingGoal } =
     useOverarchingGoalMutation();
 
@@ -87,14 +81,8 @@ const OverarchingGoalContainer: React.FC<{
               <div className="grid flex-1 items-start gap-4 sm:py-0 md:gap-8">
                 <Tabs defaultValue="subgoals">
                   <div className="flex items-center">
-                    <TabsList className="grid grid-cols-2">
+                    <TabsList>
                       <TabsTrigger value="subgoals">Sub Goals</TabsTrigger>
-                      <TabsTrigger value="transcript" className="flex items-center gap-1">
-                        Transcript
-                        {hasTranscript && (
-                          <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
-                        )}
-                      </TabsTrigger>
                     </TabsList>
                   </div>
                   <TabsContent value="subgoals">
@@ -104,9 +92,6 @@ const OverarchingGoalContainer: React.FC<{
                         <p className="text-gray-500 text-center">Sub Goals coming soon...</p>
                       </div>
                     </div>
-                  </TabsContent>
-                  <TabsContent value="transcript">
-                    <SessionTranscript sessionId={currentCoachingSessionId || ""} />
                   </TabsContent>
                 </Tabs>
               </div>

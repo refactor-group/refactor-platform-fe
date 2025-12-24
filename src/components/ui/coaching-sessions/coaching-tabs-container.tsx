@@ -9,6 +9,8 @@ import { SessionSummary } from "@/components/ui/coaching-sessions/session-summar
 import { SessionTranscript } from "@/components/ui/coaching-sessions/session-transcript";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
+import { useTranscript } from "@/lib/api/meeting-recordings";
+import { TranscriptionStatus } from "@/types/meeting-recording";
 import { ItemStatus, Id } from "@/types/general";
 import { Action, defaultAction } from "@/types/action";
 import { Agreement, defaultAgreement } from "@/types/agreement";
@@ -29,6 +31,10 @@ const CoachingTabsContainer: React.FC<{
   };
   // Get coaching session ID from URL
   const { currentCoachingSessionId } = useCurrentCoachingSession();
+
+  // Get transcript to check if one exists
+  const { transcript } = useTranscript(currentCoachingSessionId || "");
+  const hasTranscript = transcript && transcript.status === TranscriptionStatus.Completed;
 
   // Agreement and Action mutation hooks
   const {
@@ -116,8 +122,13 @@ const CoachingTabsContainer: React.FC<{
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="agreements">Agreements</TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
-            <TabsTrigger value="transcript">Transcript</TabsTrigger>
             <TabsTrigger value="summary">Summary</TabsTrigger>
+            <TabsTrigger value="transcript" className="flex items-center gap-1">
+              Transcript
+              {hasTranscript && (
+                <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
+              )}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         
