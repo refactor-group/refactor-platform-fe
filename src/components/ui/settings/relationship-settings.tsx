@@ -197,6 +197,9 @@ function RelationshipCard({
 
       <div className="space-y-3">
         <Label>AI Privacy Level</Label>
+        <p className="text-xs text-muted-foreground">
+          The most restrictive choice between you and {relationship.coachee_first_name} will be respected
+        </p>
         <div className="space-y-3">
           <PrivacyOption
             value={AiPrivacyLevel.Full}
@@ -206,6 +209,11 @@ function RelationshipCard({
             label="Full"
             sublabel="(Default)"
             description="Full recording with video, transcript, and AI features"
+            constraintNote={
+              relationship.coachee_ai_privacy_level === AiPrivacyLevel.Full
+                ? `${relationship.coachee_first_name}'s choice`
+                : undefined
+            }
           />
           <PrivacyOption
             value={AiPrivacyLevel.TranscribeOnly}
@@ -214,6 +222,11 @@ function RelationshipCard({
             icon={<FileText className="h-4 w-4 text-blue-600" />}
             label="Transcribe Only"
             description="Text transcription only, no video/audio storage"
+            constraintNote={
+              relationship.coachee_ai_privacy_level === AiPrivacyLevel.TranscribeOnly
+                ? `${relationship.coachee_first_name}'s choice`
+                : undefined
+            }
           />
           <PrivacyOption
             value={AiPrivacyLevel.None}
@@ -222,6 +235,11 @@ function RelationshipCard({
             icon={<Ban className="h-4 w-4 text-red-600" />}
             label="None"
             description="No AI recording or transcribing for clients who prefer no AI"
+            constraintNote={
+              relationship.coachee_ai_privacy_level === AiPrivacyLevel.None
+                ? `${relationship.coachee_first_name}'s choice`
+                : undefined
+            }
           />
         </div>
       </div>
@@ -246,6 +264,7 @@ interface PrivacyOptionProps {
   label: string;
   sublabel?: string;
   description: string;
+  constraintNote?: string;
 }
 
 function PrivacyOption({
@@ -255,6 +274,7 @@ function PrivacyOption({
   label,
   sublabel,
   description,
+  constraintNote,
 }: PrivacyOptionProps) {
   return (
     <button
@@ -276,11 +296,16 @@ function PrivacyOption({
         {selected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
       </div>
       <div className="flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {icon}
           <span className="font-medium">{label}</span>
           {sublabel && (
             <span className="text-xs text-muted-foreground">{sublabel}</span>
+          )}
+          {constraintNote && (
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+              ({constraintNote})
+            </span>
           )}
         </div>
         <p className="text-sm text-muted-foreground mt-1">{description}</p>
