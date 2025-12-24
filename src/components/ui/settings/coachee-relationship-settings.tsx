@@ -66,7 +66,7 @@ export function CoacheeRelationshipSettings({
         <h3 className="text-lg font-medium">My Privacy Settings</h3>
         <p className="text-sm text-muted-foreground">
           Control AI recording and transcription features for your coaching sessions.
-          Your coach must also consent to these features for them to be available.
+          {selectedRelationship && ` ${selectedRelationship.coach_first_name} must also consent to these features for them to be available.`}
         </p>
       </div>
 
