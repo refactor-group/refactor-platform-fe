@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useUserIntegration } from "@/lib/api/user-integrations";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +12,10 @@ import { CoacheeRelationshipSettings } from "./coachee-relationship-settings";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { isUserCoach, isUserCoachee } from "@/types/coaching-relationship";
+import { toast } from "sonner";
 
 export function SettingsContainer() {
+  const searchParams = useSearchParams();
   const { userId } = useAuthStore((state) => ({
     userId: state.userId,
   }));
@@ -25,8 +28,21 @@ export function SettingsContainer() {
   const isLoading = integrationLoading || relationshipsLoading;
 
   // Determine default tab based on role - coaches see integrations first, coachees see privacy
-  const defaultTab = isCoach ? "integrations" : isCoachee ? "privacy" : "integrations";
+  // If returning from Google OAuth, always show integrations tab
+  const googleConnected = searchParams.get("google") === "connected";
+  const defaultTab = googleConnected ? "integrations" : isCoach ? "integrations" : isCoachee ? "privacy" : "integrations";
   const [activeTab, setActiveTab] = useState(defaultTab);
+
+  // Handle Google OAuth success notification
+  useEffect(() => {
+    if (googleConnected) {
+      toast.success("Google account connected successfully!");
+      // Clean up URL by removing the query parameter
+      window.history.replaceState({}, "", "/settings");
+      // Refresh integration data to show updated status
+      refreshIntegration();
+    }
+  }, [googleConnected, refreshIntegration]);
 
   if (isLoading) {
     return (
