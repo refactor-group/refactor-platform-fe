@@ -11,6 +11,51 @@ import {
   defaultTranscription,
 } from "@/types/meeting-recording";
 
+/**
+ * Extracted action from LeMUR analysis.
+ */
+export interface ExtractedAction {
+  content: string;
+  source_text: string;
+  stated_by_speaker: string;
+  assigned_to_role: string;
+  confidence: number;
+  start_time_ms: number | null;
+  end_time_ms: number | null;
+}
+
+/**
+ * Extracted agreement from LeMUR analysis.
+ */
+export interface ExtractedAgreement {
+  content: string;
+  source_text: string;
+  stated_by_speaker: string;
+  confidence: number;
+  start_time_ms: number | null;
+  end_time_ms: number | null;
+}
+
+/**
+ * Response from extracting actions via LeMUR.
+ */
+export interface ExtractActionsResponse {
+  session_id: Id;
+  transcription_id: Id;
+  actions: ExtractedAction[];
+  created_count: number;
+}
+
+/**
+ * Response from extracting agreements via LeMUR.
+ */
+export interface ExtractAgreementsResponse {
+  session_id: Id;
+  transcription_id: Id;
+  agreements: ExtractedAgreement[];
+  created_count: number;
+}
+
 export const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
 
 /**
@@ -106,6 +151,26 @@ export const MeetingRecordingApi = {
       return null;
     }
   },
+
+  /**
+   * Manually triggers LeMUR to extract actions from the transcript.
+   * Creates Action entities directly.
+   */
+  extractActions: async (sessionId: Id): Promise<ExtractActionsResponse> =>
+    EntityApi.createFn<Record<string, never>, ExtractActionsResponse>(
+      `${COACHING_SESSIONS_BASEURL}/${sessionId}/transcript/extract-actions`,
+      {}
+    ),
+
+  /**
+   * Manually triggers LeMUR to extract agreements from the transcript.
+   * Creates Agreement entities directly.
+   */
+  extractAgreements: async (sessionId: Id): Promise<ExtractAgreementsResponse> =>
+    EntityApi.createFn<Record<string, never>, ExtractAgreementsResponse>(
+      `${COACHING_SESSIONS_BASEURL}/${sessionId}/transcript/extract-agreements`,
+      {}
+    ),
 };
 
 /**

@@ -20,6 +20,8 @@ export interface UserIntegration {
   assembly_ai_configured: boolean;
   /** When AssemblyAI was last verified */
   assembly_ai_verified_at: string | null;
+  /** Whether to auto-approve AI suggestions without review */
+  auto_approve_ai_suggestions: boolean;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -80,6 +82,7 @@ export function defaultUserIntegration(): UserIntegration {
     recall_ai_verified_at: null,
     assembly_ai_configured: false,
     assembly_ai_verified_at: null,
+    auto_approve_ai_suggestions: false,
     created_at: now,
     updated_at: now,
   };

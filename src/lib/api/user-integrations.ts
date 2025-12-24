@@ -21,6 +21,7 @@ export interface IntegrationUpdateParams {
   recall_ai_api_key?: string;
   recall_ai_region?: string;
   assembly_ai_api_key?: string;
+  auto_approve_ai_suggestions?: boolean;
 }
 
 /**
@@ -97,6 +98,20 @@ export const UserIntegrationApi = {
     EntityApi.deleteFn<null, void>(
       `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations/google`
     ),
+
+  /**
+   * Updates AI settings (auto-approve toggle).
+   */
+  updateAiSettings: async (
+    userId: Id,
+    autoApprove: boolean
+  ): Promise<UserIntegration> =>
+    EntityApi.updateFn<IntegrationUpdateParams, UserIntegration>(
+      `${USER_INTEGRATIONS_BASEURL}/${userId}/integrations`,
+      {
+        auto_approve_ai_suggestions: autoApprove,
+      }
+    ),
 };
 
 /**
@@ -145,11 +160,16 @@ export const useUserIntegrationMutation = (userId: Id) => {
     return UserIntegrationApi.disconnectGoogle(userId);
   };
 
+  const updateAiSettings = async (autoApprove: boolean) => {
+    return UserIntegrationApi.updateAiSettings(userId, autoApprove);
+  };
+
   return {
     updateRecallAi,
     updateAssemblyAi,
     verifyRecallAi,
     verifyAssemblyAi,
     disconnectGoogle,
+    updateAiSettings,
   };
 };

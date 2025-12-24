@@ -17,7 +17,9 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface IntegrationSettingsProps {
   userId: Id;
@@ -36,6 +38,7 @@ export function IntegrationSettings({
   const [showAssemblyKey, setShowAssemblyKey] = useState(false);
   const [isVerifying, setIsVerifying] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
+  const [isUpdatingAiSettings, setIsUpdatingAiSettings] = useState(false);
 
   const {
     updateRecallAi,
@@ -43,6 +46,7 @@ export function IntegrationSettings({
     verifyRecallAi,
     verifyAssemblyAi,
     disconnectGoogle,
+    updateAiSettings,
   } = useUserIntegrationMutation(userId);
 
   const handleSaveRecallAi = async () => {
@@ -134,6 +138,24 @@ export function IntegrationSettings({
     } catch (error) {
       toast.error("Failed to disconnect Google account");
       console.error("Error disconnecting Google:", error);
+    }
+  };
+
+  const handleAutoApproveChange = async (checked: boolean) => {
+    setIsUpdatingAiSettings(true);
+    try {
+      await updateAiSettings(checked);
+      toast.success(
+        checked
+          ? "AI suggestions will be auto-approved"
+          : "AI suggestions will require review"
+      );
+      onRefresh();
+    } catch (error) {
+      toast.error("Failed to update AI settings");
+      console.error("Error updating AI settings:", error);
+    } finally {
+      setIsUpdatingAiSettings(false);
     }
   };
 
@@ -307,6 +329,47 @@ export function IntegrationSettings({
             </Button>
           )}
         </div>
+      </div>
+
+      {/* AI Settings */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-medium flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-500" />
+            AI Settings
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Configure how AI-generated suggestions are handled
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+          <div className="space-y-0.5">
+            <Label
+              htmlFor="auto-approve"
+              className="text-base font-medium cursor-pointer"
+            >
+              Auto-approve AI suggestions
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Automatically create Actions and Agreements from meeting transcripts
+              without manual review
+            </p>
+          </div>
+          <Switch
+            id="auto-approve"
+            checked={integration.auto_approve_ai_suggestions}
+            onCheckedChange={handleAutoApproveChange}
+            disabled={isUpdatingAiSettings}
+          />
+        </div>
+
+        {integration.auto_approve_ai_suggestions && (
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            ⚠️ AI suggestions will be automatically added to your sessions. Review
+            your Actions and Agreements regularly to ensure accuracy.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -11,6 +11,8 @@ import {
   Settings,
   Loader2,
   ChevronDown,
+  ListTodo,
+  Handshake,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +32,8 @@ import { cn } from "@/components/lib/utils";
 import { Id } from "@/types/general";
 import { AiPrivacyLevel } from "@/types/coaching-relationship";
 import { RecordingStatus, formatDuration } from "@/types/meeting-recording";
-import { useMeetingRecording, useMeetingRecordingMutation } from "@/lib/api/meeting-recordings";
+import { useMeetingRecording, useMeetingRecordingMutation, useTranscript, MeetingRecordingApi } from "@/lib/api/meeting-recordings";
+import { TranscriptionStatus } from "@/types/meeting-recording";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
 import { toast } from "sonner";
@@ -48,16 +51,20 @@ interface MeetingControlsProps {
 export function MeetingControls({ sessionId, className }: MeetingControlsProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [isExtractingActions, setIsExtractingActions] = useState(false);
+  const [isExtractingAgreements, setIsExtractingAgreements] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
 
   const { recording, isLoading: recordingLoading } = useMeetingRecording(sessionId);
+  const { transcript, isLoading: transcriptLoading } = useTranscript(sessionId);
   const { startRecording, stopRecording } = useMeetingRecordingMutation(sessionId);
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
   const { isCoachInCurrentRelationship } = useCurrentRelationshipRole();
 
   const meetingUrl = currentCoachingRelationship?.meeting_url;
-  const privacyLevel = currentCoachingRelationship?.ai_privacy_level ?? AiPrivacyLevel.Full;
+  // Use effective privacy level which is the minimum of coach and coachee consent
+  const privacyLevel = currentCoachingRelationship?.effective_ai_privacy_level ?? AiPrivacyLevel.Full;
 
   // Timer for recording duration
   useEffect(() => {
@@ -116,12 +123,59 @@ export function MeetingControls({ sessionId, className }: MeetingControlsProps) 
     }
   };
 
+  const handleExtractActions = async () => {
+    setIsExtractingActions(true);
+    setIsOpen(false);
+    try {
+      const result = await MeetingRecordingApi.extractActions(sessionId);
+      toast.success(`Extracted ${result.actions.length} actions`, {
+        description: `Created ${result.created_count} new action items.`,
+      });
+    } catch (error) {
+      toast.error("Failed to extract actions", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsExtractingActions(false);
+    }
+  };
+
+  const handleExtractAgreements = async () => {
+    setIsExtractingAgreements(true);
+    setIsOpen(false);
+    try {
+      const result = await MeetingRecordingApi.extractAgreements(sessionId);
+      toast.success(`Extracted ${result.agreements.length} agreements`, {
+        description: `Created ${result.created_count} new agreements.`,
+      });
+    } catch (error) {
+      toast.error("Failed to extract agreements", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsExtractingAgreements(false);
+    }
+  };
+
   const isRecordingActive = recording?.status === RecordingStatus.Recording;
   const isJoining = recording?.status === RecordingStatus.Joining;
   const isProcessing = recording?.status === RecordingStatus.Processing;
   const isCompleted = recording?.status === RecordingStatus.Completed;
   const isFailed = recording?.status === RecordingStatus.Failed;
   const aiDisabled = privacyLevel === AiPrivacyLevel.None;
+
+  // Check if we have a completed transcript for extraction
+  // LeMUR requires the AssemblyAI transcript ID to analyze the transcript
+  const hasCompletedTranscript = transcript?.status === TranscriptionStatus.Completed &&
+    transcript?.assemblyai_transcript_id != null;
+
+  // Debug logging for transcript detection
+  console.log("[MeetingControls] transcript:", {
+    exists: !!transcript,
+    status: transcript?.status,
+    assemblyai_transcript_id: transcript?.assemblyai_transcript_id,
+    hasCompletedTranscript,
+  });
 
   // Determine the button appearance based on state
   const getButtonContent = () => {
@@ -301,25 +355,57 @@ export function MeetingControls({ sessionId, className }: MeetingControlsProps) 
                   ? "📝 Transcript only (no video)"
                   : "🎥 Full recording with transcript"}
               </div>
+
+              {/* Manual extraction options (coach only, requires completed transcript) */}
+              {isCoachInCurrentRelationship && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleExtractActions}
+                    disabled={!hasCompletedTranscript || isExtractingActions}
+                  >
+                    {isExtractingActions ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ListTodo className="h-4 w-4 mr-2" />
+                    )}
+                    Extract Actions
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleExtractAgreements}
+                    disabled={!hasCompletedTranscript || isExtractingAgreements}
+                  >
+                    {isExtractingAgreements ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Handshake className="h-4 w-4 mr-2" />
+                    )}
+                    Extract Agreements
+                  </DropdownMenuItem>
+                  {!hasCompletedTranscript && (
+                    <div className="px-2 py-1 text-xs text-muted-foreground">
+                      Requires completed transcript
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
 
-          {/* AI disabled message */}
+          {/* AI disabled message - requires mutual consent from both coach and coachee */}
           {meetingUrl && aiDisabled && (
             <>
               <DropdownMenuSeparator />
               <div className="px-2 py-1.5 text-xs text-muted-foreground flex items-center gap-1">
                 <Lock className="h-3 w-3" />
-                AI features disabled for this client
+                AI recording requires mutual consent
               </div>
-              {isCoachInCurrentRelationship && (
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" className="flex items-center gap-2 text-xs">
-                    <Settings className="h-3 w-3" />
-                    Manage in Settings
-                  </Link>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="flex items-center gap-2 text-xs">
+                  <Settings className="h-3 w-3" />
+                  Manage Privacy Settings
+                </Link>
+              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>

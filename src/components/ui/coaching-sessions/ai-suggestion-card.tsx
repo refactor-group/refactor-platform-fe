@@ -1,19 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, Loader2, Target, Handshake } from "lucide-react";
+import { Check, X, Loader2, Target, Handshake, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/components/lib/utils";
 import { AiSuggestedItem, AiSuggestionType } from "@/types/meeting-recording";
 import { useAiSuggestionMutation } from "@/lib/api/ai-suggestions";
 import { toast } from "sonner";
+import { Id } from "@/types/general";
 
 interface AiSuggestionCardProps {
   suggestion: AiSuggestedItem;
   onAction?: () => void;
   className?: string;
+  /** Coach user ID for displaying assignee labels */
+  coachId?: Id;
+  /** Coachee user ID for displaying assignee labels */
+  coacheeId?: Id;
+}
+
+/**
+ * Gets a display label for a user ID (Coach, Coachee, or unknown).
+ */
+function getUserLabel(userId: Id | null, coachId?: Id, coacheeId?: Id): string | null {
+  if (!userId) return null;
+  if (coachId && userId === coachId) return "Coach";
+  if (coacheeId && userId === coacheeId) return "Coachee";
+  return null;
 }
 
 /**
@@ -24,6 +45,8 @@ export function AiSuggestionCard({
   suggestion,
   onAction,
   className,
+  coachId,
+  coacheeId,
 }: AiSuggestionCardProps) {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -32,6 +55,10 @@ export function AiSuggestionCard({
   const isAction = suggestion.item_type === AiSuggestionType.Action;
   const Icon = isAction ? Target : Handshake;
   const typeLabel = isAction ? "Action" : "Agreement";
+
+  // Get display labels for stated_by and assigned_to users
+  const statedByLabel = getUserLabel(suggestion.stated_by_user_id, coachId, coacheeId);
+  const assignedToLabel = getUserLabel(suggestion.assigned_to_user_id, coachId, coacheeId);
 
   const handleAccept = async () => {
     setIsAccepting(true);
@@ -84,10 +111,51 @@ export function AiSuggestionCard({
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Badge variant="secondary" className="text-xs">
                 {typeLabel}
               </Badge>
+
+              {/* Assignee badges for actions */}
+              {isAction && assignedToLabel && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-xs gap-1">
+                        → {assignedToLabel}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Assigned to {assignedToLabel}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Mutual commitment badge for agreements */}
+              {!isAction && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-700 dark:text-green-400">
+                        <Users className="h-3 w-3" />
+                        Mutual
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Mutual commitment between coach and coachee</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Stated by badge (if known) */}
+              {statedByLabel && (
+                <span className="text-xs text-muted-foreground">
+                  Stated by {statedByLabel}
+                </span>
+              )}
+
               {suggestion.confidence && (
                 <span className="text-xs text-muted-foreground">
                   {Math.round(suggestion.confidence * 100)}% confident

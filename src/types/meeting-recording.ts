@@ -115,8 +115,52 @@ export interface AiSuggestedItem {
   confidence: number | null;
   status: AiSuggestionStatus;
   accepted_entity_id: Id | null;
+  /** User who stated this item (from speaker diarization) */
+  stated_by_user_id: Id | null;
+  /** User who should complete this item (from LeMUR analysis). NULL for agreements. */
+  assigned_to_user_id: Id | null;
+  /** Link to the transcript segment for provenance tracking */
+  source_segment_id: Id | null;
   created_at: DateTime;
   updated_at: DateTime;
+}
+
+/**
+ * Structured coaching summary from LeMUR analysis.
+ * Contains coaching-focused sections for goals, progress, challenges, insights, and next steps.
+ */
+export interface CoachingSummary {
+  goals_discussed: string[];
+  progress_made: string[];
+  challenges_identified: string[];
+  key_insights: string[];
+  next_steps: string[];
+}
+
+/**
+ * Parses the summary field to determine if it's a structured CoachingSummary or plain text.
+ * Returns the parsed CoachingSummary if JSON, or null if it's plain text.
+ */
+export function parseCoachingSummary(summary: string | null): CoachingSummary | null {
+  if (!summary) return null;
+
+  try {
+    const parsed = JSON.parse(summary);
+    // Check if it has the expected structure
+    if (
+      Array.isArray(parsed.goals_discussed) &&
+      Array.isArray(parsed.progress_made) &&
+      Array.isArray(parsed.challenges_identified) &&
+      Array.isArray(parsed.key_insights) &&
+      Array.isArray(parsed.next_steps)
+    ) {
+      return parsed as CoachingSummary;
+    }
+    return null;
+  } catch {
+    // Not JSON - it's plain text
+    return null;
+  }
 }
 
 /**
