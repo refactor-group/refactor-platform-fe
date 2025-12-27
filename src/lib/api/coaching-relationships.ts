@@ -80,10 +80,36 @@ export const CoachingRelationshipApi = {
   },
 
   /**
-   * Unimplemented
+   * Updates a coaching relationship.
+   *
+   * @param id The ID of the coaching relationship to update
+   * @param entity The updated coaching relationship data
+   * @returns Promise resolving to the updated CoachingRelationshipWithUserNames object
    */
-  update: async (_id: Id, entity: NewCoachingRelationship) => {
-    throw new Error("Update operation not implemented");
+  update: async (
+    id: Id,
+    entity: Partial<CoachingRelationshipWithUserNames>
+  ): Promise<CoachingRelationshipWithUserNames> => {
+    return EntityApi.updateFn<
+      Partial<CoachingRelationshipWithUserNames>,
+      CoachingRelationshipWithUserNames
+    >(`${siteConfig.env.backendServiceURL}/coaching_relationships/${id}`, entity);
+  },
+
+  /**
+   * Creates a Google Meet for a coaching relationship.
+   * Uses the coach's connected Google account to create a new Meet space.
+   *
+   * @param id The ID of the coaching relationship
+   * @returns Promise resolving to the updated CoachingRelationshipWithUserNames with the new meeting URL
+   */
+  createGoogleMeet: async (
+    id: Id
+  ): Promise<CoachingRelationshipWithUserNames> => {
+    return EntityApi.createFn<
+      Record<string, never>,
+      CoachingRelationshipWithUserNames
+    >(`${siteConfig.env.backendServiceURL}/coaching_relationships/${id}/create-google-meet`, {});
   },
 
   /**

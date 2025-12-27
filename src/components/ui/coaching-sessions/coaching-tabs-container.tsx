@@ -5,8 +5,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
+import { SessionSummary } from "@/components/ui/coaching-sessions/session-summary";
+import { SessionTranscript } from "@/components/ui/coaching-sessions/session-transcript";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
+import { useTranscript } from "@/lib/api/meeting-recordings";
+import { TranscriptionStatus } from "@/types/meeting-recording";
 import { ItemStatus, Id } from "@/types/general";
 import { Action, defaultAction } from "@/types/action";
 import { Agreement, defaultAgreement } from "@/types/agreement";
@@ -27,6 +31,10 @@ const CoachingTabsContainer: React.FC<{
   };
   // Get coaching session ID from URL
   const { currentCoachingSessionId } = useCurrentCoachingSession();
+
+  // Get transcript to check if one exists
+  const { transcript } = useTranscript(currentCoachingSessionId || "");
+  const hasTranscript = transcript && transcript.status === TranscriptionStatus.Completed;
 
   // Agreement and Action mutation hooks
   const {
@@ -110,10 +118,17 @@ const CoachingTabsContainer: React.FC<{
     <div className="row-span-1 h-full py-4 px-4">
       <div className="flex-col space-y-4 sm:flex md:order-1">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <TabsList className="flex w-128 grid-cols-3 justify-start">
+          <TabsList className="flex w-128 grid-cols-5 justify-start">
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="agreements">Agreements</TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
+            <TabsTrigger value="summary">Summary</TabsTrigger>
+            <TabsTrigger value="transcript" className="flex items-center gap-1">
+              Transcript
+              {hasTranscript && (
+                <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
+              )}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         
@@ -146,6 +161,14 @@ const CoachingTabsContainer: React.FC<{
               onActionEdited={handleActionEdited}
               onActionDeleted={handleActionDeleted}
             />
+          </div>
+
+          <div style={{ display: currentTab === "transcript" ? "block" : "none" }}>
+            <SessionTranscript sessionId={currentCoachingSessionId || ""} />
+          </div>
+
+          <div style={{ display: currentTab === "summary" ? "block" : "none" }}>
+            <SessionSummary coachingSessionId={currentCoachingSessionId || ""} />
           </div>
         </div>
       </div>

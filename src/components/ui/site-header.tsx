@@ -4,6 +4,7 @@ import { CommandMenu } from "@/components/ui/command-menu";
 import { MainNav } from "@/components/ui/main-nav";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { UserNav } from "@/components/ui/user-nav";
+import { HeaderSessionSelector } from "@/components/ui/header-session-selector";
 
 export function SiteHeader() {
   return (
@@ -14,7 +15,8 @@ export function SiteHeader() {
           {/* <div className="w-full flex-1 md:w-auto md:flex-none">
             <CommandMenu />
           </div> */}
-          <nav className="flex items-center">
+          <nav className="flex items-center gap-2">
+            <HeaderSessionSelector />
             <ModeToggle />
             <UserNav />
           </nav>

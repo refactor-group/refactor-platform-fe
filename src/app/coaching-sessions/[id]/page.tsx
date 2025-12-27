@@ -11,11 +11,11 @@ import { OverarchingGoalContainer } from "@/components/ui/coaching-sessions/over
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
-import CoachingSessionSelector from "@/components/ui/coaching-session-selector";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import ShareSessionLink from "@/components/ui/share-session-link";
+import { MeetingControls } from "@/components/ui/coaching-sessions/meeting-controls";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
@@ -87,11 +87,6 @@ export default function CoachingSessionsPage() {
     );
   }
 
-  const handleCoachingSessionSelect = (coachingSessionId: string) => {
-    console.debug("coachingSessionId selected: " + coachingSessionId);
-    router.push(`/coaching-sessions/${coachingSessionId}`);
-  };
-
   const handleShareError = (error: Error) => {
     toast.error("Failed to copy session link.");
   };
@@ -122,15 +117,11 @@ export default function CoachingSessionsPage() {
               locale={siteConfig.locale}
               style={siteConfig.titleStyle}
             />
-            <div className="ml-auto flex w-full sm:max-w-sm md:max-w-md items-center gap-3 sm:justify-end md:justify-start">
+            <div className="ml-auto flex items-center gap-3">
+              <MeetingControls sessionId={currentCoachingSessionId || ""} />
               <ShareSessionLink
                 sessionId={params.id as string}
                 onError={handleShareError}
-              />
-              <CoachingSessionSelector
-                relationshipId={currentCoachingRelationshipId}
-                disabled={!currentCoachingRelationshipId}
-                onSelect={handleCoachingSessionSelect}
               />
             </div>
           </div>

@@ -308,8 +308,10 @@ const ActionsList: React.FC<{
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {action.due_by
-                      .setLocale(siteConfig.locale)
-                      .toLocaleString(DateTime.DATE_MED)}
+                      ? action.due_by
+                          .setLocale(siteConfig.locale)
+                          .toLocaleString(DateTime.DATE_MED)
+                      : "—"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {action.created_at
@@ -330,7 +332,7 @@ const ActionsList: React.FC<{
                             setEditingActionId(action.id);
                             setNewBody(action.body ?? "");
                             setNewStatus(action.status);
-                            setNewDueBy(action.due_by);
+                            setNewDueBy(action.due_by ?? DateTime.now());
                           }}
                         >
                           Edit
