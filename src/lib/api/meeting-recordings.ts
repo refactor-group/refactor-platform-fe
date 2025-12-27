@@ -19,6 +19,10 @@ export interface ExtractedAction {
   source_text: string;
   stated_by_speaker: string;
   assigned_to_role: string;
+  /** Name of the person assigned (extracted from transcript) */
+  assigned_to_name?: string | null;
+  /** Due date in ISO 8601 format (e.g., "2025-01-15") if mentioned in transcript */
+  due_by?: string | null;
   confidence: number;
   start_time_ms: number | null;
   end_time_ms: number | null;
@@ -37,13 +41,16 @@ export interface ExtractedAgreement {
 }
 
 /**
- * Response from extracting actions via LeMUR.
+ * Response from triggering action extraction via LeMUR.
+ * Returns immediately - actions are created asynchronously.
  */
 export interface ExtractActionsResponse {
   session_id: Id;
   transcription_id: Id;
-  actions: ExtractedAction[];
-  created_count: number;
+  /** Status of the extraction request: "processing" or "error" */
+  status: string;
+  /** Human-readable message about the extraction status */
+  message: string;
 }
 
 /**
