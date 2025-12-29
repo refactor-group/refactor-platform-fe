@@ -12,6 +12,7 @@ import { Action, defaultAction } from "@/types/action";
 import { Agreement, defaultAgreement } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { siteConfig } from "@/site.config";
 
 const CoachingTabsContainer: React.FC<{
@@ -20,13 +21,16 @@ const CoachingTabsContainer: React.FC<{
   onTabChange?: (value: string) => void;
 }> = ({ userId, defaultValue = "notes", onTabChange }) => {
   const [currentTab, setCurrentTab] = useState(defaultValue);
-  
+
   const handleTabChange = (value: string) => {
     setCurrentTab(value);
     onTabChange?.(value);
   };
   // Get coaching session ID from URL
   const { currentCoachingSessionId } = useCurrentCoachingSession();
+
+  // Get coaching relationship data for coach/coachee names
+  const { currentCoachingRelationship } = useCurrentCoachingRelationship();
 
   // Agreement and Action mutation hooks
   const {
@@ -71,7 +75,8 @@ const CoachingTabsContainer: React.FC<{
   const handleActionAdded = (
     body: string,
     status: ItemStatus,
-    dueBy: DateTime
+    dueBy: DateTime,
+    assigneeIds?: Id[]
   ): Promise<Action> => {
     const newAction: Action = {
       ...defaultAction(),
@@ -80,6 +85,7 @@ const CoachingTabsContainer: React.FC<{
       body,
       status,
       due_by: dueBy,
+      assignee_ids: assigneeIds,
     };
     return createAction(newAction);
   };
@@ -88,7 +94,8 @@ const CoachingTabsContainer: React.FC<{
     id: Id,
     body: string,
     status: ItemStatus,
-    dueBy: DateTime
+    dueBy: DateTime,
+    assigneeIds?: Id[]
   ): Promise<Action> => {
     const updatedAction: Action = {
       ...defaultAction(),
@@ -98,6 +105,7 @@ const CoachingTabsContainer: React.FC<{
       body,
       status,
       due_by: dueBy,
+      assignee_ids: assigneeIds,
     };
     return updateAction(id, updatedAction);
   };
@@ -142,6 +150,10 @@ const CoachingTabsContainer: React.FC<{
               coachingSessionId={currentCoachingSessionId || ""}
               userId={userId}
               locale={siteConfig.locale}
+              coachId={currentCoachingRelationship?.coach_id || ""}
+              coachName={currentCoachingRelationship?.coach_first_name || "Coach"}
+              coacheeId={currentCoachingRelationship?.coachee_id || ""}
+              coacheeName={currentCoachingRelationship?.coachee_first_name || "Coachee"}
               onActionAdded={handleActionAdded}
               onActionEdited={handleActionEdited}
               onActionDeleted={handleActionDeleted}
