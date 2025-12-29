@@ -167,6 +167,24 @@ const ActionsList: React.FC<ActionsListProps> = ({
     clearNewActionForm();
   };
 
+  // Function to populate the form with an existing action for editing
+  const startEditingAction = (action: Action) => {
+    setEditingActionId(action.id);
+    setNewBody(action.body ?? "");
+
+    // Determine assignee selection from existing IDs
+    const ids = action.assignee_ids ?? [];
+    let selection: AssigneeSelection = ASSIGNEE_NONE;
+    if (ids.length >= 2) {
+      // If both coach and coachee are assigned, select "both"
+      selection = ASSIGNEE_BOTH;
+    } else if (ids.length === 1) {
+      selection = ids[0];
+    }
+    setNewAssigneeId(selection);
+    setNewDueBy(action.due_by);
+  };
+
   // Function to handle checkbox toggle for completion
   const handleCompletionToggle = async (
     actionId: Id,
@@ -411,23 +429,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setEditingActionId(action.id);
-                            setNewBody(action.body ?? "");
-                            // Determine assignee selection from existing IDs
-                            const ids = action.assignee_ids ?? [];
-                            let selection: AssigneeSelection = ASSIGNEE_NONE;
-                            if (ids.length >= 2) {
-                              // If both coach and coachee are assigned, select "both"
-                              selection = ASSIGNEE_BOTH;
-                            } else if (ids.length === 1) {
-                              selection = ids[0];
-                            }
-                            setNewAssigneeId(selection);
-                            setNewDueBy(action.due_by);
-                          }}
-                        >
+                        <DropdownMenuItem onClick={() => startEditingAction(action)}>
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
