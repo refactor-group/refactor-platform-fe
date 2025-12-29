@@ -5,6 +5,10 @@ import { TestProviders } from '@/test-utils/providers'
 import { ItemStatus } from '@/types/general'
 import { DateTime } from 'ts-luxon'
 
+// Mock user IDs for coach and coachee
+const MOCK_COACH_ID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+const MOCK_COACHEE_ID = 'b2c3d4e5-f6a7-8901-bcde-f12345678901'
+
 // Mock the actions API hook
 const mockActions = [
   {
@@ -13,6 +17,7 @@ const mockActions = [
     status: ItemStatus.InProgress,
     due_by: DateTime.fromISO('2024-01-15'),
     created_at: DateTime.fromISO('2024-01-01'),
+    assignee_ids: [MOCK_COACH_ID],
   }
 ]
 
@@ -48,9 +53,13 @@ const setViewport = (width: number, height: number) => {
  */
 describe('ActionsList Responsive Design', () => {
   const mockProps = {
-    coachingSessionId: 'session-123',
-    userId: 'user-123',
+    coachingSessionId: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    userId: 'd4e5f6a7-b8c9-0123-def0-234567890123',
     locale: 'us',
+    coachId: MOCK_COACH_ID,
+    coachName: 'Coach Jane',
+    coacheeId: MOCK_COACHEE_ID,
+    coacheeName: 'Coachee John',
     onActionAdded: vi.fn(),
     onActionEdited: vi.fn(),
     onActionDeleted: vi.fn(),
@@ -70,23 +79,23 @@ describe('ActionsList Responsive Design', () => {
    */
   describe('Desktop Layout (1024px+)', () => {
     /**
-     * Asserts all 5 columns (Completed, Action, Status, Due By, Assigned) are visible
+     * Asserts all 5 columns (Done?, Action, Assignee, Status, Due By) are visible
      * This ensures full information is available on desktop
      */
     it('should show all table columns', () => {
       setViewport(1024, 768)
-      
+
       render(
         <TestProviders>
           <ActionsList {...mockProps} />
         </TestProviders>
       )
 
-      expect(screen.getByText('Completed?')).toBeInTheDocument()
+      expect(screen.getByText('Done?')).toBeInTheDocument()
       expect(screen.getByText(/Action/i)).toBeInTheDocument()
-      expect(screen.getByText(/Status/i)).toBeInTheDocument()
-      expect(screen.getByText(/Due By/i)).toBeInTheDocument()
-      expect(screen.getByText(/Assigned/i)).toBeInTheDocument()
+      expect(screen.getByRole('columnheader', { name: /Status/i })).toBeInTheDocument()
+      expect(screen.getByRole('columnheader', { name: /Due By/i })).toBeInTheDocument()
+      expect(screen.getByRole('columnheader', { name: /Assignee/i })).toBeInTheDocument()
     })
 
     /**
@@ -156,7 +165,7 @@ describe('ActionsList Responsive Design', () => {
      * Asserts these columns have hidden md:table-cell classes
      * This ensures mobile users see only essential information
      */
-    it('should hide Due By and Assigned columns', () => {
+    it('should hide Due By column on tablet', () => {
       setViewport(375, 667)
       
       render(
@@ -165,11 +174,9 @@ describe('ActionsList Responsive Design', () => {
         </TestProviders>
       )
 
-      const dueBySorter = screen.getByText(/Due By/i).closest('th')
-      const assignedSorter = screen.getByText(/Assigned/i).closest('th')
-      
+      const dueBySorter = screen.getByRole('columnheader', { name: /Due By/i })
+
       expect(dueBySorter).toHaveClass('hidden', 'md:table-cell')
-      expect(assignedSorter).toHaveClass('hidden', 'md:table-cell')
     })
 
     /**
@@ -228,7 +235,7 @@ describe('ActionsList Responsive Design', () => {
         </TestProviders>
       )
 
-      const firstHeader = screen.getByText('Completed?').closest('th')
+      const firstHeader = screen.getByText('Done?').closest('th')
       expect(firstHeader).toHaveClass('rounded-tl-lg')
     })
 
@@ -258,7 +265,7 @@ describe('ActionsList Responsive Design', () => {
         </TestProviders>
       )
 
-      const header = screen.getByText('Completed?').closest('th')
+      const header = screen.getByText('Done?').closest('th')
       expect(header).toHaveClass('font-semibold', 'text-gray-700', 'dark:text-gray-300', 'py-3', 'px-4')
     })
   })
