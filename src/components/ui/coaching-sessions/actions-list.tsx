@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -11,12 +12,13 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  AssigneeSelector,
+  AssigneeOption,
+  AssigneeSelection,
+  ASSIGNEE_UNSELECTED,
+  ASSIGNEE_NONE,
+  ASSIGNEE_BOTH,
+} from "@/components/ui/assignee-selector";
 import {
   Table,
   TableBody,
@@ -41,7 +43,6 @@ import {
   ItemStatus,
   actionStatusToString,
   Id,
-  stringToActionStatus,
 } from "@/types/general";
 import { useActionList } from "@/lib/api/actions";
 import { DateTime } from "ts-luxon";
@@ -57,44 +58,90 @@ import {
 } from "@/components/lib/utils/table-styling";
 import { format } from "date-fns";
 
-const ActionsList: React.FC<{
+/** Information about an assignee resolved from their user ID */
+interface AssigneeInfo {
+  name: string;
+  isUnknown: boolean;
+}
+
+interface ActionsListProps {
   coachingSessionId: Id;
   userId: Id;
   locale: string | "us";
+  /** Coach user ID for resolving assignee names */
+  coachId: Id;
+  /** Coach display name (first name or display name) */
+  coachName: string;
+  /** Coachee user ID for resolving assignee names */
+  coacheeId: Id;
+  /** Coachee display name (first name or display name) */
+  coacheeName: string;
   onActionAdded: (
     body: string,
     status: ItemStatus,
-    dueBy: DateTime
+    dueBy: DateTime,
+    assigneeIds?: Id[]
   ) => Promise<Action>;
   onActionEdited: (
     id: Id,
     body: string,
     status: ItemStatus,
-    dueBy: DateTime
+    dueBy: DateTime,
+    assigneeIds?: Id[]
   ) => Promise<Action>;
   onActionDeleted: (id: Id) => Promise<Action>;
-}> = ({
+}
+
+const ActionsList: React.FC<ActionsListProps> = ({
   coachingSessionId,
-  onActionAdded: onActionAdded,
-  onActionEdited: onActionEdited,
-  onActionDeleted: onActionDeleted,
+  coachId,
+  coachName,
+  coacheeId,
+  coacheeName,
+  onActionAdded,
+  onActionEdited,
+  onActionDeleted,
 }) => {
   enum ActionSortField {
     Body = "body",
     DueBy = "due_by",
     Status = "status",
-    Assigned = "created_at",
   }
+
+  /**
+   * Resolves a user ID to assignee info using coach/coachee data.
+   * Returns "Unknown" with isUnknown=true for IDs that don't match either user.
+   */
+  const getAssigneeInfo = (userId: Id): AssigneeInfo => {
+    if (userId === coachId) {
+      return { name: coachName, isUnknown: false };
+    }
+    if (userId === coacheeId) {
+      return { name: coacheeName, isUnknown: false };
+    }
+    // Log warning for debugging - this indicates a data integrity issue
+    console.warn(`Unknown assignee ID: ${userId}`);
+    return { name: "Unknown", isUnknown: true };
+  };
 
   const { actions, refresh } = useActionList(coachingSessionId);
   const [newBody, setNewBody] = useState("");
-  const [newStatus, setNewStatus] = useState<ItemStatus>(ItemStatus.NotStarted);
-  const [newDueBy, setNewDueBy] = useState<DateTime>(DateTime.now());
+  const [newDueBy, setNewDueBy] = useState<DateTime | null>(null);
+  const [newAssigneeId, setNewAssigneeId] = useState<AssigneeSelection>(ASSIGNEE_UNSELECTED);
   const [editingActionId, setEditingActionId] = useState<Id | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Action>(
     ActionSortField.DueBy
   );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  // Memoized assignee options for the selector dropdown
+  const assigneeOptions: AssigneeOption[] = useMemo(
+    () => [
+      { id: coachId, name: coachName },
+      { id: coacheeId, name: coacheeName },
+    ],
+    [coachId, coachName, coacheeId, coacheeName]
+  );
 
   // Function to render the appropriate sort arrow
   const renderSortArrow = (column: keyof Action) => {
@@ -110,8 +157,8 @@ const ActionsList: React.FC<{
   // Function to clear the new action form
   const clearNewActionForm = () => {
     setNewBody("");
-    setNewStatus(ItemStatus.NotStarted);
-    setNewDueBy(DateTime.now());
+    setNewDueBy(null);
+    setNewAssigneeId(ASSIGNEE_UNSELECTED);
   };
 
   // Function to cancel editing an action
@@ -134,11 +181,13 @@ const ActionsList: React.FC<{
           ? ItemStatus.InProgress
           : ItemStatus.Completed;
 
+      // Preserve existing assignees when toggling completion
       await onActionEdited(
         actionId,
         action.body || "",
         newStatus,
-        action.due_by
+        action.due_by,
+        action.assignee_ids
       );
       refresh();
     } catch (err) {
@@ -146,23 +195,45 @@ const ActionsList: React.FC<{
     }
   };
 
+  /** Converts the assignee selection to an array of user IDs */
+  const selectionToAssigneeIds = (selection: AssigneeSelection): Id[] => {
+    if (selection === ASSIGNEE_UNSELECTED || selection === ASSIGNEE_NONE) return [];
+    if (selection === ASSIGNEE_BOTH) return [coachId, coacheeId].filter((id) => id);
+    return [selection];
+  };
+
   const addAction = async () => {
     if (newBody.trim() === "") return;
 
+    // Convert assignee selection to array of IDs
+    const assigneeIds = selectionToAssigneeIds(newAssigneeId);
+
+    // Use selected due date or default to now
+    const dueBy = newDueBy ?? DateTime.now();
+
     try {
       if (editingActionId) {
-        // Update existing action
+        // Update existing action - preserve its current status
+        const existingAction = actions.find((a) => a.id === editingActionId);
+        const statusToUse = existingAction?.status ?? ItemStatus.NotStarted;
+
         const action = await onActionEdited(
           editingActionId,
           newBody,
-          newStatus,
-          newDueBy
+          statusToUse,
+          dueBy,
+          assigneeIds
         );
         console.trace("Updated Action: " + actionToString(action));
         setEditingActionId(null);
       } else {
-        // Create new action
-        const action = await onActionAdded(newBody, newStatus, newDueBy);
+        // Create new action with default status
+        const action = await onActionAdded(
+          newBody,
+          ItemStatus.NotStarted,
+          dueBy,
+          assigneeIds
+        );
         console.trace("Newly created Action: " + actionToString(action));
       }
 
@@ -223,17 +294,25 @@ const ActionsList: React.FC<{
               <TableRow className={getTableHeaderRowClasses()}>
                 <TableHead
                   className={cn(
-                    "w-[120px]",
+                    "w-[80px]",
                     getTableHeaderCellClassesNonSortable(true)
                   )}
                 >
-                  Completed?
+                  Done?
                 </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.Body)}
                   className={getTableHeaderCellClasses()}
                 >
                   Action {renderSortArrow(ActionSortField.Body)}
+                </TableHead>
+                <TableHead
+                  className={cn(
+                    getTableHeaderCellClassesNonSortable(false),
+                    "hidden sm:table-cell"
+                  )}
+                >
+                  Assignee
                 </TableHead>
                 <TableHead
                   onClick={() => sortActions(ActionSortField.Status)}
@@ -252,15 +331,6 @@ const ActionsList: React.FC<{
                   )}
                 >
                   Due By {renderSortArrow(ActionSortField.DueBy)}
-                </TableHead>
-                <TableHead
-                  onClick={() => sortActions(ActionSortField.Assigned)}
-                  className={cn(
-                    getTableHeaderCellClasses(),
-                    "hidden md:table-cell"
-                  )}
-                >
-                  Assigned {renderSortArrow(ActionSortField.Assigned)}
                 </TableHead>
                 <TableHead
                   className={cn(
@@ -304,15 +374,31 @@ const ActionsList: React.FC<{
                   </TableCell>
                   <TableCell>{action.body}</TableCell>
                   <TableCell className="hidden sm:table-cell">
+                    <div className="flex flex-wrap gap-1 justify-start">
+                      {action.assignee_ids && action.assignee_ids.length > 0 ? (
+                        action.assignee_ids.map((assigneeId) => {
+                          const assignee = getAssigneeInfo(assigneeId);
+                          return (
+                            <Badge
+                              key={assigneeId}
+                              variant={assignee.isUnknown ? "destructive" : "secondary"}
+                              title={assignee.isUnknown ? `Unknown user ID: ${assigneeId}` : undefined}
+                              className="text-sm font-normal"
+                            >
+                              {assignee.name}
+                            </Badge>
+                          );
+                        })
+                      ) : (
+                        <span className="text-muted-foreground">None</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {actionStatusToString(action.status)}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {action.due_by
-                      .setLocale(siteConfig.locale)
-                      .toLocaleString(DateTime.DATE_MED)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {action.created_at
                       .setLocale(siteConfig.locale)
                       .toLocaleString(DateTime.DATE_MED)}
                   </TableCell>
@@ -329,7 +415,16 @@ const ActionsList: React.FC<{
                           onClick={() => {
                             setEditingActionId(action.id);
                             setNewBody(action.body ?? "");
-                            setNewStatus(action.status);
+                            // Determine assignee selection from existing IDs
+                            const ids = action.assignee_ids ?? [];
+                            let selection: AssigneeSelection = ASSIGNEE_NONE;
+                            if (ids.length >= 2) {
+                              // If both coach and coachee are assigned, select "both"
+                              selection = ASSIGNEE_BOTH;
+                            } else if (ids.length === 1) {
+                              selection = ids[0];
+                            }
+                            setNewAssigneeId(selection);
                             setNewDueBy(action.due_by);
                           }}
                         >
@@ -367,44 +462,33 @@ const ActionsList: React.FC<{
             placeholder={editingActionId ? "Edit action" : "Enter new action"}
             className="w-full sm:flex-grow"
           />
-          <Select
-            value={newStatus}
-            onValueChange={(value) => setNewStatus(stringToActionStatus(value))}
-          >
-            <SelectTrigger className="w-full sm:w-60">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(ItemStatus).map((status) => (
-                <SelectItem value={status} key={status}>
-                  {actionStatusToString(status)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AssigneeSelector
+            value={newAssigneeId}
+            onValueChange={setNewAssigneeId}
+            options={assigneeOptions}
+            className="w-full sm:w-40"
+          />
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant={"outline"}
                 className={cn(
-                  "w-full sm:w-[280px] justify-start text-left font-normal",
+                  "w-full sm:min-w-[180px] sm:max-w-[220px] justify-start text-left font-normal",
                   !newDueBy && "text-muted-foreground"
                 )}
               >
-                <CalendarClock className="mr-2 h-4 w-4" />
-                {newDueBy ? (
-                  format(newDueBy.toJSDate(), "PPP")
-                ) : (
-                  <span>Pick a due date</span>
-                )}
+                <CalendarClock className="mr-2 h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {newDueBy ? format(newDueBy.toJSDate(), "PPP") : "Due By"}
+                </span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
               <Calendar
                 mode="single"
-                selected={newDueBy.toJSDate()}
+                selected={newDueBy?.toJSDate()}
                 onSelect={(date: Date | undefined) =>
-                  setNewDueBy(date ? DateTime.fromJSDate(date) : DateTime.now())
+                  setNewDueBy(date ? DateTime.fromJSDate(date) : null)
                 }
                 footer=<div className="text-sm font-medium mt-1">
                   {newDueBy
