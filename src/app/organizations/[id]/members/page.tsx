@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { useSearchParams, redirect } from "next/navigation";
+import { useSearchParams, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -11,7 +11,7 @@ import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { Id } from "@/types/general";
 import { MemberContainer } from "@/components/ui/members/member-container";
 import { PageContainer } from "@/components/ui/page-container";
-import { toast } from "sonner";
+import { shouldDenyMembersPageAccess } from "./access-control";
 
 export default function MembersPage({
   params,
@@ -34,10 +34,8 @@ export default function MembersPage({
     }
   }, [organizationId, currentOrganizationId, setCurrentOrganizationId]);
 
-  // Access control: redirect if user doesn't have access to this organization
-  if (currentOrganizationId === organizationId && currentUserRoleState.status === 'no_access') {
-    toast.error("You don't have access to this organization");
-    redirect('/dashboard');
+  if (shouldDenyMembersPageAccess(currentOrganizationId, organizationId, currentUserRoleState)) {
+    notFound();
   }
 
   const {

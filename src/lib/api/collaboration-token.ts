@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import { Jwt, parseJwt } from "@/types/jwt";
-import { sessionGuard } from "@/lib/session/session-guard";
+import { sessionGuard } from "@/lib/auth/session-guard";
 import { siteConfig } from "@/site.config";
 
 type FetcherArgs = [string, string];

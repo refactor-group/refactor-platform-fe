@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useLogoutUser } from '@/lib/hooks/use-logout-user';
-import { registerSessionCleanup } from '../session/session-guard';
+import { registerSessionCleanup } from '../auth/session-guard';
 
 /**
  * SessionCleanupProvider: bridges session guard with React cleanup logic

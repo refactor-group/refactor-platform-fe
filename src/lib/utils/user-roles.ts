@@ -1,5 +1,5 @@
 import { User, Role } from "@/types/user";
-import { CoachingRelationshipWithUserNames, isUserCoach, isUserCoachee } from "@/types/coaching_relationship";
+import { CoachingRelationshipWithUserNames, isUserCoach, isUserCoachee } from "@/types/coaching-relationship";
 import { RelationshipRole } from "@/types/relationship-role";
 import { Id } from "@/types/general";
 

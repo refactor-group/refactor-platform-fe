@@ -27,7 +27,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
 import { User, isAdminOrSuperAdmin, UserRoleState } from "@/types/user";

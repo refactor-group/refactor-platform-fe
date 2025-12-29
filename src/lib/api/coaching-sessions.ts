@@ -5,10 +5,16 @@ import { Id } from "@/types/general";
 import {
   CoachingSession,
   defaultCoachingSession,
+  EnrichedCoachingSession,
+  CoachingSessionInclude,
 } from "@/types/coaching-session";
 import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
 import { EntityApi } from "./entity-api";
+import { USERS_BASEURL } from "./users";
 import { DateTime } from "ts-luxon";
+
+// Re-export for convenience
+export { CoachingSessionInclude };
 
 const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
 
@@ -123,6 +129,69 @@ export const CoachingSessionApi = {
   ): Promise<CoachingSession> => {
     throw new Error("Delete nested operation not implemented");
   },
+
+  /**
+   * Lists coaching sessions nested under a user (follows the createNested pattern).
+   *
+   * This uses the /users/{user_id}/coaching_sessions endpoint with support for
+   * query parameters like date filtering and related resource inclusion.
+   *
+   * @param userId The ID of the user (coach or coachee)
+   * @param params Query parameters for filtering, sorting, and including related data
+   * @returns Promise resolving to array of EnrichedCoachingSession objects
+   */
+  listNested: async (
+    userId: Id,
+    params?: any
+  ): Promise<EnrichedCoachingSession[]> => {
+    return EntityApi.listNestedFn<EnrichedCoachingSession>(
+      USERS_BASEURL,
+      userId,
+      'coaching_sessions',
+      params
+    );
+  },
+
+  /**
+   * Fetches coaching sessions for a specific user with optional related data.
+   *
+   * This uses the enhanced /users/{user_id}/coaching_sessions endpoint that
+   * supports batch loading of related resources to avoid N+1 queries.
+   *
+   * @param userId The ID of the user (coach or coachee)
+   * @param fromDate Start date for filtering sessions
+   * @param toDate End date for filtering sessions
+   * @param include Optional array of related resources to include
+   * @param sortBy Optional field to sort by
+   * @param sortOrder Optional sort order
+   * @returns Promise resolving to array of EnrichedCoachingSession objects
+   */
+  listForUser: async (
+    userId: Id,
+    fromDate: DateTime,
+    toDate: DateTime,
+    include?: CoachingSessionInclude[],
+    sortBy?: CoachingSessionSortField,
+    sortOrder?: ApiSortOrder
+  ): Promise<EnrichedCoachingSession[]> => {
+    const params: Record<string, string> = {
+      from_date: fromDate.toISODate() || '',
+      to_date: toDate.toISODate() || '',
+    };
+
+    if (include && include.length > 0) {
+      params.include = include.join(',');
+    }
+
+    if (sortBy) {
+      params.sort_by = sortBy;
+    }
+    if (sortOrder) {
+      params.sort_order = sortOrder;
+    }
+
+    return CoachingSessionApi.listNested(userId, { params });
+  },
 };
 
 /**
@@ -232,4 +301,61 @@ export const useCoachingSessionMutation = () => {
       deleteNested: CoachingSessionApi.deleteNested,
     }
   );
+};
+
+/**
+ * Custom React hook that fetches enriched coaching sessions for a user.
+ *
+ * This hook uses the enhanced endpoint that supports batch loading of related
+ * resources, avoiding N+1 queries and reducing the number of API calls needed.
+ *
+ * @param userId The ID of the user to fetch sessions for
+ * @param fromDate Start date for filtering sessions
+ * @param toDate End date for filtering sessions
+ * @param include Optional array of related resources to include
+ * @param sortBy Optional field to sort by
+ * @param sortOrder Optional sort order
+ * @returns Object containing enriched sessions, loading state, error, and refresh function
+ */
+export const useEnrichedCoachingSessionsForUser = (
+  userId: Id,
+  fromDate: DateTime,
+  toDate: DateTime,
+  include?: CoachingSessionInclude[],
+  sortBy?: CoachingSessionSortField,
+  sortOrder?: ApiSortOrder
+) => {
+  const params = {
+    from_date: fromDate.toISODate(),
+    to_date: toDate.toISODate(),
+    ...(include && include.length > 0 && { include: include.join(',') }),
+    ...(sortBy && { sort_by: sortBy }),
+    ...(sortOrder && { sort_order: sortOrder }),
+  };
+
+  const url = `${USERS_BASEURL}/${userId}/coaching_sessions`;
+
+  const fetcher = () =>
+    CoachingSessionApi.listForUser(
+      userId,
+      fromDate,
+      toDate,
+      include,
+      sortBy,
+      sortOrder
+    );
+
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<EnrichedCoachingSession>(
+      url,
+      fetcher,
+      params
+    );
+
+  return {
+    enrichedSessions: entities,
+    isLoading,
+    isError,
+    refresh,
+  };
 };

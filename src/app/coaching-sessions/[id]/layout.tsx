@@ -18,11 +18,11 @@ export default function CoachingSessionLayout({
 }>) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen min-w-full">
+      <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="min-w-0">
           <SiteHeader />
-          <main>{children}</main>
+          <main className="min-w-0">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>

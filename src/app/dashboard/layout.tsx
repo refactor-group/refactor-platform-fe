@@ -19,11 +19,11 @@ export default function DashboardLayout({
 }>) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen min-w-full">
+      <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="min-w-0">
           <SiteHeader />
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 p-6 min-w-0">{children}</main>
           <Toaster />
         </SidebarInset>
       </div>

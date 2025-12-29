@@ -1,5 +1,6 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
+import { User } from "@/types/user";
 
 export interface CoachingRelationship {
   id: Id;
@@ -17,6 +18,21 @@ export type CoachingRelationshipWithUserNames = CoachingRelationship & {
   coach_last_name: string;
   coachee_first_name: string;
   coachee_last_name: string;
+};
+
+/**
+ * Relationship with embedded coach and coachee user data
+ * Matches backend RelationshipWithUsers response from the enhanced endpoint
+ *
+ * This must always reflect the Rust struct on the backend
+ * web::response::coaching_session::RelationshipWithUsers
+ *
+ * Note: This is different from CoachingRelationshipWithUserNames which only
+ * contains name fields. This type contains full User objects.
+ */
+export type CoachingRelationshipWithUsers = CoachingRelationship & {
+  coach: User;
+  coachee: User;
 };
 
 export interface NewCoachingRelationship {
