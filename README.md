@@ -159,7 +159,20 @@ For more detailed testing information, see [docs/testing/frontend-testing-strate
 
 ---
 
-## PR Preview Environments
+## CI/CD & Deployment
+
+This project uses GitHub Actions for continuous integration, release builds, and deployment.
+
+- **Branch CI**: Automated linting, testing, and Docker builds on every push/PR
+- **Release Builds**: Multi-architecture production images triggered by GitHub releases
+- **Deployment**: Manual deployment to DigitalOcean via secure Tailscale VPN
+- **PR Previews**: Automatic preview environments for each pull request
+
+📚 **Documentation:** [docs/cicd/README.md](docs/cicd/README.md)
+
+**Note:** The frontend shares CI/CD infrastructure with the backend repository. For comprehensive documentation including PR preview workflows, see the [Backend CI/CD Documentation](https://github.com/refactor-group/refactor-platform-rs/tree/main/docs/cicd).
+
+### PR Preview Environments
 
 This repository automatically deploys **isolated preview environments** for each pull request. When you open a PR, a complete stack (backend + frontend + database) deploys to a dedicated server on our Tailnet for testing before merge.
 
@@ -170,5 +183,3 @@ This repository automatically deploys **isolated preview environments** for each
 - ✅ PR closed/merged → Environment cleans up
 
 **Access:** Requires Tailscale VPN connection. Access URLs are posted as a comment on your PR in the GitHub Web UI.
-
-For detailed information, see the [PR Preview Environments Runbook](docs/runbooks/pr-preview-environments.md).
