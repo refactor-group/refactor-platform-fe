@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TodaySessionCard } from "./today-session-card";
 import { cn } from "@/components/lib/utils";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
@@ -9,7 +10,6 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { useCarouselState } from "@/lib/hooks/use-carousel-state";
 import { useSessionAutoScroll } from "@/lib/hooks/use-session-auto-scroll";
-import { WelcomeHeader } from "./welcome-header";
 import { SessionCarouselNavigation } from "./session-carousel-navigation";
 import { LoadingState, ErrorState, EmptyState } from "./todays-sessions-states";
 
@@ -94,40 +94,46 @@ export function TodaysSessions({ className, onRescheduleSession, onRefreshNeeded
 
   // Render carousel with sessions
   return (
-    <div className={cn("space-y-4", className)}>
-      <WelcomeHeader firstName={userSession?.first_name} />
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">
+          Today&apos;s Sessions
+        </CardTitle>
+      </CardHeader>
 
-      <Carousel
-        setApi={carousel.setApi}
-        opts={{
-          align: "center",
-          loop: false,
-          slidesToScroll: 1,
-          containScroll: false,
-          dragFree: false,
-        }}
-      >
-        <CarouselContent className="py-4 !ml-0">
-          {sessions.map((session, index) => (
-            <CarouselItem key={session.id} className="!pl-0 pr-4">
-              <TodaySessionCard
-                session={session}
-                sessionIndex={index + 1}
-                totalSessions={sessions.length}
-                onReschedule={onRescheduleSession ? () => onRescheduleSession(session) : undefined}
-              />
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      </Carousel>
+      <CardContent className="pt-0">
+        <Carousel
+          setApi={carousel.setApi}
+          opts={{
+            align: "center",
+            loop: false,
+            slidesToScroll: 1,
+            containScroll: false,
+            dragFree: false,
+          }}
+        >
+          <CarouselContent className="py-4 !ml-0">
+            {sessions.map((session, index) => (
+              <CarouselItem key={session.id} className="!pl-0 pr-4">
+                <TodaySessionCard
+                  session={session}
+                  sessionIndex={index + 1}
+                  totalSessions={sessions.length}
+                  onReschedule={onRescheduleSession ? () => onRescheduleSession(session) : undefined}
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
 
-      <SessionCarouselNavigation
-        api={carousel.api}
-        current={carousel.current}
-        count={carousel.count}
-        canScrollPrev={carousel.canScrollPrev}
-        canScrollNext={carousel.canScrollNext}
-      />
-    </div>
+        <SessionCarouselNavigation
+          api={carousel.api}
+          current={carousel.current}
+          count={carousel.count}
+          canScrollPrev={carousel.canScrollPrev}
+          canScrollNext={carousel.canScrollNext}
+        />
+      </CardContent>
+    </Card>
   );
 }

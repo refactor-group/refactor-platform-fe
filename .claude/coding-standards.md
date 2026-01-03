@@ -98,6 +98,36 @@ enum connectionState {
 - Place tests in `__tests__/` directories mirroring the source structure
 - Group related components in feature-specific subdirectories
 
+### UI Component Libraries
+
+This project uses two UI component libraries with different import paths:
+
+**shadcn/ui components** - Located in `src/components/ui/`
+```typescript
+// ✅ Correct - shadcn components
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+```
+
+**Kibo UI components** - Located in `src/components/kibo/ui/`
+```typescript
+// ✅ Correct - Kibo UI components
+import { Pill, PillIndicator } from "@/components/kibo/ui/pill";
+import { Choicebox, ChoiceboxItem } from "@/components/kibo/ui/choicebox";
+```
+
+**Utility function `cn`** - Located in `src/components/lib/utils.ts`
+```typescript
+// ✅ Correct
+import { cn } from "@/components/lib/utils";
+
+// ❌ Incorrect - this path doesn't exist in this project
+import { cn } from "@/lib/utils";
+```
+
+**Note**: When installing new shadcn components via CLI, you may need to update their imports from `@/lib/utils` to `@/components/lib/utils`.
+
 ### Documentation
 - Add JSDoc comments for complex logic or non-obvious patterns
 - Explain *why* something is done, not just *what* is being done

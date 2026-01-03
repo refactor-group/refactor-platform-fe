@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type * as React from "react";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 import AddEntities from "@/components/ui/dashboard/add-entities";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
+import { WelcomeHeader } from "@/components/ui/dashboard/welcome-header";
 import { TodaysSessions } from "@/components/ui/dashboard/todays-sessions";
+import { WhatsDue } from "@/components/ui/dashboard/whats-due";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {
@@ -31,10 +32,17 @@ export function DashboardContainer() {
 
   return (
     <>
-      <TodaysSessions
-        onRescheduleSession={handleOpenDialog}
-        onRefreshNeeded={(refreshFn) => setRefreshTodaysSessions(() => refreshFn)}
-      />
+      <WelcomeHeader />
+
+      {/* Top row: Today's Sessions and What's Due side by side on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-[55fr_45fr] gap-6 mb-8 mt-4 items-start">
+        <TodaysSessions
+          onRescheduleSession={handleOpenDialog}
+          onRefreshNeeded={(refreshFn) => setRefreshTodaysSessions(() => refreshFn)}
+        />
+        <WhatsDue />
+      </div>
+
       <AddEntities
         className="mb-8"
         onCreateSession={() => handleOpenDialog()}
