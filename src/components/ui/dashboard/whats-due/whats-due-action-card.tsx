@@ -55,7 +55,6 @@ export function WhatsDueActionCard({
   const [isUpdating, setIsUpdating] = useState(false);
 
   const { action: actionData, isOverdue } = action;
-  const hasDetails = actionData.body && actionData.body.trim().length > 0;
 
   const handleCheckboxChange = async (checked: boolean) => {
     setIsUpdating(true);
@@ -110,34 +109,30 @@ export function WhatsDueActionCard({
             </div>
           </div>
 
-          {hasDetails && (
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0"
-                aria-label={isOpen ? "Collapse details" : "Expand details"}
-              >
-                {isOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-          )}
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              aria-label={isOpen ? "Collapse details" : "Expand details"}
+            >
+              {isOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </CollapsibleTrigger>
         </div>
 
         {/* Expanded content */}
-        {hasDetails && (
-          <CollapsibleContent>
-            <div className="px-3 pb-3 pt-0 pl-10">
-              <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                {actionData.body}
-              </div>
+        <CollapsibleContent>
+          <div className="px-3 pb-3 pt-0 pl-10">
+            <div className="text-sm text-muted-foreground">
+              Steps: TBD
             </div>
-          </CollapsibleContent>
-        )}
+          </div>
+        </CollapsibleContent>
       </div>
     </Collapsible>
   );
