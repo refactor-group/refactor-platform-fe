@@ -73,7 +73,7 @@ export function WhatsDueActionCard({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <div
         className={cn(
-          "rounded-lg border bg-card transition-colors",
+          "rounded-lg border bg-secondary/30 transition-colors",
           isOverdue && !isCompleted && "border-amber-200 dark:border-amber-800",
           isCompleted && "opacity-60"
         )}
