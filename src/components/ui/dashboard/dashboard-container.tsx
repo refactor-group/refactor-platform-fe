@@ -35,7 +35,7 @@ export function DashboardContainer() {
       <WelcomeHeader />
 
       {/* Top row: Today's Sessions and What's Due side by side on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-[55fr_45fr] gap-6 mb-8 mt-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 mt-4 items-start">
         <TodaysSessions
           onRescheduleSession={handleOpenDialog}
           onRefreshNeeded={(refreshFn) => setRefreshTodaysSessions(() => refreshFn)}
