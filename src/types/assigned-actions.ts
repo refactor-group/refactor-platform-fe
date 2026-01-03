@@ -11,6 +11,14 @@ export enum AssignedActionsFilter {
 }
 
 /**
+ * View mode for coaches to switch between their own actions and coachee actions
+ */
+export enum CoachViewMode {
+  MyActions = "my_actions",
+  CoacheeActions = "coachee_actions",
+}
+
+/**
  * Context about the coaching relationship for an action
  */
 export interface RelationshipContext {

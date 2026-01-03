@@ -3,7 +3,7 @@
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/components/lib/utils";
-import { AssignedActionsFilter } from "@/types/assigned-actions";
+import { AssignedActionsFilter, CoachViewMode } from "@/types/assigned-actions";
 
 interface StateProps {
   className?: string;
@@ -11,6 +11,7 @@ interface StateProps {
 
 interface EmptyStateProps extends StateProps {
   filter: AssignedActionsFilter;
+  viewMode?: CoachViewMode;
 }
 
 export function WhatsDueLoadingState({ className }: StateProps) {
@@ -37,11 +38,29 @@ export function WhatsDueErrorState({ className }: StateProps) {
   );
 }
 
-export function WhatsDueEmptyState({ filter, className }: EmptyStateProps) {
-  const message =
-    filter === AssignedActionsFilter.DueSoon
-      ? "No actions due before your next session. You're all caught up!"
-      : "No incomplete actions. Great work!";
+function getEmptyStateMessage(
+  filter: AssignedActionsFilter,
+  viewMode: CoachViewMode
+): string {
+  const isCoacheeView = viewMode === CoachViewMode.CoacheeActions;
+
+  if (filter === AssignedActionsFilter.DueSoon) {
+    return isCoacheeView
+      ? "Your coachees have no actions due before their next sessions."
+      : "No actions due before your next session. You're all caught up!";
+  }
+
+  return isCoacheeView
+    ? "Your coachees have no incomplete actions."
+    : "No incomplete actions. Great work!";
+}
+
+export function WhatsDueEmptyState({
+  filter,
+  viewMode = CoachViewMode.MyActions,
+  className,
+}: EmptyStateProps) {
+  const message = getEmptyStateMessage(filter, viewMode);
 
   return (
     <div

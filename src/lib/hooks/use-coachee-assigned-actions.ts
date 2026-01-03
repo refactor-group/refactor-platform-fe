@@ -1,7 +1,17 @@
-import { useMemo } from "react";
+// TODO: Discuss with Caleb - the current approach of fetching each coachee's
+// assigned actions via /users/{coacheeId}/assigned-actions returns 401 because
+// coaches don't have permission to access their coachees' actions directly.
+// Options to consider:
+// 1. New backend endpoint: GET /users/{coachId}/coachee-assigned-actions
+// 2. New backend endpoint: GET /coaching-relationships/{relationshipId}/actions
+// 3. Update backend authorization to allow coaches to read coachee actions
+
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useAssignedActionsList } from "@/lib/api/assigned-actions";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { AssignedActionsApi } from "@/lib/api/assigned-actions";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
@@ -119,7 +129,7 @@ function addContextToAction(
   const session = sessionMap.get(action.coaching_session_id);
   if (!session) return null;
 
-  // Skip if we don't have relationship data (shouldn't happen with enriched sessions)
+  // Skip if we don't have relationship data
   if (!session.relationship) return null;
 
   const nextSession = nextSessionByRelationship.get(
@@ -231,58 +241,93 @@ function groupActionsByRelationship(
 // Main Hook
 // ============================================================================
 
-// Empty result for when data is not yet available
-const EMPTY_RESULT = {
-  groupedActions: [] as RelationshipGroupedActions[],
-  flatActions: [] as AssignedActionWithContext[],
-  totalCount: 0,
-  overdueCount: 0,
-  isLoading: true,
-  isError: false,
-  refresh: () => {},
-};
-
 /**
- * Hook to fetch and enrich assigned actions for the current user,
+ * Hook to fetch and enrich assigned actions for all coachees of the current user (coach),
  * grouped by coaching relationship and overarching goal.
+ *
+ * @param filter - Filter for due soon or all incomplete actions
+ * @param enabled - Whether to fetch data (set to false to skip fetching)
  */
-export function useAssignedActions(
-  filter: AssignedActionsFilter = AssignedActionsFilter.DueSoon
+export function useCoacheeAssignedActions(
+  filter: AssignedActionsFilter = AssignedActionsFilter.DueSoon,
+  enabled: boolean = true
 ) {
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
 
   const userId = userSession?.id;
+  const { currentOrganizationId } = useCurrentOrganization();
 
-  // Fetch actions assigned to the user (only when userId is available)
-  const {
-    actions: rawActions,
-    isLoading: actionsLoading,
-    isError: actionsError,
-    refresh: refreshActions,
-  } = useAssignedActionsList(userId);
+  // Fetch coaching relationships to find coachees (only when enabled)
+  const { relationships, isLoading: relationshipsLoading } =
+    useCoachingRelationshipList(enabled ? (currentOrganizationId ?? "") : "");
 
-  // Fetch enriched sessions for the user (with relationship and goal data)
-  // Use a wide date range to cover historical and future sessions
+  // Get coachee IDs where current user is the coach
+  const coacheeIds = useMemo(() => {
+    if (!enabled || !userId || !relationships) return [];
+    return relationships
+      .filter((r) => r.coach_id === userId)
+      .map((r) => r.coachee_id);
+  }, [enabled, userId, relationships]);
+
+  // Create a stable string key for coacheeIds to use in useEffect dependencies
+  const coacheeIdsKey = useMemo(() => coacheeIds.join(","), [coacheeIds]);
+
+  // State for fetched actions
+  const [rawActions, setRawActions] = useState<Action[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(enabled);
+  const [actionsError, setActionsError] = useState<Error | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Fetch actions for all coachees in parallel (only when enabled)
+  useEffect(() => {
+    if (!enabled) {
+      setRawActions([]);
+      setActionsLoading(false);
+      return;
+    }
+
+    if (coacheeIds.length === 0) {
+      setRawActions([]);
+      setActionsLoading(false);
+      return;
+    }
+
+    setActionsLoading(true);
+    setActionsError(null);
+
+    Promise.all(coacheeIds.map((id) => AssignedActionsApi.list(id)))
+      .then((results) => {
+        // Flatten all coachee actions into a single array
+        const allActions = results.flat();
+        setRawActions(allActions);
+        setActionsLoading(false);
+      })
+      .catch((error) => {
+        setActionsError(error);
+        setActionsLoading(false);
+      });
+  }, [enabled, coacheeIdsKey, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch enriched sessions for context - null skips the fetch
   const oneYearAgo = useMemo(() => DateTime.now().minus({ years: 1 }), []);
   const oneYearFromNow = useMemo(() => DateTime.now().plus({ years: 1 }), []);
 
-  // Only fetch sessions when userId is available - null skips the fetch
   const {
     enrichedSessions: sessions,
     isLoading: sessionsLoading,
     isError: sessionsError,
   } = useEnrichedCoachingSessionsForUser(
-    userId ?? null,
+    enabled ? (userId ?? null) : null,
     oneYearAgo,
     oneYearFromNow,
     [CoachingSessionInclude.Relationship, CoachingSessionInclude.Goal]
   );
 
-  // If no userId yet, return loading state - the sessions hook skips fetching with null userId
-  const isLoading = !userId || actionsLoading || sessionsLoading;
-  const isError = actionsError || sessionsError;
+  // Aggregate loading and error states
+  const isLoading = enabled && (relationshipsLoading || actionsLoading || sessionsLoading);
+  const isError = enabled && (actionsError || sessionsError);
 
   // Build lookup maps
   const sessionMap = useMemo(
@@ -322,6 +367,10 @@ export function useAssignedActions(
     [actionsWithContext]
   );
 
+  const refresh = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
+
   return {
     groupedActions,
     flatActions: actionsWithContext,
@@ -329,6 +378,6 @@ export function useAssignedActions(
     overdueCount: actionsWithContext.filter((a) => a.isOverdue).length,
     isLoading,
     isError,
-    refresh: refreshActions,
+    refresh,
   };
 }

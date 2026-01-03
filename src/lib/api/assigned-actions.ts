@@ -37,14 +37,14 @@ export const AssignedActionsApi = {
  * It returns actions from all coaching sessions where the user is an assignee.
  *
  * @param userId The ID of the user whose assigned actions should be fetched.
- *               If null or undefined, no fetch will occur.
+ *               If null, no fetch will occur.
  * @returns An object containing:
  *   - actions: Array of Action objects (empty array if data is not yet loaded)
  *   - isLoading: Boolean indicating if the data is currently being fetched
  *   - isError: Error object if the fetch operation failed, undefined otherwise
  *   - refresh: Function to manually trigger a refresh of the data
  */
-export const useAssignedActionsList = (userId: Id | null | undefined) => {
+export const useAssignedActionsList = (userId: Id | null) => {
   const url = userId ? `${USERS_BASEURL}/${userId}/assigned-actions` : null;
 
   const { entities, isLoading, isError, refresh } = EntityApi.useEntityList<

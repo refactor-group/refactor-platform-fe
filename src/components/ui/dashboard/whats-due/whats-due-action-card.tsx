@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, ChevronUp, Calendar } from "lucide-react";
 import { DateTime } from "ts-luxon";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,24 +22,26 @@ interface WhatsDueActionCardProps {
 }
 
 function formatDueDate(dueBy: DateTime): string {
-  const now = DateTime.now();
-  const diff = dueBy.diff(now, "days").days;
+  // Compare dates only (not times) to avoid "overdue" for items due today
+  const today = DateTime.now().startOf("day");
+  const dueDate = dueBy.startOf("day");
+  const diffDays = dueDate.diff(today, "days").days;
 
-  if (diff < 0) {
-    const daysOverdue = Math.abs(Math.floor(diff));
+  if (diffDays < 0) {
+    const daysOverdue = Math.abs(diffDays);
     return daysOverdue === 1 ? "1 day overdue" : `${daysOverdue} days overdue`;
   }
 
-  if (diff < 1) {
+  if (diffDays === 0) {
     return "Due today";
   }
 
-  if (diff < 2) {
+  if (diffDays === 1) {
     return "Due tomorrow";
   }
 
-  if (diff < 7) {
-    return `Due in ${Math.floor(diff)} days`;
+  if (diffDays < 7) {
+    return `Due in ${diffDays} days`;
   }
 
   return `Due ${dueBy.toFormat("MMM d")}`;
@@ -51,7 +54,7 @@ export function WhatsDueActionCard({
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const { action: actionData, isOverdue, goal } = action;
+  const { action: actionData, isOverdue } = action;
   const hasDetails = actionData.body && actionData.body.trim().length > 0;
 
   const handleCheckboxChange = async (checked: boolean) => {
@@ -86,14 +89,15 @@ export function WhatsDueActionCard({
           />
 
           <div className="flex-1 min-w-0">
-            <p
+            <Link
+              href={`/coaching-sessions/${actionData.coaching_session_id}?tab=actions`}
               className={cn(
-                "text-sm font-medium leading-snug",
+                "text-sm font-medium leading-snug hover:underline",
                 isCompleted && "line-through text-muted-foreground"
               )}
             >
               {actionData.body || "No description"}
-            </p>
+            </Link>
 
             <div className="flex items-center gap-2 mt-1.5">
               <Pill variant="outline" className="text-xs px-2 py-0.5">
@@ -103,12 +107,6 @@ export function WhatsDueActionCard({
                 <Calendar className="h-3 w-3" />
                 <span>{dueDateText}</span>
               </Pill>
-
-              {goal.title !== "No Goal" && (
-                <span className="text-xs text-muted-foreground truncate">
-                  {goal.title}
-                </span>
-              )}
             </div>
           </div>
 

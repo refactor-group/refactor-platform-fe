@@ -19,10 +19,10 @@ export function WhatsDueFilter({ value, onChange }: WhatsDueFilterProps) {
       variant="outline"
       size="sm"
     >
-      <ToggleGroupItem value={AssignedActionsFilter.DueSoon}>
+      <ToggleGroupItem value={AssignedActionsFilter.DueSoon} className="whitespace-nowrap">
         Due Soon
       </ToggleGroupItem>
-      <ToggleGroupItem value={AssignedActionsFilter.AllIncomplete}>
+      <ToggleGroupItem value={AssignedActionsFilter.AllIncomplete} className="whitespace-nowrap">
         All Incomplete
       </ToggleGroupItem>
     </ToggleGroup>

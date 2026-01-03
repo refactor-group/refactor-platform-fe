@@ -5,11 +5,15 @@ import { DateTime } from "ts-luxon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pill } from "@/components/kibo/ui/pill";
 import { cn } from "@/components/lib/utils";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useRelationshipRoles } from "@/lib/api/relationship-roles";
 import { useAssignedActions } from "@/lib/hooks/use-assigned-actions";
+import { useCoacheeAssignedActions } from "@/lib/hooks/use-coachee-assigned-actions";
 import { useActionMutation } from "@/lib/api/actions";
-import { AssignedActionsFilter } from "@/types/assigned-actions";
+import { AssignedActionsFilter, CoachViewMode } from "@/types/assigned-actions";
 import { ItemStatus, type Id } from "@/types/general";
 import type { Action } from "@/types/action";
+import { WhatsDueCoachToggle } from "./whats-due-coach-toggle";
 import { WhatsDueFilter } from "./whats-due-filter";
 import { WhatsDueRelationshipGroup } from "./whats-due-relationship-group";
 import {
@@ -26,7 +30,22 @@ export function WhatsDue({ className }: WhatsDueProps) {
   const [filter, setFilter] = useState<AssignedActionsFilter>(
     AssignedActionsFilter.DueSoon
   );
+  const [coachViewMode, setCoachViewMode] = useState<CoachViewMode>(
+    CoachViewMode.MyActions
+  );
 
+  const { userSession } = useAuthStore((state) => ({
+    userSession: state.userSession,
+  }));
+  const { isCoach } = useRelationshipRoles(userSession?.id ?? null);
+
+  // Fetch actions based on view mode
+  // Only fetch coachee actions when user is a coach AND has selected that view
+  const shouldFetchCoacheeActions = isCoach && coachViewMode === CoachViewMode.CoacheeActions;
+  const myActions = useAssignedActions(filter);
+  const coacheeActions = useCoacheeAssignedActions(filter, shouldFetchCoacheeActions);
+
+  // Select which data to display based on view mode
   const {
     groupedActions,
     flatActions,
@@ -35,7 +54,7 @@ export function WhatsDue({ className }: WhatsDueProps) {
     isLoading,
     isError,
     refresh,
-  } = useAssignedActions(filter);
+  } = coachViewMode === CoachViewMode.MyActions ? myActions : coacheeActions;
 
   const { update: updateAction } = useActionMutation();
 
@@ -61,24 +80,30 @@ export function WhatsDue({ className }: WhatsDueProps) {
 
   return (
     <Card className={cn("h-full", className)}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg font-semibold">
-              What&apos;s Due
-            </CardTitle>
-            {totalCount > 0 && (
-              <Pill variant="secondary" className="text-xs">
-                {totalCount}
-              </Pill>
-            )}
-            {overdueCount > 0 && (
-              <Pill variant="destructive" className="text-xs">
-                {overdueCount} overdue
-              </Pill>
-            )}
-          </div>
+      <CardHeader className="pb-3 space-y-4">
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold">
+            What&apos;s Due
+          </CardTitle>
+          {totalCount > 0 && (
+            <Pill variant="secondary" className="text-xs">
+              {totalCount}
+            </Pill>
+          )}
+          {overdueCount > 0 && (
+            <Pill variant="destructive" className="text-xs">
+              {overdueCount} overdue
+            </Pill>
+          )}
+        </div>
 
+        <div className="flex items-center justify-end gap-2">
+          {isCoach && (
+            <WhatsDueCoachToggle
+              value={coachViewMode}
+              onChange={setCoachViewMode}
+            />
+          )}
           <WhatsDueFilter value={filter} onChange={setFilter} />
         </div>
       </CardHeader>
@@ -89,18 +114,20 @@ export function WhatsDue({ className }: WhatsDueProps) {
         {isError && <WhatsDueErrorState />}
 
         {!isLoading && !isError && groupedActions.length === 0 && (
-          <WhatsDueEmptyState filter={filter} />
+          <WhatsDueEmptyState filter={filter} viewMode={coachViewMode} />
         )}
 
         {!isLoading && !isError && groupedActions.length > 0 && (
-          <div className="space-y-3">
-            {groupedActions.map((group) => (
-              <WhatsDueRelationshipGroup
-                key={group.relationship.coachingRelationshipId}
-                group={group}
-                onActionStatusChange={handleActionStatusChange}
-              />
-            ))}
+          <div className="max-h-[280px] overflow-y-auto">
+            <div className="space-y-3">
+              {groupedActions.map((group) => (
+                <WhatsDueRelationshipGroup
+                  key={group.relationship.coachingRelationshipId}
+                  group={group}
+                  onActionStatusChange={handleActionStatusChange}
+                />
+              ))}
+            </div>
           </div>
         )}
       </CardContent>

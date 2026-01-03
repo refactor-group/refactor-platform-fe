@@ -318,32 +318,38 @@ export const useCoachingSessionMutation = () => {
  * @returns Object containing enriched sessions, loading state, error, and refresh function
  */
 export const useEnrichedCoachingSessionsForUser = (
-  userId: Id,
+  userId: Id | null,
   fromDate: DateTime,
   toDate: DateTime,
   include?: CoachingSessionInclude[],
   sortBy?: CoachingSessionSortField,
   sortOrder?: ApiSortOrder
 ) => {
-  const params = {
-    from_date: fromDate.toISODate(),
-    to_date: toDate.toISODate(),
-    ...(include && include.length > 0 && { include: include.join(',') }),
-    ...(sortBy && { sort_by: sortBy }),
-    ...(sortOrder && { sort_order: sortOrder }),
-  };
+  // Only create params when userId is valid - null params skips the SWR fetch
+  const params = userId
+    ? {
+        user_id: userId,
+        from_date: fromDate.toISODate(),
+        to_date: toDate.toISODate(),
+        ...(include && include.length > 0 && { include: include.join(',') }),
+        ...(sortBy && { sort_by: sortBy }),
+        ...(sortOrder && { sort_order: sortOrder }),
+      }
+    : null;
 
-  const url = `${USERS_BASEURL}/${userId}/coaching_sessions`;
+  const url = userId ? `${USERS_BASEURL}/${userId}/coaching_sessions` : '';
 
   const fetcher = () =>
-    CoachingSessionApi.listForUser(
-      userId,
-      fromDate,
-      toDate,
-      include,
-      sortBy,
-      sortOrder
-    );
+    userId
+      ? CoachingSessionApi.listForUser(
+          userId,
+          fromDate,
+          toDate,
+          include,
+          sortBy,
+          sortOrder
+        )
+      : Promise.resolve([]);
 
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<EnrichedCoachingSession>(
@@ -354,7 +360,7 @@ export const useEnrichedCoachingSessionsForUser = (
 
   return {
     enrichedSessions: entities,
-    isLoading,
+    isLoading: userId ? isLoading : false,
     isError,
     refresh,
   };
