@@ -89,12 +89,11 @@ export function WhatsDueRelationshipGroup({
 
   const userId = userSession?.id;
 
-  // Determine if the user is the coach or coachee in this relationship
+  // Determine the other person in this coaching relationship
   const isCoach = userId === group.relationship.coachId;
   const otherPersonName = isCoach
     ? group.relationship.coacheeName
     : group.relationship.coachName;
-  const roleLabel = isCoach ? "Coachee" : "Coach";
 
   const nextSessionText = group.nextSession
     ? formatNextSessionDate(group.nextSession.sessionDate)
@@ -109,14 +108,9 @@ export function WhatsDueRelationshipGroup({
               variant="ghost"
               className="w-full justify-between p-0 h-auto hover:bg-transparent"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <div className="text-left">
-                    <p className="font-semibold text-sm">{otherPersonName}</p>
-                    <p className="text-xs text-muted-foreground">{roleLabel}</p>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <p className="font-semibold text-sm">With {otherPersonName}</p>
               </div>
 
               <div className="flex items-center gap-2">
