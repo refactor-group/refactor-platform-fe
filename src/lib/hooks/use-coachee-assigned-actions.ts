@@ -136,8 +136,10 @@ function addContextToAction(
     session.coaching_relationship_id
   );
 
-  const now = DateTime.now();
-  const isOverdue = action.due_by < now;
+  // Compare dates only (not times) to avoid marking items due today as overdue
+  const today = DateTime.now().startOf("day");
+  const dueDate = action.due_by.startOf("day");
+  const isOverdue = dueDate < today;
 
   return {
     action,
