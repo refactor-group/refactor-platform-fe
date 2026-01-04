@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Share, User, Target, Building } from "lucide-react";
+import { Share, Target, Building } from "lucide-react";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { cn } from "@/components/lib/utils";
 import { SessionUrgency } from "@/types/session-display";
@@ -256,7 +256,7 @@ export function TodaySessionCard({
         {/* Session Title */}
         <div className="space-y-1">
           <h3 className="text-xl font-bold tracking-tight text-foreground">
-            Coaching Session
+            Coaching Session with {participantInfo.participantName}
           </h3>
           <p
             className="text-sm text-muted-foreground truncate"
@@ -268,14 +268,6 @@ export function TodaySessionCard({
 
         {/* Session Details */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <User className="h-4 w-4" />
-            <span>
-              Meeting with:{" "}
-              <span className="font-medium">{participantInfo.participantName}</span>
-            </span>
-          </div>
-
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Target className="h-4 w-4" />
             <span>
