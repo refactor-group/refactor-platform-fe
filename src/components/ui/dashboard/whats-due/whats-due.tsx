@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { DateTime } from "ts-luxon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pill } from "@/components/kibo/ui/pill";
+import { Pill, PillIndicator } from "@/components/kibo/ui/pill";
 import { cn } from "@/components/lib/utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useRelationshipRoles } from "@/lib/api/relationship-roles";
@@ -81,20 +81,26 @@ export function WhatsDue({ className }: WhatsDueProps) {
   return (
     <Card className={cn("h-[30rem] flex flex-col", className)}>
       <CardHeader className="pb-3 space-y-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">
             What&apos;s Due
           </CardTitle>
-          {totalCount > 0 && (
-            <Pill variant="secondary" className="text-xs">
-              {totalCount}
-            </Pill>
-          )}
-          {overdueCount > 0 && (
-            <Pill variant="destructive" className="text-xs">
-              {overdueCount} overdue
-            </Pill>
-          )}
+          <div className="flex items-center gap-2">
+            {totalCount > 0 && (
+              <Pill variant="secondary" className="text-xs">
+                {totalCount} total
+              </Pill>
+            )}
+            {overdueCount > 0 && (
+              <Pill
+                variant="outline"
+                className="text-xs bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800"
+              >
+                <PillIndicator variant="warning" />
+                {overdueCount} overdue
+              </Pill>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">

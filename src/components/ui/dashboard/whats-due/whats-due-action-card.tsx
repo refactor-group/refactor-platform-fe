@@ -72,6 +72,7 @@ export function WhatsDueActionCard({
 
   const isCompleted = actionData.status === ItemStatus.Completed;
   const dueDateText = formatDueDate(actionData.due_by);
+  const isDueSoon = dueDateText === "Due today" || dueDateText === "Due tomorrow";
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -109,7 +110,7 @@ export function WhatsDueActionCard({
                   <PillIndicator variant="warning" />
                 )}
                 <Calendar className="h-3 w-3" />
-                <span>{dueDateText}</span>
+                <span className={cn(isDueSoon && "font-bold")}>{dueDateText}</span>
               </Pill>
             </div>
           </div>
