@@ -58,7 +58,7 @@ export function WhatsDueActionCard({
 
   const { action: actionData, isOverdue, relationship } = action;
 
-  const assignedByName = resolveUserNameInRelationship(actionData.user_id, relationship);
+  const createdByName = resolveUserNameInRelationship(actionData.user_id, relationship);
   const createdAtText = formatShortDate(actionData.created_at);
 
   const handleCheckboxChange = async (checked: boolean) => {
@@ -135,7 +135,7 @@ export function WhatsDueActionCard({
           <div className="px-3 pb-3 pt-0 pl-10 space-y-1">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <User className="h-3 w-3" />
-              <span>Assigned by {assignedByName}</span>
+              <span>Created by {createdByName}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
