@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useAssignedActionsList } from "@/lib/api/assigned-actions";
+import { useSessionActionsList } from "@/lib/api/session-actions";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
@@ -37,6 +37,7 @@ function buildSessionMap(sessions: EnrichedCoachingSession[]) {
 function filterActionsByStatus(
   actions: Action[],
   filter: AssignedActionsFilter,
+  userId: Id | null,
   sessionMap: Map<Id, EnrichedCoachingSession>,
   nextSessionByRelationship: Map<Id, EnrichedCoachingSession>
 ): Action[] {
@@ -44,13 +45,17 @@ function filterActionsByStatus(
     // Only include incomplete actions
     if (action.status === ItemStatus.Completed) return false;
 
-    if (filter === AssignedActionsFilter.AllIncomplete) {
-      return true;
-    }
-
     if (filter === AssignedActionsFilter.AllUnassigned) {
       // Show actions with no assignees
       return !action.assignee_ids || action.assignee_ids.length === 0;
+    }
+
+    // For DueSoon and AllIncomplete, only show actions assigned to the current user
+    const isAssignedToUser = userId && action.assignee_ids?.includes(userId);
+    if (!isAssignedToUser) return false;
+
+    if (filter === AssignedActionsFilter.AllIncomplete) {
+      return true;
     }
 
     // For "due_soon" filter, include actions due within the next session
@@ -263,12 +268,13 @@ export function useAssignedActions(
   const userId = userSession?.id;
 
   // Fetch actions assigned to the user (only when userId is available)
+  // Fetch all actions from user's sessions (assigned and unassigned)
   const {
     actions: rawActions,
     isLoading: actionsLoading,
     isError: actionsError,
     refresh: refreshActions,
-  } = useAssignedActionsList(userId);
+  } = useSessionActionsList(userId);
 
   // Fetch enriched sessions for the user (with relationship and goal data)
   // Use a wide date range to cover historical and future sessions
@@ -308,10 +314,11 @@ export function useAssignedActions(
       filterActionsByStatus(
         rawActions ?? [],
         filter,
+        userId ?? null,
         sessionMap,
         nextSessionByRelationship
       ),
-    [rawActions, filter, sessionMap, nextSessionByRelationship]
+    [rawActions, filter, userId, sessionMap, nextSessionByRelationship]
   );
 
   const actionsWithContext = useMemo(
