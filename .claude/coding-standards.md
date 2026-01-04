@@ -2,6 +2,26 @@
 
 This document outlines coding conventions and standards for this project.
 
+## Strict Typing and Nullability
+
+Prefer strict, explicit typings and clear nullability rules; don't auto-widen.
+
+- In TypeScript, lean on strict null checks and intentional nullability. Enable `strict: true` and `noImplicitAny`. Use exact types rather than permissive unions, and reserve `null`/`undefined` for truly absent states.
+
+- Prefer discriminated unions and "presence" wrappers over sprinkling null: for example, `{ kind: "loaded", value: T } | { kind: "loading" } | { kind: "error", message: string }` instead of `T | null`.
+
+- Use Optional types at boundaries only. Accept `string | undefined` from inputs, but normalize immediately inside functions to a definitive shape so internals don't propagate nullability.
+
+- Write function contracts that eliminate nullability with guards. Parse and validate early, then operate on a non-null `T`.
+
+- Favor exact object shapes over partials. Use `type ExactUser = { id: string; name: string }` instead of `Partial<User>`, and avoid `Record<string, unknown>` unless unavoidable.
+
+- At async boundaries, return Result types rather than nullable payloads.
+
+- Do not use `T | null | undefined` unless a value is truly optional. Prefer discriminated unions or Result types. Assume strict null checks. Provide exact types; no lazy unions.
+
+If you inherit nullable APIs, normalize at the edge and keep your core strict. Model absence as a deliberate, named state rather than a catch-all union.
+
 ## React and TypeScript
 
 ### Import Conventions
@@ -97,6 +117,36 @@ enum connectionState {
 - Keep React components in `src/components/`
 - Place tests in `__tests__/` directories mirroring the source structure
 - Group related components in feature-specific subdirectories
+
+### UI Component Libraries
+
+This project uses two UI component libraries with different import paths:
+
+**shadcn/ui components** - Located in `src/components/ui/`
+```typescript
+// ✅ Correct - shadcn components
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+```
+
+**Kibo UI components** - Located in `src/components/kibo/ui/`
+```typescript
+// ✅ Correct - Kibo UI components
+import { Pill, PillIndicator } from "@/components/kibo/ui/pill";
+import { Choicebox, ChoiceboxItem } from "@/components/kibo/ui/choicebox";
+```
+
+**Utility function `cn`** - Located in `src/components/lib/utils.ts`
+```typescript
+// ✅ Correct
+import { cn } from "@/components/lib/utils";
+
+// ❌ Incorrect - this path doesn't exist in this project
+import { cn } from "@/lib/utils";
+```
+
+**Note**: When installing new shadcn components via CLI, you may need to update their imports from `@/lib/utils` to `@/components/lib/utils`.
 
 ### Documentation
 - Add JSDoc comments for complex logic or non-obvious patterns
