@@ -28,9 +28,15 @@ export function WhatsDueFilter({ value, onChange }: WhatsDueFilterProps) {
       </ToggleGroupItem>
       <ToggleGroupItem
         value={AssignedActionsFilter.AllIncomplete}
+        className="whitespace-nowrap text-xs px-2 h-7 rounded-none border-r-0"
+      >
+        Incomplete
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value={AssignedActionsFilter.AllUnassigned}
         className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none"
       >
-        All Incomplete
+        Unassigned
       </ToggleGroupItem>
     </ToggleGroup>
   );

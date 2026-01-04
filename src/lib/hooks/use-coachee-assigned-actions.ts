@@ -58,6 +58,11 @@ function filterActionsByStatus(
       return true;
     }
 
+    if (filter === AssignedActionsFilter.AllUnassigned) {
+      // Show actions with no assignees
+      return !action.assignee_ids || action.assignee_ids.length === 0;
+    }
+
     // For "due_soon" filter, include actions due within the next session
     const session = sessionMap.get(action.coaching_session_id);
     if (!session) return true;

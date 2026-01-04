@@ -50,6 +50,12 @@ function getEmptyStateMessage(
       : "No actions due before your next session. You're all caught up!";
   }
 
+  if (filter === AssignedActionsFilter.AllUnassigned) {
+    return isCoacheeView
+      ? "Your coachees have no unassigned actions."
+      : "No unassigned actions. All actions have owners!";
+  }
+
   return isCoacheeView
     ? "Your coachees have no incomplete actions."
     : "No incomplete actions. Great work!";

@@ -8,6 +8,7 @@ import type { Action } from "@/types/action";
 export enum AssignedActionsFilter {
   DueSoon = "due_soon",
   AllIncomplete = "all_incomplete",
+  AllUnassigned = "all_unassigned",
 }
 
 /**
