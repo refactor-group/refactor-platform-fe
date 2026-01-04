@@ -21,11 +21,18 @@ export function WhatsDueCoachToggle({
       }}
       variant="outline"
       size="sm"
+      className="gap-0"
     >
-      <ToggleGroupItem value={CoachViewMode.MyActions} className="whitespace-nowrap">
+      <ToggleGroupItem
+        value={CoachViewMode.MyActions}
+        className="whitespace-nowrap text-xs px-2 h-7 rounded-r-none border-r-0"
+      >
         My Actions
       </ToggleGroupItem>
-      <ToggleGroupItem value={CoachViewMode.CoacheeActions} className="whitespace-nowrap">
+      <ToggleGroupItem
+        value={CoachViewMode.CoacheeActions}
+        className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none"
+      >
         Coachee Actions
       </ToggleGroupItem>
     </ToggleGroup>

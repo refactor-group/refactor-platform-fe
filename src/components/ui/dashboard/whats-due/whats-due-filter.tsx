@@ -18,11 +18,18 @@ export function WhatsDueFilter({ value, onChange }: WhatsDueFilterProps) {
       }}
       variant="outline"
       size="sm"
+      className="gap-0"
     >
-      <ToggleGroupItem value={AssignedActionsFilter.DueSoon} className="whitespace-nowrap">
+      <ToggleGroupItem
+        value={AssignedActionsFilter.DueSoon}
+        className="whitespace-nowrap text-xs px-2 h-7 rounded-r-none border-r-0"
+      >
         Due Soon
       </ToggleGroupItem>
-      <ToggleGroupItem value={AssignedActionsFilter.AllIncomplete} className="whitespace-nowrap">
+      <ToggleGroupItem
+        value={AssignedActionsFilter.AllIncomplete}
+        className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none"
+      >
         All Incomplete
       </ToggleGroupItem>
     </ToggleGroup>
