@@ -23,7 +23,7 @@ interface StateComponentProps {
  */
 export function LoadingState({ className }: StateComponentProps) {
   return (
-    <Card className={cn(className)}>
+    <Card className={cn("h-[30rem]", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold">
           Today&apos;s Sessions
@@ -48,7 +48,7 @@ export function LoadingState({ className }: StateComponentProps) {
  */
 export function ErrorState({ className }: StateComponentProps) {
   return (
-    <Card className={cn(className)}>
+    <Card className={cn("h-[30rem]", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold">
           Today&apos;s Sessions
@@ -75,7 +75,7 @@ export function ErrorState({ className }: StateComponentProps) {
  */
 export function EmptyState({ className }: StateComponentProps) {
   return (
-    <Card className={cn(className)}>
+    <Card className={cn("h-[30rem]", className)}>
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-semibold">
           Today&apos;s Sessions
