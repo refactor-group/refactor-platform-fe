@@ -1,6 +1,8 @@
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
+import type { RelationshipContext } from "@/types/assigned-actions";
+import type { Id } from "@/types/general";
 
 /**
  * Relationship Utility Functions
@@ -73,4 +75,21 @@ export function getUserRoleInRelationship(
   user: User
 ): RelationshipRole {
   return isUserCoach(relationship, user) ? RelationshipRole.Coach : RelationshipRole.Coachee;
+}
+
+/**
+ * Resolve a user ID to their name within a relationship context
+ * Story: "Show who performed an action in a coaching relationship"
+ */
+export function resolveUserNameInRelationship(
+  userId: Id,
+  relationship: RelationshipContext
+): string {
+  if (userId === relationship.coachId) {
+    return relationship.coachName;
+  }
+  if (userId === relationship.coacheeId) {
+    return relationship.coacheeName;
+  }
+  return "Unknown";
 }

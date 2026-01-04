@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { ChevronDown, ChevronUp, Calendar, User, Clock } from "lucide-react";
 import { DateTime } from "ts-luxon";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { Pill, PillIndicator } from "@/components/kibo/ui/pill";
 import { cn } from "@/components/lib/utils";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { ItemStatus, type Id } from "@/types/general";
+import { resolveUserNameInRelationship } from "@/lib/relationships/relationship-utils";
+import { formatShortDate } from "@/lib/utils/date-utils";
 
 interface WhatsDueActionCardProps {
   action: AssignedActionWithContext;
@@ -54,7 +56,10 @@ export function WhatsDueActionCard({
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const { action: actionData, isOverdue } = action;
+  const { action: actionData, isOverdue, relationship } = action;
+
+  const assignedByName = resolveUserNameInRelationship(actionData.user_id, relationship);
+  const createdAtText = formatShortDate(actionData.created_at);
 
   const handleCheckboxChange = async (checked: boolean) => {
     setIsUpdating(true);
@@ -127,9 +132,14 @@ export function WhatsDueActionCard({
 
         {/* Expanded content */}
         <CollapsibleContent>
-          <div className="px-3 pb-3 pt-0 pl-10">
-            <div className="text-sm text-muted-foreground">
-              Steps: TBD
+          <div className="px-3 pb-3 pt-0 pl-10 space-y-1">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <User className="h-3 w-3" />
+              <span>Assigned by {assignedByName}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>Created {createdAtText}</span>
             </div>
           </div>
         </CollapsibleContent>
