@@ -25,3 +25,10 @@ export function formatLongDate(date: DateTime): string {
 export function formatDateWithTime(date: DateTime): string {
   return date.toFormat("MMM d, yyyy 'at' h:mm a");
 }
+
+/**
+ * Format a DateTime as weekday and date (e.g., "Sunday, January 4")
+ */
+export function formatWeekdayDate(date: DateTime): string {
+  return date.toFormat("EEEE, MMMM d");
+}
