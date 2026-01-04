@@ -86,6 +86,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   const providerRef = useRef<TiptapCollabProvider | null>(null);
   const yDocRef = useRef<Y.Doc | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
+  const extensionsCreatedRef = useRef<boolean>(false);
 
   // Generate a consistent color for this user session
   const userColor = useMemo(() => generateCollaborativeUserColor(), []);
@@ -145,14 +146,12 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
       // Provider event handlers: sync completion enables collaborative editing
       // IMPORTANT: Track if we've already created extensions to prevent recreation
-      let extensionsCreated = false;
-
       provider.on("synced", () => {
-        if (extensionsCreated) {
+        if (extensionsCreatedRef.current) {
           return;
         }
 
-        extensionsCreated = true;
+        extensionsCreatedRef.current = true;
 
         const collaborativeExtensions = createExtensions(doc, provider, {
           name: userSession.display_name,
@@ -297,6 +296,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     if (lastSessionIdRef.current !== sessionId && providerRef.current) {
       providerRef.current.disconnect();
       providerRef.current = null;
+      extensionsCreatedRef.current = false;
     }
 
     // Provider initialization or fallback to offline mode
@@ -401,6 +401,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
     yDocRef.current = null;
     lastSessionIdRef.current = null;
+    extensionsCreatedRef.current = false;
 
     setCache({
       yDoc: null,
