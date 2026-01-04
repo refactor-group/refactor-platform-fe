@@ -12,6 +12,7 @@ import { useCarouselState } from "@/lib/hooks/use-carousel-state";
 import { useSessionAutoScroll } from "@/lib/hooks/use-session-auto-scroll";
 import { SessionCarouselNavigation } from "./session-carousel-navigation";
 import { LoadingState, ErrorState, EmptyState } from "./todays-sessions-states";
+import { useAssignedActions } from "@/lib/hooks/use-assigned-actions";
 
 /**
  * Props for the TodaysSessions component
@@ -62,6 +63,9 @@ export function TodaysSessions({ className, onRescheduleSession, onRefreshNeeded
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
+
+  // Get actions (reusing logic from What's Due)
+  const { flatActions } = useAssignedActions();
 
   // Manage carousel state and behavior
   const carousel = useCarouselState();
@@ -119,6 +123,7 @@ export function TodaysSessions({ className, onRescheduleSession, onRefreshNeeded
                   session={session}
                   sessionIndex={index + 1}
                   totalSessions={sessions.length}
+                  assignedActions={flatActions}
                   onReschedule={onRescheduleSession ? () => onRescheduleSession(session) : undefined}
                 />
               </CarouselItem>

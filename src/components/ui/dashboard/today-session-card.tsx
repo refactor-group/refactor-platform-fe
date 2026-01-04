@@ -5,11 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Share, Target, Building } from "lucide-react";
+import { Share, Target, Building, CheckSquare } from "lucide-react";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { cn } from "@/components/lib/utils";
 import { SessionUrgency } from "@/types/session-display";
 import { RelationshipRole } from "@/types/relationship-role";
+import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { DateTime } from "ts-luxon";
@@ -29,6 +30,8 @@ interface TodaySessionCardProps {
   sessionIndex?: number;
   /** Optional total number of sessions today */
   totalSessions?: number;
+  /** Assigned actions to filter for this session */
+  assignedActions?: AssignedActionWithContext[];
   /** Optional callback function to handle rescheduling the session */
   onReschedule?: () => void;
 }
@@ -171,11 +174,23 @@ export function TodaySessionCard({
   session,
   sessionIndex,
   totalSessions,
+  assignedActions = [],
   onReschedule,
 }: TodaySessionCardProps) {
   const { isCurrentCoach, userSession } = useAuthStore((state) => state);
 
   if (!userSession) return null;
+
+  // Count actions due by this session for this relationship
+  const sessionDate = DateTime.fromISO(session.date);
+  const actionsDueCount = assignedActions.filter((a) => {
+    // Must be for this coaching relationship
+    if (a.relationship.coachingRelationshipId !== session.coaching_relationship_id) {
+      return false;
+    }
+    // Must be due on or before this session
+    return a.action.due_by <= sessionDate;
+  }).length;
 
   /**
    * Handles copying the session link to clipboard with a toast notification
@@ -268,6 +283,17 @@ export function TodaySessionCard({
 
         {/* Session Details */}
         <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CheckSquare className="h-4 w-4" />
+            <span>
+              You have{" "}
+              <span className="font-medium">
+                {actionsDueCount} {actionsDueCount === 1 ? "action" : "actions"}
+              </span>{" "}
+              due
+            </span>
+          </div>
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Target className="h-4 w-4" />
             <span>
