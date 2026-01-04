@@ -129,8 +129,7 @@ describe("TodaySessionCard", () => {
 
     render(<TodaySessionCard session={session} />);
 
-    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
-    expect(screen.getByText("Meeting with:")).toBeInTheDocument();
+    expect(screen.getByText(/Coaching Session with.*Alice Smith/)).toBeInTheDocument();
   });
 
   it("should display user role as Coach", () => {
