@@ -11,6 +11,7 @@ import { useAssignedActions } from "@/lib/hooks/use-assigned-actions";
 import { useCoacheeAssignedActions } from "@/lib/hooks/use-coachee-assigned-actions";
 import { useActionMutation } from "@/lib/api/actions";
 import { AssignedActionsFilter, CoachViewMode } from "@/types/assigned-actions";
+import { useIsMobile } from "@/components/hooks/use-mobile";
 import { ItemStatus, type Id } from "@/types/general";
 import type { Action } from "@/types/action";
 import { WhatsDueCoachToggle } from "./whats-due-coach-toggle";
@@ -38,6 +39,7 @@ export function WhatsDue({ className }: WhatsDueProps) {
     userSession: state.userSession,
   }));
   const { isCoach } = useRelationshipRoles(userSession?.id ?? null);
+  const isMobile = useIsMobile();
 
   // Fetch actions based on view mode
   // Only fetch coachee actions when user is a coach AND has selected that view
@@ -80,11 +82,12 @@ export function WhatsDue({ className }: WhatsDueProps) {
 
   return (
     <Card className={cn("h-[30rem] flex flex-col", className)}>
-      <CardHeader className="pb-3 space-y-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">
-            What&apos;s Due
-          </CardTitle>
+      <CardHeader className="pb-3 space-y-3 flex-shrink-0">
+        <CardTitle className="text-lg font-semibold">
+          What&apos;s Due
+        </CardTitle>
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {totalCount > 0 && (
               <Pill variant="secondary" className="text-xs">
@@ -101,16 +104,15 @@ export function WhatsDue({ className }: WhatsDueProps) {
               </Pill>
             )}
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {isCoach && (
-            <WhatsDueCoachToggle
-              value={coachViewMode}
-              onChange={setCoachViewMode}
-            />
-          )}
-          <WhatsDueFilter value={filter} onChange={setFilter} />
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            {isCoach && (
+              <WhatsDueCoachToggle
+                value={coachViewMode}
+                onChange={setCoachViewMode}
+              />
+            )}
+            <WhatsDueFilter value={filter} onChange={setFilter} />
+          </div>
         </div>
       </CardHeader>
 
@@ -125,7 +127,7 @@ export function WhatsDue({ className }: WhatsDueProps) {
 
         {!isLoading && !isError && groupedActions.length > 0 && (
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="space-y-3">
+            <div className={isMobile ? "space-y-3" : "grid grid-cols-[1fr_auto_auto_auto] gap-y-3"}>
               {groupedActions.map((group) => (
                 <WhatsDueRelationshipGroup
                   key={group.relationship.coachingRelationshipId}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, User, Calendar, Target } from "lucide-react";
 import { DateTime } from "ts-luxon";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -19,6 +19,7 @@ import type {
 } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useIsMobile } from "@/components/hooks/use-mobile";
 
 interface WhatsDueRelationshipGroupProps {
   group: RelationshipGroupedActions;
@@ -82,6 +83,7 @@ export function WhatsDueRelationshipGroup({
   defaultExpanded = false,
 }: WhatsDueRelationshipGroupProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const isMobile = useIsMobile();
 
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -99,71 +101,108 @@ export function WhatsDueRelationshipGroup({
     ? formatNextSessionDate(group.nextSession.sessionDate)
     : "No upcoming session";
 
-  return (
-    <Card className="overflow-hidden">
+  const collapsibleContent = (
+    <CollapsibleContent className={isMobile ? "" : "col-span-full"}>
+      <CardContent className="pt-0 pb-4 px-4">
+        <div
+          className={cn(
+            "space-y-4",
+            group.goalGroups.length > 1 && "divide-y divide-border"
+          )}
+        >
+          {group.goalGroups.map((goalGroup, index) => (
+            <div
+              key={goalGroup.goal.overarchingGoalId || `no-goal-${index}`}
+              className={cn(index > 0 && "pt-4")}
+            >
+              <GoalSection
+                goalGroup={goalGroup}
+                onActionStatusChange={onActionStatusChange}
+              />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </CollapsibleContent>
+  );
+
+  // Mobile layout - simple flex with wrapping
+  if (isMobile) {
+    return (
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <CardHeader className="p-4 pb-3">
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
-              className="w-full justify-between p-0 h-auto hover:bg-transparent"
+              className="w-full flex flex-wrap gap-2 p-4 h-auto hover:bg-muted/50 rounded-none items-center"
             >
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <p className="font-semibold text-sm">With {otherPersonName}</p>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="font-semibold text-sm truncate">With {otherPersonName}</span>
               </div>
-
-              <div className="flex items-center gap-2">
-                {/* Action count with overdue indicator */}
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              )}
+              <div className="flex items-center gap-2 w-full">
                 <Pill variant="secondary" className="text-xs">
-                  {group.overdueCount > 0 && (
-                    <PillIndicator variant="warning" />
-                  )}
+                  {group.overdueCount > 0 && <PillIndicator variant="warning" />}
                   <span>
-                    {group.totalActions}{" "}
-                    {group.totalActions === 1 ? "action" : "actions"}
+                    {group.totalActions} {group.totalActions === 1 ? "action" : "actions"}
                   </span>
                 </Pill>
-
-                {/* Next session date */}
                 <Pill variant="outline" className="text-xs">
                   <Calendar className="h-3 w-3" />
                   <span>{nextSessionText}</span>
                 </Pill>
-
-                {isExpanded ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
               </div>
             </Button>
           </CollapsibleTrigger>
-        </CardHeader>
-
-        <CollapsibleContent>
-          <CardContent className="pt-0 pb-4 px-4">
-            <div
-              className={cn(
-                "space-y-4",
-                group.goalGroups.length > 1 && "divide-y divide-border"
-              )}
-            >
-              {group.goalGroups.map((goalGroup, index) => (
-                <div
-                  key={goalGroup.goal.overarchingGoalId || `no-goal-${index}`}
-                  className={cn(index > 0 && "pt-4")}
-                >
-                  <GoalSection
-                    goalGroup={goalGroup}
-                    onActionStatusChange={onActionStatusChange}
-                  />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </CollapsibleContent>
+          {collapsibleContent}
+        </div>
       </Collapsible>
-    </Card>
+    );
+  }
+
+  // Desktop layout - CSS Grid with subgrid for aligned columns
+  return (
+    <Collapsible
+      open={isExpanded}
+      onOpenChange={setIsExpanded}
+      className="contents"
+    >
+      <div className="col-span-full grid grid-cols-subgrid rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className="col-span-full grid grid-cols-subgrid p-4 h-auto hover:bg-muted/50 rounded-none items-center"
+          >
+            <div className="flex items-center gap-2 justify-start">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold text-sm">With {otherPersonName}</span>
+            </div>
+            <Pill variant="secondary" className="text-xs justify-center">
+              {group.overdueCount > 0 && <PillIndicator variant="warning" />}
+              <span>
+                {group.totalActions} {group.totalActions === 1 ? "action" : "actions"}
+              </span>
+            </Pill>
+            <Pill variant="outline" className="text-xs justify-center">
+              <Calendar className="h-3 w-3" />
+              <span>{nextSessionText}</span>
+            </Pill>
+            <div className="flex justify-end">
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+          </Button>
+        </CollapsibleTrigger>
+        {collapsibleContent}
+      </div>
+    </Collapsible>
   );
 }
