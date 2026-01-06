@@ -56,6 +56,12 @@ function getEmptyStateMessage(
       : "No unassigned actions. All actions have owners!";
   }
 
+  if (filter === AssignedActionsFilter.Completed) {
+    return isCoacheeView
+      ? "Your coachees have no recently completed actions."
+      : "No actions completed since your last session.";
+  }
+
   return isCoacheeView
     ? "Your coachees have no incomplete actions."
     : "No incomplete actions. Great work!";

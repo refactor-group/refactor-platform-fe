@@ -16,7 +16,10 @@ import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
-import { findNextSessionsByRelationship } from "@/lib/sessions/session-utils";
+import {
+  findNextSessionsByRelationship,
+  findLastSessionsByRelationship,
+} from "@/lib/sessions/session-utils";
 import { ItemStatus, type Id } from "@/types/general";
 import type { Action } from "@/types/action";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -48,10 +51,33 @@ function filterActionsByStatus(
   actions: Action[],
   filter: AssignedActionsFilter,
   sessionMap: Map<Id, EnrichedCoachingSession>,
-  nextSessionByRelationship: Map<Id, EnrichedCoachingSession>
+  nextSessionByRelationship: Map<Id, EnrichedCoachingSession>,
+  lastSessionByRelationship: Map<Id, EnrichedCoachingSession>
 ): Action[] {
   return actions.filter((action) => {
-    // Only include incomplete actions
+    // Handle Completed filter separately - it only shows completed actions
+    if (filter === AssignedActionsFilter.Completed) {
+      // Must be completed
+      if (action.status !== ItemStatus.Completed) return false;
+
+      // Get the relationship for this action's session
+      const session = sessionMap.get(action.coaching_session_id);
+      if (!session) return true; // Include if no session context
+
+      // Get the last session for this relationship
+      const lastSession = lastSessionByRelationship.get(
+        session.coaching_relationship_id
+      );
+
+      // If no last session, include all completed actions
+      if (!lastSession) return true;
+
+      // Include if completed on or after the last session
+      const lastSessionDate = DateTime.fromISO(lastSession.date);
+      return action.status_changed_at >= lastSessionDate;
+    }
+
+    // All other filters exclude completed actions
     if (action.status === ItemStatus.Completed) return false;
 
     if (filter === AssignedActionsFilter.AllIncomplete) {
@@ -347,6 +373,11 @@ export function useCoacheeAssignedActions(
     [sessions]
   );
 
+  const lastSessionByRelationship = useMemo(
+    () => findLastSessionsByRelationship(sessions ?? []),
+    [sessions]
+  );
+
   // Filter and add context to actions
   const filteredActions = useMemo(
     () =>
@@ -354,9 +385,10 @@ export function useCoacheeAssignedActions(
         rawActions ?? [],
         filter,
         sessionMap,
-        nextSessionByRelationship
+        nextSessionByRelationship,
+        lastSessionByRelationship
       ),
-    [rawActions, filter, sessionMap, nextSessionByRelationship]
+    [rawActions, filter, sessionMap, nextSessionByRelationship, lastSessionByRelationship]
   );
 
   const actionsWithContext = useMemo(

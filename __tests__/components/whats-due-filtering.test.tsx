@@ -19,14 +19,19 @@ import { DateTime } from "ts-luxon";
 import {
   createMockAction,
   createMockAssignedAction,
+  createMockSession,
   isActionOverdue,
   filterActionsByAssignedStatus,
   TEST_RELATIONSHIP_IDS,
   TEST_USER_IDS,
+  TEST_SESSION_IDS,
   REFERENCE_DATE,
   generateTestUUID,
 } from "../utils/action-test-utils";
 import { ItemStatus } from "@/types/general";
+import { filterActionsByStatus } from "@/lib/hooks/use-assigned-actions";
+import { AssignedActionsFilter } from "@/types/assigned-actions";
+import type { EnrichedCoachingSession } from "@/types/coaching-session";
 
 describe("What's Due Filtering", () => {
   /**
@@ -673,6 +678,322 @@ describe("What's Due Filtering", () => {
         actions,
         "all_incomplete",
         TEST_USER_IDS.CURRENT_USER
+      );
+
+      expect(results).toHaveLength(0);
+    });
+  });
+
+  /**
+   * =========================================================================
+   * COMPLETED SINCE LAST SESSION FILTER TESTS (Production Code)
+   * =========================================================================
+   *
+   * These tests verify the production filterActionsByStatus function with
+   * the Completed filter. This filter shows actions that:
+   * 1. Have status = Completed
+   * 2. Are assigned to the current user
+   * 3. Were completed (status_changed_at) after the last session date
+   *
+   * If there is no previous session, ALL completed actions for the user
+   * should be shown (no time constraint).
+   */
+  describe("completed since last session filter (production)", () => {
+    // Helper to create minimal session map for tests
+    const createSessionMap = (sessionId: string, relationshipId: string) => {
+      const map = new Map<string, EnrichedCoachingSession>();
+      map.set(sessionId, {
+        id: sessionId,
+        coaching_relationship_id: relationshipId,
+        date: REFERENCE_DATE.toISO() ?? "",
+      } as EnrichedCoachingSession);
+      return map;
+    };
+
+    // Helper to create last session map
+    const createLastSessionMap = (
+      relationshipId: string,
+      sessionDate: DateTime | null
+    ) => {
+      const map = new Map<string, EnrichedCoachingSession>();
+      if (sessionDate) {
+        map.set(relationshipId, {
+          id: generateTestUUID(),
+          coaching_relationship_id: relationshipId,
+          date: sessionDate.toISO() ?? "",
+        } as EnrichedCoachingSession);
+      }
+      return map;
+    };
+
+    /**
+     * Test: Only completed actions are included.
+     */
+    it("should only include completed actions", () => {
+      const lastSessionDate = REFERENCE_DATE.minus({ days: 7 });
+      const sessionMap = createSessionMap(
+        TEST_SESSION_IDS.SESSION_1,
+        TEST_RELATIONSHIP_IDS.PRIMARY
+      );
+      const lastSessionMap = createLastSessionMap(
+        TEST_RELATIONSHIP_IDS.PRIMARY,
+        lastSessionDate
+      );
+
+      const actions = [
+        createMockAction({
+          id: generateTestUUID(),
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 3 }),
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+        createMockAction({
+          id: generateTestUUID(),
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.NotStarted,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 3 }),
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+        createMockAction({
+          id: generateTestUUID(),
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.InProgress,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 3 }),
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+      ];
+
+      const results = filterActionsByStatus(
+        actions,
+        AssignedActionsFilter.Completed,
+        TEST_USER_IDS.CURRENT_USER,
+        sessionMap,
+        new Map(), // nextSessionByRelationship not used for Completed filter
+        lastSessionMap
+      );
+
+      expect(results).toHaveLength(1);
+      expect(results[0].status).toBe(ItemStatus.Completed);
+    });
+
+    /**
+     * Test: Only actions assigned to user are included.
+     */
+    it("should only include actions assigned to the current user", () => {
+      const lastSessionDate = REFERENCE_DATE.minus({ days: 7 });
+      const sessionMap = createSessionMap(
+        TEST_SESSION_IDS.SESSION_1,
+        TEST_RELATIONSHIP_IDS.PRIMARY
+      );
+      const lastSessionMap = createLastSessionMap(
+        TEST_RELATIONSHIP_IDS.PRIMARY,
+        lastSessionDate
+      );
+
+      const actions = [
+        // Assigned to current user - should be included
+        createMockAction({
+          id: generateTestUUID(),
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 3 }),
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+        // Assigned to other user - should be excluded
+        createMockAction({
+          id: generateTestUUID(),
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 3 }),
+          assigneeIds: [TEST_USER_IDS.OTHER_USER],
+        }),
+        // Unassigned - should be excluded
+        createMockAction({
+          id: generateTestUUID(),
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 3 }),
+          assigneeIds: [],
+        }),
+      ];
+
+      const results = filterActionsByStatus(
+        actions,
+        AssignedActionsFilter.Completed,
+        TEST_USER_IDS.CURRENT_USER,
+        sessionMap,
+        new Map(),
+        lastSessionMap
+      );
+
+      expect(results).toHaveLength(1);
+      expect(results[0].assignee_ids).toContain(TEST_USER_IDS.CURRENT_USER);
+    });
+
+    /**
+     * Test: Only actions completed after last session are included.
+     */
+    it("should only include actions completed after the last session", () => {
+      const lastSessionDate = REFERENCE_DATE.minus({ days: 7 });
+      const sessionMap = createSessionMap(
+        TEST_SESSION_IDS.SESSION_1,
+        TEST_RELATIONSHIP_IDS.PRIMARY
+      );
+      const lastSessionMap = createLastSessionMap(
+        TEST_RELATIONSHIP_IDS.PRIMARY,
+        lastSessionDate
+      );
+
+      const actions = [
+        // Completed 3 days ago (after last session) - should be included
+        createMockAction({
+          id: generateTestUUID(),
+          body: "Completed after session",
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 3 }),
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+        // Completed 10 days ago (before last session) - should be excluded
+        createMockAction({
+          id: generateTestUUID(),
+          body: "Completed before session",
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 10 }),
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+        // Completed exactly at last session time - should be included (>=)
+        createMockAction({
+          id: generateTestUUID(),
+          body: "Completed at session time",
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: lastSessionDate,
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+      ];
+
+      const results = filterActionsByStatus(
+        actions,
+        AssignedActionsFilter.Completed,
+        TEST_USER_IDS.CURRENT_USER,
+        sessionMap,
+        new Map(),
+        lastSessionMap
+      );
+
+      expect(results).toHaveLength(2);
+      expect(results.map((a) => a.body)).toContain("Completed after session");
+      expect(results.map((a) => a.body)).toContain("Completed at session time");
+      expect(results.map((a) => a.body)).not.toContain("Completed before session");
+    });
+
+    /**
+     * Test: All completed actions shown when no previous session exists.
+     */
+    it("should include all completed actions when no previous session exists", () => {
+      const sessionMap = createSessionMap(
+        TEST_SESSION_IDS.SESSION_1,
+        TEST_RELATIONSHIP_IDS.PRIMARY
+      );
+      // Empty map = no previous session
+      const lastSessionMap = new Map<string, EnrichedCoachingSession>();
+
+      const actions = [
+        // Completed long ago - should still be included
+        createMockAction({
+          id: generateTestUUID(),
+          body: "Old completion",
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: REFERENCE_DATE.minus({ months: 6 }),
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+        // Completed recently - should be included
+        createMockAction({
+          id: generateTestUUID(),
+          body: "Recent completion",
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.Completed,
+          statusChangedAt: REFERENCE_DATE.minus({ days: 1 }),
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+        // Not completed - should still be excluded
+        createMockAction({
+          id: generateTestUUID(),
+          body: "Not completed",
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.NotStarted,
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+      ];
+
+      const results = filterActionsByStatus(
+        actions,
+        AssignedActionsFilter.Completed,
+        TEST_USER_IDS.CURRENT_USER,
+        sessionMap,
+        new Map(),
+        lastSessionMap
+      );
+
+      expect(results).toHaveLength(2);
+      expect(results.map((a) => a.body)).toContain("Old completion");
+      expect(results.map((a) => a.body)).toContain("Recent completion");
+    });
+
+    /**
+     * Test: Empty result when no completed actions exist.
+     */
+    it("should return empty array when no completed actions exist", () => {
+      const lastSessionDate = REFERENCE_DATE.minus({ days: 7 });
+      const sessionMap = createSessionMap(
+        TEST_SESSION_IDS.SESSION_1,
+        TEST_RELATIONSHIP_IDS.PRIMARY
+      );
+      const lastSessionMap = createLastSessionMap(
+        TEST_RELATIONSHIP_IDS.PRIMARY,
+        lastSessionDate
+      );
+
+      const actions = [
+        createMockAction({
+          id: generateTestUUID(),
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.NotStarted,
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+        createMockAction({
+          id: generateTestUUID(),
+          coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+          dueBy: REFERENCE_DATE,
+          status: ItemStatus.InProgress,
+          assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+        }),
+      ];
+
+      const results = filterActionsByStatus(
+        actions,
+        AssignedActionsFilter.Completed,
+        TEST_USER_IDS.CURRENT_USER,
+        sessionMap,
+        new Map(),
+        lastSessionMap
       );
 
       expect(results).toHaveLength(0);

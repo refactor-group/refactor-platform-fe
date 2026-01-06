@@ -9,6 +9,7 @@ export enum AssignedActionsFilter {
   DueSoon = "due_soon",
   AllIncomplete = "all_incomplete",
   AllUnassigned = "all_unassigned",
+  Completed = "completed",
 }
 
 /**

@@ -102,6 +102,7 @@ export interface MockActionOptions {
   status?: ItemStatus;
   dueBy: DateTime;
   createdAt?: DateTime;
+  statusChangedAt?: DateTime;
   assigneeIds?: string[];
 }
 
@@ -119,6 +120,7 @@ export function createMockAction(options: MockActionOptions): Action {
     user_id: options.userId ?? TEST_USER_IDS.CURRENT_USER,
     body: options.body ?? "Test action",
     status: options.status ?? ItemStatus.NotStarted,
+    status_changed_at: options.statusChangedAt ?? now,
     due_by: options.dueBy,
     created_at: options.createdAt ?? now.minus({ days: 7 }),
     updated_at: now,
@@ -315,6 +317,36 @@ export function filterActionsByAssignedStatus(
     // For due_soon, the actual filtering requires session context
     // which is handled at a higher level
     return true;
+  });
+}
+
+/**
+ * Filters completed actions that were completed since the last session.
+ * This mirrors the filterActionsByStatus logic for the "completed" filter.
+ *
+ * @param actions - Raw actions to filter
+ * @param userId - The current user's ID
+ * @param lastSessionDate - The date of the last session (null if no previous session)
+ * @returns Filtered actions (completed, assigned to user, completed after last session)
+ */
+export function filterCompletedActionsSinceLastSession(
+  actions: Action[],
+  userId: string,
+  lastSessionDate: DateTime | null
+): Action[] {
+  return actions.filter((action) => {
+    // Only include completed actions
+    if (action.status !== ItemStatus.Completed) return false;
+
+    // Must be assigned to user
+    const isAssignedToUser = action.assignee_ids?.includes(userId);
+    if (!isAssignedToUser) return false;
+
+    // If no last session, include all completed actions for this user
+    if (!lastSessionDate) return true;
+
+    // Include actions completed after the last session
+    return action.status_changed_at >= lastSessionDate;
   });
 }
 
