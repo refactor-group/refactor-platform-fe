@@ -13,9 +13,10 @@ import {
 import { Pill, PillIndicator } from "@/components/kibo/ui/pill";
 import { cn } from "@/components/lib/utils";
 import { WhatsDueActionCard } from "./whats-due-action-card";
-import type {
-  RelationshipGroupedActions,
-  GoalGroupedActions,
+import {
+  CoachViewMode,
+  type RelationshipGroupedActions,
+  type GoalGroupedActions,
 } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -23,6 +24,7 @@ import { useIsMobile } from "@/components/hooks/use-mobile";
 
 interface WhatsDueRelationshipGroupProps {
   group: RelationshipGroupedActions;
+  viewMode?: CoachViewMode;
   onActionStatusChange: (actionId: Id, completed: boolean) => void;
   defaultExpanded?: boolean;
 }
@@ -79,6 +81,7 @@ function GoalSection({
 
 export function WhatsDueRelationshipGroup({
   group,
+  viewMode = CoachViewMode.MyActions,
   onActionStatusChange,
   defaultExpanded = false,
 }: WhatsDueRelationshipGroupProps) {
@@ -96,6 +99,12 @@ export function WhatsDueRelationshipGroup({
   const otherPersonName = isCoach
     ? group.relationship.coacheeName
     : group.relationship.coachName;
+
+  // Format the label based on view mode
+  const relationshipLabel =
+    viewMode === CoachViewMode.CoacheeActions
+      ? `${group.relationship.coacheeName}'s Actions`
+      : `My Actions with ${otherPersonName}`;
 
   const nextSessionText = group.nextSession
     ? formatNextSessionDate(group.nextSession.sessionDate)
@@ -138,7 +147,7 @@ export function WhatsDueRelationshipGroup({
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="font-semibold text-sm truncate">With {otherPersonName}</span>
+                <span className="font-semibold text-sm truncate">{relationshipLabel}</span>
               </div>
               {isExpanded ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -180,7 +189,7 @@ export function WhatsDueRelationshipGroup({
           >
             <div className="flex items-center gap-2 justify-start">
               <User className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold text-sm">With {otherPersonName}</span>
+              <span className="font-semibold text-sm">{relationshipLabel}</span>
             </div>
             <Pill variant="secondary" className="text-xs justify-center">
               {group.overdueCount > 0 && <PillIndicator variant="warning" />}

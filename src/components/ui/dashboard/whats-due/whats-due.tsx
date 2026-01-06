@@ -132,6 +132,7 @@ export function WhatsDue({ className }: WhatsDueProps) {
                 <WhatsDueRelationshipGroup
                   key={group.relationship.coachingRelationshipId}
                   group={group}
+                  viewMode={coachViewMode}
                   onActionStatusChange={handleActionStatusChange}
                 />
               ))}
