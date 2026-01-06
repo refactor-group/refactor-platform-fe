@@ -1,17 +1,9 @@
-// TODO: Discuss with Caleb - the current approach of fetching each coachee's
-// assigned actions via /users/{coacheeId}/assigned-actions returns 401 because
-// coaches don't have permission to access their coachees' actions directly.
-// Options to consider:
-// 1. New backend endpoint: GET /users/{coachId}/coachee-assigned-actions
-// 2. New backend endpoint: GET /coaching-relationships/{relationshipId}/actions
-// 3. Update backend authorization to allow coaches to read coachee actions
-
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { AssignedActionsApi } from "@/lib/api/assigned-actions";
+import { UserActionsApi } from "@/lib/api/user-actions";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
@@ -25,6 +17,7 @@ import type { Action } from "@/types/action";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import {
   AssignedActionsFilter,
+  UserActionsScope,
   type AssignedActionWithContext,
   type RelationshipContext,
   type GoalContext,
@@ -330,7 +323,11 @@ export function useCoacheeAssignedActions(
     setActionsLoading(true);
     setActionsError(null);
 
-    Promise.all(coacheeIds.map((id) => AssignedActionsApi.list(id)))
+    Promise.all(
+      coacheeIds.map((id) =>
+        UserActionsApi.list(id, { scope: UserActionsScope.Assigned })
+      )
+    )
       .then((results) => {
         // Flatten all coachee actions into a single array
         const allActions = results.flat();

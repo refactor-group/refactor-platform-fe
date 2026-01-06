@@ -2,6 +2,34 @@ import { DateTime } from "ts-luxon";
 import type { Id } from "@/types/general";
 import type { Action } from "@/types/action";
 
+// ============================================================================
+// API Query Parameter Types
+// ============================================================================
+
+/**
+ * Scope for user actions API query.
+ * - Sessions: All actions from sessions where user is coach or coachee
+ * - Assigned: Only actions where user is an assignee
+ */
+export enum UserActionsScope {
+  Sessions = "sessions",
+  Assigned = "assigned",
+}
+
+/**
+ * Filter for actions by assignee status in API queries.
+ * - Assigned: Only actions that have at least one assignee
+ * - Unassigned: Only actions with no assignees
+ */
+export enum UserActionsAssigneeFilter {
+  Assigned = "assigned",
+  Unassigned = "unassigned",
+}
+
+// ============================================================================
+// UI Filter Types
+// ============================================================================
+
 /**
  * Filter options for the What's Due dashboard
  */

@@ -45,8 +45,8 @@ const mockActionListHook = {
   refresh: vi.fn(),
 }
 
-vi.mock('@/lib/api/actions', () => ({
-  useActionList: vi.fn(() => mockActionListHook)
+vi.mock('@/lib/api/user-actions', () => ({
+  useUserActionsList: vi.fn(() => mockActionListHook)
 }))
 
 /**

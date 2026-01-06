@@ -44,7 +44,8 @@ import {
   actionStatusToString,
   Id,
 } from "@/types/general";
-import { useActionList } from "@/lib/api/actions";
+import { useUserActionsList } from "@/lib/api/user-actions";
+import { UserActionsScope } from "@/types/assigned-actions";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { Action, actionToString } from "@/types/action";
@@ -94,6 +95,7 @@ interface ActionsListProps {
 
 const ActionsList: React.FC<ActionsListProps> = ({
   coachingSessionId,
+  userId,
   coachId,
   coachName,
   coacheeId,
@@ -124,7 +126,10 @@ const ActionsList: React.FC<ActionsListProps> = ({
     return { name: "Unknown", isUnknown: true };
   };
 
-  const { actions, refresh } = useActionList(coachingSessionId);
+  const { actions, refresh } = useUserActionsList(userId, {
+    scope: UserActionsScope.Sessions,
+    coaching_session_id: coachingSessionId,
+  });
   const [newBody, setNewBody] = useState("");
   const [newDueBy, setNewDueBy] = useState<DateTime | null>(null);
   const [newAssigneeId, setNewAssigneeId] = useState<AssigneeSelection>(ASSIGNEE_UNSELECTED);

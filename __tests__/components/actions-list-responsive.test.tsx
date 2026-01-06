@@ -21,8 +21,8 @@ const mockActions = [
   }
 ]
 
-vi.mock('@/lib/api/actions', () => ({
-  useActionList: vi.fn(() => ({
+vi.mock('@/lib/api/user-actions', () => ({
+  useUserActionsList: vi.fn(() => ({
     actions: mockActions,
     isLoading: false,
     isError: false,

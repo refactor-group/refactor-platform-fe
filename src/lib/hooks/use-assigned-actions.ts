@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useSessionActionsList } from "@/lib/api/session-actions";
+import { useUserActionsList } from "@/lib/api/user-actions";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
@@ -15,6 +15,7 @@ import type { Action } from "@/types/action";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import {
   AssignedActionsFilter,
+  UserActionsScope,
   type AssignedActionWithContext,
   type RelationshipContext,
   type GoalContext,
@@ -297,14 +298,13 @@ export function useAssignedActions(
 
   const userId = userSession?.id;
 
-  // Fetch actions assigned to the user (only when userId is available)
   // Fetch all actions from user's sessions (assigned and unassigned)
   const {
     actions: rawActions,
     isLoading: actionsLoading,
     isError: actionsError,
     refresh: refreshActions,
-  } = useSessionActionsList(userId);
+  } = useUserActionsList(userId, { scope: UserActionsScope.Sessions });
 
   // Fetch enriched sessions for the user (with relationship and goal data)
   // Use a wide date range to cover historical and future sessions
