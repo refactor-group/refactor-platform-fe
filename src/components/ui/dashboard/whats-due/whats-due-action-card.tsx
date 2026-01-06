@@ -79,7 +79,6 @@ export function WhatsDueActionCard({
       <div
         className={cn(
           "rounded-lg border bg-secondary/30 transition-colors",
-          isOverdue && !isCompleted && "border-amber-200 dark:border-amber-800",
           isCompleted && "opacity-60"
         )}
       >
