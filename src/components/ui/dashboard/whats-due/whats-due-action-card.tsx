@@ -5,11 +5,9 @@ import Link from "next/link";
 import { ChevronDown, ChevronUp, Calendar, User, Clock } from "lucide-react";
 import { DateTime } from "ts-luxon";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Pill, PillIndicator } from "@/components/kibo/ui/pill";
 import { cn } from "@/components/lib/utils";
@@ -82,14 +80,18 @@ export function WhatsDueActionCard({
           isCompleted && "opacity-60"
         )}
       >
-        {/* Main row */}
-        <div className="flex items-start gap-3 p-3">
+        {/* Main row - clickable to expand/collapse */}
+        <div
+          className="flex items-start gap-3 p-3 cursor-pointer"
+          onClick={() => setIsOpen(!isOpen)}
+        >
           <Checkbox
             checked={isCompleted}
             onCheckedChange={handleCheckboxChange}
             disabled={isUpdating}
             className="mt-0.5"
             aria-label={`Mark "${actionData.body?.slice(0, 30) || "action"}" as ${isCompleted ? "incomplete" : "complete"}`}
+            onClick={(e) => e.stopPropagation()}
           />
 
           <div className="flex-1 min-w-0">
@@ -99,6 +101,7 @@ export function WhatsDueActionCard({
                 "text-sm font-medium leading-snug hover:underline",
                 isCompleted && "line-through text-muted-foreground"
               )}
+              onClick={(e) => e.stopPropagation()}
             >
               {actionData.body || "No description"}
             </Link>
@@ -114,20 +117,13 @@ export function WhatsDueActionCard({
             </div>
           </div>
 
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              aria-label={isOpen ? "Collapse details" : "Expand details"}
-            >
-              {isOpen ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </CollapsibleTrigger>
+          <div className="h-6 w-6 shrink-0 flex items-center justify-center">
+            {isOpen ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
         </div>
 
         {/* Expanded content */}
