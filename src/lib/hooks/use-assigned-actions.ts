@@ -21,10 +21,10 @@ import {
   filterActionsByStatus,
   addContextToActions,
   groupActionsByRelationship,
-} from "./assigned-actions-utils";
+} from "@/lib/utils/assigned-actions-utils";
 
 // Re-export filterActionsByStatus for use in tests
-export { filterActionsByStatus } from "./assigned-actions-utils";
+export { filterActionsByStatus } from "@/lib/utils/assigned-actions-utils";
 
 // ============================================================================
 // Main Hook

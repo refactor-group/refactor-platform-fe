@@ -24,7 +24,7 @@ import {
   filterActionsByStatus,
   addContextToActions,
   groupActionsByRelationship,
-} from "./assigned-actions-utils";
+} from "@/lib/utils/assigned-actions-utils";
 
 // ============================================================================
 // Main Hook
