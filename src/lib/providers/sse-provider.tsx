@@ -1,8 +1,7 @@
 "use client";
 
-import { type ReactNode, useRef } from 'react';
-import { type StoreApi } from 'zustand';
-import { type SseConnectionStore, createSseConnectionStore } from '@/lib/stores/sse-connection-store';
+import { type ReactNode, useState } from 'react';
+import { createSseConnectionStore } from '@/lib/stores/sse-connection-store';
 import { SseConnectionStoreContext } from '@/lib/contexts/sse-connection-context';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { useSseConnection } from '@/lib/hooks/use-sse-connection';
@@ -24,14 +23,10 @@ function SseConnectionManager() {
 }
 
 export const SseProvider = ({ children }: SseProviderProps) => {
-  const storeRef = useRef<StoreApi<SseConnectionStore>>();
-
-  if (!storeRef.current) {
-    storeRef.current = createSseConnectionStore();
-  }
+  const [store] = useState(() => createSseConnectionStore());
 
   return (
-    <SseConnectionStoreContext.Provider value={storeRef.current}>
+    <SseConnectionStoreContext.Provider value={store}>
       <SseConnectionManager />
       {children}
     </SseConnectionStoreContext.Provider>
