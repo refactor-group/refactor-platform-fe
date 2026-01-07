@@ -54,7 +54,7 @@ import { UserActionsScope, type RelationshipContext } from "@/types/assigned-act
 import { resolveUserNameInRelationship } from "@/lib/utils/relationship";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
-import { Action, actionToString } from "@/types/action";
+import { Action } from "@/types/action";
 import { cn } from "@/components/lib/utils";
 import {
   getTableRowClasses,
@@ -238,24 +238,22 @@ const ActionsList: React.FC<ActionsListProps> = ({
         // Update existing action with selected status
         const statusToUse = newStatus ?? ItemStatus.NotStarted;
 
-        const action = await onActionEdited(
+        await onActionEdited(
           editingActionId,
           newBody,
           statusToUse,
           dueBy,
           assigneeIds
         );
-        console.trace("Updated Action: " + actionToString(action));
         setEditingActionId(null);
       } else {
         // Create new action with default status
-        const action = await onActionAdded(
+        await onActionAdded(
           newBody,
           ItemStatus.NotStarted,
           dueBy,
           assigneeIds
         );
-        console.trace("Newly created Action: " + actionToString(action));
       }
 
       // Refresh the actions list from the hook
@@ -274,11 +272,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
 
     try {
       // Delete action in backend
-      const deletedAction = await onActionDeleted(id);
-
-      console.trace(
-        "Deleted Action (onActionDeleted): " + actionToString(deletedAction)
-      );
+      await onActionDeleted(id);
 
       // Refresh the actions list from the hook
       refresh();
