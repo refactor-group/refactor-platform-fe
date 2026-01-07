@@ -15,13 +15,18 @@ export interface AssigneeOption {
   name: string;
 }
 
-/** Constants for special assignee selection values */
-export const ASSIGNEE_UNSELECTED = "" as const;
-export const ASSIGNEE_NONE = "none" as const;
-export const ASSIGNEE_BOTH = "both" as const;
+/** Assignment type for actions beyond individual user IDs */
+export enum AssignmentType {
+  /** No selection made yet (placeholder state) */
+  Unselected = "",
+  /** Explicitly unassigned */
+  None = "none",
+  /** Assigned to all available assignees */
+  Both = "both",
+}
 
-/** Special selection values beyond individual user IDs */
-export type AssigneeSelection = Id | typeof ASSIGNEE_UNSELECTED | typeof ASSIGNEE_NONE | typeof ASSIGNEE_BOTH;
+/** Assignee selection: either a user ID or an assignment type */
+export type AssigneeSelection = Id | AssignmentType;
 
 interface AssigneeSelectorProps {
   /** Currently selected value: empty string shows placeholder, "none" for unassigned, "both" for all, or a user ID */
@@ -68,14 +73,14 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ASSIGNEE_NONE}>None</SelectItem>
+        <SelectItem value={AssignmentType.None}>None</SelectItem>
         {validOptions.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             {option.name}
           </SelectItem>
         ))}
         {validOptions.length >= 2 && (
-          <SelectItem value={ASSIGNEE_BOTH}>Both</SelectItem>
+          <SelectItem value={AssignmentType.Both}>Both</SelectItem>
         )}
       </SelectContent>
     </Select>

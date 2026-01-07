@@ -15,9 +15,7 @@ import {
   AssigneeSelector,
   AssigneeOption,
   AssigneeSelection,
-  ASSIGNEE_UNSELECTED,
-  ASSIGNEE_NONE,
-  ASSIGNEE_BOTH,
+  AssignmentType,
 } from "@/components/ui/assignee-selector";
 import {
   Table,
@@ -123,7 +121,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
   });
   const [newBody, setNewBody] = useState("");
   const [newDueBy, setNewDueBy] = useState<DateTime | null>(null);
-  const [newAssigneeId, setNewAssigneeId] = useState<AssigneeSelection>(ASSIGNEE_UNSELECTED);
+  const [newAssigneeId, setNewAssigneeId] = useState<AssigneeSelection>(AssignmentType.Unselected);
   const [editingActionId, setEditingActionId] = useState<Id | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Action>(
     ActionSortField.DueBy
@@ -154,7 +152,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
   const clearNewActionForm = () => {
     setNewBody("");
     setNewDueBy(null);
-    setNewAssigneeId(ASSIGNEE_UNSELECTED);
+    setNewAssigneeId(AssignmentType.Unselected);
   };
 
   // Function to cancel editing an action
@@ -170,10 +168,10 @@ const ActionsList: React.FC<ActionsListProps> = ({
 
     // Determine assignee selection from existing IDs
     const ids = action.assignee_ids ?? [];
-    let selection: AssigneeSelection = ASSIGNEE_NONE;
+    let selection: AssigneeSelection = AssignmentType.None;
     if (ids.length >= 2) {
       // If both coach and coachee are assigned, select "both"
-      selection = ASSIGNEE_BOTH;
+      selection = AssignmentType.Both;
     } else if (ids.length === 1) {
       selection = ids[0];
     }
@@ -211,8 +209,8 @@ const ActionsList: React.FC<ActionsListProps> = ({
 
   /** Converts the assignee selection to an array of user IDs */
   const selectionToAssigneeIds = (selection: AssigneeSelection): Id[] => {
-    if (selection === ASSIGNEE_UNSELECTED || selection === ASSIGNEE_NONE) return [];
-    if (selection === ASSIGNEE_BOTH) return [coachId, coacheeId].filter((id) => id);
+    if (selection === AssignmentType.Unselected || selection === AssignmentType.None) return [];
+    if (selection === AssignmentType.Both) return [coachId, coacheeId].filter((id) => id);
     return [selection];
   };
 
