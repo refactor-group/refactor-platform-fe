@@ -338,7 +338,9 @@ export function useCoacheeAssignedActions(
         setActionsError(error);
         setActionsLoading(false);
       });
-  }, [enabled, coacheeIdsKey, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Using coacheeIdsKey (memoized string) instead of coacheeIds array to avoid
+    // re-fetching when array reference changes but content is identical
+  }, [enabled, coacheeIdsKey, refreshKey]);
 
   // Fetch enriched sessions for context - null skips the fetch
   const oneYearAgo = useMemo(() => DateTime.now().minus({ years: 1 }), []);

@@ -38,6 +38,13 @@ function buildSessionMap(sessions: EnrichedCoachingSession[]) {
 // Action Filtering
 // ============================================================================
 
+/**
+ * Filters actions based on the selected filter type and user context.
+ *
+ * @param userId - Current user ID, or null if not yet loaded. When null,
+ *   filters that check user assignment (DueSoon, AllIncomplete, Completed)
+ *   will return no actions. The AllUnassigned filter works regardless of userId.
+ */
 export function filterActionsByStatus(
   actions: Action[],
   filter: AssignedActionsFilter,
@@ -274,17 +281,6 @@ function groupActionsByRelationship(
 // Main Hook
 // ============================================================================
 
-// Empty result for when data is not yet available
-const EMPTY_RESULT = {
-  groupedActions: [] as RelationshipGroupedActions[],
-  flatActions: [] as AssignedActionWithContext[],
-  totalCount: 0,
-  overdueCount: 0,
-  isLoading: true,
-  isError: false,
-  refresh: () => {},
-};
-
 /**
  * Hook to fetch and enrich assigned actions for the current user,
  * grouped by coaching relationship and overarching goal.
@@ -296,7 +292,8 @@ export function useAssignedActions(
     userSession: state.userSession,
   }));
 
-  const userId = userSession?.id;
+  // Normalize userId at boundary: undefined -> null for consistent null handling
+  const userId = userSession?.id ?? null;
 
   // Fetch all actions from user's sessions (assigned and unassigned)
   const {
@@ -317,7 +314,7 @@ export function useAssignedActions(
     isLoading: sessionsLoading,
     isError: sessionsError,
   } = useEnrichedCoachingSessionsForUser(
-    userId ?? null,
+    userId,
     oneYearAgo,
     oneYearFromNow,
     [CoachingSessionInclude.Relationship, CoachingSessionInclude.Goal]
@@ -349,7 +346,7 @@ export function useAssignedActions(
       filterActionsByStatus(
         rawActions ?? [],
         filter,
-        userId ?? null,
+        userId,
         sessionMap,
         nextSessionByRelationship,
         lastSessionByRelationship
