@@ -35,27 +35,70 @@ export function buildSessionMap(sessions: EnrichedCoachingSession[]) {
 }
 
 // ============================================================================
-// Action Filtering
+// Action Filtering - Helper Functions
+// ============================================================================
+
+/** Checks if action is assigned to the specified user */
+function isAssignedToUser(action: Action, userId: Id): boolean {
+  return action.assignee_ids?.includes(userId) ?? false;
+}
+
+/** Checks if action has no assignees */
+function hasNoAssignees(action: Action): boolean {
+  return !action.assignee_ids || action.assignee_ids.length === 0;
+}
+
+/** Checks if action is due before the next session for its relationship */
+function isDueBeforeNextSession(
+  action: Action,
+  sessionMap: Map<Id, EnrichedCoachingSession>,
+  nextSessionByRelationship: Map<Id, EnrichedCoachingSession>
+): boolean {
+  const session = sessionMap.get(action.coaching_session_id);
+  if (!session) return true; // Include if no session context
+
+  const nextSession = nextSessionByRelationship.get(
+    session.coaching_relationship_id
+  );
+  if (!nextSession) return true; // Include if no next session scheduled
+
+  const nextSessionDate = DateTime.fromISO(nextSession.date);
+  return action.due_by <= nextSessionDate;
+}
+
+/** Checks if action was completed since the last session for its relationship */
+function wasCompletedSinceLastSession(
+  action: Action,
+  sessionMap: Map<Id, EnrichedCoachingSession>,
+  lastSessionByRelationship: Map<Id, EnrichedCoachingSession>
+): boolean {
+  const session = sessionMap.get(action.coaching_session_id);
+  if (!session) return true; // Include if no session context
+
+  const lastSession = lastSessionByRelationship.get(
+    session.coaching_relationship_id
+  );
+  if (!lastSession) return true; // Include if no last session
+
+  const lastSessionDate = DateTime.fromISO(lastSession.date);
+  return action.status_changed_at >= lastSessionDate;
+}
+
+// ============================================================================
+// Action Filtering - Main Function
 // ============================================================================
 
 /**
  * Filters actions based on the selected filter type and optional user context.
  *
  * Filter behaviors:
- * - DueSoon: Shows incomplete actions assigned to user (if provided) due before next session
- * - AllIncomplete: Shows all incomplete actions assigned to user (if provided)
- * - AllUnassigned: Shows actions with no assignees (ignores userId)
- * - Completed: Shows completed actions assigned to user (if provided) since last session
+ * - DueSoon: Incomplete actions assigned to user, due before next session
+ * - AllIncomplete: All incomplete actions assigned to user
+ * - AllUnassigned: Actions with no assignees (ignores userId)
+ * - Completed: Completed actions assigned to user, since last session
  *
- * @param actions - Array of actions to filter
- * @param filter - The filter type to apply
- * @param userId - User ID for user-specific filters. When provided,
- *   DueSoon/AllIncomplete/Completed filters check if actions are assigned to this user.
- *   When null, user assignment is not checked (useful for coachee views).
- * @param sessionMap - Map of session IDs to enriched sessions
- * @param nextSessionByRelationship - Map of relationship IDs to next sessions
- * @param lastSessionByRelationship - Map of relationship IDs to last sessions
- * @returns Filtered array of actions matching the criteria
+ * @param userId - When provided, filters to actions assigned to this user.
+ *   When null, skips user assignment check (useful for coachee views).
  */
 export function filterActionsByStatus(
   actions: Action[],
@@ -66,63 +109,33 @@ export function filterActionsByStatus(
   lastSessionByRelationship: Map<Id, EnrichedCoachingSession>
 ): Action[] {
   return actions.filter((action) => {
-    // Handle Completed filter separately - it only shows completed actions
-    if (filter === AssignedActionsFilter.Completed) {
-      // Must be completed
-      if (action.status !== ItemStatus.Completed) return false;
+    const isCompleted = action.status === ItemStatus.Completed;
+    const passesUserFilter = !userId || isAssignedToUser(action, userId);
 
-      // If userId provided, must be assigned to user
-      if (userId) {
-        const isAssignedToUser = action.assignee_ids?.includes(userId);
-        if (!isAssignedToUser) return false;
-      }
+    switch (filter) {
+      case AssignedActionsFilter.Completed:
+        return (
+          isCompleted &&
+          passesUserFilter &&
+          wasCompletedSinceLastSession(action, sessionMap, lastSessionByRelationship)
+        );
 
-      // Get the relationship for this action's session
-      const session = sessionMap.get(action.coaching_session_id);
-      if (!session) return true; // Include if no session context
+      case AssignedActionsFilter.AllUnassigned:
+        return !isCompleted && hasNoAssignees(action);
 
-      // Get the last session for this relationship
-      const lastSession = lastSessionByRelationship.get(
-        session.coaching_relationship_id
-      );
+      case AssignedActionsFilter.AllIncomplete:
+        return !isCompleted && passesUserFilter;
 
-      // If no last session, include all completed actions
-      if (!lastSession) return true;
+      case AssignedActionsFilter.DueSoon:
+        return (
+          !isCompleted &&
+          passesUserFilter &&
+          isDueBeforeNextSession(action, sessionMap, nextSessionByRelationship)
+        );
 
-      // Include if completed on or after the last session
-      const lastSessionDate = DateTime.fromISO(lastSession.date);
-      return action.status_changed_at >= lastSessionDate;
+      default:
+        return false;
     }
-
-    // All other filters exclude completed actions
-    if (action.status === ItemStatus.Completed) return false;
-
-    if (filter === AssignedActionsFilter.AllUnassigned) {
-      // Show actions with no assignees
-      return !action.assignee_ids || action.assignee_ids.length === 0;
-    }
-
-    // For DueSoon and AllIncomplete, check user assignment if userId provided
-    if (userId) {
-      const isAssignedToUser = action.assignee_ids?.includes(userId);
-      if (!isAssignedToUser) return false;
-    }
-
-    if (filter === AssignedActionsFilter.AllIncomplete) {
-      return true;
-    }
-
-    // For "due_soon" filter, include actions due within the next session
-    const session = sessionMap.get(action.coaching_session_id);
-    if (!session) return true;
-
-    const nextSession = nextSessionByRelationship.get(
-      session.coaching_relationship_id
-    );
-    if (!nextSession) return true;
-
-    const nextSessionDate = DateTime.fromISO(nextSession.date);
-    return action.due_by <= nextSessionDate;
   });
 }
 

@@ -1,5 +1,5 @@
 // Unified API for fetching actions for a user
-// Replaces: assigned-actions.ts, session-actions.ts, and list functions from actions.ts
+// Replaces: list functions from actions.ts
 
 import { siteConfig } from "@/site.config";
 import { Id, ItemStatus, transformEntityDates } from "@/types/general";
