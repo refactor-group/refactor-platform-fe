@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pill, PillIndicator } from "@/components/kibo/ui/pill";
 import { cn } from "@/components/lib/utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useRelationshipRoles } from "@/lib/api/relationship-roles";
+import { useUserCoachingRoles } from "@/lib/api/user-coaching-relationships";
 import { useAssignedActions } from "@/lib/hooks/use-assigned-actions";
 import { useCoacheeAssignedActions } from "@/lib/hooks/use-coachee-assigned-actions";
 import { useActionMutation } from "@/lib/api/actions";
@@ -46,7 +46,7 @@ export function WhatsDue({ className }: WhatsDueProps) {
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
-  const { isCoach } = useRelationshipRoles(userSession?.id ?? null);
+  const { isCoach } = useUserCoachingRoles(userSession?.id ?? null);
   const isMobile = useIsMobile();
 
   // Fetch actions based on view mode

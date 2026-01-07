@@ -1,3 +1,13 @@
+/**
+ * Types for the assigned actions system used by the What's Due dashboard.
+ *
+ * This file contains:
+ * - API query parameter enums (UserActionsScope, UserActionsAssigneeFilter)
+ * - UI filter enums (AssignedActionsFilter, CoachViewMode)
+ * - Context interfaces for enriching actions with relationship/goal/session data
+ * - Grouped action types for hierarchical display (by relationship, then by goal)
+ */
+
 import { DateTime } from "ts-luxon";
 import type { Id } from "@/types/general";
 import type { Action } from "@/types/action";
