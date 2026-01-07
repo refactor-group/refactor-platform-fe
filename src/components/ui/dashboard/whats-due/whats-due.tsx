@@ -81,7 +81,7 @@ export function WhatsDue({ className }: WhatsDueProps) {
   };
 
   return (
-    <Card className={cn("h-[30rem] flex flex-col", className)}>
+    <Card className={cn("max-h-[30rem] flex flex-col", className)}>
       <CardHeader className="pb-3 space-y-3 flex-shrink-0">
         <CardTitle className="text-lg font-semibold">
           What&apos;s Due
