@@ -46,7 +46,7 @@ import {
 import { useActionList } from "@/lib/api/actions";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
-import { Action, actionToString } from "@/types/action";
+import { Action } from "@/types/action";
 import { cn } from "@/components/lib/utils";
 import {
   getTableRowClasses,
@@ -152,18 +152,16 @@ const ActionsList: React.FC<{
     try {
       if (editingActionId) {
         // Update existing action
-        const action = await onActionEdited(
+        await onActionEdited(
           editingActionId,
           newBody,
           newStatus,
           newDueBy
         );
-        console.trace("Updated Action: " + actionToString(action));
         setEditingActionId(null);
       } else {
         // Create new action
-        const action = await onActionAdded(newBody, newStatus, newDueBy);
-        console.trace("Newly created Action: " + actionToString(action));
+        await onActionAdded(newBody, newStatus, newDueBy);
       }
 
       // Refresh the actions list from the hook
@@ -182,11 +180,7 @@ const ActionsList: React.FC<{
 
     try {
       // Delete action in backend
-      const deletedAction = await onActionDeleted(id);
-
-      console.trace(
-        "Deleted Action (onActionDeleted): " + actionToString(deletedAction)
-      );
+      await onActionDeleted(id);
 
       // Refresh the actions list from the hook
       refresh();
