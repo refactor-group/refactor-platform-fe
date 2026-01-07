@@ -6,7 +6,7 @@ import {
   enrichSessionForDisplay,
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
-} from "@/lib/sessions/session-utils";
+} from "@/lib/utils/session-utils";
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
