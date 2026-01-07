@@ -8,85 +8,52 @@ import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
-import {
-  findNextSessionsByRelationship,
-  findLastSessionsByRelationship,
-} from "@/lib/sessions/session-utils";
 import type { Action } from "@/types/action";
 import {
   AssignedActionsFilter,
   UserActionsScope,
-  type RelationshipGroupedActions,
-  type AssignedActionWithContext,
 } from "@/types/assigned-actions";
 import {
-  buildSessionMap,
-  filterActionsByStatus,
-  addContextToActions,
-  groupActionsByRelationship,
+  buildSessionLookupMaps,
+  processActions,
 } from "@/lib/utils/assigned-actions-utils";
 
 // ============================================================================
-// Main Hook
+// Helper Hook: Fetch actions for multiple coachees in parallel
 // ============================================================================
 
+interface UseCoacheeActionsFetchResult {
+  actions: Action[];
+  isLoading: boolean;
+  isError: Error | null;
+  refresh: () => void;
+}
+
 /**
- * Hook to fetch and enrich assigned actions for all coachees of the current user (coach),
- * grouped by coaching relationship and overarching goal.
- *
- * @param filter - Filter for due soon or all incomplete actions
- * @param enabled - Whether to fetch data (set to false to skip fetching)
- * @returns Object containing grouped actions, counts, loading state, and refresh function
+ * Fetches actions for multiple coachees in parallel.
+ * Returns flattened array of all coachee actions.
  */
-export function useCoacheeAssignedActions(
-  filter: AssignedActionsFilter = AssignedActionsFilter.DueSoon,
-  enabled: boolean = true
-) {
-  const { userSession } = useAuthStore((state) => ({
-    userSession: state.userSession,
-  }));
-
-  // Normalize userId at boundary: undefined -> null for consistent null handling
-  const userId = userSession?.id ?? null;
-  const { currentOrganizationId } = useCurrentOrganization();
-
-  // Fetch coaching relationships to find coachees (only when enabled)
-  const { relationships, isLoading: relationshipsLoading } =
-    useCoachingRelationshipList(enabled ? (currentOrganizationId ?? "") : "");
-
-  // Get coachee IDs where current user is the coach
-  const coacheeIds = useMemo(() => {
-    if (!enabled || !userId || !relationships) return [];
-    return relationships
-      .filter((r) => r.coach_id === userId)
-      .map((r) => r.coachee_id);
-  }, [enabled, userId, relationships]);
-
-  // Create a stable string key for coacheeIds to use in useEffect dependencies
-  const coacheeIdsKey = useMemo(() => coacheeIds.join(","), [coacheeIds]);
-
-  // State for fetched actions
-  const [rawActions, setRawActions] = useState<Action[]>([]);
-  const [actionsLoading, setActionsLoading] = useState(enabled);
-  const [actionsError, setActionsError] = useState<Error | null>(null);
+function useCoacheeActionsFetch(
+  coacheeIds: string[],
+  enabled: boolean
+): UseCoacheeActionsFetchResult {
+  const [actions, setActions] = useState<Action[]>([]);
+  const [isLoading, setIsLoading] = useState(enabled);
+  const [isError, setIsError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Fetch actions for all coachees in parallel (only when enabled)
+  // Stable key to avoid refetching when array reference changes
+  const coacheeIdsKey = useMemo(() => coacheeIds.join(","), [coacheeIds]);
+
   useEffect(() => {
-    if (!enabled) {
-      setRawActions([]);
-      setActionsLoading(false);
+    if (!enabled || coacheeIds.length === 0) {
+      setActions([]);
+      setIsLoading(false);
       return;
     }
 
-    if (coacheeIds.length === 0) {
-      setRawActions([]);
-      setActionsLoading(false);
-      return;
-    }
-
-    setActionsLoading(true);
-    setActionsError(null);
+    setIsLoading(true);
+    setIsError(null);
 
     Promise.all(
       coacheeIds.map((id) =>
@@ -94,20 +61,68 @@ export function useCoacheeAssignedActions(
       )
     )
       .then((results) => {
-        // Flatten all coachee actions into a single array
-        const allActions = results.flat();
-        setRawActions(allActions);
-        setActionsLoading(false);
+        setActions(results.flat());
+        setIsLoading(false);
       })
       .catch((error) => {
-        setActionsError(error);
-        setActionsLoading(false);
+        setIsError(error);
+        setIsLoading(false);
       });
-    // Using coacheeIdsKey (memoized string) instead of coacheeIds array to avoid
-    // re-fetching when array reference changes but content is identical
   }, [enabled, coacheeIdsKey, refreshKey]);
 
-  // Fetch enriched sessions for context - null skips the fetch
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  return { actions, isLoading, isError, refresh };
+}
+
+// ============================================================================
+// Main Hook
+// ============================================================================
+
+/**
+ * Fetches and processes actions assigned to coachees of the current user (coach).
+ *
+ * Pipeline: fetch coachee actions → fetch sessions → filter → enrich → group
+ *
+ * @param filter - Filter type (DueSoon, AllIncomplete, Completed)
+ * @param enabled - Set to false to skip all fetching
+ */
+export function useCoacheeAssignedActions(
+  filter: AssignedActionsFilter = AssignedActionsFilter.DueSoon,
+  enabled: boolean = true
+) {
+  // -------------------------------------------------------------------------
+  // Step 1: Get current user and their coachees
+  // -------------------------------------------------------------------------
+
+  const { userSession } = useAuthStore((state) => ({
+    userSession: state.userSession,
+  }));
+  const userId = userSession?.id ?? null;
+
+  const { currentOrganizationId } = useCurrentOrganization();
+
+  const { relationships, isLoading: relationshipsLoading } =
+    useCoachingRelationshipList(enabled ? (currentOrganizationId ?? "") : "");
+
+  const coacheeIds = useMemo(() => {
+    if (!enabled || !userId || !relationships) return [];
+    return relationships
+      .filter((r) => r.coach_id === userId)
+      .map((r) => r.coachee_id);
+  }, [enabled, userId, relationships]);
+
+  // -------------------------------------------------------------------------
+  // Step 2: Fetch data (actions for coachees + sessions for context)
+  // -------------------------------------------------------------------------
+
+  const {
+    actions: rawActions,
+    isLoading: actionsLoading,
+    isError: actionsError,
+    refresh,
+  } = useCoacheeActionsFetch(coacheeIds, enabled);
+
   const oneYearAgo = useMemo(() => getOneYearAgo(), []);
   const oneYearFromNow = useMemo(() => getOneYearFromNow(), []);
 
@@ -122,65 +137,30 @@ export function useCoacheeAssignedActions(
     [CoachingSessionInclude.Relationship, CoachingSessionInclude.Goal]
   );
 
-  // Aggregate loading and error states
-  const isLoading = enabled && (relationshipsLoading || actionsLoading || sessionsLoading);
+  // -------------------------------------------------------------------------
+  // Step 3: Process actions (filter → enrich → group)
+  // -------------------------------------------------------------------------
+
+  const lookupMaps = useMemo(
+    () => buildSessionLookupMaps(sessions ?? []),
+    [sessions]
+  );
+
+  const processed = useMemo(
+    () => processActions(rawActions, filter, null, lookupMaps),
+    [rawActions, filter, lookupMaps]
+  );
+
+  // -------------------------------------------------------------------------
+  // Step 4: Aggregate loading/error states and return
+  // -------------------------------------------------------------------------
+
+  const isLoading =
+    enabled && (relationshipsLoading || actionsLoading || sessionsLoading);
   const isError = enabled && (actionsError || sessionsError);
 
-  // Build lookup maps
-  const sessionMap = useMemo(
-    () => buildSessionMap(sessions ?? []),
-    [sessions]
-  );
-
-  const nextSessionByRelationship = useMemo(
-    () => findNextSessionsByRelationship(sessions ?? []),
-    [sessions]
-  );
-
-  const lastSessionByRelationship = useMemo(
-    () => findLastSessionsByRelationship(sessions ?? []),
-    [sessions]
-  );
-
-  // Filter and add context to actions
-  // Note: userId is null - coachee actions don't filter by current user
-  const filteredActions = useMemo(
-    () =>
-      filterActionsByStatus(
-        rawActions ?? [],
-        filter,
-        null,
-        sessionMap,
-        nextSessionByRelationship,
-        lastSessionByRelationship
-      ),
-    [rawActions, filter, sessionMap, nextSessionByRelationship, lastSessionByRelationship]
-  );
-
-  const actionsWithContext = useMemo(
-    () =>
-      addContextToActions(
-        filteredActions,
-        sessionMap,
-        nextSessionByRelationship
-      ),
-    [filteredActions, sessionMap, nextSessionByRelationship]
-  );
-
-  const groupedActions = useMemo(
-    () => groupActionsByRelationship(actionsWithContext),
-    [actionsWithContext]
-  );
-
-  const refresh = useCallback(() => {
-    setRefreshKey((k) => k + 1);
-  }, []);
-
   return {
-    groupedActions,
-    flatActions: actionsWithContext,
-    totalCount: actionsWithContext.length,
-    overdueCount: actionsWithContext.filter((a) => a.isOverdue).length,
+    ...processed,
     isLoading,
     isError,
     refresh,

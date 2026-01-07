@@ -7,20 +7,12 @@ import {
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
 import {
-  findNextSessionsByRelationship,
-  findLastSessionsByRelationship,
-} from "@/lib/sessions/session-utils";
-import {
   AssignedActionsFilter,
   UserActionsScope,
-  type RelationshipGroupedActions,
-  type AssignedActionWithContext,
 } from "@/types/assigned-actions";
 import {
-  buildSessionMap,
-  filterActionsByStatus,
-  addContextToActions,
-  groupActionsByRelationship,
+  buildSessionLookupMaps,
+  processActions,
 } from "@/lib/utils/assigned-actions-utils";
 
 // Re-export filterActionsByStatus for use in tests
@@ -31,36 +23,38 @@ export { filterActionsByStatus } from "@/lib/utils/assigned-actions-utils";
 // ============================================================================
 
 /**
- * Hook to fetch and enrich assigned actions for the current user,
- * grouped by coaching relationship and overarching goal.
+ * Fetches and processes actions for the current user.
  *
- * @param filter - Filter type for actions (DueSoon, AllIncomplete, AllUnassigned, Completed)
- * @returns Object containing grouped actions, counts, loading state, and refresh function
+ * Pipeline: fetch actions → fetch sessions → filter → enrich → group
+ *
+ * @param filter - Filter type (DueSoon, AllIncomplete, AllUnassigned, Completed)
  */
 export function useAssignedActions(
   filter: AssignedActionsFilter = AssignedActionsFilter.DueSoon
 ) {
+  // -------------------------------------------------------------------------
+  // Step 1: Get current user
+  // -------------------------------------------------------------------------
+
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
-
-  // Normalize userId at boundary: undefined -> null for consistent null handling
   const userId = userSession?.id ?? null;
 
-  // Fetch all actions from user's sessions (assigned and unassigned)
+  // -------------------------------------------------------------------------
+  // Step 2: Fetch data (actions + sessions for context)
+  // -------------------------------------------------------------------------
+
   const {
     actions: rawActions,
     isLoading: actionsLoading,
     isError: actionsError,
-    refresh: refreshActions,
+    refresh,
   } = useUserActionsList(userId, { scope: UserActionsScope.Sessions });
 
-  // Fetch enriched sessions for the user (with relationship and goal data)
-  // Use a wide date range to cover historical and future sessions
   const oneYearAgo = useMemo(() => getOneYearAgo(), []);
   const oneYearFromNow = useMemo(() => getOneYearFromNow(), []);
 
-  // Only fetch sessions when userId is available - null skips the fetch
   const {
     enrichedSessions: sessions,
     isLoading: sessionsLoading,
@@ -72,62 +66,31 @@ export function useAssignedActions(
     [CoachingSessionInclude.Relationship, CoachingSessionInclude.Goal]
   );
 
-  // If no userId yet, return loading state - the sessions hook skips fetching with null userId
+  // -------------------------------------------------------------------------
+  // Step 3: Process actions (filter → enrich → group)
+  // -------------------------------------------------------------------------
+
+  const lookupMaps = useMemo(
+    () => buildSessionLookupMaps(sessions ?? []),
+    [sessions]
+  );
+
+  const processed = useMemo(
+    () => processActions(rawActions ?? [], filter, userId, lookupMaps),
+    [rawActions, filter, userId, lookupMaps]
+  );
+
+  // -------------------------------------------------------------------------
+  // Step 4: Aggregate loading/error states and return
+  // -------------------------------------------------------------------------
+
   const isLoading = !userId || actionsLoading || sessionsLoading;
   const isError = actionsError || sessionsError;
 
-  // Build lookup maps
-  const sessionMap = useMemo(
-    () => buildSessionMap(sessions ?? []),
-    [sessions]
-  );
-
-  const nextSessionByRelationship = useMemo(
-    () => findNextSessionsByRelationship(sessions ?? []),
-    [sessions]
-  );
-
-  const lastSessionByRelationship = useMemo(
-    () => findLastSessionsByRelationship(sessions ?? []),
-    [sessions]
-  );
-
-  // Filter and add context to actions
-  const filteredActions = useMemo(
-    () =>
-      filterActionsByStatus(
-        rawActions ?? [],
-        filter,
-        userId,
-        sessionMap,
-        nextSessionByRelationship,
-        lastSessionByRelationship
-      ),
-    [rawActions, filter, userId, sessionMap, nextSessionByRelationship, lastSessionByRelationship]
-  );
-
-  const actionsWithContext = useMemo(
-    () =>
-      addContextToActions(
-        filteredActions,
-        sessionMap,
-        nextSessionByRelationship
-      ),
-    [filteredActions, sessionMap, nextSessionByRelationship]
-  );
-
-  const groupedActions = useMemo(
-    () => groupActionsByRelationship(actionsWithContext),
-    [actionsWithContext]
-  );
-
   return {
-    groupedActions,
-    flatActions: actionsWithContext,
-    totalCount: actionsWithContext.length,
-    overdueCount: actionsWithContext.filter((a) => a.isOverdue).length,
+    ...processed,
     isLoading,
     isError,
-    refresh: refreshActions,
+    refresh,
   };
 }

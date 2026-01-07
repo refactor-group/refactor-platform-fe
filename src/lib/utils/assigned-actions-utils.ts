@@ -16,6 +16,21 @@ import {
   type GoalGroupedActions,
   type RelationshipGroupedActions,
 } from "@/types/assigned-actions";
+import {
+  findNextSessionsByRelationship,
+  findLastSessionsByRelationship,
+} from "@/lib/sessions/session-utils";
+
+// ============================================================================
+// Types
+// ============================================================================
+
+/** Lookup maps built from enriched sessions for efficient action processing */
+export interface SessionLookupMaps {
+  sessionMap: Map<Id, EnrichedCoachingSession>;
+  nextSessionByRelationship: Map<Id, EnrichedCoachingSession>;
+  lastSessionByRelationship: Map<Id, EnrichedCoachingSession>;
+}
 
 // ============================================================================
 // Lookup Map Builders
@@ -24,14 +39,25 @@ import {
 /**
  * Builds a lookup map from session ID to enriched coaching session.
  * Enables O(1) session lookups when processing actions.
- *
- * @param sessions - Array of enriched coaching sessions
- * @returns Map with session IDs as keys and sessions as values
  */
 export function buildSessionMap(sessions: EnrichedCoachingSession[]) {
   const map = new Map<Id, EnrichedCoachingSession>();
   sessions.forEach((s) => map.set(s.id, s));
   return map;
+}
+
+/**
+ * Builds all session lookup maps needed for action processing.
+ * Consolidates three map-building operations into one call.
+ */
+export function buildSessionLookupMaps(
+  sessions: EnrichedCoachingSession[]
+): SessionLookupMaps {
+  return {
+    sessionMap: buildSessionMap(sessions),
+    nextSessionByRelationship: findNextSessionsByRelationship(sessions),
+    lastSessionByRelationship: findLastSessionsByRelationship(sessions),
+  };
 }
 
 // ============================================================================
@@ -365,4 +391,62 @@ export function groupActionsByRelationship(
       b.nextSession.sessionDate.toMillis()
     );
   });
+}
+
+// ============================================================================
+// Action Processing Pipeline
+// ============================================================================
+
+/** Result of processing actions through the full pipeline */
+export interface ProcessedActions {
+  groupedActions: RelationshipGroupedActions[];
+  flatActions: AssignedActionWithContext[];
+  totalCount: number;
+  overdueCount: number;
+}
+
+/**
+ * Processes raw actions through the complete pipeline:
+ * filter → add context → group by relationship.
+ *
+ * @param rawActions - Raw actions from the API
+ * @param filter - Filter type to apply
+ * @param userId - User ID for filtering (null skips user assignment check)
+ * @param lookupMaps - Session lookup maps for context enrichment
+ */
+export function processActions(
+  rawActions: Action[],
+  filter: AssignedActionsFilter,
+  userId: Id | null,
+  lookupMaps: SessionLookupMaps
+): ProcessedActions {
+  const { sessionMap, nextSessionByRelationship, lastSessionByRelationship } =
+    lookupMaps;
+
+  // Step 1: Filter actions by status
+  const filteredActions = filterActionsByStatus(
+    rawActions,
+    filter,
+    userId,
+    sessionMap,
+    nextSessionByRelationship,
+    lastSessionByRelationship
+  );
+
+  // Step 2: Add context (relationship, goal, session info)
+  const actionsWithContext = addContextToActions(
+    filteredActions,
+    sessionMap,
+    nextSessionByRelationship
+  );
+
+  // Step 3: Group by relationship
+  const groupedActions = groupActionsByRelationship(actionsWithContext);
+
+  return {
+    groupedActions,
+    flatActions: actionsWithContext,
+    totalCount: actionsWithContext.length,
+    overdueCount: actionsWithContext.filter((a) => a.isOverdue).length,
+  };
 }
