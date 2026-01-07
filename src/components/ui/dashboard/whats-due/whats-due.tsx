@@ -35,6 +35,14 @@ export function WhatsDue({ className }: WhatsDueProps) {
     CoachViewMode.MyActions
   );
 
+  // Reset filter if switching to CoacheeActions with Unassigned selected
+  const handleViewModeChange = (newMode: CoachViewMode) => {
+    if (newMode === CoachViewMode.CoacheeActions && filter === AssignedActionsFilter.AllUnassigned) {
+      setFilter(AssignedActionsFilter.DueSoon);
+    }
+    setCoachViewMode(newMode);
+  };
+
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
@@ -108,10 +116,10 @@ export function WhatsDue({ className }: WhatsDueProps) {
             {isCoach && (
               <WhatsDueCoachToggle
                 value={coachViewMode}
-                onChange={setCoachViewMode}
+                onChange={handleViewModeChange}
               />
             )}
-            <WhatsDueFilter value={filter} onChange={setFilter} />
+            <WhatsDueFilter value={filter} onChange={setFilter} viewMode={coachViewMode} />
           </div>
         </div>
       </CardHeader>

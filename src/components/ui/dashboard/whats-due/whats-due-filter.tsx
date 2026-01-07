@@ -7,11 +7,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AssignedActionsFilter } from "@/types/assigned-actions";
+import { AssignedActionsFilter, CoachViewMode } from "@/types/assigned-actions";
 
 interface WhatsDueFilterProps {
   value: AssignedActionsFilter;
   onChange: (value: AssignedActionsFilter) => void;
+  viewMode?: CoachViewMode;
 }
 
 const filterOptions = [
@@ -33,7 +34,12 @@ const filterOptions = [
   },
 ];
 
-export function WhatsDueFilter({ value, onChange }: WhatsDueFilterProps) {
+export function WhatsDueFilter({ value, onChange, viewMode }: WhatsDueFilterProps) {
+  // Hide "Unassigned" filter when viewing coachee actions
+  const availableOptions = viewMode === CoachViewMode.CoacheeActions
+    ? filterOptions.filter((opt) => opt.value !== AssignedActionsFilter.AllUnassigned)
+    : filterOptions;
+
   return (
     <Select
       value={value}
@@ -43,7 +49,7 @@ export function WhatsDueFilter({ value, onChange }: WhatsDueFilterProps) {
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {filterOptions.map((option) => (
+        {availableOptions.map((option) => (
           <SelectItem
             key={option.value}
             value={option.value}
