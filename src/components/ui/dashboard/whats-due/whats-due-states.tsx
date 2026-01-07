@@ -16,7 +16,7 @@ interface EmptyStateProps extends StateProps {
 
 export function WhatsDueLoadingState({ className }: StateProps) {
   return (
-    <div className={cn("flex items-center justify-center py-8", className)}>
+    <div className={cn("flex items-center justify-center py-12", className)}>
       <Spinner />
     </div>
   );
@@ -26,7 +26,7 @@ export function WhatsDueErrorState({ className }: StateProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center py-8 text-center",
+        "flex flex-col items-center justify-center py-12 text-center",
         className
       )}
     >
@@ -77,7 +77,7 @@ export function WhatsDueEmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center py-8 text-center",
+        "flex flex-col items-center justify-center py-12 text-center",
         className
       )}
     >
