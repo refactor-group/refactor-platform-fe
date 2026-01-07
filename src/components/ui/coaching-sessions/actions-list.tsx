@@ -59,12 +59,6 @@ import {
 } from "@/components/lib/utils/table-styling";
 import { format } from "date-fns";
 
-/** Information about an assignee resolved from their user ID */
-interface AssigneeInfo {
-  name: string;
-  isUnknown: boolean;
-}
-
 interface ActionsListProps {
   coachingSessionId: Id;
   userId: Id;
@@ -110,20 +104,11 @@ const ActionsList: React.FC<ActionsListProps> = ({
     Status = "status",
   }
 
-  /**
-   * Resolves a user ID to assignee info using coach/coachee data.
-   * Returns "Unknown" with isUnknown=true for IDs that don't match either user.
-   */
-  const getAssigneeInfo = (userId: Id): AssigneeInfo => {
-    if (userId === coachId) {
-      return { name: coachName, isUnknown: false };
-    }
-    if (userId === coacheeId) {
-      return { name: coacheeName, isUnknown: false };
-    }
-    // Log warning for debugging - this indicates a data integrity issue
-    console.warn(`Unknown assignee ID: ${userId}`);
-    return { name: "Unknown", isUnknown: true };
+  /** Resolves a user ID to a display name using coach/coachee data. */
+  const getAssigneeName = (userId: Id): string => {
+    if (userId === coachId) return coachName;
+    if (userId === coacheeId) return coacheeName;
+    return "Unknown";
   };
 
   const { actions, refresh } = useUserActionsList(userId, {
@@ -400,15 +385,15 @@ const ActionsList: React.FC<ActionsListProps> = ({
                     <div className="flex flex-wrap gap-1 justify-start">
                       {action.assignee_ids && action.assignee_ids.length > 0 ? (
                         action.assignee_ids.map((assigneeId) => {
-                          const assignee = getAssigneeInfo(assigneeId);
+                          const isUnknown = assigneeId !== coachId && assigneeId !== coacheeId;
                           return (
                             <Badge
                               key={assigneeId}
-                              variant={assignee.isUnknown ? "destructive" : "secondary"}
-                              title={assignee.isUnknown ? `Unknown user ID: ${assigneeId}` : undefined}
+                              variant={isUnknown ? "destructive" : "secondary"}
+                              title={isUnknown ? `Unknown user ID: ${assigneeId}` : undefined}
                               className="text-sm font-normal"
                             >
-                              {assignee.name}
+                              {getAssigneeName(assigneeId)}
                             </Badge>
                           );
                         })
