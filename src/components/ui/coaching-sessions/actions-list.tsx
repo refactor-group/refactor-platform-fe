@@ -404,7 +404,9 @@ const ActionsList: React.FC<ActionsListProps> = ({
                           );
                         })
                       ) : (
-                        <span className="text-muted-foreground">None</span>
+                        <Badge variant="outline" className="text-sm font-normal text-muted-foreground">
+                          None
+                        </Badge>
                       )}
                     </div>
                   </TableCell>
