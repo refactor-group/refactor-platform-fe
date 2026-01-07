@@ -31,7 +31,7 @@ export function WhatsDueErrorState({ className }: StateProps) {
       )}
     >
       <AlertCircle className="h-8 w-8 text-destructive mb-2" />
-      <p className="text-sm text-destructive">
+      <p className="text-destructive">
         Failed to load actions. Please try again later.
       </p>
     </div>
@@ -82,7 +82,7 @@ export function WhatsDueEmptyState({
       )}
     >
       <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2" />
-      <p className="text-sm text-muted-foreground">{message}</p>
+      <p className="text-muted-foreground">{message}</p>
     </div>
   );
 }
