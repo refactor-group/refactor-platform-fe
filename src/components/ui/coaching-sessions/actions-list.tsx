@@ -42,6 +42,13 @@ import {
   actionStatusToString,
   Id,
 } from "@/types/general";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { UserActionsScope, type RelationshipContext } from "@/types/assigned-actions";
 import { resolveUserNameInRelationship } from "@/lib/relationships/relationship-utils";
@@ -122,6 +129,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
   const [newBody, setNewBody] = useState("");
   const [newDueBy, setNewDueBy] = useState<DateTime | null>(null);
   const [newAssigneeId, setNewAssigneeId] = useState<AssigneeSelection>(AssignmentType.Unselected);
+  const [newStatus, setNewStatus] = useState<ItemStatus | null>(null);
   const [editingActionId, setEditingActionId] = useState<Id | null>(null);
   const [sortColumn, setSortColumn] = useState<keyof Action>(
     ActionSortField.DueBy
@@ -153,6 +161,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
     setNewBody("");
     setNewDueBy(null);
     setNewAssigneeId(AssignmentType.Unselected);
+    setNewStatus(null);
   };
 
   // Function to cancel editing an action
@@ -177,6 +186,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
     }
     setNewAssigneeId(selection);
     setNewDueBy(action.due_by);
+    setNewStatus(action.status);
   };
 
   // Function to handle checkbox toggle for completion
@@ -225,9 +235,8 @@ const ActionsList: React.FC<ActionsListProps> = ({
 
     try {
       if (editingActionId) {
-        // Update existing action - preserve its current status
-        const existingAction = actions.find((a) => a.id === editingActionId);
-        const statusToUse = existingAction?.status ?? ItemStatus.NotStarted;
+        // Update existing action with selected status
+        const statusToUse = newStatus ?? ItemStatus.NotStarted;
 
         const action = await onActionEdited(
           editingActionId,
@@ -466,6 +475,22 @@ const ActionsList: React.FC<ActionsListProps> = ({
             options={assigneeOptions}
             className="w-full sm:w-40"
           />
+          {editingActionId && (
+            <Select
+              value={newStatus ?? undefined}
+              onValueChange={(value) => setNewStatus(value as ItemStatus)}
+            >
+              <SelectTrigger className="w-full sm:w-36 sm:shrink-0">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ItemStatus.NotStarted}>Not Started</SelectItem>
+                <SelectItem value={ItemStatus.InProgress}>In Progress</SelectItem>
+                <SelectItem value={ItemStatus.Completed}>Completed</SelectItem>
+                <SelectItem value={ItemStatus.WontDo}>Won&apos;t Do</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <Popover>
             <PopoverTrigger asChild>
               <Button
