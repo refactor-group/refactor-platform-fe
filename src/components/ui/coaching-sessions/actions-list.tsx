@@ -45,7 +45,8 @@ import {
   Id,
 } from "@/types/general";
 import { useUserActionsList } from "@/lib/api/user-actions";
-import { UserActionsScope } from "@/types/assigned-actions";
+import { UserActionsScope, type RelationshipContext } from "@/types/assigned-actions";
+import { resolveUserNameInRelationship } from "@/lib/relationships/relationship-utils";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { Action, actionToString } from "@/types/action";
@@ -104,12 +105,17 @@ const ActionsList: React.FC<ActionsListProps> = ({
     Status = "status",
   }
 
-  /** Resolves a user ID to a display name using coach/coachee data. */
-  const getAssigneeName = (userId: Id): string => {
-    if (userId === coachId) return coachName;
-    if (userId === coacheeId) return coacheeName;
-    return "Unknown";
-  };
+  // Build relationship context for resolving assignee names
+  const relationshipContext: RelationshipContext = useMemo(
+    () => ({
+      coachingRelationshipId: "",
+      coachId,
+      coacheeId,
+      coachName,
+      coacheeName,
+    }),
+    [coachId, coacheeId, coachName, coacheeName]
+  );
 
   const { actions, refresh } = useUserActionsList(userId, {
     scope: UserActionsScope.Sessions,
@@ -393,7 +399,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
                               title={isUnknown ? `Unknown user ID: ${assigneeId}` : undefined}
                               className="text-sm font-normal"
                             >
-                              {getAssigneeName(assigneeId)}
+                              {resolveUserNameInRelationship(assigneeId, relationshipContext)}
                             </Badge>
                           );
                         })
