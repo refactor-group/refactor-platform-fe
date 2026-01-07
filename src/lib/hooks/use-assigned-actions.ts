@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { DateTime } from "ts-luxon";
+import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date-utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import {
@@ -57,8 +57,8 @@ export function useAssignedActions(
 
   // Fetch enriched sessions for the user (with relationship and goal data)
   // Use a wide date range to cover historical and future sessions
-  const oneYearAgo = useMemo(() => DateTime.now().minus({ years: 1 }), []);
-  const oneYearFromNow = useMemo(() => DateTime.now().plus({ years: 1 }), []);
+  const oneYearAgo = useMemo(() => getOneYearAgo(), []);
+  const oneYearFromNow = useMemo(() => getOneYearFromNow(), []);
 
   // Only fetch sessions when userId is available - null skips the fetch
   const {

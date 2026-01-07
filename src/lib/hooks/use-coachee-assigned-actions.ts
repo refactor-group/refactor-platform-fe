@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { DateTime } from "ts-luxon";
+import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date-utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -108,8 +108,8 @@ export function useCoacheeAssignedActions(
   }, [enabled, coacheeIdsKey, refreshKey]);
 
   // Fetch enriched sessions for context - null skips the fetch
-  const oneYearAgo = useMemo(() => DateTime.now().minus({ years: 1 }), []);
-  const oneYearFromNow = useMemo(() => DateTime.now().plus({ years: 1 }), []);
+  const oneYearAgo = useMemo(() => getOneYearAgo(), []);
+  const oneYearFromNow = useMemo(() => getOneYearFromNow(), []);
 
   const {
     enrichedSessions: sessions,

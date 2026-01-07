@@ -32,3 +32,17 @@ export function formatDateWithTime(date: DateTime): string {
 export function formatWeekdayDate(date: DateTime): string {
   return date.toFormat("EEEE, MMMM d");
 }
+
+/**
+ * Returns a DateTime representing one year ago from now
+ */
+export function getOneYearAgo(): DateTime {
+  return DateTime.now().minus({ years: 1 });
+}
+
+/**
+ * Returns a DateTime representing one year from now
+ */
+export function getOneYearFromNow(): DateTime {
+  return DateTime.now().plus({ years: 1 });
+}
