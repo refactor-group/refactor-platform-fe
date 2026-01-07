@@ -8,29 +8,18 @@ import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry';
 export function useSseConnection(isLoggedIn: boolean) {
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  const {
-    setConnecting,
-    setConnected,
-    setReconnecting,
-    setError,
-    setDisconnected,
-  } = useSseConnectionStore((store) => ({
-    setConnecting: store.setConnecting,
-    setConnected: store.setConnected,
-    setReconnecting: store.setReconnecting,
-    setError: store.setError,
-    setDisconnected: store.setDisconnected,
-  }));
+  // Get store instance directly - Zustand actions are stable and don't need to be in dependencies
+  const store = useSseConnectionStore((state) => state);
 
   useEffect(() => {
     if (!isLoggedIn) {
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
-      setDisconnected();
+      store.setDisconnected();
       return;
     }
 
-    setConnecting();
+    store.setConnecting();
 
     const source = new EventSource(`${siteConfig.env.backendServiceURL}/sse`, {
       withCredentials: true,
@@ -38,7 +27,7 @@ export function useSseConnection(isLoggedIn: boolean) {
 
     source.onopen = () => {
       console.log('[SSE] Connection established');
-      setConnected();
+      store.setConnected();
     };
 
     source.onerror = (error) => {
@@ -47,11 +36,11 @@ export function useSseConnection(isLoggedIn: boolean) {
       // Check readyState to distinguish network errors from HTTP errors
       if (source.readyState === EventSource.CONNECTING) {
         // Browser is attempting reconnection (network error)
-        setReconnecting();
+        store.setReconnecting();
         console.log('[SSE] Connection lost, browser attempting reconnection...');
       } else {
         // EventSource.CLOSED - permanent failure (HTTP error like 401, 403, 500)
-        setError('Connection failed - check authentication or server status');
+        store.setError('Connection failed - check authentication or server status');
         source.close();
       }
     };
@@ -65,10 +54,12 @@ export function useSseConnection(isLoggedIn: boolean) {
 
     return () => {
       source.close();
-      setDisconnected();
+      store.setDisconnected();
       unregisterCleanup();
     };
-  }, [isLoggedIn, setConnecting, setConnected, setReconnecting, setError, setDisconnected]);
+    // Zustand actions are stable and never change, so we only depend on isLoggedIn
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
 
   return eventSourceRef.current;
 }
