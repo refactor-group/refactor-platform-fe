@@ -4,6 +4,8 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import Link from "next/link";
 import { Share, Target, Building, CheckSquare } from "lucide-react";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
@@ -42,6 +44,10 @@ interface TodaySessionCardProps {
 type ParticipantInfo = {
   /** The display name of the participant (coach or coachee) */
   readonly participantName: string;
+  /** The participant's first name (for avatar initials) */
+  readonly firstName: string;
+  /** The participant's last name (for avatar initials) */
+  readonly lastName: string;
   /** The current user's role in the session (Coach or Coachee) */
   readonly userRole: RelationshipRole;
   /** Whether the current user is the coach in this session */
@@ -78,6 +84,8 @@ function getParticipantInfo(session: EnrichedCoachingSession, userId: string): P
     );
     return {
       participantName: isCoach ? "Coachee (data not loaded)" : "Coach (data not loaded)",
+      firstName: "",
+      lastName: "",
       userRole,
       isCoach,
     };
@@ -87,7 +95,13 @@ function getParticipantInfo(session: EnrichedCoachingSession, userId: string): P
     `${participant.first_name} ${participant.last_name}` ||
     participant.display_name;
 
-  return { participantName, userRole, isCoach };
+  return {
+    participantName,
+    firstName: participant.first_name,
+    lastName: participant.last_name,
+    userRole,
+    isCoach,
+  };
 }
 
 /**
@@ -268,17 +282,31 @@ export function TodaySessionCard({
 
       {/* Card Content */}
       <div className="p-6 space-y-4">
-        {/* Session Title */}
-        <div className="space-y-1">
-          <h3 className="text-xl font-bold tracking-tight text-foreground">
-            Coaching Session with {participantInfo.participantName}
-          </h3>
-          <p
-            className="text-sm text-muted-foreground truncate"
-            title={goalText}
-          >
-            Goal: {goalText}
-          </p>
+        {/* Session Title with Avatar */}
+        <div className="flex gap-4">
+          <Avatar className="h-12 w-12 shrink-0">
+            <AvatarImage
+              src={undefined}
+              alt={participantInfo.participantName}
+            />
+            <AvatarFallback className="bg-primary/10 text-primary font-medium">
+              {userSessionFirstLastLettersToString(
+                participantInfo.firstName,
+                participantInfo.lastName
+              )}
+            </AvatarFallback>
+          </Avatar>
+          <div className="space-y-1">
+            <h3 className="text-xl font-bold tracking-tight text-foreground">
+              Coaching Session with {participantInfo.participantName}
+            </h3>
+            <p
+              className="text-sm text-muted-foreground truncate"
+              title={goalText}
+            >
+              Goal: {goalText}
+            </p>
+          </div>
         </div>
 
         {/* Session Details */}
