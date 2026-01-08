@@ -1,6 +1,13 @@
 import '@testing-library/jest-dom'
 import { vi, beforeAll, afterEach, afterAll } from 'vitest'
 import { server } from './msw-server'
+// @ts-ignore - eventsourcemock doesn't have types, but it's only used in tests
+import EventSource from 'eventsourcemock'
+
+// Polyfill EventSource for tests (jsdom doesn't have native EventSource)
+Object.defineProperty(global, 'EventSource', {
+  value: EventSource,
+})
 
 // Mock Next.js router hooks to avoid app router dependency in tests
 vi.mock('next/navigation', () => ({
