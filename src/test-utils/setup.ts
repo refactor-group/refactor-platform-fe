@@ -34,6 +34,11 @@ vi.mock('@/lib/providers/session-cleanup-provider', () => ({
   SessionCleanupProvider: ({ children }: { children: React.ReactNode }) => children
 }))
 
+// Mock SseProvider to prevent actual SSE connections in tests
+vi.mock('@/lib/providers/sse-provider', () => ({
+  SseProvider: ({ children }: { children: React.ReactNode }) => children
+}))
+
 // Setup MSW
 beforeAll(() => server.listen())
 afterEach(() => server.resetHandlers())
