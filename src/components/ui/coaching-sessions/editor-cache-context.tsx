@@ -299,7 +299,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       providerRef.current = null;
     }
 
-    // Provider initialization or fallback to offline mode
+    // Provider initialization or error state on timeout
     if (jwt && !tokenError && userSession) {
       // Skip if provider already exists and session hasn't changed
       if (providerRef.current && lastSessionIdRef.current === sessionId) {
@@ -307,21 +307,21 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       }
 
       initializeProvider();
-    } else {
-      // Fallback to offline mode when token is unavailable
-      // Note: Don't set error state for token timeouts - let SWR retry in background
-      // The editor should remain visible in read-only mode until connection is available
-      const doc = getOrCreateYDoc();
-      const fallbackExtensions = createExtensions(null, null);
-
+    } else if (tokenError) {
+      // Token fetch failed (timeout or network error) - show error with retry option
+      console.warn(
+        "Collaboration token fetch failed. This may be due to a network timeout or server issue."
+      );
       setCache((prev) => ({
         ...prev,
-        yDoc: doc,
+        yDoc: null,
         collaborationProvider: null,
-        extensions: fallbackExtensions,
-        isReady: true,
+        extensions: [],
+        isReady: false,
         isLoading: false,
-        error: null, // Don't treat token timeout as fatal error
+        error: new Error(
+          "Unable to load coaching notes. Please check your connection and try again."
+        ),
       }));
     }
 
