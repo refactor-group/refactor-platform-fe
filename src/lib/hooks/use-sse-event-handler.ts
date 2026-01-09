@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import type { SseEvent } from '@/types/sse-events';
-import { useSseConnectionStore } from '@/lib/contexts/sse-connection-context';
+import type { SSEEvent } from '@/types/sse-events';
+import { useSSEConnectionStore } from '@/lib/contexts/sse-connection-context';
 import { transformEntityDates } from '@/types/general';
 
-export function useSseEventHandler<T extends SseEvent['type']>(
+export function useSSEEventHandler<T extends SSEEvent['type']>(
   eventSource: EventSource | null,
   eventType: T,
-  handler: (event: Extract<SseEvent, { type: T }>) => void
+  handler: (event: Extract<SSEEvent, { type: T }>) => void
 ) {
   const handlerRef = useRef(handler);
-  const recordEvent = useSseConnectionStore((store) => store.recordEvent);
+  const recordEvent = useSSEConnectionStore((store) => store.recordEvent);
 
   useEffect(() => {
     handlerRef.current = handler;
@@ -22,12 +22,12 @@ export function useSseEventHandler<T extends SseEvent['type']>(
 
     const listener = (e: MessageEvent) => {
       try {
-        const parsed: SseEvent = JSON.parse(e.data);
-        const transformed = transformEntityDates(parsed) as SseEvent;
+        const parsed: SSEEvent = JSON.parse(e.data);
+        const transformed = transformEntityDates(parsed) as SSEEvent;
 
         if (transformed.type === eventType) {
           recordEvent();
-          handlerRef.current(transformed as Extract<SseEvent, { type: T }>);
+          handlerRef.current(transformed as Extract<SSEEvent, { type: T }>);
         }
       } catch (error) {
         console.error(`[SSE] Failed to parse ${eventType} event:`, error, e.data);

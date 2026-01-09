@@ -5,7 +5,7 @@ import { AuthStoreProvider } from '@/lib/providers/auth-store-provider';
 import { OrganizationStateStoreProvider } from '@/lib/providers/organization-state-store-provider';
 import { CoachingRelationshipStateStoreProvider } from '@/lib/providers/coaching-relationship-state-store-provider';
 import { SessionCleanupProvider } from '@/lib/providers/session-cleanup-provider';
-import { SseProvider } from '@/lib/providers/sse-provider';
+import { SSEProvider } from '@/lib/providers/sse-provider';
 import { SWRConfig } from 'swr';
 
 interface ProvidersProps {
@@ -25,9 +25,9 @@ export function Providers({ children }: ProvidersProps) {
                 provider: () => new Map(),
               }}
             >
-              <SseProvider>
+              <SSEProvider>
                 {children}
-              </SseProvider>
+              </SSEProvider>
             </SWRConfig>
           </SessionCleanupProvider>
         </CoachingRelationshipStateStoreProvider>

@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import { siteConfig } from '@/site.config';
-import { useSseConnectionStore } from '@/lib/contexts/sse-connection-context';
+import { useSSEConnectionStore } from '@/lib/contexts/sse-connection-context';
 import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry';
 
-export function useSseConnection(isLoggedIn: boolean) {
+export function useSSEConnection(isLoggedIn: boolean) {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   // Get store instance directly - Zustand actions are stable and don't need to be in dependencies
-  const store = useSseConnectionStore((state) => state);
+  const store = useSSEConnectionStore((state) => state);
 
   useEffect(() => {
     if (!isLoggedIn) {

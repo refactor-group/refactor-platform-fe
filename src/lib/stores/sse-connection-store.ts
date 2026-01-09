@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-export enum SseConnectionState {
+export enum SSEConnectionState {
   Disconnected = "Disconnected",
   Connecting = "Connecting",
   Connected = "Connected",
@@ -9,20 +9,20 @@ export enum SseConnectionState {
   Error = "Error",
 }
 
-interface SseError {
+interface SSEError {
   message: string;
   timestamp: Date;
   attemptNumber: number;
 }
 
-interface SseConnectionStateData {
-  state: SseConnectionState;
-  lastError: SseError | null;
+interface SSEConnectionStateData {
+  state: SSEConnectionState;
+  lastError: SSEError | null;
   lastConnectedAt: Date | null;
   lastEventAt: Date | null;
 }
 
-interface SseConnectionActions {
+interface SSEConnectionActions {
   setConnecting: () => void;
   setConnected: () => void;
   setReconnecting: () => void;
@@ -31,40 +31,40 @@ interface SseConnectionActions {
   recordEvent: () => void;
 }
 
-export type SseConnectionStore = SseConnectionStateData & SseConnectionActions;
+export type SSEConnectionStore = SSEConnectionStateData & SSEConnectionActions;
 
-const defaultState: SseConnectionStateData = {
-  state: SseConnectionState.Disconnected,
+const defaultState: SSEConnectionStateData = {
+  state: SSEConnectionState.Disconnected,
   lastError: null,
   lastConnectedAt: null,
   lastEventAt: null,
 };
 
-export const createSseConnectionStore = () => {
-  return create<SseConnectionStore>()(
+export const createSSEConnectionStore = () => {
+  return create<SSEConnectionStore>()(
     devtools(
       (set) => ({
         ...defaultState,
 
         setConnecting: () => {
-          set({ state: SseConnectionState.Connecting });
+          set({ state: SSEConnectionState.Connecting });
         },
 
         setConnected: () => {
           set({
-            state: SseConnectionState.Connected,
+            state: SSEConnectionState.Connected,
             lastConnectedAt: new Date(),
             lastError: null,
           });
         },
 
         setReconnecting: () => {
-          set({ state: SseConnectionState.Reconnecting });
+          set({ state: SSEConnectionState.Reconnecting });
         },
 
         setError: (message: string) => {
           set({
-            state: SseConnectionState.Error,
+            state: SSEConnectionState.Error,
             lastError: {
               message,
               timestamp: new Date(),
