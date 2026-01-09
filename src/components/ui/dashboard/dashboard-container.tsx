@@ -6,7 +6,7 @@ import AddEntities from "@/components/ui/dashboard/add-entities";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
 import { WelcomeHeader } from "@/components/ui/dashboard/welcome-header";
 import { TodaysSessions } from "@/components/ui/dashboard/todays-sessions";
-import { WhatsDue } from "@/components/ui/dashboard/whats-due";
+import { WhatsDue } from "@/components/ui/dashboard/whats-due/whats-due";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {

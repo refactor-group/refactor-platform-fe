@@ -19,7 +19,7 @@ import {
 import {
   findNextSessionsByRelationship,
   findLastSessionsByRelationship,
-} from "@/lib/utils/session-utils";
+} from "@/lib/utils/session";
 
 // ============================================================================
 // Types

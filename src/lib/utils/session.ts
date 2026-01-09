@@ -10,7 +10,7 @@ import {
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
-} from "@/lib/utils/relationship-utils";
+} from "@/lib/utils/relationship";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 
 /**

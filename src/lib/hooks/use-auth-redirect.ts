@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { sanitizeCallbackUrl } from "@/lib/utils/redirect-utils";
+import { sanitizeCallbackUrl } from "@/lib/utils/redirect";
 
 /**
  * Gets the base URL for the current environment

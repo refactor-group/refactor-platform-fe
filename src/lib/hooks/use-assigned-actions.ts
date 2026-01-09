@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date-utils";
+import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import {
@@ -13,10 +13,10 @@ import {
 import {
   buildSessionLookupMaps,
   processActions,
-} from "@/lib/utils/assigned-actions-utils";
+} from "@/lib/utils/assigned-actions";
 
 // Re-export filterActionsByStatus for use in tests
-export { filterActionsByStatus } from "@/lib/utils/assigned-actions-utils";
+export { filterActionsByStatus } from "@/lib/utils/assigned-actions";
 
 // ============================================================================
 // Main Hook

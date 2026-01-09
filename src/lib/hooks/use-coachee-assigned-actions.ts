@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date-utils";
+import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -16,7 +16,7 @@ import {
 import {
   buildSessionLookupMaps,
   processActions,
-} from "@/lib/utils/assigned-actions-utils";
+} from "@/lib/utils/assigned-actions";
 
 // ============================================================================
 // Helper Hook: Fetch actions for multiple coachees in parallel

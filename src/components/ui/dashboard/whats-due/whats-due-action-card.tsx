@@ -13,8 +13,8 @@ import { Pill, PillIndicator } from "@/components/kibo/ui/pill";
 import { cn } from "@/components/lib/utils";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { ItemStatus, type Id } from "@/types/general";
-import { resolveUserNameInRelationship } from "@/lib/utils/relationship-utils";
-import { formatShortDate } from "@/lib/utils/date-utils";
+import { resolveUserNameInRelationship } from "@/lib/utils/relationship";
+import { formatShortDate } from "@/lib/utils/date";
 
 interface WhatsDueActionCardProps {
   action: AssignedActionWithContext;

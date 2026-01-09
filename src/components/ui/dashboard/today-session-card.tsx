@@ -20,7 +20,7 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import {
   calculateSessionUrgency,
   getUrgencyMessage,
-} from "@/lib/utils/session-utils";
+} from "@/lib/utils/session";
 
 /**
  * Props for the TodaySessionCard component

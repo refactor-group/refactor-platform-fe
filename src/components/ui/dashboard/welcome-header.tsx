@@ -2,7 +2,7 @@
 
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { formatWeekdayDate } from "@/lib/utils/date-utils";
+import { formatWeekdayDate } from "@/lib/utils/date";
 
 /**
  * WelcomeHeader Component

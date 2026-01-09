@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/select";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { UserActionsScope, type RelationshipContext } from "@/types/assigned-actions";
-import { resolveUserNameInRelationship } from "@/lib/utils/relationship-utils";
+import { resolveUserNameInRelationship } from "@/lib/utils/relationship";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { Action, actionToString } from "@/types/action";
