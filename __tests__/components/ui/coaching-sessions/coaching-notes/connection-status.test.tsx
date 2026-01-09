@@ -208,7 +208,7 @@ describe('ConnectionStatus', () => {
       expect(badge).toHaveClass('bg-secondary') // Secondary variant for offline mode
     })
 
-    it('should display "Offline" when JWT token fetch fails (graceful degradation)', () => {
+    it('should display "Error" when JWT token fetch fails', () => {
       vi.mocked(useCollaborationToken).mockReturnValue({
         jwt: null,
         isLoading: false,
@@ -221,11 +221,10 @@ describe('ConnectionStatus', () => {
         </EditorCacheProvider>
       )
 
-      // Should show "Offline" badge (not "Error") - graceful degradation allows editor to remain visible
-      // The editor will be in read-only offline mode while SWR retries the token fetch in background
-      const badge = screen.getByText('Offline')
+      // Should show "Error" badge - token fetch failure now shows error state with retry option
+      const badge = screen.getByText('Error')
       expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-secondary') // Secondary variant for offline state
+      expect(badge).toHaveClass('bg-destructive') // Destructive variant for error state
     })
   })
 

@@ -128,7 +128,7 @@ describe('EditorCacheProvider', () => {
     expect(screen.getByTestId('is-ready')).toBeInTheDocument()
   })
 
-  it('should work without JWT token', async () => {
+  it('should stay in loading state without JWT token', async () => {
     vi.mocked(useCollaborationToken).mockReturnValue({
       jwt: null,
       isLoading: false,
@@ -143,26 +143,32 @@ describe('EditorCacheProvider', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('has-provider')).toHaveTextContent('no')
-      expect(screen.getByTestId('is-ready')).toHaveTextContent('yes')
+      // Without JWT and without error, stays in loading state waiting for token
+      expect(screen.getByTestId('is-ready')).toHaveTextContent('no')
     })
   })
 
-  it('should handle JWT errors gracefully', async () => {
+  it('should show error state when JWT fetch fails', async () => {
     vi.mocked(useCollaborationToken).mockReturnValue({
       jwt: null,
       isLoading: false,
       isError: new Error('Token expired')
     })
 
+    let cacheRef: any = null
+
     render(
       <EditorCacheProvider sessionId="test-session">
-        <TestConsumer />
+        <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
       </EditorCacheProvider>
     )
 
     await waitFor(() => {
       expect(screen.getByTestId('has-provider')).toHaveTextContent('no')
-      expect(screen.getByTestId('is-ready')).toHaveTextContent('yes')
+      // Token error now shows error state with retry option instead of falling back to offline
+      expect(screen.getByTestId('is-ready')).toHaveTextContent('no')
+      expect(cacheRef?.error).toBeTruthy()
+      expect(cacheRef?.error?.message).toContain('Unable to load coaching notes')
     })
   })
 
