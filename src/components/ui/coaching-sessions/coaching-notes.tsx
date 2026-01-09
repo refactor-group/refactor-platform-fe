@@ -5,7 +5,7 @@ import { useRef, useState, useCallback } from "react";
 import { FileText } from "lucide-react";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
 import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
-import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu";
+import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu/link-bubble-menu";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
