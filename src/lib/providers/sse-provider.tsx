@@ -1,34 +1,34 @@
 "use client";
 
 import { type ReactNode, useState } from 'react';
-import { createSseConnectionStore } from '@/lib/stores/sse-connection-store';
-import { SseConnectionStoreContext } from '@/lib/contexts/sse-connection-context';
+import { createSSEConnectionStore } from '@/lib/stores/sse-connection-store';
+import { SSEConnectionStoreContext } from '@/lib/contexts/sse-connection-context';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
-import { useSseConnection } from '@/lib/hooks/use-sse-connection';
-import { useSseCacheInvalidation } from '@/lib/hooks/use-sse-cache-invalidation';
-import { useSseSystemEvents } from '@/lib/hooks/use-sse-system-events';
+import { useSSEConnection } from '@/lib/hooks/use-sse-connection';
+import { useSSECacheInvalidation } from '@/lib/hooks/use-sse-cache-invalidation';
+import { useSSESystemEvents } from '@/lib/hooks/use-sse-system-events';
 
-export interface SseProviderProps {
+export interface SSEProviderProps {
   children: ReactNode;
 }
 
-function SseConnectionManager() {
+function SSEConnectionManager() {
   const isLoggedIn = useAuthStore((store) => store.isLoggedIn);
-  const eventSource = useSseConnection(isLoggedIn);
+  const eventSource = useSSEConnection(isLoggedIn);
 
-  useSseCacheInvalidation(eventSource);
-  useSseSystemEvents(eventSource);
+  useSSECacheInvalidation(eventSource);
+  useSSESystemEvents(eventSource);
 
   return null;
 }
 
-export const SseProvider = ({ children }: SseProviderProps) => {
-  const [store] = useState(() => createSseConnectionStore());
+export const SSEProvider = ({ children }: SSEProviderProps) => {
+  const [store] = useState(() => createSSEConnectionStore());
 
   return (
-    <SseConnectionStoreContext.Provider value={store}>
-      <SseConnectionManager />
+    <SSEConnectionStoreContext.Provider value={store}>
+      <SSEConnectionManager />
       {children}
-    </SseConnectionStoreContext.Provider>
+    </SSEConnectionStoreContext.Provider>
   );
 };

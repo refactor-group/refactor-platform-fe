@@ -3,9 +3,9 @@
 import { useCallback } from 'react';
 import { useSWRConfig } from 'swr';
 import { siteConfig } from '@/site.config';
-import { useSseEventHandler } from './use-sse-event-handler';
+import { useSSEEventHandler } from './use-sse-event-handler';
 
-export function useSseCacheInvalidation(eventSource: EventSource | null) {
+export function useSSECacheInvalidation(eventSource: EventSource | null) {
   const { mutate } = useSWRConfig();
   const baseUrl = siteConfig.env.backendServiceURL;
 
@@ -23,47 +23,47 @@ export function useSseCacheInvalidation(eventSource: EventSource | null) {
     );
   }, [mutate, baseUrl]);
 
-  useSseEventHandler(eventSource, 'action_created', () => {
+  useSSEEventHandler(eventSource, 'action_created', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after action_created');
   });
 
-  useSseEventHandler(eventSource, 'action_updated', () => {
+  useSSEEventHandler(eventSource, 'action_updated', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after action_updated');
   });
 
-  useSseEventHandler(eventSource, 'action_deleted', () => {
+  useSSEEventHandler(eventSource, 'action_deleted', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after action_deleted');
   });
 
-  useSseEventHandler(eventSource, 'agreement_created', () => {
+  useSSEEventHandler(eventSource, 'agreement_created', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after agreement_created');
   });
 
-  useSseEventHandler(eventSource, 'agreement_updated', () => {
+  useSSEEventHandler(eventSource, 'agreement_updated', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after agreement_updated');
   });
 
-  useSseEventHandler(eventSource, 'agreement_deleted', () => {
+  useSSEEventHandler(eventSource, 'agreement_deleted', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after agreement_deleted');
   });
 
-  useSseEventHandler(eventSource, 'overarching_goal_created', () => {
+  useSSEEventHandler(eventSource, 'overarching_goal_created', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after overarching_goal_created');
   });
 
-  useSseEventHandler(eventSource, 'overarching_goal_updated', () => {
+  useSSEEventHandler(eventSource, 'overarching_goal_updated', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after overarching_goal_updated');
   });
 
-  useSseEventHandler(eventSource, 'overarching_goal_deleted', () => {
+  useSSEEventHandler(eventSource, 'overarching_goal_deleted', () => {
     invalidateAllCaches();
     console.log('[SSE] Revalidated caches after overarching_goal_deleted');
   });

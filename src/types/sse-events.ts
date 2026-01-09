@@ -7,14 +7,14 @@ import type { OverarchingGoal } from './overarching-goal';
  * Base SSE event structure matching backend serialization
  * Backend uses Rust #[serde(tag = "type", content = "data")]
  */
-interface BaseSseEvent<T extends string, D> {
+interface BaseSSEEvent<T extends string, D> {
   type: T;
   data: D;
 }
 
 // ==================== ACTION EVENTS (session-scoped) ====================
 
-export type ActionCreatedEvent = BaseSseEvent<
+export type ActionCreatedEvent = BaseSSEEvent<
   'action_created',
   {
     coaching_session_id: Id;
@@ -22,7 +22,7 @@ export type ActionCreatedEvent = BaseSseEvent<
   }
 >;
 
-export type ActionUpdatedEvent = BaseSseEvent<
+export type ActionUpdatedEvent = BaseSSEEvent<
   'action_updated',
   {
     coaching_session_id: Id;
@@ -30,7 +30,7 @@ export type ActionUpdatedEvent = BaseSseEvent<
   }
 >;
 
-export type ActionDeletedEvent = BaseSseEvent<
+export type ActionDeletedEvent = BaseSSEEvent<
   'action_deleted',
   {
     coaching_session_id: Id;
@@ -40,7 +40,7 @@ export type ActionDeletedEvent = BaseSseEvent<
 
 // ==================== AGREEMENT EVENTS (relationship-scoped) ====================
 
-export type AgreementCreatedEvent = BaseSseEvent<
+export type AgreementCreatedEvent = BaseSSEEvent<
   'agreement_created',
   {
     coaching_relationship_id: Id;
@@ -48,7 +48,7 @@ export type AgreementCreatedEvent = BaseSseEvent<
   }
 >;
 
-export type AgreementUpdatedEvent = BaseSseEvent<
+export type AgreementUpdatedEvent = BaseSSEEvent<
   'agreement_updated',
   {
     coaching_relationship_id: Id;
@@ -56,7 +56,7 @@ export type AgreementUpdatedEvent = BaseSseEvent<
   }
 >;
 
-export type AgreementDeletedEvent = BaseSseEvent<
+export type AgreementDeletedEvent = BaseSSEEvent<
   'agreement_deleted',
   {
     coaching_relationship_id: Id;
@@ -66,7 +66,7 @@ export type AgreementDeletedEvent = BaseSseEvent<
 
 // ==================== OVERARCHING GOAL EVENTS (relationship-scoped) ====================
 
-export type OverarchingGoalCreatedEvent = BaseSseEvent<
+export type OverarchingGoalCreatedEvent = BaseSSEEvent<
   'overarching_goal_created',
   {
     coaching_relationship_id: Id;
@@ -74,7 +74,7 @@ export type OverarchingGoalCreatedEvent = BaseSseEvent<
   }
 >;
 
-export type OverarchingGoalUpdatedEvent = BaseSseEvent<
+export type OverarchingGoalUpdatedEvent = BaseSSEEvent<
   'overarching_goal_updated',
   {
     coaching_relationship_id: Id;
@@ -82,7 +82,7 @@ export type OverarchingGoalUpdatedEvent = BaseSseEvent<
   }
 >;
 
-export type OverarchingGoalDeletedEvent = BaseSseEvent<
+export type OverarchingGoalDeletedEvent = BaseSSEEvent<
   'overarching_goal_deleted',
   {
     coaching_relationship_id: Id;
@@ -92,7 +92,7 @@ export type OverarchingGoalDeletedEvent = BaseSseEvent<
 
 // ==================== SYSTEM EVENTS ====================
 
-export type ForceLogoutEvent = BaseSseEvent<
+export type ForceLogoutEvent = BaseSSEEvent<
   'force_logout',
   {
     reason: string;
@@ -103,7 +103,7 @@ export type ForceLogoutEvent = BaseSseEvent<
  * Discriminated union of all SSE events
  * TypeScript automatically narrows the type based on the 'type' property
  */
-export type SseEvent =
+export type SSEEvent =
   | ActionCreatedEvent
   | ActionUpdatedEvent
   | ActionDeletedEvent
