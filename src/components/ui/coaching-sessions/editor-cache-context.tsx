@@ -66,8 +66,6 @@ const ActionKind = {
   Cleanup: "cleanup",
 } as const;
 
-type ActionKindType = (typeof ActionKind)[keyof typeof ActionKind];
-
 interface InitializeAction {
   readonly kind: typeof ActionKind.Initialize;
 }
@@ -442,7 +440,10 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       case ActionKind.Cleanup:
         providerRef.current?.disconnect();
         providerRef.current = null;
-        // After cleanup, check if we should initialize
+        // After cleanup, immediately initialize for new session if ready.
+        // We inline this check rather than re-calling determineProviderAction()
+        // because refs don't trigger re-renders and lifecycleState still has
+        // hasProvider: true (computed before we modified the ref).
         if (jwt && !tokenError && userSession) {
           initializeProvider();
         }
@@ -513,27 +514,21 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     }
   }, [userRole, userSession, userColor, cache.isReady]);
 
-  // Store current values in refs for unmount cleanup
-  const userSessionRef = useRef(userSession);
-  const userRoleRef = useRef(userRole);
-  const userColorRef = useRef(userColor);
-  useEffect(() => {
-    userSessionRef.current = userSession;
-    userRoleRef.current = userRole;
-    userColorRef.current = userColor;
-  }, [userSession, userRole, userColor]);
+  // Store current values in ref for unmount cleanup (avoids stale closures)
+  const cleanupDataRef = useRef({ userSession, userRole, userColor });
+  cleanupDataRef.current = { userSession, userRole, userColor };
 
   // Unmount cleanup: broadcast disconnected presence when leaving the session
   useEffect(() => {
     return () => {
       const provider = providerRef.current;
-      const session = userSessionRef.current;
-      if (provider && session) {
+      const { userSession, userRole, userColor } = cleanupDataRef.current;
+      if (provider && userSession) {
         disconnectProviderWithPresence(provider, {
-          userId: session.id,
-          name: session.display_name,
-          relationshipRole: userRoleRef.current,
-          color: userColorRef.current,
+          userId: userSession.id,
+          name: userSession.display_name,
+          relationshipRole: userRole,
+          color: userColor,
         });
         providerRef.current = null;
       }
