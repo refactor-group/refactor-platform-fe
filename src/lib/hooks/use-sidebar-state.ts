@@ -10,7 +10,7 @@ import {
 import { SidebarStorage } from '@/lib/services/sidebar-storage'
 import { SidebarStateCalculator } from '@/lib/services/sidebar-state-calculator'
 import { useIsMobile } from '@/components/hooks/use-mobile'
-import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
+import { useLogoutCleanup } from '@/lib/hooks/use-logout-cleanup'
 
 /**
  * Enhanced navigation drawer hook with session-only persistence and responsive behavior
@@ -136,23 +136,17 @@ export function useSidebarState(): SidebarStateHookProps {
   const [openMobile, setOpenMobile] = useState(false)
 
   // Logout cleanup registration: ensures navigation drawer state is cleared on session end
-  useEffect(() => {
-    const cleanup = () => {
+  useLogoutCleanup(
+    useCallback(() => {
       // Immediately clear storage
       SidebarStorage.clearUserIntent()
 
       // Reset navigation state synchronously
-      setNavigationState(prevState =>
+      setNavigationState((prevState) =>
         SidebarStateCalculator.handleAuthChange(prevState, false)
       )
-    }
-
-    const unregisterCleanup = logoutCleanupRegistry.register(cleanup)
-
-    return () => {
-      unregisterCleanup()
-    }
-  }, [])
+    }, [])
+  )
 
   return {
     // Core state

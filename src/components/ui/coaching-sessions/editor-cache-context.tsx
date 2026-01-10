@@ -1,6 +1,6 @@
 "use client";
 
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -8,7 +8,7 @@ import React, {
   useRef,
   useCallback,
   useMemo,
-  ReactNode,
+  type ReactNode,
 } from "react";
 import * as Y from "yjs";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
@@ -17,16 +17,17 @@ import { Extensions as createExtensions } from "@/components/ui/coaching-session
 import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { siteConfig } from "@/site.config";
+import type { Jwt } from "@/types/jwt";
+import type { UserSession } from "@/types/user-session";
 import {
-  UserPresence,
   PresenceState,
-  AwarenessData,
+  UserPresence,
+  toUserPresence,
   createConnectedPresence,
   createDisconnectedPresence,
-  toUserPresence,
 } from "@/types/presence";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
-import { logoutCleanupRegistry } from "@/lib/hooks/logout-cleanup-registry";
+import { useLogoutCleanup } from "@/lib/hooks/use-logout-cleanup";
 import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
 
 /**
@@ -35,7 +36,13 @@ import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
  * - Provider connection/disconnection with proper cleanup
  * - User presence synchronization via awareness protocol
  * - Graceful fallback to non-collaborative mode on errors
+ *
+ * @see docs/architecture/editor-cache-mechanism.md for architecture details
  */
+
+// ============================================
+// Types
+// ============================================
 
 interface EditorCacheState {
   yDoc: Y.Doc | null;
@@ -49,6 +56,46 @@ interface EditorCacheState {
 
 interface EditorCacheContextType extends EditorCacheState {
   resetCache: () => void;
+}
+
+// Provider lifecycle action types (discriminated union)
+const ActionKind = {
+  Initialize: "initialize",
+  Skip: "skip",
+  Error: "error",
+  Cleanup: "cleanup",
+} as const;
+
+type ActionKindType = (typeof ActionKind)[keyof typeof ActionKind];
+
+interface InitializeAction {
+  readonly kind: typeof ActionKind.Initialize;
+}
+
+interface SkipAction {
+  readonly kind: typeof ActionKind.Skip;
+  readonly reason: string;
+}
+
+interface ErrorAction {
+  readonly kind: typeof ActionKind.Error;
+  readonly error: Error;
+}
+
+interface CleanupAction {
+  readonly kind: typeof ActionKind.Cleanup;
+}
+
+type ProviderAction = InitializeAction | SkipAction | ErrorAction | CleanupAction;
+
+// Provider lifecycle state for determining actions
+interface ProviderLifecycleState {
+  readonly tokenLoading: boolean;
+  readonly tokenError: boolean;
+  readonly jwt: Jwt | undefined;
+  readonly userSession: UserSession | undefined;
+  readonly hasProvider: boolean;
+  readonly sessionChanged: boolean;
 }
 
 const EditorCacheContext = createContext<EditorCacheContextType | null>(null);
@@ -65,6 +112,71 @@ interface EditorCacheProviderProps {
   sessionId: string;
   children: ReactNode;
 }
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Creates the initial cache state with default values.
+ */
+function createInitialCacheState(): EditorCacheState {
+  return {
+    yDoc: null,
+    collaborationProvider: null,
+    extensions: [],
+    isReady: false,
+    isLoading: true,
+    error: null,
+    presenceState: {
+      users: new Map(),
+      currentUser: null,
+      isLoading: false,
+    },
+  };
+}
+
+/**
+ * Determines the appropriate action based on provider lifecycle state.
+ * Uses discriminated union pattern for exhaustive type checking.
+ */
+function determineProviderAction(state: ProviderLifecycleState): ProviderAction {
+  // Still loading token - wait
+  if (state.tokenLoading) {
+    return { kind: ActionKind.Skip, reason: "Token still loading" };
+  }
+
+  // Session changed and provider exists - cleanup needed
+  if (state.sessionChanged && state.hasProvider) {
+    return { kind: ActionKind.Cleanup };
+  }
+
+  // Have valid token and session - check if initialization needed
+  if (state.jwt && !state.tokenError && state.userSession) {
+    if (state.hasProvider && !state.sessionChanged) {
+      return { kind: ActionKind.Skip, reason: "Provider already initialized for this session" };
+    }
+    return { kind: ActionKind.Initialize };
+  }
+
+  // Token error occurred
+  if (state.tokenError) {
+    // Guard: Don't show error if provider is already connected
+    if (state.hasProvider && !state.sessionChanged) {
+      return { kind: ActionKind.Skip, reason: "Ignoring transient token error - provider already connected" };
+    }
+    return {
+      kind: ActionKind.Error,
+      error: new Error("Unable to load coaching notes. Please check your connection and try again."),
+    };
+  }
+
+  return { kind: ActionKind.Skip, reason: "Waiting for required state" };
+}
+
+// ============================================
+// Component
+// ============================================
 
 export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   sessionId,
@@ -90,19 +202,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   // Generate a consistent color for this user session
   const userColor = useMemo(() => generateCollaborativeUserColor(), []);
 
-  const [cache, setCache] = useState<EditorCacheState>({
-    yDoc: null,
-    collaborationProvider: null,
-    extensions: [],
-    isReady: false,
-    isLoading: true,
-    error: null,
-    presenceState: {
-      users: new Map(),
-      currentUser: null,
-      isLoading: false,
-    },
-  });
+  const [cache, setCache] = useState<EditorCacheState>(createInitialCacheState);
 
   // Y.Doc lifecycle: create new document when session changes
   const getOrCreateYDoc = useCallback(() => {
@@ -283,55 +383,60 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
             : new Error("Failed to initialize collaboration"),
       }));
     }
-  }, [jwt, userSession, userRole, getOrCreateYDoc]);
+  }, [jwt, userSession, userRole, userColor, getOrCreateYDoc]);
 
   // Provider lifecycle: manages connection state across session/token changes
   useEffect(() => {
     setCache((prev) => ({ ...prev, isLoading: tokenLoading }));
 
-    if (tokenLoading) {
-      return;
-    }
+    const lifecycleState: ProviderLifecycleState = {
+      tokenLoading,
+      tokenError,
+      jwt,
+      userSession,
+      hasProvider: providerRef.current !== null,
+      sessionChanged: lastSessionIdRef.current !== sessionId,
+    };
 
-    // Session change cleanup: disconnect stale provider
-    if (lastSessionIdRef.current !== sessionId && providerRef.current) {
-      providerRef.current.disconnect();
-      providerRef.current = null;
-    }
+    const action = determineProviderAction(lifecycleState);
 
-    // Provider initialization or error state on timeout
-    if (jwt && !tokenError && userSession) {
-      // Skip if provider already exists and session hasn't changed
-      if (providerRef.current && lastSessionIdRef.current === sessionId) {
-        return;
-      }
+    switch (action.kind) {
+      case ActionKind.Skip:
+        if (action.reason.includes("transient")) {
+          console.debug(action.reason);
+        }
+        break;
 
-      initializeProvider();
-    } else if (tokenError) {
-      // Guard: Don't show error if provider is already connected
-      // Prevents transient SWR revalidation errors from disrupting active session
-      if (providerRef.current && lastSessionIdRef.current === sessionId) {
-        console.debug(
-          "Ignoring transient token error - provider already connected"
+      case ActionKind.Cleanup:
+        providerRef.current?.disconnect();
+        providerRef.current = null;
+        // After cleanup, check if we should initialize
+        if (jwt && !tokenError && userSession) {
+          initializeProvider();
+        }
+        break;
+
+      case ActionKind.Initialize:
+        // Additional guard: verify provider hasn't been set by concurrent effect
+        if (!providerRef.current) {
+          initializeProvider();
+        }
+        break;
+
+      case ActionKind.Error:
+        console.warn(
+          "Collaboration token fetch failed. This may be due to a network timeout or server issue."
         );
-        return;
-      }
-
-      // Token fetch failed (timeout or network error) - show error with retry option
-      console.warn(
-        "Collaboration token fetch failed. This may be due to a network timeout or server issue."
-      );
-      setCache((prev) => ({
-        ...prev,
-        yDoc: null,
-        collaborationProvider: null,
-        extensions: [],
-        isReady: false,
-        isLoading: false,
-        error: new Error(
-          "Unable to load coaching notes. Please check your connection and try again."
-        ),
-      }));
+        setCache((prev) => ({
+          ...prev,
+          yDoc: null,
+          collaborationProvider: null,
+          extensions: [],
+          isReady: false,
+          isLoading: false,
+          error: action.error,
+        }));
+        break;
     }
 
     return () => {
@@ -354,8 +459,8 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
   ]);
 
   // Logout cleanup registration: ensures proper provider teardown on session end
-  useEffect(() => {
-    const cleanup = () => {
+  useLogoutCleanup(
+    useCallback(() => {
       const provider = providerRef.current;
 
       if (provider) {
@@ -388,14 +493,8 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
           isLoading: false,
         },
       }));
-    };
-
-    const unregisterCleanup = logoutCleanupRegistry.register(cleanup);
-
-    return () => {
-      unregisterCleanup();
-    };
-  }, []);
+    }, [])
+  );
 
   // Cache reset: clears all state for fresh initialization
   const resetCache = useCallback(() => {
@@ -411,19 +510,7 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     yDocRef.current = null;
     lastSessionIdRef.current = null;
 
-    setCache({
-      yDoc: null,
-      collaborationProvider: null,
-      extensions: [],
-      isReady: false,
-      isLoading: true,
-      error: null,
-      presenceState: {
-        users: new Map(),
-        currentUser: null,
-        isLoading: false,
-      },
-    });
+    setCache(createInitialCacheState());
   }, []);
 
   // Memoize context value to prevent unnecessary re-renders of consumers
