@@ -26,7 +26,13 @@ export const useCollaborationToken = (coachingSessionId: string) => {
       ]
     : null;
 
-  const { data, error } = useSWR<Jwt>(requestKey, fetcher);
+  const { data, error } = useSWR<Jwt>(requestKey, fetcher, {
+    // Prevent automatic revalidation that could cause transient error states
+    // during tab switches. The token is only needed for initial provider setup,
+    // and the WebSocket connection persists once established.
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
 
   return {
     jwt: data,

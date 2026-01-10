@@ -308,6 +308,15 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
 
       initializeProvider();
     } else if (tokenError) {
+      // Guard: Don't show error if provider is already connected
+      // Prevents transient SWR revalidation errors from disrupting active session
+      if (providerRef.current && lastSessionIdRef.current === sessionId) {
+        console.debug(
+          "Ignoring transient token error - provider already connected"
+        );
+        return;
+      }
+
       // Token fetch failed (timeout or network error) - show error with retry option
       console.warn(
         "Collaboration token fetch failed. This may be due to a network timeout or server issue."
