@@ -136,16 +136,6 @@ useLogoutCleanup(
 Also used by:
 - `use-sidebar-state.ts` - clears navigation drawer state on logout
 
-#### usePresenceTracking
-
-**Location**: `src/lib/hooks/use-presence-tracking.ts`
-
-Manages presence tracking for collaborative editing sessions:
-- Subscribes to awareness change events from the TipTap provider
-- Maintains a Map of connected users with their presence data
-- Marks users as disconnected (rather than removing) when they disappear from awareness
-- Provides `resetPresence()` for cleanup during logout
-
 ### Data Flow
 
 ```

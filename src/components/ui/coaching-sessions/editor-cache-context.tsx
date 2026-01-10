@@ -8,6 +8,7 @@ import {
   useRef,
   useCallback,
   useMemo,
+  type FC,
   type ReactNode,
 } from "react";
 import * as Y from "yjs";
@@ -159,7 +160,7 @@ function determineProviderAction(state: ProviderLifecycleState): ProviderAction 
 
   // Token error occurred
   if (state.tokenError) {
-    // Guard: Don't show error if provider is already connected
+    // Transient error guard: don't disrupt working sessions
     if (state.hasProvider && !state.sessionChanged) {
       return { kind: ActionKind.Skip, reason: "Ignoring transient token error - provider already connected" };
     }
@@ -208,7 +209,7 @@ function disconnectProviderWithPresence(
 // Component
 // ============================================
 
-export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
+export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   sessionId,
   children,
 }) => {

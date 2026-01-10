@@ -224,15 +224,15 @@ describe('EditorCacheProvider', () => {
       vi.clearAllMocks()
 
       // Re-render the same component (simulates user clicking in editor)
-      rerender(
-        <EditorCacheProvider sessionId="test-session">
-          <TestConsumer />
-        </EditorCacheProvider>
-      )
+      await act(async () => {
+        rerender(
+          <EditorCacheProvider sessionId="test-session">
+            <TestConsumer />
+          </EditorCacheProvider>
+        )
+      })
 
-      // Wait a bit to ensure no cleanup happens
-      await new Promise(resolve => setTimeout(resolve, 50))
-
+      // After rerender and effects flushed - verify provider was not disturbed
       // CRITICAL: Provider should NOT be disconnected
       expect(mockProvider?.disconnect).not.toHaveBeenCalled()
 
@@ -585,14 +585,13 @@ describe('EditorCacheProvider', () => {
       })
 
       // Re-render with error state (simulates: component re-renders on focus)
-      rerender(
-        <EditorCacheProvider sessionId="test-session">
-          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
-        </EditorCacheProvider>
-      )
-
-      // Wait for any effects to run
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await act(async () => {
+        rerender(
+          <EditorCacheProvider sessionId="test-session">
+            <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+          </EditorCacheProvider>
+        )
+      })
 
       // CRITICAL ASSERTIONS - This is what the fix ensures:
       // Provider should STILL be connected (not disconnected)

@@ -7,15 +7,18 @@ import { logoutCleanupRegistry } from "@/lib/hooks/logout-cleanup-registry";
  * Registers a cleanup function to be called during logout.
  * Automatically unregisters when the component unmounts.
  *
- * Uses a ref pattern to ensure the cleanup function always has access to
- * the latest values without causing re-registration on every render.
+ * Uses a ref pattern internally, so the cleanup function always has access to
+ * the latest values without needing dependencies. Wrap with useCallback and
+ * empty deps to avoid creating new function instances on every render.
  *
  * @example
  * ```typescript
- * useLogoutCleanup(useCallback(() => {
- *   cleanupProvider();
- *   resetState();
- * }, [dependencies]));
+ * useLogoutCleanup(
+ *   useCallback(() => {
+ *     cleanupProvider();
+ *     resetState();
+ *   }, [])
+ * );
  * ```
  */
 export function useLogoutCleanup(cleanup: () => void): void {
