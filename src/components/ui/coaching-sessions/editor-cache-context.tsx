@@ -469,6 +469,10 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
           error: action.error,
         }));
         break;
+
+      default:
+        const _exhaustive: never = action;
+        throw new Error(`Unhandled action kind: ${_exhaustive}`);
     }
 
     return () => {
