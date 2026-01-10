@@ -186,6 +186,26 @@ function updatePresenceOnProvider(
   provider.setAwarenessField("presence", updatedPresence);
 }
 
+/**
+ * Gracefully disconnects the provider after broadcasting disconnected presence.
+ * Used when leaving a coaching session to notify other users.
+ */
+function disconnectProviderWithPresence(
+  provider: TiptapCollabProvider,
+  presence: Parameters<typeof createConnectedPresence>[0]
+): void {
+  // Create connected presence first, then convert to disconnected
+  const connectedPresence = createConnectedPresence(presence);
+  const disconnectedPresence = createDisconnectedPresence(connectedPresence);
+
+  // Broadcast disconnected status so other users see us go offline
+  provider.setAwarenessField("presence", disconnectedPresence);
+
+  // Disconnect and cleanup
+  provider.disconnect();
+  provider.destroy();
+}
+
 // ============================================
 // Component
 // ============================================
@@ -488,6 +508,33 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
       });
     }
   }, [userRole, userSession, userColor, cache.isReady]);
+
+  // Store current values in refs for unmount cleanup
+  const userSessionRef = useRef(userSession);
+  const userRoleRef = useRef(userRole);
+  const userColorRef = useRef(userColor);
+  useEffect(() => {
+    userSessionRef.current = userSession;
+    userRoleRef.current = userRole;
+    userColorRef.current = userColor;
+  }, [userSession, userRole, userColor]);
+
+  // Unmount cleanup: broadcast disconnected presence when leaving the session
+  useEffect(() => {
+    return () => {
+      const provider = providerRef.current;
+      const session = userSessionRef.current;
+      if (provider && session) {
+        disconnectProviderWithPresence(provider, {
+          userId: session.id,
+          name: session.display_name,
+          relationshipRole: userRoleRef.current,
+          color: userColorRef.current,
+        });
+        providerRef.current = null;
+      }
+    };
+  }, []);
 
   // Logout cleanup registration: ensures proper provider teardown on session end
   useLogoutCleanup(
