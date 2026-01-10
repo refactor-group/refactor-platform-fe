@@ -224,15 +224,15 @@ describe('EditorCacheProvider', () => {
       vi.clearAllMocks()
 
       // Re-render the same component (simulates user clicking in editor)
-      rerender(
-        <EditorCacheProvider sessionId="test-session">
-          <TestConsumer />
-        </EditorCacheProvider>
-      )
+      await act(async () => {
+        rerender(
+          <EditorCacheProvider sessionId="test-session">
+            <TestConsumer />
+          </EditorCacheProvider>
+        )
+      })
 
-      // Wait a bit to ensure no cleanup happens
-      await new Promise(resolve => setTimeout(resolve, 50))
-
+      // After rerender and effects flushed - verify provider was not disturbed
       // CRITICAL: Provider should NOT be disconnected
       expect(mockProvider?.disconnect).not.toHaveBeenCalled()
 
@@ -548,6 +548,190 @@ describe('EditorCacheProvider', () => {
       expect(cacheRef?.presenceState.users.size).toBe(2)
       expect(cacheRef?.presenceState.users.get('user-2')?.status).toBe('disconnected')
       expect(cacheRef?.presenceState.users.get('user-1')?.status).toBe('connected')
+    })
+  })
+
+  describe('Transient Error Handling', () => {
+    it('should NOT show error when token error occurs but provider is already connected', async () => {
+      // Start with valid token - provider initializes successfully
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: { sub: 'test-doc', token: 'test-token' },
+        isLoading: false,
+        isError: false
+      })
+
+      let cacheRef: any = null
+      const { rerender } = render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      // Wait for provider to be ready (simulates: user on Notes tab, editor working)
+      await waitFor(() => {
+        expect(screen.getByTestId('is-ready')).toHaveTextContent('yes')
+      })
+
+      // Provider should be connected, no error
+      expect(screen.getByTestId('has-provider')).toHaveTextContent('yes')
+      expect(cacheRef?.error).toBeNull()
+
+      // Simulate transient token error (SWR revalidation failure on tab return)
+      // This is what happens when user switches back to Notes tab
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: null,
+        isLoading: false,
+        isError: new Error('Network timeout during revalidation')
+      })
+
+      // Re-render with error state (simulates: component re-renders on focus)
+      await act(async () => {
+        rerender(
+          <EditorCacheProvider sessionId="test-session">
+            <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+          </EditorCacheProvider>
+        )
+      })
+
+      // CRITICAL ASSERTIONS - This is what the fix ensures:
+      // Provider should STILL be connected (not disconnected)
+      expect(screen.getByTestId('has-provider')).toHaveTextContent('yes')
+      // Should STILL be ready (not show error)
+      expect(screen.getByTestId('is-ready')).toHaveTextContent('yes')
+      // Error should NOT be set
+      expect(cacheRef?.error).toBeNull()
+    })
+
+    it('should STILL show error when token fails during initial load (no provider yet)', async () => {
+      // This is the existing behavior we want to preserve
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: null,
+        isLoading: false,
+        isError: new Error('Token expired')
+      })
+
+      let cacheRef: any = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      await waitFor(() => {
+        // No provider (initial load failed)
+        expect(screen.getByTestId('has-provider')).toHaveTextContent('no')
+        // Error SHOULD be shown (this is correct behavior for initial load)
+        expect(cacheRef?.error).toBeTruthy()
+        expect(cacheRef?.error?.message).toContain('Unable to load coaching notes')
+      })
+    })
+  })
+
+  describe('Token Loading and Timeout States', () => {
+    it('should show loading state while token is being fetched', async () => {
+      // Simulate: token fetch in progress
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: null,
+        isLoading: true,
+        isError: false
+      })
+
+      let cacheRef: any = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      // Should be in loading state
+      await waitFor(() => {
+        expect(cacheRef?.isLoading).toBe(true)
+      })
+      expect(cacheRef?.isReady).toBe(false)
+      expect(cacheRef?.error).toBeNull()
+      expect(screen.getByTestId('has-provider')).toHaveTextContent('no')
+    })
+
+    it('should transition from loading to error on token timeout', async () => {
+      // Start in loading state
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: null,
+        isLoading: true,
+        isError: false
+      })
+
+      let cacheRef: any = null
+      const { rerender } = render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      // Verify loading state
+      await waitFor(() => {
+        expect(cacheRef?.isLoading).toBe(true)
+      })
+      expect(cacheRef?.error).toBeNull()
+
+      // Simulate: 15 second timeout occurs, SWR returns error
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: null,
+        isLoading: false,
+        isError: new Error('Request timed out after 15000ms')
+      })
+
+      rerender(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      await waitFor(() => {
+        // Should now show error state (no provider to protect)
+        expect(cacheRef?.isLoading).toBe(false)
+        expect(cacheRef?.error).toBeTruthy()
+        expect(cacheRef?.error?.message).toContain('Unable to load coaching notes')
+      })
+    })
+
+    it('should transition from loading to success when token arrives', async () => {
+      // Start in loading state
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: null,
+        isLoading: true,
+        isError: false
+      })
+
+      let cacheRef: any = null
+      const { rerender } = render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      // Verify loading state
+      await waitFor(() => {
+        expect(cacheRef?.isLoading).toBe(true)
+      })
+
+      // Simulate: token fetch succeeds
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: { sub: 'test-doc', token: 'test-token' },
+        isLoading: false,
+        isError: false
+      })
+
+      rerender(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      await waitFor(() => {
+        // Should now be ready
+        expect(screen.getByTestId('is-ready')).toHaveTextContent('yes')
+        expect(cacheRef?.error).toBeNull()
+      })
     })
   })
 })

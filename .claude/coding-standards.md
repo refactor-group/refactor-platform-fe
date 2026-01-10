@@ -22,6 +22,26 @@ Prefer strict, explicit typings and clear nullability rules; don't auto-widen.
 
 If you inherit nullable APIs, normalize at the edge and keep your core strict. Model absence as a deliberate, named state rather than a catch-all union.
 
+## Exhaustive Switch Statements
+
+When switching on discriminated unions, use both ESLint and the manual `never` pattern for defense in depth. Unlike Rust's `match`, TypeScript's `switch` silently falls through on unhandled cases.
+
+```typescript
+switch (action.kind) {
+  case ActionKind.Initialize:
+    // ...
+    break;
+  case ActionKind.Error:
+    // ...
+    break;
+  default:
+    const _exhaustive: never = action;
+    throw new Error(`Unhandled action kind: ${_exhaustive}`);
+}
+```
+
+The ESLint rule `@typescript-eslint/switch-exhaustiveness-check` catches missing cases at lint time; the `never` pattern catches them at compile time.
+
 ## React and TypeScript
 
 ### Import Conventions

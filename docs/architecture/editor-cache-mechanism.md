@@ -64,6 +64,100 @@ const { yDoc, extensions, isReady, isLoading, error } = useEditorCache();
 - Uses shared collaborative instances
 - Maintains progress indicator for initial loading
 
+## Modular Architecture
+
+The EditorCacheProvider has been refactored into a modular architecture with clear separation of concerns.
+
+### Type-Safe Action Handling
+
+The provider lifecycle uses a discriminated union pattern for type-safe action handling:
+
+```typescript
+const ActionKind = {
+  Initialize: "initialize",
+  Skip: "skip",
+  Error: "error",
+  Cleanup: "cleanup",
+} as const;
+
+interface InitializeAction {
+  readonly kind: typeof ActionKind.Initialize;
+}
+
+interface SkipAction {
+  readonly kind: typeof ActionKind.Skip;
+  readonly reason: string;
+}
+
+interface ErrorAction {
+  readonly kind: typeof ActionKind.Error;
+  readonly error: Error;
+}
+
+interface CleanupAction {
+  readonly kind: typeof ActionKind.Cleanup;
+}
+
+type ProviderAction = InitializeAction | SkipAction | ErrorAction | CleanupAction;
+```
+
+This enables exhaustive pattern matching in the lifecycle effect with compile-time type safety.
+
+### Helper Functions
+
+**`createInitialCacheState()`**: Creates the initial cache state with default values for consistent state initialization.
+
+**`determineProviderAction()`**: Determines the appropriate action based on provider lifecycle state. Handles:
+- Token loading states (skip while loading)
+- Session changes (cleanup stale provider, then initialize)
+- Valid token/session combinations (initialize if needed)
+- Token errors with transient error protection
+
+### Reusable Hooks
+
+#### useLogoutCleanup
+
+**Location**: `src/lib/hooks/use-logout-cleanup.ts`
+
+Registers a cleanup function to be called during logout via the `logoutCleanupRegistry`:
+- Automatically unregisters on component unmount
+- Uses ref pattern to avoid re-registration on every render
+- Ensures cleanup function always has access to latest values
+
+```typescript
+useLogoutCleanup(
+  useCallback(() => {
+    cleanupProvider(providerRef);
+    resetPresenceState();
+  }, [])
+);
+```
+
+Also used by:
+- `use-sidebar-state.ts` - clears navigation drawer state on logout
+
+### Data Flow
+
+```
+JWT Token (SWR) ──┐
+User Session ─────┼──▶ EditorCacheProvider ──▶ Cache State
+User Role ────────┘           │
+                              │
+                    ┌─────────┴─────────┐
+                    ▼                   ▼
+            TiptapCollabProvider   Presence State
+                    │
+                    ▼
+              Y.Doc + Extensions
+```
+
+### Error Handling
+
+The provider lifecycle handles errors at multiple levels:
+1. **Token timeout**: Shows error state with "Try Again" button
+2. **Provider initialization failure**: Falls back to offline editing mode
+3. **Transient errors**: Ignored if provider is already connected (prevents SWR revalidation disruption)
+
 ## Testing
 
 **Location**: `__tests__/components/ui/coaching-sessions/editor-cache-context.test.tsx`
