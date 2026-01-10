@@ -174,6 +174,18 @@ function determineProviderAction(state: ProviderLifecycleState): ProviderAction 
   return { kind: ActionKind.Skip, reason: "Waiting for required state" };
 }
 
+/**
+ * Updates the user's presence on the collaboration provider.
+ * Used to re-broadcast presence when user data (like role) changes.
+ */
+function updatePresenceOnProvider(
+  provider: TiptapCollabProvider,
+  presence: Parameters<typeof createConnectedPresence>[0]
+): void {
+  const updatedPresence = createConnectedPresence(presence);
+  provider.setAwarenessField("presence", updatedPresence);
+}
+
 // ============================================
 // Component
 // ============================================
@@ -457,6 +469,25 @@ export const EditorCacheProvider: React.FC<EditorCacheProviderProps> = ({
     getOrCreateYDoc,
     initializeProvider,
   ]);
+
+  // Re-broadcast presence when userRole changes after provider is ready
+  // This fixes the race condition where role data loads after provider initialization
+  const previousRoleRef = useRef(userRole);
+  useEffect(() => {
+    const provider = providerRef.current;
+    const roleChanged = previousRoleRef.current !== userRole;
+    previousRoleRef.current = userRole;
+
+    // Only update if: provider exists, role actually changed, and we have user data
+    if (provider && roleChanged && userSession && cache.isReady) {
+      updatePresenceOnProvider(provider, {
+        userId: userSession.id,
+        name: userSession.display_name,
+        relationshipRole: userRole,
+        color: userColor,
+      });
+    }
+  }, [userRole, userSession, userColor, cache.isReady]);
 
   // Logout cleanup registration: ensures proper provider teardown on session end
   useLogoutCleanup(
