@@ -11,8 +11,7 @@ export function useSSESystemEvents(eventSource: EventSource | null) {
   useSSEEventHandler(eventSource, 'force_logout', async (event) => {
     console.warn('[SSE] Force logout received:', event.data.reason);
 
-    if (isLoggedIn) {
-      await logout();
-    }
+
+    await logout();
   });
 }
