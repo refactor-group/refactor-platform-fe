@@ -5,6 +5,11 @@ import { server } from './msw-server'
 import EventSource from 'eventsourcemock'
 
 // Polyfill EventSource for tests (jsdom doesn't have native EventSource)
+// Add standard EventSource constants that eventsourcemock doesn't include
+EventSource.CONNECTING = 0
+EventSource.OPEN = 1
+EventSource.CLOSED = 2
+
 Object.defineProperty(global, 'EventSource', {
   value: EventSource,
 })
