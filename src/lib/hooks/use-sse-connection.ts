@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { siteConfig } from '@/site.config';
 import { useSSEConnectionStore } from '@/lib/contexts/sse-connection-context';
 import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry';
 
 export function useSSEConnection(isLoggedIn: boolean) {
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const [eventSource, setEventSource] = useState<EventSource | null>(null);
 
   // Get store instance directly - Zustand actions are stable and don't need to be in dependencies
   const store = useSSEConnectionStore((state) => state);
 
   useEffect(() => {
     if (!isLoggedIn) {
-      eventSourceRef.current?.close();
-      eventSourceRef.current = null;
+      setEventSource((prev) => {
+        prev?.close();
+        return null;
+      });
       store.setDisconnected();
       return;
     }
@@ -45,7 +47,7 @@ export function useSSEConnection(isLoggedIn: boolean) {
       }
     };
 
-    eventSourceRef.current = source;
+    setEventSource(source);
 
     const unregisterCleanup = logoutCleanupRegistry.register(() => {
       console.log('[SSE] Cleaning up connection on logout');
@@ -61,5 +63,5 @@ export function useSSEConnection(isLoggedIn: boolean) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn]);
 
-  return eventSourceRef.current;
+  return eventSource;
 }
