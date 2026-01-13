@@ -10,10 +10,7 @@ import {
   useOverarchingGoalBySession,
   useOverarchingGoalMutation,
 } from "@/lib/api/overarching-goals";
-import {
-  OverarchingGoal,
-  overarchingGoalToString,
-} from "@/types/overarching-goal";
+import { OverarchingGoal } from "@/types/overarching-goal";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 
 const OverarchingGoalContainer: React.FC<{
@@ -33,20 +30,13 @@ const OverarchingGoalContainer: React.FC<{
     try {
       if (currentCoachingSessionId) {
         if (overarchingGoal.id) {
-          const responseGoal = await updateOverarchingGoal(
+          await updateOverarchingGoal(
             overarchingGoal.id,
             newGoal
           );
-          console.trace(
-            "Updated Overarching Goal: " + overarchingGoalToString(responseGoal)
-          );
         } else if (!overarchingGoal.id) {
           newGoal.coaching_session_id = currentCoachingSessionId;
-          const responseGoal = await createOverarchingGoal(newGoal);
-          console.trace(
-            "Newly created Overarching Goal: " +
-              overarchingGoalToString(responseGoal)
-          );
+          await createOverarchingGoal(newGoal);
 
           // Manually trigger a local refresh of the cached OverarchingGoal data such that
           // any other local code using the KeyedMutator will also update with this new data.

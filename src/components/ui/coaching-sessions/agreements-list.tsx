@@ -20,7 +20,7 @@ import {
 import { MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
 import { Id } from "@/types/general";
 import { useAgreementList } from "@/lib/api/agreements";
-import { Agreement, agreementToString } from "@/types/agreement";
+import { Agreement } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
 import { cn } from "@/components/lib/utils";
@@ -86,18 +86,14 @@ const AgreementsList: React.FC<{
     try {
       if (editingAgreementId) {
         // Update existing agreement
-        const agreement = await onAgreementEdited(
+        await onAgreementEdited(
           editingAgreementId,
           newAgreement
         );
-        console.trace("Updated Agreement: " + agreementToString(agreement));
         setEditingAgreementId(null);
       } else {
         // Create new agreement
-        const agreement = await onAgreementAdded(newAgreement);
-        console.trace(
-          "Newly created Agreement: " + agreementToString(agreement)
-        );
+        await onAgreementAdded(newAgreement);
       }
 
       // Refresh the agreements list from the hook
@@ -116,12 +112,7 @@ const AgreementsList: React.FC<{
 
     try {
       // Delete agreement in backend
-      const deletedAgreement = await onAgreementDeleted(id);
-
-      console.trace(
-        "Deleted Agreement (onAgreementDeleted): " +
-          agreementToString(deletedAgreement)
-      );
+      await onAgreementDeleted(id);
 
       // Refresh the agreements list from the hook
       refresh();
