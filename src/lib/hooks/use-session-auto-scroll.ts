@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { CarouselApi } from "@/components/ui/carousel";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import { calculateSessionUrgency } from "@/lib/sessions/session-utils";
+import { calculateSessionUrgency } from "@/lib/utils/session";
 import { SessionUrgency } from "@/types/session-display";
 
 /**

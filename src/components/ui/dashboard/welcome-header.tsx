@@ -1,36 +1,30 @@
-import React from "react";
+"use client";
 
-/**
- * Props for the WelcomeHeader component
- */
-interface WelcomeHeaderProps {
-  /** User's first name for personalized greeting */
-  firstName?: string;
-  /** Subtitle text to display below the welcome message */
-  subtitle?: string;
-}
+import { DateTime } from "ts-luxon";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { formatWeekdayDate } from "@/lib/utils/date";
 
 /**
  * WelcomeHeader Component
  *
  * Displays a personalized welcome message with the user's first name
- * and an optional subtitle (e.g., "Today's Sessions").
- *
- * @param props - Component props
- * @returns The rendered welcome header
- *
- * @example
- * ```tsx
- * <WelcomeHeader firstName="John" subtitle="Today's Sessions" />
- * ```
+ * and today's date.
  */
-export function WelcomeHeader({ firstName, subtitle = "Today's Sessions" }: WelcomeHeaderProps) {
+export function WelcomeHeader() {
+  const { userSession } = useAuthStore((state) => ({
+    userSession: state.userSession,
+  }));
+
+  const todayFormatted = formatWeekdayDate(DateTime.now());
+
   return (
-    <>
-      <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">
-        Welcome {firstName}!
-      </h3>
-      <p className="text-sm text-muted-foreground">{subtitle}</p>
-    </>
+    <div>
+      <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
+        Welcome {userSession?.first_name}!
+      </h2>
+      <p className="text-sm text-muted-foreground mt-1">
+        Today is {todayFormatted}
+      </p>
+    </div>
   );
 }

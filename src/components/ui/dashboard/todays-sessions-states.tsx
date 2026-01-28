@@ -1,14 +1,13 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { WelcomeHeader } from "./welcome-header";
 import { cn } from "@/components/lib/utils";
 
 /**
  * Props for state components
  */
 interface StateComponentProps {
-  /** User's first name for personalized greeting */
+  /** User's first name for personalized greeting (unused, kept for API compatibility) */
   firstName?: string;
   /** Optional CSS class name for styling */
   className?: string;
@@ -18,19 +17,24 @@ interface StateComponentProps {
  * LoadingState Component
  *
  * Displays a loading spinner while sessions are being fetched.
- * Shows the welcome header and a centered spinner.
  *
  * @param props - Component props
  * @returns The rendered loading state
  */
-export function LoadingState({ firstName, className }: StateComponentProps) {
+export function LoadingState({ className }: StateComponentProps) {
   return (
-    <div className={cn("space-y-4", className)}>
-      <WelcomeHeader firstName={firstName} />
-      <div className="flex items-center justify-center py-12">
-        <Spinner />
-      </div>
-    </div>
+    <Card className={cn(className)}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">
+          Today&apos;s Sessions
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-center py-12">
+          <Spinner />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -38,19 +42,17 @@ export function LoadingState({ firstName, className }: StateComponentProps) {
  * ErrorState Component
  *
  * Displays an error message when sessions fail to load.
- * Wrapped in a card with the welcome header.
  *
  * @param props - Component props
  * @returns The rendered error state
  */
-export function ErrorState({ firstName, className }: StateComponentProps) {
+export function ErrorState({ className }: StateComponentProps) {
   return (
-    <Card className={cn("mb-8", className)}>
-      <CardHeader>
-        <CardTitle className="text-2xl font-semibold tracking-tight">
-          Welcome {firstName}!
+    <Card className={cn(className)}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">
+          Today&apos;s Sessions
         </CardTitle>
-        <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-center py-12">
@@ -67,19 +69,17 @@ export function ErrorState({ firstName, className }: StateComponentProps) {
  * EmptyState Component
  *
  * Displays a friendly message when no sessions are scheduled for today.
- * Wrapped in a card with the welcome header.
  *
  * @param props - Component props
  * @returns The rendered empty state
  */
-export function EmptyState({ firstName, className }: StateComponentProps) {
+export function EmptyState({ className }: StateComponentProps) {
   return (
-    <Card className={cn("mb-8", className)}>
-      <CardHeader>
-        <CardTitle className="text-2xl font-semibold tracking-tight">
-          Welcome {firstName}!
+    <Card className={cn(className)}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-semibold">
+          Today&apos;s Sessions
         </CardTitle>
-        <p className="text-sm text-muted-foreground">Today&apos;s Sessions</p>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-center py-12">

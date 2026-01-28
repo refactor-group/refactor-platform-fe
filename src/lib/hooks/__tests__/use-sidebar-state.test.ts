@@ -3,7 +3,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useSidebarState } from '../use-sidebar-state'
 import { SidebarState, StateChangeSource, ScreenSize } from '@/types/sidebar'
 import { SidebarStorage } from '@/lib/services/sidebar-storage'
-import { logoutCleanupRegistry } from '@/lib/hooks/logout-cleanup-registry'
+
+// Capture the cleanup function passed to useLogoutCleanup
+let capturedCleanupFn: (() => void) | null = null
 
 // Mock the storage service
 vi.mock('@/lib/services/sidebar-storage', () => ({
@@ -20,11 +22,11 @@ vi.mock('@/components/hooks/use-mobile', () => ({
   useIsMobile: vi.fn(() => false)
 }))
 
-// Mock the logout cleanup registry
-vi.mock('@/lib/hooks/logout-cleanup-registry', () => ({
-  logoutCleanupRegistry: {
-    register: vi.fn(() => vi.fn()), // Returns unregister function
-  }
+// Mock the logout cleanup hook
+vi.mock('@/lib/hooks/use-logout-cleanup', () => ({
+  useLogoutCleanup: vi.fn((cleanup: () => void) => {
+    capturedCleanupFn = cleanup
+  })
 }))
 
 // Mock window.innerWidth
@@ -44,6 +46,7 @@ describe('useSidebarState', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.innerWidth = 1200
+    capturedCleanupFn = null
   })
 
   it('should initialize with default expanded state on desktop', () => {
@@ -153,21 +156,21 @@ describe('useSidebarState', () => {
     expect(result.current.userIntent).toBe(SidebarState.Expanded)
   })
 
-  it('should register logout cleanup function on mount', () => {
+  it('should register logout cleanup function on mount', async () => {
+    const { useLogoutCleanup } = await import('@/lib/hooks/use-logout-cleanup')
+
     renderHook(() => useSidebarState())
 
-    expect(logoutCleanupRegistry.register).toHaveBeenCalledWith(expect.any(Function))
+    expect(useLogoutCleanup).toHaveBeenCalledWith(expect.any(Function))
   })
 
   it('should clear storage and reset state when logout cleanup is executed', () => {
     renderHook(() => useSidebarState())
 
-    // Get the cleanup function that was registered
-    const cleanupFunction = vi.mocked(logoutCleanupRegistry.register).mock.calls[0][0]
-
-    // Execute the cleanup function (simulating logout)
+    // Execute the cleanup function that was captured by the mock
+    expect(capturedCleanupFn).not.toBeNull()
     act(() => {
-      cleanupFunction()
+      capturedCleanupFn!()
     })
 
     expect(SidebarStorage.clearUserIntent).toHaveBeenCalled()

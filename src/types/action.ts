@@ -3,7 +3,7 @@ import { ItemStatus, Id } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
 
 // This must always reflect the Rust struct on the backend
-// entity::actions::Model
+// Combines entity::actions::Model with assignee_ids from ActionWithAssignees
 export interface Action {
   id: Id;
   coaching_session_id: Id;
@@ -14,6 +14,8 @@ export interface Action {
   due_by: DateTime;
   created_at: DateTime;
   updated_at: DateTime;
+  /** User IDs assigned to this action. Frontend resolves names from coach/coachee data. */
+  assignee_ids?: Id[];
 }
 
 export function isAction(value: unknown): value is Action {
@@ -68,6 +70,7 @@ export function defaultAction(): Action {
     due_by: now,
     created_at: now,
     updated_at: now,
+    assignee_ids: [],
   };
 }
 

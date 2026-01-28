@@ -2,6 +2,7 @@ import { DateTime } from "ts-luxon";
 import { CoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
+import { Id } from "@/types/general";
 import {
   SessionUrgency,
   EnrichedSessionDisplay,
@@ -9,7 +10,7 @@ import {
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
-} from "@/lib/relationships/relationship-utils";
+} from "@/lib/utils/relationship";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 
 /**
@@ -220,4 +221,65 @@ export function enrichSessionForDisplay(
       message: getUrgencyMessage(session, urgency),
     },
   };
+}
+
+/**
+ * Session with minimal required properties for next session lookup
+ */
+interface SessionWithRelationshipAndDate {
+  coaching_relationship_id: Id;
+  date: string;
+}
+
+/**
+ * Find the next upcoming session for each coaching relationship
+ * Story: "Determine when the next session is for each coaching relationship"
+ *
+ * @param sessions - Array of sessions with relationship ID and date
+ * @returns Map of relationship ID to the next upcoming session
+ */
+export function findNextSessionsByRelationship<
+  T extends SessionWithRelationshipAndDate,
+>(sessions: T[]): Map<Id, T> {
+  const map = new Map<Id, T>();
+  const now = DateTime.now();
+
+  sessions.forEach((session) => {
+    const sessionDate = DateTime.fromISO(session.date);
+    if (sessionDate > now) {
+      const existing = map.get(session.coaching_relationship_id);
+      if (!existing || DateTime.fromISO(existing.date) > sessionDate) {
+        map.set(session.coaching_relationship_id, session);
+      }
+    }
+  });
+
+  return map;
+}
+
+/**
+ * Find the most recent past session for each coaching relationship
+ * Story: "Determine when the last session was for each coaching relationship"
+ *
+ * @param sessions - Array of sessions with relationship ID and date
+ * @returns Map of relationship ID to the most recent past session
+ */
+export function findLastSessionsByRelationship<
+  T extends SessionWithRelationshipAndDate,
+>(sessions: T[]): Map<Id, T> {
+  const map = new Map<Id, T>();
+  const now = DateTime.now();
+
+  sessions.forEach((session) => {
+    const sessionDate = DateTime.fromISO(session.date);
+    if (sessionDate <= now) {
+      const existing = map.get(session.coaching_relationship_id);
+      // Keep the most recent past session (largest date that's still <= now)
+      if (!existing || DateTime.fromISO(existing.date) < sessionDate) {
+        map.set(session.coaching_relationship_id, session);
+      }
+    }
+  });
+
+  return map;
 }

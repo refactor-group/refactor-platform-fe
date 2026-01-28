@@ -6,11 +6,11 @@ import {
   enrichSessionForDisplay,
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
-} from "@/lib/sessions/session-utils";
+} from "@/lib/utils/session";
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
-} from "@/lib/relationships/relationship-utils";
+} from "@/lib/utils/relationship";
 import { SessionUrgency } from "@/types/session-display";
 import {
   createMockUser,
