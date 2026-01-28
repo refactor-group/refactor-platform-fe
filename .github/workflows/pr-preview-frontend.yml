@@ -39,7 +39,8 @@ jobs:
   deploy-frontend-pr:
     name: Deploy Frontend PR Preview
     # Call the reusable workflow from backend repository
-    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main
+    # TODO: After backend PR #190 merges, change to @main
+    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment
     with:
       # This is a frontend PR deployment
       repo_type: 'frontend'
@@ -47,7 +48,8 @@ jobs:
       pr_number: ${{ github.event.pull_request.number }}
       # Build frontend from this PR's branch
       branch_name: ${{ github.head_ref }}
-      backend_branch: 'main'
+      # TODO: After backend PR #190 merges, change to 'main'
+      backend_branch: '190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment'
       # Optional: override with specific image tags if needed
       # backend_image: ''  # Leave empty to use main-arm64
       # frontend_image: '' # Leave empty to build from PR branch
