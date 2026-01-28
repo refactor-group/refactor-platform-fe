@@ -229,6 +229,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   const providerRef = useRef<TiptapCollabProvider | null>(null);
   const yDocRef = useRef<Y.Doc | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
+  const extensionsCreatedRef = useRef<boolean>(false);
 
   // Generate a consistent color for this user session
   const userColor = useMemo(() => generateCollaborativeUserColor(), []);
@@ -276,14 +277,12 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
       // Provider event handlers: sync completion enables collaborative editing
       // IMPORTANT: Track if we've already created extensions to prevent recreation
-      let extensionsCreated = false;
-
       provider.on("synced", () => {
-        if (extensionsCreated) {
+        if (extensionsCreatedRef.current) {
           return;
         }
 
-        extensionsCreated = true;
+        extensionsCreatedRef.current = true;
 
         const collaborativeExtensions = createExtensions(doc, provider, {
           name: userSession.display_name,
@@ -441,6 +440,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       case ActionKind.Cleanup:
         providerRef.current?.disconnect();
         providerRef.current = null;
+        extensionsCreatedRef.current = false;
         // After cleanup, immediately initialize for new session if ready.
         // We inline this check rather than re-calling determineProviderAction()
         // because refs don't trigger re-renders and lifecycleState still has
@@ -587,6 +587,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
     yDocRef.current = null;
     lastSessionIdRef.current = null;
+    extensionsCreatedRef.current = false;
 
     setCache(createInitialCacheState());
   }, []);

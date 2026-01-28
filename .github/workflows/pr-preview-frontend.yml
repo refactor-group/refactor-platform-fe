@@ -1,0 +1,65 @@
+# =============================================================================
+# Frontend PR Preview Overlay Workflow
+# =============================================================================
+# Purpose: Trigger PR preview deployments when frontend PRs are opened/updated
+# Strategy: Build frontend from PR branch, use main-arm64 backend image
+# Calls: refactor-platform-rs/ci-deploy-pr-preview.yml (reusable workflow)
+# =============================================================================
+
+name: PR Preview (Frontend)
+
+on:
+  pull_request:
+    # Trigger on PR lifecycle events
+    types: [opened, synchronize, reopened]
+    # Only run for frontend code changes
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/pr-preview-frontend.yml'
+      - '!.github/workflows/cleanup-pr-preview-frontend.yml'
+
+# Prevent multiple deployments for the same PR
+concurrency:
+  group: pr-preview-frontend-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+  attestations: write
+  id-token: write
+
+jobs:
+  # ===========================================================================
+  # JOB: Call reusable workflow with frontend-specific configuration
+  # ===========================================================================
+  deploy-frontend-pr:
+    name: Deploy Frontend PR Preview
+    # Call the reusable workflow from backend repository
+    # TODO: After backend PR #190 merges, change to @main
+    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment
+    with:
+      # This is a frontend PR deployment
+      repo_type: 'frontend'
+      # Use the PR number for port allocation and naming
+      pr_number: ${{ github.event.pull_request.number }}
+      # Build frontend from this PR's branch
+      branch_name: ${{ github.head_ref }}
+      # TODO: After backend PR #190 merges, change to 'main'
+      backend_branch: '190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment'
+      # Optional: override with specific image tags if needed
+      # backend_image: ''  # Leave empty to use main-arm64
+      # frontend_image: '' # Leave empty to build from PR branch
+      # Optional: force complete rebuild
+      force_rebuild: false
+    # =========================================================================
+    # SECRETS - Resolved from backend repo's pr-preview environment
+    # =========================================================================
+    # The reusable workflow (defined in backend repo) uses 'environment: pr-preview'
+    # which resolves to the BACKEND repo's pr-preview environment, not the frontend's.
+    # All secrets are consolidated in the backend repo's pr-preview environment.
+    # We use 'secrets: inherit' to pass GITHUB_TOKEN for cross-repo operations.
+    secrets: inherit
