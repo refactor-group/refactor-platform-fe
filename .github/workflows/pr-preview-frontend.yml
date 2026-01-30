@@ -134,11 +134,11 @@ jobs:
 
             ### How to fix
 
-            1. **Create a PAT** with \`write:packages\` scope at [GitHub Settings → Tokens](https://github.com/settings/tokens)
-            2. **Store it as a repo secret:**
+            1. **Create a fine-grained PAT** with \`Packages: Read & write\` and \`Contents: Read\` permissions at [GitHub Settings → Fine-grained tokens](https://github.com/settings/personal-access-tokens/new)
+            2. **Store it as an org secret** (requires org admin):
                \`\`\`bash
-               gh secret set GHCR_PAT --repo refactor-group/refactor-platform-fe --body "<your-token>"
-               gh secret set GHCR_USERNAME --repo refactor-group/refactor-platform-fe --body "<your-username>"
+               gh secret set GHCR_PAT --org refactor-group --visibility selected --repos "refactor-platform-rs,refactor-platform-fe"
+               gh secret set GHCR_USERNAME --org refactor-group --visibility selected --repos "refactor-platform-rs,refactor-platform-fe" --body "<your-username>"
                \`\`\`
             3. **Re-run this workflow** from the Actions tab
 
