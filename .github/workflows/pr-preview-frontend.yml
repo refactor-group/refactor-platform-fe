@@ -101,9 +101,9 @@ jobs:
     # =========================================================================
     # SECRETS
     # =========================================================================
-    # The reusable workflow resolves secrets from the backend repo's pr-preview
-    # environment. We pass GHCR_PAT and GHCR_USERNAME for cross-repo GHCR
-    # pushes (needed only when backend_image override is empty).
+    # Org-level and repo-level secrets flow through via secrets: inherit.
+    # The reusable workflow conditionally skips the pr-preview environment for
+    # frontend calls so that org/repo secrets are not shadowed.
     secrets: inherit
 
   # ===========================================================================
