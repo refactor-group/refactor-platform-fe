@@ -21,6 +21,7 @@ vi.mock('next/navigation', () => ({
 // Mock auth store
 vi.mock('@/lib/providers/auth-store-provider', () => ({
   useAuthStore: vi.fn(() => ({
+    userId: 'user-123',
     userSession: {
       id: 'user-123',
       email: 'test@example.com',
@@ -29,6 +30,7 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
       roles: [],
     },
     isLoggedIn: true,
+    setIsACoach: vi.fn(),
   })),
   AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -44,6 +46,16 @@ vi.mock('@/lib/api/organizations', () => ({
   }),
   useOrganization: () => ({
     organization: null,
+    isLoading: false,
+    isError: false,
+    refresh: vi.fn(),
+  }),
+}));
+
+// Mock the coaching relationships hook (used by OrganizationSwitcher to set isACoach)
+vi.mock('@/lib/api/coaching-relationships', () => ({
+  useCoachingRelationshipList: () => ({
+    relationships: [],
     isLoading: false,
     isError: false,
     refresh: vi.fn(),

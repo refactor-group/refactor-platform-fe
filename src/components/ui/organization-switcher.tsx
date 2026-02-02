@@ -19,11 +19,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useOrganizationList } from "@/lib/api/organizations";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import type { PopoverProps } from "@radix-ui/react-popover";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { organizationToString } from "@/types/organization";
+import { isUserCoach } from "@/types/coaching-relationship";
 import { useEffect } from "react";
 
 const LOGO = "/placeholder.svg?height=40&width=40";
@@ -38,7 +40,7 @@ export function OrganizationSwitcher({
   onSelect,
   ...props
 }: OrganizationSelectorProps) {
-  const { userId, isLoggedIn } = useAuthStore((state) => state);
+  const { userId, isLoggedIn, setIsACoach } = useAuthStore((state) => state);
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [focusedIndex, setFocusedIndex] = React.useState(0);
@@ -57,6 +59,18 @@ export function OrganizationSwitcher({
   } = useCurrentOrganization();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  // Fetch coaching relationships for the current organization to determine if user is a coach
+  const { relationships } = useCoachingRelationshipList(currentOrganizationId ?? "");
+
+  // Update isACoach flag when organization or relationships change
+  useEffect(() => {
+    if (!userId || !relationships) {
+      setIsACoach(false);
+      return;
+    }
+    setIsACoach(isUserCoach(userId, relationships));
+  }, [userId, relationships, setIsACoach]);
 
   // Initialize with first organization if none is selected (only when logged in)
   //

@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
-import AddEntities from "@/components/ui/dashboard/add-entities";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
-import { WelcomeHeader } from "@/components/ui/dashboard/welcome-header";
+import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { TodaysSessions } from "@/components/ui/dashboard/todays-sessions";
 import { WhatsDue } from "@/components/ui/dashboard/whats-due/whats-due";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
@@ -32,7 +31,7 @@ export function DashboardContainer() {
 
   return (
     <>
-      <WelcomeHeader />
+      <DashboardHeader onCreateSession={() => handleOpenDialog()} />
 
       {/* Today's Sessions and What's Due stacked vertically */}
       <div className="flex flex-col gap-6 mb-8 mt-4">
@@ -43,10 +42,6 @@ export function DashboardContainer() {
         <WhatsDue />
       </div>
 
-      <AddEntities
-        className="mb-8"
-        onCreateSession={() => handleOpenDialog()}
-      />
       <CoachingSessionList onUpdateSession={handleOpenDialog} />
       <CoachingSessionDialog
         open={dialogOpen}
