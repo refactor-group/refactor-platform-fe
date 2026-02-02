@@ -6,7 +6,11 @@
  */
 
 import { Id } from "@/types/general";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import {
+  CoachingRelationshipWithUserNames,
+  getRelationshipsAsCoach,
+  getRelationshipsAsCoachee,
+} from "@/types/coaching-relationship";
 import { useCoachingRelationshipList } from "./coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 
@@ -31,10 +35,8 @@ export function deriveRolesSummary(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): UserCoachingRolesSummary {
-  const coachRelationships = relationships.filter((r) => r.coach_id === userId);
-  const coacheeRelationships = relationships.filter(
-    (r) => r.coachee_id === userId
-  );
+  const coachRelationships = getRelationshipsAsCoach(userId, relationships);
+  const coacheeRelationships = getRelationshipsAsCoachee(userId, relationships);
 
   return {
     isCoach: coachRelationships.length > 0,

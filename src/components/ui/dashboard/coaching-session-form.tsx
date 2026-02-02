@@ -1,4 +1,5 @@
 import { CoachingSession } from "@/types/coaching-session";
+import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ export default function CoachingSessionForm({
   // Filter to relationships where current user is the coach
   const coacheeRelationships = useMemo(() => {
     if (!userSession?.id || !relationships) return [];
-    return relationships.filter((r) => r.coach_id === userSession.id);
+    return getRelationshipsAsCoach(userSession.id, relationships);
   }, [relationships, userSession?.id]);
 
   // State for selected coachee in create mode

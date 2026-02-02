@@ -3,6 +3,7 @@ import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
 import { UserActionsApi } from "@/lib/api/user-actions";
 import {
   useEnrichedCoachingSessionsForUser,
@@ -107,9 +108,7 @@ export function useCoacheeAssignedActions(
 
   const coacheeIds = useMemo(() => {
     if (!enabled || !userId || !relationships) return [];
-    return relationships
-      .filter((r) => r.coach_id === userId)
-      .map((r) => r.coachee_id);
+    return getRelationshipsAsCoach(userId, relationships).map((r) => r.coachee_id);
   }, [enabled, userId, relationships]);
 
   // -------------------------------------------------------------------------

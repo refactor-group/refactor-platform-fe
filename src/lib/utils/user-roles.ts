@@ -1,5 +1,10 @@
 import { User, Role } from "@/types/user";
-import { CoachingRelationshipWithUserNames, isUserCoach, isUserCoachee } from "@/types/coaching-relationship";
+import {
+  CoachingRelationshipWithUserNames,
+  isUserCoach,
+  isUserCoachee,
+  getRelationshipsAsCoachee,
+} from "@/types/coaching-relationship";
 import { RelationshipRole } from "@/types/relationship-role";
 import { Id } from "@/types/general";
 
@@ -55,7 +60,6 @@ export function getUserCoaches(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): readonly string[] {
-  return relationships
-    .filter(r => r.coachee_id === userId)
+  return getRelationshipsAsCoachee(userId, relationships)
     .map(r => `${r.coach_first_name} ${r.coach_last_name}`);
 }
