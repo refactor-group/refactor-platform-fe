@@ -132,3 +132,23 @@ export function isUserCoachee(
 ): boolean {
   return relationships.some(r => r.coachee_id === userId);
 }
+
+/**
+ * Returns all relationships where the user is the coach
+ */
+export function getRelationshipsAsCoach(
+  userId: Id,
+  relationships: CoachingRelationshipWithUserNames[]
+): CoachingRelationshipWithUserNames[] {
+  return relationships.filter(r => r.coach_id === userId);
+}
+
+/**
+ * Returns all relationships where the user is the coachee
+ */
+export function getRelationshipsAsCoachee(
+  userId: Id,
+  relationships: CoachingRelationshipWithUserNames[]
+): CoachingRelationshipWithUserNames[] {
+  return relationships.filter(r => r.coachee_id === userId);
+}
