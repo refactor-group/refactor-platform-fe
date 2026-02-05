@@ -164,6 +164,7 @@ export const CoachingSessionApi = {
    * @param include Optional array of related resources to include
    * @param sortBy Optional field to sort by
    * @param sortOrder Optional sort order
+   * @param relationshipId Optional coaching relationship ID to filter sessions
    * @returns Promise resolving to array of EnrichedCoachingSession objects
    */
   listForUser: async (
@@ -172,12 +173,17 @@ export const CoachingSessionApi = {
     toDate: DateTime,
     include?: CoachingSessionInclude[],
     sortBy?: CoachingSessionSortField,
-    sortOrder?: ApiSortOrder
+    sortOrder?: ApiSortOrder,
+    relationshipId?: Id
   ): Promise<EnrichedCoachingSession[]> => {
     const params: Record<string, string> = {
       from_date: fromDate.toISODate() || '',
       to_date: toDate.toISODate() || '',
     };
+
+    if (relationshipId) {
+      params.coaching_relationship_id = relationshipId;
+    }
 
     if (include && include.length > 0) {
       params.include = include.join(',');
@@ -315,6 +321,7 @@ export const useCoachingSessionMutation = () => {
  * @param include Optional array of related resources to include
  * @param sortBy Optional field to sort by
  * @param sortOrder Optional sort order
+ * @param relationshipId Optional coaching relationship ID to filter sessions
  * @returns Object containing enriched sessions, loading state, error, and refresh function
  */
 export const useEnrichedCoachingSessionsForUser = (
@@ -323,7 +330,8 @@ export const useEnrichedCoachingSessionsForUser = (
   toDate: DateTime,
   include?: CoachingSessionInclude[],
   sortBy?: CoachingSessionSortField,
-  sortOrder?: ApiSortOrder
+  sortOrder?: ApiSortOrder,
+  relationshipId?: Id
 ) => {
   // Only create params when userId is valid - null params skips the SWR fetch
   const params = userId
@@ -332,6 +340,7 @@ export const useEnrichedCoachingSessionsForUser = (
         from_date: fromDate.toISODate(),
         to_date: toDate.toISODate(),
         ...(include && include.length > 0 && { include: include.join(',') }),
+        ...(relationshipId && { coaching_relationship_id: relationshipId }),
         ...(sortBy && { sort_by: sortBy }),
         ...(sortOrder && { sort_order: sortOrder }),
       }
@@ -347,7 +356,8 @@ export const useEnrichedCoachingSessionsForUser = (
           toDate,
           include,
           sortBy,
-          sortOrder
+          sortOrder,
+          relationshipId
         )
       : Promise.resolve([]);
 
