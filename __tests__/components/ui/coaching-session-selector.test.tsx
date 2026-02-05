@@ -49,15 +49,6 @@ vi.mock('@/lib/timezone-utils', () => ({
 
 vi.mock('@/types/general', () => ({
   getDateTimeFromString: (dateStr: string) => DateTime.fromISO(dateStr),
-  EntityApiError: class EntityApiError extends Error {
-    status?: number
-    static isEntityApiError(error: unknown): error is EntityApiError {
-      return error instanceof EntityApiError
-    }
-    isServiceUnavailable() {
-      return this.status === 503
-    }
-  },
 }))
 
 import { useEnrichedCoachingSessionsForUser } from '@/lib/api/coaching-sessions'
