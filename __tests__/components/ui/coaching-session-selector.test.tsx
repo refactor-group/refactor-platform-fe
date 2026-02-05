@@ -10,7 +10,13 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/lib/api/coaching-sessions', () => ({
-  useCoachingSessionList: vi.fn(),
+  useEnrichedCoachingSessionsForUser: vi.fn(),
+  CoachingSessionInclude: {
+    Relationship: 'relationship',
+    Organization: 'organization',
+    Goal: 'goal',
+    Agreements: 'agreements',
+  },
 }))
 
 vi.mock('@/lib/hooks/use-current-coaching-session', () => ({
@@ -31,7 +37,7 @@ vi.mock('@/lib/api/overarching-goals', () => ({
 
 vi.mock('@/lib/providers/auth-store-provider', () => ({
   useAuthStore: vi.fn(() => ({
-    userSession: { timezone: 'America/Chicago' },
+    userSession: { id: 'user-123', timezone: 'America/Chicago' },
   })),
   AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
@@ -43,9 +49,18 @@ vi.mock('@/lib/timezone-utils', () => ({
 
 vi.mock('@/types/general', () => ({
   getDateTimeFromString: (dateStr: string) => DateTime.fromISO(dateStr),
+  EntityApiError: class EntityApiError extends Error {
+    status?: number
+    static isEntityApiError(error: unknown): error is EntityApiError {
+      return error instanceof EntityApiError
+    }
+    isServiceUnavailable() {
+      return this.status === 503
+    }
+  },
 }))
 
-import { useCoachingSessionList } from '@/lib/api/coaching-sessions'
+import { useEnrichedCoachingSessionsForUser } from '@/lib/api/coaching-sessions'
 
 describe('CoachingSessionSelector - Sorting & Grouping', () => {
   const relationshipId = 'rel-123'
@@ -55,8 +70,8 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
   })
 
   it('should call API with correct sorting parameters (date desc)', () => {
-    vi.mocked(useCoachingSessionList).mockReturnValue({
-      coachingSessions: [],
+    vi.mocked(useEnrichedCoachingSessionsForUser).mockReturnValue({
+      enrichedSessions: [],
       isLoading: false,
       isError: false,
       refresh: vi.fn(),
@@ -64,20 +79,22 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
 
     render(
       <TestProviders>
-        <CoachingSessionSelector 
-          relationshipId={relationshipId} 
-          disabled={false} 
+        <CoachingSessionSelector
+          relationshipId={relationshipId}
+          disabled={false}
         />
       </TestProviders>
     )
 
     // Verify backend sorting is requested: date desc (newest first)
-    expect(useCoachingSessionList).toHaveBeenCalledWith(
-      relationshipId,
+    expect(useEnrichedCoachingSessionsForUser).toHaveBeenCalledWith(
+      'user-123',         // userId
       expect.any(Object), // fromDate
-      expect.any(Object), // toDate  
+      expect.any(Object), // toDate
+      expect.any(Array),  // include
       'date',             // sortBy
-      'desc'              // sortOrder - newest first
+      'desc',             // sortOrder - newest first
+      relationshipId      // relationshipId
     )
   })
 
@@ -88,16 +105,18 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
         id: 'upcoming-1',
         date: now.plus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
+        overarching_goal: { title: 'Upcoming Goal' },
       },
       {
         id: 'previous-1',
         date: now.minus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
+        overarching_goal: { title: 'Previous Goal' },
       },
     ]
 
-    vi.mocked(useCoachingSessionList).mockReturnValue({
-      coachingSessions: sessions,
+    vi.mocked(useEnrichedCoachingSessionsForUser).mockReturnValue({
+      enrichedSessions: sessions,
       isLoading: false,
       isError: false,
       refresh: vi.fn(),
@@ -105,9 +124,9 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
 
     render(
       <TestProviders>
-        <CoachingSessionSelector 
-          relationshipId={relationshipId} 
-          disabled={false} 
+        <CoachingSessionSelector
+          relationshipId={relationshipId}
+          disabled={false}
         />
       </TestProviders>
     )
@@ -128,11 +147,12 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
         id: 'upcoming-1',
         date: now.plus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
+        overarching_goal: { title: 'Test Goal' },
       },
     ]
 
-    vi.mocked(useCoachingSessionList).mockReturnValue({
-      coachingSessions: sessions,
+    vi.mocked(useEnrichedCoachingSessionsForUser).mockReturnValue({
+      enrichedSessions: sessions,
       isLoading: false,
       isError: false,
       refresh: vi.fn(),
@@ -140,9 +160,9 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
 
     render(
       <TestProviders>
-        <CoachingSessionSelector 
-          relationshipId={relationshipId} 
-          disabled={false} 
+        <CoachingSessionSelector
+          relationshipId={relationshipId}
+          disabled={false}
         />
       </TestProviders>
     )
