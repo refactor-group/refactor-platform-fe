@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { getDateTimeFromString, Id } from "@/types/general";
+import { getDateTimeFromString, Id, EntityApiError } from "@/types/general";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
@@ -81,9 +81,13 @@ function CoachingSessionsSelectItems({
   }
 
   if (isError) {
+    const isUnavailable =
+      EntityApiError.isEntityApiError(isError) && isError.isServiceUnavailable();
     return (
       <div className="p-2 text-sm text-destructive">
-        Error loading coaching sessions
+        {isUnavailable
+          ? "Service temporarily unavailable. Please try again."
+          : "Error loading coaching sessions"}
       </div>
     );
   }
