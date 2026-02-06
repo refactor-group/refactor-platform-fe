@@ -10,15 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { getDateTimeFromString, Id } from "@/types/general";
-import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
+import {
+  useEnrichedCoachingSessionsForUser,
+  CoachingSessionInclude,
+} from "@/lib/api/coaching-sessions";
+import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { DateTime } from "ts-luxon";
-import { CoachingSession } from "@/types/coaching-session";
-import {
-  useOverarchingGoalBySession,
-  useOverarchingGoalList,
-} from "@/lib/api/overarching-goals";
+import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
@@ -37,23 +39,62 @@ function CoachingSessionsSelectItems({
 }: {
   relationshipId: Id | null;
 }) {
+  const { userSession } = useAuthStore((state) => ({
+    userSession: state.userSession,
+  }));
+  const userId = userSession?.id;
+
   const fromDate = DateTime.now().minus({ month: 1 });
   const toDate = DateTime.now().plus({ month: 1 });
 
-  const {
-    coachingSessions,
-    isLoading: isLoadingSessions,
-    isError: isErrorSessions,
-  } = useCoachingSessionList(relationshipId, fromDate, toDate, 'date', 'desc');
+  const { enrichedSessions, isLoading, isError } =
+    useEnrichedCoachingSessionsForUser(
+      userId ?? null,
+      fromDate,
+      toDate,
+      [CoachingSessionInclude.Goal],
+      "date",
+      "desc",
+      relationshipId ?? undefined
+    );
 
   // Early return if no relationship - component will be disabled anyway
   if (!relationshipId) {
-    return <div>Select a coaching relationship</div>;
+    return (
+      <div className="p-2 text-sm text-muted-foreground">
+        Select a coaching relationship
+      </div>
+    );
   }
 
-  if (isLoadingSessions) return <div>Loading...</div>;
-  if (isErrorSessions) return <div>Error loading coaching sessions</div>;
-  if (!coachingSessions?.length) return <div>No coaching sessions found</div>;
+  if (isLoading || !userId) {
+    return (
+      <div className="space-y-3 p-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex flex-col space-y-1.5 pl-8">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-2 text-sm text-destructive">
+        Error loading coaching sessions
+      </div>
+    );
+  }
+
+  if (!enrichedSessions.length) {
+    return (
+      <div className="p-2 text-sm text-muted-foreground">
+        No coaching sessions found
+      </div>
+    );
+  }
 
   return (
     <>
@@ -70,13 +111,17 @@ function CoachingSessionsSelectItems({
         },
       ].map(
         ({ label, condition }) =>
-          coachingSessions.some((session) => condition(session.date)) && (
+          enrichedSessions.some((session) => condition(session.date)) && (
             <SelectGroup key={label}>
               <SelectLabel>{label}</SelectLabel>
-              {coachingSessions
+              {enrichedSessions
                 .filter((session) => condition(session.date))
                 .map((session) => (
-                  <SessionItemWithGoal key={session.id} session={session} />
+                  <SessionItem
+                    key={session.id}
+                    session={session}
+                    timezone={userSession?.timezone}
+                  />
                 ))}
             </SelectGroup>
           )
@@ -85,27 +130,25 @@ function CoachingSessionsSelectItems({
   );
 }
 
-// Separate component to handle individual session goal fetching
-function SessionItemWithGoal({ session }: { session: CoachingSession }) {
-  const { overarchingGoal, isLoading, isError } = useOverarchingGoalBySession(
-    session.id
-  );
-  const { userSession } = useAuthStore((state) => state);
-
-  if (isLoading) return <div>Loading goal...</div>;
-  if (isError) return <div>Error loading goal</div>;
-
+// Session item that displays goal from enriched session data (no separate API call)
+function SessionItem({
+  session,
+  timezone,
+}: {
+  session: EnrichedCoachingSession;
+  timezone?: string;
+}) {
   return (
     <SelectItem value={session.id} className="pl-8">
       <div className="flex min-w-0 ml-4">
         <div className="min-w-0 w-full">
           <p className="truncate text-sm font-medium">
-            {overarchingGoal.title || "No goal set"}
+            {session.overarching_goal?.title || "No goal set"}
           </p>
           <p className="truncate text-sm text-gray-400">
             {formatDateInUserTimezone(
               session.date,
-              userSession.timezone || getBrowserTimezone()
+              timezone || getBrowserTimezone()
             )}
           </p>
         </div>
@@ -118,7 +161,7 @@ export default function CoachingSessionSelector({
   relationshipId,
   disabled,
   onSelect,
-  ...props
+  ..._props
 }: CoachingSessionsSelectorProps) {
   const router = useRouter();
 
@@ -128,11 +171,8 @@ export default function CoachingSessionSelector({
 
   const { userSession } = useAuthStore((state) => state);
 
-  const {
-    overarchingGoal,
-    isLoading: isLoadingGoal,
-    isError: isErrorGoal,
-  } = useOverarchingGoalBySession(currentCoachingSessionId || "");
+  const { overarchingGoal, isLoading: isLoadingGoal } =
+    useOverarchingGoalBySession(currentCoachingSessionId || "");
 
   const handleSetCoachingSession = (coachingSessionId: Id) => {
     // Navigate to the coaching session page
@@ -145,18 +185,29 @@ export default function CoachingSessionSelector({
 
   const displayValue = isLoadingSession ? (
     <div className="flex flex-col w-full">
-      <span className="truncate text-left">Loading session...</span>
+      <span className="flex items-center gap-2 text-left">
+        <Spinner className="size-3" />
+        <span className="truncate">Loading session...</span>
+      </span>
     </div>
   ) : currentCoachingSession ? (
     <div className="flex flex-col w-full">
       <span className="truncate text-left">
-        {isLoadingGoal ? "Loading..." : overarchingGoal?.title || "No goal set"}
+        {isLoadingGoal ? (
+          <span className="flex items-center gap-2">
+            <Spinner className="size-3" />
+            <span>Loading goal...</span>
+          </span>
+        ) : (
+          overarchingGoal?.title || "No goal set"
+        )}
       </span>
       <span className="text-sm text-gray-500 text-left truncate">
-        {currentCoachingSession.date && formatDateInUserTimezone(
-          currentCoachingSession.date,
-          userSession.timezone || getBrowserTimezone()
-        )}
+        {currentCoachingSession.date &&
+          formatDateInUserTimezone(
+            currentCoachingSession.date,
+            userSession.timezone || getBrowserTimezone()
+          )}
       </span>
     </div>
   ) : undefined;

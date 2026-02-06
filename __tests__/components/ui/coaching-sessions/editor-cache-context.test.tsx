@@ -276,6 +276,9 @@ describe('EditorCacheProvider', () => {
     it('should create extensions only once even if synced event fires multiple times', async () => {
       const { Extensions } = await import('@/components/ui/coaching-sessions/coaching-notes/extensions')
 
+      // Clear any previous calls to Extensions from other tests
+      vi.mocked(Extensions).mockClear()
+
       // Create a mock provider that we can control
       const { TiptapCollabProvider } = await import('@hocuspocus/provider')
       let syncedCallback: (() => void) | undefined
