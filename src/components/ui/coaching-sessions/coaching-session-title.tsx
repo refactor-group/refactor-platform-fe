@@ -113,9 +113,11 @@ const CoachingSessionTitle: React.FC<{
       <h4 className="font-semibold break-words w-full md:text-clip">
         {renderTitleWithPresence()}
       </h4>
-      {currentCoachingSession && isPastSession(currentCoachingSession) && (
-        <p className="text-sm text-muted-foreground mt-1">
-          This session was held on{" "}
+      {currentCoachingSession && (
+        <p className="text-xs text-muted-foreground mt-1">
+          {isPastSession(currentCoachingSession)
+            ? "Held on"
+            : "Scheduled for"}{" "}
           {formatDateInUserTimezoneWithTZ(
             currentCoachingSession.date,
             userSession?.timezone || getBrowserTimezone()
