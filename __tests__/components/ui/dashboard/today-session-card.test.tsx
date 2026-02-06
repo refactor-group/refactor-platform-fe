@@ -224,7 +224,7 @@ describe("TodaySessionCard", () => {
 
   it("should apply past urgency styles", () => {
     const session = createMockEnrichedSession({
-      date: DateTime.now().minus({ hours: 1 }).toUTC().toISO(),
+      date: DateTime.now().minus({ hours: 2 }).toUTC().toISO(),
     });
 
     const { container } = render(<TodaySessionCard session={session} />);
@@ -245,7 +245,7 @@ describe("TodaySessionCard", () => {
 
   it("should show 'View Session' button for past sessions", () => {
     const session = createMockEnrichedSession({
-      date: DateTime.now().minus({ hours: 1 }).toUTC().toISO(),
+      date: DateTime.now().minus({ hours: 2 }).toUTC().toISO(),
     });
 
     render(<TodaySessionCard session={session} />);

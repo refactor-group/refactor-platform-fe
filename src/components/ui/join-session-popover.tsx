@@ -165,9 +165,11 @@ function TodaysSessionsList({
             <span
               className={cn(
                 "text-xs",
-                urgency === SessionUrgency.Imminent
-                  ? "text-orange-600 dark:text-orange-400 font-medium"
-                  : "text-muted-foreground"
+                urgency === SessionUrgency.Underway
+                  ? "text-foreground font-bold"
+                  : urgency === SessionUrgency.Imminent
+                    ? "text-orange-600 dark:text-orange-400 font-medium"
+                    : "text-muted-foreground"
               )}
             >
               {urgencyMsg}

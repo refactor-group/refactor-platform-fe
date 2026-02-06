@@ -235,6 +235,8 @@ export function TodaySessionCard({
    */
   const getUrgencyStyles = (urgencyType: SessionUrgency) => {
     switch (urgencyType) {
+      case SessionUrgency.Underway:
+        return "bg-green-50 dark:bg-green-950/20 text-green-900 dark:text-green-100 border-green-200 dark:border-green-800";
       case SessionUrgency.Imminent:
         return "bg-amber-50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-100 border-amber-200 dark:border-amber-800";
       case SessionUrgency.Soon:
