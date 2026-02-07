@@ -52,25 +52,12 @@ import { getDateTimeFromString } from "@/types/general";
 import {
   getRelationshipsAsCoach,
   getRelationshipsAsCoachee,
+  getOtherPersonName,
+  sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
-import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { SessionUrgency } from "@/types/session-display";
 import type { Id } from "@/types/general";
-
-/**
- * Returns the display name for the "other" person in a relationship,
- * relative to the current user.
- */
-function getOtherPersonName(
-  rel: CoachingRelationshipWithUserNames,
-  userId: string
-): string {
-  if (rel.coach_id === userId) {
-    return `${rel.coachee_first_name} ${rel.coachee_last_name}`.trim();
-  }
-  return `${rel.coach_first_name} ${rel.coach_last_name}`.trim();
-}
 
 // ---------------------------------------------------------------------------
 // Section 1: Today's Sessions
@@ -217,12 +204,7 @@ function RelationshipSessionBrowser({
     new Map(userRelationships.map((r) => [r.id, r])).values()
   );
 
-  // Sort by the other person's first name
-  const sortedRelationships = [...uniqueRelationships].sort((a, b) => {
-    const nameA = getOtherPersonName(a, userId);
-    const nameB = getOtherPersonName(b, userId);
-    return nameA.localeCompare(nameB);
-  });
+  const sortedRelationships = sortRelationshipsByParticipantName(uniqueRelationships, userId);
 
   const selectedRelationshipId = currentCoachingRelationshipId ?? undefined;
 

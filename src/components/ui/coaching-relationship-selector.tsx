@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Id } from "@/types/general";
+import { sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
@@ -31,6 +32,7 @@ function CoachingRelationshipsSelectItems({
 }: {
   organizationId: Id;
 }) {
+  const { userId } = useAuthStore((state) => state);
   const { relationships, isLoading, isError } =
     useCoachingRelationshipList(organizationId);
 
@@ -38,10 +40,7 @@ function CoachingRelationshipsSelectItems({
   if (isError) return <div>Error loading coaching relationships</div>;
   if (!relationships?.length) return <div>No coaching relationships found</div>;
 
-  // Sort relationships alphabetically by coachee first name
-  const sortedRelationships = [...relationships].sort((a, b) =>
-    a.coachee_first_name.localeCompare(b.coachee_first_name)
-  );
+  const sortedRelationships = sortRelationshipsByParticipantName(relationships, userId);
 
   return (
     <>
