@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DateTime } from "ts-luxon";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -97,15 +102,16 @@ function getOtherPersonName(
 // ---------------------------------------------------------------------------
 
 function TodaysSessionsList({
+  sessions,
+  isLoading,
+  error,
   onSessionClick,
 }: {
+  sessions: EnrichedCoachingSession[];
+  isLoading: boolean;
+  error: Error | undefined;
   onSessionClick: (sessionId: string) => void;
 }) {
-  const { sessions, isLoading, error } = useTodaysSessions([
-    CoachingSessionInclude.Relationship,
-    CoachingSessionInclude.Goal,
-  ]);
-
   const { userId, userSession } = useAuthStore((state) => ({
     userId: state.userId,
     userSession: state.userSession,
@@ -138,7 +144,7 @@ function TodaysSessionsList({
   );
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 max-h-[17.5rem] overflow-y-auto p-0.5 -m-0.5">
       {sessions.map((session, index) => {
         const urgency = calculateSessionUrgency(session);
         const urgencyMsg = getUrgencyMessage(session, urgency, timezone);
@@ -185,11 +191,27 @@ function TodaysSessionsList({
 // Section 2: Browse Sessions by Relationship
 // ---------------------------------------------------------------------------
 
+type DateFilter = "today" | "week" | "month";
+
+function getDateRange(filter: DateFilter): { from: DateTime; to: DateTime } {
+  const now = DateTime.now();
+  switch (filter) {
+    case "today":
+      return { from: now.startOf("day"), to: now.endOf("day") };
+    case "week":
+      return { from: now.startOf("week"), to: now.endOf("week") };
+    case "month":
+      return { from: now.startOf("month"), to: now.endOf("month") };
+  }
+}
+
 function RelationshipSessionBrowser({
   onSessionClick,
 }: {
   onSessionClick: (sessionId: string) => void;
 }) {
+  const [dateFilter, setDateFilter] = useState<DateFilter>("month");
+
   const { userId, userSession } = useAuthStore((state) => ({
     userId: state.userId,
     userSession: state.userSession,
@@ -232,6 +254,8 @@ function RelationshipSessionBrowser({
     setCurrentCoachingRelationshipId(relationshipId);
   };
 
+  const { from, to } = getDateRange(dateFilter);
+
   return (
     <div className="flex flex-col gap-2">
       <Select
@@ -251,10 +275,30 @@ function RelationshipSessionBrowser({
         </SelectContent>
       </Select>
 
+      <div className="flex gap-1">
+        {([
+          { value: "today", label: "Today" },
+          { value: "week", label: "This Week" },
+          { value: "month", label: "This Month" },
+        ] as const).map(({ value, label }) => (
+          <Button
+            key={value}
+            variant={dateFilter === value ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs flex-1"
+            onClick={() => setDateFilter(value)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
       {selectedRelationshipId && (
         <RelationshipSessionList
           userId={userId}
           relationshipId={selectedRelationshipId}
+          fromDate={from}
+          toDate={to}
           timezone={timezone}
           onSessionClick={onSessionClick}
         />
@@ -266,17 +310,18 @@ function RelationshipSessionBrowser({
 function RelationshipSessionList({
   userId,
   relationshipId,
+  fromDate,
+  toDate,
   timezone,
   onSessionClick,
 }: {
   userId: string;
   relationshipId: string;
+  fromDate: DateTime;
+  toDate: DateTime;
   timezone: string;
   onSessionClick: (sessionId: string) => void;
 }) {
-  const fromDate = DateTime.now().minus({ month: 1 });
-  const toDate = DateTime.now().plus({ month: 1 });
-
   const { enrichedSessions, isLoading, isError } =
     useEnrichedCoachingSessionsForUser(
       userId,
@@ -311,7 +356,7 @@ function RelationshipSessionList({
   );
 
   return (
-    <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
+    <div className="max-h-60 overflow-y-auto flex flex-col gap-1">
       {upcoming.length > 0 && (
         <SessionGroup
           label="Upcoming Sessions"
@@ -380,13 +425,28 @@ export function JoinSessionPopover() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
+  const { sessions, isLoading, error } = useTodaysSessions([
+    CoachingSessionInclude.Relationship,
+    CoachingSessionInclude.Goal,
+  ]);
+
+  // Collapse browse section when today has sessions, expand when empty
+  const hasTodaySessions = !isLoading && !error && sessions.length > 0;
+  const [browseOpen, setBrowseOpen] = useState(!hasTodaySessions);
+
   const handleSessionClick = (sessionId: string) => {
     setOpen(false);
     router.push(`/coaching-sessions/${sessionId}`);
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      // Reset browse section state when popover opens
+      if (isOpen) {
+        setBrowseOpen(!hasTodaySessions);
+      }
+    }}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="gap-2">
           <span className="hidden md:inline">Join Session</span>
@@ -403,18 +463,33 @@ export function JoinSessionPopover() {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
             Today&apos;s Sessions
           </p>
-          <TodaysSessionsList onSessionClick={handleSessionClick} />
+          <TodaysSessionsList
+            sessions={sessions}
+            isLoading={isLoading}
+            error={error}
+            onSessionClick={handleSessionClick}
+          />
         </div>
 
         <Separator />
 
-        {/* Section 2: Browse by Relationship */}
-        <div className="p-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Browse Sessions
-          </p>
-          <RelationshipSessionBrowser onSessionClick={handleSessionClick} />
-        </div>
+        {/* Section 2: Browse by Relationship (collapsible) */}
+        <Collapsible open={browseOpen} onOpenChange={setBrowseOpen}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-accent/50 transition-colors">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Browse Sessions
+            </p>
+            <ChevronRight className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              browseOpen && "rotate-90"
+            )} />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-3 pt-1 pb-3">
+              <RelationshipSessionBrowser onSessionClick={handleSessionClick} />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </PopoverContent>
     </Popover>
   );

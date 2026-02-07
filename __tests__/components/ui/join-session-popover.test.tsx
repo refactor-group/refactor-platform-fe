@@ -307,4 +307,132 @@ describe("JoinSessionPopover", () => {
       CoachingSessionInclude.Goal,
     ]);
   });
+
+  describe("Browse Sessions collapsible behavior", () => {
+    it("expands Browse Sessions by default when no today's sessions", () => {
+      // beforeEach sets sessions to empty array
+      vi.mocked(useCoachingRelationshipList).mockReturnValue({
+        relationships: [
+          {
+            id: "rel-1",
+            coach_id: "user-1",
+            coachee_id: "other-1",
+            organization_id: "org-1",
+            coach_first_name: "Coach",
+            coach_last_name: "Smith",
+            coachee_first_name: "Alice",
+            coachee_last_name: "Doe",
+            created_at: DateTime.now(),
+            updated_at: DateTime.now(),
+          },
+        ],
+        isLoading: false,
+        isError: false,
+        refresh: vi.fn(),
+      });
+
+      render(
+        <TestProviders>
+          <JoinSessionPopover />
+        </TestProviders>
+      );
+
+      fireEvent.click(screen.getByText("Join Session"));
+
+      // Browse section content should be visible (expanded)
+      expect(screen.getByText("Select a coachee...")).toBeInTheDocument();
+    });
+
+    it("collapses Browse Sessions by default when today has sessions", () => {
+      const session = makeTodaySession({ id: "session-1" });
+
+      vi.mocked(useTodaysSessions).mockReturnValue({
+        sessions: [session],
+        isLoading: false,
+        error: false,
+        refresh: vi.fn(),
+        _tick: 0,
+      });
+
+      vi.mocked(useCoachingRelationshipList).mockReturnValue({
+        relationships: [
+          {
+            id: "rel-1",
+            coach_id: "user-1",
+            coachee_id: "other-1",
+            organization_id: "org-1",
+            coach_first_name: "Coach",
+            coach_last_name: "Smith",
+            coachee_first_name: "Alice",
+            coachee_last_name: "Doe",
+            created_at: DateTime.now(),
+            updated_at: DateTime.now(),
+          },
+        ],
+        isLoading: false,
+        isError: false,
+        refresh: vi.fn(),
+      });
+
+      render(
+        <TestProviders>
+          <JoinSessionPopover />
+        </TestProviders>
+      );
+
+      fireEvent.click(screen.getByText("Join Session"));
+
+      // Browse section content should NOT be visible (collapsed)
+      expect(screen.queryByText("Select a coachee...")).not.toBeInTheDocument();
+    });
+
+    it("toggles Browse Sessions open when clicking its header", () => {
+      const session = makeTodaySession({ id: "session-1" });
+
+      vi.mocked(useTodaysSessions).mockReturnValue({
+        sessions: [session],
+        isLoading: false,
+        error: false,
+        refresh: vi.fn(),
+        _tick: 0,
+      });
+
+      vi.mocked(useCoachingRelationshipList).mockReturnValue({
+        relationships: [
+          {
+            id: "rel-1",
+            coach_id: "user-1",
+            coachee_id: "other-1",
+            organization_id: "org-1",
+            coach_first_name: "Coach",
+            coach_last_name: "Smith",
+            coachee_first_name: "Alice",
+            coachee_last_name: "Doe",
+            created_at: DateTime.now(),
+            updated_at: DateTime.now(),
+          },
+        ],
+        isLoading: false,
+        isError: false,
+        refresh: vi.fn(),
+      });
+
+      render(
+        <TestProviders>
+          <JoinSessionPopover />
+        </TestProviders>
+      );
+
+      fireEvent.click(screen.getByText("Join Session"));
+
+      // Initially collapsed
+      expect(screen.queryByText("Select a coachee...")).not.toBeInTheDocument();
+
+      // Click the Browse Sessions header to expand
+      fireEvent.click(screen.getByText("Browse Sessions"));
+
+      // Now the content should be visible
+      expect(screen.getByText("Select a coachee...")).toBeInTheDocument();
+    });
+  });
 });
