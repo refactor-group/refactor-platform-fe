@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
@@ -18,6 +18,8 @@ import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
+import { useStickyTitleSync } from "@/lib/hooks/use-sticky-title-sync";
+import { useStickyTitle } from "@/lib/contexts/sticky-title-context";
 
 /**
  * Determines if coaching relationship ID should be synced from session data.
@@ -50,6 +52,26 @@ export default function CoachingSessionsPage() {
   // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
     useCurrentCoachingRelationship();
+
+  // Push session title data into the sticky title context for the site header
+  useStickyTitleSync();
+
+  // Show sticky title in site header when the page title scrolls off-screen
+  const titleRef = useRef<HTMLDivElement>(null);
+  const setStickyVisible = useStickyTitle()?.setVisible ?? null;
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el || !setStickyVisible) return;
+
+    // rootMargin top = negative header height so "not intersecting" fires
+    // right when the title disappears behind the sticky header
+    const observer = new IntersectionObserver(
+      ([entry]) => setStickyVisible(!entry.isIntersecting),
+      { rootMargin: "-56px 0px 0px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [setStickyVisible]);
 
   // Auto-sync relationship ID when session data loads
   // This ensures the relationship selector always matches the current session
@@ -111,7 +133,7 @@ export default function CoachingSessionsPage() {
     <div className="max-w-screen-2xl">
       <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
         <div className="flex-col h-full pl-4 md:flex ">
-          <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
+          <div ref={titleRef} className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
             <CoachingSessionTitle
               locale={siteConfig.locale}
               style={siteConfig.titleStyle}
