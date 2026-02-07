@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { useStickyTitleSync } from "@/lib/hooks/use-sticky-title-sync";
-import { useStickyTitle } from "@/lib/contexts/sticky-title-context";
 
 /**
  * Determines if coaching relationship ID should be synced from session data.
@@ -53,25 +52,9 @@ export default function CoachingSessionsPage() {
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
     useCurrentCoachingRelationship();
 
-  // Push session title data into the sticky title context for the site header
-  useStickyTitleSync();
-
-  // Show sticky title in site header when the page title scrolls off-screen
+  // Sync session title into the site header and show/hide on scroll
   const titleRef = useRef<HTMLDivElement>(null);
-  const setStickyVisible = useStickyTitle()?.setVisible ?? null;
-  useEffect(() => {
-    const el = titleRef.current;
-    if (!el || !setStickyVisible) return;
-
-    // rootMargin top = negative header height so "not intersecting" fires
-    // right when the title disappears behind the sticky header
-    const observer = new IntersectionObserver(
-      ([entry]) => setStickyVisible(!entry.isIntersecting),
-      { rootMargin: "-80px 0px 0px 0px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [setStickyVisible]);
+  useStickyTitleSync(titleRef);
 
   // Auto-sync relationship ID when session data loads
   // This ensures the relationship selector always matches the current session
