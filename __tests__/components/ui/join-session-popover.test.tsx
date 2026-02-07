@@ -59,7 +59,7 @@ import {
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { calculateSessionUrgency, getUrgencyMessage } from "@/lib/utils/session";
+import { calculateSessionUrgency, getUrgencyMessage, formatSessionTime, getSessionParticipantName } from "@/lib/utils/session";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -132,6 +132,10 @@ describe("JoinSessionPopover", () => {
 
     vi.mocked(calculateSessionUrgency).mockReturnValue(SessionUrgency.Later);
     vi.mocked(getUrgencyMessage).mockReturnValue("Scheduled for later");
+    vi.mocked(formatSessionTime).mockReturnValue("10:00 AM CST");
+    vi.mocked(getSessionParticipantName).mockImplementation(
+      (_session, userId) => userId === "user-1" ? "Coachee Jones" : "Unknown"
+    );
   });
 
   it("renders the Join Session button", () => {

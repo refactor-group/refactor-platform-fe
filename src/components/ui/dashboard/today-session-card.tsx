@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Share, Target, Building, CheckSquare } from "lucide-react";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { cn } from "@/components/lib/utils";
+import { PulsingDot } from "@/components/ui/pulsing-dot";
 import { SessionUrgency } from "@/types/session-display";
 import { RelationshipRole } from "@/types/relationship-role";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
@@ -20,6 +21,7 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import {
   calculateSessionUrgency,
   getUrgencyMessage,
+  formatSessionTime,
 } from "@/lib/utils/session";
 
 /**
@@ -104,24 +106,6 @@ function getParticipantInfo(session: EnrichedCoachingSession, userId: string): P
   };
 }
 
-/**
- * Format the session time for display
- *
- * Converts the session's UTC datetime to the user's local timezone and formats
- * it for display (e.g., "2:30 PM PST").
- *
- * Story: "Show when the session is happening"
- *
- * @param session - The coaching session containing the UTC date
- * @param timezone - The user's timezone for display (e.g., "America/Los_Angeles")
- * @returns Formatted time string with timezone abbreviation
- */
-function formatSessionTime(session: EnrichedCoachingSession, timezone: string): string {
-  const sessionTime = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
-    timezone
-  );
-  return sessionTime.toFormat("h:mm a ZZZZ");
-}
 
 /**
  * Information about the urgency status of a session
@@ -218,7 +202,7 @@ export function TodaySessionCard({
   if (!participantInfo) return null;
 
   const timezone = userSession.timezone || getBrowserTimezone();
-  const timeStr = formatSessionTime(session, timezone);
+  const timeStr = formatSessionTime(session.date, timezone);
   const { urgency, urgencyMessage, isPast } = getSessionUrgencyInfo(
     session,
     timezone
@@ -258,6 +242,9 @@ export function TodaySessionCard({
         )}
       >
         <div className="flex items-center gap-2">
+          {(urgency === SessionUrgency.Underway || urgency === SessionUrgency.Imminent) && (
+            <PulsingDot />
+          )}
           <span className="text-sm font-medium">{urgencyMessage}</span>
           {sessionIndex !== undefined && totalSessions !== undefined && (
             <span className="text-xs opacity-70">

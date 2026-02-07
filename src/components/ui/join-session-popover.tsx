@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/components/lib/utils";
+import { PulsingDot } from "@/components/ui/pulsing-dot";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
@@ -36,8 +37,12 @@ import {
 } from "@/lib/api/coaching-sessions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 
-import { calculateSessionUrgency } from "@/lib/utils/session";
-import { getUrgencyMessage } from "@/lib/utils/session";
+import {
+  calculateSessionUrgency,
+  getUrgencyMessage,
+  formatSessionTime,
+  getSessionParticipantName,
+} from "@/lib/utils/session";
 import {
   formatDateInUserTimezone,
   getBrowserTimezone,
@@ -52,36 +57,6 @@ import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relatio
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { SessionUrgency } from "@/types/session-display";
 import type { Id } from "@/types/general";
-
-// ---------------------------------------------------------------------------
-// Helpers (replicated from today-session-card.tsx — file-local functions)
-// ---------------------------------------------------------------------------
-
-function formatSessionTime(
-  session: EnrichedCoachingSession,
-  timezone: string
-): string {
-  const sessionTime = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
-    timezone
-  );
-  return sessionTime.toFormat("h:mm a ZZZZ");
-}
-
-function getParticipantName(
-  session: EnrichedCoachingSession,
-  userId: string
-): string {
-  const relationship = session.relationship;
-  if (!relationship) return "Unknown";
-
-  const isCoach = relationship.coach_id === userId;
-  const participant = isCoach ? session.coachee : session.coach;
-
-  if (!participant) return isCoach ? "Coachee" : "Coach";
-
-  return `${participant.first_name} ${participant.last_name}`.trim() ||
-    participant.display_name;
-}
 
 /**
  * Returns the display name for the "other" person in a relationship,
@@ -162,22 +137,23 @@ function TodaysSessionsList({
           >
             <div className="flex w-full items-center justify-between gap-2">
               <span className="font-medium truncate">
-                {getParticipantName(session, userId)}
+                {getSessionParticipantName(session, userId)}
               </span>
               <span className="shrink-0 text-xs text-muted-foreground">
-                {formatSessionTime(session, timezone)}
+                {formatSessionTime(session.date, timezone)}
               </span>
             </div>
             <span
               className={cn(
-                "text-xs",
-                urgency === SessionUrgency.Underway
+                "text-xs flex items-center gap-1.5",
+                urgency === SessionUrgency.Underway || urgency === SessionUrgency.Imminent
                   ? "text-foreground font-bold"
-                  : urgency === SessionUrgency.Imminent
-                    ? "text-orange-600 dark:text-orange-400 font-medium"
-                    : "text-muted-foreground"
+                  : "text-muted-foreground"
               )}
             >
+              {(urgency === SessionUrgency.Underway || urgency === SessionUrgency.Imminent) && (
+                <PulsingDot />
+              )}
               {urgencyMsg}
             </span>
           </button>
