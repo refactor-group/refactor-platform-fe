@@ -301,7 +301,7 @@ function RelationshipSessionList({
 
   if (!enrichedSessions || enrichedSessions.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No sessions found</p>
+      <p className="text-sm text-muted-foreground py-2 pl-2">No sessions found</p>
     );
   }
 
