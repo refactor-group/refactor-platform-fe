@@ -5,6 +5,7 @@ import { siteConfig } from "@/site.config.ts";
 import { SiteHeader } from "@/components/ui/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/ui/app-sidebar";
+import { StickyTitleProvider } from "@/lib/contexts/sticky-title-context";
 
 export const metadata: Metadata = {
   title: siteConfig.name,
@@ -21,8 +22,10 @@ export default function CoachingSessionLayout({
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="min-w-0">
-          <SiteHeader />
-          <main className="min-w-0">{children}</main>
+          <StickyTitleProvider>
+            <SiteHeader />
+            <main className="min-w-0">{children}</main>
+          </StickyTitleProvider>
         </SidebarInset>
       </div>
     </SidebarProvider>
