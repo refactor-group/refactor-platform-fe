@@ -8,7 +8,7 @@ import {
 } from "@/types/session-title";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
-import { isPastSession } from "@/types/coaching-session";
+import { isPastSession, isUnderwaySession } from "@/types/coaching-session";
 import {
   formatDateInUserTimezoneWithTZ,
   getBrowserTimezone,
@@ -115,9 +115,10 @@ const CoachingSessionTitle: React.FC<{
       </h4>
       {currentCoachingSession && (
         <p className="text-xs text-muted-foreground mt-1">
-          {isPastSession(currentCoachingSession)
-            ? "Held on"
-            : "Scheduled for"}{" "}
+          {isPastSession(currentCoachingSession) && "Held on "}
+          {!isPastSession(currentCoachingSession) &&
+            !isUnderwaySession(currentCoachingSession) &&
+            "Scheduled for "}
           {formatDateInUserTimezoneWithTZ(
             currentCoachingSession.date,
             userSession?.timezone || getBrowserTimezone()

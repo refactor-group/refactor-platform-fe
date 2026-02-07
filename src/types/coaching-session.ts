@@ -160,22 +160,29 @@ export function coachingSessionsToString(
 }
 
 export function isPastSession(session: CoachingSession): boolean {
-  const sessionDate = DateTime.fromISO(session.date);
+  const sessionDate = DateTime.fromISO(session.date, { zone: 'utc' });
   const sessionEnd = sessionDate.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
   const now = DateTime.now();
   return sessionEnd < now;
 }
 
 export function isSessionToday(session: CoachingSession): boolean {
-  const sessionDate = DateTime.fromISO(session.date);
+  const sessionDate = DateTime.fromISO(session.date, { zone: 'utc' }).toLocal();
   const today = DateTime.now();
   return sessionDate.hasSame(today, 'day');
 }
 
 export function isFutureSession(session: CoachingSession): boolean {
-  const sessionDate = DateTime.fromISO(session.date);
+  const sessionDate = DateTime.fromISO(session.date, { zone: 'utc' });
   const now = DateTime.now();
   return sessionDate > now;
+}
+
+export function isUnderwaySession(session: CoachingSession): boolean {
+  const sessionStart = DateTime.fromISO(session.date, { zone: 'utc' });
+  const sessionEnd = sessionStart.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
+  const now = DateTime.now();
+  return now >= sessionStart && now < sessionEnd;
 }
 
 /**
