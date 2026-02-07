@@ -25,10 +25,16 @@ import {
  */
 
 describe("calculateSessionUrgency", () => {
-  it("identifies past sessions (session ended more than 0 minutes ago)", () => {
-    const session = createSessionAt(-30); // 30 minutes ago
+  it("identifies past sessions (session duration has fully elapsed)", () => {
+    const session = createSessionAt(-120); // 2 hours ago, well past the 60-min duration
     const urgency = calculateSessionUrgency(session);
     expect(urgency).toBe(SessionUrgency.Past);
+  });
+
+  it("identifies underway sessions (started 5+ minutes ago but duration not elapsed)", () => {
+    const session = createSessionAt(-30); // 30 minutes ago, still within 60-min duration
+    const urgency = calculateSessionUrgency(session);
+    expect(urgency).toBe(SessionUrgency.Underway);
   });
 
   it(`identifies imminent sessions (starting within ${IMMINENT_SESSION_THRESHOLD_MINUTES} minutes)`, () => {
@@ -70,10 +76,17 @@ describe("calculateSessionUrgency", () => {
 
 describe("getUrgencyMessage", () => {
   it("returns past message for past sessions", () => {
-    const session = createSessionAt(-30);
+    const session = createSessionAt(-120); // 2 hours ago, well past 60-min duration
     const urgency = calculateSessionUrgency(session);
     const message = getUrgencyMessage(session, urgency);
     expect(message).toContain("Ended");
+  });
+
+  it("returns 'Under way' for sessions that started 5+ minutes ago", () => {
+    const session = createSessionAt(-30); // 30 minutes ago, still within duration
+    const urgency = calculateSessionUrgency(session);
+    const message = getUrgencyMessage(session, urgency);
+    expect(message).toBe("Under way");
   });
 
   it(`returns imminent message with exact minutes for sessions < ${IMMINENT_SESSION_THRESHOLD_MINUTES} min`, () => {
@@ -259,7 +272,7 @@ describe("enrichSessionForDisplay", () => {
   it("handles past sessions correctly", () => {
     const user = createMockUser({ id: "coach-1" });
     const relationship = createMockRelationship({ coach_id: "coach-1" });
-    const session = createSessionAt(-30); // 30 minutes ago
+    const session = createSessionAt(-120); // 2 hours ago, well past 60-min duration
     const goal = { id: "goal-1", title: "Past Session" };
     const organization = { id: "org-1", name: "Acme Corp" };
 

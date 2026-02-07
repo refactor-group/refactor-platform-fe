@@ -152,3 +152,30 @@ export function getRelationshipsAsCoachee(
 ): CoachingRelationshipWithUserNames[] {
   return relationships.filter(r => r.coachee_id === userId);
 }
+
+/**
+ * Returns the display name of the other participant in a relationship
+ * relative to the given user.
+ */
+export function getOtherPersonName(
+  rel: CoachingRelationshipWithUserNames,
+  userId: Id
+): string {
+  if (rel.coach_id === userId) {
+    return `${rel.coachee_first_name} ${rel.coachee_last_name}`.trim();
+  }
+  return `${rel.coach_first_name} ${rel.coach_last_name}`.trim();
+}
+
+/**
+ * Sort relationships alphabetically by the other participant's name
+ * relative to the given user.
+ */
+export function sortRelationshipsByParticipantName(
+  relationships: CoachingRelationshipWithUserNames[],
+  userId: Id
+): CoachingRelationshipWithUserNames[] {
+  return [...relationships].sort((a, b) =>
+    getOtherPersonName(a, userId).localeCompare(getOtherPersonName(b, userId))
+  );
+}

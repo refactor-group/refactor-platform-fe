@@ -1,5 +1,5 @@
 import { DateTime } from "ts-luxon";
-import { CoachingSession } from "@/types/coaching-session";
+import { CoachingSession, DEFAULT_SESSION_DURATION_MINUTES, EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import { Id } from "@/types/general";
@@ -24,6 +24,9 @@ export const PAST_SESSION_THRESHOLD_MINUTES = -1;
 /** Threshold in minutes for imminent sessions (starting very soon) */
 export const IMMINENT_SESSION_THRESHOLD_MINUTES = 30;
 
+/** Minutes after session start before showing "Under way" instead of "Starting now!" */
+export const UNDERWAY_THRESHOLD_MINUTES = 5;
+
 /** Threshold in minutes for sessions starting soon */
 export const SOON_SESSION_THRESHOLD_MINUTES = 120;
 
@@ -43,11 +46,18 @@ export function calculateSessionUrgency(
   const now = DateTime.now();
   // Parse session date as UTC (backend stores in UTC)
   const sessionTime = DateTime.fromISO(session.date, { zone: 'utc' });
+  const sessionEndTime = sessionTime.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
   const minutesUntilSession = sessionTime.diff(now, "minutes").minutes;
+  const minutesUntilEnd = sessionEndTime.diff(now, "minutes").minutes;
 
-  // Treat anything less than threshold as truly past (allows for execution timing)
-  if (minutesUntilSession < PAST_SESSION_THRESHOLD_MINUTES) {
+  // Session is only past once its full duration has elapsed
+  if (minutesUntilEnd < PAST_SESSION_THRESHOLD_MINUTES) {
     return SessionUrgency.Past;
+  }
+
+  // Session is under way once 5+ minutes have passed since start (but not yet ended)
+  if (minutesUntilSession <= -UNDERWAY_THRESHOLD_MINUTES) {
+    return SessionUrgency.Underway;
   }
 
   if (minutesUntilSession <= IMMINENT_SESSION_THRESHOLD_MINUTES) {
@@ -79,8 +89,9 @@ export function getUrgencyMessage(
 
   switch (urgency) {
     case SessionUrgency.Past: {
+      const sessionEndTimeUTC = sessionTimeUTC.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
       const minutesSinceEnd = Math.abs(
-        sessionTimeUTC.diff(now, "minutes").minutes
+        sessionEndTimeUTC.diff(now, "minutes").minutes
       );
       const hoursSinceEnd = Math.floor(minutesSinceEnd / 60);
 
@@ -89,6 +100,9 @@ export function getUrgencyMessage(
       }
       return `Ended ${Math.floor(minutesSinceEnd)} minutes ago`;
     }
+
+    case SessionUrgency.Underway:
+      return "Under way";
 
     case SessionUrgency.Imminent: {
       const minutesUntil = Math.round(
@@ -282,4 +296,41 @@ export function findLastSessionsByRelationship<
   });
 
   return map;
+}
+
+/**
+ * Format a session's time for compact display (e.g. "2:30 PM CST")
+ *
+ * Converts a UTC date string to the user's timezone and formats it.
+ */
+export function formatSessionTime(
+  dateString: string,
+  timezone: string
+): string {
+  const sessionTime = DateTime.fromISO(dateString, { zone: "utc" }).setZone(
+    timezone
+  );
+  return sessionTime.toFormat("h:mm a ZZZZ");
+}
+
+/**
+ * Get the name of the other participant in an enriched session
+ *
+ * Determines whether the current user is the coach or coachee, then
+ * returns the other person's full name.
+ */
+export function getSessionParticipantName(
+  session: EnrichedCoachingSession,
+  userId: string
+): string {
+  const relationship = session.relationship;
+  if (!relationship) return "Unknown";
+
+  const isCoach = relationship.coach_id === userId;
+  const participant = isCoach ? session.coachee : session.coach;
+
+  if (!participant) return isCoach ? "Coachee" : "Coach";
+
+  return `${participant.first_name} ${participant.last_name}`.trim() ||
+    participant.display_name;
 }

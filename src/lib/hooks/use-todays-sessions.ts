@@ -9,14 +9,21 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useInterval } from "@/lib/hooks/use-interval";
 
 /**
- * Hook to fetch today's coaching sessions - ENHANCED VERSION
+ * Hook to fetch today's coaching sessions.
  *
- * Uses the new backend endpoint that supports batch loading of related data
+ * Uses the backend endpoint that supports batch loading of related data
  * in a single API call, eliminating N+1 queries and multiple round trips.
  *
- * Returns raw CoachingSession objects - display values should be computed on-the-fly.
+ * @param include - Optional array of related resources to include.
+ *   Defaults to Relationship + Organization + Goal.
  */
-export function useTodaysSessions() {
+export function useTodaysSessions(
+  include: CoachingSessionInclude[] = [
+    CoachingSessionInclude.Relationship,
+    CoachingSessionInclude.Organization,
+    CoachingSessionInclude.Goal,
+  ]
+) {
   // Get current user
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -51,11 +58,7 @@ export function useTodaysSessions() {
       userId!,
       startOfDayUTC,
       endOfDayUTC,
-      [
-        CoachingSessionInclude.Relationship,
-        CoachingSessionInclude.Organization,
-        CoachingSessionInclude.Goal,
-      ],
+      include,
       "date",
       "asc"
     );

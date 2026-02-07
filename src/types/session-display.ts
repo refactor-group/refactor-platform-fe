@@ -7,6 +7,7 @@ import type { RelationshipRole } from "./relationship-role";
 
 export enum SessionUrgency {
   Past = "past",
+  Underway = "underway",
   Imminent = "imminent",
   Soon = "soon",
   Later = "later",
