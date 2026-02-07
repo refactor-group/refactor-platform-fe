@@ -67,7 +67,7 @@ export default function CoachingSessionsPage() {
     // right when the title disappears behind the sticky header
     const observer = new IntersectionObserver(
       ([entry]) => setStickyVisible(!entry.isIntersecting),
-      { rootMargin: "-56px 0px 0px 0px" }
+      { rootMargin: "-80px 0px 0px 0px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
