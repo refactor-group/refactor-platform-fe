@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
+// PR preview: basePath for sub-path routing, containerized nginx for Docker DNS
 const nextConfig = {
 	output: 'standalone',
+	basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
 	turbopack: {
 		// Turbopack configuration options go here
 	},
