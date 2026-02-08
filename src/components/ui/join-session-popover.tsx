@@ -170,8 +170,12 @@ function getDateRange(filter: DateFilter): { from: DateTime; to: DateTime } {
 
 function RelationshipSessionBrowser({
   onSessionClick,
+  browsingRelationshipId: browsingRelationshipIdProp,
+  onRelationshipChange,
 }: {
   onSessionClick: (sessionId: string) => void;
+  browsingRelationshipId: string | undefined;
+  onRelationshipChange: (relationshipId: string) => void;
 }) {
   const [dateFilter, setDateFilter] = useState<DateFilter>("month");
 
@@ -184,7 +188,6 @@ function RelationshipSessionBrowser({
   const { currentOrganizationId } = useCurrentOrganization();
   const {
     currentCoachingRelationshipId,
-    setCurrentCoachingRelationshipId,
   } = useCurrentCoachingRelationship();
 
   // Fetch all relationships for the current org
@@ -206,11 +209,9 @@ function RelationshipSessionBrowser({
 
   const sortedRelationships = sortRelationshipsByParticipantName(uniqueRelationships, userId);
 
-  const selectedRelationshipId = currentCoachingRelationshipId ?? undefined;
-
-  const handleRelationshipChange = (relationshipId: Id) => {
-    setCurrentCoachingRelationshipId(relationshipId);
-  };
+  // Use the parent-provided value, falling back to the global relationship
+  const selectedRelationshipId =
+    browsingRelationshipIdProp ?? currentCoachingRelationshipId ?? undefined;
 
   const { from, to } = getDateRange(dateFilter);
 
@@ -218,7 +219,7 @@ function RelationshipSessionBrowser({
     <div className="flex flex-col gap-2">
       <Select
         value={selectedRelationshipId}
-        onValueChange={handleRelationshipChange}
+        onValueChange={onRelationshipChange}
         disabled={isLoadingRels || sortedRelationships.length === 0}
       >
         <SelectTrigger className="w-full text-sm">
@@ -392,6 +393,12 @@ export function JoinSessionPopover() {
   const hasTodaySessions = !isLoading && !error && sessions.length > 0;
   const [browseOpen, setBrowseOpen] = useState(!hasTodaySessions);
 
+  // Browsing relationship state lives here so it survives SelectContent
+  // portal interactions and child re-renders
+  const [browsingRelationshipId, setBrowsingRelationshipId] = useState<
+    string | undefined
+  >(undefined);
+
   const handleSessionClick = (sessionId: string) => {
     setOpen(false);
     router.push(`/coaching-sessions/${sessionId}`);
@@ -403,6 +410,8 @@ export function JoinSessionPopover() {
       // Reset browse section state when popover opens
       if (isOpen) {
         setBrowseOpen(!hasTodaySessions);
+        // Reset browsing relationship so it re-derives from global state on open
+        setBrowsingRelationshipId(undefined);
       }
     }}>
       <PopoverTrigger asChild>
@@ -415,6 +424,13 @@ export function JoinSessionPopover() {
       <PopoverContent
         align="end"
         className="w-80 sm:w-96 max-h-[70vh] overflow-y-auto p-0"
+        onInteractOutside={(e) => {
+          // Prevent popover from closing when interacting with Select dropdown portals
+          const target = e.target as HTMLElement | null;
+          if (target?.closest?.('[role="listbox"]')) {
+            e.preventDefault();
+          }
+        }}
       >
         {/* Section 1: Today's Sessions */}
         <div className="p-3">
@@ -444,7 +460,11 @@ export function JoinSessionPopover() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="px-3 pt-1 pb-3">
-              <RelationshipSessionBrowser onSessionClick={handleSessionClick} />
+              <RelationshipSessionBrowser
+                onSessionClick={handleSessionClick}
+                browsingRelationshipId={browsingRelationshipId}
+                onRelationshipChange={setBrowsingRelationshipId}
+              />
             </div>
           </CollapsibleContent>
         </Collapsible>
