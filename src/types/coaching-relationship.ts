@@ -7,6 +7,7 @@ export interface CoachingRelationship {
   coach_id: Id;
   coachee_id: Id;
   organization_id: Id;
+  meet_url?: string;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -38,6 +39,10 @@ export type CoachingRelationshipWithUsers = CoachingRelationship & {
 export interface NewCoachingRelationship {
   coach_id: Id;
   coachee_id: Id;
+}
+
+export interface CoachingRelationshipUpdate {
+  meet_url?: string | null;
 }
 
 export function isCoachingRelationshipWithUserNames(

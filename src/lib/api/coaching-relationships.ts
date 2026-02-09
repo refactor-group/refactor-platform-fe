@@ -4,6 +4,7 @@ import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import {
   NewCoachingRelationship,
+  CoachingRelationshipUpdate,
   CoachingRelationshipWithUserNames,
   defaultCoachingRelationshipWithUserNames,
 } from "@/types/coaching-relationship";
@@ -80,11 +81,39 @@ export const CoachingRelationshipApi = {
   },
 
   /**
-   * Unimplemented
+   * Updates a coaching relationship.
+   * Used by the mutation hook where the organization ID is already in the base URL.
+   *
+   * @param relationshipId The ID of the coaching relationship to update
+   * @param entity The partial coaching relationship data to update
+   * @returns Promise resolving to the updated CoachingRelationshipWithUserNames object
    */
-  update: async (_id: Id, _entity: NewCoachingRelationship) => {
-    throw new Error("Update operation not implemented");
+  update: async (
+    _relationshipId: Id,
+    _entity: NewCoachingRelationship
+  ): Promise<CoachingRelationshipWithUserNames> => {
+    throw new Error(
+      "Use updateRelationship() for direct updates with organization context"
+    );
   },
+
+  /**
+   * Updates a coaching relationship with full organization context.
+   *
+   * @param organizationId The organization ID
+   * @param relationshipId The coaching relationship ID
+   * @param entity The partial update data
+   * @returns Promise resolving to the updated CoachingRelationshipWithUserNames object
+   */
+  updateRelationship: async (
+    organizationId: Id,
+    relationshipId: Id,
+    entity: CoachingRelationshipUpdate
+  ): Promise<CoachingRelationshipWithUserNames> =>
+    EntityApi.updateFn<CoachingRelationshipUpdate, CoachingRelationshipWithUserNames>(
+      `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}/${relationshipId}`,
+      entity
+    ),
 
   /**
    * Unimplemented

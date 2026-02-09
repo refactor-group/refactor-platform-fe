@@ -18,8 +18,9 @@ import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import Link from "next/link";
 
 export function UserNav() {
-  const { userSession } = useAuthStore((state) => ({
+  const { userSession, isACoach } = useAuthStore((state) => ({
     userSession: state.userSession,
+    isACoach: state.isACoach,
   }));
   const logoutUser = useLogoutUser();
 
@@ -54,10 +55,14 @@ export function UserNav() {
               <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            Settings
-            <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-          </DropdownMenuItem>
+          {isACoach && (
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                Settings
+                <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+              </Link>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logoutUser}>
