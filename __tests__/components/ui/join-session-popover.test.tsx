@@ -148,7 +148,7 @@ describe("JoinSessionPopover", () => {
 
     fireEvent.click(screen.getByText("Join Session"));
 
-    expect(screen.getByText("Today's Sessions")).toBeInTheDocument();
+    expect(screen.getByText("Upcoming Sessions")).toBeInTheDocument();
     expect(screen.getByText("Browse Sessions")).toBeInTheDocument();
   });
 
@@ -162,7 +162,7 @@ describe("JoinSessionPopover", () => {
     fireEvent.click(screen.getByText("Join Session"));
 
     expect(
-      screen.getByText("No sessions scheduled for today")
+      screen.getByText("No upcoming sessions")
     ).toBeInTheDocument();
   });
 

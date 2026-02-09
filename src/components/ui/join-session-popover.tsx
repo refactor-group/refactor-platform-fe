@@ -94,7 +94,7 @@ function TodaysSessionsList({
   if (sessions.length === 0) {
     return (
       <p className="px-2 py-3 text-sm text-muted-foreground">
-        No sessions scheduled for today
+        No upcoming sessions
       </p>
     );
   }
@@ -430,10 +430,10 @@ export function JoinSessionPopover() {
           }
         }}
       >
-        {/* Section 1: Today's Sessions */}
+        {/* Section 1: Upcoming Sessions */}
         <div className="p-3">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Today&apos;s Sessions
+            Upcoming Sessions
           </p>
           <TodaysSessionsList
             sessions={sessions}
