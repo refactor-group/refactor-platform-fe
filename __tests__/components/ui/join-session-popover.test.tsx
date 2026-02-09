@@ -354,9 +354,9 @@ describe("JoinSessionPopover", () => {
       const thisWeekBtn = screen.getByRole("button", { name: "This Week" });
 
       // "This Month" should have the default (filled) variant, others should have outline
-      expect(thisMonthBtn.className).not.toMatch(/border/);
-      expect(lastMonthBtn.className).toMatch(/border/);
-      expect(thisWeekBtn.className).toMatch(/border/);
+      expect(thisMonthBtn.className).toMatch(/bg-primary/);
+      expect(lastMonthBtn.className).toMatch(/border-input/);
+      expect(thisWeekBtn.className).toMatch(/border-input/);
     });
 
     it("fetches sessions for current month by default", () => {
@@ -420,15 +420,15 @@ describe("JoinSessionPopover", () => {
 
       // Click "This Week" — it should become active, others outlined
       fireEvent.click(thisWeekBtn);
-      expect(thisWeekBtn.className).not.toMatch(/border/);
-      expect(lastMonthBtn.className).toMatch(/border/);
-      expect(thisMonthBtn.className).toMatch(/border/);
+      expect(thisWeekBtn.className).toMatch(/bg-primary/);
+      expect(lastMonthBtn.className).toMatch(/border-input/);
+      expect(thisMonthBtn.className).toMatch(/border-input/);
 
       // Click "Last Month" — it should become active
       fireEvent.click(lastMonthBtn);
-      expect(lastMonthBtn.className).not.toMatch(/border/);
-      expect(thisWeekBtn.className).toMatch(/border/);
-      expect(thisMonthBtn.className).toMatch(/border/);
+      expect(lastMonthBtn.className).toMatch(/bg-primary/);
+      expect(thisWeekBtn.className).toMatch(/border-input/);
+      expect(thisMonthBtn.className).toMatch(/border-input/);
     });
   });
 

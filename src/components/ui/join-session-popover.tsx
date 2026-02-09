@@ -158,8 +158,10 @@ type DateFilter = "last_month" | "week" | "month";
 function getDateRange(filter: DateFilter): { from: DateTime; to: DateTime } {
   const now = DateTime.now();
   switch (filter) {
-    case "last_month":
-      return { from: now.minus({ months: 1 }).startOf("month"), to: now.minus({ months: 1 }).endOf("month") };
+    case "last_month": {
+      const lastMonth = now.minus({ months: 1 });
+      return { from: lastMonth.startOf("month"), to: lastMonth.endOf("month") };
+    }
     case "week":
       return { from: now.startOf("week"), to: now.endOf("week") };
     case "month":
