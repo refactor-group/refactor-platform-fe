@@ -3,6 +3,11 @@ import { CoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
+import {
+  GoogleOAuthConnectionState,
+  GoogleOAuthConnectionStatus,
+} from "@/types/oauth-connection";
+import { MeetingSpace } from "@/types/meeting-space";
 
 /**
  * Test data factories for consistent, readable test setup
@@ -81,4 +86,30 @@ export function createSessionAt(minutesFromNow: number): CoachingSession {
   return createMockSession({
     date: DateTime.now().plus({ minutes: minutesFromNow }).toISO(),
   });
+}
+
+export function createMockGoogleOAuthConnectionState(
+  overrides?: Partial<{ google_email: string; connected_at: string }>
+): GoogleOAuthConnectionState {
+  return {
+    status: GoogleOAuthConnectionStatus.Connected,
+    google_email: "coach@gmail.com",
+    connected_at: "2026-01-15T10:00:00Z",
+    ...overrides,
+  };
+}
+
+export function createMockDisconnectedGoogleOAuthState(): GoogleOAuthConnectionState {
+  return { status: GoogleOAuthConnectionStatus.Disconnected };
+}
+
+export function createMockMeetingSpace(
+  overrides?: Partial<MeetingSpace>
+): MeetingSpace {
+  return {
+    meeting_id: "meet-123",
+    join_url: "https://meet.google.com/abc-defg-hij",
+    host_url: "https://meet.google.com/abc-defg-hij",
+    ...overrides,
+  };
 }
