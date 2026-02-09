@@ -15,15 +15,6 @@ vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({ push: mockPush })),
 }));
 
-const mockSetCurrentCoachingRelationshipId = vi.fn();
-
-vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
-  useCurrentCoachingRelationship: vi.fn(() => ({
-    currentCoachingRelationshipId: null,
-    setCurrentCoachingRelationshipId: mockSetCurrentCoachingRelationshipId,
-  })),
-}));
-
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: vi.fn(() => ({
     currentOrganizationId: "org-1",
@@ -54,7 +45,6 @@ vi.mock("@/lib/api/coaching-relationships");
 vi.mock("@/lib/utils/session");
 
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
-import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
@@ -327,21 +317,7 @@ describe("JoinSessionPopover", () => {
       updated_at: DateTime.now(),
     };
 
-    afterEach(() => {
-      // Restore default mock so subsequent tests aren't affected
-      vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
-        currentCoachingRelationshipId: null,
-        setCurrentCoachingRelationshipId: mockSetCurrentCoachingRelationshipId,
-      });
-    });
-
     function openBrowseWithRelationship() {
-      // Pre-select a relationship so RelationshipSessionList renders
-      vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
-        currentCoachingRelationshipId: "rel-1",
-        setCurrentCoachingRelationshipId: mockSetCurrentCoachingRelationshipId,
-      });
-
       vi.mocked(useCoachingRelationshipList).mockReturnValue({
         relationships: [relationship],
         isLoading: false,
@@ -356,6 +332,10 @@ describe("JoinSessionPopover", () => {
       );
 
       fireEvent.click(screen.getByText("Join Session"));
+
+      // Open the relationship Select and pick Alice Doe
+      fireEvent.click(screen.getByText("Select a coachee..."));
+      fireEvent.click(screen.getByText("Alice Doe"));
     }
 
     it("renders all three date filter buttons", () => {

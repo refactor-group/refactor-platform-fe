@@ -29,7 +29,6 @@ import { PulsingDot } from "@/components/ui/pulsing-dot";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import {
   useEnrichedCoachingSessionsForUser,
@@ -186,9 +185,6 @@ function RelationshipSessionBrowser({
   const timezone = userSession?.timezone || getBrowserTimezone();
 
   const { currentOrganizationId } = useCurrentOrganization();
-  const {
-    currentCoachingRelationshipId,
-  } = useCurrentCoachingRelationship();
 
   // Fetch all relationships for the current org
   const { relationships, isLoading: isLoadingRels } =
@@ -209,16 +205,16 @@ function RelationshipSessionBrowser({
 
   const sortedRelationships = sortRelationshipsByParticipantName(uniqueRelationships, userId);
 
-  // Use the parent-provided value, falling back to the global relationship
-  const selectedRelationshipId =
-    browsingRelationshipIdProp ?? currentCoachingRelationshipId ?? undefined;
+  // Only use the parent-provided value — no automatic fallback so the user
+  // must explicitly pick a relationship to avoid confusion with Today's Sessions.
+  const selectedRelationshipId = browsingRelationshipIdProp;
 
   const { from, to } = getDateRange(dateFilter);
 
   return (
     <div className="flex flex-col gap-2">
       <Select
-        value={selectedRelationshipId}
+        value={selectedRelationshipId ?? ""}
         onValueChange={onRelationshipChange}
         disabled={isLoadingRels || sortedRelationships.length === 0}
       >
