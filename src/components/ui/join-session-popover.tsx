@@ -154,13 +154,13 @@ function TodaysSessionsList({
 // Section 2: Browse Sessions by Relationship
 // ---------------------------------------------------------------------------
 
-type DateFilter = "today" | "week" | "month";
+type DateFilter = "last_month" | "week" | "month";
 
 function getDateRange(filter: DateFilter): { from: DateTime; to: DateTime } {
   const now = DateTime.now();
   switch (filter) {
-    case "today":
-      return { from: now.startOf("day"), to: now.endOf("day") };
+    case "last_month":
+      return { from: now.minus({ months: 1 }).startOf("month"), to: now.minus({ months: 1 }).endOf("month") };
     case "week":
       return { from: now.startOf("week"), to: now.endOf("week") };
     case "month":
@@ -236,7 +236,7 @@ function RelationshipSessionBrowser({
 
       <div className="flex gap-1">
         {([
-          { value: "today", label: "Today" },
+          { value: "last_month", label: "Last Month" },
           { value: "week", label: "This Week" },
           { value: "month", label: "This Month" },
         ] as const).map(({ value, label }) => (
