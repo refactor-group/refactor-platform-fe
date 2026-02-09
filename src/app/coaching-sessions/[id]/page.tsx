@@ -15,6 +15,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import ShareSessionLink from "@/components/ui/share-session-link";
+import JoinMeetLink from "@/components/ui/coaching-sessions/join-meet-link";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
@@ -49,7 +50,7 @@ export default function CoachingSessionsPage() {
   const { currentCoachingSession, currentCoachingSessionId, isError } = useCurrentCoachingSession();
 
   // Get current coaching relationship state and data
-  const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
+  const { currentCoachingRelationship, currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
     useCurrentCoachingRelationship();
 
   // Sync session title into the site header and show/hide on scroll
@@ -122,6 +123,7 @@ export default function CoachingSessionsPage() {
               style={siteConfig.titleStyle}
             />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
+              <JoinMeetLink meetUrl={currentCoachingRelationship?.meet_url} />
               <ShareSessionLink
                 sessionId={params.id as string}
                 onError={handleShareError}
