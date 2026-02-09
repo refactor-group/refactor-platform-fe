@@ -15,15 +15,6 @@ vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({ push: mockPush })),
 }));
 
-const mockSetCurrentCoachingRelationshipId = vi.fn();
-
-vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
-  useCurrentCoachingRelationship: vi.fn(() => ({
-    currentCoachingRelationshipId: null,
-    setCurrentCoachingRelationshipId: mockSetCurrentCoachingRelationshipId,
-  })),
-}));
-
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: vi.fn(() => ({
     currentOrganizationId: "org-1",
@@ -310,6 +301,135 @@ describe("JoinSessionPopover", () => {
       CoachingSessionInclude.Relationship,
       CoachingSessionInclude.Goal,
     ]);
+  });
+
+  describe("Browse Sessions date filter buttons", () => {
+    const relationship = {
+      id: "rel-1",
+      coach_id: "user-1",
+      coachee_id: "other-1",
+      organization_id: "org-1",
+      coach_first_name: "Coach",
+      coach_last_name: "Smith",
+      coachee_first_name: "Alice",
+      coachee_last_name: "Doe",
+      created_at: DateTime.now(),
+      updated_at: DateTime.now(),
+    };
+
+    function openBrowseWithRelationship() {
+      vi.mocked(useCoachingRelationshipList).mockReturnValue({
+        relationships: [relationship],
+        isLoading: false,
+        isError: false,
+        refresh: vi.fn(),
+      });
+
+      render(
+        <TestProviders>
+          <JoinSessionPopover />
+        </TestProviders>
+      );
+
+      fireEvent.click(screen.getByText("Join Session"));
+
+      // Open the relationship Select and pick Alice Doe
+      fireEvent.click(screen.getByText("Select a coachee..."));
+      fireEvent.click(screen.getByText("Alice Doe"));
+    }
+
+    it("renders all three date filter buttons", () => {
+      openBrowseWithRelationship();
+
+      expect(screen.getByRole("button", { name: "Last Month" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "This Week" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "This Month" })).toBeInTheDocument();
+    });
+
+    it("defaults to This Month filter", () => {
+      openBrowseWithRelationship();
+
+      const thisMonthBtn = screen.getByRole("button", { name: "This Month" });
+      const lastMonthBtn = screen.getByRole("button", { name: "Last Month" });
+      const thisWeekBtn = screen.getByRole("button", { name: "This Week" });
+
+      // "This Month" should have the default (filled) variant, others should have outline
+      expect(thisMonthBtn.className).toMatch(/bg-primary/);
+      expect(lastMonthBtn.className).toMatch(/border-input/);
+      expect(thisWeekBtn.className).toMatch(/border-input/);
+    });
+
+    it("fetches sessions for current month by default", () => {
+      openBrowseWithRelationship();
+
+      const now = DateTime.now();
+      const calls = vi.mocked(useEnrichedCoachingSessionsForUser).mock.calls;
+      const lastCall = calls[calls.length - 1];
+
+      // fromDate (arg index 1) should be start of this month
+      expect((lastCall[1] as DateTime).toISODate()).toBe(
+        now.startOf("month").toISODate()
+      );
+      // toDate (arg index 2) should be end of this month
+      expect((lastCall[2] as DateTime).toISODate()).toBe(
+        now.endOf("month").toISODate()
+      );
+    });
+
+    it("switches to This Week date range when clicked", () => {
+      openBrowseWithRelationship();
+
+      fireEvent.click(screen.getByRole("button", { name: "This Week" }));
+
+      const now = DateTime.now();
+      const calls = vi.mocked(useEnrichedCoachingSessionsForUser).mock.calls;
+      const lastCall = calls[calls.length - 1];
+
+      expect((lastCall[1] as DateTime).toISODate()).toBe(
+        now.startOf("week").toISODate()
+      );
+      expect((lastCall[2] as DateTime).toISODate()).toBe(
+        now.endOf("week").toISODate()
+      );
+    });
+
+    it("switches to Last Month date range when clicked", () => {
+      openBrowseWithRelationship();
+
+      fireEvent.click(screen.getByRole("button", { name: "Last Month" }));
+
+      const now = DateTime.now();
+      const lastMonth = now.minus({ months: 1 });
+      const calls = vi.mocked(useEnrichedCoachingSessionsForUser).mock.calls;
+      const lastCall = calls[calls.length - 1];
+
+      expect((lastCall[1] as DateTime).toISODate()).toBe(
+        lastMonth.startOf("month").toISODate()
+      );
+      expect((lastCall[2] as DateTime).toISODate()).toBe(
+        lastMonth.endOf("month").toISODate()
+      );
+    });
+
+    it("visually toggles the active filter on click", () => {
+      openBrowseWithRelationship();
+
+      const lastMonthBtn = screen.getByRole("button", { name: "Last Month" });
+      const thisWeekBtn = screen.getByRole("button", { name: "This Week" });
+      const thisMonthBtn = screen.getByRole("button", { name: "This Month" });
+
+      // Click "This Week" — it should become active, others outlined
+      fireEvent.click(thisWeekBtn);
+      expect(thisWeekBtn.className).toMatch(/bg-primary/);
+      expect(lastMonthBtn.className).toMatch(/border-input/);
+      expect(thisMonthBtn.className).toMatch(/border-input/);
+
+      // Click "Last Month" — it should become active
+      fireEvent.click(lastMonthBtn);
+      expect(lastMonthBtn.className).toMatch(/bg-primary/);
+      expect(thisWeekBtn.className).toMatch(/border-input/);
+      expect(thisMonthBtn.className).toMatch(/border-input/);
+    });
   });
 
   describe("Browse Sessions collapsible behavior", () => {
