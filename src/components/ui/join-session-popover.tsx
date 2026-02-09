@@ -29,7 +29,6 @@ import { PulsingDot } from "@/components/ui/pulsing-dot";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import {
   useEnrichedCoachingSessionsForUser,
@@ -154,13 +153,15 @@ function TodaysSessionsList({
 // Section 2: Browse Sessions by Relationship
 // ---------------------------------------------------------------------------
 
-type DateFilter = "today" | "week" | "month";
+type DateFilter = "last_month" | "week" | "month";
 
 function getDateRange(filter: DateFilter): { from: DateTime; to: DateTime } {
   const now = DateTime.now();
   switch (filter) {
-    case "today":
-      return { from: now.startOf("day"), to: now.endOf("day") };
+    case "last_month": {
+      const lastMonth = now.minus({ months: 1 });
+      return { from: lastMonth.startOf("month"), to: lastMonth.endOf("month") };
+    }
     case "week":
       return { from: now.startOf("week"), to: now.endOf("week") };
     case "month":
@@ -186,9 +187,6 @@ function RelationshipSessionBrowser({
   const timezone = userSession?.timezone || getBrowserTimezone();
 
   const { currentOrganizationId } = useCurrentOrganization();
-  const {
-    currentCoachingRelationshipId,
-  } = useCurrentCoachingRelationship();
 
   // Fetch all relationships for the current org
   const { relationships, isLoading: isLoadingRels } =
@@ -209,16 +207,16 @@ function RelationshipSessionBrowser({
 
   const sortedRelationships = sortRelationshipsByParticipantName(uniqueRelationships, userId);
 
-  // Use the parent-provided value, falling back to the global relationship
-  const selectedRelationshipId =
-    browsingRelationshipIdProp ?? currentCoachingRelationshipId ?? undefined;
+  // Only use the parent-provided value — no automatic fallback so the user
+  // must explicitly pick a relationship to avoid confusion with Today's Sessions.
+  const selectedRelationshipId = browsingRelationshipIdProp;
 
   const { from, to } = getDateRange(dateFilter);
 
   return (
     <div className="flex flex-col gap-2">
       <Select
-        value={selectedRelationshipId}
+        value={selectedRelationshipId ?? ""}
         onValueChange={onRelationshipChange}
         disabled={isLoadingRels || sortedRelationships.length === 0}
       >
@@ -236,7 +234,7 @@ function RelationshipSessionBrowser({
 
       <div className="flex gap-1">
         {([
-          { value: "today", label: "Today" },
+          { value: "last_month", label: "Last Month" },
           { value: "week", label: "This Week" },
           { value: "month", label: "This Month" },
         ] as const).map(({ value, label }) => (
