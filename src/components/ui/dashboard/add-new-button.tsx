@@ -59,13 +59,13 @@ export function AddNewButton({ onCreateSession, className }: AddNewButtonProps) 
         {canAddSession && (
           <DropdownMenuItem onClick={onCreateSession}>
             <Calendar className="h-4 w-4 mr-2" />
-            Add new coaching session
+            Coaching session
           </DropdownMenuItem>
         )}
         {canAddMember && (
           <DropdownMenuItem onClick={handleAddMember}>
             <Users className="h-4 w-4 mr-2" />
-            Add new organization member
+            Organization member
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
