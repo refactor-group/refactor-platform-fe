@@ -105,7 +105,7 @@ function TodaysSessionsList({
   );
 
   return (
-    <div className="flex flex-col gap-1 max-h-[17.5rem] overflow-y-auto p-0.5 -m-0.5">
+    <div className="flex flex-col gap-1 p-0.5 -m-0.5">
       {sessions.map((session, index) => {
         const urgency = calculateSessionUrgency(session);
         const urgencyMsg = getUrgencyMessage(session, urgency, timezone);
@@ -232,23 +232,25 @@ function RelationshipSessionBrowser({
         </SelectContent>
       </Select>
 
-      <div className="flex gap-1">
-        {([
-          { value: "last_month", label: "Last Month" },
-          { value: "week", label: "This Week" },
-          { value: "month", label: "This Month" },
-        ] as const).map(({ value, label }) => (
-          <Button
-            key={value}
-            variant={dateFilter === value ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs flex-1"
-            onClick={() => setDateFilter(value)}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
+      {selectedRelationshipId && (
+        <div className="flex gap-1">
+          {([
+            { value: "last_month", label: "Last Month" },
+            { value: "week", label: "This Week" },
+            { value: "month", label: "This Month" },
+          ] as const).map(({ value, label }) => (
+            <Button
+              key={value}
+              variant={dateFilter === value ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs flex-1"
+              onClick={() => setDateFilter(value)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {selectedRelationshipId && (
         <RelationshipSessionList
@@ -313,7 +315,7 @@ function RelationshipSessionList({
   );
 
   return (
-    <div className="max-h-60 overflow-y-auto flex flex-col gap-1">
+    <div className="flex flex-col gap-1">
       {upcoming.length > 0 && (
         <SessionGroup
           label="Upcoming Sessions"
@@ -421,7 +423,7 @@ export function JoinSessionPopover() {
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="w-80 sm:w-96 max-h-[70vh] overflow-y-auto p-0"
+        className="w-80 sm:w-96 max-h-[85vh] overflow-y-auto p-0"
         onInteractOutside={(e) => {
           // Prevent popover from closing when interacting with Select dropdown portals
           const target = e.target as HTMLElement | null;
@@ -449,7 +451,7 @@ export function JoinSessionPopover() {
         <Collapsible open={browseOpen} onOpenChange={setBrowseOpen}>
           <CollapsibleTrigger className="flex w-full items-center justify-between p-3 hover:bg-accent/50 transition-colors">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Browse Sessions
+              Other Sessions
             </p>
             <ChevronRight className={cn(
               "h-4 w-4 text-muted-foreground transition-transform",
