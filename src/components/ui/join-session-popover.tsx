@@ -384,7 +384,7 @@ export function JoinSessionPopover() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  const { sessions, isLoading, error } = useTodaysSessions([
+  const { sessions, isLoading, error, refresh } = useTodaysSessions([
     CoachingSessionInclude.Relationship,
     CoachingSessionInclude.Goal,
   ]);
@@ -407,8 +407,9 @@ export function JoinSessionPopover() {
   return (
     <Popover open={open} onOpenChange={(isOpen) => {
       setOpen(isOpen);
-      // Reset browse section state when popover opens
+      // Reset browse section state and refresh sessions when popover opens
       if (isOpen) {
+        refresh();
         setBrowseOpen(!hasTodaySessions);
         // Reset browsing relationship so it re-derives from global state on open
         setBrowsingRelationshipId(undefined);
