@@ -26,8 +26,11 @@ export const LinkButton = React.forwardRef<HTMLButtonElement, LinkButtonProps>(
     const editor = useTiptapEditor(providedEditor);
     const isActive = editor?.isActive("link") ?? false;
 
+    if (!editor || !editor.isEditable) {
+      return null;
+    }
+
     const handleClick = () => {
-      if (!editor) return;
       triggerLinkCreation(editor);
     };
 

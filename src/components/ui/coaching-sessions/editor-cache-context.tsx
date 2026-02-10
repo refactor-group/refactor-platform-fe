@@ -31,6 +31,9 @@ import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship
 import { useLogoutCleanup } from "@/lib/hooks/use-logout-cleanup";
 import { generateCollaborativeUserColor } from "@/lib/tiptap-utils";
 
+/** Timeout before enabling offline editing when TipTap Cloud sync doesn't complete */
+const SYNC_TIMEOUT_MS = 10_000;
+
 /**
  * EditorCacheProvider manages TipTap collaboration lifecycle:
  * - Y.Doc creation/reuse across session changes
@@ -229,6 +232,15 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   const providerRef = useRef<TiptapCollabProvider | null>(null);
   const yDocRef = useRef<Y.Doc | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Clears any pending sync timeout to prevent stale callbacks */
+  const clearSyncTimeout = useCallback(() => {
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+  }, []);
 
   // Generate a consistent color for this user session
   const userColor = useMemo(() => generateCollaborativeUserColor(), []);
@@ -274,15 +286,16 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       // Let CollaborationCaret manage the "user" field to avoid conflicts
       provider.setAwarenessField("presence", userPresence);
 
-      // Provider event handlers: sync completion enables collaborative editing
-      // IMPORTANT: Track if we've already created extensions to prevent recreation
+      // Track whether extensions have been created to prevent duplicate creation
+      // (both synced handler and timeout handler call enableEditing)
       let extensionsCreated = false;
 
-      provider.on("synced", () => {
+      // Creates extensions and enables collaborative editing.
+      // Called by either the synced handler or the timeout handler — whichever fires first.
+      const enableEditing = () => {
         if (extensionsCreated) {
           return;
         }
-
         extensionsCreated = true;
 
         const collaborativeExtensions = createExtensions(doc, provider, {
@@ -299,7 +312,25 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
           isLoading: false,
           error: null,
         }));
+      };
+
+      // Sync completion: creates extensions and enables collaborative editing
+      provider.on("synced", () => {
+        clearSyncTimeout();
+
+        enableEditing();
       });
+
+      // Sync timeout: enable offline editing if sync doesn't complete in time.
+      // The provider keeps retrying in the background; if sync eventually succeeds,
+      // Y.js CRDT merges any local edits with server content seamlessly.
+      syncTimeoutRef.current = setTimeout(() => {
+        syncTimeoutRef.current = null;
+        console.warn(
+          `TipTap sync did not complete within ${SYNC_TIMEOUT_MS}ms — enabling offline editing`
+        );
+        enableEditing();
+      }, SYNC_TIMEOUT_MS);
 
       providerRef.current = provider;
 
@@ -398,6 +429,8 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     } catch (error) {
       console.error("Collaboration provider initialization failed:", error);
 
+      clearSyncTimeout();
+
       // Fallback to offline editing mode
       const fallbackExtensions = createExtensions(null, null);
 
@@ -439,6 +472,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
         break;
 
       case ActionKind.Cleanup:
+        clearSyncTimeout();
         providerRef.current?.disconnect();
         providerRef.current = null;
         // After cleanup, immediately initialize for new session if ready.
@@ -481,6 +515,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       // IMPORTANT: Only disconnect on unmount or session change
       // Don't disconnect if dependencies change but provider should stay
       if (providerRef.current && lastSessionIdRef.current !== sessionId) {
+        clearSyncTimeout();
         providerRef.current.disconnect();
         providerRef.current = null;
       }
@@ -522,6 +557,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   // Unmount cleanup: broadcast disconnected presence when leaving the session
   useEffect(() => {
     return () => {
+      clearSyncTimeout();
       const provider = providerRef.current;
       const { userSession, userRole, userColor } = cleanupDataRef.current;
       if (provider && userSession) {
@@ -539,6 +575,8 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   // Logout cleanup registration: ensures proper provider teardown on session end
   useLogoutCleanup(
     useCallback(() => {
+      clearSyncTimeout();
+
       const provider = providerRef.current;
 
       if (provider) {
@@ -576,6 +614,8 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
   // Cache reset: clears all state for fresh initialization
   const resetCache = useCallback(() => {
+    clearSyncTimeout();
+
     if (providerRef.current) {
       try {
         providerRef.current.destroy();

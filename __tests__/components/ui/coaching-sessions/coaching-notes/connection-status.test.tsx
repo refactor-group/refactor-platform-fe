@@ -226,6 +226,7 @@ describe('ConnectionStatus', () => {
       expect(badge).toBeInTheDocument()
       expect(badge).toHaveClass('bg-destructive') // Destructive variant for error state
     })
+
   })
 
   describe('Connection Transitions', () => {
