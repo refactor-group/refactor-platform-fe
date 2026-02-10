@@ -149,7 +149,7 @@ describe("JoinSessionPopover", () => {
     fireEvent.click(screen.getByText("Join Session"));
 
     expect(screen.getByText("Upcoming Sessions")).toBeInTheDocument();
-    expect(screen.getByText("Browse Sessions")).toBeInTheDocument();
+    expect(screen.getByText("Other Sessions")).toBeInTheDocument();
   });
 
   it("shows empty state when no sessions today", () => {
@@ -303,7 +303,7 @@ describe("JoinSessionPopover", () => {
     ]);
   });
 
-  describe("Browse Sessions date filter buttons", () => {
+  describe("Other Sessions date filter buttons", () => {
     const relationship = {
       id: "rel-1",
       coach_id: "user-1",
@@ -432,8 +432,8 @@ describe("JoinSessionPopover", () => {
     });
   });
 
-  describe("Browse Sessions collapsible behavior", () => {
-    it("expands Browse Sessions by default when no today's sessions", () => {
+  describe("Other Sessions collapsible behavior", () => {
+    it("expands Other Sessions by default when no today's sessions", () => {
       // beforeEach sets sessions to empty array
       vi.mocked(useCoachingRelationshipList).mockReturnValue({
         relationships: [
@@ -467,7 +467,7 @@ describe("JoinSessionPopover", () => {
       expect(screen.getByText("Select a coachee...")).toBeInTheDocument();
     });
 
-    it("collapses Browse Sessions by default when today has sessions", () => {
+    it("collapses Other Sessions by default when today has sessions", () => {
       const session = makeTodaySession({ id: "session-1" });
 
       vi.mocked(useTodaysSessions).mockReturnValue({
@@ -510,7 +510,7 @@ describe("JoinSessionPopover", () => {
       expect(screen.queryByText("Select a coachee...")).not.toBeInTheDocument();
     });
 
-    it("toggles Browse Sessions open when clicking its header", () => {
+    it("toggles Other Sessions open when clicking its header", () => {
       const session = makeTodaySession({ id: "session-1" });
 
       vi.mocked(useTodaysSessions).mockReturnValue({
@@ -552,8 +552,8 @@ describe("JoinSessionPopover", () => {
       // Initially collapsed
       expect(screen.queryByText("Select a coachee...")).not.toBeInTheDocument();
 
-      // Click the Browse Sessions header to expand
-      fireEvent.click(screen.getByText("Browse Sessions"));
+      // Click the Other Sessions header to expand
+      fireEvent.click(screen.getByText("Other Sessions"));
 
       // Now the content should be visible
       expect(screen.getByText("Select a coachee...")).toBeInTheDocument();
