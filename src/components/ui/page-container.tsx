@@ -15,7 +15,7 @@ export function PageContainer({
         // Mobile: stack vertically
         "flex flex-col gap-6",
         // Constrain width to a reasonable maximum while allowing flexibility
-        "w-full max-w-screen-2xl mx-auto",
+        "w-full max-w-screen-2xl",
         // Ensure children respect the container width
         "[&>*]:w-full"
       )}
