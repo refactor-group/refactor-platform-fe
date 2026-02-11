@@ -223,7 +223,7 @@ function RelationshipSessionBrowser({
         <SelectTrigger className="w-full text-sm">
           <SelectValue placeholder="Select a coachee..." />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-[var(--radix-select-content-available-height)]">
           {sortedRelationships.map((rel) => (
             <SelectItem key={rel.id} value={rel.id}>
               {getOtherPersonName(rel, userId)}
@@ -364,7 +364,7 @@ function SessionGroup({
           onClick={() => onSessionClick(session.id)}
           className="flex flex-col items-start w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
         >
-          <span className="truncate font-medium">
+          <span className="w-full truncate font-medium">
             {session.overarching_goal?.title || "No goal set"}
           </span>
           <span className="text-xs text-muted-foreground truncate">
