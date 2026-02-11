@@ -602,7 +602,7 @@
 .floating-toolbar {
   position: fixed;
   top: 5rem; /* Below the header (64px) + some margin */
-  z-index: 9999; /* Well above header z-50 */
+  z-index: 40; /* Below header (z-50) and its popovers */
   background-color: var(--editor-bg);
   border: 1px solid var(--editor-border);
   border-radius: 0.75rem;

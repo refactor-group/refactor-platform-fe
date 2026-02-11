@@ -223,7 +223,7 @@ function RelationshipSessionBrowser({
         <SelectTrigger className="w-full text-sm">
           <SelectValue placeholder="Select a coachee..." />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-[var(--radix-select-content-available-height)]">
           {sortedRelationships.map((rel) => (
             <SelectItem key={rel.id} value={rel.id}>
               {getOtherPersonName(rel, userId)}
@@ -364,7 +364,7 @@ function SessionGroup({
           onClick={() => onSessionClick(session.id)}
           className="flex flex-col items-start w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
         >
-          <span className="truncate font-medium">
+          <span className="w-full truncate font-medium">
             {session.overarching_goal?.title || "No goal set"}
           </span>
           <span className="text-xs text-muted-foreground truncate">
@@ -380,7 +380,11 @@ function SessionGroup({
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function JoinSessionPopover() {
+export function JoinSessionPopover({
+  defaultRelationshipId,
+}: {
+  defaultRelationshipId?: string;
+}) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -394,10 +398,12 @@ export function JoinSessionPopover() {
   const [browseOpen, setBrowseOpen] = useState(!hasTodaySessions);
 
   // Browsing relationship state lives here so it survives SelectContent
-  // portal interactions and child re-renders
+  // portal interactions and child re-renders.
+  // Pre-select the current coaching relationship so the user sees their
+  // active coachee immediately, but they can still switch to another.
   const [browsingRelationshipId, setBrowsingRelationshipId] = useState<
     string | undefined
-  >(undefined);
+  >(defaultRelationshipId);
 
   const handleSessionClick = (sessionId: string) => {
     setOpen(false);
@@ -411,8 +417,8 @@ export function JoinSessionPopover() {
       if (isOpen) {
         refresh();
         setBrowseOpen(!hasTodaySessions);
-        // Reset browsing relationship so it re-derives from global state on open
-        setBrowsingRelationshipId(undefined);
+        // Re-sync browsing relationship with current coaching relationship on open
+        setBrowsingRelationshipId(defaultRelationshipId);
       }
     }}>
       <PopoverTrigger asChild>
