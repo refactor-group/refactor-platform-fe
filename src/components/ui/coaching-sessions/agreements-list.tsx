@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowUp, ArrowDown } from "lucide-react";
+import { MoreHorizontal, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { Id } from "@/types/general";
 import { useAgreementList } from "@/lib/api/agreements";
 import { Agreement } from "@/types/agreement";
@@ -35,11 +35,13 @@ const AgreementsList: React.FC<{
   coachingSessionId: Id;
   userId: Id;
   locale: string | "us";
+  isSaving: boolean;
   onAgreementAdded: (value: string) => Promise<Agreement>;
   onAgreementEdited: (id: Id, value: string) => Promise<Agreement>;
   onAgreementDeleted: (id: Id) => Promise<Agreement>;
 }> = ({
   coachingSessionId,
+  isSaving,
   onAgreementAdded,
   onAgreementEdited,
   onAgreementDeleted,
@@ -243,7 +245,7 @@ const AgreementsList: React.FC<{
               editingAgreementId
                 ? cancelEditAgreement()
                 : clearNewAgreementForm();
-            } else if (e.key === "Enter") {
+            } else if (e.key === "Enter" && !isSaving) {
               addAgreement();
             }
           }}
@@ -257,7 +259,8 @@ const AgreementsList: React.FC<{
             }
             className="w-full sm:flex-grow"
           />
-          <Button onClick={addAgreement} className="w-full sm:w-auto">
+          <Button onClick={addAgreement} disabled={isSaving} className="w-full sm:w-auto">
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {editingAgreementId ? "Update" : "Save"}
           </Button>
         </div>

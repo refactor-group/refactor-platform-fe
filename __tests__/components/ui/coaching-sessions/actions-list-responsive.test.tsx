@@ -60,6 +60,7 @@ describe('ActionsList Responsive Design', () => {
     coachName: 'Coach Jane',
     coacheeId: MOCK_COACHEE_ID,
     coacheeName: 'Coachee John',
+    isSaving: false,
     onActionAdded: vi.fn(),
     onActionEdited: vi.fn(),
     onActionDeleted: vi.fn(),

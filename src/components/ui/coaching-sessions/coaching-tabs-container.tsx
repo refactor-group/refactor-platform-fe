@@ -37,12 +37,14 @@ const CoachingTabsContainer: React.FC<{
     create: createAgreement,
     update: updateAgreement,
     delete: deleteAgreement,
+    isLoading: isAgreementMutating,
   } = useAgreementMutation();
 
   const {
     create: createAction,
     update: updateAction,
     delete: deleteAction,
+    isLoading: isActionMutating,
   } = useActionMutation();
 
   // Agreement CRUD handlers
@@ -139,6 +141,7 @@ const CoachingTabsContainer: React.FC<{
               coachingSessionId={currentCoachingSessionId || ""}
               userId={userId}
               locale={siteConfig.locale}
+              isSaving={isAgreementMutating}
               onAgreementAdded={handleAgreementAdded}
               onAgreementEdited={handleAgreementEdited}
               onAgreementDeleted={handleAgreementDeleted}
@@ -154,6 +157,7 @@ const CoachingTabsContainer: React.FC<{
               coachName={currentCoachingRelationship?.coach_first_name || "Coach"}
               coacheeId={currentCoachingRelationship?.coachee_id || ""}
               coacheeName={currentCoachingRelationship?.coachee_first_name || "Coachee"}
+              isSaving={isActionMutating}
               onActionAdded={handleActionAdded}
               onActionEdited={handleActionEdited}
               onActionDeleted={handleActionDeleted}

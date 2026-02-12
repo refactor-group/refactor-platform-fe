@@ -36,6 +36,7 @@ import {
   ArrowUp,
   ArrowDown,
   CalendarClock,
+  Loader2,
 } from "lucide-react";
 import {
   ItemStatus,
@@ -91,6 +92,7 @@ interface ActionsListProps {
     assigneeIds?: Id[]
   ) => Promise<Action>;
   onActionDeleted: (id: Id) => Promise<Action>;
+  isSaving: boolean;
 }
 
 const ActionsList: React.FC<ActionsListProps> = ({
@@ -100,6 +102,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
   coachName,
   coacheeId,
   coacheeName,
+  isSaving,
   onActionAdded,
   onActionEdited,
   onActionDeleted,
@@ -451,7 +454,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               editingActionId ? cancelEditAction() : clearNewActionForm();
-            } else if (e.key === "Enter") {
+            } else if (e.key === "Enter" && !isSaving) {
               addAction();
             }
           }}
@@ -515,7 +518,8 @@ const ActionsList: React.FC<ActionsListProps> = ({
               />
             </PopoverContent>
           </Popover>
-          <Button onClick={addAction} className="w-full sm:w-auto">
+          <Button onClick={addAction} disabled={isSaving} className="w-full sm:w-auto">
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {editingActionId ? "Update" : "Save"}
           </Button>
         </div>

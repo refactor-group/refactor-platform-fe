@@ -43,6 +43,7 @@ describe('AgreementsList', () => {
     coachingSessionId: 'session-123',
     userId: 'user-123',
     locale: 'us',
+    isSaving: false,
     onAgreementAdded: vi.fn(),
     onAgreementEdited: vi.fn(),
     onAgreementDeleted: vi.fn(),
