@@ -5,6 +5,9 @@ import { ActionsList } from '@/components/ui/coaching-sessions/actions-list'
 import { TestProviders } from '@/test-utils/providers'
 import { ItemStatus } from '@/types/general'
 import { DateTime } from 'ts-luxon'
+import { toast } from 'sonner'
+
+vi.mock('sonner')
 
 // Mock user IDs for coach and coachee
 const MOCK_COACH_ID = 'coach-123'
@@ -64,6 +67,7 @@ describe('ActionsList', () => {
     coachName: 'Coach Jane',
     coacheeId: MOCK_COACHEE_ID,
     coacheeName: 'Coachee John',
+    isSaving: false,
     onActionAdded: vi.fn(),
     onActionEdited: vi.fn(),
     onActionDeleted: vi.fn(),
@@ -365,5 +369,119 @@ describe('ActionsList', () => {
     // Find the Assignee text within a table header cell
     const assigneeHeader = screen.getByRole('columnheader', { name: /assignee/i })
     expect(assigneeHeader).toBeInTheDocument()
+  })
+
+  /**
+   * Error Toast Tests
+   * Validates that user-facing error messages appear when operations fail
+   */
+  describe('Error Toasts', () => {
+    const mockToast = vi.mocked(toast)
+
+    /**
+     * Asserts toast.error is called when saving a new action fails
+     * This ensures visible feedback on create failure
+     */
+    it('should show error toast when saving a new action fails', async () => {
+      mockProps.onActionAdded.mockRejectedValue(new Error('Network error'))
+
+      render(
+        <TestProviders>
+          <ActionsList {...mockProps} />
+        </TestProviders>
+      )
+
+      const input = screen.getByPlaceholderText('Enter new action')
+      const saveButton = screen.getByText('Save')
+
+      fireEvent.change(input, { target: { value: 'New action' } })
+      fireEvent.click(saveButton)
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to save action.')
+      })
+    })
+
+    /**
+     * Asserts toast.error is called when updating an action fails
+     * This ensures visible feedback on update failure
+     */
+    it('should show error toast when updating an action fails', async () => {
+      const user = userEvent.setup()
+      mockProps.onActionEdited.mockRejectedValue(new Error('Network error'))
+
+      render(
+        <TestProviders>
+          <ActionsList {...mockProps} />
+        </TestProviders>
+      )
+
+      // Enter edit mode via dropdown on first action (action-3 due to sort)
+      const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
+      await user.click(dropdownTriggers[0])
+
+      await waitFor(() => {
+        expect(screen.getByText('Edit')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByText('Edit'))
+
+      const updateButton = screen.getByText('Update')
+      await user.click(updateButton)
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to update action.')
+      })
+    })
+
+    /**
+     * Asserts toast.error is called when deleting an action fails
+     * This ensures visible feedback on delete failure
+     */
+    it('should show error toast when deleting an action fails', async () => {
+      const user = userEvent.setup()
+      mockProps.onActionDeleted.mockRejectedValue(new Error('Network error'))
+
+      render(
+        <TestProviders>
+          <ActionsList {...mockProps} />
+        </TestProviders>
+      )
+
+      const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
+      await user.click(dropdownTriggers[0])
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByText('Delete'))
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to delete action.')
+      })
+    })
+
+    /**
+     * Asserts toast.error is called when toggling action completion fails
+     * This ensures visible feedback on checkbox toggle failure
+     */
+    it('should show error toast when completion toggle fails', async () => {
+      mockProps.onActionEdited.mockRejectedValue(new Error('Network error'))
+
+      render(
+        <TestProviders>
+          <ActionsList {...mockProps} />
+        </TestProviders>
+      )
+
+      // Click the first checkbox (action-3 due to sort, NotStarted -> Completed)
+      const checkboxes = screen.getAllByRole('checkbox')
+      fireEvent.click(checkboxes[0])
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to update action status.')
+      })
+    })
   })
 })

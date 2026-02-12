@@ -4,6 +4,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AgreementsList } from '@/components/ui/coaching-sessions/agreements-list'
 import { TestProviders } from '@/test-utils/providers'
 import { DateTime } from 'ts-luxon'
+import { toast } from 'sonner'
+
+vi.mock('sonner')
 
 // Mock the agreements API hook
 const mockAgreements = [
@@ -43,6 +46,7 @@ describe('AgreementsList', () => {
     coachingSessionId: 'session-123',
     userId: 'user-123',
     locale: 'us',
+    isSaving: false,
     onAgreementAdded: vi.fn(),
     onAgreementEdited: vi.fn(),
     onAgreementDeleted: vi.fn(),
@@ -296,23 +300,115 @@ describe('AgreementsList', () => {
     const user = userEvent.setup()
     const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
     await user.click(dropdownTriggers[0])
-    
+
     await waitFor(() => {
       expect(screen.getByText('Edit')).toBeInTheDocument()
     })
-    
+
     await user.click(screen.getByText('Edit'))
 
     const input = screen.getByDisplayValue('Monthly goal review sessions')
-    
+
     // Change the text
     fireEvent.change(input, { target: { value: 'Modified text' } })
-    
+
     // Press Escape to cancel
     fireEvent.keyDown(input.closest('div')!, { key: 'Escape' })
-    
+
     // Should return to add mode with empty form
     expect(screen.getByPlaceholderText('Enter new agreement')).toHaveValue('')
     expect(screen.getByText('Save')).toBeInTheDocument()
+  })
+
+  /**
+   * Error Toast Tests
+   * Validates that user-facing error messages appear when operations fail
+   */
+  describe('Error Toasts', () => {
+    const mockToast = vi.mocked(toast)
+
+    /**
+     * Asserts toast.error is called when saving a new agreement fails
+     * This ensures visible feedback on create failure
+     */
+    it('should show error toast when saving a new agreement fails', async () => {
+      mockProps.onAgreementAdded.mockRejectedValue(new Error('Network error'))
+
+      render(
+        <TestProviders>
+          <AgreementsList {...mockProps} />
+        </TestProviders>
+      )
+
+      const input = screen.getByPlaceholderText('Enter new agreement')
+      const saveButton = screen.getByText('Save')
+
+      fireEvent.change(input, { target: { value: 'New agreement' } })
+      fireEvent.click(saveButton)
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to save agreement.')
+      })
+    })
+
+    /**
+     * Asserts toast.error is called when updating an agreement fails
+     * This ensures visible feedback on update failure
+     */
+    it('should show error toast when updating an agreement fails', async () => {
+      const user = userEvent.setup()
+      mockProps.onAgreementEdited.mockRejectedValue(new Error('Network error'))
+
+      render(
+        <TestProviders>
+          <AgreementsList {...mockProps} />
+        </TestProviders>
+      )
+
+      // Enter edit mode
+      const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
+      await user.click(dropdownTriggers[0])
+
+      await waitFor(() => {
+        expect(screen.getByText('Edit')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByText('Edit'))
+
+      const updateButton = screen.getByText('Update')
+      await user.click(updateButton)
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to update agreement.')
+      })
+    })
+
+    /**
+     * Asserts toast.error is called when deleting an agreement fails
+     * This ensures visible feedback on delete failure
+     */
+    it('should show error toast when deleting an agreement fails', async () => {
+      const user = userEvent.setup()
+      mockProps.onAgreementDeleted.mockRejectedValue(new Error('Network error'))
+
+      render(
+        <TestProviders>
+          <AgreementsList {...mockProps} />
+        </TestProviders>
+      )
+
+      const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
+      await user.click(dropdownTriggers[0])
+
+      await waitFor(() => {
+        expect(screen.getByText('Delete')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByText('Delete'))
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith('Failed to delete agreement.')
+      })
+    })
   })
 })
