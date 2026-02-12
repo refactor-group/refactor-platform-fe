@@ -38,6 +38,7 @@ import {
   CalendarClock,
   Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   ItemStatus,
   actionStatusToString,
@@ -217,6 +218,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
       refresh();
     } catch (err) {
       console.error("Failed to update action completion status: " + err);
+      toast.error("Failed to update action status.");
     }
   };
 
@@ -266,7 +268,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
       clearNewActionForm();
     } catch (err) {
       console.error("Failed to save Action: " + err);
-      throw err;
+      toast.error(editingActionId ? "Failed to update action." : "Failed to save action.");
     }
   };
 
@@ -281,7 +283,7 @@ const ActionsList: React.FC<ActionsListProps> = ({
       refresh();
     } catch (err) {
       console.error("Failed to delete Action (id: " + id + "): " + err);
-      throw err;
+      toast.error("Failed to delete action.");
     }
   };
 

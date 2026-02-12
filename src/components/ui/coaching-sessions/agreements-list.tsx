@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Id } from "@/types/general";
 import { useAgreementList } from "@/lib/api/agreements";
 import { Agreement } from "@/types/agreement";
@@ -105,7 +106,7 @@ const AgreementsList: React.FC<{
       clearNewAgreementForm();
     } catch (err) {
       console.error("Failed to save Agreement: " + err);
-      throw err;
+      toast.error(editingAgreementId ? "Failed to update agreement." : "Failed to save agreement.");
     }
   };
 
@@ -120,7 +121,7 @@ const AgreementsList: React.FC<{
       refresh();
     } catch (err) {
       console.error("Failed to delete Agreement (id: " + id + "): " + err);
-      throw err;
+      toast.error("Failed to delete agreement.");
     }
   };
 
