@@ -76,7 +76,7 @@ const createMockProvider = () => {
 }
 
 vi.mock('@hocuspocus/provider', () => ({
-  TiptapCollabProvider: vi.fn(() => createMockProvider()),
+  TiptapCollabProvider: vi.fn(function() { return createMockProvider() }),
   WebSocketStatus: {
     Connecting: 'connecting',
     Connected: 'connected',
@@ -85,7 +85,7 @@ vi.mock('@hocuspocus/provider', () => ({
 }))
 
 vi.mock('yjs', () => ({
-  Doc: vi.fn(() => ({}))
+  Doc: vi.fn(function() { return {} })
 }))
 
 import { useCollaborationToken } from '@/lib/api/collaboration-token'
