@@ -8,11 +8,13 @@ import { LinkPopover } from '@/components/ui/tiptap-ui/link-popover'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 // Mock ResizeObserver for test environment
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+global.ResizeObserver = vi.fn().mockImplementation(function() {
+  return {
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }
+})
 
 describe('LinkPopover', () => {
   const createEditorWithContent = (content: string = '') => {

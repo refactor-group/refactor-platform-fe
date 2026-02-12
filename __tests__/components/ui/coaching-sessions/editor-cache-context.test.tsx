@@ -80,7 +80,7 @@ vi.mock('@hocuspocus/provider', () => ({
 }))
 
 vi.mock('yjs', () => ({
-  Doc: vi.fn(() => ({}))
+  Doc: vi.fn(function() { return {} })
 }))
 
 import { useCollaborationToken } from '@/lib/api/collaboration-token'
