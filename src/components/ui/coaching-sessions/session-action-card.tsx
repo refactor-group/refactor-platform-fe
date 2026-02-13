@@ -352,7 +352,7 @@ const SessionActionCard = ({
                 href={`/coaching-sessions/${action.coaching_session_id}?tab=actions`}
                 className="hover:underline hover:text-foreground transition-colors"
               >
-                Session:{" "}
+                From:{" "}
                 {action.created_at
                   .setLocale(siteConfig.locale)
                   .toLocaleString(DateTime.DATE_MED)}
