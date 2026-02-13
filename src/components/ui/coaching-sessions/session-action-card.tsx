@@ -161,7 +161,7 @@ const SessionActionCard = ({
     <Card
       className={cn(
         "shadow-sm shadow-black/10 hover:border-primary transition-colors",
-        isOverdue && "border-l-4 border-l-red-500",
+        isOverdue && "bg-red-50/40 dark:bg-red-950/15",
         isCompleted && "opacity-60"
       )}
     >
