@@ -18,6 +18,48 @@ import { UserActionsScope } from "@/types/assigned-actions";
 import { SessionActionCard } from "@/components/ui/coaching-sessions/session-action-card";
 import { GhostActionCard } from "@/components/ui/coaching-sessions/ghost-action-card";
 
+/**
+ * Pure filter for determining which actions should appear in "Actions for Review".
+ *
+ * Rules:
+ * 1. Exclude actions belonging to the current session
+ * 2. Include sticky actions (previously visible) regardless of current state
+ * 3. Exclude actions due after the current session date
+ * 4. Include actions due within [previousSessionDate, currentSessionDate] (any status)
+ * 5. Include actions due before the window only if still outstanding (NotStarted/InProgress)
+ *
+ * Results are sorted reverse-chronologically by due_by.
+ */
+export function filterReviewActions(
+  allActions: Action[],
+  currentSessionId: Id,
+  currentSessionDate: DateTime,
+  previousSessionDate: DateTime | null,
+  stickyIds?: Set<Id>
+): Action[] {
+  const endOfCurrentDate = currentSessionDate.endOf("day");
+  const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
+
+  return allActions
+    .filter((a) => {
+      if (a.coaching_session_id === currentSessionId) return false;
+
+      if (stickyIds?.has(a.id)) return true;
+
+      const dueBy = a.due_by;
+
+      if (dueBy > endOfCurrentDate) return false;
+
+      if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
+
+      return (
+        a.status === ItemStatus.NotStarted ||
+        a.status === ItemStatus.InProgress
+      );
+    })
+    .sort((a, b) => b.due_by.toMillis() - a.due_by.toMillis());
+}
+
 interface ActionsListProps {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
@@ -114,40 +156,16 @@ const ActionsList = ({
   // visible even if the user edits a due date outside the window.
   const stickyReviewIdsRef = useRef<Set<Id> | null>(null);
 
-  // Actions for review: from other sessions where either:
-  // 1. due_by falls within the window [previous session, current session] (any status), OR
-  // 2. due_by is before the window and still outstanding (overdue items always surface), OR
-  // 3. the action was initially visible in this session (sticky)
   const reviewActions = useMemo(() => {
     if (!currentSessionDate) return [];
 
-    const endOfCurrentDate = currentSessionDate.endOf("day");
-    const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
-    const stickyIds = stickyReviewIdsRef.current;
-
-    const filtered = allActions
-      .filter((a) => {
-        // Exclude actions from this session
-        if (a.coaching_session_id === coachingSessionId) return false;
-
-        // Keep actions that were initially visible (sticky)
-        if (stickyIds?.has(a.id)) return true;
-
-        const dueBy = a.due_by;
-
-        // Exclude actions due after this session
-        if (dueBy > endOfCurrentDate) return false;
-
-        // Due within the window [previous session, current session]: include all statuses
-        if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
-
-        // Due before the window: only include if still outstanding (overdue)
-        return (
-          a.status === ItemStatus.NotStarted ||
-          a.status === ItemStatus.InProgress
-        );
-      })
-      .sort((a, b) => b.due_by.toMillis() - a.due_by.toMillis());
+    const filtered = filterReviewActions(
+      allActions,
+      coachingSessionId,
+      currentSessionDate,
+      previousSessionDate,
+      stickyReviewIdsRef.current ?? undefined
+    );
 
     // Capture initial set of visible IDs on first computation
     if (stickyReviewIdsRef.current === null && filtered.length > 0) {

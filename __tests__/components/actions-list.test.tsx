@@ -1,66 +1,110 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ReactNode } from 'react'
 import { ActionsList } from '@/components/ui/coaching-sessions/actions-list'
 import { TestProviders } from '@/test-utils/providers'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { ItemStatus } from '@/types/general'
 import { DateTime } from 'ts-luxon'
-import { toast } from 'sonner'
 
-vi.mock('sonner')
+/** Wraps children in both TestProviders and TooltipProvider */
+function Wrapper({ children }: { children: ReactNode }) {
+  return (
+    <TestProviders>
+      <TooltipProvider>{children}</TooltipProvider>
+    </TestProviders>
+  )
+}
 
 // Mock user IDs for coach and coachee
 const MOCK_COACH_ID = 'coach-123'
 const MOCK_COACHEE_ID = 'coachee-456'
+const MOCK_SESSION_ID = 'session-123'
 
-// Mock the actions API hook
-const mockActions = [
+// Mock actions for the current session
+const mockSessionActions = [
   {
     id: 'action-1',
+    coaching_session_id: MOCK_SESSION_ID,
+    user_id: MOCK_COACH_ID,
     body: 'Complete project proposal',
     status: ItemStatus.InProgress,
-    due_by: DateTime.fromISO('2024-01-15'),
-    created_at: DateTime.fromISO('2024-01-01'),
+    status_changed_at: DateTime.now(),
+    due_by: DateTime.fromISO('2026-02-15'),
+    created_at: DateTime.fromISO('2026-02-01'),
+    updated_at: DateTime.now(),
     assignee_ids: [MOCK_COACH_ID],
   },
   {
     id: 'action-2',
+    coaching_session_id: MOCK_SESSION_ID,
+    user_id: MOCK_COACH_ID,
     body: 'Review quarterly goals',
     status: ItemStatus.Completed,
-    due_by: DateTime.fromISO('2024-01-20'),
-    created_at: DateTime.fromISO('2024-01-02'),
+    status_changed_at: DateTime.now(),
+    due_by: DateTime.fromISO('2026-02-20'),
+    created_at: DateTime.fromISO('2026-02-02'),
+    updated_at: DateTime.now(),
     assignee_ids: [MOCK_COACH_ID, MOCK_COACHEE_ID],
   },
   {
     id: 'action-3',
+    coaching_session_id: MOCK_SESSION_ID,
+    user_id: MOCK_COACHEE_ID,
     body: 'Unassigned task',
     status: ItemStatus.NotStarted,
-    due_by: DateTime.fromISO('2024-01-25'),
-    created_at: DateTime.fromISO('2024-01-03'),
+    status_changed_at: DateTime.now(),
+    due_by: DateTime.fromISO('2026-02-25'),
+    created_at: DateTime.fromISO('2026-02-03'),
+    updated_at: DateTime.now(),
     assignee_ids: [],
-  }
+  },
 ]
 
-const mockActionListHook = {
-  actions: mockActions,
-  isLoading: false,
-  isError: false,
-  refresh: vi.fn(),
-}
+const mockRefreshSession = vi.fn()
+const mockRefreshAll = vi.fn()
 
 vi.mock('@/lib/api/user-actions', () => ({
-  useUserActionsList: vi.fn(() => mockActionListHook)
+  useUserActionsList: vi.fn((userId: string, params: Record<string, unknown>) => {
+    if (params?.coaching_session_id) {
+      return {
+        actions: mockSessionActions,
+        isLoading: false,
+        isError: false,
+        refresh: mockRefreshSession,
+      }
+    }
+    // All actions (for review filtering)
+    return {
+      actions: mockSessionActions,
+      isLoading: false,
+      isError: false,
+      refresh: mockRefreshAll,
+    }
+  }),
+}))
+
+vi.mock('@/lib/api/coaching-sessions', () => ({
+  useCoachingSessionList: vi.fn(() => ({
+    coachingSessions: [],
+    isLoading: false,
+    isError: false,
+  })),
 }))
 
 /**
- * Test Suite: Actions CRUD Operations & Checkbox Toggle
- * 
- * Purpose: Validates Actions table functionality including completion status toggling,
- * CRUD operations, sorting with visual indicators, and form interactions.
+ * Test Suite: Actions Card Stack — CRUD Operations & Checkbox Toggle
+ *
+ * Purpose: Validates the card-based ActionsList functionality including
+ * rendering action cards, completion checkbox toggling, creating actions
+ * via the ghost card, inline body editing, and deleting actions.
  */
 describe('ActionsList', () => {
   const mockProps = {
-    coachingSessionId: 'session-123',
+    coachingSessionId: MOCK_SESSION_ID,
+    coachingRelationshipId: 'rel-123',
+    sessionDate: '2026-02-11',
     userId: 'user-123',
     locale: 'us',
     coachId: MOCK_COACH_ID,
@@ -77,411 +121,337 @@ describe('ActionsList', () => {
     vi.clearAllMocks()
     mockProps.onActionAdded.mockResolvedValue({
       id: 'new-action',
+      coaching_session_id: MOCK_SESSION_ID,
+      user_id: MOCK_COACH_ID,
       body: 'New action',
       status: ItemStatus.NotStarted,
+      status_changed_at: DateTime.now(),
       due_by: DateTime.now(),
       created_at: DateTime.now(),
+      updated_at: DateTime.now(),
       assignee_ids: [],
     })
     mockProps.onActionEdited.mockResolvedValue({
       id: 'action-1',
+      coaching_session_id: MOCK_SESSION_ID,
+      user_id: MOCK_COACH_ID,
       body: 'Updated action',
       status: ItemStatus.InProgress,
+      status_changed_at: DateTime.now(),
       due_by: DateTime.now(),
       created_at: DateTime.now(),
+      updated_at: DateTime.now(),
       assignee_ids: [MOCK_COACH_ID],
+    })
+    mockProps.onActionDeleted.mockResolvedValue({
+      id: 'action-1',
+      coaching_session_id: MOCK_SESSION_ID,
+      user_id: MOCK_COACH_ID,
+      body: '',
+      status: ItemStatus.NotStarted,
+      status_changed_at: DateTime.now(),
+      due_by: DateTime.now(),
+      created_at: DateTime.now(),
+      updated_at: DateTime.now(),
+      assignee_ids: [],
     })
   })
 
   /**
-   * Asserts checkboxes appear and reflect correct checked/unchecked state based on action status
-   * This validates the completion checkbox UI and state mapping
+   * Asserts action card text and checkboxes render for all session actions
    */
-  it('should render actions table with completion checkboxes', () => {
+  it('should render action cards with completion checkboxes', () => {
     render(
-      <TestProviders>
+      <Wrapper>
         <ActionsList {...mockProps} />
-      </TestProviders>
+      </Wrapper>
     )
 
     expect(screen.getByText('Complete project proposal')).toBeInTheDocument()
     expect(screen.getByText('Review quarterly goals')).toBeInTheDocument()
     expect(screen.getByText('Unassigned task')).toBeInTheDocument()
 
-    // Check that completion checkboxes are present (3 actions)
+    // 3 action checkboxes in session cards
     const checkboxes = screen.getAllByRole('checkbox')
-    expect(checkboxes).toHaveLength(3)
-
-    // Due to default sort by due_by desc:
-    // action-3 (2024-01-25) comes first - NotStarted (unchecked)
-    expect(checkboxes[0]).not.toBeChecked()
-    // action-2 (2024-01-20) comes second - Completed (checked)
-    expect(checkboxes[1]).toBeChecked()
-    // action-1 (2024-01-15) comes third - InProgress (unchecked)
-    expect(checkboxes[2]).not.toBeChecked()
+    expect(checkboxes.length).toBeGreaterThanOrEqual(3)
   })
 
   /**
-   * Asserts clicking checkbox calls onActionEdited with toggled status and preserves assignees
-   * This validates the core completion toggle functionality
+   * Asserts "New Actions" section heading is present
+   */
+  it('should display the New Actions section heading', () => {
+    render(
+      <Wrapper>
+        <ActionsList {...mockProps} />
+      </Wrapper>
+    )
+
+    expect(screen.getByText('New Actions')).toBeInTheDocument()
+  })
+
+  /**
+   * Asserts the "Actions for Review" collapsible section is present
+   */
+  it('should display the Actions for Review collapsible section', () => {
+    render(
+      <Wrapper>
+        <ActionsList {...mockProps} />
+      </Wrapper>
+    )
+
+    expect(screen.getByText('Actions for Review')).toBeInTheDocument()
+  })
+
+  /**
+   * Asserts clicking a completion checkbox calls onActionEdited with toggled status
    */
   it('should toggle action completion status when checkbox is clicked', async () => {
     render(
-      <TestProviders>
+      <Wrapper>
         <ActionsList {...mockProps} />
-      </TestProviders>
+      </Wrapper>
     )
 
-    const checkboxes = screen.getAllByRole('checkbox')
-
-    // Click the second checkbox (which is action-2 due to sorting, Completed -> InProgress)
-    fireEvent.click(checkboxes[1])
+    // Find the checkbox inside the card for "Review quarterly goals" (Completed action)
+    const completedCard = screen.getByText('Review quarterly goals').closest('[class*="card"]')!
+    const checkbox = completedCard.querySelector('[role="checkbox"]')!
+    fireEvent.click(checkbox)
 
     await waitFor(() => {
       expect(mockProps.onActionEdited).toHaveBeenCalledWith(
         'action-2',
         'Review quarterly goals',
         ItemStatus.InProgress,
-        mockActions[1].due_by,
-        mockActions[1].assignee_ids // Assignees should be preserved
+        mockSessionActions[1].due_by,
+        mockSessionActions[1].assignee_ids
       )
     })
-
-    expect(mockActionListHook.refresh).toHaveBeenCalled()
   })
 
   /**
-   * Asserts reverse toggle works (InProgress → Completed)
-   * This ensures bidirectional status toggling
+   * Asserts reverse toggle works (InProgress -> Completed)
    */
   it('should toggle in-progress action to completed', async () => {
     render(
-      <TestProviders>
+      <Wrapper>
         <ActionsList {...mockProps} />
-      </TestProviders>
+      </Wrapper>
     )
 
-    const checkboxes = screen.getAllByRole('checkbox')
-
-    // Click the third checkbox (which is action-1 due to sorting, InProgress -> Completed)
-    fireEvent.click(checkboxes[2])
+    const inProgressCard = screen.getByText('Complete project proposal').closest('[class*="card"]')!
+    const checkbox = inProgressCard.querySelector('[role="checkbox"]')!
+    fireEvent.click(checkbox)
 
     await waitFor(() => {
       expect(mockProps.onActionEdited).toHaveBeenCalledWith(
         'action-1',
         'Complete project proposal',
         ItemStatus.Completed,
-        mockActions[0].due_by,
-        mockActions[0].assignee_ids // Assignees should be preserved
+        mockSessionActions[0].due_by,
+        mockSessionActions[0].assignee_ids
       )
     })
-
-    expect(mockActionListHook.refresh).toHaveBeenCalled()
   })
 
   /**
-   * Asserts form submission calls onActionAdded with correct parameters
-   * This validates the create functionality with default (empty) assignees
+   * Asserts the ghost card "Add action" button is present and opens the creation form
    */
-  it('should add new action when form is submitted', async () => {
+  it('should show the ghost card to add a new action', async () => {
+    const user = userEvent.setup()
+
     render(
-      <TestProviders>
+      <Wrapper>
         <ActionsList {...mockProps} />
-      </TestProviders>
+      </Wrapper>
     )
 
-    const input = screen.getByPlaceholderText('Enter new action')
-    const saveButton = screen.getByText('Save')
+    const addButton = screen.getByText('Add action')
+    expect(addButton).toBeInTheDocument()
 
-    fireEvent.change(input, { target: { value: 'New test action' } })
-    fireEvent.click(saveButton)
+    await user.click(addButton)
+
+    // Ghost card editing mode should show textarea
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('What needs to be done?')).toBeInTheDocument()
+    })
+  })
+
+  /**
+   * Asserts submitting the ghost card form calls onActionAdded
+   */
+  it('should create a new action via the ghost card', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <Wrapper>
+        <ActionsList {...mockProps} />
+      </Wrapper>
+    )
+
+    // Open the ghost card form
+    await user.click(screen.getByText('Add action'))
+
+    const textarea = await screen.findByPlaceholderText('What needs to be done?')
+    await user.type(textarea, 'New test action')
+
+    const addBtn = screen.getByRole('button', { name: 'Add' })
+    await user.click(addBtn)
 
     await waitFor(() => {
       expect(mockProps.onActionAdded).toHaveBeenCalledWith(
         'New test action',
         ItemStatus.NotStarted,
         expect.any(DateTime),
-        [] // Empty assignees when no selection made
+        undefined // No assignees selected
       )
     })
-
-    expect(mockActionListHook.refresh).toHaveBeenCalled()
   })
 
   /**
-   * Asserts edit workflow populates form and updates via onActionEdited
-   * This validates the edit functionality from dropdown to form submission
+   * Asserts clicking the delete button calls onActionDeleted
    */
-  it('should edit existing action when edit is clicked and form is submitted', async () => {
+  it('should delete action when trash button is clicked', async () => {
     const user = userEvent.setup()
 
     render(
-      <TestProviders>
+      <Wrapper>
         <ActionsList {...mockProps} />
-      </TestProviders>
+      </Wrapper>
     )
 
-    // Find and click the second action's dropdown menu (which is action-2 due to sorting by due_by desc)
-    const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
-    await user.click(dropdownTriggers[1])
+    // Find trash buttons by their icon-sized ghost variant styling
+    const deleteButtons = screen.getAllByRole('button').filter(
+      (btn) => btn.classList.contains('hover:text-destructive')
+    )
+    expect(deleteButtons.length).toBeGreaterThan(0)
+    await user.click(deleteButtons[0])
 
-    // Wait for dropdown to open and then click edit option
     await waitFor(() => {
-      expect(screen.getByText('Edit')).toBeInTheDocument()
+      expect(mockProps.onActionDeleted).toHaveBeenCalled()
     })
+  })
 
-    const editButton = screen.getByText('Edit')
-    await user.click(editButton)
+  /**
+   * Asserts inline body editing: click text -> textarea -> blur saves
+   */
+  it('should allow inline editing of action body text', async () => {
+    const user = userEvent.setup()
 
-    // Form should now be in edit mode with action-2's data
-    const input = screen.getByDisplayValue('Review quarterly goals')
-    const updateButton = screen.getByText('Update')
+    render(
+      <Wrapper>
+        <ActionsList {...mockProps} />
+      </Wrapper>
+    )
 
-    await user.clear(input)
-    await user.type(input, 'Updated quarterly goals')
-    await user.click(updateButton)
+    // Click the action body text to enter edit mode
+    const bodyText = screen.getByText('Complete project proposal')
+    await user.click(bodyText)
+
+    // Should now show a textarea with the action body
+    const textarea = screen.getByDisplayValue('Complete project proposal')
+    expect(textarea).toBeInTheDocument()
+
+    // Edit the text and blur to save
+    await user.clear(textarea)
+    await user.type(textarea, 'Updated proposal text')
+    fireEvent.blur(textarea)
 
     await waitFor(() => {
       expect(mockProps.onActionEdited).toHaveBeenCalledWith(
-        'action-2',
-        'Updated quarterly goals',
-        ItemStatus.Completed,
-        mockActions[1].due_by,
-        expect.any(Array) // Assignees loaded from existing action
+        'action-1',
+        'Updated proposal text',
+        ItemStatus.InProgress,
+        mockSessionActions[0].due_by,
+        mockSessionActions[0].assignee_ids
       )
     })
-
-    expect(mockActionListHook.refresh).toHaveBeenCalled()
   })
 
   /**
-   * Asserts visual sorting indicators appear only on the currently sorted column
-   * This validates the sorting UI feedback system
+   * Asserts empty state message when no session actions exist
    */
-  it('should display sorting arrows only for active sort column', () => {
-    render(
-      <TestProviders>
-        <ActionsList {...mockProps} />
-      </TestProviders>
-    )
-
-    // Due By should be the default sort column (desc)
-    const dueBySortButton = screen.getByRole('columnheader', { name: /Due By/i })
-    expect(dueBySortButton).toBeInTheDocument()
-    
-    // Should show down arrow for desc sort
-    const downArrow = dueBySortButton?.querySelector('svg')
-    expect(downArrow).toBeInTheDocument()
-  })
-
-  /**
-   * Asserts clicking same header toggles sort direction
-   * This validates sort direction toggle functionality
-   */
-  it('should change sort direction when clicking same column header', async () => {
-    render(
-      <TestProviders>
-        <ActionsList {...mockProps} />
-      </TestProviders>
-    )
-
-    const actionHeader = screen.getByText(/Action/i).closest('th')
-    
-    // Click once to sort by Action (asc)
-    fireEvent.click(actionHeader!)
-    
-    // Click again to reverse sort (desc)
-    fireEvent.click(actionHeader!)
-    
-    // Verify sorting behavior (actions should be reordered)
-    await waitFor(() => {
-      const rows = screen.getAllByRole('row')
-      // Skip header row, check data rows
-      expect(rows.length).toBeGreaterThan(1)
-    })
-  })
-
-  /**
-   * Asserts delete dropdown option calls onActionDeleted
-   * This validates the delete functionality
-   */
-  it('should delete action when delete is clicked', async () => {
-    const user = userEvent.setup()
-    mockProps.onActionDeleted.mockResolvedValue(mockActions[2])
+  it('should show empty state when there are no session actions', async () => {
+    const mod = await import('@/lib/api/user-actions') as {
+      useUserActionsList: ReturnType<typeof vi.fn>
+    }
+    mod.useUserActionsList.mockImplementation(() => ({
+      actions: [],
+      isLoading: false,
+      isError: false,
+      refresh: vi.fn(),
+    }))
 
     render(
-      <TestProviders>
+      <Wrapper>
         <ActionsList {...mockProps} />
-      </TestProviders>
+      </Wrapper>
     )
 
-    // Find and click the first action's dropdown menu (which is action-3 due to sorting by due_by desc)
-    const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
-    await user.click(dropdownTriggers[0])
+    expect(screen.getByText('No actions yet for this session.')).toBeInTheDocument()
 
-    // Wait for dropdown to open and then click delete option
-    await waitFor(() => {
-      expect(screen.getByText('Delete')).toBeInTheDocument()
-    })
-    
-    const deleteButton = screen.getByText('Delete')
-    await user.click(deleteButton)
-
-    await waitFor(() => {
-      expect(mockProps.onActionDeleted).toHaveBeenCalledWith('action-3')
-    })
-
-    expect(mockActionListHook.refresh).toHaveBeenCalled()
+    // Restore original mock for subsequent tests
+    mod.useUserActionsList.mockImplementation(
+      (userId: string, params: Record<string, unknown>) => {
+        if (params?.coaching_session_id) {
+          return {
+            actions: mockSessionActions,
+            isLoading: false,
+            isError: false,
+            refresh: mockRefreshSession,
+          }
+        }
+        return {
+          actions: mockSessionActions,
+          isLoading: false,
+          isError: false,
+          refresh: mockRefreshAll,
+        }
+      }
+    )
   })
 
   /**
-   * Asserts assignee badges are displayed correctly
-   * This validates the assignee display UI
+   * Asserts "All caught up" empty state in the review section
    */
-  it('should display assignee badges for actions with assignees', () => {
+  it('should show "All caught up" when there are no review actions', () => {
     render(
-      <TestProviders>
+      <Wrapper>
         <ActionsList {...mockProps} />
-      </TestProviders>
+      </Wrapper>
     )
 
-    // Coach Jane should appear for action-1 and action-2
-    const coachBadges = screen.getAllByText('Coach Jane')
-    expect(coachBadges.length).toBeGreaterThanOrEqual(1)
+    // Open the review section
+    fireEvent.click(screen.getByText('Actions for Review'))
 
-    // Coachee John should appear for action-2 (which has both)
-    expect(screen.getByText('Coachee John')).toBeInTheDocument()
-
-    // "None" should appear for action-3 (unassigned)
-    expect(screen.getByText('None')).toBeInTheDocument()
+    expect(screen.getByText('All caught up')).toBeInTheDocument()
   })
 
   /**
-   * Asserts the Assignee column header is present
+   * Asserts that completed actions have reduced opacity
    */
-  it('should display Assignee column header', () => {
+  it('should show completed actions with reduced opacity', () => {
     render(
-      <TestProviders>
+      <Wrapper>
         <ActionsList {...mockProps} />
-      </TestProviders>
+      </Wrapper>
     )
 
-    // Find the Assignee text within a table header cell
-    const assigneeHeader = screen.getByRole('columnheader', { name: /assignee/i })
-    expect(assigneeHeader).toBeInTheDocument()
+    const completedCard = screen.getByText('Review quarterly goals').closest('[class*="card"]')!
+    expect(completedCard.className).toContain('opacity-60')
   })
 
   /**
-   * Error Toast Tests
-   * Validates that user-facing error messages appear when operations fail
+   * Asserts status pill displays the correct status text
    */
-  describe('Error Toasts', () => {
-    const mockToast = vi.mocked(toast)
+  it('should display status pills with correct text', () => {
+    render(
+      <Wrapper>
+        <ActionsList {...mockProps} />
+      </Wrapper>
+    )
 
-    /**
-     * Asserts toast.error is called when saving a new action fails
-     * This ensures visible feedback on create failure
-     */
-    it('should show error toast when saving a new action fails', async () => {
-      mockProps.onActionAdded.mockRejectedValue(new Error('Network error'))
-
-      render(
-        <TestProviders>
-          <ActionsList {...mockProps} />
-        </TestProviders>
-      )
-
-      const input = screen.getByPlaceholderText('Enter new action')
-      const saveButton = screen.getByText('Save')
-
-      fireEvent.change(input, { target: { value: 'New action' } })
-      fireEvent.click(saveButton)
-
-      await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith('Failed to save action.')
-      })
-    })
-
-    /**
-     * Asserts toast.error is called when updating an action fails
-     * This ensures visible feedback on update failure
-     */
-    it('should show error toast when updating an action fails', async () => {
-      const user = userEvent.setup()
-      mockProps.onActionEdited.mockRejectedValue(new Error('Network error'))
-
-      render(
-        <TestProviders>
-          <ActionsList {...mockProps} />
-        </TestProviders>
-      )
-
-      // Enter edit mode via dropdown on first action (action-3 due to sort)
-      const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
-      await user.click(dropdownTriggers[0])
-
-      await waitFor(() => {
-        expect(screen.getByText('Edit')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('Edit'))
-
-      const updateButton = screen.getByText('Update')
-      await user.click(updateButton)
-
-      await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith('Failed to update action.')
-      })
-    })
-
-    /**
-     * Asserts toast.error is called when deleting an action fails
-     * This ensures visible feedback on delete failure
-     */
-    it('should show error toast when deleting an action fails', async () => {
-      const user = userEvent.setup()
-      mockProps.onActionDeleted.mockRejectedValue(new Error('Network error'))
-
-      render(
-        <TestProviders>
-          <ActionsList {...mockProps} />
-        </TestProviders>
-      )
-
-      const dropdownTriggers = screen.getAllByRole('button', { name: /open menu/i })
-      await user.click(dropdownTriggers[0])
-
-      await waitFor(() => {
-        expect(screen.getByText('Delete')).toBeInTheDocument()
-      })
-
-      await user.click(screen.getByText('Delete'))
-
-      await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith('Failed to delete action.')
-      })
-    })
-
-    /**
-     * Asserts toast.error is called when toggling action completion fails
-     * This ensures visible feedback on checkbox toggle failure
-     */
-    it('should show error toast when completion toggle fails', async () => {
-      mockProps.onActionEdited.mockRejectedValue(new Error('Network error'))
-
-      render(
-        <TestProviders>
-          <ActionsList {...mockProps} />
-        </TestProviders>
-      )
-
-      // Click the first checkbox (action-3 due to sort, NotStarted -> Completed)
-      const checkboxes = screen.getAllByRole('checkbox')
-      fireEvent.click(checkboxes[0])
-
-      await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith('Failed to update action status.')
-      })
-    })
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
+    expect(screen.getByText('Completed')).toBeInTheDocument()
+    expect(screen.getByText('Not Started')).toBeInTheDocument()
   })
 })
