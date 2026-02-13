@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { DateTime, Settings } from "ts-luxon";
 import {
   isPastSession,
   isFutureSession,
@@ -65,13 +66,25 @@ describe("isUnderwaySession", () => {
 });
 
 describe("isSessionToday", () => {
+  // Pin "now" to noon so +60 minutes never crosses midnight
+  const originalNow = Settings.now;
+
+  beforeEach(() => {
+    const noon = DateTime.now().set({ hour: 12, minute: 0, second: 0, millisecond: 0 });
+    Settings.now = () => noon.toMillis();
+  });
+
+  afterEach(() => {
+    Settings.now = originalNow;
+  });
+
   it("returns true for a session scheduled today", () => {
-    const session = createSessionAt(0); // right now
+    const session = createSessionAt(0); // right now (noon)
     expect(isSessionToday(session)).toBe(true);
   });
 
   it("returns true for a session later today", () => {
-    const session = createSessionAt(60); // 1 hour from now
+    const session = createSessionAt(60); // 1 hour from now (1 PM)
     expect(isSessionToday(session)).toBe(true);
   });
 });
