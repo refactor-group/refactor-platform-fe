@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { ItemStatus, Id } from "@/types/general";
 import type { Action } from "@/types/action";
 import { DateTime } from "ts-luxon";
@@ -110,19 +110,28 @@ const ActionsList = ({
     }
   );
 
+  // Track which action IDs were initially shown in review so they remain
+  // visible even if the user edits a due date outside the window.
+  const stickyReviewIdsRef = useRef<Set<Id> | null>(null);
+
   // Actions for review: from other sessions where either:
   // 1. due_by falls within the window [previous session, current session] (any status), OR
-  // 2. due_by is before the window and still outstanding (overdue items always surface)
+  // 2. due_by is before the window and still outstanding (overdue items always surface), OR
+  // 3. the action was initially visible in this session (sticky)
   const reviewActions = useMemo(() => {
     if (!currentSessionDate) return [];
 
     const endOfCurrentDate = currentSessionDate.endOf("day");
     const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
+    const stickyIds = stickyReviewIdsRef.current;
 
-    return allActions
+    const filtered = allActions
       .filter((a) => {
         // Exclude actions from this session
         if (a.coaching_session_id === coachingSessionId) return false;
+
+        // Keep actions that were initially visible (sticky)
+        if (stickyIds?.has(a.id)) return true;
 
         const dueBy = a.due_by;
 
@@ -139,6 +148,13 @@ const ActionsList = ({
         );
       })
       .sort((a, b) => b.due_by.toMillis() - a.due_by.toMillis());
+
+    // Capture initial set of visible IDs on first computation
+    if (stickyReviewIdsRef.current === null && filtered.length > 0) {
+      stickyReviewIdsRef.current = new Set(filtered.map((a) => a.id));
+    }
+
+    return filtered;
   }, [allActions, coachingSessionId, currentSessionDate, previousSessionDate]);
 
   const reviewCount = reviewActions.length;

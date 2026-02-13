@@ -86,6 +86,7 @@ const SessionActionCard = ({
 }: SessionActionCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(action.body ?? "");
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Sync edit text when action body changes externally
@@ -316,7 +317,7 @@ const SessionActionCard = ({
 
         {/* Footer: due date + session link (previous variant) */}
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-gray-100 dark:border-gray-800">
-          <Popover>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <button
                 type="button"
@@ -338,10 +339,12 @@ const SessionActionCard = ({
               <Calendar
                 mode="single"
                 selected={action.due_by.toJSDate()}
-                onSelect={(date: Date | undefined) =>
-                  date &&
-                  onDueDateChange(action.id, DateTime.fromJSDate(date))
-                }
+                onSelect={(date: Date | undefined) => {
+                  if (date) {
+                    onDueDateChange(action.id, DateTime.fromJSDate(date));
+                    setCalendarOpen(false);
+                  }
+                }}
               />
             </PopoverContent>
           </Popover>

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -10,10 +12,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  AssigneeSelector,
-  AssignmentType,
-} from "@/components/ui/assignee-selector";
-import type { AssigneeOption, AssigneeSelection } from "@/components/ui/assignee-selector";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { CalendarIcon, Plus } from "lucide-react";
 import { ItemStatus, Id } from "@/types/general";
 import type { Action } from "@/types/action";
@@ -35,19 +37,13 @@ interface GhostActionCardProps {
   disabled?: boolean;
 }
 
-/** Convert an AssigneeSelection + options into an array of user IDs */
-function selectionToAssigneeIds(
-  selection: AssigneeSelection,
-  options: AssigneeOption[]
-): Id[] | undefined {
-  if (selection === AssignmentType.Unselected || selection === AssignmentType.None) {
-    return undefined;
-  }
-  if (selection === AssignmentType.Both) {
-    return options.map((o) => o.id);
-  }
-  // Individual user ID
-  return [selection];
+/** Derive initials from a display name (e.g. "Alex Rivera" -> "AR") */
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("")
+    .slice(0, 2);
 }
 
 const GhostActionCard = ({
@@ -63,9 +59,9 @@ const GhostActionCard = ({
   const [dueBy, setDueBy] = useState<DateTime>(
     DateTime.now().plus({ days: 7 })
   );
-  const [assigneeSelection, setAssigneeSelection] =
-    useState<AssigneeSelection>(AssignmentType.Unselected);
+  const [assigneeIds, setAssigneeIds] = useState<Id[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -74,10 +70,25 @@ const GhostActionCard = ({
     }
   }, [isEditing]);
 
-  const assigneeOptions: AssigneeOption[] = [
-    { id: coachId, name: coachName },
-    { id: coacheeId, name: coacheeName },
-  ].filter((o) => o.id);
+  const allAssignees = [
+    { id: coachId, name: coachName, initials: getInitials(coachName) },
+    { id: coacheeId, name: coacheeName, initials: getInitials(coacheeName) },
+  ].filter((a) => a.id);
+
+  const resolvedAssignees = assigneeIds
+    .map((id) => allAssignees.find((a) => a.id === id))
+    .filter(
+      (a): a is { id: Id; name: string; initials: string } => a !== undefined
+    );
+
+  const handleAssigneeToggle = (assigneeId: Id) => {
+    const isAssigned = assigneeIds.includes(assigneeId);
+    setAssigneeIds(
+      isAssigned
+        ? assigneeIds.filter((id) => id !== assigneeId)
+        : [...assigneeIds, assigneeId]
+    );
+  };
 
   const handleSave = async () => {
     const trimmed = body.trim();
@@ -85,15 +96,16 @@ const GhostActionCard = ({
 
     setIsSaving(true);
     try {
-      const assigneeIds = selectionToAssigneeIds(
-        assigneeSelection,
-        assigneeOptions
+      await onCreateAction(
+        trimmed,
+        ItemStatus.NotStarted,
+        dueBy,
+        assigneeIds.length > 0 ? assigneeIds : undefined
       );
-      await onCreateAction(trimmed, ItemStatus.NotStarted, dueBy, assigneeIds);
       // Reset form on success
       setBody("");
       setDueBy(DateTime.now().plus({ days: 7 }));
-      setAssigneeSelection(AssignmentType.Unselected);
+      setAssigneeIds([]);
       setIsEditing(false);
     } finally {
       setIsSaving(false);
@@ -103,7 +115,7 @@ const GhostActionCard = ({
   const handleCancel = () => {
     setBody("");
     setDueBy(DateTime.now().plus({ days: 7 }));
-    setAssigneeSelection(AssignmentType.Unselected);
+    setAssigneeIds([]);
     setIsEditing(false);
   };
 
@@ -130,18 +142,9 @@ const GhostActionCard = ({
             disabled={isSaving}
           />
 
-          {/* Assignee + Due date row */}
+          {/* Due date + Assignee row */}
           <div className="flex flex-wrap items-center gap-2">
-            <AssigneeSelector
-              value={assigneeSelection}
-              onValueChange={setAssigneeSelection}
-              options={assigneeOptions}
-              placeholder="Assignee"
-              className="w-36"
-              disabled={isSaving}
-            />
-
-            <Popover>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -162,10 +165,75 @@ const GhostActionCard = ({
                 <Calendar
                   mode="single"
                   selected={dueBy.toJSDate()}
-                  onSelect={(date: Date | undefined) =>
-                    date && setDueBy(DateTime.fromJSDate(date))
-                  }
+                  onSelect={(date: Date | undefined) => {
+                    if (date) {
+                      setDueBy(DateTime.fromJSDate(date));
+                      setCalendarOpen(false);
+                    }
+                  }}
                 />
+              </PopoverContent>
+            </Popover>
+
+            {/* Assignee avatar stack with popover */}
+            <Popover>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex -space-x-2 cursor-pointer hover:opacity-80"
+                      disabled={isSaving}
+                    >
+                      {resolvedAssignees.length > 0 ? (
+                        resolvedAssignees.map((assignee) => (
+                          <Avatar
+                            key={assignee.id}
+                            className="h-8 w-8 border-2 border-background"
+                          >
+                            <AvatarFallback className="text-[11px]">
+                              {assignee.initials}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))
+                      ) : (
+                        <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/50">
+                          <AvatarFallback className="text-[11px] text-muted-foreground">
+                            +
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Assignees</TooltipContent>
+              </Tooltip>
+              <PopoverContent className="w-48 p-2">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-muted-foreground px-2 py-1">
+                    Assignees
+                  </span>
+                  {allAssignees.map((assignee) => {
+                    const isAssigned = assigneeIds.includes(assignee.id);
+                    return (
+                      <div
+                        key={assignee.id}
+                        role="option"
+                        aria-selected={isAssigned}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
+                        onClick={() => handleAssigneeToggle(assignee.id)}
+                      >
+                        <Checkbox checked={isAssigned} />
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-[10px]">
+                            {assignee.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{assignee.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </PopoverContent>
             </Popover>
           </div>
