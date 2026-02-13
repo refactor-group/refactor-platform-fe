@@ -17,6 +17,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Trash2 } from "lucide-react";
 import Link from "next/link";
 import { ItemStatus, Id, actionStatusToString } from "@/types/general";
@@ -155,7 +160,7 @@ const SessionActionCard = ({
   return (
     <Card
       className={cn(
-        "hover:border-primary transition-colors",
+        "shadow-sm shadow-black/10 hover:border-primary transition-colors",
         isOverdue && "border-l-4 border-l-red-500",
         isCompleted && "opacity-60"
       )}
@@ -202,31 +207,36 @@ const SessionActionCard = ({
           <div className="flex items-center gap-2">
             {/* Assignee avatar stack with popover */}
             <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex -space-x-2 cursor-pointer hover:opacity-80"
-                >
-                  {resolvedAssignees.length > 0 ? (
-                    resolvedAssignees.map((assignee) => (
-                      <Avatar
-                        key={assignee.id}
-                        className="h-7 w-7 border-2 border-background"
-                      >
-                        <AvatarFallback className="text-xs">
-                          {assignee.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))
-                  ) : (
-                    <Avatar className="h-7 w-7 border-2 border-dashed border-muted-foreground/50">
-                      <AvatarFallback className="text-xs text-muted-foreground">
-                        +
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </button>
-              </PopoverTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex -space-x-2 cursor-pointer hover:opacity-80"
+                    >
+                      {resolvedAssignees.length > 0 ? (
+                        resolvedAssignees.map((assignee) => (
+                          <Avatar
+                            key={assignee.id}
+                            className="h-7 w-7 border-2 border-background"
+                          >
+                            <AvatarFallback className="text-xs">
+                              {assignee.initials}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))
+                      ) : (
+                        <Avatar className="h-7 w-7 border-2 border-dashed border-muted-foreground/50">
+                          <AvatarFallback className="text-xs text-muted-foreground">
+                            +
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Assignees</TooltipContent>
+              </Tooltip>
               <PopoverContent className="w-48 p-2">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-medium text-muted-foreground px-2 py-1">
