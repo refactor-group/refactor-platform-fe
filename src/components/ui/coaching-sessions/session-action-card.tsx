@@ -218,16 +218,16 @@ const SessionActionCard = ({
                         resolvedAssignees.map((assignee) => (
                           <Avatar
                             key={assignee.id}
-                            className="h-7 w-7 border-2 border-background"
+                            className="h-8 w-8 border-2 border-background"
                           >
-                            <AvatarFallback className="text-xs">
+                            <AvatarFallback className="text-[11px]">
                               {assignee.initials}
                             </AvatarFallback>
                           </Avatar>
                         ))
                       ) : (
-                        <Avatar className="h-7 w-7 border-2 border-dashed border-muted-foreground/50">
-                          <AvatarFallback className="text-xs text-muted-foreground">
+                        <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/50">
+                          <AvatarFallback className="text-[11px] text-muted-foreground">
                             +
                           </AvatarFallback>
                         </Avatar>
@@ -271,10 +271,10 @@ const SessionActionCard = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
                 onClick={() => onDelete(action.id)}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="!h-[18px] !w-[18px]" />
               </Button>
             )}
           </div>

@@ -13,6 +13,7 @@ import { Agreement, defaultAgreement } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
+import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import { siteConfig } from "@/site.config";
 
 const CoachingTabsContainer: React.FC<{
@@ -156,9 +157,9 @@ const CoachingTabsContainer: React.FC<{
               userId={userId}
               locale={siteConfig.locale}
               coachId={currentCoachingRelationship?.coach_id || ""}
-              coachName={currentCoachingRelationship?.coach_first_name || "Coach"}
+              coachName={currentCoachingRelationship ? getCoachName(currentCoachingRelationship) : "Coach"}
               coacheeId={currentCoachingRelationship?.coachee_id || ""}
-              coacheeName={currentCoachingRelationship?.coachee_first_name || "Coachee"}
+              coacheeName={currentCoachingRelationship ? getCoacheeName(currentCoachingRelationship) : "Coachee"}
               isSaving={isActionMutating}
               onActionAdded={handleActionAdded}
               onActionEdited={handleActionEdited}
