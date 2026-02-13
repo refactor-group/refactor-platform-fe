@@ -26,8 +26,8 @@ const CoachingTabsContainer: React.FC<{
     setCurrentTab(value);
     onTabChange?.(value);
   };
-  // Get coaching session ID from URL
-  const { currentCoachingSessionId } = useCurrentCoachingSession();
+  // Get coaching session ID and data from URL
+  const { currentCoachingSessionId, currentCoachingSession } = useCurrentCoachingSession();
 
   // Get coaching relationship data for coach/coachee names
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
@@ -151,6 +151,8 @@ const CoachingTabsContainer: React.FC<{
           <div style={{ display: currentTab === "actions" ? "block" : "none" }}>
             <ActionsList
               coachingSessionId={currentCoachingSessionId || ""}
+              coachingRelationshipId={currentCoachingRelationship?.id || ""}
+              sessionDate={currentCoachingSession?.date || ""}
               userId={userId}
               locale={siteConfig.locale}
               coachId={currentCoachingRelationship?.coach_id || ""}

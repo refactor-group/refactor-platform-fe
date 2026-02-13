@@ -1,6 +1,6 @@
 {
   "name": "refactor-platform-fe",
-  "version": "1.0.0-beta2",
+  "version": "1.0.0-beta3",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -18,6 +18,8 @@
     "test:all:run": "npm run test:run && npm run test:e2e"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/utilities": "^3.2.2",
     "@floating-ui/dom": "^1.5.3",
     "@floating-ui/react": "^0.27.15",
     "@hocuspocus/provider": "^2.15.2",

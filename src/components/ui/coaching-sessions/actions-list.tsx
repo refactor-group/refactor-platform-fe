@@ -1,83 +1,33 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import {
-  AssigneeSelector,
-  AssigneeOption,
-  AssigneeSelection,
-  AssignmentType,
-} from "@/components/ui/assignee-selector";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  MoreHorizontal,
-  ArrowUp,
-  ArrowDown,
-  CalendarClock,
-  Loader2,
-} from "lucide-react";
-import { toast } from "sonner";
-import {
-  ItemStatus,
-  actionStatusToString,
-  Id,
-} from "@/types/general";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useUserActionsList } from "@/lib/api/user-actions";
-import { UserActionsScope, type RelationshipContext } from "@/types/assigned-actions";
-import { resolveUserNameInRelationship } from "@/lib/utils/relationship";
+import { ItemStatus, Id } from "@/types/general";
+import type { Action } from "@/types/action";
 import { DateTime } from "ts-luxon";
-import { siteConfig } from "@/site.config";
-import { Action } from "@/types/action";
-import { cn } from "@/components/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
-  getTableRowClasses,
-  getCompletedItemClasses,
-  getTableHeaderRowClasses,
-  getTableHeaderCellClasses,
-  getTableHeaderCellClassesNonSortable,
-} from "@/components/lib/utils/table-styling";
-import { format } from "date-fns";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { CheckCircle, ChevronRight } from "lucide-react";
+import { cn } from "@/components/lib/utils";
+import { useUserActionsList } from "@/lib/api/user-actions";
+import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
+import { UserActionsScope } from "@/types/assigned-actions";
+import { SessionActionCard } from "@/components/ui/coaching-sessions/session-action-card";
+import { GhostActionCard } from "@/components/ui/coaching-sessions/ghost-action-card";
 
 interface ActionsListProps {
   coachingSessionId: Id;
+  coachingRelationshipId: Id;
+  /** ISO date string for the current session (e.g. "2026-02-11") */
+  sessionDate: string;
   userId: Id;
   locale: string | "us";
-  /** Coach user ID for resolving assignee names */
   coachId: Id;
-  /** Coach display name (first name or display name) */
   coachName: string;
-  /** Coachee user ID for resolving assignee names */
   coacheeId: Id;
-  /** Coachee display name (first name or display name) */
   coacheeName: string;
   onActionAdded: (
     body: string,
@@ -96,436 +46,314 @@ interface ActionsListProps {
   isSaving: boolean;
 }
 
-const ActionsList: React.FC<ActionsListProps> = ({
+/** Wide date range for fetching all sessions in this relationship */
+const SESSION_LOOKBACK = { years: 5 };
+const SESSION_LOOKAHEAD = { years: 1 };
+
+const ActionsList = ({
   coachingSessionId,
+  coachingRelationshipId,
+  sessionDate,
   userId,
   coachId,
   coachName,
   coacheeId,
   coacheeName,
-  isSaving,
   onActionAdded,
   onActionEdited,
   onActionDeleted,
-}) => {
-  enum ActionSortField {
-    Body = "body",
-    DueBy = "due_by",
-    Status = "status",
-  }
+  isSaving,
+}: ActionsListProps) => {
+  const [reviewOpen, setReviewOpen] = useState(false);
 
-  // Build relationship context for resolving assignee names
-  const relationshipContext: RelationshipContext = useMemo(
-    () => ({
-      coachingRelationshipId: "",
-      coachId,
-      coacheeId,
-      coachName,
-      coacheeName,
-    }),
-    [coachId, coacheeId, coachName, coacheeName]
+  const currentSessionDate = sessionDate
+    ? DateTime.fromISO(sessionDate)
+    : null;
+
+  // Fetch sessions for this relationship to find the previous session
+  const { coachingSessions } = useCoachingSessionList(
+    coachingRelationshipId || null,
+    DateTime.now().minus(SESSION_LOOKBACK),
+    DateTime.now().plus(SESSION_LOOKAHEAD),
+    "date",
+    "asc"
   );
 
-  const { actions, refresh } = useUserActionsList(userId, {
-    scope: UserActionsScope.Sessions,
-    coaching_session_id: coachingSessionId,
-  });
-  const [newBody, setNewBody] = useState("");
-  const [newDueBy, setNewDueBy] = useState<DateTime | null>(null);
-  const [newAssigneeId, setNewAssigneeId] = useState<AssigneeSelection>(AssignmentType.Unselected);
-  const [newStatus, setNewStatus] = useState<ItemStatus | null>(null);
-  const [editingActionId, setEditingActionId] = useState<Id | null>(null);
-  const [sortColumn, setSortColumn] = useState<keyof Action>(
-    ActionSortField.DueBy
+  // Determine the previous session's date
+  const previousSessionDate = useMemo(() => {
+    if (!currentSessionDate || coachingSessions.length === 0) return null;
+
+    // Sessions are sorted ascending by date. Find the one immediately before this one.
+    const currentDateStr = currentSessionDate.toISODate();
+    let prev: DateTime | null = null;
+    for (const session of coachingSessions) {
+      const sessionDt = DateTime.fromISO(session.date);
+      if (session.date < currentDateStr!) {
+        prev = sessionDt;
+      }
+    }
+    return prev;
+  }, [coachingSessions, currentSessionDate]);
+
+  // Current session's actions
+  const { actions: sessionActions, refresh: refreshSession } =
+    useUserActionsList(userId, {
+      scope: UserActionsScope.Sessions,
+      coaching_session_id: coachingSessionId,
+    });
+
+  // All actions across sessions (for filtering to review window)
+  const { actions: allActions, refresh: refreshAll } = useUserActionsList(
+    userId,
+    {
+      scope: UserActionsScope.Sessions,
+    }
   );
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
-  // Memoized assignee options for the selector dropdown
-  const assigneeOptions: AssigneeOption[] = useMemo(
-    () => [
-      { id: coachId, name: coachName },
-      { id: coacheeId, name: coacheeName },
-    ],
-    [coachId, coachName, coacheeId, coacheeName]
-  );
+  // Actions for review: from other sessions, due_by falls between
+  // previous session date (exclusive) and current session date (inclusive).
+  // All statuses included.
+  const reviewActions = useMemo(() => {
+    if (!currentSessionDate) return [];
 
-  // Function to render the appropriate sort arrow
-  const renderSortArrow = (column: keyof Action) => {
-    if (sortColumn !== column) return null;
+    return allActions.filter((a) => {
+      // Exclude actions from this session
+      if (a.coaching_session_id === coachingSessionId) return false;
 
-    return sortDirection === "asc" ? (
-      <ArrowUp className="ml-2 h-4 w-4 inline" />
-    ) : (
-      <ArrowDown className="ml-2 h-4 w-4 inline" />
+      const dueBy = a.due_by;
+
+      // Upper bound: due on or before the current session date (inclusive)
+      const endOfCurrentDate = currentSessionDate.endOf("day");
+      if (dueBy > endOfCurrentDate) return false;
+
+      // Lower bound: due after the previous session date (exclusive)
+      // If no previous session, include all actions due up to this session
+      if (previousSessionDate) {
+        const endOfPrevDate = previousSessionDate.endOf("day");
+        if (dueBy <= endOfPrevDate) return false;
+      }
+
+      return true;
+    });
+  }, [allActions, coachingSessionId, currentSessionDate, previousSessionDate]);
+
+  const reviewCount = reviewActions.length;
+
+  // CRUD wrappers that refresh both lists after mutation
+
+  const handleCreateAction = async (
+    body: string,
+    status: ItemStatus,
+    dueBy: DateTime,
+    assigneeIds?: Id[]
+  ): Promise<Action> => {
+    const result = await onActionAdded(body, status, dueBy, assigneeIds);
+    refreshSession();
+    refreshAll();
+    return result;
+  };
+
+  const handleEditAction = async (
+    id: Id,
+    body: string,
+    status: ItemStatus,
+    dueBy: DateTime,
+    assigneeIds?: Id[]
+  ): Promise<Action> => {
+    const result = await onActionEdited(id, body, status, dueBy, assigneeIds);
+    refreshSession();
+    refreshAll();
+    return result;
+  };
+
+  const handleDeleteAction = async (id: Id): Promise<void> => {
+    await onActionDeleted(id);
+    refreshSession();
+    refreshAll();
+  };
+
+  // Helpers for individual field changes on session actions
+  const handleStatusChange = (id: Id, newStatus: ItemStatus) => {
+    const action = sessionActions.find((a) => a.id === id);
+    if (!action) return;
+    handleEditAction(
+      id,
+      action.body ?? "",
+      newStatus,
+      action.due_by,
+      action.assignee_ids
     );
   };
 
-  // Function to clear the new action form
-  const clearNewActionForm = () => {
-    setNewBody("");
-    setNewDueBy(null);
-    setNewAssigneeId(AssignmentType.Unselected);
-    setNewStatus(null);
+  const handleDueDateChange = (id: Id, newDueBy: DateTime) => {
+    const action = sessionActions.find((a) => a.id === id);
+    if (!action) return;
+    handleEditAction(
+      id,
+      action.body ?? "",
+      action.status,
+      newDueBy,
+      action.assignee_ids
+    );
   };
 
-  // Function to cancel editing an action
-  const cancelEditAction = () => {
-    setEditingActionId(null);
-    clearNewActionForm();
+  const handleAssigneesChange = (id: Id, assigneeIds: Id[]) => {
+    const action = sessionActions.find((a) => a.id === id);
+    if (!action) return;
+    handleEditAction(
+      id,
+      action.body ?? "",
+      action.status,
+      action.due_by,
+      assigneeIds
+    );
   };
 
-  // Function to populate the form with an existing action for editing
-  const startEditingAction = (action: Action) => {
-    setEditingActionId(action.id);
-    setNewBody(action.body ?? "");
-
-    // Determine assignee selection from existing IDs
-    const ids = action.assignee_ids ?? [];
-    let selection: AssigneeSelection = AssignmentType.None;
-    if (ids.length >= 2) {
-      // If both coach and coachee are assigned, select "both"
-      selection = AssignmentType.Both;
-    } else if (ids.length === 1) {
-      selection = ids[0];
-    }
-    setNewAssigneeId(selection);
-    setNewDueBy(action.due_by);
-    setNewStatus(action.status);
+  const handleBodyChange = (id: Id, newBody: string) => {
+    const action = sessionActions.find((a) => a.id === id);
+    if (!action) return;
+    handleEditAction(
+      id,
+      newBody,
+      action.status,
+      action.due_by,
+      action.assignee_ids
+    );
   };
 
-  // Function to handle checkbox toggle for completion
-  const handleCompletionToggle = async (
-    actionId: Id,
-    currentStatus: ItemStatus
-  ) => {
-    try {
-      const action = actions.find((a) => a.id === actionId);
-      if (!action) return;
-
-      const newStatus =
-        currentStatus === ItemStatus.Completed
-          ? ItemStatus.InProgress
-          : ItemStatus.Completed;
-
-      // Preserve existing assignees when toggling completion
-      await onActionEdited(
-        actionId,
-        action.body || "",
-        newStatus,
-        action.due_by,
-        action.assignee_ids
-      );
-      refresh();
-    } catch (err) {
-      console.error("Failed to update action completion status: " + err);
-      toast.error("Failed to update action status.");
-    }
+  // Helpers for field changes on review actions (search allActions)
+  const handleReviewStatusChange = (id: Id, newStatus: ItemStatus) => {
+    const action = allActions.find((a) => a.id === id);
+    if (!action) return;
+    handleEditAction(
+      id,
+      action.body ?? "",
+      newStatus,
+      action.due_by,
+      action.assignee_ids
+    );
   };
 
-  /** Converts the assignee selection to an array of user IDs */
-  const selectionToAssigneeIds = (selection: AssigneeSelection): Id[] => {
-    if (selection === AssignmentType.Unselected || selection === AssignmentType.None) return [];
-    if (selection === AssignmentType.Both) return [coachId, coacheeId].filter((id) => id);
-    return [selection];
+  const handleReviewDueDateChange = (id: Id, newDueBy: DateTime) => {
+    const action = allActions.find((a) => a.id === id);
+    if (!action) return;
+    handleEditAction(
+      id,
+      action.body ?? "",
+      action.status,
+      newDueBy,
+      action.assignee_ids
+    );
   };
 
-  const addAction = async () => {
-    if (newBody.trim() === "") return;
-
-    // Convert assignee selection to array of IDs
-    const assigneeIds = selectionToAssigneeIds(newAssigneeId);
-
-    // Use selected due date or default to now
-    const dueBy = newDueBy ?? DateTime.now();
-
-    try {
-      if (editingActionId) {
-        // Update existing action with selected status
-        const statusToUse = newStatus ?? ItemStatus.NotStarted;
-
-        await onActionEdited(
-          editingActionId,
-          newBody,
-          statusToUse,
-          dueBy,
-          assigneeIds
-        );
-        setEditingActionId(null);
-      } else {
-        // Create new action with default status
-        await onActionAdded(
-          newBody,
-          ItemStatus.NotStarted,
-          dueBy,
-          assigneeIds
-        );
-      }
-
-      // Refresh the actions list from the hook
-      refresh();
-
-      // Clear input fields
-      clearNewActionForm();
-    } catch (err) {
-      console.error("Failed to save Action: " + err);
-      toast.error(editingActionId ? "Failed to update action." : "Failed to save action.");
-    }
+  const handleReviewAssigneesChange = (id: Id, assigneeIds: Id[]) => {
+    const action = allActions.find((a) => a.id === id);
+    if (!action) return;
+    handleEditAction(
+      id,
+      action.body ?? "",
+      action.status,
+      action.due_by,
+      assigneeIds
+    );
   };
 
-  const deleteAction = async (id: Id) => {
-    if (id === "") return;
-
-    try {
-      // Delete action in backend
-      await onActionDeleted(id);
-
-      // Refresh the actions list from the hook
-      refresh();
-    } catch (err) {
-      console.error("Failed to delete Action (id: " + id + "): " + err);
-      toast.error("Failed to delete action.");
-    }
-  };
-
-  const sortActions = (column: keyof Action) => {
-    if (column === sortColumn) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
-
-  const sortedActions = [...actions].sort((a, b) => {
-    const aValue = a[sortColumn as keyof Action]!;
-    const bValue = b[sortColumn as keyof Action]!;
-
-    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-    return 0;
-  });
+  // Review action body is read-only, so no handleReviewBodyChange needed
 
   return (
-    <div>
-      <div className="bg-inherit rounded-lg border border-gray-200 p-6">
-        <div className="mb-4">
-          <Table>
-            <TableHeader>
-              <TableRow className={getTableHeaderRowClasses()}>
-                <TableHead
-                  className={cn(
-                    "w-[80px]",
-                    getTableHeaderCellClassesNonSortable(true)
-                  )}
-                >
-                  Done?
-                </TableHead>
-                <TableHead
-                  onClick={() => sortActions(ActionSortField.Body)}
-                  className={getTableHeaderCellClasses()}
-                >
-                  Action {renderSortArrow(ActionSortField.Body)}
-                </TableHead>
-                <TableHead
-                  className={cn(
-                    getTableHeaderCellClassesNonSortable(false),
-                    "hidden sm:table-cell"
-                  )}
-                >
-                  Assignee
-                </TableHead>
-                <TableHead
-                  onClick={() => sortActions(ActionSortField.Status)}
-                  className={cn(
-                    getTableHeaderCellClasses(),
-                    "hidden sm:table-cell"
-                  )}
-                >
-                  Status {renderSortArrow(ActionSortField.Status)}
-                </TableHead>
-                <TableHead
-                  onClick={() => sortActions(ActionSortField.DueBy)}
-                  className={cn(
-                    getTableHeaderCellClasses(),
-                    "hidden md:table-cell"
-                  )}
-                >
-                  Due By {renderSortArrow(ActionSortField.DueBy)}
-                </TableHead>
-                <TableHead
-                  className={cn(
-                    "w-[100px]",
-                    getTableHeaderRowClasses(),
-                    getTableHeaderCellClassesNonSortable(false, true)
-                  )}
-                ></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedActions.length === 0 ? (
-                <TableRow className={getTableRowClasses(0)}>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                    No Actions
-                  </TableCell>
-                </TableRow>
-              ) : (
-                sortedActions.map((action, index) => (
-                <TableRow
-                  key={action.id}
-                  aria-label={
-                    action.status === ItemStatus.Completed
-                      ? "Completed action"
-                      : undefined
-                  }
-                  className={getTableRowClasses(
-                    index,
-                    action.status === ItemStatus.Completed
-                      ? getCompletedItemClasses()
-                      : undefined
-                  )}
-                >
-                  <TableCell className="text-left">
-                    <Checkbox
-                      checked={action.status === ItemStatus.Completed}
-                      onCheckedChange={() =>
-                        handleCompletionToggle(action.id, action.status)
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>{action.body}</TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <div className="flex flex-wrap gap-1 justify-start">
-                      {action.assignee_ids && action.assignee_ids.length > 0 ? (
-                        action.assignee_ids.map((assigneeId) => {
-                          const isUnknown = assigneeId !== coachId && assigneeId !== coacheeId;
-                          return (
-                            <Badge
-                              key={assigneeId}
-                              variant={isUnknown ? "destructive" : "secondary"}
-                              title={isUnknown ? `Unknown user ID: ${assigneeId}` : undefined}
-                              className="text-sm font-normal"
-                            >
-                              {resolveUserNameInRelationship(assigneeId, relationshipContext)}
-                            </Badge>
-                          );
-                        })
-                      ) : (
-                        <Badge variant="outline" className="text-sm font-normal text-muted-foreground">
-                          None
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    {actionStatusToString(action.status)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {action.due_by
-                      .setLocale(siteConfig.locale)
-                      .toLocaleString(DateTime.DATE_MED)}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => startEditingAction(action)}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => deleteAction(action.id)}
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        {/* Create/Edit action form */}
-        <div
-          className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              editingActionId ? cancelEditAction() : clearNewActionForm();
-            } else if (e.key === "Enter" && !isSaving) {
-              addAction();
-            }
-          }}
-          tabIndex={-1}
-        >
-          <Input
-            value={newBody}
-            onChange={(e) => setNewBody(e.target.value)}
-            placeholder={editingActionId ? "Edit action" : "Enter new action"}
-            className="w-full sm:flex-grow"
-          />
-          <AssigneeSelector
-            value={newAssigneeId}
-            onValueChange={setNewAssigneeId}
-            options={assigneeOptions}
-            className="w-full sm:w-40"
-          />
-          {editingActionId && (
-            <Select
-              value={newStatus ?? undefined}
-              onValueChange={(value) => setNewStatus(value as ItemStatus)}
-            >
-              <SelectTrigger className="w-full sm:w-36 sm:shrink-0">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ItemStatus.NotStarted}>Not Started</SelectItem>
-                <SelectItem value={ItemStatus.InProgress}>In Progress</SelectItem>
-                <SelectItem value={ItemStatus.Completed}>Completed</SelectItem>
-                <SelectItem value={ItemStatus.WontDo}>Won&apos;t Do</SelectItem>
-              </SelectContent>
-            </Select>
+    <div className="flex flex-col gap-6">
+      {/* Section 1: This Session */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+        <h3 className="text-sm font-semibold mb-3">New Actions</h3>
+
+        <div className="flex flex-col gap-3">
+          {sessionActions.length === 0 && (
+            <p className="text-sm text-muted-foreground py-2">
+              No actions yet for this session.
+            </p>
           )}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-full sm:min-w-[180px] sm:max-w-[220px] justify-start text-left font-normal",
-                  !newDueBy && "text-muted-foreground"
-                )}
-              >
-                <CalendarClock className="mr-2 h-4 w-4 shrink-0" />
-                <span className="truncate">
-                  {newDueBy ? format(newDueBy.toJSDate(), "PPP") : "Due By"}
-                </span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={newDueBy?.toJSDate()}
-                onSelect={(date: Date | undefined) =>
-                  setNewDueBy(date ? DateTime.fromJSDate(date) : null)
-                }
-                footer=<div className="text-sm font-medium mt-1">
-                  {newDueBy
-                    ? `Due by: ${newDueBy.toLocaleString()}`
-                    : "Select a due by date."}
-                </div>
-              />
-            </PopoverContent>
-          </Popover>
-          <Button onClick={addAction} disabled={isSaving} className="w-full sm:w-auto">
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {editingActionId ? "Update" : "Save"}
-          </Button>
+
+          {sessionActions.map((action) => (
+            <SessionActionCard
+              key={action.id}
+              action={action}
+              coachId={coachId}
+              coachName={coachName}
+              coacheeId={coacheeId}
+              coacheeName={coacheeName}
+              onStatusChange={handleStatusChange}
+              onDueDateChange={handleDueDateChange}
+              onAssigneesChange={handleAssigneesChange}
+              onBodyChange={handleBodyChange}
+              onDelete={handleDeleteAction}
+              variant="current"
+            />
+          ))}
+
+          <GhostActionCard
+            coachId={coachId}
+            coachName={coachName}
+            coacheeId={coacheeId}
+            coacheeName={coacheeName}
+            onCreateAction={handleCreateAction}
+            disabled={isSaving}
+          />
         </div>
       </div>
+
+      {/* Section 2: Actions for Review (collapsible) */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700">
+        <Collapsible open={reviewOpen} onOpenChange={setReviewOpen}>
+            <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-accent transition-colors rounded-lg">
+              <ChevronRight
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  reviewOpen && "rotate-90"
+                )}
+              />
+              <span>Actions for Review</span>
+              {reviewCount > 0 && (
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  {reviewCount}
+                </Badge>
+              )}
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="px-4 pb-4">
+              <div className="flex flex-col gap-3">
+                {reviewActions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                      <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <h4 className="mb-1 text-sm font-semibold">
+                      All caught up
+                    </h4>
+                    <p className="text-sm text-muted-foreground max-w-xs">
+                      No actions were due between the last session and this one.
+                    </p>
+                  </div>
+                ) : (
+                  reviewActions.map((action) => (
+                    <SessionActionCard
+                      key={action.id}
+                      action={action}
+                      coachId={coachId}
+                      coachName={coachName}
+                      coacheeId={coacheeId}
+                      coacheeName={coacheeName}
+                      onStatusChange={handleReviewStatusChange}
+                      onDueDateChange={handleReviewDueDateChange}
+                      onAssigneesChange={handleReviewAssigneesChange}
+                      onBodyChange={() => {}}
+                      variant="previous"
+                    />
+                  ))
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
     </div>
   );
 };
