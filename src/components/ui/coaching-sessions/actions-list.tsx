@@ -110,31 +110,35 @@ const ActionsList = ({
     }
   );
 
-  // Actions for review: from other sessions, due_by falls between
-  // previous session date (exclusive) and current session date (inclusive).
-  // All statuses included.
+  // Actions for review: from other sessions where either:
+  // 1. due_by falls within the window [previous session, current session] (any status), OR
+  // 2. due_by is before the window and still outstanding (overdue items always surface)
   const reviewActions = useMemo(() => {
     if (!currentSessionDate) return [];
 
-    return allActions.filter((a) => {
-      // Exclude actions from this session
-      if (a.coaching_session_id === coachingSessionId) return false;
+    const endOfCurrentDate = currentSessionDate.endOf("day");
+    const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
 
-      const dueBy = a.due_by;
+    return allActions
+      .filter((a) => {
+        // Exclude actions from this session
+        if (a.coaching_session_id === coachingSessionId) return false;
 
-      // Upper bound: due on or before the current session date (inclusive)
-      const endOfCurrentDate = currentSessionDate.endOf("day");
-      if (dueBy > endOfCurrentDate) return false;
+        const dueBy = a.due_by;
 
-      // Lower bound: due after the previous session date (exclusive)
-      // If no previous session, include all actions due up to this session
-      if (previousSessionDate) {
-        const endOfPrevDate = previousSessionDate.endOf("day");
-        if (dueBy <= endOfPrevDate) return false;
-      }
+        // Exclude actions due after this session
+        if (dueBy > endOfCurrentDate) return false;
 
-      return true;
-    });
+        // Due within the window [previous session, current session]: include all statuses
+        if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
+
+        // Due before the window: only include if still outstanding (overdue)
+        return (
+          a.status === ItemStatus.NotStarted ||
+          a.status === ItemStatus.InProgress
+        );
+      })
+      .sort((a, b) => b.due_by.toMillis() - a.due_by.toMillis());
   }, [allActions, coachingSessionId, currentSessionDate, previousSessionDate]);
 
   const reviewCount = reviewActions.length;
