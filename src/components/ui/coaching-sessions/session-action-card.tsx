@@ -53,17 +53,17 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-/** Returns Tailwind classes for the status pill background, text, and border */
-function statusPillClasses(status: ItemStatus): string {
+/** Returns the Tailwind color class for the status dot */
+function statusDotColor(status: ItemStatus): string {
   switch (status) {
     case ItemStatus.NotStarted:
-      return "border-border bg-background text-foreground hover:bg-accent";
+      return "bg-muted-foreground";
     case ItemStatus.InProgress:
-      return "border-primary bg-primary text-primary-foreground hover:bg-primary/90";
+      return "bg-green-500";
     case ItemStatus.Completed:
-      return "border-secondary bg-secondary text-secondary-foreground hover:bg-secondary/80";
+      return "bg-primary";
     case ItemStatus.WontDo:
-      return "border-secondary bg-secondary text-secondary-foreground hover:bg-secondary/80";
+      return "bg-red-400";
     default: {
       const _exhaustive: never = status;
       throw new Error(`Unhandled status: ${_exhaustive}`);
@@ -115,14 +115,6 @@ const SessionActionCard = ({
 
   const assigneeIds = action.assignee_ids ?? [];
 
-  // Resolve creator name from user_id
-  const creatorName =
-    action.user_id === coachId
-      ? coachName
-      : action.user_id === coacheeId
-        ? coacheeName
-        : "Unknown";
-
   // Resolve assigned users to display info
   const resolvedAssignees = assigneeIds
     .map((id) => allAssignees.find((a) => a.id === id))
@@ -161,12 +153,12 @@ const SessionActionCard = ({
   return (
     <Card
       className={cn(
-        "shadow-sm shadow-black/10 hover:border-primary transition-colors",
+        "max-w-2xl border-border/60 shadow-none transition-colors",
         isOverdue && "bg-red-50/40 dark:bg-red-950/15",
         isCompleted && "opacity-60"
       )}
     >
-      <CardContent className="flex flex-col gap-3 p-4">
+      <CardContent className="flex flex-col gap-2 p-5">
         {/* Top row: checkbox + status pill + assignees + delete */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -183,23 +175,35 @@ const SessionActionCard = ({
               }
             >
               <SelectTrigger
-                className={cn(
-                  "h-6 w-auto gap-1 rounded-full border px-2.5 text-xs font-semibold transition-colors [&>svg]:h-3 [&>svg]:w-3",
-                  statusPillClasses(action.status)
-                )}
+                className="h-6 w-auto gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent [&>svg]:h-3 [&>svg]:w-3"
               >
+                <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(action.status))} />
                 {actionStatusToString(action.status)}
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ItemStatus.NotStarted}>
-                  Not Started
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.NotStarted))} />
+                    Not Started
+                  </span>
                 </SelectItem>
                 <SelectItem value={ItemStatus.InProgress}>
-                  In Progress
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.InProgress))} />
+                    In Progress
+                  </span>
                 </SelectItem>
-                <SelectItem value={ItemStatus.Completed}>Completed</SelectItem>
+                <SelectItem value={ItemStatus.Completed}>
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.Completed))} />
+                    Completed
+                  </span>
+                </SelectItem>
                 <SelectItem value={ItemStatus.WontDo}>
-                  Won&apos;t Do
+                  <span className="flex items-center gap-1.5">
+                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.WontDo))} />
+                    Won&apos;t Do
+                  </span>
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -316,7 +320,7 @@ const SessionActionCard = ({
         )}
 
         {/* Footer: due date + session link (previous variant) */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <button
@@ -349,20 +353,17 @@ const SessionActionCard = ({
             </PopoverContent>
           </Popover>
 
-          <div className="flex items-center gap-3">
-            {!isCurrent && (
-              <Link
-                href={`/coaching-sessions/${action.coaching_session_id}?tab=actions`}
-                className="hover:underline hover:text-foreground transition-colors"
-              >
-                From:{" "}
-                {action.created_at
-                  .setLocale(siteConfig.locale)
-                  .toLocaleString(DateTime.DATE_MED)}
-              </Link>
-            )}
-            <span>Created by {creatorName}</span>
-          </div>
+          {!isCurrent && (
+            <Link
+              href={`/coaching-sessions/${action.coaching_session_id}?tab=actions`}
+              className="hover:underline hover:text-foreground transition-colors"
+            >
+              From:{" "}
+              {action.created_at
+                .setLocale(siteConfig.locale)
+                .toLocaleString(DateTime.DATE_MED)}
+            </Link>
+          )}
         </div>
       </CardContent>
     </Card>

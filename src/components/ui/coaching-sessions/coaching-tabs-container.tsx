@@ -129,7 +129,7 @@ const CoachingTabsContainer: React.FC<{
         </Tabs>
         
         {/* Always-mounted content controlled by CSS display */}
-        <div className="mt-4">
+        <div className="mt-8 pl-4">
           <div 
             className="flex-col h-full space-y-4"
             style={{ display: currentTab === "notes" ? "flex" : "none" }}

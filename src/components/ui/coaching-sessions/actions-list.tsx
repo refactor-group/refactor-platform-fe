@@ -299,9 +299,9 @@ const ActionsList = ({
   // Review action body is read-only, so no handleReviewBodyChange needed
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pt-4">
       {/* Section 1: This Session */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div>
         <h3 className="text-sm font-semibold mb-3">New Actions</h3>
 
         <div className="flex flex-col gap-3">
@@ -340,58 +340,56 @@ const ActionsList = ({
       </div>
 
       {/* Section 2: Actions for Review (collapsible) */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700">
-        <Collapsible open={reviewOpen} onOpenChange={setReviewOpen}>
-            <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-accent transition-colors rounded-lg">
-              <ChevronRight
-                className={cn(
-                  "h-4 w-4 transition-transform",
-                  reviewOpen && "rotate-90"
-                )}
-              />
-              <span>Actions for Review</span>
-              {reviewCount > 0 && (
-                <Badge variant="secondary" className="ml-auto text-xs">
-                  {reviewCount}
-                </Badge>
-              )}
-            </CollapsibleTrigger>
+      <Collapsible open={reviewOpen} onOpenChange={setReviewOpen}>
+        <CollapsibleTrigger className="flex max-w-2xl items-center gap-2 py-3 text-sm font-semibold hover:text-foreground/80 transition-colors">
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 transition-transform",
+              reviewOpen && "rotate-90"
+            )}
+          />
+          <span>Actions for Review</span>
+          {reviewCount > 0 && (
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {reviewCount}
+            </Badge>
+          )}
+        </CollapsibleTrigger>
 
-            <CollapsibleContent className="px-4 pb-4">
-              <div className="flex flex-col gap-3">
-                {reviewActions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                      <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <h4 className="mb-1 text-sm font-semibold">
-                      All caught up
-                    </h4>
-                    <p className="text-sm text-muted-foreground max-w-xs">
-                      No actions were due between the last session and this one.
-                    </p>
-                  </div>
-                ) : (
-                  reviewActions.map((action) => (
-                    <SessionActionCard
-                      key={action.id}
-                      action={action}
-                      coachId={coachId}
-                      coachName={coachName}
-                      coacheeId={coacheeId}
-                      coacheeName={coacheeName}
-                      onStatusChange={handleReviewStatusChange}
-                      onDueDateChange={handleReviewDueDateChange}
-                      onAssigneesChange={handleReviewAssigneesChange}
-                      onBodyChange={() => {}}
-                      variant="previous"
-                    />
-                  ))
-                )}
+        <CollapsibleContent className="pt-2">
+          <div className="flex flex-col gap-3">
+            {reviewActions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <h4 className="mb-1 text-sm font-semibold">
+                  All caught up
+                </h4>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  No actions were due between the last session and this one.
+                </p>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+            ) : (
+              reviewActions.map((action) => (
+                <SessionActionCard
+                  key={action.id}
+                  action={action}
+                  coachId={coachId}
+                  coachName={coachName}
+                  coacheeId={coacheeId}
+                  coacheeName={coacheeName}
+                  onStatusChange={handleReviewStatusChange}
+                  onDueDateChange={handleReviewDueDateChange}
+                  onAssigneesChange={handleReviewAssigneesChange}
+                  onBodyChange={() => {}}
+                  variant="previous"
+                />
+              ))
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 };

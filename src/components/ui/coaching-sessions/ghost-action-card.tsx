@@ -121,7 +121,7 @@ const GhostActionCard = ({
 
   if (isEditing) {
     return (
-      <Card className="border-2 border-dashed border-primary/30">
+      <Card className="max-w-2xl border-2 border-dashed border-primary/30">
         <CardContent className="flex flex-col gap-3 p-4">
           <textarea
             ref={textareaRef}
@@ -266,7 +266,7 @@ const GhostActionCard = ({
       type="button"
       onClick={() => setIsEditing(true)}
       disabled={disabled}
-      className="w-full rounded-xl border-2 border-dashed border-muted-foreground/25 flex items-center justify-center gap-2 py-4 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      className="max-w-2xl w-full rounded-xl border-2 border-dashed border-muted-foreground/25 flex items-center justify-center gap-2 py-4 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <Plus className="h-5 w-5" />
       <span className="text-sm">Add action</span>
