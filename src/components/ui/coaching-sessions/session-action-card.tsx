@@ -159,14 +159,9 @@ const SessionActionCard = ({
       )}
     >
       <CardContent className="flex flex-col gap-2 p-5">
-        {/* Top row: checkbox + status pill + assignees + delete */}
+        {/* Top row: status pill | due date (centered) | assignees + delete */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Checkbox
-              checked={isCompleted}
-              onCheckedChange={handleCompletionToggle}
-            />
-
             {/* Status pill: displays status and opens dropdown to change it */}
             <Select
               value={action.status}
@@ -302,16 +297,16 @@ const SessionActionCard = ({
                 setIsEditing(false);
               }
             }}
-            className="flex-1 resize-none rounded border border-input bg-background px-2 py-1 text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring"
+            className="flex-1 resize-none rounded border border-input bg-background px-2 py-1 ml-2 text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring"
             rows={2}
           />
         ) : (
           <p
             className={cn(
-              "text-sm leading-relaxed",
+              "text-sm leading-relaxed ml-2",
               isCompleted && "line-through",
               isCurrent &&
-                "cursor-pointer rounded px-2 py-1 -mx-2 -my-1 hover:bg-accent transition-colors"
+                "cursor-pointer rounded px-2 py-1 hover:bg-accent transition-colors"
             )}
             onClick={isCurrent ? () => setIsEditing(true) : undefined}
           >
@@ -319,51 +314,55 @@ const SessionActionCard = ({
           </p>
         )}
 
-        {/* Footer: due date + session link (previous variant) */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "flex items-center gap-1 hover:underline cursor-pointer",
-                  isOverdue && "text-red-500 font-medium"
-                )}
-              >
-                {isOverdue && (
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                )}
-                Due:{" "}
-                {action.due_by
-                  .setLocale(siteConfig.locale)
-                  .toLocaleString(DateTime.DATE_MED)}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={action.due_by.toJSDate()}
-                onSelect={(date: Date | undefined) => {
-                  if (date) {
-                    onDueDateChange(action.id, DateTime.fromJSDate(date));
-                    setCalendarOpen(false);
-                  }
-                }}
-              />
-            </PopoverContent>
-          </Popover>
-
-          {!isCurrent && (
-            <Link
-              href={`/coaching-sessions/${action.coaching_session_id}?tab=actions`}
-              className="hover:underline hover:text-foreground transition-colors"
-            >
-              From:{" "}
-              {action.created_at
-                .setLocale(siteConfig.locale)
-                .toLocaleString(DateTime.DATE_MED)}
-            </Link>
-          )}
+        {/* Footer: due date + session link (centered) */}
+        <div className="flex justify-center text-xs text-muted-foreground ml-2">
+          <div className="flex items-center gap-1.5">
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-1 hover:underline cursor-pointer",
+                    isOverdue && "text-red-500 font-medium"
+                  )}
+                >
+                  {isOverdue && (
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+                  )}
+                  Due:{" "}
+                  {action.due_by
+                    .setLocale(siteConfig.locale)
+                    .toLocaleString(DateTime.DATE_MED)}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={action.due_by.toJSDate()}
+                  onSelect={(date: Date | undefined) => {
+                    if (date) {
+                      onDueDateChange(action.id, DateTime.fromJSDate(date));
+                      setCalendarOpen(false);
+                    }
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+            {!isCurrent && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <Link
+                  href={`/coaching-sessions/${action.coaching_session_id}?tab=actions`}
+                  className="hover:underline hover:text-foreground transition-colors"
+                >
+                  From:{" "}
+                  {action.created_at
+                    .setLocale(siteConfig.locale)
+                    .toLocaleString(DateTime.DATE_MED)}
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
