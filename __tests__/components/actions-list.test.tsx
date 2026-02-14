@@ -268,9 +268,9 @@ describe('ActionsList', () => {
   })
 
   /**
-   * Asserts clicking the delete button calls onActionDeleted
+   * Asserts clicking the delete button and confirming calls onActionDeleted
    */
-  it('should delete action when trash button is clicked', async () => {
+  it('should delete action when trash button is clicked and confirmed', async () => {
     const user = userEvent.setup()
 
     render(
@@ -286,9 +286,39 @@ describe('ActionsList', () => {
     expect(deleteButtons.length).toBeGreaterThan(0)
     await user.click(deleteButtons[0])
 
+    // Confirmation dialog should appear
+    const confirmButton = await screen.findByRole('button', { name: 'Delete' })
+    await user.click(confirmButton)
+
     await waitFor(() => {
       expect(mockProps.onActionDeleted).toHaveBeenCalled()
     })
+  })
+
+  /**
+   * Asserts clicking cancel in the delete confirmation does NOT delete the action
+   */
+  it('should not delete action when cancel is clicked in confirmation dialog', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <Wrapper>
+        <ActionsList {...mockProps} />
+      </Wrapper>
+    )
+
+    // Find trash buttons by their icon-sized ghost variant styling
+    const deleteButtons = screen.getAllByRole('button').filter(
+      (btn) => btn.classList.contains('hover:text-destructive')
+    )
+    expect(deleteButtons.length).toBeGreaterThan(0)
+    await user.click(deleteButtons[0])
+
+    // Confirmation dialog should appear — click Cancel
+    const cancelButton = await screen.findByRole('button', { name: 'Cancel' })
+    await user.click(cancelButton)
+
+    expect(mockProps.onActionDeleted).not.toHaveBeenCalled()
   })
 
   /**
