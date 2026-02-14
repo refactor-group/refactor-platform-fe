@@ -158,9 +158,9 @@ describe('ActionsList', () => {
   })
 
   /**
-   * Asserts action card text and checkboxes render for all session actions
+   * Asserts action card text and status pills render for all session actions
    */
-  it('should render action cards with completion checkboxes', () => {
+  it('should render action cards with status pills', () => {
     render(
       <Wrapper>
         <ActionsList {...mockProps} />
@@ -170,10 +170,6 @@ describe('ActionsList', () => {
     expect(screen.getByText('Complete project proposal')).toBeInTheDocument()
     expect(screen.getByText('Review quarterly goals')).toBeInTheDocument()
     expect(screen.getByText('Unassigned task')).toBeInTheDocument()
-
-    // 3 action checkboxes in session cards
-    const checkboxes = screen.getAllByRole('checkbox')
-    expect(checkboxes.length).toBeGreaterThanOrEqual(3)
   })
 
   /**
@@ -203,54 +199,18 @@ describe('ActionsList', () => {
   })
 
   /**
-   * Asserts clicking a completion checkbox calls onActionEdited with toggled status
+   * Asserts status pills render with correct text for each action
    */
-  it('should toggle action completion status when checkbox is clicked', async () => {
+  it('should render status pills with correct status text', () => {
     render(
       <Wrapper>
         <ActionsList {...mockProps} />
       </Wrapper>
     )
 
-    // Find the checkbox inside the card for "Review quarterly goals" (Completed action)
-    const completedCard = screen.getByText('Review quarterly goals').closest('[class*="card"]')!
-    const checkbox = completedCard.querySelector('[role="checkbox"]')!
-    fireEvent.click(checkbox)
-
-    await waitFor(() => {
-      expect(mockProps.onActionEdited).toHaveBeenCalledWith(
-        'action-2',
-        'Review quarterly goals',
-        ItemStatus.InProgress,
-        mockSessionActions[1].due_by,
-        mockSessionActions[1].assignee_ids
-      )
-    })
-  })
-
-  /**
-   * Asserts reverse toggle works (InProgress -> Completed)
-   */
-  it('should toggle in-progress action to completed', async () => {
-    render(
-      <Wrapper>
-        <ActionsList {...mockProps} />
-      </Wrapper>
-    )
-
-    const inProgressCard = screen.getByText('Complete project proposal').closest('[class*="card"]')!
-    const checkbox = inProgressCard.querySelector('[role="checkbox"]')!
-    fireEvent.click(checkbox)
-
-    await waitFor(() => {
-      expect(mockProps.onActionEdited).toHaveBeenCalledWith(
-        'action-1',
-        'Complete project proposal',
-        ItemStatus.Completed,
-        mockSessionActions[0].due_by,
-        mockSessionActions[0].assignee_ids
-      )
-    })
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
+    expect(screen.getByText('Completed')).toBeInTheDocument()
+    expect(screen.getByText('Not Started')).toBeInTheDocument()
   })
 
   /**
@@ -440,18 +400,4 @@ describe('ActionsList', () => {
     expect(completedCard.className).toContain('opacity-60')
   })
 
-  /**
-   * Asserts status pill displays the correct status text
-   */
-  it('should display status pills with correct text', () => {
-    render(
-      <Wrapper>
-        <ActionsList {...mockProps} />
-      </Wrapper>
-    )
-
-    expect(screen.getByText('In Progress')).toBeInTheDocument()
-    expect(screen.getByText('Completed')).toBeInTheDocument()
-    expect(screen.getByText('Not Started')).toBeInTheDocument()
-  })
 })
