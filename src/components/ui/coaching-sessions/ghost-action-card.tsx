@@ -62,6 +62,7 @@ const GhostActionCard = ({
   const [assigneeIds, setAssigneeIds] = useState<Id[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -261,15 +262,42 @@ const GhostActionCard = ({
     );
   }
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const text = e.dataTransfer.getData("text/plain").trim();
+    if (text && !disabled) {
+      setBody(text);
+      setIsEditing(true);
+    }
+  };
+
   return (
     <button
       type="button"
       onClick={() => setIsEditing(true)}
       disabled={disabled}
-      className="max-w-2xl w-full rounded-xl border-2 border-dashed border-muted-foreground/25 flex items-center justify-center gap-2 py-4 text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={cn(
+        "max-w-2xl w-full rounded-xl border-2 border-dashed flex items-center justify-center gap-2 py-4 text-muted-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+        isDragOver
+          ? "border-primary bg-primary/5 text-foreground"
+          : "border-muted-foreground/25 hover:border-primary/50 hover:text-foreground"
+      )}
     >
       <Plus className="h-5 w-5" />
-      <span className="text-sm">Add action</span>
+      <span className="text-sm">{isDragOver ? "Drop to create action" : "Add action"}</span>
     </button>
   );
 };
