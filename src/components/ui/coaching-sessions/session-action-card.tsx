@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -309,7 +312,7 @@ const SessionActionCard = ({
         </div>
 
         {/* Body text */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {isCurrent && isEditing ? (
             <textarea
               ref={textareaRef}
@@ -329,17 +332,39 @@ const SessionActionCard = ({
               className="h-full w-full resize-none rounded-lg bg-muted/50 px-3 py-2 text-sm leading-relaxed border border-black/15 outline-none ring-0 focus:border-black/15 focus:outline-none focus:ring-0"
             />
           ) : (
-            <p
+            <div
               className={cn(
-                "text-sm leading-relaxed rounded-lg bg-muted/50 px-3 py-2 line-clamp-4",
+                "text-sm leading-relaxed rounded-lg bg-muted/50 px-3 py-2 prose prose-sm prose-neutral dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0",
                 isCompleted && "line-through",
                 isCurrent &&
                   "cursor-pointer hover:bg-muted/80 transition-colors"
               )}
               onClick={isCurrent ? () => setIsEditing(true) : undefined}
             >
-              {action.body || "No description"}
-            </p>
+              <ReactMarkdown
+                components={{
+                  code({ className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    return match ? (
+                      <SyntaxHighlighter
+                        style={oneLight}
+                        language={match[1]}
+                        PreTag="div"
+                        className="!rounded-md !text-xs !my-1"
+                      >
+                        {String(children).replace(/\n$/, "")}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code className={cn("rounded bg-muted px-1 py-0.5 text-xs", className)} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {action.body || "No description"}
+              </ReactMarkdown>
+            </div>
           )}
         </div>
 
