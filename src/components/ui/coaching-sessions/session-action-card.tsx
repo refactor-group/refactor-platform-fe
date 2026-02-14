@@ -5,9 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight, oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useTheme } from "next-themes";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -15,17 +13,6 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +31,11 @@ import type { Action } from "@/types/action";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 import { siteConfig } from "@/site.config";
+import {
+  resolveAssignees,
+  AssigneePickerPopover,
+  DueDatePicker,
+} from "@/components/ui/coaching-sessions/action-card-parts";
 
 interface SessionActionCardProps {
   action: Action;
@@ -59,14 +51,9 @@ interface SessionActionCardProps {
   variant?: "current" | "previous";
 }
 
-/** Derive initials from a display name (e.g. "Alex Rivera" -> "AR") */
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("")
-    .slice(0, 2);
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 /** Returns the Tailwind color class for the status dot */
 function statusDotColor(status: ItemStatus): string {
@@ -86,6 +73,234 @@ function statusDotColor(status: ItemStatus): string {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+interface StatusSelectProps {
+  status: ItemStatus;
+  onStatusChange: (newStatus: ItemStatus) => void;
+}
+
+function StatusSelect({ status, onStatusChange }: StatusSelectProps) {
+  return (
+    <Select
+      value={status}
+      onValueChange={(value) => onStatusChange(value as ItemStatus)}
+    >
+      <SelectTrigger
+        className="h-6 w-auto gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent [&>svg]:h-3 [&>svg]:w-3"
+      >
+        <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(status))} />
+        {actionStatusToString(status)}
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ItemStatus.NotStarted}>
+          <span className="flex items-center gap-1.5">
+            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.NotStarted))} />
+            Not Started
+          </span>
+        </SelectItem>
+        <SelectItem value={ItemStatus.InProgress}>
+          <span className="flex items-center gap-1.5">
+            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.InProgress))} />
+            In Progress
+          </span>
+        </SelectItem>
+        <SelectItem value={ItemStatus.Completed}>
+          <span className="flex items-center gap-1.5">
+            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.Completed))} />
+            Completed
+          </span>
+        </SelectItem>
+        <SelectItem value={ItemStatus.WontDo}>
+          <span className="flex items-center gap-1.5">
+            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.WontDo))} />
+            Won&apos;t Do
+          </span>
+        </SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
+interface DeleteConfirmButtonProps {
+  onDelete: () => void;
+}
+
+function DeleteConfirmButton({ onDelete }: DeleteConfirmButtonProps) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="!h-[18px] !w-[18px]" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete action</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete this action? This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onDelete}>
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+interface ActionBodyProps {
+  body: string | undefined;
+  isCompleted: boolean;
+  isCurrent: boolean;
+  onBodyChange: (newBody: string) => void;
+}
+
+function ActionBody({ body, isCompleted, isCurrent, onBodyChange }: ActionBodyProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(body ?? "");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { resolvedTheme } = useTheme();
+
+  // Sync edit text when body changes externally
+  useEffect(() => {
+    setEditText(body ?? "");
+  }, [body]);
+
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+    }
+  }, [isEditing]);
+
+  const commitEdit = () => {
+    setIsEditing(false);
+    const trimmed = editText.trim();
+    if (trimmed && trimmed !== (body ?? "")) {
+      onBodyChange(trimmed);
+    } else {
+      setEditText(body ?? "");
+    }
+  };
+
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      {isCurrent && isEditing ? (
+        <textarea
+          ref={textareaRef}
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              commitEdit();
+            }
+            if (e.key === "Escape") {
+              setEditText(body ?? "");
+              setIsEditing(false);
+            }
+          }}
+          className="h-full w-full resize-none rounded-lg bg-muted/50 px-3 py-2 text-sm leading-relaxed border border-black/15 outline-none ring-0 focus:border-black/15 focus:outline-none focus:ring-0"
+        />
+      ) : (
+        <div
+          className={cn(
+            "text-sm leading-relaxed rounded-lg bg-muted/50 px-3 py-2 prose prose-sm prose-neutral dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0",
+            isCompleted && "line-through",
+            isCurrent &&
+              "cursor-pointer hover:bg-muted/80 transition-colors"
+          )}
+          onClick={isCurrent ? () => setIsEditing(true) : undefined}
+        >
+          <ReactMarkdown
+            components={{
+              code({ className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || "");
+                return match ? (
+                  <SyntaxHighlighter
+                    style={resolvedTheme === "dark" ? oneDark : oneLight}
+                    language={match[1]}
+                    PreTag="div"
+                    className="!rounded-md !text-xs !my-1"
+                  >
+                    {String(children).replace(/\n$/, "")}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={cn("rounded bg-muted px-1 py-0.5 text-xs", className)} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {body || "No description"}
+          </ReactMarkdown>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ActionFooterProps {
+  dueBy: DateTime;
+  createdAt: DateTime;
+  coachingSessionId: Id;
+  isOverdue: boolean;
+  isCurrent: boolean;
+  onDueDateChange: (newDueBy: DateTime) => void;
+}
+
+function ActionFooter({
+  dueBy,
+  createdAt,
+  coachingSessionId,
+  isOverdue,
+  isCurrent,
+  onDueDateChange,
+}: ActionFooterProps) {
+  return (
+    <div className="mt-auto flex justify-end text-xs text-muted-foreground mr-1">
+      <div className="flex items-center gap-1.5">
+        <DueDatePicker
+          value={dueBy}
+          onChange={onDueDateChange}
+          variant="text"
+          isOverdue={isOverdue}
+        />
+        {!isCurrent && (
+          <>
+            <span className="text-muted-foreground/40">·</span>
+            <Link
+              href={`/coaching-sessions/${coachingSessionId}?tab=actions`}
+              className="hover:underline hover:text-foreground transition-colors"
+            >
+              From:{" "}
+              {createdAt
+                .setLocale(siteConfig.locale)
+                .toLocaleString(DateTime.DATE_MED)}
+            </Link>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 const SessionActionCard = ({
   action,
   coachId,
@@ -99,72 +314,28 @@ const SessionActionCard = ({
   onDelete,
   variant = "current",
 }: SessionActionCardProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(action.body ?? "");
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Sync edit text when action body changes externally
-  useEffect(() => {
-    setEditText(action.body ?? "");
-  }, [action.body]);
-
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-    }
-  }, [isEditing]);
-
   const now = DateTime.now();
   const isCompleted =
     action.status === ItemStatus.Completed ||
     action.status === ItemStatus.WontDo;
   const isOverdue = !isCompleted && action.due_by < now;
-
-  // Build the list of available assignees from coach/coachee props
-  const allAssignees = [
-    { id: coachId, name: coachName, initials: getInitials(coachName) },
-    { id: coacheeId, name: coacheeName, initials: getInitials(coacheeName) },
-  ].filter((a) => a.id);
+  const isCurrent = variant === "current";
 
   const assigneeIds = action.assignee_ids ?? [];
-
-  // Resolve assigned users to display info
-  const resolvedAssignees = assigneeIds
-    .map((id) => allAssignees.find((a) => a.id === id))
-    .filter(
-      (a): a is { id: Id; name: string; initials: string } => a !== undefined
-    );
-
-  const commitEdit = () => {
-    setIsEditing(false);
-    const trimmed = editText.trim();
-    if (trimmed && trimmed !== (action.body ?? "")) {
-      onBodyChange(action.id, trimmed);
-    } else {
-      setEditText(action.body ?? "");
-    }
-  };
-
-  const handleCompletionToggle = () => {
-    const newStatus =
-      action.status === ItemStatus.Completed
-        ? ItemStatus.InProgress
-        : ItemStatus.Completed;
-    onStatusChange(action.id, newStatus);
-  };
+  const { allAssignees, resolvedAssignees } = resolveAssignees(
+    assigneeIds,
+    coachId,
+    coachName,
+    coacheeId,
+    coacheeName
+  );
 
   const handleAssigneeToggle = (assigneeId: Id) => {
-    const isAssigned = assigneeIds.includes(assigneeId);
-    const updated = isAssigned
+    const updated = assigneeIds.includes(assigneeId)
       ? assigneeIds.filter((id) => id !== assigneeId)
       : [...assigneeIds, assigneeId];
     onAssigneesChange(action.id, updated);
   };
-
-  const { resolvedTheme } = useTheme();
-  const isCurrent = variant === "current";
 
   return (
     <Card
@@ -175,251 +346,43 @@ const SessionActionCard = ({
       )}
     >
       <CardContent className="flex h-full flex-col gap-2 p-5">
-        {/* Top row: status pill | due date (centered) | assignees + delete */}
+        {/* Top row: status pill | assignees + delete */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {/* Status pill: displays status and opens dropdown to change it */}
-            <Select
-              value={action.status}
-              onValueChange={(value) =>
-                onStatusChange(action.id, value as ItemStatus)
-              }
-            >
-              <SelectTrigger
-                className="h-6 w-auto gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent [&>svg]:h-3 [&>svg]:w-3"
-              >
-                <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(action.status))} />
-                {actionStatusToString(action.status)}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ItemStatus.NotStarted}>
-                  <span className="flex items-center gap-1.5">
-                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.NotStarted))} />
-                    Not Started
-                  </span>
-                </SelectItem>
-                <SelectItem value={ItemStatus.InProgress}>
-                  <span className="flex items-center gap-1.5">
-                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.InProgress))} />
-                    In Progress
-                  </span>
-                </SelectItem>
-                <SelectItem value={ItemStatus.Completed}>
-                  <span className="flex items-center gap-1.5">
-                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.Completed))} />
-                    Completed
-                  </span>
-                </SelectItem>
-                <SelectItem value={ItemStatus.WontDo}>
-                  <span className="flex items-center gap-1.5">
-                    <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.WontDo))} />
-                    Won&apos;t Do
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <StatusSelect
+              status={action.status}
+              onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
+            />
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Assignee avatar stack with popover */}
-            <Popover>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex -space-x-2 cursor-pointer hover:opacity-80"
-                    >
-                      {resolvedAssignees.length > 0 ? (
-                        resolvedAssignees.map((assignee) => (
-                          <Avatar
-                            key={assignee.id}
-                            className="h-8 w-8 border-2 border-background"
-                          >
-                            <AvatarFallback className="text-[11px]">
-                              {assignee.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))
-                      ) : (
-                        <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/50">
-                          <AvatarFallback className="text-[11px] text-muted-foreground">
-                            +
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </button>
-                  </PopoverTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Assignees</TooltipContent>
-              </Tooltip>
-              <PopoverContent className="w-48 p-2">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-muted-foreground px-2 py-1">
-                    Assignees
-                  </span>
-                  {allAssignees.map((assignee) => {
-                    const isAssigned = assigneeIds.includes(assignee.id);
-                    return (
-                      <div
-                        key={assignee.id}
-                        role="option"
-                        aria-selected={isAssigned}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
-                        onClick={() => handleAssigneeToggle(assignee.id)}
-                      >
-                        <Checkbox checked={isAssigned} />
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-[10px]">
-                            {assignee.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{assignee.name}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            {/* Delete button with confirmation (current variant only) */}
-            {isCurrent && onDelete && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="!h-[18px] !w-[18px]" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete action</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete this action? This cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDelete(action.id)}>
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-        </div>
-
-        {/* Body text */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {isCurrent && isEditing ? (
-            <textarea
-              ref={textareaRef}
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              onBlur={commitEdit}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  commitEdit();
-                }
-                if (e.key === "Escape") {
-                  setEditText(action.body ?? "");
-                  setIsEditing(false);
-                }
-              }}
-              className="h-full w-full resize-none rounded-lg bg-muted/50 px-3 py-2 text-sm leading-relaxed border border-black/15 outline-none ring-0 focus:border-black/15 focus:outline-none focus:ring-0"
+            <AssigneePickerPopover
+              allAssignees={allAssignees}
+              resolvedAssignees={resolvedAssignees}
+              assigneeIds={assigneeIds}
+              onToggle={handleAssigneeToggle}
             />
-          ) : (
-            <div
-              className={cn(
-                "text-sm leading-relaxed rounded-lg bg-muted/50 px-3 py-2 prose prose-sm prose-neutral dark:prose-invert max-w-none [&_p]:m-0 [&_ul]:m-0 [&_ol]:m-0 [&_li]:m-0",
-                isCompleted && "line-through",
-                isCurrent &&
-                  "cursor-pointer hover:bg-muted/80 transition-colors"
-              )}
-              onClick={isCurrent ? () => setIsEditing(true) : undefined}
-            >
-              <ReactMarkdown
-                components={{
-                  code({ className, children, ...props }) {
-                    const match = /language-(\w+)/.exec(className || "");
-                    return match ? (
-                      <SyntaxHighlighter
-                        style={resolvedTheme === "dark" ? oneDark : oneLight}
-                        language={match[1]}
-                        PreTag="div"
-                        className="!rounded-md !text-xs !my-1"
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={cn("rounded bg-muted px-1 py-0.5 text-xs", className)} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                }}
-              >
-                {action.body || "No description"}
-              </ReactMarkdown>
-            </div>
-          )}
-        </div>
-
-        {/* Footer: due date + session link (right-aligned) */}
-        <div className="mt-auto flex justify-end text-xs text-muted-foreground mr-1">
-          <div className="flex items-center gap-1.5">
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex items-center gap-1 hover:underline cursor-pointer",
-                    isOverdue && "text-red-500 font-medium"
-                  )}
-                >
-                  {isOverdue && (
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-                  )}
-                  Due:{" "}
-                  {action.due_by
-                    .setLocale(siteConfig.locale)
-                    .toLocaleString(DateTime.DATE_MED)}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={action.due_by.toJSDate()}
-                  onSelect={(date: Date | undefined) => {
-                    if (date) {
-                      onDueDateChange(action.id, DateTime.fromJSDate(date));
-                      setCalendarOpen(false);
-                    }
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-            {!isCurrent && (
-              <>
-                <span className="text-muted-foreground/40">·</span>
-                <Link
-                  href={`/coaching-sessions/${action.coaching_session_id}?tab=actions`}
-                  className="hover:underline hover:text-foreground transition-colors"
-                >
-                  From:{" "}
-                  {action.created_at
-                    .setLocale(siteConfig.locale)
-                    .toLocaleString(DateTime.DATE_MED)}
-                </Link>
-              </>
+            {isCurrent && onDelete && (
+              <DeleteConfirmButton onDelete={() => onDelete(action.id)} />
             )}
           </div>
         </div>
+
+        <ActionBody
+          body={action.body}
+          isCompleted={isCompleted}
+          isCurrent={isCurrent}
+          onBodyChange={(newBody) => onBodyChange(action.id, newBody)}
+        />
+
+        <ActionFooter
+          dueBy={action.due_by}
+          createdAt={action.created_at}
+          coachingSessionId={action.coaching_session_id}
+          isOverdue={isOverdue}
+          isCurrent={isCurrent}
+          onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
+        />
       </CardContent>
     </Card>
   );

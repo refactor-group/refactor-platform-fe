@@ -2,27 +2,19 @@
 
 import { useState, useRef, useEffect, type DragEvent } from "react";
 import { toast } from "sonner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { CalendarIcon, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ItemStatus, Id, EntityApiError } from "@/types/general";
 import type { Action } from "@/types/action";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
-import { siteConfig } from "@/site.config";
+import {
+  type AssigneeInfo,
+  resolveAssignees,
+  AssigneePickerPopover,
+  DueDatePicker,
+} from "@/components/ui/coaching-sessions/action-card-parts";
 
 interface GhostActionCardProps {
   coachId: Id;
@@ -38,14 +30,148 @@ interface GhostActionCardProps {
   disabled?: boolean;
 }
 
-/** Derive initials from a display name (e.g. "Alex Rivera" -> "AR") */
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("")
-    .slice(0, 2);
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+interface GhostCardFormProps {
+  body: string;
+  onBodyChange: (body: string) => void;
+  dueBy: DateTime;
+  onDueByChange: (dueBy: DateTime) => void;
+  allAssignees: AssigneeInfo[];
+  resolvedAssignees: AssigneeInfo[];
+  assigneeIds: Id[];
+  onAssigneeToggle: (assigneeId: Id) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  isSaving: boolean;
 }
+
+function GhostCardForm({
+  body,
+  onBodyChange,
+  dueBy,
+  onDueByChange,
+  allAssignees,
+  resolvedAssignees,
+  assigneeIds,
+  onAssigneeToggle,
+  onSave,
+  onCancel,
+  isSaving,
+}: GhostCardFormProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  return (
+    <Card className="h-56 border-2 border-dashed border-primary/30">
+      <CardContent className="flex flex-col gap-3 p-4">
+        <textarea
+          ref={textareaRef}
+          value={body}
+          onChange={(e) => onBodyChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSave();
+            }
+            if (e.key === "Escape") {
+              onCancel();
+            }
+          }}
+          placeholder="What needs to be done?"
+          className="flex-1 resize-none rounded border border-input bg-background px-2 py-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          rows={3}
+          disabled={isSaving}
+        />
+
+        {/* Due date + Assignee row */}
+        <div className="flex flex-wrap items-center gap-2">
+          <DueDatePicker
+            value={dueBy}
+            onChange={onDueByChange}
+            variant="button"
+            disabled={isSaving}
+          />
+          <AssigneePickerPopover
+            allAssignees={allAssignees}
+            resolvedAssignees={resolvedAssignees}
+            assigneeIds={assigneeIds}
+            onToggle={onAssigneeToggle}
+            disabled={isSaving}
+          />
+        </div>
+
+        {/* Save / Cancel */}
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={onSave}
+            disabled={isSaving || !body.trim()}
+          >
+            {isSaving ? "Saving..." : "Add"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface GhostCardPlaceholderProps {
+  onActivate: () => void;
+  disabled: boolean;
+  isDragOver: boolean;
+  onDragOver: (e: DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: DragEvent) => void;
+}
+
+function GhostCardPlaceholder({
+  onActivate,
+  disabled,
+  isDragOver,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: GhostCardPlaceholderProps) {
+  return (
+    <button
+      type="button"
+      onClick={onActivate}
+      disabled={disabled}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      className={cn(
+        "h-56 w-full rounded-xl border-2 border-dashed flex items-center justify-center gap-2 text-muted-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+        isDragOver
+          ? "border-primary bg-primary/5 text-foreground"
+          : "border-muted-foreground/25 hover:border-primary/50 hover:text-foreground"
+      )}
+    >
+      <Plus className="h-5 w-5" />
+      <span className="text-sm">
+        {isDragOver ? "Drop to create action" : "Add action"}
+      </span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 const GhostActionCard = ({
   coachId,
@@ -62,34 +188,29 @@ const GhostActionCard = ({
   );
   const [assigneeIds, setAssigneeIds] = useState<Id[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, [isEditing]);
-
-  const allAssignees = [
-    { id: coachId, name: coachName, initials: getInitials(coachName) },
-    { id: coacheeId, name: coacheeName, initials: getInitials(coacheeName) },
-  ].filter((a) => a.id);
-
-  const resolvedAssignees = assigneeIds
-    .map((id) => allAssignees.find((a) => a.id === id))
-    .filter(
-      (a): a is { id: Id; name: string; initials: string } => a !== undefined
-    );
+  const { allAssignees, resolvedAssignees } = resolveAssignees(
+    assigneeIds,
+    coachId,
+    coachName,
+    coacheeId,
+    coacheeName
+  );
 
   const handleAssigneeToggle = (assigneeId: Id) => {
-    const isAssigned = assigneeIds.includes(assigneeId);
-    setAssigneeIds(
-      isAssigned
-        ? assigneeIds.filter((id) => id !== assigneeId)
-        : [...assigneeIds, assigneeId]
+    setAssigneeIds((prev) =>
+      prev.includes(assigneeId)
+        ? prev.filter((id) => id !== assigneeId)
+        : [...prev, assigneeId]
     );
+  };
+
+  const resetForm = () => {
+    setBody("");
+    setDueBy(DateTime.now().plus({ days: 7 }));
+    setAssigneeIds([]);
+    setIsEditing(false);
   };
 
   const handleSave = async () => {
@@ -104,11 +225,7 @@ const GhostActionCard = ({
         dueBy,
         assigneeIds.length > 0 ? assigneeIds : undefined
       );
-      // Reset form on success
-      setBody("");
-      setDueBy(DateTime.now().plus({ days: 7 }));
-      setAssigneeIds([]);
-      setIsEditing(false);
+      resetForm();
     } catch (err) {
       if (err instanceof EntityApiError && err.isNetworkError()) {
         toast.error("Failed to create new action. Connection to service was lost.");
@@ -120,154 +237,7 @@ const GhostActionCard = ({
     }
   };
 
-  const handleCancel = () => {
-    setBody("");
-    setDueBy(DateTime.now().plus({ days: 7 }));
-    setAssigneeIds([]);
-    setIsEditing(false);
-  };
-
-  if (isEditing) {
-    return (
-      <Card className="h-56 border-2 border-dashed border-primary/30">
-        <CardContent className="flex flex-col gap-3 p-4">
-          <textarea
-            ref={textareaRef}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSave();
-              }
-              if (e.key === "Escape") {
-                handleCancel();
-              }
-            }}
-            placeholder="What needs to be done?"
-            className="flex-1 resize-none rounded border border-input bg-background px-2 py-1 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            rows={3}
-            disabled={isSaving}
-          />
-
-          {/* Due date + Assignee row */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "h-9 text-xs gap-1.5",
-                    !dueBy && "text-muted-foreground"
-                  )}
-                  disabled={isSaving}
-                >
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  {dueBy
-                    .setLocale(siteConfig.locale)
-                    .toLocaleString(DateTime.DATE_MED)}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={dueBy.toJSDate()}
-                  onSelect={(date: Date | undefined) => {
-                    if (date) {
-                      setDueBy(DateTime.fromJSDate(date));
-                      setCalendarOpen(false);
-                    }
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-
-            {/* Assignee avatar stack with popover */}
-            <Popover>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex -space-x-2 cursor-pointer hover:opacity-80"
-                      disabled={isSaving}
-                    >
-                      {resolvedAssignees.length > 0 ? (
-                        resolvedAssignees.map((assignee) => (
-                          <Avatar
-                            key={assignee.id}
-                            className="h-8 w-8 border-2 border-background"
-                          >
-                            <AvatarFallback className="text-[11px]">
-                              {assignee.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))
-                      ) : (
-                        <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/50">
-                          <AvatarFallback className="text-[11px] text-muted-foreground">
-                            +
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                    </button>
-                  </PopoverTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Assignees</TooltipContent>
-              </Tooltip>
-              <PopoverContent className="w-48 p-2">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-muted-foreground px-2 py-1">
-                    Assignees
-                  </span>
-                  {allAssignees.map((assignee) => {
-                    const isAssigned = assigneeIds.includes(assignee.id);
-                    return (
-                      <div
-                        key={assignee.id}
-                        role="option"
-                        aria-selected={isAssigned}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
-                        onClick={() => handleAssigneeToggle(assignee.id)}
-                      >
-                        <Checkbox checked={isAssigned} />
-                        <Avatar className="h-6 w-6">
-                          <AvatarFallback className="text-[10px]">
-                            {assignee.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{assignee.name}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Save / Cancel */}
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={isSaving || !body.trim()}
-            >
-              {isSaving ? "Saving..." : "Add"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // -- Drag-and-drop handlers ------------------------------------------------
 
   const hasTextData = (dt: DataTransfer) =>
     dt.types.includes("text/plain") && !dt.types.includes("Files");
@@ -293,24 +263,35 @@ const GhostActionCard = ({
     }
   };
 
+  // -- Render -----------------------------------------------------------------
+
+  if (isEditing) {
+    return (
+      <GhostCardForm
+        body={body}
+        onBodyChange={setBody}
+        dueBy={dueBy}
+        onDueByChange={setDueBy}
+        allAssignees={allAssignees}
+        resolvedAssignees={resolvedAssignees}
+        assigneeIds={assigneeIds}
+        onAssigneeToggle={handleAssigneeToggle}
+        onSave={handleSave}
+        onCancel={resetForm}
+        isSaving={isSaving}
+      />
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => setIsEditing(true)}
+    <GhostCardPlaceholder
+      onActivate={() => setIsEditing(true)}
       disabled={disabled}
+      isDragOver={isDragOver}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={cn(
-        "h-56 w-full rounded-xl border-2 border-dashed flex items-center justify-center gap-2 text-muted-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
-        isDragOver
-          ? "border-primary bg-primary/5 text-foreground"
-          : "border-muted-foreground/25 hover:border-primary/50 hover:text-foreground"
-      )}
-    >
-      <Plus className="h-5 w-5" />
-      <span className="text-sm">{isDragOver ? "Drop to create action" : "Add action"}</span>
-    </button>
+    />
   );
 };
 
