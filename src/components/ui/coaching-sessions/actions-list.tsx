@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useRef } from "react";
 import { ItemStatus, Id } from "@/types/general";
-import type { Action } from "@/types/action";
+import { sortActionArray, type Action } from "@/types/action";
+import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -313,7 +314,7 @@ const ActionsList = ({
             </p>
           )}
 
-          {sessionActions.map((action) => (
+          {sortActionArray(sessionActions, SortOrder.Asc, "created_at").map((action) => (
             <SessionActionCard
               key={action.id}
               action={action}
