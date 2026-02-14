@@ -164,12 +164,12 @@ const SessionActionCard = ({
   return (
     <Card
       className={cn(
-        "max-w-2xl border-border/40 shadow-none bg-gradient-to-t from-primary/[0.02] to-card transition-colors dark:from-primary/[0.03] dark:to-card",
-        isOverdue && "from-red-100/40 to-red-50/15 dark:from-red-950/15 dark:to-red-950/5",
+        "rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] bg-card transition-colors h-56 overflow-hidden",
+        isOverdue && "bg-red-50/40 dark:bg-red-950/10",
         isCompleted && "opacity-60"
       )}
     >
-      <CardContent className="flex flex-col gap-2 p-5">
+      <CardContent className="flex h-full flex-col gap-2 p-5">
         {/* Top row: status pill | due date (centered) | assignees + delete */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -309,41 +309,42 @@ const SessionActionCard = ({
         </div>
 
         {/* Body text */}
-        {isCurrent && isEditing ? (
-          <textarea
-            ref={textareaRef}
-            value={editText}
-            onChange={(e) => setEditText(e.target.value)}
-            onBlur={commitEdit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                commitEdit();
-              }
-              if (e.key === "Escape") {
-                setEditText(action.body ?? "");
-                setIsEditing(false);
-              }
-            }}
-            className="flex-1 resize-none rounded border border-input bg-background px-2 py-1 ml-2 text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring"
-            rows={2}
-          />
-        ) : (
-          <p
-            className={cn(
-              "text-sm leading-relaxed ml-2",
-              isCompleted && "line-through",
-              isCurrent &&
-                "cursor-pointer rounded px-2 py-1 hover:bg-accent transition-colors"
-            )}
-            onClick={isCurrent ? () => setIsEditing(true) : undefined}
-          >
-            {action.body || "No description"}
-          </p>
-        )}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {isCurrent && isEditing ? (
+            <textarea
+              ref={textareaRef}
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onBlur={commitEdit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  commitEdit();
+                }
+                if (e.key === "Escape") {
+                  setEditText(action.body ?? "");
+                  setIsEditing(false);
+                }
+              }}
+              className="h-full w-full resize-none rounded-lg bg-muted/50 px-3 py-2 text-sm leading-relaxed border border-black/15 outline-none ring-0 focus:border-black/15 focus:outline-none focus:ring-0"
+            />
+          ) : (
+            <p
+              className={cn(
+                "text-sm leading-relaxed rounded-lg bg-muted/50 px-3 py-2 line-clamp-4",
+                isCompleted && "line-through",
+                isCurrent &&
+                  "cursor-pointer hover:bg-muted/80 transition-colors"
+              )}
+              onClick={isCurrent ? () => setIsEditing(true) : undefined}
+            >
+              {action.body || "No description"}
+            </p>
+          )}
+        </div>
 
         {/* Footer: due date + session link (right-aligned) */}
-        <div className="flex justify-end text-xs text-muted-foreground mr-1">
+        <div className="mt-auto flex justify-end text-xs text-muted-foreground mr-1">
           <div className="flex items-center gap-1.5">
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>

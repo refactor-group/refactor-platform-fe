@@ -300,11 +300,13 @@ const ActionsList = ({
 
   return (
     <div className="flex flex-col gap-6 pt-4 pb-24">
-      {/* Section 1: This Session */}
-      <div>
-        <h3 className="text-sm font-semibold mb-3">New Actions</h3>
-
-        <div className="flex flex-col gap-3">
+      {/* Section 1: New Actions */}
+      <div className="rounded-xl border border-border bg-card">
+        <div className="px-6 py-4">
+          <h3 className="text-sm font-semibold">New Actions</h3>
+        </div>
+        <div className="border-t border-border" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
           {sessionActions.length === 0 && (
             <p className="text-sm text-muted-foreground py-2">
               No actions yet for this session.
@@ -340,56 +342,59 @@ const ActionsList = ({
       </div>
 
       {/* Section 2: Actions for Review (collapsible) */}
-      <Collapsible open={reviewOpen} onOpenChange={setReviewOpen}>
-        <CollapsibleTrigger className="flex max-w-2xl items-center gap-2 py-3 text-sm font-semibold hover:text-foreground/80 transition-colors">
-          <span>Actions for Review</span>
-          {reviewCount > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {reviewCount}
-            </Badge>
-          )}
-          <ChevronRight
-            className={cn(
-              "h-4 w-4 transition-transform",
-              reviewOpen && "rotate-90"
+      <div className="rounded-xl border border-border bg-card">
+        <Collapsible open={reviewOpen} onOpenChange={setReviewOpen}>
+          <CollapsibleTrigger className="flex w-full items-center gap-2 px-6 py-4 text-sm font-semibold hover:text-foreground/80 transition-colors">
+            <span>Actions for Review</span>
+            {reviewCount > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {reviewCount}
+              </Badge>
             )}
-          />
-        </CollapsibleTrigger>
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 transition-transform",
+                reviewOpen && "rotate-90"
+              )}
+            />
+          </CollapsibleTrigger>
 
-        <CollapsibleContent className="pt-2">
-          <div className="flex flex-col gap-3">
-            {reviewActions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+          <CollapsibleContent>
+            <div className="border-t border-border" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
+              {reviewActions.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center justify-center py-8 text-center">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                    <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <h4 className="mb-1 text-sm font-semibold">
+                    All caught up
+                  </h4>
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    No actions were due between the last session and this one.
+                  </p>
                 </div>
-                <h4 className="mb-1 text-sm font-semibold">
-                  All caught up
-                </h4>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  No actions were due between the last session and this one.
-                </p>
-              </div>
-            ) : (
-              reviewActions.map((action) => (
-                <SessionActionCard
-                  key={action.id}
-                  action={action}
-                  coachId={coachId}
-                  coachName={coachName}
-                  coacheeId={coacheeId}
-                  coacheeName={coacheeName}
-                  onStatusChange={handleReviewStatusChange}
-                  onDueDateChange={handleReviewDueDateChange}
-                  onAssigneesChange={handleReviewAssigneesChange}
-                  onBodyChange={() => {}}
-                  variant="previous"
-                />
-              ))
-            )}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+              ) : (
+                reviewActions.map((action) => (
+                  <SessionActionCard
+                    key={action.id}
+                    action={action}
+                    coachId={coachId}
+                    coachName={coachName}
+                    coacheeId={coacheeId}
+                    coacheeName={coacheeName}
+                    onStatusChange={handleReviewStatusChange}
+                    onDueDateChange={handleReviewDueDateChange}
+                    onAssigneesChange={handleReviewAssigneesChange}
+                    onBodyChange={() => {}}
+                    variant="previous"
+                  />
+                ))
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
     </div>
   );
 };

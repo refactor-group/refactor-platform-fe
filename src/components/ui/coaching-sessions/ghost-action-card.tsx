@@ -122,7 +122,7 @@ const GhostActionCard = ({
 
   if (isEditing) {
     return (
-      <Card className="max-w-2xl border-2 border-dashed border-primary/30">
+      <Card className="h-56 border-2 border-dashed border-primary/30">
         <CardContent className="flex flex-col gap-3 p-4">
           <textarea
             ref={textareaRef}
@@ -295,7 +295,7 @@ const GhostActionCard = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "max-w-2xl w-full rounded-xl border-2 border-dashed flex items-center justify-center gap-2 py-4 text-muted-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
+        "h-56 w-full rounded-xl border-2 border-dashed flex items-center justify-center gap-2 text-muted-foreground transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
         isDragOver
           ? "border-primary bg-primary/5 text-foreground"
           : "border-muted-foreground/25 hover:border-primary/50 hover:text-foreground"
