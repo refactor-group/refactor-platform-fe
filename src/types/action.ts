@@ -25,15 +25,15 @@ export function isAction(value: unknown): value is Action {
   const object = value as Record<string, unknown>;
 
   return (
-    (typeof object.id === "string" &&
-      typeof object.coaching_session_id === "string" &&
-      typeof object.user_id === "string" &&
-      typeof object.status === "string" &&
-      typeof object.status_changed_at === "string" &&
-      typeof object.due_by === "string" &&
-      typeof object.created_at === "string" &&
-      typeof object.updated_at === "string") ||
-    typeof object.body === "string" // body is optional
+    typeof object.id === "string" &&
+    typeof object.coaching_session_id === "string" &&
+    typeof object.user_id === "string" &&
+    typeof object.status === "string" &&
+    typeof object.status_changed_at === "string" &&
+    typeof object.due_by === "string" &&
+    typeof object.created_at === "string" &&
+    typeof object.updated_at === "string" &&
+    (object.body === undefined || typeof object.body === "string") // body is optional
   );
 }
 

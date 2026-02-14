@@ -128,10 +128,11 @@ const ActionsList = ({
 
     // Sessions are sorted ascending by date. Find the one immediately before this one.
     const currentDateStr = currentSessionDate.toISODate();
+    if (!currentDateStr) return null;
     let prev: DateTime | null = null;
     for (const session of coachingSessions) {
       const sessionDt = DateTime.fromISO(session.date);
-      if (session.date < currentDateStr!) {
+      if (session.date < currentDateStr) {
         prev = sessionDt;
       }
     }

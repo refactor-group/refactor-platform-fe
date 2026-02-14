@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type DragEvent } from "react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -108,6 +109,8 @@ const GhostActionCard = ({
       setDueBy(DateTime.now().plus({ days: 7 }));
       setAssigneeIds([]);
       setIsEditing(false);
+    } catch {
+      toast.error("Failed to create new action.");
     } finally {
       setIsSaving(false);
     }
@@ -265,7 +268,7 @@ const GhostActionCard = ({
   const hasTextData = (dt: DataTransfer) =>
     dt.types.includes("text/plain") && !dt.types.includes("Files");
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: DragEvent) => {
     if (!hasTextData(e.dataTransfer)) return;
     e.preventDefault();
     setIsDragOver(true);
@@ -275,7 +278,7 @@ const GhostActionCard = ({
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e: DragEvent) => {
     if (!hasTextData(e.dataTransfer)) return;
     e.preventDefault();
     setIsDragOver(false);
