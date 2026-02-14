@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneLight, oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useTheme } from "next-themes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -162,6 +163,7 @@ const SessionActionCard = ({
     onAssigneesChange(action.id, updated);
   };
 
+  const { resolvedTheme } = useTheme();
   const isCurrent = variant === "current";
 
   return (
@@ -347,7 +349,7 @@ const SessionActionCard = ({
                     const match = /language-(\w+)/.exec(className || "");
                     return match ? (
                       <SyntaxHighlighter
-                        style={oneLight}
+                        style={resolvedTheme === "dark" ? oneDark : oneLight}
                         language={match[1]}
                         PreTag="div"
                         className="!rounded-md !text-xs !my-1"

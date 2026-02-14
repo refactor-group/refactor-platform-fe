@@ -299,7 +299,7 @@ const ActionsList = ({
   // Review action body is read-only, so no handleReviewBodyChange needed
 
   return (
-    <div className="flex flex-col gap-6 pt-4 pb-24">
+    <div className="flex flex-col gap-6 pt-4 pb-24 -mx-4 px-4 rounded-xl bg-muted/40">
       {/* Section 1: New Actions */}
       <div className="rounded-xl border border-border bg-card">
         <div className="px-4 py-2.5">
