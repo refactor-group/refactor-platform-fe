@@ -302,7 +302,7 @@ const ActionsList = ({
     <div className="flex flex-col gap-6 pt-4 pb-24">
       {/* Section 1: New Actions */}
       <div className="rounded-xl border border-border bg-card">
-        <div className="px-6 py-4">
+        <div className="px-4 py-2.5">
           <h3 className="text-sm font-semibold">New Actions</h3>
         </div>
         <div className="border-t border-border" />
@@ -344,7 +344,7 @@ const ActionsList = ({
       {/* Section 2: Actions for Review (collapsible) */}
       <div className="rounded-xl border border-border bg-card">
         <Collapsible open={reviewOpen} onOpenChange={setReviewOpen}>
-          <CollapsibleTrigger className="flex w-full items-center gap-2 px-6 py-4 text-sm font-semibold hover:text-foreground/80 transition-colors">
+          <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:text-foreground/80 transition-colors">
             <span>Actions for Review</span>
             {reviewCount > 0 && (
               <Badge variant="secondary" className="text-xs">
