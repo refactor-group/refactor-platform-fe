@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
-import { filterReviewActions } from "@/components/ui/coaching-sessions/actions-list";
+import { filterReviewActions } from "@/components/ui/coaching-sessions/actions-panel";
 import {
   createMockAction,
   TEST_SESSION_IDS,

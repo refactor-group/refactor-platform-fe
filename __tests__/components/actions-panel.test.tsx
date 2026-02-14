@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { ActionsList } from '@/components/ui/coaching-sessions/actions-list'
+import { ActionsPanel } from '@/components/ui/coaching-sessions/actions-panel'
 import { TestProviders } from '@/test-utils/providers'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ItemStatus } from '@/types/general'
@@ -96,11 +96,11 @@ vi.mock('@/lib/api/coaching-sessions', () => ({
 /**
  * Test Suite: Actions Card Stack — CRUD Operations & Checkbox Toggle
  *
- * Purpose: Validates the card-based ActionsList functionality including
+ * Purpose: Validates the card-based actions panel functionality including
  * rendering action cards, completion checkbox toggling, creating actions
  * via the ghost card, inline body editing, and deleting actions.
  */
-describe('ActionsList', () => {
+describe('ActionsPanel', () => {
   const mockProps = {
     coachingSessionId: MOCK_SESSION_ID,
     coachingRelationshipId: 'rel-123',
@@ -163,7 +163,7 @@ describe('ActionsList', () => {
   it('should render action cards with status pills', () => {
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -178,7 +178,7 @@ describe('ActionsList', () => {
   it('should display the New Actions section heading', () => {
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -191,7 +191,7 @@ describe('ActionsList', () => {
   it('should display the Actions for Review collapsible section', () => {
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -204,7 +204,7 @@ describe('ActionsList', () => {
   it('should render status pills with correct status text', () => {
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -221,7 +221,7 @@ describe('ActionsList', () => {
 
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -244,7 +244,7 @@ describe('ActionsList', () => {
 
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -275,7 +275,7 @@ describe('ActionsList', () => {
 
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -303,7 +303,7 @@ describe('ActionsList', () => {
 
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -329,7 +329,7 @@ describe('ActionsList', () => {
 
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -373,7 +373,7 @@ describe('ActionsList', () => {
 
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -406,7 +406,7 @@ describe('ActionsList', () => {
   it('should show "All caught up" when there are no review actions', () => {
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 
@@ -422,7 +422,7 @@ describe('ActionsList', () => {
   it('should show completed actions with reduced opacity', () => {
     render(
       <Wrapper>
-        <ActionsList {...mockProps} />
+        <ActionsPanel {...mockProps} />
       </Wrapper>
     )
 

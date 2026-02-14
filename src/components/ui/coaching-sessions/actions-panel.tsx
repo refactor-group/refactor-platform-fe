@@ -61,7 +61,7 @@ export function filterReviewActions(
     .sort((a, b) => b.due_by.toMillis() - a.due_by.toMillis());
 }
 
-interface ActionsListProps {
+interface ActionsPanelProps {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
   /** ISO date string for the current session (e.g. "2026-02-11") */
@@ -93,7 +93,7 @@ interface ActionsListProps {
 const SESSION_LOOKBACK = { years: 5 };
 const SESSION_LOOKAHEAD = { years: 1 };
 
-const ActionsList = ({
+const ActionsPanel = ({
   coachingSessionId,
   coachingRelationshipId,
   sessionDate,
@@ -106,7 +106,7 @@ const ActionsList = ({
   onActionEdited,
   onActionDeleted,
   isSaving,
-}: ActionsListProps) => {
+}: ActionsPanelProps) => {
   const [reviewOpen, setReviewOpen] = useState(false);
 
   const currentSessionDate = sessionDate
@@ -401,4 +401,4 @@ const ActionsList = ({
   );
 };
 
-export { ActionsList };
+export { ActionsPanel };

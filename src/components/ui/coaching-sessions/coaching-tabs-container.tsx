@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
-import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
+import { ActionsPanel } from "@/components/ui/coaching-sessions/actions-panel";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
 import { ItemStatus, Id } from "@/types/general";
@@ -150,7 +150,7 @@ const CoachingTabsContainer: React.FC<{
           </div>
           
           <div style={{ display: currentTab === "actions" ? "block" : "none" }}>
-            <ActionsList
+            <ActionsPanel
               coachingSessionId={currentCoachingSessionId || ""}
               coachingRelationshipId={currentCoachingRelationship?.id || ""}
               sessionDate={currentCoachingSession?.date || ""}
