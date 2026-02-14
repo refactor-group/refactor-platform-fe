@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CalendarIcon, Plus } from "lucide-react";
-import { ItemStatus, Id } from "@/types/general";
+import { ItemStatus, Id, EntityApiError } from "@/types/general";
 import type { Action } from "@/types/action";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -109,8 +109,12 @@ const GhostActionCard = ({
       setDueBy(DateTime.now().plus({ days: 7 }));
       setAssigneeIds([]);
       setIsEditing(false);
-    } catch {
-      toast.error("Failed to create new action.");
+    } catch (err) {
+      if (err instanceof EntityApiError && err.isNetworkError()) {
+        toast.error("Failed to create new action. Connection to service was lost.");
+      } else {
+        toast.error("Failed to create new action.");
+      }
     } finally {
       setIsSaving(false);
     }

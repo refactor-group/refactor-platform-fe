@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { ItemStatus, Id } from "@/types/general";
+import { ItemStatus, Id, EntityApiError } from "@/types/general";
 import { sortActionArray, type Action } from "@/types/action";
 import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
@@ -212,8 +212,12 @@ const ActionsPanel = ({
       await onActionDeleted(id);
       refreshSession();
       refreshAll();
-    } catch {
-      toast.error("Failed to delete action.");
+    } catch (err) {
+      if (err instanceof EntityApiError && err.isNetworkError()) {
+        toast.error("Failed to delete action. Connection to service was lost.");
+      } else {
+        toast.error("Failed to delete action.");
+      }
     }
   };
 
