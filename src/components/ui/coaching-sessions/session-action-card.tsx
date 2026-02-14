@@ -154,7 +154,7 @@ const SessionActionCard = ({
     <Card
       className={cn(
         "max-w-2xl border-border/40 shadow-none bg-gradient-to-t from-primary/[0.02] to-card transition-colors dark:from-primary/[0.03] dark:to-card",
-        isOverdue && "from-red-100/80 to-red-50/30 dark:from-red-950/30 dark:to-red-950/10",
+        isOverdue && "from-red-100/40 to-red-50/15 dark:from-red-950/15 dark:to-red-950/5",
         isCompleted && "opacity-60"
       )}
     >
@@ -314,8 +314,8 @@ const SessionActionCard = ({
           </p>
         )}
 
-        {/* Footer: due date + session link (centered) */}
-        <div className="flex justify-center text-xs text-muted-foreground ml-2">
+        {/* Footer: due date + session link (right-aligned) */}
+        <div className="flex justify-end text-xs text-muted-foreground mr-1">
           <div className="flex items-center gap-1.5">
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>

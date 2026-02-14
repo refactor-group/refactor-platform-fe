@@ -342,18 +342,18 @@ const ActionsList = ({
       {/* Section 2: Actions for Review (collapsible) */}
       <Collapsible open={reviewOpen} onOpenChange={setReviewOpen}>
         <CollapsibleTrigger className="flex max-w-2xl items-center gap-2 py-3 text-sm font-semibold hover:text-foreground/80 transition-colors">
+          <span>Actions for Review</span>
+          {reviewCount > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {reviewCount}
+            </Badge>
+          )}
           <ChevronRight
             className={cn(
               "h-4 w-4 transition-transform",
               reviewOpen && "rotate-90"
             )}
           />
-          <span>Actions for Review</span>
-          {reviewCount > 0 && (
-            <Badge variant="secondary" className="ml-auto text-xs">
-              {reviewCount}
-            </Badge>
-          )}
         </CollapsibleTrigger>
 
         <CollapsibleContent className="pt-2">
