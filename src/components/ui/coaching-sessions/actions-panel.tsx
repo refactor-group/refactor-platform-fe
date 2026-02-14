@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import { ItemStatus, Id } from "@/types/general";
 import { sortActionArray, type Action } from "@/types/action";
 import { SortOrder } from "@/types/sorting";
@@ -207,9 +208,13 @@ const ActionsPanel = ({
   };
 
   const handleDeleteAction = async (id: Id): Promise<void> => {
-    await onActionDeleted(id);
-    refreshSession();
-    refreshAll();
+    try {
+      await onActionDeleted(id);
+      refreshSession();
+      refreshAll();
+    } catch {
+      toast.error("Failed to delete action.");
+    }
   };
 
   // Helpers for individual field changes on session actions
