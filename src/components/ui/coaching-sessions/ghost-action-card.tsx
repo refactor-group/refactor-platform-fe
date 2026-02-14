@@ -262,7 +262,11 @@ const GhostActionCard = ({
     );
   }
 
+  const hasTextData = (dt: DataTransfer) =>
+    dt.types.includes("text/plain") && !dt.types.includes("Files");
+
   const handleDragOver = (e: React.DragEvent) => {
+    if (!hasTextData(e.dataTransfer)) return;
     e.preventDefault();
     setIsDragOver(true);
   };
@@ -272,6 +276,7 @@ const GhostActionCard = ({
   };
 
   const handleDrop = (e: React.DragEvent) => {
+    if (!hasTextData(e.dataTransfer)) return;
     e.preventDefault();
     setIsDragOver(false);
     const text = e.dataTransfer.getData("text/plain").trim();
