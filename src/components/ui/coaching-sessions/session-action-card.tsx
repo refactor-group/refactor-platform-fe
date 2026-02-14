@@ -153,8 +153,8 @@ const SessionActionCard = ({
   return (
     <Card
       className={cn(
-        "max-w-2xl border-border/60 shadow-none transition-colors",
-        isOverdue && "bg-red-50/40 dark:bg-red-950/15",
+        "max-w-2xl border-border/40 shadow-none bg-gradient-to-t from-primary/[0.02] to-card transition-colors dark:from-primary/[0.03] dark:to-card",
+        isOverdue && "from-red-100/80 to-red-50/30 dark:from-red-950/30 dark:to-red-950/10",
         isCompleted && "opacity-60"
       )}
     >
