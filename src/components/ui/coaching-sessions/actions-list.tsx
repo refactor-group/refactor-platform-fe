@@ -299,7 +299,7 @@ const ActionsList = ({
   // Review action body is read-only, so no handleReviewBodyChange needed
 
   return (
-    <div className="flex flex-col gap-6 pt-4">
+    <div className="flex flex-col gap-6 pt-4 pb-24">
       {/* Section 1: This Session */}
       <div>
         <h3 className="text-sm font-semibold mb-3">New Actions</h3>
