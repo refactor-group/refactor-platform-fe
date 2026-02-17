@@ -322,6 +322,7 @@ interface ActionsPanelProps {
   ) => Promise<Action>;
   onActionEdited: (
     id: Id,
+    coachingSessionId: Id,
     body: string,
     status: ItemStatus,
     dueBy: DateTime,
@@ -394,12 +395,13 @@ const ActionsPanel = ({
 
   const handleEditAction = async (
     id: Id,
+    coachingSessionId: Id,
     body: string,
     status: ItemStatus,
     dueBy: DateTime,
     assigneeIds?: Id[]
   ): Promise<Action> => {
-    const result = await onActionEdited(id, body, status, dueBy, assigneeIds);
+    const result = await onActionEdited(id, coachingSessionId, body, status, dueBy, assigneeIds);
     refreshSession();
     refreshAll();
     return result;
@@ -431,6 +433,7 @@ const ActionsPanel = ({
     if (!action) return;
     handleEditAction(
       id,
+      action.coaching_session_id,
       updates.body ?? action.body ?? "",
       updates.status ?? action.status,
       updates.due_by ?? action.due_by,

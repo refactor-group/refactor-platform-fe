@@ -95,6 +95,7 @@ const CoachingTabsContainer: React.FC<{
 
   const handleActionEdited = (
     id: Id,
+    coachingSessionId: Id,
     body: string,
     status: ItemStatus,
     dueBy: DateTime,
@@ -103,7 +104,7 @@ const CoachingTabsContainer: React.FC<{
     const updatedAction: Action = {
       ...defaultAction(),
       id,
-      coaching_session_id: currentCoachingSessionId || "",
+      coaching_session_id: coachingSessionId,
       user_id: userId,
       body,
       status,
