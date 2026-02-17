@@ -108,6 +108,43 @@ export const ComplexComponent: FC<Props> = ({ children, title }) => {
 };
 ```
 
+### Nullable Hook Values and Component Props
+
+When a hook returns a nullable value (e.g. `string | null`) and a child component expects a non-nullable prop (e.g. `string`), **never use `|| ""` to silence the type checker**. An empty string is not a valid ID, date, or meaningful value -- it just hides the null from the compiler while passing invalid data downstream.
+
+```typescript
+// ❌ WRONG - || "" creates an invalid Id that silently propagates
+const { currentCoachingSessionId } = useCurrentCoachingSession(); // string | null
+const { currentCoachingRelationship } = useCurrentCoachingRelationship(); // T | null
+
+<MyPanel
+  coachingSessionId={currentCoachingSessionId || ""}
+  relationshipId={currentCoachingRelationship?.id || ""}
+  sessionDate={currentCoachingSession?.date || ""}
+/>
+```
+
+Instead, **guard the render** so the component only mounts when all required data is available. This lets TypeScript narrow the types naturally without any casts or fallbacks.
+
+```typescript
+// ✅ CORRECT - guard the render, pass narrowed non-null values
+{currentCoachingSessionId && currentCoachingSession && currentCoachingRelationship && (
+  <MyPanel
+    coachingSessionId={currentCoachingSessionId}
+    relationshipId={currentCoachingRelationship.id}
+    sessionDate={currentCoachingSession.date}
+  />
+)}
+```
+
+**Key rules**:
+- If a prop is typed as `Id` (i.e. `string`), it must receive a real ID, never `""`.
+- If a prop is typed as a date string, it must receive a real date, never `""`.
+- The fix is always a **render guard** (conditional rendering), not a **value fallback** (`|| ""`).
+- For callback handlers that capture nullable closures, the render guard guarantees they can only be called when data is loaded. Use non-null assertions (`!`) with a comment referencing the guard, or restructure the handler to accept the value as a parameter.
+
+**Why this matters**: `DateTime.fromISO("")` produces an invalid DateTime. `useCoachingSessionList("")` fires a pointless API call. Empty-string IDs silently pass through filters and comparisons, producing wrong results that are hard to debug.
+
 ## General Guidelines
 
 ### Naming Conventions
@@ -223,3 +260,4 @@ When reviewing or writing code, ensure:
 - [ ] Tests are updated to match code changes
 - [ ] TypeScript types are properly defined and used
 - [ ] Leaf components receive `locale` and config values via props, not `siteConfig` imports
+- [ ] No `|| ""` fallbacks for nullable IDs or dates -- use render guards instead
