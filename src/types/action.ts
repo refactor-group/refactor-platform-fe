@@ -1,6 +1,6 @@
 import { DateTime } from "ts-luxon";
 import { ItemStatus, Id } from "@/types/general";
-import { SortOrder, type EntitySortField } from "@/types/sorting";
+import { SortOrder, type ActionSortField } from "@/types/sorting";
 
 // This must always reflect the Rust struct on the backend
 // Combines entity::actions::Model with assignee_ids from ActionWithAssignees
@@ -44,7 +44,7 @@ export function isActionArray(value: unknown): value is Action[] {
 export function sortActionArray(
   actions: Action[],
   order: SortOrder,
-  field: EntitySortField = "updated_at"
+  field: ActionSortField = "updated_at"
 ): Action[] {
   const sorted = [...actions];
   sorted.sort((a, b) => {
