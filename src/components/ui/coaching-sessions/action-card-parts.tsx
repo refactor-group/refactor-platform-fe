@@ -19,7 +19,7 @@ import { CalendarIcon } from "lucide-react";
 import { Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
-import { siteConfig } from "@/site.config";
+
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -150,6 +150,7 @@ export function AssigneePickerPopover({
 interface DueDatePickerProps {
   value: DateTime;
   onChange: (date: DateTime) => void;
+  locale: string;
   /** Render as a Button (for forms) or a plain text link (for footers). */
   variant?: "button" | "text";
   isOverdue?: boolean;
@@ -159,6 +160,7 @@ interface DueDatePickerProps {
 export function DueDatePicker({
   value,
   onChange,
+  locale,
   variant = "button",
   isOverdue = false,
   disabled = false,
@@ -166,7 +168,7 @@ export function DueDatePicker({
   const [open, setOpen] = useState(false);
 
   const formattedDate = value
-    .setLocale(siteConfig.locale)
+    .setLocale(locale)
     .toLocaleString(DateTime.DATE_MED);
 
   const handleSelect = (date: Date | undefined) => {

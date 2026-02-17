@@ -168,6 +168,46 @@ import { cn } from "@/lib/utils";
 
 **Note**: When installing new shadcn components via CLI, you may need to update their imports from `@/lib/utils` to `@/components/lib/utils`.
 
+### Locale and Configuration Prop Threading
+
+Thread configuration values like `locale` through component props rather than importing `siteConfig` directly in leaf components. The top-level container (e.g. a page or tab container) reads from `siteConfig` once and passes the value down.
+
+```typescript
+// ✅ Correct - thread locale via props from the top-level container
+interface MyCardProps {
+  locale: string;
+  // ...
+}
+
+function MyCard({ locale, ...rest }: MyCardProps) {
+  return <DueDatePicker locale={locale} />;
+}
+
+// Container component reads from siteConfig once and threads it down
+import { siteConfig } from "@/site.config";
+
+function Container() {
+  return <MyCard locale={siteConfig.locale} />;
+}
+```
+
+```typescript
+// ❌ Incorrect - importing siteConfig in a leaf/child component
+import { siteConfig } from "@/site.config";
+
+function MyCard() {
+  return <DueDatePicker locale={siteConfig.locale} />;
+}
+```
+
+**Do NOT** import `siteConfig` (or other global configuration objects) inside leaf or child components. This creates a hidden global dependency that makes the component harder to test and breaks explicit data flow.
+
+**Rationale**:
+- Keeps leaf components pure and testable (no hidden global dependency)
+- Makes data flow explicit and traceable
+- Follows the same pattern used by `CoachingSessionTitle` and action card components
+- Allows tests to supply locale without mocking `siteConfig`
+
 ### Documentation
 - Add JSDoc comments for complex logic or non-obvious patterns
 - Explain *why* something is done, not just *what* is being done
@@ -182,3 +222,4 @@ When reviewing or writing code, ensure:
 - [ ] Complex logic has explanatory comments
 - [ ] Tests are updated to match code changes
 - [ ] TypeScript types are properly defined and used
+- [ ] Leaf components receive `locale` and config values via props, not `siteConfig` imports

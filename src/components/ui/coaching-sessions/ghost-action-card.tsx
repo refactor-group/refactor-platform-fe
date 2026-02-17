@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/coaching-sessions/action-card-parts";
 
 interface GhostActionCardProps {
+  locale: string;
   coachId: Id;
   coachName: string;
   coacheeId: Id;
@@ -39,6 +40,7 @@ interface GhostCardFormProps {
   onBodyChange: (body: string) => void;
   dueBy: DateTime;
   onDueByChange: (dueBy: DateTime) => void;
+  locale: string;
   allAssignees: AssigneeInfo[];
   resolvedAssignees: AssigneeInfo[];
   assigneeIds: Id[];
@@ -53,6 +55,7 @@ function GhostCardForm({
   onBodyChange,
   dueBy,
   onDueByChange,
+  locale,
   allAssignees,
   resolvedAssignees,
   assigneeIds,
@@ -94,6 +97,7 @@ function GhostCardForm({
           <DueDatePicker
             value={dueBy}
             onChange={onDueByChange}
+            locale={locale}
             variant="button"
             disabled={isSaving}
           />
@@ -174,6 +178,7 @@ function GhostCardPlaceholder({
 // ---------------------------------------------------------------------------
 
 const GhostActionCard = ({
+  locale,
   coachId,
   coachName,
   coacheeId,
@@ -272,6 +277,7 @@ const GhostActionCard = ({
         onBodyChange={setBody}
         dueBy={dueBy}
         onDueByChange={setDueBy}
+        locale={locale}
         allAssignees={allAssignees}
         resolvedAssignees={resolvedAssignees}
         assigneeIds={assigneeIds}

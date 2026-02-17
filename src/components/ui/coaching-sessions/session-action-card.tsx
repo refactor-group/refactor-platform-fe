@@ -30,7 +30,7 @@ import { ItemStatus, Id, actionStatusToString } from "@/types/general";
 import type { Action } from "@/types/action";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
-import { siteConfig } from "@/site.config";
+
 import {
   resolveAssignees,
   AssigneePickerPopover,
@@ -39,6 +39,7 @@ import {
 
 interface SessionActionCardProps {
   action: Action;
+  locale: string;
   coachId: Id;
   coachName: string;
   coacheeId: Id;
@@ -256,6 +257,7 @@ interface ActionFooterProps {
   dueBy: DateTime;
   createdAt: DateTime;
   coachingSessionId: Id;
+  locale: string;
   isOverdue: boolean;
   isCurrent: boolean;
   onDueDateChange: (newDueBy: DateTime) => void;
@@ -265,6 +267,7 @@ function ActionFooter({
   dueBy,
   createdAt,
   coachingSessionId,
+  locale,
   isOverdue,
   isCurrent,
   onDueDateChange,
@@ -275,6 +278,7 @@ function ActionFooter({
         <DueDatePicker
           value={dueBy}
           onChange={onDueDateChange}
+          locale={locale}
           variant="text"
           isOverdue={isOverdue}
         />
@@ -287,7 +291,7 @@ function ActionFooter({
             >
               From:{" "}
               {createdAt
-                .setLocale(siteConfig.locale)
+                .setLocale(locale)
                 .toLocaleString(DateTime.DATE_MED)}
             </Link>
           </>
@@ -303,6 +307,7 @@ function ActionFooter({
 
 const SessionActionCard = ({
   action,
+  locale,
   coachId,
   coachName,
   coacheeId,
@@ -379,6 +384,7 @@ const SessionActionCard = ({
           dueBy={action.due_by}
           createdAt={action.created_at}
           coachingSessionId={action.coaching_session_id}
+          locale={locale}
           isOverdue={isOverdue}
           isCurrent={isCurrent}
           onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}

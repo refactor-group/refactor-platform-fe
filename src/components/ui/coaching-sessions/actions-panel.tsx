@@ -165,6 +165,7 @@ type ActionFieldUpdate =
   | { field: ActionField.AssigneeIds; value: Id[] };
 
 interface ActionCardSharedProps {
+  locale: string;
   coachId: Id;
   coachName: string;
   coacheeId: Id;
@@ -189,6 +190,7 @@ interface NewActionsSectionProps extends ActionCardSharedProps {
 
 function NewActionsSection({
   actions,
+  locale,
   coachId,
   coachName,
   coacheeId,
@@ -219,6 +221,7 @@ function NewActionsSection({
             <SessionActionCard
               key={action.id}
               action={action}
+              locale={locale}
               coachId={coachId}
               coachName={coachName}
               coacheeId={coacheeId}
@@ -234,6 +237,7 @@ function NewActionsSection({
         )}
 
         <GhostActionCard
+          locale={locale}
           coachId={coachId}
           coachName={coachName}
           coacheeId={coacheeId}
@@ -257,6 +261,7 @@ interface ReviewActionsSectionProps extends ActionCardSharedProps {
 
 function ReviewActionsSection({
   actions,
+  locale,
   open,
   onOpenChange,
   coachId,
@@ -303,6 +308,7 @@ function ReviewActionsSection({
                 <SessionActionCard
                   key={action.id}
                   action={action}
+                  locale={locale}
                   coachId={coachId}
                   coachName={coachName}
                   coacheeId={coacheeId}
@@ -332,7 +338,7 @@ interface ActionsPanelProps {
   /** ISO date string for the current session (e.g. "2026-02-11") */
   sessionDate: string;
   userId: Id;
-  locale: string | "us";
+  locale: string;
   coachId: Id;
   coachName: string;
   coacheeId: Id;
@@ -360,6 +366,7 @@ const ActionsPanel = ({
   coachingRelationshipId,
   sessionDate,
   userId,
+  locale,
   coachId,
   coachName,
   coacheeId,
@@ -503,6 +510,7 @@ const ActionsPanel = ({
     <div className="flex flex-col gap-6 pt-4 pb-24 -mx-4 px-4 rounded-xl bg-muted/40">
       <NewActionsSection
         actions={sessionActions}
+        locale={locale}
         coachId={coachId}
         coachName={coachName}
         coacheeId={coacheeId}
@@ -518,6 +526,7 @@ const ActionsPanel = ({
 
       <ReviewActionsSection
         actions={reviewActions}
+        locale={locale}
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         coachId={coachId}
