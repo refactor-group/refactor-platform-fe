@@ -147,6 +147,20 @@ function useReviewActions(
 /** Shared grid layout for both New Actions and Actions for Review card grids */
 const ACTION_CARD_GRID = "grid grid-cols-1 sm:grid-cols-2 gap-6 p-6";
 
+enum ActionField {
+  Body = "body",
+  Status = "status",
+  DueBy = "due_by",
+  AssigneeIds = "assignee_ids",
+}
+
+/** Discriminated union for single-field action updates */
+type ActionFieldUpdate =
+  | { field: ActionField.Body; value: string }
+  | { field: ActionField.Status; value: ItemStatus }
+  | { field: ActionField.DueBy; value: DateTime }
+  | { field: ActionField.AssigneeIds; value: Id[] };
+
 interface ActionCardSharedProps {
   coachId: Id;
   coachName: string;
@@ -433,18 +447,43 @@ const ActionsPanel = ({
   const updateField = async (
     actions: Action[],
     id: Id,
-    updates: Partial<Pick<Action, "body" | "status" | "due_by" | "assignee_ids">>
+    update: ActionFieldUpdate
   ) => {
     const action = actions.find((a) => a.id === id);
     if (!action) return;
+
+    let body = action.body ?? "";
+    let status = action.status;
+    let dueBy = action.due_by;
+    let assigneeIds = action.assignee_ids;
+
+    switch (update.field) {
+      case ActionField.Body:
+        body = update.value;
+        break;
+      case ActionField.Status:
+        status = update.value;
+        break;
+      case ActionField.DueBy:
+        dueBy = update.value;
+        break;
+      case ActionField.AssigneeIds:
+        assigneeIds = update.value;
+        break;
+      default: {
+        const _exhaustive: never = update;
+        throw new Error(`Unhandled action field: ${(_exhaustive as ActionFieldUpdate).field}`);
+      }
+    }
+
     try {
       await handleEditAction(
         id,
         action.coaching_session_id,
-        updates.body ?? action.body ?? "",
-        updates.status ?? action.status,
-        updates.due_by ?? action.due_by,
-        updates.assignee_ids ?? action.assignee_ids
+        body,
+        status,
+        dueBy,
+        assigneeIds
       );
     } catch (err) {
       if (err instanceof EntityApiError && err.isNetworkError()) {
@@ -465,10 +504,10 @@ const ActionsPanel = ({
         coachName={coachName}
         coacheeId={coacheeId}
         coacheeName={coacheeName}
-        onStatusChange={(id, status) => updateField(sessionActions, id, { status })}
-        onDueDateChange={(id, due_by) => updateField(sessionActions, id, { due_by })}
-        onAssigneesChange={(id, assignee_ids) => updateField(sessionActions, id, { assignee_ids })}
-        onBodyChange={(id, body) => updateField(sessionActions, id, { body })}
+        onStatusChange={(id, v) => updateField(sessionActions, id, { field: ActionField.Status, value: v })}
+        onDueDateChange={(id, v) => updateField(sessionActions, id, { field: ActionField.DueBy, value: v })}
+        onAssigneesChange={(id, v) => updateField(sessionActions, id, { field: ActionField.AssigneeIds, value: v })}
+        onBodyChange={(id, v) => updateField(sessionActions, id, { field: ActionField.Body, value: v })}
         onDelete={handleDeleteAction}
         onCreateAction={handleCreateAction}
         isSaving={isSaving}
@@ -482,9 +521,9 @@ const ActionsPanel = ({
         coachName={coachName}
         coacheeId={coacheeId}
         coacheeName={coacheeName}
-        onStatusChange={(id, status) => updateField(allActions, id, { status })}
-        onDueDateChange={(id, due_by) => updateField(allActions, id, { due_by })}
-        onAssigneesChange={(id, assignee_ids) => updateField(allActions, id, { assignee_ids })}
+        onStatusChange={(id, v) => updateField(allActions, id, { field: ActionField.Status, value: v })}
+        onDueDateChange={(id, v) => updateField(allActions, id, { field: ActionField.DueBy, value: v })}
+        onAssigneesChange={(id, v) => updateField(allActions, id, { field: ActionField.AssigneeIds, value: v })}
       />
     </div>
   );
