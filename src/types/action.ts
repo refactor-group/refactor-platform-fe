@@ -18,6 +18,14 @@ export interface Action {
   assignee_ids?: Id[];
 }
 
+const ITEM_STATUS_VALUES: ReadonlySet<string> = new Set(
+  Object.values(ItemStatus)
+);
+
+function isDateTimeOrString(value: unknown): boolean {
+  return typeof value === "string" || DateTime.isDateTime(value);
+}
+
 export function isAction(value: unknown): value is Action {
   if (!value || typeof value !== "object") {
     return false;
@@ -29,11 +37,15 @@ export function isAction(value: unknown): value is Action {
     typeof object.coaching_session_id === "string" &&
     typeof object.user_id === "string" &&
     typeof object.status === "string" &&
-    typeof object.status_changed_at === "string" &&
-    typeof object.due_by === "string" &&
-    typeof object.created_at === "string" &&
-    typeof object.updated_at === "string" &&
-    (object.body === undefined || typeof object.body === "string") // body is optional
+    ITEM_STATUS_VALUES.has(object.status as string) &&
+    isDateTimeOrString(object.status_changed_at) &&
+    isDateTimeOrString(object.due_by) &&
+    isDateTimeOrString(object.created_at) &&
+    isDateTimeOrString(object.updated_at) &&
+    (object.body === undefined || typeof object.body === "string") &&
+    (object.assignee_ids === undefined ||
+      (Array.isArray(object.assignee_ids) &&
+        object.assignee_ids.every((id: unknown) => typeof id === "string")))
   );
 }
 
