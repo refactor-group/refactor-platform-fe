@@ -1,7 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import { filterReviewActions } from "@/components/ui/coaching-sessions/actions-panel";
+
+vi.mock("react-syntax-highlighter", () => ({
+  Prism: ({ children }: { children: string }) => children,
+}));
+
+vi.mock("react-syntax-highlighter/dist/esm/styles/prism", () => ({
+  oneLight: {},
+  oneDark: {},
+}));
 import {
   createMockAction,
   TEST_SESSION_IDS,

@@ -5,8 +5,25 @@ import type { ReactNode } from 'react'
 import { ActionsPanel } from '@/components/ui/coaching-sessions/actions-panel'
 import { TestProviders } from '@/test-utils/providers'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { ItemStatus } from '@/types/general'
+import { ItemStatus, EntityApiError } from '@/types/general'
 import { DateTime } from 'ts-luxon'
+import { toast } from 'sonner'
+
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}))
+
+vi.mock('react-syntax-highlighter', () => ({
+  Prism: ({ children }: { children: string }) => children,
+}))
+
+vi.mock('react-syntax-highlighter/dist/esm/styles/prism', () => ({
+  oneLight: {},
+  oneDark: {},
+}))
 
 /** Wraps children in both TestProviders and TooltipProvider */
 function Wrapper({ children }: { children: ReactNode }) {
@@ -349,6 +366,7 @@ describe('ActionsPanel', () => {
     await waitFor(() => {
       expect(mockProps.onActionEdited).toHaveBeenCalledWith(
         'action-1',
+        MOCK_SESSION_ID,
         'Updated proposal text',
         ItemStatus.InProgress,
         mockSessionActions[0].due_by,
@@ -428,6 +446,66 @@ describe('ActionsPanel', () => {
 
     const completedCard = screen.getByText('Review quarterly goals').closest('[class*="card"]')!
     expect(completedCard.className).toContain('opacity-60')
+  })
+
+  /**
+   * Asserts that a network error during inline edit shows a network-specific toast
+   */
+  it('should show network error toast when editing an action fails due to connection loss', async () => {
+    const axiosLikeError = Object.assign(new Error('Network Error'), { isAxiosError: true })
+    const networkError = new EntityApiError('PUT', '/api/actions/action-1', axiosLikeError)
+    mockProps.onActionEdited.mockRejectedValueOnce(networkError)
+
+    const user = userEvent.setup()
+
+    render(
+      <Wrapper>
+        <ActionsPanel {...mockProps} />
+      </Wrapper>
+    )
+
+    // Trigger an inline body edit to exercise the updateField error path
+    const bodyText = screen.getByText('Complete project proposal')
+    await user.click(bodyText)
+
+    const textarea = screen.getByDisplayValue('Complete project proposal')
+    await user.clear(textarea)
+    await user.type(textarea, 'Trigger network error')
+    fireEvent.blur(textarea)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        'Failed to update action. Connection to service was lost.'
+      )
+    })
+  })
+
+  /**
+   * Asserts that a non-network error during inline edit shows a generic toast
+   */
+  it('should show generic error toast when editing an action fails', async () => {
+    mockProps.onActionEdited.mockRejectedValueOnce(new Error('Internal server error'))
+
+    const user = userEvent.setup()
+
+    render(
+      <Wrapper>
+        <ActionsPanel {...mockProps} />
+      </Wrapper>
+    )
+
+    // Trigger an inline body edit to exercise the updateField error path
+    const bodyText = screen.getByText('Complete project proposal')
+    await user.click(bodyText)
+
+    const textarea = screen.getByDisplayValue('Complete project proposal')
+    await user.clear(textarea)
+    await user.type(textarea, 'Trigger generic error')
+    fireEvent.blur(textarea)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Failed to update action.')
+    })
   })
 
 })

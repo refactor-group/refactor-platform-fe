@@ -427,21 +427,29 @@ const ActionsPanel = ({
   // -- Field-level updater --------------------------------------------------
 
   /** Applies a partial field update to an action found by ID in `actions`. */
-  const updateField = (
+  const updateField = async (
     actions: Action[],
     id: Id,
     updates: Partial<Pick<Action, "body" | "status" | "due_by" | "assignee_ids">>
   ) => {
     const action = actions.find((a) => a.id === id);
     if (!action) return;
-    handleEditAction(
-      id,
-      action.coaching_session_id,
-      updates.body ?? action.body ?? "",
-      updates.status ?? action.status,
-      updates.due_by ?? action.due_by,
-      updates.assignee_ids ?? action.assignee_ids
-    );
+    try {
+      await handleEditAction(
+        id,
+        action.coaching_session_id,
+        updates.body ?? action.body ?? "",
+        updates.status ?? action.status,
+        updates.due_by ?? action.due_by,
+        updates.assignee_ids ?? action.assignee_ids
+      );
+    } catch (err) {
+      if (err instanceof EntityApiError && err.isNetworkError()) {
+        toast.error("Failed to update action. Connection to service was lost.");
+      } else {
+        toast.error("Failed to update action.");
+      }
+    }
   };
 
   // -- Render ---------------------------------------------------------------
