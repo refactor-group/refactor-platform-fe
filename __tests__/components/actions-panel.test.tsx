@@ -6,6 +6,7 @@ import { ActionsPanel } from '@/components/ui/coaching-sessions/actions-panel'
 import { TestProviders } from '@/test-utils/providers'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ItemStatus, EntityApiError } from '@/types/general'
+import type { UserActionsQueryParams } from '@/lib/api/user-actions'
 import { DateTime } from 'ts-luxon'
 import { toast } from 'sonner'
 
@@ -83,7 +84,7 @@ const mockRefreshSession = vi.fn()
 const mockRefreshAll = vi.fn()
 
 vi.mock('@/lib/api/user-actions', () => ({
-  useUserActionsList: vi.fn((userId: string, params: Record<string, unknown>) => {
+  useUserActionsList: vi.fn((userId: string, params: UserActionsQueryParams) => {
     if (params?.coaching_session_id) {
       return {
         actions: mockSessionActions,
@@ -399,7 +400,7 @@ describe('ActionsPanel', () => {
 
     // Restore original mock for subsequent tests
     mod.useUserActionsList.mockImplementation(
-      (userId: string, params: Record<string, unknown>) => {
+      (userId: string, params: UserActionsQueryParams) => {
         if (params?.coaching_session_id) {
           return {
             actions: mockSessionActions,
