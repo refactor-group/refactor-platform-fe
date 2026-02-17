@@ -144,6 +144,9 @@ function useReviewActions(
 // Sub-components
 // ---------------------------------------------------------------------------
 
+/** Shared grid layout for both New Actions and Actions for Review card grids */
+const ACTION_CARD_GRID = "grid grid-cols-1 sm:grid-cols-2 gap-6 p-6";
+
 interface ActionCardSharedProps {
   coachId: Id;
   coachName: string;
@@ -187,7 +190,7 @@ function NewActionsSection({
         <h3 className="text-sm font-semibold">New Actions</h3>
       </div>
       <div className="border-t border-border" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
+      <div className={ACTION_CARD_GRID}>
         {actions.length === 0 && (
           <p className="text-sm text-muted-foreground py-2">
             No actions yet for this session.
@@ -267,7 +270,7 @@ function ReviewActionsSection({
 
         <CollapsibleContent>
           <div className="border-t border-border" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
+          <div className={ACTION_CARD_GRID}>
             {actions.length === 0 ? (
               <div className="col-span-full flex flex-col items-center justify-center py-8 text-center">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
