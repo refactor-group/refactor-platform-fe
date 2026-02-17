@@ -129,7 +129,10 @@ function useReviewActions(
       stickyIdsRef.current ?? undefined
     );
 
-    if (stickyIdsRef.current === null && filtered.length > 0) {
+    // Only lock the sticky set once previousSessionDate has resolved,
+    // to avoid capturing actions that would be excluded by status-based
+    // filtering once the previous session boundary is known.
+    if (stickyIdsRef.current === null && filtered.length > 0 && previousSessionDate !== null) {
       stickyIdsRef.current = new Set(filtered.map((a) => a.id));
     }
 
