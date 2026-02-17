@@ -82,10 +82,13 @@ function usePreviousSessionDate(
   coachingRelationshipId: Id,
   currentSessionDate: DateTime | null
 ): DateTime | null {
+  const fromDate = useMemo(() => DateTime.now().minus(SESSION_LOOKBACK), []);
+  const toDate = useMemo(() => DateTime.now().plus(SESSION_LOOKAHEAD), []);
+
   const { coachingSessions } = useCoachingSessionList(
     coachingRelationshipId || null,
-    DateTime.now().minus(SESSION_LOOKBACK),
-    DateTime.now().plus(SESSION_LOOKAHEAD),
+    fromDate,
+    toDate,
     "date",
     "asc"
   );
