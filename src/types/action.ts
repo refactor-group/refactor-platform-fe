@@ -1,6 +1,6 @@
 import { DateTime } from "ts-luxon";
 import { ItemStatus, Id } from "@/types/general";
-import { SortOrder } from "@/types/sorting";
+import { SortOrder, type ActionSortField } from "@/types/sorting";
 
 // This must always reflect the Rust struct on the backend
 // Combines entity::actions::Model with assignee_ids from ActionWithAssignees
@@ -18,6 +18,14 @@ export interface Action {
   assignee_ids?: Id[];
 }
 
+const ITEM_STATUS_VALUES: ReadonlySet<string> = new Set(
+  Object.values(ItemStatus)
+);
+
+function isDateTimeOrString(value: unknown): boolean {
+  return typeof value === "string" || DateTime.isDateTime(value);
+}
+
 export function isAction(value: unknown): value is Action {
   if (!value || typeof value !== "object") {
     return false;
@@ -25,15 +33,19 @@ export function isAction(value: unknown): value is Action {
   const object = value as Record<string, unknown>;
 
   return (
-    (typeof object.id === "string" &&
-      typeof object.coaching_session_id === "string" &&
-      typeof object.user_id === "string" &&
-      typeof object.status === "string" &&
-      typeof object.status_changed_at === "string" &&
-      typeof object.due_by === "string" &&
-      typeof object.created_at === "string" &&
-      typeof object.updated_at === "string") ||
-    typeof object.body === "string" // body is optional
+    typeof object.id === "string" &&
+    typeof object.coaching_session_id === "string" &&
+    typeof object.user_id === "string" &&
+    typeof object.status === "string" &&
+    ITEM_STATUS_VALUES.has(object.status as string) &&
+    isDateTimeOrString(object.status_changed_at) &&
+    isDateTimeOrString(object.due_by) &&
+    isDateTimeOrString(object.created_at) &&
+    isDateTimeOrString(object.updated_at) &&
+    (object.body === undefined || typeof object.body === "string") &&
+    (object.assignee_ids === undefined ||
+      (Array.isArray(object.assignee_ids) &&
+        object.assignee_ids.every((id: unknown) => typeof id === "string")))
   );
 }
 
@@ -41,21 +53,18 @@ export function isActionArray(value: unknown): value is Action[] {
   return Array.isArray(value) && value.every(isAction);
 }
 
-export function sortActionArray(actions: Action[], order: SortOrder): Action[] {
-  if (order == SortOrder.Asc) {
-    actions.sort(
-      (a, b) =>
-        new Date(a.updated_at.toString()).getTime() -
-        new Date(b.updated_at.toString()).getTime()
-    );
-  } else if (order == SortOrder.Desc) {
-    actions.sort(
-      (a, b) =>
-        new Date(b.updated_at.toString()).getTime() -
-        new Date(a.updated_at.toString()).getTime()
-    );
-  }
-  return actions;
+export function sortActionArray(
+  actions: Action[],
+  order: SortOrder,
+  field: ActionSortField = "updated_at"
+): Action[] {
+  const sorted = [...actions];
+  sorted.sort((a, b) => {
+    const aTime = a[field].toMillis();
+    const bTime = b[field].toMillis();
+    return order === SortOrder.Asc ? aTime - bTime : bTime - aTime;
+  });
+  return sorted;
 }
 
 export function defaultAction(): Action {

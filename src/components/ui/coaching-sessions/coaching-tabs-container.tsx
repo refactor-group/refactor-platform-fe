@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
-import { ActionsList } from "@/components/ui/coaching-sessions/actions-list";
+import { ActionsPanel } from "@/components/ui/coaching-sessions/actions-panel";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
 import { ItemStatus, Id } from "@/types/general";
@@ -13,21 +13,28 @@ import { Agreement, defaultAgreement } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
+import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import { siteConfig } from "@/site.config";
 
-const CoachingTabsContainer: React.FC<{
+interface CoachingTabsContainerProps {
   userId: Id;
   defaultValue?: string;
   onTabChange?: (value: string) => void;
-}> = ({ userId, defaultValue = "notes", onTabChange }) => {
+}
+
+const CoachingTabsContainer = ({
+  userId,
+  defaultValue = "notes",
+  onTabChange,
+}: CoachingTabsContainerProps) => {
   const [currentTab, setCurrentTab] = useState(defaultValue);
 
   const handleTabChange = (value: string) => {
     setCurrentTab(value);
     onTabChange?.(value);
   };
-  // Get coaching session ID from URL
-  const { currentCoachingSessionId } = useCurrentCoachingSession();
+  // Get coaching session ID and data from URL
+  const { currentCoachingSessionId, currentCoachingSession } = useCurrentCoachingSession();
 
   // Get coaching relationship data for coach/coachee names
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
@@ -73,7 +80,8 @@ const CoachingTabsContainer: React.FC<{
     return deleteAgreement(id);
   };
 
-  // Action CRUD handlers
+  // Action CRUD handlers (only called when ActionsPanel is rendered, which
+  // guarantees currentCoachingSessionId is non-null via the render guard)
   const handleActionAdded = (
     body: string,
     status: ItemStatus,
@@ -82,7 +90,7 @@ const CoachingTabsContainer: React.FC<{
   ): Promise<Action> => {
     const newAction: Action = {
       ...defaultAction(),
-      coaching_session_id: currentCoachingSessionId || "",
+      coaching_session_id: currentCoachingSessionId!,
       user_id: userId,
       body,
       status,
@@ -94,6 +102,7 @@ const CoachingTabsContainer: React.FC<{
 
   const handleActionEdited = (
     id: Id,
+    coachingSessionId: Id,
     body: string,
     status: ItemStatus,
     dueBy: DateTime,
@@ -102,7 +111,7 @@ const CoachingTabsContainer: React.FC<{
     const updatedAction: Action = {
       ...defaultAction(),
       id,
-      coaching_session_id: currentCoachingSessionId || "",
+      coaching_session_id: coachingSessionId,
       user_id: userId,
       body,
       status,
@@ -128,7 +137,7 @@ const CoachingTabsContainer: React.FC<{
         </Tabs>
         
         {/* Always-mounted content controlled by CSS display */}
-        <div className="mt-4">
+        <div className="mt-8 pl-4">
           <div 
             className="flex-col h-full space-y-4"
             style={{ display: currentTab === "notes" ? "flex" : "none" }}
@@ -149,19 +158,23 @@ const CoachingTabsContainer: React.FC<{
           </div>
           
           <div style={{ display: currentTab === "actions" ? "block" : "none" }}>
-            <ActionsList
-              coachingSessionId={currentCoachingSessionId || ""}
-              userId={userId}
-              locale={siteConfig.locale}
-              coachId={currentCoachingRelationship?.coach_id || ""}
-              coachName={currentCoachingRelationship?.coach_first_name || "Coach"}
-              coacheeId={currentCoachingRelationship?.coachee_id || ""}
-              coacheeName={currentCoachingRelationship?.coachee_first_name || "Coachee"}
-              isSaving={isActionMutating}
-              onActionAdded={handleActionAdded}
-              onActionEdited={handleActionEdited}
-              onActionDeleted={handleActionDeleted}
-            />
+            {currentCoachingSessionId && currentCoachingSession && currentCoachingRelationship && (
+              <ActionsPanel
+                coachingSessionId={currentCoachingSessionId}
+                coachingRelationshipId={currentCoachingRelationship.id}
+                sessionDate={currentCoachingSession.date}
+                userId={userId}
+                locale={siteConfig.locale}
+                coachId={currentCoachingRelationship.coach_id}
+                coachName={getCoachName(currentCoachingRelationship)}
+                coacheeId={currentCoachingRelationship.coachee_id}
+                coacheeName={getCoacheeName(currentCoachingRelationship)}
+                isSaving={isActionMutating}
+                onActionAdded={handleActionAdded}
+                onActionEdited={handleActionEdited}
+                onActionDeleted={handleActionDeleted}
+              />
+            )}
           </div>
         </div>
       </div>
