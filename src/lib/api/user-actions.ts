@@ -76,6 +76,9 @@ function buildQueryString(params?: UserActionsQueryParams): string {
  * - GET /actions?coaching_session_id=...
  *
  * Into a single endpoint: GET /users/{user_id}/actions
+ *
+ * Supports filtering by session, coaching relationship, assignee status,
+ * action status, and sort options via {@link UserActionsQueryParams}.
  */
 export const UserActionsApi = {
   /**
