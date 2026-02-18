@@ -27,6 +27,9 @@ import { NewActionCard } from "@/components/ui/coaching-sessions/new-action-card
 /**
  * Pure filter for determining which actions should appear in "Actions for Review".
  *
+ * Pre-condition: `allActions` must already be scoped to the current coaching
+ * relationship (e.g. via `coaching_relationship_id` on the API call).
+ *
  * Rules:
  * 1. Exclude actions belonging to the current session
  * 2. Include sticky actions (previously visible) regardless of current state
@@ -86,7 +89,7 @@ function usePreviousSessionDate(
   const toDate = useMemo(() => DateTime.now().plus(SESSION_LOOKAHEAD), []);
 
   const { coachingSessions } = useCoachingSessionList(
-    coachingRelationshipId || null,
+    coachingRelationshipId,
     fromDate,
     toDate,
     "date",
@@ -398,7 +401,10 @@ const ActionsPanel = ({
 
   const { actions: allActions, refresh: refreshAll } = useUserActionsList(
     userId,
-    { scope: UserActionsScope.Sessions }
+    {
+      scope: UserActionsScope.Sessions,
+      coaching_relationship_id: coachingRelationshipId,
+    }
   );
 
   // Filter review-eligible actions with sticky tracking

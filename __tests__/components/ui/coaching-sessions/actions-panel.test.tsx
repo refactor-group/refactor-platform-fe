@@ -6,6 +6,7 @@ import { ActionsPanel } from '@/components/ui/coaching-sessions/actions-panel'
 import { TestProviders } from '@/test-utils/providers'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ItemStatus, EntityApiError } from '@/types/general'
+import { useUserActionsList } from '@/lib/api/user-actions'
 import type { UserActionsQueryParams } from '@/lib/api/user-actions'
 import { DateTime } from 'ts-luxon'
 import { toast } from 'sonner'
@@ -80,6 +81,24 @@ const mockSessionActions = [
   },
 ]
 
+// Actions from a previous session in the same relationship (for review filtering)
+const PREVIOUS_SESSION_ID = 'session-prev-456'
+const mockAllRelationshipActions = [
+  ...mockSessionActions,
+  {
+    id: 'action-prev-1',
+    coaching_session_id: PREVIOUS_SESSION_ID,
+    user_id: MOCK_COACH_ID,
+    body: 'Follow up on last session goals',
+    status: ItemStatus.InProgress,
+    status_changed_at: DateTime.now(),
+    due_by: DateTime.fromISO('2026-02-08'),
+    created_at: DateTime.fromISO('2026-01-28'),
+    updated_at: DateTime.now(),
+    assignee_ids: [MOCK_COACHEE_ID],
+  },
+]
+
 const mockRefreshSession = vi.fn()
 const mockRefreshAll = vi.fn()
 
@@ -93,9 +112,9 @@ vi.mock('@/lib/api/user-actions', () => ({
         refresh: mockRefreshSession,
       }
     }
-    // All actions (for review filtering)
+    // All actions scoped by coaching_relationship_id (for review filtering)
     return {
-      actions: mockSessionActions,
+      actions: mockAllRelationshipActions,
       isLoading: false,
       isError: false,
       refresh: mockRefreshAll,
@@ -172,6 +191,106 @@ describe('ActionsPanel', () => {
       created_at: DateTime.now(),
       updated_at: DateTime.now(),
       assignee_ids: [],
+    })
+  })
+
+  /**
+   * Regression test for bug #289: Actions for Review must be scoped to the
+   * current coaching relationship. Without coaching_relationship_id on the
+   * allActions API call, actions from OTHER relationships leak into the
+   * review section.
+   *
+   * This test sets up a cross-relationship action that would appear in the
+   * review section if relationship scoping were missing. The mock returns
+   * different data depending on whether coaching_relationship_id is provided,
+   * simulating the backend's filtering behavior.
+   */
+  it('should only show review actions from the current coaching relationship (bug #289)', () => {
+    // Action from a DIFFERENT coaching relationship — this is the bug scenario.
+    // If the API call lacks coaching_relationship_id, this action leaks through.
+    const OTHER_RELATIONSHIP_SESSION_ID = 'session-other-rel-789'
+    const crossRelationshipAction = {
+      id: 'action-leaked',
+      coaching_session_id: OTHER_RELATIONSHIP_SESSION_ID,
+      user_id: MOCK_COACH_ID,
+      body: 'Leaked action from other relationship',
+      status: ItemStatus.InProgress,
+      status_changed_at: DateTime.now(),
+      due_by: DateTime.fromISO('2026-02-09'),
+      created_at: DateTime.fromISO('2026-01-25'),
+      updated_at: DateTime.now(),
+      assignee_ids: [MOCK_COACH_ID],
+    }
+
+    const mockedHook = vi.mocked(useUserActionsList)
+    mockedHook.mockImplementation((_userId, params) => {
+      if (params?.coaching_session_id) {
+        return {
+          actions: mockSessionActions,
+          isLoading: false,
+          isError: false,
+          refresh: mockRefreshSession,
+        }
+      }
+      // Simulate backend behavior: if coaching_relationship_id is provided,
+      // return only that relationship's actions. Otherwise return everything.
+      if (params?.coaching_relationship_id === mockProps.coachingRelationshipId) {
+        return {
+          actions: mockAllRelationshipActions,
+          isLoading: false,
+          isError: false,
+          refresh: mockRefreshAll,
+        }
+      }
+      // No relationship scoping → ALL actions including cross-relationship ones
+      return {
+        actions: [...mockAllRelationshipActions, crossRelationshipAction],
+        isLoading: false,
+        isError: false,
+        refresh: mockRefreshAll,
+      }
+    })
+
+    render(
+      <Wrapper>
+        <ActionsPanel {...mockProps} />
+      </Wrapper>
+    )
+
+    // Open the review section
+    fireEvent.click(screen.getByText('Actions for Review'))
+
+    // Same-relationship action from a previous session SHOULD appear
+    expect(screen.getByText('Follow up on last session goals')).toBeInTheDocument()
+
+    // Cross-relationship action MUST NOT appear (this was the bug)
+    expect(screen.queryByText('Leaked action from other relationship')).not.toBeInTheDocument()
+
+    // Also verify the parameter was sent correctly
+    const allActionsCalls = mockedHook.mock.calls.filter(
+      ([_userId, params]) => !params?.coaching_session_id
+    )
+    expect(allActionsCalls.length).toBeGreaterThan(0)
+    expect(allActionsCalls[0][1]).toMatchObject({
+      coaching_relationship_id: mockProps.coachingRelationshipId,
+    })
+
+    // Restore default mock for subsequent tests
+    mockedHook.mockImplementation((_userId, params) => {
+      if (params?.coaching_session_id) {
+        return {
+          actions: mockSessionActions,
+          isLoading: false,
+          isError: false,
+          refresh: mockRefreshSession,
+        }
+      }
+      return {
+        actions: mockAllRelationshipActions,
+        isLoading: false,
+        isError: false,
+        refresh: mockRefreshAll,
+      }
     })
   })
 
@@ -379,11 +498,9 @@ describe('ActionsPanel', () => {
   /**
    * Asserts empty state message when no session actions exist
    */
-  it('should show empty state when there are no session actions', async () => {
-    const mod = await import('@/lib/api/user-actions') as {
-      useUserActionsList: ReturnType<typeof vi.fn>
-    }
-    mod.useUserActionsList.mockImplementation(() => ({
+  it('should show empty state when there are no session actions', () => {
+    const mockedHook = vi.mocked(useUserActionsList)
+    mockedHook.mockImplementation(() => ({
       actions: [],
       isLoading: false,
       isError: false,
@@ -399,8 +516,8 @@ describe('ActionsPanel', () => {
     expect(screen.getByText('No actions yet for this session.')).toBeInTheDocument()
 
     // Restore original mock for subsequent tests
-    mod.useUserActionsList.mockImplementation(
-      (userId: string, params: UserActionsQueryParams) => {
+    mockedHook.mockImplementation(
+      (userId, params) => {
         if (params?.coaching_session_id) {
           return {
             actions: mockSessionActions,
@@ -410,7 +527,7 @@ describe('ActionsPanel', () => {
           }
         }
         return {
-          actions: mockSessionActions,
+          actions: mockAllRelationshipActions,
           isLoading: false,
           isError: false,
           refresh: mockRefreshAll,
@@ -423,6 +540,26 @@ describe('ActionsPanel', () => {
    * Asserts "All caught up" empty state in the review section
    */
   it('should show "All caught up" when there are no review actions', () => {
+    // Override allActions to return only current-session actions so filterReviewActions
+    // excludes them all, producing the empty "All caught up" state.
+    const mockedHook = vi.mocked(useUserActionsList)
+    mockedHook.mockImplementation((_userId, params) => {
+      if (params?.coaching_session_id) {
+        return {
+          actions: mockSessionActions,
+          isLoading: false,
+          isError: false,
+          refresh: mockRefreshSession,
+        }
+      }
+      return {
+        actions: mockSessionActions, // only current-session actions → all filtered out
+        isLoading: false,
+        isError: false,
+        refresh: mockRefreshAll,
+      }
+    })
+
     render(
       <Wrapper>
         <ActionsPanel {...mockProps} />
@@ -433,6 +570,24 @@ describe('ActionsPanel', () => {
     fireEvent.click(screen.getByText('Actions for Review'))
 
     expect(screen.getByText('All caught up')).toBeInTheDocument()
+
+    // Restore default mock for subsequent tests
+    mockedHook.mockImplementation((_userId, params) => {
+      if (params?.coaching_session_id) {
+        return {
+          actions: mockSessionActions,
+          isLoading: false,
+          isError: false,
+          refresh: mockRefreshSession,
+        }
+      }
+      return {
+        actions: mockAllRelationshipActions,
+        isLoading: false,
+        isError: false,
+        refresh: mockRefreshAll,
+      }
+    })
   })
 
   /**
