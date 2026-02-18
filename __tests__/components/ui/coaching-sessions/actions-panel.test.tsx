@@ -116,7 +116,7 @@ vi.mock('@/lib/api/coaching-sessions', () => ({
  *
  * Purpose: Validates the card-based actions panel functionality including
  * rendering action cards, completion checkbox toggling, creating actions
- * via the ghost card, inline body editing, and deleting actions.
+ * via the new action card, inline body editing, and deleting actions.
  */
 describe('ActionsPanel', () => {
   const mockProps = {
@@ -232,9 +232,9 @@ describe('ActionsPanel', () => {
   })
 
   /**
-   * Asserts the ghost card "Add action" button is present and opens the creation form
+   * Asserts the new action card "Add action" button is present and opens the creation form
    */
-  it('should show the ghost card to add a new action', async () => {
+  it('should show the new action card to add a new action', async () => {
     const user = userEvent.setup()
 
     render(
@@ -248,16 +248,16 @@ describe('ActionsPanel', () => {
 
     await user.click(addButton)
 
-    // Ghost card editing mode should show textarea
+    // New action card editing mode should show textarea
     await waitFor(() => {
       expect(screen.getByPlaceholderText('What needs to be done?')).toBeInTheDocument()
     })
   })
 
   /**
-   * Asserts submitting the ghost card form calls onActionAdded
+   * Asserts submitting the new action card form calls onActionAdded
    */
-  it('should create a new action via the ghost card', async () => {
+  it('should create a new action via the new action card', async () => {
     const user = userEvent.setup()
 
     render(
@@ -266,7 +266,7 @@ describe('ActionsPanel', () => {
       </Wrapper>
     )
 
-    // Open the ghost card form
+    // Open the new action card form
     await user.click(screen.getByText('Add action'))
 
     const textarea = await screen.findByPlaceholderText('What needs to be done?')

@@ -18,7 +18,7 @@ import { useUserActionsList } from "@/lib/api/user-actions";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { UserActionsScope } from "@/types/assigned-actions";
 import { SessionActionCard } from "@/components/ui/coaching-sessions/session-action-card";
-import { GhostActionCard } from "@/components/ui/coaching-sessions/ghost-action-card";
+import { NewActionCard } from "@/components/ui/coaching-sessions/new-action-card";
 
 // ---------------------------------------------------------------------------
 // Pure helpers
@@ -236,7 +236,7 @@ function NewActionsSection({
           )
         )}
 
-        <GhostActionCard
+        <NewActionCard
           locale={locale}
           coachId={coachId}
           coachName={coachName}

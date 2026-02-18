@@ -30,7 +30,7 @@ Follow the existing dashboard pattern:
 The kanban board code originally prototyped in `previous-actions-cards.tsx` should be adapted and moved to `src/components/ui/actions/`:
 - `KanbanBoard`, `KanbanColumn`, `DraggableActionCard`, `DragOverlay` setup
 - Adapt to use real `Action` type + `SessionActionCard` from Plan A
-- `GhostCard` -> use `GhostActionCard` from Plan A
+- `GhostCard` -> use `NewActionCard` from Plan A
 - `statusBadgeVariant()`, `statusLabel()`, `COLUMN_ORDER` -> extract to shared util
 
 ## Filtering (Design Direction)

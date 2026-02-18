@@ -16,7 +16,7 @@ import {
   DueDatePicker,
 } from "@/components/ui/coaching-sessions/action-card-parts";
 
-interface GhostActionCardProps {
+interface NewActionCardProps {
   locale: string;
   coachId: Id;
   coachName: string;
@@ -35,7 +35,7 @@ interface GhostActionCardProps {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-interface GhostCardFormProps {
+interface NewCardFormProps {
   body: string;
   onBodyChange: (body: string) => void;
   dueBy: DateTime;
@@ -50,7 +50,7 @@ interface GhostCardFormProps {
   isSaving: boolean;
 }
 
-function GhostCardForm({
+function NewCardForm({
   body,
   onBodyChange,
   dueBy,
@@ -63,7 +63,7 @@ function GhostCardForm({
   onSave,
   onCancel,
   isSaving,
-}: GhostCardFormProps) {
+}: NewCardFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -133,7 +133,7 @@ function GhostCardForm({
   );
 }
 
-interface GhostCardPlaceholderProps {
+interface NewCardPlaceholderProps {
   onActivate: () => void;
   disabled: boolean;
   isDragOver: boolean;
@@ -142,14 +142,14 @@ interface GhostCardPlaceholderProps {
   onDrop: (e: DragEvent) => void;
 }
 
-function GhostCardPlaceholder({
+function NewCardPlaceholder({
   onActivate,
   disabled,
   isDragOver,
   onDragOver,
   onDragLeave,
   onDrop,
-}: GhostCardPlaceholderProps) {
+}: NewCardPlaceholderProps) {
   return (
     <button
       type="button"
@@ -177,7 +177,7 @@ function GhostCardPlaceholder({
 // Main component
 // ---------------------------------------------------------------------------
 
-const GhostActionCard = ({
+const NewActionCard = ({
   locale,
   coachId,
   coachName,
@@ -185,7 +185,7 @@ const GhostActionCard = ({
   coacheeName,
   onCreateAction,
   disabled = false,
-}: GhostActionCardProps) => {
+}: NewActionCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [body, setBody] = useState("");
   const [dueBy, setDueBy] = useState<DateTime>(
@@ -272,7 +272,7 @@ const GhostActionCard = ({
 
   if (isEditing) {
     return (
-      <GhostCardForm
+      <NewCardForm
         body={body}
         onBodyChange={setBody}
         dueBy={dueBy}
@@ -290,7 +290,7 @@ const GhostActionCard = ({
   }
 
   return (
-    <GhostCardPlaceholder
+    <NewCardPlaceholder
       onActivate={() => setIsEditing(true)}
       disabled={disabled}
       isDragOver={isDragOver}
@@ -301,5 +301,5 @@ const GhostActionCard = ({
   );
 };
 
-export { GhostActionCard };
-export type { GhostActionCardProps };
+export { NewActionCard };
+export type { NewActionCardProps };
