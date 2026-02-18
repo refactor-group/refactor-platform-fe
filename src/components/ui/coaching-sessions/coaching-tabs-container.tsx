@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { ActionsPanel } from "@/components/ui/coaching-sessions/actions-panel";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
-import { ItemStatus, Id } from "@/types/general";
+import { ItemStatus, Id, EntityApiError } from "@/types/general";
 import { Action, defaultAction } from "@/types/action";
 import { Agreement, defaultAgreement } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
@@ -29,10 +30,11 @@ const CoachingTabsContainer = ({
 }: CoachingTabsContainerProps) => {
   const [currentTab, setCurrentTab] = useState(defaultValue);
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = useCallback((value: string) => {
     setCurrentTab(value);
     onTabChange?.(value);
-  };
+  }, [onTabChange]);
+
   // Get coaching session ID and data from URL
   const { currentCoachingSessionId, currentCoachingSession } = useCurrentCoachingSession();
 
@@ -125,6 +127,34 @@ const CoachingTabsContainer = ({
     return deleteAction(id);
   };
 
+  // Create an action from selected text in coaching notes
+  const handleAddNoteAsAction = useCallback(async (selectedText: string) => {
+    if (!currentCoachingSessionId) return;
+
+    const trimmed = selectedText.trim();
+    if (!trimmed) return;
+
+    try {
+      await handleActionAdded(
+        trimmed,
+        ItemStatus.NotStarted,
+        DateTime.now().plus({ days: 7 }),
+      );
+      toast.success("Action created from note", {
+        action: {
+          label: "View Actions",
+          onClick: () => handleTabChange("actions"),
+        },
+      });
+    } catch (err) {
+      if (err instanceof EntityApiError && err.isNetworkError()) {
+        toast.error("Failed to create action. Connection to service was lost.");
+      } else {
+        toast.error("Failed to create action.");
+      }
+    }
+  }, [currentCoachingSessionId, handleActionAdded, handleTabChange]);
+
   return (
     <div className="row-span-1 h-full py-4 px-4">
       <div className="flex-col space-y-4 sm:flex md:order-1">
@@ -142,7 +172,7 @@ const CoachingTabsContainer = ({
             className="flex-col h-full space-y-4"
             style={{ display: currentTab === "notes" ? "flex" : "none" }}
           >
-            <CoachingNotes />
+            <CoachingNotes onAddAsAction={handleAddNoteAsAction} />
           </div>
           
           <div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
