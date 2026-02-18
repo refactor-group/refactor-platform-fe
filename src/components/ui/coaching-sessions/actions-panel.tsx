@@ -398,7 +398,10 @@ const ActionsPanel = ({
 
   const { actions: allActions, refresh: refreshAll } = useUserActionsList(
     userId,
-    { scope: UserActionsScope.Sessions }
+    {
+      scope: UserActionsScope.Sessions,
+      coaching_relationship_id: coachingRelationshipId,
+    }
   );
 
   // Filter review-eligible actions with sticky tracking

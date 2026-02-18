@@ -21,6 +21,8 @@ export interface UserActionsQueryParams {
   scope?: UserActionsScope;
   /** Filter to a specific coaching session */
   coaching_session_id?: Id;
+  /** Filter to actions from sessions belonging to a specific coaching relationship */
+  coaching_relationship_id?: Id;
   /** Filter by assignee status */
   assignee_filter?: UserActionsAssigneeFilter;
   /** Filter by action status */
@@ -44,6 +46,9 @@ function buildQueryString(params?: UserActionsQueryParams): string {
   }
   if (params.coaching_session_id) {
     searchParams.set("coaching_session_id", params.coaching_session_id);
+  }
+  if (params.coaching_relationship_id) {
+    searchParams.set("coaching_relationship_id", params.coaching_relationship_id);
   }
   if (params.assignee_filter) {
     searchParams.set("assignee_filter", params.assignee_filter);

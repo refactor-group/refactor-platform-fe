@@ -93,7 +93,7 @@ vi.mock('@/lib/api/user-actions', () => ({
         refresh: mockRefreshSession,
       }
     }
-    // All actions (for review filtering)
+    // All actions scoped by coaching_relationship_id (for review filtering)
     return {
       actions: mockSessionActions,
       isLoading: false,
@@ -172,6 +172,31 @@ describe('ActionsPanel', () => {
       created_at: DateTime.now(),
       updated_at: DateTime.now(),
       assignee_ids: [],
+    })
+  })
+
+  /**
+   * Asserts that allActions fetch includes coaching_relationship_id to scope
+   * review actions to the current coaching relationship (bug #289).
+   */
+  it('should fetch all actions scoped by coaching_relationship_id', async () => {
+    const mod = await import('@/lib/api/user-actions') as {
+      useUserActionsList: ReturnType<typeof vi.fn>
+    }
+
+    render(
+      <Wrapper>
+        <ActionsPanel {...mockProps} />
+      </Wrapper>
+    )
+
+    // The second call (without coaching_session_id) should include coaching_relationship_id
+    const allActionsCalls = mod.useUserActionsList.mock.calls.filter(
+      ([_userId, params]: [string, UserActionsQueryParams]) => !params?.coaching_session_id
+    )
+    expect(allActionsCalls.length).toBeGreaterThan(0)
+    expect(allActionsCalls[0][1]).toMatchObject({
+      coaching_relationship_id: mockProps.coachingRelationshipId,
     })
   })
 
