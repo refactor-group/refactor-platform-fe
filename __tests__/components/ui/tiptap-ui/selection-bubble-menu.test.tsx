@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
@@ -43,7 +44,7 @@ const createEditorExtensions = () => [
   CodeBlock,
 ];
 
-const renderWithProviders = (ui: React.ReactElement) =>
+const renderWithProviders = (ui: ReactElement) =>
   render(<TooltipProvider>{ui}</TooltipProvider>);
 
 // ---------------------------------------------------------------------------

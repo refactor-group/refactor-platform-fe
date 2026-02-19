@@ -78,12 +78,14 @@ export function SelectionBubbleMenu({
   // Hide the menu while the user is actively dragging a selection in the editor.
   // We listen for mousedown on the editor element specifically (not the document)
   // so that clicks on the bubble menu buttons themselves don't trigger hiding.
-  // mouseup is on the document because the user may release outside the editor.
+  // mousedown also dismisses the menu so clicking outside hides it immediately.
+  // mouseup (on the document, since the user may release outside the editor)
+  // clears `selectingText`; the menu only reappears when a subsequent
+  // `selectionUpdate` fires with a non-empty selection, resetting `dismissed`.
   //
   // Rather than suppressing in `shouldShow` (which TipTap's BubbleMenu plugin
   // only re-evaluates on editor transactions), we let the BubbleMenu remain
-  // "shown" and hide the content with CSS. When mouseup fires, React state
-  // changes and a re-render makes the menu visible immediately.
+  // "shown" and hide the content with CSS.
   useEffect(() => {
     if (!editor) return;
 

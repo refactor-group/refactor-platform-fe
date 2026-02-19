@@ -101,8 +101,8 @@ const CoachingTabsContainer = ({
     return deleteAgreement(id);
   };
 
-  // Action CRUD handlers (only called when ActionsPanel is rendered, which
-  // guarantees currentCoachingSessionId is non-null via the render guard)
+  // Action CRUD handlers — called from ActionsPanel and handleAddNoteAsAction.
+  // Both callers guard against a missing currentCoachingSessionId.
   const handleActionAdded = (
     body: string,
     status: ItemStatus,
@@ -174,7 +174,7 @@ const CoachingTabsContainer = ({
         toast.error("Failed to create action.");
       }
     }
-  }, [currentCoachingSessionId, handleActionAdded, handleTabChange]);
+  }, [currentCoachingSessionId, handleActionAdded, handleTabChange, refreshSessionActions, refreshAllActions]);
 
   return (
     <div className="row-span-1 h-full py-4 px-4">
