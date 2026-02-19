@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -23,14 +23,9 @@ export function TimezoneSelector({
   placeholder = "Select time zone",
   className,
 }: TimezoneSelectorProps) {
-  const [isLoading, setIsLoading] = useState(true);
-
   // Memoize the timezones so they're only computed once per component lifecycle
-  const timezones = useMemo(() => {
-    const tz = getTimezones();
-    setIsLoading(false);
-    return tz;
-  }, []);
+  const timezones = useMemo(() => getTimezones(), []);
+  const isLoading = timezones.length === 0;
 
   return (
     <Select value={value} onValueChange={onValueChange}>

@@ -47,18 +47,17 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Disable React Compiler rules added in eslint-config-next@16 that
-  // weren't present in v15. These can be enabled incrementally as follow-up.
-  // Placed last to ensure these overrides take effect after nextVitals rules.
+  // React Compiler rules added in eslint-config-next@16 (new in v16, not present in v15).
+  // Enabled as warnings for visibility; address incrementally.
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
     rules: {
-      "react-hooks/refs": "off",
-      "react-hooks/set-state-in-render": "off",
-      "react-hooks/set-state-in-effect": "off",
-      "react-hooks/preserve-manual-memoization": "off",
-      "react-hooks/immutability": "off",
-      "react-hooks/purity": "off",
+      "react-hooks/refs": "warn",
+      "react-hooks/set-state-in-render": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/purity": "warn",
     },
   },
 ]);

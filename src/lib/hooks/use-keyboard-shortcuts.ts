@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 type Platform = 'mac' | 'windows' | 'linux' | 'unknown';
 
@@ -17,54 +17,50 @@ interface KeyboardShortcuts {
   save: string;
 }
 
+function detectPlatform(): Platform {
+  if (typeof window === 'undefined') {
+    return 'unknown';
+  }
+
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  const navPlatform = window.navigator.platform?.toLowerCase() || '';
+
+  // Check for macOS
+  if (
+    navPlatform.includes('mac') ||
+    userAgent.includes('mac') ||
+    /iphone|ipad|ipod/.test(userAgent)
+  ) {
+    return 'mac';
+  }
+
+  // Check for Windows
+  if (navPlatform.includes('win') || userAgent.includes('windows')) {
+    return 'windows';
+  }
+
+  // Check for Linux
+  if (navPlatform.includes('linux') || userAgent.includes('linux')) {
+    return 'linux';
+  }
+
+  // Fallback: detect by checking if Cmd key works (Mac-specific)
+  try {
+    const isMac = /Mac|iPod|iPhone|iPad/.test(window.navigator.platform);
+    if (isMac) return 'mac';
+  } catch {
+    // Ignore errors
+  }
+
+  // Default to Windows/Linux shortcuts for unknown platforms
+  return 'windows';
+}
+
 /**
  * Custom hook to detect the user's platform and provide appropriate keyboard shortcuts
  */
 export const useKeyboardShortcuts = () => {
-  const [platform, setPlatform] = useState<Platform>('unknown');
-
-  useEffect(() => {
-    const detectPlatform = (): Platform => {
-      if (typeof window === 'undefined') {
-        return 'unknown';
-      }
-
-      const userAgent = window.navigator.userAgent.toLowerCase();
-      const platform = window.navigator.platform?.toLowerCase() || '';
-
-      // Check for macOS
-      if (
-        platform.includes('mac') ||
-        userAgent.includes('mac') ||
-        /iphone|ipad|ipod/.test(userAgent)
-      ) {
-        return 'mac';
-      }
-
-      // Check for Windows
-      if (platform.includes('win') || userAgent.includes('windows')) {
-        return 'windows';
-      }
-
-      // Check for Linux
-      if (platform.includes('linux') || userAgent.includes('linux')) {
-        return 'linux';
-      }
-
-      // Fallback: detect by checking if Cmd key works (Mac-specific)
-      try {
-        const isMac = /Mac|iPod|iPhone|iPad/.test(window.navigator.platform);
-        if (isMac) return 'mac';
-      } catch {
-        // Ignore errors
-      }
-
-      // Default to Windows/Linux shortcuts for unknown platforms
-      return 'windows';
-    };
-
-    setPlatform(detectPlatform());
-  }, []);
+  const [platform] = useState<Platform>(detectPlatform);
 
   const getShortcuts = (): KeyboardShortcuts => {
     const isMac = platform === 'mac';
