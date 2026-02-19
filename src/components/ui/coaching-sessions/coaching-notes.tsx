@@ -6,6 +6,7 @@ import { FileText } from "lucide-react";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
 import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
 import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu/link-bubble-menu";
+import { SelectionBubbleMenu } from "@/components/ui/tiptap-ui/selection-bubble-menu/selection-bubble-menu";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +21,11 @@ const HEADER_HEIGHT_PX = 64;
 
 // Main component: orchestrates editor state and rendering logic
 
-const CoachingNotes = () => {
+interface CoachingNotesProps {
+  onAddAsAction?: (selectedText: string) => void;
+}
+
+const CoachingNotes = ({ onAddAsAction }: CoachingNotesProps) => {
   const { extensions, isReady, isLoading, error, resetCache } = useEditorCache();
 
   // Show error state if there's an error
@@ -34,7 +39,7 @@ const CoachingNotes = () => {
   }
 
   // Render the editor (will be read-only until isReady = true)
-  return renderReadyEditor(extensions, isReady);
+  return renderReadyEditor(extensions, isReady, onAddAsAction);
 };
 
 const renderLoadingState = () => (
@@ -74,9 +79,19 @@ const renderErrorState = (error: Error | null, onRetry: () => void) => (
   </div>
 );
 
-const renderReadyEditor = (extensions: Extensions, isReady: boolean) => {
+const renderReadyEditor = (
+  extensions: Extensions,
+  isReady: boolean,
+  onAddAsAction?: (selectedText: string) => void,
+) => {
   try {
-    return <CoachingNotesWithFloatingToolbar extensions={extensions} isReady={isReady} />;
+    return (
+      <CoachingNotesWithFloatingToolbar
+        extensions={extensions}
+        isReady={isReady}
+        onAddAsAction={onAddAsAction}
+      />
+    );
   } catch (error) {
     console.error("Editor initialization failed:", error);
     return (
@@ -99,7 +114,8 @@ const renderReadyEditor = (extensions: Extensions, isReady: boolean) => {
 const CoachingNotesWithFloatingToolbar: React.FC<{
   extensions: Extensions;
   isReady: boolean;
-}> = ({ extensions, isReady }) => {
+  onAddAsAction?: (selectedText: string) => void;
+}> = ({ extensions, isReady, onAddAsAction }) => {
   const { editorRef, toolbarRef, toolbarState, handlers } =
     useToolbarManagement();
   const editorProps = buildEditorProps(isReady);
@@ -114,7 +130,8 @@ const CoachingNotesWithFloatingToolbar: React.FC<{
     editorRef,
     extensions,
     editorProps,
-    toolbarSlots
+    toolbarSlots,
+    onAddAsAction
   );
 };
 
@@ -184,7 +201,8 @@ const renderEditorWithToolbars = (
   editorRef: React.RefObject<HTMLDivElement>,
   extensions: Extensions,
   editorProps: ReturnType<typeof buildEditorProps>,
-  toolbarSlots: ReturnType<typeof buildToolbarSlots>
+  toolbarSlots: ReturnType<typeof buildToolbarSlots>,
+  onAddAsAction?: (selectedText: string) => void,
 ) => (
   <div ref={editorRef} className="coaching-notes-editor">
     <EditorProvider
@@ -198,6 +216,7 @@ const renderEditorWithToolbars = (
       slotAfter={toolbarSlots.slotAfter}
     >
       <LinkBubbleMenu />
+      {onAddAsAction && <SelectionBubbleMenu onAddAsAction={onAddAsAction} />}
     </EditorProvider>
   </div>
 );
