@@ -12,7 +12,7 @@ const protectedRoutes = [
 ];
 const publicRoutes = ["/"];
 
-export default async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   // 2. Check if the current route is protected or public
   const path = req.nextUrl.pathname;
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -46,7 +46,7 @@ export default async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Routes Middleware should not run on
+// Routes proxy should not run on
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$).*)"],
 };
