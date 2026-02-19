@@ -45,7 +45,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
 
   useScrollEventManagement(editorRef, checkVisibility);
 
-  return renderFloatingToolbar(floatingRef, isVisible, styles, editorRef);
+  return renderFloatingToolbar(floatingRef, isVisible, styles);
 };
 
 /** Cancels any pending debounced visibility update */
@@ -320,8 +320,7 @@ const isScrollableElement = (element: Element): boolean => {
 const renderFloatingToolbar = (
   floatingRef: React.RefObject<HTMLDivElement>,
   isVisible: boolean,
-  styles: ReturnType<typeof getDefaultStyles>,
-  _editorRef: React.RefObject<HTMLDivElement>
+  styles: ReturnType<typeof getDefaultStyles>
 ) => (
   <div
     ref={floatingRef}

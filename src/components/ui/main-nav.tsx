@@ -1,5 +1,4 @@
 "use client";
-import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ import {
 } from "@/components/ui/tooltip";
 
 export function MainNav() {
-  const _pathname = usePathname();
   const { state, toggleSidebar } = useSidebar();
   const isExpanded = state === "expanded";
 
