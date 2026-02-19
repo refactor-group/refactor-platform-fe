@@ -69,7 +69,10 @@ function useCoacheeActionsFetch(
         setIsError(error);
         setIsLoading(false);
       });
-  }, [enabled, coacheeIds, coacheeIdsKey, refreshKey]);
+    // coacheeIds is intentionally omitted — coacheeIdsKey is the stable string proxy
+    // that prevents infinite re-renders from unstable array identity
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, coacheeIdsKey, refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 

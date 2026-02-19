@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import {
   defaultSessionTitle,
   generateSessionTitle,
@@ -24,7 +24,6 @@ const CoachingSessionTitle: React.FC<{
   style: SessionTitleStyle;
 }> = ({ locale, style }) => {
   const { userSession } = useAuthStore((state) => state);
-  const lastRenderedTitle = useRef<string>("");
 
   // Get coaching session from URL path parameter
   const { currentCoachingSession, isLoading: sessionLoading } =
@@ -42,20 +41,12 @@ const CoachingSessionTitle: React.FC<{
     if (sessionLoading || relationshipLoading) return null;
     if (!currentCoachingSession || !currentCoachingRelationship) return null;
 
-    const titleData = generateSessionTitle(
+    return generateSessionTitle(
       currentCoachingSession,
       currentCoachingRelationship,
       style,
       locale
     );
-
-    // Update document title directly where computed
-    if (titleData && titleData.title !== lastRenderedTitle.current) {
-      document.title = titleData.title;
-      lastRenderedTitle.current = titleData.title;
-    }
-
-    return titleData;
   }, [
     currentCoachingSession,
     currentCoachingRelationship,
@@ -64,6 +55,13 @@ const CoachingSessionTitle: React.FC<{
     sessionLoading,
     relationshipLoading,
   ]);
+
+  // Sync document title as a side effect when the computed title changes
+  useEffect(() => {
+    if (sessionTitle) {
+      document.title = sessionTitle.title;
+    }
+  }, [sessionTitle]);
 
   const displayTitle = sessionTitle?.title || defaultSessionTitle().title;
 
