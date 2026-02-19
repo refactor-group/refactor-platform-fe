@@ -188,14 +188,14 @@ const CoachingTabsContainer = ({
         </Tabs>
         
         {/* Always-mounted content controlled by CSS display */}
-        <div className="mt-8 pl-4">
-          <div 
+        <div className="mt-8">
+          <div
             className="flex-col h-full space-y-4"
             style={{ display: currentTab === "notes" ? "flex" : "none" }}
           >
             <CoachingNotes onAddAsAction={handleAddNoteAsAction} />
           </div>
-          
+
           <div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
             <AgreementsList
               coachingSessionId={currentCoachingSessionId || ""}
@@ -207,8 +207,8 @@ const CoachingTabsContainer = ({
               onAgreementDeleted={handleAgreementDeleted}
             />
           </div>
-          
-          <div style={{ display: currentTab === "actions" ? "block" : "none" }}>
+
+          <div className="pl-4" style={{ display: currentTab === "actions" ? "block" : "none" }}>
             {currentCoachingSessionId && currentCoachingSession && currentCoachingRelationship && (
               <ActionsPanel
                 coachingSessionId={currentCoachingSessionId}

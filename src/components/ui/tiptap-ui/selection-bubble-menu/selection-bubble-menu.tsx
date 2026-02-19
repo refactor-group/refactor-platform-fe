@@ -67,6 +67,14 @@ export function SelectionBubbleMenu({
   const [dismissed, setDismissed] = useState(false);
   const [selectingText, setSelectingText] = useState(false);
 
+  // Callback ref to set z-index on the BubbleMenu's outer positioning
+  // element so it renders above the editor toolbar.
+  const menuRef = useCallback((el: HTMLDivElement | null) => {
+    if (el) {
+      el.style.zIndex = "50";
+    }
+  }, []);
+
   // Hide the menu while the user is actively dragging a selection in the editor.
   // We listen for mousedown on the editor element specifically (not the document)
   // so that clicks on the bubble menu buttons themselves don't trigger hiding.
@@ -80,7 +88,10 @@ export function SelectionBubbleMenu({
     if (!editor) return;
 
     const editorEl = editor.view.dom;
-    const handleMouseDown = () => setSelectingText(true);
+    const handleMouseDown = () => {
+      setSelectingText(true);
+      setDismissed(true);
+    };
     const handleMouseUp = () => setSelectingText(false);
 
     editorEl.addEventListener("mousedown", handleMouseDown);
@@ -91,12 +102,17 @@ export function SelectionBubbleMenu({
     };
   }, [editor]);
 
-  // Reset dismissed state when selection changes
+  // Reset dismissed state when the user makes a new non-empty selection.
+  // We guard on from !== to so that a collapsing selection (e.g. after
+  // clicking a bubble menu button) doesn't briefly un-dismiss the menu.
   useEffect(() => {
     if (!editor) return;
 
     const handleSelectionUpdate = () => {
-      setDismissed(false);
+      const { from, to } = editor.state.selection;
+      if (from !== to) {
+        setDismissed(false);
+      }
     };
 
     editor.on("selectionUpdate", handleSelectionUpdate);
@@ -156,6 +172,7 @@ export function SelectionBubbleMenu({
 
   return (
     <BubbleMenu
+      ref={menuRef}
       editor={editor}
       shouldShow={shouldShow}
       updateDelay={BUBBLE_MENU_UPDATE_DELAY_MS}
