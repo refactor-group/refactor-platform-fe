@@ -65,6 +65,31 @@ export function SelectionBubbleMenu({
 }: SelectionBubbleMenuProps) {
   const editor = useTiptapEditor(providedEditor);
   const [dismissed, setDismissed] = useState(false);
+  const [selectingText, setSelectingText] = useState(false);
+
+  // Hide the menu while the user is actively dragging a selection in the editor.
+  // We listen for mousedown on the editor element specifically (not the document)
+  // so that clicks on the bubble menu buttons themselves don't trigger hiding.
+  // mouseup is on the document because the user may release outside the editor.
+  //
+  // Rather than suppressing in `shouldShow` (which TipTap's BubbleMenu plugin
+  // only re-evaluates on editor transactions), we let the BubbleMenu remain
+  // "shown" and hide the content with CSS. When mouseup fires, React state
+  // changes and a re-render makes the menu visible immediately.
+  useEffect(() => {
+    if (!editor) return;
+
+    const editorEl = editor.view.dom;
+    const handleMouseDown = () => setSelectingText(true);
+    const handleMouseUp = () => setSelectingText(false);
+
+    editorEl.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      editorEl.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [editor]);
 
   // Reset dismissed state when selection changes
   useEffect(() => {
@@ -90,6 +115,7 @@ export function SelectionBubbleMenu({
     const text = getSelectedText().trim();
     if (!text) return;
 
+    setDismissed(true);
     try {
       await navigator.clipboard.writeText(text);
       toast("Copied to clipboard");
@@ -101,6 +127,7 @@ export function SelectionBubbleMenu({
   const handleAddAsAction = useCallback(() => {
     const text = getSelectedText().trim();
     if (!text) return;
+    setDismissed(true);
     onAddAsAction(text);
   }, [getSelectedText, onAddAsAction]);
 
@@ -117,7 +144,6 @@ export function SelectionBubbleMenu({
     from,
     to,
   }) => {
-    if (dismissed) return false;
     return shouldShowSelectionMenu({ editor: bubbleEditor, from, to });
   };
 
@@ -135,7 +161,10 @@ export function SelectionBubbleMenu({
       updateDelay={BUBBLE_MENU_UPDATE_DELAY_MS}
       options={bubbleMenuOptions}
     >
-      <div className="selection-bubble-menu">
+      <div
+        className="selection-bubble-menu"
+        style={selectingText || dismissed ? { visibility: "hidden" } : undefined}
+      >
         <Button
           type="button"
           onClick={handleCopy}
