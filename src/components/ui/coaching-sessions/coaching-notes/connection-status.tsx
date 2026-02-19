@@ -87,27 +87,6 @@ export const ConnectionStatus = () => {
 };
 
 /**
- * Determines if the provider is connected and ready
- */
-const _isProviderConnected = (
-  isReady: boolean,
-  collaborationProvider: TiptapCollabProvider | null
-): boolean => {
-  if (!collaborationProvider) return false;
-  return isReady && collaborationProvider.status === WebSocketStatus.Connected;
-};
-
-/**
- * Determines if the provider is in an offline state
- */
-const _isProviderOffline = (
-  collaborationProvider: TiptapCollabProvider | null
-): boolean => {
-  if (!collaborationProvider) return true;
-  return collaborationProvider.status === WebSocketStatus.Disconnected;
-};
-
-/**
  * Determines the current connection state based on editor cache state and provider status
  */
 const determineConnectionState = (
