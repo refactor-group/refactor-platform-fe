@@ -62,7 +62,11 @@ export function sortActionArray(
   sorted.sort((a, b) => {
     const aTime = a[field].toMillis();
     const bTime = b[field].toMillis();
-    return order === SortOrder.Asc ? aTime - bTime : bTime - aTime;
+    const primary = order === SortOrder.Asc ? aTime - bTime : bTime - aTime;
+    if (primary !== 0) return primary;
+    // Deterministic tiebreaker: ascending by id to ensure stable order
+    // when the primary sort field values are equal.
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   });
   return sorted;
 }

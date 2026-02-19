@@ -114,7 +114,11 @@ function usePreviousSessionDate(
 
 /**
  * Filters all actions down to the review-eligible set, tracking which IDs
- * were initially shown so they remain visible ("sticky") even after edits.
+ * have been shown so they remain visible ("sticky") even after edits.
+ *
+ * The sticky set is grow-only: once an action qualifies for review, its ID
+ * is permanently added, ensuring it remains visible even if a subsequent
+ * field change (e.g. status -> Completed) would otherwise exclude it.
  */
 function useReviewActions(
   allActions: Action[],
@@ -122,7 +126,7 @@ function useReviewActions(
   currentSessionDate: DateTime | null,
   previousSessionDate: DateTime | null
 ): Action[] {
-  const stickyIdsRef = useRef<Set<Id> | null>(null);
+  const stickyIdsRef = useRef<Set<Id>>(new Set());
 
   return useMemo(() => {
     if (!currentSessionDate) return [];
@@ -132,14 +136,13 @@ function useReviewActions(
       coachingSessionId,
       currentSessionDate,
       previousSessionDate,
-      stickyIdsRef.current ?? undefined
+      stickyIdsRef.current.size > 0 ? stickyIdsRef.current : undefined
     );
 
-    // Only lock the sticky set once previousSessionDate has resolved,
-    // to avoid capturing actions that would be excluded by status-based
-    // filtering once the previous session boundary is known.
-    if (stickyIdsRef.current === null && filtered.length > 0 && previousSessionDate !== null) {
-      stickyIdsRef.current = new Set(filtered.map((a) => a.id));
+    // Grow-only: once an action qualifies for review, it stays visible
+    // for the lifetime of this component instance.
+    for (const action of filtered) {
+      stickyIdsRef.current.add(action.id);
     }
 
     return filtered;

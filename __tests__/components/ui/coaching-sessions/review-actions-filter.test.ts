@@ -274,6 +274,44 @@ describe("filterReviewActions", () => {
       // Current session exclusion takes precedence over sticky
       expect(result).toHaveLength(0);
     });
+
+    it("should retain an overdue action in the sticky set after status changes to Completed", () => {
+      // This action is due before the previous session date.
+      // Without sticky IDs, it would be filtered out once status = Completed.
+      const stickyIds = new Set(["overdue-action"]);
+      const actions = [
+        reviewAction("overdue-action", "2026-01-15", ItemStatus.Completed),
+      ];
+
+      const result = filterReviewActions(
+        actions,
+        CURRENT_SESSION_ID,
+        CURRENT_SESSION_DATE,
+        PREVIOUS_SESSION_DATE,
+        stickyIds
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("overdue-action");
+    });
+
+    it("should retain a sticky action after status changes to WontDo", () => {
+      const stickyIds = new Set(["wontdo-action"]);
+      const actions = [
+        reviewAction("wontdo-action", "2026-01-20", ItemStatus.WontDo),
+      ];
+
+      const result = filterReviewActions(
+        actions,
+        CURRENT_SESSION_ID,
+        CURRENT_SESSION_DATE,
+        PREVIOUS_SESSION_DATE,
+        stickyIds
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("wontdo-action");
+    });
   });
 
   describe("sorting", () => {
