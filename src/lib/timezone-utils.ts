@@ -79,7 +79,7 @@ function formatTimezoneLabel(timezone: string, baseTime?: DateTime): string {
     const offset = now.toFormat('ZZ');
     const city = timezone.split('/').pop()?.replace(/_/g, ' ') || timezone;
     return `${city} (${offset})`;
-  } catch (error) {
+  } catch {
     return timezone;
   }
 }
@@ -213,7 +213,7 @@ export function isValidTimezone(timezone: string): boolean {
   try {
     DateTime.now().setZone(timezone);
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

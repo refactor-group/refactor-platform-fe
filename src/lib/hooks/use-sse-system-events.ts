@@ -6,7 +6,7 @@ import { useSSEEventHandler } from './use-sse-event-handler';
 
 export function useSSESystemEvents(eventSource: EventSource | null) {
   const logout = useLogoutUser();
-  const isLoggedIn = useAuthStore((store) => store.isLoggedIn);
+  const _isLoggedIn = useAuthStore((store) => store.isLoggedIn);
 
   useSSEEventHandler(eventSource, 'force_logout', async (event) => {
     console.warn('[SSE] Force logout received:', event.data.reason);

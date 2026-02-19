@@ -447,7 +447,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
             : new Error("Failed to initialize collaboration"),
       }));
     }
-  }, [jwt, userSession, userRole, userColor, getOrCreateYDoc]);
+  }, [jwt, userSession, userRole, userColor, getOrCreateYDoc, clearSyncTimeout]);
 
   // Provider lifecycle: manages connection state across session/token changes
   useEffect(() => {
@@ -529,6 +529,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     userRole,
     getOrCreateYDoc,
     initializeProvider,
+    clearSyncTimeout,
   ]);
 
   // Re-broadcast presence when userRole changes after provider is ready
@@ -570,7 +571,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
         providerRef.current = null;
       }
     };
-  }, []);
+  }, [clearSyncTimeout]);
 
   // Logout cleanup registration: ensures proper provider teardown on session end
   useLogoutCleanup(
@@ -609,7 +610,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
           isLoading: false,
         },
       }));
-    }, [])
+    }, [clearSyncTimeout])
   );
 
   // Cache reset: clears all state for fresh initialization
@@ -629,7 +630,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     lastSessionIdRef.current = null;
 
     setCache(createInitialCacheState());
-  }, []);
+  }, [clearSyncTimeout]);
 
   // Memoize context value to prevent unnecessary re-renders of consumers
   // Only create a new object when cache state or resetCache function actually changes

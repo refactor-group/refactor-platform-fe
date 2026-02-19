@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Id } from "@/types/general";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { siteConfig } from "@/site.config";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverarchingGoalComponent } from "./overarching-goal";
 import {
@@ -15,13 +15,13 @@ import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-sess
 
 const OverarchingGoalContainer: React.FC<{
   userId: Id;
-}> = ({ userId }) => {
+}> = ({ userId: _userId }) => {
   const [isOpen, setIsOpen] = useState(false);
   
   // Get coaching session ID from URL
   const { currentCoachingSessionId } = useCurrentCoachingSession();
   
-  const { overarchingGoal, isLoading, isError, refresh } =
+  const { overarchingGoal, refresh } =
     useOverarchingGoalBySession(currentCoachingSessionId || "");
   const { create: createOverarchingGoal, update: updateOverarchingGoal } =
     useOverarchingGoalMutation();

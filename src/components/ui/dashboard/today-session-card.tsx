@@ -175,7 +175,7 @@ export function TodaySessionCard({
   assignedActions = [],
   onReschedule,
 }: TodaySessionCardProps) {
-  const { isCurrentCoach, userSession } = useAuthStore((state) => state);
+  const { userSession } = useAuthStore((state) => state);
 
   if (!userSession) return null;
 

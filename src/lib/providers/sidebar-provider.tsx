@@ -105,14 +105,14 @@ function getSidebarDimensions() {
 
 function extractContainerProps(props: SidebarProviderProps) {
   const {
-    defaultState,
-    state: stateProp,
-    onStateChange,
-    persistIntent,
-    responsiveBreakpoints,
-    className,
-    style,
-    children,
+    defaultState: _defaultState,
+    state: _stateProp,
+    onStateChange: _onStateChange,
+    persistIntent: _persistIntent,
+    responsiveBreakpoints: _responsiveBreakpoints,
+    className: _className,
+    style: _style,
+    children: _children,
     ...containerProps
   } = props;
   return containerProps;

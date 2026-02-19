@@ -11,7 +11,7 @@ export type PillProps = ComponentProps<typeof Badge> & {
 
 export const Pill = ({
   variant = "secondary",
-  themed = false,
+  themed: _themed = false,
   className,
   ...props
 }: PillProps) => (

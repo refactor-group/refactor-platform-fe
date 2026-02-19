@@ -7,7 +7,7 @@ import { User, Role } from "@/types/user";
  */
 export type UserSession = User;
 
-const isUserSession = (value: unknown): value is UserSession => {
+const _isUserSession = (value: unknown): value is UserSession => {
   return (
     value !== null &&
     typeof value === "object" &&

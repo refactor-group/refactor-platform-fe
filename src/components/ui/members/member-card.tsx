@@ -72,7 +72,7 @@ export function MemberCard({
   const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
     currentOrganizationId
   );
-  const { error: createError, createNested: createRelationship } =
+  const { error: _createError, createNested: createRelationship } =
     useCoachingRelationshipMutation(currentOrganizationId);
 
   console.log("is a coach", isACoach);

@@ -32,7 +32,7 @@ export function validateRedirectUrl(
       parsed.protocol === "http:" || parsed.protocol === "https:";
 
     return isSameOrigin && isValidPath && isSafeProtocol;
-  } catch (error) {
+  } catch {
     // Invalid URL format
     return false;
   }
@@ -62,7 +62,7 @@ export function sanitizeCallbackUrl(
     // Extract just the pathname + search + hash for internal redirect
     const parsed = new URL(decodedUrl, baseUrl);
     return parsed.pathname + parsed.search + parsed.hash;
-  } catch (error) {
+  } catch {
     // Invalid URL encoding or format
     console.warn("Invalid URL format in callback URL:", url);
     return null;

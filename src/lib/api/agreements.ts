@@ -94,7 +94,7 @@ export const AgreementApi = {
    * @param agreementId The ID of the agreement to delete
    * @returns Promise resolving to the deleted Agreement object
    */
-  deleteNested: async (_entityId: Id, agreementId: Id): Promise<Agreement> => {
+  deleteNested: async (_entityId: Id, _agreementId: Id): Promise<Agreement> => {
     throw new Error("Delete nested operation not implemented");
   },
 };

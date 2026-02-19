@@ -59,7 +59,7 @@ export default function CoachingRelationshipSelector({
   organizationId,
   disabled,
   onSelect,
-  ...props
+  ..._props
 }: CoachingRelationshipsSelectorProps) {
   const {
     currentCoachingRelationshipId,
@@ -70,7 +70,7 @@ export default function CoachingRelationshipSelector({
   const { relationships, isLoading: isLoadingRelationships } =
     useCoachingRelationshipList(organizationId);
 
-  const { setIsCurrentCoach, isLoggedIn, userId } = useAuthStore(
+  const { setIsCurrentCoach } = useAuthStore(
     (state) => state
   );
 

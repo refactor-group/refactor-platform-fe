@@ -55,7 +55,7 @@ export const useKeyboardShortcuts = () => {
       try {
         const isMac = /Mac|iPod|iPhone|iPad/.test(window.navigator.platform);
         if (isMac) return 'mac';
-      } catch (e) {
+      } catch {
         // Ignore errors
       }
 
@@ -69,7 +69,7 @@ export const useKeyboardShortcuts = () => {
   const getShortcuts = (): KeyboardShortcuts => {
     const isMac = platform === 'mac';
     const modKey = isMac ? '⌘' : 'Ctrl';
-    const altKey = isMac ? '⌥' : 'Alt';
+    const _altKey = isMac ? '⌥' : 'Alt';
     const shiftKey = '⇧';
 
     return {

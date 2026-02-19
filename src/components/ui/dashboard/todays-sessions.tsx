@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TodaySessionCard } from "./today-session-card";
-import { cn } from "@/components/lib/utils";
+
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";

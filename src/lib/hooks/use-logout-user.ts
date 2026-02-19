@@ -13,7 +13,7 @@ export function useLogoutUser() {
     userSession: state.userSession,
   }));
   const { delete: deleteUserSession } = useUserSessionMutation();
-  const { resetOrganizationState } = useOrganizationStateStore(
+  const { resetOrganizationState: _resetOrganizationState } = useOrganizationStateStore(
     (action) => action
   );
   const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(

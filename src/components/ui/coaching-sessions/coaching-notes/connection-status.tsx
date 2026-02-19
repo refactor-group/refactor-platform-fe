@@ -89,7 +89,7 @@ export const ConnectionStatus = () => {
 /**
  * Determines if the provider is connected and ready
  */
-const isProviderConnected = (
+const _isProviderConnected = (
   isReady: boolean,
   collaborationProvider: TiptapCollabProvider | null
 ): boolean => {
@@ -100,7 +100,7 @@ const isProviderConnected = (
 /**
  * Determines if the provider is in an offline state
  */
-const isProviderOffline = (
+const _isProviderOffline = (
   collaborationProvider: TiptapCollabProvider | null
 ): boolean => {
   if (!collaborationProvider) return true;

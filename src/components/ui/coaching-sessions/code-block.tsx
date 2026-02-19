@@ -16,7 +16,7 @@ const CodeBlock: React.FC<NodeViewProps> = ({
       <ProgrammingLanguageSelector
         languages={extension.options.lowlight
           .listLanguages()
-          .map((lang: string, index: number) => lang)}
+          .map((lang: string, _index: number) => lang)}
         placeholder={language}
         onSelect={(languageTitle: string) => {
           updateAttributes({ language: languageTitle });

@@ -32,7 +32,7 @@ export const UserApi = {
   /**
    * Creates a new user.
    */
-  create: async (user: NewUser): Promise<User> => {
+  create: async (_user: NewUser): Promise<User> => {
     throw new Error("Create operation not implemented");
   },
 
@@ -49,14 +49,14 @@ export const UserApi = {
   /**
    * Updates an existing user.
    */
-  update: async (id: Id, user: NewUser): Promise<User> => {
+  update: async (_id: Id, _user: NewUser): Promise<User> => {
     throw new Error("Update operation not implemented");
   },
 
   /**
    * Deletes a user.
    */
-  delete: async (id: Id): Promise<User> => {
+  delete: async (_id: Id): Promise<User> => {
     throw new Error("Delete operation not implemented");
   },
 

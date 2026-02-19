@@ -71,7 +71,7 @@ export const useLinkHandler = (props: LinkHandlerProps) => {
     if (!editor) return;
 
     const handleTransaction = ({
-      transaction,
+      transaction: _transaction,
     }: {
       transaction: Transaction;
     }) => {
@@ -82,7 +82,7 @@ export const useLinkHandler = (props: LinkHandlerProps) => {
       } else {
         // Check if we're touching a link (cursor just to the left)
         const { state } = editor;
-        const { from, $from } = state.selection;
+        const { from } = state.selection;
         const afterPos = Math.min(state.doc.content.size, from + 1);
         const marksAfter =
           afterPos <= state.doc.content.size
