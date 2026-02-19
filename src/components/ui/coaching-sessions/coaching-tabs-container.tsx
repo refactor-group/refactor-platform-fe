@@ -8,6 +8,8 @@ import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-lis
 import { ActionsPanel } from "@/components/ui/coaching-sessions/actions-panel";
 import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
+import { useUserActionsList } from "@/lib/api/user-actions";
+import { UserActionsScope } from "@/types/assigned-actions";
 import { ItemStatus, Id, EntityApiError } from "@/types/general";
 import { Action, defaultAction } from "@/types/action";
 import { Agreement, defaultAgreement } from "@/types/agreement";
@@ -40,6 +42,23 @@ const CoachingTabsContainer = ({
 
   // Get coaching relationship data for coach/coachee names
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
+
+  // SWR refresh handles for user action lists. ActionsPanel uses the same
+  // hooks with the same params, so SWR deduplicates the fetches — no extra
+  // network requests. We need these here so handleAddNoteAsAction (which
+  // bypasses ActionsPanel) can trigger the same cache revalidation.
+  const { refresh: refreshSessionActions } = useUserActionsList(
+    userId,
+    currentCoachingSessionId
+      ? { scope: UserActionsScope.Sessions, coaching_session_id: currentCoachingSessionId }
+      : undefined
+  );
+  const { refresh: refreshAllActions } = useUserActionsList(
+    userId,
+    currentCoachingRelationship
+      ? { scope: UserActionsScope.Sessions, coaching_relationship_id: currentCoachingRelationship.id }
+      : undefined
+  );
 
   // Agreement and Action mutation hooks
   const {
@@ -140,6 +159,8 @@ const CoachingTabsContainer = ({
         ItemStatus.NotStarted,
         DateTime.now().plus({ days: 7 }),
       );
+      refreshSessionActions();
+      refreshAllActions();
       toast.success("Action created from note", {
         action: {
           label: "View Actions",
