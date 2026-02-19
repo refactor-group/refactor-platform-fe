@@ -65,7 +65,6 @@ export const useKeyboardShortcuts = () => {
   const getShortcuts = (): KeyboardShortcuts => {
     const isMac = platform === 'mac';
     const modKey = isMac ? '⌘' : 'Ctrl';
-    const _altKey = isMac ? '⌥' : 'Alt';
     const shiftKey = '⇧';
 
     return {

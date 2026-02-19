@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { PopoverProps } from "@radix-ui/react-popover";
 
 import {
   Select,
@@ -13,7 +12,7 @@ import {
 
 import "@/styles/code-block.scss";
 
-interface ProgrammingLanguageSelectorProps extends PopoverProps {
+interface ProgrammingLanguageSelectorProps {
   languages: string[];
   placeholder: string;
   onSelect: (language: string) => void;
@@ -23,7 +22,6 @@ export function ProgrammingLanguageSelector({
   languages,
   placeholder,
   onSelect,
-  ..._props
 }: ProgrammingLanguageSelectorProps) {
   const [selectedLanguage, setSelectedLanguage] =
     React.useState<string>(placeholder);

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Id } from "@/types/general";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,9 +12,7 @@ import {
 import { OverarchingGoal } from "@/types/overarching-goal";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 
-const OverarchingGoalContainer: React.FC<{
-  userId: Id;
-}> = ({ userId: _userId }) => {
+const OverarchingGoalContainer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   
   // Get coaching session ID from URL

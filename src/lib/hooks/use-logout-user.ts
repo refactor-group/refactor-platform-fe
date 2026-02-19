@@ -1,6 +1,5 @@
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
@@ -13,9 +12,6 @@ export function useLogoutUser() {
     userSession: state.userSession,
   }));
   const { delete: deleteUserSession } = useUserSessionMutation();
-  const { resetOrganizationState: _resetOrganizationState } = useOrganizationStateStore(
-    (action) => action
-  );
   const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(
     (state) => state
   );

@@ -133,7 +133,7 @@ export default function CoachingSessionsPage() {
           <Separator />
         </div>
 
-        <OverarchingGoalContainer userId={userId} />
+        <OverarchingGoalContainer />
 
         <CoachingTabsContainer
           userId={userId}
