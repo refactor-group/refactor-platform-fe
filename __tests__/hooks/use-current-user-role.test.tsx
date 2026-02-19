@@ -180,7 +180,8 @@ describe('useCurrentUserRole', () => {
       userSession: {
         id: 'user-3',
         roles: []
-      } as User
+      } as User,
+      isLoggedIn: true
     });
 
     mockUseCurrentOrganization.mockReturnValue({
@@ -208,7 +209,8 @@ describe('useCurrentUserRole', () => {
       userSession: {
         id: 'user-4',
         roles: [userRole]
-      } as User
+      } as User,
+      isLoggedIn: true
     });
 
     mockUseCurrentOrganization.mockReturnValue({
@@ -236,7 +238,8 @@ describe('useCurrentUserRole', () => {
       userSession: {
         id: 'user-5',
         roles: [userRole]
-      } as User
+      } as User,
+      isLoggedIn: true
     });
 
     mockUseCurrentOrganization.mockReturnValue({

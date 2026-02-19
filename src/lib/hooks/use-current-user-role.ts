@@ -47,7 +47,10 @@ import { toast } from 'sonner';
  * ```
  */
 export const useCurrentUserRole = (): UserRoleState => {
-  const { userSession } = useAuthStore((state) => ({ userSession: state.userSession }));
+  const { userSession, isLoggedIn } = useAuthStore((state) => ({
+    userSession: state.userSession,
+    isLoggedIn: state.isLoggedIn,
+  }));
   const { currentOrganizationId } = useCurrentOrganization();
 
   const roleState = useMemo((): UserRoleState => {
@@ -92,8 +95,12 @@ export const useCurrentUserRole = (): UserRoleState => {
     };
   }, [userSession?.roles, currentOrganizationId]);
 
-  // Show toast notifications for error states (only once per state change)
+  // Show toast notifications for error states (only once per state change).
+  // Skip toasts when logged out — userSession going null during logout
+  // triggers 'no_roles' which is not a real error.
   useEffect(() => {
+    if (!isLoggedIn) return;
+
     if (roleState.status === 'no_roles') {
       toast.error('No roles assigned. Please contact support.');
     } else if (roleState.status === 'no_org_selected') {
@@ -101,7 +108,7 @@ export const useCurrentUserRole = (): UserRoleState => {
     } else if (roleState.status === 'no_access') {
       toast.warning(`You don't have access to this organization.`);
     }
-  }, [roleState.status]);
+  }, [roleState.status, isLoggedIn]);
 
   return roleState;
 };
