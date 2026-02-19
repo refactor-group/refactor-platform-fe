@@ -36,6 +36,7 @@ import { NewActionCard } from "@/components/ui/coaching-sessions/new-action-card
  * 3. Exclude actions due after the current session date
  * 4. Include actions due within [previousSessionDate, currentSessionDate] (any status)
  * 5. Include actions due before the window only if still outstanding (NotStarted/InProgress)
+ *    (but see Rule 2 — sticky actions override this)
  *
  * Results are sorted reverse-chronologically by due_by.
  */
@@ -141,8 +142,12 @@ function useReviewActions(
 
     // Grow-only: once an action qualifies for review, it stays visible
     // for the lifetime of this component instance.
-    for (const action of filtered) {
-      stickyIdsRef.current.add(action.id);
+    // Guard: only accumulate IDs after previousSessionDate resolves to avoid
+    // capturing actions during the loading phase when all actions pass the filter.
+    if (previousSessionDate !== null) {
+      for (const action of filtered) {
+        stickyIdsRef.current.add(action.id);
+      }
     }
 
     return filtered;
