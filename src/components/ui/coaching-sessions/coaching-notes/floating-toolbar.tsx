@@ -321,7 +321,7 @@ const renderFloatingToolbar = (
   floatingRef: React.RefObject<HTMLDivElement>,
   isVisible: boolean,
   styles: ReturnType<typeof getDefaultStyles>,
-  editorRef: React.RefObject<HTMLDivElement>
+  _editorRef: React.RefObject<HTMLDivElement>
 ) => (
   <div
     ref={floatingRef}

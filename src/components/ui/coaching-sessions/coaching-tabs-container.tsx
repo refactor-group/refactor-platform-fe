@@ -103,7 +103,7 @@ const CoachingTabsContainer = ({
 
   // Action CRUD handlers — called from ActionsPanel and handleAddNoteAsAction.
   // Both callers guard against a missing currentCoachingSessionId.
-  const handleActionAdded = (
+  const handleActionAdded = useCallback((
     body: string,
     status: ItemStatus,
     dueBy: DateTime,
@@ -119,7 +119,7 @@ const CoachingTabsContainer = ({
       assignee_ids: assigneeIds,
     };
     return createAction(newAction);
-  };
+  }, [currentCoachingSessionId, userId, createAction]);
 
   const handleActionEdited = (
     id: Id,

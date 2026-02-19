@@ -40,9 +40,8 @@ export default function CoachingSessionsPage() {
   // Get current tab from URL parameter, default to "notes"
   const currentTab = searchParams.get("tab") || "notes";
 
-  const { userId, isLoggedIn } = useAuthStore((state) => ({
+  const { userId } = useAuthStore((state) => ({
     userId: state.userId,
-    isLoggedIn: state.isLoggedIn,
   }));
 
   // Get current coaching session from URL
@@ -91,7 +90,7 @@ export default function CoachingSessionsPage() {
     );
   }
 
-  const handleShareError = (error: Error) => {
+  const handleShareError = (_error: Error) => {
     toast.error("Failed to copy session link.");
   };
 

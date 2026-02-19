@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/tooltip";
 
 export function MainNav() {
-  const pathname = usePathname();
+  const _pathname = usePathname();
   const { state, toggleSidebar } = useSidebar();
   const isExpanded = state === "expanded";
 

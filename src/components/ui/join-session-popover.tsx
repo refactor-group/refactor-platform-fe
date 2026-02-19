@@ -56,7 +56,6 @@ import {
 } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { SessionUrgency } from "@/types/session-display";
-import type { Id } from "@/types/general";
 
 // ---------------------------------------------------------------------------
 // Section 1: Today's Sessions

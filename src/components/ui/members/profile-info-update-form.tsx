@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
-import type { User, NewUser } from "@/types/user";
+import type { User } from "@/types/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -49,7 +49,6 @@ function constructCoachFirstCoacheeFirstDate(
   date: string,
   locale: string
 ): string {
-  var title = coach_first_name + " / " + coachee_first_name;
   var formattedDateTime =
     " @ " +
     getDateTimeFromString(date)
@@ -65,7 +64,6 @@ function constructCoachFirstCoacheeFirstDateTime(
   date: string,
   locale: string
 ): string {
-  var title = coach_first_name + " / " + coachee_first_name;
   var formattedDateTime =
     " @ " +
     getDateTimeFromString(date)

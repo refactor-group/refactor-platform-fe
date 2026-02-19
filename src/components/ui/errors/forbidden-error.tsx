@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 

@@ -24,7 +24,7 @@ export const createOrganizationStateStore = (
   const orgStateStore = create<OrganizationStateStore>()(
     devtools(
       persist(
-        (set, get) => ({
+        (set, _get) => ({
           ...initState,
 
           setCurrentOrganizationId: (organizationId: Id) => {

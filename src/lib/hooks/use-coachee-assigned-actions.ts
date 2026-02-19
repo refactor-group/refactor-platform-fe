@@ -69,7 +69,7 @@ function useCoacheeActionsFetch(
         setIsError(error);
         setIsLoading(false);
       });
-  }, [enabled, coacheeIdsKey, refreshKey]);
+  }, [enabled, coacheeIds, coacheeIdsKey, refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 

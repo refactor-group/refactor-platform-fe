@@ -1,6 +1,6 @@
 "use client";
 
-import { CommandMenu } from "@/components/ui/command-menu";
+
 import { MainNav } from "@/components/ui/main-nav";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { JoinSessionPopover } from "@/components/ui/join-session-popover";

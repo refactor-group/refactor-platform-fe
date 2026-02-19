@@ -4,7 +4,6 @@ import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { EntityApi } from "./entity-api";
 import { User, NewUserPassword, defaultUser } from "@/types/user";
-import { useState } from 'react';
 
 export const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
@@ -33,7 +32,7 @@ export const UserApi = {
   /**
    * Creates a new user nested under an organization.
    */
-  createNested: async (id: Id, user: User): Promise<User> => {
+  createNested: async (_id: Id, _user: User): Promise<User> => {
     throw new Error("Create nested operation not implemented");
   },
 

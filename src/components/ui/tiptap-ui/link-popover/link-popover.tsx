@@ -8,7 +8,6 @@ import { useLinkPopoverPositioning } from "./use-link-positioning";
 
 // --- Components ---
 import { LinkButton } from "./link-button";
-import type { LinkButtonProps } from "./link-button";
 import type { ButtonProps } from "@/components/ui/tiptap-ui-primitive/button";
 import { LinkMain } from "./link-main";
 

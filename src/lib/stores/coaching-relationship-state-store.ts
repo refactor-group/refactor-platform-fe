@@ -24,7 +24,7 @@ export const createCoachingRelationshipStateStore = (
   const relStateStore = create<CoachingRelationshipStateStore>()(
     devtools(
       persist(
-        (set, get) => ({
+        (set, _get) => ({
           ...initState,
 
           setCurrentCoachingRelationshipId: (relationshipId: Id) => {

@@ -46,7 +46,7 @@ export const OrganizationApi = {
       organization
     ),
 
-  createNested: async (id: Id, entity: Organization): Promise<Organization> => {
+  createNested: async (_id: Id, _entity: Organization): Promise<Organization> => {
     throw new Error("Create nested operation not implemented");
   },
 

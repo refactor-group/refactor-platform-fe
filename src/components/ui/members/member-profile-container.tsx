@@ -14,7 +14,7 @@ import { useUserPasswordMutation } from "@/lib/api/users"
 import { useLogoutUser } from "@/lib/hooks/use-logout-user"
 
 export function MemberProfileContainer({ userId }: { userId: Id }) {
-    const { userId: currentUserId, logout, setTimezone } = useAuthStore((state) => state)
+    const { userId: currentUserId, setTimezone } = useAuthStore((state) => state)
     const { user, isLoading, refresh } = useUser(userId)
     const { update: updateUser, isLoading: isUpdating } = useUserMutation()
     const { update: updatePassword } = useUserPasswordMutation()

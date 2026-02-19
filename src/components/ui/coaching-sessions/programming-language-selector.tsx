@@ -6,9 +6,7 @@ import { PopoverProps } from "@radix-ui/react-popover";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -25,7 +23,7 @@ export function ProgrammingLanguageSelector({
   languages,
   placeholder,
   onSelect,
-  ...props
+  ..._props
 }: ProgrammingLanguageSelectorProps) {
   const [selectedLanguage, setSelectedLanguage] =
     React.useState<string>(placeholder);
