@@ -268,6 +268,7 @@ export function addContextToAction(
     action,
     relationship: buildRelationshipContext(session),
     goal: buildGoalContext(session),
+    sourceSession: buildSessionContext(session),
     nextSession: nextSession ? buildSessionContext(nextSession) : null,
     isOverdue,
   };
