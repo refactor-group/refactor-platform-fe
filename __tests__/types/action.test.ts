@@ -138,6 +138,12 @@ describe('sortByPositionMap', () => {
     const sorted = sortByPositionMap(items, getId, new Map())
     expect(sorted.map((i) => i.id)).toEqual(['c', 'a', 'b'])
   })
+
+  it('places an item with a negative position before all zero-indexed items', () => {
+    const positions = new Map([['a', 0], ['b', 1], ['c', -1]])
+    const sorted = sortByPositionMap(items, getId, positions)
+    expect(sorted.map((i) => i.id)).toEqual(['c', 'a', 'b'])
+  })
 })
 
 describe('sortByDateField', () => {
