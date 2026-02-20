@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sortActionArray } from '@/types/action'
+import { sortActionArray, sortByPositionMap } from '@/types/action'
 import { SortOrder } from '@/types/sorting'
 import { ItemStatus } from '@/types/general'
 import { DateTime } from 'ts-luxon'
@@ -93,5 +93,49 @@ describe('sortActionArray', () => {
       const second = sortActionArray(first, SortOrder.Asc, 'due_by')
       expect(first.map((a) => a.id)).toEqual(second.map((a) => a.id))
     })
+  })
+})
+
+describe('sortByPositionMap', () => {
+  const items = [
+    { id: 'c', name: 'Charlie' },
+    { id: 'a', name: 'Alice' },
+    { id: 'b', name: 'Bob' },
+  ]
+  const getId = (item: { id: string }) => item.id
+
+  it('sorts items according to position map', () => {
+    const positions = new Map([['a', 0], ['b', 1], ['c', 2]])
+    const sorted = sortByPositionMap(items, getId, positions)
+    expect(sorted.map((i) => i.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('preserves original order when positions match input order', () => {
+    const positions = new Map([['c', 0], ['a', 1], ['b', 2]])
+    const sorted = sortByPositionMap(items, getId, positions)
+    expect(sorted.map((i) => i.id)).toEqual(['c', 'a', 'b'])
+  })
+
+  it('places items not in the map at the end', () => {
+    const positions = new Map([['a', 0], ['c', 1]])
+    const sorted = sortByPositionMap(items, getId, positions)
+    expect(sorted.map((i) => i.id)).toEqual(['a', 'c', 'b'])
+  })
+
+  it('does not mutate the original array', () => {
+    const positions = new Map([['a', 0], ['b', 1], ['c', 2]])
+    const original = [...items]
+    sortByPositionMap(items, getId, positions)
+    expect(items.map((i) => i.id)).toEqual(original.map((i) => i.id))
+  })
+
+  it('returns empty array for empty input', () => {
+    const positions = new Map([['a', 0]])
+    expect(sortByPositionMap([], getId, positions)).toEqual([])
+  })
+
+  it('works with an empty position map (all items go to end, order preserved)', () => {
+    const sorted = sortByPositionMap(items, getId, new Map())
+    expect(sorted.map((i) => i.id)).toEqual(['c', 'a', 'b'])
   })
 })

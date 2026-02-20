@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -10,7 +10,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
-import { visibleStatuses, groupByStatus } from "@/components/ui/actions/utils";
+import { visibleStatuses, groupByStatus, buildInitialOrder, sortGroupedByInitialOrder } from "@/components/ui/actions/utils";
 import { KanbanColumn } from "@/components/ui/actions/kanban-column";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
 import type { AssignedActionWithContext, StatusVisibility } from "@/types/assigned-actions";
@@ -45,7 +45,23 @@ export function KanbanBoard({
     useSensor(KeyboardSensor)
   );
 
-  const grouped = useMemo(() => groupByStatus(actions), [actions]);
+  // Snapshot initial order so inline edits don't re-sort cards.
+  // Rebuilds only when IDs are added or removed (filter/view changes).
+  const orderRef = useRef<Map<string, number>>(new Map());
+
+  const currentIds = useMemo(() => actions.map((a) => a.action.id), [actions]);
+  const updatedOrder = useMemo(
+    () => buildInitialOrder(orderRef.current, currentIds),
+    [currentIds]
+  );
+  if (updatedOrder) {
+    orderRef.current = updatedOrder;
+  }
+
+  const grouped = useMemo(
+    () => sortGroupedByInitialOrder(groupByStatus(actions), orderRef.current),
+    [actions]
+  );
   const columns = visibleStatuses(visibility);
 
   const activeAction = useMemo(

@@ -9,6 +9,7 @@ import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import type { Id } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import { sortByPositionMap } from "@/types/action";
 import {
   StatusVisibility,
   TimeRange,
@@ -105,6 +106,59 @@ export function filterByRelationship(
   return actions.filter(
     (ctx) => ctx.relationship.coachingRelationshipId === relationshipId
   );
+}
+
+/**
+ * Build a position map from a previous snapshot and the current set of IDs.
+ *
+ * Preserves existing positions for IDs still present, appends new IDs at the
+ * end. Returns `null` when the ID set hasn't changed (no additions or removals),
+ * signalling the caller that the previous map is still valid.
+ */
+export function buildInitialOrder(
+  previous: Map<string, number>,
+  currentIds: string[]
+): Map<string, number> | null {
+  const currentSet = new Set(currentIds);
+  const hasAdded = currentIds.some((id) => !previous.has(id));
+  const hasRemoved = [...previous.keys()].some((id) => !currentSet.has(id));
+
+  if (!hasAdded && !hasRemoved) return null;
+
+  const next = new Map<string, number>();
+  let idx = 0;
+
+  // Preserve order for IDs that are still present
+  for (const [id] of previous) {
+    if (currentSet.has(id)) {
+      next.set(id, idx++);
+    }
+  }
+
+  // Append new IDs at the end
+  for (const id of currentIds) {
+    if (!next.has(id)) {
+      next.set(id, idx++);
+    }
+  }
+
+  return next;
+}
+
+/**
+ * Sort actions within each status group according to an initial position map.
+ * Delegates to the generic `sortByPositionMap` from `@/types/action`.
+ */
+export function sortGroupedByInitialOrder(
+  grouped: Record<ItemStatus, AssignedActionWithContext[]>,
+  order: Map<string, number>
+): Record<ItemStatus, AssignedActionWithContext[]> {
+  const getId = (ctx: AssignedActionWithContext) => ctx.action.id;
+  const sorted = { ...grouped };
+  for (const status of Object.keys(sorted) as ItemStatus[]) {
+    sorted[status] = sortByPositionMap(sorted[status], getId, order);
+  }
+  return sorted;
 }
 
 /** Which ItemStatus values are visible for a given StatusVisibility setting */
