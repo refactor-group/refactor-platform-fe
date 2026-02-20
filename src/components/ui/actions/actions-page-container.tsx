@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -21,6 +22,22 @@ import { KanbanBoard } from "@/components/ui/actions/kanban-board";
 import { EntityApiError } from "@/lib/api/entity-api";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Default filter values — used for initialization and URL cleanup
+const DEFAULT_STATUS = StatusVisibility.Open;
+const DEFAULT_RANGE = TimeRange.Last30Days;
+const DEFAULT_VIEW = CoachViewMode.MyActions;
+
+/** Validates a URL param against an enum's values, returning the fallback if invalid. */
+function parseEnum<T extends string>(
+  enumObj: Record<string, T>,
+  value: string | null,
+  fallback: T
+): T {
+  if (!value) return fallback;
+  const valid = new Set(Object.values(enumObj));
+  return valid.has(value as T) ? (value as T) : fallback;
+}
+
 interface ActionsPageContainerProps {
   locale: string;
 }
@@ -38,13 +55,85 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   const { currentOrganizationId } = useCurrentOrganization();
 
   // ---------------------------------------------------------------------------
-  // Filter state
+  // URL query param syncing
   // ---------------------------------------------------------------------------
 
-  const [viewMode, setViewMode] = useState(CoachViewMode.MyActions);
-  const [statusVisibility, setStatusVisibility] = useState(StatusVisibility.Open);
-  const [timeRange, setTimeRange] = useState(TimeRange.Last30Days);
-  const [relationshipId, setRelationshipId] = useState<Id | undefined>(undefined);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const updateQueryParams = useCallback(
+    (updates: Record<string, string | undefined>) => {
+      const next = new URLSearchParams(searchParams);
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === undefined) {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+      }
+      // Omit default values to keep the URL clean
+      if (next.get("status") === DEFAULT_STATUS) next.delete("status");
+      if (next.get("range") === DEFAULT_RANGE) next.delete("range");
+      if (next.get("view") === DEFAULT_VIEW) next.delete("view");
+
+      const qs = next.toString();
+      const url = qs
+        ? `${window.location.pathname}?${qs}`
+        : window.location.pathname;
+      router.replace(url, { scroll: false });
+    },
+    [searchParams, router]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Filter state (initialized from URL params)
+  // ---------------------------------------------------------------------------
+
+  const [viewMode, setViewMode] = useState(() =>
+    parseEnum(CoachViewMode, searchParams.get("view"), DEFAULT_VIEW)
+  );
+  const [statusVisibility, setStatusVisibility] = useState(() =>
+    parseEnum(StatusVisibility, searchParams.get("status"), DEFAULT_STATUS)
+  );
+  const [timeRange, setTimeRange] = useState(() =>
+    parseEnum(TimeRange, searchParams.get("range"), DEFAULT_RANGE)
+  );
+  const [relationshipId, setRelationshipId] = useState<Id | undefined>(
+    () => searchParams.get("rel") ?? undefined
+  );
+
+  // Wrap setters to also update the URL
+  const handleViewModeChange = useCallback(
+    (mode: CoachViewMode) => {
+      setViewMode(mode);
+      updateQueryParams({ view: mode });
+    },
+    [updateQueryParams]
+  );
+
+  const handleStatusVisibilityChange = useCallback(
+    (vis: StatusVisibility) => {
+      setStatusVisibility(vis);
+      updateQueryParams({ status: vis });
+    },
+    [updateQueryParams]
+  );
+
+  const handleTimeRangeChange = useCallback(
+    (range: TimeRange) => {
+      setTimeRange(range);
+      updateQueryParams({ range });
+    },
+    [updateQueryParams]
+  );
+
+  const handleRelationshipChange = useCallback(
+    (id: Id | undefined) => {
+      setRelationshipId(id);
+      updateQueryParams({ rel: id });
+    },
+    [updateQueryParams]
+  );
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -198,13 +287,13 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
       <ActionsPageHeader
         isCoach={isACoach}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
         statusVisibility={statusVisibility}
-        onStatusVisibilityChange={setStatusVisibility}
+        onStatusVisibilityChange={handleStatusVisibilityChange}
         timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
+        onTimeRangeChange={handleTimeRangeChange}
         relationshipId={relationshipId}
-        onRelationshipChange={setRelationshipId}
+        onRelationshipChange={handleRelationshipChange}
         relationships={relationshipOptions}
       />
 

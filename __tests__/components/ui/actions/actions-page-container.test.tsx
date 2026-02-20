@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
@@ -161,6 +162,18 @@ describe("ActionsPageContainer", () => {
     mockActionsData = [];
     mockIsLoading = false;
     mockIsError = false;
+    // Reset navigation mocks to defaults (clearAllMocks doesn't reset mockReturnValue)
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams() as any
+    );
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+      prefetch: vi.fn(),
+    } as any);
   });
 
   // Helper: column headers are rendered as <h3> elements
@@ -288,5 +301,102 @@ describe("ActionsPageContainer", () => {
     );
 
     expect(screen.getByText("Alice Smith → Bob Jones")).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // URL query param persistence
+  // -------------------------------------------------------------------------
+
+  it("initializes filters from URL query params", () => {
+    mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams("status=all&range=all_time") as any
+    );
+
+    render(
+      <Wrapper>
+        <ActionsPageContainer locale={siteConfig.locale} />
+      </Wrapper>
+    );
+
+    // "All" visibility renders all 4 columns
+    const headers = getColumnHeaders();
+    expect(headers).toContain("Not Started");
+    expect(headers).toContain("In Progress");
+    expect(headers).toContain("Completed");
+    expect(headers).toContain("Won't Do");
+  });
+
+  it("updates URL when a filter changes", async () => {
+    mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
+
+    const user = userEvent.setup();
+
+    render(
+      <Wrapper>
+        <ActionsPageContainer locale={siteConfig.locale} />
+      </Wrapper>
+    );
+
+    // Click "All" status toggle
+    await user.click(screen.getByText("All"));
+
+    // Get the replace fn from the mocked router (set in beforeEach)
+    const mockRouter = vi.mocked(useRouter).mock.results[0].value;
+    await waitFor(() => {
+      expect(mockRouter.replace).toHaveBeenCalledWith(
+        expect.stringContaining("status=all"),
+        { scroll: false }
+      );
+    });
+  });
+
+  it("falls back to defaults for invalid query param values", () => {
+    mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams("status=garbage&range=invalid") as any
+    );
+
+    render(
+      <Wrapper>
+        <ActionsPageContainer locale={siteConfig.locale} />
+      </Wrapper>
+    );
+
+    // Invalid params should fall back to Open (2 columns: Not Started + In Progress)
+    const headers = getColumnHeaders();
+    expect(headers).toContain("Not Started");
+    expect(headers).toContain("In Progress");
+    expect(headers).not.toContain("Completed");
+  });
+
+  it("omits default values from URL", async () => {
+    mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
+
+    // Start with a non-default status
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams("status=all") as any
+    );
+
+    const user = userEvent.setup();
+
+    render(
+      <Wrapper>
+        <ActionsPageContainer locale={siteConfig.locale} />
+      </Wrapper>
+    );
+
+    // Click "Open" to go back to the default
+    await user.click(screen.getByText("Open"));
+
+    // Get the replace fn from the mocked router (set in beforeEach)
+    const mockRouter = vi.mocked(useRouter).mock.results[0].value;
+    await waitFor(() => {
+      // URL should have no query string since all filters are at defaults
+      expect(mockRouter.replace).toHaveBeenCalledWith(
+        expect.not.stringContaining("status="),
+        { scroll: false }
+      );
+    });
   });
 });
