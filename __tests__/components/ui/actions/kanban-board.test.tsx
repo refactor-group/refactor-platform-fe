@@ -81,7 +81,7 @@ const defaultProps = {
   visibility: StatusVisibility.All,
   sortField: BoardSort.Default,
   locale: "en-US",
-  onStatusChange: vi.fn(),
+  onStatusChange: vi.fn().mockResolvedValue(undefined),
   onDueDateChange: vi.fn(),
   onAssigneesChange: vi.fn(),
   onBodyChange: vi.fn(),
