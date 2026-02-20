@@ -4,7 +4,7 @@ import { useState } from "react";
 import type * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { BarChart3, ChevronRight, Gift, Home, Settings, Users } from "lucide-react";
+import { BarChart3, CheckSquare, ChevronRight, Gift, Home, Settings, Users } from "lucide-react";
 
 import { OrganizationSwitcher } from "./organization-switcher";
 import { Icons } from "@/components/ui/icons";
@@ -126,6 +126,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <Home className="h-4 w-4" />
                     </span>
                     <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Actions"
+                  className={cn(
+                    menuButtonStyles.button,
+                    menuButtonStyles.buttonCollapsed
+                  )}
+                >
+                  <Link href="/actions">
+                    <span className={menuButtonStyles.iconWrapper}>
+                      <CheckSquare className="h-4 w-4" />
+                    </span>
+                    <span className="group-data-[collapsible=icon]:hidden">Actions</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
