@@ -139,6 +139,7 @@ export interface MockAssignedActionOptions extends MockActionOptions {
   coacheeName?: string;
   goalId?: string;
   goalTitle?: string;
+  sourceSession?: SessionContext;
   nextSession?: SessionContext | null;
   isOverdue?: boolean;
 }
@@ -175,6 +176,10 @@ export function createMockAssignedAction(
     action,
     relationship,
     goal,
+    sourceSession: options.sourceSession ?? {
+      coachingSessionId: action.coaching_session_id,
+      sessionDate: action.created_at,
+    },
     nextSession: options.nextSession ?? null,
     isOverdue: options.isOverdue ?? false,
   };

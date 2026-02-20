@@ -86,6 +86,8 @@ export function KanbanActionCard({
         onBodyChange={onBodyChange}
         onDelete={onDelete}
         variant="current"
+        showSessionLink
+        sessionDate={ctx.sourceSession.sessionDate}
       />
     </div>
   );

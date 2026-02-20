@@ -141,6 +141,10 @@ function makeCtx(
       overarchingGoalId: "goal-1",
       title: "Test Goal",
     },
+    sourceSession: {
+      coachingSessionId: "session-1",
+      sessionDate: now,
+    },
     nextSession: null,
     isOverdue: false,
   };
