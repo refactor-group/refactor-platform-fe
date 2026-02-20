@@ -56,22 +56,19 @@ export function KanbanActionCard({
         isOverlay && "opacity-90 shadow-lg rotate-2"
       )}
     >
-      {/* Relationship context badge */}
-      <div className="px-3 py-1.5 text-xs text-muted-foreground truncate border border-b-0 border-border rounded-t-xl bg-muted/40">
-        {ctx.relationship.coachName} → {ctx.relationship.coacheeName}
+      {/* Relationship header — doubles as drag handle */}
+      <div
+        {...(!isOverlay ? { ...attributes, ...listeners, "aria-label": "Drag to move" } : {})}
+        className={cn(
+          "flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground border border-b-0 border-border rounded-t-xl bg-muted/40",
+          !isOverlay && "cursor-grab active:cursor-grabbing"
+        )}
+      >
+        <GripVertical className="h-3.5 w-3.5 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" />
+        <span className="truncate">
+          {ctx.relationship.coachName} → {ctx.relationship.coacheeName}
+        </span>
       </div>
-
-      {/* Drag handle — visible on hover */}
-      {!isOverlay && (
-        <button
-          {...attributes}
-          {...listeners}
-          className="absolute top-10 left-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded-r bg-muted/80"
-          aria-label="Drag to move"
-        >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </button>
-      )}
 
       <SessionActionCard
         action={ctx.action}
