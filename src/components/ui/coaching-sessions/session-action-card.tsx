@@ -54,6 +54,8 @@ interface SessionActionCardProps {
   showSessionLink?: boolean;
   /** Session date shown in "From:" link when showSessionLink is true */
   sessionDate?: DateTime;
+  /** Additional class names for the outer Card element */
+  className?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -330,6 +332,7 @@ const SessionActionCard = ({
   variant = "current",
   showSessionLink = false,
   sessionDate,
+  className: cardClassName,
 }: SessionActionCardProps) => {
   const now = DateTime.now();
   const isCompleted =
@@ -359,7 +362,8 @@ const SessionActionCard = ({
       className={cn(
         "rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] bg-card transition-colors h-56 overflow-hidden",
         isOverdue && "bg-red-50/40 dark:bg-red-950/10",
-        isCompleted && "opacity-60"
+        isCompleted && "opacity-60",
+        cardClassName
       )}
     >
       <CardContent className="flex h-full flex-col gap-2 p-5">

@@ -57,7 +57,7 @@ export function KanbanActionCard({
       )}
     >
       {/* Relationship context badge */}
-      <div className="px-3 py-1.5 text-xs text-muted-foreground truncate border border-b-0 border-border rounded-t-xl bg-muted/50">
+      <div className="px-3 py-1.5 text-xs text-muted-foreground truncate border border-b-0 border-border rounded-t-xl bg-muted/40">
         {ctx.relationship.coachName} → {ctx.relationship.coacheeName}
       </div>
 
@@ -88,6 +88,7 @@ export function KanbanActionCard({
         variant="current"
         showSessionLink
         sessionDate={ctx.sourceSession.sessionDate}
+        className="rounded-t-none"
       />
     </div>
   );
