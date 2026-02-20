@@ -1,0 +1,231 @@
+"use client";
+
+import { useState, useCallback, useMemo } from "react";
+import { DateTime } from "ts-luxon";
+import { toast } from "sonner";
+import { siteConfig } from "@/site.config";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { useActionMutation } from "@/lib/api/actions";
+import { useAllActionsWithContext } from "@/lib/hooks/use-all-actions-with-context";
+import {
+  CoachViewMode,
+  StatusVisibility,
+  TimeRange,
+  TimeField,
+} from "@/types/assigned-actions";
+import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import type { Id, ItemStatus } from "@/types/general";
+import { applyTimeFilter, filterByRelationship } from "@/components/ui/actions/utils";
+import { ActionsPageHeader } from "@/components/ui/actions/actions-page-header";
+import { KanbanBoard } from "@/components/ui/actions/kanban-board";
+import { EntityApiError } from "@/lib/api/entity-api";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export function ActionsPageContainer() {
+  // ---------------------------------------------------------------------------
+  // Auth + org context
+  // ---------------------------------------------------------------------------
+
+  const { isACoach } = useAuthStore((state) => ({
+    isACoach: state.isACoach,
+  }));
+  const { currentOrganizationId } = useCurrentOrganization();
+
+  // ---------------------------------------------------------------------------
+  // Filter state
+  // ---------------------------------------------------------------------------
+
+  const [viewMode, setViewMode] = useState(CoachViewMode.MyActions);
+  const [statusVisibility, setStatusVisibility] = useState(StatusVisibility.Open);
+  const [timeRange, setTimeRange] = useState(TimeRange.AllTime);
+  const [timeField, setTimeField] = useState(TimeField.DueDate);
+  const [relationshipId, setRelationshipId] = useState<Id | undefined>(undefined);
+
+  // ---------------------------------------------------------------------------
+  // Data fetching
+  // ---------------------------------------------------------------------------
+
+  const { actionsWithContext, isLoading, isError, refresh } =
+    useAllActionsWithContext(viewMode);
+
+  const { relationships } = useCoachingRelationshipList(
+    currentOrganizationId ?? ""
+  );
+
+  const relationshipOptions = useMemo(() => {
+    if (!relationships) return [];
+    return relationships.map((r) => ({
+      id: r.id,
+      label: `${r.coach_first_name} ${r.coach_last_name} → ${r.coachee_first_name} ${r.coachee_last_name}`,
+    }));
+  }, [relationships]);
+
+  // ---------------------------------------------------------------------------
+  // Client-side filters
+  // ---------------------------------------------------------------------------
+
+  const filteredActions = useMemo(() => {
+    let result: AssignedActionWithContext[] = actionsWithContext;
+    result = applyTimeFilter(result, timeRange, timeField);
+    result = filterByRelationship(result, relationshipId);
+    return result;
+  }, [actionsWithContext, timeRange, timeField, relationshipId]);
+
+  // ---------------------------------------------------------------------------
+  // Mutations
+  // ---------------------------------------------------------------------------
+
+  const { update: updateAction, delete: deleteAction } = useActionMutation();
+
+  const handleStatusChange = useCallback(
+    async (id: Id, newStatus: ItemStatus) => {
+      const ctx = actionsWithContext.find((a) => a.action.id === id);
+      if (!ctx) return;
+
+      try {
+        await updateAction(id, {
+          ...ctx.action,
+          status: newStatus,
+          status_changed_at: DateTime.now(),
+        });
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          toast.error("Failed to update status. Connection to service was lost.");
+        } else {
+          toast.error("Failed to update status.");
+        }
+      }
+    },
+    [actionsWithContext, updateAction, refresh]
+  );
+
+  const handleDueDateChange = useCallback(
+    async (id: Id, newDueBy: DateTime) => {
+      const ctx = actionsWithContext.find((a) => a.action.id === id);
+      if (!ctx) return;
+
+      try {
+        await updateAction(id, { ...ctx.action, due_by: newDueBy });
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          toast.error("Failed to update due date. Connection to service was lost.");
+        } else {
+          toast.error("Failed to update due date.");
+        }
+      }
+    },
+    [actionsWithContext, updateAction, refresh]
+  );
+
+  const handleAssigneesChange = useCallback(
+    async (id: Id, assigneeIds: Id[]) => {
+      const ctx = actionsWithContext.find((a) => a.action.id === id);
+      if (!ctx) return;
+
+      try {
+        await updateAction(id, { ...ctx.action, assignee_ids: assigneeIds });
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          toast.error("Failed to update assignees. Connection to service was lost.");
+        } else {
+          toast.error("Failed to update assignees.");
+        }
+      }
+    },
+    [actionsWithContext, updateAction, refresh]
+  );
+
+  const handleBodyChange = useCallback(
+    async (id: Id, newBody: string) => {
+      const ctx = actionsWithContext.find((a) => a.action.id === id);
+      if (!ctx) return;
+
+      try {
+        await updateAction(id, { ...ctx.action, body: newBody });
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          toast.error("Failed to update action. Connection to service was lost.");
+        } else {
+          toast.error("Failed to update action.");
+        }
+      }
+    },
+    [actionsWithContext, updateAction, refresh]
+  );
+
+  const handleDelete = useCallback(
+    async (id: Id) => {
+      try {
+        await deleteAction(id);
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          toast.error("Failed to delete action. Connection to service was lost.");
+        } else {
+          toast.error("Failed to delete action.");
+        }
+      }
+    },
+    [deleteAction, refresh]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <p>Failed to load actions. Please try again later.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <ActionsPageHeader
+        isCoach={isACoach}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        statusVisibility={statusVisibility}
+        onStatusVisibilityChange={setStatusVisibility}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+        timeField={timeField}
+        onTimeFieldChange={setTimeField}
+        relationshipId={relationshipId}
+        onRelationshipChange={setRelationshipId}
+        relationships={relationshipOptions}
+      />
+
+      {isLoading ? (
+        <div className="flex gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex-1 min-w-[320px] space-y-3">
+              <Skeleton className="h-10 w-full rounded-xl" />
+              <Skeleton className="h-56 w-full rounded-xl" />
+              <Skeleton className="h-56 w-full rounded-xl" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <KanbanBoard
+          actions={filteredActions}
+          visibility={statusVisibility}
+          locale={siteConfig.locale}
+          onStatusChange={handleStatusChange}
+          onDueDateChange={handleDueDateChange}
+          onAssigneesChange={handleAssigneesChange}
+          onBodyChange={handleBodyChange}
+          onDelete={handleDelete}
+        />
+      )}
+    </div>
+  );
+}
