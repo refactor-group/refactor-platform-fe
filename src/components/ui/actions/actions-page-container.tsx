@@ -3,7 +3,6 @@
 import { useState, useCallback, useMemo } from "react";
 import { DateTime } from "ts-luxon";
 import { toast } from "sonner";
-import { siteConfig } from "@/site.config";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -22,7 +21,11 @@ import { KanbanBoard } from "@/components/ui/actions/kanban-board";
 import { EntityApiError } from "@/lib/api/entity-api";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function ActionsPageContainer() {
+interface ActionsPageContainerProps {
+  locale: string;
+}
+
+export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // ---------------------------------------------------------------------------
   // Auth + org context
   // ---------------------------------------------------------------------------
@@ -51,7 +54,7 @@ export function ActionsPageContainer() {
     useAllActionsWithContext(viewMode);
 
   const { relationships } = useCoachingRelationshipList(
-    currentOrganizationId ?? ""
+    currentOrganizationId
   );
 
   const relationshipOptions = useMemo(() => {
@@ -219,7 +222,7 @@ export function ActionsPageContainer() {
         <KanbanBoard
           actions={filteredActions}
           visibility={statusVisibility}
-          locale={siteConfig.locale}
+          locale={locale}
           onStatusChange={handleStatusChange}
           onDueDateChange={handleDueDateChange}
           onAssigneesChange={handleAssigneesChange}
