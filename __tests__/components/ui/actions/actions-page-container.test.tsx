@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import { siteConfig } from "@/site.config";
 import { ActionsPageContainer } from "@/components/ui/actions/actions-page-container";
 import { TestProviders } from "@/test-utils/providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -175,7 +176,7 @@ describe("ActionsPageContainer", () => {
 
     render(
       <Wrapper>
-        <ActionsPageContainer />
+        <ActionsPageContainer locale={siteConfig.locale} />
       </Wrapper>
     );
 
@@ -190,7 +191,7 @@ describe("ActionsPageContainer", () => {
 
     const { container } = render(
       <Wrapper>
-        <ActionsPageContainer />
+        <ActionsPageContainer locale={siteConfig.locale} />
       </Wrapper>
     );
 
@@ -206,7 +207,7 @@ describe("ActionsPageContainer", () => {
 
     render(
       <Wrapper>
-        <ActionsPageContainer />
+        <ActionsPageContainer locale={siteConfig.locale} />
       </Wrapper>
     );
 
@@ -220,7 +221,7 @@ describe("ActionsPageContainer", () => {
 
     render(
       <Wrapper>
-        <ActionsPageContainer />
+        <ActionsPageContainer locale={siteConfig.locale} />
       </Wrapper>
     );
 
@@ -232,7 +233,7 @@ describe("ActionsPageContainer", () => {
   it("shows coach view toggle because isACoach is true", () => {
     render(
       <Wrapper>
-        <ActionsPageContainer />
+        <ActionsPageContainer locale={siteConfig.locale} />
       </Wrapper>
     );
 
@@ -248,7 +249,7 @@ describe("ActionsPageContainer", () => {
 
     render(
       <Wrapper>
-        <ActionsPageContainer />
+        <ActionsPageContainer locale={siteConfig.locale} />
       </Wrapper>
     );
 
@@ -270,7 +271,7 @@ describe("ActionsPageContainer", () => {
 
     render(
       <Wrapper>
-        <ActionsPageContainer />
+        <ActionsPageContainer locale={siteConfig.locale} />
       </Wrapper>
     );
 
@@ -282,7 +283,7 @@ describe("ActionsPageContainer", () => {
 
     render(
       <Wrapper>
-        <ActionsPageContainer />
+        <ActionsPageContainer locale={siteConfig.locale} />
       </Wrapper>
     );
 
