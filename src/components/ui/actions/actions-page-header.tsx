@@ -12,7 +12,6 @@ import {
   CoachViewMode,
   StatusVisibility,
   TimeRange,
-  BoardSort,
 } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
 
@@ -29,8 +28,6 @@ interface ActionsPageHeaderProps {
   onStatusVisibilityChange: (vis: StatusVisibility) => void;
   timeRange: TimeRange;
   onTimeRangeChange: (range: TimeRange) => void;
-  sortField: BoardSort;
-  onSortFieldChange: (sort: BoardSort) => void;
   relationshipId: Id | undefined;
   onRelationshipChange: (id: Id | undefined) => void;
   relationships: RelationshipOption[];
@@ -44,8 +41,6 @@ export function ActionsPageHeader({
   onStatusVisibilityChange,
   timeRange,
   onTimeRangeChange,
-  sortField,
-  onSortFieldChange,
   relationshipId,
   onRelationshipChange,
   relationships,
@@ -123,18 +118,6 @@ export function ActionsPageHeader({
             <SelectItem value={TimeRange.Last30Days}>Last 30 days</SelectItem>
             <SelectItem value={TimeRange.Last90Days}>Last 90 days</SelectItem>
             <SelectItem value={TimeRange.AllTime}>All time</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Sort order */}
-        <Select value={sortField} onValueChange={(v) => onSortFieldChange(v as BoardSort)}>
-          <SelectTrigger className="w-[140px] h-7 text-xs" aria-label="Sort order">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={BoardSort.Default}>Default</SelectItem>
-            <SelectItem value={BoardSort.DueDate}>Due date</SelectItem>
-            <SelectItem value={BoardSort.CreatedDate}>Created date</SelectItem>
           </SelectContent>
         </Select>
 

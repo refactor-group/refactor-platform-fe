@@ -10,12 +10,11 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
-import { visibleStatuses, groupByStatus, buildInitialOrder, sortGroupedActions } from "@/components/ui/actions/utils";
+import { visibleStatuses, groupByStatus, buildInitialOrder, sortGroupedByInitialOrder } from "@/components/ui/actions/utils";
 import { useOptimisticStatus } from "@/components/ui/actions/use-optimistic-status";
 import { KanbanColumn } from "@/components/ui/actions/kanban-column";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
 import type { AssignedActionWithContext, StatusVisibility } from "@/types/assigned-actions";
-import { BoardSort } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
 import type { DateTime } from "ts-luxon";
 
@@ -25,7 +24,6 @@ const TOP_OF_COLUMN_POSITION = -1;
 interface KanbanBoardProps {
   actions: AssignedActionWithContext[];
   visibility: StatusVisibility;
-  sortField: BoardSort;
   locale: string;
   onStatusChange: (id: Id, newStatus: ItemStatus) => Promise<void>;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
@@ -37,7 +35,6 @@ interface KanbanBoardProps {
 export function KanbanBoard({
   actions,
   visibility,
-  sortField,
   locale,
   onStatusChange,
   onDueDateChange,
@@ -79,8 +76,8 @@ export function KanbanBoard({
   }
 
   const grouped = useMemo(
-    () => sortGroupedActions(groupByStatus(actionsWithOverrides), sortField, orderRef.current),
-    [actionsWithOverrides, sortField]
+    () => sortGroupedByInitialOrder(groupByStatus(actionsWithOverrides), orderRef.current),
+    [actionsWithOverrides]
   );
   const columns = visibleStatuses(visibility);
 

@@ -81,15 +81,6 @@ export enum TimeRange {
 }
 
 /**
- * Sort order for action cards within kanban columns
- */
-export enum BoardSort {
-  Default = "default",
-  DueDate = "due_by",
-  CreatedDate = "created_at",
-}
-
-/**
  * Context about the coaching relationship for an action
  */
 export interface RelationshipContext {

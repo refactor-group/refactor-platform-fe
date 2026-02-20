@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import {
   CoachViewMode,
   StatusVisibility,
   TimeRange,
-  BoardSort,
 } from "@/types/assigned-actions";
 import { ActionsPageHeader } from "@/components/ui/actions/actions-page-header";
 import { TestProviders } from "@/test-utils/providers";
@@ -27,8 +26,6 @@ const defaultProps = {
   onStatusVisibilityChange: vi.fn(),
   timeRange: TimeRange.AllTime,
   onTimeRangeChange: vi.fn(),
-  sortField: BoardSort.Default,
-  onSortFieldChange: vi.fn(),
   relationshipId: undefined,
   onRelationshipChange: vi.fn(),
   relationships: [
@@ -90,16 +87,6 @@ describe("ActionsPageHeader", () => {
     expect(screen.getByText("Closed")).toBeInTheDocument();
   });
 
-  it("renders sort select with Default selected", () => {
-    render(
-      <Wrapper>
-        <ActionsPageHeader {...defaultProps} />
-      </Wrapper>
-    );
-
-    expect(screen.getByText("Default")).toBeInTheDocument();
-  });
-
   it("calls onStatusVisibilityChange when toggling", async () => {
     const user = userEvent.setup();
 
@@ -130,18 +117,4 @@ describe("ActionsPageHeader", () => {
     );
   });
 
-  it("calls onSortFieldChange when selecting a sort option", () => {
-    render(
-      <Wrapper>
-        <ActionsPageHeader {...defaultProps} />
-      </Wrapper>
-    );
-
-    // Open the sort select via its aria-label, then pick "Due date"
-    fireEvent.click(screen.getByRole("combobox", { name: /sort order/i }));
-    fireEvent.click(screen.getByRole("option", { name: /due date/i }));
-    expect(defaultProps.onSortFieldChange).toHaveBeenCalledWith(
-      BoardSort.DueDate
-    );
-  });
 });
