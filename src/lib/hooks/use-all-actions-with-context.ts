@@ -1,82 +1,24 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo } from "react";
 import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useUserActionsList, UserActionsApi } from "@/lib/api/user-actions";
+import { useUserActionsList } from "@/lib/api/user-actions";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useCoacheeActionsFetch } from "@/lib/hooks/use-coachee-actions-fetch";
 import {
   CoachViewMode,
   UserActionsScope,
 } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
-import type { Action } from "@/types/action";
 import {
   buildSessionLookupMaps,
   addContextToActions,
 } from "@/lib/utils/assigned-actions";
 import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
-
-// ============================================================================
-// Internal helper: fetch actions for all coachees
-// ============================================================================
-
-interface CoacheeActionsFetchResult {
-  actions: Action[];
-  isLoading: boolean;
-  isError: boolean;
-  refresh: () => void;
-}
-
-/**
- * Fetches actions for all coachee IDs in parallel.
- * Uses a stable string key to avoid infinite re-render loops from array identity changes.
- */
-function useCoacheeActionsFetch(
-  coacheeIds: string[],
-  enabled: boolean
-): CoacheeActionsFetchResult {
-  const [actions, setActions] = useState<Action[]>([]);
-  const [isLoading, setIsLoading] = useState(enabled);
-  const [isError, setIsError] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const coacheeIdsKey = useMemo(() => coacheeIds.join(","), [coacheeIds]);
-
-  useEffect(() => {
-    if (!enabled || coacheeIds.length === 0) {
-      setActions([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setIsError(false);
-
-    Promise.all(
-      coacheeIds.map((id) =>
-        UserActionsApi.list(id, { scope: UserActionsScope.Assigned })
-      )
-    )
-      .then((results) => {
-        setActions(results.flat());
-        setIsLoading(false);
-      })
-      .catch(() => {
-        setIsError(true);
-        setIsLoading(false);
-      });
-    // coacheeIds is intentionally omitted — coacheeIdsKey is the stable string proxy
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, coacheeIdsKey, refreshKey]);
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
-
-  return { actions, isLoading, isError, refresh };
-}
 
 // ============================================================================
 // Main Hook
@@ -124,7 +66,7 @@ export function useAllActionsWithContext(viewMode: CoachViewMode) {
 
   const { relationships, isLoading: relsLoading } =
     useCoachingRelationshipList(
-      isCoacheeMode ? (currentOrganizationId ?? "") : ""
+      isCoacheeMode ? currentOrganizationId : null
     );
 
   const coacheeIds = useMemo(() => {

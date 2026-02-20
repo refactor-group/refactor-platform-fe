@@ -1,83 +1,19 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo } from "react";
 import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
-import { UserActionsApi } from "@/lib/api/user-actions";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
-import type { Action } from "@/types/action";
-import {
-  AssignedActionsFilter,
-  UserActionsScope,
-} from "@/types/assigned-actions";
+import { useCoacheeActionsFetch } from "@/lib/hooks/use-coachee-actions-fetch";
+import { AssignedActionsFilter } from "@/types/assigned-actions";
 import {
   buildSessionLookupMaps,
   processActions,
 } from "@/lib/utils/assigned-actions";
-
-// ============================================================================
-// Helper Hook: Fetch actions for multiple coachees in parallel
-// ============================================================================
-
-interface UseCoacheeActionsFetchResult {
-  actions: Action[];
-  isLoading: boolean;
-  isError: Error | null;
-  refresh: () => void;
-}
-
-/**
- * Fetches actions for multiple coachees in parallel.
- * Returns flattened array of all coachee actions.
- */
-function useCoacheeActionsFetch(
-  coacheeIds: string[],
-  enabled: boolean
-): UseCoacheeActionsFetchResult {
-  const [actions, setActions] = useState<Action[]>([]);
-  const [isLoading, setIsLoading] = useState(enabled);
-  const [isError, setIsError] = useState<Error | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  // Stable key to avoid refetching when array reference changes
-  const coacheeIdsKey = useMemo(() => coacheeIds.join(","), [coacheeIds]);
-
-  useEffect(() => {
-    if (!enabled || coacheeIds.length === 0) {
-      setActions([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setIsError(null);
-
-    Promise.all(
-      coacheeIds.map((id) =>
-        UserActionsApi.list(id, { scope: UserActionsScope.Assigned })
-      )
-    )
-      .then((results) => {
-        setActions(results.flat());
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        setIsError(error);
-        setIsLoading(false);
-      });
-    // coacheeIds is intentionally omitted — coacheeIdsKey is the stable string proxy
-    // that prevents infinite re-renders from unstable array identity
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, coacheeIdsKey, refreshKey]);
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
-
-  return { actions, isLoading, isError, refresh };
-}
 
 // ============================================================================
 // Main Hook
@@ -107,7 +43,7 @@ export function useCoacheeAssignedActions(
   const { currentOrganizationId } = useCurrentOrganization();
 
   const { relationships, isLoading: relationshipsLoading } =
-    useCoachingRelationshipList(enabled ? (currentOrganizationId ?? "") : "");
+    useCoachingRelationshipList(enabled ? currentOrganizationId : null);
 
   const coacheeIds = useMemo(() => {
     if (!enabled || !userId || !relationships) return [];
