@@ -11,6 +11,7 @@ import {
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import { visibleStatuses, groupByStatus, buildInitialOrder, sortGroupedActions } from "@/components/ui/actions/utils";
+import { useOptimisticStatus } from "@/components/ui/actions/use-optimistic-status";
 import { KanbanColumn } from "@/components/ui/actions/kanban-column";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
 import type { AssignedActionWithContext, StatusVisibility } from "@/types/assigned-actions";
@@ -18,12 +19,15 @@ import { BoardSort } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
 import type { DateTime } from "ts-luxon";
 
+/** Position value that sorts before all natural positions (0, 1, 2…) */
+const TOP_OF_COLUMN_POSITION = -1;
+
 interface KanbanBoardProps {
   actions: AssignedActionWithContext[];
   visibility: StatusVisibility;
   sortField: BoardSort;
   locale: string;
-  onStatusChange: (id: Id, newStatus: ItemStatus) => void;
+  onStatusChange: (id: Id, newStatus: ItemStatus) => Promise<void>;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
   onBodyChange: (id: Id, newBody: string) => void;
@@ -45,6 +49,9 @@ export function KanbanBoard({
   const [activeWidth, setActiveWidth] = useState<number | undefined>();
   const [justMovedId, setJustMovedId] = useState<string | undefined>();
   const justMovedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const { actionsWithOverrides, applyOverride, rollbackOverride } =
+    useOptimisticStatus(actions);
 
   // Clear the highlight timer on unmount
   useEffect(() => {
@@ -72,14 +79,14 @@ export function KanbanBoard({
   }
 
   const grouped = useMemo(
-    () => sortGroupedActions(groupByStatus(actions), sortField, orderRef.current),
-    [actions, sortField]
+    () => sortGroupedActions(groupByStatus(actionsWithOverrides), sortField, orderRef.current),
+    [actionsWithOverrides, sortField]
   );
   const columns = visibleStatuses(visibility);
 
   const activeAction = useMemo(
-    () => (activeId ? actions.find((a) => a.action.id === activeId) : undefined),
-    [activeId, actions]
+    () => (activeId ? actionsWithOverrides.find((a) => a.action.id === activeId) : undefined),
+    [activeId, actionsWithOverrides]
   );
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -94,6 +101,22 @@ export function KanbanBoard({
     justMovedTimer.current = setTimeout(() => setJustMovedId(undefined), 1500);
   }, []);
 
+  /** Optimistic status change: move card immediately, highlight it, roll back on failure */
+  const handleOptimisticStatusChange = useCallback(
+    async (id: Id, newStatus: ItemStatus) => {
+      applyOverride(id, newStatus);
+      // Place the moved card at the top of its new column
+      orderRef.current.set(id, TOP_OF_COLUMN_POSITION);
+      highlightCard(id);
+      try {
+        await onStatusChange(id, newStatus);
+      } catch {
+        rollbackOverride(id);
+      }
+    },
+    [onStatusChange, applyOverride, rollbackOverride, highlightCard]
+  );
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveId(undefined);
@@ -106,28 +129,19 @@ export function KanbanBoard({
       const currentStatus = active.data.current?.status as ItemStatus | undefined;
 
       if (currentStatus && newStatus !== currentStatus) {
-        onStatusChange(actionId, newStatus);
-        highlightCard(actionId);
+        handleOptimisticStatusChange(actionId, newStatus);
       }
     },
-    [onStatusChange, highlightCard]
+    [handleOptimisticStatusChange]
   );
 
   const handleDragCancel = useCallback(() => {
     setActiveId(undefined);
   }, []);
 
-  const handleStatusChangeWithHighlight = useCallback(
-    (id: Id, newStatus: ItemStatus) => {
-      onStatusChange(id, newStatus);
-      highlightCard(id);
-    },
-    [onStatusChange, highlightCard]
-  );
-
   const cardProps = {
     locale,
-    onStatusChange: handleStatusChangeWithHighlight,
+    onStatusChange: handleOptimisticStatusChange,
     onDueDateChange,
     onAssigneesChange,
     onBodyChange,

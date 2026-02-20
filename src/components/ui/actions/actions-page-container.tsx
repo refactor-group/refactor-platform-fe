@@ -101,6 +101,7 @@ export function ActionsPageContainer() {
         } else {
           toast.error("Failed to update status.");
         }
+        throw err; // Re-throw so the board can roll back optimistic updates
       }
     },
     [actionsWithContext, updateAction, refresh]
