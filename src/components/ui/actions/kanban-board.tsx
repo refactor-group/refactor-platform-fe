@@ -88,6 +88,12 @@ export function KanbanBoard({
     if (el) setActiveWidth(el.offsetWidth);
   }, []);
 
+  const highlightCard = useCallback((id: string) => {
+    if (justMovedTimer.current) clearTimeout(justMovedTimer.current);
+    setJustMovedId(id);
+    justMovedTimer.current = setTimeout(() => setJustMovedId(undefined), 1500);
+  }, []);
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveId(undefined);
@@ -101,23 +107,27 @@ export function KanbanBoard({
 
       if (currentStatus && newStatus !== currentStatus) {
         onStatusChange(actionId, newStatus);
-
-        // Brief highlight on the card that just moved
-        if (justMovedTimer.current) clearTimeout(justMovedTimer.current);
-        setJustMovedId(actionId);
-        justMovedTimer.current = setTimeout(() => setJustMovedId(undefined), 1500);
+        highlightCard(actionId);
       }
     },
-    [onStatusChange]
+    [onStatusChange, highlightCard]
   );
 
   const handleDragCancel = useCallback(() => {
     setActiveId(undefined);
   }, []);
 
+  const handleStatusChangeWithHighlight = useCallback(
+    (id: Id, newStatus: ItemStatus) => {
+      onStatusChange(id, newStatus);
+      highlightCard(id);
+    },
+    [onStatusChange, highlightCard]
+  );
+
   const cardProps = {
     locale,
-    onStatusChange,
+    onStatusChange: handleStatusChangeWithHighlight,
     onDueDateChange,
     onAssigneesChange,
     onBodyChange,
