@@ -9,11 +9,10 @@ import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import type { Id } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
-import { sortByPositionMap, sortByDateField } from "@/types/action";
+import { sortByPositionMap } from "@/types/action";
 import {
   StatusVisibility,
   TimeRange,
-  BoardSort,
 } from "@/types/assigned-actions";
 
 /** Display order for kanban status columns (left → right) */
@@ -156,44 +155,6 @@ export function sortGroupedByInitialOrder(
   return sorted;
 }
 
-/**
- * Sort actions within each status group by a date field (ascending).
- * Delegates to the generic `sortByDateField` from `@/types/action`.
- */
-export function sortGroupedByDate(
-  grouped: Record<ItemStatus, AssignedActionWithContext[]>,
-  field: "due_by" | "created_at"
-): Record<ItemStatus, AssignedActionWithContext[]> {
-  const getDate = (ctx: AssignedActionWithContext) => ctx.action[field];
-  const sorted = { ...grouped };
-  for (const status of Object.keys(sorted) as ItemStatus[]) {
-    sorted[status] = sortByDateField(sorted[status], getDate);
-  }
-  return sorted;
-}
-
-/**
- * Sort grouped actions according to the board-level sort setting.
- * Dispatches to the appropriate sort strategy.
- */
-export function sortGroupedActions(
-  grouped: Record<ItemStatus, AssignedActionWithContext[]>,
-  sort: BoardSort,
-  initialOrder: Map<string, number>
-): Record<ItemStatus, AssignedActionWithContext[]> {
-  switch (sort) {
-    case BoardSort.Default:
-      return sortGroupedByInitialOrder(grouped, initialOrder);
-    case BoardSort.DueDate:
-      return sortGroupedByDate(grouped, "due_by");
-    case BoardSort.CreatedDate:
-      return sortGroupedByDate(grouped, "created_at");
-    default: {
-      const _exhaustive: never = sort;
-      throw new Error(`Unhandled sort: ${_exhaustive}`);
-    }
-  }
-}
 
 /** Which ItemStatus values are visible for a given StatusVisibility setting */
 export function visibleStatuses(visibility: StatusVisibility): ItemStatus[] {

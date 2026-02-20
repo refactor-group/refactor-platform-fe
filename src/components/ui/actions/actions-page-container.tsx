@@ -13,7 +13,6 @@ import {
   CoachViewMode,
   StatusVisibility,
   TimeRange,
-  BoardSort,
 } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
@@ -42,7 +41,6 @@ export function ActionsPageContainer() {
   const [viewMode, setViewMode] = useState(CoachViewMode.MyActions);
   const [statusVisibility, setStatusVisibility] = useState(StatusVisibility.Open);
   const [timeRange, setTimeRange] = useState(TimeRange.Last30Days);
-  const [sortField, setSortField] = useState(BoardSort.Default);
   const [relationshipId, setRelationshipId] = useState<Id | undefined>(undefined);
 
   // ---------------------------------------------------------------------------
@@ -202,8 +200,6 @@ export function ActionsPageContainer() {
         onStatusVisibilityChange={setStatusVisibility}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
-        sortField={sortField}
-        onSortFieldChange={setSortField}
         relationshipId={relationshipId}
         onRelationshipChange={setRelationshipId}
         relationships={relationshipOptions}
@@ -223,7 +219,6 @@ export function ActionsPageContainer() {
         <KanbanBoard
           actions={filteredActions}
           visibility={statusVisibility}
-          sortField={sortField}
           locale={siteConfig.locale}
           onStatusChange={handleStatusChange}
           onDueDateChange={handleDueDateChange}

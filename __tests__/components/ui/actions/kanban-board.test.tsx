@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
-import { StatusVisibility, BoardSort } from "@/types/assigned-actions";
+import { StatusVisibility } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { KanbanBoard } from "@/components/ui/actions/kanban-board";
 import { TestProviders } from "@/test-utils/providers";
@@ -79,7 +79,6 @@ const testActions: AssignedActionWithContext[] = [
 const defaultProps = {
   actions: testActions,
   visibility: StatusVisibility.All,
-  sortField: BoardSort.Default,
   locale: "en-US",
   onStatusChange: vi.fn().mockResolvedValue(undefined),
   onDueDateChange: vi.fn(),
