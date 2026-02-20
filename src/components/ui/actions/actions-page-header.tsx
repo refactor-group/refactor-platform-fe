@@ -12,7 +12,7 @@ import {
   CoachViewMode,
   StatusVisibility,
   TimeRange,
-  TimeField,
+  BoardSort,
 } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
 
@@ -29,8 +29,8 @@ interface ActionsPageHeaderProps {
   onStatusVisibilityChange: (vis: StatusVisibility) => void;
   timeRange: TimeRange;
   onTimeRangeChange: (range: TimeRange) => void;
-  timeField: TimeField;
-  onTimeFieldChange: (field: TimeField) => void;
+  sortField: BoardSort;
+  onSortFieldChange: (sort: BoardSort) => void;
   relationshipId: Id | undefined;
   onRelationshipChange: (id: Id | undefined) => void;
   relationships: RelationshipOption[];
@@ -44,8 +44,8 @@ export function ActionsPageHeader({
   onStatusVisibilityChange,
   timeRange,
   onTimeRangeChange,
-  timeField,
-  onTimeFieldChange,
+  sortField,
+  onSortFieldChange,
   relationshipId,
   onRelationshipChange,
   relationships,
@@ -116,7 +116,7 @@ export function ActionsPageHeader({
 
         {/* Time range */}
         <Select value={timeRange} onValueChange={(v) => onTimeRangeChange(v as TimeRange)}>
-          <SelectTrigger className="w-[140px] h-7 text-xs">
+          <SelectTrigger className="w-[140px] h-7 text-xs" aria-label="Time range">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -126,37 +126,24 @@ export function ActionsPageHeader({
           </SelectContent>
         </Select>
 
-        {/* Time field toggle */}
-        <ToggleGroup
-          type="single"
-          value={timeField}
-          onValueChange={(v) => {
-            if (v) onTimeFieldChange(v as TimeField);
-          }}
-          variant="outline"
-          size="sm"
-          className="gap-0"
-        >
-          <ToggleGroupItem
-            value={TimeField.DueDate}
-            className="whitespace-nowrap text-xs px-2 h-7 rounded-r-none border-r-0"
-          >
-            Due date
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value={TimeField.CreatedDate}
-            className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none"
-          >
-            Created date
-          </ToggleGroupItem>
-        </ToggleGroup>
+        {/* Sort order */}
+        <Select value={sortField} onValueChange={(v) => onSortFieldChange(v as BoardSort)}>
+          <SelectTrigger className="w-[140px] h-7 text-xs" aria-label="Sort order">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={BoardSort.Default}>Default</SelectItem>
+            <SelectItem value={BoardSort.DueDate}>Due date</SelectItem>
+            <SelectItem value={BoardSort.CreatedDate}>Created date</SelectItem>
+          </SelectContent>
+        </Select>
 
         {/* Relationship filter */}
         <Select
           value={relationshipId ?? "all"}
           onValueChange={(v) => onRelationshipChange(v === "all" ? undefined : v)}
         >
-          <SelectTrigger className="w-[200px] h-7 text-xs">
+          <SelectTrigger className="w-[200px] h-7 text-xs" aria-label="Relationship filter">
             <SelectValue placeholder="All relationships" />
           </SelectTrigger>
           <SelectContent>

@@ -13,7 +13,7 @@ import {
   CoachViewMode,
   StatusVisibility,
   TimeRange,
-  TimeField,
+  BoardSort,
 } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
@@ -41,8 +41,8 @@ export function ActionsPageContainer() {
 
   const [viewMode, setViewMode] = useState(CoachViewMode.MyActions);
   const [statusVisibility, setStatusVisibility] = useState(StatusVisibility.Open);
-  const [timeRange, setTimeRange] = useState(TimeRange.AllTime);
-  const [timeField, setTimeField] = useState(TimeField.DueDate);
+  const [timeRange, setTimeRange] = useState(TimeRange.Last30Days);
+  const [sortField, setSortField] = useState(BoardSort.Default);
   const [relationshipId, setRelationshipId] = useState<Id | undefined>(undefined);
 
   // ---------------------------------------------------------------------------
@@ -72,10 +72,10 @@ export function ActionsPageContainer() {
 
   const filteredActions = useMemo(() => {
     let result: AssignedActionWithContext[] = actionsWithContext;
-    result = applyTimeFilter(result, timeRange, timeField);
+    result = applyTimeFilter(result, timeRange);
     result = filterByRelationship(result, relationshipId);
     return result;
-  }, [actionsWithContext, timeRange, timeField, relationshipId]);
+  }, [actionsWithContext, timeRange, relationshipId]);
 
   // ---------------------------------------------------------------------------
   // Mutations
@@ -201,8 +201,8 @@ export function ActionsPageContainer() {
         onStatusVisibilityChange={setStatusVisibility}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
-        timeField={timeField}
-        onTimeFieldChange={setTimeField}
+        sortField={sortField}
+        onSortFieldChange={setSortField}
         relationshipId={relationshipId}
         onRelationshipChange={setRelationshipId}
         relationships={relationshipOptions}
@@ -222,6 +222,7 @@ export function ActionsPageContainer() {
         <KanbanBoard
           actions={filteredActions}
           visibility={statusVisibility}
+          sortField={sortField}
           locale={siteConfig.locale}
           onStatusChange={handleStatusChange}
           onDueDateChange={handleDueDateChange}
