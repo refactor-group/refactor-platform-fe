@@ -123,6 +123,7 @@ export interface AssignedActionWithContext {
   action: Action;
   relationship: RelationshipContext;
   goal: GoalContext;
+  sourceSession: SessionContext;
   nextSession: SessionContext | null;
   isOverdue: boolean;
 }
