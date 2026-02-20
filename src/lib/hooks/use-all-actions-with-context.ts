@@ -115,7 +115,7 @@ export function useAllActionsWithContext(viewMode: CoachViewMode) {
     refresh: refreshMyActions,
   } = useUserActionsList(
     !isCoacheeMode ? userId : null,
-    { scope: UserActionsScope.Sessions }
+    { scope: UserActionsScope.Assigned }
   );
 
   // ---------------------------------------------------------------------------
