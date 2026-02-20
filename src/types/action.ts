@@ -71,6 +71,29 @@ export function sortActionArray(
   return sorted;
 }
 
+/**
+ * Sort items by a pre-built position map. Items not in the map are placed at
+ * the end. Useful for preserving an initial load order across SWR revalidations
+ * so that inline edits don't re-sort the list.
+ *
+ * @param items     - The array to sort (not mutated; returns a new array)
+ * @param getId     - Extracts the ID used to look up position
+ * @param positions - Map of ID → sort index (e.g. from buildInitialOrder)
+ */
+export function sortByPositionMap<T>(
+  items: T[],
+  getId: (item: T) => string,
+  positions: Map<string, number>
+): T[] {
+  return [...items].sort((a, b) => {
+    const posA = positions.get(getId(a)) ?? Infinity;
+    const posB = positions.get(getId(b)) ?? Infinity;
+    // Guard against Infinity - Infinity = NaN (undefined sort behavior per spec)
+    if (posA === Infinity && posB === Infinity) return 0;
+    return posA - posB;
+  });
+}
+
 export function defaultAction(): Action {
   const now = DateTime.now();
   return {

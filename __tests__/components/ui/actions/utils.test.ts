@@ -15,6 +15,8 @@ import {
   applyTimeFilter,
   filterByRelationship,
   visibleStatuses,
+  buildInitialOrder,
+  sortGroupedByInitialOrder,
 } from "@/components/ui/actions/utils";
 
 // ---------------------------------------------------------------------------
@@ -304,5 +306,101 @@ describe("visibleStatuses", () => {
       ItemStatus.Completed,
       ItemStatus.WontDo,
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildInitialOrder
+// ---------------------------------------------------------------------------
+
+describe("buildInitialOrder", () => {
+  it("builds a fresh map from an empty previous map", () => {
+    const result = buildInitialOrder(new Map(), ["a", "b", "c"]);
+    expect(result).not.toBeNull();
+    expect([...result!.entries()]).toEqual([["a", 0], ["b", 1], ["c", 2]]);
+  });
+
+  it("returns null when the ID set has not changed", () => {
+    const previous = new Map([["a", 0], ["b", 1]]);
+    expect(buildInitialOrder(previous, ["a", "b"])).toBeNull();
+  });
+
+  it("returns null when IDs are the same but in different order (SWR revalidation)", () => {
+    const previous = new Map([["a", 0], ["b", 1]]);
+    expect(buildInitialOrder(previous, ["b", "a"])).toBeNull();
+  });
+
+  it("appends new IDs at the end while preserving existing positions", () => {
+    const previous = new Map([["a", 0], ["b", 1]]);
+    const result = buildInitialOrder(previous, ["a", "b", "c"]);
+    expect(result).not.toBeNull();
+    expect([...result!.entries()]).toEqual([["a", 0], ["b", 1], ["c", 2]]);
+  });
+
+  it("removes IDs that are no longer present and re-indexes", () => {
+    const previous = new Map([["a", 0], ["b", 1], ["c", 2]]);
+    const result = buildInitialOrder(previous, ["a", "c"]);
+    expect(result).not.toBeNull();
+    expect([...result!.entries()]).toEqual([["a", 0], ["c", 1]]);
+  });
+
+  it("handles simultaneous additions and removals", () => {
+    const previous = new Map([["a", 0], ["b", 1]]);
+    const result = buildInitialOrder(previous, ["a", "c"]);
+    expect(result).not.toBeNull();
+    expect([...result!.entries()]).toEqual([["a", 0], ["c", 1]]);
+  });
+
+  it("returns a fresh map when all IDs are new", () => {
+    const previous = new Map([["a", 0], ["b", 1]]);
+    const result = buildInitialOrder(previous, ["x", "y"]);
+    expect(result).not.toBeNull();
+    expect([...result!.entries()]).toEqual([["x", 0], ["y", 1]]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sortGroupedByInitialOrder
+// ---------------------------------------------------------------------------
+
+describe("sortGroupedByInitialOrder", () => {
+  it("sorts actions within each status group by position map", () => {
+    const actions = [
+      makeAction({ id: "a3", status: ItemStatus.NotStarted }),
+      makeAction({ id: "a1", status: ItemStatus.NotStarted }),
+      makeAction({ id: "a2", status: ItemStatus.InProgress }),
+    ];
+    const grouped = groupByStatus(actions);
+    const order = new Map([["a1", 0], ["a2", 1], ["a3", 2]]);
+
+    const sorted = sortGroupedByInitialOrder(grouped, order);
+    expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a1", "a3"]);
+    expect(sorted[ItemStatus.InProgress].map((a) => a.action.id)).toEqual(["a2"]);
+  });
+
+  it("does not mutate the original grouped record", () => {
+    const actions = [
+      makeAction({ id: "a2", status: ItemStatus.NotStarted }),
+      makeAction({ id: "a1", status: ItemStatus.NotStarted }),
+    ];
+    const grouped = groupByStatus(actions);
+    const originalOrder = grouped[ItemStatus.NotStarted].map((a) => a.action.id);
+    const order = new Map([["a1", 0], ["a2", 1]]);
+
+    sortGroupedByInitialOrder(grouped, order);
+    expect(grouped[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(originalOrder);
+  });
+
+  it("places actions not in the map at the end", () => {
+    const actions = [
+      makeAction({ id: "a1", status: ItemStatus.NotStarted }),
+      makeAction({ id: "a2", status: ItemStatus.NotStarted }),
+      makeAction({ id: "a3", status: ItemStatus.NotStarted }),
+    ];
+    const grouped = groupByStatus(actions);
+    const order = new Map([["a3", 0], ["a1", 1]]);
+
+    const sorted = sortGroupedByInitialOrder(grouped, order);
+    expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a3", "a1", "a2"]);
   });
 });
