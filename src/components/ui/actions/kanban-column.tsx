@@ -4,21 +4,24 @@ import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/components/lib/utils";
 import { statusLabel, statusColor } from "@/components/ui/actions/utils";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
-import type { KanbanActionCardProps } from "@/components/ui/actions/kanban-action-card";
+import type { KanbanCardCallbacks } from "@/components/ui/actions/kanban-action-card";
 import type { ItemStatus } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 
 interface KanbanColumnProps {
   status: ItemStatus;
   actions: AssignedActionWithContext[];
-  /** Props forwarded to each card (callbacks + locale) */
-  cardProps: Omit<KanbanActionCardProps, "ctx" | "isOverlay">;
+  /** Shared callback props forwarded to each card */
+  cardProps: KanbanCardCallbacks;
+  /** ID of an action that was just moved via drag-and-drop (for highlight) */
+  justMovedId?: string;
 }
 
 export function KanbanColumn({
   status,
   actions,
   cardProps,
+  justMovedId,
 }: KanbanColumnProps) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
 
@@ -50,7 +53,12 @@ export function KanbanColumn({
           </p>
         ) : (
           actions.map((ctx) => (
-            <KanbanActionCard key={ctx.action.id} ctx={ctx} {...cardProps} />
+            <KanbanActionCard
+              key={ctx.action.id}
+              ctx={ctx}
+              {...cardProps}
+              justMoved={ctx.action.id === justMovedId}
+            />
           ))
         )}
       </div>

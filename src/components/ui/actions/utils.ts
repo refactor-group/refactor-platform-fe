@@ -9,11 +9,11 @@ import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import type { Id } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
-import { sortByPositionMap } from "@/types/action";
+import { sortByPositionMap, sortByDateField } from "@/types/action";
 import {
   StatusVisibility,
   TimeRange,
-  TimeField,
+  BoardSort,
 } from "@/types/assigned-actions";
 
 /** Display order for kanban status columns (left → right) */
@@ -78,11 +78,10 @@ export function groupByStatus(
   return result;
 }
 
-/** Apply a time range filter on the given date field */
+/** Apply a time range filter on due date */
 export function applyTimeFilter(
   actions: AssignedActionWithContext[],
-  range: TimeRange,
-  field: TimeField
+  range: TimeRange
 ): AssignedActionWithContext[] {
   if (range === TimeRange.AllTime) return actions;
 
@@ -90,11 +89,7 @@ export function applyTimeFilter(
   const daysBack = range === TimeRange.Last30Days ? 30 : 90;
   const cutoff = now.minus({ days: daysBack });
 
-  return actions.filter((ctx) => {
-    const dateValue =
-      field === TimeField.DueDate ? ctx.action.due_by : ctx.action.created_at;
-    return dateValue >= cutoff;
-  });
+  return actions.filter((ctx) => ctx.action.due_by >= cutoff);
 }
 
 /** Filter actions by coaching relationship (no-op when relationshipId is undefined) */
@@ -159,6 +154,45 @@ export function sortGroupedByInitialOrder(
     sorted[status] = sortByPositionMap(sorted[status], getId, order);
   }
   return sorted;
+}
+
+/**
+ * Sort actions within each status group by a date field (ascending).
+ * Delegates to the generic `sortByDateField` from `@/types/action`.
+ */
+export function sortGroupedByDate(
+  grouped: Record<ItemStatus, AssignedActionWithContext[]>,
+  field: "due_by" | "created_at"
+): Record<ItemStatus, AssignedActionWithContext[]> {
+  const getDate = (ctx: AssignedActionWithContext) => ctx.action[field];
+  const sorted = { ...grouped };
+  for (const status of Object.keys(sorted) as ItemStatus[]) {
+    sorted[status] = sortByDateField(sorted[status], getDate);
+  }
+  return sorted;
+}
+
+/**
+ * Sort grouped actions according to the board-level sort setting.
+ * Dispatches to the appropriate sort strategy.
+ */
+export function sortGroupedActions(
+  grouped: Record<ItemStatus, AssignedActionWithContext[]>,
+  sort: BoardSort,
+  initialOrder: Map<string, number>
+): Record<ItemStatus, AssignedActionWithContext[]> {
+  switch (sort) {
+    case BoardSort.Default:
+      return sortGroupedByInitialOrder(grouped, initialOrder);
+    case BoardSort.DueDate:
+      return sortGroupedByDate(grouped, "due_by");
+    case BoardSort.CreatedDate:
+      return sortGroupedByDate(grouped, "created_at");
+    default: {
+      const _exhaustive: never = sort;
+      throw new Error(`Unhandled sort: ${_exhaustive}`);
+    }
+  }
 }
 
 /** Which ItemStatus values are visible for a given StatusVisibility setting */

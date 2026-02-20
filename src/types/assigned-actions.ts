@@ -81,9 +81,10 @@ export enum TimeRange {
 }
 
 /**
- * Which date field the time range applies to
+ * Sort order for action cards within kanban columns
  */
-export enum TimeField {
+export enum BoardSort {
+  Default = "default",
   DueDate = "due_by",
   CreatedDate = "created_at",
 }

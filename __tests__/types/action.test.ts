@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sortActionArray, sortByPositionMap } from '@/types/action'
+import { sortActionArray, sortByPositionMap, sortByDateField } from '@/types/action'
 import { SortOrder } from '@/types/sorting'
 import { ItemStatus } from '@/types/general'
 import { DateTime } from 'ts-luxon'
@@ -137,5 +137,29 @@ describe('sortByPositionMap', () => {
   it('works with an empty position map (all items go to end, order preserved)', () => {
     const sorted = sortByPositionMap(items, getId, new Map())
     expect(sorted.map((i) => i.id)).toEqual(['c', 'a', 'b'])
+  })
+})
+
+describe('sortByDateField', () => {
+  const items = [
+    { id: 'b', date: DateTime.fromISO('2026-02-10') },
+    { id: 'a', date: DateTime.fromISO('2026-02-01') },
+    { id: 'c', date: DateTime.fromISO('2026-02-05') },
+  ]
+  const getDate = (item: { date: DateTime }) => item.date
+
+  it('sorts items by date ascending (earliest first)', () => {
+    const sorted = sortByDateField(items, getDate)
+    expect(sorted.map((i) => i.id)).toEqual(['a', 'c', 'b'])
+  })
+
+  it('does not mutate the original array', () => {
+    const original = [...items]
+    sortByDateField(items, getDate)
+    expect(items.map((i) => i.id)).toEqual(original.map((i) => i.id))
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(sortByDateField([], getDate)).toEqual([])
   })
 })

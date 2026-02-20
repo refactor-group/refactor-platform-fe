@@ -11,16 +11,22 @@ import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
 import type { DateTime } from "ts-luxon";
 
-export interface KanbanActionCardProps {
-  ctx: AssignedActionWithContext;
+/** Shared props forwarded from the board through columns to each card */
+export interface KanbanCardCallbacks {
   locale: string;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
   onBodyChange: (id: Id, newBody: string) => void;
   onDelete?: (id: Id) => void;
+}
+
+export interface KanbanActionCardProps extends KanbanCardCallbacks {
+  ctx: AssignedActionWithContext;
   /** When true, render as a static preview (used in DragOverlay) */
   isOverlay?: boolean;
+  /** When true, show a brief highlight ring (just moved via drag-and-drop) */
+  justMoved?: boolean;
 }
 
 export function KanbanActionCard({
@@ -32,6 +38,7 @@ export function KanbanActionCard({
   onBodyChange,
   onDelete,
   isOverlay = false,
+  justMoved = false,
 }: KanbanActionCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
@@ -41,19 +48,19 @@ export function KanbanActionCard({
     });
 
   const style = transform
-    ? {
-        transform: CSS.Translate.toString(transform),
-      }
+    ? { transform: CSS.Translate.toString(transform) }
     : undefined;
 
   return (
     <div
       ref={!isOverlay ? setNodeRef : undefined}
       style={style}
+      data-kanban-card
       className={cn(
-        "relative group",
+        "relative group rounded-xl transition-[box-shadow] duration-700",
         isDragging && "opacity-50",
-        isOverlay && "opacity-90 shadow-lg rotate-2"
+        isOverlay && "opacity-90 shadow-lg rotate-2",
+        justMoved && "ring-2 ring-primary/40"
       )}
     >
       {/* Relationship header — doubles as drag handle */}

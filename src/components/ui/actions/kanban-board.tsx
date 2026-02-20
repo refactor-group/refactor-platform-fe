@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -10,16 +10,18 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
-import { visibleStatuses, groupByStatus, buildInitialOrder, sortGroupedByInitialOrder } from "@/components/ui/actions/utils";
+import { visibleStatuses, groupByStatus, buildInitialOrder, sortGroupedActions } from "@/components/ui/actions/utils";
 import { KanbanColumn } from "@/components/ui/actions/kanban-column";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
 import type { AssignedActionWithContext, StatusVisibility } from "@/types/assigned-actions";
+import { BoardSort } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
 import type { DateTime } from "ts-luxon";
 
 interface KanbanBoardProps {
   actions: AssignedActionWithContext[];
   visibility: StatusVisibility;
+  sortField: BoardSort;
   locale: string;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
@@ -31,6 +33,7 @@ interface KanbanBoardProps {
 export function KanbanBoard({
   actions,
   visibility,
+  sortField,
   locale,
   onStatusChange,
   onDueDateChange,
@@ -38,7 +41,17 @@ export function KanbanBoard({
   onBodyChange,
   onDelete,
 }: KanbanBoardProps) {
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | undefined>();
+  const [activeWidth, setActiveWidth] = useState<number | undefined>();
+  const [justMovedId, setJustMovedId] = useState<string | undefined>();
+  const justMovedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Clear the highlight timer on unmount
+  useEffect(() => {
+    return () => {
+      if (justMovedTimer.current) clearTimeout(justMovedTimer.current);
+    };
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -59,8 +72,8 @@ export function KanbanBoard({
   }
 
   const grouped = useMemo(
-    () => sortGroupedByInitialOrder(groupByStatus(actions), orderRef.current),
-    [actions]
+    () => sortGroupedActions(groupByStatus(actions), sortField, orderRef.current),
+    [actions, sortField]
   );
   const columns = visibleStatuses(visibility);
 
@@ -71,11 +84,13 @@ export function KanbanBoard({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
+    const el = (event.activatorEvent.target as HTMLElement | null)?.closest<HTMLElement>("[data-kanban-card]");
+    if (el) setActiveWidth(el.offsetWidth);
   }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      setActiveId(null);
+      setActiveId(undefined);
 
       const { active, over } = event;
       if (!over) return;
@@ -86,13 +101,18 @@ export function KanbanBoard({
 
       if (currentStatus && newStatus !== currentStatus) {
         onStatusChange(actionId, newStatus);
+
+        // Brief highlight on the card that just moved
+        if (justMovedTimer.current) clearTimeout(justMovedTimer.current);
+        setJustMovedId(actionId);
+        justMovedTimer.current = setTimeout(() => setJustMovedId(undefined), 1500);
       }
     },
     [onStatusChange]
   );
 
   const handleDragCancel = useCallback(() => {
-    setActiveId(null);
+    setActiveId(undefined);
   }, []);
 
   const cardProps = {
@@ -118,13 +138,14 @@ export function KanbanBoard({
             status={status}
             actions={grouped[status]}
             cardProps={cardProps}
+            justMovedId={justMovedId}
           />
         ))}
       </div>
 
       <DragOverlay dropAnimation={null}>
         {activeAction ? (
-          <div className="w-[320px]">
+          <div style={activeWidth ? { width: activeWidth } : undefined}>
             <KanbanActionCard ctx={activeAction} {...cardProps} isOverlay />
           </div>
         ) : null}
