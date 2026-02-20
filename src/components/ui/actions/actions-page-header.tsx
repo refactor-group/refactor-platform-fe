@@ -52,8 +52,9 @@ export function ActionsPageHeader({
 }: ActionsPageHeaderProps) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Actions</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Actions</h1>
+
+      <div className="flex flex-wrap items-center gap-3">
         {isCoach && (
           <ToggleGroup
             type="single"
@@ -79,9 +80,9 @@ export function ActionsPageHeader({
             </ToggleGroupItem>
           </ToggleGroup>
         )}
-      </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1" />
+
         {/* Status visibility */}
         <ToggleGroup
           type="single"
