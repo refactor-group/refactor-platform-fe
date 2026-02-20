@@ -28,9 +28,11 @@ export function ActionsPageContainer() {
   // Auth + org context
   // ---------------------------------------------------------------------------
 
-  const { isACoach } = useAuthStore((state) => ({
+  const { isACoach, userSession } = useAuthStore((state) => ({
     isACoach: state.isACoach,
+    userSession: state.userSession,
   }));
+  const userId = userSession?.id ?? null;
   const { currentOrganizationId } = useCurrentOrganization();
 
   // ---------------------------------------------------------------------------
@@ -55,12 +57,14 @@ export function ActionsPageContainer() {
   );
 
   const relationshipOptions = useMemo(() => {
-    if (!relationships) return [];
-    return relationships.map((r) => ({
-      id: r.id,
-      label: `${r.coach_first_name} ${r.coach_last_name} → ${r.coachee_first_name} ${r.coachee_last_name}`,
-    }));
-  }, [relationships]);
+    if (!relationships || !userId) return [];
+    return relationships
+      .filter((r) => r.coach_id === userId || r.coachee_id === userId)
+      .map((r) => ({
+        id: r.id,
+        label: `${r.coach_first_name} ${r.coach_last_name} → ${r.coachee_first_name} ${r.coachee_last_name}`,
+      }));
+  }, [relationships, userId]);
 
   // ---------------------------------------------------------------------------
   // Client-side filters
