@@ -94,6 +94,17 @@ export function sortByPositionMap<T>(
   });
 }
 
+/**
+ * Sort items by a date extracted via callback (ascending, earliest first).
+ * Returns a new array without mutating the original.
+ */
+export function sortByDateField<T>(
+  items: T[],
+  getDate: (item: T) => DateTime
+): T[] {
+  return [...items].sort((a, b) => getDate(a).toMillis() - getDate(b).toMillis());
+}
+
 export function defaultAction(): Action {
   const now = DateTime.now();
   return {

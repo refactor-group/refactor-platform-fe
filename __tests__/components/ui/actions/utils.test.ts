@@ -4,7 +4,7 @@ import { ItemStatus } from "@/types/general";
 import {
   StatusVisibility,
   TimeRange,
-  TimeField,
+  BoardSort,
 } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import {
@@ -17,6 +17,8 @@ import {
   visibleStatuses,
   buildInitialOrder,
   sortGroupedByInitialOrder,
+  sortGroupedByDate,
+  sortGroupedActions,
 } from "@/components/ui/actions/utils";
 
 // ---------------------------------------------------------------------------
@@ -164,7 +166,7 @@ describe("applyTimeFilter", () => {
       makeAction({ id: "recent", due_by: DateTime.now() }),
     ];
 
-    const result = applyTimeFilter(actions, TimeRange.AllTime, TimeField.DueDate);
+    const result = applyTimeFilter(actions, TimeRange.AllTime);
 
     expect(result).toHaveLength(2);
   });
@@ -181,7 +183,7 @@ describe("applyTimeFilter", () => {
       }),
     ];
 
-    const result = applyTimeFilter(actions, TimeRange.Last30Days, TimeField.DueDate);
+    const result = applyTimeFilter(actions, TimeRange.Last30Days);
 
     expect(result).toHaveLength(1);
     expect(result[0].action.id).toBe("recent");
@@ -203,34 +205,10 @@ describe("applyTimeFilter", () => {
       }),
     ];
 
-    const result = applyTimeFilter(actions, TimeRange.Last90Days, TimeField.DueDate);
+    const result = applyTimeFilter(actions, TimeRange.Last90Days);
 
     expect(result).toHaveLength(2);
     expect(result.map((a) => a.action.id)).toEqual(["old", "recent"]);
-  });
-
-  it("uses created_at when TimeField is CreatedDate", () => {
-    const actions = [
-      makeAction({
-        id: "old-created",
-        due_by: DateTime.now(), // recent due date
-        created_at: DateTime.now().minus({ days: 60 }), // old creation
-      }),
-      makeAction({
-        id: "new-created",
-        due_by: DateTime.now().minus({ days: 60 }), // old due date
-        created_at: DateTime.now().minus({ days: 5 }), // recent creation
-      }),
-    ];
-
-    const result = applyTimeFilter(
-      actions,
-      TimeRange.Last30Days,
-      TimeField.CreatedDate
-    );
-
-    expect(result).toHaveLength(1);
-    expect(result[0].action.id).toBe("new-created");
   });
 
   it("includes actions exactly on the 30-day boundary", () => {
@@ -241,13 +219,13 @@ describe("applyTimeFilter", () => {
       }),
     ];
 
-    const result = applyTimeFilter(actions, TimeRange.Last30Days, TimeField.DueDate);
+    const result = applyTimeFilter(actions, TimeRange.Last30Days);
 
     expect(result).toHaveLength(1);
   });
 
   it("returns empty array for empty input", () => {
-    const result = applyTimeFilter([], TimeRange.Last30Days, TimeField.DueDate);
+    const result = applyTimeFilter([], TimeRange.Last30Days);
     expect(result).toEqual([]);
   });
 });
@@ -402,5 +380,92 @@ describe("sortGroupedByInitialOrder", () => {
 
     const sorted = sortGroupedByInitialOrder(grouped, order);
     expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a3", "a1", "a2"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sortGroupedByDate
+// ---------------------------------------------------------------------------
+
+describe("sortGroupedByDate", () => {
+  it("sorts actions within each status group by due_by ascending", () => {
+    const now = DateTime.now();
+    const actions = [
+      makeAction({ id: "a2", status: ItemStatus.NotStarted, due_by: now.plus({ days: 10 }) }),
+      makeAction({ id: "a1", status: ItemStatus.NotStarted, due_by: now.plus({ days: 1 }) }),
+      makeAction({ id: "a3", status: ItemStatus.NotStarted, due_by: now.plus({ days: 5 }) }),
+    ];
+    const grouped = groupByStatus(actions);
+
+    const sorted = sortGroupedByDate(grouped, "due_by");
+    expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a1", "a3", "a2"]);
+  });
+
+  it("sorts actions within each status group by created_at ascending", () => {
+    const now = DateTime.now();
+    const actions = [
+      makeAction({ id: "a2", status: ItemStatus.InProgress, created_at: now.minus({ days: 5 }) }),
+      makeAction({ id: "a1", status: ItemStatus.InProgress, created_at: now.minus({ days: 20 }) }),
+      makeAction({ id: "a3", status: ItemStatus.InProgress, created_at: now.minus({ days: 10 }) }),
+    ];
+    const grouped = groupByStatus(actions);
+
+    const sorted = sortGroupedByDate(grouped, "created_at");
+    expect(sorted[ItemStatus.InProgress].map((a) => a.action.id)).toEqual(["a1", "a3", "a2"]);
+  });
+
+  it("does not mutate the original grouped record", () => {
+    const now = DateTime.now();
+    const actions = [
+      makeAction({ id: "a2", status: ItemStatus.NotStarted, due_by: now.plus({ days: 10 }) }),
+      makeAction({ id: "a1", status: ItemStatus.NotStarted, due_by: now.plus({ days: 1 }) }),
+    ];
+    const grouped = groupByStatus(actions);
+    const originalOrder = grouped[ItemStatus.NotStarted].map((a) => a.action.id);
+
+    sortGroupedByDate(grouped, "due_by");
+    expect(grouped[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(originalOrder);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sortGroupedActions
+// ---------------------------------------------------------------------------
+
+describe("sortGroupedActions", () => {
+  it("uses initial order when sort is Default", () => {
+    const actions = [
+      makeAction({ id: "a3", status: ItemStatus.NotStarted }),
+      makeAction({ id: "a1", status: ItemStatus.NotStarted }),
+    ];
+    const grouped = groupByStatus(actions);
+    const order = new Map([["a1", 0], ["a3", 1]]);
+
+    const sorted = sortGroupedActions(grouped, BoardSort.Default, order);
+    expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a1", "a3"]);
+  });
+
+  it("sorts by due date when sort is DueDate", () => {
+    const now = DateTime.now();
+    const actions = [
+      makeAction({ id: "a2", status: ItemStatus.NotStarted, due_by: now.plus({ days: 10 }) }),
+      makeAction({ id: "a1", status: ItemStatus.NotStarted, due_by: now.plus({ days: 1 }) }),
+    ];
+    const grouped = groupByStatus(actions);
+
+    const sorted = sortGroupedActions(grouped, BoardSort.DueDate, new Map());
+    expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a1", "a2"]);
+  });
+
+  it("sorts by created date when sort is CreatedDate", () => {
+    const now = DateTime.now();
+    const actions = [
+      makeAction({ id: "a2", status: ItemStatus.NotStarted, created_at: now.minus({ days: 5 }) }),
+      makeAction({ id: "a1", status: ItemStatus.NotStarted, created_at: now.minus({ days: 20 }) }),
+    ];
+    const grouped = groupByStatus(actions);
+
+    const sorted = sortGroupedActions(grouped, BoardSort.CreatedDate, new Map());
+    expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a1", "a2"]);
   });
 });

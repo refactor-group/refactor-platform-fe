@@ -131,6 +131,33 @@ describe("KanbanActionCard", () => {
     expect(screen.getByLabelText("Drag to move")).toBeInTheDocument();
   });
 
+  it("applies highlight ring when justMoved is true", () => {
+    const { container } = render(
+      <Wrapper>
+        <KanbanActionCard
+          ctx={makeCtx("a1", ItemStatus.NotStarted)}
+          {...defaultProps}
+          justMoved
+        />
+      </Wrapper>
+    );
+
+    const outerDiv = container.firstChild as HTMLElement;
+    expect(outerDiv.className).toContain("ring-2");
+    expect(outerDiv.className).toContain("ring-primary/40");
+  });
+
+  it("does not apply highlight ring by default", () => {
+    const { container } = render(
+      <Wrapper>
+        <KanbanActionCard ctx={makeCtx("a1", ItemStatus.NotStarted)} {...defaultProps} />
+      </Wrapper>
+    );
+
+    const outerDiv = container.firstChild as HTMLElement;
+    expect(outerDiv.className).not.toContain("ring-2");
+  });
+
   it("does not render drag handle when isOverlay is true", () => {
     render(
       <Wrapper>
