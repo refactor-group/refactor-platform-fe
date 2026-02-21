@@ -74,5 +74,5 @@ export function sanitizeCallbackUrl(
  */
 export function createLoginUrlWithCallback(callbackUrl: string): string {
   const encodedCallback = encodeURIComponent(callbackUrl);
-  return `/?callbackUrl=${encodedCallback}`;
+  return `/login?callbackUrl=${encodedCallback}`;
 }

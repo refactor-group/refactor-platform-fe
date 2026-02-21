@@ -36,7 +36,7 @@ export function useLogoutUser() {
       // Ensure frontend state is cleared even if backend cleanup fails
       logout();
     } finally {
-      router.replace("/");
+      router.replace("/login");
     }
   };
 }

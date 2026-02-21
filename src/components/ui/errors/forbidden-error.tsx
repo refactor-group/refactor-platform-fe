@@ -29,7 +29,7 @@ export function ForbiddenError({
   };
 
   const handleGoHome = () => {
-    router.push("/");
+    router.push("/login");
   };
 
   return (

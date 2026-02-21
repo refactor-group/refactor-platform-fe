@@ -8,7 +8,7 @@ import { siteConfig } from "@/site.config";
 import { Icons } from "@/components/ui/icons";
 
 export const metadata: Metadata = {
-  title: "Welcome to Refactor Coaching",
+  title: "Sign In — Refactor Coaching",
   description: siteConfig.description,
 };
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-zinc-900" />
           <div className="relative z-20 flex items-center text-lg font-medium">
             <Link
-              href="https://www.refactorgroup.com"
+              href="/"
               className="mr-2 flex items-center space-x-2"
             >
               <div
@@ -61,7 +61,7 @@ export default function LoginPage() {
           <div className="flex flex-col space-y-2 text-center">
             <div className="flex items-center justify-center space-x-2">
               <Link
-                href="https://www.refactorgroup.com"
+                href="/"
                 className="flex items-center lg:hidden"
               >
                 <div
