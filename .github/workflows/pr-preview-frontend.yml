@@ -102,7 +102,8 @@ jobs:
     name: Deploy Frontend PR Preview
     needs: check-backend-image
     # Call the reusable workflow from backend repository
-    # TODO: After backend PR #190 merges, change to @main
+    # IMPORTANT: Using branch ref until backend PR #201 merges to main.
+    # After merge, change to @main and backend_branch to 'main'.
     uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment
     with:
       # This is a frontend PR deployment
@@ -111,7 +112,7 @@ jobs:
       pr_number: ${{ github.event.pull_request.number }}
       # Build frontend from this PR's branch
       branch_name: ${{ github.head_ref }}
-      # TODO: After backend PR #190 merges, change to 'main'
+      # Must match the backend branch above until it merges to main
       backend_branch: '190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment'
       # If the backend image already exists, pass it to skip the cross-repo
       # build/push. Otherwise leave empty so the reusable workflow builds it.
