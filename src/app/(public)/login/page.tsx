@@ -8,7 +8,7 @@ import { siteConfig } from "@/site.config";
 import { Icons } from "@/components/ui/icons";
 
 export const metadata: Metadata = {
-  title: "Sign In — Refactor Coaching",
+  title: "Sign In — Refactor Coach",
   description: siteConfig.description,
 };
 
@@ -77,7 +77,7 @@ export default function LoginPage() {
                 </div>
               </Link>
               <h1 className="text-2xl font-semibold tracking-tight">
-                Sign in to Refactor
+                Sign in to Refactor Coach
               </h1>
             </div>
             <p className="text-sm text-muted-foreground">

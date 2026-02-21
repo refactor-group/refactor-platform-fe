@@ -15,8 +15,8 @@ export default function LandingPage() {
     <main className="min-h-screen">
       <Hero
         siteName={siteConfig.name}
-        tagline="Progress is made one powerful conversation at a time"
-        description="Refactor is a coaching platform that helps coaches and their clients run structured sessions, track action items, and measure growth — all in one place."
+        tagline="The coaching OS for people-first organizations"
+        description="Refactor Coach gives coaches and their clients one shared workspace to run sessions, capture commitments, and track real progress — so every conversation compounds into lasting change."
       />
       <Features />
       <Footer

@@ -1,10 +1,10 @@
 export const siteConfig = {
-  name: "Refactor Coaching Platform",
+  name: "Refactor Coach",
   url: "https://myrefactor.com",
   ogImage: "https://ui.shadcn.com/og.jpg",
   locale: "us",
   titleStyle: SessionTitleStyle.CoachFirstLastCoacheeFirstLast,
-  description: "Progress is made one powerful conversation at a time.",
+  description: "The coaching OS for people-first organizations.",
   links: {
     twitter: "https://www.linkedin.com/company/refactor-group/",
     github: "https://github.com/refactor-group/",

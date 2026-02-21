@@ -4,7 +4,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { MessageSquare, Target, TrendingUp } from "lucide-react";
+import { Layers, Target, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface Feature {
@@ -15,22 +15,22 @@ interface Feature {
 
 const features: Feature[] = [
   {
-    icon: <MessageSquare className="h-8 w-8" />,
-    title: "Structured Sessions",
+    icon: <Layers className="h-8 w-8" />,
+    title: "One shared workspace",
     description:
-      "Run focused coaching sessions with real-time collaborative notes, keeping every conversation productive and on track.",
+      "Coach and client collaborate in real time — live session notes, shared agendas, and a single source of truth that both sides own.",
   },
   {
     icon: <Target className="h-8 w-8" />,
-    title: "Action Tracking",
+    title: "Commitments, not to-do lists",
     description:
-      "Turn insights into outcomes. Track action items across sessions so nothing falls through the cracks.",
+      "Actions surface from the conversation and carry forward automatically. No copy-pasting between tools, no forgotten follow-ups.",
   },
   {
     icon: <TrendingUp className="h-8 w-8" />,
-    title: "Measurable Growth",
+    title: "Progress you can point to",
     description:
-      "See progress over time with session history and completed actions that demonstrate real development.",
+      "A running record of sessions, completed actions, and growth over time — so coaching impact is visible, not anecdotal.",
   },
 ];
 
@@ -39,11 +39,12 @@ export function Features() {
     <section id="features" className="px-4 py-20 sm:py-24">
       <div className="mx-auto max-w-5xl">
         <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-          Coaching that drives results
+          Everything a coaching relationship needs. Nothing it doesn&apos;t.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
-          Everything you need to run effective coaching relationships, from
-          first session to lasting change.
+          Refactor Coach replaces the patchwork of docs, spreadsheets, and
+          calendar reminders with a purpose-built system for the work that
+          happens between sessions.
         </p>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
