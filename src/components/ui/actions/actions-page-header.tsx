@@ -1,5 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { ListFilter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
@@ -8,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   CoachViewMode,
   StatusVisibility,
@@ -45,6 +54,8 @@ export function ActionsPageHeader({
   onRelationshipChange,
   relationships,
 }: ActionsPageHeaderProps) {
+  const [filterOpen, setFilterOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">Actions</h1>
@@ -78,66 +89,97 @@ export function ActionsPageHeader({
 
         <div className="flex-1" />
 
-        {/* Status visibility */}
-        <ToggleGroup
-          type="single"
-          value={statusVisibility}
-          onValueChange={(v) => {
-            if (v) onStatusVisibilityChange(v as StatusVisibility);
-          }}
-          variant="outline"
-          size="sm"
-          className="gap-0"
-        >
-          <ToggleGroupItem
-            value={StatusVisibility.Open}
-            className="whitespace-nowrap text-xs px-2 h-7 rounded-r-none border-r-0"
+        <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+              <ListFilter className="h-3.5 w-3.5" />
+              Filters
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="w-72 p-4"
+            onInteractOutside={(e) => {
+              // Prevent closing when interacting with Select dropdown portals
+              const target = e.target as HTMLElement | null;
+              if (target?.closest?.('[role="listbox"]')) {
+                e.preventDefault();
+              }
+            }}
           >
-            Open
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value={StatusVisibility.All}
-            className="whitespace-nowrap text-xs px-2 h-7 rounded-none border-r-0"
-          >
-            All
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value={StatusVisibility.Closed}
-            className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none"
-          >
-            Closed
-          </ToggleGroupItem>
-        </ToggleGroup>
+            <div className="space-y-4">
+              {/* Status visibility */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Status</Label>
+                <ToggleGroup
+                  type="single"
+                  value={statusVisibility}
+                  onValueChange={(v) => {
+                    if (v) onStatusVisibilityChange(v as StatusVisibility);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="gap-0 w-full"
+                >
+                  <ToggleGroupItem
+                    value={StatusVisibility.Open}
+                    className="whitespace-nowrap text-xs px-2 h-7 rounded-r-none border-r-0 flex-1"
+                  >
+                    Open
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value={StatusVisibility.All}
+                    className="whitespace-nowrap text-xs px-2 h-7 rounded-none border-r-0 flex-1"
+                  >
+                    All
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value={StatusVisibility.Closed}
+                    className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none flex-1"
+                  >
+                    Closed
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
 
-        {/* Time range */}
-        <Select value={timeRange} onValueChange={(v) => onTimeRangeChange(v as TimeRange)}>
-          <SelectTrigger className="w-[140px] h-7 text-xs" aria-label="Time range">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={TimeRange.Last30Days}>Last 30 days</SelectItem>
-            <SelectItem value={TimeRange.Last90Days}>Last 90 days</SelectItem>
-            <SelectItem value={TimeRange.AllTime}>All time</SelectItem>
-          </SelectContent>
-        </Select>
+              {/* Time range */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Time Range</Label>
+                <Select value={timeRange} onValueChange={(v) => onTimeRangeChange(v as TimeRange)}>
+                  <SelectTrigger className="w-full h-7 text-xs" aria-label="Time range">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TimeRange.Last30Days}>Last 30 days</SelectItem>
+                    <SelectItem value={TimeRange.Last90Days}>Last 90 days</SelectItem>
+                    <SelectItem value={TimeRange.AllTime}>All time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {/* Relationship filter */}
-        <Select
-          value={relationshipId ?? "all"}
-          onValueChange={(v) => onRelationshipChange(v === "all" ? undefined : v)}
-        >
-          <SelectTrigger className="w-[200px] h-7 text-xs" aria-label="Relationship filter">
-            <SelectValue placeholder="All relationships" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All relationships</SelectItem>
-            {relationships.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                {r.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+              {/* Relationship filter */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Relationship</Label>
+                <Select
+                  value={relationshipId ?? "all"}
+                  onValueChange={(v) => onRelationshipChange(v === "all" ? undefined : v)}
+                >
+                  <SelectTrigger className="w-full h-7 text-xs" aria-label="Relationship filter">
+                    <SelectValue placeholder="All relationships" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All relationships</SelectItem>
+                    {relationships.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

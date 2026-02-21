@@ -75,12 +75,17 @@ describe("ActionsPageHeader", () => {
     expect(screen.queryByText("Coachee Actions")).not.toBeInTheDocument();
   });
 
-  it("renders status visibility controls", () => {
+  it("renders status visibility controls inside filter popover", async () => {
+    const user = userEvent.setup();
+
     render(
       <Wrapper>
         <ActionsPageHeader {...defaultProps} />
       </Wrapper>
     );
+
+    // Open the filter popover
+    await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByText("Open")).toBeInTheDocument();
     expect(screen.getByText("All")).toBeInTheDocument();
@@ -96,6 +101,8 @@ describe("ActionsPageHeader", () => {
       </Wrapper>
     );
 
+    // Open the filter popover first
+    await user.click(screen.getByRole("button", { name: /filters/i }));
     await user.click(screen.getByText("All"));
     expect(defaultProps.onStatusVisibilityChange).toHaveBeenCalledWith(
       StatusVisibility.All
