@@ -50,6 +50,12 @@ interface SessionActionCardProps {
   onBodyChange: (id: Id, newBody: string) => void;
   onDelete?: (id: Id) => void;
   variant?: "current" | "previous";
+  /** Show session link even when variant is "current" (e.g. kanban board) */
+  showSessionLink?: boolean;
+  /** Session date shown in "From:" link when showSessionLink is true */
+  sessionDate?: DateTime;
+  /** Additional class names for the outer Card element */
+  className?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -260,6 +266,8 @@ interface ActionFooterProps {
   locale: string;
   isOverdue: boolean;
   isCurrent: boolean;
+  showSessionLink: boolean;
+  sessionDate?: DateTime;
   onDueDateChange: (newDueBy: DateTime) => void;
 }
 
@@ -270,8 +278,15 @@ function ActionFooter({
   locale,
   isOverdue,
   isCurrent,
+  showSessionLink,
+  sessionDate,
   onDueDateChange,
 }: ActionFooterProps) {
+  const showLink = !isCurrent || showSessionLink;
+  const displayDate = (sessionDate ?? createdAt)
+    .setLocale(locale)
+    .toLocaleString(DateTime.DATE_MED);
+
   return (
     <div className="mt-auto flex justify-end text-xs text-muted-foreground mr-1">
       <div className="flex items-center gap-1.5">
@@ -282,17 +297,14 @@ function ActionFooter({
           variant="text"
           isOverdue={isOverdue}
         />
-        {!isCurrent && (
+        {showLink && (
           <>
             <span className="text-muted-foreground/40">·</span>
             <Link
               href={`/coaching-sessions/${coachingSessionId}?tab=actions`}
               className="hover:underline hover:text-foreground transition-colors"
             >
-              From:{" "}
-              {createdAt
-                .setLocale(locale)
-                .toLocaleString(DateTime.DATE_MED)}
+              From: {displayDate}
             </Link>
           </>
         )}
@@ -318,6 +330,9 @@ const SessionActionCard = ({
   onBodyChange,
   onDelete,
   variant = "current",
+  showSessionLink = false,
+  sessionDate,
+  className: cardClassName,
 }: SessionActionCardProps) => {
   const now = DateTime.now();
   const isCompleted =
@@ -347,7 +362,8 @@ const SessionActionCard = ({
       className={cn(
         "rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] bg-card transition-colors h-56 overflow-hidden",
         isOverdue && "bg-red-50/40 dark:bg-red-950/10",
-        isCompleted && "opacity-60"
+        isCompleted && "opacity-60",
+        cardClassName
       )}
     >
       <CardContent className="flex h-full flex-col gap-2 p-5">
@@ -387,6 +403,8 @@ const SessionActionCard = ({
           locale={locale}
           isOverdue={isOverdue}
           isCurrent={isCurrent}
+          showSessionLink={showSessionLink}
+          sessionDate={sessionDate}
           onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
         />
       </CardContent>

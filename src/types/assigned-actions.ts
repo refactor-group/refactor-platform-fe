@@ -58,6 +58,28 @@ export enum CoachViewMode {
   CoacheeActions = "coachee_actions",
 }
 
+// ============================================================================
+// Kanban Board Filter Types (Global Actions Page)
+// ============================================================================
+
+/**
+ * Which kanban status columns are visible
+ */
+export enum StatusVisibility {
+  Open = "open",
+  All = "all",
+  Closed = "closed",
+}
+
+/**
+ * Time range for filtering actions on the kanban board
+ */
+export enum TimeRange {
+  Last30Days = "last_30_days",
+  Last90Days = "last_90_days",
+  AllTime = "all_time",
+}
+
 /**
  * Context about the coaching relationship for an action
  */
@@ -93,6 +115,7 @@ export interface AssignedActionWithContext {
   action: Action;
   relationship: RelationshipContext;
   goal: GoalContext;
+  sourceSession: SessionContext;
   nextSession: SessionContext | null;
   isOverdue: boolean;
 }

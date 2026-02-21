@@ -122,11 +122,11 @@ export const CoachingRelationshipApi = {
  * * isError: Error object if the fetch operation failed, undefined otherwise
  * * refresh: Function to manually trigger a refresh of the data
  */
-export const useCoachingRelationshipList = (organizationId: Id) => {
+export const useCoachingRelationshipList = (organizationId: Id | null) => {
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<CoachingRelationshipWithUserNames>(
       `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
-      () => CoachingRelationshipApi.list(organizationId),
+      () => CoachingRelationshipApi.list(organizationId!),
       organizationId
     );
 

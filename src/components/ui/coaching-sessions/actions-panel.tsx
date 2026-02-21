@@ -114,6 +114,32 @@ function usePreviousSessionDate(
 }
 
 /**
+ * Builds a Map<sessionId, sessionDate> for all sessions in a relationship.
+ * Used to display "From: [session date]" on review action cards.
+ * SWR deduplicates with the identical call in usePreviousSessionDate.
+ */
+function useSessionDateMap(coachingRelationshipId: Id): Map<Id, DateTime> {
+  const fromDate = useMemo(() => DateTime.now().minus(SESSION_LOOKBACK), []);
+  const toDate = useMemo(() => DateTime.now().plus(SESSION_LOOKAHEAD), []);
+
+  const { coachingSessions } = useCoachingSessionList(
+    coachingRelationshipId,
+    fromDate,
+    toDate,
+    "date",
+    "asc"
+  );
+
+  return useMemo(() => {
+    const map = new Map<Id, DateTime>();
+    for (const s of coachingSessions) {
+      map.set(s.id, DateTime.fromISO(s.date));
+    }
+    return map;
+  }, [coachingSessions]);
+}
+
+/**
  * Filters all actions down to the review-eligible set, tracking which IDs
  * have been shown so they remain visible ("sticky") even after edits.
  *
@@ -263,6 +289,7 @@ function NewActionsSection({
 
 interface ReviewActionsSectionProps extends ActionCardSharedProps {
   actions: Action[];
+  sessionDateMap: Map<Id, DateTime>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStatusChange: (id: Id, status: ItemStatus) => void;
@@ -272,6 +299,7 @@ interface ReviewActionsSectionProps extends ActionCardSharedProps {
 
 function ReviewActionsSection({
   actions,
+  sessionDateMap,
   locale,
   open,
   onOpenChange,
@@ -329,6 +357,7 @@ function ReviewActionsSection({
                   onAssigneesChange={onAssigneesChange}
                   onBodyChange={() => {}}
                   variant="previous"
+                  sessionDate={sessionDateMap.get(action.coaching_session_id)}
                 />
               ))
             )}
@@ -399,6 +428,8 @@ const ActionsPanel = ({
     coachingRelationshipId,
     currentSessionDate
   );
+
+  const sessionDateMap = useSessionDateMap(coachingRelationshipId);
 
   // Fetch current session actions and all actions across sessions
   const { actions: sessionActions, refresh: refreshSession } =
@@ -540,6 +571,7 @@ const ActionsPanel = ({
 
       <ReviewActionsSection
         actions={reviewActions}
+        sessionDateMap={sessionDateMap}
         locale={locale}
         open={reviewOpen}
         onOpenChange={setReviewOpen}
