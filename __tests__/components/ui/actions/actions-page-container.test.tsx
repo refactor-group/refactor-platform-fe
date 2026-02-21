@@ -181,6 +181,11 @@ describe("ActionsPageContainer", () => {
     return screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
   }
 
+  // Helper: open the filter popover (filters are inside a popover now)
+  async function openFilterPopover(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: /filters/i }));
+  }
+
   it("renders header and board when data is loaded", () => {
     mockActionsData = [
       makeCtx("a1", ItemStatus.NotStarted),
@@ -269,7 +274,8 @@ describe("ActionsPageContainer", () => {
     // Initially only Open columns (Not Started + In Progress)
     expect(getColumnHeaders()).not.toContain("Completed");
 
-    // Click "All" toggle
+    // Open the filter popover, then click "All" toggle
+    await openFilterPopover(user);
     await user.click(screen.getByText("All"));
 
     await waitFor(() => {
@@ -301,6 +307,33 @@ describe("ActionsPageContainer", () => {
     );
 
     expect(screen.getByText("Alice Smith → Bob Jones")).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Filter popover
+  // -------------------------------------------------------------------------
+
+  it("opens filter popover and shows filter controls", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <Wrapper>
+        <ActionsPageContainer locale={siteConfig.locale} />
+      </Wrapper>
+    );
+
+    // Filter controls should not be visible before opening popover
+    expect(screen.queryByLabelText("Time range")).not.toBeInTheDocument();
+
+    // Click the filter button to open the popover
+    await openFilterPopover(user);
+
+    // All three filter controls should now be visible
+    await waitFor(() => {
+      expect(screen.getByText("Status")).toBeInTheDocument();
+      expect(screen.getByLabelText("Time range")).toBeInTheDocument();
+      expect(screen.getByLabelText("Relationship filter")).toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -338,7 +371,8 @@ describe("ActionsPageContainer", () => {
       </Wrapper>
     );
 
-    // Click "All" status toggle
+    // Open the filter popover, then click "All" status toggle
+    await openFilterPopover(user);
     await user.click(screen.getByText("All"));
 
     // Get the replace fn from the mocked router (set in beforeEach)
@@ -386,7 +420,8 @@ describe("ActionsPageContainer", () => {
       </Wrapper>
     );
 
-    // Click "Open" to go back to the default
+    // Open the filter popover, then click "Open" to go back to the default
+    await openFilterPopover(user);
     await user.click(screen.getByText("Open"));
 
     // Get the replace fn from the mocked router (set in beforeEach)
