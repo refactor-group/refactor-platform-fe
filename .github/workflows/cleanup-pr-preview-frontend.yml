@@ -1,0 +1,41 @@
+# =============================================================================
+# Frontend PR Preview Cleanup Overlay Workflow
+# =============================================================================
+# Purpose: Trigger cleanup when frontend PRs are closed/merged
+# Calls: refactor-platform-rs/cleanup-pr-preview.yml (reusable workflow)
+# =============================================================================
+
+name: Cleanup PR Preview (Frontend)
+
+on:
+  pull_request:
+    # Trigger on PR close (includes merge)
+    types: [closed]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  # ===========================================================================
+  # JOB: Call reusable cleanup workflow from backend repo
+  # ===========================================================================
+  cleanup-frontend-pr:
+    name: Cleanup Frontend PR Preview
+    # Call the reusable workflow from backend repository
+    # TODO: After backend PR #190 merges, change to @main
+    uses: refactor-group/refactor-platform-rs/.github/workflows/cleanup-pr-preview.yml@190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment
+    with:
+      # This is a frontend PR cleanup
+      repo_type: 'frontend'
+      # PR number to cleanup
+      pr_number: ${{ github.event.pull_request.number }}
+      # Branch name for image identification
+      branch_name: ${{ github.head_ref }}
+    secrets: inherit
+    # =========================================================================
+    # NO SECRETS NEEDED!
+    # =========================================================================
+    # The reusable workflow uses the backend repo's pr-preview environment
+    # which contains all necessary secrets for cleanup.
