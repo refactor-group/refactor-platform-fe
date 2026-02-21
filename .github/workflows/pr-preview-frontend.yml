@@ -2,7 +2,7 @@
 # Frontend PR Preview Overlay Workflow
 # =============================================================================
 # Purpose: Trigger PR preview deployments when frontend PRs are opened/updated
-# Strategy: Build frontend from PR branch, use main-arm64 backend image
+# Strategy: Build frontend from PR branch, build or reuse main-arm64 backend
 # Secrets: SSH secrets (RPI5_SSH_KEY, RPI5_HOST_KEY) must exist at repo level
 # Calls: refactor-platform-rs/ci-deploy-pr-preview.yml (reusable workflow)
 #
@@ -15,12 +15,10 @@
 #   TODO: Move PR_PREVIEW_* secrets to org-level for proper cross-repo access,
 #   or switch to repository_dispatch once the dispatch workflow is on main.
 #
-# Nginx: The reusable workflow now deploys nginx as a Docker container for
-# DNS resolution of PR container names via Docker's internal DNS (127.0.0.11).
-# Resilience: Pre-checks whether the backend image already exists in GHCR.
-# If it does, we pass it as backend_image override so the reusable workflow
-# skips the cross-repo build/push entirely. If it doesn't exist, the reusable
-# workflow builds and pushes it using GHCR_PAT for cross-repo authentication.
+# Backend image strategy:
+#   The reusable workflow checks if the main-arm64 backend image exists in
+#   GHCR and builds it from source if missing. No pre-check needed here —
+#   the reusable workflow handles all image existence logic atomically.
 # =============================================================================
 
 name: PR Preview (Frontend)
@@ -51,44 +49,12 @@ permissions:
 
 jobs:
   # ===========================================================================
-  # JOB: Check if the backend image already exists in GHCR
-  # ===========================================================================
-  # This avoids the cross-repo build/push entirely when the image is available,
-  # making the workflow resilient even without GHCR_PAT.
-  # ===========================================================================
-  check-backend-image:
-    name: Check Backend Image
-    runs-on: ubuntu-latest
-    outputs:
-      image_exists: ${{ steps.check.outputs.exists }}
-      backend_image: ${{ steps.check.outputs.backend_image }}
-    steps:
-      - name: Login to GHCR (read access)
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check if backend image exists
-        id: check
-        run: |
-          BACKEND_IMAGE="ghcr.io/refactor-group/refactor-platform-rs:main-arm64"
-          echo "backend_image=${BACKEND_IMAGE}" >> $GITHUB_OUTPUT
-
-          if docker manifest inspect "${BACKEND_IMAGE}" >/dev/null 2>&1; then
-            echo "Backend image exists: ${BACKEND_IMAGE}"
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "Backend image NOT found: ${BACKEND_IMAGE}"
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-  # ===========================================================================
   # JOB: Call reusable workflow with frontend-specific configuration
   # ===========================================================================
-  # When the backend image exists, pass it as an override to skip building.
-  # When it doesn't exist, the reusable workflow builds it using GHCR_PAT.
+  # The reusable workflow handles backend image existence checks internally:
+  # - If main-arm64 exists in GHCR → reuses it (no build needed)
+  # - If main-arm64 is missing → builds from source using GHCR_PAT
+  # This eliminates race conditions from separate pre-check jobs.
   #
   # NOTE: `environment: pr-preview` in the reusable workflow resolves from
   # THIS repo (frontend), not the backend repo. Backend-specific secrets
@@ -100,7 +66,6 @@ jobs:
   # ===========================================================================
   deploy-frontend-pr:
     name: Deploy Frontend PR Preview
-    needs: check-backend-image
     # Call the reusable workflow from backend repository
     # IMPORTANT: Using branch ref until backend PR #201 merges to main.
     # After merge, change to @main and backend_branch to 'main'.
@@ -114,9 +79,6 @@ jobs:
       branch_name: ${{ github.head_ref }}
       # Must match the backend branch above until it merges to main
       backend_branch: '190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment'
-      # If the backend image already exists, pass it to skip the cross-repo
-      # build/push. Otherwise leave empty so the reusable workflow builds it.
-      backend_image: ${{ needs.check-backend-image.outputs.image_exists == 'true' && needs.check-backend-image.outputs.backend_image || '' }}
       # Optional: force complete rebuild
       force_rebuild: false
     # =========================================================================
@@ -128,48 +90,3 @@ jobs:
     # Common secrets (SSH, GHCR, Postgres) are at org level and work correctly.
     # TODO: Move PR_PREVIEW_* secrets to org-level for full cross-repo access.
     secrets: inherit
-
-  # ===========================================================================
-  # JOB: Report missing backend image (fallback diagnostic)
-  # ===========================================================================
-  # If the backend image doesn't exist and GHCR_PAT is unavailable, the deploy
-  # job will fail on cross-repo push. This job posts a PR comment explaining
-  # how to fix the issue.
-  # ===========================================================================
-  report-missing-image:
-    name: Report Missing Backend Image
-    runs-on: ubuntu-latest
-    needs: [check-backend-image, deploy-frontend-pr]
-    if: |
-      always() &&
-      needs.check-backend-image.outputs.image_exists == 'false' &&
-      needs.deploy-frontend-pr.result == 'failure'
-    permissions:
-      pull-requests: write
-    steps:
-      - name: Post remediation comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const body = `## PR Preview Deploy Failed — Backend Image Missing
-
-            The backend image \`ghcr.io/refactor-group/refactor-platform-rs:main-arm64\` was not found in GHCR, and the cross-repo build/push failed (likely due to an expired or missing \`GHCR_PAT\` secret).
-
-            ### How to fix
-
-            1. **Create a fine-grained PAT** with \`Packages: Read & write\` and \`Contents: Read\` permissions at [GitHub Settings → Fine-grained tokens](https://github.com/settings/personal-access-tokens/new)
-            2. **Store it as an org secret** (requires org admin):
-               \`\`\`bash
-               gh secret set GHCR_PAT --org refactor-group --visibility selected --repos "refactor-platform-rs,refactor-platform-fe"
-               gh secret set GHCR_USERNAME --org refactor-group --visibility selected --repos "refactor-platform-rs,refactor-platform-fe" --body "<your-username>"
-               \`\`\`
-            3. **Re-run this workflow** from the Actions tab
-
-            Alternatively, push a commit to the **backend** repo's \`main\` branch to rebuild the \`main-arm64\` image, then re-run this workflow.`;
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: body
-            });
