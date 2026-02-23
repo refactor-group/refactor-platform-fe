@@ -66,8 +66,8 @@ export const GoogleIntegrationSection: FC = () => {
   );
 
   const handleConnect = useCallback(() => {
-    window.location.href = GoogleOAuthApi.getAuthorizeUrl();
-  }, []);
+    window.location.href = GoogleOAuthApi.getAuthorizeUrl(userId);
+  }, [userId]);
 
   const handleDisconnect = useCallback(async () => {
     setIsDisconnecting(true);

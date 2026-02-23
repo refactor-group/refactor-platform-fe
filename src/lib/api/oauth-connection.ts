@@ -31,8 +31,11 @@ export const GoogleOAuthApi = {
    * Returns the full backend URL for initiating the Google OAuth flow.
    * The frontend navigates the browser to this URL, and the backend handles
    * the entire OAuth round-trip via browser redirects.
+   *
+   * @param userId - The ID of the user initiating the OAuth flow
    */
-  getAuthorizeUrl: (): string => `${OAUTH_GOOGLE_BASEURL}/authorize`,
+  getAuthorizeUrl: (userId: string): string =>
+    `${OAUTH_GOOGLE_BASEURL}/authorize?user_id=${userId}`,
 };
 
 /**
