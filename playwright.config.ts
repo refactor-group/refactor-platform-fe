@@ -61,13 +61,12 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests.
-   * In CI the app is already built, so `next start` serves the production
-   * build instantly instead of `next dev` which recompiles on demand.
-   * Note: `next start` prints a warning with output: 'standalone' but still
-   * works correctly. The standalone server.js requires static assets to be
-   * copied (as the Dockerfile does), which isn't done in the CI test job. */
+   * In CI the app is already built with output: 'standalone', so use the
+   * standalone server directly — it starts instantly instead of `next dev`
+   * which recompiles on demand. The CI workflow copies static assets into
+   * the standalone directory before running tests (mirroring the Dockerfile). */
   webServer: {
-    command: isCI ? 'npm run start' : 'npm run dev',
+    command: isCI ? 'node .next/standalone/server.js' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !isCI,
   },
