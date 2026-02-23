@@ -1,4 +1,3 @@
-import { DateTime } from "ts-luxon";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { User } from "@/types/user";
