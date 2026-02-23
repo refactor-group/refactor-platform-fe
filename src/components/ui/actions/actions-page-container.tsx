@@ -218,7 +218,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         throw err; // Re-throw so the board can roll back optimistic updates
       }
     },
-    [actionsWithContext, updateAction, refresh]
+    [actionsWithContext, updateAction]
   );
 
   const handleDueDateChange = useCallback(

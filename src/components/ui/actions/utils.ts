@@ -7,7 +7,6 @@
 
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
-import type { Id } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { sortByPositionMap } from "@/types/action";
 import {
@@ -22,24 +21,6 @@ export const STATUS_COLUMN_ORDER: ItemStatus[] = [
   ItemStatus.Completed,
   ItemStatus.WontDo,
 ];
-
-/** Human-readable label for each status */
-export function statusLabel(status: ItemStatus): string {
-  switch (status) {
-    case ItemStatus.NotStarted:
-      return "Not Started";
-    case ItemStatus.InProgress:
-      return "In Progress";
-    case ItemStatus.Completed:
-      return "Completed";
-    case ItemStatus.WontDo:
-      return "Won't Do";
-    default: {
-      const _exhaustive: never = status;
-      throw new Error(`Unhandled status: ${_exhaustive}`);
-    }
-  }
-}
 
 /** Tailwind color class for each status column indicator */
 export function statusColor(status: ItemStatus): string {
@@ -89,17 +70,6 @@ export function applyTimeFilter(
   const cutoff = now.minus({ days: daysBack });
 
   return actions.filter((ctx) => ctx.action.due_by >= cutoff);
-}
-
-/** Filter actions by coaching relationship (no-op when relationshipId is undefined) */
-export function filterByRelationship(
-  actions: AssignedActionWithContext[],
-  relationshipId?: Id
-): AssignedActionWithContext[] {
-  if (!relationshipId) return actions;
-  return actions.filter(
-    (ctx) => ctx.relationship.id === relationshipId
-  );
 }
 
 /**

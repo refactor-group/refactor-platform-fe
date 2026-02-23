@@ -4,9 +4,11 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DateTime } from "ts-luxon";
+import { toast } from "sonner";
 import { ItemStatus } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { siteConfig } from "@/site.config";
+import { EntityApiError } from "@/lib/api/entity-api";
 import { ActionsPageContainer } from "@/components/ui/actions/actions-page-container";
 import { TestProviders } from "@/test-utils/providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -97,8 +99,13 @@ vi.mock("@/lib/hooks/use-all-actions-with-context", () => ({
 
 vi.mock("@/lib/api/entity-api", () => ({
   EntityApiError: class EntityApiError extends Error {
+    private _networkError: boolean;
+    constructor(message: string, networkError = false) {
+      super(message);
+      this._networkError = networkError;
+    }
     isNetworkError() {
-      return false;
+      return this._networkError;
     }
   },
 }));
@@ -480,6 +487,90 @@ describe("ActionsPageContainer", () => {
         expect.not.stringContaining("status="),
         { scroll: false }
       );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Mutation error handling
+  // -------------------------------------------------------------------------
+
+  describe("mutation error handling", () => {
+    // Helper: trigger delete by clicking trash icon, then confirming in dialog
+    async function triggerDelete(
+      container: HTMLElement,
+      user: ReturnType<typeof userEvent.setup>
+    ) {
+      const trashSvg = container.querySelector(".lucide-trash2");
+      expect(trashSvg).toBeTruthy();
+      const trashButton = trashSvg!.closest("button");
+      await user.click(trashButton!);
+      // Confirm in the alert dialog
+      await user.click(await screen.findByRole("button", { name: "Delete" }));
+    }
+
+    it("shows network error toast when delete fails with network error", async () => {
+      mockDelete.mockRejectedValueOnce(
+        new EntityApiError("Network", true)
+      );
+      mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
+      const user = userEvent.setup();
+
+      const { container } = render(
+        <Wrapper>
+          <ActionsPageContainer locale={siteConfig.locale} />
+        </Wrapper>
+      );
+
+      await triggerDelete(container, user);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Failed to delete action. Connection to service was lost."
+        );
+      });
+    });
+
+    it("shows generic error toast when delete fails with non-network error", async () => {
+      mockDelete.mockRejectedValueOnce(new Error("Server error"));
+      mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
+      const user = userEvent.setup();
+
+      const { container } = render(
+        <Wrapper>
+          <ActionsPageContainer locale={siteConfig.locale} />
+        </Wrapper>
+      );
+
+      await triggerDelete(container, user);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Failed to delete action."
+        );
+      });
+    });
+
+    it("shows network error toast on EntityApiError that is not a network error", async () => {
+      // EntityApiError but NOT a network error — should show the generic message
+      mockDelete.mockRejectedValueOnce(
+        new EntityApiError("Server error", false)
+      );
+      mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
+      const user = userEvent.setup();
+
+      const { container } = render(
+        <Wrapper>
+          <ActionsPageContainer locale={siteConfig.locale} />
+        </Wrapper>
+      );
+
+      await triggerDelete(container, user);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Failed to delete action."
+        );
+      });
     });
   });
 });
