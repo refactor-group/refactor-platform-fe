@@ -95,6 +95,13 @@ jobs:
       - name: Run unit tests
         run: npm run test:run
 
+      # The standalone server.js expects static assets and public/ inside
+      # its own directory (same copies the Dockerfile performs).
+      - name: Prepare standalone server for E2E
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public 2>/dev/null || true
+
       - name: Run E2E tests
         run: npm run test:e2e
 
