@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { isUserCoachInRelationship, isUserCoacheeInRelationship, sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
 import { useActionMutation } from "@/lib/api/actions";
 import { useAllActionsWithContext } from "@/lib/hooks/use-all-actions-with-context";
 import {
@@ -148,12 +149,23 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
 
   const relationshipOptions = useMemo(() => {
     if (!relationships || !userId) return [];
-    return relationships
-      .filter((r) => r.coach_id === userId || r.coachee_id === userId)
-      .map((r) => ({
-        id: r.id,
-        label: `${r.coach_first_name} ${r.coach_last_name} → ${r.coachee_first_name} ${r.coachee_last_name}`,
-      }));
+    const userRelationships = relationships.filter(
+      (r) => r.coach_id === userId || r.coachee_id === userId
+    );
+    return sortRelationshipsByParticipantName(userRelationships, userId).map(
+      (r) => {
+        const coachLabel = isUserCoachInRelationship(userId, r)
+          ? "You"
+          : `${r.coach_first_name} ${r.coach_last_name}`;
+        const coacheeLabel = isUserCoacheeInRelationship(userId, r)
+          ? "You"
+          : `${r.coachee_first_name} ${r.coachee_last_name}`;
+        return {
+          id: r.id,
+          label: `${coachLabel} \u2192 ${coacheeLabel}`,
+        };
+      }
+    );
   }, [relationships, userId]);
 
   // ---------------------------------------------------------------------------
