@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
@@ -22,11 +22,13 @@ import { cn } from "@/components/lib/utils";
 interface CoachingSessionListProps {
   className?: string;
   onUpdateSession: (session: CoachingSession) => void;
+  onSessionDeleted?: () => void;
 }
 
 export default function CoachingSessionList({
   className,
   onUpdateSession,
+  onSessionDeleted,
 }: CoachingSessionListProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const { currentCoachingRelationshipId } = useCurrentCoachingRelationship();
@@ -51,7 +53,10 @@ export default function CoachingSessionList({
     }
 
     try {
-      await deleteCoachingSession(id).then(() => refreshCoachingSessions());
+      await deleteCoachingSession(id).then(() => {
+        refreshCoachingSessions();
+        onSessionDeleted?.();
+      });
     } catch (error) {
       console.error("Error deleting coaching session:", error);
       // TODO: Show an error toast here once we start using toasts for showing operation results.
@@ -101,17 +106,12 @@ export default function CoachingSessionList({
 
   return (
     <Card className={cn("min-w-64", className)}>
-      <CardHeader>
-        <CardTitle>
-          <div className="flex justify-between flex-col lg:flex-row">
-            <div>Coaching Sessions</div>
-            <CoachingRelationshipSelector
-              className={`pt-4 lg:min-w-64 ${shouldHideSelector ? 'hidden' : ''}`}
-              organizationId={currentOrganizationId}
-              disabled={!currentOrganizationId}
-            />
-          </div>
-        </CardTitle>
+      <CardHeader className="flex flex-row justify-end">
+        <CoachingRelationshipSelector
+          className={`w-64 ${shouldHideSelector ? 'hidden' : ''}`}
+          organizationId={currentOrganizationId}
+          disabled={!currentOrganizationId}
+        />
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="upcoming" className="w-full items-start">

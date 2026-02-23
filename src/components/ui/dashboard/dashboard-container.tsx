@@ -5,7 +5,6 @@ import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { TodaysSessions } from "@/components/ui/dashboard/todays-sessions";
-import { WhatsDue } from "@/components/ui/dashboard/whats-due/whats-due";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {
@@ -23,26 +22,26 @@ export function DashboardContainer() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSessionToEdit(undefined);
-    // Refresh today's sessions after closing dialog (if session was edited)
-    if (sessionToEdit && refreshTodaysSessions) {
-      refreshTodaysSessions();
-    }
+    // Refresh today's sessions after dialog closes (covers both create and edit)
+    refreshTodaysSessions?.();
   };
 
   return (
     <>
       <DashboardHeader onCreateSession={() => handleOpenDialog()} />
 
-      {/* Today's Sessions and What's Due stacked vertically */}
-      <div className="flex flex-col gap-6 mb-8 mt-4">
+      {/* Today's Sessions — constrained width on wide screens, full width on narrow */}
+      <div className="mb-8 mt-8 w-[70%] min-w-[320px]">
         <TodaysSessions
           onRescheduleSession={handleOpenDialog}
           onRefreshNeeded={(refreshFn) => setRefreshTodaysSessions(() => refreshFn)}
         />
-        <WhatsDue />
       </div>
 
-      <CoachingSessionList onUpdateSession={handleOpenDialog} />
+      <div className="w-[70%] min-w-[320px]">
+        <h2 className="text-lg font-semibold pb-3">Coaching Sessions</h2>
+        <CoachingSessionList onUpdateSession={handleOpenDialog} onSessionDeleted={() => refreshTodaysSessions?.()} />
+      </div>
       <CoachingSessionDialog
         open={dialogOpen}
         onOpenChange={handleCloseDialog}
