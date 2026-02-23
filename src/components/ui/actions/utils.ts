@@ -98,7 +98,7 @@ export function filterByRelationship(
 ): AssignedActionWithContext[] {
   if (!relationshipId) return actions;
   return actions.filter(
-    (ctx) => ctx.relationship.coachingRelationshipId === relationshipId
+    (ctx) => ctx.relationship.id === relationshipId
   );
 }
 

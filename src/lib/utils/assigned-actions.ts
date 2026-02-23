@@ -10,7 +10,6 @@ import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import {
   AssignedActionsFilter,
   type AssignedActionWithContext,
-  type RelationshipContext,
   type GoalContext,
   type SessionContext,
   type GoalGroupedActions,
@@ -20,6 +19,7 @@ import {
   findNextSessionsByRelationship,
   findLastSessionsByRelationship,
 } from "@/lib/utils/session";
+import { buildRelationshipWithUserNames } from "@/lib/utils/relationship";
 
 // ============================================================================
 // Types
@@ -170,33 +170,6 @@ export function filterActionsByStatus(
 // ============================================================================
 
 /**
- * Builds relationship context from an enriched coaching session.
- * Extracts coach, coachee, and relationship IDs/names for display purposes.
- *
- * @param session - Enriched coaching session with relationship data
- * @returns RelationshipContext object with IDs and display names
- */
-export function buildRelationshipContext(
-  session: EnrichedCoachingSession
-): RelationshipContext {
-  const coach = session.coach;
-  const coachee = session.coachee;
-  const relationship = session.relationship;
-
-  return {
-    coachingRelationshipId: relationship?.id ?? "",
-    coachId: relationship?.coach_id ?? "",
-    coacheeId: relationship?.coachee_id ?? "",
-    coachName: coach
-      ? `${coach.first_name} ${coach.last_name}`
-      : "Unknown Coach",
-    coacheeName: coachee
-      ? `${coachee.first_name} ${coachee.last_name}`
-      : "Unknown Coachee",
-  };
-}
-
-/**
  * Builds goal context from an enriched coaching session.
  * Returns a "No Goal" placeholder if the session has no overarching goal.
  *
@@ -266,7 +239,7 @@ export function addContextToAction(
 
   return {
     action,
-    relationship: buildRelationshipContext(session),
+    relationship: buildRelationshipWithUserNames(session),
     goal: buildGoalContext(session),
     sourceSession: buildSessionContext(session),
     nextSession: nextSession ? buildSessionContext(nextSession) : null,
@@ -362,7 +335,7 @@ export function groupActionsByRelationship(
   const relationshipGroups = new Map<Id, AssignedActionWithContext[]>();
 
   actions.forEach((action) => {
-    const relId = action.relationship.coachingRelationshipId;
+    const relId = action.relationship.id;
     const existing = relationshipGroups.get(relId) || [];
     relationshipGroups.set(relId, [...existing, action]);
   });

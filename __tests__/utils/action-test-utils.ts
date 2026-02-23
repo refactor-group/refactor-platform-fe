@@ -14,10 +14,10 @@ import { DateTime } from "ts-luxon";
 import type { Action } from "@/types/action";
 import type {
   AssignedActionWithContext,
-  RelationshipContext,
   GoalContext,
   SessionContext,
 } from "@/types/assigned-actions";
+import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { ItemStatus } from "@/types/general";
 
@@ -135,8 +135,10 @@ export interface MockAssignedActionOptions extends MockActionOptions {
   relationshipId: string;
   coachId?: string;
   coacheeId?: string;
-  coachName?: string;
-  coacheeName?: string;
+  coachFirstName?: string;
+  coachLastName?: string;
+  coacheeFirstName?: string;
+  coacheeLastName?: string;
   goalId?: string;
   goalTitle?: string;
   sourceSession?: SessionContext;
@@ -159,12 +161,18 @@ export function createMockAssignedAction(
 ): AssignedActionWithContext {
   const action = createMockAction(options);
 
-  const relationship: RelationshipContext = {
-    coachingRelationshipId: options.relationshipId,
-    coachId: options.coachId ?? TEST_USER_IDS.COACH,
-    coacheeId: options.coacheeId ?? TEST_USER_IDS.COACHEE,
-    coachName: options.coachName ?? "Coach Name",
-    coacheeName: options.coacheeName ?? "Coachee Name",
+  const now = DateTime.now();
+  const relationship: CoachingRelationshipWithUserNames = {
+    id: options.relationshipId,
+    coach_id: options.coachId ?? TEST_USER_IDS.COACH,
+    coachee_id: options.coacheeId ?? TEST_USER_IDS.COACHEE,
+    organization_id: "org-test",
+    created_at: now,
+    updated_at: now,
+    coach_first_name: options.coachFirstName ?? "Coach",
+    coach_last_name: options.coachLastName ?? "Name",
+    coachee_first_name: options.coacheeFirstName ?? "Coachee",
+    coachee_last_name: options.coacheeLastName ?? "Name",
   };
 
   const goal: GoalContext = {
@@ -265,7 +273,7 @@ export function countActionsDueBySession(
   sessionDate: DateTime
 ): number {
   return assignedActions.filter((a) => {
-    if (a.relationship.coachingRelationshipId !== sessionRelationshipId) {
+    if (a.relationship.id !== sessionRelationshipId) {
       return false;
     }
     return a.action.due_by <= sessionDate;
