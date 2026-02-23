@@ -1,6 +1,9 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { UserActionsApi } from "@/lib/api/user-actions";
-import { UserActionsScope } from "@/types/assigned-actions";
+import {
+  UserActionsAssigneeFilter,
+  UserActionsScope,
+} from "@/types/assigned-actions";
 import type { Action } from "@/types/action";
 
 export interface CoacheeActionsFetchResult {
@@ -20,7 +23,9 @@ export interface CoacheeActionsFetchResult {
 export function useCoacheeActionsFetch(
   coacheeIds: string[],
   enabled: boolean,
-  coachingRelationshipId?: string
+  coachingRelationshipId?: string,
+  scope: UserActionsScope = UserActionsScope.Assigned,
+  assigneeFilter?: UserActionsAssigneeFilter
 ): CoacheeActionsFetchResult {
   const [actions, setActions] = useState<Action[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
@@ -43,8 +48,9 @@ export function useCoacheeActionsFetch(
     Promise.all(
       coacheeIds.map((id) =>
         UserActionsApi.list(id, {
-          scope: UserActionsScope.Assigned,
+          scope,
           coaching_relationship_id: coachingRelationshipId,
+          assignee_filter: assigneeFilter,
         })
       )
     )
@@ -59,7 +65,7 @@ export function useCoacheeActionsFetch(
     // coacheeIds is intentionally omitted — coacheeIdsKey is the stable string proxy
     // that prevents infinite re-renders from unstable array identity
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, coacheeIdsKey, coachingRelationshipId, refreshKey]);
+  }, [enabled, coacheeIdsKey, coachingRelationshipId, scope, assigneeFilter, refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 

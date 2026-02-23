@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useActionsFetch } from "@/lib/hooks/use-actions-fetch";
 import { useSessionContextFetch } from "@/lib/hooks/use-session-context-fetch";
-import { CoachViewMode } from "@/types/assigned-actions";
+import { AssignmentFilter, CoachViewMode } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
 import { addContextToActions } from "@/lib/utils/assigned-actions";
@@ -16,10 +16,12 @@ import { addContextToActions } from "@/lib/utils/assigned-actions";
  *
  * @param viewMode - Whether to show the user's own actions or their coachees' actions
  * @param relationshipId - Optional filter to a specific coaching relationship (server-side)
+ * @param assignmentFilter - Filter by assignment status (assigned/unassigned/all)
  */
 export function useAllActionsWithContext(
   viewMode: CoachViewMode,
-  relationshipId?: Id
+  relationshipId?: Id,
+  assignmentFilter: AssignmentFilter = AssignmentFilter.Assigned
 ) {
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -31,7 +33,7 @@ export function useAllActionsWithContext(
     isLoading: actionsLoading,
     isError: actionsError,
     refresh,
-  } = useActionsFetch(viewMode, relationshipId);
+  } = useActionsFetch(viewMode, relationshipId, assignmentFilter);
 
   const {
     lookupMaps,

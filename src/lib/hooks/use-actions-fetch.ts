@@ -5,7 +5,9 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoacheeActionsFetch } from "@/lib/hooks/use-coachee-actions-fetch";
 import {
+  AssignmentFilter,
   CoachViewMode,
+  UserActionsAssigneeFilter,
   UserActionsScope,
 } from "@/types/assigned-actions";
 import type { Action } from "@/types/action";
@@ -13,17 +15,47 @@ import type { Id } from "@/types/general";
 import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
 
 /**
- * Fetches actions based on the current view mode.
+ * Maps a UI-level AssignmentFilter to the API params (scope + assignee_filter).
  *
- * In "My Actions" mode, fetches actions assigned to the current user.
+ * - Assigned: scope=assigned (backend handles filtering to assigned user)
+ * - Unassigned: scope=sessions + assignee_filter=unassigned
+ * - All: scope=sessions (returns both assigned and unassigned)
+ */
+export function assignmentFilterToApiParams(filter: AssignmentFilter): {
+  scope: UserActionsScope;
+  assigneeFilter?: UserActionsAssigneeFilter;
+} {
+  switch (filter) {
+    case AssignmentFilter.Assigned:
+      return { scope: UserActionsScope.Assigned };
+    case AssignmentFilter.Unassigned:
+      return {
+        scope: UserActionsScope.Sessions,
+        assigneeFilter: UserActionsAssigneeFilter.Unassigned,
+      };
+    case AssignmentFilter.All:
+      return { scope: UserActionsScope.Sessions };
+    default: {
+      const _exhaustive: never = filter;
+      throw new Error(`Unhandled assignment filter: ${_exhaustive}`);
+    }
+  }
+}
+
+/**
+ * Fetches actions based on the current view mode and assignment filter.
+ *
+ * In "My Actions" mode, fetches actions for the current user.
  * In "Coachee Actions" mode, fetches actions for all coachees in parallel.
  *
  * @param viewMode - Whether to show the user's own actions or their coachees' actions
  * @param relationshipId - Optional server-side filter to a specific coaching relationship
+ * @param assignmentFilter - Filter by assignment status (assigned/unassigned/all)
  */
 export function useActionsFetch(
   viewMode: CoachViewMode,
-  relationshipId?: Id
+  relationshipId?: Id,
+  assignmentFilter: AssignmentFilter = AssignmentFilter.Assigned
 ) {
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -32,6 +64,7 @@ export function useActionsFetch(
   const { currentOrganizationId } = useCurrentOrganization();
 
   const isCoacheeMode = viewMode === CoachViewMode.CoacheeActions;
+  const { scope, assigneeFilter } = assignmentFilterToApiParams(assignmentFilter);
 
   // --- My Actions path ---
 
@@ -43,8 +76,9 @@ export function useActionsFetch(
   } = useUserActionsList(
     !isCoacheeMode ? userId : null,
     {
-      scope: UserActionsScope.Assigned,
+      scope,
       coaching_relationship_id: relationshipId,
+      assignee_filter: assigneeFilter,
     }
   );
 
@@ -67,7 +101,7 @@ export function useActionsFetch(
     isLoading: coacheeActionsLoading,
     isError: coacheeActionsError,
     refresh: refreshCoacheeActions,
-  } = useCoacheeActionsFetch(coacheeIds, isCoacheeMode, relationshipId);
+  } = useCoacheeActionsFetch(coacheeIds, isCoacheeMode, relationshipId, scope, assigneeFilter);
 
   // --- Combine based on mode ---
 

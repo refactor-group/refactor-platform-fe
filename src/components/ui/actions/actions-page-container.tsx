@@ -11,6 +11,7 @@ import { isUserCoachInRelationship, isUserCoacheeInRelationship, sortRelationshi
 import { useActionMutation } from "@/lib/api/actions";
 import { useAllActionsWithContext } from "@/lib/hooks/use-all-actions-with-context";
 import {
+  AssignmentFilter,
   CoachViewMode,
   StatusVisibility,
   TimeRange,
@@ -26,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const DEFAULT_STATUS = StatusVisibility.Open;
 const DEFAULT_RANGE = TimeRange.Last30Days;
 const DEFAULT_VIEW = CoachViewMode.MyActions;
+const DEFAULT_ASSIGNMENT = AssignmentFilter.Assigned;
 
 /** Validates a URL param against an enum's values, returning the fallback if invalid. */
 function parseEnum<T extends string>(
@@ -75,6 +77,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
       if (next.get("status") === DEFAULT_STATUS) next.delete("status");
       if (next.get("range") === DEFAULT_RANGE) next.delete("range");
       if (next.get("view") === DEFAULT_VIEW) next.delete("view");
+      if (next.get("assignment") === DEFAULT_ASSIGNMENT) next.delete("assignment");
 
       const qs = next.toString();
       const url = qs
@@ -97,6 +100,9 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   );
   const [timeRange, setTimeRange] = useState(() =>
     parseEnum(TimeRange, searchParams.get("range"), DEFAULT_RANGE)
+  );
+  const [assignmentFilter, setAssignmentFilter] = useState(() =>
+    parseEnum(AssignmentFilter, searchParams.get("assignment"), DEFAULT_ASSIGNMENT)
   );
   const [relationshipId, setRelationshipId] = useState<Id | undefined>(
     () => searchParams.get("rel") ?? undefined
@@ -127,6 +133,14 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
     [updateQueryParams]
   );
 
+  const handleAssignmentFilterChange = useCallback(
+    (filter: AssignmentFilter) => {
+      setAssignmentFilter(filter);
+      updateQueryParams({ assignment: filter });
+    },
+    [updateQueryParams]
+  );
+
   const handleRelationshipChange = useCallback(
     (id: Id | undefined) => {
       setRelationshipId(id);
@@ -140,7 +154,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // ---------------------------------------------------------------------------
 
   const { actionsWithContext, isLoading, isError, refresh } =
-    useAllActionsWithContext(viewMode, relationshipId);
+    useAllActionsWithContext(viewMode, relationshipId, assignmentFilter);
 
   const { relationships } = useCoachingRelationshipList(
     currentOrganizationId
@@ -193,7 +207,8 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
           status: newStatus,
           status_changed_at: DateTime.now(),
         });
-        refresh();
+        // No explicit refresh() — the optimistic update already moved the card
+        // visually, and SWR will revalidate on its own schedule.
       } catch (err) {
         if (err instanceof EntityApiError && err.isNetworkError()) {
           toast.error("Failed to update status. Connection to service was lost.");
@@ -301,6 +316,8 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         onStatusVisibilityChange={handleStatusVisibilityChange}
         timeRange={timeRange}
         onTimeRangeChange={handleTimeRangeChange}
+        assignmentFilter={assignmentFilter}
+        onAssignmentFilterChange={handleAssignmentFilterChange}
         relationshipId={relationshipId}
         onRelationshipChange={handleRelationshipChange}
         relationships={relationshipOptions}

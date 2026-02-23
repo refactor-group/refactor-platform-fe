@@ -37,6 +37,16 @@ export enum UserActionsAssigneeFilter {
   Unassigned = "unassigned",
 }
 
+/**
+ * UI-level filter for assignment status on the actions page.
+ * Maps to different combinations of scope + assignee_filter API params.
+ */
+export enum AssignmentFilter {
+  Assigned = "assigned",
+  Unassigned = "unassigned",
+  All = "all",
+}
+
 // ============================================================================
 // UI Filter Types
 // ============================================================================
