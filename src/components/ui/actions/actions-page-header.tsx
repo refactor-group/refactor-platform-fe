@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ListFilter } from "lucide-react";
+import { ListFilter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   CoachViewMode,
   StatusVisibility,
@@ -50,6 +51,9 @@ export function ActionsPageHeader({
   relationships,
 }: ActionsPageHeaderProps) {
   const [filterOpen, setFilterOpen] = useState(false);
+  const selectedRelationshipLabel = relationshipId
+    ? relationships.find((r) => r.id === relationshipId)?.label
+    : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -175,6 +179,20 @@ export function ActionsPageHeader({
             </div>
           </PopoverContent>
         </Popover>
+
+        {selectedRelationshipLabel && (
+          <Badge variant="secondary" className="gap-1 text-xs h-7 pl-2.5 pr-1.5">
+            {selectedRelationshipLabel}
+            <button
+              type="button"
+              aria-label="Clear relationship filter"
+              onClick={() => onRelationshipChange(undefined)}
+              className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        )}
       </div>
     </div>
   );

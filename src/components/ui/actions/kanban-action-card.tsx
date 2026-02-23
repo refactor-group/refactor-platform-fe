@@ -93,9 +93,9 @@ export function KanbanActionCard({
         action={ctx.action}
         locale={locale}
         coachId={ctx.relationship.coach_id}
-        coachName={coachLabel}
+        coachName={getCoachName(ctx.relationship)}
         coacheeId={ctx.relationship.coachee_id}
-        coacheeName={coacheeLabel}
+        coacheeName={getCoacheeName(ctx.relationship)}
         onStatusChange={onStatusChange}
         onDueDateChange={onDueDateChange}
         onAssigneesChange={onAssigneesChange}
