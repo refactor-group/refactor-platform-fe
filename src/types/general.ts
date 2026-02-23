@@ -6,6 +6,12 @@ export { EntityApiError } from "./entity-api-error";
 // A type alias for each entity's Id field
 export type Id = string;
 
+/** A generic id + label pair for use in select/dropdown components */
+export interface SelectOption {
+  id: Id;
+  label: string;
+}
+
 
 export enum ItemStatus {
   NotStarted = "NotStarted",
