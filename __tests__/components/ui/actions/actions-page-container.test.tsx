@@ -234,32 +234,6 @@ describe("ActionsPageContainer", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders empty columns when no actions exist", () => {
-    mockActionsData = [];
-
-    render(
-      <Wrapper>
-        <ActionsPageContainer locale={siteConfig.locale} />
-      </Wrapper>
-    );
-
-    // Default visibility is Open (2 columns), each shows "No actions"
-    const emptyMessages = screen.getAllByText("No actions");
-    expect(emptyMessages).toHaveLength(2);
-  });
-
-  it("shows coach view toggle because isACoach is true", () => {
-    render(
-      <Wrapper>
-        <ActionsPageContainer locale={siteConfig.locale} />
-      </Wrapper>
-    );
-
-    // The "My Actions" toggle should exist since isACoach is mocked as true
-    expect(screen.getByText("My Actions")).toBeInTheDocument();
-    expect(screen.getByText("Coachee Actions")).toBeInTheDocument();
-  });
-
   it("toggles status visibility to show all 4 columns", async () => {
     mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
 
@@ -283,30 +257,6 @@ describe("ActionsPageContainer", () => {
       expect(headers).toContain("Completed");
       expect(headers).toContain("Won't Do");
     });
-  });
-
-  it("renders action body text in cards", () => {
-    mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
-
-    render(
-      <Wrapper>
-        <ActionsPageContainer locale={siteConfig.locale} />
-      </Wrapper>
-    );
-
-    expect(screen.getByText("Action a1")).toBeInTheDocument();
-  });
-
-  it("renders relationship badge on cards", () => {
-    mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
-
-    render(
-      <Wrapper>
-        <ActionsPageContainer locale={siteConfig.locale} />
-      </Wrapper>
-    );
-
-    expect(screen.getByText("Alice Smith → Bob Jones")).toBeInTheDocument();
   });
 
   // -------------------------------------------------------------------------

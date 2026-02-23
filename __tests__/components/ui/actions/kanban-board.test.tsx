@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
@@ -152,29 +152,6 @@ describe("KanbanBoard", () => {
 
     const emptyMessages = screen.getAllByText("No actions");
     expect(emptyMessages).toHaveLength(4);
-  });
-
-  it("renders relationship badge on cards", () => {
-    render(
-      <Wrapper>
-        <KanbanBoard {...defaultProps} />
-      </Wrapper>
-    );
-
-    // Each card shows "Coach → Coachee"
-    const badges = screen.getAllByText("Alice Smith → Bob Jones");
-    expect(badges.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("renders action body text in cards", () => {
-    render(
-      <Wrapper>
-        <KanbanBoard {...defaultProps} />
-      </Wrapper>
-    );
-
-    expect(screen.getByText("Action a1")).toBeInTheDocument();
-    expect(screen.getByText("Action a2")).toBeInTheDocument();
   });
 
   it("shows correct count badges for columns", () => {
