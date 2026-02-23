@@ -39,7 +39,7 @@ export function DashboardContainer() {
       </div>
 
       <div className="w-[70%] min-w-[320px]">
-        <h2 className="text-lg font-semibold pb-3">Coaching Sessions</h2>
+        <h2 className="text-lg font-semibold pb-6">Coaching Sessions</h2>
         <CoachingSessionList onUpdateSession={handleOpenDialog} onSessionDeleted={() => refreshTodaysSessions?.()} />
       </div>
       <CoachingSessionDialog
