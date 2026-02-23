@@ -104,17 +104,21 @@ export function resolveUserNameInRelationship(
 export function buildRelationshipWithUserNames(
   session: EnrichedCoachingSession
 ): CoachingRelationshipWithUserNames {
-  const coach = session.coach;
-  const coachee = session.coachee;
-  const relationship = session.relationship;
+  const { coach, coachee, relationship } = session;
+
+  if (!relationship) {
+    throw new Error(
+      "buildRelationshipWithUserNames: session.relationship is required"
+    );
+  }
 
   return {
-    id: relationship?.id ?? "",
-    coach_id: relationship?.coach_id ?? "",
-    coachee_id: relationship?.coachee_id ?? "",
-    organization_id: relationship?.organization_id ?? "",
-    created_at: relationship?.created_at ?? DateTime.now(),
-    updated_at: relationship?.updated_at ?? DateTime.now(),
+    id: relationship.id,
+    coach_id: relationship.coach_id,
+    coachee_id: relationship.coachee_id,
+    organization_id: relationship.organization_id,
+    created_at: relationship.created_at,
+    updated_at: relationship.updated_at,
     coach_first_name: coach?.first_name ?? "Unknown",
     coach_last_name: coach?.last_name ?? "",
     coachee_first_name: coachee?.first_name ?? "Unknown",

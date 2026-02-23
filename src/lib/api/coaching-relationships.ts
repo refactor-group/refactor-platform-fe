@@ -126,6 +126,8 @@ export const useCoachingRelationshipList = (organizationId: Id | null) => {
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<CoachingRelationshipWithUserNames>(
       `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
+      // Safe: SWR null-key pattern — organizationId is passed as the conditional
+      // key below, so the fetcher only runs when organizationId is non-null.
       () => CoachingRelationshipApi.list(organizationId!),
       organizationId
     );

@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useCallback } from "react";
+import { EntityApi } from "@/lib/api/entity-api";
 import { UserActionsApi } from "@/lib/api/user-actions";
 import {
   UserActionsAssigneeFilter,
@@ -17,8 +18,10 @@ export interface CoacheeActionsFetchResult {
  * Fetches actions for multiple coachees in parallel.
  * Returns a flattened array of all coachee actions.
  *
- * Uses a stable string key derived from coacheeIds to avoid infinite
- * re-render loops from unstable array identity changes.
+ * Uses EntityApi.useEntityList with a synthetic key and composite params
+ * for SWR-managed caching, auto-revalidation, and request deduplication.
+ * A stable string key derived from coacheeIds avoids infinite re-render
+ * loops from unstable array identity changes.
  */
 export function useCoacheeActionsFetch(
   coacheeIds: string[],
@@ -27,25 +30,19 @@ export function useCoacheeActionsFetch(
   scope: UserActionsScope = UserActionsScope.Assigned,
   assigneeFilter?: UserActionsAssigneeFilter
 ): CoacheeActionsFetchResult {
-  const [actions, setActions] = useState<Action[]>([]);
-  const [isLoading, setIsLoading] = useState(enabled);
-  const [isError, setIsError] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
   // Stable key to avoid refetching when array reference changes
   const coacheeIdsKey = useMemo(() => coacheeIds.join(","), [coacheeIds]);
 
-  useEffect(() => {
-    if (!enabled || coacheeIds.length === 0) {
-      setActions([]);
-      setIsLoading(false);
-      return;
-    }
+  // EntityApi.useEntityList disables fetching when params is falsy (null).
+  // When enabled, the composite params object acts as the SWR cache key —
+  // any filter change invalidates the cache and triggers a fresh fetch.
+  const params =
+    enabled && coacheeIds.length > 0
+      ? { coacheeIdsKey, scope, assigneeFilter, coachingRelationshipId }
+      : null;
 
-    setIsLoading(true);
-    setIsError(false);
-
-    Promise.all(
+  const fetcher = useCallback(async (): Promise<Action[]> => {
+    const results = await Promise.all(
       coacheeIds.map((id) =>
         UserActionsApi.list(id, {
           scope,
@@ -53,21 +50,17 @@ export function useCoacheeActionsFetch(
           assignee_filter: assigneeFilter,
         })
       )
-    )
-      .then((results) => {
-        setActions(results.flat());
-        setIsLoading(false);
-      })
-      .catch(() => {
-        setIsError(true);
-        setIsLoading(false);
-      });
-    // coacheeIds is intentionally omitted — coacheeIdsKey is the stable string proxy
-    // that prevents infinite re-renders from unstable array identity
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, coacheeIdsKey, coachingRelationshipId, scope, assigneeFilter, refreshKey]);
+    );
+    return results.flat();
+  }, [coacheeIds, scope, coachingRelationshipId, assigneeFilter]);
 
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<Action>("coachee-actions", fetcher, params);
 
-  return { actions, isLoading, isError, refresh };
+  return {
+    actions: entities,
+    isLoading,
+    isError: !!isError,
+    refresh: useCallback(() => { refresh(); }, [refresh]),
+  };
 }

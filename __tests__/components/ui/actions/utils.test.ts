@@ -8,15 +8,14 @@ import {
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import {
   STATUS_COLUMN_ORDER,
-  statusLabel,
   statusColor,
   groupByStatus,
   applyTimeFilter,
-  filterByRelationship,
   visibleStatuses,
   buildInitialOrder,
   sortGroupedByInitialOrder,
 } from "@/components/ui/actions/utils";
+import { actionStatusToString } from "@/types/general";
 
 // ---------------------------------------------------------------------------
 // Test data factory
@@ -71,15 +70,15 @@ function makeAction(
 }
 
 // ---------------------------------------------------------------------------
-// statusLabel
+// actionStatusToString
 // ---------------------------------------------------------------------------
 
-describe("statusLabel", () => {
+describe("actionStatusToString", () => {
   it("returns correct label for each status", () => {
-    expect(statusLabel(ItemStatus.NotStarted)).toBe("Not Started");
-    expect(statusLabel(ItemStatus.InProgress)).toBe("In Progress");
-    expect(statusLabel(ItemStatus.Completed)).toBe("Completed");
-    expect(statusLabel(ItemStatus.WontDo)).toBe("Won't Do");
+    expect(actionStatusToString(ItemStatus.NotStarted)).toBe("Not Started");
+    expect(actionStatusToString(ItemStatus.InProgress)).toBe("In Progress");
+    expect(actionStatusToString(ItemStatus.Completed)).toBe("Completed");
+    expect(actionStatusToString(ItemStatus.WontDo)).toBe("Won't Do");
   });
 });
 
@@ -228,39 +227,6 @@ describe("applyTimeFilter", () => {
 
   it("returns empty array for empty input", () => {
     const result = applyTimeFilter([], TimeRange.Last30Days);
-    expect(result).toEqual([]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// filterByRelationship
-// ---------------------------------------------------------------------------
-
-describe("filterByRelationship", () => {
-  const actions = [
-    makeAction({ id: "a1", relationshipId: "rel-1" }),
-    makeAction({ id: "a2", relationshipId: "rel-2" }),
-    makeAction({ id: "a3", relationshipId: "rel-1" }),
-  ];
-
-  it("returns all actions when relationshipId is undefined", () => {
-    const result = filterByRelationship(actions, undefined);
-    expect(result).toHaveLength(3);
-  });
-
-  it("filters to only matching relationship", () => {
-    const result = filterByRelationship(actions, "rel-1");
-    expect(result).toHaveLength(2);
-    expect(result.every((a) => a.relationship.id === "rel-1")).toBe(true);
-  });
-
-  it("returns empty array for non-existent relationship", () => {
-    const result = filterByRelationship(actions, "rel-nonexistent");
-    expect(result).toHaveLength(0);
-  });
-
-  it("returns empty array for empty input", () => {
-    const result = filterByRelationship([], "rel-1");
     expect(result).toEqual([]);
   });
 });

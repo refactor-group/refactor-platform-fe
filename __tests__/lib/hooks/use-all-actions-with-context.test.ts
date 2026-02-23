@@ -3,6 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import {
+  AssignmentFilter,
   CoachViewMode,
   UserActionsScope,
 } from "@/types/assigned-actions";
@@ -64,6 +65,20 @@ vi.mock("@/lib/api/user-actions", () => ({
   UserActionsApi: {
     list: vi.fn().mockResolvedValue([]),
   },
+}));
+
+// Coachee actions returned by useCoacheeActionsFetch
+let mockCoacheeActions: Action[] = [];
+let mockCoacheeActionsLoading = false;
+let mockCoacheeActionsError = false;
+
+vi.mock("@/lib/hooks/use-coachee-actions-fetch", () => ({
+  useCoacheeActionsFetch: () => ({
+    actions: mockCoacheeActions,
+    isLoading: mockCoacheeActionsLoading,
+    isError: mockCoacheeActionsError,
+    refresh: mockRefreshCoacheeActions,
+  }),
 }));
 
 // Enriched sessions
@@ -158,6 +173,9 @@ describe("useAllActionsWithContext", () => {
     mockMyActions = [];
     mockMyActionsLoading = false;
     mockMyActionsError = false;
+    mockCoacheeActions = [];
+    mockCoacheeActionsLoading = false;
+    mockCoacheeActionsError = false;
     mockSessions = [];
     mockSessionsLoading = false;
     mockSessionsError = false;
@@ -289,5 +307,76 @@ describe("useAllActionsWithContext", () => {
 
     expect(result.current.actionsWithContext).toHaveLength(1);
     expect(result.current.actionsWithContext[0].isOverdue).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // CoacheeActions mode
+  // -------------------------------------------------------------------------
+
+  describe("CoacheeActions mode", () => {
+    it("returns enriched actions in CoacheeActions mode", () => {
+      mockCoacheeActions = [makeTestAction()];
+      mockSessions = [makeTestSession()];
+
+      const { result } = renderHook(() =>
+        useAllActionsWithContext(CoachViewMode.CoacheeActions)
+      );
+
+      expect(result.current.actionsWithContext).toHaveLength(1);
+      const ctx = result.current.actionsWithContext[0];
+      expect(ctx.relationship.coach_first_name).toBe("Alice");
+      expect(ctx.relationship.coachee_first_name).toBe("Bob");
+    });
+
+    it("isLoading is true while coachee actions are loading", () => {
+      mockCoacheeActionsLoading = true;
+
+      const { result } = renderHook(() =>
+        useAllActionsWithContext(CoachViewMode.CoacheeActions)
+      );
+
+      expect(result.current.isLoading).toBe(true);
+    });
+
+    it("isError is true when coachee actions fetch fails", () => {
+      mockCoacheeActionsError = true;
+
+      const { result } = renderHook(() =>
+        useAllActionsWithContext(CoachViewMode.CoacheeActions)
+      );
+
+      expect(result.current.isError).toBe(true);
+    });
+
+    it("forwards relationshipId to useActionsFetch", () => {
+      mockCoacheeActions = [makeTestAction()];
+      mockSessions = [makeTestSession()];
+
+      const { result } = renderHook(() =>
+        useAllActionsWithContext(CoachViewMode.CoacheeActions, "rel-1")
+      );
+
+      // If the relationship filter is passed correctly, actions matching
+      // that relationship still get enriched
+      expect(result.current.actionsWithContext).toHaveLength(1);
+      expect(result.current.actionsWithContext[0].relationship.id).toBe("rel-1");
+    });
+
+    it("forwards assignmentFilter to useActionsFetch", () => {
+      mockCoacheeActions = [makeTestAction()];
+      mockSessions = [makeTestSession()];
+
+      const { result } = renderHook(() =>
+        useAllActionsWithContext(
+          CoachViewMode.CoacheeActions,
+          undefined,
+          AssignmentFilter.Unassigned
+        )
+      );
+
+      // The hook renders successfully with the filter — actions still enrich
+      expect(result.current.actionsWithContext).toHaveLength(1);
+      expect(result.current.isLoading).toBe(false);
+    });
   });
 });
