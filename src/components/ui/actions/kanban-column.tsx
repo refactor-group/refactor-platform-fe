@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/components/lib/utils";
 import { statusLabel, statusColor } from "@/components/ui/actions/utils";
@@ -17,7 +18,7 @@ interface KanbanColumnProps {
   justMovedId?: string;
 }
 
-export function KanbanColumn({
+export const KanbanColumn = memo(function KanbanColumn({
   status,
   actions,
   cardProps,
@@ -64,4 +65,4 @@ export function KanbanColumn({
       </div>
     </div>
   );
-}
+});
