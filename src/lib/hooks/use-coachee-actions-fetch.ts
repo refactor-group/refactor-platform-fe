@@ -19,7 +19,8 @@ export interface CoacheeActionsFetchResult {
  */
 export function useCoacheeActionsFetch(
   coacheeIds: string[],
-  enabled: boolean
+  enabled: boolean,
+  coachingRelationshipId?: string
 ): CoacheeActionsFetchResult {
   const [actions, setActions] = useState<Action[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
@@ -41,7 +42,10 @@ export function useCoacheeActionsFetch(
 
     Promise.all(
       coacheeIds.map((id) =>
-        UserActionsApi.list(id, { scope: UserActionsScope.Assigned })
+        UserActionsApi.list(id, {
+          scope: UserActionsScope.Assigned,
+          coaching_relationship_id: coachingRelationshipId,
+        })
       )
     )
       .then((results) => {
@@ -55,7 +59,7 @@ export function useCoacheeActionsFetch(
     // coacheeIds is intentionally omitted — coacheeIdsKey is the stable string proxy
     // that prevents infinite re-renders from unstable array identity
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, coacheeIdsKey, refreshKey]);
+  }, [enabled, coacheeIdsKey, coachingRelationshipId, refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 

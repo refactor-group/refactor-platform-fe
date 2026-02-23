@@ -14,6 +14,7 @@ import {
   UserActionsScope,
 } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import type { Id } from "@/types/general";
 import {
   buildSessionLookupMaps,
   addContextToActions,
@@ -32,8 +33,12 @@ import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
  * and applies its own client-side filters.
  *
  * @param viewMode - Whether to show the user's own actions or their coachees' actions
+ * @param relationshipId - Optional filter to a specific coaching relationship (server-side)
  */
-export function useAllActionsWithContext(viewMode: CoachViewMode) {
+export function useAllActionsWithContext(
+  viewMode: CoachViewMode,
+  relationshipId?: Id
+) {
   // ---------------------------------------------------------------------------
   // Step 1: Get current user + org context
   // ---------------------------------------------------------------------------
@@ -57,7 +62,10 @@ export function useAllActionsWithContext(viewMode: CoachViewMode) {
     refresh: refreshMyActions,
   } = useUserActionsList(
     !isCoacheeMode ? userId : null,
-    { scope: UserActionsScope.Assigned }
+    {
+      scope: UserActionsScope.Assigned,
+      coaching_relationship_id: relationshipId,
+    }
   );
 
   // ---------------------------------------------------------------------------
@@ -81,7 +89,7 @@ export function useAllActionsWithContext(viewMode: CoachViewMode) {
     isLoading: coacheeActionsLoading,
     isError: coacheeActionsError,
     refresh: refreshCoacheeActions,
-  } = useCoacheeActionsFetch(coacheeIds, isCoacheeMode);
+  } = useCoacheeActionsFetch(coacheeIds, isCoacheeMode, relationshipId);
 
   // ---------------------------------------------------------------------------
   // Step 3: Fetch enriched sessions for context
