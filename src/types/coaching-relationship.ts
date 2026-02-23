@@ -134,6 +134,26 @@ export function isUserCoachee(
 }
 
 /**
+ * Checks if a user is the coach in a single relationship
+ */
+export function isUserCoachInRelationship(
+  userId: Id,
+  relationship: CoachingRelationshipWithUserNames
+): boolean {
+  return relationship.coach_id === userId;
+}
+
+/**
+ * Checks if a user is the coachee in a single relationship
+ */
+export function isUserCoacheeInRelationship(
+  userId: Id,
+  relationship: CoachingRelationshipWithUserNames
+): boolean {
+  return relationship.coachee_id === userId;
+}
+
+/**
  * Returns all relationships where the user is the coach
  */
 export function getRelationshipsAsCoach(
