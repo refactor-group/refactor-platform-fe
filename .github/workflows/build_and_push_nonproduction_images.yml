@@ -102,17 +102,13 @@ jobs:
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public 2>/dev/null || true
 
-      - name: Debug standalone server
-        run: |
-          echo "=== Checking standalone directory ==="
-          ls -la .next/standalone/
-          ls -la .next/standalone/.next/static/ | head -5
-          echo "=== Trying to start server (5s timeout) ==="
-          timeout 5 node .next/standalone/server.js 2>&1 || true
-          echo "=== Done ==="
-
       - name: Run E2E tests
         run: npm run test:e2e
+        env:
+          # The standalone server uses HOSTNAME (defaults to container ID
+          # inside Docker). Override to 0.0.0.0 so Playwright can reach
+          # it at http://localhost:3000.
+          HOSTNAME: 0.0.0.0
 
   # === DOCKER BUILD & PUSH JOB ===
   docker:
