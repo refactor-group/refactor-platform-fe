@@ -15,9 +15,8 @@ import {
   StatusVisibility,
   TimeRange,
 } from "@/types/assigned-actions";
-import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
-import { applyTimeFilter, filterByRelationship } from "@/components/ui/actions/utils";
+import { applyTimeFilter } from "@/components/ui/actions/utils";
 import { ActionsPageHeader } from "@/components/ui/actions/actions-page-header";
 import { KanbanBoard } from "@/components/ui/actions/kanban-board";
 import { EntityApiError } from "@/lib/api/entity-api";
@@ -141,7 +140,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // ---------------------------------------------------------------------------
 
   const { actionsWithContext, isLoading, isError, refresh } =
-    useAllActionsWithContext(viewMode);
+    useAllActionsWithContext(viewMode, relationshipId);
 
   const { relationships } = useCoachingRelationshipList(
     currentOrganizationId
@@ -172,12 +171,10 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // Client-side filters
   // ---------------------------------------------------------------------------
 
-  const filteredActions = useMemo(() => {
-    let result: AssignedActionWithContext[] = actionsWithContext;
-    result = applyTimeFilter(result, timeRange);
-    result = filterByRelationship(result, relationshipId);
-    return result;
-  }, [actionsWithContext, timeRange, relationshipId]);
+  const filteredActions = useMemo(
+    () => applyTimeFilter(actionsWithContext, timeRange),
+    [actionsWithContext, timeRange]
+  );
 
   // ---------------------------------------------------------------------------
   // Mutations
