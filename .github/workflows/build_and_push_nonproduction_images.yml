@@ -99,7 +99,6 @@ jobs:
     name: Build & Push Docker Image
     runs-on: ubuntu-24.04
     needs: [lint, test]  # Only run if lint and test pass
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
     permissions:
       contents: read
       packages: write
