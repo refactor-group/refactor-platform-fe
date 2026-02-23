@@ -1,14 +1,13 @@
 /**
- * Tests for What's Due Component Filtering and Overdue Calculation
+ * Tests for Action Filtering and Overdue Calculation
  *
- * These tests verify the logic used in the What's Due dashboard component for:
+ * These tests verify the logic used by the assigned-actions pipeline for:
  * 1. Determining if an action is overdue (comparing due_by to today)
  * 2. Filtering actions by status (DueSoon, AllIncomplete, AllUnassigned)
  * 3. Filtering actions by assignment (assigned to user vs unassigned)
  *
- * The What's Due component is critical for helping users prioritize their work.
- * Incorrect overdue calculations or filtering could cause users to miss deadlines
- * or waste time on incorrect priorities.
+ * The action filtering pipeline is used by useAssignedActions which powers
+ * the dashboard action summaries on session cards and the Actions page.
  *
  * CRITICAL: The isOverdue calculation uses date-only comparison (startOf("day"))
  * to avoid marking items due later today as overdue. This is different from the
@@ -33,7 +32,7 @@ import { filterActionsByStatus } from "@/lib/hooks/use-assigned-actions";
 import { AssignedActionsFilter } from "@/types/assigned-actions";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 
-describe("What's Due Filtering", () => {
+describe("Action Filtering", () => {
   /**
    * =========================================================================
    * OVERDUE CALCULATION TESTS
