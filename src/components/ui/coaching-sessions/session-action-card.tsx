@@ -56,6 +56,8 @@ interface SessionActionCardProps {
   sessionDate?: DateTime;
   /** Additional class names for the outer Card element */
   className?: string;
+  /** When true, skip expensive rendering (ReactMarkdown) for drag overlays */
+  lightweight?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -170,9 +172,10 @@ interface ActionBodyProps {
   isCompleted: boolean;
   isCurrent: boolean;
   onBodyChange: (newBody: string) => void;
+  lightweight?: boolean;
 }
 
-function ActionBody({ body, isCompleted, isCurrent, onBodyChange }: ActionBodyProps) {
+function ActionBody({ body, isCompleted, isCurrent, onBodyChange, lightweight = false }: ActionBodyProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(body ?? "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -220,6 +223,15 @@ function ActionBody({ body, isCompleted, isCurrent, onBodyChange }: ActionBodyPr
           }}
           className="h-full w-full resize-none rounded-lg bg-muted/50 px-3 py-2 text-sm leading-relaxed border border-black/15 outline-none ring-0 focus:border-black/15 focus:outline-none focus:ring-0"
         />
+      ) : lightweight ? (
+        <div
+          className={cn(
+            "text-sm leading-relaxed rounded-lg bg-muted/50 px-3 py-2",
+            isCompleted && "line-through"
+          )}
+        >
+          <p className="line-clamp-3">{body || "No description"}</p>
+        </div>
       ) : (
         <div
           className={cn(
@@ -333,6 +345,7 @@ const SessionActionCard = ({
   showSessionLink = false,
   sessionDate,
   className: cardClassName,
+  lightweight = false,
 }: SessionActionCardProps) => {
   const now = DateTime.now();
   const isCompleted =
@@ -394,6 +407,7 @@ const SessionActionCard = ({
           isCompleted={isCompleted}
           isCurrent={isCurrent}
           onBodyChange={(newBody) => onBodyChange(action.id, newBody)}
+          lightweight={lightweight}
         />
 
         <ActionFooter

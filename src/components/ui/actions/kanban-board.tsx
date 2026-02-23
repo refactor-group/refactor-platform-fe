@@ -6,6 +6,8 @@ import {
   DragOverlay,
   PointerSensor,
   KeyboardSensor,
+  MeasuringStrategy,
+  closestCorners,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -20,6 +22,17 @@ import type { DateTime } from "ts-luxon";
 
 /** Position value that sorts before all natural positions (0, 1, 2…) */
 const TOP_OF_COLUMN_POSITION = -1;
+
+/**
+ * Measure droppable rects BEFORE dragging (while idle) and cache them.
+ * The default `WhileDragging` strategy forces synchronous layout reflows
+ * via getBoundingClientRect() at drag-start and on every column crossing,
+ * which blocks the main thread proportionally to the total DOM node count.
+ * Columns don't resize during drag, so pre-measured positions stay accurate.
+ */
+const measuringConfig = {
+  droppable: { strategy: MeasuringStrategy.BeforeDragging },
+};
 
 interface KanbanBoardProps {
   actions: AssignedActionWithContext[];
@@ -43,9 +56,10 @@ export function KanbanBoard({
   onDelete,
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | undefined>();
-  const [activeWidth, setActiveWidth] = useState<number | undefined>();
   const [justMovedId, setJustMovedId] = useState<string | undefined>();
   const justMovedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  /** Pre-cached card width so we never force a synchronous layout reflow at drag-start */
+  const cachedCardWidth = useRef<number | undefined>(undefined);
 
   const { actionsWithOverrides, applyOverride, rollbackOverride } =
     useOptimisticStatus(actions);
@@ -57,8 +71,14 @@ export function KanbanBoard({
     };
   }, []);
 
+  // Cache card width once (idle-time measurement, never during drag)
+  useEffect(() => {
+    const el = document.querySelector("[data-kanban-card]") as HTMLElement | null;
+    if (el) cachedCardWidth.current = el.offsetWidth;
+  }, [actions]);
+
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
     useSensor(KeyboardSensor)
   );
 
@@ -88,8 +108,6 @@ export function KanbanBoard({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
-    const el = (event.activatorEvent.target as HTMLElement | null)?.closest<HTMLElement>("[data-kanban-card]");
-    if (el) setActiveWidth(el.offsetWidth);
   }, []);
 
   const highlightCard = useCallback((id: string) => {
@@ -136,18 +154,23 @@ export function KanbanBoard({
     setActiveId(undefined);
   }, []);
 
-  const cardProps = {
-    locale,
-    onStatusChange: handleOptimisticStatusChange,
-    onDueDateChange,
-    onAssigneesChange,
-    onBodyChange,
-    onDelete,
-  };
+  const cardProps = useMemo(
+    () => ({
+      locale,
+      onStatusChange: handleOptimisticStatusChange,
+      onDueDateChange,
+      onAssigneesChange,
+      onBodyChange,
+      onDelete,
+    }),
+    [locale, handleOptimisticStatusChange, onDueDateChange, onAssigneesChange, onBodyChange, onDelete]
+  );
 
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCorners}
+      measuring={measuringConfig}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
@@ -166,7 +189,7 @@ export function KanbanBoard({
 
       <DragOverlay dropAnimation={null}>
         {activeAction ? (
-          <div style={activeWidth ? { width: activeWidth } : undefined}>
+          <div style={cachedCardWidth.current ? { width: cachedCardWidth.current } : undefined}>
             <KanbanActionCard ctx={activeAction} {...cardProps} isOverlay />
           </div>
         ) : null}
