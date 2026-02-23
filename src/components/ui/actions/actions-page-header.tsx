@@ -22,12 +22,7 @@ import {
   StatusVisibility,
   TimeRange,
 } from "@/types/assigned-actions";
-import type { Id } from "@/types/general";
-
-interface RelationshipOption {
-  id: Id;
-  label: string;
-}
+import type { Id, SelectOption } from "@/types/general";
 
 interface ActionsPageHeaderProps {
   isCoach: boolean;
@@ -39,7 +34,7 @@ interface ActionsPageHeaderProps {
   onTimeRangeChange: (range: TimeRange) => void;
   relationshipId: Id | undefined;
   onRelationshipChange: (id: Id | undefined) => void;
-  relationships: RelationshipOption[];
+  relationships: SelectOption[];
 }
 
 export function ActionsPageHeader({
