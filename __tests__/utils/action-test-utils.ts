@@ -4,7 +4,7 @@
  * This module provides reusable factories and utilities for testing
  * action filtering, counting, and display logic across multiple components:
  * - TodaySessionCard (actions due by session)
- * - WhatsDue (actions filtering and grouping)
+ * - ActionsSummary (inline action summary on session cards)
  * - useAssignedActions hook
  *
  * Centralizing these utilities ensures consistency and reduces duplication.
