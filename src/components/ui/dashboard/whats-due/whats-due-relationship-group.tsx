@@ -20,6 +20,7 @@ import {
 } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import { useIsMobile } from "@/components/hooks/use-mobile";
 
 interface WhatsDueRelationshipGroupProps {
@@ -95,15 +96,15 @@ export function WhatsDueRelationshipGroup({
   const userId = userSession?.id;
 
   // Determine the other person in this coaching relationship
-  const isCoach = userId === group.relationship.coachId;
+  const isCoach = userId === group.relationship.coach_id;
   const otherPersonName = isCoach
-    ? group.relationship.coacheeName
-    : group.relationship.coachName;
+    ? getCoacheeName(group.relationship)
+    : getCoachName(group.relationship);
 
   // Format the label based on view mode
   const relationshipLabel =
     viewMode === CoachViewMode.CoacheeActions
-      ? `${group.relationship.coacheeName}'s Actions`
+      ? `${getCoacheeName(group.relationship)}'s Actions`
       : `My Actions with ${otherPersonName}`;
 
   const nextSessionText = group.nextSession

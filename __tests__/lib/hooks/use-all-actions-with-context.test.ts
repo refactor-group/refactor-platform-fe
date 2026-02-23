@@ -173,10 +173,12 @@ describe("useAllActionsWithContext", () => {
 
     expect(result.current.actionsWithContext).toHaveLength(1);
     const ctx = result.current.actionsWithContext[0];
-    expect(ctx.relationship.coachName).toBe("Alice Smith");
-    expect(ctx.relationship.coacheeName).toBe("Bob Jones");
-    expect(ctx.relationship.coachId).toBe("user-1");
-    expect(ctx.relationship.coacheeId).toBe("coachee-1");
+    expect(ctx.relationship.coach_first_name).toBe("Alice");
+    expect(ctx.relationship.coach_last_name).toBe("Smith");
+    expect(ctx.relationship.coachee_first_name).toBe("Bob");
+    expect(ctx.relationship.coachee_last_name).toBe("Jones");
+    expect(ctx.relationship.coach_id).toBe("user-1");
+    expect(ctx.relationship.coachee_id).toBe("coachee-1");
   });
 
   it("returns empty array when there are no actions", () => {
@@ -269,7 +271,7 @@ describe("useAllActionsWithContext", () => {
 
     expect(result.current.actionsWithContext).toHaveLength(2);
     const names = result.current.actionsWithContext.map(
-      (a) => a.relationship.coacheeName
+      (a) => `${a.relationship.coachee_first_name} ${a.relationship.coachee_last_name}`
     );
     expect(names).toContain("Bob Jones");
     expect(names).toContain("Charlie Brown");

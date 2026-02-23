@@ -11,6 +11,7 @@
 import { DateTime } from "ts-luxon";
 import type { Id } from "@/types/general";
 import type { Action } from "@/types/action";
+import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 
 // ============================================================================
 // API Query Parameter Types
@@ -81,17 +82,6 @@ export enum TimeRange {
 }
 
 /**
- * Context about the coaching relationship for an action
- */
-export interface RelationshipContext {
-  coachingRelationshipId: Id;
-  coachId: Id;
-  coacheeId: Id;
-  coachName: string;
-  coacheeName: string;
-}
-
-/**
  * Context about the overarching goal for an action
  */
 export interface GoalContext {
@@ -113,7 +103,7 @@ export interface SessionContext {
  */
 export interface AssignedActionWithContext {
   action: Action;
-  relationship: RelationshipContext;
+  relationship: CoachingRelationshipWithUserNames;
   goal: GoalContext;
   sourceSession: SessionContext;
   nextSession: SessionContext | null;
@@ -132,7 +122,7 @@ export interface GoalGroupedActions {
  * Actions grouped by coaching relationship
  */
 export interface RelationshipGroupedActions {
-  relationship: RelationshipContext;
+  relationship: CoachingRelationshipWithUserNames;
   nextSession: SessionContext | null;
   goalGroups: GoalGroupedActions[];
   totalActions: number;

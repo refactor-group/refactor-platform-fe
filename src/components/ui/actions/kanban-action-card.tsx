@@ -4,6 +4,9 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { cn } from "@/components/lib/utils";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { isUserCoachInRelationship, isUserCoacheeInRelationship } from "@/types/coaching-relationship";
+import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import {
   SessionActionCard,
 } from "@/components/ui/coaching-sessions/session-action-card";
@@ -40,6 +43,8 @@ export function KanbanActionCard({
   isOverlay = false,
   justMoved = false,
 }: KanbanActionCardProps) {
+  const userId = useAuthStore((state) => state.userSession?.id ?? null);
+
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: ctx.action.id,
@@ -50,6 +55,13 @@ export function KanbanActionCard({
   const style = transform
     ? { transform: CSS.Translate.toString(transform) }
     : undefined;
+
+  const coachLabel = userId && isUserCoachInRelationship(userId, ctx.relationship)
+    ? "You"
+    : getCoachName(ctx.relationship);
+  const coacheeLabel = userId && isUserCoacheeInRelationship(userId, ctx.relationship)
+    ? "You"
+    : getCoacheeName(ctx.relationship);
 
   return (
     <div
@@ -73,17 +85,17 @@ export function KanbanActionCard({
       >
         <GripVertical className="h-3.5 w-3.5 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" />
         <span className="truncate">
-          {ctx.relationship.coachName} → {ctx.relationship.coacheeName}
+          {coachLabel} → {coacheeLabel}
         </span>
       </div>
 
       <SessionActionCard
         action={ctx.action}
         locale={locale}
-        coachId={ctx.relationship.coachId}
-        coachName={ctx.relationship.coachName}
-        coacheeId={ctx.relationship.coacheeId}
-        coacheeName={ctx.relationship.coacheeName}
+        coachId={ctx.relationship.coach_id}
+        coachName={coachLabel}
+        coacheeId={ctx.relationship.coachee_id}
+        coacheeName={coacheeLabel}
         onStatusChange={onStatusChange}
         onDueDateChange={onDueDateChange}
         onAssigneesChange={onAssigneesChange}
