@@ -61,11 +61,11 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests.
-   * In CI the app is already built by a prior step, so use `next start`
-   * (production server) which starts instantly instead of `next dev`
+   * In CI the app is already built with output: 'standalone', so use the
+   * standalone server directly. It starts instantly instead of `next dev`
    * which recompiles on demand and is much slower. */
   webServer: {
-    command: isCI ? 'npm run start' : 'npm run dev',
+    command: isCI ? 'node .next/standalone/server.js' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !isCI,
   },
