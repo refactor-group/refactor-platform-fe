@@ -15,7 +15,11 @@ test.describe('State Management Flows', () => {
     page,
   }) => {
     await page.goto('/dashboard')
-    await page.waitForLoadState('networkidle')
+
+    // Wait for the dashboard to render before checking storage.
+    await expect(
+      page.getByText('Coaching Sessions', { exact: true })
+    ).toBeVisible({ timeout: 15_000 })
 
     // Verify the organization state written by setupAuthentication survives
     // the page load (organization-state-store is in localStorage).
@@ -27,35 +31,9 @@ test.describe('State Management Flows', () => {
     expect(orgId).toBe('org-1')
   })
 
-  test('should populate coaching relationship state after dashboard loads', async ({
-    page,
-  }) => {
-    await page.goto('/dashboard')
-
-    // Wait for dashboard to render
-    await expect(
-      page.getByText('Coaching Sessions', { exact: true })
-    ).toBeVisible({ timeout: 15_000 })
-
-    // The auto-select hook should pick the single relationship and persist
-    // it to sessionStorage. Poll because persist is async.
-    await expect
-      .poll(
-        async () => {
-          return page.evaluate(() => {
-            const stored = sessionStorage.getItem(
-              'coaching-relationship-state-store'
-            )
-            if (!stored) return null
-            return (
-              JSON.parse(stored).state?.currentCoachingRelationshipId ?? null
-            )
-          })
-        },
-        { timeout: 5_000 }
-      )
-      .toBe('rel-1')
-  })
+  // Note: coaching relationship auto-selection is tested in
+  // coaching-relationship-selector-visibility.spec.ts ("should auto-select
+  // single relationship and keep selector hidden").
 
   test('should handle 403 API errors gracefully on the dashboard', async ({
     page,
@@ -70,23 +48,29 @@ test.describe('State Management Flows', () => {
     })
 
     await page.goto('/dashboard')
-    await page.waitForLoadState('networkidle')
 
-    // The app should not crash — verify the dashboard still renders content
-    const body = await page.textContent('body')
-    expect((body?.trim().length ?? 0) > 0).toBe(true)
+    // The app should not crash — verify the dashboard still renders its
+    // key heading despite the 403 on coaching_sessions.
+    await expect(
+      page.getByText('Coaching Sessions', { exact: true })
+    ).toBeVisible({ timeout: 15_000 })
 
-    // The page should still be on the dashboard (no redirect to error page)
     expect(page.url()).toContain('/dashboard')
   })
 
   test('should persist auth state across page refreshes', async ({ page }) => {
     await page.goto('/dashboard')
-    await page.waitForLoadState('networkidle')
+
+    await expect(
+      page.getByText('Coaching Sessions', { exact: true })
+    ).toBeVisible({ timeout: 15_000 })
 
     // Refresh — addInitScript re-runs, so auth state should survive.
     await page.reload()
-    await page.waitForLoadState('networkidle')
+
+    await expect(
+      page.getByText('Coaching Sessions', { exact: true })
+    ).toBeVisible({ timeout: 15_000 })
 
     const authState = await page.evaluate(() => {
       const stored = localStorage.getItem('auth-store')
@@ -98,7 +82,7 @@ test.describe('State Management Flows', () => {
     expect(authState.userId).toBe('user-123')
   })
 
-  test('should clear auth state from localStorage on session invalidation', async ({
+  test('should not crash when session validation returns 401', async ({
     page,
   }) => {
     // Override session validation to return 401
@@ -113,21 +97,24 @@ test.describe('State Management Flows', () => {
     })
 
     await page.goto('/dashboard')
-    await page.waitForLoadState('networkidle')
 
-    // The app should redirect away from the dashboard or show a
-    // logged-out state.
+    // Wait for the page to settle — either the app redirects away from
+    // the protected route or it renders the dashboard despite the 401.
+    await page.waitForURL(/./, { timeout: 15_000 })
+
     const currentUrl = page.url()
     const isOnProtectedRoute = currentUrl.includes('/dashboard')
 
     if (!isOnProtectedRoute) {
-      // Redirected away — expected for invalid session
-      expect(currentUrl).toContain('localhost:3000')
+      // Redirected away from the protected route — expected behavior
+      expect(currentUrl).not.toContain('/dashboard')
     } else {
-      // Still on dashboard — middleware may not enforce redirect in this
-      // test setup, but the page should at least load without crashing.
-      const body = await page.textContent('body')
-      expect((body?.trim().length ?? 0) > 0).toBe(true)
+      // Still on dashboard — addInitScript re-populates auth state in
+      // localStorage on every load, so the app may not redirect even with
+      // a 401 from validate_session. Verify it still renders key UI.
+      await expect(
+        page.getByText('Coaching Sessions', { exact: true })
+      ).toBeVisible({ timeout: 15_000 })
     }
   })
 })

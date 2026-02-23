@@ -1,6 +1,46 @@
 import type { Page, BrowserContext } from '@playwright/test'
 
 // ---------------------------------------------------------------------------
+// Mock API response types – these mirror the domain types in src/types/ but
+// use `string` for date fields because JSON API responses contain ISO strings
+// (ts-luxon DateTime transformation happens inside SWR hooks, not in the raw
+// response). Keep these in sync with the corresponding domain interfaces.
+// ---------------------------------------------------------------------------
+
+/** Mirrors CoachingRelationshipWithUserNames (src/types/coaching-relationship.ts) */
+interface MockCoachingRelationship {
+  id: string
+  coach_id: string
+  coachee_id: string
+  organization_id: string
+  coach_first_name: string
+  coach_last_name: string
+  coachee_first_name: string
+  coachee_last_name: string
+  created_at: string
+  updated_at: string
+}
+
+/** Mirrors CoachingSession (src/types/coaching-session.ts) */
+interface MockCoachingSession {
+  id: string
+  coaching_relationship_id: string
+  date: string
+  created_at: string
+  updated_at: string
+}
+
+/** Mirrors Organization (src/types/organization.ts) */
+interface MockOrganization {
+  id: string
+  name: string
+  logo?: string
+  slug: string
+  created_at: string
+  updated_at: string
+}
+
+// ---------------------------------------------------------------------------
 // Mock data – mirrors the real Zustand persist shapes (including version
 // numbers) so the stores can rehydrate without migration errors.
 // ---------------------------------------------------------------------------
@@ -9,7 +49,9 @@ export const MOCK_USER_ID = 'user-123'
 
 /**
  * auth-store lives in localStorage with version 2.
- * `userSession` must be a full User object matching the User interface.
+ * `userSession` must be a full User object matching the User interface
+ * (src/types/user.ts). The `role` field must match a Role enum value
+ * (Role.User = "User").
  */
 export const AUTH_STORE_STATE = {
   state: {
@@ -21,12 +63,12 @@ export const AUTH_STORE_STATE = {
       last_name: 'User',
       display_name: 'Test User',
       timezone: 'America/Chicago',
-      role: 'User',
+      role: 'User', // Must match Role.User enum value
       roles: [
         {
           id: 'role-1',
           user_id: MOCK_USER_ID,
-          role: 'User',
+          role: 'User', // Must match Role.User enum value
           organization_id: 'org-1',
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
@@ -48,12 +90,21 @@ export const ORGANIZATION_STORE_STATE = {
   version: 2,
 }
 
-export const MOCK_ORGANIZATIONS = [
-  { id: 'org-1', name: 'Acme Corp', slug: 'acme-corp' },
+export const MOCK_ORGANIZATIONS: MockOrganization[] = [
+  {
+    id: 'org-1',
+    name: 'Acme Corp',
+    slug: 'acme-corp',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  },
 ]
 
-/** A single coaching relationship matching the CoachingRelationshipWithUserNames type. */
-function mockRelationship(id: string, overrides: Record<string, unknown> = {}) {
+/** Build a mock coaching relationship with sensible defaults. */
+function mockRelationship(
+  id: string,
+  overrides: Partial<MockCoachingRelationship> = {}
+): MockCoachingRelationship {
   return {
     id,
     coach_id: `coach-${id}`,
@@ -130,8 +181,8 @@ export async function setupAuthentication(
 export async function mockCommonApiRoutes(
   page: Page,
   options: {
-    relationships?: Record<string, unknown>[]
-    coachingSessions?: Record<string, unknown>[]
+    relationships?: MockCoachingRelationship[]
+    coachingSessions?: MockCoachingSession[]
   } = {}
 ) {
   const { relationships = SINGLE_RELATIONSHIP, coachingSessions = [] } =
