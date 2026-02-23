@@ -34,15 +34,20 @@ export function stringToActionStatus(statusString: string): ItemStatus {
   }
 }
 
-export function actionStatusToString(actionStatus: ItemStatus): string {
-  if (actionStatus == "InProgress") {
-    return "In Progress";
-  } else if (actionStatus == "Completed") {
-    return "Completed";
-  } else if (actionStatus == "WontDo") {
-    return "Won't Do";
-  } else {
-    return "Not Started";
+export function actionStatusToString(status: ItemStatus): string {
+  switch (status) {
+    case ItemStatus.NotStarted:
+      return "Not Started";
+    case ItemStatus.InProgress:
+      return "In Progress";
+    case ItemStatus.Completed:
+      return "Completed";
+    case ItemStatus.WontDo:
+      return "Won't Do";
+    default: {
+      const _exhaustive: never = status;
+      throw new Error(`Unhandled status: ${_exhaustive}`);
+    }
   }
 }
 
