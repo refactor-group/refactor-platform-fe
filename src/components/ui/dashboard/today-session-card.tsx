@@ -183,7 +183,7 @@ export function TodaySessionCard({
   const sessionDate = DateTime.fromISO(session.date);
   const actionsDueCount = assignedActions.filter((a) => {
     // Must be for this coaching relationship
-    if (a.relationship.coachingRelationshipId !== session.coaching_relationship_id) {
+    if (a.relationship.id !== session.coaching_relationship_id) {
       return false;
     }
     // Must be due on or before this session

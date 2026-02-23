@@ -1,7 +1,8 @@
+import { DateTime } from "ts-luxon";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { User } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
-import type { RelationshipContext } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
 
 /**
@@ -78,18 +79,45 @@ export function getUserRoleInRelationship(
 }
 
 /**
- * Resolve a user ID to their name within a relationship context
+ * Resolve a user ID to their name within a relationship
  * Story: "Show who performed an action in a coaching relationship"
  */
 export function resolveUserNameInRelationship(
   userId: Id,
-  relationship: RelationshipContext
+  relationship: CoachingRelationshipWithUserNames
 ): string {
-  if (userId === relationship.coachId) {
-    return relationship.coachName;
+  if (userId === relationship.coach_id) {
+    return getCoachName(relationship);
   }
-  if (userId === relationship.coacheeId) {
-    return relationship.coacheeName;
+  if (userId === relationship.coachee_id) {
+    return getCoacheeName(relationship);
   }
   return "Unknown";
+}
+
+/**
+ * Builds a CoachingRelationshipWithUserNames from an enriched coaching session.
+ * Extracts coach, coachee, and relationship data into the canonical type.
+ *
+ * @param session - Enriched coaching session with relationship data
+ */
+export function buildRelationshipWithUserNames(
+  session: EnrichedCoachingSession
+): CoachingRelationshipWithUserNames {
+  const coach = session.coach;
+  const coachee = session.coachee;
+  const relationship = session.relationship;
+
+  return {
+    id: relationship?.id ?? "",
+    coach_id: relationship?.coach_id ?? "",
+    coachee_id: relationship?.coachee_id ?? "",
+    organization_id: relationship?.organization_id ?? "",
+    created_at: relationship?.created_at ?? DateTime.now(),
+    updated_at: relationship?.updated_at ?? DateTime.now(),
+    coach_first_name: coach?.first_name ?? "Unknown",
+    coach_last_name: coach?.last_name ?? "",
+    coachee_first_name: coachee?.first_name ?? "Unknown",
+    coachee_last_name: coachee?.last_name ?? "",
+  };
 }

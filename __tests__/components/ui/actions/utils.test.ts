@@ -46,11 +46,16 @@ function makeAction(
       assignee_ids: ["user-1"],
     },
     relationship: {
-      coachingRelationshipId: overrides.relationshipId ?? "rel-1",
-      coachId: "coach-1",
-      coacheeId: "coachee-1",
-      coachName: "Alice Smith",
-      coacheeName: "Bob Jones",
+      id: overrides.relationshipId ?? "rel-1",
+      coach_id: "coach-1",
+      coachee_id: "coachee-1",
+      organization_id: "org-1",
+      created_at: now,
+      updated_at: now,
+      coach_first_name: "Alice",
+      coach_last_name: "Smith",
+      coachee_first_name: "Bob",
+      coachee_last_name: "Jones",
     },
     goal: {
       overarchingGoalId: "goal-1",
@@ -246,7 +251,7 @@ describe("filterByRelationship", () => {
   it("filters to only matching relationship", () => {
     const result = filterByRelationship(actions, "rel-1");
     expect(result).toHaveLength(2);
-    expect(result.every((a) => a.relationship.coachingRelationshipId === "rel-1")).toBe(true);
+    expect(result.every((a) => a.relationship.id === "rel-1")).toBe(true);
   });
 
   it("returns empty array for non-existent relationship", () => {
