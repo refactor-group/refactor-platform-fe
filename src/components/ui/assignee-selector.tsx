@@ -7,13 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Id } from "@/types/general";
-
-/** Represents a user who can be assigned to an action */
-export interface AssigneeOption {
-  id: Id;
-  name: string;
-}
+import type { SelectOption } from "@/types/general";
 
 /** Assignment type for actions beyond individual user IDs */
 export enum AssignmentType {
@@ -34,7 +28,7 @@ interface AssigneeSelectorProps {
   /** Callback when selection changes */
   onValueChange: (value: AssigneeSelection) => void;
   /** Available assignee options (typically coach and coachee) */
-  options: AssigneeOption[];
+  options: SelectOption[];
   /** Placeholder text when no value selected */
   placeholder?: string;
   /** Additional CSS classes for the trigger */
@@ -76,7 +70,7 @@ const AssigneeSelector: React.FC<AssigneeSelectorProps> = ({
         <SelectItem value={AssignmentType.None}>None</SelectItem>
         {validOptions.map((option) => (
           <SelectItem key={option.id} value={option.id}>
-            {option.name}
+            {option.label}
           </SelectItem>
         ))}
         {validOptions.length >= 2 && (

@@ -6,7 +6,7 @@ import type { Action } from "@/types/action";
 export interface CoacheeActionsFetchResult {
   actions: Action[];
   isLoading: boolean;
-  isError: Error | null;
+  isError: boolean;
   refresh: () => void;
 }
 
@@ -24,7 +24,7 @@ export function useCoacheeActionsFetch(
 ): CoacheeActionsFetchResult {
   const [actions, setActions] = useState<Action[]>([]);
   const [isLoading, setIsLoading] = useState(enabled);
-  const [isError, setIsError] = useState<Error | null>(null);
+  const [isError, setIsError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Stable key to avoid refetching when array reference changes
@@ -38,7 +38,7 @@ export function useCoacheeActionsFetch(
     }
 
     setIsLoading(true);
-    setIsError(null);
+    setIsError(false);
 
     Promise.all(
       coacheeIds.map((id) =>
@@ -52,8 +52,8 @@ export function useCoacheeActionsFetch(
         setActions(results.flat());
         setIsLoading(false);
       })
-      .catch((error) => {
-        setIsError(error);
+      .catch(() => {
+        setIsError(true);
         setIsLoading(false);
       });
     // coacheeIds is intentionally omitted — coacheeIdsKey is the stable string proxy
