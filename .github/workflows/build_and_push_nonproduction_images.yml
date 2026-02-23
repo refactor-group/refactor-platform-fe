@@ -48,6 +48,12 @@ jobs:
   test:
     name: Build & Test
     runs-on: ubuntu-24.04
+    # Playwright container includes browsers + system deps, eliminating the
+    # 5+ minute `npx playwright install --with-deps` step. Keep the image
+    # tag in sync with the @playwright/test version in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      options: --user 1001
 
     steps:
       - name: Checkout
@@ -70,15 +76,6 @@ jobs:
             ${{ runner.os }}-nextjs-test-${{ hashFiles('**/package-lock.json') }}-
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
-      # 🎯 Playwright browser cache
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - name: Install dependencies
         run: npm ci --prefer-offline
 
@@ -94,9 +91,6 @@ jobs:
           NEXT_PUBLIC_BACKEND_SERVICE_PORT: 4000
           NEXT_PUBLIC_BACKEND_SERVICE_API_PATH: ""
           NEXT_PUBLIC_BACKEND_API_VERSION: 1.0.0-beta1
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
 
       - name: Run unit tests
         run: npm run test:run
