@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { SelectOption } from "@/types/general";
+import type { SelectOption, Id } from "@/types/general";
 
 /** Assignment type for actions beyond individual user IDs */
 export enum AssignmentType {

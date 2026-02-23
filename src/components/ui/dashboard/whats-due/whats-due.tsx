@@ -138,7 +138,7 @@ export function WhatsDue({ className }: WhatsDueProps) {
             <div className={isMobile ? "space-y-3" : "grid grid-cols-[1fr_auto_auto_auto] gap-y-3"}>
               {groupedActions.map((group) => (
                 <WhatsDueRelationshipGroup
-                  key={group.relationship.coachingRelationshipId}
+                  key={group.relationship.id}
                   group={group}
                   viewMode={coachViewMode}
                   onActionStatusChange={handleActionStatusChange}

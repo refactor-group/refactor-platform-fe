@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import {
+  AssignmentFilter,
   CoachViewMode,
   StatusVisibility,
   TimeRange,
@@ -26,6 +27,8 @@ const defaultProps = {
   onStatusVisibilityChange: vi.fn(),
   timeRange: TimeRange.AllTime,
   onTimeRangeChange: vi.fn(),
+  assignmentFilter: AssignmentFilter.Assigned,
+  onAssignmentFilterChange: vi.fn(),
   relationshipId: undefined,
   onRelationshipChange: vi.fn(),
   relationships: [
@@ -88,7 +91,8 @@ describe("ActionsPageHeader", () => {
     await user.click(screen.getByRole("button", { name: /filters/i }));
 
     expect(screen.getByText("Open")).toBeInTheDocument();
-    expect(screen.getByText("All")).toBeInTheDocument();
+    // "All" appears in both Status and Assignment toggles
+    expect(screen.getAllByText("All").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Closed")).toBeInTheDocument();
   });
 
@@ -103,7 +107,9 @@ describe("ActionsPageHeader", () => {
 
     // Open the filter popover first
     await user.click(screen.getByRole("button", { name: /filters/i }));
-    await user.click(screen.getByText("All"));
+    // "All" appears in both Status and Assignment toggles — Status is first
+    const allButtons = screen.getAllByText("All");
+    await user.click(allButtons[0]);
     expect(defaultProps.onStatusVisibilityChange).toHaveBeenCalledWith(
       StatusVisibility.All
     );

@@ -19,6 +19,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+  AssignmentFilter,
   CoachViewMode,
   StatusVisibility,
   TimeRange,
@@ -33,6 +34,8 @@ interface ActionsPageHeaderProps {
   onStatusVisibilityChange: (vis: StatusVisibility) => void;
   timeRange: TimeRange;
   onTimeRangeChange: (range: TimeRange) => void;
+  assignmentFilter: AssignmentFilter;
+  onAssignmentFilterChange: (filter: AssignmentFilter) => void;
   relationshipId: Id | undefined;
   onRelationshipChange: (id: Id | undefined) => void;
   relationships: SelectOption[];
@@ -46,6 +49,8 @@ export function ActionsPageHeader({
   onStatusVisibilityChange,
   timeRange,
   onTimeRangeChange,
+  assignmentFilter,
+  onAssignmentFilterChange,
   relationshipId,
   onRelationshipChange,
   relationships,
@@ -137,6 +142,40 @@ export function ActionsPageHeader({
                     className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none flex-1"
                   >
                     Closed
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
+              {/* Assignment */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Assignment</Label>
+                <ToggleGroup
+                  type="single"
+                  value={assignmentFilter}
+                  onValueChange={(v) => {
+                    if (v) onAssignmentFilterChange(v as AssignmentFilter);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="gap-0 w-full"
+                >
+                  <ToggleGroupItem
+                    value={AssignmentFilter.Assigned}
+                    className="whitespace-nowrap text-xs px-2 h-7 rounded-r-none border-r-0 flex-1"
+                  >
+                    Assigned
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value={AssignmentFilter.Unassigned}
+                    className="whitespace-nowrap text-xs px-2 h-7 rounded-none border-r-0 flex-1"
+                  >
+                    Unassigned
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value={AssignmentFilter.All}
+                    className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none flex-1"
+                  >
+                    All
                   </ToggleGroupItem>
                 </ToggleGroup>
               </div>
