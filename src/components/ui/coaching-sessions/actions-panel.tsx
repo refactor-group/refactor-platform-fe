@@ -416,15 +416,19 @@ const ActionsPanel = ({
   onActionEdited,
   onActionDeleted,
   isSaving,
-  reviewActions = false,
+  reviewActions,
 }: ActionsPanelProps) => {
   const [reviewOpen, setReviewOpen] = useState(reviewActions);
   const reviewRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to "Actions for Review" when navigated with review=true
+  // Auto-scroll to "Actions for Review" when navigated with review=true.
+  // Uses requestAnimationFrame to wait for the collapsible content to render
+  // before calculating scroll position.
   useEffect(() => {
     if (reviewActions && reviewRef.current) {
-      reviewRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      requestAnimationFrame(() => {
+        reviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     }
   }, [reviewActions]);
 

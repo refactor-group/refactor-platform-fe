@@ -118,6 +118,27 @@ describe("ActionsSummary", () => {
       render(<ActionsSummary actions={actions} sessionId="session-1" />);
       expect(screen.getByText(/1 overdue/)).toBeInTheDocument();
     });
+
+    it("should exclude completed and WontDo actions from the total count", () => {
+      const actions = [
+        createAction({ status: ItemStatus.NotStarted }),
+        createAction({ status: ItemStatus.InProgress }),
+        createAction({ status: ItemStatus.Completed }),
+        createAction({ status: ItemStatus.WontDo }),
+      ];
+      render(<ActionsSummary actions={actions} sessionId="session-1" />);
+      expect(screen.getByText(/2/)).toBeInTheDocument();
+      expect(screen.getByText(/actions/)).toBeInTheDocument();
+    });
+
+    it("should render 'No actions due' when all actions are completed or WontDo", () => {
+      const actions = [
+        createAction({ status: ItemStatus.Completed }),
+        createAction({ status: ItemStatus.WontDo }),
+      ];
+      render(<ActionsSummary actions={actions} sessionId="session-1" />);
+      expect(screen.getByText("No actions due")).toBeInTheDocument();
+    });
   });
 
   describe("link behavior", () => {

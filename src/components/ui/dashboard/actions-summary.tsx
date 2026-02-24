@@ -13,10 +13,11 @@ interface ActionsSummaryProps {
 }
 
 export function ActionsSummary({ actions, sessionId }: ActionsSummaryProps) {
-  const totalDue = actions.length;
-  const overdueCount = actions.filter(
-    (a) => a.isOverdue && a.action.status !== ItemStatus.Completed && a.action.status !== ItemStatus.WontDo
-  ).length;
+  const activeActions = actions.filter(
+    (a) => a.action.status !== ItemStatus.Completed && a.action.status !== ItemStatus.WontDo
+  );
+  const totalDue = activeActions.length;
+  const overdueCount = activeActions.filter((a) => a.isOverdue).length;
 
   // No actions — simple non-interactive line
   if (totalDue === 0) {

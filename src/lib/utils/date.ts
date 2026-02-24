@@ -46,32 +46,3 @@ export function getOneYearAgo(): DateTime {
 export function getOneYearFromNow(): DateTime {
   return DateTime.now().plus({ years: 1 });
 }
-
-/**
- * Format a due date relative to today for display in action summaries.
- * Compares dates only (not times) to avoid marking items due later today as overdue.
- */
-export function formatDueDate(dueBy: DateTime): string {
-  const today = DateTime.now().startOf("day");
-  const dueDate = dueBy.startOf("day");
-  const diffDays = dueDate.diff(today, "days").days;
-
-  if (diffDays < 0) {
-    const daysOverdue = Math.abs(diffDays);
-    return daysOverdue === 1 ? "1 day overdue" : `${daysOverdue} days overdue`;
-  }
-
-  if (diffDays === 0) {
-    return "Due today";
-  }
-
-  if (diffDays === 1) {
-    return "Due tomorrow";
-  }
-
-  if (diffDays < 7) {
-    return `Due in ${diffDays} days`;
-  }
-
-  return `Due ${dueBy.toFormat("MMM d")}`;
-}

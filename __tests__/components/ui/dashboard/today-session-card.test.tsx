@@ -260,11 +260,10 @@ describe("TodaySessionCard", () => {
 
     render(<TodaySessionCard session={session} />);
 
-    const links = screen.getAllByRole("link");
-    const sessionLink = links.find(
+    const sessionLink = screen.getAllByRole("link").find(
       (link) => link.getAttribute("href") === "/coaching-sessions/session-123"
     );
-    expect(sessionLink).toBeDefined();
+    expect(sessionLink).toBeInTheDocument();
   });
 
   it("should have a share button", () => {
