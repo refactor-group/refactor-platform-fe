@@ -86,6 +86,7 @@
     "swr": "^2.3.4",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "true-myth": "^9.3.1",
     "ts-luxon": "^5.0.7-beta.0",
     "y-prosemirror": "^1.2.15",
     "y-websocket": "^2.1.0",
