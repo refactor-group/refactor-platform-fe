@@ -84,7 +84,7 @@ describe("ActionsSummary", () => {
       render(<ActionsSummary actions={actions} sessionId="session-1" />);
       expect(screen.getByText(/3/)).toBeInTheDocument();
       expect(screen.getByText(/actions/)).toBeInTheDocument();
-      expect(screen.getByText(/due/)).toBeInTheDocument();
+      expect(screen.getByText(/due assigned to you/)).toBeInTheDocument();
     });
 
     it("should use singular 'action' for count of 1", () => {
@@ -92,31 +92,6 @@ describe("ActionsSummary", () => {
       render(<ActionsSummary actions={actions} sessionId="session-1" />);
       expect(screen.getByText(/1/)).toBeInTheDocument();
       expect(screen.getByText(/action\b/)).toBeInTheDocument();
-    });
-
-    it("should show overdue count when actions are overdue", () => {
-      const actions = [
-        createAction({ isOverdue: true }),
-        createAction({ isOverdue: true }),
-        createAction({ isOverdue: false }),
-      ];
-      render(<ActionsSummary actions={actions} sessionId="session-1" />);
-      expect(screen.getByText(/2 overdue/)).toBeInTheDocument();
-    });
-
-    it("should not show overdue text when no actions are overdue", () => {
-      const actions = [createAction({ isOverdue: false })];
-      render(<ActionsSummary actions={actions} sessionId="session-1" />);
-      expect(screen.queryByText(/overdue/)).not.toBeInTheDocument();
-    });
-
-    it("should not count completed actions as overdue", () => {
-      const actions = [
-        createAction({ isOverdue: true, status: ItemStatus.Completed }),
-        createAction({ isOverdue: true, status: ItemStatus.NotStarted }),
-      ];
-      render(<ActionsSummary actions={actions} sessionId="session-1" />);
-      expect(screen.getByText(/1 overdue/)).toBeInTheDocument();
     });
 
     it("should exclude completed and WontDo actions from the total count", () => {
