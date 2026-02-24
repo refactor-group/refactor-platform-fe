@@ -52,7 +52,7 @@ export function ActionsSummary({ actions, sessionId }: ActionsSummaryProps) {
           </Link>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Click to review your actions</p>
+          <p>Click to review</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
