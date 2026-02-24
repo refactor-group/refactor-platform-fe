@@ -53,7 +53,7 @@ describe("SessionActionCard — showSessionLink / sessionDate", () => {
   it("hides session link when variant is 'current' and showSessionLink is false (default)", () => {
     render(
       <Wrapper>
-        <SessionActionCard {...baseProps} variant="current" />
+        <SessionActionCard {...baseProps} variant="current" autoHeight={false} />
       </Wrapper>
     );
 
@@ -85,7 +85,7 @@ describe("SessionActionCard — showSessionLink / sessionDate", () => {
 
     render(
       <Wrapper>
-        <SessionActionCard {...baseProps} variant="previous" sessionDate={sessionDate} />
+        <SessionActionCard {...baseProps} variant="previous" sessionDate={sessionDate} autoHeight={false} />
       </Wrapper>
     );
 
@@ -98,7 +98,7 @@ describe("SessionActionCard — showSessionLink / sessionDate", () => {
   it("falls back to created_at when variant is 'previous' and no sessionDate", () => {
     render(
       <Wrapper>
-        <SessionActionCard {...baseProps} variant="previous" />
+        <SessionActionCard {...baseProps} variant="previous" autoHeight={false} />
       </Wrapper>
     );
 

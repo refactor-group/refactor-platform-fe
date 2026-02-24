@@ -9,12 +9,14 @@ import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import {
   STATUS_COLUMN_ORDER,
   statusColor,
+  statusTextColor,
   groupByStatus,
   applyTimeFilter,
   visibleStatuses,
   buildInitialOrder,
   sortGroupedByInitialOrder,
 } from "@/components/ui/actions/utils";
+import type { Action } from "@/types/action";
 import { actionStatusToString } from "@/types/general";
 
 // ---------------------------------------------------------------------------
@@ -96,11 +98,43 @@ describe("statusColor", () => {
 });
 
 // ---------------------------------------------------------------------------
+// statusTextColor
+// ---------------------------------------------------------------------------
+
+describe("statusTextColor", () => {
+  it("returns correct Tailwind text class for each status", () => {
+    expect(statusTextColor(ItemStatus.NotStarted)).toBe("text-slate-500");
+    expect(statusTextColor(ItemStatus.InProgress)).toBe("text-blue-500");
+    expect(statusTextColor(ItemStatus.Completed)).toBe("text-green-600");
+    expect(statusTextColor(ItemStatus.WontDo)).toBe("text-gray-500");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // groupByStatus
 // ---------------------------------------------------------------------------
 
+/** Factory for plain Action objects (no context wrapper) */
+function makePlainAction(
+  overrides: Partial<{ id: string; status: ItemStatus }> = {}
+): Action {
+  const now = DateTime.now();
+  return {
+    id: overrides.id ?? "plain-1",
+    coaching_session_id: "session-1",
+    body: "Test action",
+    user_id: "user-1",
+    status: overrides.status ?? ItemStatus.NotStarted,
+    status_changed_at: now,
+    due_by: now.plus({ days: 7 }),
+    created_at: now,
+    updated_at: now,
+    assignee_ids: ["user-1"],
+  };
+}
+
 describe("groupByStatus", () => {
-  it("groups actions correctly across all 4 status buckets", () => {
+  it("groups AssignedActionWithContext items correctly across all 4 status buckets", () => {
     const actions = [
       makeAction({ id: "a1", status: ItemStatus.NotStarted }),
       makeAction({ id: "a2", status: ItemStatus.InProgress }),
@@ -109,7 +143,7 @@ describe("groupByStatus", () => {
       makeAction({ id: "a5", status: ItemStatus.NotStarted }),
     ];
 
-    const grouped = groupByStatus(actions);
+    const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
 
     expect(grouped[ItemStatus.NotStarted]).toHaveLength(2);
     expect(grouped[ItemStatus.InProgress]).toHaveLength(1);
@@ -123,7 +157,7 @@ describe("groupByStatus", () => {
       makeAction({ id: "a2", status: ItemStatus.InProgress }),
     ];
 
-    const grouped = groupByStatus(actions);
+    const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
 
     expect(grouped[ItemStatus.InProgress]).toHaveLength(2);
     expect(grouped[ItemStatus.NotStarted]).toHaveLength(0);
@@ -132,7 +166,10 @@ describe("groupByStatus", () => {
   });
 
   it("returns all empty arrays for empty input", () => {
-    const grouped = groupByStatus([]);
+    const grouped = groupByStatus(
+      [] as AssignedActionWithContext[],
+      (ctx) => ctx.action.status
+    );
 
     for (const status of STATUS_COLUMN_ORDER) {
       expect(grouped[status]).toEqual([]);
@@ -146,10 +183,40 @@ describe("groupByStatus", () => {
       makeAction({ id: "a3", status: ItemStatus.NotStarted }),
     ];
 
-    const grouped = groupByStatus(actions);
+    const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
     const ids = grouped[ItemStatus.NotStarted].map((a) => a.action.id);
 
     expect(ids).toEqual(["a1", "a2", "a3"]);
+  });
+
+  it("groups plain Action[] items with a direct status accessor", () => {
+    const actions = [
+      makePlainAction({ id: "p1", status: ItemStatus.NotStarted }),
+      makePlainAction({ id: "p2", status: ItemStatus.InProgress }),
+      makePlainAction({ id: "p3", status: ItemStatus.Completed }),
+      makePlainAction({ id: "p4", status: ItemStatus.WontDo }),
+      makePlainAction({ id: "p5", status: ItemStatus.NotStarted }),
+    ];
+
+    const grouped = groupByStatus(actions, (a) => a.status);
+
+    expect(grouped[ItemStatus.NotStarted]).toHaveLength(2);
+    expect(grouped[ItemStatus.InProgress]).toHaveLength(1);
+    expect(grouped[ItemStatus.Completed]).toHaveLength(1);
+    expect(grouped[ItemStatus.WontDo]).toHaveLength(1);
+  });
+
+  it("returns all 4 buckets even when grouping plain Action[] with only one status", () => {
+    const actions = [
+      makePlainAction({ id: "p1", status: ItemStatus.Completed }),
+    ];
+
+    const grouped = groupByStatus(actions, (a) => a.status);
+
+    expect(grouped[ItemStatus.NotStarted]).toHaveLength(0);
+    expect(grouped[ItemStatus.InProgress]).toHaveLength(0);
+    expect(grouped[ItemStatus.Completed]).toHaveLength(1);
+    expect(grouped[ItemStatus.WontDo]).toHaveLength(0);
   });
 });
 
@@ -316,7 +383,7 @@ describe("sortGroupedByInitialOrder", () => {
       makeAction({ id: "a1", status: ItemStatus.NotStarted }),
       makeAction({ id: "a2", status: ItemStatus.InProgress }),
     ];
-    const grouped = groupByStatus(actions);
+    const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
     const order = new Map([["a1", 0], ["a2", 1], ["a3", 2]]);
 
     const sorted = sortGroupedByInitialOrder(grouped, order);
@@ -329,7 +396,7 @@ describe("sortGroupedByInitialOrder", () => {
       makeAction({ id: "a2", status: ItemStatus.NotStarted }),
       makeAction({ id: "a1", status: ItemStatus.NotStarted }),
     ];
-    const grouped = groupByStatus(actions);
+    const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
     const originalOrder = grouped[ItemStatus.NotStarted].map((a) => a.action.id);
     const order = new Map([["a1", 0], ["a2", 1]]);
 
@@ -343,7 +410,7 @@ describe("sortGroupedByInitialOrder", () => {
       makeAction({ id: "a2", status: ItemStatus.NotStarted }),
       makeAction({ id: "a3", status: ItemStatus.NotStarted }),
     ];
-    const grouped = groupByStatus(actions);
+    const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
     const order = new Map([["a3", 0], ["a1", 1]]);
 
     const sorted = sortGroupedByInitialOrder(grouped, order);

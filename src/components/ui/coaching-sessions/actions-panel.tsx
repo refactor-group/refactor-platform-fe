@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { ItemStatus, Id, EntityApiError } from "@/types/general";
+import { ItemStatus, Id, EntityApiError, actionStatusToString } from "@/types/general";
 import { sortActionArray, type Action } from "@/types/action";
 import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
-import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
@@ -19,6 +18,12 @@ import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { UserActionsScope } from "@/types/assigned-actions";
 import { SessionActionCard } from "@/components/ui/coaching-sessions/session-action-card";
 import { NewActionCard } from "@/components/ui/coaching-sessions/new-action-card";
+import {
+  statusColor,
+  statusTextColor,
+  STATUS_COLUMN_ORDER,
+  groupByStatus,
+} from "@/components/ui/actions/utils";
 
 // ---------------------------------------------------------------------------
 // Pure helpers
@@ -33,10 +38,8 @@ import { NewActionCard } from "@/components/ui/coaching-sessions/new-action-card
  * Rules:
  * 1. Exclude actions belonging to the current session
  * 2. Include sticky actions (previously visible) regardless of current state
- * 3. Exclude actions due after the current session date
- * 4. Include actions due within [previousSessionDate, currentSessionDate] (any status)
- * 5. Include actions due before the window only if still outstanding (NotStarted/InProgress)
- *    (but see Rule 2 — sticky actions override this)
+ * 3. Include only actions due within [previousSessionDate, currentSessionDate]
+ *    (any status) — actions due before or after the window are excluded
  *
  * Results are sorted reverse-chronologically by due_by.
  */
@@ -61,10 +64,7 @@ export function filterReviewActions(
 
     if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
 
-    return (
-      a.status === ItemStatus.NotStarted ||
-      a.status === ItemStatus.InProgress
-    );
+    return false;
   });
 
   return sortActionArray(filtered, SortOrder.Desc, "due_by");
@@ -269,6 +269,7 @@ function NewActionsSection({
               onBodyChange={onBodyChange}
               onDelete={onDelete}
               variant="current"
+              autoHeight={false}
             />
           )
         )}
@@ -287,6 +288,63 @@ function NewActionsSection({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Status summary badges (inline in the collapsible header)
+// ---------------------------------------------------------------------------
+
+function StatusSummaryBadges({ actions }: { actions: Action[] }) {
+  const counts = new Map<ItemStatus, number>();
+  for (const a of actions) {
+    counts.set(a.status, (counts.get(a.status) ?? 0) + 1);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 ml-1 min-w-0">
+      {STATUS_COLUMN_ORDER.map((status) => {
+        const count = counts.get(status) ?? 0;
+        return (
+          <span
+            key={status}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums whitespace-nowrap",
+              "bg-muted/80",
+              count === 0 ? "text-muted-foreground/50" : statusTextColor(status),
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full shrink-0",
+                count === 0 ? "bg-muted-foreground/30" : statusColor(status),
+              )}
+            />
+            {count} {actionStatusToString(status)}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Status group header
+// ---------------------------------------------------------------------------
+
+function StatusGroupHeader({ status, count }: { status: ItemStatus; count: number }) {
+  return (
+    <div className="flex items-center gap-2 pb-2">
+      <span className={cn("h-2.5 w-2.5 rounded-full", statusColor(status))} aria-hidden />
+      <h4 className="text-sm font-medium">{actionStatusToString(status)}</h4>
+      <span className="text-xs text-muted-foreground tabular-nums rounded-full bg-muted px-2 py-0.5">
+        {count}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Review actions section (status-grouped vertical list)
+// ---------------------------------------------------------------------------
+
 interface ReviewActionsSectionProps extends ActionCardSharedProps {
   actions: Action[];
   sessionDateMap: Map<Id, DateTime>;
@@ -295,6 +353,7 @@ interface ReviewActionsSectionProps extends ActionCardSharedProps {
   onStatusChange: (id: Id, status: ItemStatus) => void;
   onDueDateChange: (id: Id, dueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
+  justMovedId: string | null;
 }
 
 function ReviewActionsSection({
@@ -310,20 +369,31 @@ function ReviewActionsSection({
   onStatusChange,
   onDueDateChange,
   onAssigneesChange,
+  justMovedId,
 }: ReviewActionsSectionProps) {
+  // Auto-scroll to the card that just moved to a new status group
+  useEffect(() => {
+    if (!justMovedId) return;
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-action-id="${justMovedId}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }, [justMovedId]);
+
+  const grouped = useMemo(
+    () => groupByStatus(actions, (a) => a.status),
+    [actions]
+  );
+
   return (
     <div className="rounded-xl border border-border bg-card">
       <Collapsible open={open} onOpenChange={onOpenChange}>
-        <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:text-foreground/80 transition-colors">
-          <span>Actions for Review</span>
-          {actions.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {actions.length}
-            </Badge>
-          )}
+        <CollapsibleTrigger className="flex w-full flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 text-sm font-semibold hover:text-foreground/80 transition-colors">
+          <span className="shrink-0">Actions for Review</span>
+          <StatusSummaryBadges actions={actions} />
           <ChevronRight
             className={cn(
-              "h-4 w-4 transition-transform",
+              "ml-auto h-4 w-4 shrink-0 transition-transform",
               open && "rotate-90"
             )}
           />
@@ -331,37 +401,68 @@ function ReviewActionsSection({
 
         <CollapsibleContent>
           <div className="border-t border-border" />
-          <div className={ACTION_CARD_GRID}>
-            {actions.length === 0 ? (
-              <div className="col-span-full flex flex-col items-center justify-center py-8 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-                <h4 className="mb-1 text-sm font-semibold">All caught up</h4>
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  No actions were due between the last session and this one.
-                </p>
+          {actions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
-            ) : (
-              actions.map((action) => (
-                <SessionActionCard
-                  key={action.id}
-                  action={action}
-                  locale={locale}
-                  coachId={coachId}
-                  coachName={coachName}
-                  coacheeId={coacheeId}
-                  coacheeName={coacheeName}
-                  onStatusChange={onStatusChange}
-                  onDueDateChange={onDueDateChange}
-                  onAssigneesChange={onAssigneesChange}
-                  onBodyChange={() => {}}
-                  variant="previous"
-                  sessionDate={sessionDateMap.get(action.coaching_session_id)}
-                />
-              ))
-            )}
-          </div>
+              <h4 className="mb-1 text-sm font-semibold">All caught up</h4>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                No actions were due between the last session and this one.
+              </p>
+            </div>
+          ) : (
+            <div className="px-5 pb-5 pt-4 space-y-0">
+              {STATUS_COLUMN_ORDER.map((status, idx) => {
+                const group = sortActionArray(
+                  grouped[status],
+                  SortOrder.Desc,
+                  "due_by"
+                );
+                return (
+                  <div key={status}>
+                    {idx > 0 && <hr className="border-t border-border my-6" />}
+                    <StatusGroupHeader status={status} count={group.length} />
+                    {group.length === 0 ? (
+                      <p className="text-sm text-muted-foreground/60 py-3 pl-5">
+                        No actions
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {group.map((action) => (
+                          <div
+                            key={action.id}
+                            data-action-id={action.id}
+                            className={cn(
+                              "transition-[box-shadow] duration-700",
+                              action.id === justMovedId &&
+                                "animate-slide-in-from-left ring-2 ring-primary/40 ring-offset-1 rounded-xl",
+                            )}
+                          >
+                            <SessionActionCard
+                              action={action}
+                              locale={locale}
+                              coachId={coachId}
+                              coachName={coachName}
+                              coacheeId={coacheeId}
+                              coacheeName={coacheeName}
+                              onStatusChange={onStatusChange}
+                              onDueDateChange={onDueDateChange}
+                              onAssigneesChange={onAssigneesChange}
+                              onBodyChange={() => {}}
+                              variant="previous"
+                              sessionDate={sessionDateMap.get(action.coaching_session_id)}
+                              autoHeight
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
     </div>
@@ -420,6 +521,16 @@ const ActionsPanel = ({
 }: ActionsPanelProps) => {
   const [reviewOpen, setReviewOpen] = useState(reviewActions);
   const reviewRef = useRef<HTMLDivElement>(null);
+
+  // -- justMoved highlight for review action status changes -----------------
+  const [justMovedId, setJustMovedId] = useState<string | null>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const highlightCard = useCallback((id: string) => {
+    setJustMovedId(id);
+    if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+    highlightTimeoutRef.current = setTimeout(() => setJustMovedId(null), 1500);
+  }, []);
 
   // Auto-scroll to "Actions for Review" when navigated with review=true.
   // Uses requestAnimationFrame to wait for the collapsible content to render
@@ -594,9 +705,13 @@ const ActionsPanel = ({
           coachName={coachName}
           coacheeId={coacheeId}
           coacheeName={coacheeName}
-          onStatusChange={(id, v) => updateField(allActions, id, { field: ActionField.Status, value: v })}
+          onStatusChange={(id, v) => {
+            updateField(allActions, id, { field: ActionField.Status, value: v });
+            highlightCard(id);
+          }}
           onDueDateChange={(id, v) => updateField(allActions, id, { field: ActionField.DueBy, value: v })}
           onAssigneesChange={(id, v) => updateField(allActions, id, { field: ActionField.AssigneeIds, value: v })}
+          justMovedId={justMovedId}
         />
       </div>
     </div>
