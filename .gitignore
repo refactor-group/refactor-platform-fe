@@ -41,8 +41,12 @@ next-env.d.ts
 # vitest test results
 test-results/
 
-# playwright test reports
+# playwright test reports and MCP artifacts
 playwright-report/
+.playwright-mcp/
+
+# Playwright MCP screenshots (root-level only)
+/*.png
 
 # serena
 .serena/
