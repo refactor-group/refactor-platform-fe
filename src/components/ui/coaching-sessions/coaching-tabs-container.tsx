@@ -23,12 +23,14 @@ interface CoachingTabsContainerProps {
   userId: Id;
   defaultValue?: string;
   onTabChange?: (value: string) => void;
+  reviewActions: boolean;
 }
 
 const CoachingTabsContainer = ({
   userId,
   defaultValue = "notes",
   onTabChange,
+  reviewActions = false,
 }: CoachingTabsContainerProps) => {
   const [currentTab, setCurrentTab] = useState(defaultValue);
 
@@ -224,6 +226,7 @@ const CoachingTabsContainer = ({
                 onActionAdded={handleActionAdded}
                 onActionEdited={handleActionEdited}
                 onActionDeleted={handleActionDeleted}
+                reviewActions={reviewActions}
               />
             )}
           </div>

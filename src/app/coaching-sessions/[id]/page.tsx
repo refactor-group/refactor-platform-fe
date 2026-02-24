@@ -39,6 +39,7 @@ export default function CoachingSessionsPage() {
 
   // Get current tab from URL parameter, default to "notes"
   const currentTab = searchParams.get("tab") || "notes";
+  const reviewActions = searchParams.get("review") === "true";
 
   const { userId } = useAuthStore((state) => ({
     userId: state.userId,
@@ -139,6 +140,7 @@ export default function CoachingSessionsPage() {
           userId={userId}
           defaultValue={currentTab}
           onTabChange={handleTabChange}
+          reviewActions={reviewActions}
         />
       </EditorCacheProvider>
     </div>
