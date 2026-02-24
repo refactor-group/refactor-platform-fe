@@ -1,6 +1,6 @@
 /**
  * Shared utility functions for assigned actions hooks.
- * Used by both useAssignedActions and useCoacheeAssignedActions.
+ * Used by useAssignedActions.
  */
 
 import { DateTime } from "ts-luxon";
