@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { ItemStatus, Id, EntityApiError } from "@/types/general";
 import { sortActionArray, type Action } from "@/types/action";
@@ -399,6 +399,7 @@ interface ActionsPanelProps {
   ) => Promise<Action>;
   onActionDeleted: (id: Id) => Promise<Action>;
   isSaving: boolean;
+  reviewActions: boolean;
 }
 
 const ActionsPanel = ({
@@ -415,8 +416,17 @@ const ActionsPanel = ({
   onActionEdited,
   onActionDeleted,
   isSaving,
+  reviewActions = false,
 }: ActionsPanelProps) => {
-  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(reviewActions);
+  const reviewRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to "Actions for Review" when navigated with review=true
+  useEffect(() => {
+    if (reviewActions && reviewRef.current) {
+      reviewRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [reviewActions]);
 
   // Parse session date
   const currentSessionDate = sessionDate
@@ -447,7 +457,7 @@ const ActionsPanel = ({
   );
 
   // Filter review-eligible actions with sticky tracking
-  const reviewActions = useReviewActions(
+  const reviewableActions = useReviewActions(
     allActions,
     coachingSessionId,
     currentSessionDate,
@@ -569,20 +579,22 @@ const ActionsPanel = ({
         isSaving={isSaving}
       />
 
-      <ReviewActionsSection
-        actions={reviewActions}
-        sessionDateMap={sessionDateMap}
-        locale={locale}
-        open={reviewOpen}
-        onOpenChange={setReviewOpen}
-        coachId={coachId}
-        coachName={coachName}
-        coacheeId={coacheeId}
-        coacheeName={coacheeName}
-        onStatusChange={(id, v) => updateField(allActions, id, { field: ActionField.Status, value: v })}
-        onDueDateChange={(id, v) => updateField(allActions, id, { field: ActionField.DueBy, value: v })}
-        onAssigneesChange={(id, v) => updateField(allActions, id, { field: ActionField.AssigneeIds, value: v })}
-      />
+      <div ref={reviewRef} className="scroll-mt-20">
+        <ReviewActionsSection
+          actions={reviewableActions}
+          sessionDateMap={sessionDateMap}
+          locale={locale}
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          coachId={coachId}
+          coachName={coachName}
+          coacheeId={coacheeId}
+          coacheeName={coacheeName}
+          onStatusChange={(id, v) => updateField(allActions, id, { field: ActionField.Status, value: v })}
+          onDueDateChange={(id, v) => updateField(allActions, id, { field: ActionField.DueBy, value: v })}
+          onAssigneesChange={(id, v) => updateField(allActions, id, { field: ActionField.AssigneeIds, value: v })}
+        />
+      </div>
     </div>
   );
 };
