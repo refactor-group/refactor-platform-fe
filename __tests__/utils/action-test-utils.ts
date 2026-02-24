@@ -298,7 +298,7 @@ export function isActionOverdue(
 }
 
 /**
- * Filters actions by status for the What's Due component.
+ * Filters actions by status for the ActionsSummary component.
  * This mirrors the filterActionsByStatus logic in useAssignedActions.
  *
  * @param actions - Raw actions to filter

@@ -202,7 +202,7 @@ describe("Action Filtering", () => {
      * Test: Completed actions are always excluded.
      *
      * Purpose: Verify that completed actions are filtered out regardless
-     * of the filter mode. The What's Due card only shows actionable items.
+     * of the filter mode. The action summary only shows actionable items.
      *
      * Strategy: Create both completed and incomplete actions, verify only
      * incomplete ones are returned for each filter type.

@@ -1,5 +1,5 @@
 /**
- * Types for the assigned actions system used by the What's Due dashboard.
+ * Types for the assigned actions system.
  *
  * This file contains:
  * - API query parameter enums (UserActionsScope, UserActionsAssigneeFilter)
@@ -52,7 +52,7 @@ export enum AssignmentFilter {
 // ============================================================================
 
 /**
- * Filter options for the What's Due dashboard
+ * Filter options for assigned actions
  */
 export enum AssignedActionsFilter {
   DueSoon = "due_soon",
@@ -109,7 +109,7 @@ export interface SessionContext {
 
 /**
  * An Action enriched with relationship, goal, and session context
- * for display in the What's Due dashboard
+ * for display in action summaries and the Actions page
  */
 export interface AssignedActionWithContext {
   action: Action;

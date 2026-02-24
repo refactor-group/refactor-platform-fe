@@ -67,7 +67,7 @@ ActionsPageContainer
 - **Columns**: All 4 status columns always exist (NotStarted, InProgress, Completed, WontDo); visibility controlled by filter
 - **Time filter**: User-selectable — filter by `due_by` or `created_at`
 - **Scope**: User's own actions; coaches get a `CoachViewMode` toggle to view coachee actions
-- **Data strategy**: Reuses the existing enrichment pipeline (`buildSessionLookupMaps` + `addContextToActions`) with same API calls as What's Due — no new backend endpoints
+- **Data strategy**: Reuses the existing enrichment pipeline (`buildSessionLookupMaps` + `addContextToActions`) with the same API calls as the assigned actions pipeline — no new backend endpoints
 - **No sortable**: `@dnd-kit/sortable` not used — within-column ordering uses the sort filter, not manual drag reorder
 
 ## Filter Enums
