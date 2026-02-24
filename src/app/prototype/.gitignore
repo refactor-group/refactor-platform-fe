@@ -1,0 +1,3 @@
+# Ignore generated prototype pages, keep layout and gitignore
+**/page.tsx
+!layout.tsx
