@@ -129,19 +129,32 @@ export function buildInitialOrder(
 }
 
 /**
- * Sort actions within each status group according to an initial position map.
+ * Preserve snapshotted card positions within each status group.
  * Delegates to the generic `sortByPositionMap` from `@/types/action`.
  */
-export function sortGroupedByInitialOrder(
+export function preserveGroupOrder(
   grouped: Record<ItemStatus, AssignedActionWithContext[]>,
-  order: Map<string, number>
+  positionMap: Map<string, number>
 ): Record<ItemStatus, AssignedActionWithContext[]> {
   const getId = (ctx: AssignedActionWithContext) => ctx.action.id;
-  const sorted = { ...grouped };
-  for (const status of Object.keys(sorted) as ItemStatus[]) {
-    sorted[status] = sortByPositionMap(sorted[status], getId, order);
+  const result = { ...grouped };
+  for (const status of Object.keys(result) as ItemStatus[]) {
+    result[status] = sortByPositionMap(result[status], getId, positionMap);
   }
-  return sorted;
+  return result;
+}
+
+/**
+ * Functional builder: group actions by status, then optionally preserve
+ * snapshotted card positions so inline edits don't re-sort.
+ */
+export function groupActionsByStatus(items: AssignedActionWithContext[]) {
+  const grouped = groupByStatus(items, (ctx) => ctx.action.status);
+  return {
+    preservingOrder(positionMap: Map<string, number>) {
+      return preserveGroupOrder(grouped, positionMap);
+    },
+  };
 }
 
 

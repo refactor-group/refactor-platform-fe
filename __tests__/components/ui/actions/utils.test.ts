@@ -14,7 +14,7 @@ import {
   applyTimeFilter,
   visibleStatuses,
   buildInitialOrder,
-  sortGroupedByInitialOrder,
+  preserveGroupOrder,
 } from "@/components/ui/actions/utils";
 import type { Action } from "@/types/action";
 import { actionStatusToString } from "@/types/general";
@@ -373,10 +373,10 @@ describe("buildInitialOrder", () => {
 });
 
 // ---------------------------------------------------------------------------
-// sortGroupedByInitialOrder
+// preserveGroupOrder
 // ---------------------------------------------------------------------------
 
-describe("sortGroupedByInitialOrder", () => {
+describe("preserveGroupOrder", () => {
   it("sorts actions within each status group by position map", () => {
     const actions = [
       makeAction({ id: "a3", status: ItemStatus.NotStarted }),
@@ -386,7 +386,7 @@ describe("sortGroupedByInitialOrder", () => {
     const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
     const order = new Map([["a1", 0], ["a2", 1], ["a3", 2]]);
 
-    const sorted = sortGroupedByInitialOrder(grouped, order);
+    const sorted = preserveGroupOrder(grouped, order);
     expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a1", "a3"]);
     expect(sorted[ItemStatus.InProgress].map((a) => a.action.id)).toEqual(["a2"]);
   });
@@ -400,7 +400,7 @@ describe("sortGroupedByInitialOrder", () => {
     const originalOrder = grouped[ItemStatus.NotStarted].map((a) => a.action.id);
     const order = new Map([["a1", 0], ["a2", 1]]);
 
-    sortGroupedByInitialOrder(grouped, order);
+    preserveGroupOrder(grouped, order);
     expect(grouped[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(originalOrder);
   });
 
@@ -413,7 +413,7 @@ describe("sortGroupedByInitialOrder", () => {
     const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
     const order = new Map([["a3", 0], ["a1", 1]]);
 
-    const sorted = sortGroupedByInitialOrder(grouped, order);
+    const sorted = preserveGroupOrder(grouped, order);
     expect(sorted[ItemStatus.NotStarted].map((a) => a.action.id)).toEqual(["a3", "a1", "a2"]);
   });
 });
