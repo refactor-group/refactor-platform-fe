@@ -31,14 +31,14 @@ export function DashboardContainer() {
       <DashboardHeader onCreateSession={() => handleOpenDialog()} />
 
       {/* Today's Sessions — constrained width on wide screens, full width on narrow */}
-      <div className="mb-8 mt-8 w-[70%] min-w-[320px]">
+      <div className="mb-8 mt-8 w-full max-w-5xl min-w-[320px]">
         <TodaysSessions
           onRescheduleSession={handleOpenDialog}
           onRefreshNeeded={(refreshFn) => setRefreshTodaysSessions(() => refreshFn)}
         />
       </div>
 
-      <div className="w-[70%] min-w-[320px]">
+      <div className="w-full max-w-5xl min-w-[320px]">
         <h2 className="text-lg font-semibold pb-6">Coaching Sessions</h2>
         <CoachingSessionList onUpdateSession={handleOpenDialog} onSessionDeleted={() => refreshTodaysSessions?.()} />
       </div>

@@ -30,7 +30,7 @@ const CoachingTabsContainer = ({
   userId,
   defaultValue = "notes",
   onTabChange,
-  reviewActions = false,
+  reviewActions,
 }: CoachingTabsContainerProps) => {
   const [currentTab, setCurrentTab] = useState(defaultValue);
 
