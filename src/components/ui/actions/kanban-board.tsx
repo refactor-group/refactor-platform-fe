@@ -12,7 +12,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
-import { visibleStatuses, groupByStatus, buildInitialOrder, sortGroupedByInitialOrder } from "@/components/ui/actions/utils";
+import { visibleStatuses, buildInitialOrder, groupActionsByStatus } from "@/components/ui/actions/utils";
 import { useOptimisticStatus } from "@/components/ui/actions/use-optimistic-status";
 import { KanbanColumn } from "@/components/ui/actions/kanban-column";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
@@ -96,7 +96,7 @@ export function KanbanBoard({
   }
 
   const grouped = useMemo(
-    () => sortGroupedByInitialOrder(groupByStatus(actionsWithOverrides, (ctx) => ctx.action.status), orderRef.current),
+    () => groupActionsByStatus(actionsWithOverrides).preservingOrder(orderRef.current),
     [actionsWithOverrides]
   );
   const columns = visibleStatuses(visibility);
