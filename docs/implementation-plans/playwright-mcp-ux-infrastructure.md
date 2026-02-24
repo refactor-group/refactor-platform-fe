@@ -191,7 +191,7 @@ Workflow:
 
 ## Open Questions (Resolved)
 
-1. **Auth for Playwright MCP sessions**: Assuming manual login for now. Root layout providers wrap prototype pages but don't redirect — they just provide context. Future enhancement: auto-inject auth state.
+1. **Auth for Playwright MCP sessions**: Auto-login implemented. Commands read `PW_LOGIN_EMAIL` and `PW_LOGIN_PASSWORD` from `.env.local` and fill the login form via Playwright MCP when redirected to the login page. Prototype routes don't require auth.
 
 2. **Vision mode vs accessibility mode**: Using `--caps vision` only. Accessibility-tree mode can be added later as a second server entry.
 
@@ -206,4 +206,3 @@ Workflow:
 - **Code Connect**: Map Figma component library → codebase components for design-to-code accuracy
 - **Accessibility-tree mode**: Second Playwright MCP entry without `--caps vision`
 - **Persistent screenshot archive**: Save to `docs/ux-screenshots/` for historical comparison
-- **Auth helper**: Auto-inject auth state for Playwright sessions
