@@ -32,7 +32,7 @@ export default function CoachingSessionList({
 }: CoachingSessionListProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const { currentCoachingRelationshipId } = useCurrentCoachingRelationship();
-  const { relationships } = useCoachingRelationshipList(currentOrganizationId || "");
+  const { relationships } = useCoachingRelationshipList(currentOrganizationId);
   // TODO: for now we hardcode a 2 month window centered around now,
   // eventually we want to make this be configurable somewhere
   // (either on the page or elsewhere)

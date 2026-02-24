@@ -23,6 +23,20 @@ vi.mock('@/site.config', () => ({
   },
 }))
 
+describe('CoachingSessionApi.list — null relationship ID', () => {
+  it('returns empty array immediately when relationshipId is null', async () => {
+    const result = await CoachingSessionApi.list(
+      null,
+      DateTime.fromISO('2025-07-01'),
+      DateTime.fromISO('2025-07-31')
+    )
+
+    expect(result).toEqual([])
+    // Must NOT call the API
+    expect(EntityApi.listFn).not.toHaveBeenCalled()
+  })
+})
+
 describe('CoachingSessionApi - Sorting Functionality', () => {
   const mockRelationshipId = 'rel-123'
   const mockFromDate = DateTime.fromISO('2025-07-01')
