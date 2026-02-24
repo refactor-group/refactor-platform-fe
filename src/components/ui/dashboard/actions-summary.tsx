@@ -86,7 +86,7 @@ export function ActionsSummary({ actions, sessionId }: ActionsSummaryProps) {
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <div className="mt-2 ml-6 space-y-1.5 rounded-lg bg-muted/50 p-3 w-fit">
+        <div className="mt-2 ml-6 space-y-1.5 rounded-lg bg-muted/50 p-3 w-fit max-w-full overflow-hidden">
           {visibleActions.map((a) => {
             const isCompleted =
               a.action.status === ItemStatus.Completed ||
