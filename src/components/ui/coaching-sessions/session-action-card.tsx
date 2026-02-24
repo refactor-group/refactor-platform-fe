@@ -58,6 +58,8 @@ interface SessionActionCardProps {
   className?: string;
   /** When true, skip expensive rendering (ReactMarkdown) for drag overlays */
   lightweight?: boolean;
+  /** When true, card height is auto (no fixed h-56). Use for vertical list layouts. */
+  autoHeight: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,7 +100,7 @@ function StatusSelect({ status, onStatusChange }: StatusSelectProps) {
       onValueChange={(value) => onStatusChange(value as ItemStatus)}
     >
       <SelectTrigger
-        className="h-6 w-auto gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent [&>svg]:h-3 [&>svg]:w-3"
+        className="h-6 w-auto gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent whitespace-nowrap [&>svg]:h-3 [&>svg]:w-3"
       >
         <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(status))} />
         {actionStatusToString(status)}
@@ -300,7 +302,7 @@ function ActionFooter({
     .toLocaleString(DateTime.DATE_MED);
 
   return (
-    <div className="mt-auto flex justify-end text-xs text-muted-foreground mr-1">
+    <div className="flex justify-end text-xs text-muted-foreground mr-1">
       <div className="flex items-center gap-1.5">
         <DueDatePicker
           value={dueBy}
@@ -310,15 +312,12 @@ function ActionFooter({
           isOverdue={isOverdue}
         />
         {showLink && (
-          <>
-            <span className="text-muted-foreground/40">·</span>
-            <Link
-              href={`/coaching-sessions/${coachingSessionId}?tab=actions`}
-              className="hover:underline hover:text-foreground transition-colors"
-            >
-              From: {displayDate}
-            </Link>
-          </>
+          <Link
+            href={`/coaching-sessions/${coachingSessionId}?tab=actions`}
+            className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-accent whitespace-nowrap"
+          >
+            From: {displayDate}
+          </Link>
         )}
       </div>
     </div>
@@ -346,6 +345,7 @@ const SessionActionCard = ({
   sessionDate,
   className: cardClassName,
   lightweight = false,
+  autoHeight,
 }: SessionActionCardProps) => {
   const now = DateTime.now();
   const isCompleted =
@@ -373,22 +373,20 @@ const SessionActionCard = ({
   return (
     <Card
       className={cn(
-        "rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] bg-card transition-colors h-56 overflow-hidden",
+        "rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] bg-card transition-colors overflow-hidden",
+        !autoHeight && "h-56",
         isOverdue && "bg-red-50/40 dark:bg-red-950/10",
         isCompleted && "opacity-60",
         cardClassName
       )}
     >
       <CardContent className="flex h-full flex-col gap-2 p-5">
-        {/* Top row: status pill | assignees + delete */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <StatusSelect
-              status={action.status}
-              onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
-            />
-          </div>
-
+        {/* Mobile only: status pill above body */}
+        <div className="flex items-center justify-between sm:hidden">
+          <StatusSelect
+            status={action.status}
+            onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
+          />
           <div className="flex items-center gap-2">
             <AssigneePickerPopover
               allAssignees={allAssignees}
@@ -402,25 +400,50 @@ const SessionActionCard = ({
           </div>
         </div>
 
-        <ActionBody
-          body={action.body}
-          isCompleted={isCompleted}
-          isCurrent={isCurrent}
-          onBodyChange={(newBody) => onBodyChange(action.id, newBody)}
-          lightweight={lightweight}
-        />
+        {/* Body + assignees side-by-side (sm+: assignees inline; mobile: assignees in top row above) */}
+        <div className="flex items-start gap-2 flex-1 min-h-0">
+          <div className="flex-1 min-h-0 min-w-0">
+            <ActionBody
+              body={action.body}
+              isCompleted={isCompleted}
+              isCurrent={isCurrent}
+              onBodyChange={(newBody) => onBodyChange(action.id, newBody)}
+              lightweight={lightweight}
+            />
+          </div>
+          <div className="hidden sm:flex items-center gap-2 shrink-0 pt-1">
+            <AssigneePickerPopover
+              allAssignees={allAssignees}
+              resolvedAssignees={resolvedAssignees}
+              assigneeIds={assigneeIds}
+              onToggle={handleAssigneeToggle}
+            />
+            {isCurrent && onDelete && (
+              <DeleteConfirmButton onDelete={() => onDelete(action.id)} />
+            )}
+          </div>
+        </div>
 
-        <ActionFooter
-          dueBy={action.due_by}
-          createdAt={action.created_at}
-          coachingSessionId={action.coaching_session_id}
-          locale={locale}
-          isOverdue={isOverdue}
-          isCurrent={isCurrent}
-          showSessionLink={showSessionLink}
-          sessionDate={sessionDate}
-          onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
-        />
+        {/* Bottom row: status pill (sm+) | due date + session link */}
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-y-1">
+          <div className="hidden sm:block">
+            <StatusSelect
+              status={action.status}
+              onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
+            />
+          </div>
+          <ActionFooter
+            dueBy={action.due_by}
+            createdAt={action.created_at}
+            coachingSessionId={action.coaching_session_id}
+            locale={locale}
+            isOverdue={isOverdue}
+            isCurrent={isCurrent}
+            showSessionLink={showSessionLink}
+            sessionDate={sessionDate}
+            onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
+          />
+        </div>
       </CardContent>
     </Card>
   );

@@ -88,6 +88,7 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
         sessionDate={ctx.sourceSession.sessionDate}
         className="rounded-t-none"
         lightweight={isOverlay}
+        autoHeight={false}
       />
     </>
   );

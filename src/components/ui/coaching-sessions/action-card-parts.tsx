@@ -198,14 +198,11 @@ export function DueDatePicker({
           <button
             type="button"
             className={cn(
-              "flex items-center gap-1 hover:underline cursor-pointer",
-              isOverdue && "text-red-500 font-medium"
+              "inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-accent cursor-pointer whitespace-nowrap",
+              isOverdue ? "text-red-500" : "text-foreground"
             )}
           >
-            {isOverdue && (
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-            )}
-            Due: {formattedDate}
+            {isOverdue ? "Overdue" : `Due: ${formattedDate}`}
           </button>
         )}
       </PopoverTrigger>

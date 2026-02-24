@@ -152,6 +152,7 @@ describe('ActionsPanel', () => {
     onActionAdded: vi.fn(),
     onActionEdited: vi.fn(),
     onActionDeleted: vi.fn(),
+    reviewActions: false,
   }
 
   beforeEach(() => {
@@ -345,9 +346,9 @@ describe('ActionsPanel', () => {
       </Wrapper>
     )
 
-    expect(screen.getByText('In Progress')).toBeInTheDocument()
-    expect(screen.getByText('Completed')).toBeInTheDocument()
-    expect(screen.getByText('Not Started')).toBeInTheDocument()
+    expect(screen.getAllByText('In Progress').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Completed').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Not Started').length).toBeGreaterThanOrEqual(1)
   })
 
   /**
@@ -661,6 +662,114 @@ describe('ActionsPanel', () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Failed to update action.')
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Status-grouped review actions layout
+  // -------------------------------------------------------------------------
+
+  describe('Status-grouped review actions', () => {
+    /**
+     * Helper to render with review actions visible. Uses the default mock which
+     * returns mockAllRelationshipActions including one previous-session action.
+     */
+    function renderWithReviewOpen() {
+      render(
+        <Wrapper>
+          <ActionsPanel {...mockProps} reviewActions />
+        </Wrapper>
+      )
+    }
+
+    it('should render status group headers for all 4 statuses', () => {
+      renderWithReviewOpen()
+
+      // Each status group has a header with an h4 element
+      const groupHeaders = screen.getAllByRole('heading', { level: 4 })
+      const headerTexts = groupHeaders.map((h) => h.textContent)
+
+      expect(headerTexts).toContain('Not Started')
+      expect(headerTexts).toContain('In Progress')
+      expect(headerTexts).toContain('Completed')
+      expect(headerTexts).toContain("Won't Do")
+    })
+
+    it('should render status summary badges in the collapsible header', () => {
+      renderWithReviewOpen()
+
+      // The header should contain status summary badges with counts
+      // The previous-session action (InProgress) should show in the summary
+      const header = screen.getByText('Actions for Review').closest('button')!
+      expect(header).toBeInTheDocument()
+
+      // Should not have the old Badge with total count — instead has inline status badges
+      // The summary badges should contain status text labels
+      expect(header.textContent).toContain('In Progress')
+    })
+
+    it('should show "No actions" placeholder for empty status groups', () => {
+      renderWithReviewOpen()
+
+      // Groups with zero actions should show "No actions" placeholder
+      const placeholders = screen.getAllByText('No actions')
+      expect(placeholders.length).toBeGreaterThan(0)
+    })
+
+    it('should render hr dividers between status groups', () => {
+      renderWithReviewOpen()
+
+      // 4 status groups means 3 dividers between them
+      const reviewContainer = screen.getByText('Actions for Review').closest('[class*="rounded"]')!
+      const dividers = reviewContainer.querySelectorAll('hr')
+      expect(dividers).toHaveLength(3)
+    })
+
+    it('should still show "All caught up" when there are zero total review actions', () => {
+      // Override allActions to return only current-session actions
+      const mockedHook = vi.mocked(useUserActionsList)
+      mockedHook.mockImplementation((_userId, params) => {
+        if (params?.coaching_session_id) {
+          return {
+            actions: mockSessionActions,
+            isLoading: false,
+            isError: false,
+            refresh: mockRefreshSession,
+          }
+        }
+        return {
+          actions: mockSessionActions, // only current-session → all filtered out
+          isLoading: false,
+          isError: false,
+          refresh: mockRefreshAll,
+        }
+      })
+
+      render(
+        <Wrapper>
+          <ActionsPanel {...mockProps} reviewActions />
+        </Wrapper>
+      )
+
+      expect(screen.getByText('All caught up')).toBeInTheDocument()
+
+      // Restore default mock
+      mockedHook.mockImplementation((_userId, params) => {
+        if (params?.coaching_session_id) {
+          return {
+            actions: mockSessionActions,
+            isLoading: false,
+            isError: false,
+            refresh: mockRefreshSession,
+          }
+        }
+        return {
+          actions: mockAllRelationshipActions,
+          isLoading: false,
+          isError: false,
+          refresh: mockRefreshAll,
+        }
+      })
     })
   })
 
