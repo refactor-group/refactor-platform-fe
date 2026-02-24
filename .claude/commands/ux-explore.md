@@ -7,13 +7,26 @@ optional focus concerns
 
 ## Workflow
 
-### 0. Ensure dev server is running
+### 0. Ensure dev server is running and authenticate
 Before any browser interaction, check if the dev server is already running:
 - Run `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000` via Bash
 - If the response is `000` (connection refused) or any non-2xx/3xx code, start the dev
   server in the background: `npm run dev:pw &` via Bash, then poll `http://localhost:3000`
   every 2 seconds (up to 30 seconds) until it responds
 - If it's already responding, proceed immediately
+
+Then authenticate if needed:
+- Use Playwright MCP to navigate to the target route
+- If the page is the login form (URL is `/` and the page contains a "Sign In with Email"
+  button), auto-login:
+  1. Read `PW_LOGIN_EMAIL` and `PW_LOGIN_PASSWORD` from `.env.local` via Bash:
+     `grep '^PW_LOGIN_EMAIL=' .env.local | cut -d'"' -f2`
+  2. If either is empty, ask the user to fill in their credentials in `.env.local`
+  3. Click the `#email` input and type the email
+  4. Click the `#password` input and type the password
+  5. Click the "Sign In with Email" button
+  6. Wait for navigation to complete (URL should change away from `/`)
+- If already on an authenticated page, proceed immediately
 
 ### 1. Read the source code
 - Find the page/component source for the target area (trace from `src/app/` → page.tsx → component tree)
