@@ -180,8 +180,8 @@ export function DueDatePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        {variant === "button" ? (
+      {variant === "button" ? (
+        <PopoverTrigger asChild>
           <Button
             variant="outline"
             size="sm"
@@ -194,18 +194,35 @@ export function DueDatePicker({
             <CalendarIcon className="h-3.5 w-3.5" />
             {formattedDate}
           </Button>
-        ) : (
+        </PopoverTrigger>
+      ) : isOverdue ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-red-500 transition-colors hover:bg-accent cursor-pointer whitespace-nowrap"
+              >
+                Overdue
+              </button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            {value.hasSame(DateTime.now(), "day")
+              ? "This is due today"
+              : `This was due on ${formattedDate}`}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <PopoverTrigger asChild>
           <button
             type="button"
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-accent cursor-pointer whitespace-nowrap",
-              isOverdue ? "text-red-500" : "text-foreground"
-            )}
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors hover:bg-accent cursor-pointer whitespace-nowrap"
           >
-            {isOverdue ? "Overdue" : `Due: ${formattedDate}`}
+            Due: {formattedDate}
           </button>
-        )}
-      </PopoverTrigger>
+        </PopoverTrigger>
+      )}
       <PopoverContent className="w-auto p-0">
         <Calendar
           mode="single"

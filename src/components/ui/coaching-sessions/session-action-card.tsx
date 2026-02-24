@@ -375,7 +375,6 @@ const SessionActionCard = ({
       className={cn(
         "rounded-xl border border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)] bg-card transition-colors overflow-hidden",
         !autoHeight && "h-56",
-        isOverdue && "bg-red-50/40 dark:bg-red-950/10",
         isCompleted && "opacity-60",
         cardClassName
       )}
