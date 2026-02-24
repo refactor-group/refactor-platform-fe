@@ -412,7 +412,7 @@ function ReviewActionsSection({
               </p>
             </div>
           ) : (
-            <div className="px-5 pb-5 pt-4 space-y-0">
+            <div className="px-5 pb-5 pt-6 space-y-0">
               {STATUS_COLUMN_ORDER.map((status, idx) => {
                 const group = sortActionArray(
                   grouped[status],
