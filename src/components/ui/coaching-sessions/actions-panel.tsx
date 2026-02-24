@@ -434,9 +434,9 @@ function ReviewActionsSection({
                             key={action.id}
                             data-action-id={action.id}
                             className={cn(
-                              "transition-[box-shadow] duration-700",
+                              "rounded-xl transition-shadow duration-700",
                               action.id === justMovedId &&
-                                "animate-slide-in-from-left ring-2 ring-primary/40 ring-offset-1 rounded-xl",
+                                "animate-slide-in-from-left ring-2 ring-primary/40",
                             )}
                           >
                             <SessionActionCard
