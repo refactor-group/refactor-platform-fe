@@ -22,7 +22,7 @@ export const STATUS_COLUMN_ORDER: ItemStatus[] = [
   ItemStatus.WontDo,
 ];
 
-/** Tailwind color class for each status column indicator */
+/** Tailwind background color class for each status column indicator */
 export function statusColor(status: ItemStatus): string {
   switch (status) {
     case ItemStatus.NotStarted:
@@ -40,19 +40,38 @@ export function statusColor(status: ItemStatus): string {
   }
 }
 
-/** Group actions into status buckets, preserving order within each bucket */
-export function groupByStatus(
-  actions: AssignedActionWithContext[]
-): Record<ItemStatus, AssignedActionWithContext[]> {
-  const result: Record<ItemStatus, AssignedActionWithContext[]> = {
+/** Tailwind text color class for each status */
+export function statusTextColor(status: ItemStatus): string {
+  switch (status) {
+    case ItemStatus.NotStarted:
+      return "text-slate-500";
+    case ItemStatus.InProgress:
+      return "text-blue-500";
+    case ItemStatus.Completed:
+      return "text-green-600";
+    case ItemStatus.WontDo:
+      return "text-gray-500";
+    default: {
+      const _exhaustive: never = status;
+      throw new Error(`Unhandled status: ${_exhaustive}`);
+    }
+  }
+}
+
+/** Group items into status buckets, preserving order within each bucket */
+export function groupByStatus<T>(
+  items: T[],
+  getStatus: (item: T) => ItemStatus
+): Record<ItemStatus, T[]> {
+  const result: Record<ItemStatus, T[]> = {
     [ItemStatus.NotStarted]: [],
     [ItemStatus.InProgress]: [],
     [ItemStatus.Completed]: [],
     [ItemStatus.WontDo]: [],
   };
 
-  for (const ctx of actions) {
-    result[ctx.action.status].push(ctx);
+  for (const item of items) {
+    result[getStatus(item)].push(item);
   }
 
   return result;

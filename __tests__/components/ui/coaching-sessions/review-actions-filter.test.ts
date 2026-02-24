@@ -147,27 +147,13 @@ describe("filterReviewActions", () => {
     });
   });
 
-  describe("overdue actions (due before the window)", () => {
-    it("should include outstanding actions due before the window", () => {
+  describe("actions due before the window", () => {
+    it("should exclude all actions due before the window regardless of status", () => {
       const actions = [
         reviewAction("a1", "2026-01-15", ItemStatus.NotStarted),
         reviewAction("a2", "2026-02-01", ItemStatus.InProgress),
-      ];
-
-      const result = filterReviewActions(
-        actions,
-        CURRENT_SESSION_ID,
-        CURRENT_SESSION_DATE,
-        PREVIOUS_SESSION_DATE
-      );
-
-      expect(result).toHaveLength(2);
-    });
-
-    it("should exclude completed actions due before the window", () => {
-      const actions = [
-        reviewAction("a1", "2026-01-15", ItemStatus.Completed),
-        reviewAction("a2", "2026-02-01", ItemStatus.WontDo),
+        reviewAction("a3", "2026-01-20", ItemStatus.Completed),
+        reviewAction("a4", "2026-02-01", ItemStatus.WontDo),
       ];
 
       const result = filterReviewActions(
@@ -178,27 +164,6 @@ describe("filterReviewActions", () => {
       );
 
       expect(result).toHaveLength(0);
-    });
-
-    it("should include outstanding but exclude completed actions before the window", () => {
-      const actions = [
-        reviewAction("outstanding", "2026-01-20", ItemStatus.InProgress),
-        reviewAction("completed", "2026-01-20", ItemStatus.Completed),
-        reviewAction("not-started", "2026-01-25", ItemStatus.NotStarted),
-        reviewAction("wont-do", "2026-01-25", ItemStatus.WontDo),
-      ];
-
-      const result = filterReviewActions(
-        actions,
-        CURRENT_SESSION_ID,
-        CURRENT_SESSION_DATE,
-        PREVIOUS_SESSION_DATE
-      );
-
-      expect(result).toHaveLength(2);
-      const ids = result.map((a) => a.id);
-      expect(ids).toContain("outstanding");
-      expect(ids).toContain("not-started");
     });
   });
 
@@ -344,10 +309,8 @@ describe("filterReviewActions", () => {
         reviewAction("window-in-progress", "2026-02-08", ItemStatus.InProgress),
         reviewAction("window-not-started", "2026-02-11", ItemStatus.NotStarted),
 
-        // Before window, outstanding — should be included
+        // Before window — should be excluded regardless of status
         reviewAction("overdue-old", "2026-01-10", ItemStatus.NotStarted),
-
-        // Before window, completed — should be excluded
         reviewAction("done-old", "2026-01-10", ItemStatus.Completed),
 
         // After window — should be excluded
@@ -361,14 +324,14 @@ describe("filterReviewActions", () => {
         PREVIOUS_SESSION_DATE
       );
 
-      expect(result).toHaveLength(4);
+      expect(result).toHaveLength(3);
       const ids = result.map((a) => a.id);
       expect(ids).toContain("window-completed");
       expect(ids).toContain("window-in-progress");
       expect(ids).toContain("window-not-started");
-      expect(ids).toContain("overdue-old");
 
       expect(ids).not.toContain("current-1");
+      expect(ids).not.toContain("overdue-old");
       expect(ids).not.toContain("done-old");
       expect(ids).not.toContain("future");
     });

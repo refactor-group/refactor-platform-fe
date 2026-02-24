@@ -96,7 +96,7 @@ export function KanbanBoard({
   }
 
   const grouped = useMemo(
-    () => sortGroupedByInitialOrder(groupByStatus(actionsWithOverrides), orderRef.current),
+    () => sortGroupedByInitialOrder(groupByStatus(actionsWithOverrides, (ctx) => ctx.action.status), orderRef.current),
     [actionsWithOverrides]
   );
   const columns = visibleStatuses(visibility);
