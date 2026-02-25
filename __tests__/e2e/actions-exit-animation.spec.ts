@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Locator } from '@playwright/test'
 import {
   setupAuthentication,
   mockCommonApiRoutes,
@@ -128,6 +128,28 @@ function interceptStatusUpdate(page: Parameters<typeof mockCommonApiRoutes>[0]) 
 }
 
 // ---------------------------------------------------------------------------
+// Helpers — viewport-agnostic selectors
+// ---------------------------------------------------------------------------
+
+/**
+ * Each card renders two StatusSelect comboboxes (mobile: `sm:hidden`,
+ * desktop: `hidden sm:block`).  Only one is visible at any given viewport.
+ * Return whichever one Playwright considers visible so tests pass on both
+ * Mobile Chrome and desktop browsers.
+ */
+async function clickVisibleCombobox(card: Locator) {
+  const boxes = card.locator('[role="combobox"]')
+  const count = await boxes.count()
+  for (let i = 0; i < count; i++) {
+    if (await boxes.nth(i).isVisible()) {
+      await boxes.nth(i).click()
+      return
+    }
+  }
+  throw new Error('No visible combobox found in the card')
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -153,11 +175,8 @@ test.describe('Actions page: exit animation and toast on status change', () => {
     await expect(page.getByText('Write unit tests')).toBeVisible()
 
     // Open the status dropdown on the first card and select "Completed"
-    // Each card has a StatusSelect rendered as a combobox
     const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
-    // Two StatusSelect comboboxes per card (mobile + desktop); desktop is last
-    const statusTrigger = firstCard.locator('[role="combobox"]').last()
-    await statusTrigger.click()
+    await clickVisibleCombobox(firstCard)
     await page.getByRole('option', { name: /Completed/ }).click()
 
     // After the animation completes (~300ms), a toast should appear
@@ -183,9 +202,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
 
     // Change a card's status to Completed
     const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
-    // Two StatusSelect comboboxes per card (mobile + desktop); desktop is last
-    const statusTrigger = firstCard.locator('[role="combobox"]').last()
-    await statusTrigger.click()
+    await clickVisibleCombobox(firstCard)
     await page.getByRole('option', { name: /Completed/ }).click()
 
     // Wait for toast
@@ -227,9 +244,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
 
     // Change a card's status to Completed
     const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
-    // Two StatusSelect comboboxes per card (mobile + desktop); desktop is last
-    const statusTrigger = firstCard.locator('[role="combobox"]').last()
-    await statusTrigger.click()
+    await clickVisibleCombobox(firstCard)
     await page.getByRole('option', { name: /Completed/ }).click()
 
     // Wait for toast, then click Undo
@@ -257,9 +272,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
 
     // Change a card from Not Started → In Progress (both visible in Open view)
     const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
-    // Two StatusSelect comboboxes per card (mobile + desktop); desktop is last
-    const statusTrigger = firstCard.locator('[role="combobox"]').last()
-    await statusTrigger.click()
+    await clickVisibleCombobox(firstCard)
     await page.getByRole('option', { name: /In Progress/ }).click()
 
     // Card should still be visible (moved to In Progress column)
@@ -289,9 +302,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
 
     // Change a card to Completed
     const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
-    // Two StatusSelect comboboxes per card (mobile + desktop); desktop is last
-    const statusTrigger = firstCard.locator('[role="combobox"]').last()
-    await statusTrigger.click()
+    await clickVisibleCombobox(firstCard)
     await page.getByRole('option', { name: /Completed/ }).click()
 
     // Count should update to 1 immediately (before animation finishes)
