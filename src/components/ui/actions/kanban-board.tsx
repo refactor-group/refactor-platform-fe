@@ -12,16 +12,22 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import { toast } from "sonner";
 import { visibleStatuses, buildInitialOrder, groupActionsByStatus } from "@/components/ui/actions/utils";
 import { useOptimisticStatus } from "@/components/ui/actions/use-optimistic-status";
 import { KanbanColumn } from "@/components/ui/actions/kanban-column";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
-import type { AssignedActionWithContext, StatusVisibility } from "@/types/assigned-actions";
+import { actionStatusToString } from "@/types/general";
+import { StatusVisibility } from "@/types/assigned-actions";
+import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
 import type { DateTime } from "ts-luxon";
 
 /** Position value that sorts before all natural positions (0, 1, 2…) */
 const TOP_OF_COLUMN_POSITION = -1;
+
+/** Duration of the card exit animation in ms (matches CSS keyframe) */
+const EXIT_ANIMATION_MS = 300;
 
 /**
  * Measure droppable rects BEFORE dragging (while idle) and cache them.
@@ -34,11 +40,17 @@ const measuringConfig = {
   droppable: { strategy: MeasuringStrategy.BeforeDragging },
 };
 
+interface ExitingCard {
+  originalStatus: ItemStatus;
+  newStatus: ItemStatus;
+}
+
 interface KanbanBoardProps {
   actions: AssignedActionWithContext[];
   visibility: StatusVisibility;
   locale: string;
   onStatusChange: (id: Id, newStatus: ItemStatus) => Promise<void>;
+  onVisibilityChange: (vis: StatusVisibility) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
   onBodyChange: (id: Id, newBody: string) => void;
@@ -50,6 +62,7 @@ export function KanbanBoard({
   visibility,
   locale,
   onStatusChange,
+  onVisibilityChange,
   onDueDateChange,
   onAssigneesChange,
   onBodyChange,
@@ -61,13 +74,22 @@ export function KanbanBoard({
   /** Pre-cached card width so we never force a synchronous layout reflow at drag-start */
   const cachedCardWidth = useRef<number | undefined>(undefined);
 
+  /** Cards currently playing the exit animation before leaving the visible columns */
+  const [exitingCards, setExitingCards] = useState<Map<string, ExitingCard>>(
+    () => new Map()
+  );
+  const exitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map()
+  );
+
   const { actionsWithOverrides, applyOverride, rollbackOverride } =
     useOptimisticStatus(actions);
 
-  // Clear the highlight timer on unmount
+  // Clear timers on unmount
   useEffect(() => {
     return () => {
       if (justMovedTimer.current) clearTimeout(justMovedTimer.current);
+      for (const timer of exitTimers.current.values()) clearTimeout(timer);
     };
   }, []);
 
@@ -101,6 +123,11 @@ export function KanbanBoard({
   );
   const columns = visibleStatuses(visibility);
 
+  const exitingIdSet = useMemo(
+    () => new Set(exitingCards.keys()),
+    [exitingCards]
+  );
+
   const activeAction = useMemo(
     () => (activeId ? actionsWithOverrides.find((a) => a.action.id === activeId) : undefined),
     [activeId, actionsWithOverrides]
@@ -116,11 +143,95 @@ export function KanbanBoard({
     justMovedTimer.current = setTimeout(() => setJustMovedId(undefined), 1500);
   }, []);
 
-  /** Optimistic status change: move card immediately, highlight it, roll back on failure */
-  const handleOptimisticStatusChange = useCallback(
+  /** Complete the exit: apply the optimistic override and show a toast */
+  const completeExit = useCallback(
+    (id: string, entry: ExitingCard) => {
+      // Clean up timer reference
+      exitTimers.current.delete(id);
+      setExitingCards((prev) => {
+        const next = new Map(prev);
+        next.delete(id);
+        return next;
+      });
+
+      // Now apply the override so the card leaves the visible column
+      applyOverride(id, entry.newStatus);
+      orderRef.current.set(id, TOP_OF_COLUMN_POSITION);
+
+      const statusLabel = actionStatusToString(entry.newStatus);
+      toast(`Moved to ${statusLabel}`, {
+        action: {
+          label: "Show",
+          onClick: () => {
+            onVisibilityChange(StatusVisibility.All);
+            // Highlight the card once it becomes visible in the All view
+            setTimeout(() => highlightCard(id), 50);
+          },
+        },
+        cancel: {
+          label: "Undo",
+          onClick: () => {
+            // Revert: apply override back to original status and persist via API
+            applyOverride(id, entry.originalStatus);
+            orderRef.current.set(id, TOP_OF_COLUMN_POSITION);
+            highlightCard(id);
+            onStatusChange(id, entry.originalStatus).catch(() => {
+              rollbackOverride(id);
+            });
+          },
+        },
+        duration: 5000,
+      });
+    },
+    [applyOverride, rollbackOverride, onStatusChange, onVisibilityChange, highlightCard]
+  );
+
+  const cancelExit = useCallback((id: string) => {
+    setExitingCards((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+    const timer = exitTimers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      exitTimers.current.delete(id);
+    }
+  }, []);
+
+  /** Card moves to a non-visible column: animate out, persist, then show toast */
+  const handleExitingStatusChange = useCallback(
+    async (id: Id, newStatus: ItemStatus) => {
+      const action = actionsWithOverrides.find((a) => a.action.id === id);
+      if (!action) return;
+
+      const entry: ExitingCard = {
+        originalStatus: action.action.status,
+        newStatus,
+      };
+
+      // Start exit animation — card stays in its current column but fades out
+      setExitingCards((prev) => new Map(prev).set(id, entry));
+
+      // Fire API call immediately (don't wait for animation)
+      try {
+        await onStatusChange(id, newStatus);
+      } catch {
+        cancelExit(id);
+        return;
+      }
+
+      // Schedule visual removal + toast after animation completes
+      const timer = setTimeout(() => completeExit(id, entry), EXIT_ANIMATION_MS);
+      exitTimers.current.set(id, timer);
+    },
+    [actionsWithOverrides, onStatusChange, cancelExit, completeExit]
+  );
+
+  /** Card stays in a visible column: move instantly with highlight */
+  const handleVisibleStatusChange = useCallback(
     async (id: Id, newStatus: ItemStatus) => {
       applyOverride(id, newStatus);
-      // Place the moved card at the top of its new column
       orderRef.current.set(id, TOP_OF_COLUMN_POSITION);
       highlightCard(id);
       try {
@@ -130,6 +241,18 @@ export function KanbanBoard({
       }
     },
     [onStatusChange, applyOverride, rollbackOverride, highlightCard]
+  );
+
+  const handleOptimisticStatusChange = useCallback(
+    async (id: Id, newStatus: ItemStatus) => {
+      const leavesView = !visibleStatuses(visibility).includes(newStatus);
+      if (leavesView) {
+        await handleExitingStatusChange(id, newStatus);
+      } else {
+        await handleVisibleStatusChange(id, newStatus);
+      }
+    },
+    [visibility, handleExitingStatusChange, handleVisibleStatusChange]
   );
 
   const handleDragEnd = useCallback(
@@ -183,6 +306,7 @@ export function KanbanBoard({
             actions={grouped[status]}
             cardProps={cardProps}
             justMovedId={justMovedId}
+            exitingIds={exitingIdSet}
           />
         ))}
       </div>

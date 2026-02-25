@@ -20,6 +20,30 @@
   }
 }
 
+/* Exit animation for kanban cards moving to a non-visible column */
+@keyframes kanban-card-exit {
+  0% {
+    opacity: 1;
+    transform: scaleY(1);
+    max-height: 300px;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(0);
+    max-height: 0px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+  }
+}
+
+.animate-kanban-card-exit {
+  animation: kanban-card-exit 300ms ease-out forwards;
+  transform-origin: top;
+  overflow: hidden;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

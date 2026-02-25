@@ -339,6 +339,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
           visibility={statusVisibility}
           locale={locale}
           onStatusChange={handleStatusChange}
+          onVisibilityChange={handleStatusVisibilityChange}
           onDueDateChange={handleDueDateChange}
           onAssigneesChange={handleAssigneesChange}
           onBodyChange={handleBodyChange}
