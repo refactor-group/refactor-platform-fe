@@ -428,7 +428,7 @@ function ReviewActionsSection({
                         No actions
                       </p>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-3 max-w-full sm:max-w-[75%] lg:max-w-[50%]">
                         {group.map((action) => (
                           <div
                             key={action.id}
@@ -677,23 +677,7 @@ const ActionsPanel = ({
   // -- Render ---------------------------------------------------------------
 
   return (
-    <div className="flex flex-col gap-6 pt-4 pb-24 -mx-4 px-4 rounded-xl bg-muted/40">
-      <NewActionsSection
-        actions={sessionActions}
-        locale={locale}
-        coachId={coachId}
-        coachName={coachName}
-        coacheeId={coacheeId}
-        coacheeName={coacheeName}
-        onStatusChange={(id, v) => updateField(sessionActions, id, { field: ActionField.Status, value: v })}
-        onDueDateChange={(id, v) => updateField(sessionActions, id, { field: ActionField.DueBy, value: v })}
-        onAssigneesChange={(id, v) => updateField(sessionActions, id, { field: ActionField.AssigneeIds, value: v })}
-        onBodyChange={(id, v) => updateField(sessionActions, id, { field: ActionField.Body, value: v })}
-        onDelete={handleDeleteAction}
-        onCreateAction={handleCreateAction}
-        isSaving={isSaving}
-      />
-
+    <div className="flex flex-col gap-10 pt-4 pb-24 -mx-4 px-4 rounded-xl bg-muted/40">
       <div ref={reviewRef} className="scroll-mt-20">
         <ReviewActionsSection
           actions={reviewableActions}
@@ -714,6 +698,22 @@ const ActionsPanel = ({
           justMovedId={justMovedId}
         />
       </div>
+
+      <NewActionsSection
+        actions={sessionActions}
+        locale={locale}
+        coachId={coachId}
+        coachName={coachName}
+        coacheeId={coacheeId}
+        coacheeName={coacheeName}
+        onStatusChange={(id, v) => updateField(sessionActions, id, { field: ActionField.Status, value: v })}
+        onDueDateChange={(id, v) => updateField(sessionActions, id, { field: ActionField.DueBy, value: v })}
+        onAssigneesChange={(id, v) => updateField(sessionActions, id, { field: ActionField.AssigneeIds, value: v })}
+        onBodyChange={(id, v) => updateField(sessionActions, id, { field: ActionField.Body, value: v })}
+        onDelete={handleDeleteAction}
+        onCreateAction={handleCreateAction}
+        isSaving={isSaving}
+      />
     </div>
   );
 };
