@@ -86,6 +86,7 @@ const defaultProps = {
   visibility: StatusVisibility.All,
   locale: "en-US",
   onStatusChange: vi.fn().mockResolvedValue(undefined),
+  onVisibilityChange: vi.fn(),
   onDueDateChange: vi.fn(),
   onAssigneesChange: vi.fn(),
   onBodyChange: vi.fn(),
