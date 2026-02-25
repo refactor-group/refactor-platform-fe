@@ -17,6 +17,8 @@ interface KanbanColumnProps {
   cardProps: KanbanCardCallbacks;
   /** ID of an action that was just moved via drag-and-drop (for highlight) */
   justMovedId?: string;
+  /** IDs of cards currently playing the exit animation */
+  exitingIds?: Set<string>;
 }
 
 export const KanbanColumn = memo(function KanbanColumn({
@@ -24,8 +26,13 @@ export const KanbanColumn = memo(function KanbanColumn({
   actions,
   cardProps,
   justMovedId,
+  exitingIds,
 }: KanbanColumnProps) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
+
+  const visibleCount = exitingIds
+    ? actions.filter((a) => !exitingIds.has(a.action.id)).length
+    : actions.length;
 
   return (
     <div
@@ -43,7 +50,7 @@ export const KanbanColumn = memo(function KanbanColumn({
         />
         <h3 className="text-sm font-medium">{actionStatusToString(status)}</h3>
         <span className="ml-auto text-xs text-muted-foreground tabular-nums rounded-full bg-muted px-2 py-0.5">
-          {actions.length}
+          {visibleCount}
         </span>
       </div>
 
@@ -54,14 +61,21 @@ export const KanbanColumn = memo(function KanbanColumn({
             No actions
           </p>
         ) : (
-          actions.map((ctx) => (
-            <KanbanActionCard
-              key={ctx.action.id}
-              ctx={ctx}
-              {...cardProps}
-              justMoved={ctx.action.id === justMovedId}
-            />
-          ))
+          actions.map((ctx) => {
+            const isExiting = exitingIds?.has(ctx.action.id) ?? false;
+            return (
+              <div
+                key={ctx.action.id}
+                className={cn(isExiting && "animate-kanban-card-exit")}
+              >
+                <KanbanActionCard
+                  ctx={ctx}
+                  {...cardProps}
+                  justMoved={ctx.action.id === justMovedId}
+                />
+              </div>
+            );
+          })
         )}
       </div>
     </div>
