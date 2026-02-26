@@ -12,12 +12,18 @@ import { Agreement } from "@/types/agreement";
  */
 export const DEFAULT_SESSION_DURATION_MINUTES = 60;
 
+// Default meeting provider for new coaching sessions.
+// TODO: expand to support multiple providers (e.g. Zoom) when provider selection is added to the UI.
+export const DEFAULT_MEETING_PROVIDER = "google";
+
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
 export interface CoachingSession {
   id: Id;
   coaching_relationship_id: Id;
   date: string;
+  meeting_url?: string;
+  provider?: string;
   created_at: DateTime;
   updated_at: DateTime;
 }
