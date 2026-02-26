@@ -99,11 +99,13 @@ export function KanbanBoard({
 
   // Clear timers on unmount
   useEffect(() => {
+    const exitMap = exitTimers.current;
+    const enterMap = enterTimers.current;
     return () => {
       if (justMovedTimer.current) clearTimeout(justMovedTimer.current);
       if (showHighlightTimer.current) clearTimeout(showHighlightTimer.current);
-      for (const timer of exitTimers.current.values()) clearTimeout(timer);
-      for (const timer of enterTimers.current.values()) clearTimeout(timer);
+      for (const timer of exitMap.values()) clearTimeout(timer);
+      for (const timer of enterMap.values()) clearTimeout(timer);
     };
   }, []);
 
