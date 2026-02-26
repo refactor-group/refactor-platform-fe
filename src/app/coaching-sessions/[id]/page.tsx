@@ -50,7 +50,7 @@ export default function CoachingSessionsPage() {
   const { currentCoachingSession, currentCoachingSessionId, isError } = useCurrentCoachingSession();
 
   // Get current coaching relationship state and data
-  const { currentCoachingRelationship, currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
+  const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
     useCurrentCoachingRelationship();
 
   // Sync session title into the site header and show/hide on scroll
@@ -123,7 +123,7 @@ export default function CoachingSessionsPage() {
               style={siteConfig.titleStyle}
             />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
-              <JoinMeetLink meetUrl={currentCoachingRelationship?.meet_url} />
+              <JoinMeetLink meetUrl={currentCoachingSession?.meeting_url} />
               <ShareSessionLink
                 sessionId={params.id as string}
                 onError={handleShareError}
