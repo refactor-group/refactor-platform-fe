@@ -19,6 +19,8 @@ interface KanbanColumnProps {
   justMovedId?: string;
   /** IDs of cards currently playing the exit animation */
   exitingIds?: Set<string>;
+  /** IDs of cards currently playing the enter (grow-in) animation */
+  enteringIds?: Set<string>;
 }
 
 export const KanbanColumn = memo(function KanbanColumn({
@@ -27,6 +29,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   cardProps,
   justMovedId,
   exitingIds,
+  enteringIds,
 }: KanbanColumnProps) {
   const { isOver, setNodeRef } = useDroppable({ id: status });
 
@@ -63,10 +66,14 @@ export const KanbanColumn = memo(function KanbanColumn({
         ) : (
           actions.map((ctx) => {
             const isExiting = exitingIds?.has(ctx.action.id) ?? false;
+            const isEntering = enteringIds?.has(ctx.action.id) ?? false;
             return (
               <div
                 key={ctx.action.id}
-                className={cn(isExiting && "animate-kanban-card-exit")}
+                className={cn(
+                  isExiting && "animate-kanban-card-exit",
+                  isEntering && "animate-kanban-card-enter"
+                )}
               >
                 <KanbanActionCard
                   ctx={ctx}

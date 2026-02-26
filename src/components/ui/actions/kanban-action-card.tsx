@@ -10,6 +10,7 @@ import { isUserCoachInRelationship, isUserCoacheeInRelationship } from "@/types/
 import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import {
   SessionActionCard,
+  StatusSelect,
 } from "@/components/ui/coaching-sessions/session-action-card";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
@@ -58,7 +59,7 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
 }) {
   return (
     <>
-      {/* Relationship header (visual only — drag listeners are on the outer shell) */}
+      {/* Relationship header with status pill (drag listeners are on the outer shell) */}
       <div
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground border border-b-0 border-border rounded-t-xl bg-muted/40",
@@ -69,6 +70,12 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
         <span className="truncate">
           {coachLabel} → {coacheeLabel}
         </span>
+        <div className="ml-auto shrink-0">
+          <StatusSelect
+            status={ctx.action.status}
+            onStatusChange={(newStatus) => onStatusChange(ctx.action.id, newStatus)}
+          />
+        </div>
       </div>
 
       <SessionActionCard
@@ -89,6 +96,7 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
         className="rounded-t-none"
         lightweight={isOverlay}
         autoHeight={false}
+        hideStatus
       />
     </>
   );
