@@ -78,7 +78,7 @@ export function KanbanBoard({
   const [justMovedId, setJustMovedId] = useState<string | undefined>();
   const justMovedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   /** Pre-cached card width so we never force a synchronous layout reflow at drag-start */
-  const cachedCardWidth = useRef<number | undefined>(undefined);
+  const [cachedCardWidth, setCachedCardWidth] = useState<number | undefined>();
 
   /** Cards currently playing the exit animation before leaving the visible columns */
   const [exitingCards, setExitingCards] = useState<Map<string, ExitingCard>>(
@@ -112,7 +112,10 @@ export function KanbanBoard({
   // Cache card width once (idle-time measurement, never during drag)
   useEffect(() => {
     const el = document.querySelector("[data-kanban-card]") as HTMLElement | null;
-    if (el) cachedCardWidth.current = el.offsetWidth;
+    if (el) {
+      const w = el.offsetWidth;
+      setCachedCardWidth((prev) => (prev === w ? prev : w));
+    }
   }, [actions]);
 
   const sensors = useSensors(
@@ -363,7 +366,7 @@ export function KanbanBoard({
 
       <DragOverlay dropAnimation={null}>
         {activeAction ? (
-          <div style={cachedCardWidth.current ? { width: cachedCardWidth.current } : undefined}>
+          <div style={cachedCardWidth ? { width: cachedCardWidth } : undefined}>
             <KanbanActionCard ctx={activeAction} {...cardProps} isOverlay />
           </div>
         ) : null}
