@@ -27,12 +27,14 @@ export default function SettingsLayout({
           <SiteHeader />
           <main className="flex-1 p-6 min-w-0">
             <PageContainer>
-              {/* SettingsNav renders both mobile (horizontal tabs above)
-                  and desktop (vertical sidebar left) variants via responsive classes.
-                  Placing it inside the flex row ensures the desktop nav sits beside content. */}
-              <div className="flex flex-col md:flex-row gap-8">
-                <SettingsNav />
-                <div className="flex-1 min-w-0">{children}</div>
+              <div className="lg:max-w-[70%]">
+                {/* SettingsNav renders both mobile (horizontal tabs above)
+                    and desktop (vertical sidebar left) variants via responsive classes.
+                    Placing it inside the flex row ensures the desktop nav sits beside content. */}
+                <div className="flex flex-col md:flex-row gap-8">
+                  <SettingsNav />
+                  <div className="flex-1 min-w-0">{children}</div>
+                </div>
               </div>
             </PageContainer>
           </main>
