@@ -27,7 +27,13 @@ import type { DateTime } from "ts-luxon";
 const TOP_OF_COLUMN_POSITION = -1;
 
 /** Duration of the card exit animation in ms (matches CSS keyframe) */
-const EXIT_ANIMATION_MS = 300;
+const EXIT_ANIMATION_MS = 350;
+
+/** Duration of the card enter animation in ms (matches CSS keyframe) */
+const ENTER_ANIMATION_MS = 350;
+
+/** Delay (ms) for React to flush the visibility change before highlighting a card */
+const HIGHLIGHT_SETTLE_MS = 50;
 
 /**
  * Measure droppable rects BEFORE dragging (while idle) and cache them.
@@ -81,6 +87,12 @@ export function KanbanBoard({
   const exitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map()
   );
+  /** Timer for the Show button's delayed highlight (tracked for unmount cleanup) */
+  const showHighlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  /** Cards currently playing the enter (grow-in) animation after being restored via Undo */
+  const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
+  const enterTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const { actionsWithOverrides, applyOverride, rollbackOverride } =
     useOptimisticStatus(actions);
@@ -89,7 +101,9 @@ export function KanbanBoard({
   useEffect(() => {
     return () => {
       if (justMovedTimer.current) clearTimeout(justMovedTimer.current);
+      if (showHighlightTimer.current) clearTimeout(showHighlightTimer.current);
       for (const timer of exitTimers.current.values()) clearTimeout(timer);
+      for (const timer of enterTimers.current.values()) clearTimeout(timer);
     };
   }, []);
 
@@ -123,10 +137,22 @@ export function KanbanBoard({
   );
   const columns = visibleStatuses(visibility);
 
-  const exitingIdSet = useMemo(
-    () => new Set(exitingCards.keys()),
-    [exitingCards]
-  );
+  // Build per-column exiting ID sets so only the affected column re-renders.
+  // Columns without exiting cards receive `undefined` (referentially stable),
+  // preserving the memo optimization on KanbanColumn.
+  const exitingIdsByColumn = useMemo(() => {
+    if (exitingCards.size === 0) return undefined;
+    const map = new Map<ItemStatus, Set<string>>();
+    for (const [id, entry] of exitingCards) {
+      let set = map.get(entry.originalStatus);
+      if (!set) {
+        set = new Set();
+        map.set(entry.originalStatus, set);
+      }
+      set.add(id);
+    }
+    return map;
+  }, [exitingCards]);
 
   const activeAction = useMemo(
     () => (activeId ? actionsWithOverrides.find((a) => a.action.id === activeId) : undefined),
@@ -141,6 +167,20 @@ export function KanbanBoard({
     if (justMovedTimer.current) clearTimeout(justMovedTimer.current);
     setJustMovedId(id);
     justMovedTimer.current = setTimeout(() => setJustMovedId(undefined), 1500);
+  }, []);
+
+  /** Play the grow-in entry animation on a card, then auto-clear after it finishes */
+  const animateEnter = useCallback((id: string) => {
+    setEnteringIds((prev) => new Set(prev).add(id));
+    const timer = setTimeout(() => {
+      setEnteringIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      enterTimers.current.delete(id);
+    }, ENTER_ANIMATION_MS);
+    enterTimers.current.set(id, timer);
   }, []);
 
   /** Complete the exit: apply the optimistic override and show a toast */
@@ -164,8 +204,11 @@ export function KanbanBoard({
           label: "Show",
           onClick: () => {
             onVisibilityChange(StatusVisibility.All);
-            // Highlight the card once it becomes visible in the All view
-            setTimeout(() => highlightCard(id), 50);
+            // Delay highlight so React can flush the All-view render first
+            showHighlightTimer.current = setTimeout(
+              () => highlightCard(id),
+              HIGHLIGHT_SETTLE_MS
+            );
           },
         },
         cancel: {
@@ -174,16 +217,18 @@ export function KanbanBoard({
             // Revert: apply override back to original status and persist via API
             applyOverride(id, entry.originalStatus);
             orderRef.current.set(id, TOP_OF_COLUMN_POSITION);
+            animateEnter(id);
             highlightCard(id);
             onStatusChange(id, entry.originalStatus).catch(() => {
               rollbackOverride(id);
+              toast.error("Undo failed, could not restore action status.");
             });
           },
         },
         duration: 5000,
       });
     },
-    [applyOverride, rollbackOverride, onStatusChange, onVisibilityChange, highlightCard]
+    [applyOverride, rollbackOverride, onStatusChange, onVisibilityChange, highlightCard, animateEnter]
   );
 
   const cancelExit = useCallback((id: string) => {
@@ -202,7 +247,9 @@ export function KanbanBoard({
   /** Card moves to a non-visible column: animate out, persist, then show toast */
   const handleExitingStatusChange = useCallback(
     async (id: Id, newStatus: ItemStatus) => {
-      const action = actionsWithOverrides.find((a) => a.action.id === id);
+      // Read from raw `actions` (not actionsWithOverrides) so we capture the
+      // server-persisted status — not a stale optimistic override.
+      const action = actions.find((a) => a.action.id === id);
       if (!action) return;
 
       const entry: ExitingCard = {
@@ -225,7 +272,7 @@ export function KanbanBoard({
       const timer = setTimeout(() => completeExit(id, entry), EXIT_ANIMATION_MS);
       exitTimers.current.set(id, timer);
     },
-    [actionsWithOverrides, onStatusChange, cancelExit, completeExit]
+    [actions, onStatusChange, cancelExit, completeExit]
   );
 
   /** Card stays in a visible column: move instantly with highlight */
@@ -306,7 +353,8 @@ export function KanbanBoard({
             actions={grouped[status]}
             cardProps={cardProps}
             justMovedId={justMovedId}
-            exitingIds={exitingIdSet}
+            exitingIds={exitingIdsByColumn?.get(status)}
+            enteringIds={enteringIds.size > 0 ? enteringIds : undefined}
           />
         ))}
       </div>

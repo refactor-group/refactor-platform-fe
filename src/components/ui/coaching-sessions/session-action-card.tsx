@@ -60,6 +60,8 @@ interface SessionActionCardProps {
   lightweight?: boolean;
   /** When true, card height is auto (no fixed h-56). Use for vertical list layouts. */
   autoHeight: boolean;
+  /** When true, hide the StatusSelect from the card (caller renders it externally) */
+  hideStatus?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -346,6 +348,7 @@ const SessionActionCard = ({
   className: cardClassName,
   lightweight = false,
   autoHeight,
+  hideStatus = false,
 }: SessionActionCardProps) => {
   const now = DateTime.now();
   const isCompleted =
@@ -380,28 +383,30 @@ const SessionActionCard = ({
       )}
     >
       <CardContent className="flex h-full flex-col gap-2 p-5">
-        {/* Mobile only: status pill above body */}
-        <div className="flex items-center justify-between sm:hidden">
-          <StatusSelect
-            status={action.status}
-            onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
-          />
-          <div className="flex items-center gap-2">
-            <AssigneePickerPopover
-              allAssignees={allAssignees}
-              resolvedAssignees={resolvedAssignees}
-              assigneeIds={assigneeIds}
-              onToggle={handleAssigneeToggle}
+        {/* Mobile only: status pill above body (hidden when caller renders status externally) */}
+        {!hideStatus && (
+          <div className="flex items-center justify-between sm:hidden">
+            <StatusSelect
+              status={action.status}
+              onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
             />
-            {isCurrent && onDelete && (
-              <DeleteConfirmButton onDelete={() => onDelete(action.id)} />
-            )}
+            <div className="flex items-center gap-2">
+              <AssigneePickerPopover
+                allAssignees={allAssignees}
+                resolvedAssignees={resolvedAssignees}
+                assigneeIds={assigneeIds}
+                onToggle={handleAssigneeToggle}
+              />
+              {isCurrent && onDelete && (
+                <DeleteConfirmButton onDelete={() => onDelete(action.id)} />
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Body + assignees side-by-side (sm+: assignees inline; mobile: assignees in top row above) */}
-        <div className="flex items-start gap-2 flex-1 min-h-0">
-          <div className="flex-1 min-h-0 min-w-0">
+        <div className="flex gap-2 flex-1 min-h-0">
+          <div className="flex flex-col flex-1 min-h-0 min-w-0">
             <ActionBody
               body={action.body}
               isCompleted={isCompleted}
@@ -410,7 +415,7 @@ const SessionActionCard = ({
               lightweight={lightweight}
             />
           </div>
-          <div className="hidden sm:flex items-center gap-2 shrink-0 pt-1">
+          <div className={cn("items-center gap-2 shrink-0 pt-1 self-start", hideStatus ? "flex" : "hidden sm:flex")}>
             <AssigneePickerPopover
               allAssignees={allAssignees}
               resolvedAssignees={resolvedAssignees}
@@ -423,14 +428,16 @@ const SessionActionCard = ({
           </div>
         </div>
 
-        {/* Bottom row: status pill (sm+) | due date + session link */}
+        {/* Bottom row: status pill (sm+, unless hidden) | due date + session link */}
         <div className="mt-auto flex flex-wrap items-center justify-between gap-y-1">
-          <div className="hidden sm:block">
-            <StatusSelect
-              status={action.status}
-              onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
-            />
-          </div>
+          {!hideStatus && (
+            <div className="hidden sm:block">
+              <StatusSelect
+                status={action.status}
+                onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
+              />
+            </div>
+          )}
           <ActionFooter
             dueBy={action.due_by}
             createdAt={action.created_at}
@@ -448,5 +455,5 @@ const SessionActionCard = ({
   );
 };
 
-export { SessionActionCard };
-export type { SessionActionCardProps };
+export { SessionActionCard, StatusSelect };
+export type { SessionActionCardProps, StatusSelectProps };
