@@ -18,7 +18,9 @@ export function useOptimisticStatus(actions: AssignedActionWithContext[]) {
     () => new Map()
   );
 
-  // Clear overrides once the real data catches up
+  // Prune overrides once the server-persisted status catches up (SWR revalidation).
+  // This is an intentional state-sync pattern: the effect keeps the Map small so
+  // future applyOverride calls don't create unnecessarily large Maps.
   useEffect(() => {
     if (overrides.size === 0) return;
     const next = new Map<string, ItemStatus>();
@@ -30,6 +32,7 @@ export function useOptimisticStatus(actions: AssignedActionWithContext[]) {
       }
     }
     if (next.size !== overrides.size) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync: prune stale overrides
       setOverrides(next);
     }
   }, [actions, overrides]);
