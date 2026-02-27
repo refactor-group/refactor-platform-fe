@@ -1,0 +1,93 @@
+# =============================================================================
+# Frontend PR Preview Overlay Workflow
+# =============================================================================
+# Purpose: Trigger PR preview deployments when frontend PRs are opened/updated
+# Strategy: Build frontend from PR branch, build or reuse main-arm64 backend
+# Secrets: SSH secrets (RPI5_SSH_KEY, RPI5_HOST_KEY) must exist at repo level
+# Calls: refactor-platform-rs/ci-deploy-pr-preview.yml (reusable workflow)
+#
+# Cross-repo secret resolution:
+#   `environment: pr-preview` in the reusable workflow resolves from THIS repo
+#   (the caller), NOT the backend repo. Backend-specific secrets (Tiptap,
+#   MailerSend) are unavailable here. The reusable workflow uses || 'UNUSED'
+#   fallback defaults for these secrets, and the backend Rust code handles
+#   failures gracefully (e.g., welcome email is best-effort, not fatal).
+#   TODO: Move PR_PREVIEW_* secrets to org-level for proper cross-repo access,
+#   or switch to repository_dispatch once the dispatch workflow is on main.
+#
+# Backend image strategy:
+#   The reusable workflow checks if the main-arm64 backend image exists in
+#   GHCR and builds it from source if missing. No pre-check needed here —
+#   the reusable workflow handles all image existence logic atomically.
+# =============================================================================
+
+name: PR Preview (Frontend)
+
+on:
+  pull_request:
+    # Trigger on PR lifecycle events
+    types: [opened, synchronize, reopened]
+    # Only run for frontend code changes
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+      - '!.github/workflows/pr-preview-frontend.yml'
+      - '!.github/workflows/cleanup-pr-preview-frontend.yml'
+
+# Prevent multiple deployments for the same PR
+concurrency:
+  group: pr-preview-frontend-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: write
+  attestations: write
+  id-token: write
+
+jobs:
+  # ===========================================================================
+  # JOB: Call reusable workflow with frontend-specific configuration
+  # ===========================================================================
+  # The reusable workflow handles backend image existence checks internally:
+  # - If main-arm64 exists in GHCR → reuses it (no build needed)
+  # - If main-arm64 is missing → builds from source using GHCR_PAT
+  # This eliminates race conditions from separate pre-check jobs.
+  #
+  # NOTE: `environment: pr-preview` in the reusable workflow resolves from
+  # THIS repo (frontend), not the backend repo. Backend-specific secrets
+  # (Tiptap, MailerSend) will be empty. The reusable workflow handles this
+  # with || 'UNUSED' fallback defaults in the .env heredoc. The backend
+  # Rust code treats email sending as best-effort (logs failures, doesn't
+  # block user creation). Tiptap collaboration will be unavailable in
+  # preview environments until secrets are moved to org-level.
+  # ===========================================================================
+  deploy-frontend-pr:
+    name: Deploy Frontend PR Preview
+    # Call the reusable workflow from backend repository
+    # NOTE: @ref must be a literal (GitHub Actions limitation — no expressions in uses:).
+    # When testing against an unmerged backend branch, update this ref manually.
+    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main
+    with:
+      # This is a frontend PR deployment
+      repo_type: 'frontend'
+      # Use the PR number for port allocation and naming
+      pr_number: ${{ github.event.pull_request.number }}
+      # Build frontend from this PR's branch
+      branch_name: ${{ github.head_ref }}
+      # Backend branch for building the backend image in frontend PR previews.
+      # Override via repo variable PR_PREVIEW_BACKEND_BRANCH (defaults to 'main').
+      backend_branch: ${{ vars.PR_PREVIEW_BACKEND_BRANCH || 'main' }}
+      # Optional: force complete rebuild
+      force_rebuild: false
+    # =========================================================================
+    # SECRETS
+    # =========================================================================
+    # Environment secrets resolve from THIS repo (frontend), not the backend.
+    # Backend-specific secrets (PR_PREVIEW_TIPTAP_*, PR_PREVIEW_MAILERSEND_*)
+    # are unavailable here. The reusable workflow uses || 'UNUSED' fallbacks.
+    # Common secrets (SSH, GHCR, Postgres) are at org level and work correctly.
+    # TODO: Move PR_PREVIEW_* secrets to org-level for full cross-repo access.
+    secrets: inherit
