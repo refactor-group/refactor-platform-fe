@@ -24,8 +24,9 @@ jobs:
   cleanup-frontend-pr:
     name: Cleanup Frontend PR Preview
     # Call the reusable workflow from backend repository
-    # TODO: After backend PR #190 merges, change to @main
-    uses: refactor-group/refactor-platform-rs/.github/workflows/cleanup-pr-preview.yml@190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment
+    # NOTE: @ref must be a literal (GitHub Actions limitation — no expressions in uses:).
+    # When testing against an unmerged backend branch, update this ref manually.
+    uses: refactor-group/refactor-platform-rs/.github/workflows/cleanup-pr-preview.yml@main
     with:
       # This is a frontend PR cleanup
       repo_type: 'frontend'

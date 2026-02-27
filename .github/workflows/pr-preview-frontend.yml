@@ -67,9 +67,9 @@ jobs:
   deploy-frontend-pr:
     name: Deploy Frontend PR Preview
     # Call the reusable workflow from backend repository
-    # IMPORTANT: Using branch ref until backend PR #201 merges to main.
-    # After merge, change to @main and backend_branch to 'main'.
-    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment
+    # NOTE: @ref must be a literal (GitHub Actions limitation — no expressions in uses:).
+    # When testing against an unmerged backend branch, update this ref manually.
+    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main
     with:
       # This is a frontend PR deployment
       repo_type: 'frontend'
@@ -77,8 +77,9 @@ jobs:
       pr_number: ${{ github.event.pull_request.number }}
       # Build frontend from this PR's branch
       branch_name: ${{ github.head_ref }}
-      # Must match the backend branch above until it merges to main
-      backend_branch: '190-add-a-staging-environment-for-previewing-and-testing-ahead-of-a-new-deployment'
+      # Backend branch for building the backend image in frontend PR previews.
+      # Override via repo variable PR_PREVIEW_BACKEND_BRANCH (defaults to 'main').
+      backend_branch: ${{ vars.PR_PREVIEW_BACKEND_BRANCH || 'main' }}
       # Optional: force complete rebuild
       force_rebuild: false
     # =========================================================================
