@@ -10,11 +10,10 @@ import {
   CoachingRelationshipApi,
 } from "@/lib/api/coaching-relationships";
 import {
-  GoogleOAuthApi,
-  useGoogleOAuthConnectionStatus,
+  OAuthConnectionApi,
+  useGoogleOAuthConnection,
 } from "@/lib/api/oauth-connection";
 import { MeetingApi } from "@/lib/api/meetings";
-import { isGoogleOAuthConnected } from "@/types/oauth-connection";
 import {
   getRelationshipsAsCoach,
   getOtherPersonName,
@@ -45,8 +44,7 @@ import { MeetUrlField } from "./meet-url-field";
 export const GoogleIntegrationSection: FC = () => {
   const { isACoach, userId } = useAuthStore((state) => state);
   const { currentOrganizationId } = useCurrentOrganization();
-  const { connectionStatus, isLoading, refresh } =
-    useGoogleOAuthConnectionStatus();
+  const { connection, isLoading, refresh } = useGoogleOAuthConnection();
   const { relationships, refresh: refreshRelationships } =
     useCoachingRelationshipList(currentOrganizationId ?? "");
 
@@ -56,7 +54,7 @@ export const GoogleIntegrationSection: FC = () => {
   >(null);
   const [selectedRelationshipId, setSelectedRelationshipId] = useState("");
 
-  const connected = isGoogleOAuthConnected(connectionStatus);
+  const connected = connection !== null;
   const coachRelationships = sortRelationshipsByParticipantName(
     getRelationshipsAsCoach(userId, relationships),
     userId
@@ -66,13 +64,13 @@ export const GoogleIntegrationSection: FC = () => {
   );
 
   const handleConnect = useCallback(() => {
-    window.location.href = GoogleOAuthApi.getAuthorizeUrl(userId);
+    window.location.href = OAuthConnectionApi.getAuthorizeUrl(userId);
   }, [userId]);
 
   const handleDisconnect = useCallback(async () => {
     setIsDisconnecting(true);
     try {
-      await GoogleOAuthApi.disconnect();
+      await OAuthConnectionApi.disconnectGoogle();
       await refresh();
       toast.success("Google account disconnected.");
     } catch {
@@ -162,7 +160,7 @@ export const GoogleIntegrationSection: FC = () => {
               <span className="text-sm text-muted-foreground">Loading...</span>
             ) : connected ? (
               <div className="flex items-center gap-3">
-                <Pill>{connectionStatus.google_email}</Pill>
+                <Pill>{connection?.email}</Pill>
                 <GoogleDisconnectDialog
                   onConfirm={handleDisconnect}
                   isLoading={isDisconnecting}
