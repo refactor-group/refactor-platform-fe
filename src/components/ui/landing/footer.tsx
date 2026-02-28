@@ -17,9 +17,18 @@ export function Footer({
   return (
     <footer className="border-t px-4 py-10">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 sm:flex-row sm:justify-between">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 text-sm">
           <Icons.refactor_logo className="h-5 w-5" />
-          <span className="text-sm font-medium">{siteName}</span>
+          <span className="font-medium">{siteName}</span>
+          <span className="text-muted-foreground">by</span>
+          <Link
+            href={companyUrl}
+            className="font-medium hover:text-foreground text-muted-foreground"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Refactor Group
+          </Link>
         </div>
 
         <div className="flex items-center gap-6 text-sm text-muted-foreground">
