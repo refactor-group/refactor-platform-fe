@@ -40,8 +40,8 @@ vi.mock('@/components/ui/share-session-link', () => ({
   default: () => <div>Share Link</div>
 }))
 
-vi.mock('@/components/ui/coaching-sessions/overarching-goal-container', () => ({
-  OverarchingGoalContainer: () => <div>Overarching Goals</div>
+vi.mock('@/components/ui/coaching-sessions/goal-container', () => ({
+  GoalContainer: () => <div>Goals</div>
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-tabs-container', () => ({

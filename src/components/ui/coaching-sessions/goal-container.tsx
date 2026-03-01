@@ -4,48 +4,48 @@ import { useState } from "react";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OverarchingGoalComponent } from "./overarching-goal";
+import { GoalComponent } from "./goal";
 import {
-  useOverarchingGoalBySession,
-  useOverarchingGoalMutation,
-} from "@/lib/api/overarching-goals";
-import { OverarchingGoal } from "@/types/overarching-goal";
+  useGoalBySession,
+  useGoalMutation,
+} from "@/lib/api/goals";
+import { Goal } from "@/types/goal";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 
-const OverarchingGoalContainer: React.FC = () => {
+const GoalContainer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   // Get coaching session ID from URL
   const { currentCoachingSessionId } = useCurrentCoachingSession();
-  
-  const { overarchingGoal, refresh } =
-    useOverarchingGoalBySession(currentCoachingSessionId || "");
-  const { create: createOverarchingGoal, update: updateOverarchingGoal } =
-    useOverarchingGoalMutation();
 
-  const handleGoalChange = async (newGoal: OverarchingGoal) => {
+  const { goal, refresh } =
+    useGoalBySession(currentCoachingSessionId || "");
+  const { create: createGoal, update: updateGoal } =
+    useGoalMutation();
+
+  const handleGoalChange = async (newGoal: Goal) => {
     try {
       if (currentCoachingSessionId) {
-        if (overarchingGoal.id) {
-          await updateOverarchingGoal(
-            overarchingGoal.id,
+        if (goal.id) {
+          await updateGoal(
+            goal.id,
             newGoal
           );
-        } else if (!overarchingGoal.id) {
+        } else if (!goal.id) {
           newGoal.coaching_session_id = currentCoachingSessionId;
-          await createOverarchingGoal(newGoal);
+          await createGoal(newGoal);
 
-          // Manually trigger a local refresh of the cached OverarchingGoal data such that
+          // Manually trigger a local refresh of the cached Goal data such that
           // any other local code using the KeyedMutator will also update with this new data.
           refresh();
         }
       } else {
         console.error(
-          "Could not update or create a Overarching Goal since coachingSessionId or userId are not set."
+          "Could not update or create a Goal since coachingSessionId or userId are not set."
         );
       }
     } catch (err) {
-      console.error("Failed to update or create Overarching Goal: " + err);
+      console.error("Failed to update or create Goal: " + err);
     }
   };
 
@@ -57,11 +57,11 @@ const OverarchingGoalContainer: React.FC = () => {
           onOpenChange={setIsOpen}
           className="w-full space-y-2"
         >
-          <OverarchingGoalComponent
-            initialValue={overarchingGoal}
+          <GoalComponent
+            initialValue={goal}
             onOpenChange={(open: boolean) => setIsOpen(open)}
-            onGoalChange={(goal: OverarchingGoal) => handleGoalChange(goal)}
-          ></OverarchingGoalComponent>
+            onGoalChange={(g: Goal) => handleGoalChange(g)}
+          ></GoalComponent>
           <CollapsibleContent className="px-4">
             <div className="flex-col space-y-4 sm:flex">
               <div className="grid flex-1 items-start gap-4 sm:py-0 md:gap-8">
@@ -89,4 +89,4 @@ const OverarchingGoalContainer: React.FC = () => {
   );
 };
 
-export { OverarchingGoalContainer };
+export { GoalContainer };

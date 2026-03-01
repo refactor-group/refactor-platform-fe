@@ -4,7 +4,7 @@ import { SortOrder } from "@/types/sorting";
 import { CoachingRelationship } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import { Organization } from "@/types/organization";
-import { OverarchingGoal } from "@/types/overarching-goal";
+import { Goal } from "@/types/goal";
 import { Agreement } from "@/types/agreement";
 /**
  * Default session duration in minutes (used until backend provides per-session duration).
@@ -59,8 +59,8 @@ export interface EnrichedCoachingSession extends CoachingSession {
   /** Organization data (included when include=organization, requires relationship) */
   organization?: Organization;
 
-  /** Overarching goal (included when include=goal) */
-  overarching_goal?: OverarchingGoal;
+  /** Goal (included when include=goal) */
+  goal?: Goal;
 
   /** Agreement (included when include=agreements) */
   agreement?: Agreement;

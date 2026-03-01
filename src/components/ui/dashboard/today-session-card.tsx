@@ -209,7 +209,7 @@ export function TodaySessionCard({
     timezone
   );
 
-  const goalText = session.overarching_goal?.title || "No goal set";
+  const goalText = session.goal?.title || "No goal set";
   const organizationName = session.organization?.name || "Unknown organization";
 
   /**

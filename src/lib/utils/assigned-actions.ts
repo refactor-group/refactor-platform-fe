@@ -171,21 +171,21 @@ export function filterActionsByStatus(
 
 /**
  * Builds goal context from an enriched coaching session.
- * Returns a "No Goal" placeholder if the session has no overarching goal.
+ * Returns a "No Goal" placeholder if the session has no goal.
  *
  * @param session - Enriched coaching session with optional goal data
  * @returns GoalContext object with goal ID and title
  */
 export function buildGoalContext(session: EnrichedCoachingSession): GoalContext {
-  const goal = session.overarching_goal;
+  const goal = session.goal;
   if (goal) {
     return {
-      overarchingGoalId: goal.id,
+      goalId: goal.id,
       title: goal.title,
     };
   }
   return {
-    overarchingGoalId: "",
+    goalId: "",
     title: "No Goal",
   };
 }
@@ -292,7 +292,7 @@ export function sortActionsByDueDate(
 }
 
 /**
- * Groups actions by their overarching goal.
+ * Groups actions by their goal.
  * Actions within each goal group are sorted by due date.
  *
  * @param actions - Array of actions with context to group
@@ -304,7 +304,7 @@ export function groupActionsByGoal(
   const goalGroups = new Map<Id, AssignedActionWithContext[]>();
 
   actions.forEach((action) => {
-    const goalId = action.goal.overarchingGoalId;
+    const goalId = action.goal.goalId;
     const existing = goalGroups.get(goalId) || [];
     goalGroups.set(goalId, [...existing, action]);
   });

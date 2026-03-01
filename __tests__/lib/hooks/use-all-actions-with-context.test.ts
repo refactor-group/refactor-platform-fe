@@ -155,7 +155,7 @@ function makeTestSession(
       first_name: "Bob",
       last_name: "Jones",
     },
-    overarching_goal: {
+    goal: {
       id: "goal-1",
       title: "Test Goal",
     },

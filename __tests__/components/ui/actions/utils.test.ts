@@ -59,7 +59,7 @@ function makeAction(
       coachee_last_name: "Jones",
     },
     goal: {
-      overarchingGoalId: "goal-1",
+      goalId: "goal-1",
       title: "Test Goal",
     },
     sourceSession: {

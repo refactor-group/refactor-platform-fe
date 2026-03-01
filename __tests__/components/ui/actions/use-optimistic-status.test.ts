@@ -36,7 +36,7 @@ function makeCtx(
       coachee_first_name: "Bob",
       coachee_last_name: "",
     },
-    goal: { overarchingGoalId: "goal-1", title: "Goal" },
+    goal: { goalId: "goal-1", title: "Goal" },
     sourceSession: { coachingSessionId: "session-1", sessionDate: now },
     nextSession: null,
     isOverdue: false,

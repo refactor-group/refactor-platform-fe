@@ -17,7 +17,7 @@ export type EntitySortField = 'created_at' | 'updated_at';
 export type CoachingSessionSortField = 'date' | EntitySortField;
 export type ActionSortField = 'due_by' | EntitySortField;
 export type AgreementSortField = 'body' | EntitySortField;
-export type OverarchingGoalSortField = 'title' | EntitySortField;
+export type GoalSortField = 'title' | EntitySortField;
 
 /**
  * Unified sort order enum for client-side usage

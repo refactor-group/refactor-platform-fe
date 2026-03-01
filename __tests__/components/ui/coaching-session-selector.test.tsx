@@ -27,9 +27,9 @@ vi.mock('@/lib/hooks/use-current-coaching-session', () => ({
   })),
 }))
 
-vi.mock('@/lib/api/overarching-goals', () => ({
-  useOverarchingGoalBySession: vi.fn(() => ({
-    overarchingGoal: { title: 'Test Goal' },
+vi.mock('@/lib/api/goals', () => ({
+  useGoalBySession: vi.fn(() => ({
+    goal: { title: 'Test Goal' },
     isLoading: false,
     isError: false,
   })),
@@ -96,13 +96,13 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
         id: 'upcoming-1',
         date: now.plus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
-        overarching_goal: { title: 'Upcoming Goal' },
+        goal: { title: 'Upcoming Goal' },
       },
       {
         id: 'previous-1',
         date: now.minus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
-        overarching_goal: { title: 'Previous Goal' },
+        goal: { title: 'Previous Goal' },
       },
     ]
 
@@ -138,7 +138,7 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
         id: 'upcoming-1',
         date: now.plus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
-        overarching_goal: { title: 'Test Goal' },
+        goal: { title: 'Test Goal' },
       },
     ]
 
