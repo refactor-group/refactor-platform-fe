@@ -4,23 +4,87 @@ This document outlines coding conventions and standards for this project.
 
 ## Strict Typing and Nullability
 
-Prefer strict, explicit typings and clear nullability rules; don't auto-widen.
+**Never default to `T | null` or `T | undefined`.** LLM training data makes nullable unions the path of least resistance — actively resist this. When tempted to write `Foo | null`, stop and reach for `Maybe<T>` or `Result<T, E>` instead.
 
-- In TypeScript, lean on strict null checks and intentional nullability. Enable `strict: true` and `noImplicitAny`. Use exact types rather than permissive unions, and reserve `null`/`undefined` for truly absent states.
+This project uses [true-myth](https://true-myth.js.org/) for safe nullable and error handling types.
 
-- Prefer discriminated unions and "presence" wrappers over sprinkling null: for example, `{ kind: "loaded", value: T } | { kind: "loading" } | { kind: "error", message: string }` instead of `T | null`.
+### The Nullable Type Hierarchy
 
-- Use Optional types at boundaries only. Accept `string | undefined` from inputs, but normalize immediately inside functions to a definitive shape so internals don't propagate nullability.
+Reach for these in order. Pick the first one that fits:
 
-- Write function contracts that eliminate nullability with guards. Parse and validate early, then operate on a non-null `T`.
+1. **`Maybe<T>`** — when a value may or may not be present. Replaces `T | null` and `T | undefined`.
 
-- Favor exact object shapes over partials. Use `type ExactUser = { id: string; name: string }` instead of `Partial<User>`, and avoid `Record<string, unknown>` unless unavoidable.
+```typescript
+import Maybe from "true-myth/maybe";
 
-- At async boundaries, return Result types rather than nullable payloads.
+// ❌ WRONG
+function findUser(id: string): User | null { ... }
 
-- Do not use `T | null | undefined` unless a value is truly optional. Prefer discriminated unions or Result types. Assume strict null checks. Provide exact types; no lazy unions.
+// ✅ CORRECT
+function findUser(id: string): Maybe<User> { ... }
 
-If you inherit nullable APIs, normalize at the edge and keep your core strict. Model absence as a deliberate, named state rather than a catch-all union.
+// Wrapping a nullable value from an external API:
+const maybeUser = Maybe.of(nullableApiResponse); // Just(user) or Nothing
+
+// Safely transforming:
+const name = maybeUser.map((u) => u.name).unwrapOr("Unknown");
+```
+
+2. **`Result<T, E>`** — when an operation can succeed or fail. Replaces nullable returns and thrown exceptions at async/fallible boundaries.
+
+```typescript
+import Result from "true-myth/result";
+
+// ❌ WRONG
+async function fetchSession(id: string): Promise<Session | null> { ... }
+
+// ✅ CORRECT
+async function fetchSession(id: string): Promise<Result<Session, string>> {
+  try {
+    const session = await api.get(id);
+    return Result.ok(session);
+  } catch (e) {
+    return Result.err(`Failed to fetch session: ${e}`);
+  }
+}
+```
+
+3. **Custom discriminated unions** — only when you need more than two states and `Maybe`/`Result` don't fit (e.g. `loading | loaded | error` for React state).
+
+```typescript
+type UserState =
+  | { kind: "loading" }
+  | { kind: "loaded"; user: User }
+  | { kind: "error"; message: string };
+```
+
+### Supporting Rules
+
+- **Normalize at boundaries, keep internals strict.** Accept `string | undefined` from external inputs (URL params, form fields, API responses), but parse and narrow immediately. Use `Maybe.of()` to wrap nullable values at the edge. Internal functions should never accept or return bare nullable types.
+
+```typescript
+// ✅ Boundary function wraps nullable input immediately
+import Maybe from "true-myth/maybe";
+
+function parseSessionDate(raw: string | undefined): Maybe<DateTime> {
+  return Maybe.of(raw)
+    .map((r) => DateTime.fromISO(r))
+    .andThen((dt) => (dt.isValid ? Maybe.just(dt) : Maybe.nothing()));
+}
+```
+
+- **Exact object shapes over partials.** Use `type ExactUser = { id: string; name: string }` instead of `Partial<User>`. Avoid `Record<string, unknown>` unless unavoidable.
+
+- **No `T | null | undefined` double-nullable.** If a value can be absent, use `Maybe<T>` — never combine both `null` and `undefined`.
+
+### When Bare `null` Is Acceptable
+
+Reserve bare `null` for cases where it is forced by external APIs or React conventions:
+- A React ref before mount (`useRef<HTMLElement>(null)`)
+- A third-party library that requires `null` in its API contract
+- Zustand/Redux state where `null` is the established convention for "not yet loaded" and migrating to `Maybe` would touch too many files at once
+
+For domain types, always prefer `Maybe<T>` over `T | null`. If you inherit nullable APIs from external libraries or backend responses, wrap with `Maybe.of()` at the edge and keep your core strict.
 
 ## Exhaustive Switch Statements
 
@@ -261,3 +325,4 @@ When reviewing or writing code, ensure:
 - [ ] TypeScript types are properly defined and used
 - [ ] Leaf components receive `locale` and config values via props, not `siteConfig` imports
 - [ ] No `|| ""` fallbacks for nullable IDs or dates -- use render guards instead
+- [ ] New types use `Maybe<T>` or `Result<T, E>` from `true-myth` instead of `T | null`

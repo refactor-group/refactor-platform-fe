@@ -77,11 +77,12 @@ const CoachingTabsContainer = ({
     isLoading: isActionMutating,
   } = useActionMutation();
 
-  // Agreement CRUD handlers
+  // Agreement CRUD handlers — only callable when AgreementsList is rendered,
+  // which is guarded by currentCoachingSessionId being truthy.
   const handleAgreementAdded = (body: string): Promise<Agreement> => {
     const newAgreement: Agreement = {
       ...defaultAgreement(),
-      coaching_session_id: currentCoachingSessionId || "",
+      coaching_session_id: currentCoachingSessionId!,
       user_id: userId,
       body,
     };
@@ -92,7 +93,7 @@ const CoachingTabsContainer = ({
     const updatedAgreement: Agreement = {
       ...defaultAgreement(),
       id,
-      coaching_session_id: currentCoachingSessionId || "",
+      coaching_session_id: currentCoachingSessionId!,
       user_id: userId,
       body,
     };
@@ -199,15 +200,17 @@ const CoachingTabsContainer = ({
           </div>
 
           <div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
-            <AgreementsList
-              coachingSessionId={currentCoachingSessionId || ""}
-              userId={userId}
-              locale={siteConfig.locale}
-              isSaving={isAgreementMutating}
-              onAgreementAdded={handleAgreementAdded}
-              onAgreementEdited={handleAgreementEdited}
-              onAgreementDeleted={handleAgreementDeleted}
-            />
+            {currentCoachingSessionId && (
+              <AgreementsList
+                coachingSessionId={currentCoachingSessionId}
+                userId={userId}
+                locale={siteConfig.locale}
+                isSaving={isAgreementMutating}
+                onAgreementAdded={handleAgreementAdded}
+                onAgreementEdited={handleAgreementEdited}
+                onAgreementDeleted={handleAgreementDeleted}
+              />
+            )}
           </div>
 
           <div className="pl-4" style={{ display: currentTab === "actions" ? "block" : "none" }}>

@@ -114,35 +114,37 @@ export default function CoachingSessionsPage() {
   return (
     // Never grow wider than the site-header
     <div className="max-w-screen-2xl">
-      <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
-        <div className="flex-col h-full pl-4 md:flex ">
-          <div ref={titleRef} className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
-            <CoachingSessionTitle
-              locale={siteConfig.locale}
-              style={siteConfig.titleStyle}
-            />
-            <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
-              <ShareSessionLink
-                sessionId={params.id as string}
-                onError={handleShareError}
+      {currentCoachingSessionId && (
+        <EditorCacheProvider sessionId={currentCoachingSessionId}>
+          <div className="flex-col h-full pl-4 md:flex ">
+            <div ref={titleRef} className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
+              <CoachingSessionTitle
+                locale={siteConfig.locale}
+                style={siteConfig.titleStyle}
               />
+              <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
+                <ShareSessionLink
+                  sessionId={params.id as string}
+                  onError={handleShareError}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="px-3">
-          <Separator />
-        </div>
+          <div className="px-3">
+            <Separator />
+          </div>
 
-        <OverarchingGoalContainer />
+          <OverarchingGoalContainer />
 
-        <CoachingTabsContainer
-          userId={userId}
-          defaultValue={currentTab}
-          onTabChange={handleTabChange}
-          reviewActions={reviewActions}
-        />
-      </EditorCacheProvider>
+          <CoachingTabsContainer
+            userId={userId}
+            defaultValue={currentTab}
+            onTabChange={handleTabChange}
+            reviewActions={reviewActions}
+          />
+        </EditorCacheProvider>
+      )}
     </div>
   );
 }
