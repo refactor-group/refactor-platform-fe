@@ -21,7 +21,7 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useState, useMemo } from "react";
-import { defaultCoachingSession } from "@/types/coaching-session";
+import { defaultCoachingSession, DEFAULT_MEETING_PROVIDER } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 
 export type CoachingSessionFormMode = "create" | "update";
@@ -105,6 +105,7 @@ export default function CoachingSessionForm({
       ...defaultCoachingSession(),
       coaching_relationship_id: relationshipId,
       date: dateTime,
+      provider: DEFAULT_MEETING_PROVIDER,
     };
     await createCoachingSession(newCoachingSession);
   };
