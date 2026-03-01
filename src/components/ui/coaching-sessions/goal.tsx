@@ -12,23 +12,23 @@ import {
 import { useState, useEffect } from "react";
 import { cn } from "@/components/lib/utils";
 import {
-  defaultOverarchingGoal,
-  OverarchingGoal,
-} from "@/types/overarching-goal";
+  defaultGoal,
+  Goal,
+} from "@/types/goal";
 
-const OverarchingGoalComponent: React.FC<{
-  initialValue: OverarchingGoal;
+const GoalComponent: React.FC<{
+  initialValue: Goal;
   onOpenChange: (open: boolean) => void;
-  onGoalChange: (goal: OverarchingGoal) => void;
+  onGoalChange: (goal: Goal) => void;
 }> = ({ initialValue, onOpenChange, onGoalChange }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [tempGoalTitle, setTempGoalTitle] = useState<string>("");
-  const [overarchingGoal, setOverarchingGoal] = useState<OverarchingGoal>(
-    defaultOverarchingGoal()
+  const [goal, setGoal] = useState<Goal>(
+    defaultGoal()
   );
 
   useEffect(() => {
-    setOverarchingGoal(initialValue);
+    setGoal(initialValue);
     setTempGoalTitle(initialValue.title);
   }, [initialValue]);
 
@@ -38,9 +38,9 @@ const OverarchingGoalComponent: React.FC<{
   };
 
   const handleSetGoal = async () => {
-    var tempGoal = overarchingGoal;
+    var tempGoal = goal;
     tempGoal.title = tempGoalTitle;
-    setOverarchingGoal(tempGoal);
+    setGoal(tempGoal);
     onGoalChange(tempGoal);
     toggleDrawer();
   };
@@ -65,19 +65,19 @@ const OverarchingGoalComponent: React.FC<{
                 className={cn(
                   "w-full h-[40px] bg-inherit border-0 px-2 pt-5 resize-none overflow-y-auto focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 !text-sm !font-semibold"
                 )}
-                placeholder="Insert a new overarching goal"
+                placeholder="Insert a new goal"
                 rows={2}
               />
             ) : (
-              /* Ensure that clicking the overarching goal text (e.g. if the user wants to highlight the text)
+              /* Ensure that clicking the goal text (e.g. if the user wants to highlight the text)
                    does not call toggleDrawer */
               <div className="ml-2 mr-2 py-2 min-w-0 flex-1">
                 <div
                   className="line-clamp-2 break-words"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="mr-1 text-foreground hidden md:inline">Overarching goal:</span>
-                  {overarchingGoal.title}
+                  <span className="mr-1 text-foreground hidden md:inline">Goal:</span>
+                  {goal.title}
                 </div>
               </div>
             )}
@@ -127,4 +127,4 @@ const OverarchingGoalComponent: React.FC<{
   );
 };
 
-export { OverarchingGoalComponent };
+export { GoalComponent };

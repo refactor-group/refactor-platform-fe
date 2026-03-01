@@ -80,7 +80,7 @@ const createMockEnrichedSession = (
     created_at: DateTime.now(),
     updated_at: DateTime.now(),
   },
-  overarching_goal: {
+  goal: {
     id: "goal-1",
     title: "Q4 Strategy Review",
     details: "",
@@ -94,7 +94,7 @@ const createMockEnrichedSession = (
 describe("TodaySessionCard", () => {
   it("should render session goal title", () => {
     const session = createMockEnrichedSession({
-      overarching_goal: {
+      goal: {
         id: "goal-1",
         title: "Product Launch Planning",
         details: "",

@@ -2,8 +2,8 @@ import { DateTime } from "ts-luxon";
 import { Id, ItemStatus } from "@/types/general";
 
 // This must always reflect the Rust struct on the backend
-// entity::overarching_goals::Model
-export interface OverarchingGoal {
+// entity::goals::Model
+export interface Goal {
   id: Id;
   coaching_session_id: Id;
   user_id: Id;
@@ -16,8 +16,8 @@ export interface OverarchingGoal {
   updated_at: DateTime;
 }
 
-export function parseOverarchingGoal(data: any): OverarchingGoal {
-  if (!isOverarchingGoal(data)) {
+export function parseGoal(data: any): Goal {
+  if (!isGoal(data)) {
     throw new Error("Invalid CoachingSession data");
   }
   return {
@@ -34,7 +34,7 @@ export function parseOverarchingGoal(data: any): OverarchingGoal {
   };
 }
 
-export function isOverarchingGoal(value: unknown): value is OverarchingGoal {
+export function isGoal(value: unknown): value is Goal {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -54,41 +54,21 @@ export function isOverarchingGoal(value: unknown): value is OverarchingGoal {
   );
 }
 
-export function isOverarchingGoalArray(
+export function isGoalArray(
   value: unknown
-): value is OverarchingGoal[] {
-  return Array.isArray(value) && value.every(isOverarchingGoal);
+): value is Goal[] {
+  return Array.isArray(value) && value.every(isGoal);
 }
 
-// export function sortOverarchingGoalArray(
-//   sessions: OverarchingGoal[],
-//   order: SortOrder
-// ): OverarchingGoal[] {
-//   if (order == SortOrder.Ascending) {
-//     sessions.sort(
-//       (a, b) =>
-//         new Date(a.date.toString()).getTime() -
-//         new Date(b.date.toString()).getTime()
-//     );
-//   } else if (order == SortOrder.Descending) {
-//     sessions.sort(
-//       (a, b) =>
-//         new Date(b.date.toString()).getTime() -
-//         new Date(a.date.toString()).getTime()
-//     );
-//   }
-//   return sessions;
-// }
-
-export function getOverarchingGoalById(
+export function getGoalById(
   id: string,
-  goals: OverarchingGoal[]
-): OverarchingGoal {
+  goals: Goal[]
+): Goal {
   const goal = goals.find((goal) => goal.id === id);
-  return goal ? goal : defaultOverarchingGoal();
+  return goal ? goal : defaultGoal();
 }
 
-export function defaultOverarchingGoal(): OverarchingGoal {
+export function defaultGoal(): Goal {
   const now = DateTime.now();
   return {
     id: "",
@@ -104,18 +84,18 @@ export function defaultOverarchingGoal(): OverarchingGoal {
   };
 }
 
-export function defaultOverarchingGoals(): OverarchingGoal[] {
-  return [defaultOverarchingGoal()];
+export function defaultGoals(): Goal[] {
+  return [defaultGoal()];
 }
 
-export function overarchingGoalToString(
-  goal: OverarchingGoal | undefined
+export function goalToString(
+  goal: Goal | undefined
 ): string {
   return JSON.stringify(goal);
 }
 
-export function overarchingGoalsToString(
-  goals: OverarchingGoal[] | undefined
+export function goalsToString(
+  goals: Goal[] | undefined
 ): string {
   return JSON.stringify(goals);
 }
