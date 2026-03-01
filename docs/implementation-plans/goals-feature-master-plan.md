@@ -27,8 +27,9 @@ All four architectural questions have been resolved with the backend team. These
 **Q1: Goal Scoping — Option B (join table) confirmed**
 
 - `overarching_goals` table renamed to `goals`
-- `coaching_session_id` on goals renamed to `created_in_session_id` (tracks where the goal was first created)
+- `coaching_session_id` on goals renamed to `created_in_session_id` — **nullable**, allowing goals to be created outside a session context (e.g. from the dashboard or goals page)
 - New `coaching_relationship_id` column added to `goals` for relationship scoping
+- New optional `target_date` field (DATE, nullable) — the intended achieve-by date for the goal; drives dynamic health heuristics when set
 - New `coaching_sessions_goals` many-to-many join table with `goal_id` FK (not `overarching_goal_id`)
 - Enables: per-session goal limit (MAX=3), goal drawer link/unlink flow, goal detail timeline
 
@@ -43,6 +44,7 @@ All four architectural questions have been resolved with the backend team. These
 - Goal events renamed: `goal_created`, `goal_updated`, `goal_deleted` (replacing `overarching_goal_*`)
 - Two new events for join table: `coaching_session_goal_created`, `coaching_session_goal_deleted`
 - Health signals computed **synchronously on read** — no separate health event needed; existing action events trigger cache invalidation which causes goal data to re-fetch with updated health
+- Health heuristics are **dynamic when `target_date` is set**: compares elapsed time % vs action progress %. When `target_date` is null, health reflects **momentum only** (action completion regularity, no time pressure)
 
 **Q4: Annotation Persistence — Option C (both SSE + load-time) confirmed**
 
@@ -72,7 +74,7 @@ All four architectural questions have been resolved with the backend team. These
 | `DELETE /coaching_sessions_goals/{id}` | DELETE | Unlink goal from session | New |
 | `GET /coaching_sessions/{id}/goals` | GET | Goals linked to a session | New |
 | `GET /goals/{id}/sessions` | GET | Sessions that discussed a goal | New |
-| `GET /goals/{id}/summary` | GET | Aggregated stats (action counts, session count, health signal) | New — avoids N+1 |
+| `GET /goals/{id}/health` | GET | Aggregated stats (action counts, session count, health signal) | New — avoids N+1 |
 | `POST /actions/validate` | POST | Batch existence check for action IDs | New (annotation cleanup) |
 | `POST /agreements/validate` | POST | Batch existence check for agreement IDs | New (annotation cleanup) |
 | `POST /goals/validate` | POST | Batch existence check for goal IDs | New (annotation cleanup) |
@@ -107,15 +109,15 @@ Layer 1 (backend — 5 PRs)
 The backend team has committed to a 5-PR implementation plan:
 
 1. **PR1 — Rename:** `overarching_goals` → `goals` across DB table, API paths (`/overarching_goals` → `/goals`), and SSE event names (`overarching_goal_*` → `goal_*`)
-2. **PR2 — Goal scoping:** Add `coaching_relationship_id` to `goals`, rename `coaching_session_id` → `created_in_session_id`, create `coaching_sessions_goals` join table with CRUD endpoints
+2. **PR2 — Goal scoping:** Add `coaching_relationship_id` to `goals`, rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable), create `coaching_sessions_goals` join table with CRUD endpoints
 3. **PR3 — Action FK:** Add nullable `goal_id` to `actions` (ON DELETE SET NULL), add `goal_id` query param to action list endpoints
 4. **PR4 — SSE events:** Add `coaching_session_goal_created` and `coaching_session_goal_deleted` events for the join table
 5. **PR5 — Validation endpoints:** `POST /actions/validate`, `POST /agreements/validate`, `POST /goals/validate` for annotation stale-mark cleanup
 
 Additional backend work (may be part of the above PRs or separate):
 - Add `status` and `coaching_relationship_id` query params to `GET /users/{id}/goals`
-- Implement health signal computation (synchronous, on read), returned as a field on goal responses
-- Add goal summary endpoint or enrich goal responses with action counts
+- Implement health signal computation (synchronous, on read) via `GET /goals/{id}/health`
+- Health endpoint returns `GoalHealthMetrics` (action counts, session count, health signal)
 - Verify/add `DELETE /goals/{id}`
 
 ### Deliverable
@@ -128,10 +130,10 @@ Backend PRs with migrations, endpoint changes, and tests. Frontend Layer 2 can b
 **Branch/PR:** `feat/goals-api-layer`
 
 ### Scope
-- Rename `OverarchingGoal` → `Goal` interface in `src/types/goal.ts` (renamed from `overarching-goal.ts`), with updated fields: `created_in_session_id` (was `coaching_session_id`), new `coaching_relationship_id`, `health`, action count fields
+- Rename `OverarchingGoal` → `Goal` interface in `src/types/goal.ts` (renamed from `overarching-goal.ts`), with updated fields: `created_in_session_id` (nullable, was `coaching_session_id`), new `coaching_relationship_id`, new `target_date` (nullable DATE), `health`, action count fields
 - Add new types: `GoalHealth` enum (`SolidMomentum | NeedsAttention | LetsRefocus`), `GoalHealthMetrics` interface (aggregated stats: actions completed/total, linked session count, health signal), `CoachingSessionGoal` join type
 - Rename `OverarchingGoalApi` → `GoalApi` in `src/lib/api/goals.ts` (renamed from `overarching-goals.ts`): update base URL to `/goals`, new query params, new hooks for user-level goal listing with filters
-- Add new API functions: goal-session link/unlink (`POST/DELETE /coaching_sessions_goals`), goal summary (`GET /goals/{id}/summary`), entity validation (`POST /actions/validate`, etc.)
+- Add new API functions: goal-session link/unlink (`POST/DELETE /coaching_sessions_goals`), goal health (`GET /goals/{id}/health`), entity validation (`POST /actions/validate`, etc.)
 - Update SSE cache invalidation in `src/lib/hooks/use-sse-cache-invalidation.ts` and `src/types/sse-events.ts`: rename `overarching_goal_*` → `goal_*`, add `coaching_session_goal_created/deleted`
 - Update all imports and call sites across the codebase that reference the old names
 - Add/update sorting types in `src/types/sorting.ts`
@@ -201,7 +203,7 @@ New top-level page following `src/app/actions/` naming pattern. Status filter to
 ### PR 4b: Goal Detail Sheet
 **Branch:** `feat/goals-detail-sheet`
 
-Bottom sheet (85vh) opened from goal card click. Editable title/description, status dropdown, stats cards, tabs for session timeline and action groups.
+Bottom sheet (85vh) opened from goal card click. Editable title/description, status dropdown, optional `target_date` date picker, stats cards, tabs for session timeline and action groups.
 
 **Prototype reference:** `src/app/prototype/goals-hub/page.tsx` — `GoalDetailSheet`, `TimelineSession`, `ActionGroup`, `ActionRow`. Also `goal-detail/page.tsx` for inline-edit.
 

@@ -112,10 +112,12 @@ ALTER TABLE overarching_goals
 -- Rename table and column
 ALTER TABLE overarching_goals RENAME TO goals;
 ALTER TABLE goals RENAME COLUMN coaching_session_id TO created_in_session_id;
+-- created_in_session_id is NULLABLE — goals can be created outside a session context
 
--- Add relationship scoping
+-- Add relationship scoping and target date
 ALTER TABLE goals
-  ADD COLUMN coaching_relationship_id UUID REFERENCES coaching_relationships(id);
+  ADD COLUMN coaching_relationship_id UUID REFERENCES coaching_relationships(id),
+  ADD COLUMN target_date DATE;  -- optional achieve-by date, drives dynamic health heuristics
 
 -- New join table for explicit session-goal links
 CREATE TABLE coaching_sessions_goals (
@@ -156,7 +158,8 @@ GET    /goals/{id}/sessions              — List sessions that discussed a goal
 ### Additional decisions made alongside Q1
 
 - **Table rename:** `overarching_goals` → `goals` (simpler, matches UX terminology)
-- **Column rename:** `coaching_session_id` → `created_in_session_id` on goals (clarifies purpose)
+- **Column rename:** `coaching_session_id` → `created_in_session_id` on goals (nullable — goals can be created outside a session)
+- **New field:** `target_date` (DATE, nullable) — optional achieve-by date; drives dynamic health heuristics
 - **Join table name:** `coaching_sessions_goals` (plural "sessions")
 - **Join table FK:** `goal_id` (not `overarching_goal_id`)
 
@@ -321,9 +324,9 @@ This is a lightweight existence check — no need to return full entities.
 
 | # | Question | Decision | Key Details |
 |---|----------|----------|-------------|
-| Q1 | Goal scoping model | **Option B: join table** | `goals` table + `coaching_sessions_goals` join table; `created_in_session_id` column |
+| Q1 | Goal scoping model | **Option B: join table** | `goals` table + `coaching_sessions_goals` join table; `created_in_session_id` (nullable); `target_date` (nullable) |
 | Q2 | Goal FK on actions | **Option A: add FK** | Nullable `goal_id` on actions, ON DELETE SET NULL |
-| Q3 | SSE events | **Renamed + 2 new** | `goal_*` events, `coaching_session_goal_created/deleted`; health sync on read |
+| Q3 | SSE events | **Renamed + 2 new** | `goal_*` events, `coaching_session_goal_created/deleted`; health sync on read with dynamic heuristics when `target_date` set |
 | Q4 | Annotation cleanup | **Option C: both** | SSE real-time + per-entity-type load-time validation endpoints |
 
 ---
@@ -333,7 +336,7 @@ This is a lightweight existence check — no need to return full entities.
 The backend team has committed to the following PR sequence:
 
 1. **PR1 — Rename:** `overarching_goals` → `goals` (table, API paths, SSE events)
-2. **PR2 — Goal scoping:** Add `coaching_relationship_id`, rename `coaching_session_id` → `created_in_session_id`, create `coaching_sessions_goals` join table with CRUD
+2. **PR2 — Goal scoping:** Add `coaching_relationship_id`, rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable), create `coaching_sessions_goals` join table with CRUD
 3. **PR3 — Action FK:** Add nullable `goal_id` to `actions` (ON DELETE SET NULL), add `goal_id` query param
 4. **PR4 — SSE events:** `coaching_session_goal_created`, `coaching_session_goal_deleted`
 5. **PR5 — Validation endpoints:** `POST /actions/validate`, `POST /agreements/validate`, `POST /goals/validate`
@@ -345,11 +348,11 @@ Frontend Layer 2 can begin after PR1 + PR2 are merged. PR3–PR5 can land in par
 ## What the Frontend Needs from the Backend (Summary)
 
 1. **PR1:** Rename `overarching_goals` → `goals` (table, API paths `/overarching_goals` → `/goals`, SSE events `overarching_goal_*` → `goal_*`)
-2. **PR2:** Add `coaching_relationship_id` to `goals`, rename `coaching_session_id` → `created_in_session_id`, create `coaching_sessions_goals` join table with CRUD endpoints
+2. **PR2:** Add `coaching_relationship_id` to `goals`, rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable), create `coaching_sessions_goals` join table with CRUD endpoints
 3. **PR2:** New query params: `status` and `coaching_relationship_id` on `GET /users/{id}/goals`
 4. **PR3:** Add nullable `goal_id` FK to `actions` (ON DELETE SET NULL), add `goal_id` query param on `GET /actions` and `GET /users/{id}/actions`
 5. **PR4:** SSE events for join table: `coaching_session_goal_created`, `coaching_session_goal_deleted`
 6. **Backend-computed health signal:** `GoalHealth` enum returned on goal responses (computed synchronously on read)
-7. **Goal summary endpoint:** `GET /goals/{id}/summary` returning action counts, session count, health signal
+7. **Goal health metrics endpoint:** `GET /goals/{id}/health` returning action counts, session count, health signal (dynamic heuristics when `target_date` set)
 8. **PR1:** Verify/add `DELETE /goals/{id}`
 9. **PR5:** Per-entity-type validation endpoints: `POST /actions/validate`, `POST /agreements/validate`, `POST /goals/validate`
