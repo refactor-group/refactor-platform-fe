@@ -17,7 +17,7 @@ import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
-import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
+import { useGoalBySession } from "@/lib/api/goals";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { DateTime } from "ts-luxon";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -143,7 +143,7 @@ function SessionItem({
       <div className="flex min-w-0 ml-4">
         <div className="min-w-0 w-full">
           <p className="truncate text-sm font-medium">
-            {session.overarching_goal?.title || "No goal set"}
+            {session.goal?.title || "No goal set"}
           </p>
           <p className="truncate text-sm text-gray-400">
             {formatDateInUserTimezone(
@@ -171,8 +171,8 @@ export default function CoachingSessionSelector({
 
   const { userSession } = useAuthStore((state) => state);
 
-  const { overarchingGoal, isLoading: isLoadingGoal } =
-    useOverarchingGoalBySession(currentCoachingSessionId || "");
+  const { goal, isLoading: isLoadingGoal } =
+    useGoalBySession(currentCoachingSessionId || "");
 
   const handleSetCoachingSession = (coachingSessionId: Id) => {
     // Navigate to the coaching session page
@@ -199,7 +199,7 @@ export default function CoachingSessionSelector({
             <span>Loading goal...</span>
           </span>
         ) : (
-          overarchingGoal?.title || "No goal set"
+          goal?.title || "No goal set"
         )}
       </span>
       <span className="text-sm text-gray-500 text-left truncate">

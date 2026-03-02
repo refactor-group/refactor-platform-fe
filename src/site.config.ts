@@ -1,5 +1,5 @@
 export const siteConfig = {
-  name: "Refactor Coach OS",
+  name: "Refactor Coach",
   url: "https://myrefactor.com",
   ogImage: "https://ui.shadcn.com/og.jpg",
   locale: "us",

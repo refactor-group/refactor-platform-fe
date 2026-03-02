@@ -92,10 +92,10 @@ export enum TimeRange {
 }
 
 /**
- * Context about the overarching goal for an action
+ * Context about the goal for an action
  */
 export interface GoalContext {
-  overarchingGoalId: Id;
+  goalId: Id;
   title: string;
 }
 
@@ -121,7 +121,7 @@ export interface AssignedActionWithContext {
 }
 
 /**
- * Actions grouped by overarching goal within a relationship
+ * Actions grouped by goal within a relationship
  */
 export interface GoalGroupedActions {
   goal: GoalContext;

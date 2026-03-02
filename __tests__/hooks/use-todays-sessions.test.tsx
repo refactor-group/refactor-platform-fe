@@ -89,7 +89,7 @@ vi.mock("@/lib/api/coaching-sessions", () => ({
         id: "session-1",
         relationship: mockRelationships[0],
         organization: mockOrganizations[0],
-        overarching_goal: {
+        goal: {
           id: "goal-1",
           title: "Q1 Goals",
           details: "",
@@ -103,7 +103,7 @@ vi.mock("@/lib/api/coaching-sessions", () => ({
         id: "session-2",
         relationship: mockRelationships[1],
         organization: mockOrganizations[1],
-        overarching_goal: {
+        goal: {
           id: "goal-2",
           title: "Q2 Goals",
           details: "",
@@ -120,7 +120,7 @@ vi.mock("@/lib/api/coaching-sessions", () => ({
   CoachingSessionInclude: {
     Relationship: "relationship",
     Organization: "organization",
-    Goal: "overarching_goal",
+    Goal: "goal",
   },
 }));
 
@@ -176,7 +176,7 @@ describe("useTodaysSessions", () => {
     // Should have enriched related data (not pre-computed display values)
     expect(session).toHaveProperty("relationship");
     expect(session).toHaveProperty("organization");
-    expect(session).toHaveProperty("overarching_goal");
+    expect(session).toHaveProperty("goal");
     expect(session.relationship).toBeDefined();
     expect(session.organization).toBeDefined();
   });

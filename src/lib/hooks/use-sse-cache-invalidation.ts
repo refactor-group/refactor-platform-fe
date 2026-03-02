@@ -14,7 +14,7 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
    * Uses a filter function to target only caches matching the endpoint path,
    * preventing unnecessary re-renders across unrelated components.
    *
-   * @param endpointPath - The API endpoint path to invalidate (e.g., '/actions', '/overarching_goals')
+   * @param endpointPath - The API endpoint path to invalidate (e.g., '/actions', '/goals')
    * @param eventName - The SSE event name for logging purposes
    */
   const invalidateEndpoint = useCallback((endpointPath: string, eventName: string) => {
@@ -62,16 +62,16 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     invalidateEndpoint('/agreements', 'agreement_deleted');
   });
 
-  // OVERARCHING GOAL EVENTS - Invalidate only /overarching_goals endpoint
-  useSSEEventHandler(eventSource, 'overarching_goal_created', () => {
-    invalidateEndpoint('/overarching_goals', 'overarching_goal_created');
+  // GOAL EVENTS - Invalidate only /goals endpoint
+  useSSEEventHandler(eventSource, 'goal_created', () => {
+    invalidateEndpoint('/goals', 'goal_created');
   });
 
-  useSSEEventHandler(eventSource, 'overarching_goal_updated', () => {
-    invalidateEndpoint('/overarching_goals', 'overarching_goal_updated');
+  useSSEEventHandler(eventSource, 'goal_updated', () => {
+    invalidateEndpoint('/goals', 'goal_updated');
   });
 
-  useSSEEventHandler(eventSource, 'overarching_goal_deleted', () => {
-    invalidateEndpoint('/overarching_goals', 'overarching_goal_deleted');
+  useSSEEventHandler(eventSource, 'goal_deleted', () => {
+    invalidateEndpoint('/goals', 'goal_deleted');
   });
 }

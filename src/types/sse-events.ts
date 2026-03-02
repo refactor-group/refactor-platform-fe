@@ -1,7 +1,7 @@
 import type { Id } from './general';
 import type { Action } from './action';
 import type { Agreement } from './agreement';
-import type { OverarchingGoal } from './overarching-goal';
+import type { Goal } from './goal';
 
 /**
  * Base SSE event structure matching backend serialization
@@ -64,29 +64,29 @@ export type AgreementDeletedEvent = BaseSSEEvent<
   }
 >;
 
-// ==================== OVERARCHING GOAL EVENTS (relationship-scoped) ====================
+// ==================== GOAL EVENTS (relationship-scoped) ====================
 
-export type OverarchingGoalCreatedEvent = BaseSSEEvent<
-  'overarching_goal_created',
+export type GoalCreatedEvent = BaseSSEEvent<
+  'goal_created',
   {
     coaching_relationship_id: Id;
-    overarching_goal: OverarchingGoal;
+    goal: Goal;
   }
 >;
 
-export type OverarchingGoalUpdatedEvent = BaseSSEEvent<
-  'overarching_goal_updated',
+export type GoalUpdatedEvent = BaseSSEEvent<
+  'goal_updated',
   {
     coaching_relationship_id: Id;
-    overarching_goal: OverarchingGoal;
+    goal: Goal;
   }
 >;
 
-export type OverarchingGoalDeletedEvent = BaseSSEEvent<
-  'overarching_goal_deleted',
+export type GoalDeletedEvent = BaseSSEEvent<
+  'goal_deleted',
   {
     coaching_relationship_id: Id;
-    overarching_goal_id: Id;
+    goal_id: Id;
   }
 >;
 
@@ -110,7 +110,7 @@ export type SSEEvent =
   | AgreementCreatedEvent
   | AgreementUpdatedEvent
   | AgreementDeletedEvent
-  | OverarchingGoalCreatedEvent
-  | OverarchingGoalUpdatedEvent
-  | OverarchingGoalDeletedEvent
+  | GoalCreatedEvent
+  | GoalUpdatedEvent
+  | GoalDeletedEvent
   | ForceLogoutEvent;

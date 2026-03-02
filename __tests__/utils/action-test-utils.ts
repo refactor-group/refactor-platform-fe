@@ -176,7 +176,7 @@ export function createMockAssignedAction(
   };
 
   const goal: GoalContext = {
-    overarchingGoalId: options.goalId ?? TEST_GOAL_IDS.GOAL_1,
+    goalId: options.goalId ?? TEST_GOAL_IDS.GOAL_1,
     title: options.goalTitle ?? "Test Goal",
   };
 
@@ -239,7 +239,7 @@ export function createMockSession(
       email: "coachee@test.com",
       display_name: "Coachee Name",
     },
-    overarching_goal: options.goalId
+    goal: options.goalId
       ? {
           id: options.goalId,
           title: options.goalTitle ?? "Test Goal",

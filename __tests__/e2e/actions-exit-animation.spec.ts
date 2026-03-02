@@ -41,7 +41,7 @@ const ENRICHED_SESSION = {
     last_name: 'User',
     display_name: 'Test User',
   },
-  overarching_goal: {
+  goal: {
     id: 'goal-1',
     title: 'Test Goal',
     coaching_session_id: 'session-1',

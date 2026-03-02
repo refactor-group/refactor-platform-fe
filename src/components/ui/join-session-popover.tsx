@@ -364,7 +364,7 @@ function SessionGroup({
           className="flex flex-col items-start w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
         >
           <span className="w-full truncate font-medium">
-            {session.overarching_goal?.title || "No goal set"}
+            {session.goal?.title || "No goal set"}
           </span>
           <span className="text-xs text-muted-foreground truncate">
             {formatDateInUserTimezone(session.date, timezone)}

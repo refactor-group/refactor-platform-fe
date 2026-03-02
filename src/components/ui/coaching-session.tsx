@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useOverarchingGoalBySession } from "@/lib/api/overarching-goals";
+import { useGoalBySession } from "@/lib/api/goals";
 import { Id } from "@/types/general";
 import {
   DropdownMenu,
@@ -44,7 +44,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
       <CardHeader className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-1">
-            <OverarchingGoal coachingSessionId={coachingSession.id} />
+            <SessionGoal coachingSessionId={coachingSession.id} />
             <div className="text-sm text-muted-foreground">
               {formatDateInUserTimezoneWithTZ(
                 coachingSession.date,
@@ -93,27 +93,27 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
   );
 };
 
-interface OverarchingGoalProps {
+interface SessionGoalProps {
   coachingSessionId: Id;
 }
 
-const OverarchingGoal: React.FC<OverarchingGoalProps> = ({
+const SessionGoal: React.FC<SessionGoalProps> = ({
   coachingSessionId,
 }) => {
   const {
-    overarchingGoal,
-    isLoading: isLoadingOverarchingGoal,
-    isError: isErrorOverarchingGoal,
-  } = useOverarchingGoalBySession(coachingSessionId);
+    goal,
+    isLoading: isLoadingGoal,
+    isError: isErrorGoal,
+  } = useGoalBySession(coachingSessionId);
 
   let titleText: string;
 
-  if (isLoadingOverarchingGoal) {
+  if (isLoadingGoal) {
     titleText = "Loading...";
-  } else if (isErrorOverarchingGoal) {
-    titleText = "Error loading Overarching Goal";
+  } else if (isErrorGoal) {
+    titleText = "Error loading goal";
   } else {
-    titleText = overarchingGoal?.title || "No goal set";
+    titleText = goal?.title || "No goal set";
   }
 
   return <div>{titleText}</div>;

@@ -27,7 +27,7 @@ const mockRelationship: CoachingRelationshipWithUserNames = {
 };
 
 const mockGoal = {
-  overarchingGoalId: "goal-1",
+  goalId: "goal-1",
   title: "Test Goal",
 };
 
