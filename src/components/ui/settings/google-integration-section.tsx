@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { FC } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
@@ -13,6 +14,7 @@ import {
   OAuthConnectionApi,
   useGoogleOAuthConnection,
 } from "@/lib/api/oauth-connection";
+import { EntityApiError } from "@/lib/api/entity-api";
 import { MeetingApi } from "@/lib/api/meetings";
 import {
   getRelationshipsAsCoach,
@@ -42,6 +44,7 @@ import { GoogleDisconnectDialog } from "./google-disconnect-dialog";
 import { MeetUrlField } from "./meet-url-field";
 
 export const GoogleIntegrationSection: FC = () => {
+  const router = useRouter();
   const { isACoach, userId } = useAuthStore((state) => state);
   const { currentOrganizationId } = useCurrentOrganization();
   const { connection, isLoading, refresh } = useGoogleOAuthConnection();
@@ -80,24 +83,6 @@ export const GoogleIntegrationSection: FC = () => {
     }
   }, [refresh]);
 
-  const handleUpdateMeetUrl = useCallback(
-    async (relationshipId: string, meetUrl: string) => {
-      if (!currentOrganizationId) return;
-      try {
-        await CoachingRelationshipApi.updateRelationship(
-          currentOrganizationId,
-          relationshipId,
-          { meet_url: meetUrl }
-        );
-        await refreshRelationships();
-        toast.success("Meet link saved.");
-      } catch {
-        toast.error("Failed to save Meet link.");
-      }
-    },
-    [currentOrganizationId, refreshRelationships]
-  );
-
   const handleCreateMeet = useCallback(
     async (relationshipId: string) => {
       if (!currentOrganizationId) return;
@@ -114,13 +99,19 @@ export const GoogleIntegrationSection: FC = () => {
         );
         await refreshRelationships();
         toast.success("Google Meet link created.");
-      } catch {
-        toast.error("Failed to create Google Meet link.");
+      } catch (err) {
+        if (err instanceof EntityApiError && err.status === 401) {
+          await refresh();
+          router.push("/settings/integrations");
+          toast.error("Oauth connection revoked. You must reconnect");
+        } else {
+          toast.error("Failed to create Google Meet link.");
+        }
       } finally {
         setCreatingMeetForRelId(null);
       }
     },
-    [currentOrganizationId, refreshRelationships]
+    [currentOrganizationId, refresh, refreshRelationships, router]
   );
 
   const handleRemoveMeetUrl = useCallback(
@@ -211,7 +202,6 @@ export const GoogleIntegrationSection: FC = () => {
                     meetUrl={selectedRelationship.meet_url}
                     isGoogleOAuthConnected={connected}
                     isCreateLoading={creatingMeetForRelId === selectedRelationship.id}
-                    onUpdate={(url) => handleUpdateMeetUrl(selectedRelationship.id, url)}
                     onCreate={() => handleCreateMeet(selectedRelationship.id)}
                     onRemove={() => handleRemoveMeetUrl(selectedRelationship.id)}
                   />
