@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MeetUrlField } from "@/components/ui/settings/meet-url-field";
@@ -6,7 +6,6 @@ import { MeetUrlField } from "@/components/ui/settings/meet-url-field";
 describe("MeetUrlField", () => {
   const defaultProps = {
     isGoogleOAuthConnected: true,
-    onUpdate: vi.fn().mockResolvedValue(undefined),
     onCreate: vi.fn().mockResolvedValue(undefined),
     onRemove: vi.fn().mockResolvedValue(undefined),
   };
@@ -16,12 +15,9 @@ describe("MeetUrlField", () => {
   });
 
   describe("when no meet_url is set", () => {
-    it("shows text input and Create Meet button", () => {
+    it("shows Create Meet button", () => {
       render(<MeetUrlField {...defaultProps} />);
 
-      expect(
-        screen.getByPlaceholderText("Paste Google Meet URL")
-      ).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Create Meet" })
       ).toBeInTheDocument();
@@ -37,31 +33,20 @@ describe("MeetUrlField", () => {
       ).toBeDisabled();
     });
 
-    it("shows validation error for invalid URL on blur", async () => {
+    it("enables Create Meet button when Google OAuth is connected", () => {
       render(<MeetUrlField {...defaultProps} />);
 
-      const input = screen.getByPlaceholderText("Paste Google Meet URL");
-      await userEvent.type(input, "https://not-a-meet-url.com");
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Please enter a valid Google Meet URL/)
-        ).toBeInTheDocument();
-      });
+      expect(
+        screen.getByRole("button", { name: "Create Meet" })
+      ).not.toBeDisabled();
     });
 
-    it("calls onUpdate with valid URL on blur", async () => {
+    it("calls onCreate when Create Meet button is clicked", async () => {
       render(<MeetUrlField {...defaultProps} />);
 
-      const validUrl = "https://meet.google.com/abc-defg-hij";
-      const input = screen.getByPlaceholderText("Paste Google Meet URL");
-      await userEvent.type(input, validUrl);
-      fireEvent.blur(input);
+      await userEvent.click(screen.getByRole("button", { name: "Create Meet" }));
 
-      await waitFor(() => {
-        expect(defaultProps.onUpdate).toHaveBeenCalledWith(validUrl);
-      });
+      expect(defaultProps.onCreate).toHaveBeenCalled();
     });
   });
 

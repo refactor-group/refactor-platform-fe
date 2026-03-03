@@ -18,7 +18,7 @@ beforeAll(() => {
     Element.prototype.scrollIntoView = () => {};
   }
 });
-import { GoogleOAuthConnectionStatus } from "@/types/oauth-connection";
+import { OAuthConnection } from "@/types/oauth-connection";
 import {
   createMockRelationship,
   createMockGoogleOAuthConnectionState,
@@ -33,21 +33,19 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 
 const mockRefreshOAuth = vi.fn();
 vi.mock("@/lib/api/oauth-connection", () => ({
-  useGoogleOAuthConnectionStatus: () => ({
-    connectionStatus: mockConnectionStatus,
+  useGoogleOAuthConnection: () => ({
+    connection: mockConnectionStatus,
     isLoading: false,
     isError: undefined,
     refresh: mockRefreshOAuth,
   }),
-  GoogleOAuthApi: {
+  OAuthConnectionApi: {
     getAuthorizeUrl: () => "http://localhost:4000/api/oauth/google/authorize",
-    disconnect: vi.fn().mockResolvedValue(undefined),
+    disconnectGoogle: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
-let mockConnectionStatus: ReturnType<typeof createMockGoogleOAuthConnectionState> | { status: string } = {
-  status: GoogleOAuthConnectionStatus.Disconnected,
-};
+let mockConnectionStatus: OAuthConnection | null = null;
 
 const mockRefreshRelationships = vi.fn();
 vi.mock("@/lib/api/coaching-relationships", () => ({
@@ -83,9 +81,7 @@ vi.mock("@/lib/api/meetings", () => ({
 describe("GoogleIntegrationSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockConnectionStatus = {
-      status: GoogleOAuthConnectionStatus.Disconnected,
-    };
+    mockConnectionStatus = null;
     mockRelationships = [];
   });
 
