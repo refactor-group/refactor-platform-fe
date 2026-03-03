@@ -1,48 +1,45 @@
 import { describe, it, expect } from "vitest";
-import {
-  GoogleOAuthConnectionStatus,
-  GoogleOAuthConnectionState,
-  defaultGoogleOAuthConnectionState,
-  isGoogleOAuthConnected,
-} from "@/types/oauth-connection";
+import { OAuthConnection } from "@/types/oauth-connection";
+import { OAuthConnectionApi } from "@/lib/api/oauth-connection";
 
-describe("GoogleOAuthConnectionState", () => {
-  describe("defaultGoogleOAuthConnectionState", () => {
-    it("returns disconnected state", () => {
-      const state = defaultGoogleOAuthConnectionState();
-      expect(state.status).toBe(GoogleOAuthConnectionStatus.Disconnected);
+describe("OAuthConnection", () => {
+  describe("connected state", () => {
+    it("is represented as a non-null OAuthConnection object", () => {
+      const connection: OAuthConnection = {
+        provider: "google",
+        email: "coach@gmail.com",
+        connected_at: "2026-01-15T10:00:00Z",
+      };
+      expect(connection.email).toBe("coach@gmail.com");
+      expect(connection.provider).toBe("google");
+    });
+
+    it("allows null email for connections without an email address", () => {
+      const connection: OAuthConnection = {
+        provider: "google",
+        email: null,
+        connected_at: "2026-01-15T10:00:00Z",
+      };
+      expect(connection.email).toBeNull();
     });
   });
 
-  describe("isGoogleOAuthConnected", () => {
-    it("returns true for connected state", () => {
-      const state: GoogleOAuthConnectionState = {
-        status: GoogleOAuthConnectionStatus.Connected,
-        google_email: "coach@gmail.com",
-        connected_at: "2026-01-15T10:00:00Z",
-      };
-      expect(isGoogleOAuthConnected(state)).toBe(true);
+  describe("disconnected state", () => {
+    it("is represented as null", () => {
+      const connection: OAuthConnection | null = null;
+      expect(connection).toBeNull();
+    });
+  });
+
+  describe("OAuthConnectionApi.getAuthorizeUrl", () => {
+    it("includes the user_id in the query string", () => {
+      const url = OAuthConnectionApi.getAuthorizeUrl("user-123");
+      expect(url).toContain("user_id=user-123");
     });
 
-    it("returns false for disconnected state", () => {
-      const state: GoogleOAuthConnectionState = {
-        status: GoogleOAuthConnectionStatus.Disconnected,
-      };
-      expect(isGoogleOAuthConnected(state)).toBe(false);
-    });
-
-    it("narrows type to expose google_email and connected_at when connected", () => {
-      const state: GoogleOAuthConnectionState = {
-        status: GoogleOAuthConnectionStatus.Connected,
-        google_email: "test@example.com",
-        connected_at: "2026-02-01T12:00:00Z",
-      };
-
-      if (isGoogleOAuthConnected(state)) {
-        // TypeScript should narrow the type, giving access to these fields
-        expect(state.google_email).toBe("test@example.com");
-        expect(state.connected_at).toBe("2026-02-01T12:00:00Z");
-      }
+    it("includes the google oauth authorize path", () => {
+      const url = OAuthConnectionApi.getAuthorizeUrl("user-456");
+      expect(url).toContain("/oauth/google/authorize");
     });
   });
 });

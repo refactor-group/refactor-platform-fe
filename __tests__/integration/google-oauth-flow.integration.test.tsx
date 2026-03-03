@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useSearchParams, useRouter } from "next/navigation";
 import IntegrationsPage from "@/app/settings/integrations/page";
-import { GoogleOAuthConnectionStatus } from "@/types/oauth-connection";
+import { OAuthConnection } from "@/types/oauth-connection";
 import { createMockGoogleOAuthConnectionState } from "../test-utils";
 
 // Track toast calls
@@ -24,22 +24,26 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 }));
 
 // Mock OAuth connection hook
-let mockConnectionStatus: { status: string; google_email?: string; connected_at?: string } = {
-  status: GoogleOAuthConnectionStatus.Disconnected,
-};
+let mockConnection: OAuthConnection | null = null;
 const mockRefreshOAuth = vi.fn();
 const mockDisconnect = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/api/oauth-connection", () => ({
-  useGoogleOAuthConnectionStatus: () => ({
-    connectionStatus: mockConnectionStatus,
+  useGoogleOAuthConnection: () => ({
+    connection: mockConnection,
     isLoading: false,
     isError: undefined,
     refresh: mockRefreshOAuth,
   }),
-  GoogleOAuthApi: {
+  useGoogleOAuthConnectionStatus: () => ({
+    connection: mockConnection,
+    isLoading: false,
+    isError: undefined,
+    refresh: mockRefreshOAuth,
+  }),
+  OAuthConnectionApi: {
     getAuthorizeUrl: () => "http://localhost:4000/api/oauth/google/authorize",
-    disconnect: () => mockDisconnect(),
+    disconnectGoogle: () => mockDisconnect(),
   },
 }));
 
@@ -73,9 +77,7 @@ describe("Google OAuth Flow Integration", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockConnectionStatus = {
-      status: GoogleOAuthConnectionStatus.Disconnected,
-    };
+    mockConnection = null;
     mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
     vi.mocked(useRouter).mockReturnValue({
       push: vi.fn(),
@@ -169,7 +171,7 @@ describe("Google OAuth Flow Integration", () => {
   describe("Disconnect flow", () => {
     it("shows connected email and Disconnect button when connected", () => {
       vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
-      mockConnectionStatus = createMockGoogleOAuthConnectionState();
+      mockConnection = createMockGoogleOAuthConnectionState();
 
       render(<IntegrationsPage />);
 
@@ -181,7 +183,7 @@ describe("Google OAuth Flow Integration", () => {
 
     it("shows confirmation dialog and disconnects on confirm", async () => {
       vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
-      mockConnectionStatus = createMockGoogleOAuthConnectionState();
+      mockConnection = createMockGoogleOAuthConnectionState();
 
       render(<IntegrationsPage />);
 

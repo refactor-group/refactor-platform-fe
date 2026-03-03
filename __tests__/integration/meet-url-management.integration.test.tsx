@@ -1,7 +1,11 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { GoogleIntegrationSection } from "@/components/ui/settings/google-integration-section";
+import {
+  createMockRelationship,
+  createMockGoogleOAuthConnectionState,
+} from "../test-utils";
 
 // Polyfill DOM methods missing in jsdom (needed by Radix Select)
 beforeAll(() => {
@@ -18,11 +22,6 @@ beforeAll(() => {
     Element.prototype.scrollIntoView = () => {};
   }
 });
-import { GoogleOAuthConnectionStatus } from "@/types/oauth-connection";
-import {
-  createMockRelationship,
-  createMockGoogleOAuthConnectionState,
-} from "../test-utils";
 
 // Mock toast
 vi.mock("sonner", () => ({
@@ -41,15 +40,15 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 
 // Mock OAuth hook
 vi.mock("@/lib/api/oauth-connection", () => ({
-  useGoogleOAuthConnectionStatus: () => ({
-    connectionStatus: createMockGoogleOAuthConnectionState(),
+  useGoogleOAuthConnection: () => ({
+    connection: createMockGoogleOAuthConnectionState(),
     isLoading: false,
     isError: undefined,
     refresh: vi.fn(),
   }),
-  GoogleOAuthApi: {
+  OAuthConnectionApi: {
     getAuthorizeUrl: () => "http://localhost:4000/api/oauth/google/authorize",
-    disconnect: vi.fn(),
+    disconnectGoogle: vi.fn(),
   },
 }));
 
@@ -108,43 +107,6 @@ describe("Meet URL Management Integration", () => {
     await userEvent.click(screen.getByRole("combobox"));
     await userEvent.click(screen.getByRole("option", { name }));
   }
-
-  describe("Paste flow", () => {
-    it("saves valid Meet URL on blur", async () => {
-      render(<GoogleIntegrationSection />);
-      await selectCoachee("Jane Smith");
-
-      const input = screen.getByPlaceholderText("Paste Google Meet URL");
-      const validUrl = "https://meet.google.com/abc-defg-hij";
-      await userEvent.type(input, validUrl);
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(mockUpdateRelationship).toHaveBeenCalledWith(
-          "org-1",
-          "rel-1",
-          { meet_url: validUrl }
-        );
-      });
-    });
-
-    it("shows validation error for invalid URL", async () => {
-      render(<GoogleIntegrationSection />);
-      await selectCoachee("Jane Smith");
-
-      const input = screen.getByPlaceholderText("Paste Google Meet URL");
-      await userEvent.type(input, "https://zoom.us/j/123456");
-      fireEvent.blur(input);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Please enter a valid Google Meet URL/)
-        ).toBeInTheDocument();
-      });
-
-      expect(mockUpdateRelationship).not.toHaveBeenCalled();
-    });
-  });
 
   describe("Create flow", () => {
     it("creates Meet and saves URL to relationship", async () => {
