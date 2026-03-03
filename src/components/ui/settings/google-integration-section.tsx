@@ -2,25 +2,12 @@
 
 import { useState, useCallback } from "react";
 import type { FC } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import {
-  CoachingRelationshipApi,
-} from "@/lib/api/coaching-relationships";
 import {
   OAuthConnectionApi,
   useGoogleOAuthConnection,
 } from "@/lib/api/oauth-connection";
-import { EntityApiError } from "@/lib/api/entity-api";
-import { MeetingApi } from "@/lib/api/meetings";
-import {
-  getRelationshipsAsCoach,
-  getOtherPersonName,
-  sortRelationshipsByParticipantName,
-} from "@/types/coaching-relationship";
 import {
   FieldSet,
   FieldGroup,
@@ -29,42 +16,18 @@ import {
   Field,
   FieldLabel,
   FieldContent,
-  FieldSeparator,
 } from "@/components/kibo/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Pill } from "@/components/kibo/ui/pill";
 import { Button } from "@/components/ui/button";
 import { GoogleDisconnectDialog } from "./google-disconnect-dialog";
-import { MeetUrlField } from "./meet-url-field";
 
 export const GoogleIntegrationSection: FC = () => {
-  const router = useRouter();
   const { isACoach, userId } = useAuthStore((state) => state);
-  const { currentOrganizationId } = useCurrentOrganization();
   const { connection, isLoading, refresh } = useGoogleOAuthConnection();
-  const { relationships, refresh: refreshRelationships } =
-    useCoachingRelationshipList(currentOrganizationId ?? "");
 
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [creatingMeetForRelId, setCreatingMeetForRelId] = useState<
-    string | null
-  >(null);
-  const [selectedRelationshipId, setSelectedRelationshipId] = useState("");
 
   const connected = connection !== null;
-  const coachRelationships = sortRelationshipsByParticipantName(
-    getRelationshipsAsCoach(userId, relationships),
-    userId
-  );
-  const selectedRelationship = coachRelationships.find(
-    (r) => r.id === selectedRelationshipId
-  );
 
   const handleConnect = useCallback(() => {
     window.location.href = OAuthConnectionApi.getAuthorizeUrl(userId);
@@ -82,55 +45,6 @@ export const GoogleIntegrationSection: FC = () => {
       setIsDisconnecting(false);
     }
   }, [refresh]);
-
-  const handleCreateMeet = useCallback(
-    async (relationshipId: string) => {
-      if (!currentOrganizationId) return;
-      setCreatingMeetForRelId(relationshipId);
-      try {
-        const space = await MeetingApi.createGoogleMeet(
-          currentOrganizationId,
-          relationshipId
-        );
-        await CoachingRelationshipApi.updateRelationship(
-          currentOrganizationId,
-          relationshipId,
-          { meet_url: space.join_url }
-        );
-        await refreshRelationships();
-        toast.success("Google Meet link created.");
-      } catch (err) {
-        if (err instanceof EntityApiError && err.status === 401) {
-          await refresh();
-          router.push("/settings/integrations");
-          toast.error("Oauth connection revoked. You must reconnect");
-        } else {
-          toast.error("Failed to create Google Meet link.");
-        }
-      } finally {
-        setCreatingMeetForRelId(null);
-      }
-    },
-    [currentOrganizationId, refresh, refreshRelationships, router]
-  );
-
-  const handleRemoveMeetUrl = useCallback(
-    async (relationshipId: string) => {
-      if (!currentOrganizationId) return;
-      try {
-        await CoachingRelationshipApi.updateRelationship(
-          currentOrganizationId,
-          relationshipId,
-          { meet_url: null }
-        );
-        await refreshRelationships();
-        toast.success("Meet link removed.");
-      } catch {
-        toast.error("Failed to remove Meet link.");
-      }
-    },
-    [currentOrganizationId, refreshRelationships]
-  );
 
   if (!isACoach) {
     return null;
@@ -170,46 +84,6 @@ export const GoogleIntegrationSection: FC = () => {
             )}
           </FieldContent>
         </Field>
-
-        {coachRelationships.length > 0 && (
-          <>
-            <FieldSeparator />
-            <FieldGroup>
-              <FieldLegend variant="label">Google Meet Links</FieldLegend>
-              <FieldDescription>
-                Set a video call link for each coaching relationship.
-              </FieldDescription>
-
-              <div className="flex flex-col gap-4">
-                <Select
-                  value={selectedRelationshipId}
-                  onValueChange={setSelectedRelationshipId}
-                >
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder="Select a coachee..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {coachRelationships.map((rel) => (
-                      <SelectItem key={rel.id} value={rel.id}>
-                        {getOtherPersonName(rel, userId)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {selectedRelationship && (
-                  <MeetUrlField
-                    meetUrl={selectedRelationship.meet_url}
-                    isGoogleOAuthConnected={connected}
-                    isCreateLoading={creatingMeetForRelId === selectedRelationship.id}
-                    onCreate={() => handleCreateMeet(selectedRelationship.id)}
-                    onRemove={() => handleRemoveMeetUrl(selectedRelationship.id)}
-                  />
-                )}
-              </div>
-            </FieldGroup>
-          </>
-        )}
       </FieldGroup>
     </FieldSet>
   );
