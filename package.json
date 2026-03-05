@@ -125,6 +125,7 @@
     "react-dom": "$react-dom",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "minimatch": ">=10.2.1"
+    "minimatch": ">=10.2.3",
+    "rollup": ">=4.59.0"
   }
 }
