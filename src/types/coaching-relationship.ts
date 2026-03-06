@@ -7,7 +7,6 @@ export interface CoachingRelationship {
   coach_id: Id;
   coachee_id: Id;
   organization_id: Id;
-  meet_url?: string;
   created_at: DateTime;
   updated_at: DateTime;
 }

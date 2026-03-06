@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useOAuthConnection } from "@/lib/api/oauth-connection";
+import { Provider } from "@/types/provider";
 import { GoogleIntegrationSection } from "@/components/ui/settings/google-integration-section";
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -15,7 +16,7 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
 export default function IntegrationsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { refresh } = useOAuthConnection("google");
+  const { refresh } = useOAuthConnection(Provider.Google);
 
   useEffect(() => {
     const googleConnected = searchParams.get("google_connected");
