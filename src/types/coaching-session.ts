@@ -6,6 +6,7 @@ import { User } from "@/types/user";
 import { Organization } from "@/types/organization";
 import { Goal } from "@/types/goal";
 import { Agreement } from "@/types/agreement";
+import { Provider } from "@/types/provider";
 /**
  * Default session duration in minutes (used until backend provides per-session duration).
  * TODO: replace this constant once full session duration has been implemented in the entire system.
@@ -14,7 +15,7 @@ export const DEFAULT_SESSION_DURATION_MINUTES = 60;
 
 // Default meeting provider for new coaching sessions.
 // TODO: expand to support multiple providers (e.g. Zoom) when provider selection is added to the UI.
-export const DEFAULT_MEETING_PROVIDER = "google";
+export const DEFAULT_MEETING_PROVIDER = Provider.Google;
 
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
@@ -23,7 +24,7 @@ export interface CoachingSession {
   coaching_relationship_id: Id;
   date: string;
   meeting_url?: string;
-  provider?: string;
+  provider?: Provider;
   created_at: DateTime;
   updated_at: DateTime;
 }

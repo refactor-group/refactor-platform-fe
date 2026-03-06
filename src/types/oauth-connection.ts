@@ -1,6 +1,6 @@
-// Mirrors the backend Provider enum (entity/src/provider.rs).
-// Add new values here as the backend adds new OAuth providers.
-export type OAuthProvider = "google";
+import { Provider } from "@/types/provider";
+
+export type OAuthProvider = Provider;
 
 export interface OAuthConnection {
   provider: OAuthProvider;
