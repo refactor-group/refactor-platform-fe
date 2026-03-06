@@ -41,10 +41,6 @@ export interface NewCoachingRelationship {
   coachee_id: Id;
 }
 
-export interface CoachingRelationshipUpdate {
-  meet_url?: string | null;
-}
-
 export function isCoachingRelationshipWithUserNames(
   value: unknown
 ): value is CoachingRelationshipWithUserNames {

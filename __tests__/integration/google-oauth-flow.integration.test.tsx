@@ -55,9 +55,7 @@ vi.mock("@/lib/api/coaching-relationships", () => ({
     isError: undefined,
     refresh: vi.fn(),
   }),
-  CoachingRelationshipApi: {
-    updateRelationship: vi.fn(),
-  },
+  CoachingRelationshipApi: {},
 }));
 
 vi.mock("@/lib/hooks/use-current-organization", () => ({
