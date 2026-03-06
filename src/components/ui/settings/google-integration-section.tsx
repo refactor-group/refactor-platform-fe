@@ -65,7 +65,7 @@ export const GoogleIntegrationSection: FC = () => {
               <span className="text-sm text-muted-foreground">Loading...</span>
             ) : connected ? (
               <div className="flex items-center gap-3">
-                <Pill>{connection?.email}</Pill>
+                <Pill>{connection.email ?? "No email on file"}</Pill>
                 <GoogleDisconnectDialog
                   onConfirm={handleDisconnect}
                   isLoading={isDisconnecting}
