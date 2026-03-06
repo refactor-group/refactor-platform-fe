@@ -60,15 +60,4 @@ export const handlers = [
     return new HttpResponse(null, { status: 200 });
   }),
 
-  // Create Google Meet
-  http.post("*/meetings/google/create", () => {
-    return HttpResponse.json({
-      status_code: 200,
-      data: {
-        meeting_id: "meet-123",
-        join_url: "https://meet.google.com/abc-defg-hij",
-        host_url: "https://meet.google.com/abc-defg-hij",
-      },
-    });
-  }),
 ];

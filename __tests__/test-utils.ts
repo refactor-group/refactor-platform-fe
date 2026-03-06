@@ -4,7 +4,6 @@ import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
 import { OAuthConnection } from "@/types/oauth-connection";
-import { MeetingSpace } from "@/types/meeting-space";
 
 /**
  * Test data factories for consistent, readable test setup
@@ -92,17 +91,6 @@ export function createMockGoogleOAuthConnectionState(
     provider: "google",
     email: "coach@gmail.com",
     connected_at: "2026-01-15T10:00:00Z",
-    ...overrides,
-  };
-}
-
-export function createMockMeetingSpace(
-  overrides?: Partial<MeetingSpace>
-): MeetingSpace {
-  return {
-    meeting_id: "meet-123",
-    join_url: "https://meet.google.com/abc-defg-hij",
-    host_url: "https://meet.google.com/abc-defg-hij",
     ...overrides,
   };
 }

@@ -66,12 +66,6 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
   }),
 }));
 
-vi.mock("@/lib/api/meetings", () => ({
-  MeetingApi: {
-    createGoogleMeet: vi.fn(),
-  },
-}));
-
 describe("Google OAuth Flow Integration", () => {
   const mockReplace = vi.fn();
 
