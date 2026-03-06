@@ -21,8 +21,11 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useState, useMemo } from "react";
-import { defaultCoachingSession } from "@/types/coaching-session";
+import { useRouter } from "next/navigation";
+import { defaultCoachingSession, DEFAULT_MEETING_PROVIDER } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
+import { EntityApiError } from "@/types/entity-api-error";
+import { toast } from "sonner";
 
 export type CoachingSessionFormMode = "create" | "update";
 
@@ -49,6 +52,7 @@ export default function CoachingSessionForm({
     fromDate,
     toDate
   );
+  const router = useRouter();
   const { create: createCoachingSession, update } =
     useCoachingSessionMutation();
 
@@ -105,6 +109,7 @@ export default function CoachingSessionForm({
       ...defaultCoachingSession(),
       coaching_relationship_id: relationshipId,
       date: dateTime,
+      provider: DEFAULT_MEETING_PROVIDER,
     };
     await createCoachingSession(newCoachingSession);
   };
@@ -153,8 +158,16 @@ export default function CoachingSessionForm({
       await handler(utcDateTime);
       refresh();
     } catch (error) {
-      // TODO: We might want to show a toast here if/when we get that infrastructure in place
-      console.error(`Failed to ${mode} coaching session:`, error);
+      if (
+        error instanceof EntityApiError &&
+        error.status === 409 &&
+        error.data?.error === "oauth_token_revoked"
+      ) {
+        toast.error("Your OAuth connection has been disconnected. Please reconnect.");
+        router.push("/settings/integrations");
+      } else {
+        console.error(`Failed to ${mode} coaching session:`, error);
+      }
     } finally {
       resetForm();
     }

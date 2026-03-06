@@ -82,7 +82,10 @@ export const CoachingRelationshipApi = {
   /**
    * Unimplemented
    */
-  update: async (_id: Id, _entity: NewCoachingRelationship) => {
+  update: async (
+    _relationshipId: Id,
+    _entity: NewCoachingRelationship
+  ): Promise<CoachingRelationshipWithUserNames> => {
     throw new Error("Update operation not implemented");
   },
 
