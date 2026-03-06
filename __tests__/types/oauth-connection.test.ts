@@ -33,12 +33,12 @@ describe("OAuthConnection", () => {
 
   describe("OAuthConnectionApi.getAuthorizeUrl", () => {
     it("includes the user_id in the query string", () => {
-      const url = OAuthConnectionApi.getAuthorizeUrl("user-123");
+      const url = OAuthConnectionApi.getAuthorizeUrl("google", "user-123");
       expect(url).toContain("user_id=user-123");
     });
 
-    it("includes the google oauth authorize path", () => {
-      const url = OAuthConnectionApi.getAuthorizeUrl("user-456");
+    it("includes the provider oauth authorize path", () => {
+      const url = OAuthConnectionApi.getAuthorizeUrl("google", "user-456");
       expect(url).toContain("/oauth/google/authorize");
     });
   });

@@ -29,13 +29,7 @@ const mockRefreshOAuth = vi.fn();
 const mockDisconnect = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/api/oauth-connection", () => ({
-  useGoogleOAuthConnection: () => ({
-    connection: mockConnection,
-    isLoading: false,
-    isError: undefined,
-    refresh: mockRefreshOAuth,
-  }),
-  useGoogleOAuthConnectionStatus: () => ({
+  useOAuthConnection: () => ({
     connection: mockConnection,
     isLoading: false,
     isError: undefined,
@@ -43,7 +37,7 @@ vi.mock("@/lib/api/oauth-connection", () => ({
   }),
   OAuthConnectionApi: {
     getAuthorizeUrl: () => "http://localhost:4000/api/oauth/google/authorize",
-    disconnectGoogle: () => mockDisconnect(),
+    disconnect: () => mockDisconnect(),
   },
 }));
 

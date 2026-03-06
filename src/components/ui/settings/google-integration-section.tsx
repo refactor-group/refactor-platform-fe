@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
   OAuthConnectionApi,
-  useGoogleOAuthConnection,
+  useOAuthConnection,
 } from "@/lib/api/oauth-connection";
 import {
   FieldSet,
@@ -23,20 +23,20 @@ import { GoogleDisconnectDialog } from "./google-disconnect-dialog";
 
 export const GoogleIntegrationSection: FC = () => {
   const { isACoach, userId } = useAuthStore((state) => state);
-  const { connection, isLoading, refresh } = useGoogleOAuthConnection();
+  const { connection, isLoading, refresh } = useOAuthConnection("google");
 
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const connected = connection !== null;
 
   const handleConnect = useCallback(() => {
-    window.location.href = OAuthConnectionApi.getAuthorizeUrl(userId);
+    window.location.href = OAuthConnectionApi.getAuthorizeUrl("google", userId);
   }, [userId]);
 
   const handleDisconnect = useCallback(async () => {
     setIsDisconnecting(true);
     try {
-      await OAuthConnectionApi.disconnectGoogle();
+      await OAuthConnectionApi.disconnect("google");
       await refresh();
       toast.success("Google account disconnected.");
     } catch {
