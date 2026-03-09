@@ -28,10 +28,12 @@ All four architectural questions have been resolved with the backend team. These
 
 - `overarching_goals` table renamed to `goals`
 - `coaching_session_id` on goals renamed to `created_in_session_id` — **nullable**, allowing goals to be created outside a session context (e.g. from the dashboard or goals page)
-- New `coaching_relationship_id` column added to `goals` for relationship scoping
+- New `coaching_relationship_id` column added to `goals` for relationship scoping (**NOT NULL** with backfill migration deriving from `coaching_sessions.coaching_relationship_id`)
 - New optional `target_date` field (DATE, nullable) — the intended achieve-by date for the goal; drives dynamic health heuristics when set
 - New `coaching_sessions_goals` many-to-many join table with `goal_id` FK (not `overarching_goal_id`)
-- Enables: per-session goal limit (MAX=3), goal drawer link/unlink flow, goal detail timeline
+- Enables: per-session goal limit (MAX=3, **frontend-only enforcement** — no backend constraint), goal drawer link/unlink flow, goal detail timeline
+- Both FKs in the join table use **CASCADE** delete (matches `actions_users` pattern)
+- Existing data is **backfilled** into the join table from current `coaching_session_id` relationships
 
 **Q2: Action FK — Option A (direct FK) confirmed**
 
@@ -67,7 +69,7 @@ All four architectural questions have been resolved with the backend team. These
 | `POST /goals` | POST | Create goal | Exists (body needs `coaching_relationship_id`) |
 | `PUT /goals/{id}` | PUT | Update goal | Exists |
 | `PUT /goals/{id}/status` | PUT | Update goal status | Exists |
-| `DELETE /goals/{id}` | DELETE | Delete goal | Backend to verify/add |
+| `DELETE /goals/{id}` | DELETE | Delete goal | Confirmed — included in backend PR2 |
 | `GET /users/{id}/goals?status=&coaching_relationship_id=` | GET | Filter by status and relationship | Needs new query params |
 | `GET /actions?goal_id=` | GET | Actions for a goal | Needs new query param |
 | `POST /coaching_sessions_goals` | POST | Link goal to session | New |
@@ -109,16 +111,29 @@ Layer 1 (backend — 5 PRs)
 The backend team has committed to a 5-PR implementation plan:
 
 1. **PR1 — Rename:** `overarching_goals` → `goals` across DB table, API paths (`/overarching_goals` → `/goals`), and SSE event names (`overarching_goal_*` → `goal_*`)
-2. **PR2 — Goal scoping:** Add `coaching_relationship_id` to `goals`, rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable), create `coaching_sessions_goals` join table with CRUD endpoints
+2. **PR2 — Goal scoping:** Add `coaching_relationship_id` (NOT NULL, backfill) to `goals`, rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable), create `coaching_sessions_goals` join table (CASCADE on both FKs) with CRUD endpoints, backfill join table from existing data, add `DELETE /goals/{id}`, add `status` and `coaching_relationship_id` query params to `GET /users/{id}/goals`
 3. **PR3 — Action FK:** Add nullable `goal_id` to `actions` (ON DELETE SET NULL), add `goal_id` query param to action list endpoints
-4. **PR4 — SSE events:** Add `coaching_session_goal_created` and `coaching_session_goal_deleted` events for the join table
+4. **PR4 — SSE events:** Add `coaching_session_goal_created` and `coaching_session_goal_deleted` events for the join table; implement health signal computation (synchronous on read) via `GET /goals/{id}/health` returning `GoalHealthMetrics`
 5. **PR5 — Validation endpoints:** `POST /actions/validate`, `POST /agreements/validate`, `POST /goals/validate` for annotation stale-mark cleanup
 
-Additional backend work (may be part of the above PRs or separate):
-- Add `status` and `coaching_relationship_id` query params to `GET /users/{id}/goals`
-- Implement health signal computation (synchronous, on read) via `GET /goals/{id}/health`
-- Health endpoint returns `GoalHealthMetrics` (action counts, session count, health signal)
-- Verify/add `DELETE /goals/{id}`
+### Coordinated Deploy Warning
+
+**PR2 is a breaking change** requiring simultaneous frontend deployment. The rename of `coaching_session_id` → `created_in_session_id` affects:
+- POST/PUT request bodies: `coaching_session_id` → `created_in_session_id`
+- GET `/goals` query param: `coaching_session_id` → `created_in_session_id`
+- `created_in_session_id` is now **nullable** (goals can be created outside a session context)
+- Protect middleware must check `created_in_session_id` instead of `coaching_session_id`
+
+### Goal-Session Carry-Forward Workflow (PR3 scope)
+
+When a coach creates a new coaching session, all **active goals** from the relationship are automatically linked to it via the `coaching_sessions_goals` join table (carry-forward model). The coach reviews them before/during the session.
+
+**Opt-out model:** Goals are pre-linked (not manually attached). During a session, the coach/coachee can:
+- Unlink an existing active goal from the current session
+- Create a new goal and link it to the current session
+- Link an existing unlinked goal to the current session
+
+This means `coaching_sessions_goals` rows are **created at session-creation time** (not lazily). Frontend implication: the "create coaching session" flow will need a goal review/management step. Link/unlink endpoints (`POST/DELETE /coaching_session_goals`) are PR3 scope.
 
 ### Deliverable
 Backend PRs with migrations, endpoint changes, and tests. Frontend Layer 2 can begin after PR1 + PR2 are merged (the rename and scoping changes). PR3–PR5 can land in parallel with early frontend work.
