@@ -46,4 +46,18 @@ export const handlers = [
       },
     });
   }),
+
+  // Google OAuth status
+  http.get("*/oauth/google/status", () => {
+    return HttpResponse.json({
+      status_code: 200,
+      data: { status: "disconnected" },
+    });
+  }),
+
+  // Google OAuth disconnect
+  http.delete("*/oauth/google", () => {
+    return new HttpResponse(null, { status: 200 });
+  }),
+
 ];

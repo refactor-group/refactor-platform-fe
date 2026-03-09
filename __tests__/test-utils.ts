@@ -3,6 +3,7 @@ import { CoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
+import { OAuthConnection } from "@/types/oauth-connection";
 
 /**
  * Test data factories for consistent, readable test setup
@@ -81,4 +82,15 @@ export function createSessionAt(minutesFromNow: number): CoachingSession {
   return createMockSession({
     date: DateTime.now().plus({ minutes: minutesFromNow }).toISO(),
   });
+}
+
+export function createMockGoogleOAuthConnectionState(
+  overrides?: Partial<OAuthConnection>
+): OAuthConnection {
+  return {
+    provider: "google",
+    email: "coach@gmail.com",
+    connected_at: "2026-01-15T10:00:00Z",
+    ...overrides,
+  };
 }
