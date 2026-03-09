@@ -63,7 +63,7 @@ All four architectural questions have been resolved with the backend team. These
 
 | Endpoint | Method | Purpose | Status |
 |---|---|---|---|
-| `GET /goals?coaching_session_id=` | GET | List goals for a session | Exists (path renamed from `/overarching_goals`) |
+| `GET /goals?coaching_relationship_id=` | GET | List goals for a relationship | Exists (path renamed from `/overarching_goals`; `coaching_relationship_id` now required for auth — Option C) |
 | `GET /users/{id}/goals` | GET | List all goals for a user | Exists (needs `status`, `coaching_relationship_id` filter params) |
 | `GET /goals/{id}` | GET | Single goal | Exists |
 | `POST /goals` | POST | Create goal | Exists (body needs `coaching_relationship_id`) |
@@ -120,9 +120,8 @@ The backend team has committed to a 5-PR implementation plan:
 
 **PR2 is a breaking change** requiring simultaneous frontend deployment. The rename of `coaching_session_id` → `created_in_session_id` affects:
 - POST/PUT request bodies: `coaching_session_id` → `created_in_session_id`
-- GET `/goals` query param: `coaching_session_id` → `created_in_session_id`
 - `created_in_session_id` is now **nullable** (goals can be created outside a session context)
-- Protect middleware must check `created_in_session_id` instead of `coaching_session_id`
+- **Authorization (Option C confirmed):** `GET /goals` now requires `coaching_relationship_id` as a query param — backend protect middleware authorizes through it directly. The frontend will never query goals by `created_in_session_id` alone; for session-linked goals, use `GET /coaching_sessions/{id}/goals` (join table endpoint)
 
 ### Goal-Session Carry-Forward Workflow (PR3 scope)
 

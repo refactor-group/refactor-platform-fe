@@ -153,10 +153,11 @@ GET    /goals/{id}/sessions              — List sessions that discussed a goal
 - Migration needs to populate `coaching_relationship_id` for existing goals (derive from `coaching_sessions.coaching_relationship_id`)
 
 **Frontend impact:**
-- (a) list all goals for a relationship: `GET /goals?coaching_relationship_id=X` — works
-- (b) list goals linked to a specific session: `GET /coaching_sessions/{id}/goals` — direct query
+- (a) list all goals for a relationship: `GET /goals?coaching_relationship_id=X` — works (**required** for auth — Option C confirmed)
+- (b) list goals linked to a specific session: `GET /coaching_sessions/{id}/goals` — direct query (used instead of filtering `GET /goals` by `created_in_session_id`)
 - (c) link/unlink a goal from a session: `POST/DELETE /coaching_sessions_goals` — direct
 - (d) know which sessions discussed a goal: `GET /goals/{id}/sessions` — direct query
+- (e) `created_in_session_id` is **display metadata only** (which session originated the goal) — not used as a query filter on `GET /goals`
 
 ### Additional decisions made alongside Q1
 
@@ -170,14 +171,14 @@ GET    /goals/{id}/sessions              — List sessions that discussed a goal
 - **Join table backfill:** Existing data populated from current `coaching_session_id` relationships
 - **`DELETE /goals/{id}`:** Confirmed and included in backend PR2
 - **MAX=3 per session:** Enforced **frontend-only** — no backend constraint on join table row count
+- **Authorization (Option C):** `GET /goals` requires `coaching_relationship_id` — backend protect middleware authorizes through it directly. Frontend never queries goals by `created_in_session_id` alone; for session-linked goals, use `GET /coaching_sessions/{id}/goals`
 
 ### PR2 coordinated deploy (breaking change)
 
 PR2 renames `coaching_session_id` → `created_in_session_id`, which is a **breaking change** requiring simultaneous frontend deployment:
 - POST/PUT request bodies: `coaching_session_id` → `created_in_session_id`
-- GET `/goals` query param: `coaching_session_id` → `created_in_session_id`
 - `created_in_session_id` is now nullable
-- Protect middleware must check `created_in_session_id` instead of `coaching_session_id`
+- **Authorization (Option C confirmed):** `GET /goals` requires `coaching_relationship_id` as a query param — backend protect middleware authorizes through it directly. The frontend will never query goals by `created_in_session_id` alone; for session-linked goals, use `GET /coaching_sessions/{id}/goals` (join table endpoint)
 
 ### Goal-session carry-forward workflow (PR3 scope)
 
@@ -351,7 +352,7 @@ This is a lightweight existence check — no need to return full entities.
 
 | # | Question | Decision | Key Details |
 |---|----------|----------|-------------|
-| Q1 | Goal scoping model | **Option B: join table** | `goals` table + `coaching_sessions_goals` join table (CASCADE both FKs); `coaching_relationship_id` (NOT NULL, backfill); `created_in_session_id` (nullable); `target_date` (nullable); `DELETE /goals/{id}` confirmed in PR2; MAX=3 frontend-only |
+| Q1 | Goal scoping model | **Option B: join table** | `goals` table + `coaching_sessions_goals` join table (CASCADE both FKs); `coaching_relationship_id` (NOT NULL, backfill); `created_in_session_id` (nullable); `target_date` (nullable); `DELETE /goals/{id}` confirmed in PR2; MAX=3 frontend-only; **auth: Option C** — `GET /goals` requires `coaching_relationship_id`, middleware authorizes through it directly |
 | Q2 | Goal FK on actions | **Option A: add FK** | Nullable `goal_id` on actions, ON DELETE SET NULL |
 | Q3 | SSE events | **Renamed + 2 new** | `goal_*` events, `coaching_session_goal_created/deleted`; health sync on read with dynamic heuristics when `target_date` set |
 | Q4 | Annotation cleanup | **Option C: both** | SSE real-time + per-entity-type load-time validation endpoints |
