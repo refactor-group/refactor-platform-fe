@@ -103,7 +103,7 @@ export const DEFAULT_GOAL_TITLE = "No goal set";
  * Handles empty string titles consistently across the UI.
  */
 export function goalTitle(
-  goal: Goal,
+  goal: Pick<Goal, "title">,
   fallback: string = DEFAULT_GOAL_TITLE
 ): string {
   return goal.title || fallback;
