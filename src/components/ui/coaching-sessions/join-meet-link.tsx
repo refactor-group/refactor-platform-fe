@@ -12,10 +12,13 @@ import {
 
 interface JoinMeetLinkProps {
   meetUrl?: string;
+  isCoach?: boolean;
 }
 
-const JoinMeetLink: FC<JoinMeetLinkProps> = ({ meetUrl }) => {
+const JoinMeetLink: FC<JoinMeetLinkProps> = ({ meetUrl, isCoach = true }) => {
   if (!meetUrl) {
+    if (!isCoach) return null;
+
     return (
       <TooltipProvider>
         <Tooltip>
