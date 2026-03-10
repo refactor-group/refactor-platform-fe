@@ -91,6 +91,19 @@ export function defaultGoals(): Goal[] {
   return [defaultGoal()];
 }
 
+export const DEFAULT_GOAL_TITLE = "No goal set";
+
+/**
+ * Returns the goal's title if non-empty, otherwise a default fallback.
+ * Handles empty string titles consistently across the UI.
+ */
+export function goalTitle(
+  goal: Goal,
+  fallback: string = DEFAULT_GOAL_TITLE
+): string {
+  return goal.title || fallback;
+}
+
 export function goalToString(
   goal: Goal | undefined
 ): string {

@@ -5,6 +5,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useGoalsBySession } from "@/lib/api/goals";
+import { DEFAULT_GOAL_TITLE, goalTitle } from "@/types/goal";
 import { Id } from "@/types/general";
 import {
   DropdownMenu,
@@ -114,8 +115,8 @@ const SessionGoal: React.FC<SessionGoalProps> = ({
     titleText = "Error loading goal";
   } else {
     titleText = goals.length > 0
-      ? goals[0].title
-      : "No goal set";
+      ? goalTitle(goals[0])
+      : DEFAULT_GOAL_TITLE;
   }
 
   return <div>{titleText}</div>;
