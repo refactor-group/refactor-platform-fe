@@ -62,16 +62,19 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     invalidateEndpoint('/agreements', 'agreement_deleted');
   });
 
-  // GOAL EVENTS - Invalidate only /goals endpoint
+  // GOAL EVENTS - Invalidate /goals and /coaching_sessions (session-scoped goals via join table)
   useSSEEventHandler(eventSource, 'goal_created', () => {
     invalidateEndpoint('/goals', 'goal_created');
+    invalidateEndpoint('/coaching_sessions', 'goal_created');
   });
 
   useSSEEventHandler(eventSource, 'goal_updated', () => {
     invalidateEndpoint('/goals', 'goal_updated');
+    invalidateEndpoint('/coaching_sessions', 'goal_updated');
   });
 
   useSSEEventHandler(eventSource, 'goal_deleted', () => {
     invalidateEndpoint('/goals', 'goal_deleted');
+    invalidateEndpoint('/coaching_sessions', 'goal_deleted');
   });
 }
