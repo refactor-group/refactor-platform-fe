@@ -31,10 +31,10 @@ const GoalContainerInner: React.FC<GoalContainerInnerProps> = ({
   const { create: createGoal, update: updateGoal } =
     useGoalMutation();
 
-  const handleGoalChange = async (newGoal: Goal) => {
+  const handleGoalChange = async (currentGoal: Goal, newGoal: Goal) => {
     try {
-      if (goal.id) {
-        await updateGoal(goal.id, newGoal);
+      if (currentGoal.id) {
+        await updateGoal(currentGoal.id, newGoal);
       } else {
         newGoal.coaching_relationship_id = coachingRelationshipId;
         newGoal.created_in_session_id = coachingSessionId;
@@ -60,7 +60,7 @@ const GoalContainerInner: React.FC<GoalContainerInnerProps> = ({
           <GoalComponent
             initialValue={goal}
             onOpenChange={(open: boolean) => setIsOpen(open)}
-            onGoalChange={(g: Goal) => handleGoalChange(g)}
+            onGoalChange={(g: Goal) => handleGoalChange(goal, g)}
           ></GoalComponent>
           <CollapsibleContent className="px-4">
             <div className="flex-col space-y-4 sm:flex">

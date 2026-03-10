@@ -47,15 +47,17 @@ export const GoalApi = {
   },
 
   /**
-   * Fetches goals linked to a specific coaching session via the join table.
+   * Fetches goals nested under a coaching session via the join table.
    * Uses GET /coaching_sessions/{session_id}/goals which returns full Goal models.
    *
-   * @param coachingSessionId The ID of the coaching session
+   * @param coachingSessionId The ID of the parent coaching session
    * @returns Promise resolving to an array of Goal objects linked to the session
    */
-  listBySession: async (coachingSessionId: Id): Promise<Goal[]> => {
-    return EntityApi.listFn<Goal>(
-      `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`,
+  listNested: async (coachingSessionId: Id): Promise<Goal[]> => {
+    return EntityApi.listNestedFn<Goal>(
+      COACHING_SESSIONS_BASEURL,
+      coachingSessionId,
+      'goals',
       {}
     );
   },
@@ -241,7 +243,7 @@ export const useGoalsBySession = (coachingSessionId: Id | null) => {
     EntityApi.useEntityList<Goal>(
       url,
       // SWR skips this fetcher when params are falsy (null key = no fetch)
-      () => GoalApi.listBySession(coachingSessionId!),
+      () => GoalApi.listNested(coachingSessionId!),
       coachingSessionId
     );
 

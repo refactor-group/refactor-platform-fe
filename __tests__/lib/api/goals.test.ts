@@ -8,6 +8,7 @@ import { TestProviders } from '@/test-utils/providers'
 vi.mock('@/lib/api/entity-api', () => ({
   EntityApi: {
     listFn: vi.fn(),
+    listNestedFn: vi.fn(),
     getFn: vi.fn(),
     createFn: vi.fn(),
     updateFn: vi.fn(),
@@ -127,29 +128,22 @@ describe('useGoalList hook', () => {
   })
 })
 
-describe('GoalApi.listBySession', () => {
+describe('GoalApi.listNested', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('fetches goals from the coaching_sessions/:id/goals endpoint', async () => {
-    vi.mocked(EntityApi.listFn).mockResolvedValue([])
+  it('fetches goals nested under the coaching session endpoint', async () => {
+    vi.mocked(EntityApi.listNestedFn).mockResolvedValue([])
 
-    await GoalApi.listBySession('session-123')
+    await GoalApi.listNested('session-123')
 
-    expect(EntityApi.listFn).toHaveBeenCalledWith(
-      'http://localhost:3000/coaching_sessions/session-123/goals',
+    expect(EntityApi.listNestedFn).toHaveBeenCalledWith(
+      'http://localhost:3000/coaching_sessions',
+      'session-123',
+      'goals',
       {}
     )
-  })
-
-  it('does not include coaching_relationship_id param', async () => {
-    vi.mocked(EntityApi.listFn).mockResolvedValue([])
-
-    await GoalApi.listBySession('session-123')
-
-    const callArgs = vi.mocked(EntityApi.listFn).mock.calls[0]
-    expect(callArgs[1]).toEqual({})
   })
 })
 
