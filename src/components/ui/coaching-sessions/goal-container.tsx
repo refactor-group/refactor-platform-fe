@@ -6,43 +6,43 @@ import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GoalComponent } from "./goal";
 import {
-  useGoalBySession,
+  useGoalsBySession,
   useGoalMutation,
 } from "@/lib/api/goals";
-import { Goal } from "@/types/goal";
+import { defaultGoal, Goal } from "@/types/goal";
+import { Id } from "@/types/general";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 
-const GoalContainer: React.FC = () => {
+interface GoalContainerInnerProps {
+  coachingSessionId: Id;
+  coachingRelationshipId: Id;
+}
+
+const GoalContainerInner: React.FC<GoalContainerInnerProps> = ({
+  coachingSessionId,
+  coachingRelationshipId,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Get coaching session ID from URL
-  const { currentCoachingSessionId } = useCurrentCoachingSession();
-
-  const { goal, refresh } =
-    useGoalBySession(currentCoachingSessionId || "");
+  const { goals, refresh } =
+    useGoalsBySession(coachingSessionId);
+  const goal = goals.length > 0 ? goals[0] : defaultGoal();
   const { create: createGoal, update: updateGoal } =
     useGoalMutation();
 
   const handleGoalChange = async (newGoal: Goal) => {
     try {
-      if (currentCoachingSessionId) {
-        if (goal.id) {
-          await updateGoal(
-            goal.id,
-            newGoal
-          );
-        } else if (!goal.id) {
-          newGoal.coaching_session_id = currentCoachingSessionId;
-          await createGoal(newGoal);
-
-          // Manually trigger a local refresh of the cached Goal data such that
-          // any other local code using the KeyedMutator will also update with this new data.
-          refresh();
-        }
+      if (goal.id) {
+        await updateGoal(goal.id, newGoal);
       } else {
-        console.error(
-          "Could not update or create a Goal since coachingSessionId or userId are not set."
-        );
+        newGoal.coaching_relationship_id = coachingRelationshipId;
+        newGoal.created_in_session_id = coachingSessionId;
+        await createGoal(newGoal);
+
+        // Manually trigger a local refresh of the cached Goal data such that
+        // any other local code using the KeyedMutator will also update with this new data.
+        refresh();
       }
     } catch (err) {
       console.error("Failed to update or create Goal: " + err);
@@ -86,6 +86,23 @@ const GoalContainer: React.FC = () => {
         </Collapsible>
       </div>
     </div>
+  );
+};
+
+const GoalContainer: React.FC = () => {
+  const { currentCoachingSessionId } = useCurrentCoachingSession();
+  const { currentCoachingRelationshipId } = useCurrentCoachingRelationship();
+
+  // Guard: only render when both session and relationship IDs are available
+  if (!currentCoachingSessionId || !currentCoachingRelationshipId) {
+    return null;
+  }
+
+  return (
+    <GoalContainerInner
+      coachingSessionId={currentCoachingSessionId}
+      coachingRelationshipId={currentCoachingRelationshipId}
+    />
   );
 };
 

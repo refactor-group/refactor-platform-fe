@@ -17,7 +17,7 @@ import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
-import { useGoalBySession } from "@/lib/api/goals";
+import { useGoalByRelationship } from "@/lib/api/goals";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { DateTime } from "ts-luxon";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -172,7 +172,7 @@ export default function CoachingSessionSelector({
   const { userSession } = useAuthStore((state) => state);
 
   const { goal, isLoading: isLoadingGoal } =
-    useGoalBySession(currentCoachingSessionId || "");
+    useGoalByRelationship(relationshipId);
 
   const handleSetCoachingSession = (coachingSessionId: Id) => {
     // Navigate to the coaching session page
