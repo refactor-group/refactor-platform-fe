@@ -158,14 +158,18 @@ export default function CoachingSessionForm({
       await handler(utcDateTime);
       refresh();
     } catch (error) {
-      if (
-        error instanceof EntityApiError &&
-        error.status === 409 &&
-        error.data?.error === "oauth_token_revoked"
-      ) {
-        toast.error("Your OAuth connection has been disconnected. Please reconnect.");
+      if (!(error instanceof EntityApiError)) {
+        console.error(`Failed to ${mode} coaching session:`, error);
+      } else if (error.status === 409 && error.data?.error === "oauth_token_revoked") {
+        toast.error("Your Google Meet integration has been disconnected. Please reconnect in Settings.");
         router.push("/settings/integrations");
       } else {
+        const message = error.isNetworkError()
+          ? "Could not connect to server. Please check your internet connection."
+          : error.status === 502
+            ? "Could not create Google Meet link due to a connection error. Please try again."
+            : `Failed to ${mode} coaching session. Please try again.`;
+        toast.error(message);
         console.error(`Failed to ${mode} coaching session:`, error);
       }
     } finally {
