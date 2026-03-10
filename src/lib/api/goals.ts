@@ -233,7 +233,9 @@ export const useGoalByRelationship = (coachingRelationshipId: Id | null) => {
  * * refresh: Function to manually trigger a refresh of the data
  */
 export const useGoalsBySession = (coachingSessionId: Id | null) => {
-  const url = `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`;
+  const url = coachingSessionId
+    ? `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`
+    : COACHING_SESSIONS_BASEURL;
 
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<Goal>(

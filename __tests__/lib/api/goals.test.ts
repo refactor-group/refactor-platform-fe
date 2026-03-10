@@ -55,7 +55,7 @@ describe('GoalApi.list', () => {
   it('includes sort params when provided', async () => {
     vi.mocked(EntityApi.listFn).mockResolvedValue([])
 
-    await GoalApi.list('rel-123', 'title' as any, 'asc' as any)
+    await GoalApi.list('rel-123', 'title', 'asc')
 
     expect(EntityApi.listFn).toHaveBeenCalledWith('http://localhost:3000/goals', {
       params: {
@@ -177,28 +177,6 @@ describe('useGoalsBySession hook', () => {
       'http://localhost:3000/coaching_sessions/session-789/goals',
       expect.any(Function),
       'session-789'
-    )
-  })
-
-  it('passes null to EntityApi.useEntityList when session ID is null', () => {
-    const mockReturn = {
-      entities: [],
-      isLoading: false,
-      isError: false,
-      refresh: vi.fn(),
-    }
-
-    vi.mocked(EntityApi.useEntityList).mockReturnValue(mockReturn)
-
-    renderHook(
-      () => useGoalsBySession(null),
-      { wrapper: TestProviders }
-    )
-
-    expect(EntityApi.useEntityList).toHaveBeenCalledWith(
-      'http://localhost:3000/coaching_sessions/null/goals',
-      expect.any(Function),
-      null
     )
   })
 

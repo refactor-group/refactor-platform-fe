@@ -49,7 +49,12 @@ export function isGoal(value: unknown): value is Goal {
     typeof object.coaching_relationship_id === "string" &&
     (object.created_in_session_id === null || typeof object.created_in_session_id === "string") &&
     typeof object.user_id === "string" &&
+    typeof object.title === "string" &&
+    typeof object.body === "string" &&
     typeof object.status === "string" &&
+    (object.target_date === null || typeof object.target_date === "string") &&
+    typeof object.status_changed_at === "string" &&
+    typeof object.completed_at === "string" &&
     typeof object.created_at === "string" &&
     typeof object.updated_at === "string"
   );
