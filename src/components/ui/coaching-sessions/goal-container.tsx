@@ -13,7 +13,6 @@ import {
   defaultGoal,
   Goal,
   extractActiveGoalLimitError,
-  ACTIVE_GOAL_LIMIT,
 } from "@/types/goal";
 import { Id } from "@/types/general";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
@@ -51,12 +50,12 @@ const GoalContainerInner: React.FC<GoalContainerInnerProps> = ({
         refresh();
       }
     } catch (err) {
-      const activeGoals = extractActiveGoalLimitError(err);
-      if (activeGoals) {
+      const limitInfo = extractActiveGoalLimitError(err);
+      if (limitInfo) {
         toast({
           variant: "destructive",
           title: "Goal limit reached",
-          description: `You already have ${ACTIVE_GOAL_LIMIT} active goals for this coaching relationship. Please complete or put one on hold before adding another.`,
+          description: `You already have ${limitInfo.maxActiveGoals} goals in progress for this coaching relationship. Please complete or change the status of one before starting another.`,
         });
       } else {
         console.error("Failed to update or create Goal: " + err);

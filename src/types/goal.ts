@@ -2,13 +2,22 @@ import { DateTime } from "ts-luxon";
 import { Id, ItemStatus, EntityApiError } from "@/types/general";
 
 // ─── Active Goal Limit (409 Conflict) ───────────────────────────────
+// "Active" means InProgress ONLY — NotStarted does not count.
+// See ActiveGoalLimitError contract v4 on the coordination board.
 
-const ACTIVE_GOAL_LIMIT = 3;
+/** Default limit used when no 409 response has been received yet. */
+const DEFAULT_MAX_ACTIVE_GOALS = 3;
 
-/** Summary of an active goal returned in the 409 response body. */
+/** Summary of an InProgress goal returned in the 409 response body. */
 export interface ActiveGoalSummary {
   id: Id;
   title: string;
+}
+
+/** Parsed result from a 409 active-goal-limit error. */
+export interface ActiveGoalLimitInfo {
+  maxActiveGoals: number;
+  activeGoals: ActiveGoalSummary[];
 }
 
 /** Shape of the 409 response body when the active-goal limit is exceeded. */
@@ -16,17 +25,18 @@ export interface ActiveGoalLimitErrorData {
   status_code: 409;
   error: "active_goal_limit_reached";
   message: string;
+  max_active_goals: number;
   active_goals: ActiveGoalSummary[];
 }
 
 /**
- * Extracts active goals from an EntityApiError if it represents a 409
- * active-goal-limit error. Returns the active goals array on match,
+ * Extracts active-goal-limit info from an EntityApiError if it represents
+ * a 409 active-goal-limit error. Returns the limit and active goals on match,
  * or null if the error is something else.
  */
 export function extractActiveGoalLimitError(
   err: unknown
-): ActiveGoalSummary[] | null {
+): ActiveGoalLimitInfo | null {
   if (
     !(err instanceof EntityApiError) ||
     err.status !== 409
@@ -39,15 +49,19 @@ export function extractActiveGoalLimitError(
     data &&
     typeof data === "object" &&
     data.error === "active_goal_limit_reached" &&
-    Array.isArray(data.active_goals)
+    Array.isArray(data.active_goals) &&
+    typeof data.max_active_goals === "number"
   ) {
-    return data.active_goals as ActiveGoalSummary[];
+    return {
+      maxActiveGoals: data.max_active_goals,
+      activeGoals: data.active_goals as ActiveGoalSummary[],
+    };
   }
 
   return null;
 }
 
-export { ACTIVE_GOAL_LIMIT };
+export { DEFAULT_MAX_ACTIVE_GOALS };
 
 // This must always reflect the Rust struct on the backend
 // entity::goals::Model
