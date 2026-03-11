@@ -1,5 +1,53 @@
 import { DateTime } from "ts-luxon";
-import { Id, ItemStatus } from "@/types/general";
+import { Id, ItemStatus, EntityApiError } from "@/types/general";
+
+// ─── Active Goal Limit (409 Conflict) ───────────────────────────────
+
+const ACTIVE_GOAL_LIMIT = 3;
+
+/** Summary of an active goal returned in the 409 response body. */
+export interface ActiveGoalSummary {
+  id: Id;
+  title: string;
+}
+
+/** Shape of the 409 response body when the active-goal limit is exceeded. */
+export interface ActiveGoalLimitErrorData {
+  status_code: 409;
+  error: "active_goal_limit_reached";
+  message: string;
+  active_goals: ActiveGoalSummary[];
+}
+
+/**
+ * Extracts active goals from an EntityApiError if it represents a 409
+ * active-goal-limit error. Returns the active goals array on match,
+ * or null if the error is something else.
+ */
+export function extractActiveGoalLimitError(
+  err: unknown
+): ActiveGoalSummary[] | null {
+  if (
+    !(err instanceof EntityApiError) ||
+    err.status !== 409
+  ) {
+    return null;
+  }
+
+  const data = err.data;
+  if (
+    data &&
+    typeof data === "object" &&
+    data.error === "active_goal_limit_reached" &&
+    Array.isArray(data.active_goals)
+  ) {
+    return data.active_goals as ActiveGoalSummary[];
+  }
+
+  return null;
+}
+
+export { ACTIVE_GOAL_LIMIT };
 
 // This must always reflect the Rust struct on the backend
 // entity::goals::Model

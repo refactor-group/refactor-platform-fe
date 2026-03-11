@@ -9,10 +9,16 @@ import {
   useGoalsBySession,
   useGoalMutation,
 } from "@/lib/api/goals";
-import { defaultGoal, Goal } from "@/types/goal";
+import {
+  defaultGoal,
+  Goal,
+  extractActiveGoalLimitError,
+  ACTIVE_GOAL_LIMIT,
+} from "@/types/goal";
 import { Id } from "@/types/general";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
+import { toast } from "@/components/ui/use-toast";
 
 interface GoalContainerInnerProps {
   coachingSessionId: Id;
@@ -45,7 +51,16 @@ const GoalContainerInner: React.FC<GoalContainerInnerProps> = ({
         refresh();
       }
     } catch (err) {
-      console.error("Failed to update or create Goal: " + err);
+      const activeGoals = extractActiveGoalLimitError(err);
+      if (activeGoals) {
+        toast({
+          variant: "destructive",
+          title: "Goal limit reached",
+          description: `You already have ${ACTIVE_GOAL_LIMIT} active goals for this coaching relationship. Please complete or put one on hold before adding another.`,
+        });
+      } else {
+        console.error("Failed to update or create Goal: " + err);
+      }
     }
   };
 
