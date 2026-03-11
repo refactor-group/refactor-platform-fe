@@ -27,6 +27,14 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
   AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+// Lightweight JoinMeetLink stand-in: disabled placeholder when no meetUrl, link when provided
+vi.mock('@/components/ui/coaching-sessions/join-meet-link', () => ({
+  default: ({ meetUrl }: { meetUrl?: string }) =>
+    meetUrl
+      ? <a href={meetUrl} data-testid="join-meet-link">Join</a>
+      : <button disabled data-testid="join-meet-link">Join</button>,
+}))
+
 // Mock other components
 vi.mock('@/components/ui/coaching-sessions/coaching-session-title', () => ({
   CoachingSessionTitle: () => <div>Test Session</div>
@@ -476,5 +484,72 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     expect(mockSetRelationshipId).toHaveBeenCalledWith('rel-789')
     // Should call refresh to fetch the new relationship data
     expect(mockRefresh).toHaveBeenCalled()
+  })
+})
+
+/**
+ * Test Suite: Join Meet Link visibility
+ *
+ * Purpose: Validates that the join meet button is shown to all users (coaches and coachees
+ * alike) in two states: disabled when no meeting URL is set, and enabled when one is.
+ */
+describe('CoachingSessionsPage - Join meet link visibility', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn() })
+    ;(useParams as any).mockReturnValue({ id: 'session-123' })
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123',
+      setCurrentCoachingRelationshipId: vi.fn(),
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: vi.fn(),
+    })
+  })
+
+  it('shows a disabled join button when no meeting URL is set', () => {
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({ id: 'session-123' }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    const button = screen.getByTestId('join-meet-link')
+    expect(button).toBeDisabled()
+  })
+
+  it('shows an enabled join link when a meeting URL is set', () => {
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        meeting_url: 'https://meet.google.com/abc-defg-hij',
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    const link = screen.getByTestId('join-meet-link')
+    expect(link).not.toBeDisabled()
   })
 })
