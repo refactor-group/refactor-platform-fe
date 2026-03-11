@@ -42,9 +42,8 @@ export default function CoachingSessionsPage() {
   const currentTab = searchParams.get("tab") || "notes";
   const reviewActions = searchParams.get("review") === "true";
 
-  const { userId, isCurrentCoach } = useAuthStore((state) => ({
+  const { userId } = useAuthStore((state) => ({
     userId: state.userId,
-    isCurrentCoach: state.isCurrentCoach,
   }));
 
   // Get current coaching session from URL
@@ -124,7 +123,7 @@ export default function CoachingSessionsPage() {
               style={siteConfig.titleStyle}
             />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
-              <JoinMeetLink meetUrl={currentCoachingSession?.meeting_url} isCoach={isCurrentCoach} />
+              <JoinMeetLink meetUrl={currentCoachingSession?.meeting_url} />
               <ShareSessionLink
                 sessionId={params.id as string}
                 onError={handleShareError}

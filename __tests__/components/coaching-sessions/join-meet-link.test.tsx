@@ -4,29 +4,20 @@ import JoinMeetLink from "@/components/ui/coaching-sessions/join-meet-link";
 
 describe("JoinMeetLink", () => {
   describe("when no meetUrl is provided", () => {
-    describe("as a coach (default)", () => {
-      it("renders a disabled icon button", () => {
-        render(<JoinMeetLink />);
+    it("renders a disabled icon button", () => {
+      render(<JoinMeetLink />);
 
-        const button = screen.getByRole("button");
-        expect(button).toBeDisabled();
-      });
-
-      it("renders a Video icon inside the button", () => {
-        render(<JoinMeetLink />);
-
-        const button = screen.getByRole("button");
-        const svg = button.querySelector("svg");
-        expect(svg).toBeInTheDocument();
-        expect(svg?.classList.toString()).toContain("opacity-50");
-      });
+      const button = screen.getByRole("button");
+      expect(button).toBeDisabled();
     });
 
-    describe("as a coachee", () => {
-      it("renders nothing", () => {
-        const { container } = render(<JoinMeetLink isCoach={false} />);
-        expect(container).toBeEmptyDOMElement();
-      });
+    it("renders a Video icon inside the button", () => {
+      render(<JoinMeetLink />);
+
+      const button = screen.getByRole("button");
+      const svg = button.querySelector("svg");
+      expect(svg).toBeInTheDocument();
+      expect(svg?.classList.toString()).toContain("opacity-50");
     });
   });
 
