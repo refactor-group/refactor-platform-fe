@@ -132,17 +132,17 @@ CREATE TABLE coaching_sessions_goals (
 -- Backfill: populate join table rows from existing coaching_session_id (now created_in_session_id) data
 ```
 
-**New endpoints needed:**
+**New endpoints (PR2 implemented — nested routes, join table hidden as implementation detail):**
 ```
-POST   /coaching_sessions_goals          — Link a goal to a session
-DELETE /coaching_sessions_goals/{id}     — Unlink a goal from a session
-GET    /coaching_sessions/{id}/goals     — List goals linked to a session
-GET    /goals/{id}/sessions              — List sessions that discussed a goal
+POST   /coaching_sessions/{id}/goals          — Link a goal to a session (body: {goal_id})
+DELETE /coaching_sessions/{id}/goals/{goal_id} — Unlink a goal from a session
+GET    /coaching_sessions/{id}/goals           — List goals linked to a session (eager-loads full goal models)
+GET    /goals/{id}/sessions                    — List sessions that discussed a goal
 ```
 
 **Pros:**
 - Explicit tracking of which sessions discussed which goals
-- Supports per-session goal limit (MAX=3 enforced **frontend-only** — no backend constraint)
+- Supports per-relationship active goal limit (MAX=3 InProgress, **backend-enforced** — returns HTTP 409 Conflict with active goal summaries)
 - Enables the goal drawer UX: link/unlink goals per session
 - Goal detail timeline is a direct query on the join table
 - `created_in_session_id` on `goals` remains as "originating session"
@@ -155,9 +155,10 @@ GET    /goals/{id}/sessions              — List sessions that discussed a goal
 **Frontend impact:**
 - (a) list all goals for a relationship: `GET /goals?coaching_relationship_id=X` — works (**required** for auth — Option C confirmed)
 - (b) list goals linked to a specific session: `GET /coaching_sessions/{id}/goals` — direct query (used instead of filtering `GET /goals` by `created_in_session_id`)
-- (c) link/unlink a goal from a session: `POST/DELETE /coaching_sessions_goals` — direct
+- (c) link/unlink a goal from a session: `POST/DELETE /coaching_sessions/{id}/goals` — nested routes (join table hidden as implementation detail)
 - (d) know which sessions discussed a goal: `GET /goals/{id}/sessions` — direct query
 - (e) `created_in_session_id` is **display metadata only** (which session originated the goal) — not used as a query filter on `GET /goals`
+- (f) auto-link on creation: when `created_in_session_id` is provided in `POST /goals`, backend auto-inserts a join table row
 
 ### Additional decisions made alongside Q1
 
@@ -169,16 +170,24 @@ GET    /goals/{id}/sessions              — List sessions that discussed a goal
 - **Join table FK:** `goal_id` (not `overarching_goal_id`)
 - **Join table CASCADE:** Both FKs use ON DELETE CASCADE (matches `actions_users` pattern)
 - **Join table backfill:** Existing data populated from current `coaching_session_id` relationships
-- **`DELETE /goals/{id}`:** Confirmed and included in backend PR2
-- **MAX=3 per session:** Enforced **frontend-only** — no backend constraint on join table row count
-- **Authorization (Option C):** `GET /goals` requires `coaching_relationship_id` — backend protect middleware authorizes through it directly. Frontend never queries goals by `created_in_session_id` alone; for session-linked goals, use `GET /coaching_sessions/{id}/goals`
+- **`DELETE /goals/{id}`:** Implemented in PR2 — atomic delete in transaction with SSE event publishing
+- **Active goal limit (MAX=3 InProgress per relationship):** **Backend-enforced** at `entity_api` layer on create and status transitions to InProgress. Returns HTTP 409 Conflict with `ValidationError` containing `message` + structured `details` payload (active goal summaries). Uses generic `EntityErrorKind::Conflict` mapped through existing error chain (not a goal-specific error variant). Frontend handles with `ActiveGoalLimitError` types and destructive toast; uses `max_active_goals` from 409 response (not hardcoded)
+- **Authorization (Option C):** `GET /goals` requires `coaching_relationship_id` — backend protect middleware (`by_id`, `by_coaching_session_id`) authorizes through `coaching_relationship_id` directly. Frontend never queries goals by `created_in_session_id` alone; for session-linked goals, use `GET /coaching_sessions/{id}/goals`
+- **Auto-link on creation:** When `created_in_session_id` is provided, backend auto-inserts a `coaching_sessions_goals` row (extracted into `link_to_originating_session()` with CHANGEME markers for PR3 carry-forward)
 
-### PR2 coordinated deploy (breaking change)
+### PR2 coordinated deploy (✅ completed)
 
-PR2 renames `coaching_session_id` → `created_in_session_id`, which is a **breaking change** requiring simultaneous frontend deployment:
-- POST/PUT request bodies: `coaching_session_id` → `created_in_session_id`
-- `created_in_session_id` is now nullable
-- **Authorization (Option C confirmed):** `GET /goals` requires `coaching_relationship_id` as a query param — backend protect middleware authorizes through it directly. The frontend will never query goals by `created_in_session_id` alone; for session-linked goals, use `GET /coaching_sessions/{id}/goals` (join table endpoint)
+PR2 was a breaking change requiring simultaneous frontend deployment. Both PRs merged together:
+- Backend: [PR #242](https://github.com/refactor-group/refactor-platform-rs/pull/242)
+- Frontend: [PR #330](https://github.com/refactor-group/refactor-platform-fe/pull/330)
+
+Breaking changes deployed:
+- POST/PUT request bodies: `coaching_session_id` → `created_in_session_id` (nullable)
+- `GET /goals` requires `coaching_relationship_id` query param for auth
+- Join table endpoints use nested routes: `POST/DELETE /coaching_sessions/{id}/goals` (not flat `/coaching_sessions_goals`)
+- `GET /coaching_sessions/{id}/goals` returns eager-loaded full goal models (not join table records)
+- Goal responses include `coaching_relationship_id`, `created_in_session_id`, `target_date`
+- HTTP 409 on exceeding 3 InProgress goals per relationship
 
 ### Goal-session carry-forward workflow (PR3 scope)
 
@@ -190,6 +199,8 @@ During a session, the coach/coachee can:
 - Link an existing unlinked goal to the current session
 
 `coaching_sessions_goals` rows are created at **session-creation time** (not lazily). The frontend "create coaching session" flow will need a goal review/management step.
+
+**PR2 interim behavior:** Goals are auto-linked to their originating session only (via `link_to_originating_session()`). Full carry-forward is PR3 scope. The auto-link function has CHANGEME markers for removal.
 
 ---
 
@@ -352,7 +363,7 @@ This is a lightweight existence check — no need to return full entities.
 
 | # | Question | Decision | Key Details |
 |---|----------|----------|-------------|
-| Q1 | Goal scoping model | **Option B: join table** | `goals` table + `coaching_sessions_goals` join table (CASCADE both FKs); `coaching_relationship_id` (NOT NULL, backfill); `created_in_session_id` (nullable); `target_date` (nullable); `DELETE /goals/{id}` confirmed in PR2; MAX=3 frontend-only; **auth: Option C** — `GET /goals` requires `coaching_relationship_id`, middleware authorizes through it directly |
+| Q1 | Goal scoping model | **Option B: join table** | `goals` table + `coaching_sessions_goals` join table (CASCADE both FKs); `coaching_relationship_id` (NOT NULL, backfill); `created_in_session_id` (nullable); `target_date` (nullable); `DELETE /goals/{id}` ✅ PR2; MAX=3 InProgress per relationship **backend-enforced** (409 Conflict); nested join table routes; auto-link on creation; **auth: Option C** — `GET /goals` requires `coaching_relationship_id`, `by_id` and `by_coaching_session_id` protect middleware |
 | Q2 | Goal FK on actions | **Option A: add FK** | Nullable `goal_id` on actions, ON DELETE SET NULL |
 | Q3 | SSE events | **Renamed + 2 new** | `goal_*` events, `coaching_session_goal_created/deleted`; health sync on read with dynamic heuristics when `target_date` set |
 | Q4 | Annotation cleanup | **Option C: both** | SSE real-time + per-entity-type load-time validation endpoints |
@@ -361,23 +372,29 @@ This is a lightweight existence check — no need to return full entities.
 
 ## Backend Implementation Plan (5 PRs)
 
-The backend team has committed to the following PR sequence:
-
-1. **PR1 — Rename:** `overarching_goals` → `goals` (table, API paths, SSE events)
-2. **PR2 — Goal scoping (⚠️ coordinated deploy):** Add `coaching_relationship_id` (NOT NULL, backfill), rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable), create `coaching_sessions_goals` join table (CASCADE both FKs, backfill from existing data), add CRUD endpoints, add `DELETE /goals/{id}`, add `status` and `coaching_relationship_id` query params to `GET /users/{id}/goals`
-3. **PR3 — Action FK:** Add nullable `goal_id` to `actions` (ON DELETE SET NULL), add `goal_id` query param
+1. **PR1 — Rename:** `overarching_goals` → `goals` (table, API paths, SSE events) — **✅ MERGED**
+2. **PR2 — Goal scoping (✅ coordinated deploy completed):** — **✅ MERGED** ([backend #242](https://github.com/refactor-group/refactor-platform-rs/pull/242), [frontend #330](https://github.com/refactor-group/refactor-platform-fe/pull/330))
+   - `coaching_relationship_id` (NOT NULL, backfill), `created_in_session_id` (nullable), `target_date` (nullable)
+   - `coaching_sessions_goals` join table (CASCADE both FKs, backfill, nested endpoints)
+   - `DELETE /goals/{id}` (atomic, with SSE publishing)
+   - Active goal limit: max 3 InProgress per relationship (entity_api layer, 409 Conflict)
+   - Protect middleware: `by_id`, `by_coaching_session_id`
+   - Auto-link on creation when `created_in_session_id` provided
+   - Entity helpers: `in_progress()`, `includes_user()`
+   - Coding standards: error variant reuse guidance
+3. **PR3 — Action FK + carry-forward:** Add nullable `goal_id` to `actions` (ON DELETE SET NULL), add `goal_id` query param. Refactor `batch_load_goals` to use join table. Implement carry-forward workflow
 4. **PR4 — SSE events + health:** `coaching_session_goal_created`, `coaching_session_goal_deleted`; health signal computation (synchronous on read) via `GET /goals/{id}/health` returning `GoalHealthMetrics`
 5. **PR5 — Validation endpoints:** `POST /actions/validate`, `POST /agreements/validate`, `POST /goals/validate`
 
-Frontend Layer 2 can begin after PR1 + PR2 are merged. PR3–PR5 can land in parallel with early frontend work.
+PR1 + PR2 are merged. PR3–PR5 can land in parallel with frontend Layer 3+ work.
 
 ---
 
 ## What the Frontend Needs from the Backend (Summary)
 
-1. **PR1:** Rename `overarching_goals` → `goals` (table, API paths `/overarching_goals` → `/goals`, SSE events `overarching_goal_*` → `goal_*`)
-2. **PR2 (⚠️ coordinated deploy):** Add `coaching_relationship_id` (NOT NULL, backfill) to `goals`, rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable), create `coaching_sessions_goals` join table (CASCADE both FKs, backfill), CRUD endpoints, `DELETE /goals/{id}`, `status` and `coaching_relationship_id` query params on `GET /users/{id}/goals`
-3. **PR3:** Add nullable `goal_id` FK to `actions` (ON DELETE SET NULL), add `goal_id` query param on `GET /actions` and `GET /users/{id}/actions`
+1. **PR1:** ✅ Rename `overarching_goals` → `goals` (table, API paths, SSE events)
+2. **PR2:** ✅ Relationship scoping, join table with nested endpoints, `DELETE /goals/{id}`, active goal limit (409), auto-link on creation, protect middleware
+3. **PR3:** Add nullable `goal_id` FK to `actions` (ON DELETE SET NULL), add `goal_id` query param on `GET /actions` and `GET /users/{id}/actions`. Carry-forward workflow (auto-link active goals on session creation). Refactor `batch_load_goals` to use join table
 4. **PR4:** SSE events for join table (`coaching_session_goal_created`, `coaching_session_goal_deleted`) + health signal computation (synchronous on read) via `GET /goals/{id}/health` returning `GoalHealthMetrics` (dynamic heuristics when `target_date` set, momentum-only when null)
 5. **PR5:** Per-entity-type validation endpoints: `POST /actions/validate`, `POST /agreements/validate`, `POST /goals/validate`
-6. **Carry-forward workflow (PR3 scope):** Active goals auto-linked to new sessions at creation time; frontend needs goal review/management step in session creation flow; MAX=3 enforcement is frontend-only
+6. **Carry-forward workflow (PR3 scope):** Active goals auto-linked to new sessions at creation time; frontend needs goal review/management step in session creation flow

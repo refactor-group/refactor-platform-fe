@@ -24,16 +24,17 @@ For all PRs in Layer 3 and beyond, the corresponding prototype page serves as th
 
 All four architectural questions have been resolved with the backend team. These decisions are now confirmed and inform all subsequent layers.
 
-**Q1: Goal Scoping — Option B (join table) confirmed**
+**Q1: Goal Scoping — Option B (join table) confirmed — ✅ PR2 implemented**
 
 - `overarching_goals` table renamed to `goals`
 - `coaching_session_id` on goals renamed to `created_in_session_id` — **nullable**, allowing goals to be created outside a session context (e.g. from the dashboard or goals page)
 - New `coaching_relationship_id` column added to `goals` for relationship scoping (**NOT NULL** with backfill migration deriving from `coaching_sessions.coaching_relationship_id`)
 - New optional `target_date` field (DATE, nullable) — the intended achieve-by date for the goal; drives dynamic health heuristics when set
-- New `coaching_sessions_goals` many-to-many join table with `goal_id` FK (not `overarching_goal_id`)
-- Enables: per-session goal limit (MAX=3, **frontend-only enforcement** — no backend constraint), goal drawer link/unlink flow, goal detail timeline
+- New `coaching_sessions_goals` many-to-many join table with `goal_id` FK (not `overarching_goal_id`); join table hidden as implementation detail with nested endpoints (`POST/DELETE /coaching_sessions/{id}/goals`)
+- **Active goal limit:** Max 3 InProgress goals per coaching relationship, **backend-enforced** at `entity_api` layer. Returns HTTP 409 Conflict with `ValidationError` containing active goal summaries. Frontend handles with destructive toast and `ActiveGoalLimitError` types
 - Both FKs in the join table use **CASCADE** delete (matches `actions_users` pattern)
-- Existing data is **backfilled** into the join table from current `coaching_session_id` relationships
+- Existing data is **backfilled** into the join table from current `coaching_session_id` relationships (separate data migration)
+- **Auto-link on creation:** When `created_in_session_id` is provided, backend auto-inserts a join table row (interim behavior until PR3 carry-forward replaces it)
 
 **Q2: Action FK — Option A (direct FK) confirmed**
 
@@ -63,24 +64,24 @@ All four architectural questions have been resolved with the backend team. These
 
 | Endpoint | Method | Purpose | Status |
 |---|---|---|---|
-| `GET /goals?coaching_relationship_id=` | GET | List goals for a relationship | Exists (path renamed from `/overarching_goals`; `coaching_relationship_id` now required for auth — Option C) |
-| `GET /users/{id}/goals` | GET | List all goals for a user | Exists (needs `status`, `coaching_relationship_id` filter params) |
-| `GET /goals/{id}` | GET | Single goal | Exists |
-| `POST /goals` | POST | Create goal | Exists (body needs `coaching_relationship_id`) |
-| `PUT /goals/{id}` | PUT | Update goal | Exists |
-| `PUT /goals/{id}/status` | PUT | Update goal status | Exists |
-| `DELETE /goals/{id}` | DELETE | Delete goal | Confirmed — included in backend PR2 |
-| `GET /users/{id}/goals?status=&coaching_relationship_id=` | GET | Filter by status and relationship | Needs new query params |
-| `GET /actions?goal_id=` | GET | Actions for a goal | Needs new query param |
-| `POST /coaching_sessions_goals` | POST | Link goal to session | New |
-| `DELETE /coaching_sessions_goals/{id}` | DELETE | Unlink goal from session | New |
-| `GET /coaching_sessions/{id}/goals` | GET | Goals linked to a session | New |
-| `GET /goals/{id}/sessions` | GET | Sessions that discussed a goal | New |
-| `GET /goals/{id}/health` | GET | Aggregated stats (action counts, session count, health signal) | New — avoids N+1 |
-| `POST /actions/validate` | POST | Batch existence check for action IDs | New (annotation cleanup) |
-| `POST /agreements/validate` | POST | Batch existence check for agreement IDs | New (annotation cleanup) |
-| `POST /goals/validate` | POST | Batch existence check for goal IDs | New (annotation cleanup) |
-| Health signal on goal responses | — | Backend-computed enum: `SolidMomentum / NeedsAttention / LetsRefocus` | New (computed sync on read) |
+| `GET /goals?coaching_relationship_id=` | GET | List goals for a relationship | **PR2 done** — `coaching_relationship_id` required for auth (Option C) |
+| `GET /users/{id}/goals?coaching_relationship_id=` | GET | List goals for a user, filtered by relationship | **PR2 done** — `coaching_relationship_id` query param |
+| `GET /goals/{id}` | GET | Single goal | **PR2 done** — response includes `coaching_relationship_id`, `created_in_session_id`, `target_date` |
+| `POST /goals` | POST | Create goal | **PR2 done** — body takes `coaching_relationship_id`; auto-links to originating session when `created_in_session_id` provided |
+| `PUT /goals/{id}` | PUT | Update goal | **PR2 done** — active goal limit enforced on status transitions to InProgress |
+| `PUT /goals/{id}/status` | PUT | Update goal status | **PR2 done** — active goal limit enforced on transitions to InProgress |
+| `DELETE /goals/{id}` | DELETE | Delete goal | **PR2 done** — atomic delete with SSE event publishing |
+| `POST /coaching_sessions/{id}/goals` | POST | Link goal to session | **PR2 done** — nested route (join table hidden as implementation detail) |
+| `DELETE /coaching_sessions/{id}/goals/{goal_id}` | DELETE | Unlink goal from session | **PR2 done** — nested route |
+| `GET /coaching_sessions/{id}/goals` | GET | Goals linked to a session (eager-loaded full models) | **PR2 done** — returns full goal models, not join table records |
+| `GET /goals/{id}/sessions` | GET | Sessions that discussed a goal | **PR2 done** |
+| `GET /users/{id}/goals?status=` | GET | Filter by status | Needs new query param |
+| `GET /actions?goal_id=` | GET | Actions for a goal | Needs new query param (PR3) |
+| `GET /goals/{id}/health` | GET | Aggregated stats (action counts, session count, health signal) | New — avoids N+1 (PR4) |
+| `POST /actions/validate` | POST | Batch existence check for action IDs | New (PR5, annotation cleanup) |
+| `POST /agreements/validate` | POST | Batch existence check for agreement IDs | New (PR5, annotation cleanup) |
+| `POST /goals/validate` | POST | Batch existence check for goal IDs | New (PR5, annotation cleanup) |
+| Health signal on goal responses | — | Backend-computed enum: `SolidMomentum / NeedsAttention / LetsRefocus` | New (PR4, computed sync on read) |
 
 ---
 
@@ -110,18 +111,30 @@ Layer 1 (backend — 5 PRs)
 
 The backend team has committed to a 5-PR implementation plan:
 
-1. **PR1 — Rename:** `overarching_goals` → `goals` across DB table, API paths (`/overarching_goals` → `/goals`), and SSE event names (`overarching_goal_*` → `goal_*`)
-2. **PR2 — Goal scoping:** Add `coaching_relationship_id` (NOT NULL, backfill) to `goals`, rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable), create `coaching_sessions_goals` join table (CASCADE on both FKs) with CRUD endpoints, backfill join table from existing data, add `DELETE /goals/{id}`, add `status` and `coaching_relationship_id` query params to `GET /users/{id}/goals`
-3. **PR3 — Action FK:** Add nullable `goal_id` to `actions` (ON DELETE SET NULL), add `goal_id` query param to action list endpoints
-4. **PR4 — SSE events:** Add `coaching_session_goal_created` and `coaching_session_goal_deleted` events for the join table; implement health signal computation (synchronous on read) via `GET /goals/{id}/health` returning `GoalHealthMetrics`
+1. **PR1 — Rename:** `overarching_goals` → `goals` across DB table, API paths (`/overarching_goals` → `/goals`), and SSE event names (`overarching_goal_*` → `goal_*`) — **✅ MERGED**
+2. **PR2 — Goal scoping:** — **✅ MERGED** (backend [PR #242](https://github.com/refactor-group/refactor-platform-rs/pull/242), frontend [PR #330](https://github.com/refactor-group/refactor-platform-fe/pull/330))
+   - Add `coaching_relationship_id` (NOT NULL, backfill) to `goals`, rename `coaching_session_id` → `created_in_session_id` (nullable), add `target_date` (DATE, nullable)
+   - Create `coaching_sessions_goals` join table (CASCADE on both FKs) with nested endpoints (hidden as implementation detail): `POST/DELETE /coaching_sessions/{id}/goals`, `GET /coaching_sessions/{id}/goals` (eager-loads full goal models), `GET /goals/{id}/sessions`
+   - Separate schema and data migrations; data migration backfills join table from existing `created_in_session_id` links
+   - Auto-link on creation: when `created_in_session_id` is provided, backend auto-inserts a `coaching_sessions_goals` row (extracted into `link_to_originating_session()` with CHANGEME markers for PR3 carry-forward)
+   - Add `DELETE /goals/{id}` (atomic delete in transaction with SSE event publishing)
+   - **Active goal limit:** Max 3 InProgress goals per coaching relationship, enforced at `entity_api` layer on create and status transitions. Returns HTTP 409 Conflict with `ValidationError` containing active goal summaries. Uses generic `EntityErrorKind::Conflict` (not a goal-specific error variant)
+   - Protect middleware: `by_id` (path-based goal auth) and `by_coaching_session_id` (session-based auth) middleware on goal routes; authorizes via `coaching_relationship_id` directly
+   - Entity helpers: `in_progress()` on goal model, `includes_user()` on coaching relationship model
+   - Email helper: uses join table for session→goals lookup, formats as HTML ordered list, uses `max_in_progress_goals()` accessor instead of hardcoded limit
+   - Coding standards: added "Error Variant Reuse" guidance — prefer generic, reusable error variants with context fields over one-off variants
+3. **PR3 — Action FK + carry-forward:** Add nullable `goal_id` to `actions` (ON DELETE SET NULL), add `goal_id` query param to action list endpoints. Refactor `batch_load_goals` to use join table (CHANGEME in PR2). Implement carry-forward workflow (auto-link active goals on session creation)
+4. **PR4 — SSE events + health:** Add `coaching_session_goal_created` and `coaching_session_goal_deleted` events for the join table; implement health signal computation (synchronous on read) via `GET /goals/{id}/health` returning `GoalHealthMetrics`
 5. **PR5 — Validation endpoints:** `POST /actions/validate`, `POST /agreements/validate`, `POST /goals/validate` for annotation stale-mark cleanup
 
-### Coordinated Deploy Warning
+### PR2 Coordinated Deploy (completed)
 
-**PR2 is a breaking change** requiring simultaneous frontend deployment. The rename of `coaching_session_id` → `created_in_session_id` affects:
-- POST/PUT request bodies: `coaching_session_id` → `created_in_session_id`
-- `created_in_session_id` is now **nullable** (goals can be created outside a session context)
-- **Authorization (Option C confirmed):** `GET /goals` now requires `coaching_relationship_id` as a query param — backend protect middleware authorizes through it directly. The frontend will never query goals by `created_in_session_id` alone; for session-linked goals, use `GET /coaching_sessions/{id}/goals` (join table endpoint)
+PR2 was a breaking change requiring simultaneous frontend deployment. Both PRs were merged together. Key breaking changes:
+- POST/PUT request bodies: `coaching_session_id` → `created_in_session_id` (nullable)
+- `GET /goals` requires `coaching_relationship_id` as a query param — backend protect middleware authorizes through it directly
+- Join table endpoints use nested routes: `POST /coaching_sessions/{id}/goals` (not flat `/coaching_sessions_goals`)
+- `GET /coaching_sessions/{id}/goals` returns eager-loaded full goal models (not join table records)
+- Goal responses include `coaching_relationship_id`, `created_in_session_id`, `target_date`
 
 ### Goal-Session Carry-Forward Workflow (PR3 scope)
 
@@ -132,33 +145,48 @@ When a coach creates a new coaching session, all **active goals** from the relat
 - Create a new goal and link it to the current session
 - Link an existing unlinked goal to the current session
 
-This means `coaching_sessions_goals` rows are **created at session-creation time** (not lazily). Frontend implication: the "create coaching session" flow will need a goal review/management step. Link/unlink endpoints (`POST/DELETE /coaching_session_goals`) are PR3 scope.
+This means `coaching_sessions_goals` rows are **created at session-creation time** (not lazily). Frontend implication: the "create coaching session" flow will need a goal review/management step.
+
+**PR2 interim behavior:** Goals are auto-linked to their originating session only (via `link_to_originating_session()`). Full carry-forward (auto-link all active goals on session creation) is PR3 scope. The `link_to_originating_session()` function has CHANGEME markers for removal when carry-forward replaces auto-linking.
 
 ### Deliverable
-Backend PRs with migrations, endpoint changes, and tests. Frontend Layer 2 can begin after PR1 + PR2 are merged (the rename and scoping changes). PR3–PR5 can land in parallel with early frontend work.
+Backend PRs with migrations, endpoint changes, and tests. PR1 + PR2 are merged — frontend Layer 2 work can proceed. PR3–PR5 can land in parallel with early frontend work.
 
 ---
 
 ## Layer 2 — Frontend Types & API Layer
 
-**Branch/PR:** `feat/goals-api-layer`
+### PR2 companion (✅ MERGED — [PR #330](https://github.com/refactor-group/refactor-platform-fe/pull/330))
 
-### Scope
-- Rename `OverarchingGoal` → `Goal` interface in `src/types/goal.ts` (renamed from `overarching-goal.ts`), with updated fields: `created_in_session_id` (nullable, was `coaching_session_id`), new `coaching_relationship_id`, new `target_date` (nullable DATE), `health`, action count fields
-- Add new types: `GoalHealth` enum (`SolidMomentum | NeedsAttention | LetsRefocus`), `GoalHealthMetrics` interface (aggregated stats: actions completed/total, linked session count, health signal), `CoachingSessionGoal` join type
-- Rename `OverarchingGoalApi` → `GoalApi` in `src/lib/api/goals.ts` (renamed from `overarching-goals.ts`): update base URL to `/goals`, new query params, new hooks for user-level goal listing with filters
-- Add new API functions: goal-session link/unlink (`POST/DELETE /coaching_sessions_goals`), goal health (`GET /goals/{id}/health`), entity validation (`POST /actions/validate`, etc.)
-- Update SSE cache invalidation in `src/lib/hooks/use-sse-cache-invalidation.ts` and `src/types/sse-events.ts`: rename `overarching_goal_*` → `goal_*`, add `coaching_session_goal_created/deleted`
-- Update all imports and call sites across the codebase that reference the old names
-- Add/update sorting types in `src/types/sorting.ts`
+**What was delivered:**
+- Updated `Goal` interface: removed `coaching_session_id`, added `coaching_relationship_id` (required), `created_in_session_id` (nullable), `target_date` (nullable)
+- Hardened `isGoal` type guard with all field checks (title, body, target_date, status_changed_at, completed_at)
+- `GoalApi.list()` sends `coaching_relationship_id` query param
+- Added `GoalApi.listBySession()` → renamed to `listNested` using `EntityApi.listNestedFn` pattern for `GET /coaching_sessions/{id}/goals`
+- Added `useGoalsBySession` hook with conditional URL construction (avoids embedding "null" string when session ID absent)
+- Added `goalTitle()` helper and `DEFAULT_GOAL_TITLE` constant for consistent goal title display across 6 UI call sites
+- Send `created_in_session_id` on goal creation to trigger backend auto-link
+- SSE cache invalidation narrowed: `invalidateEndpoint('/coaching_sessions')` was too broad (caused title flash on goal updates) → replaced with targeted invalidator matching only `/coaching_sessions/{id}/goals` keys
+- Active goal limit handling: `ActiveGoalLimitError` types, `extractActiveGoalLimitError` helper, destructive toast on HTTP 409 using `max_active_goals` from response (not hardcoded)
+- Applied render guard pattern in `GoalContainer`
+- 38 new tests: Goal type guard (27), GoalApi/hooks (11)
 
-### Key files
-- `src/types/goal.ts` (renamed from `overarching-goal.ts`)
-- `src/types/general.ts` (if new enums needed)
-- `src/lib/api/goals.ts` (renamed from `overarching-goals.ts`)
-- `src/types/sse-events.ts`
-- `src/lib/hooks/use-sse-cache-invalidation.ts`
-- `src/types/sorting.ts`
+**Key files modified:**
+- `src/types/goal.ts` — Goal interface, `isGoal` guard, `ActiveGoalLimitError` types, `goalTitle()` helper
+- `src/lib/api/goals.ts` — `GoalApi`, `useGoalList`, `useGoalsBySession`, `listNested`
+- `src/lib/hooks/use-sse-cache-invalidation.ts` — narrowed session-goal cache invalidation
+- `src/components/ui/coaching-sessions/goal-container.tsx` — render guards, `handleGoalChange` accepts goal as parameter
+- `src/components/ui/coaching-session.tsx`, `coaching-session-selector.tsx`, `dashboard/today-session-card.tsx`, `join-session-popover.tsx` — updated to use `goalTitle()` helper
+- `__tests__/types/goal.test.ts`, `__tests__/lib/api/goals.test.ts` — new test files
+
+### Remaining Layer 2 work (future PRs)
+
+- Add `GoalHealth` enum (`SolidMomentum | NeedsAttention | LetsRefocus`), `GoalHealthMetrics` interface — blocked on backend PR4
+- Add goal health API hook (`GET /goals/{id}/health`) — blocked on backend PR4
+- Add `CoachingSessionGoal` join table events to SSE types (`coaching_session_goal_created/deleted`) — blocked on backend PR4
+- Add entity validation API functions (`POST /actions/validate`, etc.) — blocked on backend PR5
+- Add `goal_id` param support in action API hooks — blocked on backend PR3
+- Add user-level goal listing with `status` filter param — blocked on backend adding `status` query param
 
 ---
 
