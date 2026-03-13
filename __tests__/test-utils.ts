@@ -1,6 +1,8 @@
 import { DateTime } from "ts-luxon";
 import { CoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
+import { Goal } from "@/types/goal";
+import { ItemStatus } from "@/types/general";
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
 import { OAuthConnection } from "@/types/oauth-connection";
@@ -82,6 +84,25 @@ export function createSessionAt(minutesFromNow: number): CoachingSession {
   return createMockSession({
     date: DateTime.now().plus({ minutes: minutesFromNow }).toISO(),
   });
+}
+
+export function createMockGoal(overrides?: Partial<Goal>): Goal {
+  const now = DateTime.now();
+  return {
+    id: "goal-1",
+    coaching_relationship_id: "rel-1",
+    created_in_session_id: "session-1",
+    user_id: "user-1",
+    title: "Improve communication",
+    body: "Work on active listening",
+    status: ItemStatus.NotStarted,
+    status_changed_at: now,
+    completed_at: now,
+    target_date: null,
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
 }
 
 export function createMockGoogleOAuthConnectionState(

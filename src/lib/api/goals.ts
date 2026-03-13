@@ -10,6 +10,7 @@ import { ApiSortOrder, GoalSortField } from "@/types/sorting";
 import { EntityApi } from "./entity-api";
 
 const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
+const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
 
 /**
  * API client for goal-related operations.
@@ -19,20 +20,20 @@ const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
  */
 export const GoalApi = {
   /*
-   * Fetches a list of goals associated with a specific coaching session.
+   * Fetches a list of goals associated with a specific coaching relationship.
    *
-   * @param coachingSessionId The ID of the coaching session whose goals should be retrieved
+   * @param coachingRelationshipId The ID of the coaching relationship whose goals should be retrieved
    * @param sortBy Optional field to sort by.
    * @param sortOrder Optional sort order.
    * @returns Promise resolving to an array of Goal objects
    */
   list: async (
-    coachingSessionId: Id,
+    coachingRelationshipId: Id,
     sortBy?: GoalSortField,
     sortOrder?: ApiSortOrder
   ): Promise<Goal[]> => {
     const params: Record<string, string> = {
-      coaching_session_id: coachingSessionId,
+      coaching_relationship_id: coachingRelationshipId,
     };
 
     if (sortBy) {
@@ -43,6 +44,22 @@ export const GoalApi = {
     }
 
     return EntityApi.listFn<Goal>(GOALS_BASEURL, { params });
+  },
+
+  /**
+   * Fetches goals nested under a coaching session via the join table.
+   * Uses GET /coaching_sessions/{session_id}/goals which returns full Goal models.
+   *
+   * @param coachingSessionId The ID of the parent coaching session
+   * @returns Promise resolving to an array of Goal objects linked to the session
+   */
+  listNested: async (coachingSessionId: Id): Promise<Goal[]> => {
+    return EntityApi.listNestedFn<Goal>(
+      COACHING_SESSIONS_BASEURL,
+      coachingSessionId,
+      'goals',
+      {}
+    );
   },
 
   /**
@@ -116,12 +133,12 @@ export const GoalApi = {
 };
 
 /**
- * A custom React hook that fetches a list of goals for a specific coaching session.
+ * A custom React hook that fetches a list of goals for a specific coaching relationship.
  *
  * This hook uses SWR to efficiently fetch, cache, and revalidate goal data.
  * It automatically refreshes data when the component mounts.
  *
- * @param coachingSessionId The ID of the coaching session whose goals should be fetched
+ * @param coachingRelationshipId The ID of the coaching relationship whose goals should be fetched
  * @returns An object containing:
  *
  * * goals: Array of Goal objects (empty array if data is not yet loaded)
@@ -129,12 +146,13 @@ export const GoalApi = {
  * * isError: Error object if the fetch operation failed, undefined otherwise
  * * refresh: Function to manually trigger a refresh of the data
  */
-export const useGoalList = (coachingSessionId: Id) => {
+export const useGoalList = (coachingRelationshipId: Id | null) => {
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<Goal>(
       GOALS_BASEURL,
-      () => GoalApi.list(coachingSessionId),
-      coachingSessionId
+      // SWR skips this fetcher when params are falsy (null key = no fetch)
+      () => GoalApi.list(coachingRelationshipId!),
+      coachingRelationshipId
     );
 
   return {
@@ -177,10 +195,10 @@ export const useGoal = (id: Id) => {
 };
 
 /**
- * A custom React hook that fetches a single goal by coaching session ID.
+ * A custom React hook that fetches the first goal for a coaching relationship.
  * This hook uses SWR to efficiently fetch and cache goal data.
  *
- * @param coachingSessionId The coaching session ID of the goal to fetch.
+ * @param coachingRelationshipId The coaching relationship ID whose first goal should be fetched.
  * @returns An object containing:
  *
  * * goal: The fetched Goal object, or a default goal if not yet loaded
@@ -188,9 +206,9 @@ export const useGoal = (id: Id) => {
  * * isError: Error object if the fetch operation failed, undefined otherwise
  * * refresh: Function to manually trigger a refresh of the data
  */
-export const useGoalBySession = (coachingSessionId: Id) => {
+export const useGoalByRelationship = (coachingRelationshipId: Id | null) => {
   const { goals, isLoading, isError, refresh } =
-    useGoalList(coachingSessionId);
+    useGoalList(coachingRelationshipId);
 
   return {
     goal: goals.length
@@ -198,6 +216,41 @@ export const useGoalBySession = (coachingSessionId: Id) => {
       : defaultGoal(),
     isLoading,
     isError: isError,
+    refresh,
+  };
+};
+
+/**
+ * A custom React hook that fetches goals linked to a specific coaching session
+ * via the coaching_sessions_goals join table.
+ *
+ * Uses GET /coaching_sessions/{session_id}/goals which returns full Goal models.
+ *
+ * @param coachingSessionId The coaching session ID whose linked goals should be fetched.
+ * @returns An object containing:
+ *
+ * * goals: Array of Goal objects linked to the session (empty array if not loaded)
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch operation failed, undefined otherwise
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useGoalsBySession = (coachingSessionId: Id | null) => {
+  const url = coachingSessionId
+    ? `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`
+    : COACHING_SESSIONS_BASEURL;
+
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<Goal>(
+      url,
+      // SWR skips this fetcher when params are falsy (null key = no fetch)
+      () => GoalApi.listNested(coachingSessionId!),
+      coachingSessionId
+    );
+
+  return {
+    goals: entities,
+    isLoading,
+    isError,
     refresh,
   };
 };

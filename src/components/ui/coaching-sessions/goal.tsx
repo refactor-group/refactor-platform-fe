@@ -14,6 +14,7 @@ import { cn } from "@/components/lib/utils";
 import {
   defaultGoal,
   Goal,
+  goalTitle,
 } from "@/types/goal";
 
 const GoalComponent: React.FC<{
@@ -77,7 +78,7 @@ const GoalComponent: React.FC<{
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="mr-1 text-foreground hidden md:inline">Goal:</span>
-                  {goal.title}
+                  {goalTitle(goal)}
                 </div>
               </div>
             )}

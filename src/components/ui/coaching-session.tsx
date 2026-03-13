@@ -4,7 +4,8 @@ import React from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useGoalBySession } from "@/lib/api/goals";
+import { useGoalsBySession } from "@/lib/api/goals";
+import { DEFAULT_GOAL_TITLE, goalTitle } from "@/types/goal";
 import { Id } from "@/types/general";
 import {
   DropdownMenu,
@@ -101,19 +102,21 @@ const SessionGoal: React.FC<SessionGoalProps> = ({
   coachingSessionId,
 }) => {
   const {
-    goal,
-    isLoading: isLoadingGoal,
-    isError: isErrorGoal,
-  } = useGoalBySession(coachingSessionId);
+    goals,
+    isLoading: isLoadingGoals,
+    isError: isErrorGoals,
+  } = useGoalsBySession(coachingSessionId);
 
   let titleText: string;
 
-  if (isLoadingGoal) {
+  if (isLoadingGoals) {
     titleText = "Loading...";
-  } else if (isErrorGoal) {
+  } else if (isErrorGoals) {
     titleText = "Error loading goal";
   } else {
-    titleText = goal?.title || "No goal set";
+    titleText = goals.length > 0
+      ? goalTitle(goals[0])
+      : DEFAULT_GOAL_TITLE;
   }
 
   return <div>{titleText}</div>;

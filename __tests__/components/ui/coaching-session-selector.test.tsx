@@ -28,7 +28,7 @@ vi.mock('@/lib/hooks/use-current-coaching-session', () => ({
 }))
 
 vi.mock('@/lib/api/goals', () => ({
-  useGoalBySession: vi.fn(() => ({
+  useGoalByRelationship: vi.fn(() => ({
     goal: { title: 'Test Goal' },
     isLoading: false,
     isError: false,

@@ -13,6 +13,7 @@ import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-
 import { cn } from "@/components/lib/utils";
 import { PulsingDot } from "@/components/ui/pulsing-dot";
 import { SessionUrgency } from "@/types/session-display";
+import { DEFAULT_GOAL_TITLE, goalTitle } from "@/types/goal";
 import { RelationshipRole } from "@/types/relationship-role";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -209,7 +210,7 @@ export function TodaySessionCard({
     timezone
   );
 
-  const goalText = session.goal?.title || "No goal set";
+  const goalText = session.goal ? goalTitle(session.goal) : DEFAULT_GOAL_TITLE;
   const organizationName = session.organization?.name || "Unknown organization";
 
   /**
