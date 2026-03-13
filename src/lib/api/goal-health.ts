@@ -7,7 +7,7 @@ import {
   GoalHealthMetrics,
   parseGoalHealthMetrics,
 } from "@/types/goal-health";
-import { Option, None } from "ts-results";
+import { type Option, None } from "@/types/option";
 import { EntityApi } from "./entity-api";
 
 const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
@@ -47,7 +47,7 @@ export const useGoalHealth = (goalId: Option<Id>) => {
   const { entity, isLoading, isError, refresh } =
     EntityApi.useEntity<GoalHealthMetrics>(
       url,
-      () => GoalHealthApi.get(goalId.unwrap()),
+      () => goalId.some ? GoalHealthApi.get(goalId.val) : Promise.reject("unreachable"),
       defaultGoalHealthMetrics()
     );
 

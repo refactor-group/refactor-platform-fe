@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { Some } from 'ts-results'
+import { Some, None } from '@/types/option'
 import { GoalHealthApi, useGoalHealth } from '@/lib/api/goal-health'
 import { GoalHealth } from '@/types/goal-health'
 import { EntityApi } from '@/lib/api/entity-api'
@@ -82,8 +82,8 @@ describe('useGoalHealth', () => {
         actions_total: 0,
         linked_session_count: 0,
         health: GoalHealth.SolidMomentum,
-        last_session_date: { none: true, some: false } as any,
-        next_action_due: { none: true, some: false } as any,
+        last_session_date: None,
+        next_action_due: None,
       },
       isLoading: false,
       isError: undefined,
@@ -97,16 +97,14 @@ describe('useGoalHealth', () => {
   })
 
   it('passes null URL to useEntity when goalId is None to skip fetching', () => {
-    const { None } = require('ts-results')
-
     vi.mocked(EntityApi.useEntity).mockReturnValue({
       entity: {
         actions_completed: 0,
         actions_total: 0,
         linked_session_count: 0,
         health: GoalHealth.SolidMomentum,
-        last_session_date: { none: true, some: false } as any,
-        next_action_due: { none: true, some: false } as any,
+        last_session_date: None,
+        next_action_due: None,
       },
       isLoading: false,
       isError: undefined,
@@ -125,8 +123,8 @@ describe('useGoalHealth', () => {
       actions_total: 10,
       linked_session_count: 2,
       health: GoalHealth.LetsRefocus,
-      last_session_date: { some: true, none: false, val: '2026-03-01' } as any,
-      next_action_due: { none: true, some: false } as any,
+      last_session_date: Some('2026-03-01'),
+      next_action_due: None,
     }
 
     vi.mocked(EntityApi.useEntity).mockReturnValue({
