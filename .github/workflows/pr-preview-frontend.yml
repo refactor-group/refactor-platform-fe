@@ -25,8 +25,8 @@ name: PR Preview (Frontend)
 
 on:
   pull_request:
-    # Trigger on PR lifecycle events
-    types: [opened, synchronize, reopened]
+    # Trigger on PR lifecycle events (skip drafts, run when marked ready)
+    types: [opened, synchronize, reopened, ready_for_review]
     # Only run for frontend code changes
     paths-ignore:
       - '**.md'
@@ -66,6 +66,8 @@ jobs:
   # ===========================================================================
   deploy-frontend-pr:
     name: Deploy Frontend PR Preview
+    # Skip draft PRs — only run when PR is ready for review
+    if: github.event.pull_request.draft == false
     # Call the reusable workflow from backend repository
     # NOTE: @ref must be a literal (GitHub Actions limitation — no expressions in uses:).
     # When testing against an unmerged backend branch, update this ref manually.
