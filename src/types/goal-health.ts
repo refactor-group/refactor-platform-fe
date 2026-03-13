@@ -3,7 +3,7 @@
 // `domain::goal_health` / `entity_api::goal_health` module pattern.
 // See GoalHealthMetrics contract v3 on the coordination board.
 
-import { Option, Some, None } from "ts-results";
+import { type Option, Some, None } from "@/types/option";
 
 export enum GoalHealth {
   SolidMomentum = "SolidMomentum",
