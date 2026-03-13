@@ -12,6 +12,7 @@ import {
   getUserRoleInRelationship,
 } from "@/lib/utils/relationship";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
+import { goalTitle } from "@/types/goal";
 
 /**
  * Session Utility Functions
@@ -224,7 +225,7 @@ export function enrichSessionForDisplay(
 
   return {
     id: session.id,
-    goalTitle: goal?.title || "Coaching Session",
+    goalTitle: goal ? goalTitle(goal, "Coaching Session") : "Coaching Session",
     participantName: getOtherParticipantName(relationship, user),
     userRole: getUserRoleInRelationship(relationship, user),
     dateTime: formatSessionDateTime(session.date, timezone),
