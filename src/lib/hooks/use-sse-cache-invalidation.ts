@@ -94,4 +94,13 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     invalidateEndpoint('/goals', 'goal_deleted');
     invalidateSessionGoals('goal_deleted');
   });
+
+  // COACHING SESSION GOAL EVENTS (join table) - Invalidate session-scoped goal caches
+  useSSEEventHandler(eventSource, 'coaching_session_goal_created', () => {
+    invalidateSessionGoals('coaching_session_goal_created');
+  });
+
+  useSSEEventHandler(eventSource, 'coaching_session_goal_deleted', () => {
+    invalidateSessionGoals('coaching_session_goal_deleted');
+  });
 }
