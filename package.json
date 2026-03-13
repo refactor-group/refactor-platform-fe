@@ -89,7 +89,6 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "ts-luxon": "^5.0.7-beta.0",
-    "ts-results": "^3.3.0",
     "y-prosemirror": "^1.2.15",
     "y-websocket": "^2.1.0",
     "yjs": "^13.6.23",
