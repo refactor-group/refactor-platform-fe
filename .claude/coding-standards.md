@@ -14,7 +14,7 @@ Prefer strict, explicit typings and clear nullability rules; don't auto-widen.
 // ✅ Correct — use Option<T> for nullable data from the backend
 import { type Option, Some, None } from "@/types/option";
 
-interface GoalHealthMetrics {
+interface GoalProgressMetrics {
   last_session_date: Option<string>;
   next_action_due: Option<string>;
 }
@@ -34,9 +34,9 @@ if (metrics.last_session_date.some) {
 // ✅ Correct — Result at the API boundary
 import { ResultAsync } from "neverthrow";
 
-const getGoalHealth = (id: Id): ResultAsync<GoalHealthMetrics, ApiError> =>
+const getGoalProgress = (id: Id): ResultAsync<GoalProgressMetrics, ApiError> =>
   ResultAsync.fromPromise(
-    EntityApi.getFn<unknown>(`${GOALS_BASEURL}/${id}/health`).then(parseGoalHealthMetrics),
+    EntityApi.getFn<unknown>(`${GOALS_BASEURL}/${id}/progress`).then(parseGoalProgressMetrics),
     (e) => toApiError(e)
   );
 ```
