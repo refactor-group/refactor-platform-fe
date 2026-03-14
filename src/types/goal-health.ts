@@ -21,7 +21,7 @@ export interface GoalHealthMetrics {
   next_action_due: Option<string>;
 }
 
-/** Raw API response shape from GET /goals/{id}/health. */
+/** Raw API response shape from GET /goals/{id}/health, only internal use here. */
 interface GoalHealthMetricsRaw {
   actions_completed: number;
   actions_total: number;
@@ -42,12 +42,14 @@ export function parseGoalHealthMetrics(value: unknown): GoalHealthMetrics {
     actions_total: value.actions_total,
     linked_session_count: value.linked_session_count,
     health: value.health as GoalHealth,
-    last_session_date: value.last_session_date !== null ? Some(value.last_session_date) : None,
-    next_action_due: value.next_action_due !== null ? Some(value.next_action_due) : None,
+    last_session_date:
+      value.last_session_date !== null ? Some(value.last_session_date) : None,
+    next_action_due:
+      value.next_action_due !== null ? Some(value.next_action_due) : None,
   };
 }
 
-export function isGoalHealthMetricsRaw(value: unknown): value is GoalHealthMetricsRaw {
+function isGoalHealthMetricsRaw(value: unknown): value is GoalHealthMetricsRaw {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -59,7 +61,8 @@ export function isGoalHealthMetricsRaw(value: unknown): value is GoalHealthMetri
     typeof obj.linked_session_count === "number" &&
     typeof obj.health === "string" &&
     Object.values(GoalHealth).includes(obj.health as GoalHealth) &&
-    (obj.last_session_date === null || typeof obj.last_session_date === "string") &&
+    (obj.last_session_date === null ||
+      typeof obj.last_session_date === "string") &&
     (obj.next_action_due === null || typeof obj.next_action_due === "string")
   );
 }
