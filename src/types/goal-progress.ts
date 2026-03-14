@@ -1,47 +1,47 @@
-// ─── Goal Health Types (GET /goals/{id}/health) ─────────────────────
-// Dedicated module for goal health concerns, mirroring the backend's
-// `domain::goal_health` / `entity_api::goal_health` module pattern.
-// See GoalHealthMetrics contract v3 on the coordination board.
+// ─── Goal Progress Types (GET /goals/{id}/progress) ──────────────────
+// Dedicated module for goal progress concerns, mirroring the backend's
+// `domain::goal_progress` / `entity_api::goal_progress` module pattern.
+// See GoalProgressMetrics contract v4 on the coordination board.
 
 import { type Option, Some, None } from "@/types/option";
 
-export enum GoalHealth {
+export enum GoalProgress {
   SolidMomentum = "SolidMomentum",
   NeedsAttention = "NeedsAttention",
   LetsRefocus = "LetsRefocus",
 }
 
-/** Normalized goal health metrics for UI consumption. */
-export interface GoalHealthMetrics {
+/** Normalized goal progress metrics for UI consumption. */
+export interface GoalProgressMetrics {
   actions_completed: number;
   actions_total: number;
   linked_session_count: number;
-  health: GoalHealth;
+  progress: GoalProgress;
   last_session_date: Option<string>;
   next_action_due: Option<string>;
 }
 
-/** Raw API response shape from GET /goals/{id}/health, only internal use here. */
-interface GoalHealthMetricsRaw {
+/** Raw API response shape from GET /goals/{id}/progress, only internal use here. */
+interface GoalProgressMetricsRaw {
   actions_completed: number;
   actions_total: number;
   linked_session_count: number;
-  health: string;
+  progress: string;
   last_session_date: string | null;
   next_action_due: string | null;
 }
 
-/** Validates and normalizes a raw API response into GoalHealthMetrics. */
-export function parseGoalHealthMetrics(value: unknown): GoalHealthMetrics {
-  if (!isGoalHealthMetricsRaw(value)) {
-    throw new Error("Invalid GoalHealthMetrics data");
+/** Validates and normalizes a raw API response into GoalProgressMetrics. */
+export function parseGoalProgressMetrics(value: unknown): GoalProgressMetrics {
+  if (!isGoalProgressMetricsRaw(value)) {
+    throw new Error("Invalid GoalProgressMetrics data");
   }
 
   return {
     actions_completed: value.actions_completed,
     actions_total: value.actions_total,
     linked_session_count: value.linked_session_count,
-    health: value.health as GoalHealth,
+    progress: value.progress as GoalProgress,
     last_session_date:
       value.last_session_date !== null ? Some(value.last_session_date) : None,
     next_action_due:
@@ -49,7 +49,7 @@ export function parseGoalHealthMetrics(value: unknown): GoalHealthMetrics {
   };
 }
 
-function isGoalHealthMetricsRaw(value: unknown): value is GoalHealthMetricsRaw {
+function isGoalProgressMetricsRaw(value: unknown): value is GoalProgressMetricsRaw {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -59,8 +59,8 @@ function isGoalHealthMetricsRaw(value: unknown): value is GoalHealthMetricsRaw {
     typeof obj.actions_completed === "number" &&
     typeof obj.actions_total === "number" &&
     typeof obj.linked_session_count === "number" &&
-    typeof obj.health === "string" &&
-    Object.values(GoalHealth).includes(obj.health as GoalHealth) &&
+    typeof obj.progress === "string" &&
+    Object.values(GoalProgress).includes(obj.progress as GoalProgress) &&
     (obj.last_session_date === null ||
       typeof obj.last_session_date === "string") &&
     (obj.next_action_due === null || typeof obj.next_action_due === "string")

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Some, None } from '@/types/option'
-import { GoalHealthApi, useGoalHealth } from '@/lib/api/goal-health'
-import { GoalHealth } from '@/types/goal-health'
+import { GoalProgressApi, useGoalProgress } from '@/lib/api/goal-progress'
+import { GoalProgress } from '@/types/goal-progress'
 import { EntityApi } from '@/lib/api/entity-api'
 import { renderHook } from '@testing-library/react'
 
@@ -20,42 +20,42 @@ vi.mock('@/site.config', () => ({
   },
 }))
 
-/** Valid raw API response for health metrics */
-function makeRawHealthResponse(): Record<string, unknown> {
+/** Valid raw API response for progress metrics */
+function makeRawProgressResponse(): Record<string, unknown> {
   return {
     actions_completed: 4,
     actions_total: 10,
     linked_session_count: 3,
-    health: 'NeedsAttention',
+    progress: 'NeedsAttention',
     last_session_date: '2026-03-08',
     next_action_due: null,
   }
 }
 
-describe('GoalHealthApi.get', () => {
+describe('GoalProgressApi.get', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('calls getFn with the correct health endpoint URL', async () => {
-    vi.mocked(EntityApi.getFn).mockResolvedValue(makeRawHealthResponse())
+  it('calls getFn with the correct progress endpoint URL', async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue(makeRawProgressResponse())
 
-    await GoalHealthApi.get('goal-abc')
+    await GoalProgressApi.get('goal-abc')
 
     expect(EntityApi.getFn).toHaveBeenCalledWith(
-      'http://localhost:3000/goals/goal-abc/health'
+      'http://localhost:3000/goals/goal-abc/progress'
     )
   })
 
-  it('parses the raw response into GoalHealthMetrics with Option fields', async () => {
-    vi.mocked(EntityApi.getFn).mockResolvedValue(makeRawHealthResponse())
+  it('parses the raw response into GoalProgressMetrics with Option fields', async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue(makeRawProgressResponse())
 
-    const result = await GoalHealthApi.get('goal-abc')
+    const result = await GoalProgressApi.get('goal-abc')
 
     expect(result.actions_completed).toBe(4)
     expect(result.actions_total).toBe(10)
     expect(result.linked_session_count).toBe(3)
-    expect(result.health).toBe(GoalHealth.NeedsAttention)
+    expect(result.progress).toBe(GoalProgress.NeedsAttention)
     expect(result.last_session_date.some).toBe(true)
     expect(result.last_session_date.val).toBe('2026-03-08')
     expect(result.next_action_due.none).toBe(true)
@@ -64,13 +64,13 @@ describe('GoalHealthApi.get', () => {
   it('throws when the backend returns invalid data', async () => {
     vi.mocked(EntityApi.getFn).mockResolvedValue({ bad: 'data' })
 
-    await expect(GoalHealthApi.get('goal-abc')).rejects.toThrow(
-      'Invalid GoalHealthMetrics data'
+    await expect(GoalProgressApi.get('goal-abc')).rejects.toThrow(
+      'Invalid GoalProgressMetrics data'
     )
   })
 })
 
-describe('useGoalHealth', () => {
+describe('useGoalProgress', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -81,7 +81,7 @@ describe('useGoalHealth', () => {
         actions_completed: 0,
         actions_total: 0,
         linked_session_count: 0,
-        health: GoalHealth.SolidMomentum,
+        progress: GoalProgress.SolidMomentum,
         last_session_date: None,
         next_action_due: None,
       },
@@ -90,10 +90,10 @@ describe('useGoalHealth', () => {
       refresh: vi.fn(),
     })
 
-    renderHook(() => useGoalHealth(Some('goal-xyz')))
+    renderHook(() => useGoalProgress(Some('goal-xyz')))
 
     const [url] = vi.mocked(EntityApi.useEntity).mock.calls[0]
-    expect(url).toBe('http://localhost:3000/goals/goal-xyz/health')
+    expect(url).toBe('http://localhost:3000/goals/goal-xyz/progress')
   })
 
   it('passes null URL to useEntity when goalId is None to skip fetching', () => {
@@ -102,7 +102,7 @@ describe('useGoalHealth', () => {
         actions_completed: 0,
         actions_total: 0,
         linked_session_count: 0,
-        health: GoalHealth.SolidMomentum,
+        progress: GoalProgress.SolidMomentum,
         last_session_date: None,
         next_action_due: None,
       },
@@ -111,18 +111,18 @@ describe('useGoalHealth', () => {
       refresh: vi.fn(),
     })
 
-    renderHook(() => useGoalHealth(None))
+    renderHook(() => useGoalProgress(None))
 
     const [url] = vi.mocked(EntityApi.useEntity).mock.calls[0]
     expect(url).toBeNull()
   })
 
-  it('returns healthMetrics from the hook', () => {
+  it('returns progressMetrics from the hook', () => {
     const mockMetrics = {
       actions_completed: 5,
       actions_total: 10,
       linked_session_count: 2,
-      health: GoalHealth.LetsRefocus,
+      progress: GoalProgress.LetsRefocus,
       last_session_date: Some('2026-03-01'),
       next_action_due: None,
     }
@@ -134,9 +134,9 @@ describe('useGoalHealth', () => {
       refresh: vi.fn(),
     })
 
-    const { result } = renderHook(() => useGoalHealth(Some('goal-123')))
+    const { result } = renderHook(() => useGoalProgress(Some('goal-123')))
 
-    expect(result.current.healthMetrics).toBe(mockMetrics)
+    expect(result.current.progressMetrics).toBe(mockMetrics)
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isError).toBeUndefined()
   })
