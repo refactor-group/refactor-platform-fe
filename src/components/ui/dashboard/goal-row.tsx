@@ -39,7 +39,7 @@ export function GoalRow({
         />
       </div>
 
-      <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 w-8 text-right">
+      <span className="text-[11px] text-muted-foreground tabular-nums shrink-0 w-10 text-right">
         {percent}%
       </span>
 
