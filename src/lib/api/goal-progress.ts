@@ -5,12 +5,15 @@ import { Id } from "@/types/general";
 import {
   GoalProgress,
   GoalProgressMetrics,
+  GoalWithProgress,
   parseGoalProgressMetrics,
+  parseGoalProgressResponse,
 } from "@/types/goal-progress";
 import { type Option, None } from "@/types/option";
 import { EntityApi } from "./entity-api";
 
 const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
+const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
 
 /** Default metrics returned while loading or when no data is available. */
 function defaultGoalProgressMetrics(): GoalProgressMetrics {
@@ -31,6 +34,17 @@ export const GoalProgressApi = {
       `${GOALS_BASEURL}/${goalId}/progress`
     );
     return parseGoalProgressMetrics(raw);
+  },
+
+  /** Fetches progress metrics for all goals in a coaching relationship. */
+  listByRelationship: async (
+    organizationId: Id,
+    relationshipId: Id
+  ): Promise<GoalWithProgress[]> => {
+    const raw = await EntityApi.getFn<unknown>(
+      `${ORGANIZATIONS_BASEURL}/${organizationId}/coaching_relationships/${relationshipId}/goal_progress`
+    );
+    return parseGoalProgressResponse(raw);
   },
 };
 
@@ -53,6 +67,38 @@ export const useGoalProgress = (goalId: Option<Id>) => {
 
   return {
     progressMetrics: entity,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * SWR hook that fetches progress metrics for all goals in a coaching relationship.
+ * Skips the fetch when either ID is null (SWR conditional fetching).
+ *
+ * @param organizationId The organization ID — null skips the fetch.
+ * @param relationshipId The coaching relationship ID — null skips the fetch.
+ */
+export const useGoalProgressList = (
+  organizationId: Id | null,
+  relationshipId: Id | null
+) => {
+  const url =
+    organizationId && relationshipId
+      ? `${ORGANIZATIONS_BASEURL}/${organizationId}/coaching_relationships/${relationshipId}/goal_progress`
+      : null;
+
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<GoalWithProgress>(
+      url ?? "",
+      () =>
+        GoalProgressApi.listByRelationship(organizationId!, relationshipId!),
+      organizationId && relationshipId ? relationshipId : undefined
+    );
+
+  return {
+    goalsWithProgress: entities,
     isLoading,
     isError,
     refresh,

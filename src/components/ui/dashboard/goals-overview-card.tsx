@@ -1,0 +1,233 @@
+"use client";
+
+import { useState } from "react";
+import { ArrowUpRight, ArrowDownRight, AlertCircle, ArrowRight, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/components/lib/utils";
+import { useGoalProgressList } from "@/lib/api/goal-progress";
+import { GoalProgress } from "@/types/goal-progress";
+import type { GoalWithProgress } from "@/types/goal-progress";
+import { ItemStatus } from "@/types/general";
+import type { Id } from "@/types/general";
+import { ProgressRing } from "@/components/ui/dashboard/progress-ring";
+import { GoalRow } from "@/components/ui/dashboard/goal-row";
+
+interface GoalsOverviewCardProps {
+  organizationId: Id;
+  relationshipId: Id;
+  coacheeName: string;
+}
+
+/** Maps GoalProgress to a severity rank for computing the aggregate signal. */
+function progressSeverity(progress: GoalProgress): number {
+  switch (progress) {
+    case GoalProgress.SolidMomentum:
+      return 0;
+    case GoalProgress.NeedsAttention:
+      return 1;
+    case GoalProgress.LetsRefocus:
+      return 2;
+    default: {
+      const _exhaustive: never = progress;
+      throw new Error(`Unhandled GoalProgress: ${_exhaustive}`);
+    }
+  }
+}
+
+function HealthSignal({ progress }: { progress: GoalProgress }) {
+  switch (progress) {
+    case GoalProgress.SolidMomentum:
+      return (
+        <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+          <ArrowUpRight className="h-3.5 w-3.5" />
+          Solid momentum
+        </span>
+      );
+    case GoalProgress.NeedsAttention:
+      return (
+        <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+          <AlertCircle className="h-3.5 w-3.5" />
+          Needs attention
+        </span>
+      );
+    case GoalProgress.LetsRefocus:
+      return (
+        <span className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+          <ArrowDownRight className="h-3.5 w-3.5" />
+          Let&apos;s refocus
+        </span>
+      );
+    default: {
+      const _exhaustive: never = progress;
+      throw new Error(`Unhandled GoalProgress: ${_exhaustive}`);
+    }
+  }
+}
+
+/** Computes the aggregate (worst) health signal across all goals. */
+function aggregateProgress(goals: GoalWithProgress[]): GoalProgress {
+  if (goals.length === 0) return GoalProgress.SolidMomentum;
+
+  let worst = GoalProgress.SolidMomentum;
+  for (const goal of goals) {
+    if (progressSeverity(goal.progress_metrics.progress) > progressSeverity(worst)) {
+      worst = goal.progress_metrics.progress;
+    }
+  }
+  return worst;
+}
+
+function GoalsOverviewCardSkeleton() {
+  return (
+    <Card className="border shadow-none h-full">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-4 animate-pulse">
+          <div className="h-12 w-12 rounded-full bg-muted" />
+          <div className="space-y-2 flex-1">
+            <div className="h-3 w-32 bg-muted rounded" />
+            <div className="h-5 w-8 bg-muted rounded" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function GoalsOverviewCard({
+  organizationId,
+  relationshipId,
+  coacheeName,
+}: GoalsOverviewCardProps) {
+  const [expanded, setExpanded] = useState(true);
+  const { goalsWithProgress, isLoading, isError } = useGoalProgressList(
+    organizationId,
+    relationshipId
+  );
+
+  if (isLoading) return <GoalsOverviewCardSkeleton />;
+
+  // Silent fallback on error — don't break the dashboard
+  if (isError) return null;
+
+  const activeGoals = goalsWithProgress.filter(
+    (g) => g.status === ItemStatus.InProgress
+  );
+
+  const totalActions = activeGoals.reduce(
+    (sum, g) => sum + g.progress_metrics.actions_total,
+    0
+  );
+  const completedActions = activeGoals.reduce(
+    (sum, g) => sum + g.progress_metrics.actions_completed,
+    0
+  );
+  const overallPercent =
+    totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 0;
+  const overallProgress = aggregateProgress(activeGoals);
+
+  return (
+    <Card className="border shadow-none h-full">
+      <Collapsible open={expanded} onOpenChange={setExpanded}>
+        <CardContent className="p-0">
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between gap-4 p-6 text-left hover:bg-muted/20 transition-colors rounded-xl"
+            >
+              {/* Left: ring + label/value */}
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        role="img"
+                        aria-label={`${completedActions} of ${totalActions} actions completed`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ProgressRing percent={overallPercent} />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      {completedActions} of {totalActions} actions completed
+                      across active goals
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    {coacheeName}&apos;s active goals
+                  </p>
+                  <p className="text-lg font-semibold tabular-nums -mt-0.5">
+                    {activeGoals.length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: health signal + chevron */}
+              <div className="flex items-center gap-3 shrink-0">
+                <HealthSignal progress={overallProgress} />
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-muted-foreground/40 transition-transform duration-200",
+                    expanded && "rotate-180"
+                  )}
+                />
+              </div>
+            </button>
+          </CollapsibleTrigger>
+
+          {/* Expandable goal list */}
+          <CollapsibleContent>
+            <div className="border-t mx-6" />
+            <div className="px-6 pb-5 pt-2">
+              {activeGoals.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">
+                  No active goals
+                </p>
+              ) : (
+                <div className="divide-y divide-border/50">
+                  {activeGoals.map((goal) => (
+                    <GoalRow
+                      key={goal.goal_id}
+                      title={goal.title}
+                      actionsCompleted={
+                        goal.progress_metrics.actions_completed
+                      }
+                      actionsTotal={goal.progress_metrics.actions_total}
+                      linkedSessionCount={
+                        goal.progress_metrics.linked_session_count
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="pt-3 flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground hover:text-foreground gap-1 h-7"
+                  disabled
+                >
+                  View all goals
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </CardContent>
+      </Collapsible>
+    </Card>
+  );
+}

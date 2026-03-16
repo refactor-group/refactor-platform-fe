@@ -3,6 +3,7 @@
 // `domain::goal_progress` / `entity_api::goal_progress` module pattern.
 // See GoalProgressMetrics contract v4 on the coordination board.
 
+import { Id, ItemStatus } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 
 export enum GoalProgress {
@@ -65,4 +66,91 @@ function isGoalProgressMetricsRaw(value: unknown): value is GoalProgressMetricsR
       typeof obj.last_session_date === "string") &&
     (obj.next_action_due === null || typeof obj.next_action_due === "string")
   );
+}
+
+// ─── Aggregate Goal Progress (GET /organizations/{org_id}/coaching_relationships/{rel_id}/goal_progress) ──
+
+/** A single goal's progress entry from the aggregate endpoint. */
+export interface GoalWithProgress {
+  goal_id: Id;
+  coaching_relationship_id: Id;
+  title: string;
+  body: string;
+  status: ItemStatus;
+  status_changed_at: string;
+  target_date: string | null;
+  created_at: string;
+  updated_at: string;
+  progress_metrics: GoalProgressMetrics;
+}
+
+/** Raw API response shape from the aggregate endpoint. */
+interface GoalWithProgressRaw {
+  goal_id: string;
+  coaching_relationship_id: string;
+  title: string;
+  body: string;
+  status: string;
+  status_changed_at: string;
+  target_date: string | null;
+  created_at: string;
+  updated_at: string;
+  progress_metrics: unknown;
+}
+
+/** Response wrapper from GET .../goal_progress */
+interface GoalProgressResponseRaw {
+  goal_progress: unknown[];
+}
+
+function isGoalWithProgressRaw(value: unknown): value is GoalWithProgressRaw {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+
+  return (
+    typeof obj.goal_id === "string" &&
+    typeof obj.coaching_relationship_id === "string" &&
+    typeof obj.title === "string" &&
+    typeof obj.body === "string" &&
+    typeof obj.status === "string" &&
+    typeof obj.status_changed_at === "string" &&
+    (obj.target_date === null || typeof obj.target_date === "string") &&
+    typeof obj.created_at === "string" &&
+    typeof obj.updated_at === "string" &&
+    obj.progress_metrics !== undefined
+  );
+}
+
+function parseGoalWithProgress(value: unknown): GoalWithProgress {
+  if (!isGoalWithProgressRaw(value)) {
+    throw new Error("Invalid GoalWithProgress data");
+  }
+
+  return {
+    goal_id: value.goal_id,
+    coaching_relationship_id: value.coaching_relationship_id,
+    title: value.title,
+    body: value.body,
+    status: value.status as ItemStatus,
+    status_changed_at: value.status_changed_at,
+    target_date: value.target_date,
+    created_at: value.created_at,
+    updated_at: value.updated_at,
+    progress_metrics: parseGoalProgressMetrics(value.progress_metrics),
+  };
+}
+
+/** Validates and normalizes the aggregate goal progress response. */
+export function parseGoalProgressResponse(value: unknown): GoalWithProgress[] {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !Array.isArray((value as GoalProgressResponseRaw).goal_progress)
+  ) {
+    throw new Error("Invalid GoalProgressResponse data");
+  }
+
+  return (value as GoalProgressResponseRaw).goal_progress.map(parseGoalWithProgress);
 }

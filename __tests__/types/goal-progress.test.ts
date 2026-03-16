@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   GoalProgress,
   parseGoalProgressMetrics,
+  parseGoalProgressResponse,
 } from '@/types/goal-progress'
 
 /** Factory for creating valid raw progress metrics matching the API response shape */
@@ -140,5 +141,105 @@ describe('parseGoalProgressMetrics', () => {
     const data = makeProgressData()
     delete data.progress
     expect(() => parseGoalProgressMetrics(data)).toThrow('Invalid GoalProgressMetrics data')
+  })
+})
+
+// ── Aggregate GoalWithProgress parsing ────────────────────────────────
+
+function makeGoalWithProgressData(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
+  return {
+    goal_id: 'goal-1',
+    coaching_relationship_id: 'rel-1',
+    title: 'Test goal',
+    body: 'Test body',
+    status: 'InProgress',
+    status_changed_at: '2026-02-01T00:00:00Z',
+    target_date: '2026-06-01',
+    created_at: '2026-01-15T00:00:00Z',
+    updated_at: '2026-02-20T00:00:00Z',
+    progress_metrics: makeProgressData(),
+    ...overrides,
+  }
+}
+
+describe('parseGoalProgressResponse', () => {
+  it('parses a valid response with one goal', () => {
+    const response = { goal_progress: [makeGoalWithProgressData()] }
+    const result = parseGoalProgressResponse(response)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].goal_id).toBe('goal-1')
+    expect(result[0].coaching_relationship_id).toBe('rel-1')
+    expect(result[0].title).toBe('Test goal')
+    expect(result[0].body).toBe('Test body')
+    expect(result[0].status).toBe('InProgress')
+    expect(result[0].target_date).toBe('2026-06-01')
+    expect(result[0].created_at).toBe('2026-01-15T00:00:00Z')
+    expect(result[0].updated_at).toBe('2026-02-20T00:00:00Z')
+    expect(result[0].progress_metrics.actions_completed).toBe(3)
+    expect(result[0].progress_metrics.actions_total).toBe(8)
+    expect(result[0].progress_metrics.progress).toBe(GoalProgress.SolidMomentum)
+  })
+
+  it('parses a response with multiple goals', () => {
+    const response = {
+      goal_progress: [
+        makeGoalWithProgressData({ goal_id: 'g1', title: 'Goal A' }),
+        makeGoalWithProgressData({ goal_id: 'g2', title: 'Goal B' }),
+      ],
+    }
+    const result = parseGoalProgressResponse(response)
+    expect(result).toHaveLength(2)
+    expect(result[0].title).toBe('Goal A')
+    expect(result[1].title).toBe('Goal B')
+  })
+
+  it('parses a response with an empty array', () => {
+    const result = parseGoalProgressResponse({ goal_progress: [] })
+    expect(result).toHaveLength(0)
+  })
+
+  it('handles null target_date correctly', () => {
+    const response = {
+      goal_progress: [makeGoalWithProgressData({ target_date: null })],
+    }
+    const result = parseGoalProgressResponse(response)
+    expect(result[0].target_date).toBeNull()
+  })
+
+  it('throws on null input', () => {
+    expect(() => parseGoalProgressResponse(null)).toThrow('Invalid GoalProgressResponse data')
+  })
+
+  it('throws on undefined input', () => {
+    expect(() => parseGoalProgressResponse(undefined)).toThrow('Invalid GoalProgressResponse data')
+  })
+
+  it('throws when goal_progress is not an array', () => {
+    expect(() => parseGoalProgressResponse({ goal_progress: 'not array' })).toThrow(
+      'Invalid GoalProgressResponse data'
+    )
+  })
+
+  it('throws when goal_progress key is missing', () => {
+    expect(() => parseGoalProgressResponse({ other_key: [] })).toThrow(
+      'Invalid GoalProgressResponse data'
+    )
+  })
+
+  it('throws when a goal entry has invalid progress_metrics', () => {
+    expect(() =>
+      parseGoalProgressResponse({
+        goal_progress: [makeGoalWithProgressData({ progress_metrics: { bad: true } })],
+      })
+    ).toThrow('Invalid GoalProgressMetrics data')
+  })
+
+  it('throws when a goal entry is missing required fields', () => {
+    const badGoal = makeGoalWithProgressData()
+    delete badGoal.title
+    expect(() =>
+      parseGoalProgressResponse({ goal_progress: [badGoal] })
+    ).toThrow('Invalid GoalWithProgress data')
   })
 })
