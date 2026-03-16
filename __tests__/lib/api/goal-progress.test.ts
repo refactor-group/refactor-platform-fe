@@ -20,14 +20,14 @@ vi.mock('@/site.config', () => ({
   },
 }))
 
-/** Valid raw API response for progress metrics */
+/** Valid raw API response for progress metrics (uses backend snake_case names) */
 function makeRawProgressResponse(): Record<string, unknown> {
   return {
     actions_completed: 4,
     actions_total: 10,
-    linked_session_count: 3,
+    linked_coaching_session_count: 3,
     progress: 'NeedsAttention',
-    last_session_date: '2026-03-08',
+    last_coaching_session_date: '2026-03-08',
     next_action_due: null,
   }
 }

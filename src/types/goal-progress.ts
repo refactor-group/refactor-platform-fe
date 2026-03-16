@@ -22,13 +22,13 @@ export interface GoalProgressMetrics {
   next_action_due: Option<string>;
 }
 
-/** Raw API response shape from GET /goals/{id}/progress, only internal use here. */
+/** Raw API response shape — uses backend's snake_case field names. */
 interface GoalProgressMetricsRaw {
   actions_completed: number;
   actions_total: number;
-  linked_session_count: number;
+  linked_coaching_session_count: number;
   progress: string;
-  last_session_date: string | null;
+  last_coaching_session_date: string | null;
   next_action_due: string | null;
 }
 
@@ -41,10 +41,12 @@ export function parseGoalProgressMetrics(value: unknown): GoalProgressMetrics {
   return {
     actions_completed: value.actions_completed,
     actions_total: value.actions_total,
-    linked_session_count: value.linked_session_count,
+    linked_session_count: value.linked_coaching_session_count,
     progress: value.progress as GoalProgress,
     last_session_date:
-      value.last_session_date !== null ? Some(value.last_session_date) : None,
+      value.last_coaching_session_date !== null
+        ? Some(value.last_coaching_session_date)
+        : None,
     next_action_due:
       value.next_action_due !== null ? Some(value.next_action_due) : None,
   };
@@ -59,11 +61,11 @@ function isGoalProgressMetricsRaw(value: unknown): value is GoalProgressMetricsR
   return (
     typeof obj.actions_completed === "number" &&
     typeof obj.actions_total === "number" &&
-    typeof obj.linked_session_count === "number" &&
+    typeof obj.linked_coaching_session_count === "number" &&
     typeof obj.progress === "string" &&
     Object.values(GoalProgress).includes(obj.progress as GoalProgress) &&
-    (obj.last_session_date === null ||
-      typeof obj.last_session_date === "string") &&
+    (obj.last_coaching_session_date === null ||
+      typeof obj.last_coaching_session_date === "string") &&
     (obj.next_action_due === null || typeof obj.next_action_due === "string")
   );
 }
