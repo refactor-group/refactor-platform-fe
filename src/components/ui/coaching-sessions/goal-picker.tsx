@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/components/lib/utils";
 import type { Goal } from "@/types/goal";
-import { goalTitle, isOnHold, DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
+import { goalTitle, isOnHold, isInProgress, DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
 
 type PickerView = "search" | "create";
@@ -56,8 +56,8 @@ export function GoalPicker({
         .filter(
           (g) =>
             !linkedGoalIds.has(g.id) &&
-            (g.status === ItemStatus.NotStarted ||
-              g.status === ItemStatus.OnHold)
+            g.status !== ItemStatus.Completed &&
+            g.status !== ItemStatus.WontDo
         )
         .sort(
           (a, b) =>
@@ -447,6 +447,14 @@ function GoalListItem({
           className="text-[9px] h-4 px-1.5 border-border/50 text-muted-foreground/50 shrink-0"
         >
           On Hold
+        </Badge>
+      )}
+      {isInProgress(goal) && (
+        <Badge
+          variant="outline"
+          className="text-[9px] h-4 px-1.5 border-border/50 text-muted-foreground/50 shrink-0"
+        >
+          In Progress
         </Badge>
       )}
       <Link className="h-3 w-3 shrink-0 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors" />

@@ -99,18 +99,71 @@ describe("GoalPicker", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows NotStarted goals, not InProgress goals", async () => {
+  it("shows all non-terminal goals that are not linked", async () => {
     const user = userEvent.setup()
     render(<GoalPicker {...defaultProps} />)
 
     await user.click(screen.getByRole("button", { name: /link goal/i }))
 
+    // NotStarted goals should appear
     expect(
       screen.getByText("Build public speaking confidence")
     ).toBeInTheDocument()
+
+    // InProgress goal is linked (in linkedGoalIds) so it should NOT appear
     expect(
       screen.queryByText("Active goal already in progress")
     ).not.toBeInTheDocument()
+  })
+
+  it("shows unlinked InProgress goals with 'Active' badge", async () => {
+    const user = userEvent.setup()
+    const unlinkedActiveGoal = createMockGoal({
+      id: "goal-active-unlinked",
+      title: "Unlinked active goal",
+      status: ItemStatus.InProgress,
+      created_at: now,
+    })
+
+    render(
+      <GoalPicker
+        {...defaultProps}
+        allGoals={[...allGoals, unlinkedActiveGoal]}
+      />
+    )
+
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+
+    expect(screen.getByText("Unlinked active goal")).toBeInTheDocument()
+    expect(screen.getByText("In Progress")).toBeInTheDocument()
+  })
+
+  it("excludes Completed and WontDo goals from the list", async () => {
+    const user = userEvent.setup()
+    const completedGoal = createMockGoal({
+      id: "goal-done",
+      title: "Completed goal",
+      status: ItemStatus.Completed,
+      created_at: now,
+    })
+    const wontDoGoal = createMockGoal({
+      id: "goal-wont",
+      title: "Abandoned goal",
+      status: ItemStatus.WontDo,
+      created_at: now,
+    })
+
+    render(
+      <GoalPicker
+        {...defaultProps}
+        allGoals={[...allGoals, completedGoal, wontDoGoal]}
+      />
+    )
+
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+
+    expect(screen.queryByText("Completed goal")).not.toBeInTheDocument()
+    expect(screen.queryByText("Abandoned goal")).not.toBeInTheDocument()
   })
 
   it("shows the 3 most recent goals in 'Recent' group", async () => {
