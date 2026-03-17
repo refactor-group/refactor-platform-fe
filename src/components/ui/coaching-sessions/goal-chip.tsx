@@ -76,13 +76,12 @@ export function GoalChip({
             </button>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs">
-          {actionsTotal > 0 ? (
-            <span>
+        <TooltipContent side="bottom" className="text-xs max-w-[240px]">
+          <p className="font-medium">{goalTitle(goal)}</p>
+          {actionsTotal > 0 && (
+            <p className="text-muted-foreground mt-0.5">
               {actionsCompleted}/{actionsTotal} actions &middot; {percent}%
-            </span>
-          ) : (
-            <span>No actions yet</span>
+            </p>
           )}
         </TooltipContent>
       </Tooltip>
