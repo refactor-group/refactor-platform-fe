@@ -75,6 +75,8 @@ function statusDotColor(status: ItemStatus): string {
       return "bg-muted-foreground";
     case ItemStatus.InProgress:
       return "bg-green-500";
+    case ItemStatus.OnHold:
+      return "bg-amber-400";
     case ItemStatus.Completed:
       return "bg-primary";
     case ItemStatus.WontDo:

@@ -682,7 +682,7 @@ describe('ActionsPanel', () => {
       )
     }
 
-    it('should render status group headers for all 4 statuses', () => {
+    it('should render status group headers for all 5 statuses', () => {
       renderWithReviewOpen()
 
       // Each status group has a header with an h4 element
@@ -691,6 +691,7 @@ describe('ActionsPanel', () => {
 
       expect(headerTexts).toContain('Not Started')
       expect(headerTexts).toContain('In Progress')
+      expect(headerTexts).toContain('On Hold')
       expect(headerTexts).toContain('Completed')
       expect(headerTexts).toContain("Won't Do")
     })
@@ -719,10 +720,10 @@ describe('ActionsPanel', () => {
     it('should render hr dividers between status groups', () => {
       renderWithReviewOpen()
 
-      // 4 status groups means 3 dividers between them
+      // 5 status groups means 4 dividers between them
       const reviewContainer = screen.getByText('Actions for Review').closest('[class*="rounded"]')!
       const dividers = reviewContainer.querySelectorAll('hr')
-      expect(dividers).toHaveLength(3)
+      expect(dividers).toHaveLength(4)
     })
 
     it('should still show "All caught up" when there are zero total review actions', () => {

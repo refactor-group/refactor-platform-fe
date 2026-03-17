@@ -18,6 +18,7 @@ import {
 export const STATUS_COLUMN_ORDER: ItemStatus[] = [
   ItemStatus.NotStarted,
   ItemStatus.InProgress,
+  ItemStatus.OnHold,
   ItemStatus.Completed,
   ItemStatus.WontDo,
 ];
@@ -29,6 +30,8 @@ export function statusColor(status: ItemStatus): string {
       return "bg-slate-400";
     case ItemStatus.InProgress:
       return "bg-blue-500";
+    case ItemStatus.OnHold:
+      return "bg-amber-400";
     case ItemStatus.Completed:
       return "bg-green-500";
     case ItemStatus.WontDo:
@@ -47,6 +50,8 @@ export function statusTextColor(status: ItemStatus): string {
       return "text-slate-500";
     case ItemStatus.InProgress:
       return "text-blue-500";
+    case ItemStatus.OnHold:
+      return "text-amber-500";
     case ItemStatus.Completed:
       return "text-green-600";
     case ItemStatus.WontDo:
@@ -66,6 +71,7 @@ export function groupByStatus<T>(
   const result: Record<ItemStatus, T[]> = {
     [ItemStatus.NotStarted]: [],
     [ItemStatus.InProgress]: [],
+    [ItemStatus.OnHold]: [],
     [ItemStatus.Completed]: [],
     [ItemStatus.WontDo]: [],
   };
@@ -162,7 +168,7 @@ export function groupActionsByStatus(items: AssignedActionWithContext[]) {
 export function visibleStatuses(visibility: StatusVisibility): ItemStatus[] {
   switch (visibility) {
     case StatusVisibility.Open:
-      return [ItemStatus.NotStarted, ItemStatus.InProgress];
+      return [ItemStatus.NotStarted, ItemStatus.InProgress, ItemStatus.OnHold];
     case StatusVisibility.All:
       return [...STATUS_COLUMN_ORDER];
     case StatusVisibility.Closed:

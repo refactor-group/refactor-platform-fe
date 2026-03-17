@@ -275,7 +275,7 @@ export function GoalDrawer({
         if (swapGoal) {
           await updateGoal(swapGoalId, {
             ...swapGoal,
-            status: ItemStatus.WontDo,
+            status: ItemStatus.OnHold,
           });
         }
 
@@ -321,7 +321,7 @@ export function GoalDrawer({
         if (swapGoal) {
           await updateGoal(swapGoalId, {
             ...swapGoal,
-            status: ItemStatus.WontDo,
+            status: ItemStatus.OnHold,
           });
         }
 
