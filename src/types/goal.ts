@@ -171,6 +171,11 @@ export function goalTitle(
   return goal.title || fallback;
 }
 
+/** Returns true when the goal's status is OnHold. */
+export function isOnHold(goal: Pick<Goal, "status">): boolean {
+  return goal.status === ItemStatus.OnHold;
+}
+
 export function goalToString(
   goal: Goal | undefined
 ): string {
