@@ -1,25 +1,53 @@
-import { render, screen, within } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi } from "vitest"
 import { GoalPicker } from "@/components/ui/coaching-sessions/goal-picker"
 import { createMockGoal } from "../../../test-utils"
 import { ItemStatus } from "@/types/general"
+import { DateTime } from "ts-luxon"
 
-const activeGoal1 = createMockGoal({
-  id: "goal-1",
+const now = DateTime.now()
+
+// NotStarted goals — varied created_at for recency grouping
+const notStartedGoal1 = createMockGoal({
+  id: "goal-ns-1",
   title: "Build public speaking confidence",
-  status: ItemStatus.InProgress,
+  status: ItemStatus.NotStarted,
+  created_at: now.minus({ days: 1 }),
 })
 
-const activeGoal2 = createMockGoal({
-  id: "goal-2",
+const notStartedGoal2 = createMockGoal({
+  id: "goal-ns-2",
   title: "Develop delegation skills",
-  status: ItemStatus.InProgress,
+  status: ItemStatus.NotStarted,
+  created_at: now.minus({ days: 2 }),
 })
 
-const activeGoal3 = createMockGoal({
-  id: "goal-3",
+const notStartedGoal3 = createMockGoal({
+  id: "goal-ns-3",
   title: "Improve technical leadership",
+  status: ItemStatus.NotStarted,
+  created_at: now.minus({ days: 3 }),
+})
+
+const notStartedGoal4 = createMockGoal({
+  id: "goal-ns-4",
+  title: "Master conflict resolution",
+  status: ItemStatus.NotStarted,
+  created_at: now.minus({ days: 10 }),
+})
+
+const notStartedGoal5 = createMockGoal({
+  id: "goal-ns-5",
+  title: "Strengthen stakeholder communication",
+  status: ItemStatus.NotStarted,
+  created_at: now.minus({ days: 20 }),
+})
+
+// InProgress goals (should NOT appear in the available list)
+const inProgressGoal = createMockGoal({
+  id: "goal-ip-1",
+  title: "Active goal already in progress",
   status: ItemStatus.InProgress,
 })
 
@@ -29,13 +57,21 @@ const onHoldGoal = createMockGoal({
   status: ItemStatus.WontDo,
 })
 
-const allGoals = [activeGoal1, activeGoal2, activeGoal3, onHoldGoal]
+const allGoals = [
+  notStartedGoal1,
+  notStartedGoal2,
+  notStartedGoal3,
+  notStartedGoal4,
+  notStartedGoal5,
+  inProgressGoal,
+  onHoldGoal,
+]
 
 describe("GoalPicker", () => {
   const defaultProps = {
-    linkedGoalIds: new Set(["goal-1"]),
+    linkedGoalIds: new Set(["goal-ip-1"]),
     allGoals,
-    linkedGoals: [activeGoal1],
+    linkedGoals: [inProgressGoal],
     onLink: vi.fn(),
     onCreateAndLink: vi.fn(),
     onCreateAndSwap: vi.fn(),
@@ -45,7 +81,9 @@ describe("GoalPicker", () => {
   it("renders the 'Link goal' trigger button", () => {
     render(<GoalPicker {...defaultProps} />)
 
-    expect(screen.getByRole("button", { name: /link goal/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /link goal/i })
+    ).toBeInTheDocument()
   })
 
   it("opens popover on click and shows search input", async () => {
@@ -54,34 +92,68 @@ describe("GoalPicker", () => {
 
     await user.click(screen.getByRole("button", { name: /link goal/i }))
 
-    expect(screen.getByPlaceholderText(/search goals/i)).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText(/search goals/i)
+    ).toBeInTheDocument()
   })
 
-  it("lists available (unlinked) active goals sorted alphabetically", async () => {
+  it("shows NotStarted goals, not InProgress goals", async () => {
     const user = userEvent.setup()
     render(<GoalPicker {...defaultProps} />)
 
     await user.click(screen.getByRole("button", { name: /link goal/i }))
 
-    // goal-2 "Develop delegation skills" and goal-3 "Improve technical leadership" are unlinked
-    // They should appear alphabetically: Develop... before Improve...
-    const items = screen.getAllByRole("option")
-    const activeGoalTexts = items
-      .map((item) => item.textContent)
-      .filter(
-        (text) =>
-          text?.includes("Develop") || text?.includes("Improve technical")
-      )
+    expect(
+      screen.getByText("Build public speaking confidence")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("Active goal already in progress")
+    ).not.toBeInTheDocument()
+  })
 
-    expect(activeGoalTexts).toHaveLength(2)
-    // "Develop delegation skills" should come before "Improve technical leadership"
-    const developIndex = items.findIndex((item) =>
-      item.textContent?.includes("Develop")
-    )
-    const improveIndex = items.findIndex((item) =>
-      item.textContent?.includes("Improve technical")
-    )
-    expect(developIndex).toBeLessThan(improveIndex)
+  it("shows the 3 most recent goals in 'Recent' group", async () => {
+    const user = userEvent.setup()
+    render(<GoalPicker {...defaultProps} />)
+
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+
+    expect(screen.getByText("Recent")).toBeInTheDocument()
+    expect(
+      screen.getByText("Build public speaking confidence")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Develop delegation skills")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Improve technical leadership")
+    ).toBeInTheDocument()
+  })
+
+  it("collapses older goals behind a 'Show more' toggle", async () => {
+    const user = userEvent.setup()
+    render(<GoalPicker {...defaultProps} />)
+
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+
+    // Older goals should not be visible initially
+    expect(
+      screen.queryByText("Master conflict resolution")
+    ).not.toBeInTheDocument()
+
+    // "Show N more" button
+    const showMoreButton = screen.getByRole("button", {
+      name: /show 2 more/i,
+    })
+    expect(showMoreButton).toBeInTheDocument()
+
+    await user.click(showMoreButton)
+
+    expect(
+      screen.getByText("Master conflict resolution")
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Strengthen stakeholder communication")
+    ).toBeInTheDocument()
   })
 
   it("lists on-hold goals in a separate group", async () => {
@@ -95,7 +167,7 @@ describe("GoalPicker", () => {
     ).toBeInTheDocument()
   })
 
-  it("calls onLink when a goal is selected (under limit)", async () => {
+  it("calls onLink when a goal is clicked", async () => {
     const user = userEvent.setup()
     const onLink = vi.fn()
     render(<GoalPicker {...defaultProps} onLink={onLink} />)
@@ -103,10 +175,10 @@ describe("GoalPicker", () => {
     await user.click(screen.getByRole("button", { name: /link goal/i }))
     await user.click(screen.getByText("Develop delegation skills"))
 
-    expect(onLink).toHaveBeenCalledWith("goal-2")
+    expect(onLink).toHaveBeenCalledWith("goal-ns-2")
   })
 
-  it("disables goal items when atLimit is true", async () => {
+  it("allows selecting goals even when atLimit is true (backend enforces)", async () => {
     const user = userEvent.setup()
     const onLink = vi.fn()
     render(<GoalPicker {...defaultProps} atLimit={true} onLink={onLink} />)
@@ -114,7 +186,7 @@ describe("GoalPicker", () => {
     await user.click(screen.getByRole("button", { name: /link goal/i }))
     await user.click(screen.getByText("Develop delegation skills"))
 
-    expect(onLink).not.toHaveBeenCalled()
+    expect(onLink).toHaveBeenCalledWith("goal-ns-2")
   })
 
   it("shows 'Create new goal' button that expands create panel", async () => {
@@ -139,7 +211,9 @@ describe("GoalPicker", () => {
   it("calls onCreateAndLink on submit (under limit)", async () => {
     const user = userEvent.setup()
     const onCreateAndLink = vi.fn()
-    render(<GoalPicker {...defaultProps} onCreateAndLink={onCreateAndLink} />)
+    render(
+      <GoalPicker {...defaultProps} onCreateAndLink={onCreateAndLink} />
+    )
 
     await user.click(screen.getByRole("button", { name: /link goal/i }))
     await user.click(
@@ -147,10 +221,12 @@ describe("GoalPicker", () => {
     )
 
     const textarea = screen.getByPlaceholderText(/i want to/i)
-    await user.type(textarea, "Master conflict resolution")
-    await user.click(screen.getByRole("button", { name: /create & link/i }))
+    await user.type(textarea, "New goal from test")
+    await user.click(
+      screen.getByRole("button", { name: /create & link/i })
+    )
 
-    expect(onCreateAndLink).toHaveBeenCalledWith("Master conflict resolution")
+    expect(onCreateAndLink).toHaveBeenCalledWith("New goal from test")
   })
 
   it("shows context message and swap selector when at limit in create view", async () => {
@@ -158,8 +234,10 @@ describe("GoalPicker", () => {
     render(
       <GoalPicker
         {...defaultProps}
-        linkedGoalIds={new Set(["goal-1", "goal-2", "goal-3"])}
-        linkedGoals={[activeGoal1, activeGoal2, activeGoal3]}
+        linkedGoalIds={
+          new Set(["goal-ip-1", "goal-ns-1", "goal-ns-2"])
+        }
+        linkedGoals={[inProgressGoal, notStartedGoal1, notStartedGoal2]}
         atLimit={true}
       />
     )
@@ -180,8 +258,10 @@ describe("GoalPicker", () => {
     render(
       <GoalPicker
         {...defaultProps}
-        linkedGoalIds={new Set(["goal-1", "goal-2", "goal-3"])}
-        linkedGoals={[activeGoal1, activeGoal2, activeGoal3]}
+        linkedGoalIds={
+          new Set(["goal-ip-1", "goal-ns-1", "goal-ns-2"])
+        }
+        linkedGoals={[inProgressGoal, notStartedGoal1, notStartedGoal2]}
         atLimit={true}
         onCreateAndSwap={onCreateAndSwap}
       />
@@ -195,9 +275,8 @@ describe("GoalPicker", () => {
     const textarea = screen.getByPlaceholderText(/i want to/i)
     await user.type(textarea, "New important goal")
 
-    // Select a goal to swap
     await user.click(
-      screen.getByText("Build public speaking confidence")
+      screen.getByText("Active goal already in progress")
     )
 
     await user.click(
@@ -206,7 +285,7 @@ describe("GoalPicker", () => {
 
     expect(onCreateAndSwap).toHaveBeenCalledWith(
       "New important goal",
-      "goal-1"
+      "goal-ip-1"
     )
   })
 
@@ -219,7 +298,9 @@ describe("GoalPicker", () => {
       screen.getByRole("button", { name: /create new goal/i })
     )
 
-    const submitButton = screen.getByRole("button", { name: /create & link/i })
+    const submitButton = screen.getByRole("button", {
+      name: /create & link/i,
+    })
     expect(submitButton).toBeDisabled()
   })
 
@@ -237,5 +318,39 @@ describe("GoalPicker", () => {
     await user.click(screen.getByText(/back to search/i))
 
     expect(screen.queryByText("New goal")).not.toBeInTheDocument()
+  })
+
+  it("does not show 'Show more' when 3 or fewer NotStarted goals", async () => {
+    const user = userEvent.setup()
+    const fewGoals = [
+      notStartedGoal1,
+      notStartedGoal2,
+      notStartedGoal3,
+      onHoldGoal,
+    ]
+    render(<GoalPicker {...defaultProps} allGoals={fewGoals} />)
+
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+
+    expect(
+      screen.queryByRole("button", { name: /show.*more/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it("filters goals by search query", async () => {
+    const user = userEvent.setup()
+    render(<GoalPicker {...defaultProps} />)
+
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+
+    const searchInput = screen.getByPlaceholderText(/search goals/i)
+    await user.type(searchInput, "delegation")
+
+    expect(
+      screen.getByText("Develop delegation skills")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("Build public speaking confidence")
+    ).not.toBeInTheDocument()
   })
 })

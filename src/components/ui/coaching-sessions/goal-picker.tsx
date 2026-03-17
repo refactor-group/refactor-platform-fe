@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { Plus, Pause } from "lucide-react";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { Plus, Pause, ChevronDown, Search, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,14 +9,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { cn } from "@/components/lib/utils";
 import type { Goal } from "@/types/goal";
 import { goalTitle, DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
@@ -31,6 +23,7 @@ interface GoalPickerProps {
   onLink: (goalId: string) => void;
   onCreateAndLink: (title: string) => void;
   onCreateAndSwap: (title: string, swapGoalId: string) => void;
+  /** True when the relationship has max InProgress goals — affects create-panel swap flow only. */
   atLimit: boolean;
 }
 
@@ -47,15 +40,58 @@ export function GoalPicker({
   const [view, setView] = useState<PickerView>("search");
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [swapGoalId, setSwapGoalId] = useState<string | null>(null);
+  const [showAllGoals, setShowAllGoals] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
 
-  const availableGoals = allGoals
-    .filter((g) => !linkedGoalIds.has(g.id) && g.status === ItemStatus.InProgress)
-    .sort((a, b) => a.title.localeCompare(b.title));
+  const RECENT_COUNT = 3;
 
-  const onHoldGoals = allGoals
-    .filter((g) => g.status === ItemStatus.WontDo)
-    .sort((a, b) => a.title.localeCompare(b.title));
+  // Show NotStarted goals that aren't already linked to this session
+  const notStartedGoals = useMemo(
+    () =>
+      allGoals
+        .filter(
+          (g) =>
+            !linkedGoalIds.has(g.id) && g.status === ItemStatus.NotStarted
+        )
+        .sort(
+          (a, b) =>
+            new Date(String(b.created_at)).getTime() -
+            new Date(String(a.created_at)).getTime()
+        ),
+    [allGoals, linkedGoalIds]
+  );
+
+  const onHoldGoals = useMemo(
+    () =>
+      allGoals
+        .filter((g) => g.status === ItemStatus.WontDo)
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [allGoals]
+  );
+
+  // Filter all lists by search query
+  const filteredNotStarted = useMemo(() => {
+    if (!searchQuery.trim()) return notStartedGoals;
+    const q = searchQuery.toLowerCase();
+    return notStartedGoals.filter((g) =>
+      g.title.toLowerCase().includes(q)
+    );
+  }, [notStartedGoals, searchQuery]);
+
+  const filteredOnHold = useMemo(() => {
+    if (!searchQuery.trim()) return onHoldGoals;
+    const q = searchQuery.toLowerCase();
+    return onHoldGoals.filter((g) =>
+      g.title.toLowerCase().includes(q)
+    );
+  }, [onHoldGoals, searchQuery]);
+
+  const recentGoals = filteredNotStarted.slice(0, RECENT_COUNT);
+  const olderGoals = filteredNotStarted.slice(RECENT_COUNT);
+  const hasMoreGoals = olderGoals.length > 0;
+  const noResults =
+    filteredNotStarted.length === 0 && filteredOnHold.length === 0;
 
   const resetCreate = useCallback(() => {
     setView("search");
@@ -66,7 +102,11 @@ export function GoalPicker({
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       setOpen(nextOpen);
-      if (!nextOpen) resetCreate();
+      if (!nextOpen) {
+        resetCreate();
+        setShowAllGoals(false);
+        setSearchQuery("");
+      }
     },
     [resetCreate]
   );
@@ -87,7 +127,22 @@ export function GoalPicker({
       onCreateAndLink(title);
     }
     handleOpenChange(false);
-  }, [newGoalTitle, atLimit, swapGoalId, onCreateAndSwap, onCreateAndLink, handleOpenChange]);
+  }, [
+    newGoalTitle,
+    atLimit,
+    swapGoalId,
+    onCreateAndSwap,
+    onCreateAndLink,
+    handleOpenChange,
+  ]);
+
+  const handleGoalClick = useCallback(
+    (goalId: string) => {
+      onLink(goalId);
+      handleOpenChange(false);
+    },
+    [onLink, handleOpenChange]
+  );
 
   const isExpanded = view === "create";
 
@@ -118,70 +173,95 @@ export function GoalPicker({
               isExpanded ? "w-[248px] shrink-0" : "flex-1"
             )}
           >
-            <Command className="flex flex-col flex-1 min-h-0">
-              <CommandInput placeholder="Search goals..." className="h-9" />
-              <CommandList className="max-h-[220px]">
-                <CommandEmpty>No goals found.</CommandEmpty>
-                {availableGoals.length > 0 && (
-                  <CommandGroup heading="Active Goals">
-                    {availableGoals.map((goal) => (
-                      <CommandItem
-                        key={goal.id}
-                        value={goal.title}
-                        onSelect={() => {
-                          if (!atLimit) {
-                            onLink(goal.id);
-                            handleOpenChange(false);
-                          }
-                        }}
-                        className={cn(
-                          "flex items-center gap-2.5 py-2",
-                          atLimit && "opacity-40 cursor-not-allowed"
-                        )}
-                      >
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-800/50 shrink-0" />
-                        <span className="truncate flex-1">
-                          {goalTitle(goal)}
-                        </span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
-                {onHoldGoals.length > 0 && (
-                  <CommandGroup heading="On Hold">
-                    {onHoldGoals.map((goal) => (
-                      <CommandItem
-                        key={goal.id}
-                        value={goal.title}
-                        onSelect={() => {
-                          if (!atLimit) {
-                            onLink(goal.id);
-                            handleOpenChange(false);
-                          }
-                        }}
-                        className={cn(
-                          "flex items-center gap-2.5 py-2",
-                          atLimit && "opacity-40 cursor-not-allowed"
-                        )}
-                      >
-                        <Pause className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                        <span className="truncate flex-1 text-muted-foreground">
-                          {goalTitle(goal)}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="text-[9px] h-4 px-1.5 border-border/50 text-muted-foreground/50"
-                        >
-                          On Hold
-                        </Badge>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </Command>
+            {/* Search input */}
+            <div className="flex items-center border-b px-3">
+              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+              <input
+                type="text"
+                placeholder="Search goals..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
 
-            {/* Create button outside Command so cmdk doesn't swallow the click */}
+            {/* Hint */}
+            <p className="px-3 py-1.5 text-[11px] text-muted-foreground/50">
+              Select a recent goal or create a new one to link to this session
+            </p>
+
+            {/* Goal list */}
+            <div className="max-h-[220px] overflow-y-auto p-1">
+              {noResults && (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  No goals found.
+                </p>
+              )}
+
+              {recentGoals.length > 0 && (
+                <GoalGroup heading="Recent">
+                  {recentGoals.map((goal) => (
+                    <GoalListItem
+                      key={goal.id}
+                      goal={goal}
+                      onClick={() => handleGoalClick(goal.id)}
+                    />
+                  ))}
+                </GoalGroup>
+              )}
+
+              {hasMoreGoals && showAllGoals && (
+                <GoalGroup heading="More goals">
+                  {olderGoals.map((goal) => (
+                    <GoalListItem
+                      key={goal.id}
+                      goal={goal}
+                      onClick={() => handleGoalClick(goal.id)}
+                    />
+                  ))}
+                </GoalGroup>
+              )}
+
+              {filteredOnHold.length > 0 && (
+                <GoalGroup heading="On Hold">
+                  {filteredOnHold.map((goal) => (
+                    <button
+                      key={goal.id}
+                      type="button"
+                      onClick={() => handleGoalClick(goal.id)}
+                      className="flex items-center gap-2.5 py-2 px-2 w-full text-left rounded-sm text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
+                    >
+                      <Pause className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                      <span className="truncate flex-1 text-muted-foreground">
+                        {goalTitle(goal)}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] h-4 px-1.5 border-border/50 text-muted-foreground/50"
+                      >
+                        On Hold
+                      </Badge>
+                    </button>
+                  ))}
+                </GoalGroup>
+              )}
+            </div>
+
+            {/* Show more toggle */}
+            {hasMoreGoals && !showAllGoals && (
+              <div className="px-1.5 py-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAllGoals(true)}
+                  className="flex items-center gap-1.5 w-full rounded-md px-2 py-1 text-[11px] text-muted-foreground/60 hover:text-foreground hover:bg-muted/30 transition-colors"
+                >
+                  <ChevronDown className="h-3 w-3" />
+                  <span>Show {olderGoals.length} more</span>
+                </button>
+              </div>
+            )}
+
+            {/* Create button */}
             <div className="border-t border-border/30 px-1.5 py-1.5">
               <button
                 type="button"
@@ -277,9 +357,6 @@ export function GoalPicker({
                   </>
                 ) : (
                   <>
-                    <p className="text-[11px] text-muted-foreground/50 mt-2">
-                      Will be linked to this session automatically.
-                    </p>
                     <Button
                       size="sm"
                       className="w-full mt-3 h-8 text-xs"
@@ -304,5 +381,44 @@ export function GoalPicker({
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+// ── Helper components ───────────────────────────────────────────────────
+
+function GoalGroup({
+  heading,
+  children,
+}: {
+  heading: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden p-1">
+      <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+        {heading}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function GoalListItem({
+  goal,
+  onClick,
+}: {
+  goal: Goal;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex items-center gap-2.5 py-2 px-2 w-full text-left rounded-sm text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-800/50 shrink-0" />
+      <span className="truncate flex-1">{goalTitle(goal)}</span>
+      <Link className="h-3 w-3 shrink-0 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors" />
+    </button>
   );
 }
