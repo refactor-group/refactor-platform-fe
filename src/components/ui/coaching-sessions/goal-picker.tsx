@@ -81,6 +81,7 @@ export function GoalPicker({
   const hasMoreGoals = olderGoals.length > 0;
   const noResults = filteredGoals.length === 0;
 
+
   const resetCreate = useCallback(() => {
     setView("search");
     setNewGoalTitle("");
@@ -230,7 +231,8 @@ export function GoalPicker({
 
             {/* Goal list */}
             <div className={cn(
-              "max-h-[220px] overflow-y-auto p-1",
+              "overflow-y-auto p-1",
+              showAllGoals ? "max-h-[320px]" : "max-h-[220px]",
               atLimit && !swapGoalId && "opacity-40 pointer-events-none"
             )}>
               {noResults && (
