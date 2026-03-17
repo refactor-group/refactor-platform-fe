@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useOAuthConnection } from "@/lib/api/oauth-connection";
 import { Provider } from "@/types/provider";
 import { GoogleIntegrationSection } from "@/components/ui/settings/google-integration-section";
+import { ZoomIntegrationSection } from "@/components/ui/settings/zoom-integration-section";
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   access_denied: "Google account connection was cancelled.",
@@ -44,6 +45,7 @@ export default function IntegrationsPage() {
         </p>
       </div>
       <GoogleIntegrationSection />
+      <ZoomIntegrationSection />
     </div>
   );
 }

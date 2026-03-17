@@ -72,3 +72,26 @@ export const useOAuthConnection = (provider: OAuthProvider) => {
     refresh: mutate,
   };
 };
+
+/**
+ * SWR hook for fetching all OAuth connections.
+ *
+ */
+export const useOAuthConnections = () => {
+  const { data, error, isLoading, mutate } = useSWR(
+    `${OAUTH_CONNECTIONS_URL}`,
+    () => OAuthConnectionApi.list(),
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+
+  return {
+    connections: data ?? null,
+    isLoading,
+    isError: error,
+    refresh: mutate,
+  };
+};

@@ -16,16 +16,18 @@ import {
   useCoachingSessionList,
   useCoachingSessionMutation,
 } from "@/lib/api/coaching-sessions";
+import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { defaultCoachingSession, DEFAULT_MEETING_PROVIDER } from "@/types/coaching-session";
+import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { EntityApiError } from "@/types/entity-api-error";
 import { toast } from "sonner";
+import { Provider } from "@/types/provider";
 
 export type CoachingSessionFormMode = "create" | "update";
 
@@ -59,6 +61,7 @@ export default function CoachingSessionForm({
   // Fetch relationships to populate coachee selector (only needed in create mode)
   const { relationships, isLoading: isLoadingRelationships } =
     useCoachingRelationshipList(currentOrganizationId ?? "");
+  const { connections, isLoading: isLoadingOauthConnections } = useOAuthConnections();
 
   // Filter to relationships where current user is the coach
   const coacheeRelationships = useMemo(() => {
@@ -70,6 +73,8 @@ export default function CoachingSessionForm({
   const [selectedRelationshipId, setSelectedRelationshipId] = useState<string>(
     () => existingSession?.coaching_relationship_id ?? currentCoachingRelationshipId ?? ""
   );
+
+  const [selectedProvider, setSelectedProvider] = useState<string>("");
 
   // State for preventing duplicate submissions (Issue #207)
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,7 +114,7 @@ export default function CoachingSessionForm({
       ...defaultCoachingSession(),
       coaching_relationship_id: relationshipId,
       date: dateTime,
-      provider: DEFAULT_MEETING_PROVIDER,
+      provider: selectedProvider ? selectedProvider as Provider : undefined
     };
     await createCoachingSession(newCoachingSession);
   };
@@ -240,6 +245,27 @@ export default function CoachingSessionForm({
             disabled={isSubmitting}
           />
         </div>
+        {(connections?.length && connections.length !== 0) ? (
+          <div className="space-y-2">
+            <Label htmlFor="provider-select">Select Meeting Provider</Label>
+            <Select
+              value={selectedProvider}
+              onValueChange={setSelectedProvider}
+              disabled={isLoadingOauthConnections || isSubmitting}
+            >
+              <SelectTrigger id="provider-select">
+                <SelectValue placeholder="Select a provider" />
+              </SelectTrigger>
+              <SelectContent>
+                {connections.map((connection) => (
+                    <SelectItem key={connection.provider} value={connection.provider}>
+                      {connection.provider}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ): <></>}
         <Button type="submit" disabled={!canSubmit}>
           {isSubmitting && <Spinner className="mr-2" />}
           {buttonText}
