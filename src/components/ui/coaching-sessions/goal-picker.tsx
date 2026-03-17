@@ -434,7 +434,10 @@ function GoalListItem({
       onClick={onClick}
       className="group flex items-center gap-2.5 py-2 px-2 w-full text-left rounded-sm text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-emerald-800/50 shrink-0" />
+      <span className={cn(
+        "h-1.5 w-1.5 rounded-full shrink-0",
+        isOnHold(goal) ? "bg-amber-500/50" : "bg-emerald-800/50"
+      )} />
       <span className="truncate flex-1">{goalTitle(goal)}</span>
       {isOnHold(goal) && (
         <Badge

@@ -196,9 +196,32 @@ export function GoalDrawer({
 
   const handleLink = useCallback(
     async (goalId: string) => {
+      // If the goal is OnHold, transition it to InProgress before linking
+      const goal = allGoals.find((g) => g.id === goalId);
+      if (goal && goal.status === ItemStatus.OnHold) {
+        try {
+          await updateGoal(goalId, { ...goal, status: ItemStatus.InProgress });
+        } catch (err) {
+          const limitInfo = extractActiveGoalLimitError(err);
+          if (limitInfo) {
+            toast({
+              variant: "destructive",
+              title: "Goal limit reached",
+              description: `You already have ${limitInfo.maxActiveGoals} goals in progress. Please complete or change the status of one before starting another.`,
+            });
+          } else {
+            console.error("Failed to activate goal:", err);
+          }
+          return;
+        }
+      }
+
       const result = await GoalApi.linkToSession(coachingSessionId, goalId);
       result.match(
-        () => refreshSessionGoals(),
+        () => {
+          refreshSessionGoals();
+          refreshAllGoals();
+        },
         (err) => {
           console.error("Failed to link goal:", err);
           toast({
@@ -209,7 +232,7 @@ export function GoalDrawer({
         }
       );
     },
-    [coachingSessionId, refreshSessionGoals]
+    [coachingSessionId, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleUnlink = useCallback(

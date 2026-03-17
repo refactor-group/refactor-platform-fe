@@ -189,6 +189,90 @@ describe("GoalDrawer", () => {
     expect(screen.queryByText(/\/3/)).not.toBeInTheDocument()
   })
 
+  it("linking an OnHold goal transitions it to InProgress", async () => {
+    const user = userEvent.setup()
+    const onHoldGoal = createMockGoal({
+      id: "goal-hold",
+      title: "Paused goal",
+      status: ItemStatus.OnHold,
+    })
+    const mockOkResult = {
+      isOk: () => true,
+      isErr: () => false,
+      match: (ok: () => void) => ok(),
+    }
+    vi.mocked(GoalApi.linkToSession).mockResolvedValue(mockOkResult as any)
+    mockUpdate.mockResolvedValue({ ...onHoldGoal, status: ItemStatus.InProgress })
+
+    setupMocks({
+      sessionGoals: [],
+      allGoals: [onHoldGoal],
+    })
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Open picker and click the on-hold goal
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+    await user.click(screen.getByText("Paused goal"))
+
+    // Should transition status to InProgress before linking
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "goal-hold",
+      expect.objectContaining({ status: ItemStatus.InProgress })
+    )
+
+    // Then should link to session
+    expect(GoalApi.linkToSession).toHaveBeenCalledWith(
+      "session-1",
+      "goal-hold"
+    )
+  })
+
+  it("linking a NotStarted goal does not change its status", async () => {
+    const user = userEvent.setup()
+    const notStartedGoal = createMockGoal({
+      id: "goal-ns",
+      title: "Fresh goal",
+      status: ItemStatus.NotStarted,
+    })
+    const mockOkResult = {
+      isOk: () => true,
+      isErr: () => false,
+      match: (ok: () => void) => ok(),
+    }
+    vi.mocked(GoalApi.linkToSession).mockResolvedValue(mockOkResult as any)
+
+    setupMocks({
+      sessionGoals: [],
+      allGoals: [notStartedGoal],
+    })
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Open picker and click the goal
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+    await user.click(screen.getByText("Fresh goal"))
+
+    // Should NOT call updateGoal — NotStarted stays as-is
+    expect(mockUpdate).not.toHaveBeenCalled()
+
+    // Should link to session
+    expect(GoalApi.linkToSession).toHaveBeenCalledWith(
+      "session-1",
+      "goal-ns"
+    )
+  })
+
   it("unlink only removes join table row, does not change goal status", async () => {
     const user = userEvent.setup()
     const mockUnlinkResult = { isOk: () => true, isErr: () => false, match: (ok: () => void) => ok() }
