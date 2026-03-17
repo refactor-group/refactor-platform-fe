@@ -280,7 +280,16 @@ export function GoalDrawer({
         }
 
         // 2. Unlink the swapped goal
-        await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
+        const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
+        if (unlinkResult.isErr()) {
+          console.error("Failed to unlink goal during swap:", unlinkResult.error);
+          toast({
+            variant: "destructive",
+            title: "Failed to swap goal",
+            description: unlinkResult.error.message,
+          });
+          return;
+        }
 
         // 3. Create the new goal (backend auto-links via created_in_session_id)
         const newGoal = defaultGoal();
@@ -326,10 +335,28 @@ export function GoalDrawer({
         }
 
         // 2. Unlink the swapped goal
-        await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
+        const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
+        if (unlinkResult.isErr()) {
+          console.error("Failed to unlink goal during swap:", unlinkResult.error);
+          toast({
+            variant: "destructive",
+            title: "Failed to swap goal",
+            description: unlinkResult.error.message,
+          });
+          return;
+        }
 
         // 3. Link the replacement goal
-        await GoalApi.linkToSession(coachingSessionId, newGoalId);
+        const linkResult = await GoalApi.linkToSession(coachingSessionId, newGoalId);
+        if (linkResult.isErr()) {
+          console.error("Failed to link replacement goal:", linkResult.error);
+          toast({
+            variant: "destructive",
+            title: "Failed to link replacement goal",
+            description: linkResult.error.message,
+          });
+          return;
+        }
 
         refreshSessionGoals();
         refreshAllGoals();
