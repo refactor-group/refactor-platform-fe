@@ -60,7 +60,7 @@ export function GoalChip({
                 </svg>
               </div>
             )}
-            <span className="font-medium text-[13px] truncate max-w-[180px]">
+            <span className="font-medium text-[13px] truncate max-w-[180px] md:max-w-[260px] lg:max-w-[360px]">
               {goalTitle(goal)}
             </span>
             <button
