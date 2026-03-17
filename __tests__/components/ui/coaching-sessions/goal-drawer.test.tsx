@@ -188,4 +188,93 @@ describe("GoalDrawer", () => {
 
     expect(screen.queryByText(/\/3/)).not.toBeInTheDocument()
   })
+
+  it("unlink only removes join table row, does not change goal status", async () => {
+    const user = userEvent.setup()
+    const mockUnlinkResult = { isOk: () => true, isErr: () => false, match: (ok: () => void) => ok() }
+    vi.mocked(GoalApi.unlinkFromSession).mockResolvedValue(mockUnlinkResult as any)
+    setupMocks()
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Click the X button on the goal chip
+    const unlinkButton = screen.getByRole("button", {
+      name: /unlink improve technical leadership/i,
+    })
+    await user.click(unlinkButton)
+
+    // Should call unlinkFromSession with the correct IDs
+    expect(GoalApi.unlinkFromSession).toHaveBeenCalledWith(
+      "session-1",
+      "goal-1"
+    )
+
+    // Should NOT call updateGoal — status must remain unchanged
+    expect(mockUpdate).not.toHaveBeenCalled()
+
+    // Should refresh session goals after successful unlink
+    expect(mockRefreshSession).toHaveBeenCalled()
+  })
+
+  it("swap changes goal status to OnHold before unlinking", async () => {
+    const user = userEvent.setup()
+    const goal3 = createMockGoal({
+      id: "goal-3",
+      title: "Develop delegation skills",
+      status: ItemStatus.InProgress,
+    })
+    const mockOkResult = { isOk: () => true, isErr: () => false, match: (ok: () => void) => ok() }
+    vi.mocked(GoalApi.unlinkFromSession).mockResolvedValue(mockOkResult as any)
+    vi.mocked(GoalApi.linkToSession).mockResolvedValue(mockOkResult as any)
+    mockUpdate.mockResolvedValue(goal1)
+    mockCreate.mockResolvedValue(createMockGoal({ title: "Replacement goal" }))
+
+    setupMocks({
+      sessionGoals: [goal1, goal2, goal3],
+      allGoals: [goal1, goal2, goal3],
+    })
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // At limit (3/3) — open picker and go to create flow
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+    await user.click(screen.getByRole("button", { name: /create new goal/i }))
+
+    const textarea = screen.getByPlaceholderText(/i want to/i)
+    await user.type(textarea, "Replacement goal")
+
+    // Select swap target in create panel — these are the linked goals
+    // shown inside the create form's swap selector
+    const swapTargets = screen.getAllByText("Improve technical leadership")
+    await user.click(swapTargets[swapTargets.length - 1])
+
+    await user.click(screen.getByRole("button", { name: /create & swap/i }))
+
+    // Should call updateGoal to change status to OnHold
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "goal-1",
+      expect.objectContaining({ status: ItemStatus.OnHold })
+    )
+
+    // Should call unlinkFromSession for the swapped goal
+    expect(GoalApi.unlinkFromSession).toHaveBeenCalledWith(
+      "session-1",
+      "goal-1"
+    )
+
+    // Should create the new goal
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Replacement goal" })
+    )
+  })
 })
