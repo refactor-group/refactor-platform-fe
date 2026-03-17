@@ -176,6 +176,11 @@ export function isOnHold(goal: Pick<Goal, "status">): boolean {
   return goal.status === ItemStatus.OnHold;
 }
 
+/** Returns true when the goal's status is InProgress. */
+export function isInProgress(goal: Pick<Goal, "status">): boolean {
+  return goal.status === ItemStatus.InProgress;
+}
+
 export function goalToString(
   goal: Goal | undefined
 ): string {
