@@ -1,7 +1,8 @@
 // Interacts with the goal endpoints
 
+import { ResultAsync } from "neverthrow";
 import { siteConfig } from "@/site.config";
-import { Id } from "@/types/general";
+import { Id, EntityApiError } from "@/types/general";
 import {
   Goal,
   defaultGoal,
@@ -130,6 +131,43 @@ export const GoalApi = {
   ): Promise<Goal> => {
     throw new Error("Delete nested operation not implemented");
   },
+
+  /**
+   * Links an existing goal to a coaching session via the join table.
+   * Sends POST /coaching_sessions/{sessionId}/goals with { goal_id }.
+   */
+  linkToSession: (
+    coachingSessionId: Id,
+    goalId: Id
+  ): ResultAsync<void, EntityApiError> =>
+    ResultAsync.fromPromise(
+      EntityApi.createFn<{ goal_id: Id }, unknown>(
+        `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`,
+        { goal_id: goalId }
+      ).then(() => undefined),
+      (e) =>
+        e instanceof EntityApiError
+          ? e
+          : new EntityApiError("POST", `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`, e as Error)
+    ),
+
+  /**
+   * Unlinks a goal from a coaching session via the join table.
+   * Sends DELETE /coaching_sessions/{sessionId}/goals/{goalId}.
+   */
+  unlinkFromSession: (
+    coachingSessionId: Id,
+    goalId: Id
+  ): ResultAsync<void, EntityApiError> =>
+    ResultAsync.fromPromise(
+      EntityApi.deleteFn<null, unknown>(
+        `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals/${goalId}`
+      ).then(() => undefined),
+      (e) =>
+        e instanceof EntityApiError
+          ? e
+          : new EntityApiError("DELETE", `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals/${goalId}`, e as Error)
+    ),
 };
 
 /**

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { GoalApi, useGoalList, useGoalsBySession } from '@/lib/api/goals'
 import { EntityApi } from '@/lib/api/entity-api'
+import { EntityApiError } from '@/types/entity-api-error'
 import { renderHook } from '@testing-library/react'
 import { TestProviders } from '@/test-utils/providers'
 
@@ -194,5 +195,62 @@ describe('useGoalsBySession hook', () => {
 
     expect(result.current.goals).toEqual(mockGoals)
     expect(result.current.isLoading).toBe(false)
+  })
+})
+
+describe('GoalApi.linkToSession', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('sends POST to coaching_sessions/{id}/goals with goal_id body', async () => {
+    vi.mocked(EntityApi.createFn).mockResolvedValue({})
+
+    const result = await GoalApi.linkToSession('session-123', 'goal-456')
+
+    expect(result.isOk()).toBe(true)
+    expect(EntityApi.createFn).toHaveBeenCalledWith(
+      'http://localhost:3000/coaching_sessions/session-123/goals',
+      { goal_id: 'goal-456' }
+    )
+  })
+
+  it('returns err when API call fails', async () => {
+    const axiosError = new Error('Network error') as any
+    axiosError.isAxiosError = true
+    const apiError = new EntityApiError('POST', '/goals', axiosError)
+    vi.mocked(EntityApi.createFn).mockRejectedValue(apiError)
+
+    const result = await GoalApi.linkToSession('session-123', 'goal-456')
+
+    expect(result.isErr()).toBe(true)
+  })
+})
+
+describe('GoalApi.unlinkFromSession', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('sends DELETE to coaching_sessions/{id}/goals/{goalId}', async () => {
+    vi.mocked(EntityApi.deleteFn).mockResolvedValue({})
+
+    const result = await GoalApi.unlinkFromSession('session-123', 'goal-456')
+
+    expect(result.isOk()).toBe(true)
+    expect(EntityApi.deleteFn).toHaveBeenCalledWith(
+      'http://localhost:3000/coaching_sessions/session-123/goals/goal-456'
+    )
+  })
+
+  it('returns err when API call fails', async () => {
+    const axiosError = new Error('Network error') as any
+    axiosError.isAxiosError = true
+    const apiError = new EntityApiError('DELETE', '/goals', axiosError)
+    vi.mocked(EntityApi.deleteFn).mockRejectedValue(apiError)
+
+    const result = await GoalApi.unlinkFromSession('session-123', 'goal-456')
+
+    expect(result.isErr()).toBe(true)
   })
 })
