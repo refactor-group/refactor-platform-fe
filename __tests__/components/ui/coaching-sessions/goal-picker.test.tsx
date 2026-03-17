@@ -75,6 +75,7 @@ describe("GoalPicker", () => {
     onLink: vi.fn(),
     onCreateAndLink: vi.fn(),
     onCreateAndSwap: vi.fn(),
+    onSwapAndLink: vi.fn(),
     atLimit: false,
   }
 
@@ -178,15 +179,51 @@ describe("GoalPicker", () => {
     expect(onLink).toHaveBeenCalledWith("goal-ns-2")
   })
 
-  it("allows selecting goals even when atLimit is true (backend enforces)", async () => {
+  it("shows swap selector when atLimit, disables goal list until swap target selected", async () => {
     const user = userEvent.setup()
-    const onLink = vi.fn()
-    render(<GoalPicker {...defaultProps} atLimit={true} onLink={onLink} />)
+    render(
+      <GoalPicker
+        {...defaultProps}
+        linkedGoalIds={new Set(["goal-ip-1", "goal-ns-1", "goal-ns-2"])}
+        linkedGoals={[inProgressGoal, notStartedGoal1, notStartedGoal2]}
+        atLimit={true}
+      />
+    )
 
     await user.click(screen.getByRole("button", { name: /link goal/i }))
-    await user.click(screen.getByText("Develop delegation skills"))
 
-    expect(onLink).toHaveBeenCalledWith("goal-ns-2")
+    // Swap selector should be shown with linked goals
+    expect(screen.getByText(/slots used/i)).toBeInTheDocument()
+    expect(screen.getByText("Active goal already in progress")).toBeInTheDocument()
+
+    // "Create new goal" should still be available
+    expect(
+      screen.getByRole("button", { name: /create new goal/i })
+    ).toBeInTheDocument()
+  })
+
+  it("calls onSwapAndLink when swap target selected and goal clicked", async () => {
+    const user = userEvent.setup()
+    const onSwapAndLink = vi.fn()
+    render(
+      <GoalPicker
+        {...defaultProps}
+        linkedGoalIds={new Set(["goal-ip-1", "goal-ns-1", "goal-ns-2"])}
+        linkedGoals={[inProgressGoal, notStartedGoal1, notStartedGoal2]}
+        atLimit={true}
+        onSwapAndLink={onSwapAndLink}
+      />
+    )
+
+    await user.click(screen.getByRole("button", { name: /link goal/i }))
+
+    // Select a swap target
+    await user.click(screen.getByText("Active goal already in progress"))
+
+    // Now select a replacement goal
+    await user.click(screen.getByText("Improve technical leadership"))
+
+    expect(onSwapAndLink).toHaveBeenCalledWith("goal-ns-3", "goal-ip-1")
   })
 
   it("shows 'Create new goal' button that expands create panel", async () => {
@@ -252,7 +289,7 @@ describe("GoalPicker", () => {
     ).toBeInTheDocument()
   })
 
-  it("calls onCreateAndSwap on submit when at limit with swap selected", async () => {
+  it("calls onCreateAndSwap on submit when at limit with swap selected in create panel", async () => {
     const user = userEvent.setup()
     const onCreateAndSwap = vi.fn()
     render(
@@ -275,9 +312,10 @@ describe("GoalPicker", () => {
     const textarea = screen.getByPlaceholderText(/i want to/i)
     await user.type(textarea, "New important goal")
 
-    await user.click(
-      screen.getByText("Active goal already in progress")
-    )
+    // The linked goals appear in both the left-panel swap selector and
+    // the create-panel swap selector — click the one in the create panel (last)
+    const matches = screen.getAllByText("Active goal already in progress")
+    await user.click(matches[matches.length - 1])
 
     await user.click(
       screen.getByRole("button", { name: /create & swap/i })

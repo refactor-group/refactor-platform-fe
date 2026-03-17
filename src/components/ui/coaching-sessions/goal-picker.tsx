@@ -23,7 +23,8 @@ interface GoalPickerProps {
   onLink: (goalId: string) => void;
   onCreateAndLink: (title: string) => void;
   onCreateAndSwap: (title: string, swapGoalId: string) => void;
-  /** True when the relationship has max InProgress goals — affects create-panel swap flow only. */
+  onSwapAndLink: (newGoalId: string, swapGoalId: string) => void;
+  /** True when the session has max goals linked. */
   atLimit: boolean;
 }
 
@@ -34,6 +35,7 @@ export function GoalPicker({
   onLink,
   onCreateAndLink,
   onCreateAndSwap,
+  onSwapAndLink,
   atLimit,
 }: GoalPickerProps) {
   const [open, setOpen] = useState(false);
@@ -138,10 +140,16 @@ export function GoalPicker({
 
   const handleGoalClick = useCallback(
     (goalId: string) => {
-      onLink(goalId);
+      if (atLimit) {
+        // At session limit — need a swap target first
+        if (!swapGoalId) return;
+        onSwapAndLink(goalId, swapGoalId);
+      } else {
+        onLink(goalId);
+      }
       handleOpenChange(false);
     },
-    [onLink, handleOpenChange]
+    [atLimit, swapGoalId, onLink, onSwapAndLink, handleOpenChange]
   );
 
   const isExpanded = view === "create";
@@ -173,6 +181,46 @@ export function GoalPicker({
               isExpanded ? "w-[248px] shrink-0" : "flex-1"
             )}
           >
+            {/* Swap selector — shown when at session limit */}
+            {atLimit && (
+              <div className="border-b border-border/30 px-3 py-2.5">
+                <p className="text-[11px] text-muted-foreground/60 mb-2">
+                  All {DEFAULT_MAX_ACTIVE_GOALS} slots used. Select one to replace:
+                </p>
+                <div className="space-y-1">
+                  {linkedGoals.map((goal) => (
+                    <button
+                      key={goal.id}
+                      type="button"
+                      onClick={() => setSwapGoalId(goal.id)}
+                      className={cn(
+                        "flex items-center gap-2.5 w-full text-left rounded-md px-2 py-1.5 text-sm transition-all",
+                        swapGoalId === goal.id
+                          ? "bg-muted/60 text-foreground"
+                          : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "h-3 w-3 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                          swapGoalId === goal.id
+                            ? "border-foreground bg-foreground"
+                            : "border-muted-foreground/30"
+                        )}
+                      >
+                        {swapGoalId === goal.id && (
+                          <div className="h-1.5 w-1.5 rounded-full bg-background" />
+                        )}
+                      </div>
+                      <span className="truncate flex-1">
+                        {goalTitle(goal)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Search input */}
             <div className="flex items-center border-b px-3">
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
@@ -187,11 +235,18 @@ export function GoalPicker({
 
             {/* Hint */}
             <p className="px-3 py-1.5 text-[11px] text-muted-foreground/50">
-              Select a recent goal or create a new one to link to this session
+              {atLimit
+                ? swapGoalId
+                  ? "Now select a replacement goal or create a new one"
+                  : "Select a goal above to replace, then choose its replacement"
+                : "Select a recent goal or create a new one to link to this session"}
             </p>
 
             {/* Goal list */}
-            <div className="max-h-[220px] overflow-y-auto p-1">
+            <div className={cn(
+              "max-h-[220px] overflow-y-auto p-1",
+              atLimit && !swapGoalId && "opacity-40 pointer-events-none"
+            )}>
               {noResults && (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   No goals found.
@@ -248,7 +303,7 @@ export function GoalPicker({
             </div>
 
             {/* Show more toggle */}
-            {hasMoreGoals && !showAllGoals && (
+            {hasMoreGoals && !showAllGoals && !(atLimit && !swapGoalId) && (
               <div className="px-1.5 py-1">
                 <button
                   type="button"

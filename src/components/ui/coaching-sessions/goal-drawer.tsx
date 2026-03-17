@@ -313,6 +313,44 @@ export function GoalDrawer({
     ]
   );
 
+  const handleSwapAndLink = useCallback(
+    async (newGoalId: string, swapGoalId: string) => {
+      try {
+        // 1. Put the swapped goal on hold
+        const swapGoal = allGoals.find((g) => g.id === swapGoalId);
+        if (swapGoal) {
+          await updateGoal(swapGoalId, {
+            ...swapGoal,
+            status: ItemStatus.WontDo,
+          });
+        }
+
+        // 2. Unlink the swapped goal
+        await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
+
+        // 3. Link the replacement goal
+        await GoalApi.linkToSession(coachingSessionId, newGoalId);
+
+        refreshSessionGoals();
+        refreshAllGoals();
+      } catch (err) {
+        console.error("Failed to swap and link goal:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to swap goal",
+          description: "An error occurred while swapping goals.",
+        });
+      }
+    },
+    [
+      allGoals,
+      coachingSessionId,
+      updateGoal,
+      refreshSessionGoals,
+      refreshAllGoals,
+    ]
+  );
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       {/* Goal bar — inset style */}
@@ -344,6 +382,7 @@ export function GoalDrawer({
             onLink={handleLink}
             onCreateAndLink={handleCreateAndLink}
             onCreateAndSwap={handleCreateAndSwap}
+            onSwapAndLink={handleSwapAndLink}
             atLimit={atLimit}
           />
         </div>
