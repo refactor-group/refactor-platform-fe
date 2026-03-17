@@ -7,7 +7,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
 import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
-import { GoalContainer } from "@/components/ui/coaching-sessions/goal-container";
+import { GoalDrawer } from "@/components/ui/coaching-sessions/goal-drawer";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
@@ -136,7 +136,14 @@ export default function CoachingSessionsPage() {
           <Separator />
         </div>
 
-        <GoalContainer />
+        <div className="py-3 px-4">
+          {currentCoachingSessionId && currentCoachingRelationshipId && (
+            <GoalDrawer
+              coachingSessionId={currentCoachingSessionId}
+              coachingRelationshipId={currentCoachingRelationshipId}
+            />
+          )}
+        </div>
 
         <CoachingTabsContainer
           userId={userId}
