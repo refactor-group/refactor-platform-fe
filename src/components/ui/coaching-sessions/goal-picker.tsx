@@ -67,7 +67,7 @@ export function GoalPicker({
   const onHoldGoals = useMemo(
     () =>
       allGoals
-        .filter((g) => g.status === ItemStatus.WontDo)
+        .filter((g) => g.status === ItemStatus.OnHold)
         .sort((a, b) => a.title.localeCompare(b.title)),
     [allGoals]
   );

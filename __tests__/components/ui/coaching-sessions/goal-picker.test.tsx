@@ -54,7 +54,7 @@ const inProgressGoal = createMockGoal({
 const onHoldGoal = createMockGoal({
   id: "goal-hold",
   title: "Strengthen cross-team collaboration",
-  status: ItemStatus.WontDo,
+  status: ItemStatus.OnHold,
 })
 
 const allGoals = [
