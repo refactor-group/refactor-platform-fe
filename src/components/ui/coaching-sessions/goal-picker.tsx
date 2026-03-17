@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/components/lib/utils";
 import type { Goal } from "@/types/goal";
-import { goalTitle, DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
+import { goalTitle, isOnHold, DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
 
 type PickerView = "search" | "create";
@@ -48,13 +48,16 @@ export function GoalPicker({
 
   const RECENT_COUNT = 3;
 
-  // Show NotStarted goals that aren't already linked to this session
-  const notStartedGoals = useMemo(
+  // Show NotStarted and OnHold goals that aren't already linked to this session,
+  // sorted by recency in a single unified list
+  const availableGoals = useMemo(
     () =>
       allGoals
         .filter(
           (g) =>
-            !linkedGoalIds.has(g.id) && g.status === ItemStatus.NotStarted
+            !linkedGoalIds.has(g.id) &&
+            (g.status === ItemStatus.NotStarted ||
+              g.status === ItemStatus.OnHold)
         )
         .sort(
           (a, b) =>
@@ -64,36 +67,19 @@ export function GoalPicker({
     [allGoals, linkedGoalIds]
   );
 
-  const onHoldGoals = useMemo(
-    () =>
-      allGoals
-        .filter((g) => g.status === ItemStatus.OnHold)
-        .sort((a, b) => a.title.localeCompare(b.title)),
-    [allGoals]
-  );
-
-  // Filter all lists by search query
-  const filteredNotStarted = useMemo(() => {
-    if (!searchQuery.trim()) return notStartedGoals;
+  // Filter by search query
+  const filteredGoals = useMemo(() => {
+    if (!searchQuery.trim()) return availableGoals;
     const q = searchQuery.toLowerCase();
-    return notStartedGoals.filter((g) =>
+    return availableGoals.filter((g) =>
       g.title.toLowerCase().includes(q)
     );
-  }, [notStartedGoals, searchQuery]);
+  }, [availableGoals, searchQuery]);
 
-  const filteredOnHold = useMemo(() => {
-    if (!searchQuery.trim()) return onHoldGoals;
-    const q = searchQuery.toLowerCase();
-    return onHoldGoals.filter((g) =>
-      g.title.toLowerCase().includes(q)
-    );
-  }, [onHoldGoals, searchQuery]);
-
-  const recentGoals = filteredNotStarted.slice(0, RECENT_COUNT);
-  const olderGoals = filteredNotStarted.slice(RECENT_COUNT);
+  const recentGoals = filteredGoals.slice(0, RECENT_COUNT);
+  const olderGoals = filteredGoals.slice(RECENT_COUNT);
   const hasMoreGoals = olderGoals.length > 0;
-  const noResults =
-    filteredNotStarted.length === 0 && filteredOnHold.length === 0;
+  const noResults = filteredGoals.length === 0;
 
   const resetCreate = useCallback(() => {
     setView("search");
@@ -277,29 +263,6 @@ export function GoalPicker({
                 </GoalGroup>
               )}
 
-              {filteredOnHold.length > 0 && (
-                <GoalGroup heading="On Hold">
-                  {filteredOnHold.map((goal) => (
-                    <button
-                      key={goal.id}
-                      type="button"
-                      onClick={() => handleGoalClick(goal.id)}
-                      className="flex items-center gap-2.5 py-2 px-2 w-full text-left rounded-sm text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      <Pause className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                      <span className="truncate flex-1 text-muted-foreground">
-                        {goalTitle(goal)}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-[9px] h-4 px-1.5 border-border/50 text-muted-foreground/50"
-                      >
-                        On Hold
-                      </Badge>
-                    </button>
-                  ))}
-                </GoalGroup>
-              )}
             </div>
 
             {/* Show more toggle */}
@@ -473,6 +436,14 @@ function GoalListItem({
     >
       <span className="h-1.5 w-1.5 rounded-full bg-emerald-800/50 shrink-0" />
       <span className="truncate flex-1">{goalTitle(goal)}</span>
+      {isOnHold(goal) && (
+        <Badge
+          variant="outline"
+          className="text-[9px] h-4 px-1.5 border-border/50 text-muted-foreground/50 shrink-0"
+        >
+          On Hold
+        </Badge>
+      )}
       <Link className="h-3 w-3 shrink-0 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors" />
     </button>
   );

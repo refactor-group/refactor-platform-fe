@@ -55,6 +55,7 @@ const onHoldGoal = createMockGoal({
   id: "goal-hold",
   title: "Strengthen cross-team collaboration",
   status: ItemStatus.OnHold,
+  created_at: now.minus({ days: 30 }),
 })
 
 const allGoals = [
@@ -141,9 +142,9 @@ describe("GoalPicker", () => {
       screen.queryByText("Master conflict resolution")
     ).not.toBeInTheDocument()
 
-    // "Show N more" button
+    // "Show N more" button (ns-4, ns-5, on-hold = 3 older goals)
     const showMoreButton = screen.getByRole("button", {
-      name: /show 2 more/i,
+      name: /show 3 more/i,
     })
     expect(showMoreButton).toBeInTheDocument()
 
@@ -157,15 +158,22 @@ describe("GoalPicker", () => {
     ).toBeInTheDocument()
   })
 
-  it("lists on-hold goals in a separate group", async () => {
+  it("shows on-hold goals in the same list with an 'On Hold' badge", async () => {
     const user = userEvent.setup()
     render(<GoalPicker {...defaultProps} />)
 
     await user.click(screen.getByRole("button", { name: /link goal/i }))
 
+    // On-hold goal is in the collapsed "More goals" group — expand it
+    await user.click(screen.getByRole("button", { name: /show 3 more/i }))
+
+    // On-hold goal should appear in the list (not a separate group)
     expect(
       screen.getByText("Strengthen cross-team collaboration")
     ).toBeInTheDocument()
+
+    // Should have an "On Hold" badge
+    expect(screen.getByText("On Hold")).toBeInTheDocument()
   })
 
   it("calls onLink when a goal is clicked", async () => {
@@ -358,13 +366,12 @@ describe("GoalPicker", () => {
     expect(screen.queryByText("New goal")).not.toBeInTheDocument()
   })
 
-  it("does not show 'Show more' when 3 or fewer NotStarted goals", async () => {
+  it("does not show 'Show more' when 3 or fewer available goals", async () => {
     const user = userEvent.setup()
     const fewGoals = [
       notStartedGoal1,
       notStartedGoal2,
       notStartedGoal3,
-      onHoldGoal,
     ]
     render(<GoalPicker {...defaultProps} allGoals={fewGoals} />)
 
