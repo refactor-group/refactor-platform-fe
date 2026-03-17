@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useMemo } from "react";
-import { Plus, Pause, ChevronDown, Search, Link } from "lucide-react";
+import { Plus, Pause, ChevronDown, ChevronLeft, ChevronRight, Search, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,6 +9,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/components/lib/utils";
 import type { Goal } from "@/types/goal";
 import { goalTitle, isOnHold, isInProgress, DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
@@ -156,7 +162,7 @@ export function GoalPicker({
       <PopoverContent
         className={cn(
           "p-0 transition-all duration-200 ease-out",
-          isExpanded ? "w-[640px]" : "w-72"
+          isExpanded ? "w-[640px]" : "w-72 md:w-80 lg:w-96"
         )}
         align="start"
       >
@@ -296,6 +302,7 @@ export function GoalPicker({
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Create new goal</span>
+                {!isExpanded && <ChevronRight className="h-3.5 w-3.5 ml-auto text-muted-foreground/40" />}
               </button>
             </div>
           </div>
@@ -305,9 +312,19 @@ export function GoalPicker({
             <>
               <div className="w-px bg-border/30 shrink-0" />
               <div className="flex-1 p-4 min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-3">
-                  New goal
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    type="button"
+                    onClick={resetCreate}
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                    Back
+                  </button>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                    New goal
+                  </p>
+                </div>
 
                 <textarea
                   ref={titleInputRef}
@@ -388,13 +405,6 @@ export function GoalPicker({
                   </>
                 )}
 
-                <button
-                  type="button"
-                  onClick={resetCreate}
-                  className="w-full mt-2 text-[11px] text-muted-foreground/50 hover:text-foreground transition-colors py-1"
-                >
-                  &larr; Back to search
-                </button>
               </div>
             </>
           )}
@@ -430,34 +440,58 @@ function GoalListItem({
   goal: Goal;
   onClick: () => void;
 }) {
-  return (
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  const checkTruncation = useCallback(() => {
+    const el = textRef.current;
+    if (el) {
+      setIsTruncated(el.scrollWidth > el.clientWidth);
+    }
+  }, []);
+
+  const statusLabel = isOnHold(goal)
+    ? "On Hold"
+    : isInProgress(goal)
+      ? "In Progress"
+      : "Not Started";
+
+  const content = (
     <button
       type="button"
       onClick={onClick}
-      className="group flex items-center gap-2.5 py-2 px-2 w-full text-left rounded-sm text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
+      onMouseEnter={checkTruncation}
+      className="group flex items-start gap-2.5 py-2 px-2 w-full text-left rounded-sm text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
     >
       <span className={cn(
-        "h-1.5 w-1.5 rounded-full shrink-0",
+        "h-1.5 w-1.5 rounded-full shrink-0 mt-1.5",
         isOnHold(goal) ? "bg-amber-500/50" : "bg-emerald-800/50"
       )} />
-      <span className="truncate flex-1">{goalTitle(goal)}</span>
-      {isOnHold(goal) && (
-        <Badge
-          variant="outline"
-          className="text-[9px] h-4 px-1.5 border-border/50 text-muted-foreground/50 shrink-0"
-        >
-          On Hold
-        </Badge>
-      )}
-      {isInProgress(goal) && (
-        <Badge
-          variant="outline"
-          className="text-[9px] h-4 px-1.5 border-border/50 text-muted-foreground/50 shrink-0"
-        >
-          In Progress
-        </Badge>
-      )}
-      <Link className="h-3 w-3 shrink-0 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span ref={textRef} className="truncate flex-1">{goalTitle(goal)}</span>
+          <Link className="h-3 w-3 shrink-0 text-muted-foreground/0 group-hover:text-muted-foreground/40 transition-colors" />
+        </div>
+        <span className="text-[10px] text-muted-foreground/50">
+          {statusLabel}
+        </span>
+      </div>
     </button>
+  );
+
+  if (!isTruncated) return content;
+
+  return (
+    <TooltipProvider delayDuration={400}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {content}
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs max-w-[280px]">
+          <p className="font-medium">{goalTitle(goal)}</p>
+          <p className="text-muted-foreground mt-0.5">{statusLabel}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

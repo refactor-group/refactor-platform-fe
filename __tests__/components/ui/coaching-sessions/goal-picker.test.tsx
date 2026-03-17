@@ -403,7 +403,7 @@ describe("GoalPicker", () => {
     expect(submitButton).toBeDisabled()
   })
 
-  it("'Back to search' resets to search view", async () => {
+  it("'Back' button closes create panel and returns to goal list", async () => {
     const user = userEvent.setup()
     render(<GoalPicker {...defaultProps} />)
 
@@ -414,7 +414,7 @@ describe("GoalPicker", () => {
 
     expect(screen.getByText("New goal")).toBeInTheDocument()
 
-    await user.click(screen.getByText(/back to search/i))
+    await user.click(screen.getByText(/^back$/i))
 
     expect(screen.queryByText("New goal")).not.toBeInTheDocument()
   })
