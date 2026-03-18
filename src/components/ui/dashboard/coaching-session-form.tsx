@@ -61,7 +61,7 @@ export default function CoachingSessionForm({
   // Fetch relationships to populate coachee selector (only needed in create mode)
   const { relationships, isLoading: isLoadingRelationships } =
     useCoachingRelationshipList(currentOrganizationId ?? "");
-  const { connections, isLoading: isLoadingOauthConnections } = useOAuthConnections();
+  const { connections } = useOAuthConnections();
 
   // Filter to relationships where current user is the coach
   const coacheeRelationships = useMemo(() => {
@@ -74,7 +74,7 @@ export default function CoachingSessionForm({
     () => existingSession?.coaching_relationship_id ?? currentCoachingRelationshipId ?? ""
   );
 
-  const [selectedProvider, setSelectedProvider] = useState<string>("");
+  const activeProvider = connections?.[0]?.provider ?? null;
 
   // State for preventing duplicate submissions (Issue #207)
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,7 +114,7 @@ export default function CoachingSessionForm({
       ...defaultCoachingSession(),
       coaching_relationship_id: relationshipId,
       date: dateTime,
-      provider: selectedProvider ? selectedProvider as Provider : undefined
+      provider: activeProvider ? activeProvider as Provider : undefined
     };
     await createCoachingSession(newCoachingSession);
   };
@@ -245,27 +245,6 @@ export default function CoachingSessionForm({
             disabled={isSubmitting}
           />
         </div>
-        {(connections?.length && connections.length !== 0) ? (
-          <div className="space-y-2">
-            <Label htmlFor="provider-select">Select Meeting Provider</Label>
-            <Select
-              value={selectedProvider}
-              onValueChange={setSelectedProvider}
-              disabled={isLoadingOauthConnections || isSubmitting}
-            >
-              <SelectTrigger id="provider-select">
-                <SelectValue placeholder="Select a provider" />
-              </SelectTrigger>
-              <SelectContent>
-                {connections.map((connection) => (
-                    <SelectItem key={connection.provider} value={connection.provider}>
-                      {connection.provider}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ): <></>}
         <Button type="submit" disabled={!canSubmit}>
           {isSubmitting && <Spinner className="mr-2" />}
           {buttonText}
