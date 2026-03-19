@@ -7,17 +7,17 @@ import { useOAuthConnection } from "@/lib/api/oauth-connection";
 import { Provider } from "@/types/provider";
 import { MeetingIntegrationSection } from "@/components/ui/settings/meeting-integration-section";
 
-const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
-  access_denied: "Google account connection was cancelled.",
-  exchange_failed: "Failed to connect Google account. Please try again.",
-  invalid_state: "Authentication session expired. Please try again.",
-};
-
-const ZOOM_ERROR_MESSAGES: Record<string, string> = {
-  access_denied: "Zoom account connection was cancelled.",
-  exchange_failed: "Failed to connect Zoom account. Please try again.",
-  invalid_state: "Authentication session expired. Please try again.",
-};
+function getErrorMessage(provider: string, errorCode: string): string {
+  const messages: Record<string, string> = {
+    access_denied: `${provider} account connection was cancelled.`,
+    exchange_failed: `Failed to connect ${provider} account. Please try again.`,
+    invalid_state: "Authentication session expired. Please try again.",
+  };
+  return (
+    messages[errorCode] ??
+    `An unexpected error occurred connecting your ${provider} account.`
+  );
+}
 
 export default function IntegrationsPage() {
   const searchParams = useSearchParams();
@@ -36,20 +36,14 @@ export default function IntegrationsPage() {
       refreshGoogle();
       router.replace("/settings/integrations", { scroll: false });
     } else if (googleError) {
-      const message =
-        GOOGLE_ERROR_MESSAGES[googleError] ??
-        "An unexpected error occurred connecting your Google account.";
-      toast.error(message);
+      toast.error(getErrorMessage("Google", googleError));
       router.replace("/settings/integrations", { scroll: false });
     } else if (zoomConnected === "true") {
       toast.success("Zoom account connected successfully.");
       refreshZoom();
       router.replace("/settings/integrations", { scroll: false });
     } else if (zoomError) {
-      const message =
-        ZOOM_ERROR_MESSAGES[zoomError] ??
-        "An unexpected error occurred connecting your Zoom account.";
-      toast.error(message);
+      toast.error(getErrorMessage("Zoom", zoomError));
       router.replace("/settings/integrations", { scroll: false });
     }
   }, [searchParams, router, refreshGoogle, refreshZoom]);
