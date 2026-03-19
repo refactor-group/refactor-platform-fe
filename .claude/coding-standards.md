@@ -8,61 +8,17 @@ Prefer strict, explicit typings and clear nullability rules; don't auto-widen.
 
 - In TypeScript, lean on strict null checks and intentional nullability. Enable `strict: true` and `noImplicitAny`. Use exact types rather than permissive unions, and reserve `null`/`undefined` for truly absent states.
 
-- **Presence/absence — use `Option<T>`**: For values that are either present or absent (mirroring Rust's `Option<T>`), use the project-local `Option<T>` type from `@/types/option`. This provides `Some(val)` and `None` constructors with `.some` / `.none` discriminant checks and `.val` access.
+- Prefer discriminated unions and "presence" wrappers over sprinkling null: for example, `{ kind: "loaded", value: T } | { kind: "loading" } | { kind: "error", message: string }` instead of `T | null`.
 
-```typescript
-// ✅ Correct — use Option<T> for nullable data from the backend
-import { type Option, Some, None } from "@/types/option";
-
-interface GoalProgressMetrics {
-  last_session_date: Option<string>;
-  next_action_due: Option<string>;
-}
-
-// Constructing:
-const date = value !== null ? Some(value) : None;
-
-// Consuming:
-if (metrics.last_session_date.some) {
-  console.log(metrics.last_session_date.val); // narrowed to string
-}
-```
-
-- **Success/failure at async boundaries — use `neverthrow`**: For API calls and other async operations that can fail, use `Result<T, E>` or `ResultAsync<T, E>` from `neverthrow` instead of throwing or returning nullable payloads.
-
-```typescript
-// ✅ Correct — Result at the API boundary
-import { ResultAsync } from "neverthrow";
-
-const getGoalProgress = (id: Id): ResultAsync<GoalProgressMetrics, ApiError> =>
-  ResultAsync.fromPromise(
-    EntityApi.getFn<unknown>(`${GOALS_BASEURL}/${id}/progress`).then(parseGoalProgressMetrics),
-    (e) => toApiError(e)
-  );
-```
-
-- **Multi-state UI — use discriminated unions**: For component state machines with more than two states (e.g. loading/loaded/error), use custom discriminated unions:
-
-```typescript
-// ✅ Correct — discriminated union for multi-state UI
-type FetchState<T> =
-  | { kind: "loading" }
-  | { kind: "loaded"; value: T }
-  | { kind: "error"; message: string };
-```
-
-- **When to use which**:
-  - `Option<T>` — a value is present or absent (nullable backend fields, optional parameters)
-  - `Result<T, E>` / `ResultAsync<T, E>` — an operation succeeds or fails with a typed error
-  - Discriminated union — three or more states, or states that carry different payloads
-
-- Accept `string | undefined` from external inputs, but normalize immediately inside functions to `Option<T>`, `Result<T, E>`, or a definitive shape so internals don't propagate raw nullability.
+- Use Optional types at boundaries only. Accept `string | undefined` from inputs, but normalize immediately inside functions to a definitive shape so internals don't propagate nullability.
 
 - Write function contracts that eliminate nullability with guards. Parse and validate early, then operate on a non-null `T`.
 
 - Favor exact object shapes over partials. Use `type ExactUser = { id: string; name: string }` instead of `Partial<User>`, and avoid `Record<string, unknown>` unless unavoidable.
 
-- Do not use `T | null | undefined` unless a value is truly optional and none of the above patterns apply. Assume strict null checks. Provide exact types; no lazy unions.
+- At async boundaries, return Result types rather than nullable payloads.
+
+- Do not use `T | null | undefined` unless a value is truly optional. Prefer discriminated unions or Result types. Assume strict null checks. Provide exact types; no lazy unions.
 
 If you inherit nullable APIs, normalize at the edge and keep your core strict. Model absence as a deliberate, named state rather than a catch-all union.
 
