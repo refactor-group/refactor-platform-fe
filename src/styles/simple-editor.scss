@@ -80,7 +80,10 @@
   align-items: center;
   gap: 0.25rem;
   flex-wrap: wrap;
-  /* No border-radius needed since parent handles it with overflow: hidden */
+  /* Sit above collaboration cursor labels so they tuck behind the toolbar
+     rather than visually clipping mid-bubble when a cursor is on the first line */
+  position: relative;
+  z-index: 110;
 }
 
 /* Content Wrapper with Custom Scrollbar */
@@ -115,12 +118,13 @@
   font-family: "DM Sans", sans-serif;
   color: var(--editor-text);
   background-color: var(--editor-bg);
-  padding: 1rem;
+  padding: 2rem 1rem 1rem;
   min-height: 300px;
   outline: none;
   line-height: 1.6;
   font-size: 0.875rem; /* 14px */
-  /* No border-radius needed since parent handles it with overflow: hidden */
+  /* Extra top padding gives the collaboration cursor label bubble room to
+     render above the first line without being clipped by overflow-y: auto */
   
   /* Remove default margins on first child */
   > *:first-child {
