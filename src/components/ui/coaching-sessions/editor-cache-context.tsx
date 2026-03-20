@@ -88,7 +88,11 @@ interface CleanupAction {
   readonly kind: typeof ActionKind.Cleanup;
 }
 
-type ProviderAction = InitializeAction | SkipAction | ErrorAction | CleanupAction;
+type ProviderAction =
+  | InitializeAction
+  | SkipAction
+  | ErrorAction
+  | CleanupAction;
 
 // Provider lifecycle state for determining actions
 interface ProviderLifecycleState {
@@ -142,7 +146,9 @@ function createInitialCacheState(): EditorCacheState {
  * Determines the appropriate action based on provider lifecycle state.
  * Uses discriminated union pattern for exhaustive type checking.
  */
-function determineProviderAction(state: ProviderLifecycleState): ProviderAction {
+function determineProviderAction(
+  state: ProviderLifecycleState,
+): ProviderAction {
   // Still loading token - wait
   if (state.tokenLoading) {
     return { kind: ActionKind.Skip, reason: "Token still loading" };
@@ -156,7 +162,10 @@ function determineProviderAction(state: ProviderLifecycleState): ProviderAction 
   // Have valid token and session - check if initialization needed
   if (state.jwt && !state.tokenError && state.userSession) {
     if (state.hasProvider && !state.sessionChanged) {
-      return { kind: ActionKind.Skip, reason: "Provider already initialized for this session" };
+      return {
+        kind: ActionKind.Skip,
+        reason: "Provider already initialized for this session",
+      };
     }
     return { kind: ActionKind.Initialize };
   }
@@ -165,11 +174,16 @@ function determineProviderAction(state: ProviderLifecycleState): ProviderAction 
   if (state.tokenError) {
     // Transient error guard: don't disrupt working sessions
     if (state.hasProvider && !state.sessionChanged) {
-      return { kind: ActionKind.Skip, reason: "Ignoring transient token error - provider already connected" };
+      return {
+        kind: ActionKind.Skip,
+        reason: "Ignoring transient token error - provider already connected",
+      };
     }
     return {
       kind: ActionKind.Error,
-      error: new Error("Unable to load coaching notes. Please check your connection and try again."),
+      error: new Error(
+        "Unable to load coaching notes. Please check your connection and try again.",
+      ),
     };
   }
 
@@ -182,7 +196,7 @@ function determineProviderAction(state: ProviderLifecycleState): ProviderAction 
  */
 function updatePresenceOnProvider(
   provider: TiptapCollabProvider,
-  presence: Parameters<typeof createConnectedPresence>[0]
+  presence: Parameters<typeof createConnectedPresence>[0],
 ): void {
   const updatedPresence = createConnectedPresence(presence);
   provider.setAwarenessField("presence", updatedPresence);
@@ -194,7 +208,7 @@ function updatePresenceOnProvider(
  */
 function disconnectProviderWithPresence(
   provider: TiptapCollabProvider,
-  presence: Parameters<typeof createConnectedPresence>[0]
+  presence: Parameters<typeof createConnectedPresence>[0],
 ): void {
   // Create connected presence first, then convert to disconnected
   const connectedPresence = createConnectedPresence(presence);
@@ -338,7 +352,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       syncTimeoutRef.current = setTimeout(() => {
         syncTimeoutRef.current = null;
         console.warn(
-          `TipTap sync did not complete within ${SYNC_TIMEOUT_MS}ms — enabling offline editing`
+          `TipTap sync did not complete within ${SYNC_TIMEOUT_MS}ms — enabling offline editing`,
         );
         enableEditing();
       }, SYNC_TIMEOUT_MS);
@@ -348,7 +362,11 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       // Awareness synchronization: tracks all connected users for presence indicators
       provider.on(
         "awarenessChange",
-        ({ states }: { states: Array<{ clientId: number; [key: string]: any }> }) => {
+        ({
+          states,
+        }: {
+          states: Array<{ clientId: number; [key: string]: any }>;
+        }) => {
           const updatedUsers = new Map<string, UserPresence>();
           let currentUserPresence: UserPresence | null = null;
 
@@ -377,13 +395,16 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
             // creating an unwanted UX. This preserves them as status: 'disconnected' instead, enabling
             // smooth UX transitions (like showing grayed-out presence indicators).
             for (const [userId, oldPresence] of prev.presenceState.users) {
-              if (!updatedUsers.has(userId) && oldPresence.status === 'connected') {
+              if (
+                !updatedUsers.has(userId) &&
+                oldPresence.status === "connected"
+              ) {
                 // User was connected but no longer in awareness states - mark as disconnected
                 mergedUsers.set(userId, {
                   ...oldPresence,
-                  status: 'disconnected',
+                  status: "disconnected",
                   isConnected: false,
-                  lastSeen: new Date()
+                  lastSeen: new Date(),
                 });
               }
             }
@@ -403,20 +424,24 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
               },
             };
           });
-        }
+        },
       );
 
       // Connection state management: maintains awareness during network changes.
       // Reads from cleanupDataRef.current (not the closure) so reconnects always
       // broadcast the current role, not the role captured at initialization time.
       provider.on("connect", () => {
-        const { userSession: u, userRole: r, userColor: c } = cleanupDataRef.current;
-        if (!u || !r.some) return;
+        const {
+          userSession: us,
+          userRole: ur,
+          userColor: uc,
+        } = cleanupDataRef.current;
+        if (!us || !ur.some) return;
         const connectedPresence = createConnectedPresence({
-          userId: u.id,
-          name: u.display_name,
-          relationshipRole: r.val,
-          color: c,
+          userId: us.id,
+          name: us.display_name,
+          relationshipRole: ur.val,
+          color: uc,
         });
         // Only update our custom "presence" field on reconnect
         // CollaborationCaret will handle the "user" field
@@ -434,7 +459,11 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       // Reads from cleanupDataRef.current so the broadcast reflects the role that
       // was actually resolved at the time the user closes the tab.
       const handleBeforeUnload = () => {
-        const { userSession: us, userRole: ur, userColor: uc } = cleanupDataRef.current;
+        const {
+          userSession: us,
+          userRole: ur,
+          userColor: uc,
+        } = cleanupDataRef.current;
         if (!us || !ur.some) return;
         const presence = createConnectedPresence({
           userId: us.id,
@@ -472,7 +501,14 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
             : new Error("Failed to initialize collaboration"),
       }));
     }
-  }, [jwt, userSession, userRole, userColor, getOrCreateYDoc, clearSyncTimeout]);
+  }, [
+    jwt,
+    userSession,
+    userRole,
+    userColor,
+    getOrCreateYDoc,
+    clearSyncTimeout,
+  ]);
 
   // Provider lifecycle: manages connection state across session/token changes
   useEffect(() => {
@@ -518,7 +554,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
       case ActionKind.Error:
         console.warn(
-          "Collaboration token fetch failed. This may be due to a network timeout or server issue."
+          "Collaboration token fetch failed. This may be due to a network timeout or server issue.",
         );
         setCache((prev) => ({
           ...prev,
@@ -636,7 +672,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
           isLoading: false,
         },
       }));
-    }, [clearSyncTimeout])
+    }, [clearSyncTimeout]),
   );
 
   // Cache reset: clears all state for fresh initialization
@@ -667,7 +703,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       ...cache,
       resetCache,
     }),
-    [cache, resetCache]
+    [cache, resetCache],
   );
 
   return (
