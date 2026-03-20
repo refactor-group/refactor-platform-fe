@@ -13,9 +13,7 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
 }))
 
 vi.mock('@/lib/hooks/use-current-relationship-role', () => ({
-  useCurrentRelationshipRole: vi.fn(() => ({
-    relationship_role: 'Coach'
-  }))
+  useCurrentRelationshipRole: vi.fn()
 }))
 
 // Mock the logout cleanup registry to track cleanup calls
@@ -85,7 +83,10 @@ vi.mock('yjs', () => ({
 
 import { useCollaborationToken } from '@/lib/api/collaboration-token'
 import { useAuthStore } from '@/lib/providers/auth-store-provider'
+import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role'
 import { ConnectionStatus } from '@/components/ui/coaching-sessions/coaching-notes/connection-status'
+import { Some, None } from '@/types/option'
+import { RelationshipRole } from '@/types/relationship-role'
 
 // Test component
 const TestConsumer = ({ onCacheReady }: { onCacheReady?: (cache: any) => void } = {}) => {
@@ -131,6 +132,12 @@ describe('EditorCacheProvider', () => {
       jwt: { sub: 'test-doc', token: 'test-token' },
       isLoading: false,
       isError: false
+    })
+
+    // Default: role is immediately known as Coach (happy path).
+    // Individual tests override this to simulate loading states.
+    vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+      relationship_role: Some(RelationshipRole.Coach)
     })
   })
 
@@ -860,6 +867,176 @@ describe('EditorCacheProvider', () => {
       })
 
       expect(screen.getByText('Connected')).toBeInTheDocument()
+    })
+  })
+
+  // ─── Presence broadcast and relationship role timing ─────────────────────────
+  //
+  // These tests verify the fix for the race condition where a user's relationship
+  // role wasn't known yet when the TipTap provider initialized.
+  //
+  // Root cause (now fixed): useCurrentRelationshipRole returned Coachee as a default
+  // when currentCoachingRelationship hadn't loaded yet, so the coach user's first
+  // presence broadcast incorrectly identified them as Coachee. The old re-broadcast
+  // effect that was meant to correct this had a bug: it updated previousRoleRef
+  // unconditionally (even when no broadcast occurred), so by the time cache.isReady
+  // became true the "role changed" flag was already cleared.
+  //
+  // Fix: relationship_role is now Option<RelationshipRole>. The initial broadcast is
+  // suppressed while the role is None. The re-broadcast effect fires as soon as both
+  // conditions are true: userRole.some AND cache.isReady.
+  describe('Presence broadcast and relationship role timing', () => {
+    it('should NOT broadcast presence at all while the relationship role is None (not yet loaded)', async () => {
+      // Simulate the common case: provider initializes before SWR returns relationship data
+      vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+        relationship_role: None
+      })
+
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+
+      const mockProvider = await getLatestMockProvider()
+      await triggerSyncedAndWaitForReady(mockProvider)
+
+      // No presence broadcast should have happened — the role is unknown and there
+      // is nothing correct to broadcast yet. Prior to the fix, this would have
+      // broadcast relationshipRole: 'Coachee' (the incorrect default).
+      expect(mockProvider.setAwarenessField).not.toHaveBeenCalledWith(
+        'presence',
+        expect.anything()
+      )
+    })
+
+    it('should broadcast with correct role when role becomes Some after editor is already ready', async () => {
+      // Ordering: editor syncs first, relationship data arrives second
+      vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+        relationship_role: None
+      })
+
+      const { rerender } = render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+
+      const mockProvider = await getLatestMockProvider()
+      await triggerSyncedAndWaitForReady(mockProvider)
+
+      // Still no broadcast — role unknown
+      expect(mockProvider.setAwarenessField).not.toHaveBeenCalledWith('presence', expect.anything())
+
+      // Relationship loads — role transitions from None to Some(Coach)
+      vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+        relationship_role: Some(RelationshipRole.Coach)
+      })
+      await act(async () => {
+        rerender(
+          <EditorCacheProvider sessionId="test-session">
+            <TestConsumer />
+          </EditorCacheProvider>
+        )
+      })
+
+      // Now the correct role must be broadcast
+      expect(mockProvider.setAwarenessField).toHaveBeenCalledWith(
+        'presence',
+        expect.objectContaining({
+          userId: 'user-1',
+          name: 'Test User',
+          relationshipRole: RelationshipRole.Coach,
+          status: 'connected',
+        })
+      )
+      // And critically: the wrong default must never have been broadcast
+      expect(mockProvider.setAwarenessField).not.toHaveBeenCalledWith(
+        'presence',
+        expect.objectContaining({ relationshipRole: RelationshipRole.Coachee })
+      )
+    })
+
+    it('should broadcast with correct role when role becomes Some BEFORE editor syncs (the race)', async () => {
+      // This is the exact race the bug fix targets:
+      //   1. Provider initializes with role = None  → no broadcast
+      //   2. Relationship loads, role = Some(Coach) → no broadcast yet (editor not ready)
+      //   3. Editor syncs, cache.isReady = true     → broadcast fires with Coach ✓
+      //
+      // With the OLD code the sequence was:
+      //   1. Provider initializes with role = Coachee (wrong default) → broadcasts Coachee ✗
+      //   2. Role changes Coachee→Coach, but cache.isReady=false so previousRoleRef was
+      //      updated without broadcasting
+      //   3. cache.isReady=true, but roleChanged=false → no correction → stuck as Coachee ✗
+      vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+        relationship_role: None
+      })
+
+      const { rerender } = render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+
+      const mockProvider = await getLatestMockProvider()
+
+      // Step 2: relationship data arrives while editor is still syncing
+      vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+        relationship_role: Some(RelationshipRole.Coach)
+      })
+      await act(async () => {
+        rerender(
+          <EditorCacheProvider sessionId="test-session">
+            <TestConsumer />
+          </EditorCacheProvider>
+        )
+      })
+
+      // Editor still not ready — no broadcast yet
+      expect(screen.getByTestId('is-ready')).toHaveTextContent('no')
+      expect(mockProvider.setAwarenessField).not.toHaveBeenCalledWith('presence', expect.anything())
+
+      // Step 3: editor syncs
+      await triggerSyncedAndWaitForReady(mockProvider)
+
+      // Must broadcast Coach — never Coachee
+      expect(mockProvider.setAwarenessField).toHaveBeenCalledWith(
+        'presence',
+        expect.objectContaining({
+          relationshipRole: RelationshipRole.Coach,
+          status: 'connected',
+        })
+      )
+      expect(mockProvider.setAwarenessField).not.toHaveBeenCalledWith(
+        'presence',
+        expect.objectContaining({ relationshipRole: RelationshipRole.Coachee })
+      )
+    })
+
+    it('should broadcast immediately on provider init when role is already Some', async () => {
+      // Happy path: SWR returns cached relationship data before provider initializes
+      // (role is Some(Coachee) from the start)
+      vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+        relationship_role: Some(RelationshipRole.Coachee)
+      })
+
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+
+      const mockProvider = await getLatestMockProvider()
+      await triggerSyncedAndWaitForReady(mockProvider)
+
+      expect(mockProvider.setAwarenessField).toHaveBeenCalledWith(
+        'presence',
+        expect.objectContaining({
+          userId: 'user-1',
+          relationshipRole: RelationshipRole.Coachee,
+          status: 'connected',
+        })
+      )
     })
   })
 })
