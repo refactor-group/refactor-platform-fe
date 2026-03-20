@@ -75,6 +75,11 @@ jobs:
                   set -euo pipefail
                   WORKFLOW=".github/workflows/dispatch-pr-preview-frontend.yml"
 
+                  if [[ ! -f "$WORKFLOW" ]]; then
+                      echo "::notice::$WORKFLOW not found on main — skipping (will be available after merge)"
+                      exit 0
+                  fi
+
                   # Build JSON arrays from commit files
                   BE_JSON=$(jq -R -s 'split("\n") | map(select(length > 0))' < /tmp/backend_commits.txt)
                   FE_JSON=$(jq -R -s 'split("\n") | map(select(length > 0))' < /tmp/frontend_commits.txt)
