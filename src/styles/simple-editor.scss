@@ -429,13 +429,14 @@
   border-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   
-  /* Smooth transitions */
-  transition: all 0.2s ease;
+  /* Smooth transitions for hover and auto-hide */
+  transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.2s ease;
   transform: translateY(-2px);
 
-  /* CRITICAL: Prevent any animations or opacity changes */
+  /* Prevent the caret blink animation from affecting the label */
   animation: none !important;
-  opacity: 1 !important;
+  /* Base opacity — no !important so .collaboration-cursor__label--hidden can override */
+  opacity: 1;
 
   /* Pointer tail */
   &::after {
@@ -474,9 +475,22 @@
   }
 }
 
+/* Auto-hidden state for the cursor name bubble (after timeout) */
+.collaboration-cursor__label--hidden {
+  opacity: 0 !important;
+  transform: translateY(-6px);
+}
+
+/* Also fade the pointer tail when the label is hidden */
+.collaboration-cursor__label--hidden::after {
+  opacity: 0 !important;
+}
+
 /* Animation for new carets appearing - apply only to container on creation */
 .collaboration-cursor__container {
   animation: fadeInUp 0.3s ease-out forwards;
+  /* Ensure the container catches hover events for auto-hide re-display */
+  pointer-events: auto;
 }
 
 @keyframes fadeInUp {
