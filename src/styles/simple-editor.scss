@@ -80,7 +80,10 @@
   align-items: center;
   gap: 0.25rem;
   flex-wrap: wrap;
-  /* No border-radius needed since parent handles it with overflow: hidden */
+  /* Sit above collaboration cursor labels so they tuck behind the toolbar
+     rather than visually clipping mid-bubble when a cursor is on the first line */
+  position: relative;
+  z-index: 110;
 }
 
 /* Content Wrapper with Custom Scrollbar */
@@ -115,12 +118,13 @@
   font-family: "DM Sans", sans-serif;
   color: var(--editor-text);
   background-color: var(--editor-bg);
-  padding: 1rem;
+  padding: 2rem 1rem 1rem;
   min-height: 300px;
   outline: none;
   line-height: 1.6;
   font-size: 0.875rem; /* 14px */
-  /* No border-radius needed since parent handles it with overflow: hidden */
+  /* Extra top padding gives the collaboration cursor label bubble room to
+     render above the first line without being clipped by overflow-y: auto */
   
   /* Remove default margins on first child */
   > *:first-child {
@@ -429,13 +433,14 @@
   border-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   
-  /* Smooth transitions */
-  transition: all 0.2s ease;
+  /* Smooth transitions for hover and auto-hide */
+  transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.2s ease;
   transform: translateY(-2px);
 
-  /* CRITICAL: Prevent any animations or opacity changes */
+  /* Prevent the caret blink animation from affecting the label */
   animation: none !important;
-  opacity: 1 !important;
+  /* Base opacity — no !important so .collaboration-cursor__label--hidden can override */
+  opacity: 1;
 
   /* Pointer tail */
   &::after {
@@ -474,9 +479,22 @@
   }
 }
 
+/* Auto-hidden state for the cursor name bubble (after timeout) */
+.collaboration-cursor__label--hidden {
+  opacity: 0 !important;
+  transform: translateY(-6px);
+}
+
+/* Also fade the pointer tail when the label is hidden */
+.collaboration-cursor__label--hidden::after {
+  opacity: 0 !important;
+}
+
 /* Animation for new carets appearing - apply only to container on creation */
 .collaboration-cursor__container {
   animation: fadeInUp 0.3s ease-out forwards;
+  /* Ensure the container catches hover events for auto-hide re-display */
+  pointer-events: auto;
 }
 
 @keyframes fadeInUp {
