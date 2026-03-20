@@ -156,7 +156,7 @@ export function GoalPicker({
           className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
         >
           <Plus className="h-3.5 w-3.5" />
-          Link goal
+          Set goal
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -232,7 +232,7 @@ export function GoalPicker({
                 ? swapGoalId
                   ? "Now select a replacement goal or create a new one"
                   : "Select a goal above to replace, then choose its replacement"
-                : "Select a recent goal or create a new one to link to this session"}
+                : "Select a recent goal or create a new one"}
             </p>
 
             {/* Goal list */}
@@ -400,7 +400,7 @@ export function GoalPicker({
                       disabled={!newGoalTitle.trim()}
                       onClick={handleCreateSubmit}
                     >
-                      Create &amp; link
+                      Create &amp; set
                     </Button>
                   </>
                 )}

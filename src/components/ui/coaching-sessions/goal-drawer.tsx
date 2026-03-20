@@ -408,10 +408,15 @@ export function GoalDrawer({
         <span className="text-[13px] font-semibold text-muted-foreground shrink-0">
           Goals
         </span>
+        {linkedGoals.length > 0 && (
+          <span className="text-[11px] text-muted-foreground/50 tabular-nums shrink-0">
+            {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+          </span>
+        )}
         <div className="flex flex-wrap items-center gap-2 flex-1 py-1">
           {linkedGoals.length === 0 ? (
             <span className="text-sm text-muted-foreground/60 italic">
-              No goals linked to this session
+              No goals set for this session
             </span>
           ) : (
             linkedGoals.map((goal) => {
@@ -437,13 +442,8 @@ export function GoalDrawer({
           />
         </div>
 
-        {/* Counter + chevron */}
-        <div className="flex items-center gap-2 shrink-0">
-          {linkedGoals.length > 0 && (
-            <span className="text-[11px] text-muted-foreground/50 tabular-nums">
-              {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
-            </span>
-          )}
+        {/* Chevron */}
+        <div className="flex items-center shrink-0">
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
@@ -466,7 +466,7 @@ export function GoalDrawer({
         <div className="pt-2 pb-4">
           {linkedGoals.length === 0 ? (
             <p className="text-sm text-muted-foreground/50 italic py-2">
-              Link a goal above to see its progress here.
+              Set a goal above to see its progress here.
             </p>
           ) : (
             <div className="space-y-3">

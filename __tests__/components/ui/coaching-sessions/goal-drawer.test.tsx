@@ -119,7 +119,7 @@ describe("GoalDrawer", () => {
     expect(screen.getByText("Improve technical leadership")).toBeInTheDocument()
   })
 
-  it("shows 'No goals linked' when empty", () => {
+  it("shows 'No goals set' when empty", () => {
     setupMocks({ sessionGoals: [] })
     render(
       <GoalDrawer
@@ -129,7 +129,7 @@ describe("GoalDrawer", () => {
     )
 
     expect(
-      screen.getByText(/no goals linked to this session/i)
+      screen.getByText(/no goals set for this session/i)
     ).toBeInTheDocument()
   })
 
@@ -163,7 +163,7 @@ describe("GoalDrawer", () => {
     expect(screen.getByText(/actions remaining/i)).toBeInTheDocument()
   })
 
-  it("shows 'Link goal' button from GoalPicker", () => {
+  it("shows 'Set goal' button from GoalPicker", () => {
     setupMocks()
     render(
       <GoalDrawer
@@ -173,7 +173,7 @@ describe("GoalDrawer", () => {
     )
 
     expect(
-      screen.getByRole("button", { name: /link goal/i })
+      screen.getByRole("button", { name: /set goal/i })
     ).toBeInTheDocument()
   })
 
@@ -217,7 +217,7 @@ describe("GoalDrawer", () => {
     )
 
     // Open picker and click the on-hold goal
-    await user.click(screen.getByRole("button", { name: /link goal/i }))
+    await user.click(screen.getByRole("button", { name: /set goal/i }))
     await user.click(screen.getByText("Paused goal"))
 
     // Should transition status to InProgress before linking
@@ -260,7 +260,7 @@ describe("GoalDrawer", () => {
     )
 
     // Open picker and click the goal
-    await user.click(screen.getByRole("button", { name: /link goal/i }))
+    await user.click(screen.getByRole("button", { name: /set goal/i }))
     await user.click(screen.getByText("Fresh goal"))
 
     // Should NOT call updateGoal — NotStarted stays as-is
@@ -288,7 +288,7 @@ describe("GoalDrawer", () => {
 
     // Click the X button on the goal chip
     const unlinkButton = screen.getByRole("button", {
-      name: /unlink improve technical leadership/i,
+      name: /remove improve technical leadership/i,
     })
     await user.click(unlinkButton)
 
@@ -331,7 +331,7 @@ describe("GoalDrawer", () => {
     )
 
     // At limit (3/3) — open picker and go to create flow
-    await user.click(screen.getByRole("button", { name: /link goal/i }))
+    await user.click(screen.getByRole("button", { name: /set goal/i }))
     await user.click(screen.getByRole("button", { name: /create new goal/i }))
 
     const textarea = screen.getByPlaceholderText(/i want to/i)

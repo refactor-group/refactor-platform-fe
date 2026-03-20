@@ -79,7 +79,7 @@ export function GoalChip({
       </span>
       <button
         type="button"
-        aria-label={`Unlink ${goalTitle(goal)}`}
+        aria-label={`Remove ${goalTitle(goal)}`}
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
