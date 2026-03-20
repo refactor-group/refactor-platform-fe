@@ -116,7 +116,7 @@ export const MeetingIntegrationSection: FC = () => {
         </FieldDescription>
 
         <Field orientation="horizontal">
-          <FieldLabel>Meeting Platform</FieldLabel>
+          <FieldLabel>Video Conference Provider</FieldLabel>
           <FieldContent>
             {isLoading ? (
               <span className="text-sm text-muted-foreground">Loading...</span>
@@ -146,7 +146,7 @@ export const MeetingIntegrationSection: FC = () => {
                   onValueChange={(value) => setSelectedProvider(value as Provider)}
                 >
                   <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select a platform" />
+                    <SelectValue placeholder="Select a provider" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={Provider.Google}>
