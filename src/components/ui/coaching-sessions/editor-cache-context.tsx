@@ -434,13 +434,13 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       // Reads from cleanupDataRef.current so the broadcast reflects the role that
       // was actually resolved at the time the user closes the tab.
       const handleBeforeUnload = () => {
-        const { userSession: u, userRole: r, userColor: c } = cleanupDataRef.current;
-        if (!u || !r.some) return;
+        const { userSession: us, userRole: ur, userColor: uc } = cleanupDataRef.current;
+        if (!us || !ur.some) return;
         const presence = createConnectedPresence({
-          userId: u.id,
-          name: u.display_name,
-          relationshipRole: r.val,
-          color: c,
+          userId: us.id,
+          name: us.display_name,
+          relationshipRole: ur.val,
+          color: uc,
         });
         const disconnectedPresence = createDisconnectedPresence(presence);
         provider.setAwarenessField("presence", disconnectedPresence);
