@@ -48,6 +48,7 @@ import {
   isAtGoalLimit,
   isOnHold,
   isInProgress,
+  hasGoalBody,
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
@@ -104,6 +105,8 @@ function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalC
   const { progressMetrics } = useGoalProgress(Some(goal.id));
   const titleRef = useRef<HTMLSpanElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
+  const [showBody, setShowBody] = useState(false);
+  const hasBody = hasGoalBody(goal);
 
   const checkTruncation = useCallback(() => {
     const el = titleRef.current;
@@ -207,16 +210,38 @@ function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalC
         ) : (
           <>
             <span>{progressLabel(progressMetrics.progress)}</span>
-            {progressMetrics.actions_total > 0 ? (
-              <span>
-                {remaining} action{remaining !== 1 ? "s" : ""} left &middot; {percent}%
-              </span>
-            ) : (
-              <span className="italic">No actions yet</span>
-            )}
+            <div className="flex items-center gap-1">
+              {progressMetrics.actions_total > 0 ? (
+                <span>
+                  {remaining} action{remaining !== 1 ? "s" : ""} left &middot; {percent}%
+                </span>
+              ) : (
+                <span className="italic">No actions yet</span>
+              )}
+              {hasBody && (
+                <button
+                  type="button"
+                  aria-label={showBody ? "Hide details" : "Show details"}
+                  onClick={() => setShowBody(!showBody)}
+                  className="rounded p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+                >
+                  {showBody ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
+
+      {showBody && hasBody && (
+        <p className="text-[12px] text-muted-foreground/70 leading-relaxed whitespace-pre-wrap border-t border-border/30 pt-2">
+          {goal.body}
+        </p>
+      )}
     </div>
   );
 

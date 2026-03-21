@@ -196,6 +196,11 @@ export function isInProgress(goal: Pick<Goal, "status">): boolean {
   return goal.status === ItemStatus.InProgress;
 }
 
+/** Returns true when the goal has a non-empty body/description. */
+export function hasGoalBody(goal: Pick<Goal, "body">): boolean {
+  return goal.body.trim().length > 0;
+}
+
 export function goalToString(
   goal: Goal | undefined
 ): string {
