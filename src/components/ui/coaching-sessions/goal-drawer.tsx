@@ -196,7 +196,7 @@ function CompactGoalCard({ goal, onRemove, onUpdate, swapMode, pendingHold }: Co
       onMouseEnter={checkTruncation}
       onClick={hasBody ? () => setShowBody(!showBody) : undefined}
       className={cn(
-        "rounded-lg border p-3 space-y-2 group/card transition-colors",
+        "rounded-lg border p-3 space-y-2 group/card transition-colors shadow-sm",
         pendingHold
           ? "border-amber-300/60 bg-amber-50/30"
           : "border-border/50 bg-background hover:border-border",
