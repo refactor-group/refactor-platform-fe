@@ -166,7 +166,7 @@ describe("GoalDrawer", () => {
     expect(screen.getByText(/actions remaining/i)).toBeInTheDocument()
   })
 
-  it("shows 'New goal' and 'Set existing' buttons", () => {
+  it("shows 'Add goal' button", () => {
     setupMocks()
     render(
       <GoalDrawer
@@ -175,11 +175,8 @@ describe("GoalDrawer", () => {
       />
     )
 
-    const newButtons = screen.getAllByRole("button", { name: /new goal/i })
-    expect(newButtons.length).toBeGreaterThanOrEqual(1)
-
-    const existingButtons = screen.getAllByRole("button", { name: /use existing/i })
-    expect(existingButtons.length).toBeGreaterThanOrEqual(1)
+    const addButtons = screen.getAllByRole("button", { name: /add goal/i })
+    expect(addButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it("does not show counter when no goals linked", () => {
@@ -221,9 +218,9 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Open picker via "Set existing" and click the on-hold goal
-    const setExistingButtons = screen.getAllByRole("button", { name: /use existing/i })
-    await user.click(setExistingButtons[0])
+    // Click "Add goal" to enter browsing, then click the on-hold goal
+    const addGoalButtons = screen.getAllByRole("button", { name: /add goal/i })
+    await user.click(addGoalButtons[0])
     await user.click(screen.getByText("Paused goal"))
 
     expect(mockUpdate).toHaveBeenCalledWith(
@@ -263,8 +260,8 @@ describe("GoalDrawer", () => {
       />
     )
 
-    const setExistingButtons = screen.getAllByRole("button", { name: /use existing/i })
-    await user.click(setExistingButtons[0])
+    const addGoalButtons = screen.getAllByRole("button", { name: /add goal/i })
+    await user.click(addGoalButtons[0])
     await user.click(screen.getByText("Fresh goal"))
 
     expect(mockUpdate).not.toHaveBeenCalled()
@@ -341,9 +338,11 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Click "+ New goal" to reveal inline form (not at limit, goes straight to form)
-    const newGoalButtons = screen.getAllByRole("button", { name: /new goal/i })
-    await user.click(newGoalButtons[0])
+    // Click "Add goal" to browse, then "Create new" to reveal inline form
+    const addGoalButtons = screen.getAllByRole("button", { name: /add goal/i })
+    await user.click(addGoalButtons[0])
+    const createNewButtons = screen.getAllByRole("button", { name: /create new/i })
+    await user.click(createNewButtons[0])
 
     // Type into the input and submit
     const input = screen.getByPlaceholderText(/what do you want to achieve/i)
@@ -379,9 +378,9 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Step 1: At limit (3/3) — click "+ New goal" enters swap-selection mode
-    const newGoalButtons = screen.getAllByRole("button", { name: /new goal/i })
-    await user.click(newGoalButtons[0])
+    // Step 1: At limit (3/3) — click "Add goal" enters swap-selection mode
+    const addGoalButtons = screen.getAllByRole("button", { name: /add goal/i })
+    await user.click(addGoalButtons[0])
 
     // Should show "Which goal should be put on hold?" prompt
     expect(screen.getAllByText(/put on hold/i).length).toBeGreaterThanOrEqual(1)
@@ -393,7 +392,11 @@ describe("GoalDrawer", () => {
     })
     await user.click(putOnHoldButtons[0])
 
-    // Step 3: Now the create form should appear with "Save" button
+    // Step 3: Now in browsing state — click "Create new" to enter creating state
+    const createNewButtons = screen.getAllByRole("button", { name: /create new/i })
+    await user.click(createNewButtons[0])
+
+    // Step 4: Fill in the create form and submit
     const input = screen.getByPlaceholderText(/what do you want to achieve/i)
     await user.type(input, "Replacement goal")
 
