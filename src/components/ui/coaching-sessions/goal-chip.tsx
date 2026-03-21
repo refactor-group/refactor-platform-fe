@@ -15,7 +15,7 @@ interface GoalChipProps {
   goal: Goal;
   actionsCompleted: number;
   actionsTotal: number;
-  onRemove: () => void;
+  onRemove?: () => void;
 }
 
 export function GoalChip({
@@ -77,17 +77,19 @@ export function GoalChip({
       >
         {goalTitle(goal)}
       </span>
-      <button
-        type="button"
-        aria-label={`Remove ${goalTitle(goal)}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        className="rounded-md p-1 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
-      >
-        <X className="h-3 w-3" />
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          aria-label={`Remove ${goalTitle(goal)}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="rounded-md p-1 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
     </div>
   );
 

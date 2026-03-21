@@ -4,6 +4,10 @@ import { useState, useCallback, useRef } from "react";
 import {
   ChevronDown,
   ChevronUp,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Pause,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -83,10 +87,16 @@ function progressLabel(progress: GoalProgress): string {
 
 interface CompactGoalCardProps {
   goal: Goal;
-  onRemove: () => void;
+  onRemove?: () => void;
+  /** When set, card shows a "put on hold" affordance instead of normal interactions */
+  swapMode?: {
+    onSelect: () => void;
+  };
+  /** When true, card shows a visual indicator that it will be put on hold */
+  pendingHold?: boolean;
 }
 
-function CompactGoalCard({ goal, onRemove }: CompactGoalCardProps) {
+function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalCardProps) {
   const { progressMetrics } = useGoalProgress(Some(goal.id));
   const titleRef = useRef<HTMLSpanElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -110,10 +120,12 @@ function CompactGoalCard({ goal, onRemove }: CompactGoalCardProps) {
 
   const title = goalTitle(goal);
 
-  const cardContent = (
-    <div
+  const cardContent = swapMode ? (
+    <button
+      type="button"
+      onClick={swapMode.onSelect}
       onMouseEnter={checkTruncation}
-      className="rounded-lg border border-border/50 bg-background p-3 space-y-2 group/card transition-colors hover:border-border"
+      className="w-full text-left rounded-lg border border-border/50 bg-background p-3 space-y-2 transition-all hover:border-amber-500/50 hover:bg-amber-50/30 cursor-pointer group/card"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2 min-w-0">
@@ -127,17 +139,56 @@ function CompactGoalCard({ goal, onRemove }: CompactGoalCardProps) {
             {title}
           </span>
         </div>
-        <button
-          type="button"
-          aria-label={`Remove ${title}`}
-          onClick={onRemove}
-          className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors shrink-0"
-        >
-          <X className="h-3 w-3" />
-        </button>
+        <Pause className="h-3.5 w-3.5 text-muted-foreground/30 group-hover/card:text-amber-600 shrink-0 mt-0.5 transition-colors" />
       </div>
 
-      {progressMetrics.actions_total > 0 && (
+      <div className="flex items-center justify-between text-[11px] text-muted-foreground/60">
+        <span>{progressLabel(progressMetrics.progress)}</span>
+        <span className="text-muted-foreground/0 group-hover/card:text-amber-600/70 transition-colors">
+          Put on hold
+        </span>
+      </div>
+    </button>
+  ) : (
+    <div
+      onMouseEnter={checkTruncation}
+      className={cn(
+        "rounded-lg border p-3 space-y-2 group/card transition-colors",
+        pendingHold
+          ? "border-amber-300/60 bg-amber-50/30"
+          : "border-border/50 bg-background hover:border-border"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0">
+          <span
+            className={cn(
+              "h-1.5 w-1.5 rounded-full shrink-0 mt-1.5",
+              pendingHold ? "bg-amber-500/60" : progressDotColor(progressMetrics.progress)
+            )}
+          />
+          <span ref={titleRef} className={cn(
+            "text-[13px] font-medium line-clamp-2",
+            pendingHold && "text-muted-foreground"
+          )}>
+            {title}
+          </span>
+        </div>
+        {pendingHold ? (
+          <Pause className="h-3 w-3 text-amber-600/70 shrink-0 mt-0.5" />
+        ) : onRemove ? (
+          <button
+            type="button"
+            aria-label={`Remove ${title}`}
+            onClick={onRemove}
+            className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors shrink-0"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        ) : null}
+      </div>
+
+      {!pendingHold && progressMetrics.actions_total > 0 && (
         <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
           <div
             className="h-full rounded-full bg-foreground/20 transition-all"
@@ -147,13 +198,19 @@ function CompactGoalCard({ goal, onRemove }: CompactGoalCardProps) {
       )}
 
       <div className="flex items-center justify-between text-[11px] text-muted-foreground/60">
-        <span>{progressLabel(progressMetrics.progress)}</span>
-        {progressMetrics.actions_total > 0 ? (
-          <span>
-            {remaining} action{remaining !== 1 ? "s" : ""} left &middot; {percent}%
-          </span>
+        {pendingHold ? (
+          <span className="text-amber-600/60 italic">Will be put on hold</span>
         ) : (
-          <span className="italic">No actions yet</span>
+          <>
+            <span>{progressLabel(progressMetrics.progress)}</span>
+            {progressMetrics.actions_total > 0 ? (
+              <span>
+                {remaining} action{remaining !== 1 ? "s" : ""} left &middot; {percent}%
+              </span>
+            ) : (
+              <span className="italic">No actions yet</span>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -170,6 +227,106 @@ function CompactGoalCard({ goal, onRemove }: CompactGoalCardProps) {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+}
+
+// ── Inline Create Form ─────────────────────────────────────────────────
+
+interface InlineCreateFormProps {
+  onSubmit: (title: string, body?: string) => void;
+  onCancel: () => void;
+  /** Label for the submit button */
+  submitLabel: string;
+}
+
+function InlineCreateForm({
+  onSubmit,
+  onCancel,
+  submitLabel,
+}: InlineCreateFormProps) {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [showBody, setShowBody] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus on mount
+  const setInputRef = useCallback((el: HTMLInputElement | null) => {
+    (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+    if (el) el.focus();
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+
+    const trimmedBody = body.trim() || undefined;
+    await onSubmit(trimmed, trimmedBody);
+    onCancel();
+  }, [title, body, onSubmit, onCancel]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit();
+      }
+      if (e.key === "Escape") {
+        onCancel();
+      }
+    },
+    [handleSubmit, onCancel]
+  );
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3 space-y-3">
+      <input
+        ref={setInputRef}
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="What do you want to achieve?"
+        className="w-full rounded-md border border-border/50 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
+      />
+
+      {showBody ? (
+        <textarea
+          rows={2}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Add more detail..."
+          className="w-full rounded-md border border-border/50 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowBody(true)}
+          className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        >
+          + Add description
+        </button>
+      )}
+
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          className="flex-1 h-8 text-xs"
+          disabled={!title.trim()}
+          onClick={handleSubmit}
+        >
+          {submitLabel}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-xs text-muted-foreground"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -282,65 +439,206 @@ interface GoalPanelSharedProps {
   allGoals: Goal[];
   linkedGoalIds: Set<string>;
   atLimit: boolean;
+  inProgressGoals: Goal[];
   onLink: (goalId: string) => void;
   onUnlink: (goalId: string) => void;
-  onCreateAndLink: (title: string) => void;
-  onCreateAndSwap: (title: string, swapGoalId: string) => void;
+  onCreateAndLink: (title: string, body?: string) => void;
+  onCreateAndSwap: (title: string, swapGoalId: string, body?: string) => void;
   onSwapAndLink: (newGoalId: string, swapGoalId: string) => void;
+  /** When true, goal linkage is immutable (past sessions) */
+  readOnly?: boolean;
 }
 
 // ── Desktop Goals Panel ────────────────────────────────────────────────
+
+type CreateFlowState =
+  | { step: "idle" }
+  | { step: "selecting-swap" }
+  | { step: "creating"; swapGoalId?: string };
+
+interface GoalsPanelDesktopProps extends GoalPanelSharedProps {
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+}
 
 function GoalsPanelDesktop({
   linkedGoals,
   allGoals,
   linkedGoalIds,
   atLimit,
+  inProgressGoals,
   onLink,
   onUnlink,
   onCreateAndLink,
   onCreateAndSwap,
   onSwapAndLink,
-}: GoalPanelSharedProps) {
+  readOnly = false,
+  collapsed = false,
+  onCollapsedChange,
+}: GoalsPanelDesktopProps) {
+  const [flow, setFlow] = useState<CreateFlowState>({ step: "idle" });
+
+  const handleNewGoalClick = useCallback(() => {
+    if (atLimit) {
+      setFlow({ step: "selecting-swap" });
+    } else {
+      setFlow({ step: "creating" });
+    }
+  }, [atLimit]);
+
+  const handleSwapSelected = useCallback((goalId: string) => {
+    setFlow({ step: "creating", swapGoalId: goalId });
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    setFlow({ step: "idle" });
+  }, []);
+
+  const handleFormSubmit = useCallback(
+    async (title: string, body?: string) => {
+      if (flow.step === "creating" && flow.swapGoalId) {
+        await onCreateAndSwap(title, flow.swapGoalId, body);
+      } else {
+        await onCreateAndLink(title, body);
+      }
+    },
+    [flow, onCreateAndLink, onCreateAndSwap]
+  );
+
+  const isSwapSelecting = flow.step === "selecting-swap";
+  const isCreating = flow.step === "creating";
+
+  if (collapsed) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => onCollapsedChange?.(false)}
+              aria-label="Expand goals panel"
+              className="hidden md:flex md:flex-col md:items-center md:gap-2 md:sticky md:top-4 md:self-start md:pt-3 md:pb-3 md:px-1 rounded-lg border border-border/50 bg-card hover:bg-accent cursor-pointer transition-colors"
+            >
+              <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+              <span className="text-[11px] font-medium text-muted-foreground [writing-mode:vertical-lr]">
+                Goals
+              </span>
+              {linkedGoals.length > 0 && (
+                <span className="text-[10px] text-muted-foreground/50 tabular-nums">
+                  {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+                </span>
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>Expand goals</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
   return (
     <Card className="hidden md:flex md:flex-col md:sticky md:top-4 md:self-start">
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Goals</h3>
-          {linkedGoals.length > 0 && (
-            <span className="text-[11px] text-muted-foreground/50 tabular-nums">
-              {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
-            </span>
-          )}
+          <div className="flex items-center gap-1">
+            {linkedGoals.length > 0 && (
+              <span className="text-[11px] text-muted-foreground/50 tabular-nums">
+                {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+              </span>
+            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-muted-foreground/50 hover:text-foreground"
+                    onClick={() => onCollapsedChange?.(true)}
+                    aria-label="Collapse goals panel"
+                  >
+                    <PanelLeftClose className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Collapse goals</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
-        {linkedGoals.length === 0 ? (
+        {isSwapSelecting && (
+          <p className="text-[12px] text-muted-foreground/70">
+            Which goal should be put on hold?
+          </p>
+        )}
+
+        {linkedGoals.length === 0 && flow.step === "idle" && (
           <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
             <p className="text-sm text-muted-foreground/50 italic">
               No goals set for this session
             </p>
           </div>
-        ) : (
+        )}
+
+        {linkedGoals.length > 0 &&
           linkedGoals.map((goal) => (
             <CompactGoalCard
               key={goal.id}
               goal={goal}
-              onRemove={() => onUnlink(goal.id)}
+              onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
+              swapMode={isSwapSelecting ? { onSelect: () => handleSwapSelected(goal.id) } : undefined}
+              pendingHold={isCreating && flow.swapGoalId === goal.id}
             />
           ))
-        )}
+        }
 
-        <GoalPicker
-          linkedGoalIds={linkedGoalIds}
-          allGoals={allGoals}
-          linkedGoals={linkedGoals}
-          onLink={onLink}
-          onCreateAndLink={onCreateAndLink}
-          onCreateAndSwap={onCreateAndSwap}
-          onSwapAndLink={onSwapAndLink}
-          atLimit={atLimit}
-        />
+        {!readOnly && (
+          isCreating ? (
+            <InlineCreateForm
+              onSubmit={handleFormSubmit}
+              onCancel={handleCancel}
+              submitLabel="Save"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              {isSwapSelecting ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-muted-foreground"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={handleNewGoalClick}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    New goal
+                  </Button>
+                  <GoalPicker
+                    linkedGoalIds={linkedGoalIds}
+                    allGoals={allGoals}
+                    linkedGoals={linkedGoals}
+                    onLink={onLink}
+                    onSwapAndLink={onSwapAndLink}
+                    atLimit={atLimit}
+                  />
+                </>
+              )}
+            </div>
+          )
+        )}
       </CardContent>
     </Card>
   );
@@ -353,13 +651,46 @@ function GoalsPanelMobile({
   allGoals,
   linkedGoalIds,
   atLimit,
+  inProgressGoals,
   onLink,
   onUnlink,
   onCreateAndLink,
   onCreateAndSwap,
   onSwapAndLink,
+  readOnly = false,
 }: GoalPanelSharedProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [flow, setFlow] = useState<CreateFlowState>({ step: "idle" });
+
+  const handleNewGoalClick = useCallback(() => {
+    if (atLimit) {
+      setFlow({ step: "selecting-swap" });
+    } else {
+      setFlow({ step: "creating" });
+    }
+  }, [atLimit]);
+
+  const handleSwapSelected = useCallback((goalId: string) => {
+    setFlow({ step: "creating", swapGoalId: goalId });
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    setFlow({ step: "idle" });
+  }, []);
+
+  const handleFormSubmit = useCallback(
+    async (title: string, body?: string) => {
+      if (flow.step === "creating" && flow.swapGoalId) {
+        await onCreateAndSwap(title, flow.swapGoalId, body);
+      } else {
+        await onCreateAndLink(title, body);
+      }
+    },
+    [flow, onCreateAndLink, onCreateAndSwap]
+  );
+
+  const isSwapSelecting = flow.step === "selecting-swap";
+  const isCreating = flow.step === "creating";
 
   return (
     <Card className="md:hidden">
@@ -383,21 +714,10 @@ function GoalsPanelMobile({
                 <GoalChipWithProgress
                   key={goal.id}
                   goal={goal}
-                  onRemove={() => onUnlink(goal.id)}
+                  onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
                 />
               ))
             )}
-
-            <GoalPicker
-              linkedGoalIds={linkedGoalIds}
-              allGoals={allGoals}
-              linkedGoals={linkedGoals}
-              onLink={onLink}
-              onCreateAndLink={onCreateAndLink}
-              onCreateAndSwap={onCreateAndSwap}
-              onSwapAndLink={onSwapAndLink}
-              atLimit={atLimit}
-            />
           </div>
 
           <div className="flex items-center shrink-0">
@@ -419,17 +739,76 @@ function GoalsPanelMobile({
         </div>
 
         <CollapsibleContent>
-          <div className="px-4 pt-1 pb-4">
-            {linkedGoals.length === 0 ? (
-              <p className="text-sm text-muted-foreground/50 italic py-2">
-                Set a goal above to see its progress here.
+          <div className="px-4 pt-1 pb-4 space-y-3">
+            {isSwapSelecting && (
+              <p className="text-[12px] text-muted-foreground/70">
+                Which goal should be put on hold?
               </p>
-            ) : (
-              <div className="space-y-3">
-                {linkedGoals.map((goal) => (
+            )}
+
+            {linkedGoals.length === 0 && flow.step === "idle" && (
+              <p className="text-sm text-muted-foreground/50 italic py-2">
+                Set a goal to see its progress here.
+              </p>
+            )}
+
+            {linkedGoals.length > 0 &&
+              linkedGoals.map((goal) =>
+                isSwapSelecting || (isCreating && flow.swapGoalId) ? (
+                  <CompactGoalCard
+                    key={goal.id}
+                    goal={goal}
+                    onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
+                    swapMode={isSwapSelecting ? { onSelect: () => handleSwapSelected(goal.id) } : undefined}
+                    pendingHold={isCreating && flow.swapGoalId === goal.id}
+                  />
+                ) : (
                   <GoalProgressCard key={goal.id} goal={goal} />
-                ))}
-              </div>
+                )
+              )
+            }
+
+            {!readOnly && (
+              isCreating ? (
+                <InlineCreateForm
+                  onSubmit={handleFormSubmit}
+                  onCancel={handleCancel}
+                  submitLabel="Save"
+                />
+              ) : (
+                <div className="flex items-center gap-2">
+                  {isSwapSelecting ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs text-muted-foreground"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={handleNewGoalClick}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        New goal
+                      </Button>
+                      <GoalPicker
+                        linkedGoalIds={linkedGoalIds}
+                        allGoals={allGoals}
+                        linkedGoals={linkedGoals}
+                        onLink={onLink}
+                        onSwapAndLink={onSwapAndLink}
+                        atLimit={atLimit}
+                      />
+                    </>
+                  )}
+                </div>
+              )
             )}
           </div>
         </CollapsibleContent>
@@ -443,11 +822,20 @@ function GoalsPanelMobile({
 interface GoalDrawerProps {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+  hidden?: boolean;
+  /** When true, goal linkage is immutable (past sessions) */
+  readOnly?: boolean;
 }
 
 export function GoalDrawer({
   coachingSessionId,
   coachingRelationshipId,
+  collapsed = false,
+  onCollapsedChange,
+  hidden = false,
+  readOnly = false,
 }: GoalDrawerProps) {
   const { goals: linkedGoals, refresh: refreshSessionGoals } =
     useGoalsBySession(coachingSessionId);
@@ -456,7 +844,8 @@ export function GoalDrawer({
   const { create: createGoal, update: updateGoal } = useGoalMutation();
 
   const linkedGoalIds = new Set(linkedGoals.map((g) => g.id));
-  const atLimit = linkedGoals.length >= DEFAULT_MAX_ACTIVE_GOALS;
+  const inProgressGoals = allGoals.filter((g) => g.status === ItemStatus.InProgress);
+  const atLimit = inProgressGoals.length >= DEFAULT_MAX_ACTIVE_GOALS;
 
   const handleLink = useCallback(
     async (goalId: string) => {
@@ -506,7 +895,21 @@ export function GoalDrawer({
         goalId
       );
       result.match(
-        () => refreshSessionGoals(),
+        async () => {
+          // Auto-hold the goal when unlinking from a current/future session
+          if (!readOnly) {
+            const goal = allGoals.find((g) => g.id === goalId);
+            if (goal && goal.status === ItemStatus.InProgress) {
+              try {
+                await updateGoal(goalId, { ...goal, status: ItemStatus.OnHold });
+              } catch (err) {
+                console.error("Failed to put goal on hold after unlink:", err);
+              }
+            }
+          }
+          refreshSessionGoals();
+          refreshAllGoals();
+        },
         (err) => {
           console.error("Failed to unlink goal:", err);
           toast({
@@ -517,16 +920,17 @@ export function GoalDrawer({
         }
       );
     },
-    [coachingSessionId, refreshSessionGoals]
+    [coachingSessionId, readOnly, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleCreateAndLink = useCallback(
-    async (title: string) => {
+    async (title: string, body?: string) => {
       try {
         const newGoal = defaultGoal();
         newGoal.coaching_relationship_id = coachingRelationshipId;
         newGoal.created_in_session_id = coachingSessionId;
         newGoal.title = title;
+        if (body) newGoal.body = body;
         newGoal.status = ItemStatus.InProgress;
 
         await createGoal(newGoal);
@@ -555,7 +959,7 @@ export function GoalDrawer({
   );
 
   const handleCreateAndSwap = useCallback(
-    async (title: string, swapGoalId: string) => {
+    async (title: string, swapGoalId: string, body?: string) => {
       try {
         // 1. Put the swapped goal on hold
         const swapGoal = allGoals.find((g) => g.id === swapGoalId);
@@ -566,16 +970,18 @@ export function GoalDrawer({
           });
         }
 
-        // 2. Unlink the swapped goal
-        const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
-        if (unlinkResult.isErr()) {
-          console.error("Failed to unlink goal during swap:", unlinkResult.error);
-          toast({
-            variant: "destructive",
-            title: "Failed to swap goal",
-            description: unlinkResult.error.message,
-          });
-          return;
+        // 2. Unlink the swapped goal from this session (only if it's linked here)
+        if (linkedGoalIds.has(swapGoalId)) {
+          const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
+          if (unlinkResult.isErr()) {
+            console.error("Failed to unlink goal during swap:", unlinkResult.error);
+            toast({
+              variant: "destructive",
+              title: "Failed to swap goal",
+              description: unlinkResult.error.message,
+            });
+            return;
+          }
         }
 
         // 3. Create the new goal (backend auto-links via created_in_session_id)
@@ -583,6 +989,7 @@ export function GoalDrawer({
         newGoal.coaching_relationship_id = coachingRelationshipId;
         newGoal.created_in_session_id = coachingSessionId;
         newGoal.title = title;
+        if (body) newGoal.body = body;
         newGoal.status = ItemStatus.InProgress;
 
         await createGoal(newGoal);
@@ -600,6 +1007,7 @@ export function GoalDrawer({
     },
     [
       allGoals,
+      linkedGoalIds,
       coachingSessionId,
       coachingRelationshipId,
       createGoal,
@@ -621,16 +1029,18 @@ export function GoalDrawer({
           });
         }
 
-        // 2. Unlink the swapped goal
-        const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
-        if (unlinkResult.isErr()) {
-          console.error("Failed to unlink goal during swap:", unlinkResult.error);
-          toast({
-            variant: "destructive",
-            title: "Failed to swap goal",
-            description: unlinkResult.error.message,
-          });
-          return;
+        // 2. Unlink the swapped goal from this session (only if it's linked here)
+        if (linkedGoalIds.has(swapGoalId)) {
+          const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
+          if (unlinkResult.isErr()) {
+            console.error("Failed to unlink goal during swap:", unlinkResult.error);
+            toast({
+              variant: "destructive",
+              title: "Failed to swap goal",
+              description: unlinkResult.error.message,
+            });
+            return;
+          }
         }
 
         // 3. Link the replacement goal
@@ -658,6 +1068,7 @@ export function GoalDrawer({
     },
     [
       allGoals,
+      linkedGoalIds,
       coachingSessionId,
       updateGoal,
       refreshSessionGoals,
@@ -670,18 +1081,27 @@ export function GoalDrawer({
     allGoals,
     linkedGoalIds,
     atLimit,
+    inProgressGoals,
     onLink: handleLink,
     onUnlink: handleUnlink,
     onCreateAndLink: handleCreateAndLink,
     onCreateAndSwap: handleCreateAndSwap,
     onSwapAndLink: handleSwapAndLink,
+    readOnly,
   };
 
   return (
-    <>
-      <GoalsPanelDesktop {...sharedProps} />
+    <div className={cn(
+      "transition-[opacity,max-width] duration-300 ease-in-out overflow-hidden self-start",
+      hidden ? "max-w-0 opacity-0" : "max-w-[300px] opacity-100"
+    )}>
+      <GoalsPanelDesktop
+        {...sharedProps}
+        collapsed={collapsed}
+        onCollapsedChange={onCollapsedChange}
+      />
       <GoalsPanelMobile {...sharedProps} />
-    </>
+    </div>
   );
 }
 
@@ -692,7 +1112,7 @@ function GoalChipWithProgress({
   onRemove,
 }: {
   goal: Goal;
-  onRemove: () => void;
+  onRemove?: () => void;
 }) {
   const { progressMetrics } = useGoalProgress(Some(goal.id));
 

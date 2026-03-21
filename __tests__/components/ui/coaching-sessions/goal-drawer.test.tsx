@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { GoalDrawer } from "@/components/ui/coaching-sessions/goal-drawer"
@@ -107,7 +107,6 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Both desktop and mobile render "Goals"
     const labels = screen.getAllByText("Goals")
     expect(labels.length).toBeGreaterThanOrEqual(1)
   })
@@ -121,7 +120,6 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Goal title appears in both desktop (CompactGoalCard) and mobile (GoalChip)
     const titles = screen.getAllByText("Improve technical leadership")
     expect(titles.length).toBeGreaterThanOrEqual(1)
   })
@@ -162,15 +160,13 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // The expand button only exists in the mobile layout
     const expandButton = screen.getByRole("button", { name: /expand/i })
     await user.click(expandButton)
 
-    // Should now show the progress card content
     expect(screen.getByText(/actions remaining/i)).toBeInTheDocument()
   })
 
-  it("shows 'Set goal' button from GoalPicker", () => {
+  it("shows 'New goal' and 'Set existing' buttons", () => {
     setupMocks()
     render(
       <GoalDrawer
@@ -179,9 +175,11 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Both layouts render a GoalPicker with "Set goal"
-    const buttons = screen.getAllByRole("button", { name: /set goal/i })
-    expect(buttons.length).toBeGreaterThanOrEqual(1)
+    const newButtons = screen.getAllByRole("button", { name: /new goal/i })
+    expect(newButtons.length).toBeGreaterThanOrEqual(1)
+
+    const existingButtons = screen.getAllByRole("button", { name: /use existing/i })
+    expect(existingButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it("does not show counter when no goals linked", () => {
@@ -223,18 +221,16 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Open picker (use first "Set goal" button) and click the on-hold goal
-    const setGoalButtons = screen.getAllByRole("button", { name: /set goal/i })
-    await user.click(setGoalButtons[0])
+    // Open picker via "Set existing" and click the on-hold goal
+    const setExistingButtons = screen.getAllByRole("button", { name: /use existing/i })
+    await user.click(setExistingButtons[0])
     await user.click(screen.getByText("Paused goal"))
 
-    // Should transition status to InProgress before linking
     expect(mockUpdate).toHaveBeenCalledWith(
       "goal-hold",
       expect.objectContaining({ status: ItemStatus.InProgress })
     )
 
-    // Then should link to session
     expect(GoalApi.linkToSession).toHaveBeenCalledWith(
       "session-1",
       "goal-hold"
@@ -267,22 +263,19 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Open picker and click the goal
-    const setGoalButtons = screen.getAllByRole("button", { name: /set goal/i })
-    await user.click(setGoalButtons[0])
+    const setExistingButtons = screen.getAllByRole("button", { name: /use existing/i })
+    await user.click(setExistingButtons[0])
     await user.click(screen.getByText("Fresh goal"))
 
-    // Should NOT call updateGoal — NotStarted stays as-is
     expect(mockUpdate).not.toHaveBeenCalled()
 
-    // Should link to session
     expect(GoalApi.linkToSession).toHaveBeenCalledWith(
       "session-1",
       "goal-ns"
     )
   })
 
-  it("remove only removes join table row, does not change goal status", async () => {
+  it("unlink auto-holds InProgress goal on current session", async () => {
     const user = userEvent.setup()
     const mockUnlinkResult = { isOk: () => true, isErr: () => false, match: (ok: () => void) => ok() }
     vi.mocked(GoalApi.unlinkFromSession).mockResolvedValue(mockUnlinkResult as any)
@@ -295,26 +288,73 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Click the first Remove button (desktop CompactGoalCard or mobile GoalChip)
     const removeButtons = screen.getAllByRole("button", {
       name: /remove improve technical leadership/i,
     })
     await user.click(removeButtons[0])
 
-    // Should call unlinkFromSession with the correct IDs
     expect(GoalApi.unlinkFromSession).toHaveBeenCalledWith(
       "session-1",
       "goal-1"
     )
 
-    // Should NOT call updateGoal — status must remain unchanged
-    expect(mockUpdate).not.toHaveBeenCalled()
-
-    // Should refresh session goals after successful unlink
+    // Auto-hold: unlinking from a non-readOnly session puts the goal on hold
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(
+        "goal-1",
+        expect.objectContaining({ status: ItemStatus.OnHold })
+      )
+    })
     expect(mockRefreshSession).toHaveBeenCalled()
   })
 
-  it("swap changes goal status to OnHold before unlinking", async () => {
+  it("unlink does not change goal status on past (readOnly) session", async () => {
+    const mockUnlinkResult = { isOk: () => true, isErr: () => false, match: (ok: () => void) => ok() }
+    vi.mocked(GoalApi.unlinkFromSession).mockResolvedValue(mockUnlinkResult as any)
+    setupMocks()
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        readOnly
+      />
+    )
+
+    // readOnly hides the remove buttons, so unlink cannot be triggered from UI
+    const removeButtons = screen.queryAllByRole("button", {
+      name: /remove improve technical leadership/i,
+    })
+    expect(removeButtons).toHaveLength(0)
+  })
+
+  it("inline create form creates a new goal", async () => {
+    const user = userEvent.setup()
+    mockCreate.mockResolvedValue(createMockGoal({ title: "New goal" }))
+
+    setupMocks({ sessionGoals: [] })
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Click "+ New goal" to reveal inline form (not at limit, goes straight to form)
+    const newGoalButtons = screen.getAllByRole("button", { name: /new goal/i })
+    await user.click(newGoalButtons[0])
+
+    // Type into the input and submit
+    const input = screen.getByPlaceholderText(/what do you want to achieve/i)
+    await user.type(input, "New goal{Enter}")
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "New goal" })
+    )
+  })
+
+  it("swap flow: select goal to hold, then create replacement", async () => {
     const user = userEvent.setup()
     const goal3 = createMockGoal({
       id: "goal-3",
@@ -339,34 +379,38 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // At limit (3/3) — open picker and go to create flow
-    const setGoalButtons = screen.getAllByRole("button", { name: /set goal/i })
-    await user.click(setGoalButtons[0])
-    await user.click(screen.getByRole("button", { name: /create new goal/i }))
+    // Step 1: At limit (3/3) — click "+ New goal" enters swap-selection mode
+    const newGoalButtons = screen.getAllByRole("button", { name: /new goal/i })
+    await user.click(newGoalButtons[0])
 
-    const textarea = screen.getByPlaceholderText(/i want to/i)
-    await user.type(textarea, "Replacement goal")
+    // Should show "Which goal should be put on hold?" prompt
+    expect(screen.getAllByText(/put on hold/i).length).toBeGreaterThanOrEqual(1)
 
-    // Select swap target in create panel — these are the linked goals
-    // shown inside the create form's swap selector
-    const swapTargets = screen.getAllByText("Improve technical leadership")
-    await user.click(swapTargets[swapTargets.length - 1])
+    // Step 2: Click first goal card to select it as swap target
+    // In swap mode, cards become buttons with "Put on hold" text
+    const putOnHoldButtons = screen.getAllByRole("button", {
+      name: /improve technical leadership/i,
+    })
+    await user.click(putOnHoldButtons[0])
 
-    await user.click(screen.getByRole("button", { name: /create & swap/i }))
+    // Step 3: Now the create form should appear with "Save" button
+    const input = screen.getByPlaceholderText(/what do you want to achieve/i)
+    await user.type(input, "Replacement goal")
 
-    // Should call updateGoal to change status to OnHold
-    expect(mockUpdate).toHaveBeenCalledWith(
-      "goal-1",
-      expect.objectContaining({ status: ItemStatus.OnHold })
-    )
+    await user.click(screen.getByRole("button", { name: /save/i }))
 
-    // Should call unlinkFromSession for the swapped goal
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(
+        "goal-1",
+        expect.objectContaining({ status: ItemStatus.OnHold })
+      )
+    })
+
     expect(GoalApi.unlinkFromSession).toHaveBeenCalledWith(
       "session-1",
       "goal-1"
     )
 
-    // Should create the new goal
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Replacement goal" })
     )
