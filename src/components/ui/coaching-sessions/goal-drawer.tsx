@@ -613,6 +613,11 @@ interface GoalFlowCallbacks {
   onCreateAndSwap: (title: string, swapGoalId: string, body?: string) => void;
 }
 
+enum SlideDirection {
+  Forward = "forward",
+  Backward = "backward",
+}
+
 function useGoalFlow({
   atLimit,
   allGoals,
@@ -623,6 +628,7 @@ function useGoalFlow({
   onCreateAndSwap,
 }: GoalFlowCallbacks) {
   const [flow, setFlow] = useState<GoalFlowState>({ step: "idle" });
+  const [direction, setDirection] = useState<SlideDirection>(SlideDirection.Forward);
 
   const availableGoals = useMemo(
     () =>
@@ -642,6 +648,7 @@ function useGoalFlow({
   );
 
   const handleAddGoalClick = useCallback(() => {
+    setDirection(SlideDirection.Forward);
     if (atLimit) {
       setFlow({ step: "selecting-swap" });
     } else {
@@ -650,11 +657,13 @@ function useGoalFlow({
   }, [atLimit]);
 
   const handleSwapSelected = useCallback((goalId: string) => {
+    setDirection(SlideDirection.Forward);
     setFlow({ step: "browsing", swapGoalId: goalId });
   }, []);
 
   const handleBrowseGoalClick = useCallback(
     (goalId: string) => {
+      setDirection(SlideDirection.Backward);
       if (flow.step === "browsing" && flow.swapGoalId) {
         onSwapAndLink(goalId, flow.swapGoalId);
       } else {
@@ -666,17 +675,20 @@ function useGoalFlow({
   );
 
   const handleCreateNewClick = useCallback(() => {
+    setDirection(SlideDirection.Forward);
     const swapGoalId = flow.step === "browsing" ? flow.swapGoalId : undefined;
     setFlow({ step: "creating", swapGoalId });
   }, [flow]);
 
   const handleCreateBack = useCallback(() => {
+    setDirection(SlideDirection.Backward);
     const swapGoalId = flow.step === "creating" ? flow.swapGoalId : undefined;
     setFlow({ step: "browsing", swapGoalId });
   }, [flow]);
 
   const handleFormSubmit = useCallback(
     async (title: string, body?: string) => {
+      setDirection(SlideDirection.Backward);
       if (flow.step === "creating" && flow.swapGoalId) {
         await onCreateAndSwap(title, flow.swapGoalId, body);
       } else {
@@ -688,11 +700,13 @@ function useGoalFlow({
   );
 
   const handleCancel = useCallback(() => {
+    setDirection(SlideDirection.Backward);
     setFlow({ step: "idle" });
   }, []);
 
   return {
     flow,
+    direction,
     availableGoals,
     handleAddGoalClick,
     handleSwapSelected,
@@ -878,9 +892,20 @@ function BrowseGoalItem({
 
 // ── Slide Panel (animate in on mount via CSS) ────────────────────────
 
-function SlidePanel({ children }: { children: React.ReactNode }) {
+function SlidePanel({
+  children,
+  direction = SlideDirection.Forward,
+}: {
+  children: React.ReactNode;
+  direction?: SlideDirection;
+}) {
   return (
-    <div className="animate-in slide-in-from-bottom-2 fade-in duration-200 fill-mode-both">
+    <div className={cn(
+      "animate-in fade-in duration-200 fill-mode-both",
+      direction === SlideDirection.Forward
+        ? "slide-in-from-right-4"
+        : "slide-in-from-left-4"
+    )}>
       {children}
     </div>
   );
@@ -890,11 +915,13 @@ function SlidePanel({ children }: { children: React.ReactNode }) {
 
 function FlowActions({
   flow,
+  direction,
   readOnly,
   handlers,
   availableGoals,
 }: {
   flow: GoalFlowState;
+  direction: SlideDirection;
   readOnly: boolean;
   handlers: ReturnType<typeof useGoalFlow>;
   availableGoals: Goal[];
@@ -929,7 +956,7 @@ function FlowActions({
 
     case "browsing":
       return (
-        <SlidePanel>
+        <SlidePanel direction={direction}>
           <InlineBrowseView
             availableGoals={availableGoals}
             onGoalClick={handlers.handleBrowseGoalClick}
@@ -945,7 +972,7 @@ function FlowActions({
 
     case "creating":
       return (
-        <SlidePanel>
+        <SlidePanel direction={direction}>
           <InlineCreateForm
             onSubmit={handlers.handleFormSubmit}
             onCancel={flow.swapGoalId ? handlers.handleCreateBack : handlers.handleCancel}
@@ -1096,6 +1123,7 @@ function GoalsPanelDesktop({
 
         <FlowActions
           flow={flow}
+          direction={goalFlow.direction}
           readOnly={readOnly}
           handlers={goalFlow}
           availableGoals={goalFlow.availableGoals}
@@ -1219,6 +1247,7 @@ function GoalsPanelMobile({
 
             <FlowActions
               flow={flow}
+              direction={goalFlow.direction}
               readOnly={readOnly}
               handlers={goalFlow}
               availableGoals={goalFlow.availableGoals}
