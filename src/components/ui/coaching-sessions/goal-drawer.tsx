@@ -1048,7 +1048,7 @@ function GoalsPanelDesktop({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-4 space-y-3">
+      <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto">
         {flow.step === "selecting-swap" && (
           <p className="text-[12px] text-muted-foreground/70">
             Which goal should be put on hold?
