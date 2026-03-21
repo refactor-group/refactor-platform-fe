@@ -700,6 +700,31 @@ function useGoalFlow({
     [flow, onCreateAndLink, onCreateAndSwap]
   );
 
+  const handleBack = useCallback(() => {
+    setDirection(SlideDirection.Backward);
+    switch (flow.step) {
+      case "creating":
+        setFlow({ step: "browsing", swapGoalId: flow.swapGoalId });
+        break;
+      case "browsing":
+        if (flow.swapGoalId) {
+          setFlow({ step: "selecting-swap" });
+        } else {
+          setFlow({ step: "idle" });
+        }
+        break;
+      case "selecting-swap":
+        setFlow({ step: "idle" });
+        break;
+      case "idle":
+        break;
+      default: {
+        const _exhaustive: never = flow;
+        throw new Error(`Unhandled flow step: ${(_exhaustive as GoalFlowState).step}`);
+      }
+    }
+  }, [flow]);
+
   const handleCancel = useCallback(() => {
     setDirection(SlideDirection.Backward);
     setFlow({ step: "idle" });
@@ -709,6 +734,7 @@ function useGoalFlow({
     flow,
     direction,
     availableGoals,
+    handleBack,
     handleAddGoalClick,
     handleSwapSelected,
     handleBrowseGoalClick,
@@ -976,7 +1002,7 @@ function FlowActions({
         <SlidePanel direction={direction}>
           <InlineCreateForm
             onSubmit={handlers.handleFormSubmit}
-            onCancel={flow.swapGoalId ? handlers.handleCreateBack : handlers.handleCancel}
+            onCancel={handlers.handleCreateBack}
             submitLabel="Save"
           />
         </SlidePanel>
@@ -1071,11 +1097,7 @@ function GoalsPanelDesktop({
             {isInFlow && (
               <button
                 type="button"
-                onClick={
-                  flow.step === "creating" && flow.swapGoalId
-                    ? goalFlow.handleCreateBack
-                    : goalFlow.handleCancel
-                }
+                onClick={goalFlow.handleBack}
                 aria-label="Back"
                 className="rounded-md p-0.5 text-muted-foreground hover:text-foreground transition-colors"
               >
@@ -1174,7 +1196,7 @@ function GoalsPanelDesktop({
                     availableGoals={goalFlow.availableGoals}
                     onGoalClick={goalFlow.handleBrowseGoalClick}
                     onCreateNew={goalFlow.handleCreateNewClick}
-                    onCancel={goalFlow.handleCancel}
+                    onCancel={goalFlow.handleBack}
                     hint={flow.swapGoalId
                       ? "Select a replacement goal or create a new one"
                       : "Select a goal to link to this session"
@@ -1188,7 +1210,7 @@ function GoalsPanelDesktop({
                 <SlidePanel direction={goalFlow.direction}>
                   <InlineCreateForm
                     onSubmit={goalFlow.handleFormSubmit}
-                    onCancel={flow.swapGoalId ? goalFlow.handleCreateBack : goalFlow.handleCancel}
+                    onCancel={goalFlow.handleBack}
                     submitLabel="Save"
                   />
                 </SlidePanel>
