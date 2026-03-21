@@ -769,7 +769,7 @@ function InlineBrowseView({
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search goals..."
-          className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
+          className="w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/40"
         />
       </div>
 
