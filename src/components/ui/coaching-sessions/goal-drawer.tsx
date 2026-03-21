@@ -344,11 +344,11 @@ function InlineCreateForm({
 
       {showBody ? (
         <textarea
-          rows={2}
+          rows={3}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Add more detail..."
+          placeholder="Add detail to your goal..."
           className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
         />
       ) : (
@@ -357,7 +357,7 @@ function InlineCreateForm({
           onClick={() => setShowBody(true)}
           className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
         >
-          + Add description
+          + Add a goal description
         </button>
       )}
 
@@ -445,11 +445,11 @@ function InlineEditForm({
       />
 
       <textarea
-        rows={3}
+        rows={4}
         value={body}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Add more detail..."
+        placeholder="Add detail to your goal..."
         className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
       />
 
