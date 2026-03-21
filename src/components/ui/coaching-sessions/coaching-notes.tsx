@@ -1,10 +1,8 @@
 "use client";
 
 import { EditorProvider } from "@tiptap/react";
-import { useRef, useState, useCallback } from "react";
 import { FileText } from "lucide-react";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
-import { FloatingToolbar } from "@/components/ui/coaching-sessions/coaching-notes/floating-toolbar";
 import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu/link-bubble-menu";
 import { SelectionBubbleMenu } from "@/components/ui/tiptap-ui/selection-bubble-menu/selection-bubble-menu";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
@@ -16,9 +14,6 @@ import { toast } from "sonner";
 import "@/styles/simple-editor.scss";
 import "@/styles/tiptap-table.scss";
 
-/** Height of the application header in pixels (used for floating toolbar positioning) */
-const HEADER_HEIGHT_PX = 64;
-
 // Main component: orchestrates editor state and rendering logic
 
 interface CoachingNotesProps {
@@ -28,17 +23,14 @@ interface CoachingNotesProps {
 const CoachingNotes = ({ onAddAsAction }: CoachingNotesProps) => {
   const { extensions, isReady, isLoading, error, resetCache } = useEditorCache();
 
-  // Show error state if there's an error
   if (error) {
     return renderErrorState(error, resetCache);
   }
 
-  // Show loading state while extensions are being loaded
   if (isLoading || extensions.length === 0) {
     return renderLoadingState();
   }
 
-  // Render the editor (will be read-only until isReady = true)
   return renderReadyEditor(extensions, isReady, onAddAsAction);
 };
 
@@ -85,13 +77,7 @@ const renderReadyEditor = (
   onAddAsAction?: (selectedText: string) => void,
 ) => {
   try {
-    return (
-      <CoachingNotesWithFloatingToolbar
-        extensions={extensions}
-        isReady={isReady}
-        onAddAsAction={onAddAsAction}
-      />
-    );
+    return renderReadyEditorContent(extensions, isReady, onAddAsAction);
   } catch (error) {
     console.error("Editor initialization failed:", error);
     return (
@@ -109,111 +95,35 @@ const renderReadyEditor = (
   }
 };
 
-// Editor with floating toolbar: main editing interface
+// Editor rendering
 
-const CoachingNotesWithFloatingToolbar: React.FC<{
-  extensions: Extensions;
-  isReady: boolean;
-  onAddAsAction?: (selectedText: string) => void;
-}> = ({ extensions, isReady, onAddAsAction }) => {
-  const { editorRef, toolbarRef, toolbarState, handlers } =
-    useToolbarManagement();
-  const editorProps = buildEditorProps(isReady);
-  const toolbarSlots = buildToolbarSlots(
-    editorRef,
-    toolbarRef,
-    toolbarState,
-    handlers
-  );
-
-  return renderEditorWithToolbars(
-    editorRef,
-    extensions,
-    editorProps,
-    toolbarSlots,
-    onAddAsAction
-  );
-};
-
-// Toolbar state management
-
-const useToolbarManagement = () => {
-  const editorRef = useRef<HTMLDivElement>(null!);
-  const toolbarRef = useRef<HTMLDivElement>(null!);
-  const [originalToolbarVisible, setOriginalToolbarVisible] = useState(true);
-
-  const handleOriginalToolbarVisibilityChange = useCallback(
-    (visible: boolean) => {
-      setOriginalToolbarVisible(visible);
-    },
-    []
-  );
-
-  return {
-    editorRef,
-    toolbarRef,
-    toolbarState: { originalToolbarVisible },
-    handlers: { handleOriginalToolbarVisibilityChange },
-  };
-};
-
-const buildEditorProps = (isReady: boolean) => ({
-  attributes: {
-    class: "tiptap ProseMirror",
-    spellcheck: "true",
-  },
-  editable: () => isReady,
-  handleDOMEvents: {
-    click: createLinkClickHandler(),
-  },
-});
-
-const buildToolbarSlots = (
-  editorRef: React.RefObject<HTMLDivElement>,
-  toolbarRef: React.RefObject<HTMLDivElement>,
-  toolbarState: { originalToolbarVisible: boolean },
-  handlers: {
-    handleOriginalToolbarVisibilityChange: (visible: boolean) => void;
-  }
-) => ({
-  slotBefore: (
-    <div ref={toolbarRef} className="toolbar-container">
-      {toolbarState.originalToolbarVisible ? (
-        <SimpleToolbar />
-      ) : (
-        <div className="toolbar-spacer" aria-hidden="true" />
-      )}
-    </div>
-  ),
-  slotAfter: (
-    <FloatingToolbar
-      editorRef={editorRef}
-      toolbarRef={toolbarRef}
-      headerHeight={HEADER_HEIGHT_PX}
-      onOriginalToolbarVisibilityChange={
-        handlers.handleOriginalToolbarVisibilityChange
-      }
-    />
-  ),
-});
-
-const renderEditorWithToolbars = (
-  editorRef: React.RefObject<HTMLDivElement>,
+const renderReadyEditorContent = (
   extensions: Extensions,
-  editorProps: ReturnType<typeof buildEditorProps>,
-  toolbarSlots: ReturnType<typeof buildToolbarSlots>,
+  isReady: boolean,
   onAddAsAction?: (selectedText: string) => void,
 ) => (
-  <div ref={editorRef} className="coaching-notes-editor">
+  <div className="coaching-notes-editor">
     <EditorProvider
       extensions={extensions}
       autofocus={false}
       immediatelyRender={false}
       shouldRerenderOnTransaction={false}
       onContentError={handleEditorContentError}
-      editorProps={editorProps}
-      slotBefore={toolbarSlots.slotBefore}
-      slotAfter={toolbarSlots.slotAfter}
+      editorProps={{
+        attributes: {
+          class: "tiptap ProseMirror",
+          spellcheck: "true",
+        },
+        editable: () => isReady,
+        handleDOMEvents: {
+          click: createLinkClickHandler(),
+        },
+      }}
+      slotBefore={
+        <div className="toolbar-container">
+          <SimpleToolbar />
+        </div>
+      }
     >
       <LinkBubbleMenu />
       {onAddAsAction && <SelectionBubbleMenu onAddAsAction={onAddAsAction} />}

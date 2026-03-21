@@ -874,13 +874,15 @@ function GoalsPanelDesktop({
     <Card className="hidden md:flex md:flex-col h-full">
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">Goals</h3>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground">Goals</h3>
             {linkedGoals.length > 0 && (
               <span className="text-[11px] text-muted-foreground/50 tabular-nums">
                 {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
               </span>
             )}
+          </div>
+          <div className="flex items-center gap-1">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
