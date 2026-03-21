@@ -32,6 +32,7 @@ import {
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { GoalChip } from "@/components/ui/coaching-sessions/goal-chip";
+import { GoalProgressIcon } from "@/components/ui/coaching-sessions/goal-progress-icon";
 import {
   useGoalsBySession,
   useGoalList,
@@ -122,11 +123,10 @@ function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalC
             100
         )
       : 0;
-  const remaining =
-    progressMetrics.actions_total - progressMetrics.actions_completed;
 
   const title = goalTitle(goal);
 
+  // Swap mode card doesn't use progress bar or actions info
   const cardContent = swapMode ? (
     <button
       type="button"
@@ -159,40 +159,36 @@ function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalC
   ) : (
     <div
       onMouseEnter={checkTruncation}
+      onClick={hasBody ? () => setShowBody(!showBody) : undefined}
       className={cn(
         "rounded-lg border p-3 space-y-2 group/card transition-colors",
         pendingHold
           ? "border-amber-300/60 bg-amber-50/30"
-          : "border-border/50 bg-background hover:border-border"
+          : "border-border/50 bg-background hover:border-border",
+        hasBody && !pendingHold && "cursor-pointer"
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2 min-w-0">
-          <span
-            className={cn(
-              "h-1.5 w-1.5 rounded-full shrink-0 mt-1.5",
-              pendingHold ? "bg-amber-500/60" : progressDotColor(progressMetrics.progress)
-            )}
-          />
-          <span ref={titleRef} className={cn(
-            "text-[13px] font-medium line-clamp-2",
-            pendingHold && "text-muted-foreground"
-          )}>
-            {title}
-          </span>
+        <span ref={titleRef} className={cn(
+          "text-[13px] font-medium line-clamp-2 min-w-0",
+          pendingHold && "text-muted-foreground"
+        )}>
+          {title}
+        </span>
+        <div className="flex items-center gap-1 shrink-0 mt-0.5">
+          {pendingHold ? (
+            <Pause className="h-3 w-3 text-amber-600/70" />
+          ) : onRemove ? (
+            <button
+              type="button"
+              aria-label={`Remove ${title}`}
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          ) : null}
         </div>
-        {pendingHold ? (
-          <Pause className="h-3 w-3 text-amber-600/70 shrink-0 mt-0.5" />
-        ) : onRemove ? (
-          <button
-            type="button"
-            aria-label={`Remove ${title}`}
-            onClick={onRemove}
-            className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors shrink-0"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        ) : null}
       </div>
 
       {!pendingHold && progressMetrics.actions_total > 0 && (
@@ -204,44 +200,24 @@ function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalC
         </div>
       )}
 
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground/60">
+      <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
         {pendingHold ? (
-          <span className="text-amber-600/60 italic">Will be put on hold</span>
+          <span className="text-amber-600/60 italic mr-auto">Will be put on hold</span>
         ) : (
-          <>
-            <span>{progressLabel(progressMetrics.progress)}</span>
-            <div className="flex items-center gap-1">
-              {progressMetrics.actions_total > 0 ? (
-                <span>
-                  {remaining} action{remaining !== 1 ? "s" : ""} left &middot; {percent}%
-                </span>
-              ) : (
-                <span className="italic">No actions yet</span>
-              )}
-              {hasBody && (
-                <button
-                  type="button"
-                  aria-label={showBody ? "Hide details" : "Show details"}
-                  onClick={() => setShowBody(!showBody)}
-                  className="rounded p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-                >
-                  {showBody ? (
-                    <ChevronUp className="h-3 w-3" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3" />
-                  )}
-                </button>
-              )}
-            </div>
-          </>
+          <GoalProgressIcon progress={progressMetrics.progress} />
         )}
       </div>
 
-      {showBody && hasBody && (
+      <div
+        className={cn(
+          "overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out",
+          showBody && hasBody ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
         <p className="text-[12px] text-muted-foreground/70 leading-relaxed whitespace-pre-wrap border-t border-border/30 pt-2">
           {goal.body}
         </p>
-      )}
+      </div>
     </div>
   );
 
