@@ -67,7 +67,7 @@ describe("GoalChip", () => {
     )
 
     const unlinkButton = screen.getByRole("button", {
-      name: /unlink improve technical leadership/i,
+      name: /remove improve technical leadership/i,
     })
     await user.click(unlinkButton)
 
@@ -86,7 +86,7 @@ describe("GoalChip", () => {
 
     expect(
       screen.getByRole("button", {
-        name: /unlink improve technical leadership/i,
+        name: /remove improve technical leadership/i,
       })
     ).toBeInTheDocument()
   })

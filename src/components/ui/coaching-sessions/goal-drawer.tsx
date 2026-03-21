@@ -876,6 +876,16 @@ function BrowseGoalItem({
   );
 }
 
+// ── Slide Panel (animate in on mount via CSS) ────────────────────────
+
+function SlidePanel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="animate-in slide-in-from-bottom-2 fade-in duration-200 fill-mode-both">
+      {children}
+    </div>
+  );
+}
+
 // ── Flow Action Buttons (renders the right controls for each state) ───
 
 function FlowActions({
@@ -919,27 +929,29 @@ function FlowActions({
 
     case "browsing":
       return (
-        <InlineBrowseView
-          availableGoals={availableGoals}
-          onGoalClick={handlers.handleBrowseGoalClick}
-          onCreateNew={handlers.handleCreateNewClick}
-          onCancel={handlers.handleCancel}
-          hint={flow.swapGoalId
-            ? "Select a replacement goal or create a new one"
-            : "Select a goal to link to this session"
-          }
-        />
+        <SlidePanel>
+          <InlineBrowseView
+            availableGoals={availableGoals}
+            onGoalClick={handlers.handleBrowseGoalClick}
+            onCreateNew={handlers.handleCreateNewClick}
+            onCancel={handlers.handleCancel}
+            hint={flow.swapGoalId
+              ? "Select a replacement goal or create a new one"
+              : "Select a goal to link to this session"
+            }
+          />
+        </SlidePanel>
       );
 
     case "creating":
       return (
-        <div className="space-y-2">
+        <SlidePanel>
           <InlineCreateForm
             onSubmit={handlers.handleFormSubmit}
             onCancel={flow.swapGoalId ? handlers.handleCreateBack : handlers.handleCancel}
             submitLabel="Save"
           />
-        </div>
+        </SlidePanel>
       );
 
     default: {
@@ -1050,7 +1062,7 @@ function GoalsPanelDesktop({
       </CardHeader>
       <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto">
         {flow.step === "selecting-swap" && (
-          <p className="text-[12px] text-muted-foreground/70">
+          <p className="text-[12px] text-muted-foreground/70 animate-in fade-in duration-200">
             Which goal should be put on hold?
           </p>
         )}
