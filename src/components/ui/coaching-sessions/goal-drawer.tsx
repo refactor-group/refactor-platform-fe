@@ -849,7 +849,7 @@ function GoalsPanelDesktop({
               type="button"
               onClick={() => onCollapsedChange?.(false)}
               aria-label="Expand goals panel"
-              className="hidden md:flex md:flex-col md:items-center md:gap-2 md:sticky md:top-4 md:self-start md:pt-3 md:pb-3 md:px-1 rounded-lg border border-border/50 bg-card hover:bg-accent cursor-pointer transition-colors"
+              className="hidden md:flex md:flex-col md:items-center md:gap-2 md:pt-3 md:pb-3 md:px-1 h-full rounded-lg border border-border/50 bg-card hover:bg-accent cursor-pointer transition-colors"
             >
               <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
               <span className="text-[11px] font-medium text-muted-foreground [writing-mode:vertical-lr]">
@@ -871,7 +871,7 @@ function GoalsPanelDesktop({
   }
 
   return (
-    <Card className="hidden md:flex md:flex-col md:sticky md:top-4 md:self-start">
+    <Card className="hidden md:flex md:flex-col h-full">
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Goals</h3>
@@ -1345,7 +1345,7 @@ export function GoalDrawer({
 
   return (
     <div className={cn(
-      "transition-[opacity,max-width] duration-300 ease-in-out overflow-hidden self-start",
+      "transition-[opacity,max-width] duration-300 ease-in-out overflow-hidden",
       hidden ? "max-w-0 opacity-0" : "max-w-[300px] opacity-100"
     )}>
       <GoalsPanelDesktop

@@ -24,7 +24,7 @@ export default function CoachingSessionLayout({
         <SidebarInset className="min-w-0">
           <StickyTitleProvider>
             <SiteHeader />
-            <main className="min-w-0">{children}</main>
+            <main className="min-w-0 flex-1 flex flex-col">{children}</main>
           </StickyTitleProvider>
         </SidebarInset>
       </div>

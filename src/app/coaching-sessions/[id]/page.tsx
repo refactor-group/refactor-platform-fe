@@ -143,9 +143,9 @@ export default function CoachingSessionsPage() {
 
   return (
     // Never grow wider than the site-header
-    <div className="max-w-screen-2xl">
+    <div className="max-w-screen-2xl flex-1 flex flex-col">
       <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
-        <div className="flex-col h-full pl-4 md:flex ">
+        <div className="flex-col pl-4 md:flex">
           <div ref={titleRef} className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
             <CoachingSessionTitle
               locale={siteConfig.locale}
@@ -166,7 +166,7 @@ export default function CoachingSessionsPage() {
         </div>
 
         <div
-          className={`grid grid-cols-1 py-3 px-4 md:grid-cols-[var(--goals-width)_1fr] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${notesMaximized ? "md:gap-0" : "gap-4"}`}
+          className={`grid grid-cols-1 grid-rows-[1fr] py-3 px-4 flex-1 md:grid-cols-[var(--goals-width)_1fr] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${notesMaximized ? "md:gap-0" : "gap-4"}`}
           style={{
             "--goals-width": notesMaximized
               ? "0px"
