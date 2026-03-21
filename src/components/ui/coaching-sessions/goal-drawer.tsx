@@ -1,19 +1,28 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   ChevronDown,
   ChevronUp,
-  Circle,
-  CheckCircle2,
-  AlertCircle,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+} from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { GoalChip } from "@/components/ui/coaching-sessions/goal-chip";
@@ -70,7 +79,101 @@ function progressLabel(progress: GoalProgress): string {
   }
 }
 
-// ── Goal Progress Card ─────────────────────────────────────────────────
+// ── Compact Goal Card (used in both desktop panel and mobile expanded) ─
+
+interface CompactGoalCardProps {
+  goal: Goal;
+  onRemove: () => void;
+}
+
+function CompactGoalCard({ goal, onRemove }: CompactGoalCardProps) {
+  const { progressMetrics } = useGoalProgress(Some(goal.id));
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  const checkTruncation = useCallback(() => {
+    const el = titleRef.current;
+    if (el) {
+      setIsTruncated(el.scrollHeight > el.clientHeight);
+    }
+  }, []);
+
+  const percent =
+    progressMetrics.actions_total > 0
+      ? Math.round(
+          (progressMetrics.actions_completed / progressMetrics.actions_total) *
+            100
+        )
+      : 0;
+  const remaining =
+    progressMetrics.actions_total - progressMetrics.actions_completed;
+
+  const title = goalTitle(goal);
+
+  const cardContent = (
+    <div
+      onMouseEnter={checkTruncation}
+      className="rounded-lg border border-border/50 bg-background p-3 space-y-2 group/card transition-colors hover:border-border"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0">
+          <span
+            className={cn(
+              "h-1.5 w-1.5 rounded-full shrink-0 mt-1.5",
+              progressDotColor(progressMetrics.progress)
+            )}
+          />
+          <span ref={titleRef} className="text-[13px] font-medium line-clamp-2">
+            {title}
+          </span>
+        </div>
+        <button
+          type="button"
+          aria-label={`Remove ${title}`}
+          onClick={onRemove}
+          className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors shrink-0"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+
+      {progressMetrics.actions_total > 0 && (
+        <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-foreground/20 transition-all"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between text-[11px] text-muted-foreground/60">
+        <span>{progressLabel(progressMetrics.progress)}</span>
+        {progressMetrics.actions_total > 0 ? (
+          <span>
+            {remaining} action{remaining !== 1 ? "s" : ""} left &middot; {percent}%
+          </span>
+        ) : (
+          <span className="italic">No actions yet</span>
+        )}
+      </div>
+    </div>
+  );
+
+  if (!isTruncated) return cardContent;
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>{cardContent}</TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs max-w-[280px]">
+          <p className="font-medium">{title}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+// ── Full Goal Progress Card (used in mobile expanded view) ─────────────
 
 interface GoalProgressCardProps {
   goal: Goal;
@@ -172,7 +275,170 @@ function GoalProgressCard({ goal }: GoalProgressCardProps) {
   );
 }
 
-// ── Goal Drawer ────────────────────────────────────────────────────────
+// ── Shared props for both layouts ──────────────────────────────────────
+
+interface GoalPanelSharedProps {
+  linkedGoals: Goal[];
+  allGoals: Goal[];
+  linkedGoalIds: Set<string>;
+  atLimit: boolean;
+  onLink: (goalId: string) => void;
+  onUnlink: (goalId: string) => void;
+  onCreateAndLink: (title: string) => void;
+  onCreateAndSwap: (title: string, swapGoalId: string) => void;
+  onSwapAndLink: (newGoalId: string, swapGoalId: string) => void;
+}
+
+// ── Desktop Goals Panel ────────────────────────────────────────────────
+
+function GoalsPanelDesktop({
+  linkedGoals,
+  allGoals,
+  linkedGoalIds,
+  atLimit,
+  onLink,
+  onUnlink,
+  onCreateAndLink,
+  onCreateAndSwap,
+  onSwapAndLink,
+}: GoalPanelSharedProps) {
+  return (
+    <Card className="hidden md:flex md:flex-col md:sticky md:top-4 md:self-start">
+      <CardHeader className="p-4 pb-0">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">Goals</h3>
+          {linkedGoals.length > 0 && (
+            <span className="text-[11px] text-muted-foreground/50 tabular-nums">
+              {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+            </span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="p-4 space-y-3">
+        {linkedGoals.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
+            <p className="text-sm text-muted-foreground/50 italic">
+              No goals set for this session
+            </p>
+          </div>
+        ) : (
+          linkedGoals.map((goal) => (
+            <CompactGoalCard
+              key={goal.id}
+              goal={goal}
+              onRemove={() => onUnlink(goal.id)}
+            />
+          ))
+        )}
+
+        <GoalPicker
+          linkedGoalIds={linkedGoalIds}
+          allGoals={allGoals}
+          linkedGoals={linkedGoals}
+          onLink={onLink}
+          onCreateAndLink={onCreateAndLink}
+          onCreateAndSwap={onCreateAndSwap}
+          onSwapAndLink={onSwapAndLink}
+          atLimit={atLimit}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Mobile Goals Panel ─────────────────────────────────────────────────
+
+function GoalsPanelMobile({
+  linkedGoals,
+  allGoals,
+  linkedGoalIds,
+  atLimit,
+  onLink,
+  onUnlink,
+  onCreateAndLink,
+  onCreateAndSwap,
+  onSwapAndLink,
+}: GoalPanelSharedProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Card className="md:hidden">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <div className="flex items-center gap-3 min-h-[44px] px-4">
+          <span className="text-sm font-semibold text-foreground shrink-0">
+            Goals
+          </span>
+          {linkedGoals.length > 0 && (
+            <span className="text-[11px] text-muted-foreground/50 tabular-nums shrink-0">
+              {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+            </span>
+          )}
+          <div className="flex flex-wrap items-center gap-2 flex-1 py-1">
+            {linkedGoals.length === 0 ? (
+              <span className="text-sm text-muted-foreground/50 italic">
+                No goals set for this session
+              </span>
+            ) : (
+              linkedGoals.map((goal) => (
+                <GoalChipWithProgress
+                  key={goal.id}
+                  goal={goal}
+                  onRemove={() => onUnlink(goal.id)}
+                />
+              ))
+            )}
+
+            <GoalPicker
+              linkedGoalIds={linkedGoalIds}
+              allGoals={allGoals}
+              linkedGoals={linkedGoals}
+              onLink={onLink}
+              onCreateAndLink={onCreateAndLink}
+              onCreateAndSwap={onCreateAndSwap}
+              onSwapAndLink={onSwapAndLink}
+              atLimit={atLimit}
+            />
+          </div>
+
+          <div className="flex items-center shrink-0">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                aria-label={isOpen ? "Collapse goals" : "Expand goals"}
+              >
+                {isOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+        </div>
+
+        <CollapsibleContent>
+          <div className="px-4 pt-1 pb-4">
+            {linkedGoals.length === 0 ? (
+              <p className="text-sm text-muted-foreground/50 italic py-2">
+                Set a goal above to see its progress here.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {linkedGoals.map((goal) => (
+                  <GoalProgressCard key={goal.id} goal={goal} />
+                ))}
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}
+
+// ── Goal Drawer (main export) ──────────────────────────────────────────
 
 interface GoalDrawerProps {
   coachingSessionId: Id;
@@ -183,8 +449,6 @@ export function GoalDrawer({
   coachingSessionId,
   coachingRelationshipId,
 }: GoalDrawerProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
   const { goals: linkedGoals, refresh: refreshSessionGoals } =
     useGoalsBySession(coachingSessionId);
   const { goals: allGoals, refresh: refreshAllGoals } =
@@ -401,83 +665,23 @@ export function GoalDrawer({
     ]
   );
 
+  const sharedProps: GoalPanelSharedProps = {
+    linkedGoals,
+    allGoals,
+    linkedGoalIds,
+    atLimit,
+    onLink: handleLink,
+    onUnlink: handleUnlink,
+    onCreateAndLink: handleCreateAndLink,
+    onCreateAndSwap: handleCreateAndSwap,
+    onSwapAndLink: handleSwapAndLink,
+  };
+
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      {/* Goal bar — inset style */}
-      <div className="flex items-center gap-3 min-h-[36px] rounded-[0.5rem] bg-muted shadow-inner hover:bg-gray-200 transition-colors px-3">
-        <span className="text-[13px] font-semibold text-muted-foreground shrink-0">
-          Goals
-        </span>
-        {linkedGoals.length > 0 && (
-          <span className="text-[11px] text-muted-foreground/50 tabular-nums shrink-0">
-            {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
-          </span>
-        )}
-        <div className="flex flex-wrap items-center gap-2 flex-1 py-1">
-          {linkedGoals.length === 0 ? (
-            <span className="text-sm text-muted-foreground/60 italic">
-              No goals set for this session
-            </span>
-          ) : (
-            linkedGoals.map((goal) => {
-              return (
-                <GoalChipWithProgress
-                  key={goal.id}
-                  goal={goal}
-                  onRemove={() => handleUnlink(goal.id)}
-                />
-              );
-            })
-          )}
-
-          <GoalPicker
-            linkedGoalIds={linkedGoalIds}
-            allGoals={allGoals}
-            linkedGoals={linkedGoals}
-            onLink={handleLink}
-            onCreateAndLink={handleCreateAndLink}
-            onCreateAndSwap={handleCreateAndSwap}
-            onSwapAndLink={handleSwapAndLink}
-            atLimit={atLimit}
-          />
-        </div>
-
-        {/* Chevron */}
-        <div className="flex items-center shrink-0">
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-gray-300"
-              aria-label={isOpen ? "Collapse goals" : "Expand goals"}
-            >
-              {isOpen ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </CollapsibleTrigger>
-        </div>
-      </div>
-
-      {/* Expanded content — goal progress cards */}
-      <CollapsibleContent>
-        <div className="pt-2 pb-4">
-          {linkedGoals.length === 0 ? (
-            <p className="text-sm text-muted-foreground/50 italic py-2">
-              Set a goal above to see its progress here.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {linkedGoals.map((goal) => (
-                <GoalProgressCard key={goal.id} goal={goal} />
-              ))}
-            </div>
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+    <>
+      <GoalsPanelDesktop {...sharedProps} />
+      <GoalsPanelMobile {...sharedProps} />
+    </>
   );
 }
 

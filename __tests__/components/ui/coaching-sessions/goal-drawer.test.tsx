@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { GoalDrawer } from "@/components/ui/coaching-sessions/goal-drawer"
@@ -90,12 +90,15 @@ function setupMocks({
   })
 }
 
+// Both desktop and mobile layouts render in jsdom (no CSS media queries).
+// Use getAllBy* and take the first match where needed.
+
 describe("GoalDrawer", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("renders collapsed bar with 'Goals' label", () => {
+  it("renders 'Goals' label in both layouts", () => {
     setupMocks()
     render(
       <GoalDrawer
@@ -104,10 +107,12 @@ describe("GoalDrawer", () => {
       />
     )
 
-    expect(screen.getByText("Goals")).toBeInTheDocument()
+    // Both desktop and mobile render "Goals"
+    const labels = screen.getAllByText("Goals")
+    expect(labels.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("shows chips for linked goals", () => {
+  it("shows goal title for linked goals", () => {
     setupMocks()
     render(
       <GoalDrawer
@@ -116,7 +121,9 @@ describe("GoalDrawer", () => {
       />
     )
 
-    expect(screen.getByText("Improve technical leadership")).toBeInTheDocument()
+    // Goal title appears in both desktop (CompactGoalCard) and mobile (GoalChip)
+    const titles = screen.getAllByText("Improve technical leadership")
+    expect(titles.length).toBeGreaterThanOrEqual(1)
   })
 
   it("shows 'No goals set' when empty", () => {
@@ -128,9 +135,8 @@ describe("GoalDrawer", () => {
       />
     )
 
-    expect(
-      screen.getByText(/no goals set for this session/i)
-    ).toBeInTheDocument()
+    const messages = screen.getAllByText(/no goals set for this session/i)
+    expect(messages.length).toBeGreaterThanOrEqual(1)
   })
 
   it("shows counter with linked/max format", () => {
@@ -142,10 +148,11 @@ describe("GoalDrawer", () => {
       />
     )
 
-    expect(screen.getByText("1/3")).toBeInTheDocument()
+    const counters = screen.getAllByText("1/3")
+    expect(counters.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("expands on chevron click to show goal progress cards", async () => {
+  it("expands mobile view on chevron click to show goal progress cards", async () => {
     const user = userEvent.setup()
     setupMocks()
     render(
@@ -155,7 +162,7 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Click the expand button
+    // The expand button only exists in the mobile layout
     const expandButton = screen.getByRole("button", { name: /expand/i })
     await user.click(expandButton)
 
@@ -172,9 +179,9 @@ describe("GoalDrawer", () => {
       />
     )
 
-    expect(
-      screen.getByRole("button", { name: /set goal/i })
-    ).toBeInTheDocument()
+    // Both layouts render a GoalPicker with "Set goal"
+    const buttons = screen.getAllByRole("button", { name: /set goal/i })
+    expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
   it("does not show counter when no goals linked", () => {
@@ -216,8 +223,9 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Open picker and click the on-hold goal
-    await user.click(screen.getByRole("button", { name: /set goal/i }))
+    // Open picker (use first "Set goal" button) and click the on-hold goal
+    const setGoalButtons = screen.getAllByRole("button", { name: /set goal/i })
+    await user.click(setGoalButtons[0])
     await user.click(screen.getByText("Paused goal"))
 
     // Should transition status to InProgress before linking
@@ -260,7 +268,8 @@ describe("GoalDrawer", () => {
     )
 
     // Open picker and click the goal
-    await user.click(screen.getByRole("button", { name: /set goal/i }))
+    const setGoalButtons = screen.getAllByRole("button", { name: /set goal/i })
+    await user.click(setGoalButtons[0])
     await user.click(screen.getByText("Fresh goal"))
 
     // Should NOT call updateGoal — NotStarted stays as-is
@@ -273,7 +282,7 @@ describe("GoalDrawer", () => {
     )
   })
 
-  it("unlink only removes join table row, does not change goal status", async () => {
+  it("remove only removes join table row, does not change goal status", async () => {
     const user = userEvent.setup()
     const mockUnlinkResult = { isOk: () => true, isErr: () => false, match: (ok: () => void) => ok() }
     vi.mocked(GoalApi.unlinkFromSession).mockResolvedValue(mockUnlinkResult as any)
@@ -286,11 +295,11 @@ describe("GoalDrawer", () => {
       />
     )
 
-    // Click the X button on the goal chip
-    const unlinkButton = screen.getByRole("button", {
+    // Click the first Remove button (desktop CompactGoalCard or mobile GoalChip)
+    const removeButtons = screen.getAllByRole("button", {
       name: /remove improve technical leadership/i,
     })
-    await user.click(unlinkButton)
+    await user.click(removeButtons[0])
 
     // Should call unlinkFromSession with the correct IDs
     expect(GoalApi.unlinkFromSession).toHaveBeenCalledWith(
@@ -331,7 +340,8 @@ describe("GoalDrawer", () => {
     )
 
     // At limit (3/3) — open picker and go to create flow
-    await user.click(screen.getByRole("button", { name: /set goal/i }))
+    const setGoalButtons = screen.getAllByRole("button", { name: /set goal/i })
+    await user.click(setGoalButtons[0])
     await user.click(screen.getByRole("button", { name: /create new goal/i }))
 
     const textarea = screen.getByPlaceholderText(/i want to/i)

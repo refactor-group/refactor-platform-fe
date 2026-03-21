@@ -136,21 +136,21 @@ export default function CoachingSessionsPage() {
           <Separator />
         </div>
 
-        <div className="py-3 px-4">
+        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 py-3 px-4">
           {currentCoachingSessionId && currentCoachingRelationshipId && (
             <GoalDrawer
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
             />
           )}
-        </div>
 
-        <CoachingTabsContainer
-          userId={userId}
-          defaultValue={currentTab}
-          onTabChange={handleTabChange}
-          reviewActions={reviewActions}
-        />
+          <CoachingTabsContainer
+            userId={userId}
+            defaultValue={currentTab}
+            onTabChange={handleTabChange}
+            reviewActions={reviewActions}
+          />
+        </div>
       </EditorCacheProvider>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { ActionsPanel } from "@/components/ui/coaching-sessions/actions-panel";
@@ -179,8 +180,8 @@ const CoachingTabsContainer = ({
   }, [currentCoachingSessionId, handleActionAdded, handleTabChange, refreshSessionActions, refreshAllActions]);
 
   return (
-    <div className="row-span-1 h-full py-4 px-4">
-      <div className="flex-col space-y-4 sm:flex md:order-1">
+    <Card className="row-span-1 h-full">
+      <CardHeader className="p-4 pb-0">
         <Tabs value={currentTab} onValueChange={handleTabChange}>
           <TabsList className="flex w-128 grid-cols-3 justify-start">
             <TabsTrigger value="notes">Notes</TabsTrigger>
@@ -188,9 +189,11 @@ const CoachingTabsContainer = ({
             <TabsTrigger value="actions">Actions</TabsTrigger>
           </TabsList>
         </Tabs>
-        
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0">
         {/* Always-mounted content controlled by CSS display */}
-        <div className="mt-8">
+        <div className="mt-4">
           <div
             className="flex-col h-full space-y-4"
             style={{ display: currentTab === "notes" ? "flex" : "none" }}
@@ -231,8 +234,8 @@ const CoachingTabsContainer = ({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
