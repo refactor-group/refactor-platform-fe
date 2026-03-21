@@ -115,3 +115,14 @@ export function createMockGoogleOAuthConnectionState(
     ...overrides,
   };
 }
+
+export function createMockZoomOAuthConnectionState(
+  overrides?: Partial<OAuthConnection>
+): OAuthConnection {
+  return {
+    provider: "zoom",
+    email: "coach@zoom.us",
+    connected_at: "2026-02-15T10:00:00Z",
+    ...overrides,
+  };
+}

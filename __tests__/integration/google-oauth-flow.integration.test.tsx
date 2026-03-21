@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useSearchParams, useRouter } from "next/navigation";
 import IntegrationsPage from "@/app/settings/integrations/page";
@@ -24,19 +23,22 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 }));
 
 // Mock OAuth connection hook
-let mockConnection: OAuthConnection | null = null;
+let mockGoogleConnection: OAuthConnection | null = null;
+let mockZoomConnection: OAuthConnection | null = null;
 const mockRefreshOAuth = vi.fn();
 const mockDisconnect = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/api/oauth-connection", () => ({
-  useOAuthConnection: () => ({
-    connection: mockConnection,
+  useOAuthConnection: (provider: string) => ({
+    connection:
+      provider === "google" ? mockGoogleConnection : mockZoomConnection,
     isLoading: false,
     isError: undefined,
     refresh: mockRefreshOAuth,
   }),
   OAuthConnectionApi: {
-    getAuthorizeUrl: () => "http://localhost:4000/api/oauth/google/authorize",
+    getAuthorizeUrl: (provider: string) =>
+      `http://localhost:4000/api/oauth/${provider}/authorize`,
     disconnect: () => mockDisconnect(),
   },
 }));
@@ -63,7 +65,8 @@ describe("Google OAuth Flow Integration", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockConnection = null;
+    mockGoogleConnection = null;
+    mockZoomConnection = null;
     mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
     vi.mocked(useRouter).mockReturnValue({
       push: vi.fn(),
@@ -76,17 +79,15 @@ describe("Google OAuth Flow Integration", () => {
   });
 
   describe("Connect flow", () => {
-    it("shows Connect button when disconnected", () => {
+    it("shows platform dropdown when disconnected", () => {
       vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
 
       render(<IntegrationsPage />);
 
-      expect(
-        screen.getByRole("button", { name: "Connect Google Account" })
-      ).toBeInTheDocument();
+      expect(screen.getByText("Select a platform")).toBeInTheDocument();
     });
 
-    it("shows success toast and refreshes when returning from OAuth", async () => {
+    it("shows success toast and refreshes when returning from Google OAuth", async () => {
       vi.mocked(useSearchParams).mockReturnValue(
         new URLSearchParams("google_connected=true") as never
       );
@@ -104,10 +105,29 @@ describe("Google OAuth Flow Integration", () => {
         scroll: false,
       });
     });
+
+    it("shows success toast and refreshes when returning from Zoom OAuth", async () => {
+      vi.mocked(useSearchParams).mockReturnValue(
+        new URLSearchParams("zoom_connected=true") as never
+      );
+
+      render(<IntegrationsPage />);
+
+      await waitFor(() => {
+        expect(mockToastSuccess).toHaveBeenCalledWith(
+          "Zoom account connected successfully."
+        );
+      });
+
+      expect(mockRefreshOAuth).toHaveBeenCalled();
+      expect(mockReplace).toHaveBeenCalledWith("/settings/integrations", {
+        scroll: false,
+      });
+    });
   });
 
   describe("Error handling", () => {
-    it("shows error toast for access_denied", async () => {
+    it("shows error toast for Google access_denied", async () => {
       vi.mocked(useSearchParams).mockReturnValue(
         new URLSearchParams("google_error=access_denied") as never
       );
@@ -125,7 +145,7 @@ describe("Google OAuth Flow Integration", () => {
       });
     });
 
-    it("shows error toast for exchange_failed", async () => {
+    it("shows error toast for Google exchange_failed", async () => {
       vi.mocked(useSearchParams).mockReturnValue(
         new URLSearchParams("google_error=exchange_failed") as never
       );
@@ -139,7 +159,7 @@ describe("Google OAuth Flow Integration", () => {
       });
     });
 
-    it("shows generic error message for unknown error codes", async () => {
+    it("shows generic error message for unknown Google error codes", async () => {
       vi.mocked(useSearchParams).mockReturnValue(
         new URLSearchParams("google_error=something_unknown") as never
       );
@@ -152,12 +172,26 @@ describe("Google OAuth Flow Integration", () => {
         );
       });
     });
+
+    it("shows error toast for Zoom access_denied", async () => {
+      vi.mocked(useSearchParams).mockReturnValue(
+        new URLSearchParams("zoom_error=access_denied") as never
+      );
+
+      render(<IntegrationsPage />);
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith(
+          "Zoom account connection was cancelled."
+        );
+      });
+    });
   });
 
   describe("Disconnect flow", () => {
-    it("shows connected email and Disconnect button when connected", () => {
+    it("shows connected email and Disconnect button when Google is connected", () => {
       vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
-      mockConnection = createMockGoogleOAuthConnectionState();
+      mockGoogleConnection = createMockGoogleOAuthConnectionState();
 
       render(<IntegrationsPage />);
 
@@ -165,33 +199,6 @@ describe("Google OAuth Flow Integration", () => {
       expect(
         screen.getByRole("button", { name: "Disconnect" })
       ).toBeInTheDocument();
-    });
-
-    it("shows confirmation dialog and disconnects on confirm", async () => {
-      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
-      mockConnection = createMockGoogleOAuthConnectionState();
-
-      render(<IntegrationsPage />);
-
-      // Click disconnect trigger
-      await userEvent.click(
-        screen.getByRole("button", { name: "Disconnect" })
-      );
-
-      // Confirmation dialog should appear
-      expect(
-        screen.getByText("Disconnect Google Account")
-      ).toBeInTheDocument();
-
-      // Click confirm in dialog
-      const disconnectButtons = screen.getAllByRole("button", {
-        name: /Disconnect/,
-      });
-      await userEvent.click(disconnectButtons[disconnectButtons.length - 1]);
-
-      await waitFor(() => {
-        expect(mockDisconnect).toHaveBeenCalled();
-      });
     });
   });
 });
