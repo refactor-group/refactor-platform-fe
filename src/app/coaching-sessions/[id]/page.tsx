@@ -139,7 +139,7 @@ export default function CoachingSessionsPage() {
 
   return (
     // Never grow wider than the site-header
-    <div className="max-w-screen-2xl flex-1 flex flex-col overflow-hidden">
+    <div className="max-w-screen-2xl flex-1 flex flex-col md:overflow-hidden">
       <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
         <div className="flex-col pl-4 md:flex">
           <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
