@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
@@ -20,6 +20,9 @@ import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { useStickyTitleSync } from "@/lib/hooks/use-sticky-title-sync";
+import { isPastSession } from "@/types/coaching-session";
+import { useSidebar } from "@/lib/hooks/use-sidebar";
+import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
 /**
  * Determines if coaching relationship ID should be synced from session data.
@@ -56,6 +59,32 @@ export default function CoachingSessionsPage() {
   // Sync session title into the site header and show/hide on scroll
   const titleRef = useRef<HTMLDivElement>(null);
   useStickyTitleSync(titleRef);
+
+  // Auto-collapse main sidebar on coaching session page to maximize workspace
+  const { collapse, state: sidebarState, expand } = useSidebar();
+  const previousSidebarState = useRef<SidebarState | null>(null);
+
+  useEffect(() => {
+    if (previousSidebarState.current === null) {
+      previousSidebarState.current = sidebarState;
+    }
+    if (sidebarState === SidebarState.Expanded) {
+      collapse(StateChangeSource.SystemInitialization);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Restore sidebar state when leaving the coaching session page
+  useEffect(() => {
+    return () => {
+      if (previousSidebarState.current === SidebarState.Expanded) {
+        expand(StateChangeSource.SystemInitialization);
+      }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Panel layout state: goals panel collapsible, notes maximizable
+  const [goalsCollapsed, setGoalsCollapsed] = useState(false);
+  const [notesMaximized, setNotesMaximized] = useState(false);
 
   // Auto-sync relationship ID when session data loads
   // This ensures the relationship selector always matches the current session
@@ -136,11 +165,24 @@ export default function CoachingSessionsPage() {
           <Separator />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 py-3 px-4">
+        <div
+          className={`grid grid-cols-1 py-3 px-4 md:grid-cols-[var(--goals-width)_1fr] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${notesMaximized ? "md:gap-0" : "gap-4"}`}
+          style={{
+            "--goals-width": notesMaximized
+              ? "0px"
+              : goalsCollapsed
+                ? "40px"
+                : "300px",
+          } as React.CSSProperties}
+        >
           {currentCoachingSessionId && currentCoachingRelationshipId && (
             <GoalDrawer
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
+              collapsed={goalsCollapsed}
+              onCollapsedChange={setGoalsCollapsed}
+              hidden={notesMaximized}
+              readOnly={currentCoachingSession ? isPastSession(currentCoachingSession) : false}
             />
           )}
 
@@ -149,6 +191,8 @@ export default function CoachingSessionsPage() {
             defaultValue={currentTab}
             onTabChange={handleTabChange}
             reviewActions={reviewActions}
+            notesMaximized={notesMaximized}
+            onNotesMaximizedChange={setNotesMaximized}
           />
         </div>
       </EditorCacheProvider>

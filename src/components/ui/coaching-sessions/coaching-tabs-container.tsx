@@ -2,7 +2,10 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
@@ -25,6 +28,8 @@ interface CoachingTabsContainerProps {
   defaultValue?: string;
   onTabChange?: (value: string) => void;
   reviewActions: boolean;
+  notesMaximized?: boolean;
+  onNotesMaximizedChange?: (maximized: boolean) => void;
 }
 
 const CoachingTabsContainer = ({
@@ -32,6 +37,8 @@ const CoachingTabsContainer = ({
   defaultValue = "notes",
   onTabChange,
   reviewActions,
+  notesMaximized = false,
+  onNotesMaximizedChange,
 }: CoachingTabsContainerProps) => {
   const [currentTab, setCurrentTab] = useState(defaultValue);
 
@@ -182,13 +189,37 @@ const CoachingTabsContainer = ({
   return (
     <Card className="row-span-1 h-full">
       <CardHeader className="p-4 pb-0">
-        <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <TabsList className="flex w-128 grid-cols-3 justify-start">
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="agreements">Agreements</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center justify-between">
+          <Tabs value={currentTab} onValueChange={handleTabChange}>
+            <TabsList className="flex w-128 grid-cols-3 justify-start">
+              <TabsTrigger value="notes">Notes</TabsTrigger>
+              <TabsTrigger value="agreements">Agreements</TabsTrigger>
+              <TabsTrigger value="actions">Actions</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {onNotesMaximizedChange && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
+                  onClick={() => onNotesMaximizedChange(!notesMaximized)}
+                  aria-label={notesMaximized ? "Restore panels" : "Maximize workspace"}
+                >
+                  {notesMaximized ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{notesMaximized ? "Restore panels" : "Maximize workspace"}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="p-4 pt-0">

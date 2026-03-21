@@ -48,6 +48,14 @@ vi.mock('@/components/ui/share-session-link', () => ({
   default: () => <div>Share Link</div>
 }))
 
+vi.mock('@/lib/hooks/use-sidebar', () => ({
+  useSidebar: () => ({
+    collapse: vi.fn(),
+    expand: vi.fn(),
+    state: 'expanded',
+  }),
+}))
+
 vi.mock('@/components/ui/coaching-sessions/goal-drawer', () => ({
   GoalDrawer: () => <div>Goals</div>
 }))
