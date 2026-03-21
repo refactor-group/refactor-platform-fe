@@ -59,7 +59,7 @@ describe("MeetingIntegrationSection", () => {
     it("shows the platform dropdown", () => {
       render(<MeetingIntegrationSection />);
 
-      expect(screen.getByText("Select a platform")).toBeInTheDocument();
+      expect(screen.getByText("Select a provider")).toBeInTheDocument();
     });
 
     it("shows the updated description text", () => {
@@ -110,7 +110,7 @@ describe("MeetingIntegrationSection", () => {
     it("does not show the platform dropdown", () => {
       render(<MeetingIntegrationSection />);
 
-      expect(screen.queryByText("Select a platform")).not.toBeInTheDocument();
+      expect(screen.queryByText("Select a provider")).not.toBeInTheDocument();
     });
   });
 

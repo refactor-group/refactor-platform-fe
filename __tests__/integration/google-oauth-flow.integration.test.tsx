@@ -84,7 +84,7 @@ describe("Google OAuth Flow Integration", () => {
 
       render(<IntegrationsPage />);
 
-      expect(screen.getByText("Select a platform")).toBeInTheDocument();
+      expect(screen.getByText("Select a provider")).toBeInTheDocument();
     });
 
     it("shows success toast and refreshes when returning from Google OAuth", async () => {
