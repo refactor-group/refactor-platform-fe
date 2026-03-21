@@ -45,6 +45,7 @@ import {
   defaultGoal,
   DEFAULT_MAX_ACTIVE_GOALS,
   extractActiveGoalLimitError,
+  isAtGoalLimit,
   isOnHold,
   isInProgress,
 } from "@/types/goal";
@@ -1097,7 +1098,7 @@ export function GoalDrawer({
 
   const linkedGoalIds = new Set(linkedGoals.map((g) => g.id));
   const inProgressGoals = allGoals.filter((g) => g.status === ItemStatus.InProgress);
-  const atLimit = inProgressGoals.length >= DEFAULT_MAX_ACTIVE_GOALS;
+  const atLimit = isAtGoalLimit(inProgressGoals, linkedGoals);
 
   const handleLink = useCallback(
     async (goalId: string) => {

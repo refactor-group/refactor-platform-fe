@@ -61,6 +61,21 @@ export function extractActiveGoalLimitError(
   return null;
 }
 
+/**
+ * Whether the active goal limit has been reached.
+ * True when either the coaching relationship has the max number of
+ * InProgress goals, or a session already has the max linked goals.
+ */
+export function isAtGoalLimit(
+  inProgressGoals: Goal[],
+  sessionLinkedGoals: Goal[]
+): boolean {
+  return (
+    inProgressGoals.length >= DEFAULT_MAX_ACTIVE_GOALS ||
+    sessionLinkedGoals.length >= DEFAULT_MAX_ACTIVE_GOALS
+  );
+}
+
 export { DEFAULT_MAX_ACTIVE_GOALS };
 
 // This must always reflect the Rust struct on the backend
