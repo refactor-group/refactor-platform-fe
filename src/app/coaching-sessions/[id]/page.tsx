@@ -79,7 +79,6 @@ export default function CoachingSessionsPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Panel layout state: goals panel collapsible, notes maximizable
-  const [goalsCollapsed, setGoalsCollapsed] = useState(false);
   const [notesMaximized, setNotesMaximized] = useState(false);
 
   // Auto-sync relationship ID when session data loads
@@ -164,20 +163,14 @@ export default function CoachingSessionsPage() {
         <div
           className={`grid grid-cols-1 grid-rows-[1fr] py-3 px-4 flex-1 min-h-0 md:grid-cols-[var(--goals-width)_1fr] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${notesMaximized ? "md:gap-0" : "gap-4"}`}
           style={{
-            "--goals-width": notesMaximized
-              ? "0px"
-              : goalsCollapsed
-                ? "40px"
-                : "300px",
+            "--goals-width": notesMaximized ? "40px" : "300px",
           } as React.CSSProperties}
         >
           {currentCoachingSessionId && currentCoachingRelationshipId && (
             <GoalDrawer
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
-              collapsed={goalsCollapsed}
-              onCollapsedChange={setGoalsCollapsed}
-              hidden={notesMaximized}
+              collapsed={notesMaximized}
               readOnly={currentCoachingSession ? isPastSession(currentCoachingSession) : false}
             />
           )}

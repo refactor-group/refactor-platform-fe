@@ -6,8 +6,6 @@ import {
   ChevronLeft,
   ChevronUp,
   Link,
-  PanelLeftClose,
-  PanelLeftOpen,
   Pencil,
   Plus,
   Pause,
@@ -987,7 +985,6 @@ function FlowActions({
 
 interface GoalsPanelDesktopProps extends GoalPanelSharedProps {
   collapsed?: boolean;
-  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
 function GoalsPanelDesktop({
@@ -1004,7 +1001,6 @@ function GoalsPanelDesktop({
   onUpdateGoal,
   readOnly = false,
   collapsed = false,
-  onCollapsedChange,
 }: GoalsPanelDesktopProps) {
   const goalFlow = useGoalFlow({
     atLimit,
@@ -1020,37 +1016,21 @@ function GoalsPanelDesktop({
 
   if (collapsed) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => onCollapsedChange?.(false)}
-              aria-label="Expand goals panel"
-              className="hidden md:flex md:flex-col md:items-center md:gap-2 md:pt-3 md:pb-3 md:px-1 h-full rounded-lg border border-border/50 bg-card hover:bg-accent cursor-pointer transition-colors"
-            >
-              <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
-              <span className="text-[11px] font-medium text-muted-foreground [writing-mode:vertical-lr]">
-                Goals
-              </span>
-              {linkedGoals.length > 0 && (
-                <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-                  {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
-                </span>
-              )}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <p>Expand goals</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="hidden md:flex md:flex-col md:items-center md:gap-2 md:pt-3 md:pb-3 md:px-1 h-full rounded-lg border border-border/50 bg-card">
+        <span className="text-[11px] font-medium text-muted-foreground [writing-mode:vertical-lr]">
+          Goals
+        </span>
+        {linkedGoals.length > 0 && (
+          <span className="text-[10px] text-muted-foreground/50 tabular-nums">
+            {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+          </span>
+        )}
+      </div>
     );
   }
 
   const isInFlow = flow.step !== "idle";
 
-  // Header title and subtitle change per step
   const headerTitle = flow.step === "idle" || flow.step === "selecting-swap"
     ? "Goals"
     : flow.step === "browsing"
@@ -1077,28 +1057,6 @@ function GoalsPanelDesktop({
               <span className="text-[11px] text-muted-foreground/50 tabular-nums">
                 {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
               </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            {!isInFlow && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 text-muted-foreground/50 hover:text-foreground"
-                      onClick={() => onCollapsedChange?.(true)}
-                      aria-label="Collapse goals panel"
-                    >
-                      <PanelLeftClose className="h-3.5 w-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>Collapse goals</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             )}
           </div>
         </div>
@@ -1327,8 +1285,6 @@ interface GoalDrawerProps {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
   collapsed?: boolean;
-  onCollapsedChange?: (collapsed: boolean) => void;
-  hidden?: boolean;
   /** When true, goal linkage is immutable (past sessions) */
   readOnly?: boolean;
 }
@@ -1337,8 +1293,6 @@ export function GoalDrawer({
   coachingSessionId,
   coachingRelationshipId,
   collapsed = false,
-  onCollapsedChange,
-  hidden = false,
   readOnly = false,
 }: GoalDrawerProps) {
   const { goals: linkedGoals, refresh: refreshSessionGoals } =
@@ -1616,17 +1570,13 @@ export function GoalDrawer({
   };
 
   return (
-    <div className={cn(
-      "transition-[opacity,max-width] duration-300 ease-in-out overflow-hidden",
-      hidden ? "max-w-0 opacity-0" : "max-w-[300px] opacity-100"
-    )}>
+    <>
       <GoalsPanelDesktop
         {...sharedProps}
         collapsed={collapsed}
-        onCollapsedChange={onCollapsedChange}
       />
       <GoalsPanelMobile {...sharedProps} />
-    </div>
+    </>
   );
 }
 
