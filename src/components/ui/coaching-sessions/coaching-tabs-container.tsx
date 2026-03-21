@@ -205,7 +205,7 @@ const CoachingTabsContainer = ({
                   size="sm"
                   className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
                   onClick={() => onNotesMaximizedChange(!notesMaximized)}
-                  aria-label={notesMaximized ? "Restore panels" : "Maximize workspace"}
+                  aria-label={notesMaximized ? "Restore panels" : "Maximize notes"}
                 >
                   {notesMaximized ? (
                     <Minimize2 className="h-3.5 w-3.5" />
@@ -215,7 +215,7 @@ const CoachingTabsContainer = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">
-                <p>{notesMaximized ? "Restore panels" : "Maximize workspace"}</p>
+                <p>{notesMaximized ? "Restore panels" : "Maximize notes"}</p>
               </TooltipContent>
             </Tooltip>
           )}
