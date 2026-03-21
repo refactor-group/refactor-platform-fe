@@ -418,4 +418,126 @@ describe("GoalDrawer", () => {
       expect.objectContaining({ title: "Replacement goal" })
     )
   })
+
+  it("shows edit icon on hover and enters edit mode on click", async () => {
+    const user = userEvent.setup()
+    setupMocks()
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Edit button should exist (appears on hover via CSS, but accessible in DOM)
+    const editButtons = screen.getAllByRole("button", {
+      name: /edit improve technical leadership/i,
+    })
+    expect(editButtons.length).toBeGreaterThanOrEqual(1)
+
+    // Click edit to enter edit mode
+    await user.click(editButtons[0])
+
+    // Should show pre-populated input with current title
+    const titleInput = screen.getByDisplayValue("Improve technical leadership")
+    expect(titleInput).toBeInTheDocument()
+
+    // Should show pre-populated textarea with current body
+    const bodyInput = screen.getByDisplayValue("Work on active listening")
+    expect(bodyInput).toBeInTheDocument()
+
+    // Save button should be disabled (no changes yet)
+    const saveButton = screen.getByRole("button", { name: /save/i })
+    expect(saveButton).toBeDisabled()
+  })
+
+  it("editing a goal calls updateGoal with new title and body", async () => {
+    const user = userEvent.setup()
+    mockUpdate.mockResolvedValue(goal1)
+    setupMocks()
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Enter edit mode
+    const editButtons = screen.getAllByRole("button", {
+      name: /edit improve technical leadership/i,
+    })
+    await user.click(editButtons[0])
+
+    // Clear and type new title
+    const titleInput = screen.getByDisplayValue("Improve technical leadership")
+    await user.clear(titleInput)
+    await user.type(titleInput, "Updated goal title")
+
+    // Save should now be enabled
+    const saveButton = screen.getByRole("button", { name: /save/i })
+    expect(saveButton).not.toBeDisabled()
+
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(
+        "goal-1",
+        expect.objectContaining({
+          title: "Updated goal title",
+          body: "Work on active listening",
+        })
+      )
+    })
+  })
+
+  it("cancelling edit returns to display mode without saving", async () => {
+    const user = userEvent.setup()
+    setupMocks()
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Enter edit mode
+    const editButtons = screen.getAllByRole("button", {
+      name: /edit improve technical leadership/i,
+    })
+    await user.click(editButtons[0])
+
+    // Type changes
+    const titleInput = screen.getByDisplayValue("Improve technical leadership")
+    await user.clear(titleInput)
+    await user.type(titleInput, "Something else")
+
+    // Cancel
+    await user.click(screen.getByRole("button", { name: /cancel/i }))
+
+    // Should return to display mode with original title
+    expect(screen.getAllByText("Improve technical leadership").length).toBeGreaterThanOrEqual(1)
+
+    // updateGoal should NOT have been called
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it("does not show edit icon on readOnly sessions", () => {
+    setupMocks()
+
+    render(
+      <GoalDrawer
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        readOnly
+      />
+    )
+
+    const editButtons = screen.queryAllByRole("button", {
+      name: /edit improve technical leadership/i,
+    })
+    expect(editButtons).toHaveLength(0)
+  })
 })

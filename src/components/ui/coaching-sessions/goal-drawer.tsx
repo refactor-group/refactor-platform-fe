@@ -7,6 +7,7 @@ import {
   Link,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   Plus,
   Pause,
   Search,
@@ -94,6 +95,7 @@ function progressLabel(progress: GoalProgress): string {
 interface CompactGoalCardProps {
   goal: Goal;
   onRemove?: () => void;
+  onUpdate?: (goalId: string, title: string, body: string) => Promise<void>;
   /** When set, card shows a "put on hold" affordance instead of normal interactions */
   swapMode?: {
     onSelect: () => void;
@@ -102,11 +104,12 @@ interface CompactGoalCardProps {
   pendingHold?: boolean;
 }
 
-function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalCardProps) {
+function CompactGoalCard({ goal, onRemove, onUpdate, swapMode, pendingHold }: CompactGoalCardProps) {
   const { progressMetrics } = useGoalProgress(Some(goal.id));
   const titleRef = useRef<HTMLSpanElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
   const [showBody, setShowBody] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const hasBody = hasGoalBody(goal);
 
   const checkTruncation = useCallback(() => {
@@ -125,6 +128,38 @@ function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalC
       : 0;
 
   const title = goalTitle(goal);
+
+  const handleEditClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(true);
+    setShowBody(false);
+  }, []);
+
+  const handleEditSave = useCallback(
+    async (newTitle: string, newBody: string) => {
+      if (onUpdate) {
+        await onUpdate(goal.id, newTitle, newBody);
+      }
+      setIsEditing(false);
+    },
+    [goal.id, onUpdate]
+  );
+
+  const handleEditCancel = useCallback(() => {
+    setIsEditing(false);
+  }, []);
+
+  // Edit mode renders an inline form pre-populated with current values
+  if (isEditing) {
+    return (
+      <InlineEditForm
+        initialTitle={goal.title}
+        initialBody={goal.body}
+        onSave={handleEditSave}
+        onCancel={handleEditCancel}
+      />
+    );
+  }
 
   // Swap mode card doesn't use progress bar or actions info
   const cardContent = swapMode ? (
@@ -178,16 +213,30 @@ function CompactGoalCard({ goal, onRemove, swapMode, pendingHold }: CompactGoalC
         <div className="flex items-center gap-1 shrink-0 mt-0.5">
           {pendingHold ? (
             <Pause className="h-3 w-3 text-amber-600/70" />
-          ) : onRemove ? (
-            <button
-              type="button"
-              aria-label={`Remove ${title}`}
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
-              className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          ) : null}
+          ) : (
+            <>
+              {onUpdate && (
+                <button
+                  type="button"
+                  aria-label={`Edit ${title}`}
+                  onClick={handleEditClick}
+                  className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-foreground transition-colors"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              )}
+              {onRemove && (
+                <button
+                  type="button"
+                  aria-label={`Remove ${title}`}
+                  onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                  className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -282,7 +331,7 @@ function InlineCreateForm({
   );
 
   return (
-    <div className="rounded-lg border border-border bg-background p-3 space-y-3">
+    <div className="rounded-lg border border-border bg-background p-3 space-y-2">
       <input
         ref={setInputRef}
         type="text"
@@ -290,7 +339,7 @@ function InlineCreateForm({
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="What do you want to achieve?"
-        className="w-full rounded-md border border-border/50 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
+        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[13px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
       />
 
       {showBody ? (
@@ -300,7 +349,7 @@ function InlineCreateForm({
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Add more detail..."
-          className="w-full rounded-md border border-border/50 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
+          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
         />
       ) : (
         <button
@@ -320,6 +369,98 @@ function InlineCreateForm({
           onClick={handleSubmit}
         >
           {submitLabel}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-xs text-muted-foreground"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Inline Edit Form ──────────────────────────────────────────────────
+
+interface InlineEditFormProps {
+  initialTitle: string;
+  initialBody: string;
+  onSave: (title: string, body: string) => Promise<void>;
+  onCancel: () => void;
+}
+
+function InlineEditForm({
+  initialTitle,
+  initialBody,
+  onSave,
+  onCancel,
+}: InlineEditFormProps) {
+  const [title, setTitle] = useState(initialTitle);
+  const [body, setBody] = useState(initialBody);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const setInputRef = useCallback((el: HTMLInputElement | null) => {
+    (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }, []);
+
+  const hasChanges =
+    title.trim() !== initialTitle || body !== initialBody;
+
+  const handleSave = useCallback(async () => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    await onSave(trimmed, body);
+  }, [title, body, onSave]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (hasChanges) handleSave();
+      }
+      if (e.key === "Escape") {
+        onCancel();
+      }
+    },
+    [handleSave, hasChanges, onCancel]
+  );
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+      <input
+        ref={setInputRef}
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Goal title"
+        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[13px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
+      />
+
+      <textarea
+        rows={3}
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Add more detail..."
+        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
+      />
+
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          className="flex-1 h-8 text-xs"
+          disabled={!title.trim() || !hasChanges}
+          onClick={handleSave}
+        >
+          Save
         </Button>
         <Button
           variant="ghost"
@@ -449,6 +590,7 @@ interface GoalPanelSharedProps {
   onCreateAndLink: (title: string, body?: string) => void;
   onCreateAndSwap: (title: string, swapGoalId: string, body?: string) => void;
   onSwapAndLink: (newGoalId: string, swapGoalId: string) => void;
+  onUpdateGoal: (goalId: string, title: string, body: string) => Promise<void>;
   /** When true, goal linkage is immutable (past sessions) */
   readOnly?: boolean;
 }
@@ -825,6 +967,7 @@ function GoalsPanelDesktop({
   onCreateAndLink,
   onCreateAndSwap,
   onSwapAndLink,
+  onUpdateGoal,
   readOnly = false,
   collapsed = false,
   onCollapsedChange,
@@ -926,6 +1069,7 @@ function GoalsPanelDesktop({
               key={goal.id}
               goal={goal}
               onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
+              onUpdate={readOnly ? undefined : onUpdateGoal}
               swapMode={flow.step === "selecting-swap"
                 ? { onSelect: () => goalFlow.handleSwapSelected(goal.id) }
                 : undefined
@@ -962,6 +1106,7 @@ function GoalsPanelMobile({
   onCreateAndLink,
   onCreateAndSwap,
   onSwapAndLink,
+  onUpdateGoal,
   readOnly = false,
 }: GoalPanelSharedProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -1332,6 +1477,26 @@ export function GoalDrawer({
     ]
   );
 
+  const handleUpdateGoal = useCallback(
+    async (goalId: string, title: string, body: string) => {
+      const goal = allGoals.find((g) => g.id === goalId);
+      if (!goal) return;
+      try {
+        await updateGoal(goalId, { ...goal, title, body });
+        refreshSessionGoals();
+        refreshAllGoals();
+      } catch (err) {
+        console.error("Failed to update goal:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to update goal",
+          description: "An error occurred while saving changes.",
+        });
+      }
+    },
+    [allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
+  );
+
   const sharedProps: GoalPanelSharedProps = {
     linkedGoals,
     allGoals,
@@ -1343,6 +1508,7 @@ export function GoalDrawer({
     onCreateAndLink: handleCreateAndLink,
     onCreateAndSwap: handleCreateAndSwap,
     onSwapAndLink: handleSwapAndLink,
+    onUpdateGoal: handleUpdateGoal,
     readOnly,
   };
 
