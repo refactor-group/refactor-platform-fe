@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import {
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
   Link,
   PanelLeftClose,
@@ -1053,81 +1054,152 @@ function GoalsPanelDesktop({
     );
   }
 
+  const isInFlow = flow.step !== "idle";
+
+  // Header title and subtitle change per step
+  const headerTitle = flow.step === "idle" || flow.step === "selecting-swap"
+    ? "Goals"
+    : flow.step === "browsing"
+      ? "Link a goal"
+      : "Create a goal";
+
   return (
     <Card className="hidden md:flex md:flex-col h-full">
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-foreground">Goals</h3>
-            {linkedGoals.length > 0 && (
+            {isInFlow && (
+              <button
+                type="button"
+                onClick={
+                  flow.step === "creating" && flow.swapGoalId
+                    ? goalFlow.handleCreateBack
+                    : goalFlow.handleCancel
+                }
+                aria-label="Back"
+                className="rounded-md p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+            <h3 className="text-sm font-semibold text-foreground">{headerTitle}</h3>
+            {flow.step === "idle" && linkedGoals.length > 0 && (
               <span className="text-[11px] text-muted-foreground/50 tabular-nums">
                 {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
               </span>
             )}
           </div>
           <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-muted-foreground/50 hover:text-foreground"
-                    onClick={() => onCollapsedChange?.(true)}
-                    aria-label="Collapse goals panel"
-                  >
-                    <PanelLeftClose className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>Collapse goals</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {!isInFlow && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-muted-foreground/50 hover:text-foreground"
+                      onClick={() => onCollapsedChange?.(true)}
+                      aria-label="Collapse goals panel"
+                    >
+                      <PanelLeftClose className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>Collapse goals</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto">
-        {flow.step === "selecting-swap" && (
-          <p className="text-[12px] text-muted-foreground/70 animate-in fade-in duration-200">
-            Which goal should be put on hold?
-          </p>
-        )}
+      <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-hidden">
+        {(() => {
+          switch (flow.step) {
+            case "idle":
+              return (
+                <div className="space-y-3">
+                  {linkedGoals.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
+                      <p className="text-sm text-muted-foreground/50 italic">
+                        No goals set for this session
+                      </p>
+                    </div>
+                  ) : (
+                    linkedGoals.map((goal) => (
+                      <CompactGoalCard
+                        key={goal.id}
+                        goal={goal}
+                        onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
+                        onUpdate={readOnly ? undefined : onUpdateGoal}
+                      />
+                    ))
+                  )}
+                  {!readOnly && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={goalFlow.handleAddGoalClick}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add goal
+                    </Button>
+                  )}
+                </div>
+              );
 
-        {linkedGoals.length === 0 && flow.step === "idle" && (
-          <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
-            <p className="text-sm text-muted-foreground/50 italic">
-              No goals set for this session
-            </p>
-          </div>
-        )}
+            case "selecting-swap":
+              return (
+                <SlidePanel direction={goalFlow.direction}>
+                  <div className="space-y-3">
+                    <p className="text-[12px] text-muted-foreground/70">
+                      Which goal should be put on hold?
+                    </p>
+                    {linkedGoals.map((goal) => (
+                      <CompactGoalCard
+                        key={goal.id}
+                        goal={goal}
+                        swapMode={{ onSelect: () => goalFlow.handleSwapSelected(goal.id) }}
+                      />
+                    ))}
+                  </div>
+                </SlidePanel>
+              );
 
-        {linkedGoals.length > 0 &&
-          linkedGoals.map((goal) => (
-            <CompactGoalCard
-              key={goal.id}
-              goal={goal}
-              onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
-              onUpdate={readOnly ? undefined : onUpdateGoal}
-              swapMode={flow.step === "selecting-swap"
-                ? { onSelect: () => goalFlow.handleSwapSelected(goal.id) }
-                : undefined
-              }
-              pendingHold={
-                (flow.step === "browsing" || flow.step === "creating") &&
-                flow.swapGoalId === goal.id
-              }
-            />
-          ))
-        }
+            case "browsing":
+              return (
+                <SlidePanel direction={goalFlow.direction}>
+                  <InlineBrowseView
+                    availableGoals={goalFlow.availableGoals}
+                    onGoalClick={goalFlow.handleBrowseGoalClick}
+                    onCreateNew={goalFlow.handleCreateNewClick}
+                    onCancel={goalFlow.handleCancel}
+                    hint={flow.swapGoalId
+                      ? "Select a replacement goal or create a new one"
+                      : "Select a goal to link to this session"
+                    }
+                  />
+                </SlidePanel>
+              );
 
-        <FlowActions
-          flow={flow}
-          direction={goalFlow.direction}
-          readOnly={readOnly}
-          handlers={goalFlow}
-          availableGoals={goalFlow.availableGoals}
-        />
+            case "creating":
+              return (
+                <SlidePanel direction={goalFlow.direction}>
+                  <InlineCreateForm
+                    onSubmit={goalFlow.handleFormSubmit}
+                    onCancel={flow.swapGoalId ? goalFlow.handleCreateBack : goalFlow.handleCancel}
+                    submitLabel="Save"
+                  />
+                </SlidePanel>
+              );
+
+            default: {
+              const _exhaustive: never = flow;
+              throw new Error(`Unhandled flow step: ${(_exhaustive as GoalFlowState).step}`);
+            }
+          }
+        })()}
       </CardContent>
     </Card>
   );
