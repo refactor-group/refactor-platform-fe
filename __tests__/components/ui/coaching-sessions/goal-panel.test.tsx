@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { GoalDrawer } from "@/components/ui/coaching-sessions/goal-drawer"
+import { GoalPanel } from "@/components/ui/coaching-sessions/goal-panel"
 import { createMockGoal } from "../../../test-utils"
 import { ItemStatus } from "@/types/general"
 import { GoalProgress } from "@/types/goal-progress"
@@ -93,7 +93,7 @@ function setupMocks({
 // Both desktop and mobile layouts render in jsdom (no CSS media queries).
 // Use getAllBy* and take the first match where needed.
 
-describe("GoalDrawer", () => {
+describe("GoalPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -101,7 +101,7 @@ describe("GoalDrawer", () => {
   it("renders 'Goals' label in both layouts", () => {
     setupMocks()
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -114,7 +114,7 @@ describe("GoalDrawer", () => {
   it("shows goal title for linked goals", () => {
     setupMocks()
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -127,7 +127,7 @@ describe("GoalDrawer", () => {
   it("shows 'No goals added yet' when empty", () => {
     setupMocks({ sessionGoals: [] })
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -140,7 +140,7 @@ describe("GoalDrawer", () => {
   it("shows counter with linked/max format", () => {
     setupMocks()
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -154,7 +154,7 @@ describe("GoalDrawer", () => {
     const user = userEvent.setup()
     setupMocks()
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -173,7 +173,7 @@ describe("GoalDrawer", () => {
   it("shows 'Add goal' button", () => {
     setupMocks()
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -186,7 +186,7 @@ describe("GoalDrawer", () => {
   it("does not show counter when no goals linked", () => {
     setupMocks({ sessionGoals: [] })
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -216,7 +216,7 @@ describe("GoalDrawer", () => {
     })
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -258,7 +258,7 @@ describe("GoalDrawer", () => {
     })
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -283,7 +283,7 @@ describe("GoalDrawer", () => {
     setupMocks()
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -315,7 +315,7 @@ describe("GoalDrawer", () => {
     setupMocks()
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
         readOnly
@@ -336,7 +336,7 @@ describe("GoalDrawer", () => {
     setupMocks({ sessionGoals: [] })
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -376,7 +376,7 @@ describe("GoalDrawer", () => {
     })
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -428,7 +428,7 @@ describe("GoalDrawer", () => {
     setupMocks()
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -462,7 +462,7 @@ describe("GoalDrawer", () => {
     setupMocks()
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -501,7 +501,7 @@ describe("GoalDrawer", () => {
     setupMocks()
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
       />
@@ -532,7 +532,7 @@ describe("GoalDrawer", () => {
     setupMocks()
 
     render(
-      <GoalDrawer
+      <GoalPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
         readOnly

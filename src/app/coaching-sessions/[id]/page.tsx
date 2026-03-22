@@ -7,7 +7,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
 import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
-import { GoalDrawer } from "@/components/ui/coaching-sessions/goal-drawer";
+import { GoalPanel } from "@/components/ui/coaching-sessions/goal-panel";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
@@ -167,7 +167,7 @@ export default function CoachingSessionsPage() {
           } as React.CSSProperties}
         >
           {currentCoachingSessionId && currentCoachingRelationshipId && (
-            <GoalDrawer
+            <GoalPanel
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={notesMaximized}

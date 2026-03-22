@@ -5,12 +5,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronUp,
-  Link,
-  Pencil,
   Plus,
-  Pause,
   Search,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,16 +19,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { GoalChip } from "@/components/ui/coaching-sessions/goal-chip";
-import { GoalProgressIcon } from "@/components/ui/coaching-sessions/goal-progress-icon";
+import { CompactGoalCard } from "@/components/ui/coaching-sessions/goal-card-compact";
+import { GoalCreateForm } from "@/components/ui/coaching-sessions/goal-create-form";
 import {
   useGoalsBySession,
   useGoalList,
@@ -42,442 +33,14 @@ import {
 import { useGoalProgress } from "@/lib/api/goal-progress";
 import type { Goal } from "@/types/goal";
 import {
-  goalTitle,
   defaultGoal,
   DEFAULT_MAX_ACTIVE_GOALS,
   extractActiveGoalLimitError,
   isAtGoalLimit,
-  hasGoalBody,
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
-import { GoalProgress } from "@/types/goal-progress";
-import type { GoalProgressMetrics } from "@/types/goal-progress";
 import { Some } from "@/types/option";
-
-// ── Health signal helpers ──────────────────────────────────────────────
-
-function progressDotColor(progress: GoalProgress): string {
-  switch (progress) {
-    case GoalProgress.SolidMomentum:
-      return "bg-emerald-800/50";
-    case GoalProgress.NeedsAttention:
-      return "bg-amber-500/60";
-    case GoalProgress.LetsRefocus:
-      return "bg-rose-500/50";
-    default: {
-      const _exhaustive: never = progress;
-      throw new Error(`Unhandled GoalProgress: ${_exhaustive}`);
-    }
-  }
-}
-
-function progressLabel(progress: GoalProgress): string {
-  switch (progress) {
-    case GoalProgress.SolidMomentum:
-      return "Solid momentum";
-    case GoalProgress.NeedsAttention:
-      return "Needs attention";
-    case GoalProgress.LetsRefocus:
-      return "Let\u2019s refocus";
-    default: {
-      const _exhaustive: never = progress;
-      throw new Error(`Unhandled GoalProgress: ${_exhaustive}`);
-    }
-  }
-}
-
-// ── Compact Goal Card (used in both desktop panel and mobile expanded) ─
-
-interface CompactGoalCardProps {
-  goal: Goal;
-  onRemove?: () => void;
-  onUpdate?: (goalId: string, title: string, body: string) => Promise<void>;
-  /** When set, clicking the card selects/links the goal */
-  onSelect?: () => void;
-  /** When set, card shows a "put on hold" affordance instead of normal interactions */
-  swapMode?: {
-    onSelect: () => void;
-  };
-  /** When true, card shows a visual indicator that it will be put on hold */
-  pendingHold?: boolean;
-}
-
-function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, pendingHold }: CompactGoalCardProps) {
-  const { progressMetrics } = useGoalProgress(Some(goal.id));
-  const titleRef = useRef<HTMLSpanElement>(null);
-  const [isTruncated, setIsTruncated] = useState(false);
-  const [showBody, setShowBody] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const hasBody = hasGoalBody(goal);
-
-  const checkTruncation = useCallback(() => {
-    const el = titleRef.current;
-    if (el) {
-      setIsTruncated(el.scrollHeight > el.clientHeight);
-    }
-  }, []);
-
-  const percent =
-    progressMetrics.actions_total > 0
-      ? Math.round(
-          (progressMetrics.actions_completed / progressMetrics.actions_total) *
-            100
-        )
-      : 0;
-
-  const title = goalTitle(goal);
-
-  const handleEditClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsEditing(true);
-    setShowBody(false);
-  }, []);
-
-  const handleEditSave = useCallback(
-    async (newTitle: string, newBody: string) => {
-      if (onUpdate) {
-        await onUpdate(goal.id, newTitle, newBody);
-      }
-      setIsEditing(false);
-    },
-    [goal.id, onUpdate]
-  );
-
-  const handleEditCancel = useCallback(() => {
-    setIsEditing(false);
-  }, []);
-
-  // Edit mode renders an inline form pre-populated with current values
-  if (isEditing) {
-    return (
-      <InlineEditForm
-        initialTitle={goal.title}
-        initialBody={goal.body}
-        onSave={handleEditSave}
-        onCancel={handleEditCancel}
-      />
-    );
-  }
-
-  // Swap mode card doesn't use progress bar or actions info
-  const cardContent = swapMode ? (
-    <button
-      type="button"
-      onClick={swapMode.onSelect}
-      onMouseEnter={checkTruncation}
-      className="w-full text-left rounded-lg border border-border/50 bg-background p-3 space-y-2 transition-all hover:border-amber-500/50 hover:bg-amber-50/30 cursor-pointer group/card"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2 min-w-0">
-          <span
-            className={cn(
-              "h-1.5 w-1.5 rounded-full shrink-0 mt-1.5",
-              progressDotColor(progressMetrics.progress)
-            )}
-          />
-          <span ref={titleRef} className="text-[13px] font-medium line-clamp-2">
-            {title}
-          </span>
-        </div>
-        <Pause className="h-3.5 w-3.5 text-muted-foreground/30 group-hover/card:text-amber-600 shrink-0 mt-0.5 transition-colors" />
-      </div>
-
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground/60">
-        <span>{progressLabel(progressMetrics.progress)}</span>
-        <span className="text-muted-foreground/0 group-hover/card:text-amber-600/70 transition-colors">
-          Put on hold
-        </span>
-      </div>
-    </button>
-  ) : (
-    <div
-      onMouseEnter={checkTruncation}
-      onClick={onSelect ?? (hasBody ? () => setShowBody(!showBody) : undefined)}
-      className={cn(
-        "rounded-lg border p-3 space-y-2 group/card transition-colors shadow-sm",
-        pendingHold
-          ? "border-amber-300/60 bg-amber-50/30"
-          : onSelect
-            ? "border-border/50 bg-background hover:border-border cursor-pointer"
-            : "border-border/50 bg-background hover:border-border",
-        hasBody && !pendingHold && !onSelect && "cursor-pointer"
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span ref={titleRef} className={cn(
-          "text-[13px] font-medium line-clamp-2 min-w-0",
-          pendingHold && "text-muted-foreground"
-        )}>
-          {title}
-        </span>
-        <div className="flex items-center gap-1 shrink-0 mt-0.5">
-          {pendingHold ? (
-            <Pause className="h-3 w-3 text-amber-600/70" />
-          ) : onSelect ? (
-            <Link className="h-3 w-3 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 transition-colors" />
-          ) : (
-            <>
-              {onUpdate && (
-                <button
-                  type="button"
-                  aria-label={`Edit ${title}`}
-                  onClick={handleEditClick}
-                  className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-foreground transition-colors"
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
-              )}
-              {onRemove && (
-                <button
-                  type="button"
-                  aria-label={`Remove ${title}`}
-                  onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                  className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {!pendingHold && progressMetrics.actions_total > 0 && (
-        <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-foreground/20 transition-all"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-      )}
-
-      <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
-        {pendingHold ? (
-          <span className="text-amber-600/60 italic mr-auto">Will be put on hold</span>
-        ) : (
-          <GoalProgressIcon progress={progressMetrics.progress} />
-        )}
-      </div>
-
-      <div
-        className={cn(
-          "overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out",
-          showBody && hasBody ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
-        )}
-      >
-        <p className="text-[12px] text-muted-foreground/70 leading-relaxed whitespace-pre-wrap border-t border-border/30 pt-2">
-          {goal.body}
-        </p>
-      </div>
-    </div>
-  );
-
-  if (!isTruncated) return cardContent;
-
-  return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>{cardContent}</TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs max-w-[280px]">
-          <p className="font-medium">{title}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-// ── Inline Create Form ─────────────────────────────────────────────────
-
-interface InlineCreateFormProps {
-  onSubmit: (title: string, body?: string) => void;
-  onCancel: () => void;
-  /** Label for the submit button */
-  submitLabel: string;
-}
-
-function InlineCreateForm({
-  onSubmit,
-  onCancel,
-  submitLabel,
-}: InlineCreateFormProps) {
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [showBody, setShowBody] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-focus on mount
-  const setInputRef = useCallback((el: HTMLInputElement | null) => {
-    (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
-    if (el) el.focus();
-  }, []);
-
-  const handleSubmit = useCallback(async () => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-
-    const trimmedBody = body.trim() || undefined;
-    await onSubmit(trimmed, trimmedBody);
-  }, [title, body, onSubmit]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSubmit();
-      }
-      if (e.key === "Escape") {
-        onCancel();
-      }
-    },
-    [handleSubmit, onCancel]
-  );
-
-  return (
-    <div className="rounded-lg border border-border bg-background p-3 space-y-2">
-      <input
-        ref={setInputRef}
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="What do you want to achieve?"
-        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[13px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
-      />
-
-      {showBody ? (
-        <textarea
-          rows={3}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Add detail to your goal..."
-          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowBody(true)}
-          className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-        >
-          + Add a goal description
-        </button>
-      )}
-
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          className="flex-1 h-8 text-xs"
-          disabled={!title.trim()}
-          onClick={handleSubmit}
-        >
-          {submitLabel}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-xs text-muted-foreground"
-          onClick={onCancel}
-        >
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ── Inline Edit Form ──────────────────────────────────────────────────
-
-interface InlineEditFormProps {
-  initialTitle: string;
-  initialBody: string;
-  onSave: (title: string, body: string) => Promise<void>;
-  onCancel: () => void;
-}
-
-function InlineEditForm({
-  initialTitle,
-  initialBody,
-  onSave,
-  onCancel,
-}: InlineEditFormProps) {
-  const [title, setTitle] = useState(initialTitle);
-  const [body, setBody] = useState(initialBody);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const setInputRef = useCallback((el: HTMLInputElement | null) => {
-    (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
-    if (el) {
-      el.focus();
-      el.select();
-    }
-  }, []);
-
-  const hasChanges =
-    title.trim() !== initialTitle || body !== initialBody;
-
-  const handleSave = useCallback(async () => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    await onSave(trimmed, body);
-  }, [title, body, onSave]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        if (hasChanges) handleSave();
-      }
-      if (e.key === "Escape") {
-        onCancel();
-      }
-    },
-    [handleSave, hasChanges, onCancel]
-  );
-
-  return (
-    <div className="rounded-lg border border-border bg-background p-3 space-y-2">
-      <input
-        ref={setInputRef}
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Goal title"
-        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[13px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
-      />
-
-      <textarea
-        rows={4}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Add detail to your goal..."
-        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
-      />
-
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          className="flex-1 h-8 text-xs"
-          disabled={!title.trim() || !hasChanges}
-          onClick={handleSave}
-        >
-          Save
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-xs text-muted-foreground"
-          onClick={onCancel}
-        >
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 
 // ── Shared props for both layouts ──────────────────────────────────────
 
@@ -892,7 +455,7 @@ function GoalFlowPages({
     case "creating":
       return (
         <SlidePanel direction={goalFlow.direction}>
-          <InlineCreateForm
+          <GoalCreateForm
             onSubmit={goalFlow.handleFormSubmit}
             onCancel={goalFlow.handleBack}
             submitLabel="Save"
@@ -1109,9 +672,9 @@ function GoalsPanelMobile({
   );
 }
 
-// ── Goal Drawer (main export) ──────────────────────────────────────────
+// ── Goal Panel (main export) ──────────────────────────────────────────
 
-interface GoalDrawerProps {
+interface GoalPanelProps {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
   collapsed?: boolean;
@@ -1119,12 +682,12 @@ interface GoalDrawerProps {
   readOnly?: boolean;
 }
 
-export function GoalDrawer({
+export function GoalPanel({
   coachingSessionId,
   coachingRelationshipId,
   collapsed = false,
   readOnly = false,
-}: GoalDrawerProps) {
+}: GoalPanelProps) {
   const { goals: linkedGoals, refresh: refreshSessionGoals } =
     useGoalsBySession(coachingSessionId);
   const { goals: allGoals, refresh: refreshAllGoals } =

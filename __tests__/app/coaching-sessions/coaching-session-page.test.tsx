@@ -56,8 +56,8 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
   }),
 }))
 
-vi.mock('@/components/ui/coaching-sessions/goal-drawer', () => ({
-  GoalDrawer: () => <div>Goals</div>
+vi.mock('@/components/ui/coaching-sessions/goal-panel', () => ({
+  GoalPanel: () => <div>Goals</div>
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-tabs-container', () => ({
