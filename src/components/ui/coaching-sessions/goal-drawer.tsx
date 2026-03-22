@@ -478,107 +478,6 @@ function InlineEditForm({
   );
 }
 
-// ── Full Goal Progress Card (used in mobile expanded view) ─────────────
-
-interface GoalProgressCardProps {
-  goal: Goal;
-}
-
-function GoalProgressCard({ goal }: GoalProgressCardProps) {
-  const { progressMetrics } = useGoalProgress(Some(goal.id));
-
-  const percent =
-    progressMetrics.actions_total > 0
-      ? Math.round(
-          (progressMetrics.actions_completed / progressMetrics.actions_total) *
-            100
-        )
-      : 0;
-  const remaining =
-    progressMetrics.actions_total - progressMetrics.actions_completed;
-
-  return (
-    <div className="rounded-xl border border-border/50 bg-muted/30 overflow-hidden transition-colors hover:border-border">
-      <div className="flex flex-col md:flex-row">
-        {/* Left panel — goal summary */}
-        <div className="flex-1 p-4 space-y-3 min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full shrink-0",
-                  progressDotColor(progressMetrics.progress)
-                )}
-              />
-              <span className="text-[13px] font-medium truncate">
-                {goalTitle(goal)}
-              </span>
-            </div>
-            <span className="text-[11px] text-muted-foreground/60 shrink-0">
-              {progressLabel(progressMetrics.progress)}
-            </span>
-          </div>
-
-          {progressMetrics.actions_total > 0 && (
-            <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-foreground/20 transition-all"
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {progressMetrics.actions_total > 0 ? (
-              <>
-                <span>
-                  {remaining} action{remaining !== 1 ? "s" : ""} remaining
-                </span>
-                <span className="text-muted-foreground/30">&middot;</span>
-                <span>{percent}% complete</span>
-              </>
-            ) : (
-              <span className="italic text-muted-foreground/50">
-                No actions yet
-              </span>
-            )}
-          </div>
-
-          <p className="text-[11px] text-muted-foreground/50">
-            {progressMetrics.linked_session_count > 0
-              ? `${progressMetrics.linked_session_count} session${progressMetrics.linked_session_count !== 1 ? "s" : ""}`
-              : "Not discussed yet"}
-            {progressMetrics.last_session_date.some && (
-              <span> &middot; Last discussed {progressMetrics.last_session_date.val}</span>
-            )}
-          </p>
-        </div>
-
-        {/* Divider — vertical on desktop, horizontal on mobile */}
-        <div className="h-px md:h-auto md:w-px bg-border/30 shrink-0" />
-
-        {/* Right panel — actions for review */}
-        <div className="flex-1 p-4 min-w-0">
-          <div className="flex items-center justify-between mb-2.5">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-              Actions for review
-            </p>
-          </div>
-          {progressMetrics.actions_total === 0 ? (
-            <p className="text-xs text-muted-foreground/40 italic">
-              No actions yet
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground/50">
-              {progressMetrics.actions_completed} of{" "}
-              {progressMetrics.actions_total} actions completed
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Shared props for both layouts ──────────────────────────────────────
 
@@ -1243,26 +1142,22 @@ function GoalsPanelMobile({
             )}
 
             {linkedGoals.length > 0 &&
-              linkedGoals.map((goal) =>
-                flow.step === "selecting-swap" ||
-                ((flow.step === "browsing" || flow.step === "creating") && flow.swapGoalId) ? (
-                  <CompactGoalCard
-                    key={goal.id}
-                    goal={goal}
-                    onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
-                    swapMode={flow.step === "selecting-swap"
-                      ? { onSelect: () => goalFlow.handleSwapSelected(goal.id) }
-                      : undefined
-                    }
-                    pendingHold={
-                      (flow.step === "browsing" || flow.step === "creating") &&
-                      flow.swapGoalId === goal.id
-                    }
-                  />
-                ) : (
-                  <GoalProgressCard key={goal.id} goal={goal} />
-                )
-              )
+              linkedGoals.map((goal) => (
+                <CompactGoalCard
+                  key={goal.id}
+                  goal={goal}
+                  onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
+                  onUpdate={readOnly ? undefined : onUpdateGoal}
+                  swapMode={flow.step === "selecting-swap"
+                    ? { onSelect: () => goalFlow.handleSwapSelected(goal.id) }
+                    : undefined
+                  }
+                  pendingHold={
+                    (flow.step === "browsing" || flow.step === "creating") &&
+                    flow.swapGoalId === goal.id
+                  }
+                />
+              ))
             }
 
             <FlowActions

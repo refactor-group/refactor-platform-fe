@@ -150,7 +150,7 @@ describe("GoalDrawer", () => {
     expect(counters.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("expands mobile view on chevron click to show goal progress cards", async () => {
+  it("expands mobile view on chevron click to show compact goal cards", async () => {
     const user = userEvent.setup()
     setupMocks()
     render(
@@ -163,7 +163,11 @@ describe("GoalDrawer", () => {
     const expandButton = screen.getByRole("button", { name: /expand/i })
     await user.click(expandButton)
 
-    expect(screen.getByText(/actions remaining/i)).toBeInTheDocument()
+    // Expanded view shows compact goal cards with edit buttons
+    const editButtons = screen.getAllByRole("button", {
+      name: /edit improve technical leadership/i,
+    })
+    expect(editButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it("shows 'Add goal' button", () => {
