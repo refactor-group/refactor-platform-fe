@@ -124,7 +124,7 @@ describe("GoalDrawer", () => {
     expect(titles.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("shows 'No goals set' when empty", () => {
+  it("shows 'No goals added yet' when empty", () => {
     setupMocks({ sessionGoals: [] })
     render(
       <GoalDrawer
@@ -133,7 +133,7 @@ describe("GoalDrawer", () => {
       />
     )
 
-    const messages = screen.getAllByText(/no goals set for this session/i)
+    const messages = screen.getAllByText(/no goals added yet/i)
     expect(messages.length).toBeGreaterThanOrEqual(1)
   })
 
