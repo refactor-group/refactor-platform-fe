@@ -323,9 +323,8 @@ function InlineBrowseView({
       {/* Actions */}
       <div className="flex items-center gap-2 pt-1 border-t border-border/30">
         <Button
-          variant="ghost"
           size="sm"
-          className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+          className="h-8 gap-1 text-xs"
           onClick={onCreateNew}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -406,9 +405,9 @@ function GoalFlowPages({
           )}
           {!readOnly && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+              className="h-8 gap-1 text-xs"
               onClick={goalFlow.handleAddGoalClick}
             >
               <Plus className="h-3.5 w-3.5" />

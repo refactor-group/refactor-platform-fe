@@ -76,7 +76,7 @@ export function GoalEditForm({
       <div className="flex items-center gap-2">
         <Button
           size="sm"
-          className="flex-1 h-8 text-xs"
+          className="h-8 text-xs px-4"
           disabled={!title.trim() || !hasChanges}
           onClick={handleSave}
         >

@@ -14,40 +14,7 @@ import { GoalEditForm } from "@/components/ui/coaching-sessions/goal-edit-form";
 import { useGoalProgress } from "@/lib/api/goal-progress";
 import type { Goal } from "@/types/goal";
 import { goalTitle, hasGoalBody } from "@/types/goal";
-import { GoalProgress } from "@/types/goal-progress";
 import { Some } from "@/types/option";
-
-// ── Health signal helpers ──────────────────────────────────────────────
-
-function progressDotColor(progress: GoalProgress): string {
-  switch (progress) {
-    case GoalProgress.SolidMomentum:
-      return "bg-emerald-800/50";
-    case GoalProgress.NeedsAttention:
-      return "bg-amber-500/60";
-    case GoalProgress.LetsRefocus:
-      return "bg-rose-500/50";
-    default: {
-      const _exhaustive: never = progress;
-      throw new Error(`Unhandled GoalProgress: ${_exhaustive}`);
-    }
-  }
-}
-
-function progressLabel(progress: GoalProgress): string {
-  switch (progress) {
-    case GoalProgress.SolidMomentum:
-      return "Solid momentum";
-    case GoalProgress.NeedsAttention:
-      return "Needs attention";
-    case GoalProgress.LetsRefocus:
-      return "Let\u2019s refocus";
-    default: {
-      const _exhaustive: never = progress;
-      throw new Error(`Unhandled GoalProgress: ${_exhaustive}`);
-    }
-  }
-}
 
 // ── Compact Goal Card ─────────────────────────────────────────────────
 
@@ -131,22 +98,13 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
       className="w-full text-left rounded-lg border border-border/50 bg-background p-3 space-y-2 transition-all hover:border-amber-500/50 hover:bg-amber-50/30 cursor-pointer group/card"
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2 min-w-0">
-          <span
-            className={cn(
-              "h-1.5 w-1.5 rounded-full shrink-0 mt-1.5",
-              progressDotColor(progressMetrics.progress)
-            )}
-          />
-          <span ref={titleRef} className="text-[13px] font-medium line-clamp-2">
-            {title}
-          </span>
-        </div>
+        <span ref={titleRef} className="text-[13px] font-medium line-clamp-2 min-w-0">
+          {title}
+        </span>
         <Pause className="h-3.5 w-3.5 text-muted-foreground/30 group-hover/card:text-amber-600 shrink-0 mt-0.5 transition-colors" />
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground/60">
-        <span>{progressLabel(progressMetrics.progress)}</span>
+      <div className="flex items-center justify-end text-[11px]">
         <span className="text-muted-foreground/0 group-hover/card:text-amber-600/70 transition-colors">
           Put on hold
         </span>
