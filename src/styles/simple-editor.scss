@@ -61,6 +61,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Ensure clean corners */
+  isolation: isolate; /* Contain internal z-indices (e.g. toolbar z-110) so they
+                         don't escape and overlap sibling panels like the goals overlay */
 
   /* TipTap EditorProvider renders an intermediate wrapper div (after the
      toolbar-container) that must participate in the flex layout so the

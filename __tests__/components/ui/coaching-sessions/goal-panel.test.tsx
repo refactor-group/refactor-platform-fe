@@ -544,4 +544,59 @@ describe("GoalPanel", () => {
     })
     expect(editButtons).toHaveLength(0)
   })
+
+  it("clicking outside the panel dismisses the add-goal flow", async () => {
+    const user = userEvent.setup()
+    setupMocks({ sessionGoals: [], allGoals: [goal1, goal2] })
+
+    const { container } = render(
+      <div>
+        <GoalPanel
+          coachingSessionId="session-1"
+          coachingRelationshipId="rel-1"
+        />
+        <div data-testid="outside-area">Notes area</div>
+      </div>
+    )
+
+    // Enter the browsing flow
+    const addGoalButtons = screen.getAllByRole("button", { name: /add goal/i })
+    await user.click(addGoalButtons[0])
+
+    // Should be in browsing mode with search input visible
+    expect(screen.getByPlaceholderText(/search goals/i)).toBeInTheDocument()
+
+    // Click outside the panel
+    await user.click(screen.getByTestId("outside-area"))
+
+    // Should return to idle — search input gone, "Add goal" button back
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/search goals/i)).not.toBeInTheDocument()
+    })
+    expect(screen.getAllByRole("button", { name: /add goal/i }).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it("clicking inside the panel does not dismiss the flow", async () => {
+    const user = userEvent.setup()
+    setupMocks({ sessionGoals: [], allGoals: [goal1, goal2] })
+
+    render(
+      <GoalPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Enter the browsing flow
+    const addGoalButtons = screen.getAllByRole("button", { name: /add goal/i })
+    await user.click(addGoalButtons[0])
+
+    // Click the search input (inside the panel)
+    const searchInput = screen.getByPlaceholderText(/search goals/i)
+    await user.click(searchInput)
+
+    // Should still be in browsing mode
+    expect(searchInput).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: /create new/i }).length).toBeGreaterThanOrEqual(1)
+  })
 })

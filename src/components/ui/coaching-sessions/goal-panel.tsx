@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -476,6 +476,9 @@ interface GoalsPanelDesktopProps extends GoalPanelSharedProps {
   collapsed?: boolean;
 }
 
+/** Width the panel expands to during add/create/swap flows (px). */
+const EXPANDED_WIDTH = 420;
+
 function GoalsPanelDesktop({
   linkedGoals,
   allGoals,
@@ -490,6 +493,7 @@ function GoalsPanelDesktop({
   readOnly = false,
   collapsed = false,
 }: GoalsPanelDesktopProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const goalFlow = useGoalFlow({
     atLimit,
     allGoals,
@@ -501,6 +505,20 @@ function GoalsPanelDesktop({
   });
 
   const { flow } = goalFlow;
+
+  // Dismiss the flow when clicking outside the expanded panel
+  useEffect(() => {
+    if (flow.step === "idle") return;
+
+    function handlePointerDown(e: PointerEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        goalFlow.handleCancel();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [flow.step, goalFlow]);
 
   if (collapsed) {
     return (
@@ -526,39 +544,50 @@ function GoalsPanelDesktop({
       : "New goal";
 
   return (
-    <Card className="hidden md:flex md:flex-col h-full">
-      <CardHeader className="p-4 pb-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isInFlow && (
-              <button
-                type="button"
-                onClick={goalFlow.handleBack}
-                aria-label="Back"
-                className="rounded-md p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-            )}
-            <h3 className="text-sm font-semibold text-foreground">{headerTitle}</h3>
-            {flow.step === "idle" && linkedGoals.length > 0 && (
-              <span className="text-[11px] text-muted-foreground/50 tabular-nums">
-                {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
-              </span>
-            )}
+    // Wrapper stays in the grid's 300px column; the Card overlays rightward when expanded
+    <div ref={panelRef} className="hidden md:block relative">
+      <Card
+        className={cn(
+          "flex flex-col h-full transition-[width,box-shadow] duration-300 ease-in-out",
+          isInFlow
+            ? "absolute inset-y-0 left-0 z-10 shadow-xl"
+            : "relative shadow-sm"
+        )}
+        style={{ width: isInFlow ? `${EXPANDED_WIDTH}px` : "100%" }}
+      >
+        <CardHeader className="p-4 pb-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isInFlow && (
+                <button
+                  type="button"
+                  onClick={goalFlow.handleBack}
+                  aria-label="Back"
+                  className="rounded-md p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
+              <h3 className="text-sm font-semibold text-foreground">{headerTitle}</h3>
+              {flow.step === "idle" && linkedGoals.length > 0 && (
+                <span className="text-[11px] text-muted-foreground/50 tabular-nums">
+                  {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-hidden">
-        <GoalFlowPages
-          linkedGoals={linkedGoals}
-          goalFlow={goalFlow}
-          readOnly={readOnly}
-          onUnlink={onUnlink}
-          onUpdateGoal={onUpdateGoal}
-        />
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-hidden">
+          <GoalFlowPages
+            linkedGoals={linkedGoals}
+            goalFlow={goalFlow}
+            readOnly={readOnly}
+            onUnlink={onUnlink}
+            onUpdateGoal={onUpdateGoal}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
