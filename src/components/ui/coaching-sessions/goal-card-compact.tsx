@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Pencil, Pause, Link, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Pause, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -177,7 +177,16 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
           {pendingHold ? (
             <Pause className="h-3 w-3 text-amber-600/70" />
           ) : onSelect ? (
-            <Link className="h-3 w-3 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 transition-colors" />
+            hasBody ? (
+              <button
+                type="button"
+                aria-label={showBody ? `Collapse ${title}` : `Expand ${title}`}
+                onClick={(e) => { e.stopPropagation(); setShowBody(!showBody); }}
+                className="rounded-md p-0.5 text-muted-foreground/40 hover:text-foreground transition-colors"
+              >
+                {showBody ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            ) : null
           ) : (
             <>
               {onUpdate && (
@@ -191,14 +200,23 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
                 </button>
               )}
               {onRemove && (
-                <button
-                  type="button"
-                  aria-label={`Remove ${title}`}
-                  onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                  className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                <TooltipProvider delayDuration={400}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${title}`}
+                        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                        className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      Remove from session
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </>
           )}

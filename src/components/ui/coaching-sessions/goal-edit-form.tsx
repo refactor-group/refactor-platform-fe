@@ -61,7 +61,7 @@ export function GoalEditForm({
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Goal title"
-        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[13px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
+        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
       />
 
       <textarea
