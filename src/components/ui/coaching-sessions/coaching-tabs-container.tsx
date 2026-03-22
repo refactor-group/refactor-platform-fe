@@ -187,7 +187,7 @@ const CoachingTabsContainer = ({
   }, [currentCoachingSessionId, handleActionAdded, handleTabChange, refreshSessionActions, refreshAllActions]);
 
   return (
-    <Card className="row-span-1 h-full flex flex-col min-h-0">
+    <Card className="row-span-1 h-full flex flex-col min-h-0 min-w-0">
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
           <Tabs value={currentTab} onValueChange={handleTabChange}>
@@ -222,11 +222,11 @@ const CoachingTabsContainer = ({
         </div>
       </CardHeader>
 
-      <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0">
+      <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0 min-w-0">
         {/* Always-mounted content controlled by CSS display */}
-        <div className="mt-4 flex-1 flex flex-col min-h-0">
+        <div className="mt-4 flex-1 flex flex-col min-h-0 min-w-0">
           <div
-            className="flex-col flex-1 min-h-0 space-y-4"
+            className="flex-col flex-1 min-h-0 min-w-0 space-y-4"
             style={{ display: currentTab === "notes" ? "flex" : "none" }}
           >
             <CoachingNotes onAddAsAction={handleAddNoteAsAction} />
