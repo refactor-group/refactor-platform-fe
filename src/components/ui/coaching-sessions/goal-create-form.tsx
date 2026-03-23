@@ -86,7 +86,7 @@ export function GoalCreateForm({
         <button
           type="button"
           onClick={() => setShowBody(true)}
-          className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors pb-3"
         >
           + Add a longer goal description
         </button>
