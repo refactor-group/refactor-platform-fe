@@ -68,6 +68,14 @@ describe('GoalProgressApi.get', () => {
       'Invalid GoalProgressMetrics data'
     )
   })
+
+  it('propagates network errors from EntityApi.getFn', async () => {
+    vi.mocked(EntityApi.getFn).mockRejectedValue(new Error('Network failure'))
+
+    await expect(GoalProgressApi.get('goal-abc')).rejects.toThrow(
+      'Network failure'
+    )
+  })
 })
 
 describe('useGoalProgress', () => {

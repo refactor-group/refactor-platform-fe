@@ -47,7 +47,7 @@ export const useGoalProgress = (goalId: Option<Id>) => {
   const { entity, isLoading, isError, refresh } =
     EntityApi.useEntity<GoalProgressMetrics>(
       url,
-      () => goalId.some ? GoalProgressApi.get(goalId.val) : Promise.reject("unreachable"),
+      () => goalId.some ? GoalProgressApi.get(goalId.val) : Promise.reject(new Error("unreachable: goalId is None")),
       defaultGoalProgressMetrics()
     );
 
