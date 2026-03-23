@@ -29,7 +29,7 @@ export function GoalBrowseView({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const setInputRef = useCallback((el: HTMLInputElement | null) => {
-    (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+    inputRef.current = el;
     if (el) el.focus();
   }, []);
 

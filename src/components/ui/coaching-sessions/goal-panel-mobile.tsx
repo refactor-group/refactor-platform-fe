@@ -10,7 +10,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { GoalChip } from "@/components/ui/coaching-sessions/goal-chip";
-import { GoalFlowStep, useGoalFlow } from "@/components/ui/coaching-sessions/goal-flow";
+import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
 import { GoalFlowPages } from "@/components/ui/coaching-sessions/goal-panel";
 import { useGoalProgress } from "@/lib/api/goal-progress";
 import type { Goal } from "@/types/goal";
@@ -41,27 +41,12 @@ function GoalChipWithProgress({
 
 export function GoalsPanelMobile({
   linkedGoals,
-  allGoals,
-  linkedGoalIds,
-  atLimit,
-  onLink,
+  goalFlow,
   onUnlink,
-  onCreateAndLink,
-  onCreateAndSwap,
-  onSwapAndLink,
   onUpdateGoal,
   readOnly = false,
 }: GoalPanelSharedProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const goalFlow = useGoalFlow({
-    atLimit,
-    allGoals,
-    linkedGoalIds,
-    onLink,
-    onSwapAndLink,
-    onCreateAndLink,
-    onCreateAndSwap,
-  });
 
   const { flow } = goalFlow;
   const isInFlow = flow.step !== GoalFlowStep.Idle;

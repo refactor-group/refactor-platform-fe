@@ -95,17 +95,17 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
       type="button"
       onClick={swapMode.onSelect}
       onMouseEnter={checkTruncation}
-      className="w-full text-left rounded-lg border border-border/50 bg-background p-3 space-y-2 transition-all hover:border-amber-500/50 hover:bg-amber-50/30 cursor-pointer group/card"
+      className="w-full text-left rounded-lg border border-border/50 bg-background p-3 space-y-2 transition-all hover:border-border cursor-pointer group/card"
     >
       <div className="flex items-start justify-between gap-2">
         <span ref={titleRef} className="text-[13px] font-medium line-clamp-2 min-w-0">
           {title}
         </span>
-        <Pause className="h-3.5 w-3.5 text-muted-foreground/30 group-hover/card:text-amber-600 shrink-0 mt-0.5 transition-colors" />
+        <Pause className="h-3.5 w-3.5 text-muted-foreground/30 group-hover/card:text-muted-foreground shrink-0 mt-0.5 transition-colors" />
       </div>
 
       <div className="flex items-center justify-end text-[11px]">
-        <span className="text-muted-foreground/0 group-hover/card:text-amber-600/70 transition-colors">
+        <span className="text-muted-foreground/0 group-hover/card:text-muted-foreground/70 transition-colors">
           Put on hold
         </span>
       </div>
@@ -117,7 +117,7 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
       className={cn(
         "rounded-lg border p-3 space-y-2 group/card transition-colors shadow-sm",
         pendingHold
-          ? "border-amber-300/60 bg-amber-50/30"
+          ? "border-border bg-muted/30"
           : onSelect
             ? "border-border/50 bg-background hover:border-border cursor-pointer"
             : "border-border/50 bg-background hover:border-border",
@@ -133,7 +133,7 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
         </span>
         <div className="flex items-center gap-1 shrink-0 mt-0.5">
           {pendingHold ? (
-            <Pause className="h-3 w-3 text-amber-600/70" />
+            <Pause className="h-3 w-3 text-muted-foreground/70" />
           ) : onSelect ? (
             hasBody ? (
               <button
@@ -192,7 +192,7 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
 
       <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
         {pendingHold ? (
-          <span className="text-amber-600/60 italic mr-auto">Will be put on hold</span>
+          <span className="text-muted-foreground/60 italic mr-auto">Will be put on hold</span>
         ) : (
           <GoalProgressIcon progress={progressMetrics.progress} />
         )}

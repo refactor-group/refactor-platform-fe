@@ -143,7 +143,7 @@ export function useGoalFlow({
     setFlow({ step: GoalFlowStep.Idle });
   }, []);
 
-  return {
+  return useMemo(() => ({
     flow,
     direction,
     availableGoals,
@@ -155,5 +155,17 @@ export function useGoalFlow({
     handleCreateBack,
     handleFormSubmit,
     handleCancel,
-  };
+  }), [
+    flow,
+    direction,
+    availableGoals,
+    handleBack,
+    handleAddGoalClick,
+    handleSwapSelected,
+    handleBrowseGoalClick,
+    handleCreateNewClick,
+    handleCreateBack,
+    handleFormSubmit,
+    handleCancel,
+  ]);
 }

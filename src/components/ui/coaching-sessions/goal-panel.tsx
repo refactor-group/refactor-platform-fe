@@ -38,6 +38,7 @@ export interface GoalPanelSharedProps {
   allGoals: Goal[];
   linkedGoalIds: Set<string>;
   atLimit: boolean;
+  goalFlow: ReturnType<typeof useGoalFlow>;
   onLink: (goalId: string) => void;
   onUnlink: (goalId: string) => void;
   onCreateAndLink: (title: string, body?: string) => void;
@@ -125,7 +126,7 @@ export function GoalFlowPages({
         <SlidePanel direction={goalFlow.direction}>
           <div className="space-y-3">
             <p className="text-[12px] text-muted-foreground/70">
-              Which goal should be put on hold?
+              Which goal should be put on hold and replaced in this session?
             </p>
             {linkedGoals.map((goal) => (
               <CompactGoalCard
@@ -311,9 +312,11 @@ export function GoalPanel({
 
   const handleCreateAndSwap = useCallback(
     async (title: string, swapGoalId: string, body?: string) => {
+      const swapGoal = allGoals.find((g) => g.id === swapGoalId);
+      const wasLinked = linkedGoalIds.has(swapGoalId);
+
       try {
         // 1. Put the swapped goal on hold
-        const swapGoal = allGoals.find((g) => g.id === swapGoalId);
         if (swapGoal) {
           await updateGoal(swapGoalId, {
             ...swapGoal,
@@ -322,7 +325,7 @@ export function GoalPanel({
         }
 
         // 2. Unlink the swapped goal from this session (only if it's linked here)
-        if (linkedGoalIds.has(swapGoalId)) {
+        if (wasLinked) {
           const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
           if (unlinkResult.isErr()) {
             console.error("Failed to unlink goal during swap:", unlinkResult.error);
@@ -349,10 +352,21 @@ export function GoalPanel({
         refreshAllGoals();
       } catch (err) {
         console.error("Failed to create and swap goal:", err);
+
+        // Recover: re-link the original goal if it was unlinked
+        if (wasLinked) {
+          const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
+          if (relinkResult.isOk() && swapGoal) {
+            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+          }
+          refreshSessionGoals();
+          refreshAllGoals();
+        }
+
         toast({
           variant: "destructive",
           title: "Failed to swap goal",
-          description: "An error occurred while swapping goals.",
+          description: "An error occurred while swapping goals. The original goal has been restored.",
         });
       }
     },
@@ -370,9 +384,11 @@ export function GoalPanel({
 
   const handleSwapAndLink = useCallback(
     async (newGoalId: string, swapGoalId: string) => {
+      const swapGoal = allGoals.find((g) => g.id === swapGoalId);
+      const wasLinked = linkedGoalIds.has(swapGoalId);
+
       try {
         // 1. Put the swapped goal on hold
-        const swapGoal = allGoals.find((g) => g.id === swapGoalId);
         if (swapGoal) {
           await updateGoal(swapGoalId, {
             ...swapGoal,
@@ -381,7 +397,7 @@ export function GoalPanel({
         }
 
         // 2. Unlink the swapped goal from this session (only if it's linked here)
-        if (linkedGoalIds.has(swapGoalId)) {
+        if (wasLinked) {
           const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
           if (unlinkResult.isErr()) {
             console.error("Failed to unlink goal during swap:", unlinkResult.error);
@@ -398,6 +414,17 @@ export function GoalPanel({
         const linkResult = await GoalApi.linkToSession(coachingSessionId, newGoalId);
         if (linkResult.isErr()) {
           console.error("Failed to link replacement goal:", linkResult.error);
+
+          // Recover: re-link the original goal since the replacement failed
+          if (wasLinked) {
+            const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
+            if (relinkResult.isOk() && swapGoal) {
+              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+            }
+            refreshSessionGoals();
+            refreshAllGoals();
+          }
+
           toast({
             variant: "destructive",
             title: "Failed to link replacement goal",
@@ -410,10 +437,21 @@ export function GoalPanel({
         refreshAllGoals();
       } catch (err) {
         console.error("Failed to swap and link goal:", err);
+
+        // Recover: re-link the original goal if it was unlinked
+        if (wasLinked) {
+          const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
+          if (relinkResult.isOk() && swapGoal) {
+            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+          }
+          refreshSessionGoals();
+          refreshAllGoals();
+        }
+
         toast({
           variant: "destructive",
           title: "Failed to swap goal",
-          description: "An error occurred while swapping goals.",
+          description: "An error occurred while swapping goals. The original goal has been restored.",
         });
       }
     },
@@ -447,11 +485,22 @@ export function GoalPanel({
     [allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
   );
 
+  const goalFlow = useGoalFlow({
+    atLimit,
+    allGoals,
+    linkedGoalIds,
+    onLink: handleLink,
+    onSwapAndLink: handleSwapAndLink,
+    onCreateAndLink: handleCreateAndLink,
+    onCreateAndSwap: handleCreateAndSwap,
+  });
+
   const sharedProps: GoalPanelSharedProps = {
     linkedGoals,
     allGoals,
     linkedGoalIds,
     atLimit,
+    goalFlow,
     onLink: handleLink,
     onUnlink: handleUnlink,
     onCreateAndLink: handleCreateAndLink,

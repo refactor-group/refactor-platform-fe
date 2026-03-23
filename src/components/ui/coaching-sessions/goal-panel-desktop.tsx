@@ -8,7 +8,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { cn } from "@/components/lib/utils";
-import { GoalFlowStep, useGoalFlow } from "@/components/ui/coaching-sessions/goal-flow";
+import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
 import { GoalFlowPages } from "@/components/ui/coaching-sessions/goal-panel";
 import { DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
 import type { GoalPanelSharedProps } from "@/components/ui/coaching-sessions/goal-panel";
@@ -22,28 +22,13 @@ const EXPANDED_WIDTH = 420;
 
 export function GoalsPanelDesktop({
   linkedGoals,
-  allGoals,
-  linkedGoalIds,
-  atLimit,
-  onLink,
+  goalFlow,
   onUnlink,
-  onCreateAndLink,
-  onCreateAndSwap,
-  onSwapAndLink,
   onUpdateGoal,
   readOnly = false,
   collapsed = false,
 }: GoalsPanelDesktopProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const goalFlow = useGoalFlow({
-    atLimit,
-    allGoals,
-    linkedGoalIds,
-    onLink,
-    onSwapAndLink,
-    onCreateAndLink,
-    onCreateAndSwap,
-  });
 
   const { flow } = goalFlow;
 
