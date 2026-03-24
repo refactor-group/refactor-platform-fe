@@ -33,11 +33,18 @@ export function GoalsPanelDesktop({
 
   const { flow } = goalFlow;
 
-  // Dismiss the flow when clicking outside the expanded panel
+  // Dismiss the flow when clicking outside the expanded panel.
+  // Only active when the panel is visible (md+ breakpoint) to avoid
+  // interfering with the mobile sheet which renders in a portal.
   useEffect(() => {
     if (flow.step === GoalFlowStep.Idle) return;
 
+    const mq = window.matchMedia("(min-width: 768px)");
+
     function handlePointerDown(e: PointerEvent) {
+      // Skip on mobile — the sheet handles its own dismissal
+      if (!mq.matches) return;
+
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         goalFlow.handleCancel();
       }

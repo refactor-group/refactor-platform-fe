@@ -7,6 +7,21 @@ import { ItemStatus } from "@/types/general"
 import { GoalProgress } from "@/types/goal-progress"
 import { None } from "@/types/option"
 
+// Mock matchMedia to simulate desktop viewport (md+ breakpoint)
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: query === "(min-width: 768px)",
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
 // Mock the API hooks
 const mockRefreshSession = vi.fn()
 const mockRefreshAll = vi.fn()
@@ -160,8 +175,7 @@ describe("GoalPanel", () => {
     expect(counters.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("expands mobile view on chevron click to show compact goal cards", async () => {
-    const user = userEvent.setup()
+  it("shows mobile Goals trigger button with goal count", () => {
     setupMocks()
     render(
       <GoalPanel
@@ -170,14 +184,9 @@ describe("GoalPanel", () => {
       />
     )
 
-    const expandButton = screen.getByRole("button", { name: /expand/i })
-    await user.click(expandButton)
-
-    // Expanded view shows compact goal cards with info (flip) buttons
-    const infoButtons = screen.getAllByRole("button", {
-      name: /goal options for/i,
-    })
-    expect(infoButtons.length).toBeGreaterThanOrEqual(1)
+    // Mobile trigger shows "Goals" with count
+    const triggerButtons = screen.getAllByRole("button", { name: /goals/i })
+    expect(triggerButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it("shows 'Add goal' button", () => {

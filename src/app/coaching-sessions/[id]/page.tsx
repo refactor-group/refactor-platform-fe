@@ -161,7 +161,7 @@ export default function CoachingSessionsPage() {
         </div>
 
         <div
-          className={`grid grid-cols-1 grid-rows-[1fr] py-3 px-4 flex-1 min-h-0 md:grid-cols-[var(--goals-width)_1fr] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${notesMaximized ? "md:gap-0" : "gap-4"}`}
+          className={`grid grid-cols-1 grid-rows-[auto_1fr] py-3 px-4 flex-1 min-h-0 md:grid-cols-[var(--goals-width)_1fr] md:grid-rows-[1fr] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${notesMaximized ? "md:gap-0" : "gap-4"}`}
           style={{
             "--goals-width": notesMaximized ? "40px" : "300px",
           } as React.CSSProperties}
