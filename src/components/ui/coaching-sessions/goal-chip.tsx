@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -15,14 +14,12 @@ interface GoalChipProps {
   goal: Goal;
   actionsCompleted: number;
   actionsTotal: number;
-  onRemove?: () => void;
 }
 
 export function GoalChip({
   goal,
   actionsCompleted,
   actionsTotal,
-  onRemove,
 }: GoalChipProps) {
   const textRef = useRef<HTMLSpanElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -42,7 +39,7 @@ export function GoalChip({
   const chip = (
     <div
       onMouseEnter={checkTruncation}
-      className="inline-flex items-center gap-2 rounded-lg bg-muted/50 pl-3 pr-1.5 py-1.5 text-sm transition-all hover:bg-muted group"
+      className="inline-flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5 text-sm transition-all hover:bg-muted group"
     >
       {/* Mini progress ring */}
       {actionsTotal > 0 && (
@@ -77,19 +74,6 @@ export function GoalChip({
       >
         {goalTitle(goal)}
       </span>
-      {onRemove && (
-        <button
-          type="button"
-          aria-label={`Remove ${goalTitle(goal)}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          className="rounded-md p-1 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors"
-        >
-          <X className="h-3 w-3" />
-        </button>
-      )}
     </div>
   );
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
-import { ChevronDown, ChevronUp, Pencil, Pause, X } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Info, Pencil, CircleMinus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -15,8 +16,16 @@ import { useGoalProgress } from "@/lib/api/goal-progress";
 import type { Goal } from "@/types/goal";
 import { goalTitle, hasGoalBody } from "@/types/goal";
 import { Some } from "@/types/option";
+import { Pause } from "lucide-react";
 
-// ── Compact Goal Card ─────────────────────────────────────────────────
+// ── Compact Goal Card (flip-card interaction) ────────────────────────
+//
+// Front face: read-only — title, progress bar, progress icon, info button.
+// Back face:  actions   — edit, unlink from session, "Done" to flip back.
+//
+// Inspired by macOS widget flip: clicking the info icon (ⓘ) flips the card
+// to reveal actions. The card grows to accommodate the back-face content.
+// A "Done" button in the top-right returns to the front face.
 
 export interface CompactGoalCardProps {
   goal: Goal;
@@ -35,17 +44,12 @@ export interface CompactGoalCardProps {
 export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, pendingHold }: CompactGoalCardProps) {
   const { progressMetrics } = useGoalProgress(Some(goal.id));
   const titleRef = useRef<HTMLSpanElement>(null);
-  const [isTruncated, setIsTruncated] = useState(false);
-  const [showBody, setShowBody] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const backRef = useRef<HTMLDivElement>(null);
+  const frontRef = useRef<HTMLDivElement>(null);
   const hasBody = hasGoalBody(goal);
-
-  const checkTruncation = useCallback(() => {
-    const el = titleRef.current;
-    if (el) {
-      setIsTruncated(el.scrollHeight > el.clientHeight);
-    }
-  }, []);
 
   const percent =
     progressMetrics.actions_total > 0
@@ -57,10 +61,62 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
 
   const title = goalTitle(goal);
 
-  const handleEditClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  // Animate container height to match the active face.
+  // ResizeObserver handles body expansion on the front face and edit form on the back.
+  useEffect(() => {
+    const inner = cardRef.current?.querySelector(".goal-card-flip-inner") as HTMLElement | null;
+    if (!inner) return;
+
+    const measure = () => {
+      const target = isFlipped ? backRef.current : frontRef.current;
+      if (target) {
+        inner.style.height = `${target.scrollHeight}px`;
+      }
+    };
+
+    // Initial measurement after layout
+    const frameId = requestAnimationFrame(measure);
+
+    // Watch the active face for size changes (body expand, edit form toggle)
+    const activeFace = isFlipped ? backRef.current : frontRef.current;
+    let observer: ResizeObserver | undefined;
+    if (activeFace) {
+      observer = new ResizeObserver(measure);
+      observer.observe(activeFace);
+    }
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      observer?.disconnect();
+    };
+  }, [isFlipped, isEditing]);
+
+  // Close the back face when clicking outside
+  useEffect(() => {
+    if (!isFlipped) return;
+
+    function handlePointerDown(e: PointerEvent) {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setIsFlipped(false);
+        setIsEditing(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isFlipped]);
+
+  const handleFlip = useCallback(() => {
+    setIsFlipped(true);
+  }, []);
+
+  const handleDone = useCallback(() => {
+    setIsFlipped(false);
+    setIsEditing(false);
+  }, []);
+
+  const handleEditClick = useCallback(() => {
     setIsEditing(true);
-    setShowBody(false);
   }, []);
 
   const handleEditSave = useCallback(
@@ -77,111 +133,197 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
     setIsEditing(false);
   }, []);
 
-  // Edit mode renders an inline form pre-populated with current values
-  if (isEditing) {
+  const handleRemove = useCallback(() => {
+    if (onRemove) {
+      onRemove();
+      setIsFlipped(false);
+      setIsEditing(false);
+    }
+  }, [onRemove]);
+
+  // Swap mode card — no flip interaction, just a selectable card
+  if (swapMode) {
     return (
-      <GoalEditForm
-        initialTitle={goal.title}
-        initialBody={goal.body}
-        onSave={handleEditSave}
-        onCancel={handleEditCancel}
-      />
+      <button
+        type="button"
+        onClick={swapMode.onSelect}
+        className="w-full text-left rounded-lg border border-border bg-background p-3 space-y-2 transition-all hover:border-foreground/20 cursor-pointer group/card"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <span ref={titleRef} className="text-[13px] font-medium line-clamp-2 min-w-0">
+            {title}
+          </span>
+        </div>
+        <div className="flex items-center justify-end text-[11px]">
+          <span className="text-muted-foreground/0 group-hover/card:text-muted-foreground transition-colors">
+            Replace this goal
+          </span>
+        </div>
+      </button>
     );
   }
 
-  // Swap mode card doesn't use progress bar or actions info
-  const cardContent = swapMode ? (
-    <button
-      type="button"
-      onClick={swapMode.onSelect}
-      onMouseEnter={checkTruncation}
-      className="w-full text-left rounded-lg border border-border/50 bg-background p-3 space-y-2 transition-all hover:border-border cursor-pointer group/card"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <span ref={titleRef} className="text-[13px] font-medium line-clamp-2 min-w-0">
-          {title}
-        </span>
-        <Pause className="h-3.5 w-3.5 text-muted-foreground/30 group-hover/card:text-muted-foreground shrink-0 mt-0.5 transition-colors" />
-      </div>
+  // Selectable card (used in browse view) — no flip, just clickable
+  if (onSelect) {
+    return (
+      <div
+        onClick={onSelect}
+        className="rounded-lg border border-border bg-background p-3 space-y-2 group/card transition-colors shadow-sm hover:border-foreground/20 cursor-pointer"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <span ref={titleRef} className="text-[13px] font-medium line-clamp-2 min-w-0">
+            {title}
+          </span>
+        </div>
 
-      <div className="flex items-center justify-end text-[11px]">
-        <span className="text-muted-foreground/0 group-hover/card:text-muted-foreground/70 transition-colors">
-          Put on hold
-        </span>
+        {progressMetrics.actions_total > 0 && (
+          <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-foreground/20 transition-all"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+        )}
+
+        <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
+          <GoalProgressIcon progress={progressMetrics.progress} />
+        </div>
       </div>
-    </button>
-  ) : (
+    );
+  }
+
+  const canInteract = !pendingHold && Boolean(onRemove || onUpdate);
+
+  // ── Flip card ────────────────────────────────────────────────────────
+
+  return (
     <div
-      onMouseEnter={checkTruncation}
-      onClick={onSelect ?? (hasBody ? () => setShowBody(!showBody) : undefined)}
+      ref={cardRef}
       className={cn(
-        "rounded-lg border p-3 space-y-2 group/card transition-colors shadow-sm",
-        pendingHold
-          ? "border-border bg-muted/30"
-          : onSelect
-            ? "border-border/50 bg-background hover:border-border cursor-pointer"
-            : "border-border/50 bg-background hover:border-border",
-        hasBody && !pendingHold && !onSelect && "cursor-pointer"
+        "goal-card-flip-container transition-[height] duration-500 ease-in-out",
+        isFlipped ? "goal-card-flip-container--flipped" : ""
       )}
     >
+      <div className="goal-card-flip-inner">
+        {/* ── Front face ─────────────────────────────────────────── */}
+        <div
+          ref={frontRef}
+          aria-hidden={isFlipped}
+          className={cn(
+            "goal-card-face goal-card-front",
+            "rounded-lg border p-3 space-y-2 group/card transition-colors shadow-sm",
+            pendingHold
+              ? "border-border bg-muted/30"
+              : "border-border bg-background hover:border-foreground/20"
+          )}
+        >
+          <FrontFace
+            titleRef={titleRef}
+            title={title}
+            pendingHold={pendingHold}
+            canInteract={canInteract}
+            onFlip={handleFlip}
+            percent={percent}
+            actionsTotal={progressMetrics.actions_total}
+            progress={progressMetrics.progress}
+            hasBody={hasBody}
+            body={goal.body}
+          />
+        </div>
+
+        {/* ── Back face ──────────────────────────────────────────── */}
+        <div
+          ref={backRef}
+          aria-hidden={!isFlipped}
+          className="goal-card-face goal-card-back rounded-lg border border-border bg-background p-3 shadow-sm"
+        >
+          {isEditing ? (
+            <GoalEditForm
+              initialTitle={goal.title}
+              initialBody={goal.body}
+              onSave={handleEditSave}
+              onCancel={handleEditCancel}
+            />
+          ) : (
+            <BackFace
+              title={title}
+              body={goal.body}
+              hasBody={hasBody}
+              onDone={handleDone}
+              onEdit={onUpdate ? handleEditClick : undefined}
+              onRemove={onRemove ? handleRemove : undefined}
+              percent={percent}
+              actionsTotal={progressMetrics.actions_total}
+              actionsCompleted={progressMetrics.actions_completed}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Front face content ──────────────────────────────────────────────
+
+function FrontFace({
+  titleRef,
+  title,
+  pendingHold,
+  canInteract,
+  onFlip,
+  percent,
+  actionsTotal,
+  progress,
+  hasBody,
+  body,
+}: {
+  titleRef: React.RefObject<HTMLSpanElement | null>;
+  title: string;
+  pendingHold?: boolean;
+  canInteract?: boolean;
+  onFlip: () => void;
+  percent: number;
+  actionsTotal: number;
+  progress: import("@/types/goal-progress").GoalProgress;
+  hasBody: boolean;
+  body: string;
+}) {
+  const [showBody, setShowBody] = useState(false);
+
+  return (
+    <>
       <div className="flex items-start justify-between gap-2">
-        <span ref={titleRef} className={cn(
-          "text-[13px] font-medium line-clamp-2 min-w-0",
-          pendingHold && "text-muted-foreground"
-        )}>
+        <span
+          ref={titleRef}
+          onClick={hasBody && !pendingHold ? () => setShowBody(prev => !prev) : undefined}
+          className={cn(
+            "text-[13px] font-medium line-clamp-2 min-w-0",
+            pendingHold && "text-muted-foreground",
+            hasBody && !pendingHold && "cursor-pointer"
+          )}
+        >
           {title}
         </span>
         <div className="flex items-center gap-1 shrink-0 mt-0.5">
           {pendingHold ? (
             <Pause className="h-3 w-3 text-muted-foreground/70" />
-          ) : onSelect ? (
-            hasBody ? (
-              <button
-                type="button"
-                aria-label={showBody ? `Collapse ${title}` : `Expand ${title}`}
-                onClick={(e) => { e.stopPropagation(); setShowBody(!showBody); }}
-                className="rounded-md p-0.5 text-muted-foreground/40 hover:text-foreground transition-colors"
-              >
-                {showBody ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </button>
-            ) : null
-          ) : (
-            <>
-              {onUpdate && (
-                <button
-                  type="button"
-                  aria-label={`Edit ${title}`}
-                  onClick={handleEditClick}
-                  className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-foreground transition-colors"
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
-              )}
-              {onRemove && (
-                <TooltipProvider delayDuration={400}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${title}`}
-                        onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                        className="rounded-md p-0.5 text-muted-foreground/0 group-hover/card:text-muted-foreground/40 hover:!text-destructive hover:!bg-destructive/10 transition-colors"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      Remove from session
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </>
-          )}
+          ) : canInteract ? (
+            <button
+              type="button"
+              aria-label={`Goal options for ${title}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFlip();
+              }}
+              className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {!pendingHold && progressMetrics.actions_total > 0 && (
+      {!pendingHold && actionsTotal > 0 && (
         <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
           <div
             className="h-full rounded-full bg-foreground/20 transition-all"
@@ -194,33 +336,123 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
         {pendingHold ? (
           <span className="text-muted-foreground/60 italic mr-auto">Will be put on hold</span>
         ) : (
-          <GoalProgressIcon progress={progressMetrics.progress} />
+          <GoalProgressIcon progress={progress} />
         )}
       </div>
 
-      <div
-        className={cn(
-          "overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out",
-          showBody && hasBody ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
-        )}
-      >
-        <p className="text-[12px] text-muted-foreground/70 leading-relaxed whitespace-pre-wrap border-t border-border/30 pt-2">
-          {goal.body}
+      {hasBody && (
+        <div
+          className={cn(
+            "overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out",
+            showBody ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+          )}
+        >
+          <p className="text-[12px] text-muted-foreground/70 leading-relaxed whitespace-pre-wrap border-t border-border/30 pt-2">
+            {body}
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── Back face content ───────────────────────────────────────────────
+
+function BackFace({
+  title,
+  body,
+  hasBody,
+  onDone,
+  onEdit,
+  onRemove,
+  percent,
+  actionsTotal,
+  actionsCompleted,
+}: {
+  title: string;
+  body: string;
+  hasBody: boolean;
+  onDone: () => void;
+  onEdit?: () => void;
+  onRemove?: () => void;
+  percent: number;
+  actionsTotal: number;
+  actionsCompleted: number;
+}) {
+  return (
+    <div className="space-y-3">
+      {/* Done button — top right, matching macOS widget pattern */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onDone}
+          className="text-[12px] font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          Done
+        </button>
+      </div>
+
+      {/* Full goal title */}
+      <p className="text-[13px] font-medium">
+        {title}
+      </p>
+
+      {/* Goal body preview */}
+      {hasBody && (
+        <p className="text-[12px] text-muted-foreground/70 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+          {body}
         </p>
+      )}
+
+      {/* Progress summary */}
+      {actionsTotal > 0 && (
+        <div className="space-y-1.5">
+          <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-foreground/20 transition-all"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground/60">
+            {actionsCompleted}/{actionsTotal} actions &middot; {percent}%
+          </p>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex items-center justify-end gap-2 pt-3">
+        {onEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 gap-1 text-[11px] px-2"
+            onClick={onEdit}
+          >
+            <Pencil className="!h-2.5 !w-2.5" />
+            Edit
+          </Button>
+        )}
+        {onRemove && (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-6 gap-1 text-[11px] px-2"
+                  onClick={onRemove}
+                >
+                  <CircleMinus className="!h-2.5 !w-2.5" />
+                  Remove
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                Remove this goal from the session
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
     </div>
-  );
-
-  if (!isTruncated) return cardContent;
-
-  return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>{cardContent}</TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs max-w-[280px]">
-          <p className="font-medium">{title}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   );
 }

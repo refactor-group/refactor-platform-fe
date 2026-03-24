@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -14,7 +14,7 @@ import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
 import { GoalFlowPages } from "@/components/ui/coaching-sessions/goal-panel";
 import { useGoalProgress } from "@/lib/api/goal-progress";
 import type { Goal } from "@/types/goal";
-import { DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
+import { maxActiveGoals } from "@/types/goal";
 import { Some } from "@/types/option";
 import type { GoalPanelSharedProps } from "@/components/ui/coaching-sessions/goal-panel";
 
@@ -22,10 +22,8 @@ import type { GoalPanelSharedProps } from "@/components/ui/coaching-sessions/goa
 
 function GoalChipWithProgress({
   goal,
-  onRemove,
 }: {
   goal: Goal;
-  onRemove?: () => void;
 }) {
   const { progressMetrics } = useGoalProgress(Some(goal.id));
 
@@ -34,7 +32,6 @@ function GoalChipWithProgress({
       goal={goal}
       actionsCompleted={progressMetrics.actions_completed}
       actionsTotal={progressMetrics.actions_total}
-      onRemove={onRemove}
     />
   );
 }
@@ -76,7 +73,7 @@ export function GoalsPanelMobile({
           </span>
           {flow.step === GoalFlowStep.Idle && linkedGoals.length > 0 && (
             <span className="text-[11px] text-muted-foreground/50 tabular-nums shrink-0">
-              {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+              {linkedGoals.length}/{maxActiveGoals()}
             </span>
           )}
           {!isInFlow && (
@@ -91,7 +88,6 @@ export function GoalsPanelMobile({
                     <GoalChipWithProgress
                       key={goal.id}
                       goal={goal}
-                      onRemove={readOnly ? undefined : () => onUnlink(goal.id)}
                     />
                   ))
                 )}
@@ -118,6 +114,18 @@ export function GoalsPanelMobile({
 
         <CollapsibleContent>
           <div className="px-4 pt-1 pb-4 space-y-3">
+            {flow.step === GoalFlowStep.Idle && !readOnly && (
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  onClick={goalFlow.handleAddGoalClick}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add goal
+                </Button>
+              </div>
+            )}
             <GoalFlowPages
               linkedGoals={linkedGoals}
               goalFlow={goalFlow}

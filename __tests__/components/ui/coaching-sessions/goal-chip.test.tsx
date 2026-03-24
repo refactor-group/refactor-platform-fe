@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi } from "vitest"
 import { GoalChip } from "@/components/ui/coaching-sessions/goal-chip"
 import { createMockGoal } from "../../../test-utils"
@@ -18,7 +17,6 @@ describe("GoalChip", () => {
         goal={defaultGoal}
         actionsCompleted={3}
         actionsTotal={8}
-        onRemove={vi.fn()}
       />
     )
 
@@ -31,7 +29,6 @@ describe("GoalChip", () => {
         goal={defaultGoal}
         actionsCompleted={3}
         actionsTotal={8}
-        onRemove={vi.fn()}
       />
     )
 
@@ -45,49 +42,22 @@ describe("GoalChip", () => {
         goal={defaultGoal}
         actionsCompleted={0}
         actionsTotal={0}
-        onRemove={vi.fn()}
       />
     )
 
-    // No progress ring SVG should be present (the X icon SVG is still there)
     expect(container.querySelector('svg[viewBox="0 0 16 16"]')).not.toBeInTheDocument()
   })
 
-  it("calls onRemove when unlink button is clicked", async () => {
-    const user = userEvent.setup()
-    const onRemove = vi.fn()
-
+  it("does not render any interactive buttons", () => {
     render(
       <GoalChip
         goal={defaultGoal}
         actionsCompleted={3}
         actionsTotal={8}
-        onRemove={onRemove}
       />
     )
 
-    const unlinkButton = screen.getByRole("button", {
-      name: /remove improve technical leadership/i,
-    })
-    await user.click(unlinkButton)
-
-    expect(onRemove).toHaveBeenCalledOnce()
-  })
-
-  it("has accessible unlink button with goal title in aria-label", () => {
-    render(
-      <GoalChip
-        goal={defaultGoal}
-        actionsCompleted={0}
-        actionsTotal={0}
-        onRemove={vi.fn()}
-      />
-    )
-
-    expect(
-      screen.getByRole("button", {
-        name: /remove improve technical leadership/i,
-      })
-    ).toBeInTheDocument()
+    // GoalChip is display-only — no buttons for remove or other actions
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 })
