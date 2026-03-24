@@ -79,11 +79,16 @@ jobs:
               id: resolve
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+                  INPUT_BACKEND_COMMIT: ${{ inputs.backend_commit }}
+                  INPUT_FRONTEND_COMMIT: ${{ inputs.frontend_commit }}
+                  INPUT_BACKEND_OVERRIDE: ${{ inputs.backend_commit_override }}
+                  INPUT_FRONTEND_OVERRIDE: ${{ inputs.frontend_commit_override }}
+                  OWNER: ${{ github.repository_owner }}
               run: |
                   set -euo pipefail
 
-                  PR_NUMBER="${{ inputs.pr_number }}"
-                  OWNER="${{ github.repository_owner }}"
+                  PR_NUMBER="$INPUT_PR_NUMBER"
 
                   # Validate PR number is numeric
                   if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
@@ -109,17 +114,27 @@ jobs:
                   echo "::notice::PR #$PR_NUMBER is valid (state: $PR_STATE, draft: $PR_IS_DRAFT, branch: $BRANCH_NAME)"
 
                   # Parse backend SHA from dropdown choice (format: "SHORT_SHA - commit message")
-                  BACKEND_SHORT_SHA=$(echo "${{ inputs.backend_commit }}" | cut -d' ' -f1)
-                  FRONTEND_SHORT_SHA=$(echo "${{ inputs.frontend_commit }}" | cut -d' ' -f1)
+                  BACKEND_SHORT_SHA=$(echo "$INPUT_BACKEND_COMMIT" | cut -d' ' -f1)
+                  FRONTEND_SHORT_SHA=$(echo "$INPUT_FRONTEND_COMMIT" | cut -d' ' -f1)
 
                   # Override with exact SHA if provided
-                  if [[ -n "${{ inputs.backend_commit_override }}" ]]; then
-                      BACKEND_SHORT_SHA="${{ inputs.backend_commit_override }}"
+                  if [[ -n "$INPUT_BACKEND_OVERRIDE" ]]; then
+                      BACKEND_SHORT_SHA="$INPUT_BACKEND_OVERRIDE"
                       echo "::notice::Using backend SHA override: $BACKEND_SHORT_SHA"
                   fi
-                  if [[ -n "${{ inputs.frontend_commit_override }}" ]]; then
-                      FRONTEND_SHORT_SHA="${{ inputs.frontend_commit_override }}"
+                  if [[ -n "$INPUT_FRONTEND_OVERRIDE" ]]; then
+                      FRONTEND_SHORT_SHA="$INPUT_FRONTEND_OVERRIDE"
                       echo "::notice::Using frontend SHA override: $FRONTEND_SHORT_SHA"
+                  fi
+
+                  # Validate SHA format for overrides (hex only, 7-40 chars)
+                  if [[ -n "$INPUT_BACKEND_OVERRIDE" ]] && ! [[ "$INPUT_BACKEND_OVERRIDE" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+                      echo "::error::Backend SHA override must be a valid hex SHA (7-40 chars)"
+                      exit 1
+                  fi
+                  if [[ -n "$INPUT_FRONTEND_OVERRIDE" ]] && ! [[ "$INPUT_FRONTEND_OVERRIDE" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+                      echo "::error::Frontend SHA override must be a valid hex SHA (7-40 chars)"
+                      exit 1
                   fi
 
                   # Validate "pending" placeholder hasn't been selected
