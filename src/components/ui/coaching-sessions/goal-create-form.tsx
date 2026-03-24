@@ -50,10 +50,10 @@ export function GoalCreateForm({
   );
 
   return (
-    <div className="rounded-lg border border-border bg-background p-3 space-y-2">
+    <div className="rounded-lg border border-border bg-background p-3 space-y-3">
       <div className="space-y-1">
-        <label htmlFor="goal-title" className="text-[12px] font-medium text-foreground/70">
-          Goal
+        <label htmlFor="goal-title" className="text-[11px] font-medium text-muted-foreground">
+          Title
         </label>
         <input
           id="goal-title"
@@ -69,7 +69,7 @@ export function GoalCreateForm({
 
       {showBody ? (
         <div className="space-y-1">
-          <label htmlFor="goal-description" className="text-[12px] font-medium text-foreground/70">
+          <label htmlFor="goal-description" className="text-[11px] font-medium text-muted-foreground">
             Description
           </label>
           <textarea
@@ -92,7 +92,7 @@ export function GoalCreateForm({
         </button>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
         <Button
           size="sm"
           className="h-8 text-xs px-4"

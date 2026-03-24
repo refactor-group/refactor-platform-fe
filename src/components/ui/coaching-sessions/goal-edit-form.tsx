@@ -53,27 +53,39 @@ export function GoalEditForm({
   );
 
   return (
-    <div className="rounded-lg border border-border bg-background p-3 space-y-2">
-      <input
-        ref={setInputRef}
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Goal title"
-        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
-      />
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <label htmlFor="goal-title" className="text-[11px] font-medium text-muted-foreground">
+          Title
+        </label>
+        <input
+          id="goal-title"
+          ref={setInputRef}
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Goal title"
+          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
+        />
+      </div>
 
-      <textarea
-        rows={4}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Add detail to your goal..."
-        className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
-      />
+      <div className="space-y-1">
+        <label htmlFor="goal-description" className="text-[11px] font-medium text-muted-foreground">
+          Description
+        </label>
+        <textarea
+          id="goal-description"
+          rows={4}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Add detail to your goal..."
+          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
+        />
+      </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
         <Button
           size="sm"
           className="h-8 text-xs px-4"
