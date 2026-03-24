@@ -4,9 +4,8 @@ import React from "react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useGoalsBySession } from "@/lib/api/goals";
 import { DEFAULT_GOAL_TITLE, goalTitle } from "@/types/goal";
-import { Id } from "@/types/general";
+import type { Goal } from "@/types/goal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,12 +24,15 @@ import {
 
 interface CoachingSessionProps {
   coachingSession: CoachingSessionType;
+  /** Pre-fetched goals for this session from the batch endpoint */
+  sessionGoals?: Goal[];
   onUpdate: () => void;
   onDelete: () => void;
 }
 
 const CoachingSession: React.FC<CoachingSessionProps> = ({
   coachingSession,
+  sessionGoals,
   onUpdate,
   onDelete,
 }) => {
@@ -45,7 +47,7 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
       <CardHeader className="p-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="space-y-1">
-            <SessionGoal coachingSessionId={coachingSession.id} />
+            <SessionGoal goals={sessionGoals} />
             <div className="text-sm text-muted-foreground">
               {formatDateInUserTimezoneWithTZ(
                 coachingSession.date,
@@ -95,29 +97,16 @@ const CoachingSession: React.FC<CoachingSessionProps> = ({
 };
 
 interface SessionGoalProps {
-  coachingSessionId: Id;
+  /** Pre-fetched goals from the batch endpoint. Undefined means still loading. */
+  goals?: Goal[];
 }
 
-const SessionGoal: React.FC<SessionGoalProps> = ({
-  coachingSessionId,
-}) => {
-  const {
-    goals,
-    isLoading: isLoadingGoals,
-    isError: isErrorGoals,
-  } = useGoalsBySession(coachingSessionId);
-
-  let titleText: string;
-
-  if (isLoadingGoals) {
-    titleText = "Loading...";
-  } else if (isErrorGoals) {
-    titleText = "Error loading goal";
-  } else {
-    titleText = goals.length > 0
+const SessionGoal: React.FC<SessionGoalProps> = ({ goals }) => {
+  const titleText = goals === undefined
+    ? "Loading..."
+    : goals.length > 0
       ? goalTitle(goals[0])
       : DEFAULT_GOAL_TITLE;
-  }
 
   return <div>{titleText}</div>;
 };
