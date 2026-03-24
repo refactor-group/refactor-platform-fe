@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
 import { GoalFlowPages } from "@/components/ui/coaching-sessions/goal-panel";
-import { DEFAULT_MAX_ACTIVE_GOALS } from "@/types/goal";
+import { maxActiveGoals } from "@/types/goal";
 import type { GoalPanelSharedProps } from "@/components/ui/coaching-sessions/goal-panel";
 
 interface GoalsPanelDesktopProps extends GoalPanelSharedProps {
@@ -54,7 +55,7 @@ export function GoalsPanelDesktop({
         </span>
         {linkedGoals.length > 0 && (
           <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-            {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+            {linkedGoals.length}/{maxActiveGoals()}
           </span>
         )}
       </div>
@@ -97,10 +98,20 @@ export function GoalsPanelDesktop({
               <h3 className="text-sm font-semibold text-foreground">{headerTitle}</h3>
               {flow.step === GoalFlowStep.Idle && linkedGoals.length > 0 && (
                 <span className="text-[11px] text-muted-foreground/50 tabular-nums">
-                  {linkedGoals.length}/{DEFAULT_MAX_ACTIVE_GOALS}
+                  {linkedGoals.length}/{maxActiveGoals()}
                 </span>
               )}
             </div>
+            {flow.step === GoalFlowStep.Idle && !readOnly && (
+              <Button
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={goalFlow.handleAddGoalClick}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add goal
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-hidden">

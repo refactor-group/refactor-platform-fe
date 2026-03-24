@@ -55,14 +55,25 @@ export function GoalBrowseView({
   );
 
   return (
-    <div className="rounded-lg border border-border bg-background p-3 space-y-2">
-      {hint && (
-        <p className="text-[11px] text-muted-foreground/60">{hint}</p>
-      )}
+    <div className="rounded-lg border border-border bg-background p-3 space-y-3">
+      {/* Header row: hint text + Create new button */}
+      <div className="flex items-start justify-between gap-2">
+        {hint && (
+          <p className="text-[12px] text-muted-foreground pt-1">{hint}</p>
+        )}
+        <Button
+          size="sm"
+          className="h-8 gap-1 text-xs shrink-0"
+          onClick={onCreateNew}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Create new
+        </Button>
+      </div>
 
       {/* Search input */}
-      <div className="flex items-center gap-2 rounded-md border border-border/50 bg-background px-3 py-1.5">
-        <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+      <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5">
+        <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         <input
           ref={setInputRef}
           type="text"
@@ -70,14 +81,14 @@ export function GoalBrowseView({
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search goals..."
-          className="w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/40"
+          className="w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/70"
         />
       </div>
 
       {/* Goal list */}
       <div className={cn(
         "overflow-y-auto space-y-2",
-        showAll ? "max-h-[280px]" : "max-h-[180px]"
+        showAll ? "max-h-[360px]" : "max-h-[280px]"
       )}>
         {filteredGoals.length === 0 ? (
           <p className="py-4 text-center text-xs text-muted-foreground/50">
@@ -110,7 +121,7 @@ export function GoalBrowseView({
         <button
           type="button"
           onClick={() => setShowAll(true)}
-          className="flex items-center gap-1.5 w-full rounded-md px-2 py-1 text-[11px] text-muted-foreground/60 hover:text-foreground hover:bg-muted/30 transition-colors"
+          className="flex items-center gap-1.5 w-full rounded-md px-2 py-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
         >
           <ChevronDown className="h-3 w-3" />
           <span>Show {olderGoals.length} more</span>
@@ -118,15 +129,7 @@ export function GoalBrowseView({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-1 border-t border-border/30">
-        <Button
-          size="sm"
-          className="h-8 gap-1 text-xs"
-          onClick={onCreateNew}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Create new
-        </Button>
+      <div className="flex items-center justify-end pt-2 border-t border-border/30">
         <Button
           variant="ghost"
           size="sm"
