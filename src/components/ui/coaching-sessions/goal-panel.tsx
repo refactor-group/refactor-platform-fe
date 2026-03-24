@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { CompactGoalCard } from "@/components/ui/coaching-sessions/goal-card-compact";
 import { GoalBrowseView } from "@/components/ui/coaching-sessions/goal-browse-view";
 import { GoalCreateForm } from "@/components/ui/coaching-sessions/goal-create-form";
@@ -26,7 +27,9 @@ import type { Goal } from "@/types/goal";
 import {
   defaultGoal,
   extractActiveGoalLimitError,
+  goalTitle,
   isAtGoalLimit,
+  maxActiveGoals,
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
@@ -107,26 +110,15 @@ export function GoalFlowPages({
               />
             ))
           )}
-          {!readOnly && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1 text-xs"
-              onClick={goalFlow.handleAddGoalClick}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add goal
-            </Button>
-          )}
         </div>
       );
 
     case GoalFlowStep.SelectingSwap:
       return (
         <SlidePanel direction={goalFlow.direction}>
-          <div className="space-y-3">
-            <p className="text-[12px] text-muted-foreground/70">
-              Which goal should be put on hold and replaced in this session?
+          <div className="rounded-lg border border-border bg-background p-3 space-y-3">
+            <p className="text-[12px] text-muted-foreground">
+              You already have {maxActiveGoals()} goals in progress. Select an existing goal to replace with a new one.
             </p>
             {linkedGoals.map((goal) => (
               <CompactGoalCard
@@ -135,6 +127,16 @@ export function GoalFlowPages({
                 swapMode={{ onSelect: () => goalFlow.handleSwapSelected(goal.id) }}
               />
             ))}
+            <div className="flex items-center justify-end pt-2 border-t border-border/30">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground"
+                onClick={goalFlow.handleCancel}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         </SlidePanel>
       );
@@ -148,8 +150,8 @@ export function GoalFlowPages({
             onCreateNew={goalFlow.handleCreateNewClick}
             onCancel={goalFlow.handleBack}
             hint={flow.swapGoalId
-              ? "Choose a replacement or create a new goal"
-              : "Choose an existing goal or create a new one"
+              ? "Choose a replacement goal or create a new one."
+              : "Choose an existing goal or create a new one."
             }
           />
         </SlidePanel>
@@ -242,6 +244,9 @@ export function GoalPanel({
 
   const handleUnlink = useCallback(
     async (goalId: string) => {
+      const goal = allGoals.find((g) => g.id === goalId);
+      const previousStatus = goal?.status;
+
       const result = await GoalApi.unlinkFromSession(
         coachingSessionId,
         goalId
@@ -249,24 +254,48 @@ export function GoalPanel({
       result.match(
         async () => {
           // Auto-hold the goal when unlinking from a current/future session
-          if (!readOnly) {
-            const goal = allGoals.find((g) => g.id === goalId);
-            if (goal && goal.status === ItemStatus.InProgress) {
-              try {
-                await updateGoal(goalId, { ...goal, status: ItemStatus.OnHold });
-              } catch (err) {
-                console.error("Failed to put goal on hold after unlink:", err);
-              }
+          if (!readOnly && goal && goal.status === ItemStatus.InProgress) {
+            try {
+              await updateGoal(goalId, { ...goal, status: ItemStatus.OnHold });
+            } catch (err) {
+              console.error("Failed to put goal on hold after unlink:", err);
             }
           }
           refreshSessionGoals();
           refreshAllGoals();
+
+          // Show undo toast
+          const name = goal ? goalTitle(goal) : "Goal";
+          sonnerToast(`"${name}" removed from session`, {
+            action: {
+              label: "Undo",
+              onClick: async () => {
+                const relinkResult = await GoalApi.linkToSession(coachingSessionId, goalId);
+                if (relinkResult.isErr()) {
+                  sonnerToast.error("Failed to undo", {
+                    description: relinkResult.error.message,
+                  });
+                  return;
+                }
+                // Restore the original status if it was changed
+                if (!readOnly && goal && previousStatus === ItemStatus.InProgress) {
+                  try {
+                    await updateGoal(goalId, { ...goal, status: ItemStatus.InProgress });
+                  } catch (err) {
+                    console.error("Failed to restore goal status:", err);
+                  }
+                }
+                refreshSessionGoals();
+                refreshAllGoals();
+              },
+            },
+          });
         },
         (err) => {
           console.error("Failed to unlink goal:", err);
           toast({
             variant: "destructive",
-            title: "Failed to unlink goal",
+            title: "Failed to remove goal",
             description: err.message,
           });
         }

@@ -53,6 +53,16 @@ vi.mock("@/site.config", () => ({
   },
 }))
 
+const { mockSonnerToast } = vi.hoisted(() => {
+  const mockSonnerToast = vi.fn()
+  return { mockSonnerToast }
+})
+vi.mock("sonner", () => ({
+  toast: Object.assign(mockSonnerToast, {
+    error: vi.fn(),
+  }),
+}))
+
 // Import after mocks
 import { useGoalsBySession, useGoalList, GoalApi } from "@/lib/api/goals"
 
@@ -163,11 +173,11 @@ describe("GoalPanel", () => {
     const expandButton = screen.getByRole("button", { name: /expand/i })
     await user.click(expandButton)
 
-    // Expanded view shows compact goal cards with edit buttons
-    const editButtons = screen.getAllByRole("button", {
-      name: /edit improve technical leadership/i,
+    // Expanded view shows compact goal cards with info (flip) buttons
+    const infoButtons = screen.getAllByRole("button", {
+      name: /goal options for/i,
     })
-    expect(editButtons.length).toBeGreaterThanOrEqual(1)
+    expect(infoButtons.length).toBeGreaterThanOrEqual(1)
   })
 
   it("shows 'Add goal' button", () => {
@@ -289,10 +299,15 @@ describe("GoalPanel", () => {
       />
     )
 
-    const removeButtons = screen.getAllByRole("button", {
-      name: /remove improve technical leadership/i,
+    // Flip the card to reveal back-face actions
+    const infoButtons = screen.getAllByRole("button", {
+      name: /goal options for/i,
     })
-    await user.click(removeButtons[0])
+    await user.click(infoButtons[0])
+
+    // Click Remove on the back face
+    const removeButton = screen.getByRole("button", { name: /remove/i })
+    await user.click(removeButton)
 
     expect(GoalApi.unlinkFromSession).toHaveBeenCalledWith(
       "session-1",
@@ -307,6 +322,55 @@ describe("GoalPanel", () => {
       )
     })
     expect(mockRefreshSession).toHaveBeenCalled()
+
+    // Should show undo toast via sonner
+    expect(mockSonnerToast).toHaveBeenCalledWith(
+      expect.stringContaining("removed from session"),
+      expect.objectContaining({
+        action: expect.objectContaining({ label: "Undo" }),
+      })
+    )
+  })
+
+  it("undo remove re-links the goal and restores InProgress status", async () => {
+    const user = userEvent.setup()
+    const mockUnlinkResult = { isOk: () => true, isErr: () => false, match: (ok: () => void) => ok() }
+    const mockRelinkResult = { isOk: () => true, isErr: () => false }
+    vi.mocked(GoalApi.unlinkFromSession).mockResolvedValue(mockUnlinkResult as any)
+    vi.mocked(GoalApi.linkToSession).mockResolvedValue(mockRelinkResult as any)
+    mockUpdate.mockResolvedValue(goal1)
+    setupMocks()
+
+    render(
+      <GoalPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+      />
+    )
+
+    // Flip and remove
+    const infoButtons = screen.getAllByRole("button", { name: /goal options for/i })
+    await user.click(infoButtons[0])
+    await user.click(screen.getByRole("button", { name: /remove/i }))
+
+    // Extract and invoke the undo callback
+    await waitFor(() => {
+      expect(mockSonnerToast).toHaveBeenCalled()
+    })
+    const toastCall = mockSonnerToast.mock.calls[mockSonnerToast.mock.calls.length - 1]
+    const undoAction = toastCall[1].action
+    await undoAction.onClick()
+
+    // Should re-link the goal
+    expect(GoalApi.linkToSession).toHaveBeenCalledWith("session-1", "goal-1")
+
+    // Should restore InProgress status
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(
+        "goal-1",
+        expect.objectContaining({ status: ItemStatus.InProgress })
+      )
+    })
   })
 
   it("unlink does not change goal status on past (readOnly) session", async () => {
@@ -322,11 +386,11 @@ describe("GoalPanel", () => {
       />
     )
 
-    // readOnly hides the remove buttons, so unlink cannot be triggered from UI
-    const removeButtons = screen.queryAllByRole("button", {
-      name: /remove improve technical leadership/i,
+    // readOnly hides the info (flip) button, so remove can't be reached
+    const infoButtons = screen.queryAllByRole("button", {
+      name: /goal options for/i,
     })
-    expect(removeButtons).toHaveLength(0)
+    expect(infoButtons).toHaveLength(0)
   })
 
   it("inline create form creates a new goal", async () => {
@@ -386,8 +450,8 @@ describe("GoalPanel", () => {
     const addGoalButtons = screen.getAllByRole("button", { name: /add goal/i })
     await user.click(addGoalButtons[0])
 
-    // Should show "Which goal should be put on hold?" prompt
-    expect(screen.getAllByText(/put on hold/i).length).toBeGreaterThanOrEqual(1)
+    // Should show swap selection prompt
+    expect(screen.getAllByText(/select an existing goal to replace/i).length).toBeGreaterThanOrEqual(1)
 
     // Step 2: Click first goal card to select it as swap target
     // In swap mode, cards become buttons with "Put on hold" text
@@ -423,7 +487,7 @@ describe("GoalPanel", () => {
     )
   })
 
-  it("shows edit icon on hover and enters edit mode on click", async () => {
+  it("flips card to back face and enters edit mode on Edit click", async () => {
     const user = userEvent.setup()
     setupMocks()
 
@@ -434,14 +498,15 @@ describe("GoalPanel", () => {
       />
     )
 
-    // Edit button should exist (appears on hover via CSS, but accessible in DOM)
-    const editButtons = screen.getAllByRole("button", {
-      name: /edit improve technical leadership/i,
+    // Flip the card to reveal back-face actions
+    const infoButtons = screen.getAllByRole("button", {
+      name: /goal options for/i,
     })
-    expect(editButtons.length).toBeGreaterThanOrEqual(1)
+    expect(infoButtons.length).toBeGreaterThanOrEqual(1)
+    await user.click(infoButtons[0])
 
-    // Click edit to enter edit mode
-    await user.click(editButtons[0])
+    // Click Edit on the back face
+    await user.click(screen.getByRole("button", { name: /edit/i }))
 
     // Should show pre-populated input with current title
     const titleInput = screen.getByDisplayValue("Improve technical leadership")
@@ -468,11 +533,12 @@ describe("GoalPanel", () => {
       />
     )
 
-    // Enter edit mode
-    const editButtons = screen.getAllByRole("button", {
-      name: /edit improve technical leadership/i,
+    // Flip card then enter edit mode
+    const infoButtons = screen.getAllByRole("button", {
+      name: /goal options for/i,
     })
-    await user.click(editButtons[0])
+    await user.click(infoButtons[0])
+    await user.click(screen.getByRole("button", { name: /edit/i }))
 
     // Clear and type new title
     const titleInput = screen.getByDisplayValue("Improve technical leadership")
@@ -507,11 +573,12 @@ describe("GoalPanel", () => {
       />
     )
 
-    // Enter edit mode
-    const editButtons = screen.getAllByRole("button", {
-      name: /edit improve technical leadership/i,
+    // Flip card then enter edit mode
+    const infoButtons = screen.getAllByRole("button", {
+      name: /goal options for/i,
     })
-    await user.click(editButtons[0])
+    await user.click(infoButtons[0])
+    await user.click(screen.getByRole("button", { name: /edit/i }))
 
     // Type changes
     const titleInput = screen.getByDisplayValue("Improve technical leadership")
@@ -539,10 +606,11 @@ describe("GoalPanel", () => {
       />
     )
 
-    const editButtons = screen.queryAllByRole("button", {
-      name: /edit improve technical leadership/i,
+    // readOnly hides the info (flip) button, so edit/remove can't be reached
+    const infoButtons = screen.queryAllByRole("button", {
+      name: /goal options for/i,
     })
-    expect(editButtons).toHaveLength(0)
+    expect(infoButtons).toHaveLength(0)
   })
 
   it("clicking outside the panel dismisses the add-goal flow", async () => {
