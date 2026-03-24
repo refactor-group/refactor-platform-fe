@@ -315,17 +315,26 @@ function FrontFace({
           {pendingHold ? (
             <Pause className="h-3 w-3 text-muted-foreground/70" />
           ) : canInteract ? (
-            <button
-              type="button"
-              aria-label={`Goal options for ${title}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onFlip();
-              }}
-              className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-            >
-              <Info className="h-3.5 w-3.5" />
-            </button>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Goal options for ${title}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFlip();
+                    }}
+                    className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Edit or remove goal
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : null}
         </div>
       </div>

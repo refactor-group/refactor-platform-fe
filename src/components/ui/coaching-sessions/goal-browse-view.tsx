@@ -63,7 +63,7 @@ export function GoalBrowseView({
         )}
         <Button
           size="sm"
-          className="h-8 gap-1 text-xs shrink-0"
+          className="h-7 gap-1 text-xs shrink-0"
           onClick={onCreateNew}
         >
           <Plus className="h-3.5 w-3.5" />
