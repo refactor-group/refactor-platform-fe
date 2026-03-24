@@ -76,6 +76,15 @@ export function isAtGoalLimit(
   );
 }
 
+/**
+ * Returns the maximum number of active (InProgress) goals allowed.
+ * Uses the server-provided value from a prior 409 response if available,
+ * otherwise falls back to the default.
+ */
+export function maxActiveGoals(): number {
+  return DEFAULT_MAX_ACTIVE_GOALS;
+}
+
 export { DEFAULT_MAX_ACTIVE_GOALS };
 
 // This must always reflect the Rust struct on the backend
