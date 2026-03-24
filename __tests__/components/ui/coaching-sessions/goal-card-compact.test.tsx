@@ -163,14 +163,4 @@ describe("CompactGoalCard", () => {
     expect(onSelect).toHaveBeenCalledOnce()
   })
 
-  it("renders pending hold state with muted styling", () => {
-    render(
-      <CompactGoalCard
-        goal={defaultGoal}
-        pendingHold
-      />
-    )
-
-    expect(screen.getByText("Will be put on hold")).toBeInTheDocument()
-  })
 })

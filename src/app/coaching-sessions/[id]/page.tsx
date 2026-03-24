@@ -56,7 +56,8 @@ export default function CoachingSessionsPage() {
     useCurrentCoachingRelationship();
 
 
-  // Auto-collapse main sidebar on coaching session page to maximize workspace
+  // Auto-collapse main sidebar on coaching session page to maximize workspace,
+  // and restore the previous state when leaving.
   const { collapse, state: sidebarState, expand } = useSidebar();
   const previousSidebarState = useRef<SidebarState | null>(null);
 
@@ -67,10 +68,7 @@ export default function CoachingSessionsPage() {
     if (sidebarState === SidebarState.Expanded) {
       collapse(StateChangeSource.SystemInitialization);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Restore sidebar state when leaving the coaching session page
-  useEffect(() => {
     return () => {
       if (previousSidebarState.current === SidebarState.Expanded) {
         expand(StateChangeSource.SystemInitialization);

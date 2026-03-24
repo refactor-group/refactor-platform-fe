@@ -16,7 +16,6 @@ import { useGoalProgress } from "@/lib/api/goal-progress";
 import type { Goal } from "@/types/goal";
 import { goalTitle, hasGoalBody } from "@/types/goal";
 import { Some } from "@/types/option";
-import { Pause } from "lucide-react";
 
 // ── Compact Goal Card (flip-card interaction) ────────────────────────
 //
@@ -37,11 +36,9 @@ export interface CompactGoalCardProps {
   swapMode?: {
     onSelect: () => void;
   };
-  /** When true, card shows a visual indicator that it will be put on hold */
-  pendingHold?: boolean;
 }
 
-export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, pendingHold }: CompactGoalCardProps) {
+export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }: CompactGoalCardProps) {
   const { progressMetrics } = useGoalProgress(Some(goal.id));
   const titleRef = useRef<HTMLSpanElement>(null);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -196,7 +193,7 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
     );
   }
 
-  const canInteract = !pendingHold && Boolean(onRemove || onUpdate);
+  const canInteract = Boolean(onRemove || onUpdate);
 
   // ── Flip card ────────────────────────────────────────────────────────
 
@@ -213,18 +210,11 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
         <div
           ref={frontRef}
           aria-hidden={isFlipped}
-          className={cn(
-            "goal-card-face goal-card-front",
-            "rounded-lg border p-3 space-y-2 group/card transition-colors shadow-sm",
-            pendingHold
-              ? "border-border bg-muted/30"
-              : "border-border bg-background hover:border-foreground/20"
-          )}
+          className="goal-card-face goal-card-front rounded-lg border border-border bg-background p-3 space-y-2 group/card transition-colors shadow-sm hover:border-foreground/20"
         >
           <FrontFace
             titleRef={titleRef}
             title={title}
-            pendingHold={pendingHold}
             canInteract={canInteract}
             onFlip={handleFlip}
             percent={percent}
@@ -273,7 +263,6 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
 function FrontFace({
   titleRef,
   title,
-  pendingHold,
   canInteract,
   onFlip,
   percent,
@@ -285,7 +274,6 @@ function FrontFace({
 }: {
   titleRef: React.RefObject<HTMLSpanElement | null>;
   title: string;
-  pendingHold?: boolean;
   canInteract?: boolean;
   onFlip: () => void;
   percent: number;
@@ -302,19 +290,16 @@ function FrontFace({
       <div className="flex items-start justify-between gap-2">
         <span
           ref={titleRef}
-          onClick={hasBody && !pendingHold ? () => setShowBody(prev => !prev) : undefined}
+          onClick={hasBody ? () => setShowBody(prev => !prev) : undefined}
           className={cn(
             "text-[13px] font-medium line-clamp-2 min-w-0",
-            pendingHold && "text-muted-foreground",
-            hasBody && !pendingHold && "cursor-pointer"
+            hasBody && "cursor-pointer"
           )}
         >
           {title}
         </span>
         <div className="flex items-center gap-1 shrink-0 mt-0.5">
-          {pendingHold ? (
-            <Pause className="h-3 w-3 text-muted-foreground/70" />
-          ) : canInteract ? (
+          {canInteract ? (
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -339,7 +324,7 @@ function FrontFace({
         </div>
       </div>
 
-      {!pendingHold && actionsTotal > 0 && (
+      {actionsTotal > 0 && (
         <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
           <div
             className="h-full rounded-full bg-foreground/20 transition-all"
@@ -349,15 +334,11 @@ function FrontFace({
       )}
 
       <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
-        {pendingHold ? (
-          <span className="text-muted-foreground/60 italic mr-auto">Will be put on hold</span>
-        ) : (
-          <GoalProgressIcon
-            progress={progress}
-            actionsCompleted={actionsCompleted}
-            actionsTotal={actionsTotal}
-          />
-        )}
+        <GoalProgressIcon
+          progress={progress}
+          actionsCompleted={actionsCompleted}
+          actionsTotal={actionsTotal}
+        />
       </div>
 
       {hasBody && (
