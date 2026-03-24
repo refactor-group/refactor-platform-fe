@@ -171,17 +171,17 @@ export function filterActionsByStatus(
 
 /**
  * Builds goal context from an enriched coaching session.
- * Returns a "No Goal" placeholder if the session has no goal.
+ * Uses the first goal in the array (primary goal) or returns a placeholder.
  *
- * @param session - Enriched coaching session with optional goal data
+ * @param session - Enriched coaching session with optional goals array
  * @returns GoalContext object with goal ID and title
  */
 export function buildGoalContext(session: EnrichedCoachingSession): GoalContext {
-  const goal = session.goal;
-  if (goal) {
+  const firstGoal = session.goals?.[0];
+  if (firstGoal) {
     return {
-      goalId: goal.id,
-      title: goal.title,
+      goalId: firstGoal.id,
+      title: firstGoal.title,
     };
   }
   return {

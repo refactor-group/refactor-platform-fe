@@ -155,10 +155,10 @@ function makeTestSession(
       first_name: "Bob",
       last_name: "Jones",
     },
-    goal: {
+    goals: [{
       id: "goal-1",
       title: "Test Goal",
-    },
+    }],
     ...overrides,
   } as EnrichedCoachingSession;
 }

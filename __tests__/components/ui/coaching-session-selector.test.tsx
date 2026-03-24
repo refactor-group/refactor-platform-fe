@@ -96,13 +96,13 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
         id: 'upcoming-1',
         date: now.plus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
-        goal: { title: 'Upcoming Goal' },
+        goals: [{ title: 'Upcoming Goal' }],
       },
       {
         id: 'previous-1',
         date: now.minus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
-        goal: { title: 'Previous Goal' },
+        goals: [{ title: 'Previous Goal' }],
       },
     ]
 
@@ -138,7 +138,7 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
         id: 'upcoming-1',
         date: now.plus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
-        goal: { title: 'Test Goal' },
+        goals: [{ title: 'Test Goal' }],
       },
     ]
 

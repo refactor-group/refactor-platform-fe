@@ -186,6 +186,20 @@ export function goalTitle(
   return goal.title || fallback;
 }
 
+/**
+ * Summarizes an enriched session's goals array into a display string.
+ * Returns the first goal's title when there is exactly one, a comma-joined
+ * list when there are multiple, or the default fallback when the array is
+ * empty or undefined.
+ */
+export function goalsTitle(
+  goals: Pick<Goal, "title">[] | undefined,
+  fallback: string = DEFAULT_GOAL_TITLE
+): string {
+  if (!goals || goals.length === 0) return fallback;
+  return goals.map((g) => goalTitle(g, fallback)).join(", ");
+}
+
 /** Returns true when the goal's status is OnHold. */
 export function isOnHold(goal: Pick<Goal, "status">): boolean {
   return goal.status === ItemStatus.OnHold;

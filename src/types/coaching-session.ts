@@ -62,8 +62,8 @@ export interface EnrichedCoachingSession extends CoachingSession {
   /** Organization data (included when include=organization, requires relationship) */
   organization?: Organization;
 
-  /** Goal (included when include=goal) */
-  goal?: Goal;
+  /** Goals array — up to 3 InProgress goals (included when include=goal) */
+  goals?: Goal[];
 
   /** Agreement (included when include=agreements) */
   agreement?: Agreement;

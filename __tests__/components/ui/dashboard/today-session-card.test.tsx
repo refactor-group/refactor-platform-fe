@@ -80,28 +80,28 @@ const createMockEnrichedSession = (
     created_at: DateTime.now(),
     updated_at: DateTime.now(),
   },
-  goal: {
+  goals: [{
     id: "goal-1",
     title: "Q4 Strategy Review",
     details: "",
     coaching_relationship_id: "rel-1",
     created_at: DateTime.now(),
     updated_at: DateTime.now(),
-  },
+  }],
   ...overrides,
 });
 
 describe("TodaySessionCard", () => {
   it("should render session goal title", () => {
     const session = createMockEnrichedSession({
-      goal: {
+      goals: [{
         id: "goal-1",
         title: "Product Launch Planning",
         details: "",
         coaching_relationship_id: "rel-1",
         created_at: DateTime.now(),
         updated_at: DateTime.now(),
-      },
+      }],
     });
 
     render(<TodaySessionCard session={session} />);

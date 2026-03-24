@@ -41,7 +41,7 @@ const ENRICHED_SESSION = {
     last_name: 'User',
     display_name: 'Test User',
   },
-  goal: {
+  goals: [{
     id: 'goal-1',
     title: 'Test Goal',
     coaching_session_id: 'session-1',
@@ -50,7 +50,7 @@ const ENRICHED_SESSION = {
     status_changed_at: '2026-02-01T00:00:00Z',
     created_at: '2026-02-01T00:00:00Z',
     updated_at: '2026-02-01T00:00:00Z',
-  },
+  }],
 }
 
 function mockAction(
