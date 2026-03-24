@@ -186,7 +186,11 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
         )}
 
         <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
-          <GoalProgressIcon progress={progressMetrics.progress} />
+          <GoalProgressIcon
+            progress={progressMetrics.progress}
+            actionsCompleted={progressMetrics.actions_completed}
+            actionsTotal={progressMetrics.actions_total}
+          />
         </div>
       </div>
     );
@@ -224,6 +228,7 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode, 
             canInteract={canInteract}
             onFlip={handleFlip}
             percent={percent}
+            actionsCompleted={progressMetrics.actions_completed}
             actionsTotal={progressMetrics.actions_total}
             progress={progressMetrics.progress}
             hasBody={hasBody}
@@ -272,6 +277,7 @@ function FrontFace({
   canInteract,
   onFlip,
   percent,
+  actionsCompleted,
   actionsTotal,
   progress,
   hasBody,
@@ -283,6 +289,7 @@ function FrontFace({
   canInteract?: boolean;
   onFlip: () => void;
   percent: number;
+  actionsCompleted: number;
   actionsTotal: number;
   progress: import("@/types/goal-progress").GoalProgress;
   hasBody: boolean;
@@ -336,7 +343,11 @@ function FrontFace({
         {pendingHold ? (
           <span className="text-muted-foreground/60 italic mr-auto">Will be put on hold</span>
         ) : (
-          <GoalProgressIcon progress={progress} />
+          <GoalProgressIcon
+            progress={progress}
+            actionsCompleted={actionsCompleted}
+            actionsTotal={actionsTotal}
+          />
         )}
       </div>
 

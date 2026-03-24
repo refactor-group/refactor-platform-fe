@@ -13,6 +13,9 @@ interface GoalProgressIconProps {
   progress: GoalProgress;
   /** Show a tooltip with the progress label on hover. Defaults to true. */
   showTooltip?: boolean;
+  /** When provided, the tooltip includes action completion details. */
+  actionsCompleted?: number;
+  actionsTotal?: number;
   className?: string;
 }
 
@@ -51,11 +54,15 @@ function ProgressIconRaw({ progress, className }: { progress: GoalProgress; clas
 export function GoalProgressIcon({
   progress,
   showTooltip = true,
+  actionsCompleted,
+  actionsTotal,
   className,
 }: GoalProgressIconProps) {
   const icon = <ProgressIconRaw progress={progress} className={className} />;
 
   if (!showTooltip) return icon;
+
+  const showActions = actionsTotal !== undefined;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -64,7 +71,12 @@ export function GoalProgressIcon({
           <span className="cursor-default">{icon}</span>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
-          <p>{progressLabel(progress)}</p>
+          <p className="font-medium">{progressLabel(progress)}</p>
+          {showActions && (
+            <p className="text-muted-foreground">
+              {actionsCompleted ?? 0}/{actionsTotal} actions completed
+            </p>
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
