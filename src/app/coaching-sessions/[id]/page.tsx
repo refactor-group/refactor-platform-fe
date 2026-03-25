@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { isPastSession } from "@/types/coaching-session";
+import { DateTime } from "ts-luxon";
+import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
@@ -44,8 +46,9 @@ export default function CoachingSessionsPage() {
   const currentTab = searchParams.get("tab") || "notes";
   const reviewActions = searchParams.get("review") === "true";
 
-  const { userId } = useAuthStore((state) => ({
+  const { userId, userSession } = useAuthStore((state) => ({
     userId: state.userId,
+    userSession: state.userSession,
   }));
 
   // Get current coaching session from URL
@@ -169,7 +172,11 @@ export default function CoachingSessionsPage() {
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={notesMaximized}
-              readOnly={currentCoachingSession ? isPastSession(currentCoachingSession) : false}
+              readOnly={currentCoachingSession ? isPastSession(currentCoachingSession, {
+                cutoff: DateTime.fromISO(currentCoachingSession.date, { zone: 'utc' })
+                  .setZone(userSession?.timezone || getBrowserTimezone())
+                  .endOf('day'),
+              }) : false}
             />
           )}
 
