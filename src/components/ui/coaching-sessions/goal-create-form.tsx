@@ -63,7 +63,7 @@ export function GoalCreateForm({
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="What do you want to achieve?"
-          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[12px] font-medium placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30"
+          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[12px] font-medium placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30"
         />
       </div>
 
@@ -79,14 +79,14 @@ export function GoalCreateForm({
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Add detail to your goal..."
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 resize-none"
+            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/30 resize-none"
           />
         </div>
       ) : (
         <button
           type="button"
           onClick={() => setShowBody(true)}
-          className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors pb-3"
+          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors pb-3"
         >
           + Add a longer goal description
         </button>
