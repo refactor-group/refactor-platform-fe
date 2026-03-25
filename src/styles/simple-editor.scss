@@ -56,8 +56,23 @@
   border: 1px solid var(--editor-border);
   border-radius: 0.5rem;
   background-color: var(--editor-bg);
-  min-height: 200px;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden; /* Ensure clean corners */
+  isolation: isolate; /* Contain internal z-indices (e.g. toolbar z-110) so they
+                         don't escape and overlap sibling panels like the goals overlay */
+
+  /* TipTap EditorProvider renders an intermediate wrapper div (after the
+     toolbar-container) that must participate in the flex layout so the
+     ProseMirror content area can scroll internally. */
+  > div:not(.toolbar-container) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
   
   &:focus-within {
     border-color: var(--editor-border);
@@ -119,7 +134,9 @@
   color: var(--editor-text);
   background-color: var(--editor-bg);
   padding: 2rem 1rem 1rem;
-  min-height: 300px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
   outline: none;
   line-height: 1.6;
   font-size: 0.875rem; /* 14px */
@@ -616,99 +633,21 @@
   padding: 2rem;
 }
 
-/* Floating Toolbar Styles */
-.floating-toolbar {
-  position: fixed;
-  top: 5rem; /* Below the header (64px) + some margin */
-  z-index: 40; /* Below header (z-50) and its popovers */
-  background-color: var(--editor-bg);
-  border: 1px solid var(--editor-border);
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  animation: slideInDown 0.3s ease-out;
-  backdrop-filter: blur(8px);
-  max-width: calc(100vw - 2rem); /* Provide constraint for wrapping */
-  will-change: transform, opacity;
-
-  .dark & {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-  }
-}
-
-.floating-toolbar-content {
-  min-height: var(--tt-toolbar-height);
-  height: auto;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  flex-wrap: wrap;
-  
-  .tiptap-toolbar {
-    all: unset;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    flex-wrap: wrap;
-    width: 100%;
-  }
-}
-
-@keyframes slideInDown {
-  0% {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Ensure floating toolbar appears above everything */
-.floating-toolbar .toolbar-button {
-  background: var(--editor-bg);
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: var(--editor-border);
-  }
-  
-  &.is-active {
-    background-color: var(--editor-focus-border);
-    color: white;
-  }
-}
-
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .coaching-notes-toolbar {
     padding: 0.25rem;
     gap: 0.125rem;
   }
-  
+
   .toolbar-button {
     height: 1.75rem;
     width: 1.75rem;
   }
-  
+
   .tiptap.ProseMirror {
     padding: 0.75rem;
     font-size: 0.875rem;
-  }
-  
-  .floating-toolbar-content {
-    padding: 0.25rem;
-    gap: 0.125rem;
-    
-    .tiptap-toolbar {
-      gap: 0.125rem;
-    }
-  }
-  
-  .floating-toolbar .toolbar-button {
-    height: 1.75rem;
-    width: 1.75rem;
   }
 }
 
@@ -735,11 +674,3 @@
   }
 }
 
-/* Empty spacer that maintains toolbar height when toolbar is hidden */
-.toolbar-spacer {
-  min-height: var(--tt-toolbar-height);
-  height: auto;
-  padding: 0.5rem;
-  /* Invisible but maintains space */
-  visibility: hidden;
-}

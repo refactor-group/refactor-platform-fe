@@ -16,6 +16,7 @@ export interface SelectOption {
 export enum ItemStatus {
   NotStarted = "NotStarted",
   InProgress = "InProgress",
+  OnHold = "OnHold",
   Completed = "Completed",
   WontDo = "WontDo",
 }
@@ -25,6 +26,8 @@ export function stringToActionStatus(statusString: string): ItemStatus {
 
   if (status == "InProgress") {
     return ItemStatus.InProgress;
+  } else if (status == "OnHold") {
+    return ItemStatus.OnHold;
   } else if (status == "Completed") {
     return ItemStatus.Completed;
   } else if (status == "WontDo") {
@@ -40,6 +43,8 @@ export function actionStatusToString(status: ItemStatus): string {
       return "Not Started";
     case ItemStatus.InProgress:
       return "In Progress";
+    case ItemStatus.OnHold:
+      return "On Hold";
     case ItemStatus.Completed:
       return "Completed";
     case ItemStatus.WontDo:

@@ -48,8 +48,16 @@ vi.mock('@/components/ui/share-session-link', () => ({
   default: () => <div>Share Link</div>
 }))
 
-vi.mock('@/components/ui/coaching-sessions/goal-container', () => ({
-  GoalContainer: () => <div>Goals</div>
+vi.mock('@/lib/hooks/use-sidebar', () => ({
+  useSidebar: () => ({
+    collapse: vi.fn(),
+    expand: vi.fn(),
+    state: 'expanded',
+  }),
+}))
+
+vi.mock('@/components/ui/coaching-sessions/goal-panel', () => ({
+  GoalPanel: () => <div>Goals</div>
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-tabs-container', () => ({

@@ -107,7 +107,7 @@ describe("KanbanBoard", () => {
     return screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
   }
 
-  it("renders all 4 columns when visibility is All", () => {
+  it("renders all 5 columns when visibility is All", () => {
     render(
       <Wrapper>
         <KanbanBoard {...defaultProps} visibility={StatusVisibility.All} />
@@ -117,6 +117,7 @@ describe("KanbanBoard", () => {
     const headers = getColumnHeaders();
     expect(headers).toContain("Not Started");
     expect(headers).toContain("In Progress");
+    expect(headers).toContain("On Hold");
     expect(headers).toContain("Completed");
     expect(headers).toContain("Won't Do");
   });
@@ -131,6 +132,7 @@ describe("KanbanBoard", () => {
     const headers = getColumnHeaders();
     expect(headers).toContain("Not Started");
     expect(headers).toContain("In Progress");
+    expect(headers).toContain("On Hold");
     expect(headers).not.toContain("Completed");
     expect(headers).not.toContain("Won't Do");
   });
@@ -157,7 +159,7 @@ describe("KanbanBoard", () => {
     );
 
     const emptyMessages = screen.getAllByText("No actions");
-    expect(emptyMessages).toHaveLength(4);
+    expect(emptyMessages).toHaveLength(5);
   });
 
   it("shows correct count badges for columns", () => {
@@ -174,11 +176,11 @@ describe("KanbanBoard", () => {
     );
 
     // Count badges are rendered as text
-    // NotStarted: 2, InProgress: 1, Completed: 0, WontDo: 0
+    // NotStarted: 2, InProgress: 1, OnHold: 0, Completed: 0, WontDo: 0
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
-    // Two columns with 0 count
+    // Three columns with 0 count
     const zeroBadges = screen.getAllByText("0");
-    expect(zeroBadges).toHaveLength(2);
+    expect(zeroBadges).toHaveLength(3);
   });
 });

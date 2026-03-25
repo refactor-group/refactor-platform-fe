@@ -1,3 +1,17 @@
+// Polyfill ResizeObserver for tests (jsdom doesn't have it, required by cmdk)
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof globalThis.ResizeObserver;
+}
+
+// Polyfill Element.scrollIntoView for tests (jsdom doesn't have it, required by cmdk)
+if (typeof Element.prototype.scrollIntoView === 'undefined') {
+  Element.prototype.scrollIntoView = function () {};
+}
+
 import '@testing-library/jest-dom'
 import { vi, beforeAll, afterEach, afterAll } from 'vitest'
 import { server } from './msw-server'
