@@ -232,7 +232,10 @@ const CoachingTabsContainer = ({
             <CoachingNotes onAddAsAction={handleAddNoteAsAction} />
           </div>
 
-          <div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+            style={{ display: currentTab === "agreements" ? "block" : "none" }}
+          >
             <AgreementsList
               coachingSessionId={currentCoachingSessionId || ""}
               userId={userId}
@@ -244,7 +247,10 @@ const CoachingTabsContainer = ({
             />
           </div>
 
-          <div className="pl-4" style={{ display: currentTab === "actions" ? "block" : "none" }}>
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pl-4"
+            style={{ display: currentTab === "actions" ? "block" : "none" }}
+          >
             {currentCoachingSessionId && currentCoachingSession && currentCoachingRelationship && (
               <ActionsPanel
                 coachingSessionId={currentCoachingSessionId}
