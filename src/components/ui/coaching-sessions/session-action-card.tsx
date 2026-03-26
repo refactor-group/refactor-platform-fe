@@ -122,6 +122,12 @@ function StatusSelect({ status, onStatusChange }: StatusSelectProps) {
             In Progress
           </span>
         </SelectItem>
+        <SelectItem value={ItemStatus.OnHold}>
+          <span className="flex items-center gap-1.5">
+            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.OnHold))} />
+            On Hold
+          </span>
+        </SelectItem>
         <SelectItem value={ItemStatus.Completed}>
           <span className="flex items-center gap-1.5">
             <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.Completed))} />
