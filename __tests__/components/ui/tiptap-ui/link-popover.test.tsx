@@ -174,12 +174,7 @@ describe('LinkPopover', () => {
       renderWithProviders(
         <EditorProvider extensions={extensions} content={content}>
           <div>
-            {/* Simulate static toolbar */}
             <div data-testid="static-toolbar" style={{ display: 'block' }}>
-              <LinkPopover />
-            </div>
-            {/* Simulate floating toolbar */}
-            <div data-testid="floating-toolbar" style={{ display: 'none' }}>
               <LinkPopover />
             </div>
           </div>
@@ -204,16 +199,9 @@ describe('LinkPopover', () => {
       const { rerender } = renderWithProviders(
         <EditorProvider extensions={extensions} content={content}>
           <div>
-            {/* Static toolbar - visible */}
             <div data-testid="static-toolbar" style={{ display: 'block' }}>
               <LinkPopover />
             </div>
-            {/* Floating toolbar - conditionally rendered */}
-            {false && (
-              <div data-testid="floating-toolbar">
-                <LinkPopover />
-              </div>
-            )}
           </div>
         </EditorProvider>
       )

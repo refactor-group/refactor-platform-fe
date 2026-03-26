@@ -376,7 +376,6 @@ refactor-platform-fe/
 │   │       │   └── coaching-notes/
 │   │       │       ├── coaching-notes.tsx
 │   │       │       ├── simple-toolbar.tsx
-│   │       │       ├── floating-toolbar.tsx
 │   │       │       └── constants.ts
 │   │       └── coaching-relationship-selector.tsx
 │   ├── lib/                                      # Source libraries

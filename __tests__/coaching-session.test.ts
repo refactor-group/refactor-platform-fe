@@ -7,7 +7,7 @@ import {
   isSessionToday,
   DEFAULT_SESSION_DURATION_MINUTES,
 } from "@/types/coaching-session";
-import { createSessionAt } from "./test-utils";
+import { createSessionAt, createMockSession } from "./test-utils";
 
 describe("isPastSession", () => {
   it("returns true when session duration has fully elapsed", () => {
@@ -23,6 +23,50 @@ describe("isPastSession", () => {
   it("returns false for a future session", () => {
     const session = createSessionAt(60);
     expect(isPastSession(session)).toBe(false);
+  });
+
+  it("returns true when now is past the custom cutoff", () => {
+    const session = createSessionAt(-30); // 30 min ago, normally still active
+    const cutoff = DateTime.now().minus({ minutes: 5 }); // cutoff was 5 min ago
+    expect(isPastSession(session, { cutoff })).toBe(true);
+  });
+
+  it("returns false when now is before the custom cutoff", () => {
+    const session = createSessionAt(-120); // 2 hours ago, normally past
+    const cutoff = DateTime.now().plus({ hours: 1 }); // cutoff is 1 hour from now
+    expect(isPastSession(session, { cutoff })).toBe(false);
+  });
+
+  it("uses end-of-day cutoff to keep same-day sessions editable", () => {
+    const session = createSessionAt(-120); // 2 hours ago
+    const sessionDate = DateTime.fromISO(session.date, { zone: 'utc' });
+    const endOfDay = sessionDate.toLocal().endOf('day');
+    // Session started today, so end-of-day hasn't passed yet
+    expect(isPastSession(session, { cutoff: endOfDay })).toBe(false);
+  });
+
+  it("end-of-day cutoff in a specific user timezone keeps same-day session editable", () => {
+    // Simulate the exact pattern used in the coaching session page:
+    // session date → convert to user timezone → end of that calendar day
+    const userTimezone = "America/Chicago";
+    const session = createSessionAt(-180); // 3 hours ago, well past default 60-min window
+    const cutoff = DateTime.fromISO(session.date, { zone: 'utc' })
+      .setZone(userTimezone)
+      .endOf('day');
+    // Still the same calendar day in the user's timezone
+    expect(isPastSession(session, { cutoff })).toBe(false);
+  });
+
+  it("end-of-day cutoff marks yesterday's session as past", () => {
+    const userTimezone = "America/Chicago";
+    const yesterday = DateTime.now().setZone(userTimezone).minus({ days: 1 }).set({ hour: 14 });
+    const session = createMockSession({
+      date: yesterday.toUTC().toISO(),
+    });
+    const cutoff = DateTime.fromISO(session.date, { zone: 'utc' })
+      .setZone(userTimezone)
+      .endOf('day');
+    expect(isPastSession(session, { cutoff })).toBe(true);
   });
 });
 

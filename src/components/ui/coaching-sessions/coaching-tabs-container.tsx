@@ -2,7 +2,11 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
 import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { ActionsPanel } from "@/components/ui/coaching-sessions/actions-panel";
@@ -24,6 +28,8 @@ interface CoachingTabsContainerProps {
   defaultValue?: string;
   onTabChange?: (value: string) => void;
   reviewActions: boolean;
+  notesMaximized?: boolean;
+  onNotesMaximizedChange?: (maximized: boolean) => void;
 }
 
 const CoachingTabsContainer = ({
@@ -31,6 +37,8 @@ const CoachingTabsContainer = ({
   defaultValue = "notes",
   onTabChange,
   reviewActions,
+  notesMaximized = false,
+  onNotesMaximizedChange,
 }: CoachingTabsContainerProps) => {
   const [currentTab, setCurrentTab] = useState(defaultValue);
 
@@ -179,26 +187,55 @@ const CoachingTabsContainer = ({
   }, [currentCoachingSessionId, handleActionAdded, handleTabChange, refreshSessionActions, refreshAllActions]);
 
   return (
-    <div className="row-span-1 h-full py-4 px-4">
-      <div className="flex-col space-y-4 sm:flex md:order-1">
-        <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <TabsList className="flex w-128 grid-cols-3 justify-start">
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="agreements">Agreements</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
+    <Card className="row-span-1 h-full flex flex-col min-h-0 min-w-0">
+      <CardHeader className="p-4 pb-0">
+        <div className="flex items-center justify-between">
+          <Tabs value={currentTab} onValueChange={handleTabChange}>
+            <TabsList className="flex w-128 grid-cols-3 justify-start">
+              <TabsTrigger value="notes">Notes</TabsTrigger>
+              <TabsTrigger value="agreements">Agreements</TabsTrigger>
+              <TabsTrigger value="actions">Actions</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {onNotesMaximizedChange && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
+                  onClick={() => onNotesMaximizedChange(!notesMaximized)}
+                  aria-label={notesMaximized ? "Restore panels" : "Maximize notes"}
+                >
+                  {notesMaximized ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{notesMaximized ? "Restore panels" : "Maximize notes"}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0 min-w-0">
         {/* Always-mounted content controlled by CSS display */}
-        <div className="mt-8">
+        <div className="mt-4 flex-1 flex flex-col min-h-0 min-w-0">
           <div
-            className="flex-col h-full space-y-4"
+            className="flex-col flex-1 min-h-0 min-w-0 space-y-4"
             style={{ display: currentTab === "notes" ? "flex" : "none" }}
           >
             <CoachingNotes onAddAsAction={handleAddNoteAsAction} />
           </div>
 
-          <div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+            style={{ display: currentTab === "agreements" ? "block" : "none" }}
+          >
             <AgreementsList
               coachingSessionId={currentCoachingSessionId || ""}
               userId={userId}
@@ -210,7 +247,10 @@ const CoachingTabsContainer = ({
             />
           </div>
 
-          <div className="pl-4" style={{ display: currentTab === "actions" ? "block" : "none" }}>
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pl-4"
+            style={{ display: currentTab === "actions" ? "block" : "none" }}
+          >
             {currentCoachingSessionId && currentCoachingSession && currentCoachingRelationship && (
               <ActionsPanel
                 coachingSessionId={currentCoachingSessionId}
@@ -231,8 +271,8 @@ const CoachingTabsContainer = ({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

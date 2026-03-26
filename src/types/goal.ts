@@ -61,6 +61,30 @@ export function extractActiveGoalLimitError(
   return null;
 }
 
+/**
+ * Whether the active goal limit has been reached.
+ * True when either the coaching relationship has the max number of
+ * InProgress goals, or a session already has the max linked goals.
+ */
+export function isAtGoalLimit(
+  inProgressGoals: Goal[],
+  sessionLinkedGoals: Goal[]
+): boolean {
+  return (
+    inProgressGoals.length >= DEFAULT_MAX_ACTIVE_GOALS ||
+    sessionLinkedGoals.length >= DEFAULT_MAX_ACTIVE_GOALS
+  );
+}
+
+/**
+ * Returns the maximum number of active (InProgress) goals allowed.
+ * Uses the server-provided value from a prior 409 response if available,
+ * otherwise falls back to the default.
+ */
+export function maxActiveGoals(): number {
+  return DEFAULT_MAX_ACTIVE_GOALS;
+}
+
 export { DEFAULT_MAX_ACTIVE_GOALS };
 
 // This must always reflect the Rust struct on the backend
@@ -169,6 +193,35 @@ export function goalTitle(
   fallback: string = DEFAULT_GOAL_TITLE
 ): string {
   return goal.title || fallback;
+}
+
+/**
+ * Summarizes an enriched session's goals array into a display string.
+ * Returns the first goal's title when there is exactly one, a comma-joined
+ * list when there are multiple, or the default fallback when the array is
+ * empty or undefined.
+ */
+export function goalsTitle(
+  goals: Pick<Goal, "title">[] | undefined,
+  fallback: string = DEFAULT_GOAL_TITLE
+): string {
+  if (!goals || goals.length === 0) return fallback;
+  return goals.map((g) => goalTitle(g, fallback)).join(", ");
+}
+
+/** Returns true when the goal's status is OnHold. */
+export function isOnHold(goal: Pick<Goal, "status">): boolean {
+  return goal.status === ItemStatus.OnHold;
+}
+
+/** Returns true when the goal's status is InProgress. */
+export function isInProgress(goal: Pick<Goal, "status">): boolean {
+  return goal.status === ItemStatus.InProgress;
+}
+
+/** Returns true when the goal has a non-empty body/description. */
+export function hasGoalBody(goal: Pick<Goal, "body">): boolean {
+  return goal.body.trim().length > 0;
 }
 
 export function goalToString(

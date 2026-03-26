@@ -79,6 +79,7 @@ describe("actionStatusToString", () => {
   it("returns correct label for each status", () => {
     expect(actionStatusToString(ItemStatus.NotStarted)).toBe("Not Started");
     expect(actionStatusToString(ItemStatus.InProgress)).toBe("In Progress");
+    expect(actionStatusToString(ItemStatus.OnHold)).toBe("On Hold");
     expect(actionStatusToString(ItemStatus.Completed)).toBe("Completed");
     expect(actionStatusToString(ItemStatus.WontDo)).toBe("Won't Do");
   });
@@ -92,6 +93,7 @@ describe("statusColor", () => {
   it("returns a Tailwind class for each status", () => {
     expect(statusColor(ItemStatus.NotStarted)).toBe("bg-slate-400");
     expect(statusColor(ItemStatus.InProgress)).toBe("bg-blue-500");
+    expect(statusColor(ItemStatus.OnHold)).toBe("bg-amber-400");
     expect(statusColor(ItemStatus.Completed)).toBe("bg-green-500");
     expect(statusColor(ItemStatus.WontDo)).toBe("bg-gray-400");
   });
@@ -105,6 +107,7 @@ describe("statusTextColor", () => {
   it("returns correct Tailwind text class for each status", () => {
     expect(statusTextColor(ItemStatus.NotStarted)).toBe("text-slate-500");
     expect(statusTextColor(ItemStatus.InProgress)).toBe("text-blue-500");
+    expect(statusTextColor(ItemStatus.OnHold)).toBe("text-amber-500");
     expect(statusTextColor(ItemStatus.Completed)).toBe("text-green-600");
     expect(statusTextColor(ItemStatus.WontDo)).toBe("text-gray-500");
   });
@@ -134,19 +137,21 @@ function makePlainAction(
 }
 
 describe("groupByStatus", () => {
-  it("groups AssignedActionWithContext items correctly across all 4 status buckets", () => {
+  it("groups AssignedActionWithContext items correctly across all 5 status buckets", () => {
     const actions = [
       makeAction({ id: "a1", status: ItemStatus.NotStarted }),
       makeAction({ id: "a2", status: ItemStatus.InProgress }),
-      makeAction({ id: "a3", status: ItemStatus.Completed }),
-      makeAction({ id: "a4", status: ItemStatus.WontDo }),
-      makeAction({ id: "a5", status: ItemStatus.NotStarted }),
+      makeAction({ id: "a3", status: ItemStatus.OnHold }),
+      makeAction({ id: "a4", status: ItemStatus.Completed }),
+      makeAction({ id: "a5", status: ItemStatus.WontDo }),
+      makeAction({ id: "a6", status: ItemStatus.NotStarted }),
     ];
 
     const grouped = groupByStatus(actions, (ctx) => ctx.action.status);
 
     expect(grouped[ItemStatus.NotStarted]).toHaveLength(2);
     expect(grouped[ItemStatus.InProgress]).toHaveLength(1);
+    expect(grouped[ItemStatus.OnHold]).toHaveLength(1);
     expect(grouped[ItemStatus.Completed]).toHaveLength(1);
     expect(grouped[ItemStatus.WontDo]).toHaveLength(1);
   });
@@ -161,6 +166,7 @@ describe("groupByStatus", () => {
 
     expect(grouped[ItemStatus.InProgress]).toHaveLength(2);
     expect(grouped[ItemStatus.NotStarted]).toHaveLength(0);
+    expect(grouped[ItemStatus.OnHold]).toHaveLength(0);
     expect(grouped[ItemStatus.Completed]).toHaveLength(0);
     expect(grouped[ItemStatus.WontDo]).toHaveLength(0);
   });
@@ -193,20 +199,22 @@ describe("groupByStatus", () => {
     const actions = [
       makePlainAction({ id: "p1", status: ItemStatus.NotStarted }),
       makePlainAction({ id: "p2", status: ItemStatus.InProgress }),
-      makePlainAction({ id: "p3", status: ItemStatus.Completed }),
-      makePlainAction({ id: "p4", status: ItemStatus.WontDo }),
-      makePlainAction({ id: "p5", status: ItemStatus.NotStarted }),
+      makePlainAction({ id: "p3", status: ItemStatus.OnHold }),
+      makePlainAction({ id: "p4", status: ItemStatus.Completed }),
+      makePlainAction({ id: "p5", status: ItemStatus.WontDo }),
+      makePlainAction({ id: "p6", status: ItemStatus.NotStarted }),
     ];
 
     const grouped = groupByStatus(actions, (a) => a.status);
 
     expect(grouped[ItemStatus.NotStarted]).toHaveLength(2);
     expect(grouped[ItemStatus.InProgress]).toHaveLength(1);
+    expect(grouped[ItemStatus.OnHold]).toHaveLength(1);
     expect(grouped[ItemStatus.Completed]).toHaveLength(1);
     expect(grouped[ItemStatus.WontDo]).toHaveLength(1);
   });
 
-  it("returns all 4 buckets even when grouping plain Action[] with only one status", () => {
+  it("returns all 5 buckets even when grouping plain Action[] with only one status", () => {
     const actions = [
       makePlainAction({ id: "p1", status: ItemStatus.Completed }),
     ];
@@ -215,6 +223,7 @@ describe("groupByStatus", () => {
 
     expect(grouped[ItemStatus.NotStarted]).toHaveLength(0);
     expect(grouped[ItemStatus.InProgress]).toHaveLength(0);
+    expect(grouped[ItemStatus.OnHold]).toHaveLength(0);
     expect(grouped[ItemStatus.Completed]).toHaveLength(1);
     expect(grouped[ItemStatus.WontDo]).toHaveLength(0);
   });
@@ -303,14 +312,15 @@ describe("applyTimeFilter", () => {
 // ---------------------------------------------------------------------------
 
 describe("visibleStatuses", () => {
-  it("Open returns NotStarted and InProgress", () => {
+  it("Open returns NotStarted, InProgress, and OnHold", () => {
     expect(visibleStatuses(StatusVisibility.Open)).toEqual([
       ItemStatus.NotStarted,
       ItemStatus.InProgress,
+      ItemStatus.OnHold,
     ]);
   });
 
-  it("All returns all 4 statuses in column order", () => {
+  it("All returns all 5 statuses in column order", () => {
     expect(visibleStatuses(StatusVisibility.All)).toEqual(STATUS_COLUMN_ORDER);
   });
 

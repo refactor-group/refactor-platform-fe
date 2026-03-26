@@ -62,8 +62,8 @@ export interface EnrichedCoachingSession extends CoachingSession {
   /** Organization data (included when include=organization, requires relationship) */
   organization?: Organization;
 
-  /** Goal (included when include=goal) */
-  goal?: Goal;
+  /** Goals array — up to 3 InProgress goals (included when include=goal) */
+  goals?: Goal[];
 
   /** Agreement (included when include=agreements) */
   agreement?: Agreement;
@@ -162,10 +162,24 @@ export function coachingSessionsToString(
   return JSON.stringify(coaching_sessions);
 }
 
-export function isPastSession(session: CoachingSession): boolean {
+/**
+ * Returns true when the coaching session is considered "past."
+ *
+ * By default a session is past once the current time exceeds the session
+ * start plus {@link DEFAULT_SESSION_DURATION_MINUTES}. Callers that need a
+ * different boundary — for example end-of-day in the user's timezone — can
+ * supply a custom `cutoff` DateTime that overrides the default calculation.
+ */
+export function isPastSession(
+  session: CoachingSession,
+  options?: { cutoff: DateTime }
+): boolean {
+  const now = DateTime.now();
+  if (options?.cutoff) {
+    return now > options.cutoff;
+  }
   const sessionDate = DateTime.fromISO(session.date, { zone: 'utc' });
   const sessionEnd = sessionDate.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
-  const now = DateTime.now();
   return sessionEnd < now;
 }
 

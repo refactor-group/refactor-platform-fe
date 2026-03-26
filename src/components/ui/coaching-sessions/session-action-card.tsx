@@ -75,6 +75,8 @@ function statusDotColor(status: ItemStatus): string {
       return "bg-muted-foreground";
     case ItemStatus.InProgress:
       return "bg-green-500";
+    case ItemStatus.OnHold:
+      return "bg-amber-400";
     case ItemStatus.Completed:
       return "bg-primary";
     case ItemStatus.WontDo:
@@ -118,6 +120,12 @@ function StatusSelect({ status, onStatusChange }: StatusSelectProps) {
           <span className="flex items-center gap-1.5">
             <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.InProgress))} />
             In Progress
+          </span>
+        </SelectItem>
+        <SelectItem value={ItemStatus.OnHold}>
+          <span className="flex items-center gap-1.5">
+            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.OnHold))} />
+            On Hold
           </span>
         </SelectItem>
         <SelectItem value={ItemStatus.Completed}>

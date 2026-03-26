@@ -105,3 +105,44 @@
 .group-data-\[collapsible\=icon\]\/sidebar-wrapper [data-sidebar="menu-button"] {
   justify-content: center;
 }
+
+/* ── Goal card flip (macOS widget-style) ───────────────────────────── */
+
+.goal-card-flip-container {
+  perspective: 800px;
+}
+
+.goal-card-flip-inner {
+  position: relative;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.goal-card-flip-container--flipped .goal-card-flip-inner {
+  transform: rotateY(180deg);
+}
+
+.goal-card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/*
+ * Front face is always in flow and sizes the container.
+ * Back face is absolutely positioned on top so it doesn't affect height.
+ * When flipped, backface-visibility hides the front while the back shows through.
+ * No position switching = no layout shift = no downward jump.
+ */
+.goal-card-front {
+  position: relative;
+  transform: rotateY(0deg);
+}
+
+.goal-card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: rotateY(180deg);
+}
