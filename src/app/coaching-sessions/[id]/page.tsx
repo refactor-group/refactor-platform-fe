@@ -14,6 +14,7 @@ import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-ca
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
+import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import JoinMeetLink from "@/components/ui/coaching-sessions/join-meet-link";
 import { toast } from "sonner";
@@ -57,6 +58,9 @@ export default function CoachingSessionsPage() {
   // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
     useCurrentCoachingRelationship();
+
+  // Coaches can still add/remove goals on past sessions; coachees cannot
+  const { isCoachInCurrentRelationship } = useCurrentRelationshipRole();
 
 
   // Auto-collapse main sidebar on coaching session page to maximize workspace,
@@ -172,11 +176,13 @@ export default function CoachingSessionsPage() {
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={notesMaximized}
-              readOnly={currentCoachingSession ? isPastSession(currentCoachingSession, {
-                cutoff: DateTime.fromISO(currentCoachingSession.date, { zone: 'utc' })
-                  .setZone(userSession?.timezone || getBrowserTimezone())
-                  .endOf('day'),
-              }) : false}
+              readOnly={currentCoachingSession
+                ? isPastSession(currentCoachingSession, {
+                    cutoff: DateTime.fromISO(currentCoachingSession.date, { zone: 'utc' })
+                      .setZone(userSession?.timezone || getBrowserTimezone())
+                      .endOf('day'),
+                  }) && !isCoachInCurrentRelationship
+                : false}
             />
           )}
 
