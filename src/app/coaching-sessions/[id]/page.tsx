@@ -21,6 +21,8 @@ import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { isPastSession } from "@/types/coaching-session";
+import type { CoachingSession } from "@/types/coaching-session";
+
 import { DateTime } from "ts-luxon";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useSidebar } from "@/lib/hooks/use-sidebar";
@@ -30,6 +32,23 @@ import { SidebarState, StateChangeSource } from "@/types/sidebar";
  * Determines if coaching relationship ID should be synced from session data.
  * Always sync when store is empty (new tab) or when IDs differ (switching sessions).
  */
+/**
+ * Goals are read-only on past sessions for coachees, but coaches retain
+ * full add/remove/edit access so they can adjust goals retroactively.
+ */
+function isGoalPanelReadOnly(
+  session: CoachingSession,
+  timezone: string,
+  isCoach: boolean
+): boolean {
+  const isPast = isPastSession(session, {
+    cutoff: DateTime.fromISO(session.date, { zone: 'utc' })
+      .setZone(timezone)
+      .endOf('day'),
+  });
+  return isPast && !isCoach;
+}
+
 function shouldSyncRelationship(
   sessionRelationshipId: string | undefined,
   currentRelationshipId: string | null
@@ -177,11 +196,11 @@ export default function CoachingSessionsPage() {
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={notesMaximized}
               readOnly={currentCoachingSession
-                ? isPastSession(currentCoachingSession, {
-                    cutoff: DateTime.fromISO(currentCoachingSession.date, { zone: 'utc' })
-                      .setZone(userSession?.timezone || getBrowserTimezone())
-                      .endOf('day'),
-                  }) && !isCoachInCurrentRelationship
+                ? isGoalPanelReadOnly(
+                    currentCoachingSession,
+                    userSession?.timezone || getBrowserTimezone(),
+                    isCoachInCurrentRelationship
+                  )
                 : false}
             />
           )}
