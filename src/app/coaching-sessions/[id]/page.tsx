@@ -29,10 +29,6 @@ import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
 /**
- * Determines if coaching relationship ID should be synced from session data.
- * Always sync when store is empty (new tab) or when IDs differ (switching sessions).
- */
-/**
  * Goals are read-only on past sessions for coachees, but coaches retain
  * full add/remove/edit access so they can adjust goals retroactively.
  */
@@ -49,6 +45,10 @@ function isGoalPanelReadOnly(
   return isPast && !isCoach;
 }
 
+/**
+ * Determines if coaching relationship ID should be synced from session data.
+ * Always sync when store is empty (new tab) or when IDs differ (switching sessions).
+ */
 function shouldSyncRelationship(
   sessionRelationshipId: string | undefined,
   currentRelationshipId: string | null
@@ -80,7 +80,6 @@ export default function CoachingSessionsPage() {
 
   // Coaches can still add/remove goals on past sessions; coachees cannot
   const { isCoachInCurrentRelationship } = useCurrentRelationshipRole();
-
 
   // Auto-collapse main sidebar on coaching session page to maximize workspace,
   // and restore the previous state when leaving.
