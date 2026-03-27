@@ -283,17 +283,33 @@ function FrontFace({
   hasBody: boolean;
   body: string;
 }) {
-  const [showBody, setShowBody] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [isTitleClipped, setIsTitleClipped] = useState(false);
+
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el || expanded) return;
+
+    const check = () => setIsTitleClipped(el.scrollHeight > el.clientHeight);
+    check();
+
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [titleRef, title, expanded]);
+
+  const canExpand = isTitleClipped || hasBody;
 
   return (
     <>
       <div className="flex items-start justify-between gap-2">
         <span
           ref={titleRef}
-          onClick={hasBody ? () => setShowBody(prev => !prev) : undefined}
+          onClick={canExpand ? () => setExpanded(prev => !prev) : undefined}
           className={cn(
-            "text-[13px] font-medium line-clamp-2 min-w-0",
-            hasBody && "cursor-pointer"
+            "text-[13px] font-medium min-w-0",
+            !expanded && "line-clamp-2",
+            canExpand && "cursor-pointer"
           )}
         >
           {title}
@@ -345,7 +361,7 @@ function FrontFace({
         <div
           className={cn(
             "overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out",
-            showBody ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+            expanded ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
           )}
         >
           <p className="text-[12px] text-muted-foreground/70 leading-relaxed whitespace-pre-wrap border-t border-border/30 pt-2">

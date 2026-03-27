@@ -145,6 +145,60 @@ describe("CompactGoalCard", () => {
     expect(progressBar).toBeInTheDocument()
   })
 
+  it("clicking the title expands to show the full title and body", async () => {
+    const user = userEvent.setup()
+
+    render(<CompactGoalCard goal={defaultGoal} />)
+
+    // Both faces render the title and body — take the first (front face) for each
+    const frontTitle = screen.getAllByText("Improve technical leadership")[0]
+    const frontBody = screen.getAllByText("Focus on architecture decisions")[0]
+    const bodyContainer = frontBody.closest("div")!
+
+    // Initially: title is clamped, body is collapsed
+    expect(frontTitle.className).toContain("line-clamp-2")
+    expect(bodyContainer.className).toContain("max-h-0")
+
+    // Click the title to expand
+    await user.click(frontTitle)
+
+    // Title clamp removed, body visible
+    expect(frontTitle.className).not.toContain("line-clamp-2")
+    expect(bodyContainer.className).toContain("max-h-40")
+  })
+
+  it("clicking the title again collapses the body and re-clamps the title", async () => {
+    const user = userEvent.setup()
+
+    render(<CompactGoalCard goal={defaultGoal} />)
+
+    const frontTitle = screen.getAllByText("Improve technical leadership")[0]
+    const frontBody = screen.getAllByText("Focus on architecture decisions")[0]
+    const bodyContainer = frontBody.closest("div")!
+
+    // Expand then collapse
+    await user.click(frontTitle)
+    await user.click(frontTitle)
+
+    expect(frontTitle.className).toContain("line-clamp-2")
+    expect(bodyContainer.className).toContain("max-h-0")
+  })
+
+  it("title is not clickable when goal has no body and title is not clipped", () => {
+    const goalNoBody = createMockGoal({
+      id: "goal-no-body",
+      title: "Short title",
+      body: "",
+      status: ItemStatus.InProgress,
+    })
+
+    render(<CompactGoalCard goal={goalNoBody} />)
+
+    // Front face title — back face also renders the title
+    const frontTitle = screen.getAllByText("Short title")[0]
+    expect(frontTitle.className).not.toContain("cursor-pointer")
+  })
+
   it("renders swap mode card with 'Put on hold' text", async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
