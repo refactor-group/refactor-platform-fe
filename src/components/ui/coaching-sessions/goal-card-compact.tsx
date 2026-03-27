@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useRef } from "react";
 import { Info, Pencil, CircleMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/components/lib/utils";
+import { CompactFlipCard } from "@/components/ui/coaching-sessions/compact-flip-card";
+import { ExpandableContent } from "@/components/ui/coaching-sessions/expandable-content";
 import { GoalProgressIcon } from "@/components/ui/coaching-sessions/goal-progress-icon";
 import { GoalEditForm } from "@/components/ui/coaching-sessions/goal-edit-form";
 import { useGoalProgress } from "@/lib/api/goal-progress";
@@ -22,9 +23,9 @@ import { Some } from "@/types/option";
 // Front face: read-only — title, progress bar, progress icon, info button.
 // Back face:  actions   — edit, unlink from session, "Done" to flip back.
 //
-// Inspired by macOS widget flip: clicking the info icon (ⓘ) flips the card
-// to reveal actions. The card grows to accommodate the back-face content.
-// A "Done" button in the top-right returns to the front face.
+// Uses CompactFlipCard for shared flip infrastructure (state, animation,
+// outside-click). Swap mode and select mode are early returns that bypass
+// the flip card entirely.
 
 export interface CompactGoalCardProps {
   goal: Goal;
@@ -41,11 +42,6 @@ export interface CompactGoalCardProps {
 export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }: CompactGoalCardProps) {
   const { progressMetrics } = useGoalProgress(Some(goal.id));
   const titleRef = useRef<HTMLSpanElement>(null);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const backRef = useRef<HTMLDivElement>(null);
-  const frontRef = useRef<HTMLDivElement>(null);
   const hasBody = hasGoalBody(goal);
 
   const percent =
@@ -57,86 +53,6 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
       : 0;
 
   const title = goalTitle(goal);
-
-  // Animate container height to match the active face.
-  // ResizeObserver handles body expansion on the front face and edit form on the back.
-  useEffect(() => {
-    const inner = cardRef.current?.querySelector(".goal-card-flip-inner") as HTMLElement | null;
-    if (!inner) return;
-
-    const measure = () => {
-      const target = isFlipped ? backRef.current : frontRef.current;
-      if (target) {
-        inner.style.height = `${target.scrollHeight}px`;
-      }
-    };
-
-    // Initial measurement after layout
-    const frameId = requestAnimationFrame(measure);
-
-    // Watch the active face for size changes (body expand, edit form toggle)
-    const activeFace = isFlipped ? backRef.current : frontRef.current;
-    let observer: ResizeObserver | undefined;
-    if (activeFace) {
-      observer = new ResizeObserver(measure);
-      observer.observe(activeFace);
-    }
-
-    return () => {
-      cancelAnimationFrame(frameId);
-      observer?.disconnect();
-    };
-  }, [isFlipped, isEditing]);
-
-  // Close the back face when clicking outside
-  useEffect(() => {
-    if (!isFlipped) return;
-
-    function handlePointerDown(e: PointerEvent) {
-      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        setIsFlipped(false);
-        setIsEditing(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [isFlipped]);
-
-  const handleFlip = useCallback(() => {
-    setIsFlipped(true);
-  }, []);
-
-  const handleDone = useCallback(() => {
-    setIsFlipped(false);
-    setIsEditing(false);
-  }, []);
-
-  const handleEditClick = useCallback(() => {
-    setIsEditing(true);
-  }, []);
-
-  const handleEditSave = useCallback(
-    async (newTitle: string, newBody: string) => {
-      if (onUpdate) {
-        await onUpdate(goal.id, newTitle, newBody);
-      }
-      setIsEditing(false);
-    },
-    [goal.id, onUpdate]
-  );
-
-  const handleEditCancel = useCallback(() => {
-    setIsEditing(false);
-  }, []);
-
-  const handleRemove = useCallback(() => {
-    if (onRemove) {
-      onRemove();
-      setIsFlipped(false);
-      setIsEditing(false);
-    }
-  }, [onRemove]);
 
   // Swap mode card — no flip interaction, just a selectable card
   if (swapMode) {
@@ -198,70 +114,56 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
   // ── Flip card ────────────────────────────────────────────────────────
 
   return (
-    <div
-      ref={cardRef}
-      className={cn(
-        "goal-card-flip-container transition-[height] duration-500 ease-in-out",
-        isFlipped ? "goal-card-flip-container--flipped" : ""
+    <CompactFlipCard
+      canFlip={canInteract}
+      renderFront={({ onFlip }) => (
+        <FrontFace
+          title={title}
+          canInteract={canInteract}
+          onFlip={onFlip}
+          percent={percent}
+          actionsCompleted={progressMetrics.actions_completed}
+          actionsTotal={progressMetrics.actions_total}
+          progress={progressMetrics.progress}
+          hasBody={hasBody}
+          body={goal.body}
+        />
       )}
-    >
-      <div className="goal-card-flip-inner">
-        {/* ── Front face ─────────────────────────────────────────── */}
-        <div
-          ref={frontRef}
-          aria-hidden={isFlipped}
-          className="goal-card-face goal-card-front rounded-lg border border-border bg-background p-3 space-y-2 group/card transition-colors shadow-sm hover:border-foreground/20"
-        >
-          <FrontFace
-            titleRef={titleRef}
-            title={title}
-            canInteract={canInteract}
-            onFlip={handleFlip}
-            percent={percent}
-            actionsCompleted={progressMetrics.actions_completed}
-            actionsTotal={progressMetrics.actions_total}
-            progress={progressMetrics.progress}
-            hasBody={hasBody}
-            body={goal.body}
+      renderBack={({ onDone, isEditing, onEditStart, onEditEnd }) =>
+        isEditing ? (
+          <GoalEditForm
+            initialTitle={goal.title}
+            initialBody={goal.body}
+            onSave={async (newTitle, newBody) => {
+              if (onUpdate) await onUpdate(goal.id, newTitle, newBody);
+              onEditEnd();
+            }}
+            onCancel={onEditEnd}
           />
-        </div>
-
-        {/* ── Back face ──────────────────────────────────────────── */}
-        <div
-          ref={backRef}
-          aria-hidden={!isFlipped}
-          className="goal-card-face goal-card-back rounded-lg border border-border bg-background p-3 shadow-sm"
-        >
-          {isEditing ? (
-            <GoalEditForm
-              initialTitle={goal.title}
-              initialBody={goal.body}
-              onSave={handleEditSave}
-              onCancel={handleEditCancel}
-            />
-          ) : (
-            <BackFace
-              title={title}
-              body={goal.body}
-              hasBody={hasBody}
-              onDone={handleDone}
-              onEdit={onUpdate ? handleEditClick : undefined}
-              onRemove={onRemove ? handleRemove : undefined}
-              percent={percent}
-              actionsTotal={progressMetrics.actions_total}
-              actionsCompleted={progressMetrics.actions_completed}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+        ) : (
+          <BackFace
+            title={title}
+            body={goal.body}
+            hasBody={hasBody}
+            onDone={onDone}
+            onEdit={onUpdate ? onEditStart : undefined}
+            onRemove={onRemove ? () => {
+              onRemove();
+              onDone();
+            } : undefined}
+            percent={percent}
+            actionsTotal={progressMetrics.actions_total}
+            actionsCompleted={progressMetrics.actions_completed}
+          />
+        )
+      }
+    />
   );
 }
 
 // ── Front face content ──────────────────────────────────────────────
 
 function FrontFace({
-  titleRef,
   title,
   canInteract,
   onFlip,
@@ -272,7 +174,6 @@ function FrontFace({
   hasBody,
   body,
 }: {
-  titleRef: React.RefObject<HTMLSpanElement | null>;
   title: string;
   canInteract?: boolean;
   onFlip: () => void;
@@ -283,37 +184,15 @@ function FrontFace({
   hasBody: boolean;
   body: string;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const [isTitleClipped, setIsTitleClipped] = useState(false);
-
-  useEffect(() => {
-    const el = titleRef.current;
-    if (!el || expanded) return;
-
-    const check = () => setIsTitleClipped(el.scrollHeight > el.clientHeight);
-    check();
-
-    const observer = new ResizeObserver(check);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [titleRef, title, expanded]);
-
-  const canExpand = isTitleClipped || hasBody;
-
   return (
     <>
       <div className="flex items-start justify-between gap-2">
-        <span
-          ref={titleRef}
-          onClick={canExpand ? () => setExpanded(prev => !prev) : undefined}
-          className={cn(
-            "text-[13px] font-medium min-w-0",
-            !expanded && "line-clamp-2",
-            canExpand && "cursor-pointer"
-          )}
-        >
-          {title}
-        </span>
+        <ExpandableContent
+          text={title}
+          className="text-[13px] font-medium"
+          overflowText={hasBody ? body : undefined}
+          hasOverflow={hasBody}
+        />
         <div className="flex items-center gap-1 shrink-0 mt-0.5">
           {canInteract ? (
             <TooltipProvider delayDuration={300}>
@@ -356,19 +235,6 @@ function FrontFace({
           actionsTotal={actionsTotal}
         />
       </div>
-
-      {hasBody && (
-        <div
-          className={cn(
-            "overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out",
-            expanded ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
-          )}
-        >
-          <p className="text-[12px] text-muted-foreground/70 leading-relaxed whitespace-pre-wrap border-t border-border/30 pt-2">
-            {body}
-          </p>
-        </div>
-      )}
     </>
   );
 }

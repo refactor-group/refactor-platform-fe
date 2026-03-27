@@ -162,12 +162,12 @@ describe("CompactGoalCard", () => {
     // Click the title to expand
     await user.click(frontTitle)
 
-    // Title clamp removed, body visible
-    expect(frontTitle.className).not.toContain("line-clamp-2")
+    // Title stays clamped, but overflow section slides open with body visible
+    expect(frontTitle.className).toContain("line-clamp-2")
     expect(bodyContainer.className).toContain("max-h-40")
   })
 
-  it("clicking the title again collapses the body and re-clamps the title", async () => {
+  it("clicking the title again collapses the body", async () => {
     const user = userEvent.setup()
 
     render(<CompactGoalCard goal={defaultGoal} />)
@@ -180,7 +180,6 @@ describe("CompactGoalCard", () => {
     await user.click(frontTitle)
     await user.click(frontTitle)
 
-    expect(frontTitle.className).toContain("line-clamp-2")
     expect(bodyContainer.className).toContain("max-h-0")
   })
 

@@ -106,24 +106,24 @@
   justify-content: center;
 }
 
-/* ── Goal card flip (macOS widget-style) ───────────────────────────── */
+/* ── Compact flip card (macOS widget-style) ─────────────────────────── */
 
-.goal-card-flip-container {
+.flip-card-container {
   perspective: 800px;
 }
 
-.goal-card-flip-inner {
+.flip-card-inner {
   position: relative;
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
               height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
 }
 
-.goal-card-flip-container--flipped .goal-card-flip-inner {
+.flip-card-container--flipped .flip-card-inner {
   transform: rotateY(180deg);
 }
 
-.goal-card-face {
+.flip-card-face {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -134,12 +134,12 @@
  * When flipped, backface-visibility hides the front while the back shows through.
  * No position switching = no layout shift = no downward jump.
  */
-.goal-card-front {
+.flip-card-front {
   position: relative;
   transform: rotateY(0deg);
 }
 
-.goal-card-back {
+.flip-card-back {
   position: absolute;
   top: 0;
   left: 0;
