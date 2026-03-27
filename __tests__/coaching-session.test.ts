@@ -38,10 +38,12 @@ describe("isPastSession", () => {
   });
 
   it("uses end-of-day cutoff to keep same-day sessions editable", () => {
+    const userTimezone = "America/New_York";
     const session = createSessionAt(-120); // 2 hours ago
-    const sessionDate = DateTime.fromISO(session.date, { zone: 'utc' });
-    const endOfDay = sessionDate.toLocal().endOf('day');
-    // Session started today, so end-of-day hasn't passed yet
+    const endOfDay = DateTime.fromISO(session.date, { zone: 'utc' })
+      .setZone(userTimezone)
+      .endOf('day');
+    // Session started today in the user's timezone, so end-of-day hasn't passed yet
     expect(isPastSession(session, { cutoff: endOfDay })).toBe(false);
   });
 
