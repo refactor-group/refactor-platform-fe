@@ -7,7 +7,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
 import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
-import { GoalPanel } from "@/components/ui/coaching-sessions/goal-panel";
+import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
@@ -65,6 +65,9 @@ export default function CoachingSessionsPage() {
   // Get current tab from URL parameter, default to "notes"
   const currentTab = searchParams.get("tab") || "notes";
   const reviewActions = searchParams.get("review") === "true";
+
+  // Panel section persisted via URL param "panel"
+  const panelSection = (searchParams.get("panel") === "agreements" ? "agreements" : "goals") as "goals" | "agreements";
 
   const { userId, userSession } = useAuthStore((state) => ({
     userId: state.userId,
@@ -143,6 +146,22 @@ export default function CoachingSessionsPage() {
     toast.error("Failed to copy session link.");
   };
 
+  const handlePanelSectionChange = (section: string) => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (section === "goals") {
+      // Remove panel parameter for default section to keep URL clean
+      newSearchParams.delete("panel");
+    } else {
+      newSearchParams.set("panel", section);
+    }
+
+    const newUrl = newSearchParams.toString()
+      ? `${window.location.pathname}?${newSearchParams.toString()}`
+      : window.location.pathname;
+
+    router.replace(newUrl, { scroll: false });
+  };
+
   const handleTabChange = (tabValue: string) => {
     const newSearchParams = new URLSearchParams(searchParams);
     if (tabValue === "notes") {
@@ -190,7 +209,7 @@ export default function CoachingSessionsPage() {
           } as React.CSSProperties}
         >
           {currentCoachingSessionId && currentCoachingRelationshipId && (
-            <GoalPanel
+            <CoachingSessionPanel
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={notesMaximized}
@@ -201,6 +220,8 @@ export default function CoachingSessionsPage() {
                     isCoachInCurrentRelationship
                   )
                 : false}
+              defaultSection={panelSection}
+              onSectionChange={handlePanelSectionChange}
             />
           )}
 

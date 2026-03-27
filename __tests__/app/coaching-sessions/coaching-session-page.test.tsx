@@ -60,8 +60,8 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
   }),
 }))
 
-vi.mock('@/components/ui/coaching-sessions/goal-panel', () => ({
-  GoalPanel: ({ readOnly }: { readOnly?: boolean }) => (
+vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
+  CoachingSessionPanel: ({ readOnly }: { readOnly?: boolean }) => (
     <div data-testid="goal-panel" data-readonly={String(!!readOnly)}>Goals</div>
   )
 }))
@@ -178,7 +178,7 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
    * This validates URL-to-state synchronization
    */
   it('should use tab parameter from URL when present', () => {
-    const mockSearchParams = new URLSearchParams('tab=agreements')
+    const mockSearchParams = new URLSearchParams('tab=actions')
     ;(useSearchParams as any).mockReturnValue(mockSearchParams)
 
     render(
@@ -187,8 +187,9 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
       </TestProviders>
     )
 
-    expect(screen.getByTestId('current-tab')).toHaveTextContent('agreements')
+    expect(screen.getByTestId('current-tab')).toHaveTextContent('actions')
   })
+
 
   /**
    * Asserts that clicking a tab trigger calls router.replace with the correct URL parameter

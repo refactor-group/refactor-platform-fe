@@ -8,15 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
-import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
 import { ActionsPanel } from "@/components/ui/coaching-sessions/actions-panel";
-import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { UserActionsScope } from "@/types/assigned-actions";
 import { ItemStatus, Id, EntityApiError } from "@/types/general";
 import { Action, defaultAction } from "@/types/action";
-import { Agreement, defaultAgreement } from "@/types/agreement";
 import { DateTime } from "ts-luxon";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
@@ -70,46 +67,13 @@ const CoachingTabsContainer = ({
       : undefined
   );
 
-  // Agreement and Action mutation hooks
-  const {
-    create: createAgreement,
-    update: updateAgreement,
-    delete: deleteAgreement,
-    isLoading: isAgreementMutating,
-  } = useAgreementMutation();
-
+  // Action mutation hook
   const {
     create: createAction,
     update: updateAction,
     delete: deleteAction,
     isLoading: isActionMutating,
   } = useActionMutation();
-
-  // Agreement CRUD handlers
-  const handleAgreementAdded = (body: string): Promise<Agreement> => {
-    const newAgreement: Agreement = {
-      ...defaultAgreement(),
-      coaching_session_id: currentCoachingSessionId || "",
-      user_id: userId,
-      body,
-    };
-    return createAgreement(newAgreement);
-  };
-
-  const handleAgreementEdited = (id: Id, body: string): Promise<Agreement> => {
-    const updatedAgreement: Agreement = {
-      ...defaultAgreement(),
-      id,
-      coaching_session_id: currentCoachingSessionId || "",
-      user_id: userId,
-      body,
-    };
-    return updateAgreement(id, updatedAgreement);
-  };
-
-  const handleAgreementDeleted = (id: Id): Promise<Agreement> => {
-    return deleteAgreement(id);
-  };
 
   // Action CRUD handlers — called from ActionsPanel and handleAddNoteAsAction.
   // Both callers guard against a missing currentCoachingSessionId.
@@ -191,9 +155,8 @@ const CoachingTabsContainer = ({
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
           <Tabs value={currentTab} onValueChange={handleTabChange}>
-            <TabsList className="flex w-128 grid-cols-3 justify-start">
+            <TabsList className="flex w-128 grid-cols-2 justify-start">
               <TabsTrigger value="notes">Notes</TabsTrigger>
-              <TabsTrigger value="agreements">Agreements</TabsTrigger>
               <TabsTrigger value="actions">Actions</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -230,21 +193,6 @@ const CoachingTabsContainer = ({
             style={{ display: currentTab === "notes" ? "flex" : "none" }}
           >
             <CoachingNotes onAddAsAction={handleAddNoteAsAction} />
-          </div>
-
-          <div
-            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
-            style={{ display: currentTab === "agreements" ? "block" : "none" }}
-          >
-            <AgreementsList
-              coachingSessionId={currentCoachingSessionId || ""}
-              userId={userId}
-              locale={siteConfig.locale}
-              isSaving={isAgreementMutating}
-              onAgreementAdded={handleAgreementAdded}
-              onAgreementEdited={handleAgreementEdited}
-              onAgreementDeleted={handleAgreementDeleted}
-            />
           </div>
 
           <div
