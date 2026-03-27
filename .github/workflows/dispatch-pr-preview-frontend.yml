@@ -17,171 +17,168 @@
 # =============================================================================
 
 name: Deploy PR Preview (Manual Select)
-
 on:
-    workflow_dispatch:
-        inputs:
-            pr_number:
-                description: "PR number (must be an open or draft PR in this repo)"
-                required: true
-                type: string
-            backend_commit:
-                description: "Backend commit to deploy"
-                required: true
-                type: choice
-                options:
-                    # AUTO-UPDATED by refresh-preview-commits workflow
-                    - "pending - run Refresh Preview Commits workflow first"
-            frontend_commit:
-                description: "Frontend commit to deploy"
-                required: true
-                type: choice
-                options:
-                    # AUTO-UPDATED by refresh-preview-commits workflow
-                    - "pending - run Refresh Preview Commits workflow first"
-            backend_commit_override:
-                description: "Override: paste exact backend SHA (ignores dropdown)"
-                required: false
-                type: string
-                default: ""
-            frontend_commit_override:
-                description: "Override: paste exact frontend SHA (ignores dropdown)"
-                required: false
-                type: string
-                default: ""
-
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number (must be an open or draft PR in this repo)"
+        required: true
+        type: string
+      backend_commit:
+        description: "Backend commit to deploy"
+        required: true
+        type: choice
+        options:
+          - 'd039574 - chore: refresh preview commit choices [skip ci]'
+          - 'f9383af - Merge pull request #263 from refactor-group/nginx-log-r'
+          - c710d18 - Merge branch 'main' into nginx-log-rotation
+          - 'cf10bcd - Merge pull request #255 from refactor-group/feat/dispat'
+          - '583d0a0 - chore: trigger CI re-run [skip ci]'
+      frontend_commit:
+        description: "Frontend commit to deploy"
+        required: true
+        type: choice
+        options:
+          - 68fe7b1 - %.55s
+      backend_commit_override:
+        description: "Override: paste exact backend SHA (ignores dropdown)"
+        required: false
+        type: string
+        default: ""
+      frontend_commit_override:
+        description: "Override: paste exact frontend SHA (ignores dropdown)"
+        required: false
+        type: string
+        default: ""
 # Prevent multiple manual deployments for the same PR
 concurrency:
-    group: pr-preview-frontend-dispatch-${{ inputs.pr_number }}
-    cancel-in-progress: true
-
+  group: pr-preview-frontend-dispatch-${{ inputs.pr_number }}
+  cancel-in-progress: true
 permissions:
-    contents: read
-    packages: write
-    pull-requests: write
-    attestations: write
-    id-token: write
-
+  contents: read
+  packages: write
+  pull-requests: write
+  attestations: write
+  id-token: write
 jobs:
-    # ===========================================================================
-    # JOB 1: Validate inputs and resolve commit SHAs
-    # ===========================================================================
-    validate:
-        name: Validate PR & Resolve Commits
-        runs-on: ubuntu-latest
-        outputs:
-            backend_sha: ${{ steps.resolve.outputs.backend_sha }}
-            frontend_sha: ${{ steps.resolve.outputs.frontend_sha }}
-            branch_name: ${{ steps.resolve.outputs.branch_name }}
-            pr_number: ${{ steps.resolve.outputs.pr_number }}
-        steps:
-            - name: Validate PR and resolve commit SHAs
-              id: resolve
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  INPUT_PR_NUMBER: ${{ inputs.pr_number }}
-                  INPUT_BACKEND_COMMIT: ${{ inputs.backend_commit }}
-                  INPUT_FRONTEND_COMMIT: ${{ inputs.frontend_commit }}
-                  INPUT_BACKEND_OVERRIDE: ${{ inputs.backend_commit_override }}
-                  INPUT_FRONTEND_OVERRIDE: ${{ inputs.frontend_commit_override }}
-                  OWNER: ${{ github.repository_owner }}
-              run: |
-                  set -euo pipefail
+  # ===========================================================================
+  # JOB 1: Validate inputs and resolve commit SHAs
+  # ===========================================================================
+  validate:
+    name: Validate PR & Resolve Commits
+    runs-on: ubuntu-latest
+    outputs:
+      backend_sha: ${{ steps.resolve.outputs.backend_sha }}
+      frontend_sha: ${{ steps.resolve.outputs.frontend_sha }}
+      branch_name: ${{ steps.resolve.outputs.branch_name }}
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+    steps:
+      - name: Validate PR and resolve commit SHAs
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_BACKEND_COMMIT: ${{ inputs.backend_commit }}
+          INPUT_FRONTEND_COMMIT: ${{ inputs.frontend_commit }}
+          INPUT_BACKEND_OVERRIDE: ${{ inputs.backend_commit_override }}
+          INPUT_FRONTEND_OVERRIDE: ${{ inputs.frontend_commit_override }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
 
-                  PR_NUMBER="$INPUT_PR_NUMBER"
+          PR_NUMBER="$INPUT_PR_NUMBER"
 
-                  # Validate PR number is numeric
-                  if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
-                      echo "::error::PR number must be numeric, got: $PR_NUMBER"
-                      exit 1
-                  fi
+          # Validate PR number is numeric
+          if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+              echo "::error::PR number must be numeric, got: $PR_NUMBER"
+              exit 1
+          fi
 
-                  # Validate PR exists and is open (draft or regular) in the FRONTEND repo
-                  PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$OWNER/refactor-platform-fe" \
-                      --json state,isDraft,headRefName 2>&1) || {
-                      echo "::error::PR #$PR_NUMBER not found in $OWNER/refactor-platform-fe"
-                      exit 1
-                  }
+          # Validate PR exists and is open (draft or regular) in the FRONTEND repo
+          PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$OWNER/refactor-platform-fe" \
+              --json state,isDraft,headRefName 2>&1) || {
+              echo "::error::PR #$PR_NUMBER not found in $OWNER/refactor-platform-fe"
+              exit 1
+          }
 
-                  PR_STATE=$(echo "$PR_JSON" | jq -r '.state')
-                  PR_IS_DRAFT=$(echo "$PR_JSON" | jq -r '.isDraft')
-                  BRANCH_NAME=$(echo "$PR_JSON" | jq -r '.headRefName')
+          PR_STATE=$(echo "$PR_JSON" | jq -r '.state')
+          PR_IS_DRAFT=$(echo "$PR_JSON" | jq -r '.isDraft')
+          BRANCH_NAME=$(echo "$PR_JSON" | jq -r '.headRefName')
 
-                  if [[ "$PR_STATE" != "OPEN" ]]; then
-                      echo "::error::PR #$PR_NUMBER is $PR_STATE (must be OPEN). Draft PRs are allowed."
-                      exit 1
-                  fi
-                  echo "::notice::PR #$PR_NUMBER is valid (state: $PR_STATE, draft: $PR_IS_DRAFT, branch: $BRANCH_NAME)"
+          if [[ "$PR_STATE" != "OPEN" ]]; then
+              echo "::error::PR #$PR_NUMBER is $PR_STATE (must be OPEN). Draft PRs are allowed."
+              exit 1
+          fi
+          echo "::notice::PR #$PR_NUMBER is valid (state: $PR_STATE, draft: $PR_IS_DRAFT, branch: $BRANCH_NAME)"
 
-                  # Parse backend SHA from dropdown choice (format: "SHORT_SHA - commit message")
-                  BACKEND_SHORT_SHA=$(echo "$INPUT_BACKEND_COMMIT" | cut -d' ' -f1)
-                  FRONTEND_SHORT_SHA=$(echo "$INPUT_FRONTEND_COMMIT" | cut -d' ' -f1)
+          # Parse backend SHA from dropdown choice (format: "SHORT_SHA - commit message")
+          BACKEND_SHORT_SHA=$(echo "$INPUT_BACKEND_COMMIT" | cut -d' ' -f1)
+          FRONTEND_SHORT_SHA=$(echo "$INPUT_FRONTEND_COMMIT" | cut -d' ' -f1)
 
-                  # Override with exact SHA if provided
-                  if [[ -n "$INPUT_BACKEND_OVERRIDE" ]]; then
-                      BACKEND_SHORT_SHA="$INPUT_BACKEND_OVERRIDE"
-                      echo "::notice::Using backend SHA override: $BACKEND_SHORT_SHA"
-                  fi
-                  if [[ -n "$INPUT_FRONTEND_OVERRIDE" ]]; then
-                      FRONTEND_SHORT_SHA="$INPUT_FRONTEND_OVERRIDE"
-                      echo "::notice::Using frontend SHA override: $FRONTEND_SHORT_SHA"
-                  fi
+          # Override with exact SHA if provided
+          if [[ -n "$INPUT_BACKEND_OVERRIDE" ]]; then
+              BACKEND_SHORT_SHA="$INPUT_BACKEND_OVERRIDE"
+              echo "::notice::Using backend SHA override: $BACKEND_SHORT_SHA"
+          fi
+          if [[ -n "$INPUT_FRONTEND_OVERRIDE" ]]; then
+              FRONTEND_SHORT_SHA="$INPUT_FRONTEND_OVERRIDE"
+              echo "::notice::Using frontend SHA override: $FRONTEND_SHORT_SHA"
+          fi
 
-                  # Validate SHA format for overrides (hex only, 7-40 chars)
-                  if [[ -n "$INPUT_BACKEND_OVERRIDE" ]] && ! [[ "$INPUT_BACKEND_OVERRIDE" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-                      echo "::error::Backend SHA override must be a valid hex SHA (7-40 chars)"
-                      exit 1
-                  fi
-                  if [[ -n "$INPUT_FRONTEND_OVERRIDE" ]] && ! [[ "$INPUT_FRONTEND_OVERRIDE" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-                      echo "::error::Frontend SHA override must be a valid hex SHA (7-40 chars)"
-                      exit 1
-                  fi
+          # Validate SHA format for overrides (hex only, 7-40 chars)
+          if [[ -n "$INPUT_BACKEND_OVERRIDE" ]] && ! [[ "$INPUT_BACKEND_OVERRIDE" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+              echo "::error::Backend SHA override must be a valid hex SHA (7-40 chars)"
+              exit 1
+          fi
+          if [[ -n "$INPUT_FRONTEND_OVERRIDE" ]] && ! [[ "$INPUT_FRONTEND_OVERRIDE" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+              echo "::error::Frontend SHA override must be a valid hex SHA (7-40 chars)"
+              exit 1
+          fi
 
-                  # Validate "pending" placeholder hasn't been selected
-                  if [[ "$BACKEND_SHORT_SHA" == "pending" ]]; then
-                      echo "::error::Backend commit choices not yet populated. Run the 'Refresh Preview Commits' workflow first, or use the override input."
-                      exit 1
-                  fi
-                  if [[ "$FRONTEND_SHORT_SHA" == "pending" ]]; then
-                      echo "::error::Frontend commit choices not yet populated. Run the 'Refresh Preview Commits' workflow first, or use the override input."
-                      exit 1
-                  fi
+          # Validate "pending" placeholder hasn't been selected
+          if [[ "$BACKEND_SHORT_SHA" == "pending" ]]; then
+              echo "::error::Backend commit choices not yet populated. Run the 'Refresh Preview Commits' workflow first, or use the override input."
+              exit 1
+          fi
+          if [[ "$FRONTEND_SHORT_SHA" == "pending" ]]; then
+              echo "::error::Frontend commit choices not yet populated. Run the 'Refresh Preview Commits' workflow first, or use the override input."
+              exit 1
+          fi
 
-                  # Resolve short SHAs to full SHAs (validates they exist)
-                  BACKEND_FULL_SHA=$(gh api "repos/$OWNER/refactor-platform-rs/commits/$BACKEND_SHORT_SHA" \
-                      --jq '.sha' 2>&1) || {
-                      echo "::error::Backend commit '$BACKEND_SHORT_SHA' not found in $OWNER/refactor-platform-rs"
-                      exit 1
-                  }
-                  FRONTEND_FULL_SHA=$(gh api "repos/$OWNER/refactor-platform-fe/commits/$FRONTEND_SHORT_SHA" \
-                      --jq '.sha' 2>&1) || {
-                      echo "::error::Frontend commit '$FRONTEND_SHORT_SHA' not found in $OWNER/refactor-platform-fe"
-                      exit 1
-                  }
+          # Resolve short SHAs to full SHAs (validates they exist)
+          BACKEND_FULL_SHA=$(gh api "repos/$OWNER/refactor-platform-rs/commits/$BACKEND_SHORT_SHA" \
+              --jq '.sha' 2>&1) || {
+              echo "::error::Backend commit '$BACKEND_SHORT_SHA' not found in $OWNER/refactor-platform-rs"
+              exit 1
+          }
+          FRONTEND_FULL_SHA=$(gh api "repos/$OWNER/refactor-platform-fe/commits/$FRONTEND_SHORT_SHA" \
+              --jq '.sha' 2>&1) || {
+              echo "::error::Frontend commit '$FRONTEND_SHORT_SHA' not found in $OWNER/refactor-platform-fe"
+              exit 1
+          }
 
-                  echo "::notice::Backend commit resolved: ${BACKEND_FULL_SHA:0:7}"
-                  echo "::notice::Frontend commit resolved: ${FRONTEND_FULL_SHA:0:7}"
+          echo "::notice::Backend commit resolved: ${BACKEND_FULL_SHA:0:7}"
+          echo "::notice::Frontend commit resolved: ${FRONTEND_FULL_SHA:0:7}"
 
-                  echo "backend_sha=$BACKEND_FULL_SHA" >> $GITHUB_OUTPUT
-                  echo "frontend_sha=$FRONTEND_FULL_SHA" >> $GITHUB_OUTPUT
-                  echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-                  echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-    # ===========================================================================
-    # JOB 2: Deploy using the reusable workflow from the backend repo
-    # ===========================================================================
-    # Follows the same cross-repo pattern as pr-preview-frontend.yml.
-    # Backend-specific secrets (Tiptap, MailerSend) use || 'UNUSED' fallbacks.
-    # ===========================================================================
-    deploy:
-        name: Deploy PR Preview
-        needs: validate
-        uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main
-        with:
-            repo_type: "frontend"
-            pr_number: ${{ needs.validate.outputs.pr_number }}
-            branch_name: ${{ needs.validate.outputs.branch_name }}
-            backend_sha: ${{ needs.validate.outputs.backend_sha }}
-            frontend_sha: ${{ needs.validate.outputs.frontend_sha }}
-            force_rebuild: false
-        secrets: inherit
+          echo "backend_sha=$BACKEND_FULL_SHA" >> $GITHUB_OUTPUT
+          echo "frontend_sha=$FRONTEND_FULL_SHA" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+  # ===========================================================================
+  # JOB 2: Deploy using the reusable workflow from the backend repo
+  # ===========================================================================
+  # Follows the same cross-repo pattern as pr-preview-frontend.yml.
+  # Backend-specific secrets (Tiptap, MailerSend) use || 'UNUSED' fallbacks.
+  # ===========================================================================
+  deploy:
+    name: Deploy PR Preview
+    needs: validate
+    uses: refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main
+    with:
+      repo_type: "frontend"
+      pr_number: ${{ needs.validate.outputs.pr_number }}
+      branch_name: ${{ needs.validate.outputs.branch_name }}
+      backend_sha: ${{ needs.validate.outputs.backend_sha }}
+      frontend_sha: ${{ needs.validate.outputs.frontend_sha }}
+      force_rebuild: false
+    secrets: inherit
