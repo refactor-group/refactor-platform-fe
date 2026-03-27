@@ -14,16 +14,36 @@ import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-ca
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
+import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import JoinMeetLink from "@/components/ui/coaching-sessions/join-meet-link";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { isPastSession } from "@/types/coaching-session";
+import type { CoachingSession } from "@/types/coaching-session";
+
 import { DateTime } from "ts-luxon";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { SidebarState, StateChangeSource } from "@/types/sidebar";
+
+/**
+ * Goals are read-only on past sessions for coachees, but coaches retain
+ * full add/remove/edit access so they can adjust goals retroactively.
+ */
+function isGoalPanelReadOnly(
+  session: CoachingSession,
+  timezone: string,
+  isCoach: boolean
+): boolean {
+  const isPast = isPastSession(session, {
+    cutoff: DateTime.fromISO(session.date, { zone: 'utc' })
+      .setZone(timezone)
+      .endOf('day'),
+  });
+  return isPast && !isCoach;
+}
 
 /**
  * Determines if coaching relationship ID should be synced from session data.
@@ -58,6 +78,8 @@ export default function CoachingSessionsPage() {
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
     useCurrentCoachingRelationship();
 
+  // Coaches can still add/remove goals on past sessions; coachees cannot
+  const { isCoachInCurrentRelationship } = useCurrentRelationshipRole();
 
   // Auto-collapse main sidebar on coaching session page to maximize workspace,
   // and restore the previous state when leaving.
@@ -172,11 +194,13 @@ export default function CoachingSessionsPage() {
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={notesMaximized}
-              readOnly={currentCoachingSession ? isPastSession(currentCoachingSession, {
-                cutoff: DateTime.fromISO(currentCoachingSession.date, { zone: 'utc' })
-                  .setZone(userSession?.timezone || getBrowserTimezone())
-                  .endOf('day'),
-              }) : false}
+              readOnly={currentCoachingSession
+                ? isGoalPanelReadOnly(
+                    currentCoachingSession,
+                    userSession?.timezone || getBrowserTimezone(),
+                    isCoachInCurrentRelationship
+                  )
+                : false}
             />
           )}
 

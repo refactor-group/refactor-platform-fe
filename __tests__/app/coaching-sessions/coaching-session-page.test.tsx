@@ -5,7 +5,10 @@ import CoachingSessionsPage from '@/app/coaching-sessions/[id]/page'
 import { TestProviders } from '@/test-utils/providers'
 import { useCurrentCoachingSession } from '@/lib/hooks/use-current-coaching-session'
 import { useCurrentCoachingRelationship } from '@/lib/hooks/use-current-coaching-relationship'
+import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role'
 import { createMockCoachingSession } from '../../factories/coaching-session.factory'
+import { None, Some } from '@/types/option'
+import { RelationshipRole } from '@/types/relationship-role'
 
 // Mock Next.js navigation hooks
 vi.mock('next/navigation', () => ({
@@ -17,6 +20,7 @@ vi.mock('next/navigation', () => ({
 // Mock the coaching session hooks
 vi.mock('@/lib/hooks/use-current-coaching-session')
 vi.mock('@/lib/hooks/use-current-coaching-relationship')
+vi.mock('@/lib/hooks/use-current-relationship-role')
 
 // Mock auth store
 vi.mock('@/lib/providers/auth-store-provider', () => ({
@@ -57,7 +61,9 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
 }))
 
 vi.mock('@/components/ui/coaching-sessions/goal-panel', () => ({
-  GoalPanel: () => <div>Goals</div>
+  GoalPanel: ({ readOnly }: { readOnly?: boolean }) => (
+    <div data-testid="goal-panel" data-readonly={String(!!readOnly)}>Goals</div>
+  )
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-tabs-container', () => ({
@@ -76,6 +82,33 @@ vi.mock('@/components/ui/coaching-sessions/coaching-tabs-container', () => ({
     </div>
   )
 }))
+
+// Helper to mock role hook with sensible defaults
+function mockRoleAsCoach() {
+  vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+    relationship_role: Some(RelationshipRole.Coach),
+    isCoachInCurrentRelationship: true,
+    isCoacheeInCurrentRelationship: false,
+    hasActiveRelationship: true,
+    relationshipId: 'rel-123',
+    userId: 'user-123',
+    coachId: 'user-123',
+    coacheeId: 'coachee-456',
+  })
+}
+
+function mockRoleAsCoachee() {
+  vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+    relationship_role: Some(RelationshipRole.Coachee),
+    isCoachInCurrentRelationship: false,
+    isCoacheeInCurrentRelationship: true,
+    hasActiveRelationship: true,
+    relationshipId: 'rel-123',
+    userId: 'coachee-456',
+    coachId: 'user-123',
+    coacheeId: 'coachee-456',
+  })
+}
 
 /**
  * Test Suite: URL Parameter Persistence for Coaching Session Tabs
@@ -97,6 +130,7 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
     vi.clearAllMocks()
     ;(useRouter as any).mockReturnValue(mockRouter)
     ;(useParams as any).mockReturnValue(mockParams)
+    mockRoleAsCoach()
 
     // Set default mocks for relationship hooks
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
@@ -267,6 +301,7 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     ;(useRouter as any).mockReturnValue(mockRouter)
     ;(useParams as any).mockReturnValue(mockParams)
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    mockRoleAsCoach()
   })
 
   /**
@@ -507,6 +542,7 @@ describe('CoachingSessionsPage - Join meet link visibility', () => {
     ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn() })
     ;(useParams as any).mockReturnValue({ id: 'session-123' })
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    mockRoleAsCoach()
 
     vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
       currentCoachingRelationshipId: 'rel-123',
@@ -559,5 +595,136 @@ describe('CoachingSessionsPage - Join meet link visibility', () => {
 
     const link = screen.getByTestId('join-meet-link')
     expect(link).not.toBeDisabled()
+  })
+})
+
+/**
+ * Test Suite: Goal Panel readOnly behavior based on role and session timing
+ *
+ * Purpose: Validates that coaches can add/remove goals on past sessions
+ * while coachees cannot. Both roles should have full access on current sessions.
+ */
+describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
+  // A date far in the past so isPastSession always returns true
+  const pastDate = '2020-01-01T10:00:00.000Z'
+  // A date far in the future so isPastSession always returns false
+  const futureDate = '2099-12-31T10:00:00.000Z'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn() })
+    ;(useParams as any).mockReturnValue({ id: 'session-123' })
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123',
+      setCurrentCoachingRelationshipId: vi.fn(),
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: vi.fn(),
+    })
+  })
+
+  it('passes readOnly={false} to GoalPanel when coach views a past session', () => {
+    mockRoleAsCoach()
+
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: 'rel-123',
+        date: pastDate,
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    const goalPanel = screen.getByTestId('goal-panel')
+    expect(goalPanel).toHaveAttribute('data-readonly', 'false')
+  })
+
+  it('passes readOnly={true} to GoalPanel when coachee views a past session', () => {
+    mockRoleAsCoachee()
+
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: 'rel-123',
+        date: pastDate,
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    const goalPanel = screen.getByTestId('goal-panel')
+    expect(goalPanel).toHaveAttribute('data-readonly', 'true')
+  })
+
+  it('passes readOnly={false} to GoalPanel when coach views a current session', () => {
+    mockRoleAsCoach()
+
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: 'rel-123',
+        date: futureDate,
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    const goalPanel = screen.getByTestId('goal-panel')
+    expect(goalPanel).toHaveAttribute('data-readonly', 'false')
+  })
+
+  it('passes readOnly={false} to GoalPanel when coachee views a current session', () => {
+    mockRoleAsCoachee()
+
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: 'rel-123',
+        date: futureDate,
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    const goalPanel = screen.getByTestId('goal-panel')
+    expect(goalPanel).toHaveAttribute('data-readonly', 'false')
   })
 })
