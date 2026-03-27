@@ -1,4 +1,5 @@
 import { DateTime } from "ts-luxon";
+import { Agreement } from "@/types/agreement";
 import { CoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Goal } from "@/types/goal";
@@ -99,6 +100,21 @@ export function createMockGoal(overrides?: Partial<Goal>): Goal {
     status_changed_at: now,
     completed_at: now,
     target_date: null,
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
+}
+
+export function createMockAgreement(
+  overrides?: Partial<Agreement>
+): Agreement {
+  const now = DateTime.now();
+  return {
+    id: "agreement-1",
+    coaching_session_id: "session-1",
+    body: "Weekly check-in every Tuesday",
+    user_id: "user-1",
     created_at: now,
     updated_at: now,
     ...overrides,
