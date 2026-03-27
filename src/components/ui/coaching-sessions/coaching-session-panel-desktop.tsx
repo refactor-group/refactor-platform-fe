@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
 import { GoalFlowPages } from "@/components/ui/coaching-sessions/coaching-session-panel";
-import { CoachingSessionPanelSelector } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
+import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { CompactAgreementCard } from "@/components/ui/coaching-sessions/agreement-card-compact";
 import { defaultAgreement } from "@/types/agreement";
 import { maxActiveGoals } from "@/types/goal";
@@ -64,18 +64,18 @@ export function CoachingSessionPanelDesktop({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [flow.step, goalFlow]);
 
-  const goalsLabel = linkedGoals.length > 0
-    ? `Goals (${linkedGoals.length}/${maxActiveGoals()})`
-    : "Goals";
-  const agreementsLabel = agreements.length > 0
-    ? `Agreements (${agreements.length})`
-    : "Agreements";
+  const counts: Record<PanelSection, string> = {
+    [PanelSection.Goals]: linkedGoals.length > 0
+      ? `${linkedGoals.length}/${maxActiveGoals()}`
+      : "",
+    [PanelSection.Agreements]: agreements.length > 0
+      ? `${agreements.length}`
+      : "",
+  };
 
   if (collapsed) {
-    const collapsedLabel = activeSection === "goals" ? "Goals" : "Agreements";
-    const collapsedCount = activeSection === "goals"
-      ? (linkedGoals.length > 0 ? `${linkedGoals.length}/${maxActiveGoals()}` : undefined)
-      : (agreements.length > 0 ? `${agreements.length}` : undefined);
+    const collapsedLabel = activeSection === PanelSection.Goals ? "Goals" : "Agreements";
+    const collapsedCount = counts[activeSection] || undefined;
 
     return (
       <div className="hidden md:flex md:flex-col md:items-center md:gap-2 md:pt-3 md:pb-3 md:px-1 h-full rounded-lg border border-border/50 bg-card">
@@ -91,9 +91,9 @@ export function CoachingSessionPanelDesktop({
     );
   }
 
-  const isInGoalFlow = activeSection === "goals" && flow.step !== GoalFlowStep.Idle;
+  const isInGoalFlow = activeSection === PanelSection.Goals && flow.step !== GoalFlowStep.Idle;
 
-  const headerTitle = activeSection === "agreements"
+  const headerTitle = activeSection === PanelSection.Agreements
     ? undefined  // selector handles the title
     : flow.step === GoalFlowStep.Idle || flow.step === GoalFlowStep.SelectingSwap
       ? undefined  // selector handles the title
@@ -131,8 +131,7 @@ export function CoachingSessionPanelDesktop({
                 <CoachingSessionPanelSelector
                   activeSection={activeSection}
                   onSectionChange={onSectionChange}
-                  goalsLabel={goalsLabel}
-                  agreementsLabel={agreementsLabel}
+                  counts={counts}
                 />
               )}
             </div>
@@ -140,7 +139,7 @@ export function CoachingSessionPanelDesktop({
               <Button
                 size="sm"
                 className="h-8 gap-1 text-xs"
-                onClick={activeSection === "goals" ? goalFlow.handleAddGoalClick : () => onAddingAgreementChange(true)}
+                onClick={activeSection === PanelSection.Goals ? goalFlow.handleAddGoalClick : () => onAddingAgreementChange(true)}
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add
@@ -149,7 +148,7 @@ export function CoachingSessionPanelDesktop({
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-hidden">
-          {activeSection === "goals" ? (
+          {activeSection === PanelSection.Goals ? (
             <GoalFlowPages
               linkedGoals={linkedGoals}
               goalFlow={goalFlow}

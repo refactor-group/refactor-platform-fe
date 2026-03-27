@@ -8,6 +8,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
+import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
@@ -67,7 +68,9 @@ export default function CoachingSessionsPage() {
   const reviewActions = searchParams.get("review") === "true";
 
   // Panel section persisted via URL param "panel"
-  const panelSection = (searchParams.get("panel") === "agreements" ? "agreements" : "goals") as "goals" | "agreements";
+  const panelSection = searchParams.get("panel") === PanelSection.Agreements
+    ? PanelSection.Agreements
+    : PanelSection.Goals;
 
   const { userId, userSession } = useAuthStore((state) => ({
     userId: state.userId,
@@ -146,9 +149,9 @@ export default function CoachingSessionsPage() {
     toast.error("Failed to copy session link.");
   };
 
-  const handlePanelSectionChange = (section: string) => {
+  const handlePanelSectionChange = (section: PanelSection) => {
     const newSearchParams = new URLSearchParams(searchParams);
-    if (section === "goals") {
+    if (section === PanelSection.Goals) {
       // Remove panel parameter for default section to keep URL clean
       newSearchParams.delete("panel");
     } else {

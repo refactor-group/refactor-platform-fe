@@ -1,7 +1,8 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import {
   CoachingSessionPanelSelector,
+  PanelSection,
 } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 
 // Radix Select requires pointer events that jsdom doesn't fully support.
@@ -9,27 +10,31 @@ import {
 
 describe("CoachingSessionPanelSelector", () => {
   const defaultProps = {
-    activeSection: "goals" as const,
+    activeSection: PanelSection.Goals,
     onSectionChange: vi.fn(),
-    goalsLabel: "Goals (1/3)",
-    agreementsLabel: "Agreements (2)",
+    counts: {
+      [PanelSection.Goals]: "1/3",
+      [PanelSection.Agreements]: "2",
+    },
   };
 
-  it("renders dropdown trigger showing active section label", () => {
+  it("renders dropdown trigger showing active section name and count", () => {
     render(<CoachingSessionPanelSelector {...defaultProps} />);
 
-    expect(screen.getByText("Goals (1/3)")).toBeInTheDocument();
+    expect(screen.getByText("Goals")).toBeInTheDocument();
+    expect(screen.getByText("1/3")).toBeInTheDocument();
   });
 
-  it("shows agreements label when agreements is active", () => {
+  it("shows agreements name and count when agreements is active", () => {
     render(
       <CoachingSessionPanelSelector
         {...defaultProps}
-        activeSection="agreements"
+        activeSection={PanelSection.Agreements}
       />
     );
 
-    expect(screen.getByText("Agreements (2)")).toBeInTheDocument();
+    expect(screen.getByText("Agreements")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("renders a combobox trigger element", () => {
@@ -40,15 +45,15 @@ describe("CoachingSessionPanelSelector", () => {
 
   it("updates displayed label when activeSection prop changes", () => {
     const { rerender } = render(
-      <CoachingSessionPanelSelector {...defaultProps} activeSection="goals" />
+      <CoachingSessionPanelSelector {...defaultProps} activeSection={PanelSection.Goals} />
     );
 
-    expect(screen.getByText("Goals (1/3)")).toBeInTheDocument();
+    expect(screen.getByText("Goals")).toBeInTheDocument();
 
     rerender(
-      <CoachingSessionPanelSelector {...defaultProps} activeSection="agreements" />
+      <CoachingSessionPanelSelector {...defaultProps} activeSection={PanelSection.Agreements} />
     );
 
-    expect(screen.getByText("Agreements (2)")).toBeInTheDocument();
+    expect(screen.getByText("Agreements")).toBeInTheDocument();
   });
 });

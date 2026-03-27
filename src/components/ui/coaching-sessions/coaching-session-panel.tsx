@@ -35,7 +35,7 @@ import {
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
-import type { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
+import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { siteConfig } from "@/site.config";
 
 // ── Shared props for both layouts ──────────────────────────────────────
@@ -209,7 +209,7 @@ export function CoachingSessionPanel({
   coachingRelationshipId,
   collapsed = false,
   readOnly = false,
-  defaultSection = "goals",
+  defaultSection = PanelSection.Goals,
   onSectionChange: onSectionChangeExternal,
 }: CoachingSessionPanelProps) {
   // ── Section state ────────────────────────────────────────────────

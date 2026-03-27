@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel"
+import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector"
 import { createMockGoal, createMockAgreement } from "../../../test-utils"
 import { ItemStatus } from "@/types/general"
 import { GoalProgress } from "@/types/goal-progress"
@@ -183,7 +184,7 @@ describe("CoachingSessionPanel", () => {
     expect(selectors.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("shows 'Goals (1/3)' in the selector when goals are linked", () => {
+  it("shows goal count in the selector when goals are linked", () => {
     setupMocks()
     render(
       <CoachingSessionPanel
@@ -192,8 +193,9 @@ describe("CoachingSessionPanel", () => {
       />
     )
 
-    const labels = screen.getAllByText("Goals (1/3)")
-    expect(labels.length).toBeGreaterThanOrEqual(1)
+    // Name and count are rendered as separate elements
+    expect(screen.getAllByText("Goals").length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText("1/3").length).toBeGreaterThanOrEqual(1)
   })
 
   it("calls useAgreementList with the coaching session ID", () => {
@@ -243,7 +245,7 @@ describe("CoachingSessionPanel", () => {
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
-        defaultSection="agreements"
+        defaultSection={PanelSection.Agreements}
       />
     )
 
@@ -276,7 +278,7 @@ describe("CoachingSessionPanel", () => {
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
-        defaultSection="agreements"
+        defaultSection={PanelSection.Agreements}
       />
     )
 
