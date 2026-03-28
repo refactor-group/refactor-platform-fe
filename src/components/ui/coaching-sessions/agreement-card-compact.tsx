@@ -239,21 +239,21 @@ function AgreementEditForm({
       />
       <div className="flex items-center justify-end gap-2">
         <Button
-          variant="ghost"
           size="sm"
-          className="h-6 text-[11px] px-2"
-          onClick={onCancel}
-          disabled={isSaving}
-        >
-          Cancel
-        </Button>
-        <Button
-          size="sm"
-          className="h-6 text-[11px] px-2"
+          className="h-8 text-xs px-4"
           onClick={handleSave}
           disabled={isSaving || !body.trim()}
         >
           Save
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-xs text-muted-foreground"
+          onClick={onCancel}
+          disabled={isSaving}
+        >
+          Cancel
         </Button>
       </div>
     </div>
