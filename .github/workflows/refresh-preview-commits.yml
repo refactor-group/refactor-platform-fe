@@ -74,9 +74,9 @@ jobs:
                   # Frontend: 5 most recent commits (local checkout)
                   if [[ "$FRONTEND_BRANCH" != "main" ]]; then
                       git fetch origin "$FRONTEND_BRANCH"
-                      git log "origin/$FRONTEND_BRANCH" --oneline -5 --format='%h - %.55s' > /tmp/frontend_commits.txt
+                      git log "origin/$FRONTEND_BRANCH" --oneline -5 --format='%h - %s' > /tmp/frontend_commits.txt
                   else
-                      git log --oneline -5 --format='%h - %.55s' > /tmp/frontend_commits.txt
+                      git log --oneline -5 --format='%h - %s' > /tmp/frontend_commits.txt
                   fi
 
                   echo "=== Backend commits (branch: $BACKEND_BRANCH) ==="
