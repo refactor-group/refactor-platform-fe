@@ -25,10 +25,10 @@ on:
                 type: string
                 default: "main"
             frontend_branch:
-                description: "Branch to fetch frontend commits from (default: main)"
+                description: "Branch to fetch frontend commits from (default: current branch)"
                 required: false
                 type: string
-                default: "main"
+                default: ""
 
 # Only one refresh at a time to prevent push conflicts
 concurrency:
@@ -61,7 +61,7 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GHCR_PAT }}
                   BACKEND_BRANCH: ${{ inputs.backend_branch || 'main' }}
-                  FRONTEND_BRANCH: ${{ inputs.frontend_branch || 'main' }}
+                  FRONTEND_BRANCH: ${{ inputs.frontend_branch || github.ref_name }}
               run: |
                   set -euo pipefail
                   OWNER="${{ github.repository_owner }}"
