@@ -6,8 +6,8 @@
 # Usage: Go to Actions tab → select this workflow → choose commits from dropdowns
 #        → enter PR number → Run workflow
 # Requires: An open (or draft) PR in this repo for the PR number.
-# Dropdown choices: Auto-updated by refresh-preview-commits.yml on every PR push
-#                   and merge to main. Use the override inputs for exact SHAs.
+# Dropdown choices: Auto-updated by refresh-preview-commits.yml on merge to main
+#                   or via manual workflow_dispatch. Use the override inputs for exact SHAs.
 #
 # Cross-repo secret resolution:
 #   `environment: pr-preview` in the reusable workflow resolves from THIS repo
@@ -21,9 +21,10 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: "PR number (must be an open or draft PR in this repo)"
-        required: true
+        description: "PR number (leave empty to auto-detect from current branch)"
+        required: false
         type: string
+        default: ""
       backend_commit:
         description: "Backend commit to deploy"
         required: true
@@ -83,10 +84,23 @@ jobs:
           INPUT_BACKEND_OVERRIDE: ${{ inputs.backend_commit_override }}
           INPUT_FRONTEND_OVERRIDE: ${{ inputs.frontend_commit_override }}
           OWNER: ${{ github.repository_owner }}
+          BRANCH_REF: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
           PR_NUMBER="$INPUT_PR_NUMBER"
+
+          # Auto-detect PR number from current branch if not provided
+          if [[ -z "$PR_NUMBER" ]]; then
+              echo "::notice::No PR number provided, auto-detecting from branch '$BRANCH_REF'..."
+              PR_NUMBER=$(gh pr list --repo "$OWNER/refactor-platform-fe" \
+                  --head "$BRANCH_REF" --state open --json number --jq '.[0].number' 2>/dev/null || true)
+              if [[ -z "$PR_NUMBER" ]]; then
+                  echo "::error::No open PR found for branch '$BRANCH_REF' in $OWNER/refactor-platform-fe. Provide a PR number manually."
+                  exit 1
+              fi
+              echo "::notice::Auto-detected PR #$PR_NUMBER from branch '$BRANCH_REF'"
+          fi
 
           # Validate PR number is numeric
           if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
