@@ -45,6 +45,10 @@ export function CompactAgreementCard({
     { month: "short", day: "numeric", year: "numeric" },
     { locale }
   );
+  const agreedDate = agreement.created_at.toLocaleString(
+    { weekday: "long", month: "long", day: "numeric", year: "numeric" },
+    { locale }
+  );
 
   return (
     <CompactFlipCard
@@ -72,6 +76,7 @@ export function CompactAgreementCard({
           <AgreementBackFace
             body={body}
             formattedDate={formattedDate}
+            agreedDate={agreedDate}
             onDone={onDone}
             onEdit={onSave ? onEditStart : undefined}
             onDelete={onDelete ? () => {
@@ -132,19 +137,33 @@ function AgreementFrontFace({
 function AgreementBackFace({
   body,
   formattedDate,
+  agreedDate,
   onDone,
   onEdit,
   onDelete,
 }: {
   body: string;
   formattedDate: string;
+  agreedDate: string;
   onDone: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[11px] text-muted-foreground/60 cursor-default">
+                {formattedDate}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              Agreed on {agreedDate}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <button
           type="button"
           onClick={onDone}
@@ -156,10 +175,6 @@ function AgreementBackFace({
 
       <p className="text-[13px] font-medium whitespace-pre-wrap">
         {body}
-      </p>
-
-      <p className="text-[11px] text-muted-foreground/60">
-        {formattedDate}
       </p>
 
       <div className="flex items-center justify-end gap-2 pt-3">
