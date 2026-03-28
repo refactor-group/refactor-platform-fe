@@ -67,6 +67,31 @@ export interface CoachingSessionPanelSharedProps {
   locale: string;
 }
 
+// ── Shared helpers for desktop and mobile layouts ─────────────────────
+
+export function computePanelCounts(
+  linkedGoals: Goal[],
+  agreements: Agreement[],
+): Record<PanelSection, string> {
+  return {
+    [PanelSection.Goals]: linkedGoals.length > 0
+      ? `${linkedGoals.length}/${maxActiveGoals()}`
+      : "",
+    [PanelSection.Agreements]: agreements.length > 0
+      ? `${agreements.length}`
+      : "",
+  };
+}
+
+export function computeHeaderTitle(
+  activeSection: PanelSection,
+  goalFlowStep: GoalFlowStep,
+): string | undefined {
+  if (activeSection === PanelSection.Agreements) return undefined;
+  if (goalFlowStep === GoalFlowStep.Idle || goalFlowStep === GoalFlowStep.SelectingSwap) return undefined;
+  return goalFlowStep === GoalFlowStep.Browsing ? "Add goal" : "New goal";
+}
+
 // ── Slide Panel (animate in on mount via CSS) ────────────────────────
 
 function SlidePanel({

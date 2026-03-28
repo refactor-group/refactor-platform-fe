@@ -62,7 +62,7 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
 
 vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
   CoachingSessionPanel: ({ readOnly }: { readOnly?: boolean }) => (
-    <div data-testid="goal-panel" data-readonly={String(!!readOnly)}>Goals</div>
+    <div data-testid="coaching-session-panel" data-readonly={String(!!readOnly)}>Goals</div>
   )
 }))
 
@@ -649,7 +649,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
       </TestProviders>
     )
 
-    const goalPanel = screen.getByTestId('goal-panel')
+    const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'false')
   })
 
@@ -674,7 +674,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
       </TestProviders>
     )
 
-    const goalPanel = screen.getByTestId('goal-panel')
+    const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'true')
   })
 
@@ -699,7 +699,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
       </TestProviders>
     )
 
-    const goalPanel = screen.getByTestId('goal-panel')
+    const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'false')
   })
 
@@ -724,7 +724,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
       </TestProviders>
     )
 
-    const goalPanel = screen.getByTestId('goal-panel')
+    const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'false')
   })
 })

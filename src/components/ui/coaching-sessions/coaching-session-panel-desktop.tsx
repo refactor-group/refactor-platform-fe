@@ -10,10 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
-import { GoalFlowPages } from "@/components/ui/coaching-sessions/coaching-session-panel";
+import { GoalFlowPages, computePanelCounts, computeHeaderTitle } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
-import { maxActiveGoals } from "@/types/goal";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
@@ -61,14 +60,7 @@ export function CoachingSessionPanelDesktop({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [flow.step, goalFlow]);
 
-  const counts: Record<PanelSection, string> = {
-    [PanelSection.Goals]: linkedGoals.length > 0
-      ? `${linkedGoals.length}/${maxActiveGoals()}`
-      : "",
-    [PanelSection.Agreements]: agreements.length > 0
-      ? `${agreements.length}`
-      : "",
-  };
+  const counts = computePanelCounts(linkedGoals, agreements);
 
   if (collapsed) {
     const collapsedLabel = activeSection === PanelSection.Goals ? "Goals" : "Agreements";
@@ -89,14 +81,7 @@ export function CoachingSessionPanelDesktop({
   }
 
   const isInGoalFlow = activeSection === PanelSection.Goals && flow.step !== GoalFlowStep.Idle;
-
-  const headerTitle = activeSection === PanelSection.Agreements
-    ? undefined  // selector handles the title
-    : flow.step === GoalFlowStep.Idle || flow.step === GoalFlowStep.SelectingSwap
-      ? undefined  // selector handles the title
-      : flow.step === GoalFlowStep.Browsing
-        ? "Add goal"
-        : "New goal";
+  const headerTitle = computeHeaderTitle(activeSection, flow.step);
 
   return (
     <div ref={panelRef} className="hidden md:block relative">
