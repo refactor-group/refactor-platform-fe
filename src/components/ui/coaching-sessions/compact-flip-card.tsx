@@ -9,6 +9,9 @@ import { cn } from "@/components/lib/utils";
 // Owns all flip-card infrastructure: state, ResizeObserver height
 // animation, outside-click-to-close, and container markup.
 // Consumers provide domain-specific content via renderFront/renderBack.
+//
+// When initialEditing is true, the card skips the flip entirely and
+// renders the back face directly with a zoom-in entrance animation.
 
 export interface CompactFlipCardProps {
   renderFront: (props: { onFlip: () => void }) => ReactNode;
@@ -21,9 +24,9 @@ export interface CompactFlipCardProps {
   className?: string;
   /** When false, the card has no flip affordance. Defaults to true. */
   canFlip?: boolean;
-  /** When true, the card starts flipped to the back face in edit mode. */
+  /** When true, the card renders the back face directly in edit mode with a zoom-in entrance. */
   initialEditing?: boolean;
-  /** Called after the flip-back animation completes when dismissing the card. */
+  /** Called after the dismiss animation completes when removing the card. */
   onDismiss?: () => void;
 }
 
@@ -35,23 +38,77 @@ export function CompactFlipCard({
   initialEditing = false,
   onDismiss,
 }: CompactFlipCardProps) {
+  // When initialEditing, skip the flip and show back face directly
+  if (initialEditing) {
+    return (
+      <ZoomCard
+        className={className}
+        onDismiss={onDismiss}
+        renderBack={renderBack}
+      />
+    );
+  }
+
+  return (
+    <FlipCard
+      renderFront={renderFront}
+      renderBack={renderBack}
+      className={className}
+      canFlip={canFlip}
+      onDismiss={onDismiss}
+    />
+  );
+}
+
+// ── Zoom Card (initial editing mode) ─────────────────────────────────
+
+function ZoomCard({
+  className,
+  onDismiss,
+  renderBack,
+}: {
+  className?: string;
+  onDismiss?: () => void;
+  renderBack: CompactFlipCardProps["renderBack"];
+}) {
+  const handleDone = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
+
+  const handleEditEnd = useCallback(() => {}, []);
+  const handleEditStart = useCallback(() => {}, []);
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border border-border bg-background p-3 shadow-sm animate-in zoom-in-95 fade-in duration-300",
+        className
+      )}
+    >
+      {renderBack({
+        onDone: handleDone,
+        isEditing: true,
+        onEditStart: handleEditStart,
+        onEditEnd: handleEditEnd,
+      })}
+    </div>
+  );
+}
+
+// ── Flip Card (normal mode) ──────────────────────────────────────────
+
+function FlipCard({
+  renderFront,
+  renderBack,
+  className,
+  canFlip = true,
+  onDismiss,
+}: Omit<CompactFlipCardProps, "initialEditing">) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
-
-  // When initialEditing is set, show the front face briefly then flip to edit.
-  // The delay lets the card mount visibly before the CSS flip transition plays.
-  useEffect(() => {
-    if (!initialEditing) return;
-
-    const frameId = requestAnimationFrame(() => {
-      setIsFlipped(true);
-      setIsEditing(true);
-    });
-    return () => cancelAnimationFrame(frameId);
-  }, [initialEditing]);
 
   // Animate container height to match the active face.
   // ResizeObserver handles body expansion on the front face and edit form on the back.

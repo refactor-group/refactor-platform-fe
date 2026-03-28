@@ -163,21 +163,28 @@ describe("CompactFlipCard", () => {
     expect(backFace).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("flips to edit mode after mount when initialEditing is true", async () => {
+  it("renders back face directly in edit mode when initialEditing is true", () => {
     renderWithTestContent({ initialEditing: true });
 
-    // After the requestAnimationFrame fires, the card should be flipped and editing
-    await waitFor(() => {
-      expect(screen.getByText("Edit mode active")).toBeInTheDocument();
-    });
+    // Should immediately show edit mode — no flip needed
+    expect(screen.getByText("Edit mode active")).toBeInTheDocument();
+    expect(screen.getByText("Back content")).toBeInTheDocument();
 
-    const backFace = screen.getByText("Back content").closest(
-      ".flip-card-face.flip-card-back"
-    );
-    expect(backFace).toHaveAttribute("aria-hidden", "false");
+    // Should NOT render the flip card structure
+    expect(document.querySelector(".flip-card-container")).toBeNull();
   });
 
-  it("calls onDismiss after flip-back when Done is clicked", async () => {
+  it("calls onDismiss immediately when initialEditing Done is clicked", async () => {
+    const user = userEvent.setup();
+    const onDismiss = vi.fn();
+    renderWithTestContent({ initialEditing: true, onDismiss });
+
+    await user.click(screen.getByText("Done"));
+
+    expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  it("calls onDismiss after flip-back when Done is clicked on flipped card", async () => {
     const user = userEvent.setup();
     const onDismiss = vi.fn();
     renderWithTestContent({ onDismiss });
@@ -195,7 +202,7 @@ describe("CompactFlipCard", () => {
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 
-  it("does not call onDismiss for non-transform transition events", async () => {
+  it("does not call onDismiss for non-transform transition events on flipped card", async () => {
     const user = userEvent.setup();
     const onDismiss = vi.fn();
     renderWithTestContent({ onDismiss });
