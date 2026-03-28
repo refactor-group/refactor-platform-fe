@@ -54,7 +54,6 @@ export function CompactAgreementCard({
       renderFront={({ onFlip }) => (
         <AgreementFrontFace
           body={body}
-          formattedDate={formattedDate}
           canInteract={canInteract}
           onFlip={onFlip}
         />
@@ -90,49 +89,41 @@ export function CompactAgreementCard({
 
 function AgreementFrontFace({
   body,
-  formattedDate,
   canInteract,
   onFlip,
 }: {
   body: string;
-  formattedDate: string;
   canInteract: boolean;
   onFlip: () => void;
 }) {
   return (
-    <>
-      <div className="flex items-start justify-between gap-2">
-        <ExpandableContent text={body} className="text-[13px] font-medium" />
-        <div className="flex items-center gap-1 shrink-0 mt-0.5">
-          {canInteract ? (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Agreement options"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onFlip();
-                    }}
-                    className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-                  >
-                    <Info className="h-3.5 w-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Edit or delete agreement
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : null}
-        </div>
+    <div className="flex items-start justify-between gap-2">
+      <ExpandableContent text={body} className="text-[13px] font-medium" />
+      <div className="flex items-center gap-1 shrink-0 mt-0.5">
+        {canInteract ? (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Agreement options"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFlip();
+                  }}
+                  className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Edit or delete agreement
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
       </div>
-
-      <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
-        {formattedDate}
-      </div>
-    </>
+    </div>
   );
 }
 

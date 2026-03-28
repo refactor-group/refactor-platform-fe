@@ -28,17 +28,21 @@ describe("CompactAgreementCard", () => {
     expect(bodies.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders formatted created date on the front face", () => {
+  it("renders formatted created date only on the back face", () => {
     render(
       <CompactAgreementCard
         agreement={defaultAgreement}
         locale={defaultLocale}
+        onSave={vi.fn()}
+        onDelete={vi.fn()}
       />
     );
 
-    // Date appears on both front and back faces
+    // Date only on the back face (aria-hidden=true when not flipped)
     const dates = screen.getAllByText(/Mar 15, 2026/);
-    expect(dates.length).toBeGreaterThanOrEqual(1);
+    expect(dates).toHaveLength(1);
+    const backFace = dates[0].closest(".flip-card-face.flip-card-back");
+    expect(backFace).not.toBeNull();
   });
 
   it("shows info button when onSave or onDelete are provided", () => {
