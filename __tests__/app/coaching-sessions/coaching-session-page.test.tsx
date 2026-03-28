@@ -190,7 +190,6 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
     expect(screen.getByTestId('current-tab')).toHaveTextContent('actions')
   })
 
-
   /**
    * Asserts that clicking a tab trigger calls router.replace with the correct URL parameter
    * This ensures tab changes are reflected in the URL for sharing and bookmarking

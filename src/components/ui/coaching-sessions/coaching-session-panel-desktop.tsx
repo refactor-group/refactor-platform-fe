@@ -12,11 +12,8 @@ import { cn } from "@/components/lib/utils";
 import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
 import { GoalFlowPages } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
-import { CompactAgreementCard } from "@/components/ui/coaching-sessions/agreement-card-compact";
-import { defaultAgreement } from "@/types/agreement";
+import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { maxActiveGoals } from "@/types/goal";
-
-const newAgreementPlaceholder = defaultAgreement();
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
@@ -158,36 +155,16 @@ export function CoachingSessionPanelDesktop({
               onUpdateGoal={onUpdateGoal}
             />
           ) : (
-            <div className="space-y-3">
-              {isAddingAgreement && onAgreementCreate && (
-                <CompactAgreementCard
-                  agreement={newAgreementPlaceholder}
-                  locale={locale}
-                  initialEditing
-                  onSave={onAgreementCreate}
-                  onDismiss={() => onAddingAgreementChange(false)}
-                />
-              )}
-              {agreements.length === 0 && !isAddingAgreement ? (
-                <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
-                  <p className="text-sm text-muted-foreground/50 italic">
-                    No agreements yet
-                  </p>
-                </div>
-              ) : (
-                agreements.map((agreement) => (
-                  <CompactAgreementCard
-                    key={agreement.id}
-                    agreement={agreement}
-                    locale={locale}
-                    onSave={readOnly ? undefined : onAgreementEdit
-                      ? (body) => onAgreementEdit(agreement.id, body)
-                      : undefined}
-                    onDelete={readOnly ? undefined : onAgreementDelete}
-                  />
-                ))
-              )}
-            </div>
+            <AgreementSectionContent
+              agreements={agreements}
+              locale={locale}
+              isAddingAgreement={isAddingAgreement}
+              onAddingAgreementChange={onAddingAgreementChange}
+              onAgreementCreate={onAgreementCreate}
+              onAgreementEdit={onAgreementEdit}
+              onAgreementDelete={onAgreementDelete}
+              readOnly={readOnly}
+            />
           )}
         </CardContent>
       </Card>

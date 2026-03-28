@@ -40,6 +40,7 @@ export function CompactAgreementCard({
   onDismiss,
 }: CompactAgreementCardProps) {
   const canInteract = Boolean(onSave || onDelete || initialEditing);
+  // Normalize optional body at the component boundary (Agreement.body is string | undefined)
   const body = agreement.body ?? "";
   const formattedDate = agreement.created_at.toLocaleString(
     { month: "short", day: "numeric", year: "numeric" },
@@ -70,6 +71,8 @@ export function CompactAgreementCard({
               if (onSave) await onSave(newBody);
               if (!initialEditing) onEditEnd();
             }}
+            // In initial-editing mode (new card), Cancel dismisses the entire card via onDone.
+            // In flip-to-edit mode (existing card), Cancel returns to the back face view.
             onCancel={onDismiss ? onDone : onEditEnd}
           />
         ) : (
@@ -240,7 +243,7 @@ function AgreementEditForm({
       <div className="flex items-center justify-end gap-2">
         <Button
           size="sm"
-          className="h-8 text-xs px-4"
+          className="h-6 gap-1 text-[11px] px-2"
           onClick={handleSave}
           disabled={isSaving || !body.trim()}
         >
@@ -249,7 +252,7 @@ function AgreementEditForm({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-xs text-muted-foreground"
+          className="h-6 gap-1 text-[11px] px-2 text-muted-foreground"
           onClick={onCancel}
           disabled={isSaving}
         >

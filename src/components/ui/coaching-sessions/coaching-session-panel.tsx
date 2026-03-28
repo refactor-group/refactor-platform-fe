@@ -437,14 +437,12 @@ export function CoachingSessionPanel({
           if (unlinkResult.isErr()) {
             console.error("Failed to unlink goal during swap:", unlinkResult.error);
 
-            if (wasLinked) {
-              const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
-              if (relinkResult.isOk() && swapGoal) {
-                await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
-              }
-              refreshSessionGoals();
-              refreshAllGoals();
+            const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
+            if (relinkResult.isOk() && swapGoal) {
+              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
             }
+            refreshSessionGoals();
+            refreshAllGoals();
 
             toast({
               variant: "destructive",
