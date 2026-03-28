@@ -40,7 +40,9 @@ on:
         required: true
         type: choice
         options:
-          - 556a3fe - %.55s
+          - f135010 - %.55s
+          - 2a03e45 - %.55s
+          - 93f8f5f - %.55s
       backend_commit_override:
         description: "Override: paste exact backend SHA (ignores dropdown)"
         required: false
