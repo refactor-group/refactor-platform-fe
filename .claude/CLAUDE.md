@@ -41,7 +41,7 @@ The `lint-frontend` and `test-frontend` jobs use a `continue-on-error` + fallbac
 `dispatch-pr-preview-frontend.yml` allows manual PR preview deployments with specific commit combinations. Users select backend and frontend commits from dropdown menus (auto-populated by `refresh-preview-commits.yml`) and enter a PR number. The workflow validates the PR exists in the frontend repo, resolves commit SHAs, and calls the backend repo's reusable workflow with `backend_sha`/`frontend_sha` override inputs. Follows the same cross-repo `workflow_call` pattern as `pr-preview-frontend.yml`.
 
 ### Commit Choice Refresh
-`refresh-preview-commits.yml` auto-updates the dispatch workflow's dropdown choices on every PR push event and merge to main. Fetches the 5 most recent commits from both repos. The backend repo's refresh workflow also updates this repo's dispatch workflow as redundancy.
+`refresh-preview-commits.yml` auto-updates the dispatch workflow's dropdown choices on merge to main or via manual `workflow_dispatch`. Manual runs accept optional `backend_branch` and `frontend_branch` inputs to populate dropdowns with commits from branches other than main. Fetches the 5 most recent commits from both repos.
 
 ### Secrets: inherit Pitfall
 `secrets: inherit` passes **all** secrets from the calling repo (frontend) to the reusable workflow (backend). If the frontend repo has a secret like `PR_PREVIEW_BACKEND_API_VERSION`, it will **override** the reusable workflow's `|| 'fallback'` defaults — even if the secret's value is stale. Always check for stale repo-level secrets when debugging environment variable issues in PR previews.
