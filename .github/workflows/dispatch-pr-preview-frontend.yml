@@ -30,17 +30,17 @@ on:
         required: true
         type: choice
         options:
+          - '582b19e - chore: refresh preview commit choices [skip ci]'
+          - '304fe26 - fix: remove pull_request trigger from refresh-preview-c'
           - 'd039574 - chore: refresh preview commit choices [skip ci]'
           - 'f9383af - Merge pull request #263 from refactor-group/nginx-log-r'
           - c710d18 - Merge branch 'main' into nginx-log-rotation
-          - 'cf10bcd - Merge pull request #255 from refactor-group/feat/dispat'
-          - '583d0a0 - chore: trigger CI re-run [skip ci]'
       frontend_commit:
         description: "Frontend commit to deploy"
         required: true
         type: choice
         options:
-          - dce8e4f - %.55s
+          - 556a3fe - %.55s
       backend_commit_override:
         description: "Override: paste exact backend SHA (ignores dropdown)"
         required: false
