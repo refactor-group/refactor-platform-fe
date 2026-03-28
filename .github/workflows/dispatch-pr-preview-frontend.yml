@@ -30,19 +30,17 @@ on:
         required: true
         type: choice
         options:
+          - '8359194 - chore: refresh preview commit choices [skip ci]'
+          - '8265905 - fix: use valid git format specifier in refresh commit l'
           - '582b19e - chore: refresh preview commit choices [skip ci]'
           - '304fe26 - fix: remove pull_request trigger from refresh-preview-c'
           - 'd039574 - chore: refresh preview commit choices [skip ci]'
-          - 'f9383af - Merge pull request #263 from refactor-group/nginx-log-r'
-          - c710d18 - Merge branch 'main' into nginx-log-rotation
       frontend_commit:
         description: "Frontend commit to deploy"
         required: true
         type: choice
         options:
-          - f135010 - %.55s
-          - 2a03e45 - %.55s
-          - 93f8f5f - %.55s
+          - '2eb21dc - fix: use valid git format specifier in refresh commit log'
       backend_commit_override:
         description: "Override: paste exact backend SHA (ignores dropdown)"
         required: false
