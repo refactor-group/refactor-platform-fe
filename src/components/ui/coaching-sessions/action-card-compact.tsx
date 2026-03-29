@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
 import type { TextareaMarkdownRef } from "textarea-markdown-editor";
-import { ArrowUpRight, Bold, Italic, List, ListOrdered, Info, Pencil, Strikethrough, Trash2 } from "lucide-react";
+import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Info, Pencil, Strikethrough, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,15 @@ import type { Action } from "@/types/action";
 import { ItemStatus, Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
+
+// Open all markdown links in a new tab
+const markdownComponents = {
+  a: ({ href, children, ...props }: React.ComponentPropsWithoutRef<"a">) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+      {children}
+    </a>
+  ),
+};
 
 // ── Compact Action Card (flip-card interaction) ──────────────────────
 //
@@ -241,7 +250,7 @@ function ActionBody({ body }: { body: string }) {
       )}
       onClick={() => setExpanded((prev) => !prev)}
     >
-      <ReactMarkdown>{body}</ReactMarkdown>
+      <ReactMarkdown components={markdownComponents}>{body}</ReactMarkdown>
     </div>
   );
 }
@@ -344,7 +353,7 @@ function ActionBackView({
 
       {body ? (
         <div className="text-[13px] font-medium prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-          <ReactMarkdown>{body}</ReactMarkdown>
+          <ReactMarkdown components={markdownComponents}>{body}</ReactMarkdown>
         </div>
       ) : (
         <p className="text-[13px] text-muted-foreground/50 italic">No description</p>
@@ -484,6 +493,8 @@ function ActionEditForm({
           <span className="w-px h-4 bg-border mx-1" />
           <MarkdownToolbarButton icon={List} label="Bullet list" onClick={() => trigger("unordered-list")} />
           <MarkdownToolbarButton icon={ListOrdered} label="Numbered list" onClick={() => trigger("ordered-list")} />
+          <span className="w-px h-4 bg-border mx-1" />
+          <MarkdownToolbarButton icon={Link2} label="Link" onClick={() => trigger("link")} />
         </div>
         <div ref={textareaWrapRef}>
           <TextareaMarkdown
