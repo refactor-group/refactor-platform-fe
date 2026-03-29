@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
 import type { TextareaMarkdownRef } from "textarea-markdown-editor";
@@ -439,6 +439,25 @@ function ActionEditForm({
   const [body, setBody] = useState(initialBody);
   const [isSaving, setIsSaving] = useState(false);
   const markdownRef = useRef<TextareaMarkdownRef>(null);
+  const textareaWrapRef = useRef<HTMLDivElement>(null);
+
+  // Trap scroll inside the textarea when it has overflow.
+  // React's onWheel is passive so preventDefault is ignored. We attach a
+  // non-passive handler on a stable wrapper div (won't be recreated by
+  // React reconciliation) and manually scroll the textarea.
+  useEffect(() => {
+    const wrap = textareaWrapRef.current;
+    if (!wrap) return;
+    function handleWheel(e: WheelEvent) {
+      const ta = wrap!.querySelector("textarea");
+      if (!ta || ta.scrollHeight <= ta.clientHeight) return;
+      e.preventDefault();
+      e.stopPropagation();
+      ta.scrollTop += e.deltaY;
+    }
+    wrap.addEventListener("wheel", handleWheel, { passive: false });
+    return () => wrap.removeEventListener("wheel", handleWheel);
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!body.trim()) return;
@@ -466,13 +485,15 @@ function ActionEditForm({
           <MarkdownToolbarButton icon={List} label="Bullet list" onClick={() => trigger("unordered-list")} />
           <MarkdownToolbarButton icon={ListOrdered} label="Numbered list" onClick={() => trigger("ordered-list")} />
         </div>
-        <TextareaMarkdown
-          ref={markdownRef}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          className="w-full min-h-[80px] rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-          autoFocus
-        />
+        <div ref={textareaWrapRef}>
+          <TextareaMarkdown
+            ref={markdownRef}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="w-full min-h-[80px] max-h-[200px] overflow-y-auto overscroll-contain rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            autoFocus
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
