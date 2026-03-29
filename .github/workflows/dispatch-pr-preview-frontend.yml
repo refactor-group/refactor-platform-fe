@@ -40,11 +40,11 @@ on:
         required: true
         type: choice
         options:
+          - '74556b3 - chore: refresh preview commit choices [skip ci]'
           - '23ecc16 - fix: skip cleanup when no preview environment was deployed (#358)'
           - '7f2ad98 - chore: refresh preview commit choices [skip ci]'
-          - '00058be - chore: refresh preview commit choices [skip ci]'
           - b711b3c - PR#355 (feature/coaching-session-panel)
-          - fede337 - PR#349 (feature/coaching-session-panel)
+          - 3f460f8 - PR#349 (feature/coaching-session-panel)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
