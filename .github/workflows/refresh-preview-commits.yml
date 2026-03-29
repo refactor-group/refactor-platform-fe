@@ -62,7 +62,7 @@ jobs:
               env:
                   GH_TOKEN: ${{ secrets.GHCR_PAT }}
                   BACKEND_BRANCH: ${{ inputs.backend_branch || 'main' }}
-                  FRONTEND_BRANCH: ${{ inputs.frontend_branch || github.ref_name }}
+                  FRONTEND_BRANCH: ${{ inputs.frontend_branch || (github.event_name == 'pull_request' && 'main') || github.ref_name }}
               run: |
                   set -euo pipefail
                   OWNER="${{ github.repository_owner }}"
