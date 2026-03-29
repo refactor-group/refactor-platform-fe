@@ -30,17 +30,18 @@ on:
         required: true
         type: choice
         options:
-          - '8359194 - chore: refresh preview commit choices [skip ci]'
-          - '8265905 - fix: use valid git format specifier in refresh commit l'
-          - '582b19e - chore: refresh preview commit choices [skip ci]'
-          - '304fe26 - fix: remove pull_request trigger from refresh-preview-c'
-          - 'd039574 - chore: refresh preview commit choices [skip ci]'
+          - '86bafdf - chore: refresh preview commit choices [skip ci]'
+          - 'bd7c5f8 - chore: remove temporary docker cleanup workflow'
+          - '9eaf6a6 - chore: refresh preview commit choices [skip ci]'
+          - '108f9fb - fix: add resource pruning to cleanup and deploy workflo'
+          - '53b4ea2 - chore: aggressive docker cleanup — stop all orphaned pr'
       frontend_commit:
         description: "Frontend commit to deploy"
         required: true
         type: choice
         options:
-          - '2fd1e31 - test: noop change to validate preview dispatch workflow (#352)'
+          - '06994e2 - test: validate preview deploy after cleanup'
+          - '938bf0f - chore: refresh preview commit choices [skip ci]'
       backend_commit_override:
         description: "Override: paste exact backend SHA (ignores dropdown)"
         required: false
