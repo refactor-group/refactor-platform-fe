@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CountPill } from "@/components/ui/count-pill";
 
 export enum PanelSection {
   Goals = "goals",
@@ -28,13 +29,9 @@ export interface CoachingSessionPanelSelectorProps {
 
 function SectionLabel({ name, count }: { name: string; count: string }) {
   return (
-    <span>
+    <span className="inline-flex items-center">
       {name}
-      {count && (
-        <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-          {count}
-        </span>
-      )}
+      {count && <CountPill count={count} className="ml-1.5" />}
     </span>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CountPill } from "@/components/ui/count-pill";
 import {
   Sheet,
   SheetContent,
@@ -68,9 +69,7 @@ export function CoachingSessionPanelMobile({
       >
         {triggerLabel}
         {triggerCount && (
-          <span className="text-[11px] text-muted-foreground tabular-nums">
-            {triggerCount}
-          </span>
+          <CountPill count={triggerCount} />
         )}
       </Button>
 

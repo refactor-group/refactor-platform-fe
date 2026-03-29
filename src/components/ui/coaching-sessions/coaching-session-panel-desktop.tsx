@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
+import { CountPill } from "@/components/ui/count-pill";
 import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
 import { GoalFlowPages, computePanelCounts, computeHeaderTitle } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
@@ -72,9 +73,7 @@ export function CoachingSessionPanelDesktop({
           {collapsedLabel}
         </span>
         {collapsedCount && (
-          <span className="text-[10px] text-muted-foreground/50 tabular-nums">
-            {collapsedCount}
-          </span>
+          <CountPill count={collapsedCount} className="text-[10px] text-muted-foreground/50" />
         )}
       </div>
     );
