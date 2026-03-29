@@ -512,7 +512,10 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
   // Provider lifecycle: manages connection state across session/token changes
   useEffect(() => {
-    setCache((prev) => ({ ...prev, isLoading: tokenLoading }));
+    setCache((prev) => {
+      if (prev.isLoading === tokenLoading) return prev;
+      return { ...prev, isLoading: tokenLoading };
+    });
 
     const lifecycleState: ProviderLifecycleState = {
       tokenLoading,

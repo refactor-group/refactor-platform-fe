@@ -88,7 +88,7 @@ export function GoalEditForm({
       <div className="flex items-center justify-end gap-2">
         <Button
           size="sm"
-          className="h-8 text-xs px-4"
+          className="h-6 gap-1 text-[11px] px-2"
           disabled={!title.trim() || !hasChanges}
           onClick={handleSave}
         >
@@ -97,7 +97,7 @@ export function GoalEditForm({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-xs text-muted-foreground"
+          className="h-6 gap-1 text-[11px] px-2 text-muted-foreground"
           onClick={onCancel}
         >
           Cancel

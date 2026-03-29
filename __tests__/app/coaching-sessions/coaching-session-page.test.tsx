@@ -60,9 +60,9 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
   }),
 }))
 
-vi.mock('@/components/ui/coaching-sessions/goal-panel', () => ({
-  GoalPanel: ({ readOnly }: { readOnly?: boolean }) => (
-    <div data-testid="goal-panel" data-readonly={String(!!readOnly)}>Goals</div>
+vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
+  CoachingSessionPanel: ({ readOnly }: { readOnly?: boolean }) => (
+    <div data-testid="coaching-session-panel" data-readonly={String(!!readOnly)}>Goals</div>
   )
 }))
 
@@ -178,7 +178,7 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
    * This validates URL-to-state synchronization
    */
   it('should use tab parameter from URL when present', () => {
-    const mockSearchParams = new URLSearchParams('tab=agreements')
+    const mockSearchParams = new URLSearchParams('tab=actions')
     ;(useSearchParams as any).mockReturnValue(mockSearchParams)
 
     render(
@@ -187,7 +187,7 @@ describe('CoachingSessionsPage URL Parameter Persistence', () => {
       </TestProviders>
     )
 
-    expect(screen.getByTestId('current-tab')).toHaveTextContent('agreements')
+    expect(screen.getByTestId('current-tab')).toHaveTextContent('actions')
   })
 
   /**
@@ -649,7 +649,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
       </TestProviders>
     )
 
-    const goalPanel = screen.getByTestId('goal-panel')
+    const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'false')
   })
 
@@ -674,7 +674,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
       </TestProviders>
     )
 
-    const goalPanel = screen.getByTestId('goal-panel')
+    const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'true')
   })
 
@@ -699,7 +699,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
       </TestProviders>
     )
 
-    const goalPanel = screen.getByTestId('goal-panel')
+    const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'false')
   })
 
@@ -724,7 +724,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
       </TestProviders>
     )
 
-    const goalPanel = screen.getByTestId('goal-panel')
+    const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'false')
   })
 })

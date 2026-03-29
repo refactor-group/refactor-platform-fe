@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -8,8 +8,8 @@ import { toast as sonnerToast } from "sonner";
 import { CompactGoalCard } from "@/components/ui/coaching-sessions/goal-card-compact";
 import { GoalBrowseView } from "@/components/ui/coaching-sessions/goal-browse-view";
 import { GoalCreateForm } from "@/components/ui/coaching-sessions/goal-create-form";
-import { GoalsPanelDesktop } from "@/components/ui/coaching-sessions/goal-panel-desktop";
-import { GoalsPanelMobile } from "@/components/ui/coaching-sessions/goal-panel-mobile";
+import { CoachingSessionPanelDesktop } from "@/components/ui/coaching-sessions/coaching-session-panel-desktop";
+import { CoachingSessionPanelMobile } from "@/components/ui/coaching-sessions/coaching-session-panel-mobile";
 import {
   GoalFlowStep,
   SlideDirection,
@@ -22,7 +22,10 @@ import {
   useGoalMutation,
   GoalApi,
 } from "@/lib/api/goals";
+import { useAgreementList, useAgreementMutation } from "@/lib/api/agreements";
 import type { Goal } from "@/types/goal";
+import type { Agreement } from "@/types/agreement";
+import { defaultAgreement } from "@/types/agreement";
 import {
   defaultGoal,
   extractActiveGoalLimitError,
@@ -32,10 +35,12 @@ import {
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
+import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
+import { siteConfig } from "@/site.config";
 
 // ── Shared props for both layouts ──────────────────────────────────────
 
-export interface GoalPanelSharedProps {
+export interface CoachingSessionPanelSharedProps {
   linkedGoals: Goal[];
   allGoals: Goal[];
   linkedGoalIds: Set<string>;
@@ -49,6 +54,42 @@ export interface GoalPanelSharedProps {
   onUpdateGoal: (goalId: string, title: string, body: string) => Promise<void>;
   /** When true, goal linkage is immutable (past sessions) */
   readOnly?: boolean;
+  // Panel section state
+  activeSection: PanelSection;
+  onSectionChange: (section: PanelSection) => void;
+  // Agreement data
+  agreements: Agreement[];
+  onAgreementEdit?: (id: string, body: string) => Promise<void>;
+  onAgreementDelete?: (id: string) => void;
+  onAgreementCreate?: (body: string) => Promise<void>;
+  isAddingAgreement: boolean;
+  onAddingAgreementChange: (adding: boolean) => void;
+  locale: string;
+}
+
+// ── Shared helpers for desktop and mobile layouts ─────────────────────
+
+export function computePanelCounts(
+  linkedGoals: Goal[],
+  agreements: Agreement[],
+): Record<PanelSection, string> {
+  return {
+    [PanelSection.Goals]: linkedGoals.length > 0
+      ? `${linkedGoals.length}/${maxActiveGoals()}`
+      : "",
+    [PanelSection.Agreements]: agreements.length > 0
+      ? `${agreements.length}`
+      : "",
+  };
+}
+
+export function computeHeaderTitle(
+  activeSection: PanelSection,
+  goalFlowStep: GoalFlowStep,
+): string | undefined {
+  if (activeSection === PanelSection.Agreements) return undefined;
+  if (goalFlowStep === GoalFlowStep.Idle || goalFlowStep === GoalFlowStep.SelectingSwap) return undefined;
+  return goalFlowStep === GoalFlowStep.Browsing ? "Add goal" : "New goal";
 }
 
 // ── Slide Panel (animate in on mount via CSS) ────────────────────────
@@ -174,22 +215,37 @@ export function GoalFlowPages({
   }
 }
 
-// ── Goal Panel (main export) ──────────────────────────────────────────
+// ── Coaching Session Panel (main export) ─────────────────────────────
 
-interface GoalPanelProps {
+interface CoachingSessionPanelProps {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
   collapsed?: boolean;
   /** When true, goal linkage is immutable (past sessions) */
   readOnly?: boolean;
+  /** Initial panel section (persisted via URL param by the page) */
+  defaultSection?: PanelSection;
+  /** Called when the user switches sections, so the page can sync to URL */
+  onSectionChange?: (section: PanelSection) => void;
 }
 
-export function GoalPanel({
+export function CoachingSessionPanel({
   coachingSessionId,
   coachingRelationshipId,
   collapsed = false,
   readOnly = false,
-}: GoalPanelProps) {
+  defaultSection = PanelSection.Goals,
+  onSectionChange: onSectionChangeExternal,
+}: CoachingSessionPanelProps) {
+  // ── Section state ────────────────────────────────────────────────
+  const [activeSection, setActiveSection] = useState<PanelSection>(defaultSection);
+
+  const handleSectionChange = useCallback((section: PanelSection) => {
+    setActiveSection(section);
+    onSectionChangeExternal?.(section);
+  }, [onSectionChangeExternal]);
+
+  // ── Goal hooks ───────────────────────────────────────────────────
   const { goals: linkedGoals, refresh: refreshSessionGoals } =
     useGoalsBySession(coachingSessionId);
   const { goals: allGoals, refresh: refreshAllGoals } =
@@ -200,9 +256,16 @@ export function GoalPanel({
   const inProgressGoals = allGoals.filter((g) => g.status === ItemStatus.InProgress);
   const atLimit = isAtGoalLimit(inProgressGoals, linkedGoals);
 
+  // ── Agreement hooks ──────────────────────────────────────────────
+  const { agreements, refresh: refreshAgreements } =
+    useAgreementList(coachingSessionId);
+  const { create: createAgreement, update: updateAgreement, delete: deleteAgreement } =
+    useAgreementMutation();
+
+  // ── Goal handlers ────────────────────────────────────────────────
+
   const handleLink = useCallback(
     async (goalId: string) => {
-      // If the goal is OnHold, transition it to InProgress before linking
       const goal = allGoals.find((g) => g.id === goalId);
       if (goal && goal.status === ItemStatus.OnHold) {
         try {
@@ -252,7 +315,6 @@ export function GoalPanel({
       );
       result.match(
         async () => {
-          // Auto-hold the goal when unlinking from a current/future session
           if (!readOnly && goal && goal.status === ItemStatus.InProgress) {
             try {
               await updateGoal(goalId, { ...goal, status: ItemStatus.OnHold });
@@ -263,7 +325,6 @@ export function GoalPanel({
           refreshSessionGoals();
           refreshAllGoals();
 
-          // Show undo toast
           const name = goal ? goalTitle(goal) : "Goal";
           sonnerToast(`"${name}" removed from session`, {
             action: {
@@ -276,7 +337,6 @@ export function GoalPanel({
                   });
                   return;
                 }
-                // Restore the original status if it was changed
                 if (!readOnly && goal && previousStatus === ItemStatus.InProgress) {
                   try {
                     await updateGoal(goalId, { ...goal, status: ItemStatus.InProgress });
@@ -329,13 +389,7 @@ export function GoalPanel({
         }
       }
     },
-    [
-      coachingRelationshipId,
-      coachingSessionId,
-      createGoal,
-      refreshSessionGoals,
-      refreshAllGoals,
-    ]
+    [coachingRelationshipId, coachingSessionId, createGoal, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleCreateAndSwap = useCallback(
@@ -344,15 +398,10 @@ export function GoalPanel({
       const wasLinked = linkedGoalIds.has(swapGoalId);
 
       try {
-        // 1. Put the swapped goal on hold
         if (swapGoal) {
-          await updateGoal(swapGoalId, {
-            ...swapGoal,
-            status: ItemStatus.OnHold,
-          });
+          await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.OnHold });
         }
 
-        // 2. Unlink the swapped goal from this session (only if it's linked here)
         if (wasLinked) {
           const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
           if (unlinkResult.isErr()) {
@@ -366,7 +415,6 @@ export function GoalPanel({
           }
         }
 
-        // 3. Create the new goal (backend auto-links via created_in_session_id)
         const newGoal = defaultGoal();
         newGoal.coaching_relationship_id = coachingRelationshipId;
         newGoal.created_in_session_id = coachingSessionId;
@@ -375,13 +423,11 @@ export function GoalPanel({
         newGoal.status = ItemStatus.InProgress;
 
         await createGoal(newGoal);
-
         refreshSessionGoals();
         refreshAllGoals();
       } catch (err) {
         console.error("Failed to create and swap goal:", err);
 
-        // Recover: re-link the original goal if it was unlinked
         if (wasLinked) {
           const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
           if (relinkResult.isOk() && swapGoal) {
@@ -398,16 +444,7 @@ export function GoalPanel({
         });
       }
     },
-    [
-      allGoals,
-      linkedGoalIds,
-      coachingSessionId,
-      coachingRelationshipId,
-      createGoal,
-      updateGoal,
-      refreshSessionGoals,
-      refreshAllGoals,
-    ]
+    [allGoals, linkedGoalIds, coachingSessionId, coachingRelationshipId, createGoal, updateGoal, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleSwapAndLink = useCallback(
@@ -416,19 +453,22 @@ export function GoalPanel({
       const wasLinked = linkedGoalIds.has(swapGoalId);
 
       try {
-        // 1. Put the swapped goal on hold
         if (swapGoal) {
-          await updateGoal(swapGoalId, {
-            ...swapGoal,
-            status: ItemStatus.OnHold,
-          });
+          await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.OnHold });
         }
 
-        // 2. Unlink the swapped goal from this session (only if it's linked here)
         if (wasLinked) {
           const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
           if (unlinkResult.isErr()) {
             console.error("Failed to unlink goal during swap:", unlinkResult.error);
+
+            const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
+            if (relinkResult.isOk() && swapGoal) {
+              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+            }
+            refreshSessionGoals();
+            refreshAllGoals();
+
             toast({
               variant: "destructive",
               title: "Failed to swap goal",
@@ -438,12 +478,10 @@ export function GoalPanel({
           }
         }
 
-        // 3. Link the replacement goal
         const linkResult = await GoalApi.linkToSession(coachingSessionId, newGoalId);
         if (linkResult.isErr()) {
           console.error("Failed to link replacement goal:", linkResult.error);
 
-          // Recover: re-link the original goal since the replacement failed
           if (wasLinked) {
             const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
             if (relinkResult.isOk() && swapGoal) {
@@ -466,7 +504,6 @@ export function GoalPanel({
       } catch (err) {
         console.error("Failed to swap and link goal:", err);
 
-        // Recover: re-link the original goal if it was unlinked
         if (wasLinked) {
           const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
           if (relinkResult.isOk() && swapGoal) {
@@ -483,14 +520,7 @@ export function GoalPanel({
         });
       }
     },
-    [
-      allGoals,
-      linkedGoalIds,
-      coachingSessionId,
-      updateGoal,
-      refreshSessionGoals,
-      refreshAllGoals,
-    ]
+    [allGoals, linkedGoalIds, coachingSessionId, updateGoal, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleUpdateGoal = useCallback(
@@ -523,7 +553,90 @@ export function GoalPanel({
     onCreateAndSwap: handleCreateAndSwap,
   });
 
-  const sharedProps: GoalPanelSharedProps = {
+  // ── Agreement state & handlers ──────────────────────────────────
+
+  const [isAddingAgreement, setIsAddingAgreement] = useState(false);
+
+  const handleAgreementCreate = useCallback(async (body: string) => {
+    try {
+      const newAgreement = defaultAgreement();
+      newAgreement.coaching_session_id = coachingSessionId;
+      newAgreement.body = body;
+      await createAgreement(newAgreement);
+      refreshAgreements();
+      setIsAddingAgreement(false);
+    } catch (err) {
+      console.error("Failed to create agreement:", err);
+      toast({
+        variant: "destructive",
+        title: "Failed to create agreement",
+        description: "An error occurred while creating the agreement.",
+      });
+    }
+  }, [coachingSessionId, createAgreement, refreshAgreements]);
+
+  const handleAgreementEdit = useCallback(
+    async (id: string, body: string) => {
+      const agreement = agreements.find((a) => a.id === id);
+      if (!agreement) return;
+      try {
+        await updateAgreement(id, { ...agreement, body });
+        refreshAgreements();
+      } catch (err) {
+        console.error("Failed to update agreement:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to update agreement",
+          description: "An error occurred while saving changes.",
+        });
+      }
+    },
+    [agreements, updateAgreement, refreshAgreements]
+  );
+
+  const handleAgreementDelete = useCallback(
+    async (id: string) => {
+      const agreement = agreements.find((a) => a.id === id);
+      try {
+        await deleteAgreement(id);
+        refreshAgreements();
+
+        const preview = agreement?.body
+          ? agreement.body.length > 40
+            ? `${agreement.body.slice(0, 40)}...`
+            : agreement.body
+          : "Agreement";
+        sonnerToast(`"${preview}" deleted`, {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              if (!agreement) return;
+              try {
+                await createAgreement(agreement);
+                refreshAgreements();
+              } catch (err) {
+                sonnerToast.error("Failed to undo", {
+                  description: "Could not restore the agreement.",
+                });
+              }
+            },
+          },
+        });
+      } catch (err) {
+        console.error("Failed to delete agreement:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to delete agreement",
+          description: "An error occurred while deleting the agreement.",
+        });
+      }
+    },
+    [agreements, deleteAgreement, createAgreement, refreshAgreements]
+  );
+
+  // ── Shared props ─────────────────────────────────────────────────
+
+  const sharedProps: CoachingSessionPanelSharedProps = {
     linkedGoals,
     allGoals,
     linkedGoalIds,
@@ -536,15 +649,24 @@ export function GoalPanel({
     onSwapAndLink: handleSwapAndLink,
     onUpdateGoal: handleUpdateGoal,
     readOnly,
+    activeSection,
+    onSectionChange: handleSectionChange,
+    agreements,
+    onAgreementEdit: handleAgreementEdit,
+    onAgreementDelete: handleAgreementDelete,
+    onAgreementCreate: handleAgreementCreate,
+    isAddingAgreement,
+    onAddingAgreementChange: setIsAddingAgreement,
+    locale: siteConfig.locale,
   };
 
   return (
     <>
-      <GoalsPanelDesktop
+      <CoachingSessionPanelDesktop
         {...sharedProps}
         collapsed={collapsed}
       />
-      <GoalsPanelMobile {...sharedProps} />
+      <CoachingSessionPanelMobile {...sharedProps} />
     </>
   );
 }

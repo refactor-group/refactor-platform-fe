@@ -33,11 +33,8 @@ Instead of unmounting tab content (which destroys React components), the impleme
 <div style={{ display: currentTab === "notes" ? "flex" : "none" }}>
   <CoachingNotes />
 </div>
-<div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
-  <AgreementsList />
-</div>
 <div style={{ display: currentTab === "actions" ? "block" : "none" }}>
-  <ActionsList />
+  <ActionsPanel />
 </div>
 ```
 
