@@ -178,19 +178,16 @@ This repository supports **isolated preview environments** for pull requests. Pr
 
 #### How to Deploy a Preview
 
-1. **Refresh dropdown choices** (if needed) — Go to Actions → "Refresh Preview Commits" → Run workflow
-   - Select your branch from the "Use workflow from" dropdown
-   - Leave `frontend_branch` empty to use the current branch, or enter a specific branch name
-   - Set `backend_branch` to `main` (or any backend branch)
-   - This populates the deploy workflow's commit dropdowns
-
-2. **Deploy the preview** — Go to Actions → "Deploy PR Preview (Manual Select)" → Run workflow
-   - Select your branch from the "Use workflow from" dropdown
+1. **Deploy** — Go to Actions → **"Deploy PR Preview (Manual Select)"** → Run workflow
    - Leave `pr_number` empty to auto-detect from the branch, or enter a PR number
    - Choose backend and frontend commits from the dropdowns
-   - Use the SHA override fields for exact commits not in the dropdowns
+   - Dropdowns include the latest `main` commits plus the HEAD of every open PR from both repos
+   - For any commit not in the dropdown, paste the exact SHA in the override fields
 
-3. **Cleanup** — Automatic when the PR is closed or merged (containers, volumes, images pruned)
+2. **Cleanup** — Automatic when the PR is closed or merged (containers, volumes, images pruned)
+
+> **Note:** Dropdowns auto-refresh on every merge to `main` and on every PR update.
+> Run "Refresh Preview Commits" manually only if you need an immediate update.
 
 Access URLs are posted as a comment on your PR. Requires Tailscale VPN.
 
