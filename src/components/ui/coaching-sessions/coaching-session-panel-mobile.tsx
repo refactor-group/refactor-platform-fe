@@ -107,7 +107,7 @@ export function CoachingSessionPanelMobile({
           </SheetHeader>
 
           {/* Panel header — outside scroll container so section headers don't overlap */}
-          <div className="shrink-0 bg-background border-b border-border/50 px-4 py-3">
+          <div className="shrink-0 bg-background border-b border-border/50 px-4 py-3 rounded-t-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {isInGoalFlow && (
