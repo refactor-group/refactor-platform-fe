@@ -40,7 +40,7 @@ on:
         required: true
         type: choice
         options:
-          - '2eb21dc - fix: use valid git format specifier in refresh commit log'
+          - '2fd1e31 - test: noop change to validate preview dispatch workflow (#352)'
       backend_commit_override:
         description: "Override: paste exact backend SHA (ignores dropdown)"
         required: false
