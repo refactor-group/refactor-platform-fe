@@ -11,11 +11,14 @@ Preview environments are deployed on-demand — they are not created automatical
 ### How to Deploy a Preview
 
 1. ✅ **Open a PR** in `refactor-platform-rs` or `refactor-platform-fe`
-2. ✅ **Go to Actions** → "Deploy PR Preview (Manual Select)" → Run workflow
-3. ✅ **Select commits** from dropdowns (or use SHA override fields)
-4. ✅ **Wait for deployment** (~5-10 min for first build)
-5. ✅ **Check PR comment** for access URLs
-6. ✅ **Auto-cleanup** when PR closes/merges
+2. ✅ **Go to Actions** → **"Deploy PR Preview (Manual Select)"** → Run workflow
+3. ✅ **Choose commits** from dropdowns (includes latest `main` + HEAD of every open PR from both repos)
+4. ✅ For any commit not in the dropdown, paste the exact SHA in the override fields
+5. ✅ **Wait for deployment** (~5-10 min for first build)
+6. ✅ **Check PR comment** for access URLs
+7. ✅ **Auto-cleanup** when PR closes/merges
+
+> **Note:** Dropdowns auto-refresh on every merge to `main` and on every PR update.
 
 ### Access Your Preview
 
