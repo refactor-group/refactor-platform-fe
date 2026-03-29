@@ -166,7 +166,7 @@ This project uses GitHub Actions for continuous integration, release builds, and
 - **Branch CI**: Automated linting, testing, and Docker builds on every push/PR
 - **Release Builds**: Multi-architecture production images triggered by GitHub releases
 - **Deployment**: Manual deployment to DigitalOcean via secure Tailscale VPN
-- **PR Previews**: Automatic preview environments for each pull request
+- **PR Previews**: On-demand preview environments via manual workflow dispatch
 
 📚 **Documentation:** [docs/cicd/README.md](docs/cicd/README.md)
 
@@ -174,20 +174,11 @@ This project uses GitHub Actions for continuous integration, release builds, and
 
 ### PR Preview Environments
 
-This repository automatically deploys **isolated preview environments** for each pull request. When you open a PR, a complete stack (backend + frontend + database) deploys to a dedicated ARM64 server on our Tailnet for testing before merge.
+This repository supports **isolated preview environments** for pull requests. Preview environments are deployed **manually via workflow dispatch** — they are not created automatically on PR open or push.
 
-#### Automatic Lifecycle
+#### How to Deploy a Preview
 
-- **PR opened/updated** → Environment deploys (lint, test, ARM64 build, deploy)
-- **PR closed/merged** → Environment cleans up (containers, volumes, images pruned)
-
-Access URLs are posted as a comment on your PR. Requires Tailscale VPN.
-
-#### Manual Dispatch with Commit Selection
-
-You can also deploy preview environments manually with specific commit combinations from both repos:
-
-1. **Refresh dropdown choices** — Go to Actions → "Refresh Preview Commits" → Run workflow
+1. **Refresh dropdown choices** (if needed) — Go to Actions → "Refresh Preview Commits" → Run workflow
    - Select your branch from the "Use workflow from" dropdown
    - Leave `frontend_branch` empty to use the current branch, or enter a specific branch name
    - Set `backend_branch` to `main` (or any backend branch)
@@ -198,6 +189,10 @@ You can also deploy preview environments manually with specific commit combinati
    - Leave `pr_number` empty to auto-detect from the branch, or enter a PR number
    - Choose backend and frontend commits from the dropdowns
    - Use the SHA override fields for exact commits not in the dropdowns
+
+3. **Cleanup** — Automatic when the PR is closed or merged (containers, volumes, images pruned)
+
+Access URLs are posted as a comment on your PR. Requires Tailscale VPN.
 
 #### What to Expect
 

@@ -13,7 +13,7 @@
 ## PR Preview Environments
 
 ### Architecture
-The frontend PR preview workflow (`.github/workflows/pr-preview-frontend.yml`) calls the backend repo's reusable workflow (`refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main`) with `repo_type: 'frontend'`. It uses `secrets: inherit` to pass secrets to the reusable workflow.
+PR preview environments are deployed **manually via workflow dispatch only** — there are no automatic triggers on PR events. The manual dispatch workflow (`.github/workflows/dispatch-pr-preview-frontend.yml`) validates the PR, resolves commit SHAs, and calls the backend repo's reusable workflow (`refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main`) with `repo_type: 'frontend'`. It uses `secrets: inherit` to pass secrets to the reusable workflow. Cleanup runs automatically when the PR is closed or merged via `cleanup-pr-preview-frontend.yml`.
 
 The reusable workflow runs these jobs for frontend PRs:
 1. **lint-frontend** — ESLint
@@ -38,7 +38,7 @@ Docker `ARG` declarations **do not cross `FROM` boundaries**. Every `NEXT_PUBLIC
 The `lint-frontend` and `test-frontend` jobs use a `continue-on-error` + fallback checkout pattern: the primary checkout uses `GHCR_PAT`, and if it fails (e.g., stale/expired token on re-run), a fallback checkout uses the default `GITHUB_TOKEN`. This prevents "re-run failed jobs" from failing on cross-repo `workflow_call` token regeneration issues.
 
 ### Manual Dispatch with Commit Selection
-`dispatch-pr-preview-frontend.yml` allows manual PR preview deployments with specific commit combinations. Users select backend and frontend commits from dropdown menus (auto-populated by `refresh-preview-commits.yml`). The `pr_number` input is optional — when left empty, the workflow auto-detects the PR from the current branch via `gh pr list --head`. The workflow validates the PR exists in the frontend repo, resolves commit SHAs, and calls the backend repo's reusable workflow with `backend_sha`/`frontend_sha` override inputs. Follows the same cross-repo `workflow_call` pattern as `pr-preview-frontend.yml`.
+`dispatch-pr-preview-frontend.yml` is the primary (and only) way to deploy frontend PR previews. Users select backend and frontend commits from dropdown menus (auto-populated by `refresh-preview-commits.yml`). The `pr_number` input is optional — when left empty, the workflow auto-detects the PR from the current branch via `gh pr list --head`. The workflow validates the PR exists in the frontend repo, resolves commit SHAs, and calls the backend repo's reusable workflow with `backend_sha`/`frontend_sha` override inputs.
 
 ### Commit Choice Refresh
 `refresh-preview-commits.yml` auto-updates the dispatch workflow's dropdown choices on merge to main or via manual `workflow_dispatch`. Manual runs accept optional `backend_branch` and `frontend_branch` inputs to populate dropdowns with commits from branches other than main. The `frontend_branch` defaults to the current branch (`github.ref_name`), `backend_branch` defaults to `main`. Fetches the 5 most recent commits from both repos.

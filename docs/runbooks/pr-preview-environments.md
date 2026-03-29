@@ -1,20 +1,21 @@
 # PR Preview Environments - Developer Guide
 
-This guide explains how to use automatic PR preview environments for the Refactor Platform.
+This guide explains how to use PR preview environments for the Refactor Platform.
 
 ## 🚀 Quick Start
 
-**Open a PR = Get a live preview environment automatically!**
+**Deploy a preview environment manually via workflow dispatch!**
 
-Every PR in `refactor-platform-rs` (backend) or `refactor-platform-fe` (frontend) triggers an automatic deployment of a full-stack preview environment.
+Preview environments are deployed on-demand — they are not created automatically when you open a PR.
 
-### What Happens When You Open a PR
+### How to Deploy a Preview
 
-1. ✅ **Automatic deployment** starts (~5-10 min for first build)
-2. ✅ **Full stack** deployed: Postgres + Backend + Frontend
-3. ✅ **Clean path-based URLs** via NGINX routing
-4. ✅ **PR comment** posted with access URLs
-5. ✅ **Auto-cleanup** when PR closes/merges
+1. ✅ **Open a PR** in `refactor-platform-rs` or `refactor-platform-fe`
+2. ✅ **Go to Actions** → "Deploy PR Preview (Manual Select)" → Run workflow
+3. ✅ **Select commits** from dropdowns (or use SHA override fields)
+4. ✅ **Wait for deployment** (~5-10 min for first build)
+5. ✅ **Check PR comment** for access URLs
+6. ✅ **Auto-cleanup** when PR closes/merges
 
 ### Access Your Preview
 
@@ -94,11 +95,12 @@ docker compose -p pr-201 ps
 
 ## 🔧 How Frontend PRs Work
 
-When you open a frontend PR:
-1. **Frontend:** Builds from your PR branch 📦
-2. **Backend:** Uses main-arm64 image (or builds if missing)
-3. **Deploy:** Full stack with your frontend changes
-4. **NGINX Routes:** Automatically routes `/pr-<NUM>/` to your containers
+When you deploy a frontend PR preview:
+1. **Trigger:** Go to Actions → "Deploy PR Preview (Manual Select)" → Run workflow
+2. **Frontend:** Builds from your selected commit 📦
+3. **Backend:** Builds from your selected commit (or uses main-arm64 if main commit selected)
+4. **Deploy:** Full stack with your chosen commit combination
+5. **NGINX Routes:** Automatically routes `/pr-<NUM>/` to your containers
 
 **No secrets needed in frontend repo!** All configuration is managed centrally in the backend repo's `pr-preview` environment.
 
