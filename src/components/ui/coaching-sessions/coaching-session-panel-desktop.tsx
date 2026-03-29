@@ -180,7 +180,7 @@ export function CoachingSessionPanelDesktop({
               onAgreementDelete={onAgreementDelete}
               readOnly={readOnly}
             />
-          ) : (
+          ) : coachId && coachName && coacheeId && coacheeName ? (
             <ActionSectionContent
               reviewActions={reviewActions}
               sessionActions={sessionActions}
@@ -200,7 +200,7 @@ export function CoachingSessionPanelDesktop({
               onActionDelete={onActionDelete}
               readOnly={readOnly}
             />
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </div>

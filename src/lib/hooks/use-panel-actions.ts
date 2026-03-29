@@ -70,7 +70,8 @@ interface UsePanelActionsParams {
   userId: Id;
   coachingSessionId: Id;
   coachingRelationshipId: Id;
-  sessionDate: string;
+  /** May be undefined while the session is still loading from SWR */
+  sessionDate: string | undefined;
 }
 
 export function usePanelActions({
@@ -80,7 +81,7 @@ export function usePanelActions({
   sessionDate,
 }: UsePanelActionsParams) {
   const currentSessionDate = useMemo(
-    () => DateTime.fromISO(sessionDate),
+    () => sessionDate ? DateTime.fromISO(sessionDate) : null,
     [sessionDate]
   );
 
@@ -113,7 +114,7 @@ export function usePanelActions({
   );
 
   const previousSessionDate = useMemo(() => {
-    if (coachingSessions.length === 0) return null;
+    if (!currentSessionDate || coachingSessions.length === 0) return null;
     const currentDateStr = currentSessionDate.toISODate();
     if (!currentDateStr) return null;
 
@@ -139,6 +140,9 @@ export function usePanelActions({
   const stickyIdsRef = useRef<Set<Id>>(new Set());
 
   const reviewActions = useMemo(() => {
+    // Cannot filter without a valid session date
+    if (!currentSessionDate) return [];
+
     const filtered = filterReviewActions(
       allRelationshipActions,
       coachingSessionId,

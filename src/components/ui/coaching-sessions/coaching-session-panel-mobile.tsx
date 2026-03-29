@@ -174,7 +174,7 @@ export function CoachingSessionPanelMobile({
                 onAgreementDelete={onAgreementDelete}
                 readOnly={readOnly}
               />
-            ) : (
+            ) : coachId && coachName && coacheeId && coacheeName ? (
               <ActionSectionContent
                 reviewActions={reviewActions}
                 sessionActions={sessionActions}
@@ -194,7 +194,7 @@ export function CoachingSessionPanelMobile({
                 onActionDelete={onActionDelete}
                 readOnly={readOnly}
               />
-            )}
+            ) : null}
           </div>
         </SheetContent>
       </Sheet>

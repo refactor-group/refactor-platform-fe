@@ -76,10 +76,11 @@ export interface CoachingSessionPanelSharedProps {
   sessionActions: Action[];
   /** Maps coaching_session_id → session date for "view source session" links */
   sessionDateMap: Map<Id, DateTime>;
-  coachId: Id;
-  coachName: string;
-  coacheeId: Id;
-  coacheeName: string;
+  /** Undefined while the coaching relationship is still loading from SWR */
+  coachId: Id | undefined;
+  coachName: string | undefined;
+  coacheeId: Id | undefined;
+  coacheeName: string | undefined;
   onActionCreate?: (body: string, assigneeIds?: Id[]) => Promise<void>;
   onActionDelete?: (id: Id) => void;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
@@ -272,15 +273,15 @@ export function CoachingSessionPanel({
   const { currentCoachingSession } = useCurrentCoachingSession();
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
 
-  const sessionDate = currentCoachingSession?.date ?? "";
-  const coachId = currentCoachingRelationship?.coach_id ?? "";
+  const sessionDate = currentCoachingSession?.date;
+  const coachId = currentCoachingRelationship?.coach_id;
   const coachName = currentCoachingRelationship
     ? getCoachName(currentCoachingRelationship)
-    : "";
-  const coacheeId = currentCoachingRelationship?.coachee_id ?? "";
+    : undefined;
+  const coacheeId = currentCoachingRelationship?.coachee_id;
   const coacheeName = currentCoachingRelationship
     ? getCoacheeName(currentCoachingRelationship)
-    : "";
+    : undefined;
 
   // ── Section state ────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<PanelSection>(defaultSection);
