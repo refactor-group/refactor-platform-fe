@@ -40,7 +40,7 @@ on:
         required: true
         type: choice
         options:
-          - '2fb0066 - test: validate preview deploy after cleanup (#353)'
+          - 535d63b - %.55s
       backend_commit_override:
         description: "Override: paste exact backend SHA (ignores dropdown)"
         required: false
