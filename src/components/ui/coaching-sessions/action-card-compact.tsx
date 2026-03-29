@@ -14,7 +14,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CompactFlipCard } from "@/components/ui/coaching-sessions/compact-flip-card";
-import { ExpandableContent } from "@/components/ui/coaching-sessions/expandable-content";
 import {
   StatusSelect,
   DueDatePicker,
@@ -220,6 +219,8 @@ function ActionHeader({
 // ── Front face: Body ────────────────────────────────────────────────
 
 function ActionBody({ body }: { body: string }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (!body) {
     return (
       <span className="text-[13px] text-muted-foreground/50 italic">
@@ -228,7 +229,17 @@ function ActionBody({ body }: { body: string }) {
     );
   }
 
-  return <ExpandableContent text={body} className="text-[13px] font-medium" />;
+  return (
+    <div
+      className={cn(
+        "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-[13px] font-medium [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        !expanded && "max-h-[2.8em] overflow-hidden"
+      )}
+      onClick={() => setExpanded((prev) => !prev)}
+    >
+      <ReactMarkdown>{body}</ReactMarkdown>
+    </div>
+  );
 }
 
 // ── Front face: Footer ──────────────────────────────────────────────
