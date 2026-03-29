@@ -16,6 +16,8 @@ permissions:
   contents: read
   packages: write
   pull-requests: write
+  attestations: write
+  id-token: write
 
 jobs:
   # ===========================================================================
