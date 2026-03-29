@@ -104,10 +104,10 @@ export function CoachingSessionPanelDesktop({
   const headerTitle = computeHeaderTitle(activeSection, flow.step);
 
   return (
-    <div ref={panelRef} className="hidden md:block relative">
+    <div ref={panelRef} className="hidden md:block relative h-full min-h-0">
       <Card
         className={cn(
-          "flex flex-col h-full transition-[width,box-shadow] duration-300 ease-in-out",
+          "flex flex-col h-full overflow-hidden transition-[width,box-shadow] duration-300 ease-in-out",
           isInGoalFlow
             ? "absolute inset-y-0 left-0 z-10 shadow-xl"
             : "relative shadow-sm"

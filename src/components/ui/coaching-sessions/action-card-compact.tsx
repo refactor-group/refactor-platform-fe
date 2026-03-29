@@ -423,7 +423,7 @@ function ActionEditForm({
           />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">Assignee</span>
+          <span className="text-[11px] text-muted-foreground">Assignee(s)</span>
           <AssigneePickerPopover
             allAssignees={allAssignees}
             resolvedAssignees={resolvedAssignees}

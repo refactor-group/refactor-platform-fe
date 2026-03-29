@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useCallback } from "react";
+import { toast as sonnerToast } from "sonner";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
@@ -229,10 +230,36 @@ export function usePanelActions({
 
   const handleDelete = useCallback(
     async (id: Id) => {
+      const action =
+        sessionActions.find((a) => a.id === id) ??
+        allRelationshipActions.find((a) => a.id === id);
+
       await deleteAction(id);
       refresh();
+
+      const preview = action?.body
+        ? action.body.length > 40
+          ? `${action.body.slice(0, 40)}...`
+          : action.body
+        : "Action";
+      sonnerToast(`"${preview}" deleted`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            if (!action) return;
+            try {
+              await create(action);
+              refresh();
+            } catch {
+              sonnerToast.error("Failed to undo", {
+                description: "Could not restore the action.",
+              });
+            }
+          },
+        },
+      });
     },
-    [deleteAction, refresh]
+    [sessionActions, allRelationshipActions, deleteAction, create, refresh]
   );
 
   return {

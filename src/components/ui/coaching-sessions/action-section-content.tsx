@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { defaultAction } from "@/types/action";
@@ -60,6 +60,17 @@ export function ActionSectionContent({
   );
   const [sessionExpanded, setSessionExpanded] = useState(true);
 
+  // Auto-expand "Due for Review" when actions arrive after initial render
+  // (SWR data loads asynchronously). Only expand once — don't re-expand
+  // if the user manually collapsed it.
+  const hasAutoExpanded = useRef(reviewActions.length > 0);
+  useEffect(() => {
+    if (!hasAutoExpanded.current && reviewActions.length > 0) {
+      hasAutoExpanded.current = true;
+      setReviewExpanded(true);
+    }
+  }, [reviewActions.length]);
+
   // Lazy-init placeholder so defaultAction() isn't called at module scope
   const newActionPlaceholder = useMemo(() => defaultAction(), []);
 
@@ -76,7 +87,7 @@ export function ActionSectionContent({
   };
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-4">
       {/* ── Due for Review ─────────────────────────────────────── */}
       <CollapsibleSection
         title="Due for Review"
@@ -121,6 +132,7 @@ export function ActionSectionContent({
             {...sharedCardProps}
             onBodyChange={async (_id, body) => {
               await onActionCreate(body);
+              onAddingActionChange(false);
             }}
           />
         )}

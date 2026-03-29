@@ -21,7 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, UserRound } from "lucide-react";
 import { ItemStatus, Id, actionStatusToString } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -128,8 +128,8 @@ export function AssigneePickerPopover({
                 ))
               ) : (
                 <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/50">
-                  <AvatarFallback className="text-[11px] text-muted-foreground">
-                    +
+                  <AvatarFallback className="text-muted-foreground">
+                    <UserRound className="!h-4 !w-4" />
                   </AvatarFallback>
                 </Avatar>
               )}
