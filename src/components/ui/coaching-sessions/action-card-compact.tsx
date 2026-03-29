@@ -149,14 +149,6 @@ export function CompactActionCard({
               if (!initialEditing) onEditEnd();
             }}
             onCancel={onDismiss ? onDone : onEditEnd}
-            onDelete={
-              !isReview && onDelete
-                ? () => {
-                    onDelete(action.id);
-                    onDone();
-                  }
-                : undefined
-            }
           />
         ) : (
           <ActionBackView
@@ -359,8 +351,8 @@ function ActionBackView({
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
                   {formattedSessionDate
-                    ? `View session from ${formattedSessionDate}`
-                    : "View source session"}
+                    ? `View in session from ${formattedSessionDate}`
+                    : "View in source session"}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -408,7 +400,6 @@ function ActionEditForm({
   onAssigneeToggle,
   onSave,
   onCancel,
-  onDelete,
 }: {
   action: Action;
   locale: string;
@@ -422,7 +413,6 @@ function ActionEditForm({
   onAssigneeToggle: (assigneeId: Id) => void;
   onSave: (body: string) => Promise<void>;
   onCancel: () => void;
-  onDelete?: () => void;
 }) {
   const [body, setBody] = useState(initialBody);
   const [isSaving, setIsSaving] = useState(false);
@@ -480,21 +470,7 @@ function ActionEditForm({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-3">
-        <div>
-          {onDelete && (
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-6 gap-1 text-[11px] px-2"
-              onClick={onDelete}
-            >
-              <Trash2 className="!h-2.5 !w-2.5" />
-              Delete
-            </Button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2 pt-3">
           {!isReview && (
             <Button
               size="sm"
@@ -514,7 +490,6 @@ function ActionEditForm({
           >
             Cancel
           </Button>
-        </div>
       </div>
     </div>
   );

@@ -73,6 +73,8 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
         onBodyChange={onBodyChange}
         onDelete={onDelete}
         variant="current"
+        sourceSessionId={ctx.sourceSession.coachingSessionId}
+        sourceSessionDate={ctx.sourceSession.sessionDate}
         className="rounded-t-none"
       />
     </>
