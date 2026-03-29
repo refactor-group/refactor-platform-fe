@@ -40,10 +40,10 @@ on:
         required: true
         type: choice
         options:
+          - '339c80d - chore: refresh preview commit choices [skip ci]'
           - '9690f1b - chore: refresh preview commit choices [skip ci]'
           - '1e9c183 - chore: refresh preview commit choices [skip ci]'
-          - '74556b3 - chore: refresh preview commit choices [skip ci]'
-          - b711b3c - PR#355 (feature/coaching-session-panel)
+          - 9dd85cf - PR#355 (feature/coaching-session-panel)
           - 4059d79 - PR#349 (feature/coaching-session-panel)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
