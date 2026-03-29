@@ -56,50 +56,99 @@ export function filterReviewActions(
   return sortActionArray(filtered, SortOrder.Desc, "due_by");
 }
 
-// ── Hook: usePanelActions ──────────────────────────────────────────
-//
-// Encapsulates action data fetching, review filtering, and CRUD for
-// the coaching session panel's Actions section. Reuses the same SWR
-// hooks and filterReviewActions logic as the old ActionsPanel.
+/** Find an action by ID across session and relationship action lists. */
+function findActionById(
+  id: Id,
+  sessionActions: Action[],
+  allRelationshipActions: Action[]
+): Action | undefined {
+  return (
+    sessionActions.find((a) => a.id === id) ??
+    allRelationshipActions.find((a) => a.id === id)
+  );
+}
+
+/** Show an error toast, distinguishing network errors from other failures. */
+function showActionError(message: string, err: unknown) {
+  if (err instanceof EntityApiError && err.isNetworkError()) {
+    sonnerToast.error(`${message}. Connection to service was lost.`);
+  } else {
+    sonnerToast.error(`${message}.`);
+  }
+}
+
+/** Truncate action body for display in toast messages. */
+function actionPreview(action: Action | undefined): string {
+  if (!action?.body) return "Action";
+  return action.body.length > 40
+    ? `${action.body.slice(0, 40)}...`
+    : action.body;
+}
+
+// ── Sub-hooks ─────────────────────────────────────────────────────
 
 /** Wide date range for fetching all sessions in this relationship */
 const SESSION_LOOKBACK = { years: 5 };
 const SESSION_LOOKAHEAD = { years: 1 };
 
-interface UsePanelActionsParams {
+interface ActionDataParams {
   userId: Id;
   coachingSessionId: Id;
   coachingRelationshipId: Id;
-  /** May be undefined while the session is still loading from SWR */
-  sessionDate: string | undefined;
 }
 
-export function usePanelActions({
+/** Fetches session-scoped and relationship-scoped action lists via SWR. */
+function useActionData({
   userId,
   coachingSessionId,
   coachingRelationshipId,
-  sessionDate,
-}: UsePanelActionsParams) {
-  const currentSessionDate = useMemo(
-    () => sessionDate ? DateTime.fromISO(sessionDate) : null,
-    [sessionDate]
-  );
-
-  // ── Session actions (current session only) ──────────────────────
+}: ActionDataParams) {
   const { actions: sessionActions, refresh: refreshSessionActions } =
     useUserActionsList(userId, {
       scope: UserActionsScope.Sessions,
       coaching_session_id: coachingSessionId,
     });
 
-  // ── All relationship actions (for review filtering) ─────────────
   const { actions: allRelationshipActions, refresh: refreshAllActions } =
     useUserActionsList(userId, {
       scope: UserActionsScope.Sessions,
       coaching_relationship_id: coachingRelationshipId,
     });
 
-  // ── Previous session date (for review date window) ──────────────
+  const refresh = useCallback(() => {
+    refreshSessionActions();
+    refreshAllActions();
+  }, [refreshSessionActions, refreshAllActions]);
+
+  const sortedSessionActions = useMemo(
+    () => sortActionArray(sessionActions, SortOrder.Asc, "created_at"),
+    [sessionActions]
+  );
+
+  return { sessionActions, allRelationshipActions, sortedSessionActions, refresh };
+}
+
+interface ReviewWindowParams {
+  coachingSessionId: Id;
+  coachingRelationshipId: Id;
+  /** May be undefined while the session is still loading from SWR */
+  sessionDate: string | undefined;
+}
+
+/**
+ * Derives the review window (previous → current session date),
+ * filters relationship actions into the "due for review" list,
+ * and builds a session-id → date lookup map.
+ */
+function useReviewWindow(
+  { coachingSessionId, coachingRelationshipId, sessionDate }: ReviewWindowParams,
+  allRelationshipActions: Action[]
+) {
+  const currentSessionDate = useMemo(
+    () => sessionDate ? DateTime.fromISO(sessionDate) : null,
+    [sessionDate]
+  );
+
   // Intentionally frozen at mount time — the 5-year window is wide enough
   // that recalculating on every render would add no value.
   const fromDate = useMemo(() => DateTime.now().minus(SESSION_LOOKBACK), []);
@@ -127,7 +176,6 @@ export function usePanelActions({
     return prev;
   }, [coachingSessions, currentSessionDate]);
 
-  // ── Session date map (for "view source session" links) ──────────
   const sessionDateMap = useMemo(() => {
     const map = new Map<Id, DateTime>();
     for (const s of coachingSessions) {
@@ -136,11 +184,9 @@ export function usePanelActions({
     return map;
   }, [coachingSessions]);
 
-  // ── Review actions (filtered + sticky) ──────────────────────────
   const stickyIdsRef = useRef<Set<Id>>(new Set());
 
   const reviewActions = useMemo(() => {
-    // Cannot filter without a valid session date
     if (!currentSessionDate) return [];
 
     const filtered = filterReviewActions(
@@ -165,19 +211,36 @@ export function usePanelActions({
     previousSessionDate,
   ]);
 
-  // ── Sorted session actions ──────────────────────────────────────
-  const sortedSessionActions = useMemo(
-    () => sortActionArray(sessionActions, SortOrder.Asc, "created_at"),
-    [sessionActions]
-  );
+  return { reviewActions, sessionDateMap };
+}
 
-  // ── CRUD ────────────────────────────────────────────────────────
+interface ActionCrudParams {
+  userId: Id;
+  coachingSessionId: Id;
+}
+
+/** Provides create, update-field, and delete-with-undo handlers. */
+function useActionCrud(
+  { userId, coachingSessionId }: ActionCrudParams,
+  sessionActions: Action[],
+  allRelationshipActions: Action[],
+  refresh: () => void
+) {
   const { create, update, delete: deleteAction } = useActionMutation();
 
-  const refresh = useCallback(() => {
-    refreshSessionActions();
-    refreshAllActions();
-  }, [refreshSessionActions, refreshAllActions]);
+  const updateField = useCallback(
+    async (id: Id, fields: Partial<Action>, errorMessage: string) => {
+      const action = findActionById(id, sessionActions, allRelationshipActions);
+      if (!action) return;
+      try {
+        await update(id, { ...action, ...fields });
+        refresh();
+      } catch (err) {
+        showActionError(errorMessage, err);
+      }
+    },
+    [sessionActions, allRelationshipActions, update, refresh]
+  );
 
   const handleCreate = useCallback(
     async (body: string, assigneeIds?: Id[]) => {
@@ -194,120 +257,49 @@ export function usePanelActions({
         await create(newAction);
         refresh();
       } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          sonnerToast.error("Failed to create action. Connection to service was lost.");
-        } else {
-          sonnerToast.error("Failed to create action.");
-        }
+        showActionError("Failed to create action", err);
       }
     },
     [coachingSessionId, userId, create, refresh]
   );
 
   const handleStatusChange = useCallback(
-    async (id: Id, newStatus: ItemStatus) => {
-      const action =
-        sessionActions.find((a) => a.id === id) ??
-        allRelationshipActions.find((a) => a.id === id);
-      if (!action) return;
-      try {
-        await update(id, { ...action, status: newStatus });
-        refresh();
-      } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          sonnerToast.error("Failed to update status. Connection to service was lost.");
-        } else {
-          sonnerToast.error("Failed to update status.");
-        }
-      }
-    },
-    [sessionActions, allRelationshipActions, update, refresh]
+    (id: Id, newStatus: ItemStatus) =>
+      updateField(id, { status: newStatus }, "Failed to update status"),
+    [updateField]
   );
 
   const handleDueDateChange = useCallback(
-    async (id: Id, newDueBy: DateTime) => {
-      const action =
-        sessionActions.find((a) => a.id === id) ??
-        allRelationshipActions.find((a) => a.id === id);
-      if (!action) return;
-      try {
-        await update(id, { ...action, due_by: newDueBy });
-        refresh();
-      } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          sonnerToast.error("Failed to update due date. Connection to service was lost.");
-        } else {
-          sonnerToast.error("Failed to update due date.");
-        }
-      }
-    },
-    [sessionActions, allRelationshipActions, update, refresh]
+    (id: Id, newDueBy: DateTime) =>
+      updateField(id, { due_by: newDueBy }, "Failed to update due date"),
+    [updateField]
   );
 
   const handleAssigneesChange = useCallback(
-    async (id: Id, assigneeIds: Id[]) => {
-      const action =
-        sessionActions.find((a) => a.id === id) ??
-        allRelationshipActions.find((a) => a.id === id);
-      if (!action) return;
-      try {
-        await update(id, { ...action, assignee_ids: assigneeIds });
-        refresh();
-      } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          sonnerToast.error("Failed to update assignees. Connection to service was lost.");
-        } else {
-          sonnerToast.error("Failed to update assignees.");
-        }
-      }
-    },
-    [sessionActions, allRelationshipActions, update, refresh]
+    (id: Id, assigneeIds: Id[]) =>
+      updateField(id, { assignee_ids: assigneeIds }, "Failed to update assignees"),
+    [updateField]
   );
 
   const handleBodyChange = useCallback(
-    async (id: Id, newBody: string) => {
-      const action =
-        sessionActions.find((a) => a.id === id) ??
-        allRelationshipActions.find((a) => a.id === id);
-      if (!action) return;
-      try {
-        await update(id, { ...action, body: newBody });
-        refresh();
-      } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          sonnerToast.error("Failed to update action. Connection to service was lost.");
-        } else {
-          sonnerToast.error("Failed to update action.");
-        }
-      }
-    },
-    [sessionActions, allRelationshipActions, update, refresh]
+    (id: Id, newBody: string) =>
+      updateField(id, { body: newBody }, "Failed to update action"),
+    [updateField]
   );
 
   const handleDelete = useCallback(
     async (id: Id) => {
-      const action =
-        sessionActions.find((a) => a.id === id) ??
-        allRelationshipActions.find((a) => a.id === id);
+      const action = findActionById(id, sessionActions, allRelationshipActions);
 
       try {
         await deleteAction(id);
         refresh();
       } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          sonnerToast.error("Failed to delete action. Connection to service was lost.");
-        } else {
-          sonnerToast.error("Failed to delete action.");
-        }
+        showActionError("Failed to delete action", err);
         return;
       }
 
-      const preview = action?.body
-        ? action.body.length > 40
-          ? `${action.body.slice(0, 40)}...`
-          : action.body
-        : "Action";
-      sonnerToast(`"${preview}" deleted`, {
+      sonnerToast(`"${actionPreview(action)}" deleted`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -328,15 +320,40 @@ export function usePanelActions({
   );
 
   return {
-    sessionActions: sortedSessionActions,
-    reviewActions,
-    sessionDateMap,
     handleCreate,
     handleStatusChange,
     handleDueDateChange,
     handleAssigneesChange,
     handleBodyChange,
     handleDelete,
+  };
+}
+
+// ── Main hook ─────────────────────────────────────────────────────
+
+interface UsePanelActionsParams {
+  userId: Id;
+  coachingSessionId: Id;
+  coachingRelationshipId: Id;
+  /** May be undefined while the session is still loading from SWR */
+  sessionDate: string | undefined;
+}
+
+export function usePanelActions(params: UsePanelActionsParams) {
+  const { sessionActions, allRelationshipActions, sortedSessionActions, refresh } =
+    useActionData(params);
+
+  const { reviewActions, sessionDateMap } =
+    useReviewWindow(params, allRelationshipActions);
+
+  const handlers =
+    useActionCrud(params, sessionActions, allRelationshipActions, refresh);
+
+  return {
+    sessionActions: sortedSessionActions,
+    reviewActions,
+    sessionDateMap,
+    ...handlers,
     refresh,
   };
 }
