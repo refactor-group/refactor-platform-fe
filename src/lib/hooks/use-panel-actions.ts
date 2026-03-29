@@ -176,7 +176,7 @@ export function usePanelActions({
   }, [refreshSessionActions, refreshAllActions]);
 
   const handleCreate = useCallback(
-    async (body: string) => {
+    async (body: string, assigneeIds?: Id[]) => {
       try {
         const newAction: Action = {
           ...defaultAction(),
@@ -185,6 +185,7 @@ export function usePanelActions({
           body,
           status: ItemStatus.NotStarted,
           due_by: DateTime.now().plus({ days: 7 }),
+          assignee_ids: assigneeIds ?? [],
         };
         await create(newAction);
         refresh();

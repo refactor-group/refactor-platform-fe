@@ -80,12 +80,12 @@ export interface CoachingSessionPanelSharedProps {
   coachName: string;
   coacheeId: Id;
   coacheeName: string;
-  onActionCreate?: (body: string) => Promise<void>;
+  onActionCreate?: (body: string, assigneeIds?: Id[]) => Promise<void>;
   onActionDelete?: (id: Id) => void;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[]) => Promise<void>;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
   locale: string;

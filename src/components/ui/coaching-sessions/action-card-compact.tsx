@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
 import type { TextareaMarkdownRef } from "textarea-markdown-editor";
@@ -19,7 +19,6 @@ import {
   DueDatePicker,
   AssigneePickerPopover,
   resolveAssignees,
-  getInitials,
 } from "@/components/ui/coaching-sessions/action-card-parts";
 import type { Action } from "@/types/action";
 import { ItemStatus, Id } from "@/types/general";
@@ -46,7 +45,7 @@ export interface CompactActionCardProps {
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[]) => Promise<void>;
   onDelete?: (id: Id) => void;
   /** "review" makes body read-only and hides delete. Defaults to "current". */
   variant?: "current" | "review";
@@ -85,12 +84,16 @@ export function CompactActionCard({
 }: CompactActionCardProps) {
   const body = action.body ?? "";
   const isReview = variant === "review";
-  const isOverdue =
-    action.due_by < DateTime.now() &&
-    action.status !== ItemStatus.Completed &&
-    action.status !== ItemStatus.WontDo;
+  // For new (unsaved) actions, assignee changes must be tracked locally
+  // because the action doesn't exist in the backend yet.
+  const [localAssigneeIds, setLocalAssigneeIds] = useState<Id[]>(
+    action.assignee_ids ?? []
+  );
+  const assigneeIds = useMemo(
+    () => initialEditing ? localAssigneeIds : (action.assignee_ids ?? []),
+    [initialEditing, localAssigneeIds, action.assignee_ids]
+  );
 
-  const assigneeIds = action.assignee_ids ?? [];
   const { allAssignees, resolvedAssignees } = resolveAssignees(
     assigneeIds,
     coachId,
@@ -104,9 +107,13 @@ export function CompactActionCard({
       const updated = assigneeIds.includes(assigneeId)
         ? assigneeIds.filter((id) => id !== assigneeId)
         : [...assigneeIds, assigneeId];
-      onAssigneesChange(action.id, updated);
+      if (initialEditing) {
+        setLocalAssigneeIds(updated);
+      } else {
+        onAssigneesChange(action.id, updated);
+      }
     },
-    [assigneeIds, onAssigneesChange, action.id]
+    [assigneeIds, initialEditing, onAssigneesChange, action.id]
   );
 
   return (
@@ -130,7 +137,6 @@ export function CompactActionCard({
           resolvedAssignees={resolvedAssignees}
           dueBy={action.due_by}
           locale={locale}
-          isOverdue={isOverdue}
         />
       )}
       renderBack={({ onDone, isEditing, onEditStart, onEditEnd }) =>
@@ -145,8 +151,8 @@ export function CompactActionCard({
             onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
             onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
             onAssigneeToggle={handleAssigneeToggle}
-            onSave={async (newBody) => {
-              await onBodyChange(action.id, newBody);
+            onSave={async (newBody, savedAssigneeIds) => {
+              await onBodyChange(action.id, newBody, savedAssigneeIds);
               if (!initialEditing) onEditEnd();
             }}
             onCancel={onDismiss ? onDone : onEditEnd}
@@ -156,8 +162,6 @@ export function CompactActionCard({
             action={action}
             body={body}
             locale={locale}
-            isReview={isReview}
-            isOverdue={isOverdue}
             resolvedAssignees={resolvedAssignees}
             sourceSessionId={sourceSessionId}
             sourceSessionDate={sourceSessionDate}
@@ -248,12 +252,10 @@ function ActionFooter({
   resolvedAssignees,
   dueBy,
   locale,
-  isOverdue,
 }: {
   resolvedAssignees: { initials: string; name: string }[];
   dueBy: DateTime;
   locale: string;
-  isOverdue: boolean;
 }) {
   const formattedDate = dueBy
     .setLocale(locale)
@@ -275,12 +277,21 @@ function ActionFooter({
           </TooltipProvider>
         ))}
       </div>
-      <span
-        data-testid="action-due-date"
-        className={cn("text-[11px]", isOverdue && "font-bold")}
-      >
-        {formattedDate}
-      </span>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              data-testid="action-due-date"
+              className="text-[11px] font-bold"
+            >
+              {formattedDate}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            Due {formattedDate}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }
@@ -291,8 +302,6 @@ function ActionBackView({
   action,
   body,
   locale,
-  isReview,
-  isOverdue,
   resolvedAssignees,
   sourceSessionId,
   sourceSessionDate,
@@ -303,8 +312,6 @@ function ActionBackView({
   action: Action;
   body: string;
   locale: string;
-  isReview: boolean;
-  isOverdue: boolean;
   resolvedAssignees: { initials: string; name: string }[];
   sourceSessionId?: Id;
   sourceSessionDate?: DateTime;
@@ -323,7 +330,7 @@ function ActionBackView({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground/60">
+        <span className="text-[11px] font-bold">
           Due: {formattedDate}
         </span>
         <button
@@ -426,7 +433,7 @@ function ActionEditForm({
   onStatusChange: (newStatus: ItemStatus) => void;
   onDueDateChange: (newDueBy: DateTime) => void;
   onAssigneeToggle: (assigneeId: Id) => void;
-  onSave: (body: string) => Promise<void>;
+  onSave: (body: string, assigneeIds: Id[]) => Promise<void>;
   onCancel: () => void;
 }) {
   const [body, setBody] = useState(initialBody);
@@ -437,11 +444,11 @@ function ActionEditForm({
     if (!body.trim()) return;
     setIsSaving(true);
     try {
-      await onSave(body.trim());
+      await onSave(body.trim(), assigneeIds);
     } finally {
       setIsSaving(false);
     }
-  }, [body, onSave]);
+  }, [body, assigneeIds, onSave]);
 
   const trigger = useCallback(
     (command: string) => markdownRef.current?.trigger(command),

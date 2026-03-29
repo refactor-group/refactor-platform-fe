@@ -34,8 +34,8 @@ export interface ActionSectionContentProps {
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string) => Promise<void>;
-  onActionCreate?: (body: string) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[]) => Promise<void>;
+  onActionCreate?: (body: string, assigneeIds?: Id[]) => Promise<void>;
   onActionDelete?: (id: Id) => void;
   readOnly?: boolean;
 }
@@ -191,8 +191,8 @@ export function ActionSectionContent({
               onDelete={undefined}
               onDismiss={() => onAddingActionChange(false)}
               {...sharedCardProps}
-              onBodyChange={async (_id, body) => {
-                await onActionCreate(body);
+              onBodyChange={async (_id, body, assigneeIds) => {
+                await onActionCreate(body, assigneeIds);
                 onAddingActionChange(false);
               }}
             />

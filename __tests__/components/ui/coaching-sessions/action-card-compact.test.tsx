@@ -324,7 +324,8 @@ describe("CompactActionCard", () => {
       await waitFor(() => {
         expect(onBodyChange).toHaveBeenCalledWith(
           "action-1",
-          "Updated action text"
+          "Updated action text",
+          expect.any(Array)
         );
       });
     });

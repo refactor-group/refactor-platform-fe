@@ -156,6 +156,12 @@ function EditDetailsCard({
 
     function handlePointerDown(e: PointerEvent) {
       if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        // Radix UI portals (Popover, Select, Calendar) render outside the card DOM.
+        // Treat clicks inside those portals as "inside the card" so interactions
+        // like assignee selection don't accidentally flip the card back.
+        const target = e.target as Element;
+        if (target.closest?.("[data-radix-popper-content-wrapper]")) return;
+
         setIsFlipped(false);
         setIsEditing(false);
       }
