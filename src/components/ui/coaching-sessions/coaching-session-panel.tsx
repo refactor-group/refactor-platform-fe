@@ -476,7 +476,8 @@ export function CoachingSessionPanel({
         if (wasLinked) {
           const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
           if (relinkResult.isOk() && swapGoal) {
-            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress })
+              .catch((err) => console.error("Failed to restore goal status during recovery:", err));
           }
           refreshSessionGoals();
           refreshAllGoals();
@@ -509,7 +510,8 @@ export function CoachingSessionPanel({
 
             const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
             if (relinkResult.isOk() && swapGoal) {
-              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress })
+              .catch((err) => console.error("Failed to restore goal status during recovery:", err));
             }
             refreshSessionGoals();
             refreshAllGoals();
@@ -530,7 +532,8 @@ export function CoachingSessionPanel({
           if (wasLinked) {
             const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
             if (relinkResult.isOk() && swapGoal) {
-              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress })
+              .catch((err) => console.error("Failed to restore goal status during recovery:", err));
             }
             refreshSessionGoals();
             refreshAllGoals();
@@ -552,7 +555,8 @@ export function CoachingSessionPanel({
         if (wasLinked) {
           const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
           if (relinkResult.isOk() && swapGoal) {
-            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress })
+              .catch((err) => console.error("Failed to restore goal status during recovery:", err));
           }
           refreshSessionGoals();
           refreshAllGoals();

@@ -63,8 +63,9 @@ export default function CoachingSessionsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
 
-  // Panel section persisted via URL param "panel"
-  const panelParam = searchParams.get("panel");
+  // Panel section persisted via URL param "panel".
+  // Also recognize the legacy "tab" param so old bookmarks still work.
+  const panelParam = searchParams.get("panel") ?? searchParams.get("tab");
   const panelSection = panelParam === PanelSection.Agreements
     ? PanelSection.Agreements
     : panelParam === PanelSection.Actions

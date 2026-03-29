@@ -9,7 +9,7 @@ import { UserActionsScope } from "@/types/assigned-actions";
 import { sortActionArray, defaultAction } from "@/types/action";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
-import { ItemStatus } from "@/types/general";
+import { ItemStatus, EntityApiError } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
 
@@ -99,6 +99,8 @@ export function usePanelActions({
     });
 
   // ── Previous session date (for review date window) ──────────────
+  // Intentionally frozen at mount time — the 5-year window is wide enough
+  // that recalculating on every render would add no value.
   const fromDate = useMemo(() => DateTime.now().minus(SESSION_LOOKBACK), []);
   const toDate = useMemo(() => DateTime.now().plus(SESSION_LOOKAHEAD), []);
 
@@ -175,16 +177,24 @@ export function usePanelActions({
 
   const handleCreate = useCallback(
     async (body: string) => {
-      const newAction: Action = {
-        ...defaultAction(),
-        coaching_session_id: coachingSessionId,
-        user_id: userId,
-        body,
-        status: ItemStatus.NotStarted,
-        due_by: DateTime.now().plus({ days: 7 }),
-      };
-      await create(newAction);
-      refresh();
+      try {
+        const newAction: Action = {
+          ...defaultAction(),
+          coaching_session_id: coachingSessionId,
+          user_id: userId,
+          body,
+          status: ItemStatus.NotStarted,
+          due_by: DateTime.now().plus({ days: 7 }),
+        };
+        await create(newAction);
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          sonnerToast.error("Failed to create action. Connection to service was lost.");
+        } else {
+          sonnerToast.error("Failed to create action.");
+        }
+      }
     },
     [coachingSessionId, userId, create, refresh]
   );
@@ -195,8 +205,16 @@ export function usePanelActions({
         sessionActions.find((a) => a.id === id) ??
         allRelationshipActions.find((a) => a.id === id);
       if (!action) return;
-      await update(id, { ...action, status: newStatus });
-      refresh();
+      try {
+        await update(id, { ...action, status: newStatus });
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          sonnerToast.error("Failed to update status. Connection to service was lost.");
+        } else {
+          sonnerToast.error("Failed to update status.");
+        }
+      }
     },
     [sessionActions, allRelationshipActions, update, refresh]
   );
@@ -207,8 +225,16 @@ export function usePanelActions({
         sessionActions.find((a) => a.id === id) ??
         allRelationshipActions.find((a) => a.id === id);
       if (!action) return;
-      await update(id, { ...action, due_by: newDueBy });
-      refresh();
+      try {
+        await update(id, { ...action, due_by: newDueBy });
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          sonnerToast.error("Failed to update due date. Connection to service was lost.");
+        } else {
+          sonnerToast.error("Failed to update due date.");
+        }
+      }
     },
     [sessionActions, allRelationshipActions, update, refresh]
   );
@@ -219,8 +245,16 @@ export function usePanelActions({
         sessionActions.find((a) => a.id === id) ??
         allRelationshipActions.find((a) => a.id === id);
       if (!action) return;
-      await update(id, { ...action, assignee_ids: assigneeIds });
-      refresh();
+      try {
+        await update(id, { ...action, assignee_ids: assigneeIds });
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          sonnerToast.error("Failed to update assignees. Connection to service was lost.");
+        } else {
+          sonnerToast.error("Failed to update assignees.");
+        }
+      }
     },
     [sessionActions, allRelationshipActions, update, refresh]
   );
@@ -231,8 +265,16 @@ export function usePanelActions({
         sessionActions.find((a) => a.id === id) ??
         allRelationshipActions.find((a) => a.id === id);
       if (!action) return;
-      await update(id, { ...action, body: newBody });
-      refresh();
+      try {
+        await update(id, { ...action, body: newBody });
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          sonnerToast.error("Failed to update action. Connection to service was lost.");
+        } else {
+          sonnerToast.error("Failed to update action.");
+        }
+      }
     },
     [sessionActions, allRelationshipActions, update, refresh]
   );
@@ -243,8 +285,17 @@ export function usePanelActions({
         sessionActions.find((a) => a.id === id) ??
         allRelationshipActions.find((a) => a.id === id);
 
-      await deleteAction(id);
-      refresh();
+      try {
+        await deleteAction(id);
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          sonnerToast.error("Failed to delete action. Connection to service was lost.");
+        } else {
+          sonnerToast.error("Failed to delete action.");
+        }
+        return;
+      }
 
       const preview = action?.body
         ? action.body.length > 40
