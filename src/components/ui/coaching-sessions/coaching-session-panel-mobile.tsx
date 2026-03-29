@@ -99,15 +99,15 @@ export function CoachingSessionPanelMobile({
       <Sheet open={isOpen} onOpenChange={handleOpenChange}>
         <SheetContent
           side="bottom"
-          className="max-h-[85vh] overflow-y-auto rounded-t-xl p-0"
+          className="max-h-[85vh] flex flex-col rounded-t-xl p-0"
         >
           <SheetHeader className="sr-only">
             <SheetTitle>{triggerLabel}</SheetTitle>
             <SheetDescription>Manage {triggerLabel.toLowerCase()} for this coaching session.</SheetDescription>
           </SheetHeader>
 
-          {/* Panel header */}
-          <div className="sticky top-0 z-20 bg-background border-b border-border/50 px-4 py-3">
+          {/* Panel header — outside scroll container so section headers don't overlap */}
+          <div className="shrink-0 bg-background border-b border-border/50 px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {isInGoalFlow && (
@@ -153,8 +153,8 @@ export function CoachingSessionPanelMobile({
             </div>
           </div>
 
-          {/* Panel content */}
-          <div className="p-4 space-y-3">
+          {/* Panel content — own scroll container for sticky section headers */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
             {activeSection === PanelSection.Goals ? (
               <GoalFlowPages
                 linkedGoals={linkedGoals}
