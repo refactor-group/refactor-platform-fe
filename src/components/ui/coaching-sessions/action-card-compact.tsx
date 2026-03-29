@@ -13,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CompactFlipCard } from "@/components/ui/coaching-sessions/compact-flip-card";
+import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
 import {
   StatusSelect,
   DueDatePicker,
@@ -28,7 +28,7 @@ import { DateTime } from "ts-luxon";
 
 // ── Compact Action Card (flip-card interaction) ──────────────────────
 //
-// Uses CompactFlipCard with header/footer for a three-zone front face:
+// Uses BaseCardCompactEditable with header/footer for a three-zone front face:
 //   Header: Status pill (interactive) + flip icon
 //   Body:   Expandable action text
 //   Footer: Assignee initials + due date
@@ -110,7 +110,7 @@ export function CompactActionCard({
   );
 
   return (
-    <CompactFlipCard
+    <BaseCardCompactEditable
       canFlip
       initialEditing={initialEditing}
       onDismiss={onDismiss}
