@@ -30,10 +30,9 @@ on:
         required: true
         type: choice
         options:
+          - '1c60c49 - chore: refresh preview commit choices [skip ci]'
+          - '3db2c07 - feat: auto-populate dispatch dropdown with open PR head'
           - '5801031 - chore: refresh preview commit choices [skip ci]'
-          - '259a6d6 - chore: refresh preview commit choices [skip ci]'
-          - 'bc183b9 - chore: refresh preview commit choices [skip ci]'
-          - 1723779 - PR#269 (feature/preview-dispatch-open-)
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
@@ -41,10 +40,9 @@ on:
         required: true
         type: choice
         options:
+          - '319702f - feat: auto-populate dispatch dropdown with open PR head commits (#357)'
+          - 'd722976 - chore: refresh preview commit choices [skip ci]'
           - '8f3ace0 - chore: refresh preview commit choices [skip ci]'
-          - 'f8ff280 - chore: update stale comment referencing deleted workflow'
-          - 'e6e710b - chore: refresh preview commit choices [skip ci]'
-          - 7a50406 - PR#357 (feature/preview-dispatch-open-)
           - b711b3c - PR#355 (feature/coaching-session-panel)
           - fede337 - PR#349 (feature/coaching-session-panel)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
