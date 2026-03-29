@@ -161,7 +161,7 @@ export function CoachingSessionPanelDesktop({
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-clip">
-          <div className="h-full overflow-y-auto">
+          <div className="h-full overflow-y-auto pr-1">
           {activeSection === PanelSection.Goals ? (
             <GoalFlowPages
               linkedGoals={linkedGoals}

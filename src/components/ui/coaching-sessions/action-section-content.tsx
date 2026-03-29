@@ -113,6 +113,16 @@ export function ActionSectionContent({
     return () => clearTimeout(timer);
   }, [highlightId, reviewActions, sessionActions]);
 
+  // Scroll "New This Session" header into view when adding a new action
+  const sessionSectionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isAddingAction && sessionSectionRef.current) {
+      requestAnimationFrame(() => {
+        sessionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }, [isAddingAction]);
+
   // Lazy-init placeholder so defaultAction() isn't called at module scope
   const newActionPlaceholder = useMemo(() => defaultAction(), []);
 
@@ -166,6 +176,7 @@ export function ActionSectionContent({
 
       {/* ── New This Session ───────────────────────────────────── */}
       <CollapsibleSection
+        sectionRef={sessionSectionRef}
         title="New This Session"
         count={sessionActions.length}
         expanded={sessionExpanded}
@@ -173,17 +184,19 @@ export function ActionSectionContent({
         testIdPrefix="session"
       >
         {isAddingAction && onActionCreate && (
-          <CompactActionCard
-            action={newActionPlaceholder}
-            initialEditing
-            onDelete={undefined}
-            onDismiss={() => onAddingActionChange(false)}
-            {...sharedCardProps}
-            onBodyChange={async (_id, body) => {
-              await onActionCreate(body);
-              onAddingActionChange(false);
-            }}
-          />
+          <div>
+            <CompactActionCard
+              action={newActionPlaceholder}
+              initialEditing
+              onDelete={undefined}
+              onDismiss={() => onAddingActionChange(false)}
+              {...sharedCardProps}
+              onBodyChange={async (_id, body) => {
+                await onActionCreate(body);
+                onAddingActionChange(false);
+              }}
+            />
+          </div>
         )}
         {sessionActions.length === 0 && !isAddingAction ? (
           <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
@@ -219,6 +232,7 @@ function CollapsibleSection({
   expanded,
   onToggle,
   testIdPrefix,
+  sectionRef,
   children,
 }: {
   title: string;
@@ -226,12 +240,13 @@ function CollapsibleSection({
   expanded: boolean;
   onToggle: () => void;
   testIdPrefix: string;
+  sectionRef?: React.RefObject<HTMLDivElement | null>;
   children: React.ReactNode;
 }) {
   const Chevron = expanded ? ChevronDown : ChevronRight;
 
   return (
-    <div className="relative">
+    <div ref={sectionRef} className="relative">
       <div>
         <button
           type="button"
