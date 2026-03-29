@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { ArrowUpRight, Info, Pencil, Trash2 } from "lucide-react";
+import TextareaMarkdown from "textarea-markdown-editor";
+import type { TextareaMarkdownRef } from "textarea-markdown-editor";
+import { ArrowUpRight, Bold, Italic, List, ListOrdered, Info, Pencil, Strikethrough, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -418,6 +420,7 @@ function ActionEditForm({
 }) {
   const [body, setBody] = useState(initialBody);
   const [isSaving, setIsSaving] = useState(false);
+  const markdownRef = useRef<TextareaMarkdownRef>(null);
 
   const handleSave = useCallback(async () => {
     if (!body.trim()) return;
@@ -429,14 +432,30 @@ function ActionEditForm({
     }
   }, [body, onSave]);
 
+  const trigger = useCallback(
+    (command: string) => markdownRef.current?.trigger(command),
+    []
+  );
+
   return (
     <div className="space-y-3">
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        className="w-full min-h-[80px] rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-        autoFocus
-      />
+      <div className="space-y-1">
+        <div className="flex items-center gap-0.5">
+          <MarkdownToolbarButton icon={Bold} label="Bold" onClick={() => trigger("bold")} />
+          <MarkdownToolbarButton icon={Italic} label="Italic" onClick={() => trigger("italic")} />
+          <MarkdownToolbarButton icon={Strikethrough} label="Strikethrough" onClick={() => trigger("strike-through")} />
+          <span className="w-px h-4 bg-border mx-1" />
+          <MarkdownToolbarButton icon={List} label="Bullet list" onClick={() => trigger("unordered-list")} />
+          <MarkdownToolbarButton icon={ListOrdered} label="Numbered list" onClick={() => trigger("ordered-list")} />
+        </div>
+        <TextareaMarkdown
+          ref={markdownRef}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          className="w-full min-h-[80px] rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+          autoFocus
+        />
+      </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -486,5 +505,39 @@ function ActionEditForm({
           </Button>
       </div>
     </div>
+  );
+}
+
+// ── Markdown toolbar button ─────────────────────────────────────────
+
+function MarkdownToolbarButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof Bold;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onClick();
+            }}
+            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-xs">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
