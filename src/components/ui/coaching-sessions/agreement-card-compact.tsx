@@ -9,13 +9,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { EditableCardCompact } from "@/components/ui/coaching-sessions/editable-card-compact";
-import { ExpandableContent } from "@/components/ui/coaching-sessions/expandable-content";
+import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
+import { ContentExpandable } from "@/components/ui/content-expandable";
 import type { Agreement } from "@/types/agreement";
 
 // ── Compact Agreement Card (flip-card interaction) ───────────────────
 //
-// Uses EditableCardCompact for shared card infrastructure.
+// Uses BaseCardCompactEditable for shared card infrastructure.
 // Simpler than goal cards: no progress bar, no status, no linking.
 // Just body text, a created date, and edit/delete actions.
 
@@ -52,7 +52,7 @@ export function CompactAgreementCard({
   );
 
   return (
-    <EditableCardCompact
+    <BaseCardCompactEditable
       canFlip={canInteract}
       initialEditing={initialEditing}
       onDismiss={onDismiss}
@@ -106,7 +106,7 @@ function AgreementFrontFace({
 }) {
   return (
     <div className="flex items-start justify-between gap-2">
-      <ExpandableContent text={body} className="text-[13px] font-medium" />
+      <ContentExpandable text={body} className="text-[13px] font-medium" />
       <div className="flex items-center gap-1 shrink-0 mt-0.5">
         {canInteract ? (
           <TooltipProvider delayDuration={300}>

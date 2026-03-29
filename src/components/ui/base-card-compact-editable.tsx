@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import type { ReactNode } from "react";
 import { cn } from "@/components/lib/utils";
 
-// ── Editable Card Compact (shared base for goal and agreement cards) ─
+// ── Base Card Compact Editable (shared base for goal and agreement cards)
 //
 // Owns all card infrastructure: state, ResizeObserver height
 // animation, outside-click-to-close, and container markup.
@@ -13,7 +13,7 @@ import { cn } from "@/components/lib/utils";
 // When initialEditing is true, the card skips the flip entirely and
 // renders the back face directly with an entrance animation.
 
-export interface EditableCardCompactProps {
+export interface BaseCardCompactEditableProps {
   renderFront: (props: { onFlip: () => void }) => ReactNode;
   renderBack: (props: {
     onDone: () => void;
@@ -30,14 +30,14 @@ export interface EditableCardCompactProps {
   onDismiss?: () => void;
 }
 
-export function EditableCardCompact({
+export function BaseCardCompactEditable({
   renderFront,
   renderBack,
   className,
   canFlip = true,
   initialEditing = false,
   onDismiss,
-}: EditableCardCompactProps) {
+}: BaseCardCompactEditableProps) {
   // When initialEditing, skip the flip and show back face directly
   if (initialEditing) {
     return (
@@ -69,7 +69,7 @@ function InitialEditCard({
 }: {
   className?: string;
   onDismiss?: () => void;
-  renderBack: EditableCardCompactProps["renderBack"];
+  renderBack: BaseCardCompactEditableProps["renderBack"];
 }) {
   const handleDone = useCallback(() => {
     onDismiss?.();
@@ -103,7 +103,7 @@ function EditDetailsCard({
   className,
   canFlip = true,
   onDismiss,
-}: Omit<EditableCardCompactProps, "initialEditing">) {
+}: Omit<BaseCardCompactEditableProps, "initialEditing">) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);

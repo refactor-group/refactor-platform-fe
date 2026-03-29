@@ -18,19 +18,19 @@ import { useTextClamp } from "@/lib/hooks/use-text-clamp";
  *   when the summary text isn't clipped. Useful when `overflowText` differs
  *   from `text` (e.g. goal card always has expandable body).
  */
-export interface ExpandableContentProps {
+export interface ContentExpandableProps {
   text: string;
   className?: string;
   overflowText?: string;
   hasOverflow?: boolean;
 }
 
-export function ExpandableContent({
+export function ContentExpandable({
   text,
   className,
   overflowText,
   hasOverflow = false,
-}: ExpandableContentProps) {
+}: ContentExpandableProps) {
   const { ref, expanded, isClipped, toggle } = useTextClamp(text);
   const hasSeparateOverflow = Boolean(overflowText);
   const canExpand = isClipped || hasOverflow;

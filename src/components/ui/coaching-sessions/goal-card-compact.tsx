@@ -9,8 +9,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { EditableCardCompact } from "@/components/ui/coaching-sessions/editable-card-compact";
-import { ExpandableContent } from "@/components/ui/coaching-sessions/expandable-content";
+import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
+import { ContentExpandable } from "@/components/ui/content-expandable";
 import { GoalProgressIcon } from "@/components/ui/coaching-sessions/goal-progress-icon";
 import { GoalEditForm } from "@/components/ui/coaching-sessions/goal-edit-form";
 import { useGoalProgress } from "@/lib/api/goal-progress";
@@ -23,7 +23,7 @@ import { Some } from "@/types/option";
 // Front face: read-only — title, progress bar, progress icon, info button.
 // Back face:  actions   — edit, unlink from session, "Done" to flip back.
 //
-// Uses EditableCardCompact for shared card infrastructure (state, animation,
+// Uses BaseCardCompactEditable for shared card infrastructure (state, animation,
 // outside-click). Swap mode and select mode are early returns that bypass
 // the flip card entirely.
 
@@ -114,7 +114,7 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
   // ── Flip card ────────────────────────────────────────────────────────
 
   return (
-    <EditableCardCompact
+    <BaseCardCompactEditable
       canFlip={canInteract}
       renderFront={({ onFlip }) => (
         <FrontFace
@@ -187,7 +187,7 @@ function FrontFace({
   return (
     <>
       <div className="flex items-start justify-between gap-2">
-        <ExpandableContent
+        <ContentExpandable
           text={title}
           className="text-[13px] font-medium"
           overflowText={hasBody ? body : undefined}

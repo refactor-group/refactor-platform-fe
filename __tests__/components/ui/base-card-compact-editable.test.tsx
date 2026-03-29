@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
-import { EditableCardCompact } from "@/components/ui/coaching-sessions/editable-card-compact";
+import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
 
 /** jsdom doesn't have TransitionEvent — create a minimal substitute */
 function createTransitionEndEvent(propertyName: string) {
@@ -10,14 +10,14 @@ function createTransitionEndEvent(propertyName: string) {
   return event;
 }
 
-describe("EditableCardCompact", () => {
+describe("BaseCardCompactEditable", () => {
   function renderWithTestContent(props?: {
     canFlip?: boolean;
     initialEditing?: boolean;
     onDismiss?: () => void;
   }) {
     return render(
-      <EditableCardCompact
+      <BaseCardCompactEditable
         canFlip={props?.canFlip}
         initialEditing={props?.initialEditing}
         onDismiss={props?.onDismiss}
