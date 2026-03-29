@@ -176,6 +176,8 @@ export function ActionSectionContent({
         )}
       </CollapsibleSection>
 
+      <hr className="border-border" />
+
       {/* ── New This Session ───────────────────────────────────── */}
       <CollapsibleSection
         sectionRef={sessionSectionRef}
