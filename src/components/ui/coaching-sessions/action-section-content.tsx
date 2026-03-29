@@ -180,22 +180,24 @@ function CollapsibleSection({
   const Chevron = expanded ? ChevronDown : ChevronRight;
 
   return (
-    <div>
-      <button
-        type="button"
-        data-testid={`${testIdPrefix}-section-toggle`}
-        onClick={onToggle}
-        className="flex w-full items-center gap-1.5 py-2 px-1 text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors sticky top-0 bg-background z-10"
-      >
-        <Chevron className="h-3.5 w-3.5 shrink-0" />
-        {title}
-        <span className="text-[11px] font-normal text-muted-foreground/60">
-          ({count})
-        </span>
-      </button>
+    <div className="relative">
+      <div>
+        <button
+          type="button"
+          data-testid={`${testIdPrefix}-section-toggle`}
+          onClick={onToggle}
+          className="flex w-full items-center gap-1.5 py-2 px-1 text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Chevron className="h-3.5 w-3.5 shrink-0" />
+          {title}
+          <span className="text-[11px] font-normal text-muted-foreground/60">
+            ({count})
+          </span>
+        </button>
+      </div>
       <div
         data-testid={`${testIdPrefix}-section-content`}
-        className={cn(!expanded && "hidden")}
+        className={cn("relative", !expanded && "hidden")}
       >
         {children}
       </div>
