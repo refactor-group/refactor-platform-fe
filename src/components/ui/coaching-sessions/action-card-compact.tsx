@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 import { ArrowUpRight, Info, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -136,7 +137,6 @@ export function CompactActionCard({
           <ActionEditForm
             action={action}
             locale={locale}
-            isReview={isReview}
             initialBody={body}
             allAssignees={allAssignees}
             resolvedAssignees={resolvedAssignees}
@@ -322,9 +322,13 @@ function ActionBackView({
         </button>
       </div>
 
-      <p className="text-[13px] font-medium whitespace-pre-wrap">
-        {body || <span className="text-muted-foreground/50 italic">No description</span>}
-      </p>
+      {body ? (
+        <div className="text-[13px] font-medium prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+          <ReactMarkdown>{body}</ReactMarkdown>
+        </div>
+      ) : (
+        <p className="text-[13px] text-muted-foreground/50 italic">No description</p>
+      )}
 
       <div className="flex items-center justify-between text-[11px] text-muted-foreground">
         <span>
@@ -390,7 +394,6 @@ function ActionBackView({
 function ActionEditForm({
   action,
   locale,
-  isReview,
   initialBody,
   allAssignees,
   resolvedAssignees,
@@ -403,7 +406,6 @@ function ActionEditForm({
 }: {
   action: Action;
   locale: string;
-  isReview: boolean;
   initialBody: string;
   allAssignees: { id: Id; name: string; initials: string }[];
   resolvedAssignees: { id: Id; name: string; initials: string }[];
@@ -429,18 +431,12 @@ function ActionEditForm({
 
   return (
     <div className="space-y-3">
-      {isReview ? (
-        <p className="text-[13px] font-medium whitespace-pre-wrap min-h-[60px]">
-          {initialBody}
-        </p>
-      ) : (
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          className="w-full min-h-[80px] rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-          autoFocus
-        />
-      )}
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        className="w-full min-h-[80px] rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+        autoFocus
+      />
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -471,16 +467,14 @@ function ActionEditForm({
       </div>
 
       <div className="flex items-center justify-end gap-2 pt-3">
-          {!isReview && (
-            <Button
-              size="sm"
-              className="h-6 gap-1 text-[11px] px-2"
-              onClick={handleSave}
-              disabled={isSaving || !body.trim()}
-            >
-              Save
-            </Button>
-          )}
+          <Button
+            size="sm"
+            className="h-6 gap-1 text-[11px] px-2"
+            onClick={handleSave}
+            disabled={isSaving || !body.trim()}
+          >
+            Save
+          </Button>
           <Button
             variant="ghost"
             size="sm"

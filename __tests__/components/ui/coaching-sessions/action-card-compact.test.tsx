@@ -291,7 +291,7 @@ describe("CompactActionCard", () => {
       expect(screen.queryByText("Delete")).not.toBeInTheDocument();
     });
 
-    it("makes body read-only for review variant in edit mode", async () => {
+    it("allows body editing for review variant in edit mode", async () => {
       render(
         <Wrapper>
           <CompactActionCard {...baseProps({ variant: "review" })} />
@@ -301,9 +301,9 @@ describe("CompactActionCard", () => {
       const user = await flipToBack();
       await user.click(screen.getByText("Edit"));
 
-      // Should show text, not a textarea
-      const textarea = screen.queryByRole("textbox");
-      expect(textarea).toBeNull();
+      // Review cards now allow body editing
+      const textarea = screen.getByRole("textbox");
+      expect(textarea).toHaveValue("Follow up on resume review");
     });
 
     it("calls onBodyChange when Save is clicked after editing", async () => {
