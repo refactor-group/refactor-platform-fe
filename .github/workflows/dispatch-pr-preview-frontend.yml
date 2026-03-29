@@ -36,11 +36,10 @@ on:
         required: true
         type: choice
         options:
+          - 3fcef41 - Multi-section coaching session panel with agreement cards (#349)
+          - '2ad3f90 - chore: refresh preview commit choices [skip ci]'
           - '373cdc4 - fix: extract PR number from commit dropdown instead of separate input (#359)'
-          - '553e9a4 - chore: refresh preview commit choices [skip ci]'
-          - '9562fd0 - chore: refresh preview commit choices [skip ci]'
-          - 5e3acc0 - PR#355 (feature/coaching-session-panel)
-          - fcaa151 - PR#349 (feature/coaching-session-panel)
+          - e43e192 - PR#355 (feature/coaching-session-panel)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
