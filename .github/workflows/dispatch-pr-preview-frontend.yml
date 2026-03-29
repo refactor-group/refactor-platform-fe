@@ -30,17 +30,17 @@ on:
         required: true
         type: choice
         options:
+          - '19a9383 - chore: refresh preview commit choices [skip ci]'
+          - '1dff978 - fix: use GHCR_PAT for main-arm64 image push in cleanup '
           - '86bafdf - chore: refresh preview commit choices [skip ci]'
           - 'bd7c5f8 - chore: remove temporary docker cleanup workflow'
           - '9eaf6a6 - chore: refresh preview commit choices [skip ci]'
-          - '108f9fb - fix: add resource pruning to cleanup and deploy workflo'
-          - '53b4ea2 - chore: aggressive docker cleanup — stop all orphaned pr'
       frontend_commit:
         description: "Frontend commit to deploy"
         required: true
         type: choice
         options:
-          - 535d63b - %.55s
+          - '83612fc - test: validate arm64 cache build permissions (#354)'
       backend_commit_override:
         description: "Override: paste exact backend SHA (ignores dropdown)"
         required: false
