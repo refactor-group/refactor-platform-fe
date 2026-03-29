@@ -30,17 +30,25 @@ on:
         required: true
         type: choice
         options:
-          - '7491b58 - chore: refresh preview commit choices [skip ci]'
-          - 'c48e302 - ci: remove automatic PR preview triggers, make previews'
-          - '3140fc2 - chore: refresh preview commit choices [skip ci]'
-          - '1eb923f - docs: update PR preview section with manual dispatch an'
-          - '17dbcbe - chore: refresh preview commit choices [skip ci]'
+          - '259a6d6 - chore: refresh preview commit choices [skip ci]'
+          - 'bc183b9 - chore: refresh preview commit choices [skip ci]'
+          - '21d48d7 - chore: remove stale references to deleted dispatch work'
+          - 0cba76d - PR#269 (feature/preview-dispatch-open-)
+          - 3cce00b - PR#254 (ai-transcription-milestone-2)
+          - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
         description: "Frontend commit to deploy"
         required: true
         type: choice
         options:
-          - '604ca11 - ci: remove automatic PR preview trigger, make previews manual-only'
+          - 'f8ff280 - chore: update stale comment referencing deleted workflow'
+          - 9c28554 - PR#357 (feature/preview-dispatch-open-)
+          - b711b3c - PR#355 (feature/coaching-session-panel)
+          - fede337 - PR#349 (feature/coaching-session-panel)
+          - 4852f68 - PR#336 (feat/dashboard-goals-overview)
+          - 479f4db - PR#318 (docs/goals-implementation-plan)
+          - 9e30ca1 - PR#315 (improve-nullable-types)
+          - d9e1e08 - PR#243 (feature/146-ai-meeting-integra)
       backend_commit_override:
         description: "Override: paste exact backend SHA (ignores dropdown)"
         required: false
