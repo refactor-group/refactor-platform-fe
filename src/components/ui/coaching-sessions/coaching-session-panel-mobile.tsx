@@ -107,7 +107,7 @@ export function CoachingSessionPanelMobile({
           </SheetHeader>
 
           {/* Panel header */}
-          <div className="sticky top-0 z-10 bg-background border-b border-border/50 px-4 py-3">
+          <div className="sticky top-0 z-20 bg-background border-b border-border/50 px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {isInGoalFlow && (
