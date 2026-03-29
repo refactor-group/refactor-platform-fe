@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { defaultAction } from "@/types/action";
@@ -21,6 +22,8 @@ import { DateTime } from "ts-luxon";
 export interface ActionSectionContentProps {
   reviewActions: Action[];
   sessionActions: Action[];
+  /** Maps coaching_session_id → session date for "view source session" links on review cards */
+  sessionDateMap?: Map<Id, DateTime>;
   locale: string;
   coachId: Id;
   coachName: string;
@@ -40,6 +43,7 @@ export interface ActionSectionContentProps {
 export function ActionSectionContent({
   reviewActions,
   sessionActions,
+  sessionDateMap,
   locale,
   coachId,
   coachName,
@@ -70,6 +74,44 @@ export function ActionSectionContent({
       setReviewExpanded(true);
     }
   }, [reviewActions.length]);
+
+  // ── Highlight & scroll-to for deep-linked actions ────────────────
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) cardRefs.current.set(id, el);
+    else cardRefs.current.delete(id);
+  }, []);
+
+  // When a highlight param is present and actions have loaded, scroll to
+  // and highlight the target card. Also ensure the containing section is expanded.
+  useEffect(() => {
+    if (!highlightId) return;
+
+    const allActions = [...reviewActions, ...sessionActions];
+    const target = allActions.find((a) => a.id === highlightId);
+    if (!target) return;
+
+    // Expand the section containing the target
+    const isInReview = reviewActions.some((a) => a.id === highlightId);
+    if (isInReview) setReviewExpanded(true);
+    else setSessionExpanded(true);
+
+    setActiveHighlight(highlightId);
+
+    // Scroll to the card after a frame (let expansion render)
+    requestAnimationFrame(() => {
+      const el = cardRefs.current.get(highlightId);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    // Clear highlight after animation
+    const timer = setTimeout(() => setActiveHighlight(null), 2000);
+    return () => clearTimeout(timer);
+  }, [highlightId, reviewActions, sessionActions]);
 
   // Lazy-init placeholder so defaultAction() isn't called at module scope
   const newActionPlaceholder = useMemo(() => defaultAction(), []);
@@ -102,15 +144,22 @@ export function ActionSectionContent({
           </p>
         ) : (
           <div className="space-y-3">
-            {reviewActions.map((action) => (
-              <CompactActionCard
-                key={action.id}
-                action={action}
-                variant="review"
-                onDelete={readOnly ? undefined : onActionDelete}
-                {...sharedCardProps}
-              />
-            ))}
+            {reviewActions.map((action) => {
+              const sourceSessionDate = sessionDateMap?.get(action.coaching_session_id);
+              return (
+                <div key={action.id} ref={(el) => setCardRef(action.id, el)}>
+                  <CompactActionCard
+                    action={action}
+                    variant="review"
+                    sourceSessionId={action.coaching_session_id}
+                    sourceSessionDate={sourceSessionDate}
+                    highlighted={activeHighlight === action.id}
+                    onDelete={readOnly ? undefined : onActionDelete}
+                    {...sharedCardProps}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </CollapsibleSection>
@@ -145,13 +194,15 @@ export function ActionSectionContent({
         ) : (
           <div className="space-y-3">
             {sessionActions.map((action) => (
-              <CompactActionCard
-                key={action.id}
-                action={action}
-                variant="current"
-                onDelete={readOnly ? undefined : onActionDelete}
-                {...sharedCardProps}
-              />
+              <div key={action.id} ref={(el) => setCardRef(action.id, el)}>
+                <CompactActionCard
+                  action={action}
+                  variant="current"
+                  highlighted={activeHighlight === action.id}
+                  onDelete={readOnly ? undefined : onActionDelete}
+                  {...sharedCardProps}
+                />
+              </div>
             ))}
           </div>
         )}

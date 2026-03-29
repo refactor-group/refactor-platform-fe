@@ -35,6 +35,7 @@ export function CoachingSessionPanelMobile({
   // Action props
   reviewActions,
   sessionActions,
+  sessionDateMap,
   coachId,
   coachName,
   coacheeId,
@@ -177,6 +178,7 @@ export function CoachingSessionPanelMobile({
               <ActionSectionContent
                 reviewActions={reviewActions}
                 sessionActions={sessionActions}
+                sessionDateMap={sessionDateMap}
                 locale={locale}
                 coachId={coachId}
                 coachName={coachName}

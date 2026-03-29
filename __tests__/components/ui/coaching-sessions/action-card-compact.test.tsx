@@ -376,4 +376,76 @@ describe("CompactActionCard", () => {
       expect(onDismiss).toHaveBeenCalledOnce();
     });
   });
+
+  // ── Highlight ────────────────────────────────────────────────────
+
+  describe("highlight", () => {
+    it("applies highlight ring when highlighted is true", () => {
+      const { container } = render(
+        <Wrapper>
+          <CompactActionCard {...baseProps({ highlighted: true })} />
+        </Wrapper>
+      );
+
+      const flipCard = container.firstChild as HTMLElement;
+      expect(flipCard.className).toContain("ring-2");
+      expect(flipCard.className).toContain("ring-primary/40");
+    });
+
+    it("does not apply highlight ring by default", () => {
+      const { container } = render(
+        <Wrapper>
+          <CompactActionCard {...baseProps()} />
+        </Wrapper>
+      );
+
+      const flipCard = container.firstChild as HTMLElement;
+      expect(flipCard.className).not.toContain("ring-2");
+    });
+  });
+
+  // ── Source session link ──────────────────────────────────────────
+
+  describe("source session link", () => {
+    it("renders a source session link on review card back face", async () => {
+      render(
+        <Wrapper>
+          <CompactActionCard
+            {...baseProps({
+              variant: "review",
+              sourceSessionId: "session-99",
+              sourceSessionDate: DateTime.fromISO("2026-03-17"),
+            })}
+          />
+        </Wrapper>
+      );
+
+      const user = userEvent.setup();
+      // Flip to back face
+      await user.click(
+        screen.getByRole("button", { name: /action options/i })
+      );
+
+      const link = screen.getByRole("link");
+      expect(link).toHaveAttribute(
+        "href",
+        "/coaching-sessions/session-99?panel=actions&highlight=action-1"
+      );
+    });
+
+    it("does not render source session link on current variant", async () => {
+      render(
+        <Wrapper>
+          <CompactActionCard {...baseProps({ variant: "current" })} />
+        </Wrapper>
+      );
+
+      const user = userEvent.setup();
+      await user.click(
+        screen.getByRole("button", { name: /action options/i })
+      );
+
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+  });
 });

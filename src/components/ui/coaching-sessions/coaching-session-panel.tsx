@@ -74,6 +74,8 @@ export interface CoachingSessionPanelSharedProps {
   // Action data
   reviewActions: Action[];
   sessionActions: Action[];
+  /** Maps coaching_session_id → session date for "view source session" links */
+  sessionDateMap: Map<Id, DateTime>;
   coachId: Id;
   coachName: string;
   coacheeId: Id;
@@ -607,6 +609,7 @@ export function CoachingSessionPanel({
     handleAssigneesChange,
     handleBodyChange,
     handleDelete: handleActionDelete,
+    sessionDateMap,
   } = usePanelActions({
     userId,
     coachingSessionId,
@@ -723,6 +726,7 @@ export function CoachingSessionPanel({
     // Action data
     reviewActions: panelReviewActions,
     sessionActions,
+    sessionDateMap,
     coachId,
     coachName,
     coacheeId,

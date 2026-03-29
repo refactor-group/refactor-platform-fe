@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Info, Pencil, Trash2 } from "lucide-react";
+import { ArrowUpRight, Info, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -47,6 +48,12 @@ export interface CompactActionCardProps {
   onDelete?: (id: Id) => void;
   /** "review" makes body read-only and hides delete. Defaults to "current". */
   variant?: "current" | "review";
+  /** Source session ID for "view session" link on review cards */
+  sourceSessionId?: Id;
+  /** Source session date for tooltip on "view session" link */
+  sourceSessionDate?: DateTime;
+  /** When true, show a brief highlight ring animation */
+  highlighted?: boolean;
   /** When true, card starts in edit mode (used for new actions). */
   initialEditing?: boolean;
   /** Called when the user dismisses an initial-editing card. */
@@ -67,6 +74,9 @@ export function CompactActionCard({
   onBodyChange,
   onDelete,
   variant = "current",
+  sourceSessionId,
+  sourceSessionDate,
+  highlighted = false,
   initialEditing = false,
   onDismiss,
   className,
@@ -102,7 +112,7 @@ export function CompactActionCard({
       canFlip
       initialEditing={initialEditing}
       onDismiss={onDismiss}
-      className={className}
+      className={cn(className, highlighted && "ring-2 ring-primary/40 animate-in fade-in duration-500")}
       renderHeader={({ onFlip }) => (
         <ActionHeader
           status={action.status}
@@ -156,6 +166,8 @@ export function CompactActionCard({
             isReview={isReview}
             isOverdue={isOverdue}
             resolvedAssignees={resolvedAssignees}
+            sourceSessionId={sourceSessionId}
+            sourceSessionDate={sourceSessionDate}
             onDone={onDone}
             onEdit={onEditStart}
             onDelete={
@@ -277,6 +289,8 @@ function ActionBackView({
   isReview,
   isOverdue,
   resolvedAssignees,
+  sourceSessionId,
+  sourceSessionDate,
   onDone,
   onEdit,
   onDelete,
@@ -287,12 +301,18 @@ function ActionBackView({
   isReview: boolean;
   isOverdue: boolean;
   resolvedAssignees: { initials: string; name: string }[];
+  sourceSessionId?: Id;
+  sourceSessionDate?: DateTime;
   onDone: () => void;
   onEdit: () => void;
   onDelete?: () => void;
 }) {
   const formattedDate = action.due_by
     .setLocale(locale)
+    .toLocaleString(DateTime.DATE_MED);
+
+  const formattedSessionDate = sourceSessionDate
+    ?.setLocale(locale)
     .toLocaleString(DateTime.DATE_MED);
 
   return (
@@ -320,27 +340,54 @@ function ActionBackView({
         </span>
       </div>
 
-      <div className="flex items-center justify-end gap-2 pt-3">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-6 gap-1 text-[11px] px-2"
-          onClick={onEdit}
-        >
-          <Pencil className="!h-2.5 !w-2.5" />
-          Edit
-        </Button>
-        {onDelete && (
+      <div className="flex items-center justify-between pt-3">
+        <div>
+          {sourceSessionId && (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                    asChild
+                  >
+                    <Link href={`/coaching-sessions/${sourceSessionId}?panel=actions&highlight=${action.id}`}>
+                      <ArrowUpRight className="!h-3.5 !w-3.5" />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  {formattedSessionDate
+                    ? `View session from ${formattedSessionDate}`
+                    : "View source session"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
           <Button
-            variant="destructive"
+            variant="outline"
             size="sm"
             className="h-6 gap-1 text-[11px] px-2"
-            onClick={onDelete}
+            onClick={onEdit}
           >
-            <Trash2 className="!h-2.5 !w-2.5" />
-            Delete
+            <Pencil className="!h-2.5 !w-2.5" />
+            Edit
           </Button>
-        )}
+          {onDelete && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-6 gap-1 text-[11px] px-2"
+              onClick={onDelete}
+            >
+              <Trash2 className="!h-2.5 !w-2.5" />
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

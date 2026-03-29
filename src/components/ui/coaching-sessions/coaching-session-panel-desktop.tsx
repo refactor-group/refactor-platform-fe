@@ -42,6 +42,7 @@ export function CoachingSessionPanelDesktop({
   // Action props
   reviewActions,
   sessionActions,
+  sessionDateMap,
   coachId,
   coachName,
   coacheeId,
@@ -184,6 +185,7 @@ export function CoachingSessionPanelDesktop({
             <ActionSectionContent
               reviewActions={reviewActions}
               sessionActions={sessionActions}
+              sessionDateMap={sessionDateMap}
               locale={locale}
               coachId={coachId}
               coachName={coachName}

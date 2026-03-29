@@ -124,6 +124,15 @@ export function usePanelActions({
     return prev;
   }, [coachingSessions, currentSessionDate]);
 
+  // ── Session date map (for "view source session" links) ──────────
+  const sessionDateMap = useMemo(() => {
+    const map = new Map<Id, DateTime>();
+    for (const s of coachingSessions) {
+      map.set(s.id, DateTime.fromISO(s.date));
+    }
+    return map;
+  }, [coachingSessions]);
+
   // ── Review actions (filtered + sticky) ──────────────────────────
   const stickyIdsRef = useRef<Set<Id>>(new Set());
 
@@ -265,6 +274,7 @@ export function usePanelActions({
   return {
     sessionActions: sortedSessionActions,
     reviewActions,
+    sessionDateMap,
     handleCreate,
     handleStatusChange,
     handleDueDateChange,
