@@ -174,12 +174,44 @@ This project uses GitHub Actions for continuous integration, release builds, and
 
 ### PR Preview Environments
 
-This repository automatically deploys **isolated preview environments** for each pull request. When you open a PR, a complete stack (backend + frontend + database) deploys to a dedicated server on our Tailnet for testing before merge.
+This repository automatically deploys **isolated preview environments** for each pull request. When you open a PR, a complete stack (backend + frontend + database) deploys to a dedicated ARM64 server on our Tailnet for testing before merge.
 
-**What happens automatically:**
+#### Automatic Lifecycle
 
-- ✅ PR opened → Environment deploys
-- ✅ New commits → Environment updates
-- ✅ PR closed/merged → Environment cleans up
+- **PR opened/updated** → Environment deploys (lint, test, ARM64 build, deploy)
+- **PR closed/merged** → Environment cleans up (containers, volumes, images pruned)
 
-**Access:** Requires Tailscale VPN connection. Access URLs are posted as a comment on your PR in the GitHub Web UI.
+Access URLs are posted as a comment on your PR. Requires Tailscale VPN.
+
+#### Manual Dispatch with Commit Selection
+
+You can also deploy preview environments manually with specific commit combinations from both repos:
+
+1. **Refresh dropdown choices** — Go to Actions → "Refresh Preview Commits" → Run workflow
+   - Select your branch from the "Use workflow from" dropdown
+   - Leave `frontend_branch` empty to use the current branch, or enter a specific branch name
+   - Set `backend_branch` to `main` (or any backend branch)
+   - This populates the deploy workflow's commit dropdowns
+
+2. **Deploy the preview** — Go to Actions → "Deploy PR Preview (Manual Select)" → Run workflow
+   - Select your branch from the "Use workflow from" dropdown
+   - Leave `pr_number` empty to auto-detect from the branch, or enter a PR number
+   - Choose backend and frontend commits from the dropdowns
+   - Use the SHA override fields for exact commits not in the dropdowns
+
+#### What to Expect
+
+Each preview environment includes:
+
+| Service | Description |
+|---------|-------------|
+| PostgreSQL | Isolated per-PR database with its own schema |
+| Backend (Axum) | API server built from the selected backend commit |
+| Frontend (Next.js) | Web app built from the selected frontend commit, served at `/pr-<NUM>/` |
+| Migrator | Runs SeaORM migrations on startup, then exits |
+
+- **Build time**: ~5-10 minutes (ARM64 native builds with multi-tier caching)
+- **Dangling resources**: Automatically pruned on each deploy and cleanup to prevent disk/network exhaustion
+- **Stale environments**: If a cleanup fails, the next deploy prunes orphaned resources
+
+**Note:** The frontend shares CI/CD infrastructure with the backend repository. For comprehensive documentation including PR preview architecture, see the [Backend CI/CD Documentation](https://github.com/refactor-group/refactor-platform-rs/tree/main/docs/cicd).
