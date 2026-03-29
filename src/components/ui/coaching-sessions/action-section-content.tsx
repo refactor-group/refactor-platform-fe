@@ -147,6 +147,8 @@ export function ActionSectionContent({
         expanded={reviewExpanded}
         onToggle={() => setReviewExpanded((prev) => !prev)}
         testIdPrefix="review"
+        stickyTop="-top-4"
+        stickyPadding="pt-4"
       >
         {reviewActions.length === 0 ? (
           <p className="text-sm text-muted-foreground/50 italic px-1 py-2">
@@ -182,6 +184,7 @@ export function ActionSectionContent({
         expanded={sessionExpanded}
         onToggle={() => setSessionExpanded((prev) => !prev)}
         testIdPrefix="session"
+        stickyTop="top-8"
       >
         {isAddingAction && onActionCreate && (
           <div>
@@ -233,6 +236,8 @@ function CollapsibleSection({
   onToggle,
   testIdPrefix,
   sectionRef,
+  stickyTop = "top-0",
+  stickyPadding,
   children,
 }: {
   title: string;
@@ -241,18 +246,22 @@ function CollapsibleSection({
   onToggle: () => void;
   testIdPrefix: string;
   sectionRef?: React.RefObject<HTMLDivElement | null>;
+  /** Tailwind top class for sticky stacking (e.g. "top-0", "-top-4") */
+  stickyTop?: string;
+  /** Extra padding on the sticky header to cover the scroll gap (e.g. "pt-4") */
+  stickyPadding?: string;
   children: React.ReactNode;
 }) {
   const Chevron = expanded ? ChevronDown : ChevronRight;
 
   return (
     <div ref={sectionRef} className="relative">
-      <div>
+      <div className={cn("sticky z-10 bg-background", stickyTop, stickyPadding)}>
         <button
           type="button"
           data-testid={`${testIdPrefix}-section-toggle`}
           onClick={onToggle}
-          className="flex w-full items-center gap-1.5 py-2 px-1 text-[12px] font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          className="flex w-full items-center gap-1.5 py-2 px-1 text-[12px] font-bold text-muted-foreground hover:text-foreground transition-colors"
         >
           <Chevron className="h-3.5 w-3.5 shrink-0" />
           {title}
