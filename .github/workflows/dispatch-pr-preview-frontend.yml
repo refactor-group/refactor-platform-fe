@@ -181,7 +181,7 @@ jobs:
   # ===========================================================================
   # JOB 2: Deploy using the reusable workflow from the backend repo
   # ===========================================================================
-  # Follows the same cross-repo pattern as pr-preview-frontend.yml.
+  # Calls the backend repo's reusable workflow via cross-repo workflow_call.
   # Backend-specific secrets (Tiptap, MailerSend) use || 'UNUSED' fallbacks.
   # ===========================================================================
   deploy:
