@@ -108,14 +108,14 @@ export function CoachingSessionPanelDesktop({
     <div ref={panelRef} className="hidden md:block relative h-full min-h-0">
       <Card
         className={cn(
-          "flex flex-col h-full overflow-hidden transition-[width,box-shadow] duration-300 ease-in-out",
+          "flex flex-col h-full overflow-clip transition-[width,box-shadow] duration-300 ease-in-out",
           isInGoalFlow
             ? "absolute inset-y-0 left-0 z-10 shadow-xl"
             : "relative shadow-sm"
         )}
         style={{ width: isInGoalFlow ? `${EXPANDED_WIDTH}px` : "100%" }}
       >
-        <CardHeader className="p-4 pb-0">
+        <CardHeader className="p-4 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {isInGoalFlow && (
@@ -160,8 +160,7 @@ export function CoachingSessionPanelDesktop({
             )}
           </div>
         </CardHeader>
-        <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-clip">
-          <div className="h-full overflow-y-auto pr-1">
+        <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin]">
           {activeSection === PanelSection.Goals ? (
             <GoalFlowPages
               linkedGoals={linkedGoals}
@@ -202,7 +201,6 @@ export function CoachingSessionPanelDesktop({
               readOnly={readOnly}
             />
           )}
-          </div>
         </CardContent>
       </Card>
     </div>
