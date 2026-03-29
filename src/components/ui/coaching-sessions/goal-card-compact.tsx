@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CompactFlipCard } from "@/components/ui/coaching-sessions/compact-flip-card";
+import { EditableCardCompact } from "@/components/ui/coaching-sessions/editable-card-compact";
 import { ExpandableContent } from "@/components/ui/coaching-sessions/expandable-content";
 import { GoalProgressIcon } from "@/components/ui/coaching-sessions/goal-progress-icon";
 import { GoalEditForm } from "@/components/ui/coaching-sessions/goal-edit-form";
@@ -23,7 +23,7 @@ import { Some } from "@/types/option";
 // Front face: read-only — title, progress bar, progress icon, info button.
 // Back face:  actions   — edit, unlink from session, "Done" to flip back.
 //
-// Uses CompactFlipCard for shared flip infrastructure (state, animation,
+// Uses EditableCardCompact for shared card infrastructure (state, animation,
 // outside-click). Swap mode and select mode are early returns that bypass
 // the flip card entirely.
 
@@ -114,7 +114,7 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
   // ── Flip card ────────────────────────────────────────────────────────
 
   return (
-    <CompactFlipCard
+    <EditableCardCompact
       canFlip={canInteract}
       renderFront={({ onFlip }) => (
         <FrontFace

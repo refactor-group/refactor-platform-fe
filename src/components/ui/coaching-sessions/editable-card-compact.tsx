@@ -4,16 +4,16 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import type { ReactNode } from "react";
 import { cn } from "@/components/lib/utils";
 
-// ── Compact Flip Card (shared base for goal and agreement cards) ─────
+// ── Editable Card Compact (shared base for goal and agreement cards) ─
 //
-// Owns all flip-card infrastructure: state, ResizeObserver height
+// Owns all card infrastructure: state, ResizeObserver height
 // animation, outside-click-to-close, and container markup.
 // Consumers provide domain-specific content via renderFront/renderBack.
 //
 // When initialEditing is true, the card skips the flip entirely and
-// renders the back face directly with a zoom-in entrance animation.
+// renders the back face directly with an entrance animation.
 
-export interface CompactFlipCardProps {
+export interface EditableCardCompactProps {
   renderFront: (props: { onFlip: () => void }) => ReactNode;
   renderBack: (props: {
     onDone: () => void;
@@ -30,18 +30,18 @@ export interface CompactFlipCardProps {
   onDismiss?: () => void;
 }
 
-export function CompactFlipCard({
+export function EditableCardCompact({
   renderFront,
   renderBack,
   className,
   canFlip = true,
   initialEditing = false,
   onDismiss,
-}: CompactFlipCardProps) {
+}: EditableCardCompactProps) {
   // When initialEditing, skip the flip and show back face directly
   if (initialEditing) {
     return (
-      <ZoomCard
+      <InitialEditCard
         className={className}
         onDismiss={onDismiss}
         renderBack={renderBack}
@@ -50,7 +50,7 @@ export function CompactFlipCard({
   }
 
   return (
-    <FlipCard
+    <EditDetailsCard
       renderFront={renderFront}
       renderBack={renderBack}
       className={className}
@@ -60,16 +60,16 @@ export function CompactFlipCard({
   );
 }
 
-// ── Zoom Card (initial editing mode) ─────────────────────────────────
+// ── Initial Edit Card (skips flip, renders back face directly) ───────
 
-function ZoomCard({
+function InitialEditCard({
   className,
   onDismiss,
   renderBack,
 }: {
   className?: string;
   onDismiss?: () => void;
-  renderBack: CompactFlipCardProps["renderBack"];
+  renderBack: EditableCardCompactProps["renderBack"];
 }) {
   const handleDone = useCallback(() => {
     onDismiss?.();
@@ -95,15 +95,15 @@ function ZoomCard({
   );
 }
 
-// ── Flip Card (normal mode) ──────────────────────────────────────────
+// ── Edit Details Card (flip between read-only front and edit back) ───
 
-function FlipCard({
+function EditDetailsCard({
   renderFront,
   renderBack,
   className,
   canFlip = true,
   onDismiss,
-}: Omit<CompactFlipCardProps, "initialEditing">) {
+}: Omit<EditableCardCompactProps, "initialEditing">) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);

@@ -9,13 +9,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CompactFlipCard } from "@/components/ui/coaching-sessions/compact-flip-card";
+import { EditableCardCompact } from "@/components/ui/coaching-sessions/editable-card-compact";
 import { ExpandableContent } from "@/components/ui/coaching-sessions/expandable-content";
 import type { Agreement } from "@/types/agreement";
 
 // ── Compact Agreement Card (flip-card interaction) ───────────────────
 //
-// Uses CompactFlipCard for shared flip infrastructure.
+// Uses EditableCardCompact for shared card infrastructure.
 // Simpler than goal cards: no progress bar, no status, no linking.
 // Just body text, a created date, and edit/delete actions.
 
@@ -52,7 +52,7 @@ export function CompactAgreementCard({
   );
 
   return (
-    <CompactFlipCard
+    <EditableCardCompact
       canFlip={canInteract}
       initialEditing={initialEditing}
       onDismiss={onDismiss}
