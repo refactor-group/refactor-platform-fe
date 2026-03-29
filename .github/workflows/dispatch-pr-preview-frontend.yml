@@ -26,10 +26,9 @@ on:
         required: true
         type: choice
         options:
+          - '2b5430b - chore: refresh preview commit choices [skip ci]'
+          - '3c78a6c - fix: extract PR number from commit dropdown instead of '
           - '16d1238 - chore: refresh preview commit choices [skip ci]'
-          - '22c617c - chore: refresh preview commit choices [skip ci]'
-          - '3ff8cb7 - fix: skip cleanup when no preview environment was deplo'
-          - 5e691b8 - PR#271 (fix/dispatch-remove-pr-number-)
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
@@ -37,10 +36,9 @@ on:
         required: true
         type: choice
         options:
+          - '373cdc4 - fix: extract PR number from commit dropdown instead of separate input (#359)'
+          - '553e9a4 - chore: refresh preview commit choices [skip ci]'
           - '9562fd0 - chore: refresh preview commit choices [skip ci]'
-          - '9fb352e - chore: refresh preview commit choices [skip ci]'
-          - '13b410c - chore: refresh preview commit choices [skip ci]'
-          - 3c76f7a - PR#359 (fix/dispatch-remove-pr-number-)
           - 5e3acc0 - PR#355 (feature/coaching-session-panel)
           - fcaa151 - PR#349 (feature/coaching-session-panel)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
