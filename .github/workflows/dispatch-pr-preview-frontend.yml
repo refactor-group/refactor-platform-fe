@@ -41,11 +41,11 @@ on:
         required: true
         type: choice
         options:
+          - '9562fd0 - chore: refresh preview commit choices [skip ci]'
           - '9fb352e - chore: refresh preview commit choices [skip ci]'
           - '13b410c - chore: refresh preview commit choices [skip ci]'
-          - '339c80d - chore: refresh preview commit choices [skip ci]'
           - 3c76f7a - PR#359 (fix/dispatch-remove-pr-number-)
-          - 9dd85cf - PR#355 (feature/coaching-session-panel)
+          - 5e3acc0 - PR#355 (feature/coaching-session-panel)
           - fcaa151 - PR#349 (feature/coaching-session-panel)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
