@@ -333,4 +333,152 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     await expect(actionText).toBeVisible({ timeout: 5_000 })
     await expect(actionText).toBeInViewport({ timeout: 3_000 })
   })
+
+  test('deep-link with non-existent action ID loads panel without crash or highlight', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'Desktop panel layout test only')
+
+    await page.goto(
+      `/coaching-sessions/${SESSION_ID}?panel=actions&highlight=bogus-action-id`
+    )
+
+    await dismissDevErrorOverlay(page)
+
+    // Panel should still load and show both section headers
+    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('Due for Review')).toBeVisible()
+
+    // Existing action cards should render normally
+    await expect(page.getByText(SESSION_ACTIONS[0].body).first()).toBeVisible()
+
+    // No action card should have the deep-link highlight ring.
+    // The highlight is applied as "ring-2 ring-primary/40" on action card wrappers.
+    // Scope to the action section content to avoid matching unrelated ring-2 elements.
+    const sessionContent = page.getByTestId('session-section-content')
+    const reviewContent = page.getByTestId('review-section-content')
+    const highlightedInSession = sessionContent.locator('[class*="ring-primary"]')
+    const highlightedInReview = reviewContent.locator('[class*="ring-primary"]')
+    await expect(highlightedInSession).toHaveCount(0)
+    await expect(highlightedInReview).toHaveCount(0)
+  })
+
+  test('panel=actions without highlight param shows Actions panel with no highlight', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'Desktop panel layout test only')
+
+    await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
+
+    await dismissDevErrorOverlay(page)
+
+    // Actions panel should be active
+    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('Due for Review')).toBeVisible()
+
+    // Action cards render normally
+    await expect(page.getByText(SESSION_ACTIONS[0].body).first()).toBeVisible()
+
+    // No highlight ring applied to any action card
+    const sessionContent = page.getByTestId('session-section-content')
+    const reviewContent = page.getByTestId('review-section-content')
+    const highlightedInSession = sessionContent.locator('[class*="ring-primary"]')
+    const highlightedInReview = reviewContent.locator('[class*="ring-primary"]')
+    await expect(highlightedInSession).toHaveCount(0)
+    await expect(highlightedInReview).toHaveCount(0)
+  })
+
+  test('deep-link highlight ring is applied immediately and clears after ~2 seconds', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'Highlight ring assertion applies to desktop panel only')
+
+    const targetAction = SESSION_ACTIONS[0] // "Draft quarterly report"
+
+    await page.goto(
+      `/coaching-sessions/${SESSION_ID}?panel=actions&highlight=${targetAction.id}`
+    )
+
+    await dismissDevErrorOverlay(page)
+
+    // Wait for the card to appear
+    await expect(page.getByText(targetAction.body).first()).toBeVisible({ timeout: 15_000 })
+
+    // Poll for the highlight ring — it should appear within a short window
+    const targetCard = page
+      .getByText(targetAction.body)
+      .first()
+      .locator('xpath=ancestor::div[contains(@class, "ring-2")]')
+    await expect(targetCard).toBeVisible({ timeout: 3_000 })
+
+    // After 2s the component clears activeHighlight — the ring should disappear
+    await expect(targetCard).toBeHidden({ timeout: 5_000 })
+  })
+
+  test('deep-link to review action expands a previously-collapsed review section', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'Desktop panel layout test only')
+
+    const targetAction = REVIEW_ACTIONS[0] // "Finish onboarding checklist"
+
+    // First, load without highlight to verify the review section content is visible
+    // (it auto-expands when review actions exist), then collapse it manually
+    await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
+    await dismissDevErrorOverlay(page)
+
+    await expect(page.getByTestId('review-section-toggle')).toBeVisible({ timeout: 15_000 })
+
+    // Collapse the review section
+    await page.getByTestId('review-section-toggle').click()
+
+    // Verify it collapsed — content should be hidden
+    const reviewContent = page.getByTestId('review-section-content')
+    await expect(reviewContent).toBeHidden()
+
+    // Now navigate with a deep-link highlight to the review action
+    await page.goto(
+      `/coaching-sessions/${SESSION_ID}?panel=actions&highlight=${targetAction.id}`
+    )
+    await dismissDevErrorOverlay(page)
+
+    // The review section should be auto-expanded and the target action visible
+    await expect(page.getByTestId('review-section-content')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(targetAction.body).first()).toBeVisible()
+  })
+
+  test('review action card back-view has correct deep-link href', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'Desktop panel layout test only')
+
+    const targetAction = REVIEW_ACTIONS[0] // "Finish onboarding checklist"
+
+    await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
+    await dismissDevErrorOverlay(page)
+
+    // Wait for the review action to render
+    await expect(page.getByText(targetAction.body).first()).toBeVisible({ timeout: 15_000 })
+
+    // Click the action card to flip it to the back view
+    await page.getByText(targetAction.body).first().click()
+
+    // The back view should have a "View in source session" link with the correct href.
+    // The link is rendered as an <a> inside a Button with asChild.
+    const deepLink = page.locator(
+      `a[href*="panel=actions"][href*="highlight=${targetAction.id}"]`
+    )
+    await expect(deepLink).toBeVisible({ timeout: 5_000 })
+
+    // Verify the href points to the source session (previous session)
+    const href = await deepLink.getAttribute('href')
+    expect(href).toContain(`/coaching-sessions/${PREV_SESSION_ID}`)
+    expect(href).toContain(`panel=actions`)
+    expect(href).toContain(`highlight=${targetAction.id}`)
+  })
 })
