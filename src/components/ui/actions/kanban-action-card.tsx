@@ -109,7 +109,7 @@ export function KanbanActionCard({
     });
 
   const style: React.CSSProperties = {
-    contain: "layout style paint",
+    contain: "layout style",
     ...(transform ? { transform: CSS.Translate.toString(transform) } : undefined),
   };
 
