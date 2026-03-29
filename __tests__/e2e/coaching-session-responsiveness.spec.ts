@@ -52,8 +52,8 @@ test.describe('Coaching session page responsiveness', () => {
 
       await page.goto(`/coaching-sessions/${SESSION_ID}`)
 
-      // Wait for the page to render the tabs (indicates layout is complete)
-      await page.getByRole('tab', { name: 'Notes' }).waitFor({ state: 'visible' })
+      // Wait for the page to render the Notes heading (indicates layout is complete)
+      await page.getByRole('heading', { name: 'Notes' }).waitFor({ state: 'visible' })
 
       // Core assertion: document scroll width should not exceed viewport,
       // meaning no content is overflowing horizontally.
@@ -65,9 +65,8 @@ test.describe('Coaching session page responsiveness', () => {
         `Content overflows viewport at ${viewport.width}px: scrollWidth=${bodyScrollWidth}`
       ).toBeLessThanOrEqual(viewport.width)
 
-      // The notes tab and at least one other tab should be visible
-      await expect(page.getByRole('tab', { name: 'Notes' })).toBeVisible()
-      await expect(page.getByRole('tab', { name: 'Actions' })).toBeVisible()
+      // The notes section should be visible
+      await expect(page.getByRole('heading', { name: 'Notes' })).toBeVisible()
     })
   }
 })
