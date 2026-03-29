@@ -52,6 +52,7 @@ jobs:
               with:
                   token: ${{ secrets.GHCR_PAT }}
                   ref: main
+                  fetch-depth: 10
 
             - name: Install yq
               run: |
