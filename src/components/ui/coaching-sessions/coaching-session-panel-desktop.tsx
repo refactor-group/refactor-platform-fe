@@ -14,6 +14,7 @@ import { GoalFlowStep } from "@/components/ui/coaching-sessions/goal-flow";
 import { GoalFlowPages, computePanelCounts, computeHeaderTitle } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
+import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
@@ -38,6 +39,21 @@ export function CoachingSessionPanelDesktop({
   onAgreementCreate,
   isAddingAgreement,
   onAddingAgreementChange,
+  // Action props
+  reviewActions,
+  sessionActions,
+  coachId,
+  coachName,
+  coacheeId,
+  coacheeName,
+  onActionCreate,
+  onActionDelete,
+  onStatusChange,
+  onDueDateChange,
+  onAssigneesChange,
+  onBodyChange,
+  isAddingAction,
+  onAddingActionChange,
   locale,
 }: CoachingSessionPanelDesktopProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -61,10 +77,15 @@ export function CoachingSessionPanelDesktop({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [flow.step, goalFlow]);
 
-  const counts = computePanelCounts(linkedGoals, agreements);
+  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions);
 
   if (collapsed) {
-    const collapsedLabel = activeSection === PanelSection.Goals ? "Goals" : "Agreements";
+    const sectionLabels: Record<PanelSection, string> = {
+      [PanelSection.Goals]: "Goals",
+      [PanelSection.Agreements]: "Agreements",
+      [PanelSection.Actions]: "Actions",
+    };
+    const collapsedLabel = sectionLabels[activeSection];
     const collapsedCount = counts[activeSection] || undefined;
 
     return (
@@ -120,8 +141,17 @@ export function CoachingSessionPanelDesktop({
               <Button
                 size="sm"
                 className="h-8 gap-1 text-xs"
-                disabled={isAddingAgreement && activeSection === PanelSection.Agreements}
-                onClick={activeSection === PanelSection.Goals ? goalFlow.handleAddGoalClick : () => onAddingAgreementChange(true)}
+                disabled={
+                  (isAddingAgreement && activeSection === PanelSection.Agreements) ||
+                  (isAddingAction && activeSection === PanelSection.Actions)
+                }
+                onClick={
+                  activeSection === PanelSection.Goals
+                    ? goalFlow.handleAddGoalClick
+                    : activeSection === PanelSection.Actions
+                      ? () => onAddingActionChange(true)
+                      : () => onAddingAgreementChange(true)
+                }
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add
@@ -129,7 +159,7 @@ export function CoachingSessionPanelDesktop({
             )}
           </div>
         </CardHeader>
-        <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-hidden">
+        <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto">
           {activeSection === PanelSection.Goals ? (
             <GoalFlowPages
               linkedGoals={linkedGoals}
@@ -138,7 +168,7 @@ export function CoachingSessionPanelDesktop({
               onUnlink={onUnlink}
               onUpdateGoal={onUpdateGoal}
             />
-          ) : (
+          ) : activeSection === PanelSection.Agreements ? (
             <AgreementSectionContent
               agreements={agreements}
               locale={locale}
@@ -147,6 +177,25 @@ export function CoachingSessionPanelDesktop({
               onAgreementCreate={onAgreementCreate}
               onAgreementEdit={onAgreementEdit}
               onAgreementDelete={onAgreementDelete}
+              readOnly={readOnly}
+            />
+          ) : (
+            <ActionSectionContent
+              reviewActions={reviewActions}
+              sessionActions={sessionActions}
+              locale={locale}
+              coachId={coachId}
+              coachName={coachName}
+              coacheeId={coacheeId}
+              coacheeName={coacheeName}
+              isAddingAction={isAddingAction}
+              onAddingActionChange={onAddingActionChange}
+              onStatusChange={onStatusChange}
+              onDueDateChange={onDueDateChange}
+              onAssigneesChange={onAssigneesChange}
+              onBodyChange={onBodyChange}
+              onActionCreate={onActionCreate}
+              onActionDelete={onActionDelete}
               readOnly={readOnly}
             />
           )}

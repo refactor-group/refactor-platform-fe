@@ -68,9 +68,12 @@ export default function CoachingSessionsPage() {
   const reviewActions = searchParams.get("review") === "true";
 
   // Panel section persisted via URL param "panel"
-  const panelSection = searchParams.get("panel") === PanelSection.Agreements
+  const panelParam = searchParams.get("panel");
+  const panelSection = panelParam === PanelSection.Agreements
     ? PanelSection.Agreements
-    : PanelSection.Goals;
+    : panelParam === PanelSection.Actions
+      ? PanelSection.Actions
+      : PanelSection.Goals;
 
   const { userId, userSession } = useAuthStore((state) => ({
     userId: state.userId,

@@ -8,12 +8,6 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -26,16 +20,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
 import Link from "next/link";
-import { ItemStatus, Id, actionStatusToString } from "@/types/general";
+import { ItemStatus, Id } from "@/types/general";
 import type { Action } from "@/types/action";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
 import {
   resolveAssignees,
+  statusDotColor,
   AssigneePickerPopover,
   DueDatePicker,
+  StatusSelect,
 } from "@/components/ui/coaching-sessions/action-card-parts";
+import type { StatusSelectProps } from "@/components/ui/coaching-sessions/action-card-parts";
 
 interface SessionActionCardProps {
   action: Action;
@@ -65,85 +62,8 @@ interface SessionActionCardProps {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Returns the Tailwind color class for the status dot */
-function statusDotColor(status: ItemStatus): string {
-  switch (status) {
-    case ItemStatus.NotStarted:
-      return "bg-muted-foreground";
-    case ItemStatus.InProgress:
-      return "bg-green-500";
-    case ItemStatus.OnHold:
-      return "bg-amber-400";
-    case ItemStatus.Completed:
-      return "bg-primary";
-    case ItemStatus.WontDo:
-      return "bg-red-400";
-    default: {
-      const _exhaustive: never = status;
-      throw new Error(`Unhandled status: ${_exhaustive}`);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-interface StatusSelectProps {
-  status: ItemStatus;
-  onStatusChange: (newStatus: ItemStatus) => void;
-}
-
-function StatusSelect({ status, onStatusChange }: StatusSelectProps) {
-  return (
-    <Select
-      value={status}
-      onValueChange={(value) => onStatusChange(value as ItemStatus)}
-    >
-      <SelectTrigger
-        className="h-6 w-auto gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent whitespace-nowrap [&>svg]:h-3 [&>svg]:w-3"
-      >
-        <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(status))} />
-        {actionStatusToString(status)}
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ItemStatus.NotStarted}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.NotStarted))} />
-            Not Started
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.InProgress}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.InProgress))} />
-            In Progress
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.OnHold}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.OnHold))} />
-            On Hold
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.Completed}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.Completed))} />
-            Completed
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.WontDo}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.WontDo))} />
-            Won&apos;t Do
-          </span>
-        </SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}
 
 interface DeleteConfirmButtonProps {
   onDelete: () => void;

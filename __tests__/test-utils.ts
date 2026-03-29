@@ -1,4 +1,5 @@
 import { DateTime } from "ts-luxon";
+import { Action } from "@/types/action";
 import { Agreement } from "@/types/agreement";
 import { CoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
@@ -102,6 +103,23 @@ export function createMockGoal(overrides?: Partial<Goal>): Goal {
     target_date: null,
     created_at: now,
     updated_at: now,
+    ...overrides,
+  };
+}
+
+export function createMockAction(overrides?: Partial<Action>): Action {
+  const now = DateTime.now();
+  return {
+    id: "action-1",
+    coaching_session_id: "session-1",
+    body: "Follow up on resume review",
+    user_id: "user-1",
+    status: ItemStatus.NotStarted,
+    status_changed_at: now,
+    due_by: now.plus({ days: 7 }),
+    created_at: now,
+    updated_at: now,
+    assignee_ids: ["user-1"],
     ...overrides,
   };
 }

@@ -14,7 +14,11 @@ import { cn } from "@/components/lib/utils";
 // renders the back face directly with an entrance animation.
 
 export interface BaseCardCompactEditableProps {
+  /** Optional header rendered above the body on the front face only. */
+  renderHeader?: (props: { onFlip: () => void }) => ReactNode;
   renderFront: (props: { onFlip: () => void }) => ReactNode;
+  /** Optional footer rendered below the body on the front face only. */
+  renderFooter?: () => ReactNode;
   renderBack: (props: {
     onDone: () => void;
     isEditing: boolean;
@@ -31,7 +35,9 @@ export interface BaseCardCompactEditableProps {
 }
 
 export function BaseCardCompactEditable({
+  renderHeader,
   renderFront,
+  renderFooter,
   renderBack,
   className,
   canFlip = true,
@@ -51,7 +57,9 @@ export function BaseCardCompactEditable({
 
   return (
     <EditDetailsCard
+      renderHeader={renderHeader}
       renderFront={renderFront}
+      renderFooter={renderFooter}
       renderBack={renderBack}
       className={className}
       canFlip={canFlip}
@@ -98,7 +106,9 @@ function InitialEditCard({
 // ── Edit Details Card (flip between read-only front and edit back) ───
 
 function EditDetailsCard({
+  renderHeader,
   renderFront,
+  renderFooter,
   renderBack,
   className,
   canFlip = true,
@@ -200,7 +210,17 @@ function EditDetailsCard({
           aria-hidden={isFlipped}
           className="flip-card-face flip-card-front rounded-lg border border-border bg-background p-3 space-y-2 group/card transition-colors shadow-sm hover:border-foreground/20"
         >
+          {renderHeader && (
+            <div data-slot="card-header">
+              {renderHeader({ onFlip: handleFlip })}
+            </div>
+          )}
           {renderFront({ onFlip: handleFlip })}
+          {renderFooter && (
+            <div data-slot="card-footer">
+              {renderFooter()}
+            </div>
+          )}
         </div>
 
         {/* ── Back face ──────────────────────────────────────────── */}
