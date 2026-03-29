@@ -40,8 +40,7 @@ Calls the backend repository's reusable workflow to deploy PR preview environmen
 
 **Parameters:**
 - `repo_type: 'frontend'`
-- `pr_number`: PR number
-- `branch_name`: Frontend PR branch
+- `branch_name`: Frontend PR branch (PR number is extracted from the frontend commit dropdown selection)
 - `backend_branch`: 'main' (or temporary override)
 
 ### 5. Frontend PR Cleanup
