@@ -2,26 +2,34 @@
 # Refresh PR Preview Commit Choices (Frontend)
 # =============================================================================
 # Purpose: Keep the dispatch-pr-preview-frontend workflow's dropdown commit
-#          choices up-to-date with the 5 most recent commits from both repos.
-# Triggers: On every PR push (opened/synchronize/reopened/ready_for_review),
-#           on merge to main, or manually via workflow_dispatch.
+#          choices up-to-date with the latest main commits + HEAD of every open
+#          PR from both repos.
+# Triggers: On merge to main, PR activity, or manually via workflow_dispatch.
 # Updates: This repo's dispatch-pr-preview-frontend.yml only.
 # Requires: GHCR_PAT with 'workflow' scope to push changes to .github/workflows/
-#
-# Note: The backend repo's refresh-preview-commits.yml also updates this repo's
-#       dispatch workflow as a redundancy layer (Step 5b in backend refresh).
 # =============================================================================
 
 name: Refresh Preview Commits
 
 on:
-    pull_request:
-        types: [opened, synchronize, reopened, ready_for_review]
     push:
         branches: [main]
         paths-ignore:
             - ".github/workflows/dispatch-pr-preview-frontend.yml"
+    pull_request:
+        types: [opened, synchronize, reopened, closed]
     workflow_dispatch:
+        inputs:
+            backend_branch:
+                description: "Branch to fetch backend commits from (default: main)"
+                required: false
+                type: string
+                default: "main"
+            frontend_branch:
+                description: "Branch to fetch frontend commits from (default: current branch)"
+                required: false
+                type: string
+                default: ""
 
 # Only one refresh at a time to prevent push conflicts
 concurrency:
@@ -44,6 +52,7 @@ jobs:
               with:
                   token: ${{ secrets.GHCR_PAT }}
                   ref: main
+                  fetch-depth: 10
 
             - name: Install yq
               run: |
@@ -53,21 +62,40 @@ jobs:
             - name: Fetch recent commits from both repos
               env:
                   GH_TOKEN: ${{ secrets.GHCR_PAT }}
+                  BACKEND_BRANCH: ${{ inputs.backend_branch || 'main' }}
+                  FRONTEND_BRANCH: ${{ inputs.frontend_branch || (github.event_name == 'pull_request' && 'main') || github.ref_name }}
               run: |
                   set -euo pipefail
                   OWNER="${{ github.repository_owner }}"
 
-                  # Backend: 5 most recent commits on main (via API)
-                  gh api "repos/$OWNER/refactor-platform-rs/commits?sha=main&per_page=5" \
+                  # Backend: 3 most recent main commits (via API)
+                  gh api "repos/$OWNER/refactor-platform-rs/commits?sha=$BACKEND_BRANCH&per_page=3" \
                       --jq '.[] | "\(.sha[0:7]) - \(.commit.message | split("\n")[0] | .[0:55])"' \
                       > /tmp/backend_commits.txt
 
-                  # Frontend: 5 most recent commits on main (local checkout)
-                  git log --oneline -5 --format='%h - %.55s' > /tmp/frontend_commits.txt
+                  # Backend: append HEAD of each open PR
+                  gh pr list --repo "$OWNER/refactor-platform-rs" --state open \
+                      --json number,headRefName,headRefOid \
+                      --jq '.[] | "\(.headRefOid[0:7]) - PR#\(.number) (\(.headRefName | .[0:30]))"' \
+                      >> /tmp/backend_commits.txt
 
-                  echo "=== Backend commits ==="
+                  # Frontend: 3 most recent main commits (local checkout)
+                  if [[ "$FRONTEND_BRANCH" != "main" ]]; then
+                      git fetch origin "$FRONTEND_BRANCH"
+                      git log "origin/$FRONTEND_BRANCH" --oneline -3 --format='%h - %s' > /tmp/frontend_commits.txt
+                  else
+                      git log --oneline -3 --format='%h - %s' > /tmp/frontend_commits.txt
+                  fi
+
+                  # Frontend: append HEAD of each open PR
+                  gh pr list --repo "$OWNER/refactor-platform-fe" --state open \
+                      --json number,headRefName,headRefOid \
+                      --jq '.[] | "\(.headRefOid[0:7]) - PR#\(.number) (\(.headRefName | .[0:30]))"' \
+                      >> /tmp/frontend_commits.txt
+
+                  echo "=== Backend commits (branch: $BACKEND_BRANCH) ==="
                   cat /tmp/backend_commits.txt
-                  echo "=== Frontend commits ==="
+                  echo "=== Frontend commits (branch: $FRONTEND_BRANCH) ==="
                   cat /tmp/frontend_commits.txt
 
             - name: Update dispatch workflow choices

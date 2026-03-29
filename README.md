@@ -166,7 +166,7 @@ This project uses GitHub Actions for continuous integration, release builds, and
 - **Branch CI**: Automated linting, testing, and Docker builds on every push/PR
 - **Release Builds**: Multi-architecture production images triggered by GitHub releases
 - **Deployment**: Manual deployment to DigitalOcean via secure Tailscale VPN
-- **PR Previews**: Automatic preview environments for each pull request
+- **PR Previews**: On-demand preview environments via manual workflow dispatch
 
 📚 **Documentation:** [docs/cicd/README.md](docs/cicd/README.md)
 
@@ -174,12 +174,36 @@ This project uses GitHub Actions for continuous integration, release builds, and
 
 ### PR Preview Environments
 
-This repository automatically deploys **isolated preview environments** for each pull request. When you open a PR, a complete stack (backend + frontend + database) deploys to a dedicated server on our Tailnet for testing before merge.
+This repository supports **isolated preview environments** for pull requests. Preview environments are deployed **manually via workflow dispatch** — they are not created automatically on PR open or push.
 
-**What happens automatically:**
+#### How to Deploy a Preview
 
-- ✅ PR opened → Environment deploys
-- ✅ New commits → Environment updates
-- ✅ PR closed/merged → Environment cleans up
+1. **Deploy** — Go to Actions → **"Deploy PR Preview (Manual Select)"** → Run workflow
+   - Leave `pr_number` empty to auto-detect from the branch, or enter a PR number
+   - Choose backend and frontend commits from the dropdowns
+   - Dropdowns include the latest `main` commits plus the HEAD of every open PR from both repos
+   - For any commit not in the dropdown, paste the exact SHA in the override fields
 
-**Access:** Requires Tailscale VPN connection. Access URLs are posted as a comment on your PR in the GitHub Web UI.
+2. **Cleanup** — Automatic when the PR is closed or merged (containers, volumes, images pruned)
+
+> **Note:** Dropdowns auto-refresh on every merge to `main` and on every PR update.
+> Run "Refresh Preview Commits" manually only if you need an immediate update.
+
+Access URLs are posted as a comment on your PR. Requires Tailscale VPN.
+
+#### What to Expect
+
+Each preview environment includes:
+
+| Service | Description |
+|---------|-------------|
+| PostgreSQL | Isolated per-PR database with its own schema |
+| Backend (Axum) | API server built from the selected backend commit |
+| Frontend (Next.js) | Web app built from the selected frontend commit, served at `/pr-<NUM>/` |
+| Migrator | Runs SeaORM migrations on startup, then exits |
+
+- **Build time**: ~5-10 minutes (ARM64 native builds with multi-tier caching)
+- **Dangling resources**: Automatically pruned on each deploy and cleanup to prevent disk/network exhaustion
+- **Stale environments**: If a cleanup fails, the next deploy prunes orphaned resources
+
+**Note:** The frontend shares CI/CD infrastructure with the backend repository. For comprehensive documentation including PR preview architecture, see the [Backend CI/CD Documentation](https://github.com/refactor-group/refactor-platform-rs/tree/main/docs/cicd).

@@ -3,6 +3,7 @@
 # =============================================================================
 # Purpose: Trigger cleanup when frontend PRs are closed/merged
 # Calls: refactor-platform-rs/cleanup-pr-preview.yml (reusable workflow)
+# Safety: Checks if a preview was deployed before calling cleanup
 # =============================================================================
 
 name: Cleanup PR Preview (Frontend)
@@ -16,16 +17,45 @@ permissions:
   contents: read
   packages: write
   pull-requests: write
+  attestations: write
+  id-token: write
 
 jobs:
   # ===========================================================================
-  # JOB: Call reusable cleanup workflow from backend repo
+  # JOB: Check if a preview environment was deployed for this PR
+  # ===========================================================================
+  check-preview:
+    name: Check for deployed preview
+    runs-on: ubuntu-latest
+    outputs:
+      has_preview: ${{ steps.check.outputs.has_preview }}
+    steps:
+      - name: Check for deploy comment on PR
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          COMMENTS=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" \
+            --jq '[.[] | select(.body | contains("PR Preview Environment"))] | length')
+          if [[ "$COMMENTS" -gt 0 ]]; then
+            echo "has_preview=true" >> $GITHUB_OUTPUT
+            echo "::notice::Preview environment found for PR #$PR_NUMBER — proceeding with cleanup"
+          else
+            echo "has_preview=false" >> $GITHUB_OUTPUT
+            echo "::notice::No preview environment was deployed for PR #$PR_NUMBER — skipping cleanup"
+          fi
+
+  # ===========================================================================
+  # JOB: Call reusable cleanup workflow (only if preview exists)
   # ===========================================================================
   cleanup-frontend-pr:
     name: Cleanup Frontend PR Preview
+    needs: check-preview
+    if: needs.check-preview.outputs.has_preview == 'true'
     # Call the reusable workflow from backend repository
     # NOTE: @ref must be a literal (GitHub Actions limitation — no expressions in uses:).
-    # When testing against an unmerged backend branch, update this ref manually.
     uses: refactor-group/refactor-platform-rs/.github/workflows/cleanup-pr-preview.yml@main
     with:
       # This is a frontend PR cleanup
@@ -35,8 +65,3 @@ jobs:
       # Branch name for image identification
       branch_name: ${{ github.head_ref }}
     secrets: inherit
-    # =========================================================================
-    # NO SECRETS NEEDED!
-    # =========================================================================
-    # The reusable workflow uses the backend repo's pr-preview environment
-    # which contains all necessary secrets for cleanup.
