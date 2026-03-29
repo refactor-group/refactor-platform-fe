@@ -59,7 +59,7 @@ interface KanbanBoardProps {
   onVisibilityChange: (vis: StatusVisibility) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string) => void;
+  onBodyChange: (id: Id, newBody: string) => Promise<void>;
   onDelete?: (id: Id) => void;
 }
 

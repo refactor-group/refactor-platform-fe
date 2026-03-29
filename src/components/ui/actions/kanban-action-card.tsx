@@ -3,15 +3,11 @@
 import { memo } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { isUserCoachInRelationship, isUserCoacheeInRelationship } from "@/types/coaching-relationship";
 import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
-import {
-  SessionActionCard,
-  StatusSelect,
-} from "@/components/ui/coaching-sessions/session-action-card";
+import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
 import type { DateTime } from "ts-luxon";
@@ -22,7 +18,7 @@ export interface KanbanCardCallbacks {
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string) => void;
+  onBodyChange: (id: Id, newBody: string) => Promise<void>;
   onDelete?: (id: Id) => void;
 }
 
@@ -38,7 +34,7 @@ export interface KanbanActionCardProps extends KanbanCardCallbacks {
  * Heavy card content — memoized separately so it is NOT re-rendered by
  * dnd-kit's internal context updates during drag. `useDraggable` subscribes
  * to InternalContext which changes on every pointer move; without this split,
- * every card (including its ReactMarkdown body) would re-render continuously.
+ * every card would re-render continuously.
  */
 const KanbanActionCardContent = memo(function KanbanActionCardContent({
   ctx,
@@ -48,37 +44,23 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
   onAssigneesChange,
   onBodyChange,
   onDelete,
-  isOverlay,
   coachLabel,
   coacheeLabel,
 }: KanbanCardCallbacks & {
   ctx: AssignedActionWithContext;
-  isOverlay: boolean;
   coachLabel: string;
   coacheeLabel: string;
 }) {
   return (
     <>
-      {/* Relationship header with status pill (drag listeners are on the outer shell) */}
-      <div
-        className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground border border-b-0 border-border rounded-t-xl bg-muted/40",
-          !isOverlay && "cursor-grab active:cursor-grabbing"
-        )}
-      >
-        <GripVertical className="h-3.5 w-3.5 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" />
+      {/* Relationship header */}
+      <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground border border-b-0 border-border rounded-t-lg bg-muted/40">
         <span className="truncate">
           {coachLabel} → {coacheeLabel}
         </span>
-        <div className="ml-auto shrink-0">
-          <StatusSelect
-            status={ctx.action.status}
-            onStatusChange={(newStatus) => onStatusChange(ctx.action.id, newStatus)}
-          />
-        </div>
       </div>
 
-      <SessionActionCard
+      <CompactActionCard
         action={ctx.action}
         locale={locale}
         coachId={ctx.relationship.coach_id}
@@ -91,12 +73,7 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
         onBodyChange={onBodyChange}
         onDelete={onDelete}
         variant="current"
-        showSessionLink
-        sessionDate={ctx.sourceSession.sessionDate}
         className="rounded-t-none"
-        lightweight={isOverlay}
-        autoHeight={false}
-        hideStatus
       />
     </>
   );
@@ -106,6 +83,10 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
  * Thin draggable shell — re-renders on every dnd-kit context update during
  * drag, but only renders a wrapper div. The heavy content is in
  * KanbanActionCardContent which is memoized and skips these re-renders.
+ *
+ * The entire card is the drag handle (grab from anywhere). DnD-kit
+ * distinguishes drag from click via pointer movement threshold, so click
+ * interactions (status pill, expand, flip) still work naturally.
  */
 export function KanbanActionCard({
   ctx,
@@ -145,7 +126,7 @@ export function KanbanActionCard({
       style={style}
       data-kanban-card
       className={cn(
-        "relative group rounded-xl transition-[box-shadow] duration-700",
+        "relative group rounded-lg cursor-grab active:cursor-grabbing transition-[box-shadow] duration-700",
         isDragging && "opacity-50",
         isOverlay && "opacity-90 shadow-lg rotate-2",
         justMoved && "ring-2 ring-primary/40"
@@ -160,7 +141,6 @@ export function KanbanActionCard({
         onAssigneesChange={onAssigneesChange}
         onBodyChange={onBodyChange}
         onDelete={onDelete}
-        isOverlay={isOverlay}
         coachLabel={coachLabel}
         coacheeLabel={coacheeLabel}
       />

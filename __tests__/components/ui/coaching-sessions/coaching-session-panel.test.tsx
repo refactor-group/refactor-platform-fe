@@ -79,6 +79,73 @@ vi.mock("@/lib/api/goal-progress", () => ({
   })),
 }))
 
+// Mock auth store
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: vi.fn((selector: (state: any) => any) =>
+    selector({ userId: "user-1" })
+  ),
+}))
+
+// Mock coaching session/relationship hooks (used internally by panel for action data)
+vi.mock("@/lib/hooks/use-current-coaching-session", () => ({
+  useCurrentCoachingSession: vi.fn(() => ({
+    currentCoachingSessionId: "session-1",
+    currentCoachingSession: { id: "session-1", date: "2026-03-28T10:00:00.000Z", coaching_relationship_id: "rel-1" },
+    isError: false,
+    isLoading: false,
+    refresh: vi.fn(),
+  })),
+}))
+
+vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
+  useCurrentCoachingRelationship: vi.fn(() => ({
+    currentCoachingRelationshipId: "rel-1",
+    currentCoachingRelationship: {
+      id: "rel-1",
+      coach_id: "coach-1",
+      coachee_id: "coachee-1",
+      organization_id: "org-1",
+      coach_first_name: "Jim",
+      coach_last_name: "Hodapp",
+      coachee_first_name: "Caleb",
+      coachee_last_name: "Bourg",
+    },
+    isLoading: false,
+    isError: false,
+    setCurrentCoachingRelationshipId: vi.fn(),
+    refresh: vi.fn(),
+  })),
+}))
+
+// Mock action hooks
+vi.mock("@/lib/api/actions", () => ({
+  useActionMutation: vi.fn(() => ({
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    isLoading: false,
+    error: null,
+  })),
+}))
+
+vi.mock("@/lib/api/user-actions", () => ({
+  useUserActionsList: vi.fn(() => ({
+    actions: [],
+    isLoading: false,
+    isError: false,
+    refresh: vi.fn(),
+  })),
+}))
+
+vi.mock("@/lib/api/coaching-sessions", () => ({
+  useCoachingSessionList: vi.fn(() => ({
+    coachingSessions: [],
+    isLoading: false,
+    isError: false,
+    refresh: vi.fn(),
+  })),
+}))
+
 vi.mock("@/site.config", () => ({
   siteConfig: {
     locale: "en-US",

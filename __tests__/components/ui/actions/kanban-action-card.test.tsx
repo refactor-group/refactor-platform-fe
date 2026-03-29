@@ -8,14 +8,6 @@ import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
 import { TestProviders } from "@/test-utils/providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-// Mock react-syntax-highlighter (used by SessionActionCard's markdown renderer)
-vi.mock("react-syntax-highlighter", () => ({
-  Prism: ({ children }: { children: string }) => children,
-}));
-
-vi.mock("react-syntax-highlighter/dist/esm/styles/prism", () => ({
-  oneDark: {},
-}));
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
@@ -78,7 +70,7 @@ const defaultProps = {
   onStatusChange: vi.fn(),
   onDueDateChange: vi.fn(),
   onAssigneesChange: vi.fn(),
-  onBodyChange: vi.fn(),
+  onBodyChange: vi.fn().mockResolvedValue(undefined),
   onDelete: vi.fn(),
 };
 
@@ -101,29 +93,29 @@ describe("KanbanActionCard", () => {
     expect(screen.getByText("Alice Smith → Bob Jones")).toBeInTheDocument();
   });
 
-  it("renders action body text", () => {
+  it("renders action body text on the front face", () => {
     render(
       <Wrapper>
         <KanbanActionCard ctx={makeCtx("a1", ItemStatus.NotStarted)} {...defaultProps} />
       </Wrapper>
     );
 
-    expect(screen.getByText("Action a1")).toBeInTheDocument();
+    // Text appears on both card faces; verify at least one is in the front face
+    const matches = screen.getAllByText("Action a1");
+    const inFrontFace = matches.some(
+      (el) => el.closest(".flip-card-front") !== null
+    );
+    expect(inFrontFace).toBe(true);
   });
 
-  it("renders a session link via showSessionLink on the inner card", () => {
+  it("renders a status pill on the compact card", () => {
     render(
       <Wrapper>
         <KanbanActionCard ctx={makeCtx("a1", ItemStatus.NotStarted)} {...defaultProps} />
       </Wrapper>
     );
 
-    const sessionLink = screen.getByRole("link", { name: /From:/i });
-    expect(sessionLink).toBeInTheDocument();
-    expect(sessionLink).toHaveAttribute(
-      "href",
-      "/coaching-sessions/session-42?tab=actions"
-    );
+    expect(screen.getByText("Not Started")).toBeInTheDocument();
   });
 
   it("renders drag handle", () => {

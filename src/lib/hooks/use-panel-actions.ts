@@ -4,7 +4,6 @@ import { useMemo, useRef, useCallback } from "react";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
-import { filterReviewActions } from "@/components/ui/coaching-sessions/actions-panel";
 import { UserActionsScope } from "@/types/assigned-actions";
 import { sortActionArray, defaultAction } from "@/types/action";
 import type { Action } from "@/types/action";
@@ -12,6 +11,49 @@ import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
+
+// ── Pure helpers ───────────────────────────────────────────────────
+
+/**
+ * Pure filter for determining which actions should appear in "Actions for Review".
+ *
+ * Pre-condition: `allActions` must already be scoped to the current coaching
+ * relationship (e.g. via `coaching_relationship_id` on the API call).
+ *
+ * Rules:
+ * 1. Exclude actions belonging to the current session
+ * 2. Include sticky actions (previously visible) regardless of current state
+ * 3. Include only actions due within [previousSessionDate, currentSessionDate]
+ *    (any status) — actions due before or after the window are excluded
+ *
+ * Results are sorted reverse-chronologically by due_by.
+ */
+export function filterReviewActions(
+  allActions: Action[],
+  currentSessionId: Id,
+  currentSessionDate: DateTime,
+  previousSessionDate: DateTime | null,
+  stickyIds?: Set<Id>
+): Action[] {
+  const endOfCurrentDate = currentSessionDate.endOf("day");
+  const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
+
+  const filtered = allActions.filter((a) => {
+    if (a.coaching_session_id === currentSessionId) return false;
+
+    if (stickyIds?.has(a.id)) return true;
+
+    const dueBy = a.due_by;
+
+    if (dueBy > endOfCurrentDate) return false;
+
+    if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
+
+    return false;
+  });
+
+  return sortActionArray(filtered, SortOrder.Desc, "due_by");
+}
 
 // ── Hook: usePanelActions ──────────────────────────────────────────
 //

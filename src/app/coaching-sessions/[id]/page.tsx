@@ -63,10 +63,6 @@ export default function CoachingSessionsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
 
-  // Get current tab from URL parameter, default to "notes"
-  const currentTab = searchParams.get("tab") || "notes";
-  const reviewActions = searchParams.get("review") === "true";
-
   // Panel section persisted via URL param "panel"
   const panelParam = searchParams.get("panel");
   const panelSection = panelParam === PanelSection.Agreements
@@ -168,22 +164,6 @@ export default function CoachingSessionsPage() {
     router.replace(newUrl, { scroll: false });
   };
 
-  const handleTabChange = (tabValue: string) => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    if (tabValue === "notes") {
-      // Remove tab parameter for default tab to keep URL clean
-      newSearchParams.delete("tab");
-    } else {
-      newSearchParams.set("tab", tabValue);
-    }
-
-    const newUrl = newSearchParams.toString()
-      ? `${window.location.pathname}?${newSearchParams.toString()}`
-      : window.location.pathname;
-
-    router.replace(newUrl, { scroll: false });
-  };
-
   return (
     // Never grow wider than the site-header
     <div className="max-w-screen-2xl flex-1 flex flex-col md:overflow-hidden">
@@ -233,9 +213,6 @@ export default function CoachingSessionsPage() {
 
           <CoachingTabsContainer
             userId={userId}
-            defaultValue={currentTab}
-            onTabChange={handleTabChange}
-            reviewActions={reviewActions}
             notesMaximized={notesMaximized}
             onNotesMaximizedChange={setNotesMaximized}
           />

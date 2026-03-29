@@ -39,7 +39,7 @@ export function ActionsSummary({ actions, sessionId }: ActionsSummaryProps) {
       <Tooltip>
         <TooltipTrigger asChild>
           <Link
-            href={`/coaching-sessions/${sessionId}?tab=actions&review=true`}
+            href={`/coaching-sessions/${sessionId}?panel=actions`}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <CheckSquare className="h-4 w-4 shrink-0" />

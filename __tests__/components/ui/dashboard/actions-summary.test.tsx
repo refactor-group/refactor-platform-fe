@@ -117,13 +117,13 @@ describe("ActionsSummary", () => {
   });
 
   describe("link behavior", () => {
-    it("should link to the session's actions tab with review=true", () => {
+    it("should link to the session's actions panel", () => {
       const actions = [createAction()];
       render(<ActionsSummary actions={actions} sessionId="session-42" />);
       const link = screen.getByRole("link");
       expect(link).toHaveAttribute(
         "href",
-        "/coaching-sessions/session-42?tab=actions&review=true"
+        "/coaching-sessions/session-42?panel=actions"
       );
     });
   });
