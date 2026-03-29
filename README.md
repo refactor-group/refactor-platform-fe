@@ -179,8 +179,8 @@ This repository supports **isolated preview environments** for pull requests. Pr
 #### How to Deploy a Preview
 
 1. **Deploy** — Go to Actions → **"Deploy PR Preview (Manual Select)"** → Run workflow
-   - Leave `pr_number` empty to auto-detect from the branch, or enter a PR number
-   - Choose backend and frontend commits from the dropdowns
+   - Select a PR branch entry from the frontend commit dropdown (PR number is extracted automatically)
+   - Choose the backend commit from the dropdown
    - Dropdowns include the latest `main` commits plus the HEAD of every open PR from both repos
    - For any commit not in the dropdown, paste the exact SHA in the override fields
 

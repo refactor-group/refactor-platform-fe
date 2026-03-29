@@ -17,7 +17,7 @@ on:
         paths-ignore:
             - ".github/workflows/dispatch-pr-preview-frontend.yml"
     pull_request:
-        types: [opened, synchronize, reopened, closed]
+        types: [opened, reopened, closed]
     workflow_dispatch:
         inputs:
             backend_branch:

@@ -3,9 +3,10 @@
 # =============================================================================
 # Purpose: Allow users to manually deploy a PR preview environment with specific
 #          commit combinations from both backend and frontend repos.
-# Usage: Go to Actions tab → select this workflow → choose commits from dropdowns
-#        → enter PR number → Run workflow
-# Requires: An open (or draft) PR in this repo for the PR number.
+# Usage: Go to Actions tab → select this workflow → choose a PR branch from the
+#        frontend commit dropdown → choose backend commit → Run workflow
+# Requires: Select a PR branch entry from the frontend commit dropdown (PR# is
+#           extracted automatically from the selection).
 # Dropdown choices: Auto-updated by refresh-preview-commits.yml on merge to main
 #                   or via manual workflow_dispatch. Use the override inputs for exact SHAs.
 #
@@ -20,19 +21,14 @@ name: Deploy PR Preview (Manual Select)
 on:
   workflow_dispatch:
     inputs:
-      pr_number:
-        description: "PR number (leave empty to auto-detect from current branch)"
-        required: false
-        type: string
-        default: ""
       backend_commit:
         description: "Backend commit to deploy"
         required: true
         type: choice
         options:
-          - '22c617c - chore: refresh preview commit choices [skip ci]'
-          - '3ff8cb7 - fix: skip cleanup when no preview environment was deplo'
-          - '4edc80b - chore: refresh preview commit choices [skip ci]'
+          - '2b5430b - chore: refresh preview commit choices [skip ci]'
+          - '3c78a6c - fix: extract PR number from commit dropdown instead of '
+          - '16d1238 - chore: refresh preview commit choices [skip ci]'
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
@@ -40,11 +36,11 @@ on:
         required: true
         type: choice
         options:
-          - '339c80d - chore: refresh preview commit choices [skip ci]'
-          - '9690f1b - chore: refresh preview commit choices [skip ci]'
-          - '1e9c183 - chore: refresh preview commit choices [skip ci]'
-          - 9dd85cf - PR#355 (feature/coaching-session-panel)
-          - 4059d79 - PR#349 (feature/coaching-session-panel)
+          - '373cdc4 - fix: extract PR number from commit dropdown instead of separate input (#359)'
+          - '553e9a4 - chore: refresh preview commit choices [skip ci]'
+          - '9562fd0 - chore: refresh preview commit choices [skip ci]'
+          - 5e3acc0 - PR#355 (feature/coaching-session-panel)
+          - fcaa151 - PR#349 (feature/coaching-session-panel)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
@@ -61,7 +57,7 @@ on:
         default: ""
 # Prevent multiple manual deployments for the same PR
 concurrency:
-  group: pr-preview-frontend-dispatch-${{ inputs.pr_number }}
+  group: pr-preview-frontend-dispatch-${{ inputs.frontend_commit }}
   cancel-in-progress: true
 permissions:
   contents: read
@@ -86,28 +82,22 @@ jobs:
         id: resolve
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
           INPUT_BACKEND_COMMIT: ${{ inputs.backend_commit }}
           INPUT_FRONTEND_COMMIT: ${{ inputs.frontend_commit }}
           INPUT_BACKEND_OVERRIDE: ${{ inputs.backend_commit_override }}
           INPUT_FRONTEND_OVERRIDE: ${{ inputs.frontend_commit_override }}
           OWNER: ${{ github.repository_owner }}
-          BRANCH_REF: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
-          PR_NUMBER="$INPUT_PR_NUMBER"
-
-          # Auto-detect PR number from current branch if not provided
-          if [[ -z "$PR_NUMBER" ]]; then
-              echo "::notice::No PR number provided, auto-detecting from branch '$BRANCH_REF'..."
-              PR_NUMBER=$(gh pr list --repo "$OWNER/refactor-platform-fe" \
-                  --head "$BRANCH_REF" --state open --json number --jq '.[0].number' 2>/dev/null || true)
-              if [[ -z "$PR_NUMBER" ]]; then
-                  echo "::error::No open PR found for branch '$BRANCH_REF' in $OWNER/refactor-platform-fe. Provide a PR number manually."
-                  exit 1
-              fi
-              echo "::notice::Auto-detected PR #$PR_NUMBER from branch '$BRANCH_REF'"
+          # Extract PR number from frontend commit selection (calling repo)
+          # Dropdown PR entries use format: "SHA - PR#NNN (branch-name)"
+          if [[ "$INPUT_FRONTEND_COMMIT" =~ PR#([0-9]+) ]]; then
+              PR_NUMBER="${BASH_REMATCH[1]}"
+              echo "::notice::Extracted PR #$PR_NUMBER from frontend commit selection"
+          else
+              echo "::error::Selected frontend commit is not a PR entry. Select a PR branch (format: 'SHA - PR#NNN (branch)') to deploy a preview."
+              exit 1
           fi
 
           # Validate PR number is numeric
