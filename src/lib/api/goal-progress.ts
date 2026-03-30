@@ -17,9 +17,9 @@ function defaultGoalProgressMetrics(): GoalProgressMetrics {
   return {
     actions_completed: 0,
     actions_total: 0,
-    linked_session_count: 0,
+    linked_coaching_session_count: 0,
     progress: GoalProgress.SolidMomentum,
-    last_session_date: None,
+    last_coaching_session_date: None,
     next_action_due: None,
   };
 }

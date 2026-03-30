@@ -89,15 +89,6 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
           </span>
         </div>
 
-        {progressMetrics.actions_total > 0 && (
-          <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-foreground/20 transition-all"
-              style={{ width: `${percent}%` }}
-            />
-          </div>
-        )}
-
         <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
           <GoalProgressIcon
             progress={progressMetrics.progress}
@@ -121,7 +112,6 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
           title={title}
           canInteract={canInteract}
           onFlip={onFlip}
-          percent={percent}
           actionsCompleted={progressMetrics.actions_completed}
           actionsTotal={progressMetrics.actions_total}
           progress={progressMetrics.progress}
@@ -167,7 +157,6 @@ function FrontFace({
   title,
   canInteract,
   onFlip,
-  percent,
   actionsCompleted,
   actionsTotal,
   progress,
@@ -177,7 +166,6 @@ function FrontFace({
   title: string;
   canInteract?: boolean;
   onFlip: () => void;
-  percent: number;
   actionsCompleted: number;
   actionsTotal: number;
   progress: import("@/types/goal-progress").GoalProgress;
@@ -218,15 +206,6 @@ function FrontFace({
           ) : null}
         </div>
       </div>
-
-      {actionsTotal > 0 && (
-        <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-foreground/20 transition-all"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-      )}
 
       <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
         <GoalProgressIcon
@@ -289,17 +268,9 @@ function BackFace({
 
       {/* Progress summary */}
       {actionsTotal > 0 && (
-        <div className="space-y-1.5">
-          <div className="h-1 w-full rounded-full bg-border/40 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-foreground/20 transition-all"
-              style={{ width: `${percent}%` }}
-            />
-          </div>
-          <p className="text-[11px] text-muted-foreground/60">
-            {actionsCompleted}/{actionsTotal} actions &middot; {percent}%
-          </p>
-        </div>
+        <p className="text-[11px] text-muted-foreground/60">
+          {actionsCompleted}/{actionsTotal} actions &middot; {percent}%
+        </p>
       )}
 
       {/* Action buttons */}
