@@ -248,7 +248,7 @@ function useActionCrud(
   /** Revalidate all goal progress SWR caches after a goal link or status change. */
   const revalidateGoalProgress = useCallback(() => {
     globalMutate(
-      (key: unknown) => typeof key === "string" && key.includes("/progress"),
+      (key: unknown) => typeof key === "string" && key.includes("/goals/") && key.endsWith("/progress"),
       undefined,
       { revalidate: true }
     );
