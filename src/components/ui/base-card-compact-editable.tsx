@@ -14,7 +14,11 @@ import { cn } from "@/components/lib/utils";
 // renders the back face directly with an entrance animation.
 
 export interface BaseCardCompactEditableProps {
+  /** Optional header rendered above the body on the front face only. */
+  renderHeader?: (props: { onFlip: () => void }) => ReactNode;
   renderFront: (props: { onFlip: () => void }) => ReactNode;
+  /** Optional footer rendered below the body on the front face only. */
+  renderFooter?: () => ReactNode;
   renderBack: (props: {
     onDone: () => void;
     isEditing: boolean;
@@ -31,7 +35,9 @@ export interface BaseCardCompactEditableProps {
 }
 
 export function BaseCardCompactEditable({
+  renderHeader,
   renderFront,
+  renderFooter,
   renderBack,
   className,
   canFlip = true,
@@ -51,7 +57,9 @@ export function BaseCardCompactEditable({
 
   return (
     <EditDetailsCard
+      renderHeader={renderHeader}
       renderFront={renderFront}
+      renderFooter={renderFooter}
       renderBack={renderBack}
       className={className}
       canFlip={canFlip}
@@ -98,7 +106,9 @@ function InitialEditCard({
 // ── Edit Details Card (flip between read-only front and edit back) ───
 
 function EditDetailsCard({
+  renderHeader,
   renderFront,
+  renderFooter,
   renderBack,
   className,
   canFlip = true,
@@ -146,6 +156,12 @@ function EditDetailsCard({
 
     function handlePointerDown(e: PointerEvent) {
       if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        // Radix UI portals (Popover, Select, Calendar) render outside the card DOM.
+        // Treat clicks inside those portals as "inside the card" so interactions
+        // like assignee selection don't accidentally flip the card back.
+        const target = e.target as Element;
+        if (target.closest?.("[data-radix-popper-content-wrapper]")) return;
+
         setIsFlipped(false);
         setIsEditing(false);
       }
@@ -200,7 +216,17 @@ function EditDetailsCard({
           aria-hidden={isFlipped}
           className="flip-card-face flip-card-front rounded-lg border border-border bg-background p-3 space-y-2 group/card transition-colors shadow-sm hover:border-foreground/20"
         >
+          {renderHeader && (
+            <div data-slot="card-header">
+              {renderHeader({ onFlip: handleFlip })}
+            </div>
+          )}
           {renderFront({ onFlip: handleFlip })}
+          {renderFooter && (
+            <div data-slot="card-footer">
+              {renderFooter()}
+            </div>
+          )}
         </div>
 
         {/* ── Back face ──────────────────────────────────────────── */}

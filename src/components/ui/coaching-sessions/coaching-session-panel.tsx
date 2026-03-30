@@ -23,7 +23,13 @@ import {
   GoalApi,
 } from "@/lib/api/goals";
 import { useAgreementList, useAgreementMutation } from "@/lib/api/agreements";
+import { usePanelActions } from "@/lib/hooks/use-panel-actions";
+import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import type { Goal } from "@/types/goal";
+import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
 import { defaultAgreement } from "@/types/agreement";
 import {
@@ -35,6 +41,7 @@ import {
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
+import { DateTime } from "ts-luxon";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { siteConfig } from "@/site.config";
 
@@ -64,6 +71,24 @@ export interface CoachingSessionPanelSharedProps {
   onAgreementCreate?: (body: string) => Promise<void>;
   isAddingAgreement: boolean;
   onAddingAgreementChange: (adding: boolean) => void;
+  // Action data
+  reviewActions: Action[];
+  sessionActions: Action[];
+  /** Maps coaching_session_id → session date for "view source session" links */
+  sessionDateMap: Map<Id, DateTime>;
+  /** Undefined while the coaching relationship is still loading from SWR */
+  coachId: Id | undefined;
+  coachName: string | undefined;
+  coacheeId: Id | undefined;
+  coacheeName: string | undefined;
+  onActionCreate?: (body: string, assigneeIds?: Id[]) => Promise<void>;
+  onActionDelete?: (id: Id) => void;
+  onStatusChange: (id: Id, newStatus: ItemStatus) => void;
+  onDueDateChange: (id: Id, newDueBy: DateTime) => void;
+  onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[]) => Promise<void>;
+  isAddingAction: boolean;
+  onAddingActionChange: (adding: boolean) => void;
   locale: string;
 }
 
@@ -72,13 +97,19 @@ export interface CoachingSessionPanelSharedProps {
 export function computePanelCounts(
   linkedGoals: Goal[],
   agreements: Agreement[],
+  reviewActions: Action[],
+  sessionActions: Action[],
 ): Record<PanelSection, string> {
+  const totalActions = reviewActions.length + sessionActions.length;
   return {
     [PanelSection.Goals]: linkedGoals.length > 0
       ? `${linkedGoals.length}/${maxActiveGoals()}`
       : "",
     [PanelSection.Agreements]: agreements.length > 0
       ? `${agreements.length}`
+      : "",
+    [PanelSection.Actions]: totalActions > 0
+      ? `${totalActions}`
       : "",
   };
 }
@@ -87,7 +118,7 @@ export function computeHeaderTitle(
   activeSection: PanelSection,
   goalFlowStep: GoalFlowStep,
 ): string | undefined {
-  if (activeSection === PanelSection.Agreements) return undefined;
+  if (activeSection === PanelSection.Agreements || activeSection === PanelSection.Actions) return undefined;
   if (goalFlowStep === GoalFlowStep.Idle || goalFlowStep === GoalFlowStep.SelectingSwap) return undefined;
   return goalFlowStep === GoalFlowStep.Browsing ? "Add goal" : "New goal";
 }
@@ -237,6 +268,21 @@ export function CoachingSessionPanel({
   defaultSection = PanelSection.Goals,
   onSectionChange: onSectionChangeExternal,
 }: CoachingSessionPanelProps) {
+  // ── Resolve user/relationship context for actions ───────────────
+  const userId = useAuthStore((state) => state.userId);
+  const { currentCoachingSession } = useCurrentCoachingSession();
+  const { currentCoachingRelationship } = useCurrentCoachingRelationship();
+
+  const sessionDate = currentCoachingSession?.date;
+  const coachId = currentCoachingRelationship?.coach_id;
+  const coachName = currentCoachingRelationship
+    ? getCoachName(currentCoachingRelationship)
+    : undefined;
+  const coacheeId = currentCoachingRelationship?.coachee_id;
+  const coacheeName = currentCoachingRelationship
+    ? getCoacheeName(currentCoachingRelationship)
+    : undefined;
+
   // ── Section state ────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<PanelSection>(defaultSection);
 
@@ -431,7 +477,8 @@ export function CoachingSessionPanel({
         if (wasLinked) {
           const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
           if (relinkResult.isOk() && swapGoal) {
-            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress })
+              .catch((err) => console.error("Failed to restore goal status during recovery:", err));
           }
           refreshSessionGoals();
           refreshAllGoals();
@@ -464,7 +511,8 @@ export function CoachingSessionPanel({
 
             const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
             if (relinkResult.isOk() && swapGoal) {
-              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress })
+              .catch((err) => console.error("Failed to restore goal status during recovery:", err));
             }
             refreshSessionGoals();
             refreshAllGoals();
@@ -485,7 +533,8 @@ export function CoachingSessionPanel({
           if (wasLinked) {
             const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
             if (relinkResult.isOk() && swapGoal) {
-              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+              await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress })
+              .catch((err) => console.error("Failed to restore goal status during recovery:", err));
             }
             refreshSessionGoals();
             refreshAllGoals();
@@ -507,7 +556,8 @@ export function CoachingSessionPanel({
         if (wasLinked) {
           const relinkResult = await GoalApi.linkToSession(coachingSessionId, swapGoalId);
           if (relinkResult.isOk() && swapGoal) {
-            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress }).catch(() => {});
+            await updateGoal(swapGoalId, { ...swapGoal, status: ItemStatus.InProgress })
+              .catch((err) => console.error("Failed to restore goal status during recovery:", err));
           }
           refreshSessionGoals();
           refreshAllGoals();
@@ -552,6 +602,27 @@ export function CoachingSessionPanel({
     onCreateAndLink: handleCreateAndLink,
     onCreateAndSwap: handleCreateAndSwap,
   });
+
+  // ── Action hooks & state ─────────────────────────────────────────
+
+  const {
+    sessionActions,
+    reviewActions: panelReviewActions,
+    handleCreate: handleActionCreate,
+    handleStatusChange,
+    handleDueDateChange,
+    handleAssigneesChange,
+    handleBodyChange,
+    handleDelete: handleActionDelete,
+    sessionDateMap,
+  } = usePanelActions({
+    userId,
+    coachingSessionId,
+    coachingRelationshipId,
+    sessionDate,
+  });
+
+  const [isAddingAction, setIsAddingAction] = useState(false);
 
   // ── Agreement state & handlers ──────────────────────────────────
 
@@ -657,6 +728,22 @@ export function CoachingSessionPanel({
     onAgreementCreate: handleAgreementCreate,
     isAddingAgreement,
     onAddingAgreementChange: setIsAddingAgreement,
+    // Action data
+    reviewActions: panelReviewActions,
+    sessionActions,
+    sessionDateMap,
+    coachId,
+    coachName,
+    coacheeId,
+    coacheeName,
+    onActionCreate: handleActionCreate,
+    onActionDelete: handleActionDelete,
+    onStatusChange: handleStatusChange,
+    onDueDateChange: handleDueDateChange,
+    onAssigneesChange: handleAssigneesChange,
+    onBodyChange: handleBodyChange,
+    isAddingAction,
+    onAddingActionChange: setIsAddingAction,
     locale: siteConfig.locale,
   };
 

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
@@ -15,12 +16,16 @@ describe("BaseCardCompactEditable", () => {
     canFlip?: boolean;
     initialEditing?: boolean;
     onDismiss?: () => void;
+    renderHeader?: (p: { onFlip: () => void }) => ReactNode;
+    renderFooter?: () => ReactNode;
   }) {
     return render(
       <BaseCardCompactEditable
         canFlip={props?.canFlip}
         initialEditing={props?.initialEditing}
         onDismiss={props?.onDismiss}
+        renderHeader={props?.renderHeader}
+        renderFooter={props?.renderFooter}
         renderFront={({ onFlip }) => (
           <div>
             <span>Front content</span>
@@ -221,5 +226,98 @@ describe("BaseCardCompactEditable", () => {
     inner.dispatchEvent(createTransitionEndEvent("transform"));
 
     expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
+  // ── Header / Footer enhancement tests ────────────────────────────
+
+  it("renders header content on the front face when renderHeader is provided", () => {
+    renderWithTestContent({
+      renderHeader: ({ onFlip }) => (
+        <div>
+          <span>Header content</span>
+          <button type="button" onClick={onFlip} aria-label="flip from header">
+            Flip
+          </button>
+        </div>
+      ),
+    });
+
+    expect(screen.getByText("Header content")).toBeInTheDocument();
+    // Header should be inside the front face
+    const headerText = screen.getByText("Header content");
+    const frontFace = headerText.closest(".flip-card-front");
+    expect(frontFace).not.toBeNull();
+  });
+
+  it("renders footer content on the front face when renderFooter is provided", () => {
+    renderWithTestContent({
+      renderFooter: () => <span>Footer content</span>,
+    });
+
+    expect(screen.getByText("Footer content")).toBeInTheDocument();
+    // Footer should be inside the front face
+    const footerText = screen.getByText("Footer content");
+    const frontFace = footerText.closest(".flip-card-front");
+    expect(frontFace).not.toBeNull();
+  });
+
+  it("does not render header/footer sections when props are not provided", () => {
+    renderWithTestContent();
+
+    // No header or footer test IDs should be present
+    expect(document.querySelector("[data-slot='card-header']")).toBeNull();
+    expect(document.querySelector("[data-slot='card-footer']")).toBeNull();
+  });
+
+  it("passes onFlip to renderHeader so the flip icon can live in the header", async () => {
+    const user = userEvent.setup();
+    renderWithTestContent({
+      renderHeader: ({ onFlip }) => (
+        <button type="button" onClick={onFlip} aria-label="flip from header">
+          Header Flip
+        </button>
+      ),
+    });
+
+    await user.click(screen.getByRole("button", { name: /flip from header/i }));
+
+    const backFace = screen.getByText("Back content").closest(
+      ".flip-card-face.flip-card-back"
+    );
+    expect(backFace).toHaveAttribute("aria-hidden", "false");
+  });
+
+  it("renders header and footer together with body content between them", () => {
+    renderWithTestContent({
+      renderHeader: ({ onFlip }) => <span>Header</span>,
+      renderFooter: () => <span>Footer</span>,
+    });
+
+    // All three zones should be present in the front face
+    const frontFace = screen.getByText("Front content").closest(".flip-card-front")!;
+    expect(frontFace).not.toBeNull();
+    expect(screen.getByText("Header")).toBeInTheDocument();
+    expect(screen.getByText("Front content")).toBeInTheDocument();
+    expect(screen.getByText("Footer")).toBeInTheDocument();
+  });
+
+  it("does not render header or footer on the back face", async () => {
+    const user = userEvent.setup();
+    renderWithTestContent({
+      renderHeader: ({ onFlip }) => (
+        <button type="button" onClick={onFlip} aria-label="flip from header">
+          Header content
+        </button>
+      ),
+      renderFooter: () => <span>Footer content</span>,
+    });
+
+    // Flip to back
+    await user.click(screen.getByRole("button", { name: /flip from header/i }));
+
+    // Header and footer should not be inside the back face
+    const backFace = screen.getByText("Back content").closest(".flip-card-back")!;
+    expect(backFace.textContent).not.toContain("Header content");
+    expect(backFace.textContent).not.toContain("Footer content");
   });
 });

@@ -171,11 +171,11 @@ test.describe('Actions page: exit animation and toast on status change', () => {
       page.getByRole('heading', { name: 'Not Started', level: 3 })
     ).toBeVisible({ timeout: 15_000 })
 
-    // Verify the card is visible
-    await expect(page.getByText('Write unit tests')).toBeVisible()
+    // Verify the card is visible on the kanban board
+    const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
+    await expect(firstCard).toBeVisible()
 
     // Open the status dropdown on the first card and select "Completed"
-    const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
     await clickVisibleCombobox(firstCard)
     await page.getByRole('option', { name: /Completed/ }).click()
 
@@ -189,7 +189,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
     await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible()
 
     // The card should no longer be in the visible columns
-    await expect(page.getByText('Write unit tests')).toBeHidden()
+    await expect(firstCard).toBeHidden()
   })
 
   test('toast Show button switches filter to All and reveals the card', async ({
@@ -254,7 +254,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
     await page.getByRole('button', { name: 'Undo' }).click()
 
     // The card should reappear in the Not Started column
-    await expect(page.getByText('Write unit tests')).toBeVisible({
+    await expect(firstCard).toBeVisible({
       timeout: 2_000,
     })
 
@@ -276,7 +276,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
     await page.getByRole('option', { name: /In Progress/ }).click()
 
     // Card should still be visible (moved to In Progress column)
-    await expect(page.getByText('Write unit tests')).toBeVisible()
+    await expect(firstCard).toBeVisible()
 
     // No exit animation should have been applied
     await expect(page.locator('.animate-kanban-card-exit')).toHaveCount(0)

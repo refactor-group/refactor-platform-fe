@@ -419,7 +419,9 @@ describe("ActionsPageContainer", () => {
     );
 
     await openFilterPopover(user);
-    await user.click(screen.getByText("Unassigned"));
+    // Use getByRole to target the toggle button specifically, not card text
+    const unassignedToggle = screen.getByRole("radio", { name: /unassigned/i });
+    await user.click(unassignedToggle);
 
     const mockRouter = vi.mocked(useRouter).mock.results[0].value;
     await waitFor(() => {
@@ -495,17 +497,16 @@ describe("ActionsPageContainer", () => {
   // -------------------------------------------------------------------------
 
   describe("mutation error handling", () => {
-    // Helper: trigger delete by clicking trash icon, then confirming in dialog
+    // Helper: trigger delete by flipping the compact card, clicking Edit, then Delete
     async function triggerDelete(
       container: HTMLElement,
       user: ReturnType<typeof userEvent.setup>
     ) {
-      const trashSvg = container.querySelector(".lucide-trash2");
-      expect(trashSvg).toBeTruthy();
-      const trashButton = trashSvg!.closest("button");
-      await user.click(trashButton!);
-      // Confirm in the alert dialog
-      await user.click(await screen.findByRole("button", { name: "Delete" }));
+      // Flip the compact card via the info icon
+      const flipButton = screen.getByRole("button", { name: /action options/i });
+      await user.click(flipButton);
+      // Click Delete on the back face view
+      await user.click(await screen.findByText("Delete"));
     }
 
     it("shows network error toast when delete fails with network error", async () => {
