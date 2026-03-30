@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useCallback } from "react";
+import { useSWRConfig } from "swr";
 import { toast as sonnerToast } from "sonner";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
@@ -227,6 +228,7 @@ function useActionCrud(
   refresh: () => void
 ) {
   const { create, update, delete: deleteAction } = useActionMutation();
+  const { mutate: globalMutate } = useSWRConfig();
 
   const updateField = useCallback(
     async (id: Id, fields: Partial<Action>, errorMessage: string) => {
@@ -242,31 +244,71 @@ function useActionCrud(
     [sessionActions, allRelationshipActions, update, refresh]
   );
 
+  /** Revalidate all goal progress SWR caches after a goal link or status change. */
+  const revalidateGoalProgress = useCallback(() => {
+    globalMutate(
+      (key: unknown) => typeof key === "string" && key.includes("/progress"),
+      undefined,
+      { revalidate: true }
+    );
+  }, [globalMutate]);
+
   const handleCreate = useCallback(
-    async (body: string, assigneeIds?: Id[]) => {
+    async (body: string, assigneeIds?: Id[], goalId?: Id) => {
       try {
         const newAction: Action = {
           ...defaultAction(),
           coaching_session_id: coachingSessionId,
           user_id: userId,
           body,
+          goal_id: goalId,
           status: ItemStatus.NotStarted,
           due_by: DateTime.now().plus({ days: 7 }),
           assignee_ids: assigneeIds ?? [],
         };
         await create(newAction);
         refresh();
+        if (goalId) {
+          revalidateGoalProgress();
+        }
       } catch (err) {
         showActionError("Failed to create action", err);
       }
     },
-    [coachingSessionId, userId, create, refresh]
+    [coachingSessionId, userId, create, refresh, revalidateGoalProgress]
+  );
+
+  const handleGoalChange = useCallback(
+    async (id: Id, goalId: Id | undefined) => {
+      const action = findActionById(id, sessionActions, allRelationshipActions);
+      if (!action) return;
+      try {
+        // Spread then override goal_id. When unlinking, the backend expects
+        // null (undefined is stripped by JSON.stringify), so we assign null
+        // at runtime while keeping the TypeScript type satisfied via the spread.
+        const payload: Action = { ...action, goal_id: goalId };
+        if (!goalId) {
+          Object.assign(payload, { goal_id: null });
+        }
+        await update(id, payload);
+        refresh();
+        revalidateGoalProgress();
+      } catch (err) {
+        showActionError("Failed to update goal link", err);
+      }
+    },
+    [sessionActions, allRelationshipActions, update, refresh, revalidateGoalProgress]
   );
 
   const handleStatusChange = useCallback(
-    (id: Id, newStatus: ItemStatus) =>
-      updateField(id, { status: newStatus }, "Failed to update status"),
-    [updateField]
+    async (id: Id, newStatus: ItemStatus) => {
+      const action = findActionById(id, sessionActions, allRelationshipActions);
+      await updateField(id, { status: newStatus }, "Failed to update status");
+      if (action?.goal_id) {
+        revalidateGoalProgress();
+      }
+    },
+    [updateField, sessionActions, allRelationshipActions, revalidateGoalProgress]
   );
 
   const handleDueDateChange = useCallback(
@@ -321,6 +363,7 @@ function useActionCrud(
 
   return {
     handleCreate,
+    handleGoalChange,
     handleStatusChange,
     handleDueDateChange,
     handleAssigneesChange,

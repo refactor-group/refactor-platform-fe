@@ -7,6 +7,8 @@ import { SortOrder, type ActionSortField } from "@/types/sorting";
 export interface Action {
   id: Id;
   coaching_session_id: Id;
+  /** Optional FK to goals table. null/absent = unlinked. */
+  goal_id?: Id;
   body?: string;
   user_id: Id;
   status: ItemStatus;
@@ -42,6 +44,9 @@ export function isAction(value: unknown): value is Action {
     isDateTimeOrString(object.due_by) &&
     isDateTimeOrString(object.created_at) &&
     isDateTimeOrString(object.updated_at) &&
+    (object.goal_id === undefined ||
+      object.goal_id === null ||
+      typeof object.goal_id === "string") &&
     (object.body === undefined || typeof object.body === "string") &&
     (object.assignee_ids === undefined ||
       (Array.isArray(object.assignee_ids) &&
