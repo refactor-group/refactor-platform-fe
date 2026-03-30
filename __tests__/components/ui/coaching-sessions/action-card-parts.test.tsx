@@ -22,14 +22,14 @@ describe("GoalPickerPopover", () => {
     onChange = vi.fn();
   });
 
-  it("renders 'Link goal' placeholder when no goal is selected", () => {
+  it("renders 'None' placeholder when no goal is selected", () => {
     render(
       <Wrapper>
         <GoalPickerPopover goals={GOALS} onChange={onChange} />
       </Wrapper>
     );
 
-    expect(screen.getByText("Link goal")).toBeInTheDocument();
+    expect(screen.getByText("None")).toBeInTheDocument();
   });
 
   it("renders the selected goal title when a goal is linked", () => {
@@ -55,7 +55,7 @@ describe("GoalPickerPopover", () => {
       </Wrapper>
     );
 
-    await user.click(screen.getByText("Link goal"));
+    await user.click(screen.getByText("None"));
 
     const popover = await screen.findByRole("dialog");
     await user.click(within(popover).getByText("Improve communication"));
@@ -93,7 +93,7 @@ describe("GoalPickerPopover", () => {
       </Wrapper>
     );
 
-    await user.click(screen.getByText("Link goal"));
+    await user.click(screen.getByText("None"));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

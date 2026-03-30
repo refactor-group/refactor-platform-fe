@@ -207,14 +207,14 @@ export function GoalPickerPopover({
             >
               <Link2 className="h-3 w-3 shrink-0" />
               <span className="truncate">
-                {selectedGoal ? selectedGoal.title : "Link goal"}
+                {selectedGoal ? selectedGoal.title : "None"}
               </span>
               <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>
-          {selectedGoal ? selectedGoal.title : "Link a goal to this action"}
+          {selectedGoal ? selectedGoal.title : "No goal linked to this action"}
         </TooltipContent>
       </Tooltip>
       <PopoverContent className="w-72 p-2">

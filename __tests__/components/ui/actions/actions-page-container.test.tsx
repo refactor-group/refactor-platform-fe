@@ -110,6 +110,11 @@ vi.mock("@/lib/api/entity-api", () => ({
   },
 }));
 
+vi.mock("@/lib/api/goals", () => ({
+  useGoal: () => ({ goal: { id: "" }, isLoading: false, isError: undefined, refresh: vi.fn() }),
+  useGoalsBySession: () => ({ goals: [], isLoading: false, isError: undefined, refresh: vi.fn() }),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

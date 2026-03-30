@@ -309,8 +309,8 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
     // Click Edit to enter edit mode
     await page.getByText('Edit').click()
 
-    // The Goal label and "Link goal" button should appear in the edit form
+    // The Goal label and "None" button should appear in the edit form
     await expect(page.getByText('Goal')).toBeVisible()
-    await expect(page.getByText('Link goal')).toBeVisible()
+    await expect(page.getByText('None')).toBeVisible()
   })
 })

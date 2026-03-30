@@ -24,7 +24,7 @@ import {
 import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import { goalTitle as getGoalTitle } from "@/types/goal";
-import { useGoal } from "@/lib/api/goals";
+import { useGoal, useGoalsBySession } from "@/lib/api/goals";
 import { ItemStatus, Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -121,6 +121,14 @@ export function CompactActionCard({
     return undefined;
   }, [goalFromArray, shouldFetchGoal, fetchedGoal]);
 
+  // When no goals prop is provided (e.g. kanban board), lazy-fetch session
+  // goals so the edit form's goal picker still works. SWR skips the fetch
+  // when the key is null (goals already provided via prop).
+  const { goals: sessionGoals } = useGoalsBySession(
+    !goals ? action.coaching_session_id : null
+  );
+  const resolvedGoals = goals ?? (sessionGoals.length > 0 ? sessionGoals : undefined);
+
   // For new (unsaved) actions, track goal and assignee changes locally
   // because the action doesn't exist in the backend yet.
   const [localGoalId, setLocalGoalId] = useState<Id | undefined>(undefined);
@@ -186,12 +194,12 @@ export function CompactActionCard({
             allAssignees={allAssignees}
             resolvedAssignees={resolvedAssignees}
             assigneeIds={assigneeIds}
-            goals={goals}
+            goals={resolvedGoals}
             selectedGoalId={initialEditing ? localGoalId : action.goal_id}
             onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
             onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
             onAssigneeToggle={handleAssigneeToggle}
-            onGoalSelect={goals ? (goalId) => {
+            onGoalSelect={resolvedGoals ? (goalId) => {
               if (initialEditing) {
                 setLocalGoalId(goalId);
               } else {

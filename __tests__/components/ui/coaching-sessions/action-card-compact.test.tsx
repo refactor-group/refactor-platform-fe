@@ -487,7 +487,7 @@ describe("CompactActionCard", () => {
       await user.click(screen.getByText("Edit"));
 
       expect(screen.getByText("Linked goal")).toBeInTheDocument();
-      expect(screen.getByText("Link goal")).toBeInTheDocument();
+      expect(screen.getByText("None")).toBeInTheDocument();
     });
   });
 
