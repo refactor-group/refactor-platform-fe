@@ -2,8 +2,8 @@
 // Replaces: list functions from actions.ts
 
 import { siteConfig } from "@/site.config";
-import { Id, ItemStatus, transformEntityDates } from "@/types/general";
-import type { Action } from "@/types/action";
+import { Id, ItemStatus } from "@/types/general";
+import { transformAction, type Action } from "@/types/action";
 import { ApiSortOrder, ActionSortField } from "@/types/sorting";
 import {
   UserActionsScope,
@@ -99,7 +99,7 @@ export const UserActionsApi = {
       userId,
       `actions${queryString}`,
       { params: {} },
-      transformEntityDates
+      transformAction
     );
   },
 };
@@ -127,12 +127,10 @@ export const useUserActionsList = (
   const url = userId ? `${USERS_BASEURL}/${userId}/actions${queryString}` : null;
 
   const { entities, isLoading, isError, refresh } = EntityApi.useEntityList<
-    Action,
     Action
   >(
     url ?? "",
     () => (userId ? UserActionsApi.list(userId, params) : Promise.resolve([])),
-    transformEntityDates,
     userId ? { user_id: userId, ...params } : null
   );
 

@@ -25,9 +25,9 @@ function makeRawProgressResponse(): Record<string, unknown> {
   return {
     actions_completed: 4,
     actions_total: 10,
-    linked_session_count: 3,
+    linked_coaching_session_count: 3,
     progress: 'NeedsAttention',
-    last_session_date: '2026-03-08',
+    last_coaching_session_date: '2026-03-08',
     next_action_due: null,
   }
 }
@@ -54,10 +54,10 @@ describe('GoalProgressApi.get', () => {
 
     expect(result.actions_completed).toBe(4)
     expect(result.actions_total).toBe(10)
-    expect(result.linked_session_count).toBe(3)
+    expect(result.linked_coaching_session_count).toBe(3)
     expect(result.progress).toBe(GoalProgress.NeedsAttention)
-    expect(result.last_session_date.some).toBe(true)
-    expect(result.last_session_date.val).toBe('2026-03-08')
+    expect(result.last_coaching_session_date.some).toBe(true)
+    expect(result.last_coaching_session_date.val).toBe('2026-03-08')
     expect(result.next_action_due.none).toBe(true)
   })
 
@@ -88,9 +88,9 @@ describe('useGoalProgress', () => {
       entity: {
         actions_completed: 0,
         actions_total: 0,
-        linked_session_count: 0,
+        linked_coaching_session_count: 0,
         progress: GoalProgress.SolidMomentum,
-        last_session_date: None,
+        last_coaching_session_date: None,
         next_action_due: None,
       },
       isLoading: false,
@@ -109,9 +109,9 @@ describe('useGoalProgress', () => {
       entity: {
         actions_completed: 0,
         actions_total: 0,
-        linked_session_count: 0,
+        linked_coaching_session_count: 0,
         progress: GoalProgress.SolidMomentum,
-        last_session_date: None,
+        last_coaching_session_date: None,
         next_action_due: None,
       },
       isLoading: false,
@@ -129,9 +129,9 @@ describe('useGoalProgress', () => {
     const mockMetrics = {
       actions_completed: 5,
       actions_total: 10,
-      linked_session_count: 2,
+      linked_coaching_session_count: 2,
       progress: GoalProgress.LetsRefocus,
-      last_session_date: Some('2026-03-01'),
+      last_coaching_session_date: Some('2026-03-01'),
       next_action_due: None,
     }
 

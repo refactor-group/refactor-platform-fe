@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { defaultAction } from "@/types/action";
 import type { Action } from "@/types/action";
+import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
 import { cn } from "@/components/lib/utils";
@@ -35,7 +36,11 @@ export interface ActionSectionContentProps {
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
   onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[]) => Promise<void>;
-  onActionCreate?: (body: string, assigneeIds?: Id[]) => Promise<void>;
+  /** Session goals for the goal picker on action cards */
+  goals?: Goal[];
+  /** Called when user links/unlinks a goal on an action */
+  onGoalChange?: (id: Id, goalId: Id | undefined) => void;
+  onActionCreate?: (body: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
   onActionDelete?: (id: Id) => void;
   readOnly?: boolean;
 }
@@ -55,6 +60,8 @@ export function ActionSectionContent({
   onDueDateChange,
   onAssigneesChange,
   onBodyChange,
+  goals,
+  onGoalChange,
   onActionCreate,
   onActionDelete,
   readOnly = false,
@@ -136,6 +143,8 @@ export function ActionSectionContent({
     onDueDateChange,
     onAssigneesChange,
     onBodyChange,
+    goals,
+    onGoalChange,
   };
 
   return (
@@ -196,8 +205,8 @@ export function ActionSectionContent({
               onDelete={undefined}
               onDismiss={() => onAddingActionChange(false)}
               {...sharedCardProps}
-              onBodyChange={async (_id, body, assigneeIds) => {
-                await onActionCreate(body, assigneeIds);
+              onBodyChange={async (_id, body, assigneeIds, goalId) => {
+                await onActionCreate(body, assigneeIds, goalId);
                 onAddingActionChange(false);
               }}
             />

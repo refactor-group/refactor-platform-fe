@@ -19,3 +19,10 @@ export function Some<T>(val: T): Some<T> {
 
 /** The singleton absent value. */
 export const None: None = { some: false, none: true };
+
+/** Runtime type guard for Option<unknown>. */
+export function isOption(value: unknown): value is Option<unknown> {
+  if (!value || typeof value !== "object") return false;
+  const obj = value as Record<string, unknown>;
+  return typeof obj.some === "boolean" && typeof obj.none === "boolean";
+}

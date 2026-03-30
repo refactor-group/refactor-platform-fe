@@ -81,12 +81,13 @@ export interface CoachingSessionPanelSharedProps {
   coachName: string | undefined;
   coacheeId: Id | undefined;
   coacheeName: string | undefined;
-  onActionCreate?: (body: string, assigneeIds?: Id[]) => Promise<void>;
+  onActionCreate?: (body: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
   onActionDelete?: (id: Id) => void;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[]) => Promise<void>;
+  onGoalChange?: (id: Id, goalId: Id | undefined) => void;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
   locale: string;
@@ -609,6 +610,7 @@ export function CoachingSessionPanel({
     sessionActions,
     reviewActions: panelReviewActions,
     handleCreate: handleActionCreate,
+    handleGoalChange,
     handleStatusChange,
     handleDueDateChange,
     handleAssigneesChange,
@@ -741,6 +743,7 @@ export function CoachingSessionPanel({
     onStatusChange: handleStatusChange,
     onDueDateChange: handleDueDateChange,
     onAssigneesChange: handleAssigneesChange,
+    onGoalChange: handleGoalChange,
     onBodyChange: handleBodyChange,
     isAddingAction,
     onAddingActionChange: setIsAddingAction,

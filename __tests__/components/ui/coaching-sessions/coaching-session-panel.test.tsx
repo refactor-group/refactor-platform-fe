@@ -68,9 +68,9 @@ vi.mock("@/lib/api/goal-progress", () => ({
     progressMetrics: {
       actions_completed: 3,
       actions_total: 8,
-      linked_session_count: 2,
+      linked_coaching_session_count: 2,
       progress: GoalProgress.SolidMomentum,
-      last_session_date: None,
+      last_coaching_session_date: None,
       next_action_due: None,
     },
     isLoading: false,

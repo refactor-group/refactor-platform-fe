@@ -18,7 +18,8 @@ export interface KanbanCardCallbacks {
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
+  onGoalChange?: (id: Id, goalId: Id | undefined) => void;
   onDelete?: (id: Id) => void;
 }
 
@@ -43,6 +44,7 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
   onDueDateChange,
   onAssigneesChange,
   onBodyChange,
+  onGoalChange,
   onDelete,
   coachLabel,
   coacheeLabel,
@@ -71,6 +73,7 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
         onDueDateChange={onDueDateChange}
         onAssigneesChange={onAssigneesChange}
         onBodyChange={onBodyChange}
+        onGoalChange={onGoalChange}
         onDelete={onDelete}
         variant="current"
         sourceSessionId={ctx.sourceSession.coachingSessionId}
@@ -97,6 +100,7 @@ export function KanbanActionCard({
   onDueDateChange,
   onAssigneesChange,
   onBodyChange,
+  onGoalChange,
   onDelete,
   isOverlay = false,
   justMoved = false,
@@ -142,6 +146,7 @@ export function KanbanActionCard({
         onDueDateChange={onDueDateChange}
         onAssigneesChange={onAssigneesChange}
         onBodyChange={onBodyChange}
+        onGoalChange={onGoalChange}
         onDelete={onDelete}
         coachLabel={coachLabel}
         coacheeLabel={coacheeLabel}

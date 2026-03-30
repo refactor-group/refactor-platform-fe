@@ -9,6 +9,7 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { isUserCoachInRelationship, isUserCoacheeInRelationship, sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
 import { useActionMutation } from "@/lib/api/actions";
+import { Some, None } from "@/types/option";
 import { useAllActionsWithContext } from "@/lib/hooks/use-all-actions-with-context";
 import {
   AssignmentFilter,
@@ -260,18 +261,44 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   );
 
   const handleBodyChange = useCallback(
-    async (id: Id, newBody: string) => {
+    async (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id) => {
       const ctx = actionsWithContext.find((a) => a.action.id === id);
       if (!ctx) return;
 
       try {
-        await updateAction(id, { ...ctx.action, body: newBody });
+        const updated = {
+          ...ctx.action,
+          body: newBody,
+          ...(assigneeIds !== undefined && { assignee_ids: assigneeIds }),
+          ...(goalId !== undefined ? { goal_id: Some(goalId) } : {}),
+        };
+        await updateAction(id, updated);
         refresh();
       } catch (err) {
         if (err instanceof EntityApiError && err.isNetworkError()) {
           toast.error("Failed to update action. Connection to service was lost.");
         } else {
           toast.error("Failed to update action.");
+        }
+      }
+    },
+    [actionsWithContext, updateAction, refresh]
+  );
+
+  const handleGoalChange = useCallback(
+    async (id: Id, goalId: Id | undefined) => {
+      const ctx = actionsWithContext.find((a) => a.action.id === id);
+      if (!ctx) return;
+
+      try {
+        const updated = { ...ctx.action, goal_id: goalId ? Some(goalId) : None };
+        await updateAction(id, updated);
+        refresh();
+      } catch (err) {
+        if (err instanceof EntityApiError && err.isNetworkError()) {
+          toast.error("Failed to update goal link. Connection to service was lost.");
+        } else {
+          toast.error("Failed to update goal link.");
         }
       }
     },
@@ -343,6 +370,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
           onDueDateChange={handleDueDateChange}
           onAssigneesChange={handleAssigneesChange}
           onBodyChange={handleBodyChange}
+          onGoalChange={handleGoalChange}
           onDelete={handleDelete}
         />
       )}

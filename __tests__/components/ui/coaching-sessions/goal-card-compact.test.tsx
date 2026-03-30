@@ -13,9 +13,9 @@ vi.mock("@/lib/api/goal-progress", () => ({
     progressMetrics: {
       actions_completed: 3,
       actions_total: 8,
-      linked_session_count: 2,
+      linked_coaching_session_count: 2,
       progress: GoalProgress.SolidMomentum,
-      last_session_date: None,
+      last_coaching_session_date: None,
       next_action_due: None,
     },
     isLoading: false,
@@ -132,17 +132,17 @@ describe("CompactGoalCard", () => {
     expect(onRemove).toHaveBeenCalledOnce()
   })
 
-  it("shows progress bar when actions exist", () => {
-    const { container } = render(
+  it("shows progress icon when actions exist", () => {
+    render(
       <CompactGoalCard
         goal={defaultGoal}
         onRemove={vi.fn()}
       />
     )
 
-    // Progress bar container with rounded-full classes
-    const progressBar = container.querySelector(".bg-border\\/40")
-    expect(progressBar).toBeInTheDocument()
+    // Progress icon should be present (trending-up, arrow-right, or trending-down)
+    const icon = document.querySelector(".lucide-trending-up, .lucide-arrow-right, .lucide-trending-down")
+    expect(icon).toBeInTheDocument()
   })
 
   it("clicking the title expands to show the full title and body", async () => {
