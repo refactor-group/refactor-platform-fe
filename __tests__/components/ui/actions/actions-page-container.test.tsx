@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import { toast } from "sonner";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { siteConfig } from "@/site.config";
 import { EntityApiError } from "@/lib/api/entity-api";
@@ -135,6 +136,7 @@ function makeCtx(
     action: {
       id,
       coaching_session_id: "session-1",
+      goal_id: None,
       body: `Action ${id}`,
       user_id: "user-1",
       status,

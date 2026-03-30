@@ -7,7 +7,8 @@ import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { UserActionsScope } from "@/types/assigned-actions";
-import { sortActionArray, defaultAction } from "@/types/action";
+import { sortActionArray, defaultAction, serializeAction } from "@/types/action";
+import { Some, None } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
 import { ItemStatus, EntityApiError } from "@/types/general";
@@ -261,12 +262,12 @@ function useActionCrud(
           coaching_session_id: coachingSessionId,
           user_id: userId,
           body,
-          goal_id: goalId,
+          goal_id: goalId ? Some(goalId) : None,
           status: ItemStatus.NotStarted,
           due_by: DateTime.now().plus({ days: 7 }),
           assignee_ids: assigneeIds ?? [],
         };
-        await create(newAction);
+        await create(serializeAction(newAction) as unknown as Action);
         refresh();
         if (goalId) {
           revalidateGoalProgress();
@@ -283,14 +284,8 @@ function useActionCrud(
       const action = findActionById(id, sessionActions, allRelationshipActions);
       if (!action) return;
       try {
-        // Spread then override goal_id. When unlinking, the backend expects
-        // null (undefined is stripped by JSON.stringify), so we assign null
-        // at runtime while keeping the TypeScript type satisfied via the spread.
-        const payload: Action = { ...action, goal_id: goalId };
-        if (!goalId) {
-          Object.assign(payload, { goal_id: null });
-        }
-        await update(id, payload);
+        const updated: Action = { ...action, goal_id: goalId ? Some(goalId) : None };
+        await update(id, serializeAction(updated) as unknown as Action);
         refresh();
         revalidateGoalProgress();
       } catch (err) {
@@ -304,7 +299,7 @@ function useActionCrud(
     async (id: Id, newStatus: ItemStatus) => {
       const action = findActionById(id, sessionActions, allRelationshipActions);
       await updateField(id, { status: newStatus }, "Failed to update status");
-      if (action?.goal_id) {
+      if (action?.goal_id.some) {
         revalidateGoalProgress();
       }
     },

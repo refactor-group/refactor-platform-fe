@@ -5,6 +5,7 @@ import { CoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
 import { OAuthConnection } from "@/types/oauth-connection";
@@ -112,6 +113,7 @@ export function createMockAction(overrides?: Partial<Action>): Action {
   return {
     id: "action-1",
     coaching_session_id: "session-1",
+    goal_id: None,
     body: "Follow up on resume review",
     user_id: "user-1",
     status: ItemStatus.NotStarted,

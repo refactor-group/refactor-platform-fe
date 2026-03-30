@@ -6,6 +6,7 @@ import { DateTime } from "ts-luxon";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { ItemStatus } from "@/types/general";
+import { Some } from "@/types/option";
 import { createMockAction, createMockGoal } from "../../../test-utils";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -420,7 +421,7 @@ describe("CompactActionCard", () => {
         <Wrapper>
           <CompactActionCard
             {...baseProps({
-              action: createMockAction({ goal_id: "goal-1" }),
+              action: createMockAction({ goal_id: Some("goal-1") }),
               goals: GOALS,
             })}
           />
@@ -455,7 +456,7 @@ describe("CompactActionCard", () => {
         <Wrapper>
           <CompactActionCard
             {...baseProps({
-              action: createMockAction({ goal_id: "goal-1" }),
+              action: createMockAction({ goal_id: Some("goal-1") }),
             })}
           />
         </Wrapper>

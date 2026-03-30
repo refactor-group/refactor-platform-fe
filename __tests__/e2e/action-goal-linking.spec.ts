@@ -192,9 +192,9 @@ async function setupCoachingSessionPage(page: Page) {
         data: {
           actions_completed: 0,
           actions_total: 1,
-          linked_session_count: 1,
+          linked_coaching_session_count: 1,
           progress: 'NeedsAttention',
-          last_session_date: null,
+          last_coaching_session_date: null,
           next_action_due: null,
         },
       }),

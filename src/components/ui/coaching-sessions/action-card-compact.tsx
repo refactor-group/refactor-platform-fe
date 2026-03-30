@@ -107,13 +107,15 @@ export function CompactActionCard({
   // Resolve linked goal title for display.
   // Prefer the goals array if provided (session panel); otherwise lazy-fetch
   // the single goal by ID (kanban board / any context without pre-fetched goals).
-  const goalFromArray = useMemo(() => {
-    if (!action.goal_id || !goals) return undefined;
-    return goals.find((g) => g.id === action.goal_id);
-  }, [action.goal_id, goals]);
+  const linkedGoalId = action.goal_id.some ? action.goal_id.val : undefined;
 
-  const shouldFetchGoal = Boolean(action.goal_id) && !goalFromArray;
-  const { goal: fetchedGoal } = useGoal(shouldFetchGoal ? action.goal_id! : "");
+  const goalFromArray = useMemo(() => {
+    if (!linkedGoalId || !goals) return undefined;
+    return goals.find((g) => g.id === linkedGoalId);
+  }, [linkedGoalId, goals]);
+
+  const shouldFetchGoal = Boolean(linkedGoalId) && !goalFromArray;
+  const { goal: fetchedGoal } = useGoal(shouldFetchGoal ? linkedGoalId! : "");
 
   const linkedGoalTitle = useMemo(() => {
     if (goalFromArray) return getGoalTitle(goalFromArray);
@@ -195,7 +197,7 @@ export function CompactActionCard({
             resolvedAssignees={resolvedAssignees}
             assigneeIds={assigneeIds}
             goals={resolvedGoals}
-            selectedGoalId={initialEditing ? localGoalId : action.goal_id}
+            selectedGoalId={initialEditing ? localGoalId : linkedGoalId}
             onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
             onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
             onAssigneeToggle={handleAssigneeToggle}

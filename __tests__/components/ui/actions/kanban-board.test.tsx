@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import { StatusVisibility } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { KanbanBoard } from "@/components/ui/actions/kanban-board";
@@ -40,6 +41,7 @@ function makeAction(
     action: {
       id,
       coaching_session_id: "session-1",
+      goal_id: None,
       body: `Action ${id}`,
       user_id: "user-1",
       status,

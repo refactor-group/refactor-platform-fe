@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import {
   StatusVisibility,
   TimeRange,
@@ -37,6 +38,7 @@ function makeAction(
     action: {
       id: overrides.id ?? "action-1",
       coaching_session_id: "session-1",
+      goal_id: None,
       body: "Test action",
       user_id: "user-1",
       status: overrides.status ?? ItemStatus.NotStarted,
@@ -125,6 +127,7 @@ function makePlainAction(
   return {
     id: overrides.id ?? "plain-1",
     coaching_session_id: "session-1",
+    goal_id: None,
     body: "Test action",
     user_id: "user-1",
     status: overrides.status ?? ItemStatus.NotStarted,

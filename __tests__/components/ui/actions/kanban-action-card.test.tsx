@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
 import { TestProviders } from "@/test-utils/providers";
@@ -31,6 +32,7 @@ function makeCtx(
     action: {
       id,
       coaching_session_id: "session-42",
+      goal_id: None,
       body: `Action ${id}`,
       user_id: "user-1",
       status,

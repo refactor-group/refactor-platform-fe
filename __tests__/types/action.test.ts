@@ -2,12 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { isAction, sortActionArray, sortByPositionMap, sortByDateField } from '@/types/action'
 import { SortOrder } from '@/types/sorting'
 import { ItemStatus } from '@/types/general'
+import { None } from '@/types/option'
 import { DateTime } from 'ts-luxon'
 import type { Action } from '@/types/action'
 
 const makeAction = (id: string, createdAt: string, updatedAt: string): Action => ({
   id,
   coaching_session_id: 'session-1',
+  goal_id: None,
   user_id: 'user-1',
   body: `Action ${id}`,
   status: ItemStatus.NotStarted,

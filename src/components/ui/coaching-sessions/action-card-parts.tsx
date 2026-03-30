@@ -227,7 +227,7 @@ export function GoalPickerPopover({
               No goals in this session
             </span>
           ) : (
-            <div className="max-h-48 overflow-y-auto">
+            <div role="listbox" className="max-h-48 overflow-y-auto">
               {goals.map((goal) => {
                 const isSelected = goal.id === selectedGoalId;
                 return (
