@@ -18,10 +18,10 @@ import {
   StatusSelect,
   DueDatePicker,
   AssigneePickerPopover,
-  GoalPickerPopover,
-  GoalPill,
   resolveAssignees,
 } from "@/components/ui/coaching-sessions/action-card-parts";
+import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
+import { GoalPill } from "@/components/ui/goal-pill";
 import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import { useLinkedGoalDisplay } from "@/lib/hooks/use-linked-goal-display";

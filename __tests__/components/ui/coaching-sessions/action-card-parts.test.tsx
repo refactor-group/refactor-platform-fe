@@ -3,7 +3,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { GoalPill, GoalPickerPopover } from "@/components/ui/coaching-sessions/action-card-parts";
+import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
+import { GoalPill } from "@/components/ui/goal-pill";
 import { createMockGoal } from "../../../test-utils";
 
 function Wrapper({ children }: { children: ReactNode }) {
