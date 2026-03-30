@@ -239,16 +239,20 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
 
     await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
 
-    // Goal pill should NOT be visible before expanding
-    await expect(page.getByTestId('goal-pill')).toHaveCount(0)
+    // Before expanding, back-face pills exist for each goal-linked action
+    // (session action + review action = 2 back-face pills)
+    await expect(page.getByTestId('goal-pill')).toHaveCount(2)
 
     // Click the goal-linked action body to expand it
     await page.getByText('Practice active listening').first().click()
 
-    // The goal pill should now be visible
-    const goalPill = page.getByTestId('goal-pill').first()
-    await expect(goalPill).toBeVisible()
-    await expect(goalPill).toContainText('Improve communication')
+    // After expanding, the front-face pill appears too (2 back-face + 1 front-face)
+    await expect(page.getByTestId('goal-pill')).toHaveCount(3)
+
+    // Verify the session section's front-face pill shows the correct goal
+    const sessionSection = page.getByTestId('session-section-content')
+    const sessionPill = sessionSection.getByTestId('goal-pill').first()
+    await expect(sessionPill).toContainText('Improve communication')
   })
 
   test('session action without goal_id does not show goal pill when expanded', async ({
@@ -265,10 +269,10 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
     // Click the unlinked action body to expand it
     await page.getByText('Review quarterly OKRs').first().click()
 
-    // No goal pill should appear for the unlinked action
-    // (The session section should have 0 goal pills since the linked action is not expanded)
+    // The unlinked action has no goal pill, but the linked action's back face
+    // still has one (GoalPill renders on both faces for linked actions)
     const sessionSection = page.getByTestId('session-section-content')
-    await expect(sessionSection.getByTestId('goal-pill')).toHaveCount(0)
+    await expect(sessionSection.getByTestId('goal-pill')).toHaveCount(1)
   })
 
   test('review action with goal_id shows goal pill in back view', async ({
