@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import {
   AssignmentFilter,
   CoachViewMode,
@@ -116,6 +117,7 @@ function makeTestAction(overrides: Partial<Action> = {}): Action {
   return {
     id: "action-1",
     coaching_session_id: "session-1",
+    goal_id: None,
     body: "Test action",
     user_id: "user-1",
     status: ItemStatus.NotStarted,
