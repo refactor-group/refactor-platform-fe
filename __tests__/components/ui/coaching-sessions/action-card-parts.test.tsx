@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { GoalPickerPopover } from "@/components/ui/coaching-sessions/action-card-parts";
+import { GoalPill, GoalPickerPopover } from "@/components/ui/coaching-sessions/action-card-parts";
 import { createMockGoal } from "../../../test-utils";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -14,6 +14,42 @@ const GOALS = [
   createMockGoal({ id: "goal-1", title: "Improve communication" }),
   createMockGoal({ id: "goal-2", title: "Build leadership skills" }),
 ];
+
+describe("GoalPill", () => {
+  it("renders the goal title", () => {
+    render(
+      <Wrapper>
+        <GoalPill title="Improve communication" />
+      </Wrapper>
+    );
+
+    expect(screen.getByTestId("goal-pill")).toHaveTextContent("Improve communication");
+  });
+
+  it("does not render unlink button when onUnlink is not provided", () => {
+    render(
+      <Wrapper>
+        <GoalPill title="Improve communication" />
+      </Wrapper>
+    );
+
+    expect(screen.queryByRole("button", { name: /unlink goal/i })).not.toBeInTheDocument();
+  });
+
+  it("renders unlink button and calls onUnlink when clicked", async () => {
+    const user = userEvent.setup();
+    const onUnlink = vi.fn();
+
+    render(
+      <Wrapper>
+        <GoalPill title="Improve communication" onUnlink={onUnlink} />
+      </Wrapper>
+    );
+
+    await user.click(screen.getByRole("button", { name: /unlink goal/i }));
+    expect(onUnlink).toHaveBeenCalledOnce();
+  });
+});
 
 describe("GoalPickerPopover", () => {
   let onChange: ReturnType<typeof vi.fn>;

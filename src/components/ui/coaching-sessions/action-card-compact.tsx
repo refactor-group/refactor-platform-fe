@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
 import type { TextareaMarkdownRef } from "textarea-markdown-editor";
-import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Info, Pencil, Strikethrough, Trash2, X } from "lucide-react";
+import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Info, Pencil, Strikethrough, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +19,12 @@ import {
   DueDatePicker,
   AssigneePickerPopover,
   GoalPickerPopover,
+  GoalPill,
   resolveAssignees,
 } from "@/components/ui/coaching-sessions/action-card-parts";
 import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
-import { goalTitle as getGoalTitle } from "@/types/goal";
-import { useGoal, useGoalsBySession } from "@/lib/api/goals";
+import { useLinkedGoalDisplay } from "@/lib/hooks/use-linked-goal-display";
 import { ItemStatus, Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -104,32 +104,7 @@ export function CompactActionCard({
   const body = action.body ?? "";
   const isReview = variant === "review";
 
-  // Resolve linked goal title for display.
-  // Prefer the goals array if provided (session panel); otherwise lazy-fetch
-  // the single goal by ID (kanban board / any context without pre-fetched goals).
-  const linkedGoalId = action.goal_id.some ? action.goal_id.val : undefined;
-
-  const goalFromArray = useMemo(() => {
-    if (!linkedGoalId || !goals) return undefined;
-    return goals.find((g) => g.id === linkedGoalId);
-  }, [linkedGoalId, goals]);
-
-  const shouldFetchGoal = Boolean(linkedGoalId) && !goalFromArray;
-  const { goal: fetchedGoal } = useGoal(shouldFetchGoal ? linkedGoalId! : "");
-
-  const linkedGoalTitle = useMemo(() => {
-    if (goalFromArray) return getGoalTitle(goalFromArray);
-    if (shouldFetchGoal && fetchedGoal.id) return getGoalTitle(fetchedGoal);
-    return undefined;
-  }, [goalFromArray, shouldFetchGoal, fetchedGoal]);
-
-  // When no goals prop is provided (e.g. kanban board), lazy-fetch session
-  // goals so the edit form's goal picker still works. SWR skips the fetch
-  // when the key is null (goals already provided via prop).
-  const { goals: sessionGoals } = useGoalsBySession(
-    !goals ? action.coaching_session_id : null
-  );
-  const resolvedGoals = goals ?? (sessionGoals.length > 0 ? sessionGoals : undefined);
+  const { linkedGoalId, linkedGoalTitle, resolvedGoals } = useLinkedGoalDisplay(action, goals);
 
   // For new (unsaved) actions, track goal and assignee changes locally
   // because the action doesn't exist in the backend yet.
@@ -308,21 +283,7 @@ function ActionBody({ body, goalTitle }: { body: string; goalTitle?: string }) {
         <ReactMarkdown components={markdownComponents}>{body}</ReactMarkdown>
       </div>
       {expanded && goalTitle && (
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                data-testid="goal-pill"
-                className="mt-1.5 block rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground truncate"
-              >
-                {goalTitle}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">
-              {goalTitle}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <GoalPill title={goalTitle} className="mt-1.5" />
       )}
     </div>
   );
@@ -443,30 +404,7 @@ function ActionBackView({
       </div>
 
       {goalTitle && (
-        <div className="flex items-center gap-1.5">
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="min-w-0 block rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground truncate">
-                  {goalTitle}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">
-                {goalTitle}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          {onGoalUnlink && (
-            <button
-              type="button"
-              aria-label="Unlink goal"
-              onClick={onGoalUnlink}
-              className="rounded-full p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </div>
+        <GoalPill title={goalTitle} onUnlink={onGoalUnlink} />
       )}
 
       <div className="flex items-center justify-between pt-3">

@@ -428,15 +428,18 @@ describe("CompactActionCard", () => {
         </Wrapper>
       );
 
-      // Goal pill should not be visible before expanding
-      expect(screen.queryByTestId("goal-pill")).not.toBeInTheDocument();
+      // Before expanding, only the back-face pill exists (front face not expanded)
+      const pillsBefore = screen.queryAllByTestId("goal-pill");
+      expect(pillsBefore).toHaveLength(1);
 
       // Click the body text to expand it (appears on both faces; pick the front)
       const bodyTexts = screen.getAllByText("Follow up on resume review");
       await user.click(bodyTexts[0]);
 
-      expect(screen.getByTestId("goal-pill")).toBeInTheDocument();
-      expect(screen.getByTestId("goal-pill")).toHaveTextContent("Improve communication");
+      // After expanding, both front-face and back-face pills are present
+      const pillsAfter = screen.getAllByTestId("goal-pill");
+      expect(pillsAfter).toHaveLength(2);
+      expect(pillsAfter[0]).toHaveTextContent("Improve communication");
     });
 
     it("does not render goal pill when action has no goal_id", () => {
