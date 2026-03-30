@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/coaching-sessions/action-card-parts";
 import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
+import { goalTitle as getGoalTitle } from "@/types/goal";
+import { useGoal } from "@/lib/api/goals";
 import { ItemStatus, Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -102,11 +104,22 @@ export function CompactActionCard({
   const body = action.body ?? "";
   const isReview = variant === "review";
 
-  // Resolve linked goal title for display
-  const linkedGoal = useMemo(() => {
+  // Resolve linked goal title for display.
+  // Prefer the goals array if provided (session panel); otherwise lazy-fetch
+  // the single goal by ID (kanban board / any context without pre-fetched goals).
+  const goalFromArray = useMemo(() => {
     if (!action.goal_id || !goals) return undefined;
     return goals.find((g) => g.id === action.goal_id);
   }, [action.goal_id, goals]);
+
+  const shouldFetchGoal = Boolean(action.goal_id) && !goalFromArray;
+  const { goal: fetchedGoal } = useGoal(shouldFetchGoal ? action.goal_id! : "");
+
+  const linkedGoalTitle = useMemo(() => {
+    if (goalFromArray) return getGoalTitle(goalFromArray);
+    if (shouldFetchGoal && fetchedGoal.id) return getGoalTitle(fetchedGoal);
+    return undefined;
+  }, [goalFromArray, shouldFetchGoal, fetchedGoal]);
 
   // For new (unsaved) actions, track goal and assignee changes locally
   // because the action doesn't exist in the backend yet.
@@ -155,7 +168,7 @@ export function CompactActionCard({
         />
       )}
       renderFront={() => (
-        <ActionBody body={body} goalTitle={linkedGoal?.title} />
+        <ActionBody body={body} goalTitle={linkedGoalTitle} />
       )}
       renderFooter={() => (
         <ActionFooter
@@ -197,9 +210,9 @@ export function CompactActionCard({
             body={body}
             locale={locale}
             resolvedAssignees={resolvedAssignees}
-            goalTitle={linkedGoal?.title}
+            goalTitle={linkedGoalTitle}
             onGoalUnlink={
-              linkedGoal && onGoalChange
+              linkedGoalTitle && onGoalChange
                 ? () => onGoalChange(action.id, undefined)
                 : undefined
             }
