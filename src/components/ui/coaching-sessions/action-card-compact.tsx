@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
 import type { TextareaMarkdownRef } from "textarea-markdown-editor";
-import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Info, Pencil, Strikethrough, Trash2 } from "lucide-react";
+import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Info, Pencil, Strikethrough, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,9 +18,11 @@ import {
   StatusSelect,
   DueDatePicker,
   AssigneePickerPopover,
+  GoalPickerPopover,
   resolveAssignees,
 } from "@/components/ui/coaching-sessions/action-card-parts";
 import type { Action } from "@/types/action";
+import type { Goal } from "@/types/goal";
 import { ItemStatus, Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -54,7 +56,7 @@ export interface CompactActionCardProps {
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[]) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
   onDelete?: (id: Id) => void;
   /** "review" makes body read-only and hides delete. Defaults to "current". */
   variant?: "current" | "review";
@@ -64,6 +66,10 @@ export interface CompactActionCardProps {
   sourceSessionDate?: DateTime;
   /** When true, show a brief highlight ring animation */
   highlighted?: boolean;
+  /** Session goals available for the goal picker */
+  goals?: Goal[];
+  /** Called when the user links or unlinks a goal */
+  onGoalChange?: (id: Id, goalId: Id | undefined) => void;
   /** When true, card starts in edit mode (used for new actions). */
   initialEditing?: boolean;
   /** Called when the user dismisses an initial-editing card. */
@@ -86,6 +92,8 @@ export function CompactActionCard({
   variant = "current",
   sourceSessionId,
   sourceSessionDate,
+  goals,
+  onGoalChange,
   highlighted = false,
   initialEditing = false,
   onDismiss,
@@ -93,8 +101,16 @@ export function CompactActionCard({
 }: CompactActionCardProps) {
   const body = action.body ?? "";
   const isReview = variant === "review";
-  // For new (unsaved) actions, assignee changes must be tracked locally
+
+  // Resolve linked goal title for display
+  const linkedGoal = useMemo(() => {
+    if (!action.goal_id || !goals) return undefined;
+    return goals.find((g) => g.id === action.goal_id);
+  }, [action.goal_id, goals]);
+
+  // For new (unsaved) actions, track goal and assignee changes locally
   // because the action doesn't exist in the backend yet.
+  const [localGoalId, setLocalGoalId] = useState<Id | undefined>(undefined);
   const [localAssigneeIds, setLocalAssigneeIds] = useState<Id[]>(
     action.assignee_ids ?? []
   );
@@ -139,7 +155,7 @@ export function CompactActionCard({
         />
       )}
       renderFront={() => (
-        <ActionBody body={body} />
+        <ActionBody body={body} goalTitle={linkedGoal?.title} />
       )}
       renderFooter={() => (
         <ActionFooter
@@ -157,11 +173,20 @@ export function CompactActionCard({
             allAssignees={allAssignees}
             resolvedAssignees={resolvedAssignees}
             assigneeIds={assigneeIds}
+            goals={goals}
+            selectedGoalId={initialEditing ? localGoalId : action.goal_id}
             onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
             onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
             onAssigneeToggle={handleAssigneeToggle}
-            onSave={async (newBody, savedAssigneeIds) => {
-              await onBodyChange(action.id, newBody, savedAssigneeIds);
+            onGoalSelect={goals ? (goalId) => {
+              if (initialEditing) {
+                setLocalGoalId(goalId);
+              } else {
+                onGoalChange?.(action.id, goalId);
+              }
+            } : undefined}
+            onSave={async (newBody, savedAssigneeIds, goalId) => {
+              await onBodyChange(action.id, newBody, savedAssigneeIds, goalId);
               if (!initialEditing) onEditEnd();
             }}
             onCancel={onDismiss ? onDone : onEditEnd}
@@ -172,6 +197,12 @@ export function CompactActionCard({
             body={body}
             locale={locale}
             resolvedAssignees={resolvedAssignees}
+            goalTitle={linkedGoal?.title}
+            onGoalUnlink={
+              linkedGoal && onGoalChange
+                ? () => onGoalChange(action.id, undefined)
+                : undefined
+            }
             sourceSessionId={sourceSessionId}
             sourceSessionDate={sourceSessionDate}
             onDone={onDone}
@@ -231,7 +262,7 @@ function ActionHeader({
 
 // ── Front face: Body ────────────────────────────────────────────────
 
-function ActionBody({ body }: { body: string }) {
+function ActionBody({ body, goalTitle }: { body: string; goalTitle?: string }) {
   const [expanded, setExpanded] = useState(false);
 
   if (!body) {
@@ -243,14 +274,33 @@ function ActionBody({ body }: { body: string }) {
   }
 
   return (
-    <div
-      className={cn(
-        "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-[13px] font-medium [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        !expanded && "max-h-[2.8em] overflow-hidden"
+    <div>
+      <div
+        className={cn(
+          "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-[13px] font-medium [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          !expanded && "max-h-[2.8em] overflow-hidden"
+        )}
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        <ReactMarkdown components={markdownComponents}>{body}</ReactMarkdown>
+      </div>
+      {expanded && goalTitle && (
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                data-testid="goal-pill"
+                className="mt-1.5 block rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground truncate"
+              >
+                {goalTitle}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              {goalTitle}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
-      onClick={() => setExpanded((prev) => !prev)}
-    >
-      <ReactMarkdown components={markdownComponents}>{body}</ReactMarkdown>
     </div>
   );
 }
@@ -312,6 +362,8 @@ function ActionBackView({
   body,
   locale,
   resolvedAssignees,
+  goalTitle,
+  onGoalUnlink,
   sourceSessionId,
   sourceSessionDate,
   onDone,
@@ -322,6 +374,8 @@ function ActionBackView({
   body: string;
   locale: string;
   resolvedAssignees: { initials: string; name: string }[];
+  goalTitle?: string;
+  onGoalUnlink?: () => void;
   sourceSessionId?: Id;
   sourceSessionDate?: DateTime;
   onDone: () => void;
@@ -364,6 +418,33 @@ function ActionBackView({
           {resolvedAssignees.map((a) => a.name).join(", ") || "Unassigned"}
         </span>
       </div>
+
+      {goalTitle && (
+        <div className="flex items-center gap-1.5">
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="min-w-0 block rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground truncate">
+                  {goalTitle}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {goalTitle}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {onGoalUnlink && (
+            <button
+              type="button"
+              aria-label="Unlink goal"
+              onClick={onGoalUnlink}
+              className="rounded-full p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between pt-3">
         <div>
@@ -427,9 +508,12 @@ function ActionEditForm({
   allAssignees,
   resolvedAssignees,
   assigneeIds,
+  goals,
+  selectedGoalId,
   onStatusChange,
   onDueDateChange,
   onAssigneeToggle,
+  onGoalSelect,
   onSave,
   onCancel,
 }: {
@@ -439,10 +523,13 @@ function ActionEditForm({
   allAssignees: { id: Id; name: string; initials: string }[];
   resolvedAssignees: { id: Id; name: string; initials: string }[];
   assigneeIds: Id[];
+  goals?: Goal[];
+  selectedGoalId?: Id;
   onStatusChange: (newStatus: ItemStatus) => void;
   onDueDateChange: (newDueBy: DateTime) => void;
   onAssigneeToggle: (assigneeId: Id) => void;
-  onSave: (body: string, assigneeIds: Id[]) => Promise<void>;
+  onGoalSelect?: (goalId: Id | undefined) => void;
+  onSave: (body: string, assigneeIds: Id[], goalId?: Id) => Promise<void>;
   onCancel: () => void;
 }) {
   const [body, setBody] = useState(initialBody);
@@ -472,11 +559,11 @@ function ActionEditForm({
     if (!body.trim()) return;
     setIsSaving(true);
     try {
-      await onSave(body.trim(), assigneeIds);
+      await onSave(body.trim(), assigneeIds, selectedGoalId);
     } finally {
       setIsSaving(false);
     }
-  }, [body, assigneeIds, onSave]);
+  }, [body, assigneeIds, selectedGoalId, onSave]);
 
   const trigger = useCallback(
     (command: string) => markdownRef.current?.trigger(command),
@@ -533,6 +620,16 @@ function ActionEditForm({
             onToggle={onAssigneeToggle}
           />
         </div>
+        {goals && onGoalSelect && (
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground">Linked goal</span>
+            <GoalPickerPopover
+              goals={goals}
+              selectedGoalId={selectedGoalId}
+              onChange={onGoalSelect}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-end gap-2 pt-3">

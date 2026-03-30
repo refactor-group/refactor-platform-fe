@@ -45,6 +45,7 @@ export function CoachingSessionPanelMobile({
   onStatusChange,
   onDueDateChange,
   onAssigneesChange,
+  onGoalChange,
   onBodyChange,
   isAddingAction,
   onAddingActionChange,
@@ -189,7 +190,9 @@ export function CoachingSessionPanelMobile({
                 onStatusChange={onStatusChange}
                 onDueDateChange={onDueDateChange}
                 onAssigneesChange={onAssigneesChange}
+                onGoalChange={onGoalChange}
                 onBodyChange={onBodyChange}
+                goals={linkedGoals}
                 onActionCreate={onActionCreate}
                 onActionDelete={onActionDelete}
                 readOnly={readOnly}
