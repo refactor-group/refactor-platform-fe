@@ -6,7 +6,7 @@ import { DateTime } from "ts-luxon";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { ItemStatus } from "@/types/general";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, createMockGoal } from "../../../test-utils";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
@@ -325,7 +325,8 @@ describe("CompactActionCard", () => {
         expect(onBodyChange).toHaveBeenCalledWith(
           "action-1",
           "Updated action text",
-          expect.any(Array)
+          expect.any(Array),
+          undefined // goalId — no goal selected
         );
       });
     });
@@ -402,6 +403,91 @@ describe("CompactActionCard", () => {
 
       const flipCard = container.firstChild as HTMLElement;
       expect(flipCard.className).not.toContain("ring-2");
+    });
+  });
+
+  // ── Goal pill on front face ──────────────────────────────────────
+
+  describe("goal pill", () => {
+    const GOALS = [
+      createMockGoal({ id: "goal-1", title: "Improve communication" }),
+      createMockGoal({ id: "goal-2", title: "Build leadership skills" }),
+    ];
+
+    it("renders goal pill when action body is expanded and has goal_id", async () => {
+      const user = userEvent.setup();
+      render(
+        <Wrapper>
+          <CompactActionCard
+            {...baseProps({
+              action: createMockAction({ goal_id: "goal-1" }),
+              goals: GOALS,
+            })}
+          />
+        </Wrapper>
+      );
+
+      // Goal pill should not be visible before expanding
+      expect(screen.queryByTestId("goal-pill")).not.toBeInTheDocument();
+
+      // Click the body text to expand it (appears on both faces; pick the front)
+      const bodyTexts = screen.getAllByText("Follow up on resume review");
+      await user.click(bodyTexts[0]);
+
+      expect(screen.getByTestId("goal-pill")).toBeInTheDocument();
+      expect(screen.getByTestId("goal-pill")).toHaveTextContent("Improve communication");
+    });
+
+    it("does not render goal pill when action has no goal_id", () => {
+      render(
+        <Wrapper>
+          <CompactActionCard
+            {...baseProps({ goals: GOALS })}
+          />
+        </Wrapper>
+      );
+
+      expect(screen.queryByTestId("goal-pill")).not.toBeInTheDocument();
+    });
+
+    it("does not render goal pill when goals prop is not provided", () => {
+      render(
+        <Wrapper>
+          <CompactActionCard
+            {...baseProps({
+              action: createMockAction({ goal_id: "goal-1" }),
+            })}
+          />
+        </Wrapper>
+      );
+
+      expect(screen.queryByTestId("goal-pill")).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Goal picker in edit form ────────────────────────────────────
+
+  describe("goal picker in edit form", () => {
+    const GOALS = [
+      createMockGoal({ id: "goal-1", title: "Improve communication" }),
+      createMockGoal({ id: "goal-2", title: "Build leadership skills" }),
+    ];
+
+    it("shows goal picker row in edit form when goals are provided", async () => {
+      render(
+        <Wrapper>
+          <CompactActionCard
+            {...baseProps({ goals: GOALS })}
+          />
+        </Wrapper>
+      );
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("button", { name: /action options/i }));
+      await user.click(screen.getByText("Edit"));
+
+      expect(screen.getByText("Linked goal")).toBeInTheDocument();
+      expect(screen.getByText("Link goal")).toBeInTheDocument();
     });
   });
 

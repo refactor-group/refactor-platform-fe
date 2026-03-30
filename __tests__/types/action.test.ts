@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { sortActionArray, sortByPositionMap, sortByDateField } from '@/types/action'
+import { isAction, sortActionArray, sortByPositionMap, sortByDateField } from '@/types/action'
 import { SortOrder } from '@/types/sorting'
 import { ItemStatus } from '@/types/general'
 import { DateTime } from 'ts-luxon'
@@ -16,6 +16,37 @@ const makeAction = (id: string, createdAt: string, updatedAt: string): Action =>
   created_at: DateTime.fromISO(createdAt),
   updated_at: DateTime.fromISO(updatedAt),
   assignee_ids: [],
+})
+
+describe('isAction — goal_id field', () => {
+  const baseAction = {
+    id: 'action-1',
+    coaching_session_id: 'session-1',
+    user_id: 'user-1',
+    body: 'Test action',
+    status: ItemStatus.NotStarted,
+    status_changed_at: '2026-03-01T00:00:00Z',
+    due_by: '2026-03-15T00:00:00Z',
+    created_at: '2026-03-01T00:00:00Z',
+    updated_at: '2026-03-01T00:00:00Z',
+    assignee_ids: [],
+  }
+
+  it('accepts action with goal_id as a valid UUID string', () => {
+    expect(isAction({ ...baseAction, goal_id: 'goal-uuid-123' })).toBe(true)
+  })
+
+  it('accepts action with goal_id as null (backend sends null for unlinked)', () => {
+    expect(isAction({ ...baseAction, goal_id: null })).toBe(true)
+  })
+
+  it('accepts action with goal_id absent (optional field)', () => {
+    expect(isAction({ ...baseAction })).toBe(true)
+  })
+
+  it('rejects action with goal_id as a number (wrong type)', () => {
+    expect(isAction({ ...baseAction, goal_id: 123 })).toBe(false)
+  })
 })
 
 describe('sortActionArray', () => {
