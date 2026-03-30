@@ -59,7 +59,8 @@ interface KanbanBoardProps {
   onVisibilityChange: (vis: StatusVisibility) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
+  onGoalChange?: (id: Id, goalId: Id | undefined) => void;
   onDelete?: (id: Id) => void;
 }
 
@@ -72,6 +73,7 @@ export function KanbanBoard({
   onDueDateChange,
   onAssigneesChange,
   onBodyChange,
+  onGoalChange,
   onDelete,
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | undefined>();
@@ -336,9 +338,10 @@ export function KanbanBoard({
       onDueDateChange,
       onAssigneesChange,
       onBodyChange,
+      onGoalChange,
       onDelete,
     }),
-    [locale, handleOptimisticStatusChange, onDueDateChange, onAssigneesChange, onBodyChange, onDelete]
+    [locale, handleOptimisticStatusChange, onDueDateChange, onAssigneesChange, onBodyChange, onGoalChange, onDelete]
   );
 
   return (
