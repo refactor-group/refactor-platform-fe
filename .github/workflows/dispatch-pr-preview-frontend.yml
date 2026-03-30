@@ -36,10 +36,9 @@ on:
         required: true
         type: choice
         options:
+          - 23e2983 - Move Actions into coaching session panel with compact flip cards (#355)
+          - '66264b4 - chore: refresh preview commit choices [skip ci]'
           - 3fcef41 - Multi-section coaching session panel with agreement cards (#349)
-          - '2ad3f90 - chore: refresh preview commit choices [skip ci]'
-          - '373cdc4 - fix: extract PR number from commit dropdown instead of separate input (#359)'
-          - e43e192 - PR#355 (feature/coaching-session-panel)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
