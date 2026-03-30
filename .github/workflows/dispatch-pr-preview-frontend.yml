@@ -36,9 +36,10 @@ on:
         required: true
         type: choice
         options:
+          - '67826d6 - chore: refresh preview commit choices [skip ci]'
           - 23e2983 - Move Actions into coaching session panel with compact flip cards (#355)
           - '66264b4 - chore: refresh preview commit choices [skip ci]'
-          - 3fcef41 - Multi-section coaching session panel with agreement cards (#349)
+          - 16a5443 - PR#360 (feature/goal-action-linking)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
