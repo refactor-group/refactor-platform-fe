@@ -7,7 +7,7 @@ import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { UserActionsScope } from "@/types/assigned-actions";
-import { sortActionArray, defaultAction, serializeAction } from "@/types/action";
+import { sortActionArray, defaultAction } from "@/types/action";
 import { Some, None } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
@@ -267,7 +267,7 @@ function useActionCrud(
           due_by: DateTime.now().plus({ days: 7 }),
           assignee_ids: assigneeIds ?? [],
         };
-        await create(serializeAction(newAction) as unknown as Action);
+        await create(newAction);
         refresh();
         if (goalId) {
           revalidateGoalProgress();
@@ -285,7 +285,7 @@ function useActionCrud(
       if (!action) return;
       try {
         const updated: Action = { ...action, goal_id: goalId ? Some(goalId) : None };
-        await update(id, serializeAction(updated) as unknown as Action);
+        await update(id, updated);
         refresh();
         revalidateGoalProgress();
       } catch (err) {

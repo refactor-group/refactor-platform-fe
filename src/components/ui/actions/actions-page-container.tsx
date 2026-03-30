@@ -9,7 +9,6 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { isUserCoachInRelationship, isUserCoacheeInRelationship, sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
 import { useActionMutation } from "@/lib/api/actions";
-import { serializeAction } from "@/types/action";
 import { Some, None } from "@/types/option";
 import { useAllActionsWithContext } from "@/lib/hooks/use-all-actions-with-context";
 import {
@@ -273,7 +272,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
           ...(assigneeIds !== undefined && { assignee_ids: assigneeIds }),
           ...(goalId !== undefined ? { goal_id: Some(goalId) } : {}),
         };
-        await updateAction(id, serializeAction(updated) as unknown as typeof updated);
+        await updateAction(id, updated);
         refresh();
       } catch (err) {
         if (err instanceof EntityApiError && err.isNetworkError()) {
@@ -293,7 +292,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
 
       try {
         const updated = { ...ctx.action, goal_id: goalId ? Some(goalId) : None };
-        await updateAction(id, serializeAction(updated) as unknown as typeof updated);
+        await updateAction(id, updated);
         refresh();
       } catch (err) {
         if (err instanceof EntityApiError && err.isNetworkError()) {

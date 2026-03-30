@@ -113,7 +113,7 @@ export function sortByDateField<T>(
 }
 
 /** Wire shape where Option fields are unwrapped to string | null for JSON. */
-type ActionWire = Omit<Action, "goal_id"> & { goal_id: Id | null };
+export type ActionWire = Omit<Action, "goal_id"> & { goal_id: Id | null };
 
 /**
  * Converts an Action to the wire format expected by the backend.
