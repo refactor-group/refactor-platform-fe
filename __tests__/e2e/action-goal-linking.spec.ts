@@ -228,7 +228,7 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
     await setupCoachingSessionPage(page)
   })
 
-  test('session action with goal_id shows goal pill on front face', async ({
+  test('session action with goal_id shows goal pill when body is expanded', async ({
     page,
     isMobile,
   }) => {
@@ -239,13 +239,19 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
 
     await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
 
-    // The goal-linked action should show a goal pill with the goal title
+    // Goal pill should NOT be visible before expanding
+    await expect(page.getByTestId('goal-pill')).toHaveCount(0)
+
+    // Click the goal-linked action body to expand it
+    await page.getByText('Practice active listening').first().click()
+
+    // The goal pill should now be visible
     const goalPill = page.getByTestId('goal-pill').first()
     await expect(goalPill).toBeVisible()
     await expect(goalPill).toContainText('Improve communication')
   })
 
-  test('session action without goal_id does not show goal pill', async ({
+  test('session action without goal_id does not show goal pill when expanded', async ({
     page,
     isMobile,
   }) => {
@@ -256,17 +262,16 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
 
     await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
 
-    // The action without goal should be visible but without a goal pill
-    await expect(page.getByText('Review quarterly OKRs').first()).toBeVisible()
+    // Click the unlinked action body to expand it
+    await page.getByText('Review quarterly OKRs').first().click()
 
-    // There should be exactly 1 goal pill (from the linked action), not 2
-    const goalPills = page.getByTestId('goal-pill')
-    // Count within session section — 1 for linked action, 0 for unlinked
-    // Plus 1 in review section for the review action with goal
-    await expect(goalPills).toHaveCount(2)
+    // No goal pill should appear for the unlinked action
+    // (The session section should have 0 goal pills since the linked action is not expanded)
+    const sessionSection = page.getByTestId('session-section-content')
+    await expect(sessionSection.getByTestId('goal-pill')).toHaveCount(0)
   })
 
-  test('review action with goal_id shows goal pill in Due for Review section', async ({
+  test('review action with goal_id shows goal pill in back view', async ({
     page,
     isMobile,
   }) => {
@@ -280,11 +285,13 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
     // The review action body should be visible
     await expect(page.getByText('Delegate weekly report to team lead').first()).toBeVisible()
 
-    // The review section should contain a goal pill for "Build leadership skills"
+    // Flip the review action to its back view to see the goal pill
     const reviewSection = page.getByTestId('review-section-content')
-    const reviewGoalPill = reviewSection.getByTestId('goal-pill')
+    await reviewSection.locator('button[aria-label="Action options"]').first().click()
+
+    // The back view should show the goal pill
+    const reviewGoalPill = reviewSection.getByText('Build leadership').first()
     await expect(reviewGoalPill).toBeVisible()
-    await expect(reviewGoalPill).toContainText('Build leadership')
   })
 
   test('goal picker appears in action edit form', async ({
@@ -298,19 +305,15 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
 
     await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
 
-    // Flip to back face of the unlinked action
-    const actionCard = page.getByText('Review quarterly OKRs').first()
-    await expect(actionCard).toBeVisible()
+    // Flip the unlinked action to back view
+    const sessionSection = page.getByTestId('session-section-content')
+    await sessionSection.locator('button[aria-label="Action options"]').nth(1).click()
 
-    // Find the info/flip button on the same card and click it
-    const flipButton = page.locator('button[aria-label="Action options"]').nth(1)
-    await flipButton.click()
+    // Click Edit — scoped to the session section to avoid ambiguity
+    await sessionSection.getByRole('button', { name: 'Edit' }).click()
 
-    // Click Edit to enter edit mode
-    await page.getByText('Edit').click()
-
-    // The Goal label and "None" button should appear in the edit form
-    await expect(page.getByText('Goal')).toBeVisible()
-    await expect(page.getByText('None')).toBeVisible()
+    // The Linked goal label and "None" dropdown should appear in the edit form
+    await expect(page.getByText('Linked goal')).toBeVisible()
+    await expect(sessionSection.getByText('None')).toBeVisible()
   })
 })
