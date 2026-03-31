@@ -151,7 +151,7 @@ export function AddMemberDialog({
                 required
               />
             </div>
-            <div className="grid gap-4">
+            {/* <div className="grid gap-4">
               <Label htmlFor="password">Initial Password</Label>
               <Input
                 id="password"
@@ -175,7 +175,7 @@ export function AddMemberDialog({
             </div>
             {passwordError && (
               <div className="text-red-500 text-sm">{passwordError}</div>
-            )}
+            )} */}
           </div>
           <div className="pt-4">
             <DialogFooter>
