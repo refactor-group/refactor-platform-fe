@@ -5,6 +5,7 @@ import {
   createContext,
   useContext,
   forwardRef,
+  useMemo,
   CSSProperties,
 } from "react";
 import {
@@ -123,7 +124,32 @@ export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
     const sidebarState = useSidebarState();
 
     const sidebarActions = useSidebarActions(sidebarState, props.onStateChange);
-    const contextValue = buildSidebarContext(sidebarState, sidebarActions);
+    // Individual properties listed instead of the parent objects (sidebarState,
+    // sidebarActions) because those are new object references every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const contextValue = useMemo(
+      () => buildSidebarContext(sidebarState, sidebarActions),
+      [
+        // State values (primitives/enums — stable unless the value changes)
+        sidebarState.state,
+        sidebarState.userIntent,
+        sidebarState.isResponsiveOverride,
+        sidebarState.screenSize,
+        sidebarState.isMobile,
+        sidebarState.openMobile,
+        // Action callbacks (stable via useCallback in their respective hooks)
+        sidebarState.setUserIntent,
+        sidebarState.toggle,
+        sidebarState.setOpenMobile,
+        sidebarState.handleScreenSizeChange,
+        sidebarState.handleAuthenticationChange,
+        sidebarActions.open,
+        sidebarActions.setOpen,
+        sidebarActions.toggleSidebar,
+        sidebarActions.expand,
+        sidebarActions.collapse,
+      ]
+    );
     const containerStyle = createContainerStyle(props.style);
 
     return renderSidebarProvider(contextValue, containerStyle, props, ref);
