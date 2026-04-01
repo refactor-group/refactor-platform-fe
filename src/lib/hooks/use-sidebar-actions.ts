@@ -15,26 +15,41 @@ export function useSidebarActions(
 ) {
   const open = sidebarState.state === SidebarState.Expanded;
 
+  // Destructure stable callbacks from sidebarState so useCallback deps
+  // are individual references (not the whole object, which is new every render).
+  const {
+    setUserIntent,
+    toggle,
+    isMobile,
+    openMobile,
+    setOpenMobile,
+    expand: stateExpand,
+    collapse: stateCollapse,
+  } = sidebarState;
+
   const setOpen = useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = resolveOpenState(value, open);
       const newState = convertToSidebarState(openState);
-      updateSidebarState(sidebarState, newState, onStateChange);
+      setUserIntent(newState, StateChangeSource.UserAction);
+      onStateChange?.(newState, StateChangeSource.UserAction);
     },
-    [open, sidebarState, onStateChange]
+    [open, setUserIntent, onStateChange]
   );
 
   const toggleSidebar = useCallback(() => {
-    return handleSidebarToggle(sidebarState);
-  }, [sidebarState]);
+    return isMobile
+      ? setOpenMobile(!openMobile)
+      : toggle(StateChangeSource.UserAction);
+  }, [isMobile, openMobile, setOpenMobile, toggle]);
 
   const expand = useCallback(() => {
-    sidebarState.expand(StateChangeSource.UserAction);
-  }, [sidebarState]);
+    stateExpand(StateChangeSource.UserAction);
+  }, [stateExpand]);
 
   const collapse = useCallback(() => {
-    sidebarState.collapse(StateChangeSource.UserAction);
-  }, [sidebarState]);
+    stateCollapse(StateChangeSource.UserAction);
+  }, [stateCollapse]);
 
   return { open, setOpen, toggleSidebar, expand, collapse };
 }
@@ -49,17 +64,3 @@ function convertToSidebarState(openState: boolean): SidebarState {
   return openState ? SidebarState.Expanded : SidebarState.Collapsed;
 }
 
-function updateSidebarState(
-  sidebarState: SidebarStateHookProps,
-  newState: SidebarState,
-  onStateChange?: (state: SidebarState, source: StateChangeSource) => void
-) {
-  sidebarState.setUserIntent(newState, StateChangeSource.UserAction);
-  onStateChange?.(newState, StateChangeSource.UserAction);
-}
-
-function handleSidebarToggle(sidebarState: SidebarStateHookProps) {
-  return sidebarState.isMobile
-    ? sidebarState.setOpenMobile(!sidebarState.openMobile)
-    : sidebarState.toggle(StateChangeSource.UserAction);
-}

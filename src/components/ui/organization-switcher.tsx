@@ -40,7 +40,9 @@ export function OrganizationSwitcher({
   onSelect,
   ...props
 }: OrganizationSelectorProps) {
-  const { userId, isLoggedIn, setIsACoach } = useAuthStore((state) => state);
+  const userId = useAuthStore((state) => state.userId);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const setIsACoach = useAuthStore((state) => state.setIsACoach);
   const [open, setOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [focusedIndex, setFocusedIndex] = React.useState(0);
