@@ -38,9 +38,9 @@ on:
         required: true
         type: choice
         options:
-          - 4b71dd7 - Replace collapsible action sections with tabbed Due/New interface (#365)
-          - '6cff5ad - chore: refresh preview commit choices [skip ci]'
-          - '5f476c8 - chore: refresh preview commit choices [skip ci]'
+          - 'a190614 - fix: remove unused err binding in coaching-session-panel'
+          - 'd19848d - fix: resolve all React Compiler and ESLint warnings'
+          - '8d61082 - fix: resolve all Dependabot security vulnerabilities'
           - 2ed32f8 - PR#364 (fix/coachee-actions-connection)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
