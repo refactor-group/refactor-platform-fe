@@ -72,9 +72,9 @@ export function ActionSectionContent({
 
   const handleTabChange = useCallback(
     (value: string) => {
-      const tab = value as ActionTab;
-      setActiveTab(tab);
-      onActiveTabChange?.(tab);
+      if (value !== "due" && value !== "new") return;
+      setActiveTab(value);
+      onActiveTabChange?.(value);
     },
     [onActiveTabChange]
   );
@@ -109,11 +109,18 @@ export function ActionSectionContent({
     return null;
   }, [highlightTarget, reviewActions, isAddingAction]);
 
-  // Switch tab when required (highlight deep-link or adding action)
+  // Switch tab when required (highlight deep-link or adding action).
+  // setState during render is a React-supported pattern for derived state.
   if (requiredTab !== null && activeTab !== requiredTab) {
     setActiveTab(requiredTab);
-    onActiveTabChange?.(requiredTab);
   }
+
+  // Notify parent asynchronously to avoid mid-render parent updates
+  useEffect(() => {
+    if (requiredTab !== null) {
+      onActiveTabChange?.(requiredTab);
+    }
+  }, [requiredTab, onActiveTabChange]);
 
   // Reset highlightCleared synchronously when a new target arrives
   if (highlightTarget && highlightCleared) {
@@ -124,20 +131,22 @@ export function ActionSectionContent({
   const activeHighlight =
     highlightTarget && !highlightCleared ? highlightTarget.id : null;
 
-  // Scroll to highlighted card and clear highlight after animation
+  // Scroll to highlighted card and clear highlight after animation.
+  // Depend on highlightTarget.id so a re-navigation to the same action still fires.
+  const highlightTargetId = highlightTarget?.id ?? null;
   useEffect(() => {
-    if (!highlightTarget) return;
+    if (!highlightTargetId) return;
 
     // Scroll to the card after a frame (let tab switch render)
     requestAnimationFrame(() => {
-      const el = cardRefs.current.get(highlightTarget.id);
+      const el = cardRefs.current.get(highlightTargetId);
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
     // Clear highlight after animation
     const timer = setTimeout(() => setHighlightCleared(true), 2000);
     return () => clearTimeout(timer);
-  }, [highlightTarget]);
+  }, [highlightTargetId]);
 
   // Lazy-init placeholder so defaultAction() isn't called at module scope
   const newActionPlaceholder = useMemo(() => defaultAction(), []);
@@ -158,16 +167,16 @@ export function ActionSectionContent({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col">
-      <TabsList className="w-full">
-        <TabsTrigger value="due" className="flex-1 gap-1.5" data-testid="action-tab-due">
+      <TabsList className="h-8 w-full">
+        <TabsTrigger value="due" className="flex-1 gap-1.5 py-1 text-xs" data-testid="action-tab-due">
           Due
-          <span className="text-[11px] font-normal text-muted-foreground/60">
+          <span className="text-[10px] font-normal text-muted-foreground/60">
             ({reviewActions.length})
           </span>
         </TabsTrigger>
-        <TabsTrigger value="new" className="flex-1 gap-1.5" data-testid="action-tab-new">
+        <TabsTrigger value="new" className="flex-1 gap-1.5 py-1 text-xs" data-testid="action-tab-new">
           New
-          <span className="text-[11px] font-normal text-muted-foreground/60">
+          <span className="text-[10px] font-normal text-muted-foreground/60">
             ({sessionActions.length})
           </span>
         </TabsTrigger>
