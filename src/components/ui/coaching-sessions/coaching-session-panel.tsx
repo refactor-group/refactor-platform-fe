@@ -691,7 +691,7 @@ export function CoachingSessionPanel({
               try {
                 await createAgreement(agreement);
                 refreshAgreements();
-              } catch (err) {
+              } catch {
                 sonnerToast.error("Failed to undo", {
                   description: "Could not restore the agreement.",
                 });
