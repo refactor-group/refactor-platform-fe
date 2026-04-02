@@ -37,9 +37,10 @@ on:
         required: true
         type: choice
         options:
+          - '7b49204 - chore: refresh preview commit choices [skip ci]'
           - '0914024 - fix: stabilize React references to prevent infinite re-render loop (#363)'
           - 'b7545e8 - chore: refresh preview commit choices [skip ci]'
-          - 'd3659ba - chore: refresh preview commit choices [skip ci]'
+          - 5a65875 - PR#364 (fix/coachee-actions-connection)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
