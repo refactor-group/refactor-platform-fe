@@ -237,21 +237,21 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
     await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
     await dismissDevErrorOverlay(page)
 
-    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
 
-    // Before expanding, back-face pills exist for each goal-linked action
-    // (session action + review action = 2 back-face pills)
-    await expect(page.getByTestId('goal-pill')).toHaveCount(2)
+    // The default "New" tab shows session actions. Back-face pills exist for
+    // goal-linked session action (1 back-face pill visible in New tab).
+    await expect(page.getByTestId('goal-pill')).toHaveCount(1)
 
     // Click the goal-linked action body to expand it
     await page.getByText('Practice active listening').first().click()
 
-    // After expanding, the front-face pill appears too (2 back-face + 1 front-face)
-    await expect(page.getByTestId('goal-pill')).toHaveCount(3)
+    // After expanding, the front-face pill appears too (1 back-face + 1 front-face)
+    await expect(page.getByTestId('goal-pill')).toHaveCount(2)
 
     // Verify the session section's front-face pill shows the correct goal
-    const sessionSection = page.getByTestId('session-section-content')
-    const sessionPill = sessionSection.getByTestId('goal-pill').first()
+    const sessionContent = page.getByTestId('session-section-content')
+    const sessionPill = sessionContent.getByTestId('goal-pill').first()
     await expect(sessionPill).toContainText('Improve communication')
   })
 
@@ -264,15 +264,15 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
     await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
     await dismissDevErrorOverlay(page)
 
-    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
 
     // Click the unlinked action body to expand it
     await page.getByText('Review quarterly OKRs').first().click()
 
     // The unlinked action has no goal pill, but the linked action's back face
     // still has one (GoalPill renders on both faces for linked actions)
-    const sessionSection = page.getByTestId('session-section-content')
-    await expect(sessionSection.getByTestId('goal-pill')).toHaveCount(1)
+    const sessionContent = page.getByTestId('session-section-content')
+    await expect(sessionContent.getByTestId('goal-pill')).toHaveCount(1)
   })
 
   test('review action with goal_id shows goal pill in back view', async ({
@@ -284,7 +284,10 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
     await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
     await dismissDevErrorOverlay(page)
 
-    await expect(page.getByText('Due for Review')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-due')).toBeVisible({ timeout: 15_000 })
+
+    // Switch to the Due tab to see review actions
+    await page.getByTestId('action-tab-due').click()
 
     // The review action body should be visible
     await expect(page.getByText('Delegate weekly report to team lead').first()).toBeVisible()
@@ -307,17 +310,17 @@ test.describe('Action goal linking: goal pill display and goal picker', () => {
     await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
     await dismissDevErrorOverlay(page)
 
-    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
 
     // Flip the unlinked action to back view
-    const sessionSection = page.getByTestId('session-section-content')
-    await sessionSection.locator('button[aria-label="Action options"]').nth(1).click()
+    const sessionContent = page.getByTestId('session-section-content')
+    await sessionContent.locator('button[aria-label="Action options"]').nth(1).click()
 
     // Click Edit — scoped to the session section to avoid ambiguity
-    await sessionSection.getByRole('button', { name: 'Edit' }).click()
+    await sessionContent.getByRole('button', { name: 'Edit' }).click()
 
     // The Linked goal label and "None" dropdown should appear in the edit form
     await expect(page.getByText('Linked goal')).toBeVisible()
-    await expect(sessionSection.getByText('None')).toBeVisible()
+    await expect(sessionContent.getByText('None')).toBeVisible()
   })
 })
