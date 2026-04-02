@@ -29,7 +29,7 @@ on:
           - 'ae1c415 - chore: refresh preview commit choices [skip ci]'
           - '0787aa7 - chore: refresh preview commit choices [skip ci]'
           - '2b5430b - chore: refresh preview commit choices [skip ci]'
-          - 060ab54 - PR#274 (batch-coachee-actions)
+          - 7c5b20d - PR#274 (batch-coachee-actions)
           - feea802 - PR#273 (raymond/implements-magic-login)
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
@@ -38,10 +38,9 @@ on:
         required: true
         type: choice
         options:
+          - 4b71dd7 - Replace collapsible action sections with tabbed Due/New interface (#365)
+          - '6cff5ad - chore: refresh preview commit choices [skip ci]'
           - '5f476c8 - chore: refresh preview commit choices [skip ci]'
-          - '7b49204 - chore: refresh preview commit choices [skip ci]'
-          - '0914024 - fix: stabilize React references to prevent infinite re-render loop (#363)'
-          - 7502d82 - PR#365 (feature/actions-tabbed-panel)
           - 2ed32f8 - PR#364 (fix/coachee-actions-connection)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
