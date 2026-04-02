@@ -31,7 +31,7 @@ const PREVIOUS_SESSION = {
   updated_at: '2026-02-01T00:00:00Z',
 }
 
-/** Action belonging to the current session (appears in "New This Session") */
+/** Action belonging to the current session (appears in "New" tab) */
 function mockSessionAction(id: string, body: string) {
   return {
     id,
@@ -47,7 +47,7 @@ function mockSessionAction(id: string, body: string) {
   }
 }
 
-/** Action from a previous session (appears in "Due for Review") */
+/** Action from a previous session (appears in "Due" tab) */
 function mockReviewAction(id: string, body: string) {
   return {
     id,
@@ -208,15 +208,15 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
 
     await dismissDevErrorOverlay(page)
 
-    // Panel should have switched to Actions — verify both section headers
-    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText('Due for Review')).toBeVisible()
+    // Panel should have switched to Actions — verify both tab triggers are visible
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-due')).toBeVisible()
 
     // The target action card body text should be visible
     await expect(page.getByText(targetAction.body).first()).toBeVisible()
   })
 
-  test('deep-link to review action expands "Due for Review" and shows the card', async ({
+  test('deep-link to review action switches to "Due" tab and shows the card', async ({
     page,
     isMobile,
   }) => {
@@ -230,8 +230,8 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
 
     await dismissDevErrorOverlay(page)
 
-    // "Due for Review" section should be expanded and contain the target action
-    await expect(page.getByTestId('review-section-toggle')).toBeVisible({ timeout: 15_000 })
+    // "Due" tab should be active and contain the target action
+    await expect(page.getByTestId('action-tab-due')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText(targetAction.body).first()).toBeVisible()
   })
 
@@ -256,7 +256,7 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     // The highlight ring should be applied. Tailwind compiles ring-primary/40
     // to a class containing "ring-2". Check via computed style rather than
     // fragile class name matching.
-    const targetCard = page.getByText(targetAction.body).first().locator('xpath=ancestor::div[contains(@class, "ring-2")]')
+    const targetCard = page.getByText(targetAction.body).first().locator('xpath=ancestor::div[contains(@class, "flip-card-container") and contains(@class, "ring-2")]')
     const hasHighlight = await targetCard.count() > 0
 
     // The highlight lasts 2 seconds. If we caught it, verify it clears.
@@ -283,7 +283,7 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     await dismissDevErrorOverlay(page)
 
     // Should still arrive at the Actions panel
-    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText(targetAction.body).first()).toBeVisible()
   })
 
@@ -326,7 +326,7 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     await dismissDevErrorOverlay(page)
 
     // Wait for the panel to render
-    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
 
     // The last action should be scrolled into the visible viewport
     const actionText = page.getByText(lastAction.body).first()
@@ -346,21 +346,22 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
 
     await dismissDevErrorOverlay(page)
 
-    // Panel should still load and show both section headers
-    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText('Due for Review')).toBeVisible()
+    // Panel should still load and show both tab triggers
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-due')).toBeVisible()
 
-    // Existing action cards should render normally
+    // Existing action cards should render normally (default "New" tab is active)
     await expect(page.getByText(SESSION_ACTIONS[0].body).first()).toBeVisible()
 
-    // No action card should have the deep-link highlight ring.
-    // The highlight is applied as "ring-2 ring-primary/40" on action card wrappers.
-    // Scope to the action section content to avoid matching unrelated ring-2 elements.
+    // No action card in the active "New" tab should have the deep-link highlight ring.
     const sessionContent = page.getByTestId('session-section-content')
-    const reviewContent = page.getByTestId('review-section-content')
     const highlightedInSession = sessionContent.locator('[class*="ring-primary"]')
-    const highlightedInReview = reviewContent.locator('[class*="ring-primary"]')
     await expect(highlightedInSession).toHaveCount(0)
+
+    // Switch to "Due" tab and verify no highlights there either
+    await page.getByTestId('action-tab-due').click()
+    const reviewContent = page.getByTestId('review-section-content')
+    const highlightedInReview = reviewContent.locator('[class*="ring-primary"]')
     await expect(highlightedInReview).toHaveCount(0)
   })
 
@@ -375,18 +376,21 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     await dismissDevErrorOverlay(page)
 
     // Actions panel should be active
-    await expect(page.getByText('New This Session')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText('Due for Review')).toBeVisible()
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-due')).toBeVisible()
 
-    // Action cards render normally
+    // Action cards render normally (default "New" tab)
     await expect(page.getByText(SESSION_ACTIONS[0].body).first()).toBeVisible()
 
-    // No highlight ring applied to any action card
+    // No highlight ring in the active "New" tab
     const sessionContent = page.getByTestId('session-section-content')
-    const reviewContent = page.getByTestId('review-section-content')
     const highlightedInSession = sessionContent.locator('[class*="ring-primary"]')
-    const highlightedInReview = reviewContent.locator('[class*="ring-primary"]')
     await expect(highlightedInSession).toHaveCount(0)
+
+    // Switch to "Due" tab and verify no highlights there either
+    await page.getByTestId('action-tab-due').click()
+    const reviewContent = page.getByTestId('review-section-content')
+    const highlightedInReview = reviewContent.locator('[class*="ring-primary"]')
     await expect(highlightedInReview).toHaveCount(0)
   })
 
@@ -411,14 +415,14 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     const targetCard = page
       .getByText(targetAction.body)
       .first()
-      .locator('xpath=ancestor::div[contains(@class, "ring-2")]')
+      .locator('xpath=ancestor::div[contains(@class, "flip-card-container") and contains(@class, "ring-2")]')
     await expect(targetCard).toBeVisible({ timeout: 3_000 })
 
     // After 2s the component clears activeHighlight — the ring should disappear
     await expect(targetCard).toBeHidden({ timeout: 5_000 })
   })
 
-  test('deep-link to review action expands a previously-collapsed review section', async ({
+  test('deep-link to review action auto-switches to Due tab', async ({
     page,
     isMobile,
   }) => {
@@ -426,19 +430,11 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
 
     const targetAction = REVIEW_ACTIONS[0] // "Finish onboarding checklist"
 
-    // First, load without highlight to verify the review section content is visible
-    // (it auto-expands when review actions exist), then collapse it manually
+    // First, load without highlight — default "New" tab is active
     await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
     await dismissDevErrorOverlay(page)
 
-    await expect(page.getByTestId('review-section-toggle')).toBeVisible({ timeout: 15_000 })
-
-    // Collapse the review section
-    await page.getByTestId('review-section-toggle').click()
-
-    // Verify it collapsed — content should be hidden
-    const reviewContent = page.getByTestId('review-section-content')
-    await expect(reviewContent).toBeHidden()
+    await expect(page.getByTestId('action-tab-new')).toBeVisible({ timeout: 15_000 })
 
     // Now navigate with a deep-link highlight to the review action
     await page.goto(
@@ -446,7 +442,7 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     )
     await dismissDevErrorOverlay(page)
 
-    // The review section should be auto-expanded and the target action visible
+    // The "Due" tab content should be visible with the target action
     await expect(page.getByTestId('review-section-content')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText(targetAction.body).first()).toBeVisible()
   })
@@ -461,6 +457,9 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
 
     await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions`)
     await dismissDevErrorOverlay(page)
+
+    // Switch to Due tab to see review actions
+    await page.getByTestId('action-tab-due').click()
 
     // Wait for the review action to render
     await expect(page.getByText(targetAction.body).first()).toBeVisible({ timeout: 15_000 })

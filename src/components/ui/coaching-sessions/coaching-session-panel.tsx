@@ -44,6 +44,7 @@ import { ItemStatus } from "@/types/general";
 import { DateTime } from "ts-luxon";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { siteConfig } from "@/site.config";
+import type { ActionTab } from "@/components/ui/coaching-sessions/action-section-content";
 
 // ── Shared props for both layouts ──────────────────────────────────────
 
@@ -91,6 +92,8 @@ export interface CoachingSessionPanelSharedProps {
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
   locale: string;
+  activeActionTab: ActionTab;
+  onActiveActionTabChange: (tab: ActionTab) => void;
 }
 
 // ── Shared helpers for desktop and mobile layouts ─────────────────────
@@ -625,6 +628,7 @@ export function CoachingSessionPanel({
   });
 
   const [isAddingAction, setIsAddingAction] = useState(false);
+  const [activeActionTab, setActiveActionTab] = useState<ActionTab>("new");
 
   // ── Agreement state & handlers ──────────────────────────────────
 
@@ -748,6 +752,8 @@ export function CoachingSessionPanel({
     isAddingAction,
     onAddingActionChange: setIsAddingAction,
     locale: siteConfig.locale,
+    activeActionTab,
+    onActiveActionTabChange: setActiveActionTab,
   };
 
   return (
