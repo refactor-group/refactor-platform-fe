@@ -256,7 +256,7 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     // The highlight ring should be applied. Tailwind compiles ring-primary/40
     // to a class containing "ring-2". Check via computed style rather than
     // fragile class name matching.
-    const targetCard = page.getByText(targetAction.body).first().locator('xpath=ancestor::div[contains(@class, "ring-2")]')
+    const targetCard = page.getByText(targetAction.body).first().locator('xpath=ancestor::div[contains(@class, "flip-card-container") and contains(@class, "ring-2")]')
     const hasHighlight = await targetCard.count() > 0
 
     // The highlight lasts 2 seconds. If we caught it, verify it clears.
@@ -415,7 +415,7 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     const targetCard = page
       .getByText(targetAction.body)
       .first()
-      .locator('xpath=ancestor::div[contains(@class, "ring-2")]')
+      .locator('xpath=ancestor::div[contains(@class, "flip-card-container") and contains(@class, "ring-2")]')
     await expect(targetCard).toBeVisible({ timeout: 3_000 })
 
     // After 2s the component clears activeHighlight — the ring should disappear

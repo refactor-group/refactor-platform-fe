@@ -82,7 +82,7 @@ export function ActionSectionContent({
   // ── Highlight & scroll-to for deep-linked actions ────────────────
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");
-  const [highlightCleared, setHighlightCleared] = useState(false);
+  const [clearedHighlightId, setClearedHighlightId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
@@ -122,14 +122,13 @@ export function ActionSectionContent({
     }
   }, [requiredTab, onActiveTabChange]);
 
-  // Reset highlightCleared synchronously when a new target arrives
-  if (highlightTarget && highlightCleared) {
-    setHighlightCleared(false);
-  }
-
   // Derive activeHighlight from the highlight target, cleared after animation.
+  // When clearedHighlightId matches the current target, the highlight is off.
+  // A new target automatically shows the highlight since IDs won't match.
   const activeHighlight =
-    highlightTarget && !highlightCleared ? highlightTarget.id : null;
+    highlightTarget && clearedHighlightId !== highlightTarget.id
+      ? highlightTarget.id
+      : null;
 
   // Scroll to highlighted card and clear highlight after animation.
   // Depend on highlightTarget.id so a re-navigation to the same action still fires.
@@ -144,7 +143,8 @@ export function ActionSectionContent({
     });
 
     // Clear highlight after animation
-    const timer = setTimeout(() => setHighlightCleared(true), 2000);
+    const id = highlightTargetId;
+    const timer = setTimeout(() => setClearedHighlightId(id), 2000);
     return () => clearTimeout(timer);
   }, [highlightTargetId]);
 
