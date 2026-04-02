@@ -1,0 +1,102 @@
+// Coachee actions API — routes between two backend endpoints:
+//   - Single relationship: GET /organizations/{org}/coaching_relationships/{rel}/actions
+//   - Batch (all coachees): GET /organizations/{org}/coaching_relationships/coachee-actions
+
+import { siteConfig } from "@/site.config";
+import { Id } from "@/types/general";
+import {
+  type Action,
+  type ActionWithAssigneesWire,
+  type BatchCoacheeActionsResponse,
+  transformActionWithAssignees,
+} from "@/types/action";
+import {
+  UserActionsScope,
+  UserActionsAssigneeFilter,
+} from "@/types/assigned-actions";
+import { ApiResponse } from "./entity-api";
+import { buildQueryString } from "./query-params";
+import { sessionGuard } from "@/lib/auth/session-guard";
+import useSWR from "swr";
+
+const ORGANIZATIONS_BASEURL = `${siteConfig.env.backendServiceURL}/organizations`;
+const COACHING_RELATIONSHIPS_PATH = "coaching_relationships";
+
+/** Query parameters for coachee actions endpoints. */
+export interface CoacheeActionsParams {
+  scope?: UserActionsScope;
+  coaching_relationship_id?: Id;
+  assignee_filter?: UserActionsAssigneeFilter;
+  status?: string;
+  sort_by?: string;
+  sort_order?: string;
+}
+
+function sharedQueryString(params?: CoacheeActionsParams): string {
+  if (!params) return "";
+  return buildQueryString({
+    scope: params.scope,
+    assignee_filter: params.assignee_filter,
+    status: params.status,
+    sort_by: params.sort_by,
+    sort_order: params.sort_order,
+  });
+}
+
+function coacheeActionsUrl(orgId: Id, params?: CoacheeActionsParams): string {
+  const relId = params?.coaching_relationship_id;
+  const qs = sharedQueryString(params);
+  if (relId) {
+    return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/${relId}/actions${qs}`;
+  }
+  return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/coachee-actions${qs}`;
+}
+
+/** Fetches actions for a single relationship. Returns flat Action[]. */
+async function fetchSingleRelationshipActions(url: string): Promise<Action[]> {
+  const response =
+    await sessionGuard.get<ApiResponse<ActionWithAssigneesWire[]>>(url);
+  return response.data.data.map(transformActionWithAssignees);
+}
+
+/** Fetches actions for all coachees. Flattens grouped response into flat Action[]. */
+async function fetchBatchCoacheeActions(url: string): Promise<Action[]> {
+  const response =
+    await sessionGuard.get<ApiResponse<BatchCoacheeActionsResponse>>(url);
+  const grouped = response.data.data.coachee_actions;
+  return Object.values(grouped).flat().map(transformActionWithAssignees);
+}
+
+/**
+ * SWR hook that fetches coachee actions.
+ *
+ * Routes to the appropriate backend endpoint:
+ * - When coaching_relationship_id is set: single-relationship endpoint
+ * - Otherwise: batch endpoint returning actions for all coachees
+ *
+ * @param orgId Organization ID, or null to skip fetching
+ * @param params Optional query parameters for filtering and sorting
+ */
+export function useBatchCoacheeActions(
+  orgId: Id | null,
+  params?: CoacheeActionsParams
+) {
+  const url = orgId ? coacheeActionsUrl(orgId, params) : null;
+  const isSingleRelationship = !!params?.coaching_relationship_id;
+
+  const { data, error, isLoading, mutate } = useSWR<Action[]>(
+    url,
+    () =>
+      isSingleRelationship
+        ? fetchSingleRelationshipActions(url!)
+        : fetchBatchCoacheeActions(url!),
+    { revalidateOnMount: true, shouldRetryOnError: false }
+  );
+
+  return {
+    actions: data ?? [],
+    isLoading,
+    isError: !!error,
+    refresh: mutate,
+  };
+}

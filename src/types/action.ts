@@ -116,6 +116,28 @@ export function sortByDateField<T>(
 export type ActionWire = Omit<Action, "goal_id"> & { goal_id: Id | null };
 
 /**
+ * Wire shape of a single item in the batch coachee-actions response.
+ * The backend returns action fields flat alongside assignee_ids.
+ */
+export interface ActionWithAssigneesWire extends Record<string, unknown> {
+  assignee_ids: Id[];
+}
+
+/** Response from GET /organizations/{org_id}/coaching_relationships/coachee-actions */
+export interface BatchCoacheeActionsResponse {
+  coachee_actions: Record<Id, ActionWithAssigneesWire[]>;
+}
+
+/** Transforms a flat ActionWithAssigneesWire into a domain Action. */
+export function transformActionWithAssignees(
+  raw: ActionWithAssigneesWire
+): Action {
+  const action = transformAction(raw);
+  action.assignee_ids = raw.assignee_ids;
+  return action;
+}
+
+/**
  * Converts an Action to the wire format expected by the backend.
  * Unwraps Option fields to string | null for JSON serialization.
  */

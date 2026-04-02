@@ -68,13 +68,13 @@ vi.mock("@/lib/api/user-actions", () => ({
   },
 }));
 
-// Coachee actions returned by useCoacheeActionsFetch
+// Coachee actions returned by useBatchCoacheeActions
 let mockCoacheeActions: Action[] = [];
 let mockCoacheeActionsLoading = false;
 let mockCoacheeActionsError = false;
 
-vi.mock("@/lib/hooks/use-coachee-actions-fetch", () => ({
-  useCoacheeActionsFetch: () => ({
+vi.mock("@/lib/api/coachee-actions", () => ({
+  useBatchCoacheeActions: () => ({
     actions: mockCoacheeActions,
     isLoading: mockCoacheeActionsLoading,
     isError: mockCoacheeActionsError,

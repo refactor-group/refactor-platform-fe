@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useUserActionsList } from "@/lib/api/user-actions";
-import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { useBatchCoacheeActions } from "@/lib/api/coachee-actions";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { useCoacheeActionsFetch } from "@/lib/hooks/use-coachee-actions-fetch";
 import {
   AssignmentFilter,
   CoachViewMode,
@@ -12,7 +11,6 @@ import {
 } from "@/types/assigned-actions";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
-import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
 
 /**
  * Maps a UI-level AssignmentFilter to the API params (scope + assignee_filter).
@@ -46,7 +44,7 @@ export function assignmentFilterToApiParams(filter: AssignmentFilter): {
  * Fetches actions based on the current view mode and assignment filter.
  *
  * In "My Actions" mode, fetches actions for the current user.
- * In "Coachee Actions" mode, fetches actions for all coachees in parallel.
+ * In "Coachee Actions" mode, fetches actions for all coachees via a single batch request.
  *
  * @param viewMode - Whether to show the user's own actions or their coachees' actions
  * @param relationshipId - Optional server-side filter to a specific coaching relationship
@@ -82,26 +80,21 @@ export function useActionsFetch(
     }
   );
 
-  // --- Coachee Actions path ---
-
-  const { relationships, isLoading: relsLoading } =
-    useCoachingRelationshipList(
-      isCoacheeMode ? currentOrganizationId : null
-    );
-
-  const coacheeIds = useMemo(() => {
-    if (!isCoacheeMode || !userId || !relationships) return [];
-    return getRelationshipsAsCoach(userId, relationships).map(
-      (r) => r.coachee_id
-    );
-  }, [isCoacheeMode, userId, relationships]);
+  // --- Coachee Actions path (single batch request) ---
 
   const {
     actions: coacheeActions,
     isLoading: coacheeActionsLoading,
     isError: coacheeActionsError,
     refresh: refreshCoacheeActions,
-  } = useCoacheeActionsFetch(coacheeIds, isCoacheeMode, relationshipId, scope, assigneeFilter);
+  } = useBatchCoacheeActions(
+    isCoacheeMode ? currentOrganizationId : null,
+    {
+      scope,
+      assignee_filter: assigneeFilter,
+      coaching_relationship_id: relationshipId,
+    }
+  );
 
   // --- Combine based on mode ---
 
@@ -111,7 +104,7 @@ export function useActionsFetch(
   );
 
   const isLoading = isCoacheeMode
-    ? relsLoading || coacheeActionsLoading
+    ? coacheeActionsLoading
     : myActionsLoading;
 
   const isError = isCoacheeMode ? coacheeActionsError : myActionsError;
