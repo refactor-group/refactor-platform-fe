@@ -45,10 +45,10 @@ describe("ActionSectionContent", () => {
     vi.clearAllMocks();
   });
 
-  // ���─ Sub-section headers ──────────────────────────────────────────
+  // ── Tab headers ──────────────────────────────────────────────────
 
-  describe("sub-section headers", () => {
-    it("renders 'Due for Review' header with count", () => {
+  describe("tab headers", () => {
+    it("renders 'Due' tab with count", () => {
       const reviewActions = [
         createMockAction({ id: "review-1" }),
         createMockAction({ id: "review-2" }),
@@ -60,12 +60,12 @@ describe("ActionSectionContent", () => {
         </Wrapper>
       );
 
-      const toggle = screen.getByTestId("review-section-toggle");
-      expect(toggle.textContent).toContain("Due for Review");
-      expect(toggle.textContent).toContain("(2)");
+      const tab = screen.getByTestId("action-tab-due");
+      expect(tab.textContent).toContain("Due");
+      expect(tab.textContent).toContain("(2)");
     });
 
-    it("renders 'New This Session' header with count", () => {
+    it("renders 'New' tab with count", () => {
       const sessionActions = [createMockAction({ id: "session-1" })];
 
       render(
@@ -74,93 +74,29 @@ describe("ActionSectionContent", () => {
         </Wrapper>
       );
 
-      const toggle = screen.getByTestId("session-section-toggle");
-      expect(toggle.textContent).toContain("New This Session");
-      expect(toggle.textContent).toContain("(1)");
+      const tab = screen.getByTestId("action-tab-new");
+      expect(tab.textContent).toContain("New");
+      expect(tab.textContent).toContain("(1)");
     });
   });
 
-  // ── Collapse behavior ────────────────────────────────────────────
+  // ── Tab switching ────────────────────────────────────────────────
 
-  describe("collapse behavior", () => {
-    it("starts 'Due for Review' expanded when there are review actions", () => {
-      const reviewActions = [createMockAction({ id: "review-1" })];
-
-      render(
-        <Wrapper>
-          <ActionSectionContent {...baseProps({ reviewActions })} />
-        </Wrapper>
-      );
-
-      // The review section content should not be hidden
-      const reviewSection = screen.getByTestId("review-section-content");
-      expect(reviewSection.className).not.toContain("hidden");
-    });
-
-    it("starts 'Due for Review' collapsed when there are no review actions", () => {
-      render(
-        <Wrapper>
-          <ActionSectionContent {...baseProps({ reviewActions: [] })} />
-        </Wrapper>
-      );
-
-      // The header should still be visible
-      expect(screen.getByText(/Due for Review/)).toBeInTheDocument();
-      // But the empty state should not be visible (collapsed)
-      const reviewSection = screen.getByTestId("review-section-content");
-      expect(reviewSection.className).toContain("hidden");
-    });
-
-    it("starts 'New This Session' expanded by default", () => {
+  describe("tab switching", () => {
+    it("defaults to the 'New' tab", () => {
       render(
         <Wrapper>
           <ActionSectionContent {...baseProps()} />
         </Wrapper>
       );
 
-      // The "New This Session" content area should be visible
-      const sessionSection = screen.getByTestId("session-section-content");
-      expect(sessionSection.className).not.toContain("hidden");
+      // The session content area should be visible
+      const sessionContent = screen.getByTestId("session-section-content");
+      expect(sessionContent).toBeInTheDocument();
     });
 
-    it("collapses 'Due for Review' when header is clicked", async () => {
+    it("switches to 'Due' tab when clicked", async () => {
       const user = userEvent.setup();
-      const reviewActions = [createMockAction({ id: "review-1" })];
-
-      render(
-        <Wrapper>
-          <ActionSectionContent {...baseProps({ reviewActions })} />
-        </Wrapper>
-      );
-
-      // Click the review section header to collapse
-      await user.click(screen.getByTestId("review-section-toggle"));
-
-      const reviewSection = screen.getByTestId("review-section-content");
-      expect(reviewSection.className).toContain("hidden");
-    });
-
-    it("collapses 'New This Session' when header is clicked", async () => {
-      const user = userEvent.setup();
-
-      render(
-        <Wrapper>
-          <ActionSectionContent {...baseProps()} />
-        </Wrapper>
-      );
-
-      // Click the session section header to collapse
-      await user.click(screen.getByTestId("session-section-toggle"));
-
-      const sessionSection = screen.getByTestId("session-section-content");
-      expect(sessionSection.className).toContain("hidden");
-    });
-  });
-
-  // ── Action cards rendering ───────────────────────────────────────
-
-  describe("action cards", () => {
-    it("renders review actions in the review section", () => {
       const reviewActions = [
         createMockAction({
           id: "review-1",
@@ -175,12 +111,55 @@ describe("ActionSectionContent", () => {
         </Wrapper>
       );
 
-      // Text appears on both card faces; verify it exists in the review section
+      await user.click(screen.getByTestId("action-tab-due"));
+
       const reviewContent = screen.getByTestId("review-section-content");
       expect(reviewContent.textContent).toContain("Review action one");
     });
 
-    it("renders session actions in the session section", () => {
+    it("calls onActiveTabChange when tab switches", async () => {
+      const user = userEvent.setup();
+      const onActiveTabChange = vi.fn();
+
+      render(
+        <Wrapper>
+          <ActionSectionContent
+            {...baseProps({ onActiveTabChange })}
+          />
+        </Wrapper>
+      );
+
+      await user.click(screen.getByTestId("action-tab-due"));
+      expect(onActiveTabChange).toHaveBeenCalledWith("due");
+    });
+  });
+
+  // ── Action cards rendering ───────────────────────────────────────
+
+  describe("action cards", () => {
+    it("renders review actions in the Due tab", async () => {
+      const user = userEvent.setup();
+      const reviewActions = [
+        createMockAction({
+          id: "review-1",
+          body: "Review action one",
+          assignee_ids: [MOCK_COACH_ID],
+        }),
+      ];
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps({ reviewActions })} />
+        </Wrapper>
+      );
+
+      await user.click(screen.getByTestId("action-tab-due"));
+
+      const reviewContent = screen.getByTestId("review-section-content");
+      expect(reviewContent.textContent).toContain("Review action one");
+    });
+
+    it("renders session actions in the New tab", () => {
       const sessionActions = [
         createMockAction({
           id: "session-1",

@@ -2,23 +2,23 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight } from "lucide-react";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { defaultAction } from "@/types/action";
 import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
 // ── Action Section Content ───────────────────────────────────────────
 //
-// Two collapsible sub-sections for the coaching session panel:
-//   "Due for Review" — actions from previous sessions that are due
-//   "New This Session" — actions created in the current session
-//
-// Both sub-sections have sticky headers within the panel scroll area.
+// Two tabbed sub-sections for the coaching session panel:
+//   "Due" — actions from previous sessions that are due for review
+//   "New" — actions created in the current session
+
+export type ActionTab = "due" | "new";
 
 export interface ActionSectionContentProps {
   reviewActions: Action[];
@@ -43,6 +43,8 @@ export interface ActionSectionContentProps {
   onActionCreate?: (body: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
   onActionDelete?: (id: Id) => void;
   readOnly?: boolean;
+  /** Called when the active tab changes so the parent can react (e.g. disable Add button) */
+  onActiveTabChange?: (tab: ActionTab) => void;
 }
 
 export function ActionSectionContent({
@@ -65,22 +67,18 @@ export function ActionSectionContent({
   onActionCreate,
   onActionDelete,
   readOnly = false,
+  onActiveTabChange,
 }: ActionSectionContentProps) {
-  const [reviewExpanded, setReviewExpanded] = useState(
-    reviewActions.length > 0
-  );
-  const [sessionExpanded, setSessionExpanded] = useState(true);
+  const [activeTab, setActiveTab] = useState<ActionTab>("new");
 
-  // Auto-expand "Due for Review" when actions arrive after initial render
-  // (SWR data loads asynchronously). Only expand once — don't re-expand
-  // if the user manually collapsed it.
-  const hasAutoExpanded = useRef(reviewActions.length > 0);
-  useEffect(() => {
-    if (!hasAutoExpanded.current && reviewActions.length > 0) {
-      hasAutoExpanded.current = true;
-      setReviewExpanded(true);
-    }
-  }, [reviewActions.length]);
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const tab = value as ActionTab;
+      setActiveTab(tab);
+      onActiveTabChange?.(tab);
+    },
+    [onActiveTabChange]
+  );
 
   // ── Highlight & scroll-to for deep-linked actions ────────────────
   const searchParams = useSearchParams();
@@ -93,8 +91,8 @@ export function ActionSectionContent({
     else cardRefs.current.delete(id);
   }, []);
 
-  // When a highlight param is present and actions have loaded, scroll to
-  // and highlight the target card. Also ensure the containing section is expanded.
+  // When a highlight param is present and actions have loaded, switch to
+  // the correct tab and scroll to the target card.
   useEffect(() => {
     if (!highlightId) return;
 
@@ -102,14 +100,17 @@ export function ActionSectionContent({
     const target = allActions.find((a) => a.id === highlightId);
     if (!target) return;
 
-    // Expand the section containing the target
+    // Switch to the tab containing the target
     const isInReview = reviewActions.some((a) => a.id === highlightId);
-    if (isInReview) setReviewExpanded(true);
-    else setSessionExpanded(true);
+    if (isInReview) {
+      handleTabChange("due");
+    } else {
+      handleTabChange("new");
+    }
 
     setActiveHighlight(highlightId);
 
-    // Scroll to the card after a frame (let expansion render)
+    // Scroll to the card after a frame (let tab switch render)
     requestAnimationFrame(() => {
       const el = cardRefs.current.get(highlightId);
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -118,17 +119,14 @@ export function ActionSectionContent({
     // Clear highlight after animation
     const timer = setTimeout(() => setActiveHighlight(null), 2000);
     return () => clearTimeout(timer);
-  }, [highlightId, reviewActions, sessionActions]);
+  }, [highlightId, reviewActions, sessionActions, handleTabChange]);
 
-  // Scroll "New This Session" header into view when adding a new action
-  const sessionSectionRef = useRef<HTMLDivElement>(null);
+  // Scroll into view when adding a new action — switch to New tab first
   useEffect(() => {
-    if (isAddingAction && sessionSectionRef.current) {
-      requestAnimationFrame(() => {
-        sessionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
+    if (isAddingAction) {
+      handleTabChange("new");
     }
-  }, [isAddingAction]);
+  }, [isAddingAction, handleTabChange]);
 
   // Lazy-init placeholder so defaultAction() isn't called at module scope
   const newActionPlaceholder = useMemo(() => defaultAction(), []);
@@ -148,17 +146,24 @@ export function ActionSectionContent({
   };
 
   return (
-    <div className="space-y-4">
+    <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col">
+      <TabsList className="w-full">
+        <TabsTrigger value="due" className="flex-1 gap-1.5" data-testid="action-tab-due">
+          Due
+          <span className="text-[11px] font-normal text-muted-foreground/60">
+            ({reviewActions.length})
+          </span>
+        </TabsTrigger>
+        <TabsTrigger value="new" className="flex-1 gap-1.5" data-testid="action-tab-new">
+          New
+          <span className="text-[11px] font-normal text-muted-foreground/60">
+            ({sessionActions.length})
+          </span>
+        </TabsTrigger>
+      </TabsList>
+
       {/* ── Due for Review ─────────────────────────────────────── */}
-      <CollapsibleSection
-        title="Due for Review"
-        count={reviewActions.length}
-        expanded={reviewExpanded}
-        onToggle={() => setReviewExpanded((prev) => !prev)}
-        testIdPrefix="review"
-        stickyTop="-top-4"
-        stickyPadding="pt-4"
-      >
+      <TabsContent value="due" data-testid="review-section-content">
         {reviewActions.length === 0 ? (
           <p className="text-sm text-muted-foreground/50 italic px-1 py-2">
             No actions due for review
@@ -183,20 +188,10 @@ export function ActionSectionContent({
             })}
           </div>
         )}
-      </CollapsibleSection>
-
-      <hr className="border-border" />
+      </TabsContent>
 
       {/* ── New This Session ───────────────────────────────────── */}
-      <CollapsibleSection
-        sectionRef={sessionSectionRef}
-        title="New This Session"
-        count={sessionActions.length}
-        expanded={sessionExpanded}
-        onToggle={() => setSessionExpanded((prev) => !prev)}
-        testIdPrefix="session"
-        stickyTop="top-8"
-      >
+      <TabsContent value="new" data-testid="session-section-content">
         {isAddingAction && onActionCreate && (
           <div>
             <CompactActionCard
@@ -233,60 +228,7 @@ export function ActionSectionContent({
             ))}
           </div>
         )}
-      </CollapsibleSection>
-    </div>
-  );
-}
-
-// ── Collapsible Section ─────────────────────────────────────────────
-
-function CollapsibleSection({
-  title,
-  count,
-  expanded,
-  onToggle,
-  testIdPrefix,
-  sectionRef,
-  stickyTop = "top-0",
-  stickyPadding,
-  children,
-}: {
-  title: string;
-  count: number;
-  expanded: boolean;
-  onToggle: () => void;
-  testIdPrefix: string;
-  sectionRef?: React.RefObject<HTMLDivElement | null>;
-  /** Tailwind top class for sticky stacking (e.g. "top-0", "-top-4") */
-  stickyTop?: string;
-  /** Extra padding on the sticky header to cover the scroll gap (e.g. "pt-4") */
-  stickyPadding?: string;
-  children: React.ReactNode;
-}) {
-  const Chevron = expanded ? ChevronDown : ChevronRight;
-
-  return (
-    <div ref={sectionRef} className="relative">
-      <div className={cn("sticky z-10 bg-background", stickyTop, stickyPadding)}>
-        <button
-          type="button"
-          data-testid={`${testIdPrefix}-section-toggle`}
-          onClick={onToggle}
-          className="flex w-full items-center gap-1.5 py-2 px-1 text-[12px] font-bold text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Chevron className="h-3.5 w-3.5 shrink-0" />
-          {title}
-          <span className="text-[11px] font-normal text-muted-foreground/60">
-            ({count})
-          </span>
-        </button>
-      </div>
-      <div
-        data-testid={`${testIdPrefix}-section-content`}
-        className={cn("relative", !expanded && "hidden")}
-      >
-        {children}
-      </div>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

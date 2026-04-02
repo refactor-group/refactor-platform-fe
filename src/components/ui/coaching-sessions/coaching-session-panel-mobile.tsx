@@ -17,6 +17,7 @@ import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coac
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
+import type { ActionTab } from "@/components/ui/coaching-sessions/action-section-content";
 
 export function CoachingSessionPanelMobile({
   linkedGoals,
@@ -49,6 +50,8 @@ export function CoachingSessionPanelMobile({
   onBodyChange,
   isAddingAction,
   onAddingActionChange,
+  activeActionTab,
+  onActiveActionTabChange,
   locale,
 }: CoachingSessionPanelSharedProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -137,7 +140,8 @@ export function CoachingSessionPanelMobile({
                   className="h-8 gap-1 text-xs"
                   disabled={
                     (isAddingAgreement && activeSection === PanelSection.Agreements) ||
-                    (isAddingAction && activeSection === PanelSection.Actions)
+                    (isAddingAction && activeSection === PanelSection.Actions) ||
+                    (activeSection === PanelSection.Actions && activeActionTab === "due")
                   }
                   onClick={
                     activeSection === PanelSection.Goals
@@ -196,6 +200,7 @@ export function CoachingSessionPanelMobile({
                 onActionCreate={onActionCreate}
                 onActionDelete={onActionDelete}
                 readOnly={readOnly}
+                onActiveTabChange={onActiveActionTabChange}
               />
             ) : null}
           </div>

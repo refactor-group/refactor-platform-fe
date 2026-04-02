@@ -16,6 +16,7 @@ import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coac
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
+import type { ActionTab } from "@/components/ui/coaching-sessions/action-section-content";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
   collapsed?: boolean;
@@ -56,6 +57,8 @@ export function CoachingSessionPanelDesktop({
   onBodyChange,
   isAddingAction,
   onAddingActionChange,
+  activeActionTab,
+  onActiveActionTabChange,
   locale,
 }: CoachingSessionPanelDesktopProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -145,7 +148,8 @@ export function CoachingSessionPanelDesktop({
                 className="h-8 gap-1 text-xs"
                 disabled={
                   (isAddingAgreement && activeSection === PanelSection.Agreements) ||
-                  (isAddingAction && activeSection === PanelSection.Actions)
+                  (isAddingAction && activeSection === PanelSection.Actions) ||
+                  (activeSection === PanelSection.Actions && activeActionTab === "due")
                 }
                 onClick={
                   activeSection === PanelSection.Goals
@@ -202,6 +206,7 @@ export function CoachingSessionPanelDesktop({
               onActionCreate={onActionCreate}
               onActionDelete={onActionDelete}
               readOnly={readOnly}
+              onActiveTabChange={onActiveActionTabChange}
             />
           ) : null}
         </CardContent>
