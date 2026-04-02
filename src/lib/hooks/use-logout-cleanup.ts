@@ -25,7 +25,9 @@ export function useLogoutCleanup(cleanup: () => void): void {
   // Use ref to avoid re-registering on every render
   // The ref always points to the latest cleanup function
   const cleanupRef = useRef(cleanup);
-  cleanupRef.current = cleanup;
+  useEffect(() => {
+    cleanupRef.current = cleanup;
+  });
 
   useEffect(() => {
     // Wrap the cleanup call to use the ref's current value

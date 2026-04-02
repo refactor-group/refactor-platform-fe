@@ -5,7 +5,6 @@
 import {
   type ReactNode,
   createContext,
-  useRef,
   useContext,
   useEffect,
   useState,
@@ -22,26 +21,27 @@ export interface AuthStoreProviderProps {
 }
 
 export const AuthStoreProvider = ({ children }: AuthStoreProviderProps) => {
-  const storeRef = useRef<StoreApi<AuthStore> | null>(null);
+  // Create the store eagerly with default state (safe during SSR since it
+  // doesn't access browser APIs). The zustand persist middleware will
+  // automatically rehydrate from localStorage on the client.
+  const [store] = useState(() => createAuthStore());
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      // Now safe to access localStorage
-      const storedValue = localStorage.getItem("auth-store");
-      const initialState = storedValue ? JSON.parse(storedValue).state : null;
-      storeRef.current = createAuthStore(initialState);
-      setIsInitialized(true);
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- gate to detect client mount; children depend on browser APIs unavailable during SSR
+    setIsInitialized(true);
   }, []);
 
-  // Ensure store is initialized before rendering the provider
+  // Gate rendering until the client has mounted. This delays the first paint
+  // of child components (including the sidebar) so that client-only state
+  // (sessionStorage, window size) is available when children mount,
+  // preventing flash of incorrect layout.
   if (!isInitialized) {
-    return null; // or return a loading component
+    return null;
   }
 
   return (
-    <AuthStoreContext.Provider value={storeRef.current}>
+    <AuthStoreContext.Provider value={store}>
       {children}
     </AuthStoreContext.Provider>
   );

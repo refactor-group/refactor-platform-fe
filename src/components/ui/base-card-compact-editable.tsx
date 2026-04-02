@@ -116,16 +116,16 @@ function EditDetailsCard({
 }: Omit<BaseCardCompactEditableProps, "initialEditing">) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [pendingDismiss, setPendingDismiss] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
 
   // Animate container height to match the active face.
   // ResizeObserver handles body expansion on the front face and edit form on the back.
   useEffect(() => {
-    const inner = cardRef.current?.querySelector(
-      ".flip-card-inner"
-    ) as HTMLElement | null;
+    const inner = innerRef.current;
     if (!inner) return;
 
     const measure = () => {
@@ -178,24 +178,34 @@ function EditDetailsCard({
   const handleDone = useCallback(() => {
     setIsFlipped(false);
     setIsEditing(false);
-
-    if (onDismiss) {
-      // Wait for the flip-back transform transition (500ms) before unmounting.
-      // The inner element transitions both transform and height — only listen
-      // for transform so the height transition doesn't fire the callback early.
-      const inner = cardRef.current?.querySelector(".flip-card-inner") as HTMLElement | null;
-      if (inner) {
-        const handler = (e: TransitionEvent) => {
-          if (e.propertyName !== "transform") return;
-          inner.removeEventListener("transitionend", handler);
-          onDismiss();
-        };
-        inner.addEventListener("transitionend", handler);
-      } else {
-        onDismiss();
-      }
-    }
+    if (onDismiss) setPendingDismiss(true);
   }, [onDismiss]);
+
+  // Wait for the flip-back transform transition before dismissing.
+  // Ref reads are safe inside useEffect (not during render).
+  useEffect(() => {
+    if (!pendingDismiss || !onDismiss) return;
+
+    const inner = innerRef.current;
+    if (!inner) {
+      // No inner element — dismiss on next frame to avoid synchronous
+      // setState inside an effect (react-hooks/set-state-in-effect).
+      const id = requestAnimationFrame(() => {
+        setPendingDismiss(false);
+        onDismiss();
+      });
+      return () => cancelAnimationFrame(id);
+    }
+
+    const handler = (e: TransitionEvent) => {
+      if (e.propertyName !== "transform") return;
+      inner.removeEventListener("transitionend", handler);
+      setPendingDismiss(false);
+      onDismiss();
+    };
+    inner.addEventListener("transitionend", handler);
+    return () => inner.removeEventListener("transitionend", handler);
+  }, [pendingDismiss, onDismiss]);
 
   const handleEditStart = useCallback(() => setIsEditing(true), []);
   const handleEditEnd = useCallback(() => setIsEditing(false), []);
@@ -209,7 +219,7 @@ function EditDetailsCard({
         className
       )}
     >
-      <div className="flip-card-inner">
+      <div ref={innerRef} className="flip-card-inner">
         {/* ── Front face ─────────────────────────────────────────── */}
         <div
           ref={frontRef}

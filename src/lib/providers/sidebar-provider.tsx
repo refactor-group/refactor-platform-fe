@@ -126,9 +126,9 @@ export const SidebarProvider = forwardRef<HTMLDivElement, SidebarProviderProps>(
     const sidebarActions = useSidebarActions(sidebarState, props.onStateChange);
     // Individual properties listed instead of the parent objects (sidebarState,
     // sidebarActions) because those are new object references every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const contextValue = useMemo(
       () => buildSidebarContext(sidebarState, sidebarActions),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       [
         // State values (primitives/enums — stable unless the value changes)
         sidebarState.state,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useSWRConfig } from "swr";
 import { toast as sonnerToast } from "sonner";
 import { useUserActionsList } from "@/lib/api/user-actions";
@@ -186,32 +186,44 @@ function useReviewWindow(
     return map;
   }, [coachingSessions]);
 
-  const stickyIdsRef = useRef<Set<Id>>(new Set());
+  const [stickyIds, setStickyIds] = useState<Set<Id>>(() => new Set());
 
   const reviewActions = useMemo(() => {
     if (!currentSessionDate) return [];
 
-    const filtered = filterReviewActions(
+    return filterReviewActions(
       allRelationshipActions,
       coachingSessionId,
       currentSessionDate,
       previousSessionDate,
-      stickyIdsRef.current.size > 0 ? stickyIdsRef.current : undefined
+      stickyIds.size > 0 ? stickyIds : undefined
     );
-
-    if (previousSessionDate !== null) {
-      for (const action of filtered) {
-        stickyIdsRef.current.add(action.id);
-      }
-    }
-
-    return filtered;
   }, [
     allRelationshipActions,
     coachingSessionId,
     currentSessionDate,
     previousSessionDate,
+    stickyIds,
   ]);
+
+  // Accumulate sticky IDs after render so that previously-visible review
+  // actions remain visible even if their status changes.
+  useEffect(() => {
+    if (previousSessionDate !== null && reviewActions.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- accumulating IDs from reviewActions that can't be derived via useMemo
+      setStickyIds((prev) => {
+        const next = new Set(prev);
+        let changed = false;
+        for (const action of reviewActions) {
+          if (!next.has(action.id)) {
+            next.add(action.id);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [reviewActions, previousSessionDate]);
 
   return { reviewActions, sessionDateMap };
 }
