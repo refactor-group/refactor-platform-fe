@@ -6,6 +6,13 @@ export { EntityApiError } from "./entity-api-error";
 // A type alias for each entity's Id field
 export type Id = string;
 
+/**
+ * A frozen empty array that preserves reference identity across renders.
+ * Use this instead of `[]` in hooks and memoized values to prevent
+ * unnecessary re-renders caused by new-array-every-render instability.
+ */
+export const EMPTY_ARRAY: readonly never[] = Object.freeze([]);
+
 /** A generic id + label pair for use in select/dropdown components */
 export interface SelectOption {
   id: Id;

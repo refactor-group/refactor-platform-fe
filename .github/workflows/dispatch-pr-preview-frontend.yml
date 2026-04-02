@@ -26,9 +26,10 @@ on:
         required: true
         type: choice
         options:
+          - '0787aa7 - chore: refresh preview commit choices [skip ci]'
           - '2b5430b - chore: refresh preview commit choices [skip ci]'
           - '3c78a6c - fix: extract PR number from commit dropdown instead of '
-          - '16d1238 - chore: refresh preview commit choices [skip ci]'
+          - feea802 - PR#273 (raymond/implements-magic-login)
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
@@ -36,9 +37,10 @@ on:
         required: true
         type: choice
         options:
-          - a902256 - Goal-action linking with progress tracking (#360)
-          - 'ed01fe2 - chore: refresh preview commit choices [skip ci]'
-          - '67826d6 - chore: refresh preview commit choices [skip ci]'
+          - '7b49204 - chore: refresh preview commit choices [skip ci]'
+          - '0914024 - fix: stabilize React references to prevent infinite re-render loop (#363)'
+          - 'b7545e8 - chore: refresh preview commit choices [skip ci]'
+          - 5a65875 - PR#364 (fix/coachee-actions-connection)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
