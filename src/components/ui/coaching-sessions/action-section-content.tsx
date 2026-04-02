@@ -9,7 +9,6 @@ import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
 // ── Action Section Content ───────────────────────────────────────────
@@ -83,7 +82,7 @@ export function ActionSectionContent({
   // ── Highlight & scroll-to for deep-linked actions ────────────────
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");
-  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+  const [highlightCleared, setHighlightCleared] = useState(false);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
@@ -91,42 +90,54 @@ export function ActionSectionContent({
     else cardRefs.current.delete(id);
   }, []);
 
-  // When a highlight param is present and actions have loaded, switch to
-  // the correct tab and scroll to the target card.
-  useEffect(() => {
-    if (!highlightId) return;
-
+  // Derive the required tab from highlight param or isAddingAction.
+  // Compute this synchronously so we can pass it to setActiveTab outside
+  // of an effect (avoids the react-hooks/set-state-in-effect warning).
+  const highlightTarget = useMemo(() => {
+    if (!highlightId) return null;
     const allActions = [...reviewActions, ...sessionActions];
-    const target = allActions.find((a) => a.id === highlightId);
-    if (!target) return;
+    return allActions.find((a) => a.id === highlightId) ?? null;
+  }, [highlightId, reviewActions, sessionActions]);
 
-    // Switch to the tab containing the target
-    const isInReview = reviewActions.some((a) => a.id === highlightId);
-    if (isInReview) {
-      handleTabChange("due");
-    } else {
-      handleTabChange("new");
+  const requiredTab = useMemo((): ActionTab | null => {
+    if (highlightTarget) {
+      return reviewActions.some((a) => a.id === highlightTarget.id)
+        ? "due"
+        : "new";
     }
+    if (isAddingAction) return "new";
+    return null;
+  }, [highlightTarget, reviewActions, isAddingAction]);
 
-    setActiveHighlight(highlightId);
+  // Switch tab when required (highlight deep-link or adding action)
+  if (requiredTab !== null && activeTab !== requiredTab) {
+    setActiveTab(requiredTab);
+    onActiveTabChange?.(requiredTab);
+  }
+
+  // Reset highlightCleared synchronously when a new target arrives
+  if (highlightTarget && highlightCleared) {
+    setHighlightCleared(false);
+  }
+
+  // Derive activeHighlight from the highlight target, cleared after animation.
+  const activeHighlight =
+    highlightTarget && !highlightCleared ? highlightTarget.id : null;
+
+  // Scroll to highlighted card and clear highlight after animation
+  useEffect(() => {
+    if (!highlightTarget) return;
 
     // Scroll to the card after a frame (let tab switch render)
     requestAnimationFrame(() => {
-      const el = cardRefs.current.get(highlightId);
+      const el = cardRefs.current.get(highlightTarget.id);
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
     // Clear highlight after animation
-    const timer = setTimeout(() => setActiveHighlight(null), 2000);
+    const timer = setTimeout(() => setHighlightCleared(true), 2000);
     return () => clearTimeout(timer);
-  }, [highlightId, reviewActions, sessionActions, handleTabChange]);
-
-  // Scroll into view when adding a new action — switch to New tab first
-  useEffect(() => {
-    if (isAddingAction) {
-      handleTabChange("new");
-    }
-  }, [isAddingAction, handleTabChange]);
+  }, [highlightTarget]);
 
   // Lazy-init placeholder so defaultAction() isn't called at module scope
   const newActionPlaceholder = useMemo(() => defaultAction(), []);

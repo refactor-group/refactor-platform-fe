@@ -16,7 +16,6 @@ import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coac
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
-import type { ActionTab } from "@/components/ui/coaching-sessions/action-section-content";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
   collapsed?: boolean;
