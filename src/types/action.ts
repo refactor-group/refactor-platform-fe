@@ -123,7 +123,7 @@ export interface ActionWithAssigneesWire extends Record<string, unknown> {
   assignee_ids: Id[];
 }
 
-/** Response from GET /organizations/{org_id}/coaching_relationships/coachee-actions */
+/** Response from GET /organizations/{org_id}/coaching_relationships/actions?assignee=... */
 export interface BatchCoacheeActionsResponse {
   coachee_actions: Record<Id, ActionWithAssigneesWire[]>;
 }

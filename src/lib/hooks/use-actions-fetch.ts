@@ -4,6 +4,7 @@ import { useUserActionsList } from "@/lib/api/user-actions";
 import { useBatchCoacheeActions } from "@/lib/api/coachee-actions";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import {
+  AssigneeScope,
   AssignmentFilter,
   CoachViewMode,
   UserActionsAssigneeFilter,
@@ -13,13 +14,14 @@ import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
 
 /**
- * Maps a UI-level AssignmentFilter to the API params (scope + assignee_filter).
+ * Maps a UI-level AssignmentFilter to the user-actions API params
+ * (scope + assignee_filter) used by the "My Actions" path.
  *
  * - Assigned: scope=assigned (backend handles filtering to assigned user)
  * - Unassigned: scope=sessions + assignee_filter=unassigned
  * - All: scope=sessions (returns both assigned and unassigned)
  */
-export function assignmentFilterToApiParams(filter: AssignmentFilter): {
+export function assignmentFilterToUserActionsParams(filter: AssignmentFilter): {
   scope: UserActionsScope;
   assigneeFilter?: UserActionsAssigneeFilter;
 } {
@@ -33,6 +35,34 @@ export function assignmentFilterToApiParams(filter: AssignmentFilter): {
       };
     case AssignmentFilter.All:
       return { scope: UserActionsScope.Sessions };
+    default: {
+      const _exhaustive: never = filter;
+      throw new Error(`Unhandled assignment filter: ${_exhaustive}`);
+    }
+  }
+}
+
+/**
+ * Maps a UI-level AssignmentFilter to the batch coachee-actions API params
+ * (assignee + assignee_filter) used by the "Coachee Actions" path.
+ *
+ * The `assignee` param scopes by role (coachee/coach) while `assignee_filter`
+ * controls assigned/unassigned filtering.
+ */
+export function assignmentFilterToCoacheeActionsParams(filter: AssignmentFilter): {
+  assignee: AssigneeScope;
+  assigneeFilter?: UserActionsAssigneeFilter;
+} {
+  switch (filter) {
+    case AssignmentFilter.Assigned:
+      return { assignee: AssigneeScope.Coachee };
+    case AssignmentFilter.Unassigned:
+      return {
+        assignee: AssigneeScope.Coachee,
+        assigneeFilter: UserActionsAssigneeFilter.Unassigned,
+      };
+    case AssignmentFilter.All:
+      return { assignee: AssigneeScope.Coachee };
     default: {
       const _exhaustive: never = filter;
       throw new Error(`Unhandled assignment filter: ${_exhaustive}`);
@@ -62,21 +92,23 @@ export function useActionsFetch(
   const { currentOrganizationId } = useCurrentOrganization();
 
   const isCoacheeMode = viewMode === CoachViewMode.CoacheeActions;
-  const { scope, assigneeFilter } = assignmentFilterToApiParams(assignmentFilter);
 
-  // --- My Actions path ---
+  const userActionsParams = assignmentFilterToUserActionsParams(assignmentFilter);
+  const coacheeActionsParams = assignmentFilterToCoacheeActionsParams(assignmentFilter);
+
+  // --- User Actions path ---
 
   const {
-    actions: myActions,
-    isLoading: myActionsLoading,
-    isError: myActionsError,
-    refresh: refreshMyActions,
+    actions: userActions,
+    isLoading: userActionsLoading,
+    isError: userActionsError,
+    refresh: refreshUserActions,
   } = useUserActionsList(
     !isCoacheeMode ? userId : null,
     {
-      scope,
+      scope: userActionsParams.scope,
       coaching_relationship_id: relationshipId,
-      assignee_filter: assigneeFilter,
+      assignee_filter: userActionsParams.assigneeFilter,
     }
   );
 
@@ -90,8 +122,8 @@ export function useActionsFetch(
   } = useBatchCoacheeActions(
     isCoacheeMode ? currentOrganizationId : null,
     {
-      scope,
-      assignee_filter: assigneeFilter,
+      assignee: coacheeActionsParams.assignee,
+      assignee_filter: coacheeActionsParams.assigneeFilter,
       coaching_relationship_id: relationshipId,
     }
   );
@@ -99,16 +131,16 @@ export function useActionsFetch(
   // --- Combine based on mode ---
 
   const actions: Action[] = useMemo(
-    () => (isCoacheeMode ? coacheeActions : (myActions ?? [])),
-    [isCoacheeMode, coacheeActions, myActions]
+    () => (isCoacheeMode ? coacheeActions : (userActions ?? [])),
+    [isCoacheeMode, coacheeActions, userActions]
   );
 
   const isLoading = isCoacheeMode
     ? coacheeActionsLoading
-    : myActionsLoading;
+    : userActionsLoading;
 
-  const isError = isCoacheeMode ? coacheeActionsError : myActionsError;
-  const refresh = isCoacheeMode ? refreshCoacheeActions : refreshMyActions;
+  const isError = isCoacheeMode ? coacheeActionsError : userActionsError;
+  const refresh = isCoacheeMode ? refreshCoacheeActions : refreshUserActions;
 
   return { actions, isLoading, isError, refresh };
 }

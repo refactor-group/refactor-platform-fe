@@ -1,6 +1,6 @@
 // Coachee actions API — routes between two backend endpoints:
 //   - Single relationship: GET /organizations/{org}/coaching_relationships/{rel}/actions
-//   - Batch (all coachees): GET /organizations/{org}/coaching_relationships/coachee-actions
+//   - Batch (all coachees): GET /organizations/{org}/coaching_relationships/actions?assignee=...
 
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
@@ -11,7 +11,7 @@ import {
   transformActionWithAssignees,
 } from "@/types/action";
 import {
-  UserActionsScope,
+  type AssigneeScope,
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
 import { ApiResponse } from "./entity-api";
@@ -24,7 +24,8 @@ const COACHING_RELATIONSHIPS_PATH = "coaching_relationships";
 
 /** Query parameters for coachee actions endpoints. */
 export interface CoacheeActionsParams {
-  scope?: UserActionsScope;
+  /** Scopes the batch endpoint by assignee role (coach, coachee, or a UUID). */
+  assignee?: AssigneeScope | Id;
   coaching_relationship_id?: Id;
   assignee_filter?: UserActionsAssigneeFilter;
   status?: string;
@@ -32,10 +33,9 @@ export interface CoacheeActionsParams {
   sort_order?: string;
 }
 
-function sharedQueryString(params?: CoacheeActionsParams): string {
-  if (!params) return "";
+/** Builds the query params shared by both endpoints (excludes `assignee`). */
+function sharedQueryString(params: CoacheeActionsParams): string {
   return buildQueryString({
-    scope: params.scope,
     assignee_filter: params.assignee_filter,
     status: params.status,
     sort_by: params.sort_by,
@@ -43,13 +43,25 @@ function sharedQueryString(params?: CoacheeActionsParams): string {
   });
 }
 
-function coacheeActionsUrl(orgId: Id, params?: CoacheeActionsParams): string {
-  const relId = params?.coaching_relationship_id;
-  const qs = sharedQueryString(params);
+/** Builds the batch endpoint query string, including the `assignee` param. */
+function batchQueryString(params: CoacheeActionsParams): string {
+  return buildQueryString({
+    assignee: params.assignee,
+    assignee_filter: params.assignee_filter,
+    status: params.status,
+    sort_by: params.sort_by,
+    sort_order: params.sort_order,
+  });
+}
+
+function coacheeActionsUrl(orgId: Id, params: CoacheeActionsParams): string {
+  const relId = params.coaching_relationship_id;
   if (relId) {
+    const qs = sharedQueryString(params);
     return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/${relId}/actions${qs}`;
   }
-  return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/coachee-actions${qs}`;
+  const qs = batchQueryString(params);
+  return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/actions${qs}`;
 }
 
 /** Fetches actions for a single relationship. Returns flat Action[]. */
@@ -75,14 +87,14 @@ async function fetchBatchCoacheeActions(url: string): Promise<Action[]> {
  * - Otherwise: batch endpoint returning actions for all coachees
  *
  * @param orgId Organization ID, or null to skip fetching
- * @param params Optional query parameters for filtering and sorting
+ * @param params Query parameters for filtering and sorting
  */
 export function useBatchCoacheeActions(
   orgId: Id | null,
-  params?: CoacheeActionsParams
+  params: CoacheeActionsParams
 ) {
   const url = orgId ? coacheeActionsUrl(orgId, params) : null;
-  const isSingleRelationship = !!params?.coaching_relationship_id;
+  const isSingleRelationship = !!params.coaching_relationship_id;
 
   const { data, error, isLoading, mutate } = useSWR<Action[]>(
     url,

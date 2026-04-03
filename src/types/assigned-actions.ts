@@ -38,6 +38,20 @@ export enum UserActionsAssigneeFilter {
 }
 
 /**
+ * Scopes the batch coaching-relationship actions endpoint by assignee role.
+ * Maps to the `assignee` query param on:
+ *   GET /organizations/{org_id}/coaching_relationships/actions
+ *
+ * - Coach: actions assigned to the coach in each relationship
+ * - Coachee: actions assigned to the coachee in each relationship
+ * - A raw UUID string targets a specific user
+ */
+export enum AssigneeScope {
+  Coach = "coach",
+  Coachee = "coachee",
+}
+
+/**
  * UI-level filter for assignment status on the actions page.
  * Maps to different combinations of scope + assignee_filter API params.
  */
