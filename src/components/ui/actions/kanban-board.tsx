@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -112,10 +112,11 @@ export function KanbanBoard({
   }, []);
 
   // Cache card width once (idle-time measurement, never during drag)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = document.querySelector("[data-kanban-card]") as HTMLElement | null;
     if (el) {
       const w = el.offsetWidth;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing state with DOM measurement
       setCachedCardWidth((prev) => (prev === w ? prev : w));
     }
   }, [actions]);
@@ -127,20 +128,20 @@ export function KanbanBoard({
 
   // Snapshot initial order so inline edits don't re-sort cards.
   // Rebuilds only when IDs are added or removed (filter/view changes).
-  const orderRef = useRef<Map<string, number>>(new Map());
+  const [orderMap, setOrderMap] = useState<Map<string, number>>(() => new Map());
 
   const currentIds = useMemo(() => actions.map((a) => a.action.id), [actions]);
   const updatedOrder = useMemo(
-    () => buildInitialOrder(orderRef.current, currentIds),
-    [currentIds]
+    () => buildInitialOrder(orderMap, currentIds),
+    [orderMap, currentIds]
   );
   if (updatedOrder) {
-    orderRef.current = updatedOrder;
+    setOrderMap(updatedOrder);
   }
 
   const grouped = useMemo(
-    () => groupActionsByStatus(actionsWithOverrides).preservingOrder(orderRef.current),
-    [actionsWithOverrides]
+    () => groupActionsByStatus(actionsWithOverrides).preservingOrder(orderMap),
+    [actionsWithOverrides, orderMap]
   );
   const columns = visibleStatuses(visibility);
 
@@ -203,7 +204,7 @@ export function KanbanBoard({
 
       // Now apply the override so the card leaves the visible column
       applyOverride(id, entry.newStatus);
-      orderRef.current.set(id, TOP_OF_COLUMN_POSITION);
+      setOrderMap((prev) => new Map(prev).set(id, TOP_OF_COLUMN_POSITION));
 
       const statusLabel = actionStatusToString(entry.newStatus);
       toast(`Moved to ${statusLabel}`, {
@@ -223,7 +224,7 @@ export function KanbanBoard({
           onClick: () => {
             // Revert: apply override back to original status and persist via API
             applyOverride(id, entry.originalStatus);
-            orderRef.current.set(id, TOP_OF_COLUMN_POSITION);
+            setOrderMap((prev) => new Map(prev).set(id, TOP_OF_COLUMN_POSITION));
             animateEnter(id);
             highlightCard(id);
             onStatusChange(id, entry.originalStatus).catch(() => {
@@ -286,7 +287,7 @@ export function KanbanBoard({
   const handleVisibleStatusChange = useCallback(
     async (id: Id, newStatus: ItemStatus) => {
       applyOverride(id, newStatus);
-      orderRef.current.set(id, TOP_OF_COLUMN_POSITION);
+      setOrderMap((prev) => new Map(prev).set(id, TOP_OF_COLUMN_POSITION));
       highlightCard(id);
       try {
         await onStatusChange(id, newStatus);

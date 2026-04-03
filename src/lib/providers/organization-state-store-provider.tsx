@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, createContext, useRef, useContext } from "react";
+import { type ReactNode, createContext, useState, useContext } from "react";
 import { useStore } from "zustand";
 
 import {
@@ -23,13 +23,10 @@ export interface OrganizationStateStoreProviderProps {
 export const OrganizationStateStoreProvider = ({
   children,
 }: OrganizationStateStoreProviderProps) => {
-  const storeRef = useRef<OrganizationStateStoreApi | null>(null);
-  if (!storeRef.current) {
-    storeRef.current = createOrganizationStateStore();
-  }
+  const [store] = useState(() => createOrganizationStateStore());
 
   return (
-    <OrganizationStateStoreContext.Provider value={storeRef.current}>
+    <OrganizationStateStoreContext.Provider value={store}>
       {children}
     </OrganizationStateStoreContext.Provider>
   );

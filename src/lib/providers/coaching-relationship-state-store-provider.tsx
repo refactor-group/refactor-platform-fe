@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, createContext, useRef, useContext } from "react";
+import { type ReactNode, createContext, useState, useContext } from "react";
 import { useStore } from "zustand";
 
 import {
@@ -23,13 +23,10 @@ export interface CoachingRelationshipStateStoreProviderProps {
 export const CoachingRelationshipStateStoreProvider = ({
   children,
 }: CoachingRelationshipStateStoreProviderProps) => {
-  const storeRef = useRef<CoachingRelationshipStateStoreApi | null>(null);
-  if (!storeRef.current) {
-    storeRef.current = createCoachingRelationshipStateStore();
-  }
+  const [store] = useState(() => createCoachingRelationshipStateStore());
 
   return (
-    <CoachingRelationshipStateStoreContext.Provider value={storeRef.current}>
+    <CoachingRelationshipStateStoreContext.Provider value={store}>
       {children}
     </CoachingRelationshipStateStoreContext.Provider>
   );

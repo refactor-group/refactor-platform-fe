@@ -136,6 +136,13 @@ export function LinkPopover({
     return true;
   }, [hideWhenUnavailable, editor, canSetLink]);
 
+  // Sync containerRef.current into state so we don't read refs during render
+  const [containerElement, setContainerElement] =
+    React.useState<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    setContainerElement(containerRef?.current ?? null);
+  }, [containerRef]);
+
   // Create popover props with conditional boundary
   const popoverProps = React.useMemo(() => {
     const baseProps = {
@@ -144,16 +151,16 @@ export function LinkPopover({
     };
 
     // Only add boundary if we have a valid container
-    if (containerRef?.current) {
+    if (containerElement) {
       return {
         ...baseProps,
-        boundary: containerRef.current,
+        boundary: containerElement,
         padding: 16,
       };
     }
 
     return baseProps;
-  }, [isOpen, handleOnOpenChange, containerRef]);
+  }, [isOpen, handleOnOpenChange, containerElement]);
 
   if (!show || !editor || !editor.isEditable) {
     return null;

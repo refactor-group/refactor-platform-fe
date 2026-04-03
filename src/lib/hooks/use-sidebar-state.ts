@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import {
   SidebarState,
   ScreenSize,
@@ -40,7 +40,9 @@ export function useSidebarState(): SidebarStateHookProps {
 
   // Use ref to access current state in event handlers without re-registering
   const navigationStateRef = useRef(navigationState)
-  navigationStateRef.current = navigationState
+  useEffect(() => {
+    navigationStateRef.current = navigationState
+  })
 
   // Handle screen size changes with enhanced event typing
   const handleResize = useCallback((event: Event): void => {
@@ -74,12 +76,13 @@ export function useSidebarState(): SidebarStateHookProps {
   }, [handleResize]) // Include handleResize in dependencies
 
   // Update screen size when isMobile changes (from useIsMobile hook)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const breakpoints = SidebarStateCalculator.getBreakpoints()
     const newScreenSize = isMobile ? ScreenSize.Mobile :
       (window.innerWidth < breakpoints[BreakpointKey.Tablet] ? ScreenSize.Tablet : ScreenSize.Desktop)
 
     if (newScreenSize !== navigationState.screenSize) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing with external system (window resize)
       setNavigationState(prevState =>
         SidebarStateCalculator.handleScreenSizeChange(prevState, newScreenSize)
       )

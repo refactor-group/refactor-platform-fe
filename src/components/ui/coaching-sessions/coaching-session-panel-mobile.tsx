@@ -49,6 +49,8 @@ export function CoachingSessionPanelMobile({
   onBodyChange,
   isAddingAction,
   onAddingActionChange,
+  activeActionTab,
+  onActiveActionTabChange,
   locale,
 }: CoachingSessionPanelSharedProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -137,7 +139,8 @@ export function CoachingSessionPanelMobile({
                   className="h-8 gap-1 text-xs"
                   disabled={
                     (isAddingAgreement && activeSection === PanelSection.Agreements) ||
-                    (isAddingAction && activeSection === PanelSection.Actions)
+                    (isAddingAction && activeSection === PanelSection.Actions) ||
+                    (activeSection === PanelSection.Actions && activeActionTab === "due")
                   }
                   onClick={
                     activeSection === PanelSection.Goals
@@ -154,7 +157,6 @@ export function CoachingSessionPanelMobile({
             </div>
           </div>
 
-          {/* Panel content — own scroll container for sticky section headers */}
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
             {activeSection === PanelSection.Goals ? (
               <GoalFlowPages
@@ -196,6 +198,7 @@ export function CoachingSessionPanelMobile({
                 onActionCreate={onActionCreate}
                 onActionDelete={onActionDelete}
                 readOnly={readOnly}
+                onActiveTabChange={onActiveActionTabChange}
               />
             ) : null}
           </div>
