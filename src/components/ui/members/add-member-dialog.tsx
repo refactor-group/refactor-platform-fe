@@ -151,31 +151,6 @@ export function AddMemberDialog({
                 required
               />
             </div>
-            {/* <div className="grid gap-4">
-              <Label htmlFor="password">Initial Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="grid gap-4">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            {passwordError && (
-              <div className="text-red-500 text-sm">{passwordError}</div>
-            )} */}
           </div>
           <div className="pt-4">
             <DialogFooter>
