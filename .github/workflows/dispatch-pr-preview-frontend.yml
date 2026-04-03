@@ -37,10 +37,9 @@ on:
         required: true
         type: choice
         options:
-          - '79ba32f - Merge pull request #364 from refactor-group/fix/coachee-actions-connection-pool-exhaustion'
-          - 'd688270 - test: add buildQueryString input-to-output test'
-          - '7d98a7a - refactor: rename coachee-actions to relationship-actions to match endpoint'
-          - 10cfa04 - PR#368 (feat/stale-build-detection-and)
+          - 'c4b2daa - Merge pull request #368 from refactor-group/feat/stale-build-detection-and-sse-reconnect'
+          - 0c589b4 - Merge branch 'main' into feat/stale-build-detection-and-sse-reconnect
+          - 'a0b22ea - chore: refresh preview commit choices [skip ci]'
           - 7922903 - PR#367 (raymond/implements-magic-login)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
