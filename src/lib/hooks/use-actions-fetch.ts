@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useUserActionsList } from "@/lib/api/user-actions";
-import { useBatchCoacheeActions } from "@/lib/api/coachee-actions";
+import { useBatchRelationshipActions } from "@/lib/api/relationship-actions";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import {
   AssigneeScope,
@@ -43,13 +43,13 @@ export function assignmentFilterToUserActionsParams(filter: AssignmentFilter): {
 }
 
 /**
- * Maps a UI-level AssignmentFilter to the batch coachee-actions API params
+ * Maps a UI-level AssignmentFilter to the batch relationship-actions API params
  * (assignee + assignee_filter) used by the "Coachee Actions" path.
  *
  * The `assignee` param scopes by role (coachee/coach) while `assignee_filter`
  * controls assigned/unassigned filtering.
  */
-export function assignmentFilterToCoacheeActionsParams(filter: AssignmentFilter): {
+export function assignmentFilterToRelationshipActionsParams(filter: AssignmentFilter): {
   assignee?: AssigneeScope;
   assigneeFilter?: UserActionsAssigneeFilter;
 } {
@@ -96,7 +96,7 @@ export function useActionsFetch(
   const isCoacheeMode = viewMode === CoachViewMode.CoacheeActions;
 
   const userActionsParams = assignmentFilterToUserActionsParams(assignmentFilter);
-  const coacheeActionsParams = assignmentFilterToCoacheeActionsParams(assignmentFilter);
+  const relationshipActionsParams = assignmentFilterToRelationshipActionsParams(assignmentFilter);
 
   // --- User Actions path ---
 
@@ -114,18 +114,18 @@ export function useActionsFetch(
     }
   );
 
-  // --- Coachee Actions path (single batch request) ---
+  // --- Relationship Actions path (single batch request) ---
 
   const {
-    actions: coacheeActions,
-    isLoading: coacheeActionsLoading,
-    isError: coacheeActionsError,
-    refresh: refreshCoacheeActions,
-  } = useBatchCoacheeActions(
+    actions: relationshipActions,
+    isLoading: relationshipActionsLoading,
+    isError: relationshipActionsError,
+    refresh: refreshRelationshipActions,
+  } = useBatchRelationshipActions(
     isCoacheeMode ? currentOrganizationId : null,
     {
-      assignee: coacheeActionsParams.assignee,
-      assignee_filter: coacheeActionsParams.assigneeFilter,
+      assignee: relationshipActionsParams.assignee,
+      assignee_filter: relationshipActionsParams.assigneeFilter,
       coaching_relationship_id: relationshipId,
     }
   );
@@ -133,16 +133,16 @@ export function useActionsFetch(
   // --- Combine based on mode ---
 
   const actions: Action[] = useMemo(
-    () => (isCoacheeMode ? coacheeActions : (userActions ?? [])),
-    [isCoacheeMode, coacheeActions, userActions]
+    () => (isCoacheeMode ? relationshipActions : (userActions ?? [])),
+    [isCoacheeMode, relationshipActions, userActions]
   );
 
   const isLoading = isCoacheeMode
-    ? coacheeActionsLoading
+    ? relationshipActionsLoading
     : userActionsLoading;
 
-  const isError = isCoacheeMode ? coacheeActionsError : userActionsError;
-  const refresh = isCoacheeMode ? refreshCoacheeActions : refreshUserActions;
+  const isError = isCoacheeMode ? relationshipActionsError : userActionsError;
+  const refresh = isCoacheeMode ? refreshRelationshipActions : refreshUserActions;
 
   return { actions, isLoading, isError, refresh };
 }

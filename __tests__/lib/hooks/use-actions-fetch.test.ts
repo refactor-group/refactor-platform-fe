@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   assignmentFilterToUserActionsParams,
-  assignmentFilterToCoacheeActionsParams,
+  assignmentFilterToRelationshipActionsParams,
 } from "@/lib/hooks/use-actions-fetch";
 import {
   AssigneeScope,
@@ -32,9 +32,9 @@ describe("assignmentFilterToUserActionsParams", () => {
   });
 });
 
-describe("assignmentFilterToCoacheeActionsParams", () => {
+describe("assignmentFilterToRelationshipActionsParams", () => {
   it("maps Assigned to assignee=coachee with assignee_filter=assigned", () => {
-    const result = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Assigned);
+    const result = assignmentFilterToRelationshipActionsParams(AssignmentFilter.Assigned);
     expect(result).toEqual({
       assignee: AssigneeScope.Coachee,
       assigneeFilter: UserActionsAssigneeFilter.Assigned,
@@ -42,7 +42,7 @@ describe("assignmentFilterToCoacheeActionsParams", () => {
   });
 
   it("maps Unassigned to assignee_filter=unassigned with no assignee scope", () => {
-    const result = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Unassigned);
+    const result = assignmentFilterToRelationshipActionsParams(AssignmentFilter.Unassigned);
     expect(result).toEqual({
       assigneeFilter: UserActionsAssigneeFilter.Unassigned,
     });
@@ -50,15 +50,15 @@ describe("assignmentFilterToCoacheeActionsParams", () => {
   });
 
   it("maps All to assignee=coachee with no assignee filter", () => {
-    const result = assignmentFilterToCoacheeActionsParams(AssignmentFilter.All);
+    const result = assignmentFilterToRelationshipActionsParams(AssignmentFilter.All);
     expect(result).toEqual({ assignee: AssigneeScope.Coachee });
     expect(result.assigneeFilter).toBeUndefined();
   });
 
   it("returns distinct params for each filter value", () => {
-    const assigned = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Assigned);
-    const unassigned = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Unassigned);
-    const all = assignmentFilterToCoacheeActionsParams(AssignmentFilter.All);
+    const assigned = assignmentFilterToRelationshipActionsParams(AssignmentFilter.Assigned);
+    const unassigned = assignmentFilterToRelationshipActionsParams(AssignmentFilter.Unassigned);
+    const all = assignmentFilterToRelationshipActionsParams(AssignmentFilter.All);
 
     // All three produce different param shapes
     expect(assigned).not.toEqual(unassigned);
