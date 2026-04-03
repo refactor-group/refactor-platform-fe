@@ -26,10 +26,9 @@ on:
         required: true
         type: choice
         options:
-          - '665ac0e - chore: refresh preview commit choices [skip ci]'
-          - 'a8a695b - Merge pull request #276 from refactor-group/fix-email-g'
-          - 5449d69 - Merge branch 'main' into fix-email-goal-html-escaping
-          - 744657e - PR#274 (batch-coachee-actions)
+          - '206b7e1 - chore: refresh preview commit choices [skip ci]'
+          - '57c93c8 - Merge pull request #274 from refactor-group/batch-coach'
+          - 'eaaa478 - refactor: use match shadowing for query builder in find'
           - 173936d - PR#273 (raymond/implements-magic-login)
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
@@ -38,12 +37,11 @@ on:
         required: true
         type: choice
         options:
-          - '7d3c88e - chore: refresh preview commit choices [skip ci]'
-          - 'eb81fc3 - chore: refresh preview commit choices [skip ci]'
-          - 'a190614 - fix: remove unused err binding in coaching-session-panel'
-          - 7d7314c - PR#368 (feat/stale-build-detection-and)
+          - '79ba32f - Merge pull request #364 from refactor-group/fix/coachee-actions-connection-pool-exhaustion'
+          - 'd688270 - test: add buildQueryString input-to-output test'
+          - '7d98a7a - refactor: rename coachee-actions to relationship-actions to match endpoint'
+          - 10cfa04 - PR#368 (feat/stale-build-detection-and)
           - 7922903 - PR#367 (raymond/implements-magic-login)
-          - 2ed32f8 - PR#364 (fix/coachee-actions-connection)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
