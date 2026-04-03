@@ -7,11 +7,13 @@ import axios from "axios";
 // Re-export EntityApiError for easy access
 export { EntityApiError } from "@/types/general";
 
+/** Standard wrapper for all backend API responses. */
+export interface ApiResponse<T> {
+  status_code: number;
+  data: T;
+}
+
 export namespace EntityApi {
-  interface ApiResponse<T> {
-    status_code: number;
-    data: T;
-  }
 
   /**
    * Interface defining API operations for entity management.

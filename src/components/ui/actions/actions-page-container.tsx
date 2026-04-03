@@ -63,7 +63,6 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
 
   const searchParams = useSearchParams();
   const router = useRouter();
-
   const updateQueryParams = useCallback(
     (updates: Record<string, string | undefined>) => {
       const next = new URLSearchParams(searchParams);
