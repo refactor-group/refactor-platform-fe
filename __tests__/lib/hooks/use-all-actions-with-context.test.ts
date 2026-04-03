@@ -16,7 +16,7 @@ import type { EnrichedCoachingSession } from "@/lib/api/coaching-sessions";
 // ---------------------------------------------------------------------------
 
 const mockRefreshActions = vi.fn();
-const mockRefreshCoacheeActions = vi.fn();
+const mockRefreshRelationshipActions = vi.fn();
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (sel: (s: Record<string, unknown>) => unknown) =>
@@ -68,17 +68,17 @@ vi.mock("@/lib/api/user-actions", () => ({
   },
 }));
 
-// Coachee actions returned by useCoacheeActionsFetch
-let mockCoacheeActions: Action[] = [];
-let mockCoacheeActionsLoading = false;
-let mockCoacheeActionsError = false;
+// Relationship actions returned by useBatchRelationshipActions
+let mockRelationshipActions: Action[] = [];
+let mockRelationshipActionsLoading = false;
+let mockRelationshipActionsError = false;
 
-vi.mock("@/lib/hooks/use-coachee-actions-fetch", () => ({
-  useCoacheeActionsFetch: () => ({
-    actions: mockCoacheeActions,
-    isLoading: mockCoacheeActionsLoading,
-    isError: mockCoacheeActionsError,
-    refresh: mockRefreshCoacheeActions,
+vi.mock("@/lib/api/relationship-actions", () => ({
+  useBatchRelationshipActions: () => ({
+    actions: mockRelationshipActions,
+    isLoading: mockRelationshipActionsLoading,
+    isError: mockRelationshipActionsError,
+    refresh: mockRefreshRelationshipActions,
   }),
 }));
 
@@ -175,9 +175,9 @@ describe("useAllActionsWithContext", () => {
     mockMyActions = [];
     mockMyActionsLoading = false;
     mockMyActionsError = false;
-    mockCoacheeActions = [];
-    mockCoacheeActionsLoading = false;
-    mockCoacheeActionsError = false;
+    mockRelationshipActions = [];
+    mockRelationshipActionsLoading = false;
+    mockRelationshipActionsError = false;
     mockSessions = [];
     mockSessionsLoading = false;
     mockSessionsError = false;
@@ -317,7 +317,7 @@ describe("useAllActionsWithContext", () => {
 
   describe("CoacheeActions mode", () => {
     it("returns enriched actions in CoacheeActions mode", () => {
-      mockCoacheeActions = [makeTestAction()];
+      mockRelationshipActions = [makeTestAction()];
       mockSessions = [makeTestSession()];
 
       const { result } = renderHook(() =>
@@ -331,7 +331,7 @@ describe("useAllActionsWithContext", () => {
     });
 
     it("isLoading is true while coachee actions are loading", () => {
-      mockCoacheeActionsLoading = true;
+      mockRelationshipActionsLoading = true;
 
       const { result } = renderHook(() =>
         useAllActionsWithContext(CoachViewMode.CoacheeActions)
@@ -341,7 +341,7 @@ describe("useAllActionsWithContext", () => {
     });
 
     it("isError is true when coachee actions fetch fails", () => {
-      mockCoacheeActionsError = true;
+      mockRelationshipActionsError = true;
 
       const { result } = renderHook(() =>
         useAllActionsWithContext(CoachViewMode.CoacheeActions)
@@ -351,7 +351,7 @@ describe("useAllActionsWithContext", () => {
     });
 
     it("forwards relationshipId to useActionsFetch", () => {
-      mockCoacheeActions = [makeTestAction()];
+      mockRelationshipActions = [makeTestAction()];
       mockSessions = [makeTestSession()];
 
       const { result } = renderHook(() =>
@@ -365,7 +365,7 @@ describe("useAllActionsWithContext", () => {
     });
 
     it("forwards assignmentFilter to useActionsFetch", () => {
-      mockCoacheeActions = [makeTestAction()];
+      mockRelationshipActions = [makeTestAction()];
       mockSessions = [makeTestSession()];
 
       const { result } = renderHook(() =>

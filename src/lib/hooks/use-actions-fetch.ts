@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useUserActionsList } from "@/lib/api/user-actions";
-import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { useBatchRelationshipActions } from "@/lib/api/relationship-actions";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { useCoacheeActionsFetch } from "@/lib/hooks/use-coachee-actions-fetch";
 import {
+  AssigneeScope,
   AssignmentFilter,
   CoachViewMode,
   UserActionsAssigneeFilter,
@@ -12,16 +12,16 @@ import {
 } from "@/types/assigned-actions";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
-import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
 
 /**
- * Maps a UI-level AssignmentFilter to the API params (scope + assignee_filter).
+ * Maps a UI-level AssignmentFilter to the user-actions API params
+ * (scope + assignee_filter) used by the "My Actions" path.
  *
  * - Assigned: scope=assigned (backend handles filtering to assigned user)
  * - Unassigned: scope=sessions + assignee_filter=unassigned
  * - All: scope=sessions (returns both assigned and unassigned)
  */
-export function assignmentFilterToApiParams(filter: AssignmentFilter): {
+export function assignmentFilterToUserActionsParams(filter: AssignmentFilter): {
   scope: UserActionsScope;
   assigneeFilter?: UserActionsAssigneeFilter;
 } {
@@ -43,10 +43,40 @@ export function assignmentFilterToApiParams(filter: AssignmentFilter): {
 }
 
 /**
+ * Maps a UI-level AssignmentFilter to the batch relationship-actions API params
+ * (assignee + assignee_filter) used by the "Coachee Actions" path.
+ *
+ * The `assignee` param scopes by role (coachee/coach) while `assignee_filter`
+ * controls assigned/unassigned filtering.
+ */
+export function assignmentFilterToRelationshipActionsParams(filter: AssignmentFilter): {
+  assignee?: AssigneeScope;
+  assigneeFilter?: UserActionsAssigneeFilter;
+} {
+  switch (filter) {
+    case AssignmentFilter.Assigned:
+      return {
+        assignee: AssigneeScope.Coachee,
+        assigneeFilter: UserActionsAssigneeFilter.Assigned,
+      };
+    case AssignmentFilter.Unassigned:
+      return {
+        assigneeFilter: UserActionsAssigneeFilter.Unassigned,
+      };
+    case AssignmentFilter.All:
+      return { assignee: AssigneeScope.Coachee };
+    default: {
+      const _exhaustive: never = filter;
+      throw new Error(`Unhandled assignment filter: ${_exhaustive}`);
+    }
+  }
+}
+
+/**
  * Fetches actions based on the current view mode and assignment filter.
  *
  * In "My Actions" mode, fetches actions for the current user.
- * In "Coachee Actions" mode, fetches actions for all coachees in parallel.
+ * In "Coachee Actions" mode, fetches actions for all coachees via a single batch request.
  *
  * @param viewMode - Whether to show the user's own actions or their coachees' actions
  * @param relationshipId - Optional server-side filter to a specific coaching relationship
@@ -64,58 +94,55 @@ export function useActionsFetch(
   const { currentOrganizationId } = useCurrentOrganization();
 
   const isCoacheeMode = viewMode === CoachViewMode.CoacheeActions;
-  const { scope, assigneeFilter } = assignmentFilterToApiParams(assignmentFilter);
 
-  // --- My Actions path ---
+  const userActionsParams = assignmentFilterToUserActionsParams(assignmentFilter);
+  const relationshipActionsParams = assignmentFilterToRelationshipActionsParams(assignmentFilter);
+
+  // --- User Actions path ---
 
   const {
-    actions: myActions,
-    isLoading: myActionsLoading,
-    isError: myActionsError,
-    refresh: refreshMyActions,
+    actions: userActions,
+    isLoading: userActionsLoading,
+    isError: userActionsError,
+    refresh: refreshUserActions,
   } = useUserActionsList(
     !isCoacheeMode ? userId : null,
     {
-      scope,
+      scope: userActionsParams.scope,
       coaching_relationship_id: relationshipId,
-      assignee_filter: assigneeFilter,
+      assignee_filter: userActionsParams.assigneeFilter,
     }
   );
 
-  // --- Coachee Actions path ---
-
-  const { relationships, isLoading: relsLoading } =
-    useCoachingRelationshipList(
-      isCoacheeMode ? currentOrganizationId : null
-    );
-
-  const coacheeIds = useMemo(() => {
-    if (!isCoacheeMode || !userId || !relationships) return [];
-    return getRelationshipsAsCoach(userId, relationships).map(
-      (r) => r.coachee_id
-    );
-  }, [isCoacheeMode, userId, relationships]);
+  // --- Relationship Actions path (single batch request) ---
 
   const {
-    actions: coacheeActions,
-    isLoading: coacheeActionsLoading,
-    isError: coacheeActionsError,
-    refresh: refreshCoacheeActions,
-  } = useCoacheeActionsFetch(coacheeIds, isCoacheeMode, relationshipId, scope, assigneeFilter);
+    actions: relationshipActions,
+    isLoading: relationshipActionsLoading,
+    isError: relationshipActionsError,
+    refresh: refreshRelationshipActions,
+  } = useBatchRelationshipActions(
+    isCoacheeMode ? currentOrganizationId : null,
+    {
+      assignee: relationshipActionsParams.assignee,
+      assignee_filter: relationshipActionsParams.assigneeFilter,
+      coaching_relationship_id: relationshipId,
+    }
+  );
 
   // --- Combine based on mode ---
 
   const actions: Action[] = useMemo(
-    () => (isCoacheeMode ? coacheeActions : (myActions ?? [])),
-    [isCoacheeMode, coacheeActions, myActions]
+    () => (isCoacheeMode ? relationshipActions : (userActions ?? [])),
+    [isCoacheeMode, relationshipActions, userActions]
   );
 
   const isLoading = isCoacheeMode
-    ? relsLoading || coacheeActionsLoading
-    : myActionsLoading;
+    ? relationshipActionsLoading
+    : userActionsLoading;
 
-  const isError = isCoacheeMode ? coacheeActionsError : myActionsError;
-  const refresh = isCoacheeMode ? refreshCoacheeActions : refreshMyActions;
+  const isError = isCoacheeMode ? relationshipActionsError : userActionsError;
+  const refresh = isCoacheeMode ? refreshRelationshipActions : refreshUserActions;
 
   return { actions, isLoading, isError, refresh };
 }

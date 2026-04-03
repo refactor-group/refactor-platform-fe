@@ -10,6 +10,7 @@ import {
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
 import { EntityApi } from "./entity-api";
+import { buildQueryString } from "./query-params";
 
 const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
@@ -33,38 +34,17 @@ export interface UserActionsQueryParams {
   sort_order?: ApiSortOrder;
 }
 
-/**
- * Builds URL search params from query parameters, excluding undefined values.
- */
-function buildQueryString(params?: UserActionsQueryParams): string {
+function userActionsQueryString(params?: UserActionsQueryParams): string {
   if (!params) return "";
-
-  const searchParams = new URLSearchParams();
-
-  if (params.scope) {
-    searchParams.set("scope", params.scope);
-  }
-  if (params.coaching_session_id) {
-    searchParams.set("coaching_session_id", params.coaching_session_id);
-  }
-  if (params.coaching_relationship_id) {
-    searchParams.set("coaching_relationship_id", params.coaching_relationship_id);
-  }
-  if (params.assignee_filter) {
-    searchParams.set("assignee_filter", params.assignee_filter);
-  }
-  if (params.status) {
-    searchParams.set("status", params.status);
-  }
-  if (params.sort_by) {
-    searchParams.set("sort_by", params.sort_by);
-  }
-  if (params.sort_order) {
-    searchParams.set("sort_order", params.sort_order);
-  }
-
-  const queryString = searchParams.toString();
-  return queryString ? `?${queryString}` : "";
+  return buildQueryString({
+    scope: params.scope,
+    coaching_session_id: params.coaching_session_id,
+    coaching_relationship_id: params.coaching_relationship_id,
+    assignee_filter: params.assignee_filter,
+    status: params.status,
+    sort_by: params.sort_by,
+    sort_order: params.sort_order,
+  });
 }
 
 /**
@@ -92,7 +72,7 @@ export const UserActionsApi = {
     userId: Id,
     params?: UserActionsQueryParams
   ): Promise<Action[]> => {
-    const queryString = buildQueryString(params);
+    const queryString = userActionsQueryString(params);
 
     return EntityApi.listNestedFn<Action, Action>(
       USERS_BASEURL,
@@ -123,7 +103,7 @@ export const useUserActionsList = (
   userId: Id | null,
   params?: UserActionsQueryParams
 ) => {
-  const queryString = buildQueryString(params);
+  const queryString = userActionsQueryString(params);
   const url = userId ? `${USERS_BASEURL}/${userId}/actions${queryString}` : null;
 
   const { entities, isLoading, isError, refresh } = EntityApi.useEntityList<
