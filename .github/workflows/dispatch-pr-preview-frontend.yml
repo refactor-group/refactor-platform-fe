@@ -29,7 +29,7 @@ on:
           - '665ac0e - chore: refresh preview commit choices [skip ci]'
           - 'a8a695b - Merge pull request #276 from refactor-group/fix-email-g'
           - 5449d69 - Merge branch 'main' into fix-email-goal-html-escaping
-          - 7c5b20d - PR#274 (batch-coachee-actions)
+          - 744657e - PR#274 (batch-coachee-actions)
           - 173936d - PR#273 (raymond/implements-magic-login)
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
@@ -38,10 +38,11 @@ on:
         required: true
         type: choice
         options:
+          - '7d3c88e - chore: refresh preview commit choices [skip ci]'
           - 'eb81fc3 - chore: refresh preview commit choices [skip ci]'
           - 'a190614 - fix: remove unused err binding in coaching-session-panel'
-          - 'd19848d - fix: resolve all React Compiler and ESLint warnings'
-          - 88f16c8 - PR#367 (raymond/implements-magic-login)
+          - 7d7314c - PR#368 (feat/stale-build-detection-and)
+          - 7922903 - PR#367 (raymond/implements-magic-login)
           - 2ed32f8 - PR#364 (fix/coachee-actions-connection)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
