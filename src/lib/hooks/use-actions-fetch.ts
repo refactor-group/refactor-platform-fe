@@ -50,15 +50,17 @@ export function assignmentFilterToUserActionsParams(filter: AssignmentFilter): {
  * controls assigned/unassigned filtering.
  */
 export function assignmentFilterToCoacheeActionsParams(filter: AssignmentFilter): {
-  assignee: AssigneeScope;
+  assignee?: AssigneeScope;
   assigneeFilter?: UserActionsAssigneeFilter;
 } {
   switch (filter) {
     case AssignmentFilter.Assigned:
-      return { assignee: AssigneeScope.Coachee };
-    case AssignmentFilter.Unassigned:
       return {
         assignee: AssigneeScope.Coachee,
+        assigneeFilter: UserActionsAssigneeFilter.Assigned,
+      };
+    case AssignmentFilter.Unassigned:
+      return {
         assigneeFilter: UserActionsAssigneeFilter.Unassigned,
       };
     case AssignmentFilter.All:

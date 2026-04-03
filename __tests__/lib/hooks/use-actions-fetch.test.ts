@@ -33,23 +33,48 @@ describe("assignmentFilterToUserActionsParams", () => {
 });
 
 describe("assignmentFilterToCoacheeActionsParams", () => {
-  it("maps Assigned to assignee=coachee with no assignee filter", () => {
+  it("maps Assigned to assignee=coachee with assignee_filter=assigned", () => {
     const result = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Assigned);
-    expect(result).toEqual({ assignee: AssigneeScope.Coachee });
-    expect(result.assigneeFilter).toBeUndefined();
-  });
-
-  it("maps Unassigned to assignee=coachee with assignee_filter=unassigned", () => {
-    const result = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Unassigned);
     expect(result).toEqual({
       assignee: AssigneeScope.Coachee,
+      assigneeFilter: UserActionsAssigneeFilter.Assigned,
+    });
+  });
+
+  it("maps Unassigned to assignee_filter=unassigned with no assignee scope", () => {
+    const result = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Unassigned);
+    expect(result).toEqual({
       assigneeFilter: UserActionsAssigneeFilter.Unassigned,
     });
+    expect(result.assignee).toBeUndefined();
   });
 
   it("maps All to assignee=coachee with no assignee filter", () => {
     const result = assignmentFilterToCoacheeActionsParams(AssignmentFilter.All);
     expect(result).toEqual({ assignee: AssigneeScope.Coachee });
     expect(result.assigneeFilter).toBeUndefined();
+  });
+
+  it("returns distinct params for each filter value", () => {
+    const assigned = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Assigned);
+    const unassigned = assignmentFilterToCoacheeActionsParams(AssignmentFilter.Unassigned);
+    const all = assignmentFilterToCoacheeActionsParams(AssignmentFilter.All);
+
+    // All three produce different param shapes
+    expect(assigned).not.toEqual(unassigned);
+    expect(assigned).not.toEqual(all);
+    expect(unassigned).not.toEqual(all);
+
+    // Assigned scopes to coachee AND filters to assigned
+    expect(assigned.assignee).toBe(AssigneeScope.Coachee);
+    expect(assigned.assigneeFilter).toBe(UserActionsAssigneeFilter.Assigned);
+
+    // Unassigned omits assignee scope (unassigned actions have no assignee to scope by)
+    expect(unassigned.assignee).toBeUndefined();
+    expect(unassigned.assigneeFilter).toBe(UserActionsAssigneeFilter.Unassigned);
+
+    // All scopes to coachee with no assignee filter (returns everything for coachee)
+    expect(all.assignee).toBe(AssigneeScope.Coachee);
+    expect(all.assigneeFilter).toBeUndefined();
   });
 });

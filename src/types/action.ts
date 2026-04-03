@@ -119,7 +119,7 @@ export type ActionWire = Omit<Action, "goal_id"> & { goal_id: Id | null };
  * Wire shape of a single item in the batch coachee-actions response.
  * The backend returns action fields flat alongside assignee_ids.
  */
-export interface ActionWithAssigneesWire extends Record<string, unknown> {
+export interface ActionWithAssigneesWire extends ActionWire {
   assignee_ids: Id[];
 }
 
@@ -132,9 +132,7 @@ export interface BatchCoacheeActionsResponse {
 export function transformActionWithAssignees(
   raw: ActionWithAssigneesWire
 ): Action {
-  const action = transformAction(raw);
-  action.assignee_ids = raw.assignee_ids;
-  return action;
+  return { ...transformAction(raw), assignee_ids: raw.assignee_ids };
 }
 
 /**

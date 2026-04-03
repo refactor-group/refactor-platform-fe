@@ -98,6 +98,7 @@ export function useBatchCoacheeActions(
 
   const { data, error, isLoading, mutate } = useSWR<Action[]>(
     url,
+    // SWR only invokes the fetcher when key (url) is non-null
     () =>
       isSingleRelationship
         ? fetchSingleRelationshipActions(url!)
