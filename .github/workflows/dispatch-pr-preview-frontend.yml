@@ -26,9 +26,10 @@ on:
         required: true
         type: choice
         options:
+          - '6a4c2b7 - chore: refresh preview commit choices [skip ci]'
           - '206b7e1 - chore: refresh preview commit choices [skip ci]'
           - '57c93c8 - Merge pull request #274 from refactor-group/batch-coach'
-          - 'eaaa478 - refactor: use match shadowing for query builder in find'
+          - 1a51a36 - PR#277 (fix-single-relationship-assign)
           - 173936d - PR#273 (raymond/implements-magic-login)
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
@@ -37,9 +38,10 @@ on:
         required: true
         type: choice
         options:
+          - 'dc949db - chore: refresh preview commit choices [skip ci]'
           - 'c4b2daa - Merge pull request #368 from refactor-group/feat/stale-build-detection-and-sse-reconnect'
           - 0c589b4 - Merge branch 'main' into feat/stale-build-detection-and-sse-reconnect
-          - 'a0b22ea - chore: refresh preview commit choices [skip ci]'
+          - 55d3f37 - PR#370 (fix/coachee-actions-assignee-f)
           - 7922903 - PR#367 (raymond/implements-magic-login)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
