@@ -8,7 +8,7 @@ import {
   defaultGoal,
 } from "@/types/goal";
 import { ApiSortOrder, GoalSortField } from "@/types/sorting";
-import { EntityApi } from "./entity-api";
+import { EntityApi, ApiResponse } from "./entity-api";
 import useSWR from "swr";
 import { sessionGuard } from "@/lib/auth/session-guard";
 
@@ -175,12 +175,6 @@ export const GoalApi = {
 /** Response shape from GET /coaching_sessions/goals batch endpoint. */
 interface BatchSessionGoalsResponse {
   session_goals: Record<Id, Goal[]>;
-}
-
-/** Wrapped API response from the backend. */
-interface ApiResponse<T> {
-  status_code: number;
-  data: T;
 }
 
 /**

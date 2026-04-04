@@ -98,12 +98,16 @@ async function setupActionsPage(
     })
   })
 
-  // User actions list endpoint
-  await page.route(`**/users/${MOCK_USER_ID}/actions**`, async (route) => {
+  // Batch relationship-actions endpoint (used by actions kanban page)
+  await page.route('**/coaching_relationships/actions**', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: OPEN_ACTIONS }),
+      body: JSON.stringify({
+        data: {
+          coachee_actions: { 'rel-1': OPEN_ACTIONS },
+        },
+      }),
     })
   })
 }

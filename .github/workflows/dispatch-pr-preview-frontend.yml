@@ -26,11 +26,10 @@ on:
         required: true
         type: choice
         options:
-          - 'ae1c415 - chore: refresh preview commit choices [skip ci]'
-          - '0787aa7 - chore: refresh preview commit choices [skip ci]'
-          - '2b5430b - chore: refresh preview commit choices [skip ci]'
-          - 7c5b20d - PR#274 (batch-coachee-actions)
-          - feea802 - PR#273 (raymond/implements-magic-login)
+          - 'ba1d360 - chore: refresh preview commit choices [skip ci]'
+          - '2d10238 - Merge pull request #277 from refactor-group/fix-single-'
+          - 14c0f44 - Merge branch 'main' into fix-single-relationship-assign
+          - 173936d - PR#273 (raymond/implements-magic-login)
           - 3cce00b - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
@@ -38,10 +37,10 @@ on:
         required: true
         type: choice
         options:
-          - 'a190614 - fix: remove unused err binding in coaching-session-panel'
-          - 'd19848d - fix: resolve all React Compiler and ESLint warnings'
-          - '8d61082 - fix: resolve all Dependabot security vulnerabilities'
-          - 2ed32f8 - PR#364 (fix/coachee-actions-connection)
+          - '668bdb2 - Merge pull request #370 from refactor-group/fix/coachee-actions-assignee-filter'
+          - 'a10732d - fix: update e2e test mocks to use batch relationship-actions endpoint'
+          - 9310211 - Merge branch 'main' into fix/coachee-actions-assignee-filter
+          - 7922903 - PR#367 (raymond/implements-magic-login)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)

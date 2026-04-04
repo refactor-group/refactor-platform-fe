@@ -199,11 +199,16 @@ async function setupActionsPage(page: Page) {
     })
   })
 
-  await page.route(`**/users/${MOCK_USER_ID}/actions**`, async (route) => {
+  // Batch relationship-actions endpoint (used by actions kanban page)
+  await page.route('**/coaching_relationships/actions**', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: SESSION_ACTIONS }),
+      body: JSON.stringify({
+        data: {
+          coachee_actions: { [RELATIONSHIP_ID]: SESSION_ACTIONS },
+        },
+      }),
     })
   })
 }
