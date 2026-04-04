@@ -33,18 +33,8 @@ export interface RelationshipActionsParams {
   sort_order?: string;
 }
 
-/** Builds the query params shared by both endpoints (excludes `assignee`). */
-function sharedQueryString(params: RelationshipActionsParams): string {
-  return buildQueryString({
-    assignee_filter: params.assignee_filter,
-    status: params.status,
-    sort_by: params.sort_by,
-    sort_order: params.sort_order,
-  });
-}
-
-/** Builds the batch endpoint query string, including the `assignee` param. */
-function batchQueryString(params: RelationshipActionsParams): string {
+/** Builds the query string for relationship action endpoints. */
+export function relationshipQueryString(params: RelationshipActionsParams): string {
   return buildQueryString({
     assignee: params.assignee,
     assignee_filter: params.assignee_filter,
@@ -54,13 +44,12 @@ function batchQueryString(params: RelationshipActionsParams): string {
   });
 }
 
-function relationshipActionsUrl(orgId: Id, params: RelationshipActionsParams): string {
+export function relationshipActionsUrl(orgId: Id, params: RelationshipActionsParams): string {
   const relId = params.coaching_relationship_id;
+  const qs = relationshipQueryString(params);
   if (relId) {
-    const qs = sharedQueryString(params);
     return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/${relId}/actions${qs}`;
   }
-  const qs = batchQueryString(params);
   return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/actions${qs}`;
 }
 
