@@ -17,7 +17,7 @@ function getErrorMessage(error: unknown): string {
     if (axios.isAxiosError(error)) {
         const status = error.response?.status
         if (status === 404 || status === 410) {
-            return "This setup link is invalid or has expired. Please contact your administrator."
+            return "This setup link is invalid or has expired. Please contact your coach."
         }
         if (status === 409) {
             return "This account has already been set up."
