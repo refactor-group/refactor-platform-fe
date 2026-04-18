@@ -43,7 +43,7 @@ export interface NewUser {
   last_name: string;
   display_name: string;
   email: string;
-  password: string;
+  password?: string;
   timezone: string;
 }
 
