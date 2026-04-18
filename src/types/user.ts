@@ -22,6 +22,8 @@ export type UserRoleState =
   | { status: 'no_access'; role: null; hasAccess: false; reason: 'NO_ORG_ACCESS'; organizationId: string }
   | { status: 'no_org_selected'; role: null; hasAccess: false; reason: 'NO_ORG_SELECTED' };
 
+export type InviteStatus = "active" | "pending" | "expired";
+
 // This must always reflect the Rust struct on the backend entity::users::Model
 export interface User {
   id: Id;
@@ -36,6 +38,7 @@ export interface User {
    */
   role: Role;
   roles: UserRole[];
+  invite_status: InviteStatus | null;
 }
 
 export interface NewUser {
@@ -72,7 +75,8 @@ export function parseUser(data: unknown): User {
     display_name: data.display_name,
     timezone: data.timezone || "UTC",
     role: data.role,
-    roles: data.roles
+    roles: data.roles,
+    invite_status: data.invite_status,
   };
 }
 
@@ -103,6 +107,7 @@ export function defaultUser(): User {
     timezone: "UTC",
     role: Role.User,
     roles: [],
+    invite_status: null,
   };
 }
 
@@ -169,7 +174,7 @@ export function sortUsersAlphabetically(users: User[], currentUserId?: Id): User
       if (a.id === currentUserId) return -1;
       if (b.id === currentUserId) return 1;
     }
-    
+
     // Alphabetize by full name
     const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
     const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
