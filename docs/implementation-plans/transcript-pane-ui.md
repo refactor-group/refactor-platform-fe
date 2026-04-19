@@ -43,7 +43,7 @@ Default (no transcript open):
   [ Goals 300px | Notes 1fr ]
 
 Transcript open:
-  [ Goals rail 40px | Transcript 440px | Notes 1fr ]
+  [ Goals rail 40px | Transcript <user-width, default 440px> | Notes 1fr ]
 
 Transcript maximized:
   [ Goals rail 40px | Transcript 1fr ]
@@ -56,6 +56,7 @@ Notes maximized:
 - Opening the transcript auto-collapses Goals to its thin vertical rail. The rail remains visible so Goals is always one click away.
 - Grid template uses `minmax(0,1fr)` for both rows and the Notes column — required for internal scrolling (plain `1fr` stretches to content height and breaks the overflow container).
 - Below `lg:` (1024px), the three-column layout is replaced with a full-width sheet that slides in over Notes, reusing the mobile sheet pattern from [coaching-session-panel-mobile.tsx](../../src/components/ui/coaching-sessions/coaching-session-panel-mobile.tsx).
+- In the 3-column docked view, the boundary between transcript and Notes is a drag handle. See **Resizable transcript/notes split** under Phase 1.
 
 ### Focus mode
 
@@ -312,6 +313,11 @@ The transcript pane is wrapped in a dedicated error boundary. A render error in 
 - `src/lib/hooks/use-transcript-polling.ts`
 - `src/lib/hooks/use-transcript-copy.ts`
 - `src/lib/hooks/use-speaker-filter.ts`
+- `src/lib/hooks/use-transcript-pane-width.ts` — thin selector wrapper around the UI preferences store
+
+**Stores & providers:**
+- `src/lib/stores/ui-preferences-state-store.ts` — Zustand store, `persist` middleware backed by `localStorage`
+- `src/lib/providers/ui-preferences-state-provider.tsx` — registered at app root alongside other providers
 
 **Utilities:**
 - `src/lib/transcript/format-timestamp.ts`
@@ -329,6 +335,7 @@ The transcript pane is wrapped in a dedicated error boundary. A render error in 
 - `src/components/ui/coaching-sessions/transcript-empty-state.tsx`
 - `src/components/ui/coaching-sessions/transcript-status-indicator.tsx` — the dot/glyph on the icon
 - `src/components/ui/coaching-sessions/recording-control.tsx` — Start/Stop/status inside the pane
+- `src/components/ui/coaching-sessions/transcript-resize-handle.tsx` — drag handle between transcript and Notes; hidden below `lg:`
 
 ### Files touched
 
@@ -356,7 +363,48 @@ Ships the structural scaffolding with no transcript data wired.
 
 Build the pane, search, filter, bubbles, copy, maximize, and empty states against mocked transcription data (hardcoded fixtures matching the real backend shape). Lets the full UI be reviewed and tested without depending on the Recall.ai pipeline.
 
-**Checkpoint:** opening the pane shows a fully functional transcript from mock data. All interactions reviewable end-to-end.
+Also lands the **resizable transcript/notes split** (see below) since resizing is pane UX and belongs with the rest of the pane's interactions.
+
+**Checkpoint:** opening the pane shows a fully functional transcript from mock data. All interactions reviewable end-to-end. Users can drag to resize the transcript-vs-notes boundary, and their width preference survives refreshes and future sessions.
+
+#### Resizable transcript/notes split
+
+When both panes are visible in the 3-column docked view, the coach can drag the vertical boundary between them to rebalance space. Desktop-only; below `lg:` (1024px) the sheet fallback takes over and the handle doesn't apply.
+
+**Constraints and defaults:**
+- Default width: 440px (matches Phase 0 initial layout)
+- Min transcript width: 280px (prose readability floor)
+- Max transcript width: 700px (preserves ~400px minimum for Notes)
+- Width value clamped server-side of the store setter, so callers can't write out-of-range values
+
+**Persistence via a new UI preferences store:**
+
+UI preferences get their own Zustand store following the project's established pattern. The key difference from the existing stores: `localStorage` instead of `sessionStorage`, since pane-width preference should survive tab close, logout, and browser restart — it's about how the coach likes their UI, not about who they are in the current session.
+
+New file: `src/lib/stores/ui-preferences-state-store.ts` following the shape of [coaching-relationship-state-store.ts](../../src/lib/stores/coaching-relationship-state-store.ts), with:
+- `transcriptPaneWidth: number` state slot
+- `setTranscriptPaneWidth(width)` action that clamps to `[MIN, MAX]`
+- `resetUIPreferences()` escape hatch
+- `createJSONStorage(() => localStorage)` — intentional deviation from sessionStorage used elsewhere
+- `persist` middleware gives us cross-tab sync for free
+
+New provider: `src/lib/providers/ui-preferences-state-provider.tsx` wiring the store at the app root next to the other providers.
+
+Leaves room to absorb future UI preferences (default panel section, editor font size, density toggle) without creating a new store each time.
+
+**Drag handle:**
+- Use shadcn's `Resizable` primitive (wrapper around `react-resizable-panels`), consistent with the project's UI-kit approach. Install via shadcn CLI if not already present.
+- Handle is `role="separator"` with `aria-orientation="vertical"` and `aria-label="Resize transcript"`.
+- Keyboard: handle is focusable; ArrowLeft / ArrowRight shift by 24px per press, clamped to min/max. Home/End jump to min/max.
+- On drag, update the store's `transcriptPaneWidth`. The grid template reads the store value and applies it to the transcript column: `gridTemplateColumns: ${goals} ${width}px minmax(0,1fr)`.
+- Persisting on every pointer-move would thrash localStorage. Strategy: update the store (in-memory) continuously via `requestAnimationFrame`, but `persist` middleware only writes on state change — default debouncing inside Zustand is fine for this cadence. If writes feel heavy, wrap the setter in a small debounce (100ms).
+
+**Interaction with focus mode:**
+- Maximizing either pane hides the handle (only one column exists).
+- Restoring from maximize returns to the user's stored width, not the default. This is automatic since the store value is the source of truth.
+
+**SSR:**
+- `persist` middleware handles the server/client hydration mismatch. The store initializes with the default (440px), then rehydrates from localStorage after mount. A brief flash at the default width is acceptable for v1.
 
 ### Phase 2 — Real backend integration (Caleb)
 
@@ -378,6 +426,8 @@ Caleb replaces the mock data source with real API calls from his backend PR, wir
 - `transcript-bubble.test.tsx` — grouping tails, speaker color mapping, per-bubble copy feedback (mocked clipboard)
 - `transcript-speaker-filter.test.tsx` — segmented control semantics, derived labels from data
 - `use-coaching-session-layout.test.ts` — focus mode mutual exclusion, URL sync
+- `ui-preferences-state-store.test.ts` — default width, clamping at min/max, persistence key and storage backend are correct
+- `transcript-resize-handle.test.tsx` — drag updates store, keyboard arrow keys nudge by 24px, Home/End jump to bounds, handle hidden below `lg:`
 
 ### E2E
 
@@ -392,6 +442,7 @@ Caleb replaces the mock data source with real API calls from his backend PR, wir
 7. Copy a bubble; copy all
 8. Maximize transcript; maximize notes (mutual exclusion)
 9. URL deep-link round trip
+10. Drag the resize handle; width persists across reload
 
 ---
 
