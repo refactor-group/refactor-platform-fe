@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { useCoachingSessionLayout } from "../use-coaching-session-layout";
-import { FocusedPane } from "@/types/coaching-session-layout";
+import { FocusedPanel } from "@/types/coaching-session-layout";
 
 vi.mock("next/navigation", () => ({
   useRouter: vi.fn(),
@@ -35,7 +35,7 @@ beforeEach(() => {
 describe("useCoachingSessionLayout — URL reading", () => {
   it("returns default state for an empty URL", () => {
     const { result } = renderHook(() => useCoachingSessionLayout());
-    expect(result.current.focusedPane).toBe(FocusedPane.None);
+    expect(result.current.focusedPanel).toBe(FocusedPanel.None);
     expect(result.current.isTranscriptOpen).toBe(false);
     expect(result.current.isGoalsCollapsed).toBe(false);
     expect(result.current.isNotesMaximized).toBe(false);
@@ -52,7 +52,7 @@ describe("useCoachingSessionLayout — URL reading", () => {
   it("recognizes ?focus=notes as Notes maximized", () => {
     setUrl("/coaching-sessions/abc", "focus=notes");
     const { result } = renderHook(() => useCoachingSessionLayout());
-    expect(result.current.focusedPane).toBe(FocusedPane.Notes);
+    expect(result.current.focusedPanel).toBe(FocusedPanel.Notes);
     expect(result.current.isNotesMaximized).toBe(true);
     expect(result.current.isGoalsCollapsed).toBe(true);
   });
@@ -60,7 +60,7 @@ describe("useCoachingSessionLayout — URL reading", () => {
   it("recognizes ?focus=transcript as Transcript maximized", () => {
     setUrl("/coaching-sessions/abc", "focus=transcript&transcript=1");
     const { result } = renderHook(() => useCoachingSessionLayout());
-    expect(result.current.focusedPane).toBe(FocusedPane.Transcript);
+    expect(result.current.focusedPanel).toBe(FocusedPanel.Transcript);
     expect(result.current.isTranscriptMaximized).toBe(true);
     expect(result.current.isTranscriptOpen).toBe(true);
   });
@@ -68,7 +68,7 @@ describe("useCoachingSessionLayout — URL reading", () => {
   it("ignores invalid ?focus values and falls back to None", () => {
     setUrl("/coaching-sessions/abc", "focus=bogus");
     const { result } = renderHook(() => useCoachingSessionLayout());
-    expect(result.current.focusedPane).toBe(FocusedPane.None);
+    expect(result.current.focusedPanel).toBe(FocusedPanel.None);
   });
 });
 
@@ -100,14 +100,29 @@ describe("useCoachingSessionLayout — URL writing", () => {
     expect(getLastReplaceUrl()).toBe("/coaching-sessions/abc?focus=notes");
   });
 
-  it("toggleNotesMaximized turns on Notes focus and closes the transcript", () => {
+  it("toggleNotesMaximized turns on Notes focus and preserves open transcript state", () => {
     setUrl("/coaching-sessions/abc", "transcript=1");
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    act(() => result.current.toggleNotesMaximized());
+    const url = getLastReplaceUrl();
+    expect(url).toContain("focus=notes");
+    expect(url).toContain("transcript=1");
+  });
+
+  it("toggleNotesMaximized doesn't open the transcript when it wasn't open", () => {
     const { result } = renderHook(() => useCoachingSessionLayout());
     act(() => result.current.toggleNotesMaximized());
     expect(getLastReplaceUrl()).toBe("/coaching-sessions/abc?focus=notes");
   });
 
-  it("toggleNotesMaximized restores when already maximized", () => {
+  it("toggleNotesMaximized restores 3-col layout when unmaximizing with transcript still open", () => {
+    setUrl("/coaching-sessions/abc", "focus=notes&transcript=1");
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    act(() => result.current.toggleNotesMaximized());
+    expect(getLastReplaceUrl()).toBe("/coaching-sessions/abc?transcript=1");
+  });
+
+  it("toggleNotesMaximized restores clean state when unmaximizing without transcript", () => {
     setUrl("/coaching-sessions/abc", "focus=notes");
     const { result } = renderHook(() => useCoachingSessionLayout());
     act(() => result.current.toggleNotesMaximized());
@@ -136,5 +151,24 @@ describe("useCoachingSessionLayout — URL writing", () => {
     const url = getLastReplaceUrl();
     expect(url).toContain("panel=actions");
     expect(url).toContain("transcript=1");
+  });
+});
+
+describe("useCoachingSessionLayout — Goals collapse override", () => {
+  it("user can expand Goals even while the transcript is open", () => {
+    setUrl("/coaching-sessions/abc", "transcript=1");
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    expect(result.current.isGoalsCollapsed).toBe(true);
+
+    act(() => result.current.toggleGoalsCollapsed());
+    expect(result.current.isGoalsCollapsed).toBe(false);
+  });
+
+  it("user can collapse Goals even when there's no transcript or focus mode", () => {
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    expect(result.current.isGoalsCollapsed).toBe(false);
+
+    act(() => result.current.toggleGoalsCollapsed());
+    expect(result.current.isGoalsCollapsed).toBe(true);
   });
 });

@@ -10,7 +10,7 @@ import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
-import { TranscriptPane } from "@/components/ui/coaching-sessions/transcript-pane";
+import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-panel";
 import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
@@ -26,7 +26,7 @@ import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { isPastSession } from "@/types/coaching-session";
 import type { CoachingSession } from "@/types/coaching-session";
-import { FocusedPane } from "@/types/coaching-session-layout";
+import { FocusedPanel } from "@/types/coaching-session-layout";
 
 import { DateTime } from "ts-luxon";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
@@ -81,13 +81,13 @@ function shouldSyncRelationship(
  * to fit content and internal scrolling breaks.
  */
 function computeGridColumns(
-  focusedPane: FocusedPane,
+  focusedPanel: FocusedPanel,
   isTranscriptOpen: boolean,
   isGoalsCollapsed: boolean
 ): string {
   const goalsColumn = isGoalsCollapsed ? COLLAPSED_GOALS_WIDTH : EXPANDED_GOALS_WIDTH;
   const isDockedThreeColumn =
-    focusedPane === FocusedPane.None && isTranscriptOpen;
+    focusedPanel === FocusedPanel.None && isTranscriptOpen;
   if (isDockedThreeColumn) {
     return `${goalsColumn} ${DOCKED_TRANSCRIPT_WIDTH} ${FLEX_COL}`;
   }
@@ -202,7 +202,7 @@ export default function CoachingSessionsPage() {
   };
 
   const gridColumns = computeGridColumns(
-    layout.focusedPane,
+    layout.focusedPanel,
     layout.isTranscriptOpen,
     layout.isGoalsCollapsed
   );
@@ -242,7 +242,7 @@ export default function CoachingSessionsPage() {
         </div>
 
         <div
-          className={`grid grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)] py-3 px-4 flex-1 min-h-0 md:grid-rows-[minmax(0,1fr)] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${layout.focusedPane === FocusedPane.None ? "gap-4" : "md:gap-0"}`}
+          className={`grid grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)] py-3 px-4 flex-1 min-h-0 md:grid-rows-[minmax(0,1fr)] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${layout.focusedPanel === FocusedPanel.None ? "gap-4" : "md:gap-0"}`}
           style={{ gridTemplateColumns: gridColumns }}
         >
           {currentCoachingSessionId && currentCoachingRelationshipId && (
@@ -250,6 +250,7 @@ export default function CoachingSessionsPage() {
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={layout.isGoalsCollapsed}
+              onToggleCollapsed={layout.toggleGoalsCollapsed}
               readOnly={currentCoachingSession
                 ? isGoalPanelReadOnly(
                     currentCoachingSession,
@@ -263,7 +264,7 @@ export default function CoachingSessionsPage() {
           )}
 
           {shouldRenderTranscript && (
-            <TranscriptPane
+            <TranscriptPanel
               isMaximized={layout.isTranscriptMaximized}
               onToggleMaximize={layout.toggleTranscriptMaximized}
               onClose={layout.closeTranscript}
