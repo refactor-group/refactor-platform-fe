@@ -11,6 +11,7 @@ import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-panel";
+import { TranscriptResizeHandle } from "@/components/ui/coaching-sessions/transcript-resize-handle";
 import { MOCK_TRANSCRIPT_SEGMENTS } from "@/lib/transcript/mock-transcript";
 import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
@@ -20,6 +21,11 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
 import { useCoachingSessionLayout } from "@/lib/hooks/use-coaching-session-layout";
+import { useTranscriptPanelWidth } from "@/lib/hooks/use-transcript-panel-width";
+import {
+  MIN_TRANSCRIPT_PANEL_WIDTH,
+  MAX_TRANSCRIPT_PANEL_WIDTH,
+} from "@/lib/stores/ui-preferences-state-store";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import JoinMeetLink from "@/components/ui/coaching-sessions/join-meet-link";
 import { toast } from "sonner";
@@ -36,8 +42,8 @@ import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
 const COLLAPSED_GOALS_WIDTH = "40px";
 const EXPANDED_GOALS_WIDTH = "300px";
-const DOCKED_TRANSCRIPT_WIDTH = "minmax(0,440px)";
 const FLEX_COL = "minmax(0,1fr)";
+const RESIZE_HANDLE_WIDTH = "6px";
 
 /**
  * Goals are read-only on past sessions for coachees, but coaches retain
@@ -84,13 +90,15 @@ function shouldSyncRelationship(
 function computeGridColumns(
   focusedPanel: FocusedPanel,
   isTranscriptOpen: boolean,
-  isGoalsCollapsed: boolean
+  isGoalsCollapsed: boolean,
+  transcriptPanelWidth: number
 ): string {
   const goalsColumn = isGoalsCollapsed ? COLLAPSED_GOALS_WIDTH : EXPANDED_GOALS_WIDTH;
   const isDockedThreeColumn =
     focusedPanel === FocusedPanel.None && isTranscriptOpen;
   if (isDockedThreeColumn) {
-    return `${goalsColumn} ${DOCKED_TRANSCRIPT_WIDTH} ${FLEX_COL}`;
+    const transcriptColumn = `${transcriptPanelWidth}px`;
+    return `${goalsColumn} ${transcriptColumn} ${RESIZE_HANDLE_WIDTH} ${FLEX_COL}`;
   }
   return `${goalsColumn} ${FLEX_COL}`;
 }
@@ -126,6 +134,11 @@ export default function CoachingSessionsPage() {
 
   // Three-pane layout state (focus mode + transcript visibility). URL-backed.
   const layout = useCoachingSessionLayout();
+
+  // User-resizable width of the docked transcript column. Persisted to
+  // localStorage across sessions.
+  const { width: transcriptPanelWidth, setWidth: setTranscriptPanelWidth } =
+    useTranscriptPanelWidth();
 
   // Auto-collapse main sidebar on coaching session page to maximize workspace,
   // and restore the previous state when leaving.
@@ -205,13 +218,18 @@ export default function CoachingSessionsPage() {
   const gridColumns = computeGridColumns(
     layout.focusedPanel,
     layout.isTranscriptOpen,
-    layout.isGoalsCollapsed
+    layout.isGoalsCollapsed,
+    transcriptPanelWidth
   );
 
   // When the transcript is maximized, Notes is hidden. When Notes is maximized,
   // the hook's toggle closes the transcript, so we never need to render it.
   const shouldRenderTranscript =
     layout.isTranscriptOpen && !layout.isNotesMaximized;
+  // The resize handle only exists between the transcript and Notes in the
+  // docked three-column layout.
+  const shouldRenderResizeHandle =
+    layout.focusedPanel === FocusedPanel.None && layout.isTranscriptOpen;
   const shouldRenderNotes = !layout.isTranscriptMaximized;
 
   return (
@@ -270,6 +288,15 @@ export default function CoachingSessionsPage() {
               isMaximized={layout.isTranscriptMaximized}
               onToggleMaximize={layout.toggleTranscriptMaximized}
               onClose={layout.closeTranscript}
+            />
+          )}
+
+          {shouldRenderResizeHandle && (
+            <TranscriptResizeHandle
+              width={transcriptPanelWidth}
+              onResize={setTranscriptPanelWidth}
+              min={MIN_TRANSCRIPT_PANEL_WIDTH}
+              max={MAX_TRANSCRIPT_PANEL_WIDTH}
             />
           )}
 
