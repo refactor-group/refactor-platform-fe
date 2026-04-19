@@ -14,6 +14,7 @@ import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-pa
 import { TranscriptResizeHandle } from "@/components/ui/coaching-sessions/transcript-resize-handle";
 import { MOCK_TRANSCRIPT_SEGMENTS } from "@/lib/transcript/mock-transcript";
 import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
+import { IndicatorStatus } from "@/lib/transcript/indicator-status";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -247,6 +248,16 @@ export default function CoachingSessionsPage() {
               <TranscriptToggleButton
                 isOpen={layout.isTranscriptOpen}
                 onToggle={layout.toggleTranscript}
+                indicatorStatus={
+                  MOCK_TRANSCRIPT_SEGMENTS.length > 0
+                    ? IndicatorStatus.TranscriptReady
+                    : IndicatorStatus.None
+                }
+                indicatorTooltip={
+                  MOCK_TRANSCRIPT_SEGMENTS.length > 0
+                    ? "Transcript ready"
+                    : undefined
+                }
               />
               <ShareSessionLink
                 sessionId={params.id as string}
