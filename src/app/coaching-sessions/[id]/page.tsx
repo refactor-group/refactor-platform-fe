@@ -242,7 +242,7 @@ export default function CoachingSessionsPage() {
         </div>
 
         <div
-          className={`grid grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)] py-3 px-4 flex-1 min-h-0 md:grid-rows-[minmax(0,1fr)] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${layout.focusedPanel === FocusedPanel.None ? "gap-4" : "md:gap-0"}`}
+          className="grid grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)] gap-4 py-3 px-4 flex-1 min-h-0 md:grid-rows-[minmax(0,1fr)] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out"
           style={{ gridTemplateColumns: gridColumns }}
         >
           {currentCoachingSessionId && currentCoachingRelationshipId && (

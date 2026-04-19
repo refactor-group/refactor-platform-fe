@@ -72,10 +72,6 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
     setGoalsCollapsed(defaultGoalsCollapsed(focusedPanel, isTranscriptOpen));
   }, [focusedPanel, isTranscriptOpen]);
 
-  const toggleGoalsCollapsed = useCallback(() => {
-    setGoalsCollapsed((prev) => !prev);
-  }, []);
-
   const writeLayout = useCallback(
     (nextFocus: FocusedPanel, nextTranscriptOpen: boolean) => {
       const url = buildLayoutUrl(pathname, searchParams, nextFocus, nextTranscriptOpen);
@@ -83,6 +79,32 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
     },
     [router, pathname, searchParams]
   );
+
+  const toggleGoalsCollapsed = useCallback(() => {
+    if (isGoalsCollapsed) {
+      // Expanding. If a focus mode is active, exit it — the other panel is
+      // no longer sharing the screen alone, so its "maximized" framing no
+      // longer fits. The previously-focused panel stays visible either way.
+      if (focusedPanel !== FocusedPanel.None) {
+        writeLayout(FocusedPanel.None, isTranscriptOpen);
+      }
+      setGoalsCollapsed(false);
+      return;
+    }
+    // Collapsing. If collapsing leaves only one other panel visible alongside
+    // the rail, auto-maximize that panel so the layout doesn't leak a small
+    // Notes area next to a big rail. The only case where more than one other
+    // panel is visible is the 3-col docked state (transcript open, no focus).
+    const inDockedThreeColumn =
+      focusedPanel === FocusedPanel.None && isTranscriptOpen;
+    const shouldAutoMaximize =
+      !inDockedThreeColumn && focusedPanel === FocusedPanel.None;
+    if (shouldAutoMaximize) {
+      // Currently in default (Goals + Notes) — Notes is the only other panel.
+      writeLayout(FocusedPanel.Notes, isTranscriptOpen);
+    }
+    setGoalsCollapsed(true);
+  }, [isGoalsCollapsed, focusedPanel, isTranscriptOpen, writeLayout]);
 
   const openTranscript = useCallback(() => {
     // Opening the transcript clears Notes-focused mode — otherwise the panel

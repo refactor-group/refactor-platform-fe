@@ -171,4 +171,45 @@ describe("useCoachingSessionLayout — Goals collapse override", () => {
     act(() => result.current.toggleGoalsCollapsed());
     expect(result.current.isGoalsCollapsed).toBe(true);
   });
+
+  it("collapsing Goals from the default state auto-maximizes Notes (the only other panel)", () => {
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    act(() => result.current.toggleGoalsCollapsed());
+    expect(getLastReplaceUrl()).toBe("/coaching-sessions/abc?focus=notes");
+  });
+
+  it("collapsing Goals in the 3-col docked state does not auto-maximize", () => {
+    setUrl("/coaching-sessions/abc", "transcript=1");
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    // Goals is already collapsed by default here; expand first, then collapse.
+    act(() => result.current.toggleGoalsCollapsed()); // expand
+    act(() => result.current.toggleGoalsCollapsed()); // collapse again
+    // writeLayout should not have been called to set a focus mode.
+    for (const call of mockReplace.mock.calls) {
+      expect(call[0] as string).not.toContain("focus=");
+    }
+  });
+
+  it("expanding Goals from a focused state exits focus mode (mirror of auto-maximize)", () => {
+    setUrl("/coaching-sessions/abc", "focus=notes");
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    act(() => result.current.toggleGoalsCollapsed()); // expand
+    expect(getLastReplaceUrl()).toBe("/coaching-sessions/abc");
+  });
+
+  it("expanding Goals in the 3-col docked state leaves the URL alone", () => {
+    setUrl("/coaching-sessions/abc", "transcript=1");
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    act(() => result.current.toggleGoalsCollapsed()); // expand
+    // Expanding in 3-col docked shouldn't call writeLayout at all — no
+    // focus mode to exit, and transcript open state shouldn't flip.
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("expanding Goals from transcript-maximized returns to goals+transcript docked", () => {
+    setUrl("/coaching-sessions/abc", "focus=transcript&transcript=1");
+    const { result } = renderHook(() => useCoachingSessionLayout());
+    act(() => result.current.toggleGoalsCollapsed()); // expand
+    expect(getLastReplaceUrl()).toBe("/coaching-sessions/abc?transcript=1");
+  });
 });
