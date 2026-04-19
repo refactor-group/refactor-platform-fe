@@ -4,7 +4,6 @@ import { ReactNode } from 'react';
 import { AuthStoreProvider } from '@/lib/providers/auth-store-provider';
 import { OrganizationStateStoreProvider } from '@/lib/providers/organization-state-store-provider';
 import { CoachingRelationshipStateStoreProvider } from '@/lib/providers/coaching-relationship-state-store-provider';
-import { UIPreferencesStateStoreProvider } from '@/lib/providers/ui-preferences-state-store-provider';
 import { SessionCleanupProvider } from '@/lib/providers/session-cleanup-provider';
 import { SSEProvider } from '@/lib/providers/sse-provider';
 import { SWRConfig } from 'swr';
@@ -18,21 +17,19 @@ export function Providers({ children }: ProvidersProps) {
     <AuthStoreProvider>
       <OrganizationStateStoreProvider>
         <CoachingRelationshipStateStoreProvider>
-          <UIPreferencesStateStoreProvider>
-            <SessionCleanupProvider>
-              <SWRConfig
-                value={{
-                  revalidateIfStale: true,
-                  focusThrottleInterval: 10000,
-                  provider: () => new Map(),
-                }}
-              >
-                <SSEProvider>
-                  {children}
-                </SSEProvider>
-              </SWRConfig>
-            </SessionCleanupProvider>
-          </UIPreferencesStateStoreProvider>
+          <SessionCleanupProvider>
+            <SWRConfig
+              value={{
+                revalidateIfStale: true,
+                focusThrottleInterval: 10000,
+                provider: () => new Map(),
+              }}
+            >
+              <SSEProvider>
+                {children}
+              </SSEProvider>
+            </SWRConfig>
+          </SessionCleanupProvider>
         </CoachingRelationshipStateStoreProvider>
       </OrganizationStateStoreProvider>
     </AuthStoreProvider>
