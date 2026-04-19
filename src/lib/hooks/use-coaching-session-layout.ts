@@ -1,43 +1,156 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 
 import { FocusedPanel, isFocusedPanel } from "@/types/coaching-session-layout";
 
-/**
- * URL is the source of truth for the coaching session's panel visibility
- * and focus mode. The hook reads state from `useSearchParams` and writes
- * it back via `router.replace`, so links and refreshes both round-trip
- * cleanly.
- *
- * URL params owned here:
- *   `?focus=notes|transcript`  → which panel is maximized
- *   `?transcript=1`            → whether the transcript panel is open
- *
- * The existing `?panel=` param (Goals/Agreements/Actions section) is
- * owned elsewhere and left untouched.
- *
- * The Goals-collapsed state is transient (not URL-backed) — it starts
- * from a derived default but the user can override it by clicking the
- * rail. See `defaultGoalsCollapsed` below.
- */
+// ── Coaching session layout state machine ──────────────────────────────
+//
+// Models the valid shapes of the coaching session page as a discriminated
+// union. Follows the same idiom as `goal-flow.ts` — a tagged union for
+// states, inline transition functions, and a hook that exposes derived
+// fields plus action callbacks.
+//
+// URL is still the source of truth for `focusedPanel` and
+// `isTranscriptOpen`. The Docked state's `goalsExpanded` flag is a
+// transient in-memory override (not URL-backed) — it only matters while
+// the transcript is docked and there's no other reason to persist it
+// across sessions or deep links.
 
-const TRANSCRIPT_PARAM = "transcript";
-const FOCUS_PARAM = "focus";
+export enum LayoutShape {
+  Default = "default",                         // [ goals | notes ]
+  NotesMaximized = "notes-maximized",          // [ rail  | notes ]
+  TranscriptMaximized = "transcript-maximized", // [ rail  | transcript ]
+  Docked = "docked",                           // [ rail|goals | transcript | notes ]
+}
+
+export type LayoutState =
+  | { shape: LayoutShape.Default }
+  | {
+      shape: LayoutShape.NotesMaximized;
+      /** True when the user had the transcript open before maximizing Notes. Restoring returns to Docked. */
+      transcriptPending: boolean;
+    }
+  | { shape: LayoutShape.TranscriptMaximized }
+  | {
+      shape: LayoutShape.Docked;
+      /** User-controlled override — defaults to `false` (collapsed rail). */
+      goalsExpanded: boolean;
+    };
+
+// ── Pure transitions ──────────────────────────────────────────────────
+// Each transition is a pure function exported for unit testing. The
+// hook composes them with URL + in-memory I/O.
+
+export function afterOpenTranscript(state: LayoutState): LayoutState {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      return { shape: LayoutShape.Docked, goalsExpanded: false };
+    case LayoutShape.NotesMaximized:
+      return { shape: LayoutShape.Docked, goalsExpanded: false };
+    case LayoutShape.TranscriptMaximized:
+      return state; // already visible
+    case LayoutShape.Docked:
+      return state; // already visible
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+export function afterCloseTranscript(state: LayoutState): LayoutState {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      return state;
+    case LayoutShape.NotesMaximized:
+      // Clear the pending-transcript flag; staying maximized.
+      return { shape: LayoutShape.NotesMaximized, transcriptPending: false };
+    case LayoutShape.TranscriptMaximized:
+      return { shape: LayoutShape.Default };
+    case LayoutShape.Docked:
+      return { shape: LayoutShape.Default };
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+export function afterToggleNotesMaximized(state: LayoutState): LayoutState {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      return { shape: LayoutShape.NotesMaximized, transcriptPending: false };
+    case LayoutShape.NotesMaximized:
+      // Restoring: if the transcript was pending, go back to Docked.
+      return state.transcriptPending
+        ? { shape: LayoutShape.Docked, goalsExpanded: false }
+        : { shape: LayoutShape.Default };
+    case LayoutShape.TranscriptMaximized:
+      // Switch focus from transcript to notes; remember transcript was open.
+      return { shape: LayoutShape.NotesMaximized, transcriptPending: true };
+    case LayoutShape.Docked:
+      return { shape: LayoutShape.NotesMaximized, transcriptPending: true };
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+export function afterToggleTranscriptMaximized(state: LayoutState): LayoutState {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      return { shape: LayoutShape.TranscriptMaximized };
+    case LayoutShape.NotesMaximized:
+      return { shape: LayoutShape.TranscriptMaximized };
+    case LayoutShape.TranscriptMaximized:
+      // Restoring: keep transcript open (Docked), default-collapse goals.
+      return { shape: LayoutShape.Docked, goalsExpanded: false };
+    case LayoutShape.Docked:
+      return { shape: LayoutShape.TranscriptMaximized };
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+export function afterToggleGoalsCollapsed(state: LayoutState): LayoutState {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      // Collapsing from Default leaves only Notes visible → auto-maximize Notes.
+      return { shape: LayoutShape.NotesMaximized, transcriptPending: false };
+    case LayoutShape.NotesMaximized:
+      // Expanding from NotesMax exits focus, returning to two-col Default
+      // (preserving transcriptPending as whether to re-open transcript — but
+      // the symmetric choice is to drop pending too, since the user is
+      // actively re-engaging Goals; keep current behavior: drop it).
+      return { shape: LayoutShape.Default };
+    case LayoutShape.TranscriptMaximized:
+      // Expanding exits focus; transcript stays open (Docked).
+      return { shape: LayoutShape.Docked, goalsExpanded: true };
+    case LayoutShape.Docked:
+      // In 3-col docked, just flip the user's expanded override.
+      return { shape: LayoutShape.Docked, goalsExpanded: !state.goalsExpanded };
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+// ── Public hook return ────────────────────────────────────────────────
 
 export interface CoachingSessionLayout {
+  state: LayoutState;
+
+  // Derived surface kept for backwards-compatibility with existing consumers.
   focusedPanel: FocusedPanel;
   isTranscriptOpen: boolean;
-  /**
-   * Whether the Goals panel is currently collapsed to its thin rail.
-   * Auto-collapses when the transcript opens or a focus mode activates,
-   * and the user can override at any time via `toggleGoalsCollapsed`.
-   */
   isGoalsCollapsed: boolean;
-
-  // Derived
   isNotesMaximized: boolean;
   isTranscriptMaximized: boolean;
 
@@ -50,119 +163,110 @@ export interface CoachingSessionLayout {
   toggleGoalsCollapsed: () => void;
 }
 
+// ── Hook ──────────────────────────────────────────────────────────────
+
+const TRANSCRIPT_PARAM = "transcript";
+const FOCUS_PARAM = "focus";
+
 export function useCoachingSessionLayout(): CoachingSessionLayout {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { focusedPanel, isTranscriptOpen } = readLayoutFromParams(searchParams);
+  const slots = readSlotsFromParams(searchParams);
+  const [goalsExpandedOverride, setGoalsExpandedOverride] = useState<boolean>(false);
 
-  // Goals-collapsed is transient UI state — not URL-backed — so the user's
-  // manual expansion survives unrelated re-renders, but a fresh
-  // transcript-open action still defaults to collapsed.
-  const [isGoalsCollapsed, setGoalsCollapsed] = useState<boolean>(
-    defaultGoalsCollapsed(focusedPanel, isTranscriptOpen)
-  );
-
-  // Reset collapse state to match the derived default whenever the layout
-  // context changes. Opening the transcript auto-collapses Goals (matching
-  // the default), but once the user expands manually, subsequent re-renders
-  // don't override that until the context genuinely shifts again.
+  // Reset the override whenever the URL-derived shape changes. This makes
+  // deep links and transcript open/close return to the default collapse
+  // behavior, while preserving overrides through unrelated re-renders.
   useEffect(() => {
-    setGoalsCollapsed(defaultGoalsCollapsed(focusedPanel, isTranscriptOpen));
-  }, [focusedPanel, isTranscriptOpen]);
+    setGoalsExpandedOverride(false);
+  }, [slots.focusedPanel, slots.isTranscriptOpen]);
 
-  const writeLayout = useCallback(
-    (nextFocus: FocusedPanel, nextTranscriptOpen: boolean) => {
-      const url = buildLayoutUrl(pathname, searchParams, nextFocus, nextTranscriptOpen);
-      router.replace(url, { scroll: false });
+  const state = stateFromSlots(slots, goalsExpandedOverride);
+
+  const commit = useCallback(
+    (next: LayoutState) => {
+      const nextSlots = slotsFromState(next);
+      const currentSlots = readSlotsFromParams(searchParams);
+      // Only write the URL when the slot-backed state actually changed.
+      // Docked.goalsExpanded lives in memory, so toggling it alone is a
+      // no-op at the URL level.
+      if (
+        nextSlots.focusedPanel !== currentSlots.focusedPanel ||
+        nextSlots.isTranscriptOpen !== currentSlots.isTranscriptOpen
+      ) {
+        writeSlotsToUrl(router, pathname, searchParams, nextSlots);
+      }
+      if (next.shape === LayoutShape.Docked) {
+        setGoalsExpandedOverride(next.goalsExpanded);
+      } else {
+        setGoalsExpandedOverride(false);
+      }
     },
     [router, pathname, searchParams]
   );
 
-  const toggleGoalsCollapsed = useCallback(() => {
-    if (isGoalsCollapsed) {
-      // Expanding. If a focus mode is active, exit it — the other panel is
-      // no longer sharing the screen alone, so its "maximized" framing no
-      // longer fits. The previously-focused panel stays visible either way.
-      if (focusedPanel !== FocusedPanel.None) {
-        writeLayout(FocusedPanel.None, isTranscriptOpen);
-      }
-      setGoalsCollapsed(false);
-      return;
-    }
-    // Collapsing. If collapsing leaves only one other panel visible alongside
-    // the rail, auto-maximize that panel so the layout doesn't leak a small
-    // Notes area next to a big rail. The only case where more than one other
-    // panel is visible is the 3-col docked state (transcript open, no focus).
-    const inDockedThreeColumn =
-      focusedPanel === FocusedPanel.None && isTranscriptOpen;
-    const shouldAutoMaximize =
-      !inDockedThreeColumn && focusedPanel === FocusedPanel.None;
-    if (shouldAutoMaximize) {
-      // Currently in default (Goals + Notes) — Notes is the only other panel.
-      writeLayout(FocusedPanel.Notes, isTranscriptOpen);
-    }
-    setGoalsCollapsed(true);
-  }, [isGoalsCollapsed, focusedPanel, isTranscriptOpen, writeLayout]);
-
-  const openTranscript = useCallback(() => {
-    // Opening the transcript clears Notes-focused mode — otherwise the panel
-    // would open behind a maximized Notes and the click would appear to do
-    // nothing. Transcript-focused mode is preserved (that's the panel we're
-    // opening).
-    const nextFocus =
-      focusedPanel === FocusedPanel.Notes ? FocusedPanel.None : focusedPanel;
-    writeLayout(nextFocus, true);
-  }, [writeLayout, focusedPanel]);
-
-  const closeTranscript = useCallback(() => {
-    // Closing the panel also clears transcript-focused mode — you cannot
-    // be "maximizing" a panel that isn't shown.
-    const nextFocus =
-      focusedPanel === FocusedPanel.Transcript ? FocusedPanel.None : focusedPanel;
-    writeLayout(nextFocus, false);
-  }, [writeLayout, focusedPanel]);
-
+  const openTranscript = useCallback(
+    () => commit(afterOpenTranscript(state)),
+    [commit, state]
+  );
+  const closeTranscript = useCallback(
+    () => commit(afterCloseTranscript(state)),
+    [commit, state]
+  );
   const toggleTranscript = useCallback(() => {
-    if (isTranscriptOpen) closeTranscript();
+    if (slots.isTranscriptOpen) closeTranscript();
     else openTranscript();
-  }, [isTranscriptOpen, openTranscript, closeTranscript]);
+  }, [slots.isTranscriptOpen, openTranscript, closeTranscript]);
+  const toggleNotesMaximized = useCallback(
+    () => commit(afterToggleNotesMaximized(state)),
+    [commit, state]
+  );
+  const toggleTranscriptMaximized = useCallback(
+    () => commit(afterToggleTranscriptMaximized(state)),
+    [commit, state]
+  );
+  const toggleGoalsCollapsed = useCallback(
+    () => commit(afterToggleGoalsCollapsed(state)),
+    [commit, state]
+  );
 
-  const toggleNotesMaximized = useCallback(() => {
-    const isOn = focusedPanel === FocusedPanel.Notes;
-    // The transcript's open/closed intent is preserved through the toggle —
-    // the user's desire to see the transcript shouldn't be forgotten just
-    // because Notes is temporarily taking the floor. Restoring returns
-    // the 3-col layout with the transcript still open.
-    writeLayout(isOn ? FocusedPanel.None : FocusedPanel.Notes, isTranscriptOpen);
-  }, [writeLayout, focusedPanel, isTranscriptOpen]);
-
-  const toggleTranscriptMaximized = useCallback(() => {
-    const isOn = focusedPanel === FocusedPanel.Transcript;
-    // Maximizing the transcript requires the panel to be open; restoring
-    // leaves it open.
-    writeLayout(isOn ? FocusedPanel.None : FocusedPanel.Transcript, true);
-  }, [writeLayout, focusedPanel]);
-
-  return {
-    focusedPanel,
-    isTranscriptOpen,
-    isGoalsCollapsed,
-    isNotesMaximized: focusedPanel === FocusedPanel.Notes,
-    isTranscriptMaximized: focusedPanel === FocusedPanel.Transcript,
-    openTranscript,
-    closeTranscript,
-    toggleTranscript,
-    toggleNotesMaximized,
-    toggleTranscriptMaximized,
-    toggleGoalsCollapsed,
-  };
+  return useMemo<CoachingSessionLayout>(
+    () => ({
+      state,
+      focusedPanel: focusedPanelFor(state),
+      isTranscriptOpen: isTranscriptOpenFor(state),
+      isGoalsCollapsed: isGoalsCollapsedFor(state),
+      isNotesMaximized: state.shape === LayoutShape.NotesMaximized,
+      isTranscriptMaximized: state.shape === LayoutShape.TranscriptMaximized,
+      openTranscript,
+      closeTranscript,
+      toggleTranscript,
+      toggleNotesMaximized,
+      toggleTranscriptMaximized,
+      toggleGoalsCollapsed,
+    }),
+    [
+      state,
+      openTranscript,
+      closeTranscript,
+      toggleTranscript,
+      toggleNotesMaximized,
+      toggleTranscriptMaximized,
+      toggleGoalsCollapsed,
+    ]
+  );
 }
 
-function readLayoutFromParams(
-  searchParams: ReadonlyURLSearchParams
-): { focusedPanel: FocusedPanel; isTranscriptOpen: boolean } {
+// ── URL slot (de)serialization ────────────────────────────────────────
+
+interface LayoutSlots {
+  focusedPanel: FocusedPanel;
+  isTranscriptOpen: boolean;
+}
+
+function readSlotsFromParams(searchParams: ReadonlyURLSearchParams): LayoutSlots {
   const rawFocus = searchParams.get(FOCUS_PARAM);
   const focusedPanel =
     rawFocus && isFocusedPanel(rawFocus) ? rawFocus : FocusedPanel.None;
@@ -170,37 +274,107 @@ function readLayoutFromParams(
   return { focusedPanel, isTranscriptOpen };
 }
 
-function buildLayoutUrl(
+function writeSlotsToUrl(
+  router: ReturnType<typeof useRouter>,
   pathname: string,
   existing: ReadonlyURLSearchParams,
-  focusedPanel: FocusedPanel,
-  isTranscriptOpen: boolean
-): string {
+  slots: LayoutSlots
+): void {
   const next = new URLSearchParams(existing);
-  writeFocusParam(next, focusedPanel);
-  writeTranscriptParam(next, isTranscriptOpen);
+  if (slots.focusedPanel === FocusedPanel.None) next.delete(FOCUS_PARAM);
+  else next.set(FOCUS_PARAM, slots.focusedPanel);
+  if (slots.isTranscriptOpen) next.set(TRANSCRIPT_PARAM, "1");
+  else next.delete(TRANSCRIPT_PARAM);
   const qs = next.toString();
-  return qs ? `${pathname}?${qs}` : pathname;
+  router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
 }
 
-function writeFocusParam(params: URLSearchParams, focusedPanel: FocusedPanel): void {
-  if (focusedPanel === FocusedPanel.None) params.delete(FOCUS_PARAM);
-  else params.set(FOCUS_PARAM, focusedPanel);
-}
-
-function writeTranscriptParam(params: URLSearchParams, isOpen: boolean): void {
-  if (isOpen) params.set(TRANSCRIPT_PARAM, "1");
-  else params.delete(TRANSCRIPT_PARAM);
-}
+// ── State <-> slots conversions ──────────────────────────────────────
 
 /**
- * Default collapse decision when the layout context changes. Matches the
- * long-standing "rail when something else takes the floor" behavior — a
- * focus mode is active, or the transcript is sharing the workspace.
+ * Derives the LayoutState from URL-backed slots plus the in-memory
+ * goals-expanded override (only meaningful for the Docked shape).
+ *
+ * Illegal slot combinations are normalized (e.g. `focus=transcript`
+ * without `transcript=1` → TranscriptMaximized, transcript implied open).
  */
-function defaultGoalsCollapsed(
-  focusedPanel: FocusedPanel,
-  isTranscriptOpen: boolean
-): boolean {
-  return focusedPanel !== FocusedPanel.None || isTranscriptOpen;
+export function stateFromSlots(
+  slots: LayoutSlots,
+  goalsExpandedOverride: boolean
+): LayoutState {
+  if (slots.focusedPanel === FocusedPanel.Transcript) {
+    return { shape: LayoutShape.TranscriptMaximized };
+  }
+  if (slots.focusedPanel === FocusedPanel.Notes) {
+    return {
+      shape: LayoutShape.NotesMaximized,
+      transcriptPending: slots.isTranscriptOpen,
+    };
+  }
+  if (slots.isTranscriptOpen) {
+    return { shape: LayoutShape.Docked, goalsExpanded: goalsExpandedOverride };
+  }
+  return { shape: LayoutShape.Default };
+}
+
+function slotsFromState(state: LayoutState): LayoutSlots {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      return { focusedPanel: FocusedPanel.None, isTranscriptOpen: false };
+    case LayoutShape.NotesMaximized:
+      return {
+        focusedPanel: FocusedPanel.Notes,
+        isTranscriptOpen: state.transcriptPending,
+      };
+    case LayoutShape.TranscriptMaximized:
+      return { focusedPanel: FocusedPanel.Transcript, isTranscriptOpen: true };
+    case LayoutShape.Docked:
+      return { focusedPanel: FocusedPanel.None, isTranscriptOpen: true };
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+// ── Derivations for the public surface ────────────────────────────────
+
+function focusedPanelFor(state: LayoutState): FocusedPanel {
+  if (state.shape === LayoutShape.NotesMaximized) return FocusedPanel.Notes;
+  if (state.shape === LayoutShape.TranscriptMaximized) return FocusedPanel.Transcript;
+  return FocusedPanel.None;
+}
+
+function isTranscriptOpenFor(state: LayoutState): boolean {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      return false;
+    case LayoutShape.NotesMaximized:
+      return state.transcriptPending;
+    case LayoutShape.TranscriptMaximized:
+      return true;
+    case LayoutShape.Docked:
+      return true;
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+function isGoalsCollapsedFor(state: LayoutState): boolean {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      return false;
+    case LayoutShape.NotesMaximized:
+      return true;
+    case LayoutShape.TranscriptMaximized:
+      return true;
+    case LayoutShape.Docked:
+      return !state.goalsExpanded;
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
 }
