@@ -25,12 +25,7 @@ export function TranscriptPane({
     <Card className="flex flex-col h-full overflow-clip shadow-sm min-h-0">
       <CardHeader className="p-4 pb-3 shrink-0 border-b border-border/60">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-col items-start min-w-0 gap-0.5">
-            <h2 className="text-base font-semibold tracking-tight">Transcript</h2>
-            <p className="text-xs text-muted-foreground">
-              Transcript will appear here after the meeting ends.
-            </p>
-          </div>
+          <h2 className="text-base font-semibold tracking-tight">Transcript</h2>
           <TranscriptPaneActions
             isMaximized={isMaximized}
             onToggleMaximize={onToggleMaximize}
@@ -40,9 +35,14 @@ export function TranscriptPane({
       </CardHeader>
 
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 [scrollbar-width:thin]">
-        <p className="text-sm text-muted-foreground">
-          Recording controls and transcript segments will be added in the next phase.
-        </p>
+        <div className="space-y-1.5">
+          <p className="text-sm text-muted-foreground">
+            Transcript will appear here after the meeting ends.
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            Recording controls and transcript segments will be added in the next phase.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
