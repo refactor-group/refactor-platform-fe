@@ -4,7 +4,7 @@ import { Maximize2, Minimize2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Phase 0 placeholder. Renders the shell of the transcript panel so the
@@ -62,18 +62,20 @@ function TranscriptPanelActions({
 }: TranscriptPanelActionsProps) {
   const maximizeLabel = isMaximized ? "Restore panels" : "Maximize transcript";
   return (
-    <div className="flex items-center gap-1 shrink-0">
-      <IconButton
-        label={maximizeLabel}
-        onClick={onToggleMaximize}
-        icon={isMaximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-      />
-      <IconButton
-        label="Close transcript"
-        onClick={onClose}
-        icon={<X className="h-3.5 w-3.5" />}
-      />
-    </div>
+    <TooltipProvider>
+      <div className="flex items-center gap-1 shrink-0">
+        <IconButton
+          label={maximizeLabel}
+          onClick={onToggleMaximize}
+          icon={isMaximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+        />
+        <IconButton
+          label="Close transcript"
+          onClick={onClose}
+          icon={<X className="h-3.5 w-3.5" />}
+        />
+      </div>
+    </TooltipProvider>
   );
 }
 
