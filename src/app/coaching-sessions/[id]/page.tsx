@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
@@ -10,12 +10,15 @@ import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
+import { TranscriptPane } from "@/components/ui/coaching-sessions/transcript-pane";
+import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
+import { useCoachingSessionLayout } from "@/lib/hooks/use-coaching-session-layout";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import JoinMeetLink from "@/components/ui/coaching-sessions/join-meet-link";
 import { toast } from "sonner";
@@ -23,11 +26,17 @@ import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { isPastSession } from "@/types/coaching-session";
 import type { CoachingSession } from "@/types/coaching-session";
+import { FocusedPane } from "@/types/coaching-session-layout";
 
 import { DateTime } from "ts-luxon";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { SidebarState, StateChangeSource } from "@/types/sidebar";
+
+const COLLAPSED_GOALS_WIDTH = "40px";
+const EXPANDED_GOALS_WIDTH = "300px";
+const DOCKED_TRANSCRIPT_WIDTH = "minmax(0,440px)";
+const FLEX_COL = "minmax(0,1fr)";
 
 /**
  * Goals are read-only on past sessions for coachees, but coaches retain
@@ -56,6 +65,33 @@ function shouldSyncRelationship(
 ): boolean {
   if (!sessionRelationshipId) return false;
   return !currentRelationshipId || sessionRelationshipId !== currentRelationshipId;
+}
+
+/**
+ * Derives the CSS grid column template from layout state.
+ *
+ * Four distinct layouts, each expressed as a single grid-template-columns string:
+ *   - Notes maximized:      [rail][notes]
+ *   - Transcript maximized: [rail][transcript]    (notes hidden)
+ *   - Transcript docked:    [goals/rail][transcript][notes]
+ *   - Default:              [goals][notes]
+ *
+ * `minmax(0, 1fr)` (not bare `1fr`) is required on the flex column so the
+ * child's overflow-y-auto can actually trigger — otherwise the row stretches
+ * to fit content and internal scrolling breaks.
+ */
+function computeGridColumns(
+  focusedPane: FocusedPane,
+  isTranscriptOpen: boolean,
+  isGoalsCollapsed: boolean
+): string {
+  const goalsColumn = isGoalsCollapsed ? COLLAPSED_GOALS_WIDTH : EXPANDED_GOALS_WIDTH;
+  const isDockedThreeColumn =
+    focusedPane === FocusedPane.None && isTranscriptOpen;
+  if (isDockedThreeColumn) {
+    return `${goalsColumn} ${DOCKED_TRANSCRIPT_WIDTH} ${FLEX_COL}`;
+  }
+  return `${goalsColumn} ${FLEX_COL}`;
 }
 
 export default function CoachingSessionsPage() {
@@ -87,6 +123,9 @@ export default function CoachingSessionsPage() {
   // Coaches can still add/remove goals on past sessions; coachees cannot
   const { isCoachInCurrentRelationship } = useCurrentRelationshipRole();
 
+  // Three-pane layout state (focus mode + transcript visibility). URL-backed.
+  const layout = useCoachingSessionLayout();
+
   // Auto-collapse main sidebar on coaching session page to maximize workspace,
   // and restore the previous state when leaving.
   const { collapse, state: sidebarState, expand } = useSidebar();
@@ -106,9 +145,6 @@ export default function CoachingSessionsPage() {
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Panel layout state: goals panel collapsible, notes maximizable
-  const [notesMaximized, setNotesMaximized] = useState(false);
 
   // Auto-sync relationship ID when session data loads
   // This ensures the relationship selector always matches the current session
@@ -165,9 +201,21 @@ export default function CoachingSessionsPage() {
     router.replace(newUrl, { scroll: false });
   };
 
+  const gridColumns = computeGridColumns(
+    layout.focusedPane,
+    layout.isTranscriptOpen,
+    layout.isGoalsCollapsed
+  );
+
+  // When the transcript is maximized, Notes is hidden. When Notes is maximized,
+  // the hook's toggle closes the transcript, so we never need to render it.
+  const shouldRenderTranscript =
+    layout.isTranscriptOpen && !layout.isNotesMaximized;
+  const shouldRenderNotes = !layout.isTranscriptMaximized;
+
   return (
     // Never grow wider than the site-header
-    <div className="max-w-screen-2xl flex-1 flex flex-col md:overflow-hidden">
+    <div className="max-w-screen-2xl flex-1 flex flex-col min-h-0 md:overflow-hidden">
       <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
         <div className="flex-col pl-4 md:flex">
           <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
@@ -177,6 +225,10 @@ export default function CoachingSessionsPage() {
             />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
               <JoinMeetLink meetUrl={currentCoachingSession?.meeting_url} />
+              <TranscriptToggleButton
+                isOpen={layout.isTranscriptOpen}
+                onToggle={layout.toggleTranscript}
+              />
               <ShareSessionLink
                 sessionId={params.id as string}
                 onError={handleShareError}
@@ -190,16 +242,14 @@ export default function CoachingSessionsPage() {
         </div>
 
         <div
-          className={`grid grid-cols-1 grid-rows-[auto_1fr] py-3 px-4 flex-1 min-h-0 md:grid-cols-[var(--goals-width)_1fr] md:grid-rows-[1fr] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${notesMaximized ? "md:gap-0" : "gap-4"}`}
-          style={{
-            "--goals-width": notesMaximized ? "40px" : "300px",
-          } as React.CSSProperties}
+          className={`grid grid-cols-1 grid-rows-[auto_auto_minmax(0,1fr)] py-3 px-4 flex-1 min-h-0 md:grid-rows-[minmax(0,1fr)] md:transition-[grid-template-columns,gap] md:duration-300 md:ease-in-out ${layout.focusedPane === FocusedPane.None ? "gap-4" : "md:gap-0"}`}
+          style={{ gridTemplateColumns: gridColumns }}
         >
           {currentCoachingSessionId && currentCoachingRelationshipId && (
             <CoachingSessionPanel
               coachingSessionId={currentCoachingSessionId}
               coachingRelationshipId={currentCoachingRelationshipId}
-              collapsed={notesMaximized}
+              collapsed={layout.isGoalsCollapsed}
               readOnly={currentCoachingSession
                 ? isGoalPanelReadOnly(
                     currentCoachingSession,
@@ -212,11 +262,21 @@ export default function CoachingSessionsPage() {
             />
           )}
 
-          <CoachingTabsContainer
-            userId={userId}
-            notesMaximized={notesMaximized}
-            onNotesMaximizedChange={setNotesMaximized}
-          />
+          {shouldRenderTranscript && (
+            <TranscriptPane
+              isMaximized={layout.isTranscriptMaximized}
+              onToggleMaximize={layout.toggleTranscriptMaximized}
+              onClose={layout.closeTranscript}
+            />
+          )}
+
+          {shouldRenderNotes && (
+            <CoachingTabsContainer
+              userId={userId}
+              isMaximized={layout.isNotesMaximized}
+              onToggleMaximize={layout.toggleNotesMaximized}
+            />
+          )}
         </div>
       </EditorCacheProvider>
     </div>
