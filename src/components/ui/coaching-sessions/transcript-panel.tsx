@@ -4,6 +4,7 @@ import { Maximize2, Minimize2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * Phase 0 placeholder. Renders the shell of the transcript panel so the
@@ -59,30 +60,51 @@ function TranscriptPanelActions({
   onToggleMaximize,
   onClose,
 }: TranscriptPanelActionsProps) {
+  const maximizeLabel = isMaximized ? "Restore panels" : "Maximize transcript";
   return (
     <div className="flex items-center gap-1 shrink-0">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 rounded-full"
+      <IconButton
+        label={maximizeLabel}
         onClick={onToggleMaximize}
-        aria-label={isMaximized ? "Restore panels" : "Maximize transcript"}
-      >
-        {isMaximized ? (
-          <Minimize2 className="h-4 w-4" />
-        ) : (
-          <Maximize2 className="h-4 w-4" />
-        )}
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 rounded-full"
+        icon={isMaximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+      />
+      <IconButton
+        label="Close transcript"
         onClick={onClose}
-        aria-label="Close transcript"
-      >
-        <X className="h-4 w-4" />
-      </Button>
+        icon={<X className="h-3.5 w-3.5" />}
+      />
     </div>
+  );
+}
+
+interface IconButtonProps {
+  label: string;
+  onClick: () => void;
+  icon: React.ReactNode;
+}
+
+/**
+ * Header action button matching the visual weight of the Notes panel's
+ * maximize button: small, greyed by default, darker on hover, with a
+ * tooltip carrying the action label.
+ */
+function IconButton({ label, onClick, icon }: IconButtonProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
+          onClick={onClick}
+          aria-label={label}
+        >
+          {icon}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>{label}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
