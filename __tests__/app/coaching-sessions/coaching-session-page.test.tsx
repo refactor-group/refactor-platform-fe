@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useRouter, useParams, useSearchParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams, usePathname } from 'next/navigation'
 import CoachingSessionsPage from '@/app/coaching-sessions/[id]/page'
 import { TestProviders } from '@/test-utils/providers'
 import { useCurrentCoachingSession } from '@/lib/hooks/use-current-coaching-session'
@@ -15,6 +15,7 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
   useParams: vi.fn(),
   useSearchParams: vi.fn(),
+  usePathname: vi.fn(),
 }))
 
 // Mock the coaching session hooks
@@ -122,6 +123,7 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     ;(useRouter as any).mockReturnValue(mockRouter)
     ;(useParams as any).mockReturnValue(mockParams)
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
     mockRoleAsCoach()
   })
 
@@ -363,6 +365,7 @@ describe('CoachingSessionsPage - Join meet link visibility', () => {
     ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn() })
     ;(useParams as any).mockReturnValue({ id: 'session-123' })
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
     mockRoleAsCoach()
 
     vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
@@ -436,6 +439,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
     ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn() })
     ;(useParams as any).mockReturnValue({ id: 'session-123' })
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
 
     vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
       currentCoachingRelationshipId: 'rel-123',
