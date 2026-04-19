@@ -1,32 +1,43 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 
-import { FocusedPane, isFocusedPane } from "@/types/coaching-session-layout";
+import { FocusedPanel, isFocusedPanel } from "@/types/coaching-session-layout";
 
 /**
- * URL is the source of truth for all coaching session layout state.
- * The hook reads state from `useSearchParams` and writes it back via
- * `router.replace`, so links and refreshes both round-trip cleanly.
+ * URL is the source of truth for the coaching session's panel visibility
+ * and focus mode. The hook reads state from `useSearchParams` and writes
+ * it back via `router.replace`, so links and refreshes both round-trip
+ * cleanly.
  *
  * URL params owned here:
- *   `?focus=notes|transcript`  → which pane is maximized
- *   `?transcript=1`            → whether the transcript pane is open
+ *   `?focus=notes|transcript`  → which panel is maximized
+ *   `?transcript=1`            → whether the transcript panel is open
  *
- * The existing `?panel=` param is owned elsewhere and left untouched.
+ * The existing `?panel=` param (Goals/Agreements/Actions section) is
+ * owned elsewhere and left untouched.
+ *
+ * The Goals-collapsed state is transient (not URL-backed) — it starts
+ * from a derived default but the user can override it by clicking the
+ * rail. See `defaultGoalsCollapsed` below.
  */
 
 const TRANSCRIPT_PARAM = "transcript";
 const FOCUS_PARAM = "focus";
 
 export interface CoachingSessionLayout {
-  focusedPane: FocusedPane;
+  focusedPanel: FocusedPanel;
   isTranscriptOpen: boolean;
+  /**
+   * Whether the Goals panel is currently collapsed to its thin rail.
+   * Auto-collapses when the transcript opens or a focus mode activates,
+   * and the user can override at any time via `toggleGoalsCollapsed`.
+   */
+  isGoalsCollapsed: boolean;
 
   // Derived
-  isGoalsCollapsed: boolean;
   isNotesMaximized: boolean;
   isTranscriptMaximized: boolean;
 
@@ -36,6 +47,7 @@ export interface CoachingSessionLayout {
   toggleTranscript: () => void;
   toggleNotesMaximized: () => void;
   toggleTranscriptMaximized: () => void;
+  toggleGoalsCollapsed: () => void;
 }
 
 export function useCoachingSessionLayout(): CoachingSessionLayout {
@@ -43,10 +55,29 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { focusedPane, isTranscriptOpen } = readLayoutFromParams(searchParams);
+  const { focusedPanel, isTranscriptOpen } = readLayoutFromParams(searchParams);
+
+  // Goals-collapsed is transient UI state — not URL-backed — so the user's
+  // manual expansion survives unrelated re-renders, but a fresh
+  // transcript-open action still defaults to collapsed.
+  const [isGoalsCollapsed, setGoalsCollapsed] = useState<boolean>(
+    defaultGoalsCollapsed(focusedPanel, isTranscriptOpen)
+  );
+
+  // Reset collapse state to match the derived default whenever the layout
+  // context changes. Opening the transcript auto-collapses Goals (matching
+  // the default), but once the user expands manually, subsequent re-renders
+  // don't override that until the context genuinely shifts again.
+  useEffect(() => {
+    setGoalsCollapsed(defaultGoalsCollapsed(focusedPanel, isTranscriptOpen));
+  }, [focusedPanel, isTranscriptOpen]);
+
+  const toggleGoalsCollapsed = useCallback(() => {
+    setGoalsCollapsed((prev) => !prev);
+  }, []);
 
   const writeLayout = useCallback(
-    (nextFocus: FocusedPane, nextTranscriptOpen: boolean) => {
+    (nextFocus: FocusedPanel, nextTranscriptOpen: boolean) => {
       const url = buildLayoutUrl(pathname, searchParams, nextFocus, nextTranscriptOpen);
       router.replace(url, { scroll: false });
     },
@@ -54,21 +85,22 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
   );
 
   const openTranscript = useCallback(() => {
-    // Opening the transcript clears Notes-focused mode — otherwise the pane
+    // Opening the transcript clears Notes-focused mode — otherwise the panel
     // would open behind a maximized Notes and the click would appear to do
-    // nothing. Transcript-focused mode is preserved (that's the pane we're
+    // nothing. Transcript-focused mode is preserved (that's the panel we're
     // opening).
     const nextFocus =
-      focusedPane === FocusedPane.Notes ? FocusedPane.None : focusedPane;
+      focusedPanel === FocusedPanel.Notes ? FocusedPanel.None : focusedPanel;
     writeLayout(nextFocus, true);
-  }, [writeLayout, focusedPane]);
+  }, [writeLayout, focusedPanel]);
 
   const closeTranscript = useCallback(() => {
-    // Closing the pane also clears transcript-focused mode — you cannot be
-    // "maximizing" a pane that isn't shown.
-    const nextFocus = focusedPane === FocusedPane.Transcript ? FocusedPane.None : focusedPane;
+    // Closing the panel also clears transcript-focused mode — you cannot
+    // be "maximizing" a panel that isn't shown.
+    const nextFocus =
+      focusedPanel === FocusedPanel.Transcript ? FocusedPanel.None : focusedPanel;
     writeLayout(nextFocus, false);
-  }, [writeLayout, focusedPane]);
+  }, [writeLayout, focusedPanel]);
 
   const toggleTranscript = useCallback(() => {
     if (isTranscriptOpen) closeTranscript();
@@ -76,57 +108,62 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
   }, [isTranscriptOpen, openTranscript, closeTranscript]);
 
   const toggleNotesMaximized = useCallback(() => {
-    const isOn = focusedPane === FocusedPane.Notes;
-    // Maximizing Notes closes the transcript; restoring leaves transcript closed.
-    writeLayout(isOn ? FocusedPane.None : FocusedPane.Notes, false);
-  }, [writeLayout, focusedPane]);
+    const isOn = focusedPanel === FocusedPanel.Notes;
+    // The transcript's open/closed intent is preserved through the toggle —
+    // the user's desire to see the transcript shouldn't be forgotten just
+    // because Notes is temporarily taking the floor. Restoring returns
+    // the 3-col layout with the transcript still open.
+    writeLayout(isOn ? FocusedPanel.None : FocusedPanel.Notes, isTranscriptOpen);
+  }, [writeLayout, focusedPanel, isTranscriptOpen]);
 
   const toggleTranscriptMaximized = useCallback(() => {
-    const isOn = focusedPane === FocusedPane.Transcript;
-    // Maximizing the transcript requires the pane to be open; restoring leaves it open.
-    writeLayout(isOn ? FocusedPane.None : FocusedPane.Transcript, true);
-  }, [writeLayout, focusedPane]);
+    const isOn = focusedPanel === FocusedPanel.Transcript;
+    // Maximizing the transcript requires the panel to be open; restoring
+    // leaves it open.
+    writeLayout(isOn ? FocusedPanel.None : FocusedPanel.Transcript, true);
+  }, [writeLayout, focusedPanel]);
 
   return {
-    focusedPane,
+    focusedPanel,
     isTranscriptOpen,
-    isGoalsCollapsed: deriveGoalsCollapsed(focusedPane, isTranscriptOpen),
-    isNotesMaximized: focusedPane === FocusedPane.Notes,
-    isTranscriptMaximized: focusedPane === FocusedPane.Transcript,
+    isGoalsCollapsed,
+    isNotesMaximized: focusedPanel === FocusedPanel.Notes,
+    isTranscriptMaximized: focusedPanel === FocusedPanel.Transcript,
     openTranscript,
     closeTranscript,
     toggleTranscript,
     toggleNotesMaximized,
     toggleTranscriptMaximized,
+    toggleGoalsCollapsed,
   };
 }
 
 function readLayoutFromParams(
   searchParams: ReadonlyURLSearchParams
-): { focusedPane: FocusedPane; isTranscriptOpen: boolean } {
+): { focusedPanel: FocusedPanel; isTranscriptOpen: boolean } {
   const rawFocus = searchParams.get(FOCUS_PARAM);
-  const focusedPane =
-    rawFocus && isFocusedPane(rawFocus) ? rawFocus : FocusedPane.None;
+  const focusedPanel =
+    rawFocus && isFocusedPanel(rawFocus) ? rawFocus : FocusedPanel.None;
   const isTranscriptOpen = searchParams.get(TRANSCRIPT_PARAM) === "1";
-  return { focusedPane, isTranscriptOpen };
+  return { focusedPanel, isTranscriptOpen };
 }
 
 function buildLayoutUrl(
   pathname: string,
   existing: ReadonlyURLSearchParams,
-  focusedPane: FocusedPane,
+  focusedPanel: FocusedPanel,
   isTranscriptOpen: boolean
 ): string {
   const next = new URLSearchParams(existing);
-  writeFocusParam(next, focusedPane);
+  writeFocusParam(next, focusedPanel);
   writeTranscriptParam(next, isTranscriptOpen);
   const qs = next.toString();
   return qs ? `${pathname}?${qs}` : pathname;
 }
 
-function writeFocusParam(params: URLSearchParams, focusedPane: FocusedPane): void {
-  if (focusedPane === FocusedPane.None) params.delete(FOCUS_PARAM);
-  else params.set(FOCUS_PARAM, focusedPane);
+function writeFocusParam(params: URLSearchParams, focusedPanel: FocusedPanel): void {
+  if (focusedPanel === FocusedPanel.None) params.delete(FOCUS_PARAM);
+  else params.set(FOCUS_PARAM, focusedPanel);
 }
 
 function writeTranscriptParam(params: URLSearchParams, isOpen: boolean): void {
@@ -134,11 +171,14 @@ function writeTranscriptParam(params: URLSearchParams, isOpen: boolean): void {
   else params.delete(TRANSCRIPT_PARAM);
 }
 
-function deriveGoalsCollapsed(
-  focusedPane: FocusedPane,
+/**
+ * Default collapse decision when the layout context changes. Matches the
+ * long-standing "rail when something else takes the floor" behavior — a
+ * focus mode is active, or the transcript is sharing the workspace.
+ */
+function defaultGoalsCollapsed(
+  focusedPanel: FocusedPanel,
   isTranscriptOpen: boolean
 ): boolean {
-  // Goals collapses to its rail whenever any other pane is taking the floor:
-  // either a focus mode is active, or the transcript is sharing space.
-  return focusedPane !== FocusedPane.None || isTranscriptOpen;
+  return focusedPanel !== FocusedPanel.None || isTranscriptOpen;
 }

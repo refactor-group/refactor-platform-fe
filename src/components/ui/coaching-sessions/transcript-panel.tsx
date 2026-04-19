@@ -6,27 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 /**
- * Phase 0 placeholder. Renders the shell of the transcript pane so the
- * three-column layout can be validated visually. Phase 1 replaces the body
- * with real segments, search, speaker filter, and iMessage bubbles.
+ * Phase 0 placeholder. Renders the shell of the transcript panel so the
+ * three-column layout can be validated visually. Phase 1 replaces the
+ * body with real segments, search, speaker filter, and iMessage bubbles.
  */
-interface TranscriptPaneProps {
+interface TranscriptPanelProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
 }
 
-export function TranscriptPane({
+export function TranscriptPanel({
   isMaximized,
   onToggleMaximize,
   onClose,
-}: TranscriptPaneProps) {
+}: TranscriptPanelProps) {
   return (
     <Card className="flex flex-col h-full overflow-clip shadow-sm min-h-0">
       <CardHeader className="p-4 pb-3 shrink-0 border-b border-border/60">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold tracking-tight">Transcript</h2>
-          <TranscriptPaneActions
+          <TranscriptPanelActions
             isMaximized={isMaximized}
             onToggleMaximize={onToggleMaximize}
             onClose={onClose}
@@ -48,17 +48,17 @@ export function TranscriptPane({
   );
 }
 
-interface TranscriptPaneActionsProps {
+interface TranscriptPanelActionsProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
 }
 
-function TranscriptPaneActions({
+function TranscriptPanelActions({
   isMaximized,
   onToggleMaximize,
   onClose,
-}: TranscriptPaneActionsProps) {
+}: TranscriptPanelActionsProps) {
   return (
     <div className="flex items-center gap-1 shrink-0">
       <Button
