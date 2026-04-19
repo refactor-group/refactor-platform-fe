@@ -42,9 +42,9 @@ describe("TranscriptSearch — input", () => {
 });
 
 describe("TranscriptSearch — counter", () => {
-  it('shows "0" when there are no matches', () => {
+  it('shows "No results" when there are no matches', () => {
     renderSearch({ query: "nada", totalMatches: 0, activeIndex: 0 });
-    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("No results")).toBeInTheDocument();
   });
 
   it("formats the counter as n/total (1-based)", () => {

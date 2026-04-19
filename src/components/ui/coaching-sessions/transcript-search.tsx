@@ -150,6 +150,6 @@ function formatCounter(
   activeIndex: number,
   totalMatches: number
 ): string {
-  if (!hasMatches) return "0";
+  if (!hasMatches) return "No results";
   return `${activeIndex + 1}/${totalMatches}`;
 }
