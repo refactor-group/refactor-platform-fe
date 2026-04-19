@@ -11,6 +11,7 @@ import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-panel";
+import { MOCK_TRANSCRIPT_SEGMENTS } from "@/lib/transcript/mock-transcript";
 import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
@@ -265,6 +266,7 @@ export default function CoachingSessionsPage() {
 
           {shouldRenderTranscript && (
             <TranscriptPanel
+              segments={MOCK_TRANSCRIPT_SEGMENTS}
               isMaximized={layout.isTranscriptMaximized}
               onToggleMaximize={layout.toggleTranscriptMaximized}
               onClose={layout.closeTranscript}
