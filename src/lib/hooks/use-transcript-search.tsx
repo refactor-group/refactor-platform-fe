@@ -60,15 +60,22 @@ export function useTranscriptSearch(
   const totalMatches = matches.length;
 
   // Reset the active match pointer whenever the result set changes.
+  // Note: don't clear matchRefs here — by the time this effect runs, React
+  // has already re-registered refs for the new query's <mark> elements via
+  // inline ref callbacks. Clearing would wipe those fresh entries and the
+  // scroll-to-active effect below wouldn't find anything to scroll to.
   useEffect(() => {
     setActiveIndex(0);
-    matchRefs.current.clear();
   }, [query, segments]);
 
   // Scroll the active match into the middle of the scrolling container,
-  // without affecting the outer page.
+  // without affecting the outer page. `matches` (a memoized array) is in
+  // the dep list so this re-fires whenever the result set changes — not
+  // only when the active index moves. Otherwise a new query that happens
+  // to produce the same totalMatches and same activeIndex (often 0→0)
+  // wouldn't trigger a scroll to the new first match.
   useEffect(() => {
-    if (totalMatches === 0) return;
+    if (matches.length === 0) return;
     const el = matchRefs.current.get(activeIndex);
     const container = scrollContainerRef.current;
     if (!el || !container) return;
@@ -78,7 +85,7 @@ export function useTranscriptSearch(
     const offset =
       elRect.top - containerRect.top - container.clientHeight / 2 + el.offsetHeight / 2;
     container.scrollBy({ top: offset, behavior: "smooth" });
-  }, [activeIndex, totalMatches, scrollContainerRef]);
+  }, [activeIndex, matches, scrollContainerRef]);
 
   const goNext = useCallback(() => {
     if (totalMatches === 0) return;
