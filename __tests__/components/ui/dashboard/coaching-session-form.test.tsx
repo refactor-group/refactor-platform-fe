@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
@@ -8,7 +8,8 @@ import { TestProviders } from "@/test-utils/providers";
 import { EntityApiError } from "@/types/general";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { createMockSession } from "../../../test-utils";
+import { createMockRelationship, createMockSession } from "../../../test-utils";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -103,6 +104,57 @@ beforeEach(() => {
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
+
+describe("CoachingSessionForm – coachee dropdown ordering", () => {
+  function renderCreateForm() {
+    render(
+      <Wrapper>
+        <CoachingSessionForm mode="create" onOpenChange={vi.fn()} />
+      </Wrapper>
+    );
+  }
+
+  it("lists coachees alphabetically by full name when the user is the coach", () => {
+    vi.mocked(useCoachingRelationshipList).mockReturnValue({
+      relationships: [
+        createMockRelationship({
+          id: "r-zoe",
+          coach_id: "user-1",
+          coachee_first_name: "Zoe",
+          coachee_last_name: "Zimmerman",
+        }),
+        createMockRelationship({
+          id: "r-alice",
+          coach_id: "user-1",
+          coachee_first_name: "Alice",
+          coachee_last_name: "Anderson",
+        }),
+        createMockRelationship({
+          id: "r-mike",
+          coach_id: "user-1",
+          coachee_first_name: "Mike",
+          coachee_last_name: "Miller",
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+      refresh: vi.fn(),
+    });
+
+    renderCreateForm();
+
+    fireEvent.click(screen.getByRole("combobox"));
+
+    const optionNames = screen
+      .getAllByRole("option")
+      .map((o) => o.textContent?.trim());
+    expect(optionNames).toEqual([
+      "Alice Anderson",
+      "Mike Miller",
+      "Zoe Zimmerman",
+    ]);
+  });
+});
 
 describe("CoachingSessionForm – handleSubmit error handling", () => {
   /**
