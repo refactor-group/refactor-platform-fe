@@ -40,12 +40,11 @@ on:
         required: true
         type: choice
         options:
-          - '764c7cd - Merge pull request #375 from refactor-group/fix/e2e-actions-exit-animation-combobox'
-          - f412d0c - Merge branch 'main' into fix/e2e-actions-exit-animation-combobox
-          - 'b0f86b6 - chore: refresh preview commit choices [skip ci]'
-          - ceb6791 - PR#374 (fix/coachee-dropdown-alphabeti)
-          - adfa58a - PR#373 (feature/transcript-pane)
-          - 052ee20 - PR#367 (raymond/implements-magic-login)
+          - '97fe8d8 - Merge pull request #374 from refactor-group/fix/coachee-dropdown-alphabetical-sort'
+          - 778cbe1 - Merge branch 'main' into fix/coachee-dropdown-alphabetical-sort
+          - '942d0b2 - chore: refresh preview commit choices [skip ci]'
+          - e2d5011 - PR#373 (feature/transcript-pane)
+          - 3d0859b - PR#367 (raymond/implements-magic-login)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
