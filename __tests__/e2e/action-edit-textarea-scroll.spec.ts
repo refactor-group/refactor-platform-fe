@@ -45,6 +45,12 @@ const LONG_ACTION_BODY = [
   'Line 10: Plan the next iteration of the feature roadmap.',
 ].join('\n')
 
+// Keep `due_by` near "today" so the kanban page's default Last-30-days time
+// filter always includes these mock actions. Hardcoded dates cause the test to
+// silently start failing once the test run date drifts past 30 days from the
+// chosen value.
+const DUE_BY_ISO = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
 function mockAction(id: string, sessionId: string, body: string) {
   return {
     id,
@@ -53,7 +59,7 @@ function mockAction(id: string, sessionId: string, body: string) {
     user_id: MOCK_USER_ID,
     status: 'NotStarted',
     status_changed_at: '2026-03-25T10:00:00Z',
-    due_by: '2026-04-01T00:00:00Z',
+    due_by: DUE_BY_ISO,
     created_at: '2026-03-25T10:00:00Z',
     updated_at: '2026-03-25T10:00:00Z',
     assignee_ids: [COACH_ID],
