@@ -53,6 +53,12 @@ const ENRICHED_SESSION = {
   }],
 }
 
+// Keep `due_by` near "today" so the kanban page's default Last-30-days time
+// filter always includes these mock actions. Hardcoded dates cause the test to
+// silently start failing once the test run date drifts past 30 days from the
+// chosen value.
+const DUE_BY_ISO = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
 function mockAction(
   id: string,
   status: string,
@@ -65,7 +71,7 @@ function mockAction(
     user_id: MOCK_USER_ID,
     status,
     status_changed_at: '2026-02-15T00:00:00Z',
-    due_by: '2026-03-15T00:00:00Z',
+    due_by: DUE_BY_ISO,
     created_at: '2026-02-01T00:00:00Z',
     updated_at: '2026-02-01T00:00:00Z',
     assignee_ids: [MOCK_USER_ID],

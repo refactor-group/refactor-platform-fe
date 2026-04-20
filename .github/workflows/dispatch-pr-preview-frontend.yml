@@ -40,11 +40,12 @@ on:
         required: true
         type: choice
         options:
-          - '3b05a2e - chore: refresh preview commit choices [skip ci]'
-          - '668bdb2 - Merge pull request #370 from refactor-group/fix/coachee-actions-assignee-filter'
-          - 'a10732d - fix: update e2e test mocks to use batch relationship-actions endpoint'
-          - f0a5ece - PR#373 (feature/transcript-pane)
-          - e0ef270 - PR#367 (raymond/implements-magic-login)
+          - '764c7cd - Merge pull request #375 from refactor-group/fix/e2e-actions-exit-animation-combobox'
+          - f412d0c - Merge branch 'main' into fix/e2e-actions-exit-animation-combobox
+          - 'b0f86b6 - chore: refresh preview commit choices [skip ci]'
+          - ceb6791 - PR#374 (fix/coachee-dropdown-alphabeti)
+          - adfa58a - PR#373 (feature/transcript-pane)
+          - 052ee20 - PR#367 (raymond/implements-magic-login)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
           - 479f4db - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
