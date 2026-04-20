@@ -1,5 +1,8 @@
 import { CoachingSession } from "@/types/coaching-session";
-import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
+import {
+  getRelationshipsAsCoach,
+  sortRelationshipsByParticipantName,
+} from "@/types/coaching-relationship";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -63,10 +66,11 @@ export default function CoachingSessionForm({
     useCoachingRelationshipList(currentOrganizationId ?? "");
   const { connections } = useOAuthConnections();
 
-  // Filter to relationships where current user is the coach
+  // Filter to relationships where current user is the coach, sorted alphabetically by coachee name
   const coacheeRelationships = useMemo(() => {
     if (!userSession?.id || !relationships) return [];
-    return getRelationshipsAsCoach(userSession.id, relationships);
+    const asCoach = getRelationshipsAsCoach(userSession.id, relationships);
+    return sortRelationshipsByParticipantName(asCoach, userSession.id);
   }, [relationships, userSession?.id]);
 
   // State for selected coachee in create mode
