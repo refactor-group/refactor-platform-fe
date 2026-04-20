@@ -40,10 +40,9 @@ on:
         required: true
         type: choice
         options:
-          - 'b2f8eb6 - chore: refresh preview commit choices [skip ci]'
-          - '5a38eeb - chore: refresh preview commit choices [skip ci]'
-          - '3b05a2e - chore: refresh preview commit choices [skip ci]'
-          - 3a1bc3d - PR#375 (fix/e2e-actions-exit-animation)
+          - '764c7cd - Merge pull request #375 from refactor-group/fix/e2e-actions-exit-animation-combobox'
+          - f412d0c - Merge branch 'main' into fix/e2e-actions-exit-animation-combobox
+          - 'b0f86b6 - chore: refresh preview commit choices [skip ci]'
           - ceb6791 - PR#374 (fix/coachee-dropdown-alphabeti)
           - adfa58a - PR#373 (feature/transcript-pane)
           - 052ee20 - PR#367 (raymond/implements-magic-login)
