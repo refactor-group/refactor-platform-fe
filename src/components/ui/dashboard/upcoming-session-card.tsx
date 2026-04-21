@@ -70,25 +70,25 @@ export function UpcomingSessionCard({
   if (!userSession) return null;
 
   if (isLoading) {
-    return <UpcomingSessionCardShell><StateLoading /></UpcomingSessionCardShell>;
+    return <CardContainer><StateLoading /></CardContainer>;
   }
 
   if (error) {
-    return <UpcomingSessionCardShell><StateError /></UpcomingSessionCardShell>;
+    return <CardContainer><StateError /></CardContainer>;
   }
 
   const nextSession = selectNextUpcomingSession(sessions);
 
   if (!nextSession) {
     return (
-      <UpcomingSessionCardShell>
+      <CardContainer>
         <UpcomingSessionCardEmpty onCreateSession={onCreateSession ?? noop} />
-      </UpcomingSessionCardShell>
+      </CardContainer>
     );
   }
 
   return (
-    <UpcomingSessionCardShell>
+    <CardContainer>
       <PopulatedBody
         session={nextSession}
         userId={userSession.id}
@@ -96,13 +96,13 @@ export function UpcomingSessionCard({
         assignedActions={flatActions}
         onReschedule={onReschedule}
       />
-    </UpcomingSessionCardShell>
+    </CardContainer>
   );
 }
 
-// ── Card shell ──────────────────────────────────────────────────────────
+// ── Card container ──────────────────────────────────────────────────────
 
-function UpcomingSessionCardShell({ children }: { children: React.ReactNode }) {
+function CardContainer({ children }: { children: React.ReactNode }) {
   return (
     <Card className="border shadow-none h-full flex flex-col">
       <CardContent className="p-4 sm:p-6 flex flex-col flex-1 gap-4">
