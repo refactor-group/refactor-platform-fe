@@ -2,7 +2,7 @@ import { DateTime } from "ts-luxon";
 import { CoachingSession, DEFAULT_SESSION_DURATION_MINUTES, EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
-import { Id } from "@/types/general";
+import { Id, ItemStatus } from "@/types/general";
 import {
   SessionUrgency,
   EnrichedSessionDisplay,
@@ -412,8 +412,14 @@ export function selectNextUpcomingSession(
 }
 
 /**
- * Count actions in the assignee's list that are due on or before a given
- * session's start time, scoped to that session's coaching relationship.
+ * Count **incomplete** actions in the assignee's list that are due on or
+ * before a given session's start time, scoped to that session's coaching
+ * relationship.
+ *
+ * Excludes Completed actions so the "N actions due" count reflects work
+ * still outstanding, not work ever assigned. Matches the incomplete filter
+ * convention used elsewhere (`filterActionsByStatus` in
+ * `lib/utils/assigned-actions.ts`), which treats only `Completed` as closed.
  *
  * Used by UpcomingSessionCard to surface "N actions due" next to a session,
  * and by action-test-utils to preserve equivalent counting semantics in tests.
@@ -425,6 +431,7 @@ export function countActionsDueBySession(
 ): number {
   return assignedActions.filter((a) => {
     if (a.relationship.id !== sessionRelationshipId) return false;
+    if (a.action.status === ItemStatus.Completed) return false;
     return a.action.due_by <= sessionDate;
   }).length;
 }

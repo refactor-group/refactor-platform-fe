@@ -310,6 +310,25 @@ describe("countActionsDueBySession", () => {
   it("returns 0 for an empty list", () => {
     expect(countActionsDueBySession([], "rel-1", sessionDate)).toBe(0);
   });
+
+  it("excludes completed actions", () => {
+    const completed = makeAction("rel-1", sessionDate.minus({ hours: 1 }));
+    completed.action.status = ItemStatus.Completed;
+    const actions = [
+      makeAction("rel-1", sessionDate.minus({ hours: 1 })),
+      completed,
+      makeAction("rel-1", sessionDate.minus({ days: 2 })),
+    ];
+    expect(countActionsDueBySession(actions, "rel-1", sessionDate)).toBe(2);
+  });
+
+  it("counts OnHold and WontDo as still due (matches the incomplete convention)", () => {
+    const onHold = makeAction("rel-1", sessionDate.minus({ hours: 1 }));
+    onHold.action.status = ItemStatus.OnHold;
+    const wontDo = makeAction("rel-1", sessionDate.minus({ hours: 1 }));
+    wontDo.action.status = ItemStatus.WontDo;
+    expect(countActionsDueBySession([onHold, wontDo], "rel-1", sessionDate)).toBe(2);
+  });
 });
 
 describe("selectNextUpcomingSession", () => {
