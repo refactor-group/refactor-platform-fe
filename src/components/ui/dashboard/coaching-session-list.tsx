@@ -7,6 +7,7 @@ import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { CoachingSession as CoachingSessionComponent } from "@/components/ui/coaching-session";
+import { useBatchSessionGoals } from "@/lib/api/goals";
 import { DateTime } from "ts-luxon";
 import { useMemo } from "react";
 import {
@@ -45,6 +46,7 @@ export default function CoachingSessionList({
     refresh: refreshCoachingSessions,
   } = useCoachingSessionList(currentCoachingRelationshipId, fromDate, toDate);
 
+  const { sessionGoals } = useBatchSessionGoals(currentCoachingRelationshipId);
   const { delete: deleteCoachingSession } = useCoachingSessionMutation();
 
   const handleDeleteCoachingSession = async (id: Id) => {
@@ -132,6 +134,7 @@ export default function CoachingSessionList({
                   <CoachingSessionComponent
                     key={coachingSession.id}
                     coachingSession={coachingSession}
+                    sessionGoals={sessionGoals[coachingSession.id]}
                     onUpdate={() => onUpdateSession(coachingSession)}
                     onDelete={() =>
                       handleDeleteCoachingSession(coachingSession.id)
@@ -154,6 +157,7 @@ export default function CoachingSessionList({
                   <CoachingSessionComponent
                     key={coachingSession.id}
                     coachingSession={coachingSession}
+                    sessionGoals={sessionGoals[coachingSession.id]}
                     onUpdate={() => onUpdateSession(coachingSession)}
                     onDelete={() =>
                       handleDeleteCoachingSession(coachingSession.id)

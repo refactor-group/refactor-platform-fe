@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import { toast } from "sonner";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { siteConfig } from "@/site.config";
 import { EntityApiError } from "@/lib/api/entity-api";
@@ -110,6 +111,11 @@ vi.mock("@/lib/api/entity-api", () => ({
   },
 }));
 
+vi.mock("@/lib/api/goals", () => ({
+  useGoal: () => ({ goal: { id: "" }, isLoading: false, isError: undefined, refresh: vi.fn() }),
+  useGoalsBySession: () => ({ goals: [], isLoading: false, isError: undefined, refresh: vi.fn() }),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -130,6 +136,7 @@ function makeCtx(
     action: {
       id,
       coaching_session_id: "session-1",
+      goal_id: None,
       body: `Action ${id}`,
       user_id: "user-1",
       status,
@@ -419,7 +426,9 @@ describe("ActionsPageContainer", () => {
     );
 
     await openFilterPopover(user);
-    await user.click(screen.getByText("Unassigned"));
+    // Use getByRole to target the toggle button specifically, not card text
+    const unassignedToggle = screen.getByRole("radio", { name: /unassigned/i });
+    await user.click(unassignedToggle);
 
     const mockRouter = vi.mocked(useRouter).mock.results[0].value;
     await waitFor(() => {
@@ -495,17 +504,16 @@ describe("ActionsPageContainer", () => {
   // -------------------------------------------------------------------------
 
   describe("mutation error handling", () => {
-    // Helper: trigger delete by clicking trash icon, then confirming in dialog
+    // Helper: trigger delete by flipping the compact card, clicking Edit, then Delete
     async function triggerDelete(
       container: HTMLElement,
       user: ReturnType<typeof userEvent.setup>
     ) {
-      const trashSvg = container.querySelector(".lucide-trash2");
-      expect(trashSvg).toBeTruthy();
-      const trashButton = trashSvg!.closest("button");
-      await user.click(trashButton!);
-      // Confirm in the alert dialog
-      await user.click(await screen.findByRole("button", { name: "Delete" }));
+      // Flip the compact card via the info icon
+      const flipButton = screen.getByRole("button", { name: /action options/i });
+      await user.click(flipButton);
+      // Click Delete on the back face view
+      await user.click(await screen.findByText("Delete"));
     }
 
     it("shows network error toast when delete fails with network error", async () => {

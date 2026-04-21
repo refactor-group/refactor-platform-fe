@@ -50,3 +50,6 @@ playwright-report/
 
 # serena
 .serena/
+
+# prototype
+prototype/

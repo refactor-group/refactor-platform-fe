@@ -18,20 +18,25 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
 }));
 
-// Mock auth store
+// Mock auth store — selector-compatible: each useAuthStore(selector) call
+// applies the selector to the mock state, supporting both whole-state and
+// individual-property selectors.
+const mockAuthState = {
+  userId: 'user-123',
+  userSession: {
+    id: 'user-123',
+    email: 'test@example.com',
+    first_name: 'Test',
+    last_name: 'User',
+    roles: [],
+  },
+  isLoggedIn: true,
+  setIsACoach: vi.fn(),
+};
 vi.mock('@/lib/providers/auth-store-provider', () => ({
-  useAuthStore: vi.fn(() => ({
-    userId: 'user-123',
-    userSession: {
-      id: 'user-123',
-      email: 'test@example.com',
-      first_name: 'Test',
-      last_name: 'User',
-      roles: [],
-    },
-    isLoggedIn: true,
-    setIsACoach: vi.fn(),
-  })),
+  useAuthStore: vi.fn((selector?: (state: typeof mockAuthState) => unknown) =>
+    selector ? selector(mockAuthState) : mockAuthState
+  ),
   AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 

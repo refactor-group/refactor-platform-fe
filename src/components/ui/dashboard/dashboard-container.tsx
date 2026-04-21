@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
-import { TodaysSessions } from "@/components/ui/dashboard/todays-sessions";
+import { UpcomingSessionCard } from "@/components/ui/dashboard/upcoming-session-card";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
@@ -17,7 +17,7 @@ export function DashboardContainer() {
   const [sessionToEdit, setSessionToEdit] = useState<
     CoachingSession | undefined
   >();
-  const [refreshTodaysSessions, setRefreshTodaysSessions] = useState<(() => void) | null>(() => null);
+  const [refreshUpcomingSession, setRefreshUpcomingSession] = useState<(() => void) | null>(() => null);
 
   const { userId } = useAuthStore((state) => ({ userId: state.userId }));
   const { currentOrganizationId } = useCurrentOrganization();
@@ -32,36 +32,46 @@ export function DashboardContainer() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSessionToEdit(undefined);
-    // Refresh today's sessions after dialog closes (covers both create and edit)
-    refreshTodaysSessions?.();
+    // Force-refresh the upcoming session card after create/edit.
+    refreshUpcomingSession?.();
   };
+
+  // Stable reference so the card's onRefreshNeeded useEffect doesn't refire
+  // on every parent render.
+  const handleRefreshNeeded = useCallback(
+    (refreshFn: () => void) => setRefreshUpcomingSession(() => refreshFn),
+    [],
+  );
+
+  const canShowGoalsOverview =
+    currentOrganizationId && currentCoachingRelationshipId && currentCoachingRelationship;
 
   return (
     <>
       <DashboardHeader onCreateSession={() => handleOpenDialog()} />
 
-      {/* Today's Sessions — constrained width on wide screens, full width on narrow */}
-      <div className="mb-8 mt-8 w-full max-w-5xl min-w-[320px]">
-        <TodaysSessions
-          onRescheduleSession={handleOpenDialog}
-          onRefreshNeeded={(refreshFn) => setRefreshTodaysSessions(() => refreshFn)}
+      {/* Upcoming Session + Goals Overview (2-col grid on md+).
+          Width follows the page's max-w-screen-2xl via PageContainer. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 mb-8 w-full">
+        <UpcomingSessionCard
+          onReschedule={handleOpenDialog}
+          onCreateSession={() => handleOpenDialog()}
+          onRefreshNeeded={handleRefreshNeeded}
         />
-      </div>
-
-      {/* Goals Overview — only renders when relationship data is available */}
-      {currentOrganizationId && currentCoachingRelationshipId && currentCoachingRelationship && (
-        <div className="mb-8 w-full max-w-5xl min-w-[320px]">
+        {canShowGoalsOverview ? (
           <GoalsOverviewCard
             organizationId={currentOrganizationId}
             relationshipId={currentCoachingRelationshipId}
             coacheeName={getOtherPersonName(currentCoachingRelationship, userId)}
           />
-        </div>
-      )}
+        ) : (
+          <div aria-hidden="true" />
+        )}
+      </div>
 
-      <div className="w-full max-w-5xl min-w-[320px]">
+      <div className="w-full">
         <h2 className="text-lg font-semibold pb-6">Coaching Sessions</h2>
-        <CoachingSessionList onUpdateSession={handleOpenDialog} onSessionDeleted={() => refreshTodaysSessions?.()} />
+        <CoachingSessionList onUpdateSession={handleOpenDialog} onSessionDeleted={() => refreshUpcomingSession?.()} />
       </div>
       <CoachingSessionDialog
         open={dialogOpen}

@@ -1,0 +1,135 @@
+# =============================================================================
+# Refresh PR Preview Commit Choices (Frontend)
+# =============================================================================
+# Purpose: Keep the dispatch-pr-preview-frontend workflow's dropdown commit
+#          choices up-to-date with the latest main commits + HEAD of every open
+#          PR from both repos.
+# Triggers: On merge to main, PR activity, or manually via workflow_dispatch.
+# Updates: This repo's dispatch-pr-preview-frontend.yml only.
+# Requires: GHCR_PAT with 'workflow' scope to push changes to .github/workflows/
+# =============================================================================
+
+name: Refresh Preview Commits
+
+on:
+    push:
+        branches: [main]
+        paths-ignore:
+            - ".github/workflows/dispatch-pr-preview-frontend.yml"
+    pull_request:
+        types: [opened, reopened, closed]
+    workflow_dispatch:
+        inputs:
+            backend_branch:
+                description: "Branch to fetch backend commits from (default: main)"
+                required: false
+                type: string
+                default: "main"
+            frontend_branch:
+                description: "Branch to fetch frontend commits from (default: current branch)"
+                required: false
+                type: string
+                default: ""
+
+# Only one refresh at a time to prevent push conflicts
+concurrency:
+    group: refresh-preview-commits-frontend
+    cancel-in-progress: true
+
+permissions:
+    contents: write
+
+jobs:
+    # ===========================================================================
+    # JOB: Update frontend dispatch workflow choices
+    # ===========================================================================
+    refresh-dispatch:
+        name: Refresh Dispatch Choices
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout frontend repo
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ secrets.GHCR_PAT }}
+                  ref: main
+                  fetch-depth: 10
+
+            - name: Install yq
+              run: |
+                  sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.52.4/yq_linux_amd64
+                  sudo chmod +x /usr/local/bin/yq
+
+            - name: Fetch recent commits from both repos
+              env:
+                  GH_TOKEN: ${{ secrets.GHCR_PAT }}
+                  BACKEND_BRANCH: ${{ inputs.backend_branch || 'main' }}
+                  FRONTEND_BRANCH: ${{ inputs.frontend_branch || (github.event_name == 'pull_request' && 'main') || github.ref_name }}
+              run: |
+                  set -euo pipefail
+                  OWNER="${{ github.repository_owner }}"
+
+                  # Backend: 3 most recent main commits (via API)
+                  gh api "repos/$OWNER/refactor-platform-rs/commits?sha=$BACKEND_BRANCH&per_page=3" \
+                      --jq '.[] | "\(.sha[0:7]) - \(.commit.message | split("\n")[0] | .[0:55])"' \
+                      > /tmp/backend_commits.txt
+
+                  # Backend: append HEAD of each open PR
+                  gh pr list --repo "$OWNER/refactor-platform-rs" --state open \
+                      --json number,headRefName,headRefOid \
+                      --jq '.[] | "\(.headRefOid[0:7]) - PR#\(.number) (\(.headRefName | .[0:30]))"' \
+                      >> /tmp/backend_commits.txt
+
+                  # Frontend: 3 most recent main commits (local checkout)
+                  if [[ "$FRONTEND_BRANCH" != "main" ]]; then
+                      git fetch origin "$FRONTEND_BRANCH"
+                      git log "origin/$FRONTEND_BRANCH" --oneline -3 --format='%h - %s' > /tmp/frontend_commits.txt
+                  else
+                      git log --oneline -3 --format='%h - %s' > /tmp/frontend_commits.txt
+                  fi
+
+                  # Frontend: append HEAD of each open PR
+                  gh pr list --repo "$OWNER/refactor-platform-fe" --state open \
+                      --json number,headRefName,headRefOid \
+                      --jq '.[] | "\(.headRefOid[0:7]) - PR#\(.number) (\(.headRefName | .[0:30]))"' \
+                      >> /tmp/frontend_commits.txt
+
+                  echo "=== Backend commits (branch: $BACKEND_BRANCH) ==="
+                  cat /tmp/backend_commits.txt
+                  echo "=== Frontend commits (branch: $FRONTEND_BRANCH) ==="
+                  cat /tmp/frontend_commits.txt
+
+            - name: Update dispatch workflow choices
+              id: update-dispatch
+              run: |
+                  set -euo pipefail
+                  WORKFLOW=".github/workflows/dispatch-pr-preview-frontend.yml"
+
+                  if [[ ! -f "$WORKFLOW" ]]; then
+                      echo "::notice::$WORKFLOW not found on main — skipping (will be available after merge)"
+                      echo "skipped=true" >> $GITHUB_OUTPUT
+                      exit 0
+                  fi
+
+                  # Build JSON arrays from commit files
+                  BE_JSON=$(jq -R -s 'split("\n") | map(select(length > 0))' < /tmp/backend_commits.txt)
+                  FE_JSON=$(jq -R -s 'split("\n") | map(select(length > 0))' < /tmp/frontend_commits.txt)
+
+                  # Update choices in the YAML
+                  yq -i ".on.workflow_dispatch.inputs.backend_commit.options = ${BE_JSON}" "$WORKFLOW"
+                  yq -i ".on.workflow_dispatch.inputs.frontend_commit.options = ${FE_JSON}" "$WORKFLOW"
+
+                  echo "Updated dispatch workflow choices"
+
+            - name: Commit and push if changed
+              if: steps.update-dispatch.outputs.skipped != 'true'
+              run: |
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git config user.name "github-actions[bot]"
+                  git add .github/workflows/dispatch-pr-preview-frontend.yml
+                  if git diff --staged --quiet; then
+                      echo "No changes to commit — choices already up to date"
+                  else
+                      git commit -m "chore: refresh preview commit choices [skip ci]"
+                      git push
+                      echo "Pushed updated commit choices to main"
+                  fi

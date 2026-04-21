@@ -18,7 +18,7 @@ import {
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
 import { useGoalByRelationship } from "@/lib/api/goals";
-import { DEFAULT_GOAL_TITLE, goalTitle } from "@/types/goal";
+import { goalTitle, goalsTitle } from "@/types/goal";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { DateTime } from "ts-luxon";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -144,7 +144,7 @@ function SessionItem({
       <div className="flex min-w-0 ml-4">
         <div className="min-w-0 w-full">
           <p className="truncate text-sm font-medium">
-            {session.goal ? goalTitle(session.goal) : DEFAULT_GOAL_TITLE}
+            {goalsTitle(session.goals)}
           </p>
           <p className="truncate text-sm text-gray-400">
             {formatDateInUserTimezone(

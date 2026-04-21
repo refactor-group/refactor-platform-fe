@@ -105,3 +105,44 @@
 .group-data-\[collapsible\=icon\]\/sidebar-wrapper [data-sidebar="menu-button"] {
   justify-content: center;
 }
+
+/* ── Compact flip card (macOS widget-style) ─────────────────────────── */
+
+.flip-card-container {
+  perspective: 800px;
+}
+
+.flip-card-inner {
+  position: relative;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.flip-card-container--flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/*
+ * Front face is always in flow and sizes the container.
+ * Back face is absolutely positioned on top so it doesn't affect height.
+ * When flipped, backface-visibility hides the front while the back shows through.
+ * No position switching = no layout shift = no downward jump.
+ */
+.flip-card-front {
+  position: relative;
+  transform: rotateY(0deg);
+}
+
+.flip-card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: rotateY(180deg);
+}

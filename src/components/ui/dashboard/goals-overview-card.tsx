@@ -139,8 +139,12 @@ export function GoalsOverviewCard({
 
   return (
     <Card className="border shadow-none h-full">
-      <Collapsible open={expanded} onOpenChange={setExpanded}>
-        <CardContent className="p-0">
+      <Collapsible
+        open={expanded}
+        onOpenChange={setExpanded}
+        className="flex flex-col h-full"
+      >
+        <CardContent className="p-0 flex flex-col flex-1">
           <CollapsibleTrigger asChild>
             <button
               type="button"
@@ -189,9 +193,9 @@ export function GoalsOverviewCard({
           </CollapsibleTrigger>
 
           {/* Expandable goal list */}
-          <CollapsibleContent>
+          <CollapsibleContent className="flex-1 flex flex-col data-[state=closed]:flex-initial">
             <div className="border-t mx-6" />
-            <div className="px-6 pb-5 pt-2">
+            <div className="px-6 pb-5 pt-2 flex flex-col flex-1">
               {activeGoals.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">
                   No active goals
@@ -207,13 +211,13 @@ export function GoalsOverviewCard({
                       }
                       actionsTotal={goal.progress_metrics.actions_total}
                       linkedSessionCount={
-                        goal.progress_metrics.linked_session_count
+                        goal.progress_metrics.linked_coaching_session_count
                       }
                     />
                   ))}
                 </div>
               )}
-              <div className="pt-3 flex justify-end">
+              <div className="pt-3 mt-auto flex justify-end">
                 <Button
                   variant="ghost"
                   size="sm"

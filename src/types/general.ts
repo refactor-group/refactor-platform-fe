@@ -6,6 +6,13 @@ export { EntityApiError } from "./entity-api-error";
 // A type alias for each entity's Id field
 export type Id = string;
 
+/**
+ * A frozen empty array that preserves reference identity across renders.
+ * Use this instead of `[]` in hooks and memoized values to prevent
+ * unnecessary re-renders caused by new-array-every-render instability.
+ */
+export const EMPTY_ARRAY: readonly never[] = Object.freeze([]);
+
 /** A generic id + label pair for use in select/dropdown components */
 export interface SelectOption {
   id: Id;
@@ -16,6 +23,7 @@ export interface SelectOption {
 export enum ItemStatus {
   NotStarted = "NotStarted",
   InProgress = "InProgress",
+  OnHold = "OnHold",
   Completed = "Completed",
   WontDo = "WontDo",
 }
@@ -25,6 +33,8 @@ export function stringToActionStatus(statusString: string): ItemStatus {
 
   if (status == "InProgress") {
     return ItemStatus.InProgress;
+  } else if (status == "OnHold") {
+    return ItemStatus.OnHold;
   } else if (status == "Completed") {
     return ItemStatus.Completed;
   } else if (status == "WontDo") {
@@ -40,6 +50,8 @@ export function actionStatusToString(status: ItemStatus): string {
       return "Not Started";
     case ItemStatus.InProgress:
       return "In Progress";
+    case ItemStatus.OnHold:
+      return "On Hold";
     case ItemStatus.Completed:
       return "Completed";
     case ItemStatus.WontDo:

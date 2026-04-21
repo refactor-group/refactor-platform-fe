@@ -1,8 +1,11 @@
 import { DateTime } from "ts-luxon";
-import { CoachingSession } from "@/types/coaching-session";
+import { Action } from "@/types/action";
+import { Agreement } from "@/types/agreement";
+import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
 import { OAuthConnection } from "@/types/oauth-connection";
@@ -86,6 +89,76 @@ export function createSessionAt(minutesFromNow: number): CoachingSession {
   });
 }
 
+/**
+ * Create an EnrichedCoachingSession fixture with sensible defaults for
+ * relationship, coach, coachee, organization, and one goal. Override fields
+ * via the partial argument.
+ */
+export function createMockEnrichedSession(
+  overrides?: Partial<EnrichedCoachingSession>
+): EnrichedCoachingSession {
+  const now = DateTime.now();
+  return {
+    id: "session-1",
+    coaching_relationship_id: "rel-1",
+    date: now.plus({ hours: 2 }).toISO() ?? "",
+    created_at: now,
+    updated_at: now,
+    relationship: {
+      id: "rel-1",
+      coach_id: "coach-1",
+      coachee_id: "coachee-1",
+      organization_id: "org-1",
+      created_at: now,
+      updated_at: now,
+    },
+    coach: {
+      id: "coach-1",
+      email: "coach@example.com",
+      first_name: "Jim",
+      last_name: "Hodapp",
+      display_name: "Jim Hodapp",
+      timezone: "America/Los_Angeles",
+      role: "coach",
+      roles: [],
+      created_at: now.toISO() ?? "",
+      updated_at: now.toISO() ?? "",
+    },
+    coachee: {
+      id: "coachee-1",
+      email: "coachee@example.com",
+      first_name: "Alex",
+      last_name: "Chen",
+      display_name: "Alex Chen",
+      timezone: "America/Los_Angeles",
+      role: "user",
+      roles: [],
+      created_at: now.toISO() ?? "",
+      updated_at: now.toISO() ?? "",
+    },
+    organization: {
+      id: "org-1",
+      name: "Refactor Group",
+      slug: "refactor-group",
+      created_at: now,
+      updated_at: now,
+    },
+    goals: [],
+    ...overrides,
+  };
+}
+
+/** Create an EnrichedCoachingSession offset by minutesFromNow. */
+export function createEnrichedSessionAt(
+  minutesFromNow: number,
+  overrides?: Partial<EnrichedCoachingSession>
+): EnrichedCoachingSession {
+  return createMockEnrichedSession({
+    date: DateTime.now().plus({ minutes: minutesFromNow }).toISO() ?? "",
+    ...overrides,
+  });
+}
+
 export function createMockGoal(overrides?: Partial<Goal>): Goal {
   const now = DateTime.now();
   return {
@@ -99,6 +172,39 @@ export function createMockGoal(overrides?: Partial<Goal>): Goal {
     status_changed_at: now,
     completed_at: now,
     target_date: null,
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
+}
+
+export function createMockAction(overrides?: Partial<Action>): Action {
+  const now = DateTime.now();
+  return {
+    id: "action-1",
+    coaching_session_id: "session-1",
+    goal_id: None,
+    body: "Follow up on resume review",
+    user_id: "user-1",
+    status: ItemStatus.NotStarted,
+    status_changed_at: now,
+    due_by: now.plus({ days: 7 }),
+    created_at: now,
+    updated_at: now,
+    assignee_ids: ["user-1"],
+    ...overrides,
+  };
+}
+
+export function createMockAgreement(
+  overrides?: Partial<Agreement>
+): Agreement {
+  const now = DateTime.now();
+  return {
+    id: "agreement-1",
+    coaching_session_id: "session-1",
+    body: "Weekly check-in every Tuesday",
+    user_id: "user-1",
     created_at: now,
     updated_at: now,
     ...overrides,

@@ -1,13 +1,16 @@
 // Interacts with the goal endpoints
 
+import { ResultAsync } from "neverthrow";
 import { siteConfig } from "@/site.config";
-import { Id } from "@/types/general";
+import { Id, EntityApiError } from "@/types/general";
 import {
   Goal,
   defaultGoal,
 } from "@/types/goal";
 import { ApiSortOrder, GoalSortField } from "@/types/sorting";
-import { EntityApi } from "./entity-api";
+import { EntityApi, ApiResponse } from "./entity-api";
+import useSWR from "swr";
+import { sessionGuard } from "@/lib/auth/session-guard";
 
 const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
 const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
@@ -130,6 +133,95 @@ export const GoalApi = {
   ): Promise<Goal> => {
     throw new Error("Delete nested operation not implemented");
   },
+
+  /**
+   * Links an existing goal to a coaching session via the join table.
+   * Sends POST /coaching_sessions/{sessionId}/goals with { goal_id }.
+   */
+  linkToSession: (
+    coachingSessionId: Id,
+    goalId: Id
+  ): ResultAsync<void, EntityApiError> =>
+    ResultAsync.fromPromise(
+      EntityApi.createFn<{ goal_id: Id }, unknown>(
+        `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`,
+        { goal_id: goalId }
+      ).then(() => undefined),
+      (e) =>
+        e instanceof EntityApiError
+          ? e
+          : new EntityApiError("POST", `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`, e as Error)
+    ),
+
+  /**
+   * Unlinks a goal from a coaching session via the join table.
+   * Sends DELETE /coaching_sessions/{sessionId}/goals/{goalId}.
+   */
+  unlinkFromSession: (
+    coachingSessionId: Id,
+    goalId: Id
+  ): ResultAsync<void, EntityApiError> =>
+    ResultAsync.fromPromise(
+      EntityApi.deleteFn<null, unknown>(
+        `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals/${goalId}`
+      ).then(() => undefined),
+      (e) =>
+        e instanceof EntityApiError
+          ? e
+          : new EntityApiError("DELETE", `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals/${goalId}`, e as Error)
+    ),
+};
+
+/** Response shape from GET /coaching_sessions/goals batch endpoint. */
+interface BatchSessionGoalsResponse {
+  session_goals: Record<Id, Goal[]>;
+}
+
+/**
+ * Fetches goals for all sessions in a coaching relationship in a single request.
+ * Replaces the N+1 pattern of calling GET /coaching_sessions/{id}/goals per session.
+ *
+ * @param coachingRelationshipId The coaching relationship whose session goals to fetch
+ * @returns Record mapping session IDs to their linked goals
+ */
+async function fetchBatchSessionGoals(
+  coachingRelationshipId: Id
+): Promise<Record<Id, Goal[]>> {
+  const response = await sessionGuard.get<ApiResponse<BatchSessionGoalsResponse>>(
+    `${COACHING_SESSIONS_BASEURL}/goals`,
+    {
+      params: { coaching_relationship_id: coachingRelationshipId },
+    }
+  );
+  return response.data.data.session_goals;
+}
+
+/**
+ * SWR hook that fetches goals for all sessions in a coaching relationship
+ * via the batch endpoint GET /coaching_sessions/goals?coaching_relationship_id=UUID.
+ *
+ * Returns a Record<Id, Goal[]> mapping session IDs to their linked goals.
+ * Session cards can read sessionGoals[sessionId] directly.
+ *
+ * @param coachingRelationshipId The relationship ID, or null to skip fetching
+ */
+export const useBatchSessionGoals = (coachingRelationshipId: Id | null) => {
+  const key = coachingRelationshipId
+    ? `${COACHING_SESSIONS_BASEURL}/goals?coaching_relationship_id=${coachingRelationshipId}`
+    : null;
+
+  const { data, error, isLoading, mutate } = useSWR<Record<Id, Goal[]>>(
+    key,
+    () => fetchBatchSessionGoals(coachingRelationshipId!),
+    { revalidateOnMount: true }
+  );
+
+  return {
+    sessionGoals: data ?? {},
+    isLoading,
+    isError: error,
+    refresh: mutate,
+  };
 };
 
 /**

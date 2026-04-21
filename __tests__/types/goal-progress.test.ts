@@ -36,11 +36,11 @@ describe('parseGoalProgressMetrics', () => {
 
     expect(result.actions_completed).toBe(3)
     expect(result.actions_total).toBe(8)
-    expect(result.linked_session_count).toBe(5)
+    expect(result.linked_coaching_session_count).toBe(5)
     expect(result.progress).toBe(GoalProgress.SolidMomentum)
 
-    expect(result.last_session_date.some).toBe(true)
-    expect(result.last_session_date.val).toBe('2026-03-10')
+    expect(result.last_coaching_session_date.some).toBe(true)
+    expect(result.last_coaching_session_date.val).toBe('2026-03-10')
 
     expect(result.next_action_due.some).toBe(true)
     expect(result.next_action_due.val).toBe('2026-03-15T09:00:00Z')
@@ -48,7 +48,7 @@ describe('parseGoalProgressMetrics', () => {
 
   it('wraps null last_coaching_session_date as None', () => {
     const result = parseGoalProgressMetrics(makeProgressData({ last_coaching_session_date: null }))
-    expect(result.last_session_date.none).toBe(true)
+    expect(result.last_coaching_session_date.none).toBe(true)
   })
 
   it('wraps null next_action_due as None', () => {
@@ -60,7 +60,7 @@ describe('parseGoalProgressMetrics', () => {
     const result = parseGoalProgressMetrics(
       makeProgressData({ last_coaching_session_date: null, next_action_due: null })
     )
-    expect(result.last_session_date.none).toBe(true)
+    expect(result.last_coaching_session_date.none).toBe(true)
     expect(result.next_action_due.none).toBe(true)
   })
 

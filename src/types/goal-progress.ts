@@ -16,9 +16,9 @@ export enum GoalProgress {
 export interface GoalProgressMetrics {
   actions_completed: number;
   actions_total: number;
-  linked_session_count: number;
+  linked_coaching_session_count: number;
   progress: GoalProgress;
-  last_session_date: Option<string>;
+  last_coaching_session_date: Option<string>;
   next_action_due: Option<string>;
 }
 
@@ -41,9 +41,9 @@ export function parseGoalProgressMetrics(value: unknown): GoalProgressMetrics {
   return {
     actions_completed: value.actions_completed,
     actions_total: value.actions_total,
-    linked_session_count: value.linked_coaching_session_count,
+    linked_coaching_session_count: value.linked_coaching_session_count,
     progress: value.progress as GoalProgress,
-    last_session_date:
+    last_coaching_session_date:
       value.last_coaching_session_date !== null
         ? Some(value.last_coaching_session_date)
         : None,

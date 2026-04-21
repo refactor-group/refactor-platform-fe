@@ -40,8 +40,7 @@ Calls the backend repository's reusable workflow to deploy PR preview environmen
 
 **Parameters:**
 - `repo_type: 'frontend'`
-- `pr_number`: PR number
-- `branch_name`: Frontend PR branch
+- `branch_name`: Frontend PR branch (PR number is extracted from the frontend commit dropdown selection)
 - `backend_branch`: 'main' (or temporary override)
 
 ### 5. Frontend PR Cleanup
@@ -54,12 +53,12 @@ Calls the backend repository's reusable cleanup workflow.
 
 ## PR Preview Environments
 
-Frontend PRs trigger the same preview environment infrastructure as backend PRs. The workflows call reusable workflows in the backend repository:
+Frontend PR previews are deployed **manually via workflow dispatch** — they are not created automatically on PR events. The manual dispatch workflow (`dispatch-pr-preview-frontend.yml`) calls the backend repo's reusable workflow:
 
-- **Deployment:** `refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml`
-- **Cleanup:** `refactor-group/refactor-platform-rs/.github/workflows/cleanup-pr-preview.yml`
+- **Deployment:** `dispatch-pr-preview-frontend.yml` → `refactor-group/refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml`
+- **Cleanup:** `cleanup-pr-preview-frontend.yml` → `refactor-group/refactor-platform-rs/.github/workflows/cleanup-pr-preview.yml`
 
-This ensures parity between frontend and backend PR previews - both create isolated full-stack environments with unique ports.
+This ensures parity between frontend and backend PR previews — both create isolated full-stack environments with unique ports. Cleanup runs automatically when the PR is closed or merged.
 
 **Access:** Requires Tailscale VPN connection. Preview URLs are posted as PR comments.
 

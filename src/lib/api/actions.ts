@@ -3,7 +3,7 @@
 
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
-import { Action, defaultAction } from "@/types/action";
+import { Action, defaultAction, serializeAction, type ActionWire } from "@/types/action";
 import { EntityApi } from "./entity-api";
 
 const ACTIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/actions`;
@@ -31,7 +31,7 @@ export const ActionApi = {
    * @returns Promise resolving to the created Action object
    */
   create: async (action: Action): Promise<Action> =>
-    EntityApi.createFn<Action, Action>(ACTIONS_BASEURL, action),
+    EntityApi.createFn<ActionWire, Action>(ACTIONS_BASEURL, serializeAction(action)),
 
   createNested: async (_id: Id, _entity: Action): Promise<Action> => {
     throw new Error("Create nested operation not implemented");
@@ -45,7 +45,7 @@ export const ActionApi = {
    * @returns Promise resolving to the updated Action object
    */
   update: async (id: Id, action: Action): Promise<Action> =>
-    EntityApi.updateFn<Action, Action>(`${ACTIONS_BASEURL}/${id}`, action),
+    EntityApi.updateFn<ActionWire, Action>(`${ACTIONS_BASEURL}/${id}`, serializeAction(action)),
 
   /**
    * Deletes an action.
