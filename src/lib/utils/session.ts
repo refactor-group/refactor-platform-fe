@@ -2,7 +2,7 @@ import { DateTime } from "ts-luxon";
 import { CoachingSession, DEFAULT_SESSION_DURATION_MINUTES, EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
-import { Id, ItemStatus } from "@/types/general";
+import { Id } from "@/types/general";
 import {
   SessionUrgency,
   EnrichedSessionDisplay,
@@ -14,7 +14,9 @@ import {
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { goalTitle } from "@/types/goal";
 import { RelationshipRole } from "@/types/relationship-role";
-import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import type { Action } from "@/types/action";
+import { sortActionArray } from "@/types/action";
+import { SortOrder } from "@/types/sorting";
 
 /**
  * Session Utility Functions
@@ -412,26 +414,43 @@ export function selectNextUpcomingSession(
 }
 
 /**
- * Count **incomplete** actions in the assignee's list that are due on or
- * before a given session's start time, scoped to that session's coaching
- * relationship.
+ * Pure filter matching the coaching-session Actions panel's "Due" tab
+ * semantics: which actions from a given relationship should surface as
+ * "due for review" at a given session.
  *
- * Excludes Completed actions so the "N actions due" count reflects work
- * still outstanding, not work ever assigned. Matches the incomplete filter
- * convention used elsewhere (`filterActionsByStatus` in
- * `lib/utils/assigned-actions.ts`), which treats only `Completed` as closed.
+ * Pre-condition: `allActions` must already be scoped to the session's
+ * coaching relationship (e.g. via the `coaching_relationship_id` query param).
  *
- * Used by UpcomingSessionCard to surface "N actions due" next to a session,
- * and by action-test-utils to preserve equivalent counting semantics in tests.
+ * Rules:
+ * 1. Exclude actions that were created in the current session (they belong
+ *    to the session's own "New" tab, not the carry-forward review window).
+ * 2. Include sticky actions (previously visible in the panel) regardless of
+ *    current state. Dashboard callers typically pass no sticky set.
+ * 3. Include only actions due within `[previousSessionDate, currentSessionDate]`
+ *    — of any status. The panel's Due tab shows Completed actions too so
+ *    they're visible for review; the count mirrors that.
+ *
+ * Results are sorted reverse-chronologically by due_by.
  */
-export function countActionsDueBySession(
-  assignedActions: AssignedActionWithContext[],
-  sessionRelationshipId: Id,
-  sessionDate: DateTime,
-): number {
-  return assignedActions.filter((a) => {
-    if (a.relationship.id !== sessionRelationshipId) return false;
-    if (a.action.status === ItemStatus.Completed) return false;
-    return a.action.due_by <= sessionDate;
-  }).length;
+export function filterReviewActions(
+  allActions: Action[],
+  currentSessionId: Id,
+  currentSessionDate: DateTime,
+  previousSessionDate: DateTime | null,
+  stickyIds?: Set<Id>,
+): Action[] {
+  const endOfCurrentDate = currentSessionDate.endOf("day");
+  const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
+
+  const filtered = allActions.filter((a) => {
+    if (a.coaching_session_id === currentSessionId) return false;
+    if (stickyIds?.has(a.id)) return true;
+
+    const dueBy = a.due_by;
+    if (dueBy > endOfCurrentDate) return false;
+    if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
+    return false;
+  });
+
+  return sortActionArray(filtered, SortOrder.Desc, "due_by");
 }

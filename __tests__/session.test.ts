@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import {
   calculateSessionUrgency,
-  countActionsDueBySession,
   getUrgencyMessage,
   enrichSessionForDisplay,
   selectNextUpcomingSession,
@@ -11,9 +10,6 @@ import {
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/utils/session";
-import type { AssignedActionWithContext } from "@/types/assigned-actions";
-import { ItemStatus } from "@/types/general";
-import { None } from "@/types/option";
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
@@ -247,89 +243,6 @@ describe("getUserRoleInRelationship", () => {
   });
 });
 
-describe("countActionsDueBySession", () => {
-  function makeAction(relationshipId: string, dueBy: DateTime): AssignedActionWithContext {
-    return {
-      action: {
-        id: `action-${Math.random()}`,
-        coaching_session_id: "session-1",
-        goal_id: None,
-        body: "x",
-        user_id: "u",
-        status: ItemStatus.NotStarted,
-        status_changed_at: DateTime.now(),
-        due_by: dueBy,
-        created_at: DateTime.now(),
-        updated_at: DateTime.now(),
-        assignee_ids: ["u"],
-      },
-      relationship: {
-        id: relationshipId,
-        coach_id: "c",
-        coachee_id: "e",
-        organization_id: "o",
-        coach_first_name: "",
-        coach_last_name: "",
-        coachee_first_name: "",
-        coachee_last_name: "",
-        created_at: DateTime.now(),
-        updated_at: DateTime.now(),
-      },
-      goal: { goalId: "g", title: "g" },
-      sourceSession: { coachingSessionId: "session-1", sessionDate: dueBy },
-      nextSession: null,
-      isOverdue: false,
-    };
-  }
-
-  const sessionDate = DateTime.now().plus({ hours: 4 });
-
-  it("counts actions for the session's relationship that are due on or before the session", () => {
-    const actions = [
-      makeAction("rel-1", sessionDate.minus({ hours: 1 })),
-      makeAction("rel-1", sessionDate.minus({ days: 2 })),
-    ];
-    expect(countActionsDueBySession(actions, "rel-1", sessionDate)).toBe(2);
-  });
-
-  it("excludes actions for other relationships", () => {
-    const actions = [
-      makeAction("rel-1", sessionDate.minus({ hours: 1 })),
-      makeAction("rel-other", sessionDate.minus({ hours: 1 })),
-    ];
-    expect(countActionsDueBySession(actions, "rel-1", sessionDate)).toBe(1);
-  });
-
-  it("excludes actions due after the session", () => {
-    const actions = [
-      makeAction("rel-1", sessionDate.plus({ days: 1 })),
-    ];
-    expect(countActionsDueBySession(actions, "rel-1", sessionDate)).toBe(0);
-  });
-
-  it("returns 0 for an empty list", () => {
-    expect(countActionsDueBySession([], "rel-1", sessionDate)).toBe(0);
-  });
-
-  it("excludes completed actions", () => {
-    const completed = makeAction("rel-1", sessionDate.minus({ hours: 1 }));
-    completed.action.status = ItemStatus.Completed;
-    const actions = [
-      makeAction("rel-1", sessionDate.minus({ hours: 1 })),
-      completed,
-      makeAction("rel-1", sessionDate.minus({ days: 2 })),
-    ];
-    expect(countActionsDueBySession(actions, "rel-1", sessionDate)).toBe(2);
-  });
-
-  it("counts OnHold and WontDo as still due (matches the incomplete convention)", () => {
-    const onHold = makeAction("rel-1", sessionDate.minus({ hours: 1 }));
-    onHold.action.status = ItemStatus.OnHold;
-    const wontDo = makeAction("rel-1", sessionDate.minus({ hours: 1 }));
-    wontDo.action.status = ItemStatus.WontDo;
-    expect(countActionsDueBySession([onHold, wontDo], "rel-1", sessionDate)).toBe(2);
-  });
-});
 
 describe("selectNextUpcomingSession", () => {
   it("returns undefined for an empty list", () => {

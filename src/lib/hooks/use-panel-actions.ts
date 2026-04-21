@@ -14,49 +14,13 @@ import type { Id } from "@/types/general";
 import { ItemStatus, EntityApiError } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
+import { filterReviewActions } from "@/lib/utils/session";
+
+// Re-export so existing imports from use-panel-actions keep working. The
+// canonical definition lives in @/lib/utils/session.
+export { filterReviewActions };
 
 // ── Pure helpers ───────────────────────────────────────────────────
-
-/**
- * Pure filter for determining which actions should appear in "Actions for Review".
- *
- * Pre-condition: `allActions` must already be scoped to the current coaching
- * relationship (e.g. via `coaching_relationship_id` on the API call).
- *
- * Rules:
- * 1. Exclude actions belonging to the current session
- * 2. Include sticky actions (previously visible) regardless of current state
- * 3. Include only actions due within [previousSessionDate, currentSessionDate]
- *    (any status) — actions due before or after the window are excluded
- *
- * Results are sorted reverse-chronologically by due_by.
- */
-export function filterReviewActions(
-  allActions: Action[],
-  currentSessionId: Id,
-  currentSessionDate: DateTime,
-  previousSessionDate: DateTime | null,
-  stickyIds?: Set<Id>
-): Action[] {
-  const endOfCurrentDate = currentSessionDate.endOf("day");
-  const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
-
-  const filtered = allActions.filter((a) => {
-    if (a.coaching_session_id === currentSessionId) return false;
-
-    if (stickyIds?.has(a.id)) return true;
-
-    const dueBy = a.due_by;
-
-    if (dueBy > endOfCurrentDate) return false;
-
-    if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
-
-    return false;
-  });
-
-  return sortActionArray(filtered, SortOrder.Desc, "due_by");
-}
 
 /** Find an action by ID across session and relationship action lists. */
 function findActionById(

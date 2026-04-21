@@ -257,10 +257,6 @@ export function createMockSession(
 // Shared Filter Functions (extracted for testing)
 // ============================================================================
 
-// countActionsDueBySession has been lifted to @/lib/utils/session.ts so the
-// source and test-utility helpers can't drift. Re-export here so existing
-// test imports keep working.
-export { countActionsDueBySession } from "@/lib/utils/session";
 
 /**
  * Calculates whether an action is overdue.

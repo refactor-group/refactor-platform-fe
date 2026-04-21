@@ -2,12 +2,11 @@ import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DateTime } from "ts-luxon";
 import {
-  createMockEnrichedSession,
   createEnrichedSessionAt,
   createMockGoal,
 } from "../../../test-utils";
-import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import type { EnrichedCoachingSession, CoachingSession } from "@/types/coaching-session";
+import type { Action } from "@/types/action";
 import { ItemStatus } from "@/types/general";
 import { None } from "@/types/option";
 
@@ -36,9 +35,14 @@ vi.mock("@/lib/hooks/use-todays-sessions", () => ({
   useTodaysSessions: () => mockUseTodaysSessions(),
 }));
 
-const mockUseAssignedActions = vi.fn();
-vi.mock("@/lib/hooks/use-assigned-actions", () => ({
-  useAssignedActions: () => mockUseAssignedActions(),
+const mockUseUserActionsList = vi.fn();
+vi.mock("@/lib/api/user-actions", () => ({
+  useUserActionsList: () => mockUseUserActionsList(),
+}));
+
+const mockUseCoachingSessionList = vi.fn();
+vi.mock("@/lib/api/coaching-sessions", () => ({
+  useCoachingSessionList: () => mockUseCoachingSessionList(),
 }));
 
 // Import after mocks are registered.
@@ -72,53 +76,46 @@ function setSessions(sessions: EnrichedCoachingSession[], overrides?: { isLoadin
   });
 }
 
-function setAssignedActions(flatActions: AssignedActionWithContext[] = []) {
-  mockUseAssignedActions.mockReturnValue({
-    flatActions,
+function setRelationshipActions(actions: Action[] = []) {
+  mockUseUserActionsList.mockReturnValue({
+    actions,
     isLoading: false,
     isError: false,
     refresh: vi.fn(),
   });
 }
 
-function makeActionContext(relationshipId: string, dueBy: DateTime): AssignedActionWithContext {
+function setRelationshipSessionList(sessions: CoachingSession[] = []) {
+  mockUseCoachingSessionList.mockReturnValue({
+    coachingSessions: sessions,
+    isLoading: false,
+    isError: false,
+    refresh: vi.fn(),
+  });
+}
+
+function makeAction(overrides: Partial<Action> & { coaching_session_id: string; due_by: DateTime }): Action {
   return {
-    action: {
-      id: `action-${Math.random()}`,
-      coaching_session_id: "session-1",
-      goal_id: None,
-      body: "Follow up on last action",
-      user_id: "coach-1",
-      status: ItemStatus.NotStarted,
-      status_changed_at: DateTime.now(),
-      due_by: dueBy,
-      created_at: DateTime.now(),
-      updated_at: DateTime.now(),
-      assignee_ids: ["coach-1"],
-    },
-    relationship: {
-      id: relationshipId,
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      organization_id: "org-1",
-      coach_first_name: "Jim",
-      coach_last_name: "Hodapp",
-      coachee_first_name: "Alex",
-      coachee_last_name: "Chen",
-      created_at: DateTime.now(),
-      updated_at: DateTime.now(),
-    },
-    goal: { goalId: "goal-1", title: "Goal" },
-    sourceSession: { coachingSessionId: "session-1", sessionDate: dueBy },
-    nextSession: null,
-    isOverdue: false,
+    id: overrides.id ?? `action-${Math.random()}`,
+    coaching_session_id: overrides.coaching_session_id,
+    goal_id: None,
+    body: "some action",
+    user_id: "coach-1",
+    status: ItemStatus.NotStarted,
+    status_changed_at: DateTime.now(),
+    due_by: overrides.due_by,
+    created_at: DateTime.now(),
+    updated_at: DateTime.now(),
+    assignee_ids: ["coach-1"],
+    ...overrides,
   };
 }
 
 beforeEach(() => {
   setAuth();
   setSessions([]);
-  setAssignedActions([]);
+  setRelationshipActions([]);
+  setRelationshipSessionList([]);
 });
 
 afterEach(() => {
@@ -193,7 +190,7 @@ describe("UpcomingSessionCard — populated state", () => {
     expect(screen.getByText("AC")).toBeInTheDocument();
   });
 
-  it("shows the count of actions due on or before the session", () => {
+  it("shows the count of actions carried forward into this session (matches panel Due tab)", () => {
     const sessionDate = DateTime.now().plus({ minutes: 15 });
     const imminent = createEnrichedSessionAt(15, {
       id: "imminent",
@@ -201,13 +198,48 @@ describe("UpcomingSessionCard — populated state", () => {
       date: sessionDate.toISO() ?? "",
     });
     setSessions([imminent]);
-    setAssignedActions([
-      makeActionContext("rel-1", sessionDate.minus({ hours: 1 })),
-      makeActionContext("rel-1", sessionDate.minus({ days: 1 })),
-      // Wrong relationship — must be filtered out.
-      makeActionContext("rel-other", sessionDate.minus({ hours: 1 })),
-      // Due after the session — must be filtered out.
-      makeActionContext("rel-1", sessionDate.plus({ days: 1 })),
+
+    // The panel's Due tab shows actions where coaching_session_id !== current
+    // session and due_by is within [previousSessionDate, currentSessionDate].
+    // Tell the card the previous session was yesterday.
+    const prev: CoachingSession = {
+      id: "prev-session",
+      coaching_relationship_id: "rel-1",
+      date: sessionDate.minus({ days: 3 }).toISO() ?? "",
+      created_at: DateTime.now(),
+      updated_at: DateTime.now(),
+    };
+    setRelationshipSessionList([prev]);
+
+    setRelationshipActions([
+      // Carried forward — due within the window, different source session
+      makeAction({ id: "a1", coaching_session_id: "other-1", due_by: sessionDate.minus({ hours: 1 }) }),
+      makeAction({ id: "a2", coaching_session_id: "other-2", due_by: sessionDate.minus({ days: 2 }) }),
+      // Created in this session — excluded (would appear on the New tab, not Due)
+      makeAction({ id: "a3", coaching_session_id: "imminent", due_by: sessionDate.minus({ hours: 1 }) }),
+      // Due after the session — excluded
+      makeAction({ id: "a4", coaching_session_id: "other-3", due_by: sessionDate.plus({ days: 1 }) }),
+      // Due before the previous session — excluded
+      makeAction({ id: "a5", coaching_session_id: "other-4", due_by: sessionDate.minus({ days: 10 }) }),
+    ]);
+
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
+    expect(screen.getByText("2 actions due")).toBeInTheDocument();
+  });
+
+  it("includes Completed actions in the count (matches panel Due tab — Completed still shows up for review)", () => {
+    const sessionDate = DateTime.now().plus({ minutes: 15 });
+    const imminent = createEnrichedSessionAt(15, {
+      id: "imminent",
+      coaching_relationship_id: "rel-1",
+      date: sessionDate.toISO() ?? "",
+    });
+    setSessions([imminent]);
+    setRelationshipSessionList([]); // No previous session → window is open-ended back
+
+    setRelationshipActions([
+      makeAction({ id: "a1", coaching_session_id: "other-1", due_by: sessionDate.minus({ hours: 1 }), status: ItemStatus.Completed }),
+      makeAction({ id: "a2", coaching_session_id: "other-2", due_by: sessionDate.minus({ hours: 2 }), status: ItemStatus.NotStarted }),
     ]);
 
     render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
@@ -375,7 +407,8 @@ describe("UpcomingSessionCard — populated state", () => {
       error: null,
       refresh,
     });
-    setAssignedActions([]);
+    setRelationshipActions([]);
+    setRelationshipSessionList([]);
     const handleRefreshNeeded = vi.fn();
 
     act(() => {

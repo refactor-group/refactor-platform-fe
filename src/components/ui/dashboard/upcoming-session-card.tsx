@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { DateTime } from "ts-luxon";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,10 +12,11 @@ import { UpcomingSessionCardEmpty } from "@/components/ui/dashboard/upcoming-ses
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
-import { useAssignedActions } from "@/lib/hooks/use-assigned-actions";
+import { useUserActionsList } from "@/lib/api/user-actions";
+import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import {
   calculateSessionUrgency,
-  countActionsDueBySession,
+  filterReviewActions,
   formatSessionTime,
   getSessionParticipantInfo,
   getUrgencyMessage,
@@ -28,7 +29,13 @@ import {
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
 import { SessionUrgency } from "@/types/session-display";
-import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import { UserActionsScope } from "@/types/assigned-actions";
+
+// Width of the session-list lookup window used to find this session's
+// previous session — matches the Actions panel (use-panel-actions) so the
+// dashboard count stays in sync with the panel's Due tab.
+const SESSION_LOOKBACK = { years: 5 };
+const SESSION_LOOKAHEAD = { years: 1 };
 
 /**
  * Props for UpcomingSessionCard.
@@ -61,7 +68,6 @@ export function UpcomingSessionCard({
 }: UpcomingSessionCardProps) {
   const { userSession, isACoach } = useAuthStore((state) => state);
   const { sessions, isLoading, error, refresh } = useTodaysSessions();
-  const { flatActions } = useAssignedActions();
 
   // Surface refresh to parent (e.g. DashboardContainer) so it can force a
   // re-fetch after the create/edit dialog closes.
@@ -98,7 +104,6 @@ export function UpcomingSessionCard({
         session={nextSession}
         userId={userSession.id}
         userTimezone={userSession.timezone || getBrowserTimezone()}
-        assignedActions={flatActions}
         onReschedule={onReschedule}
       />
     </CardContainer>
@@ -144,7 +149,6 @@ interface PopulatedBodyProps {
   session: EnrichedCoachingSession;
   userId: string;
   userTimezone: string;
-  assignedActions: AssignedActionWithContext[];
   onReschedule?: (session: EnrichedCoachingSession) => void;
 }
 
@@ -152,9 +156,55 @@ function PopulatedBody({
   session,
   userId,
   userTimezone,
-  assignedActions,
   onReschedule,
 }: PopulatedBodyProps) {
+  // Fetch the same two datasets the session's Actions panel fetches, so the
+  // dashboard's "N actions due" stays in lockstep with the panel's Due tab:
+  //   1. Actions scoped to this session's coaching relationship.
+  //   2. All sessions for the relationship (to derive the previous session).
+  const { actions: relationshipActions } = useUserActionsList(userId, {
+    scope: UserActionsScope.Sessions,
+    coaching_relationship_id: session.coaching_relationship_id,
+  });
+
+  const fromDate = useMemo(() => DateTime.now().minus(SESSION_LOOKBACK), []);
+  const toDate = useMemo(() => DateTime.now().plus(SESSION_LOOKAHEAD), []);
+  const { coachingSessions } = useCoachingSessionList(
+    session.coaching_relationship_id,
+    fromDate,
+    toDate,
+    "date",
+    "asc",
+  );
+
+  const currentSessionDate = useMemo(
+    () => DateTime.fromISO(session.date),
+    [session.date],
+  );
+
+  const previousSessionDate = useMemo(() => {
+    const currentDateStr = currentSessionDate.toISODate();
+    if (!currentDateStr) return null;
+    let prev: DateTime | null = null;
+    for (const s of coachingSessions) {
+      if (s.date < currentDateStr) {
+        prev = DateTime.fromISO(s.date);
+      }
+    }
+    return prev;
+  }, [coachingSessions, currentSessionDate]);
+
+  const actionsDueCount = useMemo(
+    () =>
+      filterReviewActions(
+        relationshipActions,
+        session.id,
+        currentSessionDate,
+        previousSessionDate,
+      ).length,
+    [relationshipActions, session.id, currentSessionDate, previousSessionDate],
+  );
+
   const participant = getSessionParticipantInfo(session, userId);
   if (!participant) return null;
 
@@ -163,12 +213,6 @@ function PopulatedBody({
   const urgencyMessage = getUrgencyMessage(session, urgency, userTimezone);
   const showPulsingDot =
     urgency === SessionUrgency.Imminent || urgency === SessionUrgency.Underway;
-
-  const actionsDueCount = countActionsDueBySession(
-    assignedActions,
-    session.coaching_relationship_id,
-    DateTime.fromISO(session.date),
-  );
   const initials = userSessionFirstLastLettersToString(
     participant.firstName,
     participant.lastName,
