@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, ArrowDownRight, AlertCircle, ArrowRight, ChevronDown } from "lucide-react";
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  AlertCircle,
+  ArrowRight,
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -17,18 +23,18 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/components/lib/utils";
 import { useGoalProgressList } from "@/lib/api/goal-progress";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
+import {
+  getSessionParticipantName,
+  selectNextUpcomingSession,
+} from "@/lib/utils/session";
+import { maxActiveGoals } from "@/types/goal";
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
-import { ItemStatus } from "@/types/general";
-import type { Id } from "@/types/general";
 import { ProgressRing } from "@/components/ui/dashboard/progress-ring";
 import { GoalRow } from "@/components/ui/dashboard/goal-row";
-
-interface GoalsOverviewCardProps {
-  organizationId: Id;
-  relationshipId: Id;
-  coacheeName: string;
-}
+import { GoalsOverviewCardEmpty } from "@/components/ui/dashboard/goals-overview-card-empty";
 
 /** Maps GoalProgress to a severity rank for computing the aggregate signal. */
 function progressSeverity(progress: GoalProgress): number {
@@ -105,25 +111,64 @@ function GoalsOverviewCardSkeleton() {
   );
 }
 
-export function GoalsOverviewCard({
-  organizationId,
-  relationshipId,
-  coacheeName,
-}: GoalsOverviewCardProps) {
+export function GoalsOverviewCard() {
   const [expanded, setExpanded] = useState(true);
-  const { goalsWithProgress, isLoading, isError } = useGoalProgressList(
-    organizationId,
-    relationshipId
-  );
+  const { userId } = useAuthStore((state) => ({ userId: state.userId }));
+  const { sessions: todaysSessions, isLoading: isSessionsLoading } =
+    useTodaysSessions();
+  const upcomingSession = selectNextUpcomingSession(todaysSessions);
 
-  if (isLoading) return <GoalsOverviewCardSkeleton />;
+  const organizationId = upcomingSession?.organization?.id ?? null;
+  const relationshipId = upcomingSession?.coaching_relationship_id ?? null;
+
+  // The card shows the same goals the Upcoming Session card shows —
+  // whatever's linked to that session via the join table, any status.
+  // We fetch the full relationship's goal_progress (no server-side filter)
+  // and intersect with `upcomingSession.goals` below to pick up each linked
+  // goal's progress metrics (action counts, session counts, signal). A
+  // follow-up backend param (?coaching_session_id=<uuid>) would let us push
+  // this filter down server-side; until then the relationship-scoped fetch
+  // is the only way to get progress_metrics per goal.
+  const {
+    goalsWithProgress,
+    isLoading: isGoalsLoading,
+    isError,
+  } = useGoalProgressList(organizationId, relationshipId);
+
+  // Show loading chrome while either fetch is in flight.
+  if (isSessionsLoading || (organizationId && isGoalsLoading)) {
+    return <GoalsOverviewCardSkeleton />;
+  }
+
+  // No upcoming session → nothing to show goals for.
+  if (!upcomingSession) {
+    return <GoalsOverviewCardEmpty />;
+  }
 
   // Silent fallback on error — don't break the dashboard
   if (isError) return null;
 
-  const activeGoals = goalsWithProgress.filter(
-    (g) => g.status === ItemStatus.InProgress
+  const coacheeName = userId
+    ? getSessionParticipantName(upcomingSession, userId)
+    : "";
+
+  // Intersect the relationship's full progress list with the session's
+  // linked goals — renders the same set the Upcoming Session card shows,
+  // one row per goal with its progress metrics.
+  // Preserves the session's own ordering (backend decides). Defensive cap
+  // at maxActiveGoals() in case a session ever has more linked goals than
+  // the product limit; if a linked goal is missing from the progress list
+  // (shouldn't happen — join table FK enforces existence), it's skipped.
+  const sessionLinkedGoalIds = new Set(
+    (upcomingSession.goals ?? []).map((g) => g.id)
   );
+  const progressByGoalId = new Map(
+    goalsWithProgress.map((g) => [g.goal_id, g])
+  );
+  const activeGoals = (upcomingSession.goals ?? [])
+    .map((g) => progressByGoalId.get(g.id))
+    .filter((g): g is GoalWithProgress => g !== undefined && sessionLinkedGoalIds.has(g.goal_id))
+    .slice(0, maxActiveGoals());
 
   const totalActions = activeGoals.reduce(
     (sum, g) => sum + g.progress_metrics.actions_total,

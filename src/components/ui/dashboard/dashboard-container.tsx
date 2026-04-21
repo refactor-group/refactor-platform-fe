@@ -6,10 +6,6 @@ import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-sessio
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
 import { UpcomingSessionCard } from "@/components/ui/dashboard/upcoming-session-card";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
-import { getOtherPersonName } from "@/types/coaching-relationship";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {
@@ -18,11 +14,6 @@ export function DashboardContainer() {
     CoachingSession | undefined
   >();
   const [refreshUpcomingSession, setRefreshUpcomingSession] = useState<(() => void) | null>(() => null);
-
-  const { userId } = useAuthStore((state) => ({ userId: state.userId }));
-  const { currentOrganizationId } = useCurrentOrganization();
-  const { currentCoachingRelationshipId, currentCoachingRelationship } =
-    useCurrentCoachingRelationship();
 
   const handleOpenDialog = (session?: CoachingSession | EnrichedCoachingSession) => {
     setSessionToEdit(session);
@@ -43,9 +34,6 @@ export function DashboardContainer() {
     [],
   );
 
-  const canShowGoalsOverview =
-    currentOrganizationId && currentCoachingRelationshipId && currentCoachingRelationship;
-
   return (
     <>
       <DashboardHeader onCreateSession={() => handleOpenDialog()} />
@@ -58,15 +46,7 @@ export function DashboardContainer() {
           onCreateSession={() => handleOpenDialog()}
           onRefreshNeeded={handleRefreshNeeded}
         />
-        {canShowGoalsOverview ? (
-          <GoalsOverviewCard
-            organizationId={currentOrganizationId}
-            relationshipId={currentCoachingRelationshipId}
-            coacheeName={getOtherPersonName(currentCoachingRelationship, userId)}
-          />
-        ) : (
-          <div aria-hidden="true" />
-        )}
+        <GoalsOverviewCard />
       </div>
 
       <div className="w-full">
