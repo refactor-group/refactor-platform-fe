@@ -40,13 +40,14 @@ on:
         required: true
         type: choice
         options:
+          - '8ff4356 - chore: refresh preview commit choices [skip ci]'
           - '97fe8d8 - Merge pull request #374 from refactor-group/fix/coachee-dropdown-alphabetical-sort'
           - 778cbe1 - Merge branch 'main' into fix/coachee-dropdown-alphabetical-sort
-          - '942d0b2 - chore: refresh preview commit choices [skip ci]'
-          - e2d5011 - PR#373 (feature/transcript-pane)
-          - 3d0859b - PR#367 (raymond/implements-magic-login)
+          - d3e763f - PR#377 (feat/dashboard-upcoming-sessio)
+          - 0ede2a2 - PR#373 (feature/transcript-pane)
+          - 47a70df - PR#367 (raymond/implements-magic-login)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
-          - 479f4db - PR#318 (docs/goals-implementation-plan)
+          - 8ad4e21 - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
           - d9e1e08 - PR#243 (feature/146-ai-meeting-integra)
       backend_commit_override:
