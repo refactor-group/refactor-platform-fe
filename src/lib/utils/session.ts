@@ -13,6 +13,10 @@ import {
 } from "@/lib/utils/relationship";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { goalTitle } from "@/types/goal";
+import { RelationshipRole } from "@/types/relationship-role";
+import type { Action } from "@/types/action";
+import { sortActionArray } from "@/types/action";
+import { SortOrder } from "@/types/sorting";
 
 /**
  * Session Utility Functions
@@ -136,9 +140,10 @@ export function getUrgencyMessage(
     }
 
     case SessionUrgency.Later: {
-      const timeOfDay = sessionTime.toFormat("h:mm a");
+      // The absolute time is shown separately in the UI (card header, popover
+      // row); keep this message relative so it doesn't duplicate that info.
       const period = getPeriodOfDay(sessionTime);
-      return `Scheduled for ${period} at ${timeOfDay}`;
+      return `Scheduled for ${period}`;
     }
   }
 }
@@ -315,23 +320,137 @@ export function formatSessionTime(
 }
 
 /**
- * Get the name of the other participant in an enriched session
+ * Information about the other participant in a coaching session, from the
+ * perspective of the viewing user. `null` when relationship data is missing.
+ */
+export type SessionParticipantInfo = {
+  /** The display name of the participant (coach or coachee) */
+  readonly participantName: string;
+  /** The participant's first name (for avatar initials) */
+  readonly firstName: string;
+  /** The participant's last name (for avatar initials) */
+  readonly lastName: string;
+  /** The viewer's role in the session (Coach or Coachee) */
+  readonly userRole: RelationshipRole;
+  /** Whether the viewer is the coach in this session */
+  readonly isCoach: boolean;
+  /** True when the counterpart user object was not loaded; participantName
+   *  in that case is a "(data not loaded)" placeholder, not a real name. */
+  readonly isMissing: boolean;
+} | null;
+
+/**
+ * Get participant details for an enriched session from the viewer's perspective.
  *
- * Determines whether the current user is the coach or coachee, then
- * returns the other person's full name.
+ * Determines whether the viewer is the coach or coachee, then returns the
+ * *other* participant's display info. Returns null when the session lacks a
+ * relationship, and a "(data not loaded)" fallback when the counterpart user
+ * object is missing.
+ */
+export function getSessionParticipantInfo(
+  session: EnrichedCoachingSession,
+  userId: string
+): SessionParticipantInfo {
+  const relationship = session.relationship;
+  if (!relationship) return null;
+
+  const isCoach = relationship.coach_id === userId;
+  const userRole = isCoach ? RelationshipRole.Coach : RelationshipRole.Coachee;
+  const participant = isCoach ? session.coachee : session.coach;
+
+  if (!participant) {
+    return {
+      participantName: isCoach ? "Coachee (data not loaded)" : "Coach (data not loaded)",
+      firstName: "",
+      lastName: "",
+      userRole,
+      isCoach,
+      isMissing: true,
+    };
+  }
+
+  const participantName =
+    `${participant.first_name} ${participant.last_name}`.trim() ||
+    participant.display_name;
+
+  return {
+    participantName,
+    firstName: participant.first_name,
+    lastName: participant.last_name,
+    userRole,
+    isCoach,
+    isMissing: false,
+  };
+}
+
+/**
+ * Get the name of the other participant in an enriched session.
+ *
+ * Thin wrapper over getSessionParticipantInfo that collapses the null/missing
+ * cases to single-word strings (for terse list-style UI). When the participant
+ * *is* loaded but has blank first/last names, the underlying display_name
+ * fallback from getSessionParticipantInfo is returned as-is.
  */
 export function getSessionParticipantName(
   session: EnrichedCoachingSession,
   userId: string
 ): string {
-  const relationship = session.relationship;
-  if (!relationship) return "Unknown";
+  const info = getSessionParticipantInfo(session, userId);
+  if (!info) return "Unknown";
+  if (info.isMissing) return info.isCoach ? "Coachee" : "Coach";
+  return info.participantName;
+}
 
-  const isCoach = relationship.coach_id === userId;
-  const participant = isCoach ? session.coachee : session.coach;
+/**
+ * Select the next session a user should act on: the first session in the list
+ * whose urgency is not Past. Assumes the list is sorted ascending by date.
+ */
+export function selectNextUpcomingSession(
+  sessions: EnrichedCoachingSession[]
+): EnrichedCoachingSession | undefined {
+  return sessions.find(
+    (session) => calculateSessionUrgency(session) !== SessionUrgency.Past
+  );
+}
 
-  if (!participant) return isCoach ? "Coachee" : "Coach";
+/**
+ * Pure filter matching the coaching-session Actions panel's "Due" tab
+ * semantics: which actions from a given relationship should surface as
+ * "due for review" at a given session.
+ *
+ * Pre-condition: `allActions` must already be scoped to the session's
+ * coaching relationship (e.g. via the `coaching_relationship_id` query param).
+ *
+ * Rules:
+ * 1. Exclude actions that were created in the current session (they belong
+ *    to the session's own "New" tab, not the carry-forward review window).
+ * 2. Include sticky actions (previously visible in the panel) regardless of
+ *    current state. Dashboard callers typically pass no sticky set.
+ * 3. Include only actions due within `[previousSessionDate, currentSessionDate]`
+ *    — of any status. The panel's Due tab shows Completed actions too so
+ *    they're visible for review; the count mirrors that.
+ *
+ * Results are sorted reverse-chronologically by due_by.
+ */
+export function filterReviewActions(
+  allActions: Action[],
+  currentSessionId: Id,
+  currentSessionDate: DateTime,
+  previousSessionDate: DateTime | null,
+  stickyIds?: Set<Id>,
+): Action[] {
+  const endOfCurrentDate = currentSessionDate.endOf("day");
+  const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
 
-  return `${participant.first_name} ${participant.last_name}`.trim() ||
-    participant.display_name;
+  const filtered = allActions.filter((a) => {
+    if (a.coaching_session_id === currentSessionId) return false;
+    if (stickyIds?.has(a.id)) return true;
+
+    const dueBy = a.due_by;
+    if (dueBy > endOfCurrentDate) return false;
+    if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
+    return false;
+  });
+
+  return sortActionArray(filtered, SortOrder.Desc, "due_by");
 }
