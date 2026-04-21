@@ -14,6 +14,18 @@ import { type AssigneeScope } from "@/types/assigned-actions";
 import { EntityApi } from "./entity-api";
 
 /**
+ * Deterministic serialization of a params record for use in an SWR cache
+ * key. Emits only defined fields in a stable sort order so that two
+ * params objects with the same semantic content produce the same key.
+ * Plain `JSON.stringify` is sensitive to insertion order.
+ */
+function stableParamsKey(params: Record<string, unknown>): string {
+  const defined = Object.entries(params).filter(([, v]) => v !== undefined);
+  defined.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return JSON.stringify(Object.fromEntries(defined));
+}
+
+/**
  * Server-side filter / sort / limit params for GET .../goal_progress.
  * See RelationshipGoalProgress v4 contract.
  *
@@ -63,7 +75,7 @@ export const GoalProgressApi = {
 
   /**
    * Fetches progress metrics for all goals in a coaching relationship.
-   * Optional server-side filter/sort/limit — see RelationshipGoalProgress v3.
+   * Optional server-side filter/sort/limit — see RelationshipGoalProgress v4.
    */
   listByRelationship: async (
     organizationId: Id,
@@ -115,39 +127,55 @@ export const useGoalProgress = (goalId: Option<Id>) => {
 };
 
 /**
- * SWR hook that fetches progress metrics for all goals in a coaching relationship.
- * Skips the fetch when either ID is null (SWR conditional fetching).
+ * SWR hook that fetches progress metrics for all goals in a coaching
+ * relationship. Passes `None` for either id to skip the fetch — matches the
+ * `Option<T>` pattern used by `useGoalProgress` and canonicalized in the
+ * project's coding standards.
  *
- * @param organizationId The organization ID — null skips the fetch.
- * @param relationshipId The coaching relationship ID — null skips the fetch.
- * @param params Optional server-side filter / sort / limit (RelationshipGoalProgress v3).
+ * @param organizationId The organization ID wrapped in Option — None skips the fetch.
+ * @param relationshipId The coaching relationship ID wrapped in Option — None skips the fetch.
+ * @param params Optional server-side filter / sort / limit (RelationshipGoalProgress v4).
  */
 export const useGoalProgressList = (
-  organizationId: Id | null,
-  relationshipId: Id | null,
+  organizationId: Option<Id>,
+  relationshipId: Option<Id>,
   params: GoalProgressListParams = {}
 ) => {
-  const url =
-    organizationId && relationshipId
-      ? buildUrl(
-          `${ORGANIZATIONS_BASEURL}/${organizationId}/coaching_relationships/${relationshipId}/goal_progress`,
-          params
-        )
+  // Narrow both Options into a single nullable object so downstream reads
+  // carry the Some-guarantee through without any `!` assertions.
+  const resolved =
+    organizationId.some && relationshipId.some
+      ? { orgId: organizationId.val, relId: relationshipId.val }
       : null;
+
+  const url = resolved
+    ? buildUrl(
+        `${ORGANIZATIONS_BASEURL}/${resolved.orgId}/coaching_relationships/${resolved.relId}/goal_progress`,
+        params
+      )
+    : null;
 
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<GoalWithProgress>(
+      // `url ?? ""` is a placeholder — SWR's fetch gate is driven by the
+      // cache-key arg below being undefined, not the URL string. See
+      // useEntityList: `key = actualParams ? [url, actualParams] : null`.
       url ?? "",
       () =>
-        GoalProgressApi.listByRelationship(
-          organizationId!,
-          relationshipId!,
-          params
-        ),
-      // Cache key scopes on (relationshipId + query params) so SWR refetches
-      // when any param changes.
-      organizationId && relationshipId
-        ? `${relationshipId}|${JSON.stringify(params)}`
+        resolved
+          ? GoalProgressApi.listByRelationship(
+              resolved.orgId,
+              resolved.relId,
+              params
+            )
+          : Promise.reject(
+              new Error("unreachable: fetcher invoked with unresolved IDs")
+            ),
+      // Cache key scopes on (relationshipId + stable-serialized params) so
+      // SWR refetches when any param changes and key identity stays stable
+      // regardless of object-key insertion order.
+      resolved
+        ? `${resolved.relId}|${stableParamsKey(params as Record<string, unknown>)}`
         : undefined
     );
 

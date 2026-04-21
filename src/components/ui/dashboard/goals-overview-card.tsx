@@ -15,12 +15,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/components/lib/utils";
 import { useGoalProgressList } from "@/lib/api/goal-progress";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -32,6 +26,8 @@ import {
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
 import { AssigneeScope } from "@/types/assigned-actions";
+import { type Option, Some, None } from "@/types/option";
+import type { Id } from "@/types/general";
 import { ProgressRing } from "@/components/ui/dashboard/progress-ring";
 import { GoalRow } from "@/components/ui/dashboard/goal-row";
 import { GoalsOverviewCardEmpty } from "@/components/ui/dashboard/goals-overview-card-empty";
@@ -127,14 +123,21 @@ function GoalsOverviewCardError() {
 
 export function GoalsOverviewCard() {
   const [expanded, setExpanded] = useState(true);
-  const { userId } = useAuthStore((state) => ({ userId: state.userId }));
+  // Select the primitive directly so Zustand's default Object.is equality
+  // doesn't re-subscribe every render (would happen if the selector returned
+  // a fresh object).
+  const userId = useAuthStore((state) => state.userId);
   const { sessions: todaysSessions, isLoading: isSessionsLoading } =
     useTodaysSessions();
   const upcomingSession = selectNextUpcomingSession(todaysSessions);
 
-  const organizationId = upcomingSession?.organization?.id ?? null;
-  const relationshipId = upcomingSession?.coaching_relationship_id ?? null;
-  const sessionId = upcomingSession?.id ?? null;
+  const organizationId: Option<Id> = upcomingSession?.organization?.id
+    ? Some(upcomingSession.organization.id)
+    : None;
+  const relationshipId: Option<Id> = upcomingSession?.coaching_relationship_id
+    ? Some(upcomingSession.coaching_relationship_id)
+    : None;
+  const sessionId = upcomingSession?.id ?? undefined;
 
   // The server returns exactly the coachee-scoped progress metrics for goals
   // linked to the upcoming session — same set the Upcoming Session card
@@ -146,12 +149,12 @@ export function GoalsOverviewCard() {
     isLoading: isGoalsLoading,
     isError,
   } = useGoalProgressList(organizationId, relationshipId, {
-    coaching_session_id: sessionId ?? undefined,
+    coaching_session_id: sessionId,
     assignee: AssigneeScope.Coachee,
   });
 
   // Show loading chrome while any required fetch is in flight.
-  if (isSessionsLoading || (organizationId && isGoalsLoading)) {
+  if (isSessionsLoading || (organizationId.some && isGoalsLoading)) {
     return <GoalsOverviewCardSkeleton />;
   }
 
@@ -198,25 +201,15 @@ export function GoalsOverviewCard() {
               type="button"
               className="w-full flex items-center justify-between gap-4 p-6 text-left hover:bg-muted/20 transition-colors rounded-xl"
             >
-              {/* Left: ring + label/value */}
+              {/* Left: ring + label/value. The outer button's computed
+                  accessible name already includes "{completed} of {total}
+                  actions completed" + the count + the health signal, so the
+                  ring is presentational — no role="img" / aria-label /
+                  tooltip needed (and the previous wrapper div's
+                  stopPropagation was breaking the collapse toggle when the
+                  ring was tapped on touch devices). */}
               <div className="flex items-center gap-4 flex-1 min-w-0">
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div
-                        role="img"
-                        aria-label={`${completedActions} of ${totalActions} actions completed`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ProgressRing percent={overallPercent} />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">
-                      {completedActions} of {totalActions} actions completed
-                      across active goals
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <ProgressRing percent={overallPercent} />
                 <div>
                   <p className="text-xs text-muted-foreground">
                     {coacheeName}&apos;s active goals
@@ -227,9 +220,14 @@ export function GoalsOverviewCard() {
                 </div>
               </div>
 
-              {/* Right: health signal + chevron */}
+              {/* Right: health signal + chevron. Hide the signal when there
+                  are no goals — aggregateProgress([]) defaults to
+                  SolidMomentum, which would otherwise flash a misleading
+                  "Solid momentum" badge next to a count of 0. */}
               <div className="flex items-center gap-3 shrink-0">
-                <HealthSignal progress={overallProgress} />
+                {activeGoals.length > 0 && (
+                  <HealthSignal progress={overallProgress} />
+                )}
                 <ChevronDown
                   className={cn(
                     "h-4 w-4 text-muted-foreground/40 transition-transform duration-200",

@@ -314,7 +314,57 @@ describe("GoalsOverviewCard", () => {
     // Server filters + scopes in one round trip — no client-side intersect
     // or count override needed. Card passes the upcoming session's id and
     // AssigneeScope.Coachee (RelationshipGoalProgress v4).
-    expect(mockUseGoalProgressList).toHaveBeenCalledWith("org-1", "rel-1", {
+    expect(mockUseGoalProgressList).toHaveBeenCalledWith(
+      Some("org-1"),
+      Some("rel-1"),
+      {
+        coaching_session_id: "sess-1",
+        assignee: AssigneeScope.Coachee,
+      }
+    );
+  });
+
+  it("hides the health signal when the server returns an empty list", () => {
+    // aggregateProgress([]) defaults to SolidMomentum; without the
+    // length-guard a misleading "Solid momentum" badge would flash next to
+    // the count of 0.
+    setupDefault();
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: [],
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(screen.queryByText("Solid momentum")).not.toBeInTheDocument();
+    expect(screen.queryByText("Needs attention")).not.toBeInTheDocument();
+    expect(screen.queryByText(/refocus/i)).not.toBeInTheDocument();
+  });
+
+  it("passes None Options to the hook when the upcoming session has no organization/relationship", () => {
+    // Partially-hydrated enriched session (no `organization` on the include
+    // or a race where the data hasn't landed). The card should pass None so
+    // the hook skips the fetch rather than blowing up.
+    mockAuthStore.mockReturnValue({ userId: "user-1" });
+    const partial = { id: "sess-1" }; // no organization, no coaching_relationship_id
+    mockUseTodaysSessions.mockReturnValue({
+      sessions: [partial],
+      isLoading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    });
+    mockSelectNextUpcomingSession.mockReturnValue(partial);
+    mockGetSessionParticipantName.mockReturnValue("Alex Chen");
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: [],
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(mockUseGoalProgressList).toHaveBeenCalledWith(None, None, {
       coaching_session_id: "sess-1",
       assignee: AssigneeScope.Coachee,
     });
