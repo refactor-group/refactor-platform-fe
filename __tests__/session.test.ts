@@ -4,6 +4,9 @@ import {
   calculateSessionUrgency,
   getUrgencyMessage,
   enrichSessionForDisplay,
+  selectNextUpcomingSession,
+  getSessionParticipantInfo,
+  getSessionParticipantName,
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/utils/session";
@@ -12,11 +15,14 @@ import {
   getUserRoleInRelationship,
 } from "@/lib/utils/relationship";
 import { SessionUrgency } from "@/types/session-display";
+import { RelationshipRole } from "@/types/relationship-role";
 import {
   createMockUser,
   createMockRelationship,
   createMockSession,
   createSessionAt,
+  createMockEnrichedSession,
+  createEnrichedSessionAt,
 } from "./test-utils";
 
 /**
@@ -234,6 +240,103 @@ describe("getUserRoleInRelationship", () => {
 
     const role = getUserRoleInRelationship(relationship, user);
     expect(role).toBe("Coachee");
+  });
+});
+
+describe("selectNextUpcomingSession", () => {
+  it("returns undefined for an empty list", () => {
+    expect(selectNextUpcomingSession([])).toBeUndefined();
+  });
+
+  it("returns undefined when every session is in the past", () => {
+    const sessions = [
+      createEnrichedSessionAt(-120),
+      createEnrichedSessionAt(-240),
+    ];
+    expect(selectNextUpcomingSession(sessions)).toBeUndefined();
+  });
+
+  it("selects the first non-past session in a mixed list", () => {
+    const past = createEnrichedSessionAt(-120, { id: "past" });
+    const imminent = createEnrichedSessionAt(15, { id: "imminent" });
+    const later = createEnrichedSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60, { id: "later" });
+    const result = selectNextUpcomingSession([past, imminent, later]);
+    expect(result?.id).toBe("imminent");
+  });
+
+  it("selects an underway session over a later one", () => {
+    const underway = createEnrichedSessionAt(-30, { id: "underway" });
+    const later = createEnrichedSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60, { id: "later" });
+    const result = selectNextUpcomingSession([underway, later]);
+    expect(result?.id).toBe("underway");
+  });
+
+  it("returns the only session when it is not past", () => {
+    const soon = createEnrichedSessionAt(90, { id: "only" });
+    expect(selectNextUpcomingSession([soon])?.id).toBe("only");
+  });
+});
+
+describe("getSessionParticipantInfo", () => {
+  it("returns coach-role info when the viewer is the coach", () => {
+    const session = createMockEnrichedSession();
+    const info = getSessionParticipantInfo(session, "coach-1");
+    expect(info).not.toBeNull();
+    expect(info?.isCoach).toBe(true);
+    expect(info?.userRole).toBe(RelationshipRole.Coach);
+    expect(info?.participantName).toBe("Alex Chen");
+    expect(info?.firstName).toBe("Alex");
+    expect(info?.lastName).toBe("Chen");
+  });
+
+  it("returns coachee-role info when the viewer is the coachee", () => {
+    const session = createMockEnrichedSession();
+    const info = getSessionParticipantInfo(session, "coachee-1");
+    expect(info).not.toBeNull();
+    expect(info?.isCoach).toBe(false);
+    expect(info?.userRole).toBe(RelationshipRole.Coachee);
+    expect(info?.participantName).toBe("Jim Hodapp");
+    expect(info?.firstName).toBe("Jim");
+    expect(info?.lastName).toBe("Hodapp");
+  });
+
+  it("returns null when the session has no relationship", () => {
+    const session = createMockEnrichedSession({ relationship: undefined });
+    expect(getSessionParticipantInfo(session, "coach-1")).toBeNull();
+  });
+
+  it("returns a 'data not loaded' fallback when the counterpart user is missing", () => {
+    const session = createMockEnrichedSession({ coachee: undefined });
+    const info = getSessionParticipantInfo(session, "coach-1");
+    expect(info).not.toBeNull();
+    expect(info?.isCoach).toBe(true);
+    expect(info?.participantName).toBe("Coachee (data not loaded)");
+    expect(info?.firstName).toBe("");
+    expect(info?.lastName).toBe("");
+  });
+});
+
+describe("getSessionParticipantName", () => {
+  it("returns the counterpart's full name when viewer is coach", () => {
+    const session = createMockEnrichedSession();
+    expect(getSessionParticipantName(session, "coach-1")).toBe("Alex Chen");
+  });
+
+  it("returns the counterpart's full name when viewer is coachee", () => {
+    const session = createMockEnrichedSession();
+    expect(getSessionParticipantName(session, "coachee-1")).toBe("Jim Hodapp");
+  });
+
+  it("returns 'Unknown' when the session has no relationship", () => {
+    const session = createMockEnrichedSession({ relationship: undefined });
+    expect(getSessionParticipantName(session, "coach-1")).toBe("Unknown");
+  });
+
+  it("returns a role-aware fallback when the counterpart user is missing", () => {
+    const coachMissing = createMockEnrichedSession({ coach: undefined });
+    expect(getSessionParticipantName(coachMissing, "coachee-1")).toBe("Coach");
+    const coacheeMissing = createMockEnrichedSession({ coachee: undefined });
+    expect(getSessionParticipantName(coacheeMissing, "coach-1")).toBe("Coachee");
   });
 });
 

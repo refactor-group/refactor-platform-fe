@@ -13,6 +13,7 @@ import {
 } from "@/lib/utils/relationship";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { goalTitle } from "@/types/goal";
+import { RelationshipRole } from "@/types/relationship-role";
 
 /**
  * Session Utility Functions
@@ -315,23 +316,93 @@ export function formatSessionTime(
 }
 
 /**
- * Get the name of the other participant in an enriched session
+ * Information about the other participant in a coaching session, from the
+ * perspective of the viewing user. `null` when relationship data is missing.
+ */
+export type SessionParticipantInfo = {
+  /** The display name of the participant (coach or coachee) */
+  readonly participantName: string;
+  /** The participant's first name (for avatar initials) */
+  readonly firstName: string;
+  /** The participant's last name (for avatar initials) */
+  readonly lastName: string;
+  /** The viewer's role in the session (Coach or Coachee) */
+  readonly userRole: RelationshipRole;
+  /** Whether the viewer is the coach in this session */
+  readonly isCoach: boolean;
+} | null;
+
+/**
+ * Get participant details for an enriched session from the viewer's perspective.
  *
- * Determines whether the current user is the coach or coachee, then
- * returns the other person's full name.
+ * Determines whether the viewer is the coach or coachee, then returns the
+ * *other* participant's display info. Returns null when the session lacks a
+ * relationship, and a "(data not loaded)" fallback when the counterpart user
+ * object is missing.
+ */
+export function getSessionParticipantInfo(
+  session: EnrichedCoachingSession,
+  userId: string
+): SessionParticipantInfo {
+  const relationship = session.relationship;
+  if (!relationship) return null;
+
+  const isCoach = relationship.coach_id === userId;
+  const userRole = isCoach ? RelationshipRole.Coach : RelationshipRole.Coachee;
+  const participant = isCoach ? session.coachee : session.coach;
+
+  if (!participant) {
+    return {
+      participantName: isCoach ? "Coachee (data not loaded)" : "Coach (data not loaded)",
+      firstName: "",
+      lastName: "",
+      userRole,
+      isCoach,
+    };
+  }
+
+  const participantName =
+    `${participant.first_name} ${participant.last_name}`.trim() ||
+    participant.display_name;
+
+  return {
+    participantName,
+    firstName: participant.first_name,
+    lastName: participant.last_name,
+    userRole,
+    isCoach,
+  };
+}
+
+/**
+ * Get the name of the other participant in an enriched session.
+ *
+ * Thin wrapper over getSessionParticipantInfo that collapses the null/fallback
+ * cases to single-word strings (for terse list-style UI).
  */
 export function getSessionParticipantName(
   session: EnrichedCoachingSession,
   userId: string
 ): string {
-  const relationship = session.relationship;
-  if (!relationship) return "Unknown";
+  const info = getSessionParticipantInfo(session, userId);
+  if (!info) return "Unknown";
+  // When counterpart user data is missing, getSessionParticipantInfo returns
+  // "Coach (data not loaded)" / "Coachee (data not loaded)" — collapse that
+  // to a terse role label here.
+  if (info.firstName === "" && info.lastName === "") {
+    return info.isCoach ? "Coachee" : "Coach";
+  }
+  return info.participantName;
+}
 
-  const isCoach = relationship.coach_id === userId;
-  const participant = isCoach ? session.coachee : session.coach;
-
-  if (!participant) return isCoach ? "Coachee" : "Coach";
-
-  return `${participant.first_name} ${participant.last_name}`.trim() ||
-    participant.display_name;
+/**
+ * Select the next session a user should act on: the first session in the list
+ * whose urgency is not Past. Assumes the list is sorted ascending by date.
+ */
+export function selectNextUpcomingSession(
+  sessions: EnrichedCoachingSession[]
+): EnrichedCoachingSession | undefined {
+  return sessions.find(
+    (session) => calculateSessionUrgency(session) !== SessionUrgency.Past
+  );
 }
