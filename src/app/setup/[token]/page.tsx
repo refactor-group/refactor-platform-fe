@@ -6,10 +6,11 @@ import Link from "next/link"
 import axios from "axios"
 
 import { cn } from "@/components/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Icons } from "@/components/ui/icons"
 import { AccountSetupForm } from "@/components/ui/setup/account-setup-form"
 import { MagicLinkApi } from "@/lib/api/magic-links"
+import { useLogoutUser } from "@/lib/hooks/use-logout-user"
 import { siteConfig } from "@/site.config"
 import type { SetupPageState } from "@/types/magic-link"
 
@@ -40,6 +41,13 @@ export default function SetupPage() {
     const token = params.token
     const [pageState, setPageState] = useState<SetupPageState>({ kind: "validating" })
     const [formError, setFormError] = useState("")
+    const [isSigningOut, setIsSigningOut] = useState(false)
+    const logoutUser = useLogoutUser()
+
+    const handleSignIn = async () => {
+        setIsSigningOut(true)
+        await logoutUser()
+    }
 
     useEffect(() => {
         MagicLinkApi.validate(token)
@@ -152,15 +160,16 @@ export default function SetupPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                Your account has been set up successfully.
+                            <p className="text-center text-sm text-muted-foreground">
+                                Your account has been set up successfully. Please sign in with your new password.
                             </p>
-                            <Link
-                                href="/"
-                                className={cn(buttonVariants({ variant: "default" }), "w-full")}
+                            <Button
+                                className="w-full"
+                                onClick={handleSignIn}
+                                disabled={isSigningOut}
                             >
-                                Sign In
-                            </Link>
+                                {isSigningOut ? "Signing out..." : "Sign In"}
+                            </Button>
                         </div>
                     )}
 
