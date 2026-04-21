@@ -137,9 +137,10 @@ export function getUrgencyMessage(
     }
 
     case SessionUrgency.Later: {
-      const timeOfDay = sessionTime.toFormat("h:mm a");
+      // The absolute time is shown separately in the UI (card header, popover
+      // row); keep this message relative so it doesn't duplicate that info.
       const period = getPeriodOfDay(sessionTime);
-      return `Scheduled for ${period} at ${timeOfDay}`;
+      return `Scheduled for ${period}`;
     }
   }
 }
