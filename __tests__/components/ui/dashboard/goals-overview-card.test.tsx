@@ -347,7 +347,7 @@ describe("GoalsOverviewCard", () => {
     expect(trigger).toHaveAttribute("data-state", "closed");
   });
 
-  it("renders 'View all goals' button as disabled", () => {
+  it("does not render a 'View all goals' link (deferred until Goals page lands)", () => {
     const goals = [makeGoalWithProgress({ goal_id: "g1" })];
     setupDefault(["g1"]);
     mockUseGoalProgressList.mockReturnValue({
@@ -358,10 +358,12 @@ describe("GoalsOverviewCard", () => {
     });
 
     render(<GoalsOverviewCard />);
-    const viewAllButton = screen.getByRole("button", {
-      name: /view all goals/i,
-    });
-    expect(viewAllButton).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: /view all goals/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /view all goals/i })
+    ).not.toBeInTheDocument();
   });
 
   it("fetches the relationship's full progress list (no server-side filter)", () => {

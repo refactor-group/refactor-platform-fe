@@ -262,17 +262,22 @@ export function GoalsOverviewCard() {
                   ))}
                 </div>
               )}
-              <div className="pt-3 mt-auto flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground hover:text-foreground gap-1 h-7"
-                  disabled
-                >
-                  View all goals
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+              {/* TODO: Flip this `false` to render the "View all goals" link
+                  once the global Goals page lands — the button already points
+                  at nothing, so showing a disabled CTA just adds noise. */}
+              {false && (
+                <div className="pt-3 mt-auto flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground hover:text-foreground gap-1 h-7"
+                    disabled
+                  >
+                    View all goals
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
           </CollapsibleContent>
         </CardContent>
