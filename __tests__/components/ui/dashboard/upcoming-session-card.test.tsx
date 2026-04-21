@@ -56,6 +56,7 @@ const baseAuthState = {
     role: "coach",
     roles: [],
   },
+  isACoach: true,
 };
 
 function setAuth(state = baseAuthState) {
@@ -134,7 +135,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(screen.getByText(/upcoming session/i)).toBeInTheDocument();
   });
 
@@ -161,7 +162,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([past, imminent]);
 
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     // Alex Chen is the default coachee on the fixture; when viewer is coach-1,
     // the participant shown should be Alex (from the imminent session), not
     // Past Person (from the past session).
@@ -176,7 +177,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     // Duration defaults to 60 minutes until backend supports per-session duration.
     expect(screen.getByText("60 min")).toBeInTheDocument();
   });
@@ -188,7 +189,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(screen.getByText("AC")).toBeInTheDocument();
   });
 
@@ -209,7 +210,7 @@ describe("UpcomingSessionCard — populated state", () => {
       makeActionContext("rel-1", sessionDate.plus({ days: 1 })),
     ]);
 
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(screen.getByText("2 actions due")).toBeInTheDocument();
   });
 
@@ -224,7 +225,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(screen.getByText("Improve technical leadership")).toBeInTheDocument();
     expect(screen.getByText("Build public speaking confidence")).toBeInTheDocument();
   });
@@ -236,7 +237,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(screen.getByText(/Starting in 15 minutes/)).toBeInTheDocument();
   });
 
@@ -247,7 +248,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    const { container } = render(<UpcomingSessionCard />);
+    const { container } = render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     // PulsingDot contains a uniquely-classed animate-ping element.
     expect(container.querySelector(".animate-ping")).toBeInTheDocument();
   });
@@ -259,7 +260,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([later]);
 
-    const { container } = render(<UpcomingSessionCard />);
+    const { container } = render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(container.querySelector(".animate-ping")).not.toBeInTheDocument();
   });
 
@@ -270,7 +271,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    render(<UpcomingSessionCard onReschedule={vi.fn()} />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} onReschedule={vi.fn()} />);
     expect(
       screen.getByRole("button", { name: /reschedule/i })
     ).toBeInTheDocument();
@@ -278,7 +279,9 @@ describe("UpcomingSessionCard — populated state", () => {
 
   it("hides the Reschedule button when the viewer is the coachee", () => {
     setAuth({
+      ...baseAuthState,
       userSession: { ...baseAuthState.userSession, id: "coachee-1" },
+      isACoach: false,
     });
     const imminent = createEnrichedSessionAt(15, {
       id: "imminent",
@@ -286,7 +289,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    render(<UpcomingSessionCard onReschedule={vi.fn()} />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} onReschedule={vi.fn()} />);
     expect(
       screen.queryByRole("button", { name: /reschedule/i })
     ).not.toBeInTheDocument();
@@ -300,7 +303,7 @@ describe("UpcomingSessionCard — populated state", () => {
     setSessions([imminent]);
     const handleReschedule = vi.fn();
 
-    render(<UpcomingSessionCard onReschedule={handleReschedule} />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} onReschedule={handleReschedule} />);
     fireEvent.click(screen.getByRole("button", { name: /reschedule/i }));
     expect(handleReschedule).toHaveBeenCalledWith(imminent);
   });
@@ -312,7 +315,7 @@ describe("UpcomingSessionCard — populated state", () => {
     });
     setSessions([imminent]);
 
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     const join = screen.getByRole("link", { name: /join/i });
     expect(join.getAttribute("href")).toBe("/coaching-sessions/imminent");
   });
@@ -338,15 +341,27 @@ describe("UpcomingSessionCard — populated state", () => {
     expect(handleCreate).toHaveBeenCalledTimes(1);
   });
 
+  it("hides the empty-state schedule button when the viewer cannot create sessions", () => {
+    setAuth({ ...baseAuthState, isACoach: false });
+    setSessions([]);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
+    expect(
+      screen.queryByRole("button", { name: /schedule a coaching session/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/your coach will schedule your next session/i)
+    ).toBeInTheDocument();
+  });
+
   it("renders a loading state while sessions are loading", () => {
     setSessions([], { isLoading: true });
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(screen.getByText(/loading your upcoming session/i)).toBeInTheDocument();
   });
 
   it("renders an error state when the sessions fetch errors", () => {
     setSessions([], { error: new Error("boom") });
-    render(<UpcomingSessionCard />);
+    render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(
       screen.getByText(/couldn't load your upcoming session/i)
     ).toBeInTheDocument();
@@ -365,7 +380,7 @@ describe("UpcomingSessionCard — populated state", () => {
 
     act(() => {
       render(
-        <UpcomingSessionCard onRefreshNeeded={handleRefreshNeeded} />
+        <UpcomingSessionCard onCreateSession={vi.fn()} onRefreshNeeded={handleRefreshNeeded} />
       );
     });
 

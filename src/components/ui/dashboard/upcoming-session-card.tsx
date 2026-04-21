@@ -59,7 +59,7 @@ export function UpcomingSessionCard({
   onReschedule,
   onRefreshNeeded,
 }: UpcomingSessionCardProps) {
-  const { userSession } = useAuthStore((state) => state);
+  const { userSession, isACoach } = useAuthStore((state) => state);
   const { sessions, isLoading, error, refresh } = useTodaysSessions();
   const { flatActions } = useAssignedActions();
 
@@ -84,7 +84,10 @@ export function UpcomingSessionCard({
   if (!nextSession) {
     return (
       <CardContainer>
-        <UpcomingSessionCardEmpty onCreateSession={onCreateSession} />
+        <UpcomingSessionCardEmpty
+          onCreateSession={onCreateSession}
+          canCreateSession={isACoach}
+        />
       </CardContainer>
     );
   }
