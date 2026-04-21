@@ -10,6 +10,7 @@ import {
   parseGoalProgressResponse,
 } from "@/types/goal-progress";
 import { type Option, None } from "@/types/option";
+import { type AssigneeScope } from "@/types/assigned-actions";
 import { EntityApi } from "./entity-api";
 
 /**
@@ -19,12 +20,17 @@ import { EntityApi } from "./entity-api";
  * Note: `status` is sent as PascalCase on the wire (e.g. "InProgress") — see
  * the "Status casing caveat" in the contract. `ItemStatus` already uses
  * PascalCase values, so its variants pass through unchanged.
+ *
+ * `assignee` scopes the aggregated action counts (and the `progress`
+ * signal once backend-supported) to a single assignee role / user id. See
+ * coordination board question `goal_progress_assignee_filter`.
  */
 export interface GoalProgressListParams {
   status?: ItemStatus;
   sort_by?: "updated_at" | "status_changed_at" | "created_at";
   sort_order?: "asc" | "desc";
   limit?: number;
+  assignee?: AssigneeScope | Id;
 }
 
 const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
@@ -72,6 +78,7 @@ function buildUrl(base: string, params: GoalProgressListParams): string {
   if (params.sort_by !== undefined) qs.append("sort_by", params.sort_by);
   if (params.sort_order !== undefined) qs.append("sort_order", params.sort_order);
   if (params.limit !== undefined) qs.append("limit", String(params.limit));
+  if (params.assignee !== undefined) qs.append("assignee", params.assignee);
   const query = qs.toString();
   return query ? `${base}?${query}` : base;
 }

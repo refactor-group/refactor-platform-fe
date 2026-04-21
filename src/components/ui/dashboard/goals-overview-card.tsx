@@ -32,6 +32,7 @@ import {
 import { maxActiveGoals } from "@/types/goal";
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
+import { AssigneeScope } from "@/types/assigned-actions";
 import { ProgressRing } from "@/components/ui/dashboard/progress-ring";
 import { GoalRow } from "@/components/ui/dashboard/goal-row";
 import { GoalsOverviewCardEmpty } from "@/components/ui/dashboard/goals-overview-card-empty";
@@ -121,21 +122,26 @@ export function GoalsOverviewCard() {
   const organizationId = upcomingSession?.organization?.id ?? null;
   const relationshipId = upcomingSession?.coaching_relationship_id ?? null;
 
-  // The card shows the same goals the Upcoming Session card shows —
-  // whatever's linked to that session via the join table, any status.
-  // We fetch the full relationship's goal_progress (no server-side filter)
-  // and intersect with `upcomingSession.goals` below to pick up each linked
-  // goal's progress metrics (action counts, session counts, signal). A
-  // follow-up backend param (?coaching_session_id=<uuid>) would let us push
-  // this filter down server-side; until then the relationship-scoped fetch
-  // is the only way to get progress_metrics per goal.
+  // The card shows the same goals the Upcoming Session card shows — whatever
+  // is linked to that session via the join table, any status — plus each
+  // goal's progress metrics scoped to the coachee. We fetch the full
+  // relationship's goal_progress with `?assignee=coachee` (see
+  // RelationshipGoalProgress v3 + coordination question
+  // `goal_progress_assignee_filter`) and intersect with
+  // `upcomingSession.goals` below to pick out the linked goals. A follow-up
+  // backend param (?coaching_session_id=<uuid>) would let us push the
+  // session-side filter down server-side too; until then the
+  // relationship-scoped fetch is the only way to get progress_metrics per
+  // goal.
   const {
     goalsWithProgress,
     isLoading: isGoalsLoading,
     isError,
-  } = useGoalProgressList(organizationId, relationshipId);
+  } = useGoalProgressList(organizationId, relationshipId, {
+    assignee: AssigneeScope.Coachee,
+  });
 
-  // Show loading chrome while either fetch is in flight.
+  // Show loading chrome while any required fetch is in flight.
   if (isSessionsLoading || (organizationId && isGoalsLoading)) {
     return <GoalsOverviewCardSkeleton />;
   }
@@ -152,9 +158,9 @@ export function GoalsOverviewCard() {
     ? getSessionParticipantName(upcomingSession, userId)
     : "";
 
-  // Intersect the relationship's full progress list with the session's
-  // linked goals — renders the same set the Upcoming Session card shows,
-  // one row per goal with its progress metrics.
+  // Intersect the relationship's coachee-scoped progress list with the
+  // session's linked goals — renders the same set the Upcoming Session card
+  // shows, one row per goal with its (coachee-filtered) progress metrics.
   // Preserves the session's own ordering (backend decides). Defensive cap
   // at maxActiveGoals() in case a session ever has more linked goals than
   // the product limit; if a linked goal is missing from the progress list

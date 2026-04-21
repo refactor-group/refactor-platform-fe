@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
+import { AssigneeScope } from "@/types/assigned-actions";
 import { maxActiveGoals } from "@/types/goal";
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
@@ -366,7 +367,7 @@ describe("GoalsOverviewCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("fetches the relationship's full progress list (no server-side filter)", () => {
+  it("asks the server for coachee-scoped progress metrics", () => {
     setupDefault();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: [],
@@ -376,8 +377,10 @@ describe("GoalsOverviewCard", () => {
     });
 
     render(<GoalsOverviewCard />);
-    // Card intersects with session.goals client-side, so it asks the server
-    // for the full relationship-scoped list — no status / sort / limit.
-    expect(mockUseGoalProgressList).toHaveBeenCalledWith("org-1", "rel-1");
+    // Card intersects with session.goals client-side but scopes action
+    // counts to the coachee via the assignee param (server-side filter).
+    expect(mockUseGoalProgressList).toHaveBeenCalledWith("org-1", "rel-1", {
+      assignee: AssigneeScope.Coachee,
+    });
   });
 });
