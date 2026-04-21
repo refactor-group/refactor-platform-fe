@@ -111,6 +111,20 @@ function GoalsOverviewCardSkeleton() {
   );
 }
 
+function GoalsOverviewCardError() {
+  return (
+    <Card className="border shadow-none h-full flex flex-col">
+      <CardContent className="p-4 sm:p-6 flex flex-col flex-1">
+        <div className="flex flex-col items-center justify-center flex-1 text-center py-4">
+          <p className="text-sm text-destructive">
+            Couldn&apos;t load active goals. Please refresh.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function GoalsOverviewCard() {
   const [expanded, setExpanded] = useState(true);
   const { userId } = useAuthStore((state) => ({ userId: state.userId }));
@@ -146,8 +160,10 @@ export function GoalsOverviewCard() {
     return <GoalsOverviewCardEmpty />;
   }
 
-  // Silent fallback on error — don't break the dashboard
-  if (isError) return null;
+  // Inline error state — matches the UpcomingSessionCard pattern so the
+  // dashboard layout stays intact when the backend request fails (network,
+  // 404 from a relationship the caller isn't in, 5xx, etc.).
+  if (isError) return <GoalsOverviewCardError />;
 
   const coacheeName = userId
     ? getSessionParticipantName(upcomingSession, userId)

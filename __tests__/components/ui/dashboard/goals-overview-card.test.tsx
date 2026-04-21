@@ -134,7 +134,7 @@ describe("GoalsOverviewCard", () => {
     expect(screen.getByText("No active goals to show")).toBeInTheDocument();
   });
 
-  it("renders nothing on goals-progress error (silent fallback)", () => {
+  it("renders an inline error message when goal_progress fails", () => {
     setupDefault();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: [],
@@ -143,8 +143,10 @@ describe("GoalsOverviewCard", () => {
       refresh: vi.fn(),
     });
 
-    const { container } = render(<GoalsOverviewCard />);
-    expect(container.firstChild).toBeNull();
+    render(<GoalsOverviewCard />);
+    expect(
+      screen.getByText(/couldn[’']t load active goals\. please refresh/i)
+    ).toBeInTheDocument();
   });
 
   it("renders the coachee name and the goal count returned by the server", () => {
