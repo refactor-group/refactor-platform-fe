@@ -38,9 +38,8 @@ interface UpcomingSessionCardProps {
   /** Invoked with no args when the user clicks Schedule a coaching session
    *  from the empty state. */
   onCreateSession?: () => void;
-  /** Surfaces the internal hook refresh function to the parent so it can
-   *  force a refresh after a dialog closes. Mirrors the pattern the previous
-   *  TodaysSessions carousel used. */
+  /** Surfaces the internal hook's refresh function to the parent so it can
+   *  force a refresh after a dialog closes. */
   onRefreshNeeded?: (refresh: () => void) => void;
 }
 
