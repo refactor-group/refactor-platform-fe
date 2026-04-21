@@ -5,7 +5,9 @@
 
 import { DateTime } from "ts-luxon";
 import { ItemStatus, type Id } from "@/types/general";
+import type { Option } from "@/types/option";
 import type { Action } from "@/types/action";
+import type { Goal } from "@/types/goal";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import {
   AssignedActionsFilter,
@@ -169,25 +171,39 @@ export function filterActionsByStatus(
 // Context Builders
 // ============================================================================
 
+const NO_GOAL: GoalContext = { goalId: "", title: "No Goal" };
+
 /**
- * Builds goal context from an enriched coaching session.
- * Returns a "No Goal" placeholder if the session has no goal.
- *
- * @param session - Enriched coaching session with optional goal data
- * @returns GoalContext object with goal ID and title
+ * Resolves a GoalContext from an Option<Id> and a goals array.
+ * Returns undefined when the ID is absent or not found in the array.
  */
-export function buildGoalContext(session: EnrichedCoachingSession): GoalContext {
-  const goal = session.goal;
-  if (goal) {
-    return {
-      goalId: goal.id,
-      title: goal.title,
-    };
-  }
-  return {
-    goalId: "",
-    title: "No Goal",
-  };
+export function resolveGoalContext(
+  goalId: Option<Id>,
+  goals: Goal[] | undefined
+): GoalContext | undefined {
+  if (!goalId.some || !goals) return undefined;
+  const goal = goals.find((g) => g.id === goalId.val);
+  if (!goal) return undefined;
+  return { goalId: goal.id, title: goal.title };
+}
+
+/**
+ * Builds goal context for an action.
+ *
+ * Prefers the action's explicit goal_id when present, falling back to
+ * the session's first goal, then a "No Goal" placeholder.
+ */
+export function buildGoalContext(
+  action: Action,
+  session: EnrichedCoachingSession
+): GoalContext {
+  const fromAction = resolveGoalContext(action.goal_id, session.goals);
+  if (fromAction) return fromAction;
+
+  const firstGoal = session.goals?.[0];
+  if (firstGoal) return { goalId: firstGoal.id, title: firstGoal.title };
+
+  return NO_GOAL;
 }
 
 /**
@@ -240,7 +256,7 @@ export function addContextToAction(
   return {
     action,
     relationship: buildRelationshipWithUserNames(session),
-    goal: buildGoalContext(session),
+    goal: buildGoalContext(action, session),
     sourceSession: buildSessionContext(session),
     nextSession: nextSession ? buildSessionContext(nextSession) : null,
     isOverdue,

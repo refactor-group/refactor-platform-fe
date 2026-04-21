@@ -252,9 +252,70 @@ const createCollaborationExtension = (doc: Y.Doc) => {
   });
 };
 
+/** Timeout before auto-hiding the collaborator cursor name bubble */
+const LABEL_AUTO_HIDE_MS = 5_000;
+
+/** Debounce delay before showing the label on hover to prevent flicker */
+const LABEL_HOVER_DEBOUNCE_MS = 150;
+
+/**
+ * Sets up auto-hide behavior for the collaboration cursor label bubble.
+ * The label fades out after LABEL_AUTO_HIDE_MS, reappears on hover over the
+ * cursor area (with a slight debounce to prevent flicker), and fades out again
+ * when the mouse leaves.
+ *
+ * @see https://github.com/refactor-group/refactor-platform-fe/issues/256
+ */
+function setupLabelAutoHide(container: HTMLElement, label: HTMLElement): void {
+  let hideTimeout: ReturnType<typeof setTimeout> | null = null;
+  let hoverDebounce: ReturnType<typeof setTimeout> | null = null;
+
+  const clearTimers = () => {
+    if (hideTimeout !== null) {
+      clearTimeout(hideTimeout);
+      hideTimeout = null;
+    }
+    if (hoverDebounce !== null) {
+      clearTimeout(hoverDebounce);
+      hoverDebounce = null;
+    }
+  };
+
+  const hideLabel = () => {
+    label.classList.add("collaboration-cursor__label--hidden");
+  };
+
+  const showLabel = () => {
+    label.classList.remove("collaboration-cursor__label--hidden");
+  };
+
+  const scheduleHide = () => {
+    clearTimers();
+    hideTimeout = setTimeout(hideLabel, LABEL_AUTO_HIDE_MS);
+  };
+
+  // Start auto-hide countdown on creation
+  scheduleHide();
+
+  // Show label on hover with a slight debounce to prevent flicker.
+  // mouseenter fires when the pointer enters the container or any descendant
+  // (including the absolutely-positioned label), so hovering the invisible
+  // label area also triggers re-display.
+  container.addEventListener("mouseenter", () => {
+    clearTimers();
+    hoverDebounce = setTimeout(showLabel, LABEL_HOVER_DEBOUNCE_MS);
+  });
+
+  // Re-start the auto-hide countdown when the mouse leaves
+  container.addEventListener("mouseleave", () => {
+    clearTimers();
+    scheduleHide();
+  });
+}
+
 const createCollaborationCaret = (
   provider: TiptapCollabProvider,
-  user?: { name: string; color: string }
+  user?: { name: string; color: string },
 ) => {
   return CollaborationCaret.configure({
     provider: provider,
@@ -272,19 +333,22 @@ const createCollaborationCaret = (
       cursor.classList.add("collaboration-cursor__caret");
       cursor.setAttribute(
         "style",
-        `border-color: ${user.color}; --collaboration-user-color: ${user.color};`
+        `border-color: ${user.color}; --collaboration-user-color: ${user.color};`,
       );
 
       const label = document.createElement("div");
       label.classList.add("collaboration-cursor__label");
       label.setAttribute(
         "style",
-        `background-color: ${user.color}; --collaboration-user-color: ${user.color};`
+        `background-color: ${user.color}; --collaboration-user-color: ${user.color};`,
       );
       label.insertBefore(document.createTextNode(user.name), null);
 
       container.appendChild(cursor);
       container.appendChild(label);
+
+      // Auto-hide the name bubble after timeout, re-show on hover
+      setupLabelAutoHide(container, label);
 
       return container;
     },

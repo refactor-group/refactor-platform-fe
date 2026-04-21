@@ -41,7 +41,7 @@ const ENRICHED_SESSION = {
     last_name: 'User',
     display_name: 'Test User',
   },
-  goal: {
+  goals: [{
     id: 'goal-1',
     title: 'Test Goal',
     coaching_session_id: 'session-1',
@@ -50,8 +50,14 @@ const ENRICHED_SESSION = {
     status_changed_at: '2026-02-01T00:00:00Z',
     created_at: '2026-02-01T00:00:00Z',
     updated_at: '2026-02-01T00:00:00Z',
-  },
+  }],
 }
+
+// Keep `due_by` near "today" so the kanban page's default Last-30-days time
+// filter always includes these mock actions. Hardcoded dates cause the test to
+// silently start failing once the test run date drifts past 30 days from the
+// chosen value.
+const DUE_BY_ISO = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
 function mockAction(
   id: string,
@@ -65,7 +71,7 @@ function mockAction(
     user_id: MOCK_USER_ID,
     status,
     status_changed_at: '2026-02-15T00:00:00Z',
-    due_by: '2026-03-15T00:00:00Z',
+    due_by: DUE_BY_ISO,
     created_at: '2026-02-01T00:00:00Z',
     updated_at: '2026-02-01T00:00:00Z',
     assignee_ids: [MOCK_USER_ID],
@@ -98,12 +104,16 @@ async function setupActionsPage(
     })
   })
 
-  // User actions list endpoint
-  await page.route(`**/users/${MOCK_USER_ID}/actions**`, async (route) => {
+  // Batch relationship-actions endpoint (used by actions kanban page)
+  await page.route('**/coaching_relationships/actions**', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: OPEN_ACTIONS }),
+      body: JSON.stringify({
+        data: {
+          coachee_actions: { 'rel-1': OPEN_ACTIONS },
+        },
+      }),
     })
   })
 }
@@ -171,11 +181,11 @@ test.describe('Actions page: exit animation and toast on status change', () => {
       page.getByRole('heading', { name: 'Not Started', level: 3 })
     ).toBeVisible({ timeout: 15_000 })
 
-    // Verify the card is visible
-    await expect(page.getByText('Write unit tests')).toBeVisible()
+    // Verify the card is visible on the kanban board
+    const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
+    await expect(firstCard).toBeVisible()
 
     // Open the status dropdown on the first card and select "Completed"
-    const firstCard = page.locator('[data-kanban-card]').filter({ hasText: 'Write unit tests' })
     await clickVisibleCombobox(firstCard)
     await page.getByRole('option', { name: /Completed/ }).click()
 
@@ -189,7 +199,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
     await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible()
 
     // The card should no longer be in the visible columns
-    await expect(page.getByText('Write unit tests')).toBeHidden()
+    await expect(firstCard).toBeHidden()
   })
 
   test('toast Show button switches filter to All and reveals the card', async ({
@@ -254,7 +264,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
     await page.getByRole('button', { name: 'Undo' }).click()
 
     // The card should reappear in the Not Started column
-    await expect(page.getByText('Write unit tests')).toBeVisible({
+    await expect(firstCard).toBeVisible({
       timeout: 2_000,
     })
 
@@ -276,7 +286,7 @@ test.describe('Actions page: exit animation and toast on status change', () => {
     await page.getByRole('option', { name: /In Progress/ }).click()
 
     // Card should still be visible (moved to In Progress column)
-    await expect(page.getByText('Write unit tests')).toBeVisible()
+    await expect(firstCard).toBeVisible()
 
     // No exit animation should have been applied
     await expect(page.locator('.animate-kanban-card-exit')).toHaveCount(0)

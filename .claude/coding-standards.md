@@ -2,6 +2,16 @@
 
 This document outlines coding conventions and standards for this project.
 
+## Branch Workflow (MUST DO FIRST)
+
+**Before making any code changes, create a feature branch off main.** Never work directly on main.
+
+```bash
+git checkout -b feat/descriptive-branch-name
+```
+
+This is the very first step for every task — no exceptions. If you find yourself about to push to main, **STOP IMMEDIATELY** and ask the user what to do instead.
+
 ## Strict Typing and Nullability
 
 Prefer strict, explicit typings and clear nullability rules; don't auto-widen.

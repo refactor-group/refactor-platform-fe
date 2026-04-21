@@ -2,4 +2,5 @@
 // Add new values here as the backend adds new providers.
 export enum Provider {
   Google = "google",
+  Zoom = "zoom"
 }

@@ -150,16 +150,19 @@ interface DropdownMenuTriggerProps
   asChild?: boolean
 }
 
+function getChildRef(children: React.ReactNode): React.Ref<any> | undefined {
+  if (!React.isValidElement(children)) return undefined
+  return parseInt(React.version, 10) >= 19
+    ? (children as { props: { ref?: React.Ref<any> } }).props.ref
+    : (children as any).ref
+}
+
 export const DropdownMenuTrigger = React.forwardRef<
   HTMLButtonElement,
   DropdownMenuTriggerProps
 >(({ children, asChild = false, ...props }, propRef) => {
   const context = useDropdownMenuContext()
-  const childrenRef = React.isValidElement(children)
-    ? parseInt(React.version, 10) >= 19
-      ? (children as { props: { ref?: React.Ref<any> } }).props.ref
-      : (children as any).ref
-    : undefined
+  const childrenRef = getChildRef(children)
   const ref = useMergeRefs([context.refs.setReference, propRef, childrenRef])
 
   if (asChild && React.isValidElement(children)) {
@@ -167,17 +170,17 @@ export const DropdownMenuTrigger = React.forwardRef<
       "data-state": context.open ? "open" : "closed",
     }
 
-    return React.cloneElement(
-      children,
-      context.getReferenceProps({
-        ref,
-        ...props,
-        ...(typeof children.props === "object" ? children.props : {}),
-        "aria-expanded": context.open,
-        "aria-haspopup": "menu" as const,
-        ...dataAttributes,
-      })
-    )
+    // eslint-disable-next-line react-hooks/refs -- floating-ui callback ref passed through getReferenceProps, not read during render
+    const referenceProps = context.getReferenceProps({
+      ref,
+      ...props,
+      ...(typeof children.props === "object" ? children.props : {}),
+      "aria-expanded": context.open,
+      "aria-haspopup": "menu" as const,
+      ...dataAttributes,
+    })
+
+    return React.cloneElement(children, referenceProps)
   }
 
   return (

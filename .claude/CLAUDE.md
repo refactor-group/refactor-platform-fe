@@ -13,7 +13,7 @@
 ## PR Preview Environments
 
 ### Architecture
-The frontend PR preview workflow (`.github/workflows/pr-preview-frontend.yml`) calls the backend repo's reusable workflow (`refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main`) with `repo_type: 'frontend'`. It uses `secrets: inherit` to pass secrets to the reusable workflow.
+PR preview environments are deployed **manually via workflow dispatch only** — there are no automatic triggers on PR events. The manual dispatch workflow (`.github/workflows/dispatch-pr-preview-frontend.yml`) validates the PR, resolves commit SHAs, and calls the backend repo's reusable workflow (`refactor-platform-rs/.github/workflows/ci-deploy-pr-preview.yml@main`) with `repo_type: 'frontend'`. It uses `secrets: inherit` to pass secrets to the reusable workflow. Cleanup runs automatically when the PR is closed or merged via `cleanup-pr-preview-frontend.yml`.
 
 The reusable workflow runs these jobs for frontend PRs:
 1. **lint-frontend** — ESLint
@@ -36,6 +36,12 @@ Docker `ARG` declarations **do not cross `FROM` boundaries**. Every `NEXT_PUBLIC
 
 ### Checkout Token Resilience
 The `lint-frontend` and `test-frontend` jobs use a `continue-on-error` + fallback checkout pattern: the primary checkout uses `GHCR_PAT`, and if it fails (e.g., stale/expired token on re-run), a fallback checkout uses the default `GITHUB_TOKEN`. This prevents "re-run failed jobs" from failing on cross-repo `workflow_call` token regeneration issues.
+
+### Manual Dispatch with Commit Selection
+`dispatch-pr-preview-frontend.yml` is the primary (and only) way to deploy frontend PR previews. Users select backend and frontend commits from dropdown menus (auto-populated by `refresh-preview-commits.yml`). The PR number is automatically extracted from the selected frontend commit dropdown entry (PR entries use format `SHA - PR#NNN (branch)`). You must select a PR branch entry — main commits will error. The workflow validates the PR exists in the frontend repo, resolves commit SHAs, and calls the backend repo's reusable workflow with `backend_sha`/`frontend_sha` override inputs.
+
+### Commit Choice Refresh
+`refresh-preview-commits.yml` auto-updates the dispatch workflow's dropdown choices. Triggers: push to main, PR activity (opened/reopened/closed), or manual `workflow_dispatch`. Note: `synchronize` is intentionally excluded to prevent an infinite loop (refresh pushes to main → PR falls behind → "Update Branch" fires synchronize → refresh again). Fetches 3 most recent main commits + HEAD of every open PR from both repos. Manual runs accept optional `backend_branch` and `frontend_branch` inputs. The `frontend_branch` defaults to the current branch (`github.ref_name`), `backend_branch` defaults to `main`.
 
 ### Secrets: inherit Pitfall
 `secrets: inherit` passes **all** secrets from the calling repo (frontend) to the reusable workflow (backend). If the frontend repo has a secret like `PR_PREVIEW_BACKEND_API_VERSION`, it will **override** the reusable workflow's `|| 'fallback'` defaults — even if the secret's value is stale. Always check for stale repo-level secrets when debugging environment variable issues in PR previews.

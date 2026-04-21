@@ -90,6 +90,26 @@ export type GoalDeletedEvent = BaseSSEEvent<
   }
 >;
 
+// ==================== COACHING SESSION GOAL EVENTS (join table, relationship-scoped) ====================
+
+export type CoachingSessionGoalCreatedEvent = BaseSSEEvent<
+  'coaching_session_goal_created',
+  {
+    coaching_relationship_id: Id;
+    coaching_session_id: Id;
+    goal_id: Id;
+  }
+>;
+
+export type CoachingSessionGoalDeletedEvent = BaseSSEEvent<
+  'coaching_session_goal_deleted',
+  {
+    coaching_relationship_id: Id;
+    coaching_session_id: Id;
+    goal_id: Id;
+  }
+>;
+
 // ==================== SYSTEM EVENTS ====================
 
 export type ForceLogoutEvent = BaseSSEEvent<
@@ -113,4 +133,6 @@ export type SSEEvent =
   | GoalCreatedEvent
   | GoalUpdatedEvent
   | GoalDeletedEvent
+  | CoachingSessionGoalCreatedEvent
+  | CoachingSessionGoalDeletedEvent
   | ForceLogoutEvent;

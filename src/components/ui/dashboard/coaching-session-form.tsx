@@ -1,5 +1,8 @@
 import { CoachingSession } from "@/types/coaching-session";
-import { getRelationshipsAsCoach } from "@/types/coaching-relationship";
+import {
+  getRelationshipsAsCoach,
+  sortRelationshipsByParticipantName,
+} from "@/types/coaching-relationship";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -16,16 +19,18 @@ import {
   useCoachingSessionList,
   useCoachingSessionMutation,
 } from "@/lib/api/coaching-sessions";
+import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { defaultCoachingSession, DEFAULT_MEETING_PROVIDER } from "@/types/coaching-session";
+import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { EntityApiError } from "@/types/entity-api-error";
 import { toast } from "sonner";
+import { Provider } from "@/types/provider";
 
 export type CoachingSessionFormMode = "create" | "update";
 
@@ -59,17 +64,21 @@ export default function CoachingSessionForm({
   // Fetch relationships to populate coachee selector (only needed in create mode)
   const { relationships, isLoading: isLoadingRelationships } =
     useCoachingRelationshipList(currentOrganizationId ?? "");
+  const { connections } = useOAuthConnections();
 
-  // Filter to relationships where current user is the coach
+  // Filter to relationships where current user is the coach, sorted alphabetically by coachee name
   const coacheeRelationships = useMemo(() => {
     if (!userSession?.id || !relationships) return [];
-    return getRelationshipsAsCoach(userSession.id, relationships);
+    const asCoach = getRelationshipsAsCoach(userSession.id, relationships);
+    return sortRelationshipsByParticipantName(asCoach, userSession.id);
   }, [relationships, userSession?.id]);
 
   // State for selected coachee in create mode
   const [selectedRelationshipId, setSelectedRelationshipId] = useState<string>(
     () => existingSession?.coaching_relationship_id ?? currentCoachingRelationshipId ?? ""
   );
+
+  const activeProvider = connections?.[0]?.provider ?? null;
 
   // State for preventing duplicate submissions (Issue #207)
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,7 +118,7 @@ export default function CoachingSessionForm({
       ...defaultCoachingSession(),
       coaching_relationship_id: relationshipId,
       date: dateTime,
-      provider: DEFAULT_MEETING_PROVIDER,
+      provider: activeProvider ? activeProvider as Provider : undefined
     };
     await createCoachingSession(newCoachingSession);
   };

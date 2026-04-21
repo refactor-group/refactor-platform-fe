@@ -1,8 +1,11 @@
 import { DateTime } from "ts-luxon";
+import { Action } from "@/types/action";
+import { Agreement } from "@/types/agreement";
 import { CoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
 import { OAuthConnection } from "@/types/oauth-connection";
@@ -105,6 +108,39 @@ export function createMockGoal(overrides?: Partial<Goal>): Goal {
   };
 }
 
+export function createMockAction(overrides?: Partial<Action>): Action {
+  const now = DateTime.now();
+  return {
+    id: "action-1",
+    coaching_session_id: "session-1",
+    goal_id: None,
+    body: "Follow up on resume review",
+    user_id: "user-1",
+    status: ItemStatus.NotStarted,
+    status_changed_at: now,
+    due_by: now.plus({ days: 7 }),
+    created_at: now,
+    updated_at: now,
+    assignee_ids: ["user-1"],
+    ...overrides,
+  };
+}
+
+export function createMockAgreement(
+  overrides?: Partial<Agreement>
+): Agreement {
+  const now = DateTime.now();
+  return {
+    id: "agreement-1",
+    coaching_session_id: "session-1",
+    body: "Weekly check-in every Tuesday",
+    user_id: "user-1",
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
+}
+
 export function createMockGoogleOAuthConnectionState(
   overrides?: Partial<OAuthConnection>
 ): OAuthConnection {
@@ -112,6 +148,17 @@ export function createMockGoogleOAuthConnectionState(
     provider: "google",
     email: "coach@gmail.com",
     connected_at: "2026-01-15T10:00:00Z",
+    ...overrides,
+  };
+}
+
+export function createMockZoomOAuthConnectionState(
+  overrides?: Partial<OAuthConnection>
+): OAuthConnection {
+  return {
+    provider: "zoom",
+    email: "coach@zoom.us",
+    connected_at: "2026-02-15T10:00:00Z",
     ...overrides,
   };
 }

@@ -37,15 +37,21 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   }, [mutate, baseUrl]);
 
   /**
-   * Invalidates only the session-scoped goal caches (e.g. /coaching_sessions/{id}/goals)
-   * without touching other coaching_sessions caches (session list, enriched sessions, etc.).
+   * Invalidates session-scoped goal caches: both per-session caches
+   * (e.g. /coaching_sessions/{id}/goals) and the batch endpoint cache
+   * (e.g. /coaching_sessions/goals?coaching_relationship_id=...).
    */
   const invalidateSessionGoals = useCallback((eventName: string) => {
     const sessionGoalsPattern = `${baseUrl}/coaching_sessions/`;
     mutate(
       (key) => {
         const url = typeof key === 'string' ? key : Array.isArray(key) ? key[0] : null;
-        return typeof url === 'string' && url.startsWith(sessionGoalsPattern) && url.endsWith('/goals');
+        if (typeof url !== 'string' || !url.startsWith(sessionGoalsPattern)) return false;
+        // Match per-session caches: /coaching_sessions/{id}/goals
+        if (url.endsWith('/goals')) return true;
+        // Match batch cache: /coaching_sessions/goals?coaching_relationship_id=...
+        if (url.includes('/coaching_sessions/goals?')) return true;
+        return false;
       },
       undefined,
       { revalidate: true }
@@ -93,5 +99,14 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   useSSEEventHandler(eventSource, 'goal_deleted', () => {
     invalidateEndpoint('/goals', 'goal_deleted');
     invalidateSessionGoals('goal_deleted');
+  });
+
+  // COACHING SESSION GOAL EVENTS (join table) - Invalidate session-scoped goal caches
+  useSSEEventHandler(eventSource, 'coaching_session_goal_created', () => {
+    invalidateSessionGoals('coaching_session_goal_created');
+  });
+
+  useSSEEventHandler(eventSource, 'coaching_session_goal_deleted', () => {
+    invalidateSessionGoals('coaching_session_goal_deleted');
   });
 }

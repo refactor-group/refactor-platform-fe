@@ -1,5 +1,6 @@
 import { DateTime } from "ts-luxon";
-import { ItemStatus, Id } from "@/types/general";
+import { ItemStatus, Id, transformEntityDates } from "@/types/general";
+import { type Option, Some, None, isOption } from "@/types/option";
 import { SortOrder, type ActionSortField } from "@/types/sorting";
 
 // This must always reflect the Rust struct on the backend
@@ -7,6 +8,8 @@ import { SortOrder, type ActionSortField } from "@/types/sorting";
 export interface Action {
   id: Id;
   coaching_session_id: Id;
+  /** FK to goals table. None = unlinked. */
+  goal_id: Option<Id>;
   body?: string;
   user_id: Id;
   status: ItemStatus;
@@ -42,6 +45,10 @@ export function isAction(value: unknown): value is Action {
     isDateTimeOrString(object.due_by) &&
     isDateTimeOrString(object.created_at) &&
     isDateTimeOrString(object.updated_at) &&
+    (object.goal_id === undefined ||
+      object.goal_id === null ||
+      typeof object.goal_id === "string" ||
+      isOption(object.goal_id as unknown)) &&
     (object.body === undefined || typeof object.body === "string") &&
     (object.assignee_ids === undefined ||
       (Array.isArray(object.assignee_ids) &&
@@ -105,11 +112,58 @@ export function sortByDateField<T>(
   return [...items].sort((a, b) => getDate(a).toMillis() - getDate(b).toMillis());
 }
 
+/** Wire shape where Option fields are unwrapped to string | null for JSON. */
+export type ActionWire = Omit<Action, "goal_id"> & { goal_id: Id | null };
+
+/**
+ * Wire shape of a single item in the batch coachee-actions response.
+ * The backend returns action fields flat alongside assignee_ids.
+ */
+export interface ActionWithAssigneesWire extends ActionWire {
+  assignee_ids: Id[];
+}
+
+/** Response from GET /organizations/{org_id}/coaching_relationships/actions?assignee=... */
+export interface BatchCoacheeActionsResponse {
+  coachee_actions: Record<Id, ActionWithAssigneesWire[]>;
+}
+
+/** Transforms a flat ActionWithAssigneesWire into a domain Action. */
+export function transformActionWithAssignees(
+  raw: ActionWithAssigneesWire
+): Action {
+  return { ...transformAction(raw), assignee_ids: raw.assignee_ids };
+}
+
+/**
+ * Converts an Action to the wire format expected by the backend.
+ * Unwraps Option fields to string | null for JSON serialization.
+ */
+export function serializeAction(action: Action): ActionWire {
+  return {
+    ...action,
+    goal_id: action.goal_id.some ? action.goal_id.val : null,
+  };
+}
+
+/**
+ * Parse boundary transform for Action entities. Composes date transformation
+ * with Option wrapping for goal_id. Use this instead of transformEntityDates
+ * when fetching actions.
+ */
+export function transformAction(raw: any): Action {
+  const dated = transformEntityDates(raw);
+  const rawGoalId = dated.goal_id;
+  dated.goal_id = typeof rawGoalId === "string" ? Some(rawGoalId) : None;
+  return dated;
+}
+
 export function defaultAction(): Action {
   const now = DateTime.now();
   return {
     id: "",
     coaching_session_id: "",
+    goal_id: None,
     body: "",
     user_id: "",
     status: ItemStatus.NotStarted,

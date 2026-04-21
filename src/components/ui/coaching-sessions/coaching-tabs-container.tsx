@@ -1,54 +1,43 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { toast } from "sonner";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
-import { AgreementsList } from "@/components/ui/coaching-sessions/agreements-list";
-import { ActionsPanel } from "@/components/ui/coaching-sessions/actions-panel";
-import { useAgreementMutation } from "@/lib/api/agreements";
 import { useActionMutation } from "@/lib/api/actions";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { UserActionsScope } from "@/types/assigned-actions";
 import { ItemStatus, Id, EntityApiError } from "@/types/general";
-import { Action, defaultAction } from "@/types/action";
-import { Agreement, defaultAgreement } from "@/types/agreement";
+import { defaultAction } from "@/types/action";
+import type { Action } from "@/types/action";
 import { DateTime } from "ts-luxon";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
-import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
-import { siteConfig } from "@/site.config";
 
 interface CoachingTabsContainerProps {
   userId: Id;
-  defaultValue?: string;
-  onTabChange?: (value: string) => void;
-  reviewActions: boolean;
+  notesMaximized?: boolean;
+  onNotesMaximizedChange?: (maximized: boolean) => void;
 }
 
 const CoachingTabsContainer = ({
   userId,
-  defaultValue = "notes",
-  onTabChange,
-  reviewActions,
+  notesMaximized = false,
+  onNotesMaximizedChange,
 }: CoachingTabsContainerProps) => {
-  const [currentTab, setCurrentTab] = useState(defaultValue);
-
-  const handleTabChange = useCallback((value: string) => {
-    setCurrentTab(value);
-    onTabChange?.(value);
-  }, [onTabChange]);
-
   // Get coaching session ID and data from URL
-  const { currentCoachingSessionId, currentCoachingSession } = useCurrentCoachingSession();
+  const { currentCoachingSessionId } = useCurrentCoachingSession();
 
-  // Get coaching relationship data for coach/coachee names
+  // Get coaching relationship data
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
 
-  // SWR refresh handles for user action lists. ActionsPanel uses the same
+  // SWR refresh handles for user action lists. The panel uses the same
   // hooks with the same params, so SWR deduplicates the fetches — no extra
-  // network requests. We need these here so handleAddNoteAsAction (which
-  // bypasses ActionsPanel) can trigger the same cache revalidation.
+  // network requests. We need these here so handleAddNoteAsAction can
+  // trigger the same cache revalidation.
   const { refresh: refreshSessionActions } = useUserActionsList(
     userId,
     currentCoachingSessionId
@@ -62,49 +51,9 @@ const CoachingTabsContainer = ({
       : undefined
   );
 
-  // Agreement and Action mutation hooks
-  const {
-    create: createAgreement,
-    update: updateAgreement,
-    delete: deleteAgreement,
-    isLoading: isAgreementMutating,
-  } = useAgreementMutation();
+  // Action mutation hook (for creating actions from notes)
+  const { create: createAction } = useActionMutation();
 
-  const {
-    create: createAction,
-    update: updateAction,
-    delete: deleteAction,
-    isLoading: isActionMutating,
-  } = useActionMutation();
-
-  // Agreement CRUD handlers
-  const handleAgreementAdded = (body: string): Promise<Agreement> => {
-    const newAgreement: Agreement = {
-      ...defaultAgreement(),
-      coaching_session_id: currentCoachingSessionId || "",
-      user_id: userId,
-      body,
-    };
-    return createAgreement(newAgreement);
-  };
-
-  const handleAgreementEdited = (id: Id, body: string): Promise<Agreement> => {
-    const updatedAgreement: Agreement = {
-      ...defaultAgreement(),
-      id,
-      coaching_session_id: currentCoachingSessionId || "",
-      user_id: userId,
-      body,
-    };
-    return updateAgreement(id, updatedAgreement);
-  };
-
-  const handleAgreementDeleted = (id: Id): Promise<Agreement> => {
-    return deleteAgreement(id);
-  };
-
-  // Action CRUD handlers — called from ActionsPanel and handleAddNoteAsAction.
-  // Both callers guard against a missing currentCoachingSessionId.
   const handleActionAdded = useCallback((
     body: string,
     status: ItemStatus,
@@ -123,31 +72,6 @@ const CoachingTabsContainer = ({
     return createAction(newAction);
   }, [currentCoachingSessionId, userId, createAction]);
 
-  const handleActionEdited = (
-    id: Id,
-    coachingSessionId: Id,
-    body: string,
-    status: ItemStatus,
-    dueBy: DateTime,
-    assigneeIds?: Id[]
-  ): Promise<Action> => {
-    const updatedAction: Action = {
-      ...defaultAction(),
-      id,
-      coaching_session_id: coachingSessionId,
-      user_id: userId,
-      body,
-      status,
-      due_by: dueBy,
-      assignee_ids: assigneeIds,
-    };
-    return updateAction(id, updatedAction);
-  };
-
-  const handleActionDeleted = (id: Id): Promise<Action> => {
-    return deleteAction(id);
-  };
-
   // Create an action from selected text in coaching notes
   const handleAddNoteAsAction = useCallback(async (selectedText: string) => {
     if (!currentCoachingSessionId) return;
@@ -163,12 +87,7 @@ const CoachingTabsContainer = ({
       );
       refreshSessionActions();
       refreshAllActions();
-      toast.success("Action created from note", {
-        action: {
-          label: "View Actions",
-          onClick: () => handleTabChange("actions"),
-        },
-      });
+      toast.success("Action created from note");
     } catch (err) {
       if (err instanceof EntityApiError && err.isNetworkError()) {
         toast.error("Failed to create action. Connection to service was lost.");
@@ -176,63 +95,44 @@ const CoachingTabsContainer = ({
         toast.error("Failed to create action.");
       }
     }
-  }, [currentCoachingSessionId, handleActionAdded, handleTabChange, refreshSessionActions, refreshAllActions]);
+  }, [currentCoachingSessionId, handleActionAdded, refreshSessionActions, refreshAllActions]);
 
   return (
-    <div className="row-span-1 h-full py-4 px-4">
-      <div className="flex-col space-y-4 sm:flex md:order-1">
-        <Tabs value={currentTab} onValueChange={handleTabChange}>
-          <TabsList className="flex w-128 grid-cols-3 justify-start">
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="agreements">Agreements</TabsTrigger>
-            <TabsTrigger value="actions">Actions</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        {/* Always-mounted content controlled by CSS display */}
-        <div className="mt-8">
-          <div
-            className="flex-col h-full space-y-4"
-            style={{ display: currentTab === "notes" ? "flex" : "none" }}
-          >
-            <CoachingNotes onAddAsAction={handleAddNoteAsAction} />
-          </div>
-
-          <div style={{ display: currentTab === "agreements" ? "block" : "none" }}>
-            <AgreementsList
-              coachingSessionId={currentCoachingSessionId || ""}
-              userId={userId}
-              locale={siteConfig.locale}
-              isSaving={isAgreementMutating}
-              onAgreementAdded={handleAgreementAdded}
-              onAgreementEdited={handleAgreementEdited}
-              onAgreementDeleted={handleAgreementDeleted}
-            />
-          </div>
-
-          <div className="pl-4" style={{ display: currentTab === "actions" ? "block" : "none" }}>
-            {currentCoachingSessionId && currentCoachingSession && currentCoachingRelationship && (
-              <ActionsPanel
-                coachingSessionId={currentCoachingSessionId}
-                coachingRelationshipId={currentCoachingRelationship.id}
-                sessionDate={currentCoachingSession.date}
-                userId={userId}
-                locale={siteConfig.locale}
-                coachId={currentCoachingRelationship.coach_id}
-                coachName={getCoachName(currentCoachingRelationship)}
-                coacheeId={currentCoachingRelationship.coachee_id}
-                coacheeName={getCoacheeName(currentCoachingRelationship)}
-                isSaving={isActionMutating}
-                onActionAdded={handleActionAdded}
-                onActionEdited={handleActionEdited}
-                onActionDeleted={handleActionDeleted}
-                reviewActions={reviewActions}
-              />
-            )}
-          </div>
+    <Card className="row-span-1 h-full flex flex-col min-h-0 min-w-0">
+      <CardHeader className="p-4 pb-0">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Notes</h3>
+          {onNotesMaximizedChange && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
+                  onClick={() => onNotesMaximizedChange(!notesMaximized)}
+                  aria-label={notesMaximized ? "Restore panels" : "Maximize notes"}
+                >
+                  {notesMaximized ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{notesMaximized ? "Restore panels" : "Maximize notes"}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
-      </div>
-    </div>
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0 min-w-0">
+        <div className="mt-4 flex-1 flex flex-col min-h-0 min-w-0">
+          <CoachingNotes onAddAsAction={handleAddNoteAsAction} />
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -53,9 +53,11 @@ export const useCurrentUserRole = (): UserRoleState => {
   }));
   const { currentOrganizationId } = useCurrentOrganization();
 
+  const roles = userSession?.roles;
+
   const roleState = useMemo((): UserRoleState => {
     // System error: user shouldn't be logged in without roles
-    if (!userSession?.roles || userSession.roles.length === 0) {
+    if (!roles || roles.length === 0) {
       return {
         status: 'no_roles',
         role: null,
@@ -75,7 +77,7 @@ export const useCurrentUserRole = (): UserRoleState => {
     }
 
     // Try to get role for current organization
-    const role = getUserRoleForOrganization(userSession.roles, currentOrganizationId);
+    const role = getUserRoleForOrganization(roles, currentOrganizationId);
 
     if (role !== null) {
       return {
@@ -93,7 +95,7 @@ export const useCurrentUserRole = (): UserRoleState => {
       reason: 'NO_ORG_ACCESS',
       organizationId: currentOrganizationId
     };
-  }, [userSession?.roles, currentOrganizationId]);
+  }, [roles, currentOrganizationId]);
 
   // Show toast notifications for error states (only once per state change).
   // Skip toasts when logged out — userSession going null during logout

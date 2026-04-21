@@ -1,4 +1,4 @@
-import { Id, EntityApiError } from "@/types/general";
+import { Id, EntityApiError, EMPTY_ARRAY } from "@/types/general";
 import { useState } from "react";
 import useSWR, { KeyedMutator, SWRConfiguration, useSWRConfig } from "swr";
 import { sessionGuard } from "@/lib/auth/session-guard";
@@ -7,11 +7,13 @@ import axios from "axios";
 // Re-export EntityApiError for easy access
 export { EntityApiError } from "@/types/general";
 
+/** Standard wrapper for all backend API responses. */
+export interface ApiResponse<T> {
+  status_code: number;
+  data: T;
+}
+
 export namespace EntityApi {
-  interface ApiResponse<T> {
-    status_code: number;
-    data: T;
-  }
 
   /**
    * Interface defining API operations for entity management.
@@ -363,7 +365,7 @@ export namespace EntityApi {
       ? transform
         ? data.map(transform)
         : (data as unknown as U[])
-      : [];
+      : (EMPTY_ARRAY as unknown as U[]);
 
     return {
       entities,
