@@ -317,15 +317,10 @@ describe("getSessionParticipantInfo", () => {
 });
 
 describe("getSessionParticipantName", () => {
-  it("returns the counterpart's full name when viewer is coach", () => {
-    const session = createMockEnrichedSession();
-    expect(getSessionParticipantName(session, "coach-1")).toBe("Alex Chen");
-  });
-
-  it("returns the counterpart's full name when viewer is coachee", () => {
-    const session = createMockEnrichedSession();
-    expect(getSessionParticipantName(session, "coachee-1")).toBe("Jim Hodapp");
-  });
+  // Happy-path coach/coachee cases are covered by getSessionParticipantInfo tests
+  // above; this function now delegates to that. These tests exercise the
+  // behavior unique to the name variant: null → "Unknown" and the terse
+  // role-label collapse when the counterpart user object is missing.
 
   it("returns 'Unknown' when the session has no relationship", () => {
     const session = createMockEnrichedSession({ relationship: undefined });

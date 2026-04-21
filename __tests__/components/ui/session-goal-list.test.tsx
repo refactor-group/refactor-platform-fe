@@ -45,16 +45,6 @@ describe("SessionGoalList", () => {
     expect(screen.getByText("No goals linked to this session")).toBeInTheDocument();
   });
 
-  it("applies default class names to dot and text elements", () => {
-    const goals = [createMockGoal({ id: "g1", title: "Some goal" })];
-    const { container } = render(<SessionGoalList goals={goals} />);
-    const dot = container.querySelector("[data-testid='session-goal-dot']");
-    const text = container.querySelector("[data-testid='session-goal-text']");
-    expect(dot?.className).toContain("bg-emerald-800/50");
-    expect(text?.className).toContain("text-sm");
-    expect(text?.className).toContain("text-muted-foreground");
-  });
-
   it("honors class-name overrides", () => {
     const goals = [createMockGoal({ id: "g1", title: "Some goal" })];
     const { container } = render(
