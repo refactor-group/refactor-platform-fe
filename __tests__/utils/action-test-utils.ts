@@ -3,8 +3,7 @@
  *
  * This module provides reusable factories and utilities for testing
  * action filtering, counting, and display logic across multiple components:
- * - TodaySessionCard (actions due by session)
- * - ActionsSummary (inline action summary on session cards)
+ * - UpcomingSessionCard (actions due by session)
  * - useAssignedActions hook
  *
  * Centralizing these utilities ensures consistency and reduces duplication.
@@ -258,27 +257,6 @@ export function createMockSession(
 // Shared Filter Functions (extracted for testing)
 // ============================================================================
 
-/**
- * Counts actions due by a specific session date for a given relationship.
- * This mirrors the logic in TodaySessionCard.
- *
- * @param assignedActions - Array of actions with context
- * @param sessionRelationshipId - The coaching_relationship_id of the session
- * @param sessionDate - The DateTime of the session
- * @returns Count of actions matching both criteria
- */
-export function countActionsDueBySession(
-  assignedActions: AssignedActionWithContext[],
-  sessionRelationshipId: string,
-  sessionDate: DateTime
-): number {
-  return assignedActions.filter((a) => {
-    if (a.relationship.id !== sessionRelationshipId) {
-      return false;
-    }
-    return a.action.due_by <= sessionDate;
-  }).length;
-}
 
 /**
  * Calculates whether an action is overdue.
@@ -298,8 +276,8 @@ export function isActionOverdue(
 }
 
 /**
- * Filters actions by status for the ActionsSummary component.
- * This mirrors the filterActionsByStatus logic in useAssignedActions.
+ * Filters actions by status. This mirrors the filterActionsByStatus logic in
+ * useAssignedActions.
  *
  * @param actions - Raw actions to filter
  * @param filter - The filter type (due_soon, all_incomplete, all_unassigned)

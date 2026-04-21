@@ -26,10 +26,11 @@ on:
         required: true
         type: choice
         options:
+          - 'c9ecf14 - chore: refresh preview commit choices [skip ci]'
           - '9eb9c32 - chore: refresh preview commit choices [skip ci]'
           - 76cac0d - Tolerate empty DB pool env vars on container startup (#
-          - 'c90a0e6 - chore: refresh preview commit choices [skip ci]'
-          - 18ed7d8 - PR#281 (raymond/add-invite-status-to-u)
+          - 374f242 - PR#286 (raymond/bug/fix-misleading-ext)
+          - 1dc563f - PR#281 (raymond/add-invite-status-to-u)
           - 88e274a - PR#279 (dependabot/cargo/cargo-39cecc6)
           - 04d2d8c - PR#278 (raymond/fix-google-provider-co)
           - 6abd9c9 - PR#273 (raymond/implements-magic-login)
@@ -40,13 +41,13 @@ on:
         required: true
         type: choice
         options:
-          - '97fe8d8 - Merge pull request #374 from refactor-group/fix/coachee-dropdown-alphabetical-sort'
-          - 778cbe1 - Merge branch 'main' into fix/coachee-dropdown-alphabetical-sort
-          - '942d0b2 - chore: refresh preview commit choices [skip ci]'
-          - e2d5011 - PR#373 (feature/transcript-pane)
-          - 3d0859b - PR#367 (raymond/implements-magic-login)
+          - '5a62fec - Merge pull request #377 from refactor-group/feat/dashboard-upcoming-session-card'
+          - 7d77af9 - Merge branch 'main' into feat/dashboard-upcoming-session-card
+          - '42869da - fix(dashboard): match upcoming-session card count to panel Due tab'
+          - 0ede2a2 - PR#373 (feature/transcript-pane)
+          - b0ad5f1 - PR#367 (raymond/implements-magic-login)
           - 4852f68 - PR#336 (feat/dashboard-goals-overview)
-          - 479f4db - PR#318 (docs/goals-implementation-plan)
+          - 8ad4e21 - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
           - d9e1e08 - PR#243 (feature/146-ai-meeting-integra)
       backend_commit_override:

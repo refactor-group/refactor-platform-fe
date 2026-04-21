@@ -1,3 +1,11 @@
+> **⚠️ Historical — Superseded**
+>
+> The Today's Sessions carousel and `TodaySessionCard` described below were removed in PR 3b of the goals feature (see [`goals-feature-master-plan.md`](./goals-feature-master-plan.md)). They have been replaced by a single `UpcomingSessionCard` on the dashboard. The `useTodaysSessions` hook is still in use (consumed by `UpcomingSessionCard` and the Join Session popover), so decisions about that hook remain broadly relevant; decisions about the carousel UI, auto-scroll, and `TodaySessionCard` are no longer applicable.
+>
+> This document is preserved for historical context only. Do not use it as an implementation guide.
+
+---
+
 # Implementation Decisions: Today's Sessions Feature
 
 **Date**: 2025-10-23

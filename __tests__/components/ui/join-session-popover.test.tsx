@@ -36,6 +36,17 @@ vi.mock("@/lib/timezone-utils", () => ({
 
 vi.mock("@/types/general", () => ({
   getDateTimeFromString: (dateStr: string) => DateTime.fromISO(dateStr),
+  // action.ts's ITEM_STATUS_VALUES (loaded transitively via session.ts →
+  // action.ts once the popover's mocked session module is automocked) reads
+  // from ItemStatus at module-load time, so we need to preserve the enum.
+  ItemStatus: {
+    NotStarted: "NotStarted",
+    InProgress: "InProgress",
+    OnHold: "OnHold",
+    Completed: "Completed",
+    WontDo: "WontDo",
+  },
+  transformEntityDates: (data: unknown) => data,
 }));
 
 // The key data hooks — we mock return values per test
