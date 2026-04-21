@@ -204,11 +204,104 @@ New component: a collapsible card on the dashboard showing the user's active goa
 ### PR 3b: Upcoming Session Card
 **Branch:** `feat/dashboard-upcoming-session-card`
 
-Replace `TodaySessionCard` + `TodaysSessions` carousel with a single **Upcoming Session Card**. Shows next session with participant, goal chip, action count, live countdown, Reschedule/Join.
+Replace the `TodaysSessions` carousel + multi-card surface with a single **Upcoming Session Card** on the dashboard. Match the prototype's Mercury styling, add a duration line not present in the prototype, render a multi-goal list of every goal linked to the session, and provide an actionable empty state when no session remains today.
 
-**Prototype reference:** `src/app/prototype/dashboard-goals/page.tsx` — `TodaySessionCard` function (line 193: "Upcoming session").
+**Prototype reference:** `src/app/prototype/dashboard-goals/page.tsx` — `TodaySessionCard` function (lines 186–232).
 
-**Key files:** New `upcoming-session-card.tsx`. Modify `dashboard-container.tsx`. Deprecate `todays-sessions.tsx` carousel.
+#### Session selection logic
+
+- Source: `useTodaysSessions()` — already returns today's sessions in the user's timezone with a 30s tick; reuse as-is.
+- Select **the next non-past session**: first session in `asc`-by-date order whose urgency is not `Past` (i.e. `Underway`, `Imminent`, `Soon`, or `Later`).
+- If none remains → empty state. Strictly today; no fallback to tomorrow.
+
+#### Card structure (prototype + additions)
+
+- `border shadow-none h-full flex flex-col`; inner `p-6 flex flex-col flex-1 gap-4`.
+- **Header row:**
+  - Eyebrow: `UPCOMING SESSION` (`text-xs font-medium uppercase tracking-wider text-muted-foreground/60`).
+  - Title: `Session with {participantName}` (`text-base font-semibold`).
+  - Right column (stacked): time (`text-sm tabular-nums`) on line 1, duration (`text-[11px] text-muted-foreground/60 tabular-nums` — e.g. `60 min`) on line 2. Use `DEFAULT_SESSION_DURATION_MINUTES` until backend ships per-session duration (existing TODO preserved).
+- **Participant row:** 32px muted avatar circle with initials + `N actions due` copy (reuse the filter logic currently in `TodaySessionCard` lines 184–193).
+- **Goals list:** render `<SessionGoalList goals={session.goals ?? []} />` — stacked dot+title rows, one per linked goal, truncated.
+- **Footer** (separated by `border-t`):
+  - Left: pulsing dot + urgency copy from `getUrgencyMessage(session, urgency, timezone)` — reuse existing util. The current colored urgency *band* is dropped, but the *messages* (`Starting in 45 min`, `Under way`, etc.) remain.
+  - Right: `Reschedule` (outline, coach-only) + `Join` (primary, links to `/coaching-sessions/{id}`).
+
+#### Dropped from current card (not in prototype)
+
+Share-link icon, organization name, role line, colored urgency band. These remain accessible on the coaching-session page itself.
+
+#### Empty state (new, extends prototype)
+
+Same card chrome. Centered inside the card body:
+- Small Lucide `CalendarPlus` icon above, `text-muted-foreground/40`.
+- Heading: `No sessions scheduled for today` (`text-sm font-medium`).
+- Subcopy: one-line explanation (`text-xs text-muted-foreground`).
+- Primary button: `Schedule a coaching session`, proportionally sized to match the filled state's `Reschedule/Join` footer. Wires to `DashboardContainer`'s existing `CoachingSessionDialog` via an `onCreateSession` callback prop — no new dialog state.
+
+#### Factored shared component
+
+**`src/components/ui/session-goal-list.tsx`** — new, read-only presentational component, placed loose in `src/components/ui/` to match the existing convention for shared goal widgets (`goal-pill.tsx`, `goal-picker-popover.tsx`).
+
+```ts
+interface SessionGoalListProps {
+  goals: Goal[];
+  dotClassName?: string;        // default: "bg-emerald-800/50"
+  textClassName?: string;       // default: "text-sm text-muted-foreground"
+  gapClassName?: string;        // default: "gap-0.5"
+  emptyFallback?: React.ReactNode; // default: null — caller decides
+}
+```
+
+Renders the prototype's dot-per-goal pattern (prototype lines 714–720). Uses `goalTitle(goal)`. No interactivity — callers wrap with a link or popover if needed.
+
+**Why extract rather than reuse `CompactGoalCard`:** `goal-card-compact.tsx` is an interactive flip-card with edit/remove/swap modes and a per-goal `useGoalProgress` fetch — overkill for read-only "what goals is this session about" surfaces. This extraction gives one place to enforce the Mercury goal-chip look; `CompactGoalCard` keeps its interactive role on the session panel unchanged.
+
+Reuse sites:
+- `UpcomingSessionCard` (this PR)
+- `SessionRow` detail panel in PR 3c
+- Timeline hover card in PR 3d
+- Any future session-summary surface
+
+#### Files
+
+**Created:**
+- `src/components/ui/dashboard/upcoming-session-card.tsx`
+- `src/components/ui/dashboard/upcoming-session-empty.tsx` (empty-state subcomponent)
+- `src/components/ui/session-goal-list.tsx`
+
+**Modified:**
+- `src/components/ui/dashboard/dashboard-container.tsx` — swap `TodaysSessions` for `UpcomingSessionCard`, pass `onCreateSession={() => handleOpenDialog()}` and the existing reschedule callback.
+
+**Deleted (after parity is verified):**
+- `src/components/ui/dashboard/today-session-card.tsx`
+- `src/components/ui/dashboard/todays-sessions.tsx`
+- `src/components/ui/dashboard/todays-sessions-states.tsx`
+- `src/components/ui/dashboard/session-carousel-navigation.tsx`
+- `src/lib/hooks/use-carousel-state.ts` and `src/lib/hooks/use-session-auto-scroll.ts` **if** Grep confirms no other callers; otherwise leave in place.
+- Associated tests under `__tests__/`.
+
+#### Tests (Vitest + MSW, TDD)
+
+- `upcoming-session-card.test.tsx`
+  - Picks the first non-past session from a mixed set (not simply the first by date).
+  - Renders participant initials, time, duration line, urgency message; pulsing dot shown only for `Imminent` / `Underway`.
+  - Lists all linked goals via `SessionGoalList`; truncates long titles.
+  - `Reschedule` hidden when current user is coachee, shown when coach.
+  - Empty state renders when all sessions are `Past`.
+  - Empty-state button fires `onCreateSession`.
+- `session-goal-list.test.tsx` — one row per goal, uses `goalTitle()` fallback for empty titles, honors class overrides.
+- Update `dashboard-container.test.tsx` (if present) to assert `UpcomingSessionCard` replaces the carousel.
+
+#### Acceptance criteria
+
+1. Visual parity with the prototype's `TodaySessionCard` (spacing, typography, pulsing dot, footer layout, border/shadow).
+2. Duration line under time (new).
+3. Multi-goal vertical list (new, via `SessionGoalList`).
+4. Selects next non-past today session; empty state otherwise.
+5. Empty state's "Schedule a coaching session" button opens the existing `CoachingSessionDialog`.
+6. Live countdown (30s tick) preserved.
+7. Deleted files have no remaining references (Grep clean).
 
 ### PR 3c: Sessions Dual-View — List
 **Branch:** `feat/dashboard-sessions-list`
