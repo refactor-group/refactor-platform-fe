@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
 import { AssigneeScope } from "@/types/assigned-actions";
-import { maxActiveGoals } from "@/types/goal";
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
 import { ItemStatus } from "@/types/general";
@@ -63,26 +62,22 @@ function makeGoalWithProgress(
   };
 }
 
-/**
- * A minimal upcoming session shape — only the fields the card reads directly.
- * `linkedGoalIds` populates `goals` with the matching IDs so the card's
- * intersection logic has something to pick up from the progress list.
- */
-function makeUpcomingSession(linkedGoalIds: string[] = []) {
+/** A minimal upcoming session shape — only the fields the card reads directly. */
+function makeUpcomingSession() {
   return {
+    id: "sess-1",
     coaching_relationship_id: "rel-1",
     organization: { id: "org-1" },
-    goals: linkedGoalIds.map((id) => ({ id })),
   };
 }
 
 /**
  * Default: a logged-in user with an upcoming session resolvable to "Alex
- * Chen". `linkedGoalIds` drives which goals the session has linked — the
- * card shows only those.
+ * Chen". The card trusts the server's response — tests mock whatever goals
+ * the server would return for `?coaching_session_id=sess-1&assignee=coachee`.
  */
-function setupDefault(linkedGoalIds: string[] = []) {
-  const session = makeUpcomingSession(linkedGoalIds);
+function setupDefault() {
+  const session = makeUpcomingSession();
   mockAuthStore.mockReturnValue({ userId: "user-1" });
   mockUseTodaysSessions.mockReturnValue({
     sessions: [session],
@@ -152,13 +147,14 @@ describe("GoalsOverviewCard", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the coachee name and the session-linked goal count", () => {
+  it("renders the coachee name and the goal count returned by the server", () => {
+    // Card trusts the server's filtered+scoped response — whatever goals it
+    // gets back are the goals it renders.
     const goals = [
       makeGoalWithProgress({ goal_id: "g1", title: "Goal A" }),
       makeGoalWithProgress({ goal_id: "g2", title: "Goal B" }),
-      makeGoalWithProgress({ goal_id: "g3", title: "Goal C (not linked)" }),
     ];
-    setupDefault(["g1", "g2"]);
+    setupDefault();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: goals,
       isLoading: false,
@@ -171,66 +167,14 @@ describe("GoalsOverviewCard", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Goal A")).toBeInTheDocument();
     expect(screen.getByText("Goal B")).toBeInTheDocument();
-    expect(screen.queryByText("Goal C (not linked)")).not.toBeInTheDocument();
   });
 
-  it("intersects progress list with the session's linked goal IDs", () => {
-    // The card renders the same goals the Upcoming Session card shows —
-    // whatever is linked to that session via the join table, regardless of
-    // status.
-    const goals = [
-      makeGoalWithProgress({ goal_id: "g1", title: "In progress", status: ItemStatus.InProgress }),
-      makeGoalWithProgress({ goal_id: "g2", title: "Not started", status: ItemStatus.NotStarted }),
-      makeGoalWithProgress({ goal_id: "g3", title: "On hold", status: ItemStatus.OnHold }),
-      makeGoalWithProgress({ goal_id: "g4", title: "Completed", status: ItemStatus.Completed }),
-      makeGoalWithProgress({ goal_id: "g5", title: "Won't do", status: ItemStatus.WontDo }),
-    ];
-    // Session links three of them — any status is fair game.
-    setupDefault(["g2", "g4", "g5"]);
+  it("shows 'No active goals' when the server returns an empty list", () => {
+    // Session has no linked goals (or none match the assignee scope) → server
+    // returns []. Card shows the inline empty-state copy.
+    setupDefault();
     mockUseGoalProgressList.mockReturnValue({
-      goalsWithProgress: goals,
-      isLoading: false,
-      isError: undefined,
-      refresh: vi.fn(),
-    });
-
-    render(<GoalsOverviewCard />);
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("Not started")).toBeInTheDocument();
-    expect(screen.getByText("Completed")).toBeInTheDocument();
-    expect(screen.getByText("Won't do")).toBeInTheDocument();
-    expect(screen.queryByText("In progress")).not.toBeInTheDocument();
-    expect(screen.queryByText("On hold")).not.toBeInTheDocument();
-  });
-
-  it("defensively caps the display at maxActiveGoals()", () => {
-    // Session shouldn't normally have more linked goals than the product
-    // limit, but if it ever does (stale data, backend drift), the card caps
-    // to the same active-goal max.
-    const goals = Array.from({ length: 7 }, (_, i) =>
-      makeGoalWithProgress({ goal_id: `g${i + 1}`, title: `Goal ${i + 1}` })
-    );
-    setupDefault(goals.map((g) => g.goal_id));
-    mockUseGoalProgressList.mockReturnValue({
-      goalsWithProgress: goals,
-      isLoading: false,
-      isError: undefined,
-      refresh: vi.fn(),
-    });
-
-    render(<GoalsOverviewCard />);
-    expect(screen.getByText(String(maxActiveGoals()))).toBeInTheDocument();
-    expect(screen.getByText("Goal 1")).toBeInTheDocument();
-    expect(screen.getByText("Goal 2")).toBeInTheDocument();
-    expect(screen.getByText("Goal 3")).toBeInTheDocument();
-    expect(screen.queryByText("Goal 4")).not.toBeInTheDocument();
-    expect(screen.queryByText("Goal 7")).not.toBeInTheDocument();
-  });
-
-  it("shows 'No active goals' when the session has no linked goals", () => {
-    setupDefault([]);
-    mockUseGoalProgressList.mockReturnValue({
-      goalsWithProgress: [makeGoalWithProgress({ goal_id: "unrelated" })],
+      goalsWithProgress: [],
       isLoading: false,
       isError: undefined,
       refresh: vi.fn(),
@@ -240,10 +184,10 @@ describe("GoalsOverviewCard", () => {
     expect(screen.getByText("No active goals")).toBeInTheDocument();
   });
 
-  it("computes aggregate percentage across only the session-linked goals", () => {
+  it("computes aggregate percentage across the returned goals", () => {
     const goals = [
       makeGoalWithProgress({
-        goal_id: "linked-a",
+        goal_id: "g1",
         progress_metrics: {
           actions_completed: 6,
           actions_total: 8,
@@ -254,7 +198,7 @@ describe("GoalsOverviewCard", () => {
         },
       }),
       makeGoalWithProgress({
-        goal_id: "linked-b",
+        goal_id: "g2",
         progress_metrics: {
           actions_completed: 2,
           actions_total: 6,
@@ -264,20 +208,8 @@ describe("GoalsOverviewCard", () => {
           next_action_due: None,
         },
       }),
-      // Unlinked — should NOT influence the aggregate.
-      makeGoalWithProgress({
-        goal_id: "unlinked",
-        progress_metrics: {
-          actions_completed: 100,
-          actions_total: 100,
-          linked_coaching_session_count: 5,
-          progress: GoalProgress.SolidMomentum,
-          last_coaching_session_date: None,
-          next_action_due: None,
-        },
-      }),
     ];
-    setupDefault(["linked-a", "linked-b"]);
+    setupDefault();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: goals,
       isLoading: false,
@@ -286,11 +218,11 @@ describe("GoalsOverviewCard", () => {
     });
 
     render(<GoalsOverviewCard />);
-    // (6+2)/(8+6) = 8/14 = 57% — unlinked goal excluded
+    // (6+2)/(8+6) = 8/14 = 57%
     expect(screen.getByText("57%")).toBeInTheDocument();
   });
 
-  it("shows worst health signal across session-linked goals", () => {
+  it("shows worst health signal across returned goals", () => {
     const goals = [
       makeGoalWithProgress({
         goal_id: "g1",
@@ -315,7 +247,7 @@ describe("GoalsOverviewCard", () => {
         },
       }),
     ];
-    setupDefault(["g1", "g2"]);
+    setupDefault();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: goals,
       isLoading: false,
@@ -330,7 +262,7 @@ describe("GoalsOverviewCard", () => {
   it("toggles collapsible content when header is clicked", async () => {
     const user = userEvent.setup();
     const goals = [makeGoalWithProgress({ goal_id: "g1", title: "My goal" })];
-    setupDefault(["g1"]);
+    setupDefault();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: goals,
       isLoading: false,
@@ -350,7 +282,7 @@ describe("GoalsOverviewCard", () => {
 
   it("does not render a 'View all goals' link (deferred until Goals page lands)", () => {
     const goals = [makeGoalWithProgress({ goal_id: "g1" })];
-    setupDefault(["g1"]);
+    setupDefault();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: goals,
       isLoading: false,
@@ -367,7 +299,7 @@ describe("GoalsOverviewCard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("asks the server for coachee-scoped progress metrics", () => {
+  it("asks the server for session-linked + coachee-scoped progress metrics", () => {
     setupDefault();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: [],
@@ -377,9 +309,11 @@ describe("GoalsOverviewCard", () => {
     });
 
     render(<GoalsOverviewCard />);
-    // Card intersects with session.goals client-side but scopes action
-    // counts to the coachee via the assignee param (server-side filter).
+    // Server filters + scopes in one round trip — no client-side intersect
+    // or count override needed. Card passes the upcoming session's id and
+    // AssigneeScope.Coachee (RelationshipGoalProgress v4).
     expect(mockUseGoalProgressList).toHaveBeenCalledWith("org-1", "rel-1", {
+      coaching_session_id: "sess-1",
       assignee: AssigneeScope.Coachee,
     });
   });

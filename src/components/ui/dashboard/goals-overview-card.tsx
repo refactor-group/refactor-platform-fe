@@ -29,7 +29,6 @@ import {
   getSessionParticipantName,
   selectNextUpcomingSession,
 } from "@/lib/utils/session";
-import { maxActiveGoals } from "@/types/goal";
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
 import { AssigneeScope } from "@/types/assigned-actions";
@@ -121,23 +120,19 @@ export function GoalsOverviewCard() {
 
   const organizationId = upcomingSession?.organization?.id ?? null;
   const relationshipId = upcomingSession?.coaching_relationship_id ?? null;
+  const sessionId = upcomingSession?.id ?? null;
 
-  // The card shows the same goals the Upcoming Session card shows — whatever
-  // is linked to that session via the join table, any status — plus each
-  // goal's progress metrics scoped to the coachee. We fetch the full
-  // relationship's goal_progress with `?assignee=coachee` (see
-  // RelationshipGoalProgress v3 + coordination question
-  // `goal_progress_assignee_filter`) and intersect with
-  // `upcomingSession.goals` below to pick out the linked goals. A follow-up
-  // backend param (?coaching_session_id=<uuid>) would let us push the
-  // session-side filter down server-side too; until then the
-  // relationship-scoped fetch is the only way to get progress_metrics per
-  // goal.
+  // The server returns exactly the coachee-scoped progress metrics for goals
+  // linked to the upcoming session — same set the Upcoming Session card
+  // shows, already filtered + assignee-scoped. See RelationshipGoalProgress
+  // v4 + coordination questions `goal_progress_filter_by_coaching_session`
+  // and `goal_progress_assignee_filter`.
   const {
     goalsWithProgress,
     isLoading: isGoalsLoading,
     isError,
   } = useGoalProgressList(organizationId, relationshipId, {
+    coaching_session_id: sessionId ?? undefined,
     assignee: AssigneeScope.Coachee,
   });
 
@@ -158,23 +153,9 @@ export function GoalsOverviewCard() {
     ? getSessionParticipantName(upcomingSession, userId)
     : "";
 
-  // Intersect the relationship's coachee-scoped progress list with the
-  // session's linked goals — renders the same set the Upcoming Session card
-  // shows, one row per goal with its (coachee-filtered) progress metrics.
-  // Preserves the session's own ordering (backend decides). Defensive cap
-  // at maxActiveGoals() in case a session ever has more linked goals than
-  // the product limit; if a linked goal is missing from the progress list
-  // (shouldn't happen — join table FK enforces existence), it's skipped.
-  const sessionLinkedGoalIds = new Set(
-    (upcomingSession.goals ?? []).map((g) => g.id)
-  );
-  const progressByGoalId = new Map(
-    goalsWithProgress.map((g) => [g.goal_id, g])
-  );
-  const activeGoals = (upcomingSession.goals ?? [])
-    .map((g) => progressByGoalId.get(g.id))
-    .filter((g): g is GoalWithProgress => g !== undefined && sessionLinkedGoalIds.has(g.goal_id))
-    .slice(0, maxActiveGoals());
+  // Server already filtered to this session's linked goals + coachee scope;
+  // render whatever it returned.
+  const activeGoals = goalsWithProgress;
 
   const totalActions = activeGoals.reduce(
     (sum, g) => sum + g.progress_metrics.actions_total,

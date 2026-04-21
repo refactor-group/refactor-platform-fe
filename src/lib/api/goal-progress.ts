@@ -15,15 +15,18 @@ import { EntityApi } from "./entity-api";
 
 /**
  * Server-side filter / sort / limit params for GET .../goal_progress.
- * See RelationshipGoalProgress v3 contract.
+ * See RelationshipGoalProgress v4 contract.
  *
  * Note: `status` is sent as PascalCase on the wire (e.g. "InProgress") — see
  * the "Status casing caveat" in the contract. `ItemStatus` already uses
  * PascalCase values, so its variants pass through unchanged.
  *
- * `assignee` scopes the aggregated action counts (and the `progress`
- * signal once backend-supported) to a single assignee role / user id. See
- * coordination board question `goal_progress_assignee_filter`.
+ * `assignee` scopes the aggregated action counts and the `progress` signal
+ * to a single assignee role / user id (server-side via SQL join).
+ *
+ * `coaching_session_id` restricts the returned goals to those linked to
+ * that specific session via the session↔goal join table. AND-composes
+ * with all other filters.
  */
 export interface GoalProgressListParams {
   status?: ItemStatus;
@@ -31,6 +34,7 @@ export interface GoalProgressListParams {
   sort_order?: "asc" | "desc";
   limit?: number;
   assignee?: AssigneeScope | Id;
+  coaching_session_id?: Id;
 }
 
 const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
@@ -79,6 +83,8 @@ function buildUrl(base: string, params: GoalProgressListParams): string {
   if (params.sort_order !== undefined) qs.append("sort_order", params.sort_order);
   if (params.limit !== undefined) qs.append("limit", String(params.limit));
   if (params.assignee !== undefined) qs.append("assignee", params.assignee);
+  if (params.coaching_session_id !== undefined)
+    qs.append("coaching_session_id", params.coaching_session_id);
   const query = qs.toString();
   return query ? `${base}?${query}` : base;
 }
