@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
@@ -26,6 +26,13 @@ export function DashboardContainer() {
     refreshUpcomingSession?.();
   };
 
+  // Stable reference so the card's onRefreshNeeded useEffect doesn't refire
+  // on every parent render.
+  const handleRefreshNeeded = useCallback(
+    (refreshFn: () => void) => setRefreshUpcomingSession(() => refreshFn),
+    [],
+  );
+
   return (
     <>
       <DashboardHeader onCreateSession={() => handleOpenDialog()} />
@@ -37,7 +44,7 @@ export function DashboardContainer() {
         <UpcomingSessionCard
           onReschedule={handleOpenDialog}
           onCreateSession={() => handleOpenDialog()}
-          onRefreshNeeded={(refreshFn) => setRefreshUpcomingSession(() => refreshFn)}
+          onRefreshNeeded={handleRefreshNeeded}
         />
         <div aria-hidden="true" />
       </div>

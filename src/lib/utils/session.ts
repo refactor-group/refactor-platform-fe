@@ -14,6 +14,7 @@ import {
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { goalTitle } from "@/types/goal";
 import { RelationshipRole } from "@/types/relationship-role";
+import type { AssignedActionWithContext } from "@/types/assigned-actions";
 
 /**
  * Session Utility Functions
@@ -331,6 +332,9 @@ export type SessionParticipantInfo = {
   readonly userRole: RelationshipRole;
   /** Whether the viewer is the coach in this session */
   readonly isCoach: boolean;
+  /** True when the counterpart user object was not loaded; participantName
+   *  in that case is a "(data not loaded)" placeholder, not a real name. */
+  readonly isMissing: boolean;
 } | null;
 
 /**
@@ -359,6 +363,7 @@ export function getSessionParticipantInfo(
       lastName: "",
       userRole,
       isCoach,
+      isMissing: true,
     };
   }
 
@@ -372,14 +377,17 @@ export function getSessionParticipantInfo(
     lastName: participant.last_name,
     userRole,
     isCoach,
+    isMissing: false,
   };
 }
 
 /**
  * Get the name of the other participant in an enriched session.
  *
- * Thin wrapper over getSessionParticipantInfo that collapses the null/fallback
- * cases to single-word strings (for terse list-style UI).
+ * Thin wrapper over getSessionParticipantInfo that collapses the null/missing
+ * cases to single-word strings (for terse list-style UI). When the participant
+ * *is* loaded but has blank first/last names, the underlying display_name
+ * fallback from getSessionParticipantInfo is returned as-is.
  */
 export function getSessionParticipantName(
   session: EnrichedCoachingSession,
@@ -387,12 +395,7 @@ export function getSessionParticipantName(
 ): string {
   const info = getSessionParticipantInfo(session, userId);
   if (!info) return "Unknown";
-  // When counterpart user data is missing, getSessionParticipantInfo returns
-  // "Coach (data not loaded)" / "Coachee (data not loaded)" — collapse that
-  // to a terse role label here.
-  if (info.firstName === "" && info.lastName === "") {
-    return info.isCoach ? "Coachee" : "Coach";
-  }
+  if (info.isMissing) return info.isCoach ? "Coachee" : "Coach";
   return info.participantName;
 }
 
@@ -406,4 +409,22 @@ export function selectNextUpcomingSession(
   return sessions.find(
     (session) => calculateSessionUrgency(session) !== SessionUrgency.Past
   );
+}
+
+/**
+ * Count actions in the assignee's list that are due on or before a given
+ * session's start time, scoped to that session's coaching relationship.
+ *
+ * Used by UpcomingSessionCard to surface "N actions due" next to a session,
+ * and by action-test-utils to preserve equivalent counting semantics in tests.
+ */
+export function countActionsDueBySession(
+  assignedActions: AssignedActionWithContext[],
+  sessionRelationshipId: Id,
+  sessionDate: DateTime,
+): number {
+  return assignedActions.filter((a) => {
+    if (a.relationship.id !== sessionRelationshipId) return false;
+    return a.action.due_by <= sessionDate;
+  }).length;
 }

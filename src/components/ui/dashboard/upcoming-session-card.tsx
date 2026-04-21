@@ -15,6 +15,7 @@ import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useAssignedActions } from "@/lib/hooks/use-assigned-actions";
 import {
   calculateSessionUrgency,
+  countActionsDueBySession,
   formatSessionTime,
   getSessionParticipantInfo,
   getUrgencyMessage,
@@ -33,11 +34,12 @@ import type { AssignedActionWithContext } from "@/types/assigned-actions";
  * Props for UpcomingSessionCard.
  */
 interface UpcomingSessionCardProps {
+  /** Invoked with no args when the user clicks Schedule a coaching session
+   *  from the empty state. Required because the empty state is reachable
+   *  whenever there is no non-past session today. */
+  onCreateSession: () => void;
   /** Invoked with the selected session when the user clicks Reschedule. */
   onReschedule?: (session: EnrichedCoachingSession) => void;
-  /** Invoked with no args when the user clicks Schedule a coaching session
-   *  from the empty state. */
-  onCreateSession?: () => void;
   /** Surfaces the internal hook's refresh function to the parent so it can
    *  force a refresh after a dialog closes. */
   onRefreshNeeded?: (refresh: () => void) => void;
@@ -53,8 +55,8 @@ interface UpcomingSessionCardProps {
  * (loading / error / populated / empty).
  */
 export function UpcomingSessionCard({
-  onReschedule,
   onCreateSession,
+  onReschedule,
   onRefreshNeeded,
 }: UpcomingSessionCardProps) {
   const { userSession } = useAuthStore((state) => state);
@@ -67,9 +69,9 @@ export function UpcomingSessionCard({
     onRefreshNeeded?.(refresh);
   }, [onRefreshNeeded, refresh]);
 
-  if (!userSession) return null;
-
-  if (isLoading) {
+  // During the brief auth hydration race, render the loading chrome rather
+  // than an empty slot — keeps the dashboard layout stable.
+  if (!userSession || isLoading) {
     return <CardContainer><StateLoading /></CardContainer>;
   }
 
@@ -82,7 +84,7 @@ export function UpcomingSessionCard({
   if (!nextSession) {
     return (
       <CardContainer>
-        <UpcomingSessionCardEmpty onCreateSession={onCreateSession ?? noop} />
+        <UpcomingSessionCardEmpty onCreateSession={onCreateSession} />
       </CardContainer>
     );
   }
@@ -159,7 +161,11 @@ function PopulatedBody({
   const showPulsingDot =
     urgency === SessionUrgency.Imminent || urgency === SessionUrgency.Underway;
 
-  const actionsDueCount = countActionsDueForSession(session, assignedActions);
+  const actionsDueCount = countActionsDueBySession(
+    assignedActions,
+    session.coaching_relationship_id,
+    DateTime.fromISO(session.date),
+  );
   const initials = userSessionFirstLastLettersToString(
     participant.firstName,
     participant.lastName,
@@ -277,20 +283,3 @@ function FooterRow({
   );
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────
-
-/** Count actions in the user's assigned list that are due on or before
- *  this session's start time for the session's relationship. */
-function countActionsDueForSession(
-  session: EnrichedCoachingSession,
-  assignedActions: AssignedActionWithContext[],
-): number {
-  const sessionDate = DateTime.fromISO(session.date);
-  return assignedActions.reduce((count, a) => {
-    if (a.relationship.id !== session.coaching_relationship_id) return count;
-    if (a.action.due_by > sessionDate) return count;
-    return count + 1;
-  }, 0);
-}
-
-function noop() {}

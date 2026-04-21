@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import {
   calculateSessionUrgency,
+  countActionsDueBySession,
   getUrgencyMessage,
   enrichSessionForDisplay,
   selectNextUpcomingSession,
@@ -10,6 +11,9 @@ import {
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/utils/session";
+import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import { ItemStatus } from "@/types/general";
+import { None } from "@/types/option";
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
@@ -243,6 +247,71 @@ describe("getUserRoleInRelationship", () => {
   });
 });
 
+describe("countActionsDueBySession", () => {
+  function makeAction(relationshipId: string, dueBy: DateTime): AssignedActionWithContext {
+    return {
+      action: {
+        id: `action-${Math.random()}`,
+        coaching_session_id: "session-1",
+        goal_id: None,
+        body: "x",
+        user_id: "u",
+        status: ItemStatus.NotStarted,
+        status_changed_at: DateTime.now(),
+        due_by: dueBy,
+        created_at: DateTime.now(),
+        updated_at: DateTime.now(),
+        assignee_ids: ["u"],
+      },
+      relationship: {
+        id: relationshipId,
+        coach_id: "c",
+        coachee_id: "e",
+        organization_id: "o",
+        coach_first_name: "",
+        coach_last_name: "",
+        coachee_first_name: "",
+        coachee_last_name: "",
+        created_at: DateTime.now(),
+        updated_at: DateTime.now(),
+      },
+      goal: { goalId: "g", title: "g" },
+      sourceSession: { coachingSessionId: "session-1", sessionDate: dueBy },
+      nextSession: null,
+      isOverdue: false,
+    };
+  }
+
+  const sessionDate = DateTime.now().plus({ hours: 4 });
+
+  it("counts actions for the session's relationship that are due on or before the session", () => {
+    const actions = [
+      makeAction("rel-1", sessionDate.minus({ hours: 1 })),
+      makeAction("rel-1", sessionDate.minus({ days: 2 })),
+    ];
+    expect(countActionsDueBySession(actions, "rel-1", sessionDate)).toBe(2);
+  });
+
+  it("excludes actions for other relationships", () => {
+    const actions = [
+      makeAction("rel-1", sessionDate.minus({ hours: 1 })),
+      makeAction("rel-other", sessionDate.minus({ hours: 1 })),
+    ];
+    expect(countActionsDueBySession(actions, "rel-1", sessionDate)).toBe(1);
+  });
+
+  it("excludes actions due after the session", () => {
+    const actions = [
+      makeAction("rel-1", sessionDate.plus({ days: 1 })),
+    ];
+    expect(countActionsDueBySession(actions, "rel-1", sessionDate)).toBe(0);
+  });
+
+  it("returns 0 for an empty list", () => {
+    expect(countActionsDueBySession([], "rel-1", sessionDate)).toBe(0);
+  });
+});
+
 describe("selectNextUpcomingSession", () => {
   it("returns undefined for an empty list", () => {
     expect(selectNextUpcomingSession([])).toBeUndefined();
@@ -313,6 +382,28 @@ describe("getSessionParticipantInfo", () => {
     expect(info?.participantName).toBe("Coachee (data not loaded)");
     expect(info?.firstName).toBe("");
     expect(info?.lastName).toBe("");
+    expect(info?.isMissing).toBe(true);
+  });
+
+  it("falls back to display_name when the loaded user has empty first/last names", () => {
+    const session = createMockEnrichedSession({
+      coachee: {
+        id: "coachee-1",
+        email: "alex@example.com",
+        first_name: "",
+        last_name: "",
+        display_name: "A. Chen",
+        timezone: "America/Los_Angeles",
+        role: "user",
+        roles: [],
+        created_at: "",
+        updated_at: "",
+      },
+    });
+    const info = getSessionParticipantInfo(session, "coach-1");
+    expect(info).not.toBeNull();
+    expect(info?.participantName).toBe("A. Chen");
+    expect(info?.isMissing).toBe(false);
   });
 });
 
@@ -332,6 +423,24 @@ describe("getSessionParticipantName", () => {
     expect(getSessionParticipantName(coachMissing, "coachee-1")).toBe("Coach");
     const coacheeMissing = createMockEnrichedSession({ coachee: undefined });
     expect(getSessionParticipantName(coacheeMissing, "coach-1")).toBe("Coachee");
+  });
+
+  it("returns display_name when the loaded user has empty first/last names (regression)", () => {
+    const session = createMockEnrichedSession({
+      coachee: {
+        id: "coachee-1",
+        email: "alex@example.com",
+        first_name: "",
+        last_name: "",
+        display_name: "A. Chen",
+        timezone: "America/Los_Angeles",
+        role: "user",
+        roles: [],
+        created_at: "",
+        updated_at: "",
+      },
+    });
+    expect(getSessionParticipantName(session, "coach-1")).toBe("A. Chen");
   });
 });
 

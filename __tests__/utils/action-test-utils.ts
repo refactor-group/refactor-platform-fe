@@ -257,27 +257,10 @@ export function createMockSession(
 // Shared Filter Functions (extracted for testing)
 // ============================================================================
 
-/**
- * Counts actions due by a specific session date for a given relationship.
- * This mirrors the logic in UpcomingSessionCard's actions-due count.
- *
- * @param assignedActions - Array of actions with context
- * @param sessionRelationshipId - The coaching_relationship_id of the session
- * @param sessionDate - The DateTime of the session
- * @returns Count of actions matching both criteria
- */
-export function countActionsDueBySession(
-  assignedActions: AssignedActionWithContext[],
-  sessionRelationshipId: string,
-  sessionDate: DateTime
-): number {
-  return assignedActions.filter((a) => {
-    if (a.relationship.id !== sessionRelationshipId) {
-      return false;
-    }
-    return a.action.due_by <= sessionDate;
-  }).length;
-}
+// countActionsDueBySession has been lifted to @/lib/utils/session.ts so the
+// source and test-utility helpers can't drift. Re-export here so existing
+// test imports keep working.
+export { countActionsDueBySession } from "@/lib/utils/session";
 
 /**
  * Calculates whether an action is overdue.
