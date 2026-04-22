@@ -168,7 +168,14 @@ export default function SetupPage() {
                                 onClick={handleSignIn}
                                 disabled={isSigningOut}
                             >
-                                {isSigningOut ? "Signing out..." : "Sign In"}
+                                {isSigningOut ? (
+                                    <>
+                                        <span className="mr-2">Sign In</span>
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    </>
+                                ) : (
+                                    "Sign In"
+                                )}
                             </Button>
                         </div>
                     )}
