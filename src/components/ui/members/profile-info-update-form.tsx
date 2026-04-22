@@ -34,6 +34,7 @@ export function ProfileInfoUpdateForm({
     timezone: user.timezone || getBrowserTimezone(),
     role: user.role,
     roles: user.roles,
+    invite_status: user.invite_status,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

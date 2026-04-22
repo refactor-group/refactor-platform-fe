@@ -26,6 +26,7 @@ export function createMockUser(overrides?: Partial<User>): User {
     timezone: "America/Los_Angeles",
     role: "coach",
     roles: [],
+    invite_status: null,
     created_at: now.toISO() ?? '', // User expects string, handle null case
     updated_at: now.toISO() ?? '',
     ...overrides,

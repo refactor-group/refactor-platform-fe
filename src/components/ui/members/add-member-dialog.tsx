@@ -41,11 +41,7 @@ export function AddMemberDialog({
     lastName: "",
     displayName: "",
     email: "",
-    password: "",
-    confirmPassword: "", // For validation
   });
-
-  const [passwordError, setPasswordError] = useState("");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -58,19 +54,11 @@ export function AddMemberDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate passwords match
-    // we may want to add other validations in the future
-    if (formData.password !== formData.confirmPassword) {
-      setPasswordError("Passwords do not match");
-      return;
-    }
-
     const newUser: NewUser = {
       first_name: formData.firstName,
       last_name: formData.lastName,
       display_name: formData.displayName,
       email: formData.email,
-      password: formData.password,
       timezone: getBrowserTimezone(), // Default to browser timezone for new users
     };
 
@@ -81,10 +69,7 @@ export function AddMemberDialog({
         lastName: "",
         displayName: "",
         email: "",
-        password: "",
-        confirmPassword: "",
       });
-      setPasswordError("");
       onMemberAdded();
       toast.success(`New Member ${formData.firstName} ${formData.lastName} added successfully`);
       onOpenChange(false);
@@ -100,8 +85,8 @@ export function AddMemberDialog({
         <DialogHeader>
           <DialogTitle>Add New Member</DialogTitle>
           <DialogDescription>
-            Create a new member account. The member will be able to change their
-            password after first login.
+            Create a new member account. They&apos;ll receive an email with a
+            link to set up their password.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -151,31 +136,6 @@ export function AddMemberDialog({
                 required
               />
             </div>
-            <div className="grid gap-4">
-              <Label htmlFor="password">Initial Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            <div className="grid gap-4">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-            {passwordError && (
-              <div className="text-red-500 text-sm">{passwordError}</div>
-            )}
           </div>
           <div className="pt-4">
             <DialogFooter>
