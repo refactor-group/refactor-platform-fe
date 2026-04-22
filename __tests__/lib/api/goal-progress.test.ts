@@ -20,7 +20,7 @@ vi.mock('@/site.config', () => ({
   },
 }))
 
-/** Valid raw API response for progress metrics */
+/** Valid raw API response for progress metrics (uses backend snake_case names) */
 function makeRawProgressResponse(): Record<string, unknown> {
   return {
     actions_completed: 4,

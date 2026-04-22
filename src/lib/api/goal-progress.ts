@@ -1,16 +1,56 @@
 // Goal progress API — dedicated module mirroring backend's goal_progress module pattern.
 
 import { siteConfig } from "@/site.config";
-import { Id } from "@/types/general";
+import { Id, ItemStatus } from "@/types/general";
 import {
   GoalProgress,
   GoalProgressMetrics,
+  GoalWithProgress,
   parseGoalProgressMetrics,
+  parseGoalProgressResponse,
 } from "@/types/goal-progress";
 import { type Option, None } from "@/types/option";
+import { type AssigneeScope } from "@/types/assigned-actions";
 import { EntityApi } from "./entity-api";
 
+/**
+ * Deterministic serialization of a params record for use in an SWR cache
+ * key. Emits only defined fields in a stable sort order so that two
+ * params objects with the same semantic content produce the same key.
+ * Plain `JSON.stringify` is sensitive to insertion order.
+ */
+function stableParamsKey(params: Record<string, unknown>): string {
+  const defined = Object.entries(params).filter(([, v]) => v !== undefined);
+  defined.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return JSON.stringify(Object.fromEntries(defined));
+}
+
+/**
+ * Server-side filter / sort / limit params for GET .../goal_progress.
+ * See RelationshipGoalProgress v4 contract.
+ *
+ * Note: `status` is sent as PascalCase on the wire (e.g. "InProgress") — see
+ * the "Status casing caveat" in the contract. `ItemStatus` already uses
+ * PascalCase values, so its variants pass through unchanged.
+ *
+ * `assignee` scopes the aggregated action counts and the `progress` signal
+ * to a single assignee role / user id (server-side via SQL join).
+ *
+ * `coaching_session_id` restricts the returned goals to those linked to
+ * that specific session via the session↔goal join table. AND-composes
+ * with all other filters.
+ */
+export interface GoalProgressListParams {
+  status?: ItemStatus;
+  sort_by?: "updated_at" | "status_changed_at" | "created_at";
+  sort_order?: "asc" | "desc";
+  limit?: number;
+  assignee?: AssigneeScope | Id;
+  coaching_session_id?: Id;
+}
+
 const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
+const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
 
 /** Default metrics returned while loading or when no data is available. */
 function defaultGoalProgressMetrics(): GoalProgressMetrics {
@@ -32,7 +72,34 @@ export const GoalProgressApi = {
     );
     return parseGoalProgressMetrics(raw);
   },
+
+  /**
+   * Fetches progress metrics for all goals in a coaching relationship.
+   * Optional server-side filter/sort/limit — see RelationshipGoalProgress v4.
+   */
+  listByRelationship: async (
+    organizationId: Id,
+    relationshipId: Id,
+    params: GoalProgressListParams = {}
+  ): Promise<GoalWithProgress[]> => {
+    const base = `${ORGANIZATIONS_BASEURL}/${organizationId}/coaching_relationships/${relationshipId}/goal_progress`;
+    const raw = await EntityApi.getFn<unknown>(buildUrl(base, params));
+    return parseGoalProgressResponse(raw);
+  },
 };
+
+function buildUrl(base: string, params: GoalProgressListParams): string {
+  const qs = new URLSearchParams();
+  if (params.status !== undefined) qs.append("status", params.status);
+  if (params.sort_by !== undefined) qs.append("sort_by", params.sort_by);
+  if (params.sort_order !== undefined) qs.append("sort_order", params.sort_order);
+  if (params.limit !== undefined) qs.append("limit", String(params.limit));
+  if (params.assignee !== undefined) qs.append("assignee", params.assignee);
+  if (params.coaching_session_id !== undefined)
+    qs.append("coaching_session_id", params.coaching_session_id);
+  const query = qs.toString();
+  return query ? `${base}?${query}` : base;
+}
 
 /**
  * SWR hook that fetches progress metrics for a single goal.
@@ -53,6 +120,67 @@ export const useGoalProgress = (goalId: Option<Id>) => {
 
   return {
     progressMetrics: entity,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * SWR hook that fetches progress metrics for all goals in a coaching
+ * relationship. Passes `None` for either id to skip the fetch — matches the
+ * `Option<T>` pattern used by `useGoalProgress` and canonicalized in the
+ * project's coding standards.
+ *
+ * @param organizationId The organization ID wrapped in Option — None skips the fetch.
+ * @param relationshipId The coaching relationship ID wrapped in Option — None skips the fetch.
+ * @param params Optional server-side filter / sort / limit (RelationshipGoalProgress v4).
+ */
+export const useGoalProgressList = (
+  organizationId: Option<Id>,
+  relationshipId: Option<Id>,
+  params: GoalProgressListParams = {}
+) => {
+  // Narrow both Options into a single nullable object so downstream reads
+  // carry the Some-guarantee through without any `!` assertions.
+  const resolved =
+    organizationId.some && relationshipId.some
+      ? { orgId: organizationId.val, relId: relationshipId.val }
+      : null;
+
+  const url = resolved
+    ? buildUrl(
+        `${ORGANIZATIONS_BASEURL}/${resolved.orgId}/coaching_relationships/${resolved.relId}/goal_progress`,
+        params
+      )
+    : null;
+
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<GoalWithProgress>(
+      // `url ?? ""` is a placeholder — SWR's fetch gate is driven by the
+      // cache-key arg below being undefined, not the URL string. See
+      // useEntityList: `key = actualParams ? [url, actualParams] : null`.
+      url ?? "",
+      () =>
+        resolved
+          ? GoalProgressApi.listByRelationship(
+              resolved.orgId,
+              resolved.relId,
+              params
+            )
+          : Promise.reject(
+              new Error("unreachable: fetcher invoked with unresolved IDs")
+            ),
+      // Cache key scopes on (relationshipId + stable-serialized params) so
+      // SWR refetches when any param changes and key identity stays stable
+      // regardless of object-key insertion order.
+      resolved
+        ? `${resolved.relId}|${stableParamsKey(params as Record<string, unknown>)}`
+        : undefined
+    );
+
+  return {
+    goalsWithProgress: entities,
     isLoading,
     isError,
     refresh,

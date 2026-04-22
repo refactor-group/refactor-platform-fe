@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
+import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
 import { UpcomingSessionCard } from "@/components/ui/dashboard/upcoming-session-card";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
@@ -38,7 +39,6 @@ export function DashboardContainer() {
       <DashboardHeader onCreateSession={() => handleOpenDialog()} />
 
       {/* Upcoming Session + Goals Overview (2-col grid on md+).
-          Right column is an empty placeholder for PR 3a (Goals Overview Card).
           Width follows the page's max-w-screen-2xl via PageContainer. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 mb-8 w-full">
         <UpcomingSessionCard
@@ -46,7 +46,7 @@ export function DashboardContainer() {
           onCreateSession={() => handleOpenDialog()}
           onRefreshNeeded={handleRefreshNeeded}
         />
-        <div aria-hidden="true" />
+        <GoalsOverviewCard />
       </div>
 
       <div className="w-full">
