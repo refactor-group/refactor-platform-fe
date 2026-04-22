@@ -68,6 +68,16 @@ export const UserApi = {
       `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}`
     );
   },
+
+  /**
+   * Resends the magic link invitation email to a user whose invite has expired.
+   */
+  resendInvite: async (organizationId: Id, userId: Id): Promise<void> => {
+    await EntityApi.createFn<Record<string, never>, void>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/resend-invite`,
+      {}
+    );
+  },
 };
 
 /**

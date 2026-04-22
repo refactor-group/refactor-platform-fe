@@ -26,14 +26,11 @@ on:
         required: true
         type: choice
         options:
-          - 'c9ecf14 - chore: refresh preview commit choices [skip ci]'
-          - '9eb9c32 - chore: refresh preview commit choices [skip ci]'
-          - 76cac0d - Tolerate empty DB pool env vars on container startup (#
-          - 374f242 - PR#286 (raymond/bug/fix-misleading-ext)
-          - 1dc563f - PR#281 (raymond/add-invite-status-to-u)
-          - 88e274a - PR#279 (dependabot/cargo/cargo-39cecc6)
-          - 04d2d8c - PR#278 (raymond/fix-google-provider-co)
-          - 6abd9c9 - PR#273 (raymond/implements-magic-login)
+          - '8ceafdd - chore: refresh preview commit choices [skip ci]'
+          - 24847cd - Add filter/sort/limit/assignee/session params to goal_p
+          - 'c178e56 - chore: refresh preview commit choices [skip ci]'
+          - 14bfc7c - PR#279 (dependabot/cargo/cargo-39cecc6)
+          - 4632ee2 - PR#278 (raymond/fix-google-provider-co)
           - a51652a - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
@@ -41,13 +38,11 @@ on:
         required: true
         type: choice
         options:
-          - '5a62fec - Merge pull request #377 from refactor-group/feat/dashboard-upcoming-session-card'
-          - 7d77af9 - Merge branch 'main' into feat/dashboard-upcoming-session-card
-          - '42869da - fix(dashboard): match upcoming-session card count to panel Due tab'
+          - '3e70eac - Merge pull request #336 from refactor-group/feat/dashboard-goals-overview'
+          - 978cb85 - Merge branch 'main' into feat/dashboard-goals-overview
+          - '5d3ca4a - chore: refresh preview commit choices [skip ci]'
           - 0ede2a2 - PR#373 (feature/transcript-pane)
-          - b0ad5f1 - PR#367 (raymond/implements-magic-login)
-          - 4852f68 - PR#336 (feat/dashboard-goals-overview)
-          - 8ad4e21 - PR#318 (docs/goals-implementation-plan)
+          - 3b36667 - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
           - d9e1e08 - PR#243 (feature/146-ai-meeting-integra)
       backend_commit_override:

@@ -74,6 +74,7 @@ export const AUTH_STORE_STATE = {
           updated_at: '2024-01-01T00:00:00Z',
         },
       ],
+      invite_status: null,
     },
     isLoggedIn: true,
     isCurrentCoach: false,
