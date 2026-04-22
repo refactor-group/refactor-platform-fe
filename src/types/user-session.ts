@@ -30,6 +30,7 @@ export function defaultUserSession(): UserSession {
     timezone: "UTC",
     role: Role.User,
     roles: [],
+    invite_status: null,
   };
 }
 

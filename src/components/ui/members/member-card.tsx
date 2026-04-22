@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useUserMutation } from "@/lib/api/organizations/users";
+import { UserApi, useUserMutation } from "@/lib/api/organizations/users";
 import { getUserDisplayRoles, getUserCoaches } from "@/lib/utils/user-roles";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { MoreHorizontal, Send, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,12 @@ import {
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id } from "@/types/general";
-import { User, isAdminOrSuperAdmin, UserRoleState } from "@/types/user";
+import {
+  InviteStatus,
+  User,
+  isAdminOrSuperAdmin,
+  UserRoleState,
+} from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { toast } from "sonner";
@@ -100,6 +106,36 @@ export function MemberCard({
     onRefresh();
   };
 
+  const handleResendInvite = async () => {
+    try {
+      await UserApi.resendInvite(currentOrganizationId, userId);
+      toast.success(`Invitation resent to ${email}`);
+      onRefresh();
+    } catch (err) {
+      console.error("Error resending invitation:", err);
+      toast.error("Failed to resend invitation");
+    }
+  };
+
+  const renderInviteStatusBadge = (status: InviteStatus | null) => {
+    switch (status) {
+      case "pending":
+        return <Badge variant="secondary">Pending</Badge>;
+      case "expired":
+        return <Badge variant="destructive">Invitation Expired</Badge>;
+      case "active":
+      case null:
+        return null;
+      default: {
+        const _exhaustive: never = status;
+        throw new Error(`Unhandled invite status: ${_exhaustive}`);
+      }
+    }
+  };
+
+  const canResendInvite =
+    user.invite_status === "expired" && isAdminOrSuperAdmin(currentUserRoleState);
+
   const handleAssignMember = (val: string) => {
     const user = users.find((m) => m.id === val);
     if (!user) return;
@@ -151,9 +187,22 @@ export function MemberCard({
   return (
     <div className="flex items-center p-4 hover:bg-accent/50 transition-colors">
       <div className="flex-1">
-        <h3 className="font-medium">
-          {firstName} {lastName}
-          {userId === currentUserId && " (You)"}
+        <h3 className="font-medium flex items-center gap-2">
+          <span>
+            {firstName} {lastName}
+            {userId === currentUserId && " (You)"}
+          </span>
+          {renderInviteStatusBadge(user.invite_status)}
+          {canResendInvite && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={handleResendInvite}
+            >
+              <Send className="mr-1 h-3 w-3" /> Resend
+            </Button>
+          )}
         </h3>
         {email && <p className="text-sm text-muted-foreground">{email}</p>}
         {displayRoles.length > 0 && (
