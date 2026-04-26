@@ -38,10 +38,9 @@ on:
         required: true
         type: choice
         options:
-          - '494c8fd - chore: refresh preview commit choices [skip ci]'
-          - '3e70eac - Merge pull request #336 from refactor-group/feat/dashboard-goals-overview'
-          - 978cb85 - Merge branch 'main' into feat/dashboard-goals-overview
-          - 5b134de - PR#380 (fix/dependabot-cves-april-2026)
+          - 'ff891ed - Merge pull request #380 from refactor-group/fix/dependabot-cves-april-2026'
+          - dfa8b93 - Merge branch 'main' into fix/dependabot-cves-april-2026
+          - 'f4d164d - chore: refresh preview commit choices [skip ci]'
           - 79083cf - PR#379 (ci/runtime-ref-resolver)
           - 0ede2a2 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
