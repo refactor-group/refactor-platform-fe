@@ -26,11 +26,11 @@ on:
         required: true
         type: choice
         options:
-          - '8ceafdd - chore: refresh preview commit choices [skip ci]'
-          - 24847cd - Add filter/sort/limit/assignee/session params to goal_p
-          - 'c178e56 - chore: refresh preview commit choices [skip ci]'
-          - 14bfc7c - PR#279 (dependabot/cargo/cargo-39cecc6)
-          - 4632ee2 - PR#278 (raymond/fix-google-provider-co)
+          - '2947956 - chore: refresh preview commit choices [skip ci]'
+          - '22f2054 - Merge pull request #294 from refactor-group/fix/test-en'
+          - 'd68a916 - review: document Config::default side effect and hoist '
+          - 8dda4ef - PR#291 (ci/runtime-ref-resolver)
+          - 4fa19dd - PR#278 (raymond/fix-google-provider-co)
           - a51652a - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
@@ -38,11 +38,13 @@ on:
         required: true
         type: choice
         options:
+          - '494c8fd - chore: refresh preview commit choices [skip ci]'
           - '3e70eac - Merge pull request #336 from refactor-group/feat/dashboard-goals-overview'
           - 978cb85 - Merge branch 'main' into feat/dashboard-goals-overview
-          - '5d3ca4a - chore: refresh preview commit choices [skip ci]'
+          - 5b134de - PR#380 (fix/dependabot-cves-april-2026)
+          - 79083cf - PR#379 (ci/runtime-ref-resolver)
           - 0ede2a2 - PR#373 (feature/transcript-pane)
-          - 3b36667 - PR#318 (docs/goals-implementation-plan)
+          - abe1231 - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
           - d9e1e08 - PR#243 (feature/146-ai-meeting-integra)
       backend_commit_override:
