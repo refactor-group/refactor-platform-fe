@@ -20,7 +20,7 @@ import { useGoalProgressList } from "@/lib/api/goal-progress";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import {
-  getSessionParticipantName,
+  getSessionParticipantInfo,
   selectNextUpcomingSession,
 } from "@/lib/utils/session";
 import { GoalProgress } from "@/types/goal-progress";
@@ -168,9 +168,12 @@ export function GoalsOverviewCard() {
   // 404 from a relationship the caller isn't in, 5xx, etc.).
   if (isError) return <GoalsOverviewCardError />;
 
-  const coacheeName = userId
-    ? getSessionParticipantName(upcomingSession, userId)
-    : "";
+  // Resolve the user's role in this specific session — org-wide isACoach
+  // can't disambiguate users who are coach in one relationship and coachee in
+  // another within the same org.
+  const participantInfo = userId
+    ? getSessionParticipantInfo(upcomingSession, userId)
+    : null;
 
   // Server already filtered to this session's linked goals + coachee scope;
   // render whatever it returned.
@@ -212,7 +215,9 @@ export function GoalsOverviewCard() {
                 <ProgressRing percent={overallPercent} />
                 <div>
                   <p className="text-xs text-muted-foreground">
-                    {coacheeName}&apos;s active goals
+                    {participantInfo?.isCoach
+                      ? `${participantInfo.participantName}’s active goals`
+                      : "Your active goals"}
                   </p>
                   <p className="text-lg font-semibold tabular-nums -mt-0.5">
                     {activeGoals.length}

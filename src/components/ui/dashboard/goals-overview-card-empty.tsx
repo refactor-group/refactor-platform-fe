@@ -23,8 +23,7 @@ export function GoalsOverviewCardEmpty() {
               No active goals to show
             </p>
             <p className="text-xs text-muted-foreground">
-              When you have an upcoming session, your coachee&apos;s active
-              goals will appear here.
+              When you have an upcoming session, active goals will appear here.
             </p>
           </div>
         </div>
