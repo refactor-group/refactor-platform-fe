@@ -37,10 +37,9 @@ on:
         required: true
         type: choice
         options:
-          - '3872cd3 - chore: refresh preview commit choices [skip ci]'
-          - 'ff891ed - Merge pull request #380 from refactor-group/fix/dependabot-cves-april-2026'
-          - dfa8b93 - Merge branch 'main' into fix/dependabot-cves-april-2026
-          - 5a0092d - PR#381 (fix/goals-overview-empty-coach)
+          - '8c2faed - Merge pull request #381 from refactor-group/fix/goals-overview-empty-coachee-copy'
+          - 4b48a91 - Merge branch 'main' into fix/goals-overview-empty-coachee-copy
+          - 'f3a5f83 - test(dashboard): cover GoalsOverviewCard heading per session role'
           - 79083cf - PR#379 (ci/runtime-ref-resolver)
           - 0ede2a2 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
