@@ -26,14 +26,14 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 }));
 
 // Session utilities are pure; we mock them to isolate the card's behavior
-// (their own tests cover participant-name resolution).
+// (their own tests cover participant-info resolution).
 const mockSelectNextUpcomingSession = vi.fn();
-const mockGetSessionParticipantName = vi.fn();
+const mockGetSessionParticipantInfo = vi.fn();
 vi.mock("@/lib/utils/session", () => ({
   selectNextUpcomingSession: (...args: unknown[]) =>
     mockSelectNextUpcomingSession(...args),
-  getSessionParticipantName: (...args: unknown[]) =>
-    mockGetSessionParticipantName(...args),
+  getSessionParticipantInfo: (...args: unknown[]) =>
+    mockGetSessionParticipantInfo(...args),
 }));
 
 // ── Fixtures ───────────────────────────────────────────────────────────
@@ -72,9 +72,10 @@ function makeUpcomingSession() {
 }
 
 /**
- * Default: a logged-in user with an upcoming session resolvable to "Alex
- * Chen". The card trusts the server's response — tests mock whatever goals
- * the server would return for `?coaching_session_id=sess-1&assignee=coachee`.
+ * Default: a logged-in user who is the COACH in an upcoming session whose
+ * coachee is "Alex Chen". The card trusts the server's response — tests mock
+ * whatever goals the server would return for
+ * `?coaching_session_id=sess-1&assignee=coachee`.
  */
 function setupDefault() {
   const session = makeUpcomingSession();
@@ -86,7 +87,14 @@ function setupDefault() {
     refresh: vi.fn(),
   });
   mockSelectNextUpcomingSession.mockReturnValue(session);
-  mockGetSessionParticipantName.mockReturnValue("Alex Chen");
+  mockGetSessionParticipantInfo.mockReturnValue({
+    participantName: "Alex Chen",
+    firstName: "Alex",
+    lastName: "Chen",
+    userRole: "Coach",
+    isCoach: true,
+    isMissing: false,
+  });
 }
 
 describe("GoalsOverviewCard", () => {
@@ -114,7 +122,11 @@ describe("GoalsOverviewCard", () => {
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
-  it("renders the empty state when there is no upcoming session", () => {
+  it("renders the empty state with role-neutral copy when there is no upcoming session", () => {
+    // Without an upcoming session there's no relationship to derive a role
+    // from, so the copy must be role-neutral — never "your coachee's" (wrong
+    // for users who are never a coach) and never "your" (wrong for users who
+    // are only coaches).
     mockAuthStore.mockReturnValue({ userId: "user-1" });
     mockUseTodaysSessions.mockReturnValue({
       sessions: [],
@@ -132,6 +144,12 @@ describe("GoalsOverviewCard", () => {
 
     render(<GoalsOverviewCard />);
     expect(screen.getByText("No active goals to show")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "When you have an upcoming session, active goals will appear here."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/coachee['’]s/i)).not.toBeInTheDocument();
   });
 
   it("renders an inline error message when goal_progress fails", () => {
@@ -149,7 +167,7 @@ describe("GoalsOverviewCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the coachee name and the goal count returned by the server", () => {
+  it("renders the coachee name and the goal count when the user is the coach", () => {
     // Card trusts the server's filtered+scoped response — whatever goals it
     // gets back are the goals it renders.
     const goals = [
@@ -165,10 +183,39 @@ describe("GoalsOverviewCard", () => {
     });
 
     render(<GoalsOverviewCard />);
-    expect(screen.getByText("Alex Chen's active goals")).toBeInTheDocument();
+    expect(screen.getByText("Alex Chen’s active goals")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Goal A")).toBeInTheDocument();
     expect(screen.getByText("Goal B")).toBeInTheDocument();
+  });
+
+  it("renders 'Your active goals' when the user is the coachee in the upcoming session", () => {
+    // The server already returned coachee-scoped goals — i.e., the user's own
+    // goals — so the heading should refer to the user themself, not the coach.
+    const goals = [makeGoalWithProgress({ goal_id: "g1", title: "Goal A" })];
+    setupDefault();
+    mockGetSessionParticipantInfo.mockReturnValue({
+      participantName: "Bob Coach",
+      firstName: "Bob",
+      lastName: "Coach",
+      userRole: "Coachee",
+      isCoach: false,
+      isMissing: false,
+    });
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: goals,
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(screen.getByText("Your active goals")).toBeInTheDocument();
+    // The coach's name must NOT appear in the heading even though
+    // getSessionParticipantInfo returns it as the "other participant".
+    expect(
+      screen.queryByText("Bob Coach’s active goals")
+    ).not.toBeInTheDocument();
   });
 
   it("shows 'No active goals' when the server returns an empty list", () => {
@@ -355,7 +402,14 @@ describe("GoalsOverviewCard", () => {
       refresh: vi.fn(),
     });
     mockSelectNextUpcomingSession.mockReturnValue(partial);
-    mockGetSessionParticipantName.mockReturnValue("Alex Chen");
+    mockGetSessionParticipantInfo.mockReturnValue({
+      participantName: "Alex Chen",
+      firstName: "Alex",
+      lastName: "Chen",
+      userRole: "Coach",
+      isCoach: true,
+      isMissing: false,
+    });
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: [],
       isLoading: false,
