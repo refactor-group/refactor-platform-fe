@@ -30,7 +30,6 @@ on:
           - '22f2054 - Merge pull request #294 from refactor-group/fix/test-en'
           - 'd68a916 - review: document Config::default side effect and hoist '
           - 8dda4ef - PR#291 (ci/runtime-ref-resolver)
-          - 4fa19dd - PR#278 (raymond/fix-google-provider-co)
           - a51652a - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
@@ -38,9 +37,10 @@ on:
         required: true
         type: choice
         options:
+          - '3872cd3 - chore: refresh preview commit choices [skip ci]'
           - 'ff891ed - Merge pull request #380 from refactor-group/fix/dependabot-cves-april-2026'
           - dfa8b93 - Merge branch 'main' into fix/dependabot-cves-april-2026
-          - 'f4d164d - chore: refresh preview commit choices [skip ci]'
+          - 5a0092d - PR#381 (fix/goals-overview-empty-coach)
           - 79083cf - PR#379 (ci/runtime-ref-resolver)
           - 0ede2a2 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
