@@ -1,14 +1,37 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import CoachingSessionList from "@/components/ui/dashboard/coaching-session-list";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
+import { CoachingSessionsCard } from "@/components/ui/dashboard/coaching-sessions-card";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
 import { UpcomingSessionCard } from "@/components/ui/dashboard/upcoming-session-card";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
+import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {
+  // Used to live inside the per-card relationship selector. Now that the
+  // dashboard has no visible selector (the new CoachingSessionsCard is
+  // user-scoped), wire the hook here so single-relationship users still get
+  // auto-selection — UpcomingSessionCard and GoalsOverviewCard depend on a
+  // selected `currentCoachingRelationshipId`.
+  const { currentOrganizationId } = useCurrentOrganization();
+  const { relationships, isLoading: isLoadingRelationships } =
+    useCoachingRelationshipList(currentOrganizationId);
+  const {
+    currentCoachingRelationshipId,
+    setCurrentCoachingRelationshipId,
+  } = useCurrentCoachingRelationship();
+  useAutoSelectSingleRelationship(
+    relationships,
+    isLoadingRelationships,
+    currentCoachingRelationshipId,
+    setCurrentCoachingRelationshipId
+  );
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sessionToEdit, setSessionToEdit] = useState<
     CoachingSession | undefined
@@ -50,8 +73,10 @@ export function DashboardContainer() {
       </div>
 
       <div className="w-full">
-        <h2 className="text-lg font-semibold pb-6">Coaching Sessions</h2>
-        <CoachingSessionList onUpdateSession={handleOpenDialog} onSessionDeleted={() => refreshUpcomingSession?.()} />
+        <CoachingSessionsCard
+          onReschedule={handleOpenDialog}
+          onSessionDeleted={() => refreshUpcomingSession?.()}
+        />
       </div>
       <CoachingSessionDialog
         open={dialogOpen}

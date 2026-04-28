@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
+import {
+  getRelationshipParticipantInfo,
+  sortRelationshipsByParticipantName,
+} from "@/types/coaching-relationship";
+import { RelationshipRole } from "@/types/relationship-role";
 import { createMockRelationship } from "../test-utils";
 
 describe("sortRelationshipsByParticipantName", () => {
@@ -99,5 +103,77 @@ describe("sortRelationshipsByParticipantName", () => {
 
   it("returns an empty array when given an empty array", () => {
     expect(sortRelationshipsByParticipantName([], coachId)).toEqual([]);
+  });
+});
+
+describe("getRelationshipParticipantInfo", () => {
+  it("returns coachee details when the viewer is the coach", () => {
+    const relationship = createMockRelationship({
+      coach_id: "user-coach",
+      coachee_id: "user-coachee",
+      coach_first_name: "Casey",
+      coach_last_name: "Coach",
+      coachee_first_name: "Alex",
+      coachee_last_name: "Chen",
+    });
+
+    expect(getRelationshipParticipantInfo(relationship, "user-coach")).toEqual({
+      participantName: "Alex Chen",
+      firstName: "Alex",
+      lastName: "Chen",
+      userRole: RelationshipRole.Coach,
+      isCoach: true,
+    });
+  });
+
+  it("returns coach details when the viewer is the coachee", () => {
+    const relationship = createMockRelationship({
+      coach_id: "user-coach",
+      coachee_id: "user-coachee",
+      coach_first_name: "Casey",
+      coach_last_name: "Coach",
+      coachee_first_name: "Alex",
+      coachee_last_name: "Chen",
+    });
+
+    expect(
+      getRelationshipParticipantInfo(relationship, "user-coachee")
+    ).toEqual({
+      participantName: "Casey Coach",
+      firstName: "Casey",
+      lastName: "Coach",
+      userRole: RelationshipRole.Coachee,
+      isCoach: false,
+    });
+  });
+
+  it("falls back to coachee role when the viewer matches neither coach nor coachee", () => {
+    // Defensive default: caller should never pass a non-participant viewer,
+    // but if they do we still produce a valid (coach-pointing) info object.
+    const relationship = createMockRelationship({
+      coach_id: "user-coach",
+      coachee_id: "user-coachee",
+      coach_first_name: "Casey",
+      coach_last_name: "Coach",
+    });
+
+    const info = getRelationshipParticipantInfo(relationship, "stranger");
+    expect(info.isCoach).toBe(false);
+    expect(info.userRole).toBe(RelationshipRole.Coachee);
+    expect(info.participantName).toBe("Casey Coach"); // viewer treated as coachee → sees coach
+  });
+
+  it("trims whitespace when only one name field is populated", () => {
+    const relationship = createMockRelationship({
+      coach_id: "user-coach",
+      coachee_id: "user-coachee",
+      coachee_first_name: "Alex",
+      coachee_last_name: "",
+    });
+
+    const info = getRelationshipParticipantInfo(relationship, "user-coach");
+    expect(info.participantName).toBe("Alex");
+    expect(info.firstName).toBe("Alex");
+    expect(info.lastName).toBe("");
   });
 });
