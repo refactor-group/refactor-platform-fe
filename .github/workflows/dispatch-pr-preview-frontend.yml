@@ -37,9 +37,10 @@ on:
         required: true
         type: choice
         options:
+          - 'c43ae9b - chore: refresh preview commit choices [skip ci]'
           - '8c2faed - Merge pull request #381 from refactor-group/fix/goals-overview-empty-coachee-copy'
           - 4b48a91 - Merge branch 'main' into fix/goals-overview-empty-coachee-copy
-          - 'f3a5f83 - test(dashboard): cover GoalsOverviewCard heading per session role'
+          - 2ea1159 - PR#382 (feat/dashboard-sessions-list)
           - 79083cf - PR#379 (ci/runtime-ref-resolver)
           - 0ede2a2 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
