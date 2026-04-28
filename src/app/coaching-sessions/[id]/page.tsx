@@ -11,9 +11,10 @@ import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-panel";
-import { MOCK_TRANSCRIPT_SEGMENTS } from "@/lib/transcript/mock-transcript";
 import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
-import { IndicatorStatus } from "@/lib/transcript/indicator-status";
+import { deriveIndicatorStatus } from "@/lib/transcript/indicator-status";
+import { useMeetingRecording } from "@/lib/api/meeting-recordings";
+import { useTranscription } from "@/lib/api/transcriptions";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -131,6 +132,15 @@ export default function CoachingSessionsPage() {
   // Three-pane layout state (focus mode + transcript visibility). URL-backed.
   const layout = useCoachingSessionLayout();
 
+  // Recording and transcription status — used for the header indicator.
+  // TranscriptPanel calls the same hooks internally; SWR deduplicates the requests.
+  const { recording } = useMeetingRecording(currentCoachingSessionId ?? null);
+  const { transcription } = useTranscription(currentCoachingSessionId ?? null);
+  const indicatorStatus = deriveIndicatorStatus({
+    recordingStatus: recording?.status,
+    transcriptionStatus: transcription?.status,
+  });
+
   // Auto-collapse main sidebar on coaching session page to maximize workspace,
   // and restore the previous state when leaving.
   const { collapse, state: sidebarState, expand } = useSidebar();
@@ -233,16 +243,7 @@ export default function CoachingSessionsPage() {
               <TranscriptToggleButton
                 isOpen={layout.isTranscriptOpen}
                 onToggle={layout.toggleTranscript}
-                indicatorStatus={
-                  MOCK_TRANSCRIPT_SEGMENTS.length > 0
-                    ? IndicatorStatus.TranscriptReady
-                    : IndicatorStatus.None
-                }
-                indicatorTooltip={
-                  MOCK_TRANSCRIPT_SEGMENTS.length > 0
-                    ? "Transcript ready"
-                    : undefined
-                }
+                indicatorStatus={indicatorStatus}
               />
               <ShareSessionLink
                 sessionId={params.id as string}
@@ -280,9 +281,10 @@ export default function CoachingSessionsPage() {
             />
           )}
 
-          {shouldRenderTranscript && (
+          {shouldRenderTranscript && currentCoachingSessionId && (
             <TranscriptPanel
-              segments={MOCK_TRANSCRIPT_SEGMENTS}
+              sessionId={currentCoachingSessionId}
+              meetingUrl={currentCoachingSession?.meeting_url}
               isMaximized={layout.isTranscriptMaximized}
               onToggleMaximize={layout.toggleTranscriptMaximized}
               onClose={layout.closeTranscript}
