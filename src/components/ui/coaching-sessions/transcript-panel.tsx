@@ -12,30 +12,78 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { TranscriptBubble } from "@/components/ui/coaching-sessions/transcript-bubble";
-import { TranscriptEmptyState } from "@/components/ui/coaching-sessions/transcript-empty-state";
+import {
+  TranscriptEmptyState,
+  type TranscriptEmptyStateVariant,
+} from "@/components/ui/coaching-sessions/transcript-empty-state";
 import { TranscriptSearch } from "@/components/ui/coaching-sessions/transcript-search";
 import { TranscriptSpeakerFilter } from "@/components/ui/coaching-sessions/transcript-speaker-filter";
 import { groupBubbles } from "@/lib/transcript/group-bubbles";
 import { buildSpeakerStyles, speakerStyleFor } from "@/lib/transcript/speakers";
 import { useSpeakerFilter } from "@/lib/hooks/use-speaker-filter";
 import { useTranscriptSearch } from "@/lib/hooks/use-transcript-search";
-import type { TranscriptSegment } from "@/types/transcription";
+import type { Transcription, TranscriptSegment } from "@/types/transcription";
+import { TranscriptionStatus } from "@/types/transcription";
+import type { MeetingRecording } from "@/types/meeting-recording";
+import { MeetingRecordingStatus } from "@/types/meeting-recording";
+import { useMeetingRecording } from "@/lib/api/meeting-recordings";
+import { useTranscription, useTranscriptionSegments } from "@/lib/api/transcriptions";
+import type { Id } from "@/types/general";
 
 interface TranscriptPanelProps {
-  /** Full transcript for the session. Empty means "nothing recorded yet". */
-  segments: readonly TranscriptSegment[];
+  sessionId: Id;
+  meetingUrl: string | undefined;
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
 }
 
+function deriveEmptyState(
+  recording: MeetingRecording | null,
+  transcription: Transcription | null,
+  meetingUrl: string | undefined,
+  onStart: () => void,
+  onStop: () => void,
+): TranscriptEmptyStateVariant {
+  if (!meetingUrl) {
+    return { kind: "no-meeting-url" };
+  }
+  if (!recording) {
+    return { kind: "no-recording", canStart: true, onStart };
+  }
+  if (recording.status === MeetingRecordingStatus.Failed) {
+    return { kind: "recording-failed", errorMessage: recording.error_message, onRetry: onStart };
+  }
+  if (recording.status === MeetingRecordingStatus.Completed) {
+    if (transcription?.status === TranscriptionStatus.Failed) {
+      return { kind: "transcription-failed", errorMessage: transcription.error_message, onRetry: onStart };
+    }
+    return { kind: "processing" };
+  }
+  // Pending / Joining / WaitingRoom / InMeeting / Recording / Processing
+  const durationMs = recording.started_at
+    ? Math.max(0, Date.now() - new Date(recording.started_at).getTime())
+    : 0;
+  return { kind: "recording-live", durationMs, onStop };
+}
+
 export function TranscriptPanel({
-  segments,
+  sessionId,
+  meetingUrl,
   isMaximized,
   onToggleMaximize,
   onClose,
 }: TranscriptPanelProps) {
+  const { recording, startRecording, stopRecording } = useMeetingRecording(sessionId);
+  const { transcription } = useTranscription(sessionId);
+  const transcriptionId =
+    transcription?.status === TranscriptionStatus.Completed ? transcription.id : null;
+  const { segments } = useTranscriptionSegments(sessionId, transcriptionId);
+
+  const onStart = () => startRecording(meetingUrl!);
+  const emptyState = deriveEmptyState(recording, transcription, meetingUrl, onStart, stopRecording);
   const hasSegments = segments.length > 0;
+
   return (
     <Card className="flex flex-col h-full overflow-clip shadow-sm min-h-0">
       {hasSegments ? (
@@ -53,13 +101,7 @@ export function TranscriptPanel({
             onClose={onClose}
           />
           <CardContent className="flex-1 min-h-0 overflow-y-auto p-4">
-            <TranscriptEmptyState
-              variant={{
-                kind: "no-recording",
-                canStart: false,
-                onStart: () => {},
-              }}
-            />
+            <TranscriptEmptyState variant={emptyState} />
           </CardContent>
         </>
       )}
@@ -69,12 +111,19 @@ export function TranscriptPanel({
 
 // ── Main orchestrator (data-driven) ───────────────────────────────────
 
+interface TranscriptPanelWithDataProps {
+  segments: readonly TranscriptSegment[];
+  isMaximized: boolean;
+  onToggleMaximize: () => void;
+  onClose: () => void;
+}
+
 function TranscriptPanelWithData({
   segments,
   isMaximized,
   onToggleMaximize,
   onClose,
-}: TranscriptPanelProps) {
+}: TranscriptPanelWithDataProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const speakerStyles = useMemo(() => buildSpeakerStyles(segments), [segments]);
