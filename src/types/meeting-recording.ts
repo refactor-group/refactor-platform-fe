@@ -1,5 +1,3 @@
-import { DateTime } from "ts-luxon";
-
 import type { Id } from "@/types/general";
 
 // Must always reflect the Rust entity on the backend.
@@ -52,11 +50,11 @@ export interface MeetingRecording {
   status: MeetingRecordingStatus;
   video_url?: string;
   duration_seconds?: number;
-  started_at?: DateTime;
-  ended_at?: DateTime;
+  started_at?: string;
+  ended_at?: string;
   error_message?: string;
-  created_at: DateTime;
-  updated_at: DateTime;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
