@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { DateTime } from 'ts-luxon'
-import { ItemStatus } from '@/types/general'
+import { ItemStatus, EntityApiError } from '@/types/general'
 import {
   isGoal,
   isGoalArray,
@@ -10,8 +10,18 @@ import {
   getGoalById,
   goalToString,
   goalsToString,
+  extractActiveGoalLimitError,
+  isCannotLinkCompletedGoalError,
 } from '@/types/goal'
 import type { Goal } from '@/types/goal'
+
+function makeEntityApiError(status: number, data: unknown): EntityApiError {
+  const axiosLikeError = Object.assign(new Error('Request failed'), {
+    isAxiosError: true,
+    response: { status, statusText: 'Error', data },
+  })
+  return new EntityApiError('POST', '/coaching_sessions/x/goals', axiosLikeError)
+}
 
 /** Factory for creating test Goal data matching the PR2 schema */
 function makeGoalData(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
@@ -195,5 +205,109 @@ describe('goalToString / goalsToString', () => {
   it('serializes a goal array to JSON', () => {
     const json = goalsToString([defaultGoal()])
     expect(json).toContain('coaching_relationship_id')
+  })
+})
+
+describe('extractActiveGoalLimitError', () => {
+  // Wire format: ActiveGoalLimitConflict v1 contract on the coordination board.
+  // 409 carries a generic `error: "conflict"` and the limit info under `details`.
+
+  it('returns the limit info for the BE 409 conflict shape with details.in_progress_goals', () => {
+    const err = makeEntityApiError(409, {
+      status_code: 409,
+      error: 'conflict',
+      message: 'A coaching relationship can have at most 3 in-progress goals.',
+      details: {
+        max_in_progress_goals: 3,
+        in_progress_goals: [
+          { id: 'g1', title: 'Goal one' },
+          { id: 'g2', title: 'Goal two' },
+          { id: 'g3', title: 'Goal three' },
+        ],
+      },
+    })
+
+    const info = extractActiveGoalLimitError(err)
+    expect(info).not.toBeNull()
+    expect(info?.maxInProgressGoals).toBe(3)
+    expect(info?.inProgressGoals).toHaveLength(3)
+    expect(info?.inProgressGoals[0]).toEqual({ id: 'g1', title: 'Goal one' })
+  })
+
+  it('returns null for a 422 (wrong status)', () => {
+    const err = makeEntityApiError(422, {
+      details: { max_in_progress_goals: 3, in_progress_goals: [] },
+    })
+    expect(extractActiveGoalLimitError(err)).toBeNull()
+  })
+
+  it('returns null for a 409 without a details object', () => {
+    const err = makeEntityApiError(409, { error: 'conflict', message: 'other' })
+    expect(extractActiveGoalLimitError(err)).toBeNull()
+  })
+
+  it('returns null for a 409 with details missing max_in_progress_goals', () => {
+    const err = makeEntityApiError(409, {
+      error: 'conflict',
+      details: { in_progress_goals: [] },
+    })
+    expect(extractActiveGoalLimitError(err)).toBeNull()
+  })
+
+  it('returns null for a 409 with details missing in_progress_goals array', () => {
+    const err = makeEntityApiError(409, {
+      error: 'conflict',
+      details: { max_in_progress_goals: 3 },
+    })
+    expect(extractActiveGoalLimitError(err)).toBeNull()
+  })
+
+  it('returns null for the legacy active_goal_limit_reached top-level shape (no longer on the wire)', () => {
+    // Documents the regression that existed pre-fix: the BE stopped sending
+    // this shape on 2026-03-12. If a stub or older proxy ever surfaces it,
+    // the parser must still return null so the UI surfaces an honest error
+    // rather than a stale "limit reached" toast.
+    const err = makeEntityApiError(409, {
+      error: 'active_goal_limit_reached',
+      max_active_goals: 3,
+      active_goals: [{ id: 'g1', title: 'Goal one' }],
+    })
+    expect(extractActiveGoalLimitError(err)).toBeNull()
+  })
+
+  it('returns null for a non-EntityApiError input', () => {
+    expect(extractActiveGoalLimitError(new Error('plain'))).toBeNull()
+    expect(extractActiveGoalLimitError(null)).toBeNull()
+    expect(extractActiveGoalLimitError(undefined)).toBeNull()
+  })
+})
+
+describe('isCannotLinkCompletedGoalError', () => {
+  it('returns true for a 422 cannot_link_completed_goal response', () => {
+    const err = makeEntityApiError(422, {
+      status_code: 422,
+      error: 'cannot_link_completed_goal',
+      message: 'This goal is completed',
+    })
+    expect(isCannotLinkCompletedGoalError(err)).toBe(true)
+  })
+
+  it('returns false for a 422 with a different error code', () => {
+    const err = makeEntityApiError(422, { error: 'validation_failed' })
+    expect(isCannotLinkCompletedGoalError(err)).toBe(false)
+  })
+
+  it('returns false for a 409 in-progress-goal-limit conflict response', () => {
+    const err = makeEntityApiError(409, {
+      error: 'conflict',
+      details: { max_in_progress_goals: 3, in_progress_goals: [] },
+    })
+    expect(isCannotLinkCompletedGoalError(err)).toBe(false)
+  })
+
+  it('returns false for non-EntityApiError input', () => {
+    expect(isCannotLinkCompletedGoalError(new Error('plain'))).toBe(false)
+    expect(isCannotLinkCompletedGoalError(null)).toBe(false)
+    expect(isCannotLinkCompletedGoalError(undefined)).toBe(false)
   })
 })

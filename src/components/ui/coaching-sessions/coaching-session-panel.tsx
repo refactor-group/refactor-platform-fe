@@ -37,6 +37,7 @@ import {
   extractActiveGoalLimitError,
   goalTitle,
   isAtGoalLimit,
+  isCannotLinkCompletedGoalError,
   maxActiveGoals,
 } from "@/types/goal";
 import type { Id } from "@/types/general";
@@ -316,25 +317,9 @@ export function CoachingSessionPanel({
 
   const handleLink = useCallback(
     async (goalId: string) => {
-      const goal = allGoals.find((g) => g.id === goalId);
-      if (goal && goal.status === ItemStatus.OnHold) {
-        try {
-          await updateGoal(goalId, { ...goal, status: ItemStatus.InProgress });
-        } catch (err) {
-          const limitInfo = extractActiveGoalLimitError(err);
-          if (limitInfo) {
-            toast({
-              variant: "destructive",
-              title: "Goal limit reached",
-              description: `You already have ${limitInfo.maxActiveGoals} goals in progress. Please complete or change the status of one before starting another.`,
-            });
-          } else {
-            console.error("Failed to activate goal:", err);
-          }
-          return;
-        }
-      }
-
+      // BE auto-promotes NotStarted/OnHold goals to InProgress atomically with
+      // the join insert (see goal_session_link_invariant decision). FE must
+      // NOT pre-promote — that races with the server's atomic write.
       const result = await GoalApi.linkToSession(coachingSessionId, goalId);
       result.match(
         () => {
@@ -342,6 +327,28 @@ export function CoachingSessionPanel({
           refreshAllGoals();
         },
         (err) => {
+          const limitInfo = extractActiveGoalLimitError(err);
+          if (limitInfo) {
+            // TODO(goal_session_link_invariant): re-enter SelectingSwap with
+            // limitInfo.inProgressGoals as the demote candidates and goalId
+            // as the pending link target, then call onSwapAndLink on selection.
+            toast({
+              variant: "destructive",
+              title: "Goal limit reached",
+              description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Please complete or change the status of one before linking another.`,
+            });
+            return;
+          }
+          if (isCannotLinkCompletedGoalError(err)) {
+            const goal = allGoals.find((g) => g.id === goalId);
+            const name = goal ? goalTitle(goal) : "This goal";
+            toast({
+              variant: "destructive",
+              title: "Goal is completed",
+              description: `"${name}" is completed. Reopen it to in-progress before linking it to a session.`,
+            });
+            return;
+          }
           console.error("Failed to link goal:", err);
           toast({
             variant: "destructive",
@@ -351,7 +358,7 @@ export function CoachingSessionPanel({
         }
       );
     },
-    [coachingSessionId, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
+    [coachingSessionId, allGoals, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleUnlink = useCallback(
@@ -382,9 +389,19 @@ export function CoachingSessionPanel({
               onClick: async () => {
                 const relinkResult = await GoalApi.linkToSession(coachingSessionId, goalId);
                 if (relinkResult.isErr()) {
-                  sonnerToast.error("Failed to undo", {
-                    description: relinkResult.error.message,
-                  });
+                  const err = relinkResult.error;
+                  const limitInfo = extractActiveGoalLimitError(err);
+                  if (limitInfo) {
+                    sonnerToast.error("Goal limit reached", {
+                      description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Demote one before restoring this goal.`,
+                    });
+                  } else if (isCannotLinkCompletedGoalError(err)) {
+                    sonnerToast.error("Goal is completed", {
+                      description: "Reopen this goal to in-progress before linking it again.",
+                    });
+                  } else {
+                    sonnerToast.error("Failed to undo", { description: err.message });
+                  }
                   return;
                 }
                 if (!readOnly && goal && previousStatus === ItemStatus.InProgress) {
@@ -432,7 +449,7 @@ export function CoachingSessionPanel({
           toast({
             variant: "destructive",
             title: "Goal limit reached",
-            description: `You already have ${limitInfo.maxActiveGoals} goals in progress. Please complete or change the status of one before starting another.`,
+            description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Please complete or change the status of one before starting another.`,
           });
         } else {
           console.error("Failed to create goal:", err);

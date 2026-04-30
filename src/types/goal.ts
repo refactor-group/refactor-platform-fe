@@ -1,38 +1,34 @@
 import { DateTime } from "ts-luxon";
 import { Id, ItemStatus, EntityApiError } from "@/types/general";
 
-// ─── Active Goal Limit (409 Conflict) ───────────────────────────────
-// "Active" means InProgress ONLY — NotStarted does not count.
-// See ActiveGoalLimitError contract v4 on the coordination board.
+// ─── In-Progress Goal Limit (409 Conflict) ─────────────────────────
+// "Active" in FE-internal naming (e.g. DEFAULT_MAX_ACTIVE_GOALS) means
+// InProgress ONLY — NotStarted does not count.
+// Wire format documented in ActiveGoalLimitConflict v1 on the
+// coordination board. The 409 carries `error: "conflict"` (generic) and
+// the limit info nested under `details` — discriminate on the presence
+// of `details.max_in_progress_goals`, NOT on the `error` string.
 
 /** Default limit used when no 409 response has been received yet. */
 const DEFAULT_MAX_ACTIVE_GOALS = 3;
 
 /** Summary of an InProgress goal returned in the 409 response body. */
-export interface ActiveGoalSummary {
+export interface InProgressGoalSummary {
   id: Id;
   title: string;
 }
 
-/** Parsed result from a 409 active-goal-limit error. */
+/** Parsed result from a 409 in-progress-goal-limit error. */
 export interface ActiveGoalLimitInfo {
-  maxActiveGoals: number;
-  activeGoals: ActiveGoalSummary[];
-}
-
-/** Shape of the 409 response body when the active-goal limit is exceeded. */
-export interface ActiveGoalLimitErrorData {
-  status_code: 409;
-  error: "active_goal_limit_reached";
-  message: string;
-  max_active_goals: number;
-  active_goals: ActiveGoalSummary[];
+  maxInProgressGoals: number;
+  inProgressGoals: InProgressGoalSummary[];
 }
 
 /**
- * Extracts active-goal-limit info from an EntityApiError if it represents
- * a 409 active-goal-limit error. Returns the limit and active goals on match,
- * or null if the error is something else.
+ * Extracts in-progress-goal-limit info from an EntityApiError if it
+ * represents the active-goal-limit case (409 with the BE's
+ * `details.max_in_progress_goals` discriminator). Returns the limit
+ * and in-progress goals on match, or null otherwise.
  */
 export function extractActiveGoalLimitError(
   err: unknown
@@ -45,20 +41,50 @@ export function extractActiveGoalLimitError(
   }
 
   const data = err.data;
+  if (!data || typeof data !== "object") return null;
+
+  const details = (data as { details?: unknown }).details;
   if (
-    data &&
-    typeof data === "object" &&
-    data.error === "active_goal_limit_reached" &&
-    Array.isArray(data.active_goals) &&
-    typeof data.max_active_goals === "number"
+    details &&
+    typeof details === "object" &&
+    typeof (details as { max_in_progress_goals?: unknown }).max_in_progress_goals === "number" &&
+    Array.isArray((details as { in_progress_goals?: unknown }).in_progress_goals)
   ) {
+    const d = details as {
+      max_in_progress_goals: number;
+      in_progress_goals: InProgressGoalSummary[];
+    };
     return {
-      maxActiveGoals: data.max_active_goals,
-      activeGoals: data.active_goals as ActiveGoalSummary[],
+      maxInProgressGoals: d.max_in_progress_goals,
+      inProgressGoals: d.in_progress_goals,
     };
   }
 
   return null;
+}
+
+// ─── Cannot-Link-Completed-Goal (422) ───────────────────────────────
+// Returned by POST /coaching_sessions/:id/goals when the target goal is
+// Completed or WontDo. See goal_session_link_invariant decision on the
+// coordination board.
+
+/**
+ * Returns true when the error is a 422 cannot_link_completed_goal response
+ * from the link-goal-to-session endpoint.
+ */
+export function isCannotLinkCompletedGoalError(err: unknown): boolean {
+  if (
+    !(err instanceof EntityApiError) ||
+    err.status !== 422
+  ) {
+    return false;
+  }
+  const data = err.data;
+  return (
+    !!data &&
+    typeof data === "object" &&
+    data.error === "cannot_link_completed_goal"
+  );
 }
 
 /**
