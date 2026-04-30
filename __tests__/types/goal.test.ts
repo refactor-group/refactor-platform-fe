@@ -12,6 +12,7 @@ import {
   goalsToString,
   extractActiveGoalLimitError,
   isCannotLinkCompletedGoalError,
+  isGoalAlreadyLinkedToSessionError,
 } from '@/types/goal'
 import type { Goal } from '@/types/goal'
 
@@ -309,5 +310,82 @@ describe('isCannotLinkCompletedGoalError', () => {
     expect(isCannotLinkCompletedGoalError(new Error('plain'))).toBe(false)
     expect(isCannotLinkCompletedGoalError(null)).toBe(false)
     expect(isCannotLinkCompletedGoalError(undefined)).toBe(false)
+  })
+})
+
+describe('isGoalAlreadyLinkedToSessionError', () => {
+  // Wire format: GoalAlreadyLinkedToSessionError v1 contract.
+  // Specific top-level discriminator (no `details` envelope), distinct
+  // from the cap-collision 409 which uses error: "conflict" + details.
+
+  it('returns true for the BE 409 goal_already_linked_to_session shape', () => {
+    const err = makeEntityApiError(409, {
+      status_code: 409,
+      error: 'goal_already_linked_to_session',
+      message: 'This goal is already linked to the coaching session.',
+    })
+    expect(isGoalAlreadyLinkedToSessionError(err)).toBe(true)
+  })
+
+  it('returns false for the cap-collision 409 (different discriminator)', () => {
+    const err = makeEntityApiError(409, {
+      error: 'conflict',
+      details: { max_in_progress_goals: 3, in_progress_goals: [] },
+    })
+    expect(isGoalAlreadyLinkedToSessionError(err)).toBe(false)
+  })
+
+  it('returns false for a 422 cannot_link_completed_goal response', () => {
+    const err = makeEntityApiError(422, { error: 'cannot_link_completed_goal' })
+    expect(isGoalAlreadyLinkedToSessionError(err)).toBe(false)
+  })
+
+  it('returns false for non-EntityApiError input', () => {
+    expect(isGoalAlreadyLinkedToSessionError(new Error('plain'))).toBe(false)
+    expect(isGoalAlreadyLinkedToSessionError(null)).toBe(false)
+    expect(isGoalAlreadyLinkedToSessionError(undefined)).toBe(false)
+  })
+})
+
+describe('link-endpoint error disambiguation', () => {
+  // The link endpoint POST /coaching_sessions/:id/goals can emit two
+  // structurally different 409s plus a structured 422. Each of the three
+  // parsers must match exactly one shape and reject the others. This
+  // test pins that mutual exclusion so future contract drift is caught
+  // at FE-test-time, not user-rendering-time.
+
+  const capCollision409 = {
+    status_code: 409,
+    error: 'conflict' as const,
+    message: 'cap',
+    details: { max_in_progress_goals: 3, in_progress_goals: [] },
+  }
+  const alreadyLinked409 = {
+    status_code: 409,
+    error: 'goal_already_linked_to_session' as const,
+    message: 'dup',
+  }
+  const completed422 = {
+    status_code: 422,
+    error: 'cannot_link_completed_goal' as const,
+    message: 'completed',
+  }
+
+  it('extractActiveGoalLimitError matches only the cap-collision 409', () => {
+    expect(extractActiveGoalLimitError(makeEntityApiError(409, capCollision409))).not.toBeNull()
+    expect(extractActiveGoalLimitError(makeEntityApiError(409, alreadyLinked409))).toBeNull()
+    expect(extractActiveGoalLimitError(makeEntityApiError(422, completed422))).toBeNull()
+  })
+
+  it('isGoalAlreadyLinkedToSessionError matches only the duplicate-link 409', () => {
+    expect(isGoalAlreadyLinkedToSessionError(makeEntityApiError(409, capCollision409))).toBe(false)
+    expect(isGoalAlreadyLinkedToSessionError(makeEntityApiError(409, alreadyLinked409))).toBe(true)
+    expect(isGoalAlreadyLinkedToSessionError(makeEntityApiError(422, completed422))).toBe(false)
+  })
+
+  it('isCannotLinkCompletedGoalError matches only the completed-goal 422', () => {
+    expect(isCannotLinkCompletedGoalError(makeEntityApiError(409, capCollision409))).toBe(false)
+    expect(isCannotLinkCompletedGoalError(makeEntityApiError(409, alreadyLinked409))).toBe(false)
+    expect(isCannotLinkCompletedGoalError(makeEntityApiError(422, completed422))).toBe(true)
   })
 })

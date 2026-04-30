@@ -87,6 +87,31 @@ export function isCannotLinkCompletedGoalError(err: unknown): boolean {
   );
 }
 
+// ─── Goal Already Linked To Session (409) ──────────────────────────
+// Wire format documented in GoalAlreadyLinkedToSessionError v1 on the
+// coordination board. Distinct from the cap-collision 409 — this one
+// uses the specific-discriminator pattern (top-level `error` string),
+// no `details` envelope. See feedback_error_variant_shape on BE side.
+
+/**
+ * Returns true when the error is a 409 goal_already_linked_to_session
+ * response from POST /coaching_sessions/:id/goals.
+ */
+export function isGoalAlreadyLinkedToSessionError(err: unknown): boolean {
+  if (
+    !(err instanceof EntityApiError) ||
+    err.status !== 409
+  ) {
+    return false;
+  }
+  const data = err.data;
+  return (
+    !!data &&
+    typeof data === "object" &&
+    data.error === "goal_already_linked_to_session"
+  );
+}
+
 /**
  * Whether the active goal limit has been reached.
  * True when either the coaching relationship has the max number of

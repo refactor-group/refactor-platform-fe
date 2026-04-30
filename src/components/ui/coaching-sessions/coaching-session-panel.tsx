@@ -38,6 +38,7 @@ import {
   goalTitle,
   isAtGoalLimit,
   isCannotLinkCompletedGoalError,
+  isGoalAlreadyLinkedToSessionError,
   maxActiveGoals,
   type InProgressGoalSummary,
 } from "@/types/goal";
@@ -348,6 +349,23 @@ export function CoachingSessionPanel({
             enterSwapForLinkRef.current?.(goalId, limitInfo.inProgressGoals);
             return;
           }
+          if (isGoalAlreadyLinkedToSessionError(err)) {
+            // Race: another tab/window linked the same goal between when the
+            // FE's linkable list was computed and this request. The FE
+            // normally filters already-linked goals out of the picker, so
+            // this is rare in practice. Refresh state so the goal disappears
+            // from any visible list.
+            refreshSessionGoals();
+            refreshAllGoals();
+            const goal = allGoals.find((g) => g.id === goalId);
+            const name = goal ? goalTitle(goal) : "This goal";
+            toast({
+              variant: "destructive",
+              title: "Already linked",
+              description: `"${name}" is already linked to this session.`,
+            });
+            return;
+          }
           if (isCannotLinkCompletedGoalError(err)) {
             const goal = allGoals.find((g) => g.id === goalId);
             const name = goal ? goalTitle(goal) : "This goal";
@@ -404,6 +422,14 @@ export function CoachingSessionPanel({
                     sonnerToast.error("Goal limit reached", {
                       description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Demote one before restoring this goal.`,
                     });
+                  } else if (isGoalAlreadyLinkedToSessionError(err)) {
+                    // Concurrent re-link won the race — the goal is back, so
+                    // surface a softer message and refresh.
+                    sonnerToast("Goal already restored", {
+                      description: "Looks like it was added back from another window.",
+                    });
+                    refreshSessionGoals();
+                    refreshAllGoals();
                   } else if (isCannotLinkCompletedGoalError(err)) {
                     sonnerToast.error("Goal is completed", {
                       description: "Reopen this goal to in-progress before linking it again.",
