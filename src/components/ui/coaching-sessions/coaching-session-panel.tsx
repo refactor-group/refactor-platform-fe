@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -39,6 +39,7 @@ import {
   isAtGoalLimit,
   isCannotLinkCompletedGoalError,
   maxActiveGoals,
+  type InProgressGoalSummary,
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
@@ -189,14 +190,16 @@ export function GoalFlowPages({
         </div>
       );
 
-    case GoalFlowStep.SelectingSwap:
+    case GoalFlowStep.SelectingSwap: {
+      const isLinkRecovery = flow.pendingLinkGoalId !== undefined;
+      const prompt = isLinkRecovery
+        ? `You already have ${maxActiveGoals()} goals in progress. Pick one to put on hold so this one can replace it.`
+        : `You already have ${maxActiveGoals()} goals in progress. Select an existing goal to replace with a new one.`;
       return (
         <SlidePanel direction={goalFlow.direction}>
           <div className="rounded-lg border border-border bg-background p-3 space-y-3">
-            <p className="text-[12px] text-muted-foreground">
-              You already have {maxActiveGoals()} goals in progress. Select an existing goal to replace with a new one.
-            </p>
-            {linkedGoals.map((goal) => (
+            <p className="text-[12px] text-muted-foreground">{prompt}</p>
+            {goalFlow.swapCandidates.map((goal) => (
               <CompactGoalCard
                 key={goal.id}
                 goal={goal}
@@ -216,6 +219,7 @@ export function GoalFlowPages({
           </div>
         </SlidePanel>
       );
+    }
 
     case GoalFlowStep.Browsing:
       return (
@@ -315,6 +319,13 @@ export function CoachingSessionPanel({
 
   // ── Goal handlers ────────────────────────────────────────────────
 
+  // useGoalFlow consumes handleLink, but handleLink (on 409) needs to call
+  // back into the hook's enterSwapForLink. Break the cycle with a ref that
+  // we populate after useGoalFlow runs (assigned during render below).
+  const enterSwapForLinkRef = useRef<
+    ((goalId: string, candidates: InProgressGoalSummary[]) => void) | null
+  >(null);
+
   const handleLink = useCallback(
     async (goalId: string) => {
       // BE auto-promotes NotStarted/OnHold goals to InProgress atomically with
@@ -329,14 +340,12 @@ export function CoachingSessionPanel({
         (err) => {
           const limitInfo = extractActiveGoalLimitError(err);
           if (limitInfo) {
-            // TODO(goal_session_link_invariant): re-enter SelectingSwap with
-            // limitInfo.inProgressGoals as the demote candidates and goalId
-            // as the pending link target, then call onSwapAndLink on selection.
-            toast({
-              variant: "destructive",
-              title: "Goal limit reached",
-              description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Please complete or change the status of one before linking another.`,
-            });
+            // Re-open the swap dialog seeded with the BE-supplied InProgress
+            // goals. After the user picks a demote candidate, the flow
+            // resolves via onSwapAndLink(goalId, demoteId). Authoritative
+            // candidate list comes from details.in_progress_goals — the FE's
+            // own atLimit/linkedGoals view may be stale at this point.
+            enterSwapForLinkRef.current?.(goalId, limitInfo.inProgressGoals);
             return;
           }
           if (isCannotLinkCompletedGoalError(err)) {
@@ -623,6 +632,12 @@ export function CoachingSessionPanel({
     onCreateAndLink: handleCreateAndLink,
     onCreateAndSwap: handleCreateAndSwap,
   });
+
+  // Backfill the ref handleLink reads on 409. enterSwapForLink is memoized
+  // with empty deps inside the hook, so this is a one-shot assignment in
+  // practice — but tracking it on every render is cheap and avoids any
+  // staleness risk if the hook's memoization ever changes.
+  enterSwapForLinkRef.current = goalFlow.enterSwapForLink;
 
   // ── Action hooks & state ─────────────────────────────────────────
 

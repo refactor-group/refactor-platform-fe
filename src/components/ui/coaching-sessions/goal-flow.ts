@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import type { Goal } from "@/types/goal";
+import type { Goal, InProgressGoalSummary } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
 
 // ── Goal Flow State Machine ────────────────────────────────────────────
@@ -13,7 +13,18 @@ export enum GoalFlowStep {
 
 export type GoalFlowState =
   | { step: GoalFlowStep.Idle }
-  | { step: GoalFlowStep.SelectingSwap }
+  | {
+      step: GoalFlowStep.SelectingSwap;
+      // When set, the user already picked the goal to link (via Browsing)
+      // and the BE rejected with 409. After they pick a demote candidate,
+      // resolve via onSwapAndLink(pendingLinkGoalId, demoteId) instead of
+      // re-entering Browsing.
+      pendingLinkGoalId?: string;
+      // BE-supplied list of currently-InProgress goals from the 409 body.
+      // Authoritative; preferred over the FE's view of session-linked goals
+      // when the cap was hit on the relationship (not the session).
+      candidateOverrides?: InProgressGoalSummary[];
+    }
   | { step: GoalFlowStep.Browsing; swapGoalId?: string }
   | { step: GoalFlowStep.Creating; swapGoalId?: string };
 
@@ -70,10 +81,60 @@ export function useGoalFlow({
     }
   }, [atLimit]);
 
-  const handleSwapSelected = useCallback((goalId: string) => {
-    setDirection(SlideDirection.Forward);
-    setFlow({ step: GoalFlowStep.Browsing, swapGoalId: goalId });
-  }, []);
+  const handleSwapSelected = useCallback(
+    (goalId: string) => {
+      setDirection(SlideDirection.Forward);
+      // 409-recovery path: user already chose what to link; just resolve
+      // the swap and exit. Otherwise fall through to the "+Add → at limit"
+      // path which transitions to Browsing for the user to pick the new goal.
+      if (flow.step === GoalFlowStep.SelectingSwap && flow.pendingLinkGoalId) {
+        onSwapAndLink(flow.pendingLinkGoalId, goalId);
+        setFlow({ step: GoalFlowStep.Idle });
+        return;
+      }
+      setFlow({ step: GoalFlowStep.Browsing, swapGoalId: goalId });
+    },
+    [flow, onSwapAndLink]
+  );
+
+  /**
+   * Open the swap dialog programmatically in response to a 409 from the
+   * link endpoint. The user has already picked `goalId`; after they pick
+   * a demote candidate, the flow resolves via onSwapAndLink rather than
+   * re-entering Browsing. `candidates` is the BE-supplied authoritative
+   * list of currently-InProgress goals (from `details.in_progress_goals`).
+   */
+  const enterSwapForLink = useCallback(
+    (goalId: string, candidates: InProgressGoalSummary[]) => {
+      setDirection(SlideDirection.Forward);
+      setFlow({
+        step: GoalFlowStep.SelectingSwap,
+        pendingLinkGoalId: goalId,
+        candidateOverrides: candidates,
+      });
+    },
+    []
+  );
+
+  /**
+   * Resolved swap-candidate Goal[] for the SelectingSwap UI.
+   * - When `candidateOverrides` is set (entered via 409), look up each id
+   *   in `allGoals`. If a candidate isn't in local state (rare cache lag),
+   *   it's filtered out — the user picks from what's resolvable, and the
+   *   subsequent demote update_status call would otherwise fail anyway.
+   * - Otherwise, the dialog was opened proactively from "+Add → at limit";
+   *   show the session-linked goals (which under the new invariant are all
+   *   InProgress).
+   */
+  const swapCandidates = useMemo<Goal[]>(() => {
+    if (flow.step !== GoalFlowStep.SelectingSwap) return [];
+    if (flow.candidateOverrides) {
+      return flow.candidateOverrides
+        .map(({ id }) => allGoals.find((g) => g.id === id))
+        .filter((g): g is Goal => g !== undefined);
+    }
+    return allGoals.filter((g) => linkedGoalIds.has(g.id));
+  }, [flow, allGoals, linkedGoalIds]);
 
   const handleBrowseGoalClick = useCallback(
     (goalId: string) => {
@@ -147,6 +208,7 @@ export function useGoalFlow({
     flow,
     direction,
     availableGoals,
+    swapCandidates,
     handleBack,
     handleAddGoalClick,
     handleSwapSelected,
@@ -155,10 +217,12 @@ export function useGoalFlow({
     handleCreateBack,
     handleFormSubmit,
     handleCancel,
+    enterSwapForLink,
   }), [
     flow,
     direction,
     availableGoals,
+    swapCandidates,
     handleBack,
     handleAddGoalClick,
     handleSwapSelected,
@@ -167,5 +231,6 @@ export function useGoalFlow({
     handleCreateBack,
     handleFormSubmit,
     handleCancel,
+    enterSwapForLink,
   ]);
 }
