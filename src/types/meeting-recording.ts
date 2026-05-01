@@ -63,6 +63,7 @@ export interface MeetingRecording {
  */
 export function isRecordingInProgress(status: MeetingRecordingStatus): boolean {
   return (
+    status === MeetingRecordingStatus.Pending ||
     status === MeetingRecordingStatus.Joining ||
     status === MeetingRecordingStatus.WaitingRoom ||
     status === MeetingRecordingStatus.InMeeting ||
