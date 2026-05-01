@@ -1,5 +1,3 @@
-import { DateTime } from "ts-luxon";
-
 import type { TranscriptSegment } from "@/types/transcription";
 
 /**
@@ -15,7 +13,7 @@ import type { TranscriptSegment } from "@/types/transcription";
  * the segments came from.
  */
 
-const NOW = DateTime.fromISO("2026-03-17T15:30:00.000Z");
+const NOW = "2026-03-17T15:30:00.000Z";
 
 export const MOCK_TRANSCRIPT_SEGMENTS: readonly TranscriptSegment[] = [
   segment("1", "Speaker A", 0, 5_000, "Hey Bob, great to see you. How's the cohort going this week?"),

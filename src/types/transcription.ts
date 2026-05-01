@@ -1,5 +1,3 @@
-import { DateTime } from "ts-luxon";
-
 import type { Id } from "@/types/general";
 
 // Must always reflect the Rust entity types on the backend.
@@ -68,8 +66,8 @@ export interface Transcription {
   duration_seconds?: number;
   confidence?: number;
   error_message?: string;
-  created_at: DateTime;
-  updated_at: DateTime;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -91,5 +89,5 @@ export interface TranscriptSegment {
   end_ms: number;
   confidence?: number;
   sentiment?: TranscriptSegmentSentiment;
-  created_at: DateTime;
+  created_at: string;
 }

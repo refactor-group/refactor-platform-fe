@@ -56,13 +56,13 @@ export function useMeetingRecording(sessionId: Id | null) {
 
   const startRecording = async (meetingUrl: string): Promise<MeetingRecording> => {
     const created = await MeetingRecordingApi.start(sessionId!, meetingUrl);
-    await mutate(created, false);
+    await mutate(created, { revalidate: false });
     return created;
   };
 
   const stopRecording = async (): Promise<MeetingRecording> => {
     const updated = await MeetingRecordingApi.stop(sessionId!);
-    await mutate(updated, false);
+    await mutate(updated, { revalidate: false });
     return updated;
   };
 
