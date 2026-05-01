@@ -128,8 +128,15 @@ jobs:
           fi
 
           # ------------------------------------------------------------------
-          # Resolve the backend ref: accepts PR#<num>, a 7-40 char SHA, or a
-          # branch name (including "main"). Falls through in that order.
+          # Resolve the backend ref. Precedence:
+          #   1. "PR#<num>"                    → look up the PR's HEAD SHA
+          #   2. anything else (SHA or branch) → resolve via `commits/<ref>`
+          #
+          # The GitHub `commits/<ref>` endpoint is ref-type-agnostic: it
+          # accepts a full/short SHA, a branch name, or a tag. Edge case:
+          # a branch literally named in 7-40 hex chars resolves identically
+          # — only the log line wording would have differed, which is why
+          # the SHA/branch arms are intentionally collapsed.
           # ------------------------------------------------------------------
           BE_REPO="$OWNER/refactor-platform-rs"
           if [[ "$INPUT_BACKEND_REF" =~ ^PR#([0-9]+)$ ]]; then
@@ -140,21 +147,13 @@ jobs:
                   exit 1
               }
               echo "::notice::Backend ref resolved from PR #$BE_PR: ${BACKEND_FULL_SHA:0:7}"
-          elif [[ "$INPUT_BACKEND_REF" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-              BACKEND_FULL_SHA=$(gh api "repos/$BE_REPO/commits/$INPUT_BACKEND_REF" \
-                  --jq '.sha' 2>&1) || {
-                  echo "::error::Backend SHA '$INPUT_BACKEND_REF' not found in $BE_REPO"
-                  exit 1
-              }
-              echo "::notice::Backend ref resolved from SHA: ${BACKEND_FULL_SHA:0:7}"
           else
-              # Treat as branch name (default path — includes "main")
               BACKEND_FULL_SHA=$(gh api "repos/$BE_REPO/commits/$INPUT_BACKEND_REF" \
                   --jq '.sha' 2>&1) || {
-                  echo "::error::Backend branch/ref '$INPUT_BACKEND_REF' not found in $BE_REPO"
+                  echo "::error::Backend ref '$INPUT_BACKEND_REF' not found in $BE_REPO (tried as SHA/branch/tag)"
                   exit 1
               }
-              echo "::notice::Backend ref resolved from branch '$INPUT_BACKEND_REF': ${BACKEND_FULL_SHA:0:7}"
+              echo "::notice::Backend ref '$INPUT_BACKEND_REF' resolved to: ${BACKEND_FULL_SHA:0:7}"
           fi
 
           {
