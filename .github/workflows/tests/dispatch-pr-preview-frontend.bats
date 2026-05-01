@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 #
 # Regression tests for the input-classification regexes in
-# .github/workflows/dispatch-pr-preview.yml.
+# .github/workflows/dispatch-pr-preview-frontend.yml.
 #
 # These tests do NOT execute the workflow itself (no GitHub API calls).
 # They pin the *classification logic* so future edits to the regexes
