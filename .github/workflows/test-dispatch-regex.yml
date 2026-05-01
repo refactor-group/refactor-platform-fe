@@ -20,6 +20,7 @@ on:
             - ".github/workflows/dispatch-pr-preview-frontend.yml"
             - ".github/workflows/tests/dispatch-pr-preview-frontend.bats"
             - ".github/workflows/test-dispatch-regex.yml"
+    workflow_dispatch: {}
 
 permissions:
     contents: read
