@@ -1,3 +1,6 @@
+import { MainNavItem, SidebarNavItem } from "./types/nav";
+import { SessionTitleStyle } from "./types/session-title";
+
 export const siteConfig = {
   name: "Refactor Coach",
   url: "https://myrefactor.com",
@@ -30,9 +33,6 @@ export const siteConfig = {
 };
 
 export type SiteConfig = typeof siteConfig;
-
-import { MainNavItem, SidebarNavItem } from "./types/nav";
-import { SessionTitleStyle } from "./types/session-title";
 
 interface DocsConfig {
   mainNav: MainNavItem[];
