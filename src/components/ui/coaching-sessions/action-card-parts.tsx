@@ -21,7 +21,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CalendarIcon, UserRound } from "lucide-react";
+import {
+  CalendarIcon,
+  CheckCircle2,
+  Circle,
+  CircleDot,
+  PauseCircle,
+  UserRound,
+  XCircle,
+} from "lucide-react";
 import { ItemStatus, Id, actionStatusToString } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -30,6 +38,44 @@ import { DateTime } from "ts-luxon";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** A small lucide glyph indicating an Action's status. Pure presentational. */
+export interface ActionStatusIconProps {
+  status: ItemStatus;
+  className?: string;
+}
+
+function statusIconAndLabel(
+  status: ItemStatus
+): { Icon: typeof Circle; label: string } {
+  switch (status) {
+    case ItemStatus.NotStarted:
+      return { Icon: Circle, label: "Not started" };
+    case ItemStatus.InProgress:
+      return { Icon: CircleDot, label: "In progress" };
+    case ItemStatus.Completed:
+      return { Icon: CheckCircle2, label: "Completed" };
+    case ItemStatus.OnHold:
+      return { Icon: PauseCircle, label: "On hold" };
+    case ItemStatus.WontDo:
+      return { Icon: XCircle, label: "Won't do" };
+    default: {
+      const _exhaustive: never = status;
+      throw new Error(`Unhandled status: ${_exhaustive}`);
+    }
+  }
+}
+
+export function ActionStatusIcon({ status, className }: ActionStatusIconProps) {
+  const { Icon, label } = statusIconAndLabel(status);
+  return (
+    <Icon
+      role="img"
+      aria-label={label}
+      className={cn("h-4 w-4 text-muted-foreground/60 shrink-0", className)}
+    />
+  );
+}
 
 /** Tailwind background class for a status dot indicator */
 export function statusDotColor(status: ItemStatus): string {

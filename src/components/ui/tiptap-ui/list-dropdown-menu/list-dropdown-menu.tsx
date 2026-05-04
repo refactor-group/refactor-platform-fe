@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { isNodeSelection, type Editor, useEditorState } from "@tiptap/react"
 
 // --- Hooks ---

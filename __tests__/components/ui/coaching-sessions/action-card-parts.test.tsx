@@ -3,8 +3,10 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ActionStatusIcon } from "@/components/ui/coaching-sessions/action-card-parts";
 import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
 import { GoalPill } from "@/components/ui/goal-pill";
+import { ItemStatus } from "@/types/general";
 import { createMockGoal } from "../../../test-utils";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -133,5 +135,28 @@ describe("GoalPickerPopover", () => {
     await user.click(screen.getByText("None"));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("ActionStatusIcon", () => {
+  const cases: Array<{ status: ItemStatus; testId: string; label: string }> = [
+    { status: ItemStatus.NotStarted, testId: "icon-not-started", label: "Not started" },
+    { status: ItemStatus.InProgress, testId: "icon-in-progress", label: "In progress" },
+    { status: ItemStatus.Completed, testId: "icon-completed", label: "Completed" },
+    { status: ItemStatus.OnHold, testId: "icon-on-hold", label: "On hold" },
+    { status: ItemStatus.WontDo, testId: "icon-wont-do", label: "Won't do" },
+  ];
+
+  it.each(cases)("renders an aria-labelled icon for $label", ({ status, label }) => {
+    render(<ActionStatusIcon status={status} />);
+    expect(screen.getByRole("img", { name: label })).toBeInTheDocument();
+  });
+
+  it("forwards a custom className to the rendered icon", () => {
+    const { container } = render(
+      <ActionStatusIcon status={ItemStatus.Completed} className="text-red-500" />
+    );
+    const svg = container.querySelector("svg");
+    expect(svg?.getAttribute("class")).toContain("text-red-500");
   });
 });
