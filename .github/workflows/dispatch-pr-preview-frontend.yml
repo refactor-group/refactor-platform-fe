@@ -39,10 +39,11 @@ on:
         required: true
         type: choice
         options:
+          - 'ebcfa51 - chore: refresh preview commit choices [skip ci]'
           - '0d09857 - Merge pull request #383 from refactor-group/fix/goal-link-error-handling'
           - '0a94cee - refactor(goals): break ref cycle in link 409 recovery; tighten error parsers'
-          - fed0acd - Merge branch 'main' into fix/goal-link-error-handling
-          - 752f775 - PR#382 (feat/dashboard-sessions-list)
+          - 3694021 - PR#385 (fix/unused-local-variables)
+          - f203b19 - PR#382 (feat/dashboard-sessions-list)
           - 1a12c9a - PR#379 (ci/runtime-ref-resolver)
           - 9d95029 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
