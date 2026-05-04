@@ -129,8 +129,10 @@ export function CoachingSessionsListView({
       <div className="hidden md:block w-px bg-border shrink-0" />
 
       {/* Right: hover detail — `min-h-0 + overflow-y-auto` lets it scroll
-          internally instead of growing the card. */}
-      <div className="hidden md:flex flex-col flex-1 min-w-0 min-h-0 px-6 pt-3 pb-4 overflow-y-auto">
+          internally instead of growing the card. Padding mirrors
+          `UpcomingSessionCard` (`p-4 sm:p-6`) so the same content type reads
+          with the same breathing room across the dashboard. */}
+      <div className="hidden md:flex flex-col flex-1 min-w-0 min-h-0 p-4 sm:p-6 gap-4 overflow-y-auto">
         <SessionHoverDetail
           session={hoveredSession}
           participantName={hoveredParticipant?.participantName ?? ""}

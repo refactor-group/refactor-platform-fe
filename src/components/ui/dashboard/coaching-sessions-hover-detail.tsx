@@ -33,41 +33,43 @@ export function SessionHoverDetail({
 
   const goals = session.goals ?? [];
 
+  // Sections are siblings under the parent's `gap-4` (set by the wrapper in
+  // `coaching-sessions-list-view.tsx`), matching the rhythm of
+  // `UpcomingSessionCard`. Internal spacing within each section uses the
+  // tighter `mt-2 / gap-2` scale.
   return (
     <>
-      <div className="mb-4">
-        {/* Sub-header inside the hover panel — `text-[13px] font-medium
-            text-foreground` mirrors the GoalRow primary text in
-            GoalsOverviewCard for visual parity. */}
-        <p className="text-[13px] font-medium text-foreground">
+      <div>
+        {/* Title typography mirrors `UpcomingSessionCard`'s HeaderRow
+            (`text-base font-semibold text-foreground`) so the same content
+            type reads consistently across the dashboard. */}
+        <p className="text-base font-semibold text-foreground">
           Session with {participantName}
         </p>
         {goals.length > 0 && (
-          <SessionGoalList
-            goals={goals}
-            textClassName="text-xs text-muted-foreground"
-            gapClassName="gap-1 mt-1"
-          />
+          <SessionGoalList goals={goals} gapClassName="gap-0.5 mt-2" />
         )}
       </div>
 
-      {/* Same eyebrow style as "UPCOMING SESSION" in UpcomingSessionCard:
-          `text-xs font-medium uppercase tracking-wider text-muted-foreground/60`. */}
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 mb-2">
-        Actions
-      </p>
-
-      {reviewActions.length === 0 ? (
-        <p className="text-xs text-muted-foreground/50">
-          No actions due for this session.
+      <div>
+        {/* Same eyebrow style as "UPCOMING SESSION" in UpcomingSessionCard:
+            `text-xs font-medium uppercase tracking-wider text-muted-foreground/60`. */}
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 mb-2">
+          Actions
         </p>
-      ) : (
-        <div className="space-y-3">
-          {reviewActions.map((action) => (
-            <ActionDueRow key={action.id} action={action} />
-          ))}
-        </div>
-      )}
+
+        {reviewActions.length === 0 ? (
+          <p className="text-sm text-muted-foreground/50">
+            No actions due for this session.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {reviewActions.map((action) => (
+              <ActionDueRow key={action.id} action={action} />
+            ))}
+          </div>
+        )}
+      </div>
     </>
   );
 }
