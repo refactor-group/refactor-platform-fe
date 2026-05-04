@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -28,6 +28,7 @@ import {
   isUserCoacheeInRelationship,
   sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
+import { type Id } from "@/types/general";
 import { UserActionsScope } from "@/types/assigned-actions";
 
 const ENRICHMENT_INCLUDES = [
@@ -168,16 +169,31 @@ export function CoachingSessionsCard({
     return { upcomingSessions: upcoming, previousSessions: previous };
   }, [allSessions, now]);
 
-  // Session-scoped actions for the user — narrowed to the chosen relationship
-  // when the filter is set, so hover-panel "actions due" stays consistent.
+  // Hover state is owned here — not in `CoachingSessionsListView` — so the
+  // hovered session's relationship can key the action fetch below. This
+  // mirrors `usePanelActions::useReviewWindow` on the session page: actions
+  // are scoped at the API layer by `coaching_relationship_id`, never
+  // post-filtered client-side. Without this, the hover preview would surface
+  // actions from other coachees' relationships.
+  const [hoveredSessionId, setHoveredSessionId] = useState<Id | undefined>();
+  const hoveredSession = useMemo(
+    () => allSessions.find((s) => s.id === hoveredSessionId),
+    [allSessions, hoveredSessionId]
+  );
+
+  // The relationship to scope actions by: an explicit filter takes priority,
+  // otherwise follow the hovered session. When neither is set, skip the
+  // fetch entirely (passing `null` as `userId`) — there's nothing to show.
+  const actionsRelationshipId =
+    relationshipFilter ?? hoveredSession?.coaching_relationship_id;
   const { actions: allActions } = useUserActionsList(
-    userId ?? null,
-    {
-      scope: UserActionsScope.Sessions,
-      ...(relationshipFilter && {
-        coaching_relationship_id: relationshipFilter,
-      }),
-    }
+    actionsRelationshipId ? (userId ?? null) : null,
+    actionsRelationshipId
+      ? {
+          scope: UserActionsScope.Sessions,
+          coaching_relationship_id: actionsRelationshipId,
+        }
+      : undefined
   );
 
   return (
@@ -212,6 +228,8 @@ export function CoachingSessionsCard({
               viewerId={userSession.id}
               userTimezone={userSession.timezone || getBrowserTimezone()}
               fallbackPriorSessionDate={fromDate}
+              hoveredSession={hoveredSession}
+              onHoverChange={setHoveredSessionId}
               onReschedule={onReschedule}
             />
           )}

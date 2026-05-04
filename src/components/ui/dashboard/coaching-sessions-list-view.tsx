@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { type DateTime } from "ts-luxon";
 import {
   Tabs,
@@ -26,6 +26,12 @@ export interface CoachingSessionsListViewProps {
    *  matches the user's selected display window so the oldest session never
    *  shows actions due before that. */
   fallbackPriorSessionDate: DateTime;
+  /** Currently hovered session, owned by the parent so the action fetch can
+   *  be keyed on the hovered session's `coaching_relationship_id`. Undefined
+   *  when nothing is hovered. */
+  hoveredSession: EnrichedCoachingSession | undefined;
+  /** Notifies the parent of hover changes (or clears with `undefined`). */
+  onHoverChange: (id: Id | undefined) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
 }
 
@@ -36,21 +42,15 @@ export function CoachingSessionsListView({
   viewerId,
   userTimezone,
   fallbackPriorSessionDate,
+  hoveredSession,
+  onHoverChange,
   onReschedule,
 }: CoachingSessionsListViewProps) {
-  const [hoveredSessionId, setHoveredSessionId] = useState<Id | undefined>(
-    undefined
-  );
-
-  // Combine for hover lookup; the helper filters by relationship internally.
+  // Combined list is needed for the helper's prev-session lookup within the
+  // hovered session's relationship.
   const allSessions = useMemo(
     () => [...previousSessions, ...upcomingSessions],
     [previousSessions, upcomingSessions]
-  );
-
-  const hoveredSession = useMemo(
-    () => allSessions.find((s) => s.id === hoveredSessionId),
-    [allSessions, hoveredSessionId]
   );
 
   const hoveredParticipant = useMemo(
@@ -74,11 +74,8 @@ export function CoachingSessionsListView({
     [allActions, allSessions, hoveredSession, fallbackPriorSessionDate]
   );
 
-  const handleHover = useCallback(
-    (id: Id | undefined) => setHoveredSessionId(id),
-    []
-  );
-  const clearHover = useCallback(() => setHoveredSessionId(undefined), []);
+  const clearHover = useCallback(() => onHoverChange(undefined), [onHoverChange]);
+  const hoveredSessionId = hoveredSession?.id;
 
   return (
     <div
@@ -107,7 +104,7 @@ export function CoachingSessionsListView({
             userTimezone={userTimezone}
             isPast={false}
             hoveredId={hoveredSessionId}
-            onHover={handleHover}
+            onHover={onHoverChange}
             onReschedule={onReschedule}
           />
         </TabsContent>
@@ -119,7 +116,7 @@ export function CoachingSessionsListView({
             userTimezone={userTimezone}
             isPast={true}
             hoveredId={hoveredSessionId}
-            onHover={handleHover}
+            onHover={onHoverChange}
             onReschedule={onReschedule}
           />
         </TabsContent>

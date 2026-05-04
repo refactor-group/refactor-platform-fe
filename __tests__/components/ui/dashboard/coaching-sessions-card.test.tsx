@@ -45,9 +45,12 @@ vi.mock("@/lib/api/coaching-sessions", () => ({
     mockUseEnrichedCoachingSessionsForUser(),
 }));
 
+// Forward args so tests can assert the call was scoped by the hovered
+// session's `coaching_relationship_id` — the architectural defense against
+// the cross-relationship actions leakage bug.
 const mockUseUserActionsList = vi.fn();
 vi.mock("@/lib/api/user-actions", () => ({
-  useUserActionsList: () => mockUseUserActionsList(),
+  useUserActionsList: (...args: unknown[]) => mockUseUserActionsList(...args),
 }));
 
 // Filter dropdown dependencies — stable defaults for all tests.
@@ -361,6 +364,60 @@ describe("CoachingSessionsCard", () => {
     expect(
       screen.getByRole("combobox", { name: /relationship filter/i })
     ).toBeInTheDocument();
+  });
+
+  // ── Hover preview — actions fetch is scoped by hovered relationship ────
+  //
+  // Pins the architectural fix for the bug where Bob's previous-session
+  // hover surfaced actions assigned in Levi's and Caleb's sessions: the
+  // dashboard now fetches actions scoped at the API layer by the hovered
+  // session's `coaching_relationship_id`, mirroring `usePanelActions::
+  // useReviewWindow`. A regression that re-introduces a cross-relationship
+  // fetch (or post-filter) would break this assertion.
+  describe("hover-keyed actions fetch scoping", () => {
+    it("scopes the actions fetch by the hovered session's coaching_relationship_id when no relationship filter is set", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+      const session = createMockEnrichedSession({
+        id: "s-bob-prev",
+        date: FAR_PAST,
+        coaching_relationship_id: "rel-bob",
+      });
+      setupSessionWindows({ previous: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      // Move to Previous tab (where the seeded session lives) and hover it.
+      await user.click(screen.getByRole("tab", { name: /previous/i }));
+      fireEvent.mouseEnter(screen.getByTestId("session-row-s-bob-prev"));
+
+      // The MOST RECENT call must scope to Bob's relationship — even though
+      // earlier calls during pre-hover renders may have skipped the fetch
+      // (userId=null) when no filter and nothing hovered.
+      const lastCall =
+        mockUseUserActionsList.mock.calls[
+          mockUseUserActionsList.mock.calls.length - 1
+        ];
+      expect(lastCall[0]).toBe(COACH_USER.id);
+      expect(lastCall[1]).toMatchObject({
+        coaching_relationship_id: "rel-bob",
+      });
+    });
+
+    it("skips the actions fetch entirely when no relationship filter is set and nothing is hovered", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      // No hover → no relationship to scope by → fetch is skipped (userId=null).
+      // Don't assert "all calls" — other code paths may make their own
+      // useUserActionsList calls; just verify no scoped call ran.
+      const scopedCalls = mockUseUserActionsList.mock.calls.filter(
+        (args) => args[0] !== null
+      );
+      expect(scopedCalls).toHaveLength(0);
+    });
   });
 
   // ── Sticky filter — stale-relationship cleanup effect ──────────────────
