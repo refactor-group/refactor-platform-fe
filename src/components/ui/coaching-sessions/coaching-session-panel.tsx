@@ -261,6 +261,12 @@ interface CoachingSessionPanelProps {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
   collapsed?: boolean;
+  /**
+   * Optional — when provided, lets the user expand/collapse the panel
+   * independently of layout defaults. Collapsed rail becomes clickable,
+   * expanded header renders a matching collapse button.
+   */
+  onToggleCollapsed?: () => void;
   /** When true, goal linkage is immutable (past sessions) */
   readOnly?: boolean;
   /** Initial panel section (persisted via URL param by the page) */
@@ -273,6 +279,7 @@ export function CoachingSessionPanel({
   coachingSessionId,
   coachingRelationshipId,
   collapsed = false,
+  onToggleCollapsed,
   readOnly = false,
   defaultSection = PanelSection.Goals,
   onSectionChange: onSectionChangeExternal,
@@ -807,6 +814,7 @@ export function CoachingSessionPanel({
       <CoachingSessionPanelDesktop
         {...sharedProps}
         collapsed={collapsed}
+        onToggleCollapsed={onToggleCollapsed}
       />
       <CoachingSessionPanelMobile {...sharedProps} />
     </>

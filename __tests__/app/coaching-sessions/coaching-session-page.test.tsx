@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useRouter, useParams, useSearchParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams, usePathname } from 'next/navigation'
 import CoachingSessionsPage from '@/app/coaching-sessions/[id]/page'
 import { TestProviders } from '@/test-utils/providers'
 import { useCurrentCoachingSession } from '@/lib/hooks/use-current-coaching-session'
@@ -15,6 +15,7 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(),
   useParams: vi.fn(),
   useSearchParams: vi.fn(),
+  usePathname: vi.fn(),
 }))
 
 // Mock the coaching session hooks
@@ -122,6 +123,7 @@ describe('CoachingSessionsPage - Relationship Auto-Sync', () => {
     ;(useRouter as any).mockReturnValue(mockRouter)
     ;(useParams as any).mockReturnValue(mockParams)
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
     mockRoleAsCoach()
   })
 
@@ -363,6 +365,7 @@ describe('CoachingSessionsPage - Join meet link visibility', () => {
     ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn() })
     ;(useParams as any).mockReturnValue({ id: 'session-123' })
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
     mockRoleAsCoach()
 
     vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
@@ -436,6 +439,7 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
     ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn() })
     ;(useParams as any).mockReturnValue({ id: 'session-123' })
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
 
     vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
       currentCoachingRelationshipId: 'rel-123',
@@ -547,5 +551,110 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
 
     const goalPanel = screen.getByTestId('coaching-session-panel')
     expect(goalPanel).toHaveAttribute('data-readonly', 'false')
+  })
+})
+
+/**
+ * Test Suite: Layout panel visibility across URL states
+ *
+ * Purpose: Asserts that the page renders / hides the transcript panel
+ * correctly across the layout URL states. These tests guard the bug fix
+ * for "open transcript → maximize notes → restore leaves transcript
+ * hidden": the fix relies on the notes-maximize toggle preserving
+ * `?transcript=1` in the URL, and this suite confirms the page renders
+ * the correct panels for each URL variant.
+ */
+describe('CoachingSessionsPage - Panel visibility across URL states', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn() })
+    ;(useParams as any).mockReturnValue({ id: 'session-123' })
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
+    mockRoleAsCoach()
+
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: 'rel-123',
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123',
+      setCurrentCoachingRelationshipId: vi.fn(),
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: vi.fn(),
+    })
+  })
+
+  it('renders the transcript panel when ?transcript=1', () => {
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams('transcript=1'))
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+    expect(screen.getByRole('heading', { name: 'Transcript' })).toBeInTheDocument()
+    expect(screen.getByTestId('coaching-tabs-container')).toBeInTheDocument()
+  })
+
+  it('hides the transcript panel while Notes is maximized, even if ?transcript=1 is still set', () => {
+    // This is the critical state: transcript was open, user maximized notes,
+    // URL preserved transcript=1 so restoring brings the transcript back.
+    ;(useSearchParams as any).mockReturnValue(
+      new URLSearchParams('transcript=1&focus=notes')
+    )
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+    expect(screen.queryByRole('heading', { name: 'Transcript' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('coaching-tabs-container')).toBeInTheDocument()
+  })
+
+  it('re-renders the transcript panel after unmaximizing Notes (?transcript=1 preserved)', () => {
+    // Simulates the URL state that toggleNotesMaximized writes when
+    // restoring from a notes-maximize with transcript still open.
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams('transcript=1'))
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+    expect(screen.getByRole('heading', { name: 'Transcript' })).toBeInTheDocument()
+  })
+
+  it('hides Notes when the transcript is maximized', () => {
+    ;(useSearchParams as any).mockReturnValue(
+      new URLSearchParams('transcript=1&focus=transcript')
+    )
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+    expect(screen.getByRole('heading', { name: 'Transcript' })).toBeInTheDocument()
+    expect(screen.queryByTestId('coaching-tabs-container')).not.toBeInTheDocument()
+  })
+
+  it('shows neither focus panel in the default state', () => {
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+    expect(screen.queryByRole('heading', { name: 'Transcript' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('coaching-tabs-container')).toBeInTheDocument()
+    expect(screen.getByTestId('coaching-session-panel')).toBeInTheDocument()
   })
 })
