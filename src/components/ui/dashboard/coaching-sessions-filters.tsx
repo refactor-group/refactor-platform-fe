@@ -137,17 +137,35 @@ export function FiltersPopover({
                 className="w-full h-7 text-xs"
                 aria-label="Time Range"
               >
-                <SelectValue />
+                {/* Render the trigger content explicitly instead of using
+                    `<SelectValue />`. Radix's `<SelectValue />` clones the
+                    selected `<SelectItem>`'s children verbatim — which
+                    means our two-line `flex flex-col` (abstract label +
+                    date hint) would render stacked inside the 28px-tall
+                    trigger, distorting its height and making it
+                    inconsistent with the Relationship select below. The
+                    Select is controlled (`value={timeWindow}`), so we
+                    can render the abstract label directly here. The
+                    stacked layout still renders inside each option in
+                    `<SelectContent>` — that's the "preview" surface. */}
+                <span>{TIME_WINDOW_LABELS[timeWindow]}</span>
               </SelectTrigger>
               <SelectContent>
                 {/* Each option pairs the abstract size with the concrete
                     resolved range for that size against `now`. The abstract
                     label is the primary read; the date range is a small
                     secondary hint that previews what the user will get on
-                    selection — matches the chip's date-range display. */}
+                    selection — matches the chip's date-range display.
+                    `textValue` is kept so Radix's type-ahead matching
+                    uses the abstract label instead of the concatenated
+                    "{abstract}{date-range}" textContent. */}
                 {(Object.values(SessionTimeWindow) as SessionTimeWindow[]).map(
                   (w) => (
-                    <SelectItem key={w} value={w}>
+                    <SelectItem
+                      key={w}
+                      value={w}
+                      textValue={TIME_WINDOW_LABELS[w]}
+                    >
                       <div className="flex flex-col gap-0.5">
                         <span>{TIME_WINDOW_LABELS[w]}</span>
                         <span className="text-[11px] text-muted-foreground/70 tabular-nums">

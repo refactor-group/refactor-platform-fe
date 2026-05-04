@@ -796,7 +796,7 @@ describe("CoachingSessionsCard", () => {
     // hook surface or accidentally drops the prop, the create flow will
     // start showing stale data without any unit-test failure — unless
     // this test catches it.
-    it("surfaces the hook's refresh function via onRefreshNeeded on mount", () => {
+    it("surfaces a stable wrapper via onRefreshNeeded that delegates to the hook's refresh", () => {
       setupBaseAuth();
       setupSessionWindows();
       const handleRefreshNeeded = vi.fn();
@@ -808,10 +808,17 @@ describe("CoachingSessionsCard", () => {
         />
       );
 
-      // Pin: called once with the same fn the test setup wired into
-      // setupSessionWindows.
+      // The card passes a *wrapper* closure that delegates to whatever
+      // `refreshSessions` is current at call time — keeps the parent's
+      // stored callback identity-stable. We can't assert
+      // `toHaveBeenCalledWith(mockSessionsRefresh)` because they aren't
+      // the same function reference. Instead: assert one registration,
+      // grab the wrapper, invoke it, and verify it routed to the spy.
       expect(handleRefreshNeeded).toHaveBeenCalledTimes(1);
-      expect(handleRefreshNeeded).toHaveBeenCalledWith(mockSessionsRefresh);
+      const wrapper = handleRefreshNeeded.mock.calls[0][0] as () => void;
+      expect(typeof wrapper).toBe("function");
+      wrapper();
+      expect(mockSessionsRefresh).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -54,14 +54,12 @@ export function SessionRow({
   // Delete is coach-only across both tabs — the cost asymmetry between
   // upcoming and previous deletions is conveyed by the dialog copy, not by
   // gating availability.
-  // Share link is available to *any* viewer on *any* tab — it's a read-only
-  // operation that produces a URL the recipient can navigate to (and the
-  // backend will gate on actual access). Restoring this from the legacy
-  // CoachingSessionList ensures the kebab covers the full former feature set.
+  // Share link is available to every viewer on every tab — read-only,
+  // produces a URL the recipient can navigate to (the backend gates on
+  // actual access). Because Share is universal, the kebab itself is
+  // never empty — the dropdown is rendered unconditionally below.
   const canReschedule = !isPast && participant?.isCoach === true;
   const canDelete = participant?.isCoach === true;
-  const canShareLink = true;
-  const hasMenuItems = canReschedule || canShareLink || canDelete;
 
   const participantName = participant?.participantName ?? "Unknown";
   const participantInitials = participant
@@ -122,62 +120,60 @@ export function SessionRow({
           "[&:has([data-state=open])]:opacity-100"
         )}
       >
-        {hasMenuItems && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Session actions"
-                // `rounded-full` is what gives the hover background a circle
-                // shape (Mercury's idiom) instead of the default rounded
-                // square. `[&_svg]:!h-4 !w-4` defends against the
-                // `buttonVariants` `[&_svg]:size-4` rule documented in
-                // memory — explicit is safer than relying on the default.
-                className="rounded-full h-8 w-8 text-muted-foreground/60 hover:text-foreground"
+        {/* Kebab is rendered unconditionally — Share link is universal so
+            the menu is never empty. Reschedule and Delete render only
+            when the viewer has the corresponding capability; Share link
+            is always present. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Session actions"
+              // `rounded-full` is what gives the hover background a circle
+              // shape (Mercury's idiom) instead of the default rounded
+              // square. `[&_svg]:!h-4 !w-4` defends against the
+              // `buttonVariants` `[&_svg]:size-4` rule documented in
+              // memory — explicit is safer than relying on the default.
+              className="rounded-full h-8 w-8 text-muted-foreground/60 hover:text-foreground"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {canReschedule && (
+              <DropdownMenuItem
+                onClick={() => onReschedule(session)}
+                data-testid="session-row-reschedule"
               >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {canReschedule && (
-                <DropdownMenuItem
-                  onClick={() => onReschedule(session)}
-                  data-testid="session-row-reschedule"
-                >
-                  Reschedule
-                </DropdownMenuItem>
-              )}
-              {canShareLink && (
-                <DropdownMenuItem
-                  // Fire-and-forget: `copyCoachingSessionLinkWithToast`
-                  // surfaces both success ("link copied") and error toasts
-                  // itself, so the row doesn't need to handle either.
-                  onClick={() =>
-                    void copyCoachingSessionLinkWithToast(session.id)
-                  }
-                  data-testid="session-row-share-link"
-                >
-                  <Link2 className="mr-2 h-4 w-4" />
-                  Share link
-                </DropdownMenuItem>
-              )}
-              {(canReschedule || canShareLink) && canDelete && (
-                <DropdownMenuSeparator />
-              )}
-              {canDelete && (
-                <DropdownMenuItem
-                  onClick={() => onRequestDelete(session)}
-                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                  data-testid="session-row-delete"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete session
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                Reschedule
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              // Fire-and-forget: `copyCoachingSessionLinkWithToast`
+              // surfaces both success ("link copied") and error toasts
+              // itself, so the row doesn't need to handle either.
+              onClick={() =>
+                void copyCoachingSessionLinkWithToast(session.id)
+              }
+              data-testid="session-row-share-link"
+            >
+              <Link2 className="mr-2 h-4 w-4" />
+              Share link
+            </DropdownMenuItem>
+            {canDelete && <DropdownMenuSeparator />}
+            {canDelete && (
+              <DropdownMenuItem
+                onClick={() => onRequestDelete(session)}
+                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                data-testid="session-row-delete"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete session
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Link href={`/coaching-sessions/${session.id}`}>
           <Button
             variant={isPast ? "outline" : "default"}
