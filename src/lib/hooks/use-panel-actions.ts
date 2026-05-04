@@ -15,6 +15,7 @@ import { ItemStatus, EntityApiError } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
 import { filterReviewActions } from "@/lib/utils/session";
+import { selectReviewActionsForSession } from "@/lib/utils/select-review-actions-for-session";
 
 // Re-export so existing imports from use-panel-actions keep working. The
 // canonical definition lives in @/lib/utils/session.
@@ -128,6 +129,10 @@ function useReviewWindow(
     "asc"
   );
 
+  // Derive the previous session date once, only for the sticky-IDs effect
+  // below. The actual review-actions calculation now delegates to the shared
+  // `selectReviewActionsForSession` helper to keep the panel and dashboard
+  // in lockstep on prev-session semantics + filterReviewActions invocation.
   const previousSessionDate = useMemo(() => {
     if (!currentSessionDate || coachingSessions.length === 0) return null;
     const currentDateStr = currentSessionDate.toISODate();
@@ -152,23 +157,17 @@ function useReviewWindow(
 
   const [stickyIds, setStickyIds] = useState<Set<Id>>(() => new Set());
 
-  const reviewActions = useMemo(() => {
-    if (!currentSessionDate) return [];
-
-    return filterReviewActions(
-      allRelationshipActions,
-      coachingSessionId,
-      currentSessionDate,
-      previousSessionDate,
-      stickyIds.size > 0 ? stickyIds : undefined
-    );
-  }, [
-    allRelationshipActions,
-    coachingSessionId,
-    currentSessionDate,
-    previousSessionDate,
-    stickyIds,
-  ]);
+  const reviewActions = useMemo(
+    () =>
+      selectReviewActionsForSession(
+        allRelationshipActions,
+        coachingSessions,
+        coachingSessionId,
+        undefined, // no fallback — panel uses a 5-year session window already
+        stickyIds.size > 0 ? stickyIds : undefined
+      ),
+    [allRelationshipActions, coachingSessions, coachingSessionId, stickyIds]
+  );
 
   // Accumulate sticky IDs after render so that previously-visible review
   // actions remain visible even if their status changes.

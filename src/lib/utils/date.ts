@@ -20,10 +20,15 @@ export function formatLongDate(date: DateTime): string {
 }
 
 /**
- * Format a DateTime with time (e.g., "Jan 3, 2026 at 2:30 PM")
+ * Format a DateTime with time, using a configurable separator between the
+ * date and time (e.g., "Jan 3, 2026 at 2:30 PM" by default, or
+ * "Jan 3, 2026 · 2:30 PM" when separator is "·").
  */
-export function formatDateWithTime(date: DateTime): string {
-  return date.toFormat("MMM d, yyyy 'at' h:mm a");
+export function formatDateWithTime(
+  date: DateTime,
+  separator: string = "at"
+): string {
+  return `${date.toFormat("MMM d, yyyy")} ${separator} ${date.toFormat("h:mm a")}`;
 }
 
 /**
