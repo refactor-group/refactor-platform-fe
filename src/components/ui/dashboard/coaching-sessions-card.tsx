@@ -1,18 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { DateTime } from "ts-luxon";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CoachingSessionsCardHeader } from "@/components/ui/dashboard/coaching-sessions-card-header";
 import {
-  SessionTimeWindow,
   TIME_WINDOW_DURATIONS,
   type RelationshipOption,
 } from "@/components/ui/dashboard/coaching-sessions-filters";
 import { CoachingSessionsListView } from "@/components/ui/dashboard/coaching-sessions-list-view";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useEnrichedCoachingSessionsForUser } from "@/lib/api/coaching-sessions";
@@ -28,7 +28,6 @@ import {
   isUserCoacheeInRelationship,
   sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
-import { type Id } from "@/types/general";
 import { UserActionsScope } from "@/types/assigned-actions";
 
 const ENRICHMENT_INCLUDES = [
@@ -59,17 +58,25 @@ export function CoachingSessionsCard({
   const { currentOrganizationId } = useCurrentOrganization();
 
   // ── Filter state ─────────────────────────────────────────────────────
-  const [timeWindow, setTimeWindow] = useState<SessionTimeWindow>(
-    SessionTimeWindow.Day
+  // Persisted in sessionStorage via the dedicated card filter store, so the
+  // user's last-used time range and relationship filter survive navigation
+  // away from the dashboard and reloads within the same browser tab session.
+  const timeWindow = useCoachingSessionsCardFilterStore((s) => s.timeWindow);
+  const setTimeWindow = useCoachingSessionsCardFilterStore(
+    (s) => s.setTimeWindow
   );
-  const [relationshipFilter, setRelationshipFilter] = useState<Id | undefined>(
-    undefined
+  const relationshipFilter = useCoachingSessionsCardFilterStore(
+    (s) => s.relationshipFilter
+  );
+  const setRelationshipFilter = useCoachingSessionsCardFilterStore(
+    (s) => s.setRelationshipFilter
   );
 
   // Build the relationship options (mirrors the pattern in
   // ActionsPageContainer): only the user's own relationships, alphabetized
   // by counterpart name, labeled "Coach → Coachee" with "You" inserted.
-  const { relationships } = useCoachingRelationshipList(currentOrganizationId);
+  const { relationships, isLoading: isRelationshipsLoading } =
+    useCoachingRelationshipList(currentOrganizationId);
   const relationshipOptions = useMemo<RelationshipOption[]>(() => {
     if (!relationships || !userId) return [];
     const userRelationships = relationships.filter(
@@ -87,6 +94,28 @@ export function CoachingSessionsCard({
       }
     );
   }, [relationships, userId]);
+
+  // Clear a stale persisted relationship filter once we know the user's
+  // current relationship set — covers org switches, removed relationships,
+  // and any other case where the saved id no longer resolves to a real
+  // option. Gate on `isRelationshipsLoading` because `useEntityList` returns
+  // an empty array (not `undefined`) during the SWR pre-fetch window — a
+  // truthiness check on `relationships` would silently clear the persisted
+  // filter on every mount before the API call resolves.
+  useEffect(() => {
+    if (isRelationshipsLoading || !relationshipFilter) return;
+    const stillExists = relationshipOptions.some(
+      (r) => r.id === relationshipFilter
+    );
+    if (!stillExists) {
+      setRelationshipFilter(undefined);
+    }
+  }, [
+    isRelationshipsLoading,
+    relationshipFilter,
+    relationshipOptions,
+    setRelationshipFilter,
+  ]);
 
   const selectedRelationshipLabel = relationshipFilter
     ? relationshipOptions.find((r) => r.id === relationshipFilter)?.label

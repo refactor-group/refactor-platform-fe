@@ -10,6 +10,7 @@ import {
   createMockEnrichedSession,
 } from "../../../test-utils";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { SessionTimeWindow } from "@/components/ui/dashboard/coaching-sessions-filters";
 
 // ── Hook mocks ───────────────────────────────────────────────────────────
 
@@ -18,6 +19,21 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
     selector(mockAuthStore()),
 }));
+
+// Sticky filter store — backed by a vi.fn so each test can override the
+// initial timeWindow / relationshipFilter values, and so we can spy on the
+// setter calls to verify the stale-filter cleanup effect.
+const mockSetTimeWindow = vi.fn();
+const mockSetRelationshipFilter = vi.fn();
+const mockFilterStore = vi.fn();
+vi.mock(
+  "@/lib/providers/coaching-sessions-card-filter-store-provider",
+  () => ({
+    useCoachingSessionsCardFilterStore: (
+      selector: (state: unknown) => unknown
+    ) => selector(mockFilterStore()),
+  })
+);
 
 // The card issues a single `useEnrichedCoachingSessionsForUser` call over
 // `[now − window, now + window]` and partitions client-side at timestamp
@@ -39,8 +55,12 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-1" }),
 }));
 
+// `useCoachingRelationshipList` returns `{ relationships, isLoading }`. The
+// card's stale-filter cleanup effect gates on `isLoading`, so tests that
+// exercise that effect override this mock per-case via mockUseCoachingRelationshipList.
+const mockUseCoachingRelationshipList = vi.fn();
 vi.mock("@/lib/api/coaching-relationships", () => ({
-  useCoachingRelationshipList: () => ({ relationships: [] }),
+  useCoachingRelationshipList: () => mockUseCoachingRelationshipList(),
 }));
 
 // ── Setup helpers ────────────────────────────────────────────────────────
@@ -54,6 +74,22 @@ function setupBaseAuth(user = COACH_USER) {
     isLoading: false,
     isError: undefined,
     refresh: vi.fn(),
+  });
+}
+
+interface FilterStoreOverrides {
+  timeWindow?: SessionTimeWindow;
+  relationshipFilter?: string;
+}
+
+/** Configure the sticky filter store with the given persisted values. */
+function setupFilterStore(overrides: FilterStoreOverrides = {}) {
+  mockFilterStore.mockReturnValue({
+    timeWindow: overrides.timeWindow ?? SessionTimeWindow.Day,
+    relationshipFilter: overrides.relationshipFilter,
+    setTimeWindow: mockSetTimeWindow,
+    setRelationshipFilter: mockSetRelationshipFilter,
+    resetCoachingSessionsCardFilters: vi.fn(),
   });
 }
 
@@ -99,6 +135,17 @@ const FAR_FUTURE = "2099-03-15T14:00:00Z";
 describe("CoachingSessionsCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default sticky-filter store: empty filter, default time range. Tests
+    // exercising stickiness/cleanup override these via setupFilterStore.
+    setupFilterStore();
+    // Default: relationship list loaded with no relationships. Tests
+    // exercising the stale-filter cleanup effect override this.
+    mockUseCoachingRelationshipList.mockReturnValue({
+      relationships: [],
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    });
   });
 
   it("renders the loading state while either window is fetching", () => {
@@ -314,5 +361,87 @@ describe("CoachingSessionsCard", () => {
     expect(
       screen.getByRole("combobox", { name: /relationship filter/i })
     ).toBeInTheDocument();
+  });
+
+  // ── Sticky filter — stale-relationship cleanup effect ──────────────────
+  //
+  // The card persists `relationshipFilter` across navigations via
+  // `useCoachingSessionsCardFilterStore` (sessionStorage). On mount it
+  // reconciles the persisted id against the freshly-loaded relationships:
+  // if the id no longer resolves to a real option (org switch, removed
+  // relationship), it must clear the filter so the user doesn't see an
+  // empty session list with no visible cause. The cleanup must NOT fire
+  // before the relationship list has loaded — `useEntityList` returns
+  // `entities` defaulted to an empty array (not undefined), so a naive
+  // truthiness check would clear a valid persisted filter on every mount.
+  describe("sticky relationship filter cleanup", () => {
+    const STALE_REL_ID = "rel-no-longer-exists";
+    const VALID_REL_ID = "rel-1";
+
+    function relationshipsWithUser(ids: string[]) {
+      return ids.map((id) => ({
+        id,
+        organization_id: "org-1",
+        coach_id: COACH_USER.id,
+        coachee_id: `coachee-${id}`,
+        coach_first_name: "Coach",
+        coach_last_name: "User",
+        coachee_first_name: "Coachee",
+        coachee_last_name: id.toUpperCase(),
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      }));
+    }
+
+    it("clears persisted relationshipFilter when it does not resolve to a loaded relationship", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      setupFilterStore({ relationshipFilter: STALE_REL_ID });
+      mockUseCoachingRelationshipList.mockReturnValue({
+        relationships: relationshipsWithUser([VALID_REL_ID]),
+        isLoading: false,
+        isError: undefined,
+        refresh: vi.fn(),
+      });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      expect(mockSetRelationshipFilter).toHaveBeenCalledWith(undefined);
+    });
+
+    it("preserves persisted relationshipFilter when it does resolve to a loaded relationship", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      setupFilterStore({ relationshipFilter: VALID_REL_ID });
+      mockUseCoachingRelationshipList.mockReturnValue({
+        relationships: relationshipsWithUser([VALID_REL_ID, "rel-2"]),
+        isLoading: false,
+        isError: undefined,
+        refresh: vi.fn(),
+      });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      expect(mockSetRelationshipFilter).not.toHaveBeenCalled();
+    });
+
+    it("does not clear the persisted relationshipFilter while the relationship list is still loading", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      setupFilterStore({ relationshipFilter: VALID_REL_ID });
+      // Loading state: `useEntityList` returns the EMPTY_ARRAY sentinel even
+      // mid-fetch, so isLoading=true is the only honest "not yet loaded"
+      // signal. The cleanup effect must respect it.
+      mockUseCoachingRelationshipList.mockReturnValue({
+        relationships: [],
+        isLoading: true,
+        isError: undefined,
+        refresh: vi.fn(),
+      });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      expect(mockSetRelationshipFilter).not.toHaveBeenCalled();
+    });
   });
 });
