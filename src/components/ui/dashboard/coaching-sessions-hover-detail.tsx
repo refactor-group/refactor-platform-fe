@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { MessageSquare } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, MessageSquare } from "lucide-react";
 import { SessionGoalList } from "@/components/ui/session-goal-list";
 import { ActionStatusIcon } from "@/components/ui/coaching-sessions/action-card-parts";
+import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { cn } from "@/components/lib/utils";
 import type { Action } from "@/types/action";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -63,7 +65,11 @@ export function SessionHoverDetail({
             No actions due for this session.
           </p>
         ) : (
-          <div className="space-y-3">
+          // `divide-y` + per-row hover/chevron pattern mirrors `GoalRow` in
+          // the Goals Overview card so the dashboard's two list surfaces read
+          // consistently. Each row links to the session that owns the action
+          // with `?panel=actions` so the Actions panel opens automatically.
+          <div className="divide-y divide-border/50">
             {reviewActions.map((action) => (
               <ActionDueRow key={action.id} action={action} />
             ))}
@@ -82,9 +88,12 @@ function ActionDueRow({ action }: { action: Action }) {
   );
 
   return (
-    <div className="flex items-start gap-2.5">
-      <ActionStatusIcon status={action.status} className="mt-0.5" />
-      <div className="min-w-0">
+    <Link
+      href={`/coaching-sessions/${action.coaching_session_id}?panel=${PanelSection.Actions}`}
+      className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-md transition-colors hover:bg-muted/30"
+    >
+      <ActionStatusIcon status={action.status} className="shrink-0" />
+      <div className="flex-1 min-w-0">
         <p
           className={cn(
             "text-sm leading-snug",
@@ -95,6 +104,7 @@ function ActionDueRow({ action }: { action: Action }) {
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">Due {dueLabel}</p>
       </div>
-    </div>
+      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/25 shrink-0" />
+    </Link>
   );
 }
