@@ -313,6 +313,7 @@ describe("CoachingSessionsCard", () => {
     }
   });
 
+
   it("shows Reschedule for a coach viewer inside the row's kebab menu and fires the callback", async () => {
     const user = userEvent.setup();
     const onReschedule = vi.fn();
