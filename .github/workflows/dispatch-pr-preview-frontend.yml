@@ -32,20 +32,19 @@ on:
           - a1f8a01 - PR#298 (mcp-proof-of-concept-via-warp)
           - f0e953f - PR#297 (mcp-server-adr)
           - 1123161 - PR#291 (ci/runtime-ref-resolver)
-          - b85b2ac - PR#254 (ai-transcription-milestone-2)
+          - 23b2bfa - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
         description: "Frontend commit to deploy"
         required: true
         type: choice
         options:
-          - 'ebcfa51 - chore: refresh preview commit choices [skip ci]'
-          - '0d09857 - Merge pull request #383 from refactor-group/fix/goal-link-error-handling'
-          - '0a94cee - refactor(goals): break ref cycle in link 409 recovery; tighten error parsers'
-          - 3694021 - PR#385 (fix/unused-local-variables)
-          - f203b19 - PR#382 (feat/dashboard-sessions-list)
+          - '6887a81 - Merge pull request #382 from refactor-group/feat/dashboard-sessions-list'
+          - dbb9f6c - Merge branch 'main' into feat/dashboard-sessions-list
+          - '77c34f9 - chore: refresh preview commit choices [skip ci]'
+          - af56626 - PR#385 (fix/unused-local-variables)
           - 1a12c9a - PR#379 (ci/runtime-ref-resolver)
-          - 9d95029 - PR#373 (feature/transcript-pane)
+          - 41f85e8 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
           - d9e1e08 - PR#243 (feature/146-ai-meeting-integra)
