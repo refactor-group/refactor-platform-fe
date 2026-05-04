@@ -32,6 +32,11 @@ import { ProgressRing } from "@/components/ui/dashboard/progress-ring";
 import { GoalRow } from "@/components/ui/dashboard/goal-row";
 import { GoalsOverviewCardEmpty } from "@/components/ui/dashboard/goals-overview-card-empty";
 
+// Feature flag: flip to true once the global Goals page lands so the
+// "View all goals" CTA in the card body can render. Until then the link
+// points at nothing, so the CTA stays hidden.
+const SHOW_VIEW_ALL_GOALS_LINK = false;
+
 /** Maps GoalProgress to a severity rank for computing the aggregate signal. */
 function progressSeverity(progress: GoalProgress): number {
   switch (progress) {
@@ -268,10 +273,7 @@ export function GoalsOverviewCard() {
                   ))}
                 </div>
               )}
-              {/* TODO: Flip this `false` to render the "View all goals" link
-                  once the global Goals page lands — the button already points
-                  at nothing, so showing a disabled CTA just adds noise. */}
-              {false && (
+              {SHOW_VIEW_ALL_GOALS_LINK && (
                 <div className="pt-3 mt-auto flex justify-end">
                   <Button
                     variant="ghost"

@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Target } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
