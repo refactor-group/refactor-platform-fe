@@ -1,6 +1,7 @@
 "use client";
 
 import { Clock, List, X } from "lucide-react";
+import { type DateTime } from "ts-luxon";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -11,7 +12,7 @@ import { cn } from "@/components/lib/utils";
 import {
   FiltersPopover,
   SessionTimeWindow,
-  TIME_WINDOW_LABELS,
+  formatTimeWindowDateRange,
   type RelationshipOption,
 } from "@/components/ui/dashboard/coaching-sessions-filters";
 import { defaultInitState as filterStoreDefaults } from "@/lib/stores/coaching-sessions-card-filter-store";
@@ -31,6 +32,11 @@ export interface CoachingSessionsCardHeaderProps {
   onRelationshipFilterChange: (id: Id | undefined) => void;
   relationshipOptions: RelationshipOption[];
   selectedRelationshipLabel: string | undefined;
+  /** The same `mountNow` the card uses to drive its session fetch. Anchors
+   *  the chip's resolved date range so chip text and visible rows always
+   *  agree, even if `DateTime.now()` would have shifted between mount and
+   *  this render. */
+  now: DateTime;
 }
 
 export function CoachingSessionsCardHeader({
@@ -40,17 +46,22 @@ export function CoachingSessionsCardHeader({
   onRelationshipFilterChange,
   relationshipOptions,
   selectedRelationshipLabel,
+  now,
 }: CoachingSessionsCardHeaderProps) {
   return (
     <div className="px-6 pt-6 pb-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
       <h2 className="text-base font-semibold">Coaching Sessions</h2>
 
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Time-window chip is always shown so the user can see the current
-            window at a glance. X resets to whatever the store defaults to
-            (currently ±7 days — `DEFAULT_TIME_WINDOW`). */}
-        <Badge variant="secondary" className="gap-1 text-xs h-7 pl-2.5 pr-1.5">
-          {TIME_WINDOW_LABELS[timeWindow]}
+        {/* Time-window chip shows the *resolved* calendar range (e.g.
+            "Apr 27 – May 11"), not the abstract size — answers "what am I
+            looking at right now?" more concretely. The dropdown options
+            keep the abstract size as their primary label since the user
+            is choosing window *size*, not specific dates. X resets to
+            whatever the store defaults to (sourced from
+            `defaultInitState`, currently ±7 days). */}
+        <Badge variant="secondary" className="gap-1 text-xs h-7 pl-2.5 pr-1.5 tabular-nums">
+          {formatTimeWindowDateRange(timeWindow, now)}
           {timeWindow !== DEFAULT_TIME_WINDOW && (
             <button
               type="button"
@@ -84,6 +95,7 @@ export function CoachingSessionsCardHeader({
           relationshipFilter={relationshipFilter}
           onRelationshipFilterChange={onRelationshipFilterChange}
           relationshipOptions={relationshipOptions}
+          now={now}
         />
         <ViewToggle />
       </div>

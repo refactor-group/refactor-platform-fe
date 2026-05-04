@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { DateTime } from "ts-luxon";
-import { MoreVertical, Trash2 } from "lucide-react";
+import { Link2, MoreVertical, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { cn } from "@/components/lib/utils";
 import { formatDateWithTime } from "@/lib/utils/date";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
@@ -53,9 +54,14 @@ export function SessionRow({
   // Delete is coach-only across both tabs — the cost asymmetry between
   // upcoming and previous deletions is conveyed by the dialog copy, not by
   // gating availability.
+  // Share link is available to *any* viewer on *any* tab — it's a read-only
+  // operation that produces a URL the recipient can navigate to (and the
+  // backend will gate on actual access). Restoring this from the legacy
+  // CoachingSessionList ensures the kebab covers the full former feature set.
   const canReschedule = !isPast && participant?.isCoach === true;
   const canDelete = participant?.isCoach === true;
-  const hasMenuItems = canReschedule || canDelete;
+  const canShareLink = true;
+  const hasMenuItems = canReschedule || canShareLink || canDelete;
 
   const participantName = participant?.participantName ?? "Unknown";
   const participantInitials = participant
@@ -142,7 +148,23 @@ export function SessionRow({
                   Reschedule
                 </DropdownMenuItem>
               )}
-              {canReschedule && canDelete && <DropdownMenuSeparator />}
+              {canShareLink && (
+                <DropdownMenuItem
+                  // Fire-and-forget: `copyCoachingSessionLinkWithToast`
+                  // surfaces both success ("link copied") and error toasts
+                  // itself, so the row doesn't need to handle either.
+                  onClick={() =>
+                    void copyCoachingSessionLinkWithToast(session.id)
+                  }
+                  data-testid="session-row-share-link"
+                >
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Share link
+                </DropdownMenuItem>
+              )}
+              {(canReschedule || canShareLink) && canDelete && (
+                <DropdownMenuSeparator />
+              )}
               {canDelete && (
                 <DropdownMenuItem
                   onClick={() => onRequestDelete(session)}

@@ -311,6 +311,7 @@ export function CoachingSessionsCard({
             onRelationshipFilterChange={setRelationshipFilter}
             relationshipOptions={relationshipOptions}
             selectedRelationshipLabel={selectedRelationshipLabel}
+            now={mountNow}
           />
 
           {!userSession || isLoading ? (

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ListFilter } from "lucide-react";
-import { type DurationObject } from "ts-luxon";
+import { type DateTime, type DurationObject } from "ts-luxon";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,13 +38,37 @@ export const TIME_WINDOW_DURATIONS: Record<SessionTimeWindow, DurationObject> = 
 };
 
 // `+/-` prefix signals symmetry around `now` — sessions within this range
-// before and after the current time are both shown.
+// before and after the current time are both shown. Used as the abstract
+// label in the dropdown (where the user is choosing window *size*, not a
+// specific date range).
 export const TIME_WINDOW_LABELS: Record<SessionTimeWindow, string> = {
   [SessionTimeWindow.Day]: "+/- 24 hours",
   [SessionTimeWindow.Week]: "+/- 7 days",
   [SessionTimeWindow.Month]: "+/- 30 days",
   [SessionTimeWindow.Quarter]: "+/- 90 days",
 };
+
+/**
+ * Resolves a `SessionTimeWindow` into a concrete calendar-date range string,
+ * relative to a given `now`. Used for surfaces that benefit from concreteness
+ * — the header's active-state chip and (as a secondary line) each dropdown
+ * option — while the abstract `TIME_WINDOW_LABELS` remain the primary label.
+ *
+ * Format: `MMM d – MMM d` when both ends are in the same year; falls back to
+ * `MMM d, yyyy – MMM d, yyyy` when the range crosses a year boundary
+ * (only realistic at ±90d near year-end). Day-of-month digits stay tabular
+ * via `tabular-nums` at the call site if vertical alignment matters.
+ */
+export function formatTimeWindowDateRange(
+  window: SessionTimeWindow,
+  now: DateTime
+): string {
+  const duration = TIME_WINDOW_DURATIONS[window];
+  const from = now.minus(duration);
+  const to = now.plus(duration);
+  const fmt = from.year === to.year ? "LLL d" : "LLL d, yyyy";
+  return `${from.toFormat(fmt)} – ${to.toFormat(fmt)}`;
+}
 
 export interface RelationshipOption {
   id: Id;
@@ -57,6 +81,11 @@ export interface FiltersPopoverProps {
   relationshipFilter: Id | undefined;
   onRelationshipFilterChange: (id: Id | undefined) => void;
   relationshipOptions: RelationshipOption[];
+  /** Anchor for resolving each dropdown option into a concrete date range.
+   *  Sourced from the card's `mountNow` so the displayed ranges match the
+   *  data the user will see on selection — single source of truth for
+   *  "what does the data fetch consider 'now'?". */
+  now: DateTime;
 }
 
 export function FiltersPopover({
@@ -65,6 +94,7 @@ export function FiltersPopover({
   relationshipFilter,
   onRelationshipFilterChange,
   relationshipOptions,
+  now,
 }: FiltersPopoverProps) {
   const [open, setOpen] = useState(false);
 
@@ -110,10 +140,20 @@ export function FiltersPopover({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                {/* Each option pairs the abstract size with the concrete
+                    resolved range for that size against `now`. The abstract
+                    label is the primary read; the date range is a small
+                    secondary hint that previews what the user will get on
+                    selection — matches the chip's date-range display. */}
                 {(Object.values(SessionTimeWindow) as SessionTimeWindow[]).map(
                   (w) => (
                     <SelectItem key={w} value={w}>
-                      {TIME_WINDOW_LABELS[w]}
+                      <div className="flex flex-col gap-0.5">
+                        <span>{TIME_WINDOW_LABELS[w]}</span>
+                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+                          {formatTimeWindowDateRange(w, now)}
+                        </span>
+                      </div>
                     </SelectItem>
                   )
                 )}
