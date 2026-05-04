@@ -1,13 +1,29 @@
 import { DateTime } from "ts-luxon";
 import { Id, ItemStatus, EntityApiError } from "@/types/general";
 
+// ─── Goal-endpoint error discriminators ────────────────────────────
+// Top-level `error` string values returned by structured-error
+// responses from goal-related endpoints. Centralized so wire-format
+// strings live in one place and additions are discoverable.
+
+export enum GoalErrorCode {
+  /** Generic conflict; the specific case is carried in `details`. */
+  Conflict = "conflict",
+  /** POST /coaching_sessions/:id/goals on a goal already linked. */
+  GoalAlreadyLinkedToSession = "goal_already_linked_to_session",
+  /** POST /coaching_sessions/:id/goals on a Completed/WontDo goal. */
+  CannotLinkCompletedGoal = "cannot_link_completed_goal",
+}
+
 // ─── In-Progress Goal Limit (409 Conflict) ─────────────────────────
 // "Active" in FE-internal naming (e.g. DEFAULT_MAX_ACTIVE_GOALS) means
 // InProgress ONLY — NotStarted does not count.
 // Wire format documented in ActiveGoalLimitConflict v1 on the
 // coordination board. The 409 carries `error: "conflict"` (generic) and
-// the limit info nested under `details` — discriminate on the presence
-// of `details.max_in_progress_goals`, NOT on the `error` string.
+// the limit info nested under `details`. Discriminate on BOTH the error
+// code AND the presence of `details.max_in_progress_goals` so a future
+// 409 variant that happens to carry similar details fields can't be
+// misclassified.
 
 /** Default limit used when no 409 response has been received yet. */
 const DEFAULT_MAX_ACTIVE_GOALS = 3;
@@ -26,9 +42,9 @@ export interface ActiveGoalLimitInfo {
 
 /**
  * Extracts in-progress-goal-limit info from an EntityApiError if it
- * represents the active-goal-limit case (409 with the BE's
- * `details.max_in_progress_goals` discriminator). Returns the limit
- * and in-progress goals on match, or null otherwise.
+ * represents the active-goal-limit case (409 with `error: "conflict"`
+ * and the BE's `details.max_in_progress_goals` discriminator). Returns
+ * the limit and in-progress goals on match, or null otherwise.
  */
 export function extractActiveGoalLimitError(
   err: unknown
@@ -42,6 +58,10 @@ export function extractActiveGoalLimitError(
 
   const data = err.data;
   if (!data || typeof data !== "object") return null;
+
+  if ((data as { error?: unknown }).error !== GoalErrorCode.Conflict) {
+    return null;
+  }
 
   const details = (data as { details?: unknown }).details;
   if (
@@ -83,7 +103,7 @@ export function isCannotLinkCompletedGoalError(err: unknown): boolean {
   return (
     !!data &&
     typeof data === "object" &&
-    data.error === "cannot_link_completed_goal"
+    (data as { error?: unknown }).error === GoalErrorCode.CannotLinkCompletedGoal
   );
 }
 
@@ -108,7 +128,7 @@ export function isGoalAlreadyLinkedToSessionError(err: unknown): boolean {
   return (
     !!data &&
     typeof data === "object" &&
-    data.error === "goal_already_linked_to_session"
+    (data as { error?: unknown }).error === GoalErrorCode.GoalAlreadyLinkedToSession
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -15,7 +15,7 @@ import {
   SlideDirection,
   useGoalFlow,
 } from "@/components/ui/coaching-sessions/goal-flow";
-import type { GoalFlowState } from "@/components/ui/coaching-sessions/goal-flow";
+import type { GoalFlowState, LinkAttemptResult } from "@/components/ui/coaching-sessions/goal-flow";
 import {
   useGoalsBySession,
   useGoalList,
@@ -40,7 +40,6 @@ import {
   isCannotLinkCompletedGoalError,
   isGoalAlreadyLinkedToSessionError,
   maxActiveGoals,
-  type InProgressGoalSummary,
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
@@ -320,70 +319,64 @@ export function CoachingSessionPanel({
 
   // ── Goal handlers ────────────────────────────────────────────────
 
-  // useGoalFlow consumes handleLink, but handleLink (on 409) needs to call
-  // back into the hook's enterSwapForLink. Break the cycle with a ref that
-  // we populate after useGoalFlow runs (assigned during render below).
-  const enterSwapForLinkRef = useRef<
-    ((goalId: string, candidates: InProgressGoalSummary[]) => void) | null
-  >(null);
-
+  // Returns a LinkAttemptResult so useGoalFlow can react to a cap-collision
+  // 409 by transitioning into 409-recovery without a feedback cycle. All
+  // other terminal outcomes (success, already-linked, completed-goal,
+  // generic error) are handled inline with toasts/refreshes here.
   const handleLink = useCallback(
-    async (goalId: string) => {
+    async (goalId: string): Promise<LinkAttemptResult> => {
       // BE auto-promotes NotStarted/OnHold goals to InProgress atomically with
       // the join insert (see goal_session_link_invariant decision). FE must
       // NOT pre-promote — that races with the server's atomic write.
       const result = await GoalApi.linkToSession(coachingSessionId, goalId);
-      result.match(
-        () => {
-          refreshSessionGoals();
-          refreshAllGoals();
-        },
-        (err) => {
-          const limitInfo = extractActiveGoalLimitError(err);
-          if (limitInfo) {
-            // Re-open the swap dialog seeded with the BE-supplied InProgress
-            // goals. After the user picks a demote candidate, the flow
-            // resolves via onSwapAndLink(goalId, demoteId). Authoritative
-            // candidate list comes from details.in_progress_goals — the FE's
-            // own atLimit/linkedGoals view may be stale at this point.
-            enterSwapForLinkRef.current?.(goalId, limitInfo.inProgressGoals);
-            return;
-          }
-          if (isGoalAlreadyLinkedToSessionError(err)) {
-            // Race: another tab/window linked the same goal between when the
-            // FE's linkable list was computed and this request. The FE
-            // normally filters already-linked goals out of the picker, so
-            // this is rare in practice. Refresh state so the goal disappears
-            // from any visible list.
-            refreshSessionGoals();
-            refreshAllGoals();
-            const goal = allGoals.find((g) => g.id === goalId);
-            const name = goal ? goalTitle(goal) : "This goal";
-            toast({
-              variant: "destructive",
-              title: "Already linked",
-              description: `"${name}" is already linked to this session.`,
-            });
-            return;
-          }
-          if (isCannotLinkCompletedGoalError(err)) {
-            const goal = allGoals.find((g) => g.id === goalId);
-            const name = goal ? goalTitle(goal) : "This goal";
-            toast({
-              variant: "destructive",
-              title: "Goal is completed",
-              description: `"${name}" is completed. Reopen it to in-progress before linking it to a session.`,
-            });
-            return;
-          }
-          console.error("Failed to link goal:", err);
-          toast({
-            variant: "destructive",
-            title: "Failed to link goal",
-            description: err.message,
-          });
-        }
-      );
+      if (result.isOk()) {
+        refreshSessionGoals();
+        refreshAllGoals();
+        return { kind: "done" };
+      }
+
+      const err = result.error;
+      const limitInfo = extractActiveGoalLimitError(err);
+      if (limitInfo) {
+        // Authoritative candidate list comes from details.in_progress_goals —
+        // the FE's own atLimit/linkedGoals view may be stale at this point.
+        // The hook will transition to SelectingSwap; the panel doesn't toast.
+        return { kind: "needs-swap-recovery", candidates: limitInfo.inProgressGoals };
+      }
+      if (isGoalAlreadyLinkedToSessionError(err)) {
+        // Race: another tab/window linked the same goal between when the
+        // FE's linkable list was computed and this request. The FE
+        // normally filters already-linked goals out of the picker, so
+        // this is rare in practice. Refresh state so the goal disappears
+        // from any visible list.
+        refreshSessionGoals();
+        refreshAllGoals();
+        const goal = allGoals.find((g) => g.id === goalId);
+        const name = goal ? goalTitle(goal) : "This goal";
+        toast({
+          variant: "destructive",
+          title: "Already linked",
+          description: `"${name}" is already linked to this session.`,
+        });
+        return { kind: "done" };
+      }
+      if (isCannotLinkCompletedGoalError(err)) {
+        const goal = allGoals.find((g) => g.id === goalId);
+        const name = goal ? goalTitle(goal) : "This goal";
+        toast({
+          variant: "destructive",
+          title: "Goal is completed",
+          description: `"${name}" is completed. Reopen it to in-progress before linking it to a session.`,
+        });
+        return { kind: "done" };
+      }
+      console.error("Failed to link goal:", err);
+      toast({
+        variant: "destructive",
+        title: "Failed to link goal",
+        description: err.message,
+      });
+      return { kind: "done" };
     },
     [coachingSessionId, allGoals, refreshSessionGoals, refreshAllGoals]
   );
@@ -657,13 +650,8 @@ export function CoachingSessionPanel({
     onSwapAndLink: handleSwapAndLink,
     onCreateAndLink: handleCreateAndLink,
     onCreateAndSwap: handleCreateAndSwap,
+    onRefreshGoals: refreshAllGoals,
   });
-
-  // Backfill the ref handleLink reads on 409. enterSwapForLink is memoized
-  // with empty deps inside the hook, so this is a one-shot assignment in
-  // practice — but tracking it on every render is cheap and avoids any
-  // staleness risk if the hook's memoization ever changes.
-  enterSwapForLinkRef.current = goalFlow.enterSwapForLink;
 
   // ── Action hooks & state ─────────────────────────────────────────
 
