@@ -58,6 +58,9 @@ function deriveEmptyState(
     if (transcription?.status === TranscriptionStatus.Failed) {
       return { kind: "transcription-failed", errorMessage: transcription.error_message, onRetry: onStart };
     }
+    if (transcription?.status === TranscriptionStatus.Completed) {
+      return { kind: "no-speech" };
+    }
     return { kind: "processing" };
   }
   // Pending / Joining / WaitingRoom / InMeeting / Recording / Processing

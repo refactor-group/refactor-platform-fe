@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, Loader2, Mic, Video } from "lucide-react";
+import { AlertCircle, Loader2, Mic, MicOff, Video } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatTimestamp } from "@/lib/transcript/format-timestamp";
@@ -19,6 +19,7 @@ export type TranscriptEmptyStateVariant =
   | { kind: "no-recording"; canStart: boolean; onStart: () => void }
   | { kind: "recording-live"; durationMs: number; onStop: () => void }
   | { kind: "processing" }
+  | { kind: "no-speech" }
   | { kind: "recording-failed"; errorMessage?: string; onRetry: () => void }
   | { kind: "transcription-failed"; errorMessage?: string; onRetry: () => void };
 
@@ -43,6 +44,8 @@ export function TranscriptEmptyState({ variant }: TranscriptEmptyStateProps) {
       );
     case "processing":
       return <Processing />;
+    case "no-speech":
+      return <NoSpeech />;
     case "recording-failed":
       return (
         <Failed
@@ -150,6 +153,18 @@ function Processing() {
       <p className="text-sm text-foreground">Generating transcript…</p>
       <p className="text-xs text-muted-foreground">
         This usually takes a few minutes after the meeting ends.
+      </p>
+    </Shell>
+  );
+}
+
+function NoSpeech() {
+  return (
+    <Shell icon={<MicOff className="h-5 w-5 text-muted-foreground" aria-hidden="true" />}>
+      <p className="text-sm text-foreground">No speech detected</p>
+      <p className="text-xs text-muted-foreground">
+        The recording completed but no audio was captured. Make sure the bot
+        joined while the meeting was active.
       </p>
     </Shell>
   );
