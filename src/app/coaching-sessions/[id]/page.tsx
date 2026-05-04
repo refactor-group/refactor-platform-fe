@@ -24,6 +24,7 @@ import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship
 import { useCoachingSessionLayout } from "@/lib/hooks/use-coaching-session-layout";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import JoinMeetLink from "@/components/ui/coaching-sessions/join-meet-link";
+import { StartRecordingButton } from "@/components/ui/coaching-sessions/start-recording-button";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
@@ -240,6 +241,10 @@ export default function CoachingSessionsPage() {
             />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
               <JoinMeetLink meetUrl={currentCoachingSession?.meeting_url} />
+              <StartRecordingButton
+                sessionId={currentCoachingSessionId ?? null}
+                meetingUrl={currentCoachingSession?.meeting_url}
+              />
               <TranscriptToggleButton
                 isOpen={layout.isTranscriptOpen}
                 onToggle={layout.toggleTranscript}

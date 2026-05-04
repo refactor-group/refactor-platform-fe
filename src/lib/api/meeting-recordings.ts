@@ -1,5 +1,4 @@
 import useSWR from "swr";
-import { useEffect, useRef } from "react";
 import { siteConfig } from "@/site.config";
 import { EntityApi } from "@/lib/api/entity-api";
 import type { Id } from "@/types/general";
@@ -31,26 +30,16 @@ export function useMeetingRecording(sessionId: Id | null) {
     ? `${COACHING_SESSIONS_BASEURL}/${sessionId}/meeting_recording`
     : null;
 
-  const isVisibleRef = useRef(true);
-
-  useEffect(() => {
-    isVisibleRef.current = document.visibilityState === "visible";
-    const handler = () => {
-      isVisibleRef.current = document.visibilityState === "visible";
-    };
-    document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
-  }, []);
-
   const { data, error, isLoading, mutate } = useSWR<MeetingRecording | null>(
     url,
     () => MeetingRecordingApi.get(sessionId!),
     {
       refreshInterval: (latestData) => {
-        if (!isVisibleRef.current) return 0;
         if (!latestData) return 0;
         return isRecordingInProgress(latestData.status) ? 5_000 : 0;
       },
+      refreshWhenHidden: false,
+      revalidateOnFocus: true,
     }
   );
 
