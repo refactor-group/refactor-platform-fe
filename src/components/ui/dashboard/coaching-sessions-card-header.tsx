@@ -14,7 +14,13 @@ import {
   TIME_WINDOW_LABELS,
   type RelationshipOption,
 } from "@/components/ui/dashboard/coaching-sessions-filters";
+import { defaultInitState as filterStoreDefaults } from "@/lib/stores/coaching-sessions-card-filter-store";
 import type { Id } from "@/types/general";
+
+// Single source of truth for "what's the default time range?" — bound to
+// the persisted store's defaults so changing the default in one place can
+// never desynchronize the chip's reset behavior from the actual default.
+const DEFAULT_TIME_WINDOW = filterStoreDefaults.timeWindow;
 
 type SessionView = "list" | "timeline";
 
@@ -41,14 +47,15 @@ export function CoachingSessionsCardHeader({
 
       <div className="flex items-center gap-2 flex-wrap">
         {/* Time-window chip is always shown so the user can see the current
-            window at a glance. X resets to the default (24 hours). */}
+            window at a glance. X resets to whatever the store defaults to
+            (currently ±7 days — `DEFAULT_TIME_WINDOW`). */}
         <Badge variant="secondary" className="gap-1 text-xs h-7 pl-2.5 pr-1.5">
           {TIME_WINDOW_LABELS[timeWindow]}
-          {timeWindow !== SessionTimeWindow.Day && (
+          {timeWindow !== DEFAULT_TIME_WINDOW && (
             <button
               type="button"
               aria-label="Reset time window to default"
-              onClick={() => onTimeWindowChange(SessionTimeWindow.Day)}
+              onClick={() => onTimeWindowChange(DEFAULT_TIME_WINDOW)}
               className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
             >
               <X className="h-3 w-3" />

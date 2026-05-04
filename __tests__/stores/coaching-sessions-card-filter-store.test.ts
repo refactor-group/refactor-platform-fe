@@ -9,14 +9,17 @@ describe("CoachingSessionsCardFilterStore", () => {
     store = createCoachingSessionsCardFilterStore();
   });
 
-  it("initializes with the default time range and no relationship filter", () => {
-    expect(store.getState().timeWindow).toBe(SessionTimeWindow.Day);
+  it("initializes with the default time range (Week) and no relationship filter", () => {
+    // Week (±7 days) is the default — picked to match the weekly coaching
+    // cadence so common cases (a session a couple days out) are visible
+    // without the user having to discover the Filters popover.
+    expect(store.getState().timeWindow).toBe(SessionTimeWindow.Week);
     expect(store.getState().relationshipFilter).toBeUndefined();
   });
 
   it("sets and retrieves the time range", () => {
-    store.getState().setTimeWindow(SessionTimeWindow.Week);
-    expect(store.getState().timeWindow).toBe(SessionTimeWindow.Week);
+    store.getState().setTimeWindow(SessionTimeWindow.Day);
+    expect(store.getState().timeWindow).toBe(SessionTimeWindow.Day);
   });
 
   it("sets and retrieves the relationship filter", () => {
@@ -37,7 +40,7 @@ describe("CoachingSessionsCardFilterStore", () => {
 
     store.getState().resetCoachingSessionsCardFilters();
 
-    expect(store.getState().timeWindow).toBe(SessionTimeWindow.Day);
+    expect(store.getState().timeWindow).toBe(SessionTimeWindow.Week);
     expect(store.getState().relationshipFilter).toBeUndefined();
   });
 });
