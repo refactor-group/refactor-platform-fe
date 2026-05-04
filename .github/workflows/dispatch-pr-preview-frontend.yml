@@ -39,10 +39,9 @@ on:
         required: true
         type: choice
         options:
-          - '6887a81 - Merge pull request #382 from refactor-group/feat/dashboard-sessions-list'
-          - dbb9f6c - Merge branch 'main' into feat/dashboard-sessions-list
-          - '77c34f9 - chore: refresh preview commit choices [skip ci]'
-          - af56626 - PR#385 (fix/unused-local-variables)
+          - 'ca6cbba - Merge pull request #385 from refactor-group/fix/unused-local-variables'
+          - fbd2e2b - Merge branch 'main' into fix/unused-local-variables
+          - '309dbc2 - chore: refresh preview commit choices [skip ci]'
           - 1a12c9a - PR#379 (ci/runtime-ref-resolver)
           - 41f85e8 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
