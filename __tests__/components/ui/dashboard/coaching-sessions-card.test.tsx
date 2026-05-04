@@ -825,7 +825,7 @@ describe("CoachingSessionsCard", () => {
   // ── Date-range chip + dropdown date hints ─────────────────────────────
   //
   // The header chip shows the *resolved* calendar range (e.g.
-  // "Apr 27 – May 11") instead of the abstract "+/- 7 days". The dropdown
+  // "Apr 27 – May 11") instead of the abstract "1 week". The dropdown
   // options also stack the resolved range under the abstract size so the
   // user previews "what would I get?" before selecting. Both share the
   // same anchor (`mountNow`) so chip text and dropdown previews always
@@ -856,9 +856,9 @@ describe("CoachingSessionsCard", () => {
 
       render(<CoachingSessionsCard onReschedule={vi.fn()} />);
 
-      // Chip should show the resolved dates, NOT "+/- 7 days".
+      // Chip should show the resolved dates, NOT the abstract label.
       expect(screen.getByText(/Apr 27 – May 11/)).toBeInTheDocument();
-      expect(screen.queryByText("+/- 7 days")).not.toBeInTheDocument();
+      expect(screen.queryByText("1 week")).not.toBeInTheDocument();
     });
 
     it("recomputes the chip range when a different window size is selected", () => {

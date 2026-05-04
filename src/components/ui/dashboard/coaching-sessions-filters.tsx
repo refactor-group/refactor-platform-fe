@@ -37,15 +37,14 @@ export const TIME_WINDOW_DURATIONS: Record<SessionTimeWindow, DurationObject> = 
   [SessionTimeWindow.Quarter]: { days: 90 },
 };
 
-// `+/-` prefix signals symmetry around `now` — sessions within this range
-// before and after the current time are both shown. Used as the abstract
-// label in the dropdown (where the user is choosing window *size*, not a
-// specific date range).
+// Natural-language window sizes. The symmetry-around-now signal is carried
+// by the resolved date range shown beneath each option (and in the header
+// chip), so the abstract label can stay short and conversational.
 export const TIME_WINDOW_LABELS: Record<SessionTimeWindow, string> = {
-  [SessionTimeWindow.Day]: "+/- 24 hours",
-  [SessionTimeWindow.Week]: "+/- 7 days",
-  [SessionTimeWindow.Month]: "+/- 30 days",
-  [SessionTimeWindow.Quarter]: "+/- 90 days",
+  [SessionTimeWindow.Day]: "1 day",
+  [SessionTimeWindow.Week]: "1 week",
+  [SessionTimeWindow.Month]: "1 month",
+  [SessionTimeWindow.Quarter]: "3 months",
 };
 
 /**
