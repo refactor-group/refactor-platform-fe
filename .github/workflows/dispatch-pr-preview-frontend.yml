@@ -26,23 +26,26 @@ on:
         required: true
         type: choice
         options:
-          - '2947956 - chore: refresh preview commit choices [skip ci]'
-          - '22f2054 - Merge pull request #294 from refactor-group/fix/test-en'
-          - 'd68a916 - review: document Config::default side effect and hoist '
-          - 8dda4ef - PR#291 (ci/runtime-ref-resolver)
-          - a51652a - PR#254 (ai-transcription-milestone-2)
+          - 'e166cb0 - chore: refresh preview commit choices [skip ci]'
+          - '98994a1 - Merge pull request #299 from refactor-group/fix/auto-pr'
+          - 'd4eaf4b - fix: lookup relationship before opening link txn'
+          - a1f8a01 - PR#298 (mcp-proof-of-concept-via-warp)
+          - f0e953f - PR#297 (mcp-server-adr)
+          - 1123161 - PR#291 (ci/runtime-ref-resolver)
+          - b85b2ac - PR#254 (ai-transcription-milestone-2)
           - dcaf354 - PR#213 (feature/146-ai-meeting-integra)
       frontend_commit:
         description: "Frontend commit to deploy"
         required: true
         type: choice
         options:
-          - 'c43ae9b - chore: refresh preview commit choices [skip ci]'
-          - '8c2faed - Merge pull request #381 from refactor-group/fix/goals-overview-empty-coachee-copy'
-          - 4b48a91 - Merge branch 'main' into fix/goals-overview-empty-coachee-copy
-          - 2ea1159 - PR#382 (feat/dashboard-sessions-list)
-          - 79083cf - PR#379 (ci/runtime-ref-resolver)
-          - 0ede2a2 - PR#373 (feature/transcript-pane)
+          - 'ebcfa51 - chore: refresh preview commit choices [skip ci]'
+          - '0d09857 - Merge pull request #383 from refactor-group/fix/goal-link-error-handling'
+          - '0a94cee - refactor(goals): break ref cycle in link 409 recovery; tighten error parsers'
+          - 3694021 - PR#385 (fix/unused-local-variables)
+          - f203b19 - PR#382 (feat/dashboard-sessions-list)
+          - 1a12c9a - PR#379 (ci/runtime-ref-resolver)
+          - 9d95029 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
           - 9e30ca1 - PR#315 (improve-nullable-types)
           - d9e1e08 - PR#243 (feature/146-ai-meeting-integra)

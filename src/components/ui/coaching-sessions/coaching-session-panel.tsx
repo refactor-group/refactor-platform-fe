@@ -15,7 +15,7 @@ import {
   SlideDirection,
   useGoalFlow,
 } from "@/components/ui/coaching-sessions/goal-flow";
-import type { GoalFlowState } from "@/components/ui/coaching-sessions/goal-flow";
+import type { GoalFlowState, LinkAttemptResult } from "@/components/ui/coaching-sessions/goal-flow";
 import {
   useGoalsBySession,
   useGoalList,
@@ -37,6 +37,8 @@ import {
   extractActiveGoalLimitError,
   goalTitle,
   isAtGoalLimit,
+  isCannotLinkCompletedGoalError,
+  isGoalAlreadyLinkedToSessionError,
   maxActiveGoals,
 } from "@/types/goal";
 import type { Id } from "@/types/general";
@@ -188,14 +190,16 @@ export function GoalFlowPages({
         </div>
       );
 
-    case GoalFlowStep.SelectingSwap:
+    case GoalFlowStep.SelectingSwap: {
+      const isLinkRecovery = flow.pendingLinkGoalId !== undefined;
+      const prompt = isLinkRecovery
+        ? `You already have ${maxActiveGoals()} goals in progress. Pick one to put on hold so this one can replace it.`
+        : `You already have ${maxActiveGoals()} goals in progress. Select an existing goal to replace with a new one.`;
       return (
         <SlidePanel direction={goalFlow.direction}>
           <div className="rounded-lg border border-border bg-background p-3 space-y-3">
-            <p className="text-[12px] text-muted-foreground">
-              You already have {maxActiveGoals()} goals in progress. Select an existing goal to replace with a new one.
-            </p>
-            {linkedGoals.map((goal) => (
+            <p className="text-[12px] text-muted-foreground">{prompt}</p>
+            {goalFlow.swapCandidates.map((goal) => (
               <CompactGoalCard
                 key={goal.id}
                 goal={goal}
@@ -215,6 +219,7 @@ export function GoalFlowPages({
           </div>
         </SlidePanel>
       );
+    }
 
     case GoalFlowStep.Browsing:
       return (
@@ -321,44 +326,66 @@ export function CoachingSessionPanel({
 
   // ── Goal handlers ────────────────────────────────────────────────
 
+  // Returns a LinkAttemptResult so useGoalFlow can react to a cap-collision
+  // 409 by transitioning into 409-recovery without a feedback cycle. All
+  // other terminal outcomes (success, already-linked, completed-goal,
+  // generic error) are handled inline with toasts/refreshes here.
   const handleLink = useCallback(
-    async (goalId: string) => {
-      const goal = allGoals.find((g) => g.id === goalId);
-      if (goal && goal.status === ItemStatus.OnHold) {
-        try {
-          await updateGoal(goalId, { ...goal, status: ItemStatus.InProgress });
-        } catch (err) {
-          const limitInfo = extractActiveGoalLimitError(err);
-          if (limitInfo) {
-            toast({
-              variant: "destructive",
-              title: "Goal limit reached",
-              description: `You already have ${limitInfo.maxActiveGoals} goals in progress. Please complete or change the status of one before starting another.`,
-            });
-          } else {
-            console.error("Failed to activate goal:", err);
-          }
-          return;
-        }
+    async (goalId: string): Promise<LinkAttemptResult> => {
+      // BE auto-promotes NotStarted/OnHold goals to InProgress atomically with
+      // the join insert (see goal_session_link_invariant decision). FE must
+      // NOT pre-promote — that races with the server's atomic write.
+      const result = await GoalApi.linkToSession(coachingSessionId, goalId);
+      if (result.isOk()) {
+        refreshSessionGoals();
+        refreshAllGoals();
+        return { kind: "done" };
       }
 
-      const result = await GoalApi.linkToSession(coachingSessionId, goalId);
-      result.match(
-        () => {
-          refreshSessionGoals();
-          refreshAllGoals();
-        },
-        (err) => {
-          console.error("Failed to link goal:", err);
-          toast({
-            variant: "destructive",
-            title: "Failed to link goal",
-            description: err.message,
-          });
-        }
-      );
+      const err = result.error;
+      const limitInfo = extractActiveGoalLimitError(err);
+      if (limitInfo) {
+        // Authoritative candidate list comes from details.in_progress_goals —
+        // the FE's own atLimit/linkedGoals view may be stale at this point.
+        // The hook will transition to SelectingSwap; the panel doesn't toast.
+        return { kind: "needs-swap-recovery", candidates: limitInfo.inProgressGoals };
+      }
+      if (isGoalAlreadyLinkedToSessionError(err)) {
+        // Race: another tab/window linked the same goal between when the
+        // FE's linkable list was computed and this request. The FE
+        // normally filters already-linked goals out of the picker, so
+        // this is rare in practice. Refresh state so the goal disappears
+        // from any visible list.
+        refreshSessionGoals();
+        refreshAllGoals();
+        const goal = allGoals.find((g) => g.id === goalId);
+        const name = goal ? goalTitle(goal) : "This goal";
+        toast({
+          variant: "destructive",
+          title: "Already linked",
+          description: `"${name}" is already linked to this session.`,
+        });
+        return { kind: "done" };
+      }
+      if (isCannotLinkCompletedGoalError(err)) {
+        const goal = allGoals.find((g) => g.id === goalId);
+        const name = goal ? goalTitle(goal) : "This goal";
+        toast({
+          variant: "destructive",
+          title: "Goal is completed",
+          description: `"${name}" is completed. Reopen it to in-progress before linking it to a session.`,
+        });
+        return { kind: "done" };
+      }
+      console.error("Failed to link goal:", err);
+      toast({
+        variant: "destructive",
+        title: "Failed to link goal",
+        description: err.message,
+      });
+      return { kind: "done" };
     },
-    [coachingSessionId, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
+    [coachingSessionId, allGoals, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleUnlink = useCallback(
@@ -389,9 +416,27 @@ export function CoachingSessionPanel({
               onClick: async () => {
                 const relinkResult = await GoalApi.linkToSession(coachingSessionId, goalId);
                 if (relinkResult.isErr()) {
-                  sonnerToast.error("Failed to undo", {
-                    description: relinkResult.error.message,
-                  });
+                  const err = relinkResult.error;
+                  const limitInfo = extractActiveGoalLimitError(err);
+                  if (limitInfo) {
+                    sonnerToast.error("Goal limit reached", {
+                      description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Demote one before restoring this goal.`,
+                    });
+                  } else if (isGoalAlreadyLinkedToSessionError(err)) {
+                    // Concurrent re-link won the race — the goal is back, so
+                    // surface a softer message and refresh.
+                    sonnerToast("Goal already restored", {
+                      description: "Looks like it was added back from another window.",
+                    });
+                    refreshSessionGoals();
+                    refreshAllGoals();
+                  } else if (isCannotLinkCompletedGoalError(err)) {
+                    sonnerToast.error("Goal is completed", {
+                      description: "Reopen this goal to in-progress before linking it again.",
+                    });
+                  } else {
+                    sonnerToast.error("Failed to undo", { description: err.message });
+                  }
                   return;
                 }
                 if (!readOnly && goal && previousStatus === ItemStatus.InProgress) {
@@ -439,7 +484,7 @@ export function CoachingSessionPanel({
           toast({
             variant: "destructive",
             title: "Goal limit reached",
-            description: `You already have ${limitInfo.maxActiveGoals} goals in progress. Please complete or change the status of one before starting another.`,
+            description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Please complete or change the status of one before starting another.`,
           });
         } else {
           console.error("Failed to create goal:", err);
@@ -612,6 +657,7 @@ export function CoachingSessionPanel({
     onSwapAndLink: handleSwapAndLink,
     onCreateAndLink: handleCreateAndLink,
     onCreateAndSwap: handleCreateAndSwap,
+    onRefreshGoals: refreshAllGoals,
   });
 
   // ── Action hooks & state ─────────────────────────────────────────
