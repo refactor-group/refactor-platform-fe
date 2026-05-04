@@ -39,8 +39,6 @@ const ENRICHMENT_INCLUDES = [
 export interface CoachingSessionsCardProps {
   /** Opens the create/edit dialog with the given session pre-filled. */
   onReschedule: (session: CoachingSession | EnrichedCoachingSession) => void;
-  /** Notify the parent so it can refresh sibling cards (e.g. UpcomingSessionCard). */
-  onSessionDeleted?: () => void;
 }
 
 /**
@@ -128,15 +126,29 @@ export function CoachingSessionsCard({
   // a dual-fetch would produce: backend `from_date`/`to_date` are `[from, to]`
   // inclusive at calendar-day precision, so two queries meeting at `now` would
   // both return today's sessions and render them in both tabs.
-  const now = useMemo(() => DateTime.now(), []);
+  //
+  // Two distinct "now"s on purpose:
+  //   - `mountNow` is frozen at mount and drives `fromDate`/`toDate` so the SWR
+  //     fetch key stays stable. Re-deriving it on every tick would refetch the
+  //     session list every minute for no benefit.
+  //   - `now` ticks every minute and drives the partition so a session whose
+  //     start time crosses the boundary while the dashboard is open migrates
+  //     from Upcoming to Previous within ≤ 60s. SWR's revalidate-on-focus is
+  //     the orthogonal mechanism for picking up *new* sessions.
+  const mountNow = useMemo(() => DateTime.now(), []);
+  const [now, setNow] = useState(() => DateTime.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(DateTime.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const windowDuration = TIME_WINDOW_DURATIONS[timeWindow];
   const fromDate = useMemo(
-    () => now.minus(windowDuration),
-    [now, windowDuration]
+    () => mountNow.minus(windowDuration),
+    [mountNow, windowDuration]
   );
   const toDate = useMemo(
-    () => now.plus(windowDuration),
-    [now, windowDuration]
+    () => mountNow.plus(windowDuration),
+    [mountNow, windowDuration]
   );
 
   const {
@@ -155,11 +167,15 @@ export function CoachingSessionsCard({
 
   // Sessions starting exactly at `now` belong in Upcoming. Previous is reversed
   // so the most recent session appears first, matching the prior `desc` fetch.
+  // `{ zone: "utc" }` matches the row formatter (`coaching-sessions-row.tsx`)
+  // because the backend ships naive ISO datetime strings — without it Luxon
+  // parses in the viewer's local zone, shifting the absolute time by the user's
+  // UTC offset and bucketing boundary sessions into the wrong tab.
   const { upcomingSessions, previousSessions } = useMemo(() => {
     const upcoming: EnrichedCoachingSession[] = [];
     const previous: EnrichedCoachingSession[] = [];
     for (const session of allSessions) {
-      if (DateTime.fromISO(session.date) >= now) {
+      if (DateTime.fromISO(session.date, { zone: "utc" }) >= now) {
         upcoming.push(session);
       } else {
         previous.push(session);

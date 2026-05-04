@@ -42,6 +42,13 @@ export const createCoachingSessionsCardFilterStore = (
           },
         }),
         {
+          // Persisted in sessionStorage (cleared on tab close, survives in-tab
+          // navigation + reload). Intentionally NOT cleared on logout: the
+          // safety net for a stale `relationshipFilter` after logout/login
+          // (different user → different relationship set) lives in the card's
+          // cleanup effect, which reconciles the persisted id against the
+          // freshly-loaded relationships and clears it if it no longer
+          // resolves. See `coaching-sessions-card.tsx`.
           name: "coaching-sessions-card-filter-store",
           storage: createJSONStorage(() => sessionStorage),
           version: 1,

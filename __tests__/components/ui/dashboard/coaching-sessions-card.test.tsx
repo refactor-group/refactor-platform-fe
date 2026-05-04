@@ -180,6 +180,20 @@ describe("CoachingSessionsCard", () => {
     expect(screen.getByText(/no upcoming sessions/i)).toBeInTheDocument();
   });
 
+  // Notes on partition behavior NOT directly asserted below — coverage gaps
+  // worth re-considering if the helper is rewritten:
+  //
+  //   - `now` is captured at mount AND ticks every 60s in the card itself.
+  //     A session crossing the boundary while the dashboard sits open
+  //     migrates Upcoming → Previous within ≤ 60s. Asserting this would
+  //     require fake timers + advancing past 60s; the cost-to-signal of
+  //     simulating a real-time tick exceeds its value here.
+  //   - The partition parses `session.date` with `{ zone: "utc" }` because
+  //     the backend ships naive ISO datetime strings; without that, sessions
+  //     near `now` would partition into the wrong tab in non-UTC viewer
+  //     zones. Reproducing that bug deterministically requires controlling
+  //     `process.env.TZ` at vitest startup, which the current test infra
+  //     doesn't gate per-file.
   it("places the upcoming-window sessions in Upcoming and previous-window sessions in Previous", async () => {
     const user = userEvent.setup();
     setupBaseAuth();

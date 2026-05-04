@@ -73,10 +73,7 @@ export function DashboardContainer() {
       </div>
 
       <div className="w-full">
-        <CoachingSessionsCard
-          onReschedule={handleOpenDialog}
-          onSessionDeleted={() => refreshUpcomingSession?.()}
-        />
+        <CoachingSessionsCard onReschedule={handleOpenDialog} />
       </div>
       <CoachingSessionDialog
         open={dialogOpen}

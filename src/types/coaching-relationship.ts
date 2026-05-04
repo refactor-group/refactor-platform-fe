@@ -1,6 +1,5 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
-import { RelationshipRole } from "@/types/relationship-role";
 import { User } from "@/types/user";
 
 export interface CoachingRelationship {
@@ -186,48 +185,6 @@ export function getOtherPersonName(
     return `${rel.coachee_first_name} ${rel.coachee_last_name}`.trim();
   }
   return `${rel.coach_first_name} ${rel.coach_last_name}`.trim();
-}
-
-/**
- * The other participant's display info, derived from the relationship.
- *
- * Relationship-scoped twin of `getSessionParticipantInfo` (which requires
- * an enriched session). Use when you have the relationship in hand but not
- * a per-session enriched payload — e.g. listing many sessions on the
- * dashboard without losing SWR cache reuse with the session page.
- */
-export interface RelationshipParticipantInfo {
-  /** Joined "First Last" of the counterpart, trimmed; may be empty if both name fields are blank. */
-  readonly participantName: string;
-  /** Counterpart's first name (for avatar initials). */
-  readonly firstName: string;
-  /** Counterpart's last name (for avatar initials). */
-  readonly lastName: string;
-  /** The viewer's role in the relationship. */
-  readonly userRole: RelationshipRole;
-  /** True when the viewer is the coach (and therefore counterpart is the coachee). */
-  readonly isCoach: boolean;
-}
-
-export function getRelationshipParticipantInfo(
-  relationship: CoachingRelationshipWithUserNames,
-  viewerId: Id
-): RelationshipParticipantInfo {
-  const isCoach = relationship.coach_id === viewerId;
-  const userRole = isCoach ? RelationshipRole.Coach : RelationshipRole.Coachee;
-  const firstName = isCoach
-    ? relationship.coachee_first_name
-    : relationship.coach_first_name;
-  const lastName = isCoach
-    ? relationship.coachee_last_name
-    : relationship.coach_last_name;
-  return {
-    participantName: `${firstName} ${lastName}`.trim(),
-    firstName,
-    lastName,
-    userRole,
-    isCoach,
-  };
 }
 
 /**
