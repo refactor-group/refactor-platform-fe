@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
+import { toast as sonnerToast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,13 +12,18 @@ import {
   type RelationshipOption,
 } from "@/components/ui/dashboard/coaching-sessions-filters";
 import { CoachingSessionsListView } from "@/components/ui/dashboard/coaching-sessions-list-view";
+import { DeleteSessionDialog } from "@/components/ui/dashboard/delete-session-dialog";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { useEnrichedCoachingSessionsForUser } from "@/lib/api/coaching-sessions";
+import {
+  useCoachingSessionMutation,
+  useEnrichedCoachingSessionsForUser,
+} from "@/lib/api/coaching-sessions";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
+import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
   CoachingSessionInclude,
   type CoachingSession,
@@ -39,6 +45,14 @@ const ENRICHMENT_INCLUDES = [
 export interface CoachingSessionsCardProps {
   /** Opens the create/edit dialog with the given session pre-filled. */
   onReschedule: (session: CoachingSession | EnrichedCoachingSession) => void;
+  /** Surfaces the card's internal SWR `refresh()` to the parent so it can
+   *  force a revalidate after a create/edit dialog closes. The
+   *  user-scoped enriched fetch uses a tuple SWR key (`[url, params]`),
+   *  which `useEntityMutation`'s auto-invalidation skips because it
+   *  filters by `typeof key === "string"`. Without this hook-up, newly-
+   *  created sessions wouldn't appear in the list until a hard reload.
+   *  Mirrors `UpcomingSessionCard.onRefreshNeeded`. */
+  onRefreshNeeded?: (refresh: () => void) => void;
 }
 
 /**
@@ -51,6 +65,7 @@ export interface CoachingSessionsCardProps {
  */
 export function CoachingSessionsCard({
   onReschedule,
+  onRefreshNeeded,
 }: CoachingSessionsCardProps) {
   const userSession = useAuthStore((s) => s.userSession);
   const userId = userSession?.id;
@@ -155,6 +170,7 @@ export function CoachingSessionsCard({
     enrichedSessions: allSessions,
     isLoading,
     isError,
+    refresh: refreshSessions,
   } = useEnrichedCoachingSessionsForUser(
     userId ?? null,
     fromDate,
@@ -164,6 +180,16 @@ export function CoachingSessionsCard({
     "asc",
     relationshipFilter
   );
+
+  // Surface refresh to the parent so dialog-close (after create/edit) can
+  // force a revalidate. The dependency array intentionally omits
+  // `refreshSessions` — SWR's mutate identity is stable per key, but adding
+  // it here would cause the parent's stored callback to swap on every
+  // window-tick re-render, defeating the parent's `useCallback` memo.
+  useEffect(() => {
+    onRefreshNeeded?.(refreshSessions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onRefreshNeeded]);
 
   // Sessions starting exactly at `now` belong in Upcoming. Previous is reversed
   // so the most recent session appears first, matching the prior `desc` fetch.
@@ -212,6 +238,61 @@ export function CoachingSessionsCard({
       : undefined
   );
 
+  // ── Delete flow ──────────────────────────────────────────────────────
+  // The dialog and mutation live here (alongside SWR) so a single dialog
+  // instance serves every row and SWR cache invalidation runs at the same
+  // scope as the fetch that populated it. `useEntityMutation` auto-mutates
+  // every SWR key matching the entity baseUrl on success — no manual
+  // refresh call is needed.
+  const { delete: deleteSession } = useCoachingSessionMutation();
+  const [sessionPendingDelete, setSessionPendingDelete] = useState<
+    EnrichedCoachingSession | undefined
+  >(undefined);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const pendingParticipantName = useMemo(() => {
+    if (!sessionPendingDelete || !userSession) return "";
+    const info = getSessionParticipantInfo(sessionPendingDelete, userSession.id);
+    return info?.participantName ?? "Unknown";
+  }, [sessionPendingDelete, userSession]);
+
+  const handleRequestDelete = useCallback(
+    (session: EnrichedCoachingSession) => setSessionPendingDelete(session),
+    []
+  );
+
+  const handleCancelDelete = useCallback(() => {
+    setSessionPendingDelete(undefined);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!sessionPendingDelete) return;
+    const target = sessionPendingDelete;
+    setIsDeleting(true);
+    try {
+      await deleteSession(target.id);
+      // `useEntityMutation`'s built-in cache invalidation matches keys
+      // containing the entity baseUrl (`coaching_sessions/`), but the
+      // dashboard fetches via `useEnrichedCoachingSessionsForUser` which
+      // hits a *user-scoped* endpoint — its cache key doesn't match, so
+      // the deleted row would linger until a hard refresh. Pull the
+      // hook's own `refresh()` instead. Disappearance of the row is the
+      // only feedback the user gets (no success toast — confirmation
+      // already happened via the dialog), so this revalidate is
+      // load-bearing.
+      refreshSessions();
+      setSessionPendingDelete(undefined);
+    } catch (err) {
+      sonnerToast.error("Failed to delete session", {
+        description:
+          err instanceof Error ? err.message : "Please try again.",
+      });
+      setSessionPendingDelete(undefined);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [sessionPendingDelete, deleteSession, refreshSessions]);
+
   return (
     <TooltipProvider delayDuration={200}>
       {/* `md:h-[360px]` is a *fixed* height (~50% taller than the two cards
@@ -247,10 +328,19 @@ export function CoachingSessionsCard({
               hoveredSession={hoveredSession}
               onHoverChange={setHoveredSessionId}
               onReschedule={onReschedule}
+              onRequestDelete={handleRequestDelete}
             />
           )}
         </CardContent>
       </Card>
+      <DeleteSessionDialog
+        session={sessionPendingDelete}
+        participantName={pendingParticipantName}
+        userTimezone={userSession?.timezone || getBrowserTimezone()}
+        isDeleting={isDeleting}
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+      />
     </TooltipProvider>
   );
 }

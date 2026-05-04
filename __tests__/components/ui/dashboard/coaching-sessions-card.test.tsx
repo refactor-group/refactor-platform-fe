@@ -40,9 +40,25 @@ vi.mock(
 // precision. The mock returns one combined dataset; tests that distinguish
 // "upcoming" vs "previous" rely on `session.date` relative to `now`.
 const mockUseEnrichedCoachingSessionsForUser = vi.fn();
+// Delete-flow plumbing: `useCoachingSessionMutation` exposes `delete`. We
+// expose a fresh `mockDelete` per test so assertions on call args /
+// rejection paths stay isolated.
+const mockDelete = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", () => ({
   useEnrichedCoachingSessionsForUser: () =>
     mockUseEnrichedCoachingSessionsForUser(),
+  useCoachingSessionMutation: () => ({ delete: mockDelete }),
+}));
+
+// Sonner is mounted globally in app/layout but isn't rendered in unit
+// tests, so we mock the module surface and assert the toast calls
+// directly. Only `error` is used today — successful deletes communicate
+// via the row disappearing, not a toast.
+const mockToastError = vi.fn();
+vi.mock("sonner", () => ({
+  toast: {
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
 }));
 
 // Forward args so tests can assert the call was scoped by the hovered
@@ -88,7 +104,9 @@ interface FilterStoreOverrides {
 /** Configure the sticky filter store with the given persisted values. */
 function setupFilterStore(overrides: FilterStoreOverrides = {}) {
   mockFilterStore.mockReturnValue({
-    timeWindow: overrides.timeWindow ?? SessionTimeWindow.Day,
+    // Mirrors the production default (Week) so tests share the same baseline
+    // the user actually sees on first load. Override per-test as needed.
+    timeWindow: overrides.timeWindow ?? SessionTimeWindow.Week,
     relationshipFilter: overrides.relationshipFilter,
     setTimeWindow: mockSetTimeWindow,
     setRelationshipFilter: mockSetRelationshipFilter,
@@ -117,6 +135,12 @@ interface WindowMocks {
  * unambiguously-past dates (e.g. 2020) for `previous` and unambiguously-future
  * dates (e.g. 2099) for `upcoming` so the partition is deterministic.
  */
+// Captured at module scope so the delete-flow test can assert that the
+// card calls the hook's `refresh()` after a successful delete — that's
+// the load-bearing wiring (the entity-mutation auto-invalidate doesn't
+// fire because the user-scoped fetch uses a different cache key).
+const mockSessionsRefresh = vi.fn();
+
 function setupSessionWindows({ upcoming, previous }: WindowMocks = {}) {
   const enrichedSessions = [
     ...(previous?.enrichedSessions ?? []),
@@ -126,7 +150,7 @@ function setupSessionWindows({ upcoming, previous }: WindowMocks = {}) {
     enrichedSessions,
     isLoading: !!(upcoming?.isLoading || previous?.isLoading),
     isError: upcoming?.isError ?? previous?.isError,
-    refresh: vi.fn(),
+    refresh: mockSessionsRefresh,
   });
 }
 
@@ -221,7 +245,8 @@ describe("CoachingSessionsCard", () => {
     expect(screen.queryByTestId("session-row-s-future")).not.toBeInTheDocument();
   });
 
-  it("shows Reschedule on upcoming rows for a coach viewer and fires the callback", () => {
+  it("shows Reschedule for a coach viewer inside the row's kebab menu and fires the callback", async () => {
+    const user = userEvent.setup();
     const onReschedule = vi.fn();
     setupBaseAuth({ id: "coach-1", timezone: "UTC" });
 
@@ -231,11 +256,15 @@ describe("CoachingSessionsCard", () => {
     render(<CoachingSessionsCard onReschedule={onReschedule} />);
 
     const row = screen.getByTestId("session-row-s1");
-    fireEvent.click(within(row).getByRole("button", { name: /reschedule/i }));
+    // Reschedule lives inside the kebab dropdown — must open it first.
+    await user.click(within(row).getByRole("button", { name: /session actions/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /reschedule/i })
+    );
     expect(onReschedule).toHaveBeenCalledWith(session);
   });
 
-  it("hides Reschedule on upcoming rows when viewer is the coachee", () => {
+  it("hides the kebab entirely when the viewer is the coachee with no available actions", () => {
     setupBaseAuth({ id: "coachee-1", timezone: "UTC" });
 
     const session = createMockEnrichedSession({ id: "s1", date: FAR_FUTURE });
@@ -244,11 +273,12 @@ describe("CoachingSessionsCard", () => {
     render(<CoachingSessionsCard onReschedule={vi.fn()} />);
 
     const row = screen.getByTestId("session-row-s1");
+    // Coachee has no Reschedule and no Delete (coach-only) → the kebab
+    // shouldn't render at all. Empty kebabs are noise.
     expect(
-      within(row).queryByRole("button", { name: /reschedule/i })
+      within(row).queryByRole("button", { name: /session actions/i })
     ).not.toBeInTheDocument();
-    // Two Join links rendered: one desktop (hover-revealed), one mobile-only.
-    // Both must point at the same coaching session detail route.
+    // The Join link still renders so coachees can navigate.
     const links = within(row).getAllByRole("link");
     expect(links.length).toBeGreaterThanOrEqual(1);
     for (const link of links) {
@@ -256,7 +286,7 @@ describe("CoachingSessionsCard", () => {
     }
   });
 
-  it("renders the View link instead of Join on the Previous tab", async () => {
+  it("renders the View link instead of Join on the Previous tab and offers Delete in the kebab", async () => {
     const user = userEvent.setup();
     setupBaseAuth();
 
@@ -267,11 +297,18 @@ describe("CoachingSessionsCard", () => {
 
     await user.click(screen.getByRole("tab", { name: /previous/i }));
     const row = screen.getByTestId("session-row-s-past");
-    expect(
-      within(row).queryByRole("button", { name: /reschedule/i })
-    ).not.toBeInTheDocument();
     const viewButtons = within(row).getAllByRole("button", { name: /view/i });
     expect(viewButtons.length).toBeGreaterThanOrEqual(1);
+
+    // Past sessions: no Reschedule, but Delete is still available to the
+    // coach. Open the kebab to assert both invariants.
+    await user.click(within(row).getByRole("button", { name: /session actions/i }));
+    expect(
+      screen.queryByRole("menuitem", { name: /reschedule/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /delete session/i })
+    ).toBeInTheDocument();
   });
 
   it("shows the empty hover-detail panel before any row is hovered", () => {
@@ -513,6 +550,245 @@ describe("CoachingSessionsCard", () => {
       render(<CoachingSessionsCard onReschedule={vi.fn()} />);
 
       expect(mockSetRelationshipFilter).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Delete flow ──────────────────────────────────────────────────────
+  //
+  // Covers the kebab-menu → AlertDialog → mutation pipeline. The card owns
+  // the dialog state (single instance for all rows) and the mutation, so
+  // every assertion in this block targets the card's externally-visible
+  // contract: which menu items are reachable, what copy the dialog shows,
+  // which API the confirm button drives, and which toasts fire on
+  // success/failure.
+  describe("delete flow", () => {
+    it("opens the confirmation dialog with the unified copy when Delete is clicked on an upcoming row", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+
+      const session = createMockEnrichedSession({
+        id: "s-upcoming",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(
+        within(screen.getByTestId("session-row-s-upcoming")).getByRole("button", {
+          name: /session actions/i,
+        })
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+
+      expect(
+        screen.getByRole("alertdialog", {
+          name: /delete this coaching session/i,
+        })
+      ).toBeInTheDocument();
+      // The dialog uses unified copy regardless of tab — it always names
+      // the cascading loss. For upcoming sessions this is informational
+      // (none yet); for previous sessions it's load-bearing.
+      expect(
+        screen.getByText(/notes and completed actions/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /^delete session$/i })
+      ).toBeInTheDocument();
+    });
+
+    it("opens the same unified dialog on previous rows", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+
+      const session = createMockEnrichedSession({
+        id: "s-past",
+        date: FAR_PAST,
+      });
+      setupSessionWindows({ previous: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(screen.getByRole("tab", { name: /previous/i }));
+      await user.click(
+        within(screen.getByTestId("session-row-s-past")).getByRole("button", {
+          name: /session actions/i,
+        })
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+
+      // Same copy, both tabs. Pinning that the unification didn't quietly
+      // re-introduce a tab-keyed branch.
+      expect(
+        screen.getByText(/notes and completed actions/i)
+      ).toBeInTheDocument();
+    });
+
+    it("does not call the delete API when Cancel is clicked", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+
+      const session = createMockEnrichedSession({
+        id: "s1",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(
+        within(screen.getByTestId("session-row-s1")).getByRole("button", {
+          name: /session actions/i,
+        })
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+      await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    it("calls the delete mutation, refreshes the session list, and closes the dialog when confirmed", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+      mockDelete.mockResolvedValueOnce(undefined);
+
+      const session = createMockEnrichedSession({
+        id: "s-doomed",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(
+        within(screen.getByTestId("session-row-s-doomed")).getByRole(
+          "button",
+          { name: /session actions/i }
+        )
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+      await user.click(
+        screen.getByRole("button", { name: /^delete session$/i })
+      );
+
+      expect(mockDelete).toHaveBeenCalledWith("s-doomed");
+      // Pinning the bug found during browser verification: the entity-
+      // mutation auto-invalidate matches keys by entity baseUrl
+      // (`coaching_sessions/`), but the dashboard fetches via the
+      // user-scoped enriched endpoint, whose cache key doesn't match.
+      // Without an explicit `refresh()` call, the deleted row would
+      // linger until a hard reload.
+      expect(mockSessionsRefresh).toHaveBeenCalled();
+      // Dialog should be gone after a successful confirm.
+      expect(
+        screen.queryByRole("alertdialog", {
+          name: /delete this coaching session/i,
+        })
+      ).not.toBeInTheDocument();
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+
+    it("fires the error toast and closes the dialog when the delete mutation rejects", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+      mockDelete.mockRejectedValueOnce(new Error("API down"));
+
+      const session = createMockEnrichedSession({
+        id: "s-fail",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(
+        within(screen.getByTestId("session-row-s-fail")).getByRole("button", {
+          name: /session actions/i,
+        })
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+      await user.click(
+        screen.getByRole("button", { name: /^delete session$/i })
+      );
+
+      expect(mockDelete).toHaveBeenCalledWith("s-fail");
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to delete session",
+        expect.objectContaining({ description: "API down" })
+      );
+      // No success toast exists — only the error path surfaces a toast.
+      // The dialog still closes after a failure — the user sees the error
+      // toast and can retry from the row.
+      expect(
+        screen.queryByRole("alertdialog", {
+          name: /delete this coaching session/i,
+        })
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not expose Delete in the kebab when the viewer is a coachee", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth({ id: "coachee-1", timezone: "UTC" });
+
+      // Relationship has coach-1 as coach, so coachee-1 is the coachee.
+      const session = createMockEnrichedSession({
+        id: "s1",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      const row = screen.getByTestId("session-row-s1");
+      // Coachee has neither Reschedule nor Delete → no kebab.
+      expect(
+        within(row).queryByRole("button", { name: /session actions/i })
+      ).not.toBeInTheDocument();
+
+      // Sanity: confirm `mockDelete` is never reachable from this row.
+      expect(mockDelete).not.toHaveBeenCalled();
+      // Discharge the unused `user` to satisfy linting in CI; the assertion
+      // chain above is intentionally synchronous.
+      void user;
+    });
+
+    // ── Card-side half of the auto-refresh contract ───────────────────────
+    //
+    // The dashboard relies on `onRefreshNeeded` to plumb the user-scoped
+    // SWR fetch's `refresh()` up to `DashboardContainer` so it can fire
+    // after the create/edit dialog closes. This bypasses the bug in
+    // `useEntityMutation`'s auto-invalidation, which filters by
+    // `typeof key === "string"` and silently skips tuple-keyed
+    // `useEntityList` caches like ours. If a future refactor changes the
+    // hook surface or accidentally drops the prop, the create flow will
+    // start showing stale data without any unit-test failure — unless
+    // this test catches it.
+    it("surfaces the hook's refresh function via onRefreshNeeded on mount", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      const handleRefreshNeeded = vi.fn();
+
+      render(
+        <CoachingSessionsCard
+          onReschedule={vi.fn()}
+          onRefreshNeeded={handleRefreshNeeded}
+        />
+      );
+
+      // Pin: called once with the same fn the test setup wired into
+      // setupSessionWindows.
+      expect(handleRefreshNeeded).toHaveBeenCalledTimes(1);
+      expect(handleRefreshNeeded).toHaveBeenCalledWith(mockSessionsRefresh);
     });
   });
 });

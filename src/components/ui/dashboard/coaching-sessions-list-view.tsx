@@ -33,6 +33,9 @@ export interface CoachingSessionsListViewProps {
   /** Notifies the parent of hover changes (or clears with `undefined`). */
   onHoverChange: (id: Id | undefined) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
+  /** Surfaces a row's "Delete" intent up to the card so the dialog and
+   *  mutation live alongside the SWR cache they invalidate. */
+  onRequestDelete: (session: EnrichedCoachingSession) => void;
 }
 
 export function CoachingSessionsListView({
@@ -45,6 +48,7 @@ export function CoachingSessionsListView({
   hoveredSession,
   onHoverChange,
   onReschedule,
+  onRequestDelete,
 }: CoachingSessionsListViewProps) {
   // Combined list is needed for the helper's prev-session lookup within the
   // hovered session's relationship.
@@ -106,6 +110,7 @@ export function CoachingSessionsListView({
             hoveredId={hoveredSessionId}
             onHover={onHoverChange}
             onReschedule={onReschedule}
+            onRequestDelete={onRequestDelete}
           />
         </TabsContent>
 
@@ -118,6 +123,7 @@ export function CoachingSessionsListView({
             hoveredId={hoveredSessionId}
             onHover={onHoverChange}
             onReschedule={onReschedule}
+            onRequestDelete={onRequestDelete}
           />
         </TabsContent>
       </Tabs>
@@ -152,6 +158,7 @@ interface SessionListColumnProps {
   hoveredId: Id | undefined;
   onHover: (id: Id | undefined) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
+  onRequestDelete: (session: EnrichedCoachingSession) => void;
 }
 
 function SessionListColumn({
@@ -162,6 +169,7 @@ function SessionListColumn({
   hoveredId,
   onHover,
   onReschedule,
+  onRequestDelete,
 }: SessionListColumnProps) {
   if (sessions.length === 0) {
     return (
@@ -183,6 +191,7 @@ function SessionListColumn({
           isHovered={hoveredId === session.id}
           onHover={onHover}
           onReschedule={onReschedule}
+          onRequestDelete={onRequestDelete}
         />
       ))}
     </div>

@@ -3,8 +3,16 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { DateTime } from "ts-luxon";
+import { MoreVertical, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/components/lib/utils";
 import { formatDateWithTime } from "@/lib/utils/date";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
@@ -20,6 +28,10 @@ export interface SessionRowProps {
   isHovered: boolean;
   onHover: (id: Id | undefined) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
+  /** Hands the session up to the card so it can drive the
+   *  `<DeleteSessionDialog>` and the delete mutation. Not invoked on
+   *  rows where the viewer isn't a coach — the kebab item is hidden. */
+  onRequestDelete: (session: EnrichedCoachingSession) => void;
 }
 
 export function SessionRow({
@@ -30,13 +42,21 @@ export function SessionRow({
   isHovered,
   onHover,
   onReschedule,
+  onRequestDelete,
 }: SessionRowProps) {
   const participant = useMemo(
     () => getSessionParticipantInfo(session, viewerId),
     [session, viewerId]
   );
 
-  const showReschedule = !isPast && participant?.isCoach === true;
+  // Reschedule remains coach-only and upcoming-only (matches prior behavior).
+  // Delete is coach-only across both tabs — the cost asymmetry between
+  // upcoming and previous deletions is conveyed by the dialog copy, not by
+  // gating availability.
+  const canReschedule = !isPast && participant?.isCoach === true;
+  const canDelete = participant?.isCoach === true;
+  const hasMenuItems = canReschedule || canDelete;
+
   const participantName = participant?.participantName ?? "Unknown";
   const participantInitials = participant
     ? userSessionFirstLastLettersToString(
@@ -81,20 +101,60 @@ export function SessionRow({
         </div>
       </div>
 
-      {/* Hover-revealed actions are desktop-only; touch devices can't trigger
-          hover, so on mobile we hide them entirely and the user navigates by
-          tapping the link below (Join/View). `h-8 text-xs` matches the
-          UpcomingSessionCard footer button sizing. */}
-      <div className="hidden sm:flex gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        {showReschedule && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs h-8"
-            onClick={() => onReschedule(session)}
-          >
-            Reschedule
-          </Button>
+      {/* Right-side actions. Kebab + Join/View ride together in one block.
+          Mobile (always visible): touch users have no hover, so they need
+          the kebab to reach Delete and the link to navigate. Desktop
+          (hover-revealed): keeps the row visually quiet at rest, surfaces
+          actions when the row is engaged. */}
+      <div
+        className={cn(
+          "flex gap-1.5 shrink-0 items-center",
+          "sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity",
+          // Keep the menu/popover affordances open while the user is
+          // interacting with them — Radix sets `data-state=open` on the
+          // hovered row (kebab button), so we keep the action group visible.
+          "[&:has([data-state=open])]:opacity-100"
+        )}
+      >
+        {hasMenuItems && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Session actions"
+                // `rounded-full` is what gives the hover background a circle
+                // shape (Mercury's idiom) instead of the default rounded
+                // square. `[&_svg]:!h-4 !w-4` defends against the
+                // `buttonVariants` `[&_svg]:size-4` rule documented in
+                // memory — explicit is safer than relying on the default.
+                className="rounded-full h-8 w-8 text-muted-foreground/60 hover:text-foreground"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {canReschedule && (
+                <DropdownMenuItem
+                  onClick={() => onReschedule(session)}
+                  data-testid="session-row-reschedule"
+                >
+                  Reschedule
+                </DropdownMenuItem>
+              )}
+              {canReschedule && canDelete && <DropdownMenuSeparator />}
+              {canDelete && (
+                <DropdownMenuItem
+                  onClick={() => onRequestDelete(session)}
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  data-testid="session-row-delete"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete session
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         <Link href={`/coaching-sessions/${session.id}`}>
           <Button
@@ -106,21 +166,6 @@ export function SessionRow({
           </Button>
         </Link>
       </div>
-
-      {/* Mobile-only always-visible affordance — touch users get a tap target
-          without needing hover. */}
-      <Link
-        href={`/coaching-sessions/${session.id}`}
-        className="sm:hidden shrink-0"
-      >
-        <Button
-          variant={isPast ? "outline" : "default"}
-          size="sm"
-          className="text-xs h-8"
-        >
-          {isPast ? "View" : "Join"}
-        </Button>
-      </Link>
     </div>
   );
 }
