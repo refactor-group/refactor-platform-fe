@@ -1002,4 +1002,115 @@ describe("CoachingSessionsCard", () => {
       ).toBeInTheDocument();
     });
   });
+
+  // ── Date-range chip + dropdown date hints ─────────────────────────────
+  //
+  // The header chip shows the *resolved* calendar range (e.g.
+  // "Apr 27 – May 11") instead of the abstract "+/- 7 days". The dropdown
+  // options also stack the resolved range under the abstract size so the
+  // user previews "what would I get?" before selecting. Both share the
+  // same anchor (`mountNow`) so chip text and dropdown previews always
+  // agree with the data fetch.
+  //
+  // Tests below pin a fixed system time so the resolved ranges are
+  // deterministic. Without this, expected strings would drift with the
+  // wall clock.
+  describe("date-range display in chip and dropdown", () => {
+    // 2026-05-04 noon UTC — chosen so ±7 days produces "Apr 27 – May 11"
+    // entirely within the same year (no year-crossing edge case).
+    const FIXED_NOW = new Date("2026-05-04T12:00:00Z");
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(FIXED_NOW);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("shows the resolved date range in the chip instead of the abstract size", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      // Default ±7 days against May 4 → Apr 27 – May 11.
+      setupFilterStore({ timeWindow: SessionTimeWindow.Week });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      // Chip should show the resolved dates, NOT "+/- 7 days".
+      expect(screen.getByText(/Apr 27 – May 11/)).toBeInTheDocument();
+      expect(screen.queryByText("+/- 7 days")).not.toBeInTheDocument();
+    });
+
+    it("recomputes the chip range when a different window size is selected", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      // ±24 hours against May 4 → May 3 – May 5.
+      setupFilterStore({ timeWindow: SessionTimeWindow.Day });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      expect(screen.getByText(/May 3 – May 5/)).toBeInTheDocument();
+    });
+
+    // Note: the dropdown options stack the resolved range as a secondary
+    // line under each abstract label. Driving the Radix Select open in
+    // JSDOM under fake timers reliably times out (Radix waits for animation
+    // frames the test harness can't advance). The wiring is covered by:
+    //   - The `formatTimeWindowDateRange` unit tests (filters helper)
+    //   - The chip integration tests above (same anchor + helper)
+    // If a future regression silently strips the secondary line, both the
+    // helper output and the chip would be unaffected — at that point a
+    // focused header/popover render test would be worth adding. Today the
+    // cost-to-signal of fighting Radix-in-JSDOM exceeds its value.
+  });
+
+  // ── Share link kebab item ─────────────────────────────────────────────
+  //
+  // Restored from the legacy CoachingSessionList. Universal action — any
+  // viewer (coach or coachee), any tab (upcoming or previous). Routes
+  // through the existing `copyCoachingSessionLinkWithToast` utility so
+  // the success/error toasts come for free.
+  describe("share link", () => {
+    it("invokes the copy utility with the session id when Share link is clicked", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+      const session = createMockEnrichedSession({
+        id: "s-share",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      const row = screen.getByTestId("session-row-s-share");
+      await user.click(within(row).getByRole("button", { name: /session actions/i }));
+      await user.click(
+        await screen.findByRole("menuitem", { name: /share link/i })
+      );
+
+      expect(mockCopyLink).toHaveBeenCalledTimes(1);
+      expect(mockCopyLink).toHaveBeenCalledWith("s-share");
+    });
+
+    it("exposes Share link to coachees as well (universal action)", async () => {
+      const user = userEvent.setup();
+      // Coachee viewer — has no Reschedule and no Delete.
+      setupBaseAuth({ id: "coachee-1", timezone: "UTC" });
+      const session = createMockEnrichedSession({
+        id: "s-coachee",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      const row = screen.getByTestId("session-row-s-coachee");
+      await user.click(within(row).getByRole("button", { name: /session actions/i }));
+      // Share link is the only menu item the coachee should see.
+      expect(
+        screen.getByRole("menuitem", { name: /share link/i })
+      ).toBeInTheDocument();
+    });
+  });
 });
