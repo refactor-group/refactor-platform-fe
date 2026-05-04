@@ -101,3 +101,4 @@ describe("sortRelationshipsByParticipantName", () => {
     expect(sortRelationshipsByParticipantName([], coachId)).toEqual([]);
   });
 });
+

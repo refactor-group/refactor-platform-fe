@@ -1,6 +1,7 @@
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
 import { logoutCleanupRegistry } from "./logout-cleanup-registry";
@@ -15,6 +16,9 @@ export function useLogoutUser() {
   const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(
     (state) => state
   );
+  const resetCoachingSessionsCardFilters = useCoachingSessionsCardFilterStore(
+    (s) => s.resetCoachingSessionsCardFilters
+  );
   const clearCache = EntityApi.useClearCache();
 
   return async () => {
@@ -28,6 +32,7 @@ export function useLogoutUser() {
       // Clear cached data
       clearCache();
       resetCoachingRelationshipState();
+      resetCoachingSessionsCardFilters();
 
       // Clean up backend session
       await deleteUserSession(userSession.id);
