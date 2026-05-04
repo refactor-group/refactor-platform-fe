@@ -19,19 +19,14 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
     selector(mockAuthStore()),
 }));
 
-// The card calls `useEnrichedCoachingSessionsForUser` twice — once with
-// `sortOrder: "asc"` (upcoming) and once with `"desc"` (previous). The mock
-// dispatches by sortOrder so each call gets its own dataset.
+// The card issues a single `useEnrichedCoachingSessionsForUser` call over
+// `[now − window, now + window]` and partitions client-side at timestamp
+// precision. The mock returns one combined dataset; tests that distinguish
+// "upcoming" vs "previous" rely on `session.date` relative to `now`.
 const mockUseEnrichedCoachingSessionsForUser = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", () => ({
-  useEnrichedCoachingSessionsForUser: (
-    _userId: unknown,
-    _from: unknown,
-    _to: unknown,
-    _include: unknown,
-    _sortBy: unknown,
-    sortOrder: "asc" | "desc"
-  ) => mockUseEnrichedCoachingSessionsForUser(sortOrder),
+  useEnrichedCoachingSessionsForUser: () =>
+    mockUseEnrichedCoachingSessionsForUser(),
 }));
 
 const mockUseUserActionsList = vi.fn();
@@ -75,21 +70,25 @@ interface WindowMocks {
   }>;
 }
 
-/** Configure the dual `useEnrichedCoachingSessionsForUser` calls. */
+/**
+ * Configure the single `useEnrichedCoachingSessionsForUser` call. The
+ * `upcoming` / `previous` field names are kept for test ergonomics — the
+ * sessions are merged into one dataset and the card partitions them
+ * client-side based on `session.date` vs `now`. Tests should use
+ * unambiguously-past dates (e.g. 2020) for `previous` and unambiguously-future
+ * dates (e.g. 2099) for `upcoming` so the partition is deterministic.
+ */
 function setupSessionWindows({ upcoming, previous }: WindowMocks = {}) {
-  const baseUpcoming = {
-    enrichedSessions: [],
-    isLoading: false,
-    isError: undefined,
+  const enrichedSessions = [
+    ...(previous?.enrichedSessions ?? []),
+    ...(upcoming?.enrichedSessions ?? []),
+  ];
+  mockUseEnrichedCoachingSessionsForUser.mockReturnValue({
+    enrichedSessions,
+    isLoading: !!(upcoming?.isLoading || previous?.isLoading),
+    isError: upcoming?.isError ?? previous?.isError,
     refresh: vi.fn(),
-  };
-  const basePrevious = { ...baseUpcoming };
-  mockUseEnrichedCoachingSessionsForUser.mockImplementation(
-    (sortOrder: "asc" | "desc") =>
-      sortOrder === "asc"
-        ? { ...baseUpcoming, ...upcoming }
-        : { ...basePrevious, ...previous }
-  );
+  });
 }
 
 const FAR_PAST = "2020-02-15T14:00:00Z";
@@ -297,7 +296,7 @@ describe("CoachingSessionsCard", () => {
     ).toBeDisabled();
   });
 
-  it("renders a Filters trigger that opens a popover with Time window and Relationship controls", async () => {
+  it("renders a Filters trigger that opens a popover with Time Range and Relationship controls", async () => {
     const user = userEvent.setup();
     setupBaseAuth();
     setupSessionWindows();
@@ -310,7 +309,7 @@ describe("CoachingSessionsCard", () => {
     await user.click(filtersBtn);
 
     expect(
-      screen.getByRole("combobox", { name: /time window/i })
+      screen.getByRole("combobox", { name: /time range/i })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: /relationship filter/i })

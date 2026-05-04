@@ -37,11 +37,13 @@ export const TIME_WINDOW_DURATIONS: Record<SessionTimeWindow, DurationObject> = 
   [SessionTimeWindow.Quarter]: { days: 90 },
 };
 
+// `+/-` prefix signals symmetry around `now` — sessions within this range
+// before and after the current time are both shown.
 export const TIME_WINDOW_LABELS: Record<SessionTimeWindow, string> = {
-  [SessionTimeWindow.Day]: "24 hours",
-  [SessionTimeWindow.Week]: "7 days",
-  [SessionTimeWindow.Month]: "30 days",
-  [SessionTimeWindow.Quarter]: "90 days",
+  [SessionTimeWindow.Day]: "+/- 24 hours",
+  [SessionTimeWindow.Week]: "+/- 7 days",
+  [SessionTimeWindow.Month]: "+/- 30 days",
+  [SessionTimeWindow.Quarter]: "+/- 90 days",
 };
 
 export interface RelationshipOption {
@@ -92,10 +94,10 @@ export function FiltersPopover({
         }}
       >
         <div className="space-y-4">
-          {/* Time window — applied symmetrically to both tabs */}
+          {/* Time range — applied symmetrically to both tabs */}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">
-              Time window
+              Time Range
             </Label>
             <Select
               value={timeWindow}
@@ -103,7 +105,7 @@ export function FiltersPopover({
             >
               <SelectTrigger
                 className="w-full h-7 text-xs"
-                aria-label="Time window"
+                aria-label="Time Range"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -117,6 +119,9 @@ export function FiltersPopover({
                 )}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground/70 leading-snug">
+              Past and upcoming sessions relative to now.
+            </p>
           </div>
 
           {/* Relationship — narrows both lists to a single coachee/coach */}

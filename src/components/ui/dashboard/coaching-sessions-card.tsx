@@ -93,49 +93,51 @@ export function CoachingSessionsCard({
     : undefined;
 
   // ── Date window — symmetric around `now`, sized by the time-window filter ─
-  // The fetch matches the displayed window (no over-fetching). For the OLDEST
-  // session in the list, the helper's prior-session lookup will fall back to
-  // `previousFromDate` so it never shows actions due before the user's selection.
+  // Single fetch over `[now − window, now + window]`, partitioned client-side at
+  // full timestamp precision against `now`. This avoids the day-precision overlap
+  // a dual-fetch would produce: backend `from_date`/`to_date` are `[from, to]`
+  // inclusive at calendar-day precision, so two queries meeting at `now` would
+  // both return today's sessions and render them in both tabs.
   const now = useMemo(() => DateTime.now(), []);
   const windowDuration = TIME_WINDOW_DURATIONS[timeWindow];
-  const upcomingFromDate = now;
-  const upcomingToDate = useMemo(
-    () => now.plus(windowDuration),
-    [now, windowDuration]
-  );
-  const previousFromDate = useMemo(
+  const fromDate = useMemo(
     () => now.minus(windowDuration),
     [now, windowDuration]
   );
-  const previousToDate = now;
+  const toDate = useMemo(
+    () => now.plus(windowDuration),
+    [now, windowDuration]
+  );
 
   const {
-    enrichedSessions: upcomingSessions,
-    isLoading: upcomingLoading,
-    isError: upcomingError,
+    enrichedSessions: allSessions,
+    isLoading,
+    isError,
   } = useEnrichedCoachingSessionsForUser(
     userId ?? null,
-    upcomingFromDate,
-    upcomingToDate,
+    fromDate,
+    toDate,
     ENRICHMENT_INCLUDES,
     "date",
     "asc",
     relationshipFilter
   );
 
-  const {
-    enrichedSessions: previousSessions,
-    isLoading: previousLoading,
-    isError: previousError,
-  } = useEnrichedCoachingSessionsForUser(
-    userId ?? null,
-    previousFromDate,
-    previousToDate,
-    ENRICHMENT_INCLUDES,
-    "date",
-    "desc",
-    relationshipFilter
-  );
+  // Sessions starting exactly at `now` belong in Upcoming. Previous is reversed
+  // so the most recent session appears first, matching the prior `desc` fetch.
+  const { upcomingSessions, previousSessions } = useMemo(() => {
+    const upcoming: EnrichedCoachingSession[] = [];
+    const previous: EnrichedCoachingSession[] = [];
+    for (const session of allSessions) {
+      if (DateTime.fromISO(session.date) >= now) {
+        upcoming.push(session);
+      } else {
+        previous.push(session);
+      }
+    }
+    previous.reverse();
+    return { upcomingSessions: upcoming, previousSessions: previous };
+  }, [allSessions, now]);
 
   // Session-scoped actions for the user — narrowed to the chosen relationship
   // when the filter is set, so hover-panel "actions due" stays consistent.
@@ -148,9 +150,6 @@ export function CoachingSessionsCard({
       }),
     }
   );
-
-  const isLoading = upcomingLoading || previousLoading;
-  const isError = !!upcomingError || !!previousError;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -183,7 +182,7 @@ export function CoachingSessionsCard({
               allActions={allActions}
               viewerId={userSession.id}
               userTimezone={userSession.timezone || getBrowserTimezone()}
-              fallbackPriorSessionDate={previousFromDate}
+              fallbackPriorSessionDate={fromDate}
               onReschedule={onReschedule}
             />
           )}
