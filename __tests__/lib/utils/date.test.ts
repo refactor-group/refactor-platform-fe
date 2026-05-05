@@ -12,4 +12,10 @@ describe("formatDateWithTime", () => {
   it("accepts a custom separator", () => {
     expect(formatDateWithTime(date, "·")).toBe("Mar 5, 2026 · 2:00 PM");
   });
+
+  it("prefixes the abbreviated weekday when includeWeekday is true", () => {
+    expect(formatDateWithTime(date, "·", true)).toBe(
+      "Thu, Mar 5, 2026 · 2:00 PM"
+    );
+  });
 });
