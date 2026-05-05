@@ -10,7 +10,7 @@ describe("CoachingSessionsCardFilterStore", () => {
   });
 
   it("initializes with the default time range (Week) and no relationship filter", () => {
-    // Week (±7 days) is the default — picked to match the weekly coaching
+    // Week (a 7-day span centered on now) is the default — picked to match the weekly coaching
     // cadence so common cases (a session a couple days out) are visible
     // without the user having to discover the Filters popover.
     expect(store.getState().timeWindow).toBe(SessionTimeWindow.Week);

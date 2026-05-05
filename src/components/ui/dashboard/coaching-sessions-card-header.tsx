@@ -59,7 +59,7 @@ export function CoachingSessionsCardHeader({
             keep the abstract size as their primary label since the user
             is choosing window *size*, not specific dates. X resets to
             whatever the store defaults to (sourced from
-            `defaultInitState`, currently ±7 days). */}
+            `defaultInitState`, currently a 1-week span). */}
         <Badge variant="secondary" className="gap-1 text-xs h-7 pl-2.5 pr-1.5 tabular-nums">
           {formatTimeWindowDateRange(timeWindow, now)}
           {timeWindow !== DEFAULT_TIME_WINDOW && (

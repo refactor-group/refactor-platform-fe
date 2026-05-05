@@ -30,11 +30,17 @@ export enum SessionTimeWindow {
   Quarter = "90d",
 }
 
+// These are *half-spans*, applied symmetrically as `now - duration` and
+// `now + duration`. The total visible window therefore equals the labeled
+// size (1 day = 24h total, 1 week = 7d total, etc.) — matching what the
+// dropdown labels promise. An earlier version stored full spans here,
+// which made "1 day" silently render a 48-hour window across 3 calendar
+// dates; this naming makes the doubling explicit at the source.
 export const TIME_WINDOW_DURATIONS: Record<SessionTimeWindow, DurationObject> = {
-  [SessionTimeWindow.Day]: { hours: 24 },
-  [SessionTimeWindow.Week]: { days: 7 },
-  [SessionTimeWindow.Month]: { days: 30 },
-  [SessionTimeWindow.Quarter]: { days: 90 },
+  [SessionTimeWindow.Day]: { hours: 12 },
+  [SessionTimeWindow.Week]: { days: 3, hours: 12 },
+  [SessionTimeWindow.Month]: { days: 15 },
+  [SessionTimeWindow.Quarter]: { days: 45 },
 };
 
 // Natural-language window sizes. The symmetry-around-now signal is carried
@@ -55,7 +61,7 @@ export const TIME_WINDOW_LABELS: Record<SessionTimeWindow, string> = {
  *
  * Format: `MMM d – MMM d` when both ends are in the same year; falls back to
  * `MMM d, yyyy – MMM d, yyyy` when the range crosses a year boundary
- * (only realistic at ±90d near year-end). Day-of-month digits stay tabular
+ * (only realistic for the 3-month option near year-end). Day-of-month digits stay tabular
  * via `tabular-nums` at the call site if vertical alignment matters.
  */
 export function formatTimeWindowDateRange(

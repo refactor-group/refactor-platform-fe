@@ -1,7 +1,12 @@
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DateTime } from "ts-luxon";
+import {
+  DateTime,
+  FixedOffsetZone,
+  Settings as LuxonSettings,
+  type Zone,
+} from "ts-luxon";
 import { CoachingSessionsCard } from "@/components/ui/dashboard/coaching-sessions-card";
 import { ItemStatus } from "@/types/general";
 import { Some } from "@/types/option";
@@ -835,41 +840,50 @@ describe("CoachingSessionsCard", () => {
   // deterministic. Without this, expected strings would drift with the
   // wall clock.
   describe("date-range display in chip and dropdown", () => {
-    // 2026-05-04 noon UTC — chosen so ±7 days produces "Apr 27 – May 11"
+    // 2026-05-04 noon UTC — anchored so the 1-week half-span (±3.5d) lands
     // entirely within the same year (no year-crossing edge case).
     const FIXED_NOW = new Date("2026-05-04T12:00:00Z");
+    // Pin luxon to UTC for these assertions. The chip uses
+    // `DateTime.now()`, which respects the local zone — without this the
+    // expected strings would shift between dev machines and CI depending
+    // on `TZ`. The unit tests for `formatTimeWindowDateRange` already
+    // pass an explicit UTC anchor, so they're insulated from this.
+    let originalDefaultZone: Zone;
 
     beforeEach(() => {
       vi.useFakeTimers();
       vi.setSystemTime(FIXED_NOW);
+      originalDefaultZone = LuxonSettings.defaultZone;
+      LuxonSettings.defaultZone = FixedOffsetZone.utcInstance;
     });
 
     afterEach(() => {
       vi.useRealTimers();
+      LuxonSettings.defaultZone = originalDefaultZone;
     });
 
     it("shows the resolved date range in the chip instead of the abstract size", () => {
       setupBaseAuth();
       setupSessionWindows();
-      // Default ±7 days against May 4 → Apr 27 – May 11.
+      // 1 week against May 4 noon → ±3.5d → May 1 – May 8.
       setupFilterStore({ timeWindow: SessionTimeWindow.Week });
 
       render(<CoachingSessionsCard onReschedule={vi.fn()} />);
 
       // Chip should show the resolved dates, NOT the abstract label.
-      expect(screen.getByText(/Apr 27 – May 11/)).toBeInTheDocument();
+      expect(screen.getByText(/May 1 – May 8/)).toBeInTheDocument();
       expect(screen.queryByText("1 week")).not.toBeInTheDocument();
     });
 
     it("recomputes the chip range when a different window size is selected", () => {
       setupBaseAuth();
       setupSessionWindows();
-      // ±24 hours against May 4 → May 3 – May 5.
+      // 1 day against May 4 noon → ±12h → May 4 – May 5.
       setupFilterStore({ timeWindow: SessionTimeWindow.Day });
 
       render(<CoachingSessionsCard onReschedule={vi.fn()} />);
 
-      expect(screen.getByText(/May 3 – May 5/)).toBeInTheDocument();
+      expect(screen.getByText(/May 4 – May 5/)).toBeInTheDocument();
     });
 
     // Note: the dropdown options stack the resolved range as a secondary

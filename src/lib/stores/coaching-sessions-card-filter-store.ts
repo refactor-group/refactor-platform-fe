@@ -18,11 +18,12 @@ export type CoachingSessionsCardFilterStore =
   CoachingSessionsCardFilterState & CoachingSessionsCardFilterActions;
 
 export const defaultInitState: CoachingSessionsCardFilterState = {
-  // Week (±7 days) instead of Day. Coaching cadence is weekly, so a 24-hour
-  // window left common cases (like a session two days out) silently invisible
-  // until the user discovered the Filters popover. Week matches users'
-  // natural mental scheduling unit and surfaces near-term sessions on first
-  // load. The fetch cost difference is negligible at typical session counts.
+  // Week (a 7-day total span centered on now) instead of Day. Coaching
+  // cadence is weekly, so a 1-day window left common cases (like a session
+  // two days out) silently invisible until the user discovered the Filters
+  // popover. Week matches users' natural mental scheduling unit and surfaces
+  // near-term sessions on first load. The fetch cost difference is
+  // negligible at typical session counts.
   timeWindow: SessionTimeWindow.Week,
   relationshipFilter: undefined,
 };
