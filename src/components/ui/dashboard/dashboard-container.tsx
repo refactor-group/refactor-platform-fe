@@ -37,6 +37,7 @@ export function DashboardContainer() {
     CoachingSession | undefined
   >();
   const [refreshUpcomingSession, setRefreshUpcomingSession] = useState<(() => void) | null>(() => null);
+  const [refreshSessionsCard, setRefreshSessionsCard] = useState<(() => void) | null>(() => null);
 
   const handleOpenDialog = (session?: CoachingSession | EnrichedCoachingSession) => {
     setSessionToEdit(session);
@@ -46,14 +47,24 @@ export function DashboardContainer() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setSessionToEdit(undefined);
-    // Force-refresh the upcoming session card after create/edit.
+    // Force-refresh BOTH affected surfaces after create/edit. The
+    // user-scoped fetches behind these cards use a tuple SWR key
+    // (`[url, params]`) which `useEntityMutation`'s auto-invalidation
+    // skips (it filters by `typeof key === "string"`), so without these
+    // explicit calls a newly-created session wouldn't appear in either
+    // card until a hard reload.
     refreshUpcomingSession?.();
+    refreshSessionsCard?.();
   };
 
-  // Stable reference so the card's onRefreshNeeded useEffect doesn't refire
-  // on every parent render.
-  const handleRefreshNeeded = useCallback(
+  // Stable references so the cards' onRefreshNeeded useEffects don't
+  // refire on every parent render.
+  const handleUpcomingSessionRefreshNeeded = useCallback(
     (refreshFn: () => void) => setRefreshUpcomingSession(() => refreshFn),
+    [],
+  );
+  const handleSessionsCardRefreshNeeded = useCallback(
+    (refreshFn: () => void) => setRefreshSessionsCard(() => refreshFn),
     [],
   );
 
@@ -67,13 +78,16 @@ export function DashboardContainer() {
         <UpcomingSessionCard
           onReschedule={handleOpenDialog}
           onCreateSession={() => handleOpenDialog()}
-          onRefreshNeeded={handleRefreshNeeded}
+          onRefreshNeeded={handleUpcomingSessionRefreshNeeded}
         />
         <GoalsOverviewCard />
       </div>
 
       <div className="w-full">
-        <CoachingSessionsCard onReschedule={handleOpenDialog} />
+        <CoachingSessionsCard
+          onReschedule={handleOpenDialog}
+          onRefreshNeeded={handleSessionsCardRefreshNeeded}
+        />
       </div>
       <CoachingSessionDialog
         open={dialogOpen}

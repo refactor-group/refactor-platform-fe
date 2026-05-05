@@ -1,7 +1,12 @@
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { DateTime } from "ts-luxon";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  DateTime,
+  FixedOffsetZone,
+  Settings as LuxonSettings,
+  type Zone,
+} from "ts-luxon";
 import { CoachingSessionsCard } from "@/components/ui/dashboard/coaching-sessions-card";
 import { ItemStatus } from "@/types/general";
 import { Some } from "@/types/option";
@@ -40,9 +45,33 @@ vi.mock(
 // precision. The mock returns one combined dataset; tests that distinguish
 // "upcoming" vs "previous" rely on `session.date` relative to `now`.
 const mockUseEnrichedCoachingSessionsForUser = vi.fn();
+// Delete-flow plumbing: `useCoachingSessionMutation` exposes `delete`. We
+// expose a fresh `mockDelete` per test so assertions on call args /
+// rejection paths stay isolated.
+const mockDelete = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", () => ({
   useEnrichedCoachingSessionsForUser: () =>
     mockUseEnrichedCoachingSessionsForUser(),
+  useCoachingSessionMutation: () => ({ delete: mockDelete }),
+}));
+
+// Sonner is mounted globally in app/layout but isn't rendered in unit
+// tests, so we mock the module surface and assert the toast calls
+// directly. Only `error` is used today — successful deletes communicate
+// via the row disappearing, not a toast.
+const mockToastError = vi.fn();
+vi.mock("sonner", () => ({
+  toast: {
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
+}));
+
+// The Share link kebab item routes through `copyCoachingSessionLink-
+// WithToast`. Mock the whole module so we can assert the right session
+// id was sent to it without exercising the real clipboard write path.
+const mockCopyLink = vi.fn();
+vi.mock("@/components/ui/share-session-link", () => ({
+  copyCoachingSessionLinkWithToast: (id: string) => mockCopyLink(id),
 }));
 
 // Forward args so tests can assert the call was scoped by the hovered
@@ -88,7 +117,9 @@ interface FilterStoreOverrides {
 /** Configure the sticky filter store with the given persisted values. */
 function setupFilterStore(overrides: FilterStoreOverrides = {}) {
   mockFilterStore.mockReturnValue({
-    timeWindow: overrides.timeWindow ?? SessionTimeWindow.Day,
+    // Mirrors the production default (Week) so tests share the same baseline
+    // the user actually sees on first load. Override per-test as needed.
+    timeWindow: overrides.timeWindow ?? SessionTimeWindow.Week,
     relationshipFilter: overrides.relationshipFilter,
     setTimeWindow: mockSetTimeWindow,
     setRelationshipFilter: mockSetRelationshipFilter,
@@ -117,6 +148,12 @@ interface WindowMocks {
  * unambiguously-past dates (e.g. 2020) for `previous` and unambiguously-future
  * dates (e.g. 2099) for `upcoming` so the partition is deterministic.
  */
+// Captured at module scope so the delete-flow test can assert that the
+// card calls the hook's `refresh()` after a successful delete — that's
+// the load-bearing wiring (the entity-mutation auto-invalidate doesn't
+// fire because the user-scoped fetch uses a different cache key).
+const mockSessionsRefresh = vi.fn();
+
 function setupSessionWindows({ upcoming, previous }: WindowMocks = {}) {
   const enrichedSessions = [
     ...(previous?.enrichedSessions ?? []),
@@ -126,7 +163,7 @@ function setupSessionWindows({ upcoming, previous }: WindowMocks = {}) {
     enrichedSessions,
     isLoading: !!(upcoming?.isLoading || previous?.isLoading),
     isError: upcoming?.isError ?? previous?.isError,
-    refresh: vi.fn(),
+    refresh: mockSessionsRefresh,
   });
 }
 
@@ -221,7 +258,8 @@ describe("CoachingSessionsCard", () => {
     expect(screen.queryByTestId("session-row-s-future")).not.toBeInTheDocument();
   });
 
-  it("shows Reschedule on upcoming rows for a coach viewer and fires the callback", () => {
+  it("shows Reschedule for a coach viewer inside the row's kebab menu and fires the callback", async () => {
+    const user = userEvent.setup();
     const onReschedule = vi.fn();
     setupBaseAuth({ id: "coach-1", timezone: "UTC" });
 
@@ -231,11 +269,16 @@ describe("CoachingSessionsCard", () => {
     render(<CoachingSessionsCard onReschedule={onReschedule} />);
 
     const row = screen.getByTestId("session-row-s1");
-    fireEvent.click(within(row).getByRole("button", { name: /reschedule/i }));
+    // Reschedule lives inside the kebab dropdown — must open it first.
+    await user.click(within(row).getByRole("button", { name: /session actions/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /reschedule/i })
+    );
     expect(onReschedule).toHaveBeenCalledWith(session);
   });
 
-  it("hides Reschedule on upcoming rows when viewer is the coachee", () => {
+  it("renders a kebab on coachee rows but limits it to Share link (no Reschedule, no Delete)", async () => {
+    const user = userEvent.setup();
     setupBaseAuth({ id: "coachee-1", timezone: "UTC" });
 
     const session = createMockEnrichedSession({ id: "s1", date: FAR_FUTURE });
@@ -244,19 +287,32 @@ describe("CoachingSessionsCard", () => {
     render(<CoachingSessionsCard onReschedule={vi.fn()} />);
 
     const row = screen.getByTestId("session-row-s1");
-    expect(
-      within(row).queryByRole("button", { name: /reschedule/i })
-    ).not.toBeInTheDocument();
-    // Two Join links rendered: one desktop (hover-revealed), one mobile-only.
-    // Both must point at the same coaching session detail route.
+    // The Join link still renders so coachees can navigate. Asserted
+    // BEFORE opening the menu — Radix's DropdownMenu marks the rest of
+    // the page `aria-hidden` while open, so `getAllByRole("link")`
+    // returns nothing if queried after the menu trigger fires.
     const links = within(row).getAllByRole("link");
     expect(links.length).toBeGreaterThanOrEqual(1);
     for (const link of links) {
       expect(link).toHaveAttribute("href", "/coaching-sessions/s1");
     }
+
+    // Share link is available to any viewer, so the kebab itself stays
+    // present even for coachees — but the menu must NOT expose the
+    // coach-only actions.
+    await user.click(within(row).getByRole("button", { name: /session actions/i }));
+    expect(
+      screen.queryByRole("menuitem", { name: /reschedule/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /delete session/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /share link/i })
+    ).toBeInTheDocument();
   });
 
-  it("renders the View link instead of Join on the Previous tab", async () => {
+  it("renders the View link instead of Join on the Previous tab and offers Delete in the kebab", async () => {
     const user = userEvent.setup();
     setupBaseAuth();
 
@@ -267,11 +323,18 @@ describe("CoachingSessionsCard", () => {
 
     await user.click(screen.getByRole("tab", { name: /previous/i }));
     const row = screen.getByTestId("session-row-s-past");
-    expect(
-      within(row).queryByRole("button", { name: /reschedule/i })
-    ).not.toBeInTheDocument();
     const viewButtons = within(row).getAllByRole("button", { name: /view/i });
     expect(viewButtons.length).toBeGreaterThanOrEqual(1);
+
+    // Past sessions: no Reschedule, but Delete is still available to the
+    // coach. Open the kebab to assert both invariants.
+    await user.click(within(row).getByRole("button", { name: /session actions/i }));
+    expect(
+      screen.queryByRole("menuitem", { name: /reschedule/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /delete session/i })
+    ).toBeInTheDocument();
   });
 
   it("shows the empty hover-detail panel before any row is hovered", () => {
@@ -513,6 +576,374 @@ describe("CoachingSessionsCard", () => {
       render(<CoachingSessionsCard onReschedule={vi.fn()} />);
 
       expect(mockSetRelationshipFilter).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Delete flow ──────────────────────────────────────────────────────
+  //
+  // Covers the kebab-menu → AlertDialog → mutation pipeline. The card owns
+  // the dialog state (single instance for all rows) and the mutation, so
+  // every assertion in this block targets the card's externally-visible
+  // contract: which menu items are reachable, what copy the dialog shows,
+  // which API the confirm button drives, and which toasts fire on
+  // success/failure.
+  describe("delete flow", () => {
+    it("opens the confirmation dialog with the unified copy when Delete is clicked on an upcoming row", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+
+      const session = createMockEnrichedSession({
+        id: "s-upcoming",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(
+        within(screen.getByTestId("session-row-s-upcoming")).getByRole("button", {
+          name: /session actions/i,
+        })
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+
+      expect(
+        screen.getByRole("alertdialog", {
+          name: /delete this coaching session/i,
+        })
+      ).toBeInTheDocument();
+      // The dialog uses unified copy regardless of tab — it always names
+      // the cascading loss. For upcoming sessions this is informational
+      // (none yet); for previous sessions it's load-bearing.
+      expect(
+        screen.getByText(/notes and completed actions/i)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /^delete session$/i })
+      ).toBeInTheDocument();
+    });
+
+    it("opens the same unified dialog on previous rows", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+
+      const session = createMockEnrichedSession({
+        id: "s-past",
+        date: FAR_PAST,
+      });
+      setupSessionWindows({ previous: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(screen.getByRole("tab", { name: /previous/i }));
+      await user.click(
+        within(screen.getByTestId("session-row-s-past")).getByRole("button", {
+          name: /session actions/i,
+        })
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+
+      // Same copy, both tabs. Pinning that the unification didn't quietly
+      // re-introduce a tab-keyed branch.
+      expect(
+        screen.getByText(/notes and completed actions/i)
+      ).toBeInTheDocument();
+    });
+
+    it("does not call the delete API when Cancel is clicked", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+
+      const session = createMockEnrichedSession({
+        id: "s1",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(
+        within(screen.getByTestId("session-row-s1")).getByRole("button", {
+          name: /session actions/i,
+        })
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+      await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    it("calls the delete mutation, refreshes the session list, and closes the dialog when confirmed", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+      mockDelete.mockResolvedValueOnce(undefined);
+
+      const session = createMockEnrichedSession({
+        id: "s-doomed",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(
+        within(screen.getByTestId("session-row-s-doomed")).getByRole(
+          "button",
+          { name: /session actions/i }
+        )
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+      await user.click(
+        screen.getByRole("button", { name: /^delete session$/i })
+      );
+
+      expect(mockDelete).toHaveBeenCalledWith("s-doomed");
+      // Pinning the bug found during browser verification: the entity-
+      // mutation auto-invalidate matches keys by entity baseUrl
+      // (`coaching_sessions/`), but the dashboard fetches via the
+      // user-scoped enriched endpoint, whose cache key doesn't match.
+      // Without an explicit `refresh()` call, the deleted row would
+      // linger until a hard reload.
+      expect(mockSessionsRefresh).toHaveBeenCalled();
+      // Dialog should be gone after a successful confirm.
+      expect(
+        screen.queryByRole("alertdialog", {
+          name: /delete this coaching session/i,
+        })
+      ).not.toBeInTheDocument();
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+
+    it("fires the error toast and closes the dialog when the delete mutation rejects", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+      mockDelete.mockRejectedValueOnce(new Error("API down"));
+
+      const session = createMockEnrichedSession({
+        id: "s-fail",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      await user.click(
+        within(screen.getByTestId("session-row-s-fail")).getByRole("button", {
+          name: /session actions/i,
+        })
+      );
+      await user.click(
+        await screen.findByRole("menuitem", { name: /delete session/i })
+      );
+      await user.click(
+        screen.getByRole("button", { name: /^delete session$/i })
+      );
+
+      expect(mockDelete).toHaveBeenCalledWith("s-fail");
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to delete session",
+        expect.objectContaining({ description: "API down" })
+      );
+      // No success toast exists — only the error path surfaces a toast.
+      // The dialog still closes after a failure — the user sees the error
+      // toast and can retry from the row.
+      expect(
+        screen.queryByRole("alertdialog", {
+          name: /delete this coaching session/i,
+        })
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not expose Delete in the kebab when the viewer is a coachee", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth({ id: "coachee-1", timezone: "UTC" });
+
+      // Relationship has coach-1 as coach, so coachee-1 is the coachee.
+      const session = createMockEnrichedSession({
+        id: "s1",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      const row = screen.getByTestId("session-row-s1");
+      // Coachee gets a kebab (Share link is universal) but the menu must
+      // NOT expose Delete — that's the contract this test pins. Open the
+      // kebab and assert the menu surface explicitly.
+      await user.click(
+        within(row).getByRole("button", { name: /session actions/i })
+      );
+      expect(
+        screen.queryByRole("menuitem", { name: /delete session/i })
+      ).not.toBeInTheDocument();
+
+      // Sanity: confirm `mockDelete` is never reachable from this row.
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    // ── Card-side half of the auto-refresh contract ───────────────────────
+    //
+    // The dashboard relies on `onRefreshNeeded` to plumb the user-scoped
+    // SWR fetch's `refresh()` up to `DashboardContainer` so it can fire
+    // after the create/edit dialog closes. This bypasses the bug in
+    // `useEntityMutation`'s auto-invalidation, which filters by
+    // `typeof key === "string"` and silently skips tuple-keyed
+    // `useEntityList` caches like ours. If a future refactor changes the
+    // hook surface or accidentally drops the prop, the create flow will
+    // start showing stale data without any unit-test failure — unless
+    // this test catches it.
+    it("surfaces a stable wrapper via onRefreshNeeded that delegates to the hook's refresh", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      const handleRefreshNeeded = vi.fn();
+
+      render(
+        <CoachingSessionsCard
+          onReschedule={vi.fn()}
+          onRefreshNeeded={handleRefreshNeeded}
+        />
+      );
+
+      // The card passes a *wrapper* closure that delegates to whatever
+      // `refreshSessions` is current at call time — keeps the parent's
+      // stored callback identity-stable. We can't assert
+      // `toHaveBeenCalledWith(mockSessionsRefresh)` because they aren't
+      // the same function reference. Instead: assert one registration,
+      // grab the wrapper, invoke it, and verify it routed to the spy.
+      expect(handleRefreshNeeded).toHaveBeenCalledTimes(1);
+      const wrapper = handleRefreshNeeded.mock.calls[0][0] as () => void;
+      expect(typeof wrapper).toBe("function");
+      wrapper();
+      expect(mockSessionsRefresh).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── Date-range chip + dropdown date hints ─────────────────────────────
+  //
+  // The header chip shows the *resolved* calendar range (e.g.
+  // "Apr 27 – May 11") instead of the abstract "1 week". The dropdown
+  // options also stack the resolved range under the abstract size so the
+  // user previews "what would I get?" before selecting. Both share the
+  // same anchor (`mountNow`) so chip text and dropdown previews always
+  // agree with the data fetch.
+  //
+  // Tests below pin a fixed system time so the resolved ranges are
+  // deterministic. Without this, expected strings would drift with the
+  // wall clock.
+  describe("date-range display in chip and dropdown", () => {
+    // 2026-05-04 noon UTC — anchored so the 1-week half-span (±3.5d) lands
+    // entirely within the same year (no year-crossing edge case).
+    const FIXED_NOW = new Date("2026-05-04T12:00:00Z");
+    // Pin luxon to UTC for these assertions. The chip uses
+    // `DateTime.now()`, which respects the local zone — without this the
+    // expected strings would shift between dev machines and CI depending
+    // on `TZ`. The unit tests for `formatTimeWindowDateRange` already
+    // pass an explicit UTC anchor, so they're insulated from this.
+    let originalDefaultZone: Zone;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(FIXED_NOW);
+      originalDefaultZone = LuxonSettings.defaultZone;
+      LuxonSettings.defaultZone = FixedOffsetZone.utcInstance;
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      LuxonSettings.defaultZone = originalDefaultZone;
+    });
+
+    it("shows the resolved date range in the chip instead of the abstract size", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      // 1 week against May 4 noon → ±3.5d → May 1 – May 8.
+      setupFilterStore({ timeWindow: SessionTimeWindow.Week });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      // Chip should show the resolved dates, NOT the abstract label.
+      expect(screen.getByText(/May 1 – May 8/)).toBeInTheDocument();
+      expect(screen.queryByText("1 week")).not.toBeInTheDocument();
+    });
+
+    it("recomputes the chip range when a different window size is selected", () => {
+      setupBaseAuth();
+      setupSessionWindows();
+      // 1 day against May 4 noon → ±12h → May 4 – May 5.
+      setupFilterStore({ timeWindow: SessionTimeWindow.Day });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      expect(screen.getByText(/May 4 – May 5/)).toBeInTheDocument();
+    });
+
+    // Note: the dropdown options stack the resolved range as a secondary
+    // line under each abstract label. Driving the Radix Select open in
+    // JSDOM under fake timers reliably times out (Radix waits for animation
+    // frames the test harness can't advance). The wiring is covered by:
+    //   - The `formatTimeWindowDateRange` unit tests (filters helper)
+    //   - The chip integration tests above (same anchor + helper)
+    // If a future regression silently strips the secondary line, both the
+    // helper output and the chip would be unaffected — at that point a
+    // focused header/popover render test would be worth adding. Today the
+    // cost-to-signal of fighting Radix-in-JSDOM exceeds its value.
+  });
+
+  // ── Share link kebab item ─────────────────────────────────────────────
+  //
+  // Restored from the legacy CoachingSessionList. Universal action — any
+  // viewer (coach or coachee), any tab (upcoming or previous). Routes
+  // through the existing `copyCoachingSessionLinkWithToast` utility so
+  // the success/error toasts come for free.
+  describe("share link", () => {
+    it("invokes the copy utility with the session id when Share link is clicked", async () => {
+      const user = userEvent.setup();
+      setupBaseAuth();
+      const session = createMockEnrichedSession({
+        id: "s-share",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      const row = screen.getByTestId("session-row-s-share");
+      await user.click(within(row).getByRole("button", { name: /session actions/i }));
+      await user.click(
+        await screen.findByRole("menuitem", { name: /share link/i })
+      );
+
+      expect(mockCopyLink).toHaveBeenCalledTimes(1);
+      expect(mockCopyLink).toHaveBeenCalledWith("s-share");
+    });
+
+    it("exposes Share link to coachees as well (universal action)", async () => {
+      const user = userEvent.setup();
+      // Coachee viewer — has no Reschedule and no Delete.
+      setupBaseAuth({ id: "coachee-1", timezone: "UTC" });
+      const session = createMockEnrichedSession({
+        id: "s-coachee",
+        date: FAR_FUTURE,
+      });
+      setupSessionWindows({ upcoming: { enrichedSessions: [session] } });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      const row = screen.getByTestId("session-row-s-coachee");
+      await user.click(within(row).getByRole("button", { name: /session actions/i }));
+      // Share link is the only menu item the coachee should see.
+      expect(
+        screen.getByRole("menuitem", { name: /share link/i })
+      ).toBeInTheDocument();
     });
   });
 });

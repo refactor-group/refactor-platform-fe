@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ListFilter } from "lucide-react";
-import { type DurationObject } from "ts-luxon";
+import { type DateTime, type DurationObject } from "ts-luxon";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,21 +30,50 @@ export enum SessionTimeWindow {
   Quarter = "90d",
 }
 
+// These are *half-spans*, applied symmetrically as `now - duration` and
+// `now + duration`. The total visible window therefore equals the labeled
+// size (1 day = 24h total, 1 week = 7d total, etc.) — matching what the
+// dropdown labels promise. An earlier version stored full spans here,
+// which made "1 day" silently render a 48-hour window across 3 calendar
+// dates; this naming makes the doubling explicit at the source.
 export const TIME_WINDOW_DURATIONS: Record<SessionTimeWindow, DurationObject> = {
-  [SessionTimeWindow.Day]: { hours: 24 },
-  [SessionTimeWindow.Week]: { days: 7 },
-  [SessionTimeWindow.Month]: { days: 30 },
-  [SessionTimeWindow.Quarter]: { days: 90 },
+  [SessionTimeWindow.Day]: { hours: 12 },
+  [SessionTimeWindow.Week]: { days: 3, hours: 12 },
+  [SessionTimeWindow.Month]: { days: 15 },
+  [SessionTimeWindow.Quarter]: { days: 45 },
 };
 
-// `+/-` prefix signals symmetry around `now` — sessions within this range
-// before and after the current time are both shown.
+// Natural-language window sizes. The symmetry-around-now signal is carried
+// by the resolved date range shown beneath each option (and in the header
+// chip), so the abstract label can stay short and conversational.
 export const TIME_WINDOW_LABELS: Record<SessionTimeWindow, string> = {
-  [SessionTimeWindow.Day]: "+/- 24 hours",
-  [SessionTimeWindow.Week]: "+/- 7 days",
-  [SessionTimeWindow.Month]: "+/- 30 days",
-  [SessionTimeWindow.Quarter]: "+/- 90 days",
+  [SessionTimeWindow.Day]: "1 day",
+  [SessionTimeWindow.Week]: "1 week",
+  [SessionTimeWindow.Month]: "1 month",
+  [SessionTimeWindow.Quarter]: "3 months",
 };
+
+/**
+ * Resolves a `SessionTimeWindow` into a concrete calendar-date range string,
+ * relative to a given `now`. Used for surfaces that benefit from concreteness
+ * — the header's active-state chip and (as a secondary line) each dropdown
+ * option — while the abstract `TIME_WINDOW_LABELS` remain the primary label.
+ *
+ * Format: `MMM d – MMM d` when both ends are in the same year; falls back to
+ * `MMM d, yyyy – MMM d, yyyy` when the range crosses a year boundary
+ * (only realistic for the 3-month option near year-end). Day-of-month digits stay tabular
+ * via `tabular-nums` at the call site if vertical alignment matters.
+ */
+export function formatTimeWindowDateRange(
+  window: SessionTimeWindow,
+  now: DateTime
+): string {
+  const duration = TIME_WINDOW_DURATIONS[window];
+  const from = now.minus(duration);
+  const to = now.plus(duration);
+  const fmt = from.year === to.year ? "LLL d" : "LLL d, yyyy";
+  return `${from.toFormat(fmt)} – ${to.toFormat(fmt)}`;
+}
 
 export interface RelationshipOption {
   id: Id;
@@ -57,6 +86,11 @@ export interface FiltersPopoverProps {
   relationshipFilter: Id | undefined;
   onRelationshipFilterChange: (id: Id | undefined) => void;
   relationshipOptions: RelationshipOption[];
+  /** Anchor for resolving each dropdown option into a concrete date range.
+   *  Sourced from the card's `mountNow` so the displayed ranges match the
+   *  data the user will see on selection — single source of truth for
+   *  "what does the data fetch consider 'now'?". */
+  now: DateTime;
 }
 
 export function FiltersPopover({
@@ -65,6 +99,7 @@ export function FiltersPopover({
   relationshipFilter,
   onRelationshipFilterChange,
   relationshipOptions,
+  now,
 }: FiltersPopoverProps) {
   const [open, setOpen] = useState(false);
 
@@ -107,13 +142,41 @@ export function FiltersPopover({
                 className="w-full h-7 text-xs"
                 aria-label="Time Range"
               >
-                <SelectValue />
+                {/* Render the trigger content explicitly instead of using
+                    `<SelectValue />`. Radix's `<SelectValue />` clones the
+                    selected `<SelectItem>`'s children verbatim — which
+                    means our two-line `flex flex-col` (abstract label +
+                    date hint) would render stacked inside the 28px-tall
+                    trigger, distorting its height and making it
+                    inconsistent with the Relationship select below. The
+                    Select is controlled (`value={timeWindow}`), so we
+                    can render the abstract label directly here. The
+                    stacked layout still renders inside each option in
+                    `<SelectContent>` — that's the "preview" surface. */}
+                <span>{TIME_WINDOW_LABELS[timeWindow]}</span>
               </SelectTrigger>
               <SelectContent>
+                {/* Each option pairs the abstract size with the concrete
+                    resolved range for that size against `now`. The abstract
+                    label is the primary read; the date range is a small
+                    secondary hint that previews what the user will get on
+                    selection — matches the chip's date-range display.
+                    `textValue` is kept so Radix's type-ahead matching
+                    uses the abstract label instead of the concatenated
+                    "{abstract}{date-range}" textContent. */}
                 {(Object.values(SessionTimeWindow) as SessionTimeWindow[]).map(
                   (w) => (
-                    <SelectItem key={w} value={w}>
-                      {TIME_WINDOW_LABELS[w]}
+                    <SelectItem
+                      key={w}
+                      value={w}
+                      textValue={TIME_WINDOW_LABELS[w]}
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span>{TIME_WINDOW_LABELS[w]}</span>
+                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+                          {formatTimeWindowDateRange(w, now)}
+                        </span>
+                      </div>
                     </SelectItem>
                   )
                 )}
