@@ -39,10 +39,9 @@ on:
         required: true
         type: choice
         options:
-          - '513892c - chore: refresh preview commit choices [skip ci]'
-          - 'dad663b - Merge pull request #386 from refactor-group/feat/dashboard-sessions-card-delete'
-          - '983d924 - fix(dashboard): align time-window durations with their labels'
-          - 3c78330 - PR#388 (feat/upcoming-sessions-weekday)
+          - '54e8b95 - Merge pull request #388 from refactor-group/feat/upcoming-sessions-weekday-label'
+          - 28e4ab8 - Merge branch 'main' into feat/upcoming-sessions-weekday-label
+          - 'db4c4f2 - chore: refresh preview commit choices [skip ci]'
           - 1a12c9a - PR#379 (ci/runtime-ref-resolver)
           - 5f03b01 - PR#373 (feature/transcript-pane)
           - abe1231 - PR#318 (docs/goals-implementation-plan)
