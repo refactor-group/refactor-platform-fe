@@ -22,13 +22,16 @@ export function formatLongDate(date: DateTime): string {
 /**
  * Format a DateTime with time, using a configurable separator between the
  * date and time (e.g., "Jan 3, 2026 at 2:30 PM" by default, or
- * "Jan 3, 2026 · 2:30 PM" when separator is "·").
+ * "Jan 3, 2026 · 2:30 PM" when separator is "·"). Pass `includeWeekday`
+ * to prefix the abbreviated weekday (e.g., "Tue, May 6, 2026 · 2:30 PM").
  */
 export function formatDateWithTime(
   date: DateTime,
-  separator: string = "at"
+  separator: string = "at",
+  includeWeekday: boolean = false
 ): string {
-  return `${date.toFormat("MMM d, yyyy")} ${separator} ${date.toFormat("h:mm a")}`;
+  const dateFormat = includeWeekday ? "EEE, MMM d, yyyy" : "MMM d, yyyy";
+  return `${date.toFormat(dateFormat)} ${separator} ${date.toFormat("h:mm a")}`;
 }
 
 /**
