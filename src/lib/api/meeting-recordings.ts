@@ -3,7 +3,6 @@ import { siteConfig } from "@/site.config";
 import { EntityApi } from "@/lib/api/entity-api";
 import type { Id } from "@/types/general";
 import type { MeetingRecording } from "@/types/meeting-recording";
-import { isRecordingInProgress } from "@/types/meeting-recording";
 
 const COACHING_SESSIONS_BASEURL = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
 
@@ -33,14 +32,7 @@ export function useMeetingRecording(sessionId: Id | null) {
   const { data, error, isLoading, mutate } = useSWR<MeetingRecording | null>(
     url,
     () => MeetingRecordingApi.get(sessionId!),
-    {
-      refreshInterval: (latestData) => {
-        if (!latestData) return 0;
-        return isRecordingInProgress(latestData.status) ? 5_000 : 0;
-      },
-      refreshWhenHidden: false,
-      revalidateOnFocus: true,
-    }
+    { revalidateOnFocus: true }
   );
 
   const startRecording = async (meetingUrl: string): Promise<MeetingRecording> => {

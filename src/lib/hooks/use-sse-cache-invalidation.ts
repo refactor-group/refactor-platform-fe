@@ -126,4 +126,16 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   useSSEEventHandler(eventSource, 'coaching_session_goal_deleted', () => {
     invalidateSessionGoals('coaching_session_goal_deleted');
   });
+
+  // MEETING RECORDING EVENTS - Invalidate the meeting_recording endpoint for the session
+  useSSEEventHandler(eventSource, 'meeting_recording_updated', () => {
+    invalidateEndpoint('/meeting_recording', 'meeting_recording_updated');
+  });
+
+  // TRANSCRIPTION EVENTS - Invalidate transcriptions and transcript_segments endpoints
+  // The /transcriptions pattern also matches .../transcriptions/{id}/transcription_segments,
+  // which is intentional: when a transcription completes the segments were just written.
+  useSSEEventHandler(eventSource, 'transcription_updated', () => {
+    invalidateEndpoint('/transcriptions', 'transcription_updated');
+  });
 }
