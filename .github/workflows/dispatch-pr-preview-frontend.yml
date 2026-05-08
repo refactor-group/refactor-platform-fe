@@ -78,6 +78,37 @@ jobs:
           set -euo pipefail
 
           # ------------------------------------------------------------------
+          # Field protection: every dispatch input is free-text and flows into
+          # GitHub API calls. Cap length, reject control chars, enforce a
+          # charset that's a strict superset of git ref names + the PR# token.
+          # The downstream regexes still gate semantic shape — these checks
+          # short-circuit obviously-bad input before it reaches gh api.
+          # ------------------------------------------------------------------
+          MAX_INPUT_LEN=250
+          # Allowed: alphanumerics, dot, underscore, slash, hyphen, hash, plus, at-sign
+          SAFE_INPUT_RE='^[A-Za-z0-9._/#+@-]+$'
+          validate_input() {
+              local label="$1" value="$2" allow_empty="${3:-no}"
+              if [[ -z "$value" ]]; then
+                  if [[ "$allow_empty" == "yes" ]]; then return 0; fi
+                  echo "::error::$label must not be empty"; exit 1
+              fi
+              if (( ${#value} > MAX_INPUT_LEN )); then
+                  echo "::error::$label exceeds max length (${MAX_INPUT_LEN} chars)"; exit 1
+              fi
+              if [[ "$value" == *$'\n'* || "$value" == *$'\r'* || "$value" == *$'\t'* ]]; then
+                  echo "::error::$label must not contain newline/carriage-return/tab characters"; exit 1
+              fi
+              if ! [[ "$value" =~ $SAFE_INPUT_RE ]]; then
+                  echo "::error::$label contains characters outside the allowed set [A-Za-z0-9._/#+@-]"; exit 1
+              fi
+          }
+
+          validate_input "frontend_pr_number"     "$INPUT_FRONTEND_PR"
+          validate_input "frontend_sha_override"  "$INPUT_FRONTEND_SHA_OVERRIDE" yes
+          validate_input "backend_ref"            "$INPUT_BACKEND_REF"
+
+          # ------------------------------------------------------------------
           # Normalize the frontend PR number: accept "373" or "PR#373"
           # ------------------------------------------------------------------
           if [[ "$INPUT_FRONTEND_PR" =~ ^PR#([0-9]+)$ ]]; then
