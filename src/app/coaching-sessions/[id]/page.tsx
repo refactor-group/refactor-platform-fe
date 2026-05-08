@@ -12,9 +12,16 @@ import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
 import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-panel";
 import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
-import { deriveIndicatorStatus } from "@/lib/transcript/indicator-status";
+import { JoinMeetingButton } from "@/components/ui/coaching-sessions/join-meeting-button";
+import {
+  IndicatorStatus,
+  deriveIndicatorStatus,
+} from "@/lib/transcript/indicator-status";
 import { useMeetingRecording } from "@/lib/api/meeting-recordings";
 import { useTranscription } from "@/lib/api/transcriptions";
+import { useTranscriptionToasts } from "@/lib/hooks/use-transcription-toasts";
+import { useUiPreferencesStore } from "@/lib/providers/ui-preferences-state-store-provider";
+import { TranscriptionStatus } from "@/types/transcription";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
 import { useRouter, useParams, useSearchParams } from "next/navigation";
@@ -23,8 +30,6 @@ import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-sess
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
 import { useCoachingSessionLayout } from "@/lib/hooks/use-coaching-session-layout";
 import ShareSessionLink from "@/components/ui/share-session-link";
-import JoinMeetLink from "@/components/ui/coaching-sessions/join-meet-link";
-import { StartRecordingButton } from "@/components/ui/coaching-sessions/start-recording-button";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
@@ -137,9 +142,54 @@ export default function CoachingSessionsPage() {
   // TranscriptPanel calls the same hooks internally; SWR deduplicates the requests.
   const { recording } = useMeetingRecording(currentCoachingSessionId ?? null);
   const { transcription } = useTranscription(currentCoachingSessionId ?? null);
-  const indicatorStatus = deriveIndicatorStatus({
+  const baseIndicatorStatus = deriveIndicatorStatus({
     recordingStatus: recording?.status,
     transcriptionStatus: transcription?.status,
+  });
+
+  // Suppress the "transcript ready" green dot once the user has opened the
+  // panel for this transcript. Persisted across reload via UI prefs store.
+  const viewedTranscripts = useUiPreferencesStore((s) => s.viewedTranscripts);
+  const markTranscriptViewed = useUiPreferencesStore(
+    (s) => s.markTranscriptViewed
+  );
+  const transcriptIsViewed =
+    currentCoachingSessionId &&
+    transcription?.id &&
+    viewedTranscripts[currentCoachingSessionId] === transcription.id;
+  const indicatorStatus =
+    baseIndicatorStatus === IndicatorStatus.TranscriptReady &&
+    transcriptIsViewed
+      ? IndicatorStatus.None
+      : baseIndicatorStatus;
+
+  // Wrap toggle so that opening the panel marks the current transcript
+  // as viewed (clears the badge dot, suppresses repeat ready toasts).
+  const handleToggleTranscript = () => {
+    const willOpen = !layout.isTranscriptOpen;
+    if (
+      willOpen &&
+      currentCoachingSessionId &&
+      transcription?.id &&
+      transcription.status === TranscriptionStatus.Completed
+    ) {
+      markTranscriptViewed(currentCoachingSessionId, transcription.id);
+    }
+    layout.toggleTranscript();
+  };
+
+  useTranscriptionToasts({
+    sessionId: currentCoachingSessionId ?? null,
+    onOpenTranscript: () => {
+      if (
+        currentCoachingSessionId &&
+        transcription?.id &&
+        transcription.status === TranscriptionStatus.Completed
+      ) {
+        markTranscriptViewed(currentCoachingSessionId, transcription.id);
+      }
+      layout.openTranscript();
+    },
   });
 
   // Auto-collapse main sidebar on coaching session page to maximize workspace,
@@ -240,14 +290,14 @@ export default function CoachingSessionsPage() {
               style={siteConfig.titleStyle}
             />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
-              <JoinMeetLink meetUrl={currentCoachingSession?.meeting_url} />
-              <StartRecordingButton
+              <JoinMeetingButton
                 sessionId={currentCoachingSessionId ?? null}
                 meetingUrl={currentCoachingSession?.meeting_url}
+                isCoach={isCoachInCurrentRelationship}
               />
               <TranscriptToggleButton
                 isOpen={layout.isTranscriptOpen}
-                onToggle={layout.toggleTranscript}
+                onToggle={handleToggleTranscript}
                 indicatorStatus={indicatorStatus}
               />
               <ShareSessionLink

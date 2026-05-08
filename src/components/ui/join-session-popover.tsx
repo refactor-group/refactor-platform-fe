@@ -423,8 +423,8 @@ export function JoinSessionPopover({
     }}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="gap-2">
-          <span className="hidden md:inline">Join Session</span>
-          <span className="md:hidden">Join</span>
+          <span className="hidden md:inline">Switch Session</span>
+          <span className="md:hidden">Switch</span>
           <ChevronDown className="h-4 w-4" />
         </Button>
       </PopoverTrigger>

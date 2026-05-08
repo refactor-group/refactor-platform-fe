@@ -3,45 +3,35 @@
 import Link from "next/link";
 import { AlertCircle, Loader2, Mic, MicOff, Video } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { formatTimestamp } from "@/lib/transcript/format-timestamp";
 
 /**
- * Variants that describe why the transcript body can't show segments
- * yet, and the one action (if any) the user can take from each state.
+ * Variants that describe why the transcript body can't show segments yet.
  *
- * These map 1:1 to combinations of MeetingRecordingStatus and
- * TranscriptionStatus; the orchestrator in Phase 1.6 picks the right
- * variant based on current data.
+ * Actions live in the header (Join Session button) and as toasts; the
+ * panel itself is view-only — its variants carry no callbacks.
  */
 export type TranscriptEmptyStateVariant =
   | { kind: "no-meeting-url" }
-  | { kind: "no-recording"; canStart: boolean; onStart: () => void }
-  | { kind: "recording-live"; durationMs: number; onStop: () => void }
+  | { kind: "no-recording" }
+  | { kind: "recording-live"; durationMs: number }
   | { kind: "processing" }
   | { kind: "no-speech" }
-  | { kind: "recording-failed"; errorMessage?: string; onRetry: () => void }
-  | { kind: "transcription-failed"; errorMessage?: string; onRetry: () => void };
+  | { kind: "recording-failed"; errorMessage?: string }
+  | { kind: "transcription-failed"; errorMessage?: string };
 
 interface TranscriptEmptyStateProps {
   variant: TranscriptEmptyStateVariant;
 }
 
-/**
- * Single empty-state renderer that dispatches on a discriminated-union
- * variant. Each variant stays small and focused; if any grows beyond
- * ~20 lines, extract to its own file.
- */
 export function TranscriptEmptyState({ variant }: TranscriptEmptyStateProps) {
   switch (variant.kind) {
     case "no-meeting-url":
       return <NoMeetingUrl />;
     case "no-recording":
-      return <NoRecording canStart={variant.canStart} onStart={variant.onStart} />;
+      return <NoRecording />;
     case "recording-live":
-      return (
-        <RecordingLive durationMs={variant.durationMs} onStop={variant.onStop} />
-      );
+      return <RecordingLive durationMs={variant.durationMs} />;
     case "processing":
       return <Processing />;
     case "no-speech":
@@ -51,7 +41,6 @@ export function TranscriptEmptyState({ variant }: TranscriptEmptyStateProps) {
         <Failed
           title="Recording failed"
           errorMessage={variant.errorMessage}
-          onRetry={variant.onRetry}
         />
       );
     case "transcription-failed":
@@ -59,7 +48,6 @@ export function TranscriptEmptyState({ variant }: TranscriptEmptyStateProps) {
         <Failed
           title="Transcript generation failed"
           errorMessage={variant.errorMessage}
-          onRetry={variant.onRetry}
         />
       );
     default: {
@@ -83,43 +71,29 @@ function NoMeetingUrl() {
         >
           Settings → Integrations
         </Link>{" "}
-        to enable recording.
+        to enable transcription.
       </p>
     </Shell>
   );
 }
 
-interface NoRecordingProps {
-  canStart: boolean;
-  onStart: () => void;
-}
-
-function NoRecording({ canStart, onStart }: NoRecordingProps) {
+function NoRecording() {
   return (
     <Shell icon={<Mic className="h-5 w-5" aria-hidden="true" />}>
       <p className="text-sm text-foreground">No transcript yet</p>
       <p className="text-xs text-muted-foreground">
-        Record this session to capture a searchable transcript.
+        Use the Join Meeting button to launch the meeting and start a
+        transcription.
       </p>
-      <Button
-        size="sm"
-        className="mt-1 gap-1.5"
-        onClick={onStart}
-        disabled={!canStart}
-      >
-        <Mic className="h-3.5 w-3.5" />
-        Start recording
-      </Button>
     </Shell>
   );
 }
 
 interface RecordingLiveProps {
   durationMs: number;
-  onStop: () => void;
 }
 
-function RecordingLive({ durationMs, onStop }: RecordingLiveProps) {
+function RecordingLive({ durationMs }: RecordingLiveProps) {
   return (
     <Shell
       icon={
@@ -130,26 +104,26 @@ function RecordingLive({ durationMs, onStop }: RecordingLiveProps) {
       }
     >
       <p className="text-sm text-foreground">
-        Recording in progress · <span className="tabular-nums">{formatTimestamp(durationMs)}</span>
+        Transcription in progress ·{" "}
+        <span className="tabular-nums">{formatTimestamp(durationMs)}</span>
       </p>
       <p className="text-xs text-muted-foreground">
-        Transcript will appear here after the meeting ends.
+        Transcript segments will appear here after the meeting ends.
       </p>
-      <Button
-        variant="outline"
-        size="sm"
-        className="mt-1"
-        onClick={onStop}
-      >
-        Stop recording
-      </Button>
     </Shell>
   );
 }
 
 function Processing() {
   return (
-    <Shell icon={<Loader2 className="h-5 w-5 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />}>
+    <Shell
+      icon={
+        <Loader2
+          className="h-5 w-5 motion-safe:animate-spin text-muted-foreground"
+          aria-hidden="true"
+        />
+      }
+    >
       <p className="text-sm text-foreground">Generating transcript…</p>
       <p className="text-xs text-muted-foreground">
         This usually takes a few minutes after the meeting ends.
@@ -160,7 +134,14 @@ function Processing() {
 
 function NoSpeech() {
   return (
-    <Shell icon={<MicOff className="h-5 w-5 text-muted-foreground" aria-hidden="true" />}>
+    <Shell
+      icon={
+        <MicOff
+          className="h-5 w-5 text-muted-foreground"
+          aria-hidden="true"
+        />
+      }
+    >
       <p className="text-sm text-foreground">No speech detected</p>
       <p className="text-xs text-muted-foreground">
         The recording completed but no audio was captured. Make sure the bot
@@ -173,19 +154,22 @@ function NoSpeech() {
 interface FailedProps {
   title: string;
   errorMessage?: string;
-  onRetry: () => void;
 }
 
-function Failed({ title, errorMessage, onRetry }: FailedProps) {
+function Failed({ title, errorMessage }: FailedProps) {
   return (
-    <Shell icon={<AlertCircle className="h-5 w-5 text-amber-500" aria-hidden="true" />}>
+    <Shell
+      icon={
+        <AlertCircle className="h-5 w-5 text-amber-500" aria-hidden="true" />
+      }
+    >
       <p className="text-sm text-foreground">{title}</p>
       {errorMessage && (
         <p className="text-xs text-muted-foreground">{errorMessage}</p>
       )}
-      <Button variant="outline" size="sm" className="mt-1" onClick={onRetry}>
-        Try again
-      </Button>
+      <p className="text-xs text-muted-foreground">
+        See the notification for retry options.
+      </p>
     </Shell>
   );
 }

@@ -42,21 +42,19 @@ function deriveEmptyState(
   recording: MeetingRecording | null,
   transcription: Transcription | null,
   meetingUrl: string | undefined,
-  onStart: () => void,
-  onStop: () => void,
 ): TranscriptEmptyStateVariant {
   if (!meetingUrl) {
     return { kind: "no-meeting-url" };
   }
   if (!recording) {
-    return { kind: "no-recording", canStart: true, onStart };
+    return { kind: "no-recording" };
   }
   if (recording.status === MeetingRecordingStatus.Failed) {
-    return { kind: "recording-failed", errorMessage: recording.error_message, onRetry: onStart };
+    return { kind: "recording-failed", errorMessage: recording.error_message };
   }
   if (recording.status === MeetingRecordingStatus.Completed) {
     if (transcription?.status === TranscriptionStatus.Failed) {
-      return { kind: "transcription-failed", errorMessage: transcription.error_message, onRetry: onStart };
+      return { kind: "transcription-failed", errorMessage: transcription.error_message };
     }
     if (transcription?.status === TranscriptionStatus.Completed) {
       return { kind: "no-speech" };
@@ -67,7 +65,7 @@ function deriveEmptyState(
   const durationMs = recording.started_at
     ? Math.max(0, Date.now() - new Date(recording.started_at).getTime())
     : 0;
-  return { kind: "recording-live", durationMs, onStop };
+  return { kind: "recording-live", durationMs };
 }
 
 export function TranscriptPanel({
@@ -77,14 +75,13 @@ export function TranscriptPanel({
   onToggleMaximize,
   onClose,
 }: TranscriptPanelProps) {
-  const { recording, startRecording, stopRecording } = useMeetingRecording(sessionId);
+  const { recording } = useMeetingRecording(sessionId);
   const { transcription } = useTranscription(sessionId);
   const transcriptionId =
     transcription?.status === TranscriptionStatus.Completed ? transcription.id : null;
   const { segments } = useTranscriptionSegments(sessionId, transcriptionId);
 
-  const onStart = () => startRecording(meetingUrl!);
-  const emptyState = deriveEmptyState(recording, transcription, meetingUrl, onStart, stopRecording);
+  const emptyState = deriveEmptyState(recording, transcription, meetingUrl);
   const hasSegments = segments.length > 0;
 
   return (

@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
 
 import { TranscriptEmptyState } from "@/components/ui/coaching-sessions/transcript-empty-state";
 
@@ -7,51 +7,34 @@ describe("TranscriptEmptyState — no-meeting-url", () => {
   it("tells the user to set up a Google Meet link", () => {
     render(<TranscriptEmptyState variant={{ kind: "no-meeting-url" }} />);
     expect(screen.getByText("No meeting link set")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /settings → integrations/i })).toHaveAttribute(
-      "href",
-      "/settings/integrations"
-    );
+    expect(
+      screen.getByRole("link", { name: /settings → integrations/i })
+    ).toHaveAttribute("href", "/settings/integrations");
   });
 });
 
 describe("TranscriptEmptyState — no-recording", () => {
-  it("renders a Start Recording CTA bound to the provided handler", () => {
-    const onStart = vi.fn();
-    render(
-      <TranscriptEmptyState
-        variant={{ kind: "no-recording", canStart: true, onStart }}
-      />
-    );
-    const button = screen.getByRole("button", { name: /start recording/i });
-    fireEvent.click(button);
-    expect(onStart).toHaveBeenCalledTimes(1);
-  });
-
-  it("disables the Start CTA when canStart is false", () => {
-    render(
-      <TranscriptEmptyState
-        variant={{ kind: "no-recording", canStart: false, onStart: vi.fn() }}
-      />
-    );
-    expect(screen.getByRole("button", { name: /start recording/i })).toBeDisabled();
+  it("directs the user to the Join Meeting button (no in-panel action)", () => {
+    render(<TranscriptEmptyState variant={{ kind: "no-recording" }} />);
+    expect(screen.getByText("No transcript yet")).toBeInTheDocument();
+    expect(
+      screen.getByText(/join meeting button/i)
+    ).toBeInTheDocument();
+    // Action moved to the header CTA — panel must not carry its own button.
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
 
 describe("TranscriptEmptyState — recording-live", () => {
-  it("shows the formatted live duration and a Stop button", () => {
-    const onStop = vi.fn();
+  it("shows the formatted live duration with no in-panel Stop button", () => {
     render(
       <TranscriptEmptyState
-        variant={{ kind: "recording-live", durationMs: 125_000, onStop }}
+        variant={{ kind: "recording-live", durationMs: 125_000 }}
       />
     );
-    expect(
-      screen.getByText(/Recording in progress/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/transcription in progress/i)).toBeInTheDocument();
     expect(screen.getByText("2:05")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /stop recording/i }));
-    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
 
@@ -63,41 +46,47 @@ describe("TranscriptEmptyState — processing", () => {
 });
 
 describe("TranscriptEmptyState — recording-failed", () => {
-  it("shows the title + error + Try Again button wired to onRetry", () => {
-    const onRetry = vi.fn();
+  it("shows the title + error and points to the toast for retry", () => {
     render(
       <TranscriptEmptyState
         variant={{
           kind: "recording-failed",
           errorMessage: "Bot couldn't join the meeting",
-          onRetry,
         }}
       />
     );
     expect(screen.getByText("Recording failed")).toBeInTheDocument();
-    expect(screen.getByText("Bot couldn't join the meeting")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByText("Bot couldn't join the meeting")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/notification for retry options/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("omits the error message when none is provided", () => {
+  it("omits the error description when none is provided", () => {
     render(
-      <TranscriptEmptyState
-        variant={{ kind: "recording-failed", onRetry: vi.fn() }}
-      />
+      <TranscriptEmptyState variant={{ kind: "recording-failed" }} />
     );
     expect(screen.getByText("Recording failed")).toBeInTheDocument();
-    expect(screen.queryByText(/.+ error/i)).not.toBeInTheDocument();
   });
 });
 
 describe("TranscriptEmptyState — transcription-failed", () => {
   it("shows a distinct title from recording-failed", () => {
     render(
-      <TranscriptEmptyState
-        variant={{ kind: "transcription-failed", onRetry: vi.fn() }}
-      />
+      <TranscriptEmptyState variant={{ kind: "transcription-failed" }} />
     );
-    expect(screen.getByText("Transcript generation failed")).toBeInTheDocument();
+    expect(
+      screen.getByText("Transcript generation failed")
+    ).toBeInTheDocument();
+  });
+});
+
+describe("TranscriptEmptyState — no-speech", () => {
+  it("explains that no audio was captured", () => {
+    render(<TranscriptEmptyState variant={{ kind: "no-speech" }} />);
+    expect(screen.getByText("No speech detected")).toBeInTheDocument();
   });
 });

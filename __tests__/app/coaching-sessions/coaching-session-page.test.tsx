@@ -32,12 +32,29 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
   AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-// Lightweight JoinMeetLink stand-in: disabled placeholder when no meetUrl, link when provided
-vi.mock('@/components/ui/coaching-sessions/join-meet-link', () => ({
-  default: ({ meetUrl }: { meetUrl?: string }) =>
-    meetUrl
-      ? <a href={meetUrl} data-testid="join-meet-link">Join</a>
-      : <button disabled data-testid="join-meet-link">Join</button>,
+// Lightweight JoinMeetingButton stand-in: disabled placeholder when no meetingUrl,
+// enabled button when provided. Real component pulls in DropdownMenu/AlertDialog
+// internals not relevant to page-level layout/auto-sync tests.
+vi.mock('@/components/ui/coaching-sessions/join-meeting-button', () => ({
+  JoinMeetingButton: ({ meetingUrl }: { meetingUrl?: string }) =>
+    meetingUrl
+      ? <button data-testid="join-meeting-button">Join Meeting</button>
+      : <button disabled data-testid="join-meeting-button">Join Meeting</button>,
+}))
+
+// Page-level toast hook is mounted but not under test here.
+vi.mock('@/lib/hooks/use-transcription-toasts', () => ({
+  useTranscriptionToasts: () => undefined,
+}))
+
+// Page reads recording/transcription status for the header indicator.
+// Default to no live state; individual tests can override if needed.
+vi.mock('@/lib/api/meeting-recordings', () => ({
+  useMeetingRecording: () => ({ recording: null }),
+}))
+vi.mock('@/lib/api/transcriptions', () => ({
+  useTranscription: () => ({ transcription: null }),
+  useTranscriptionSegments: () => ({ segments: [], isLoading: false, isError: undefined }),
 }))
 
 // Mock other components
@@ -395,11 +412,11 @@ describe('CoachingSessionsPage - Join meet link visibility', () => {
       </TestProviders>
     )
 
-    const button = screen.getByTestId('join-meet-link')
+    const button = screen.getByTestId('join-meeting-button')
     expect(button).toBeDisabled()
   })
 
-  it('shows an enabled join link when a meeting URL is set', () => {
+  it('shows an enabled join button when a meeting URL is set', () => {
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
       currentCoachingSessionId: 'session-123',
       currentCoachingSession: createMockCoachingSession({
@@ -417,8 +434,8 @@ describe('CoachingSessionsPage - Join meet link visibility', () => {
       </TestProviders>
     )
 
-    const link = screen.getByTestId('join-meet-link')
-    expect(link).not.toBeDisabled()
+    const button = screen.getByTestId('join-meeting-button')
+    expect(button).not.toBeDisabled()
   })
 })
 
