@@ -34,6 +34,24 @@ is_valid_sha_override() {
     [[ "$1" =~ ^[0-9a-fA-F]{7,40}$ ]]
 }
 
+# Field-protection helper. Mirrors the validate_input function at the top of
+# the dispatch workflow's resolver step. A non-zero return is "rejected".
+MAX_INPUT_LEN=250
+SAFE_INPUT_RE='^[A-Za-z0-9._/#+@-]+$'
+validate_input() {
+    local label="$1" value="$2" allow_empty="${3:-no}"
+    if [[ -z "$value" ]]; then
+        if [[ "$allow_empty" == "yes" ]]; then return 0; fi
+        return 1
+    fi
+    if (( ${#value} > MAX_INPUT_LEN )); then return 1; fi
+    if [[ "$value" == *$'\n'* || "$value" == *$'\r'* || "$value" == *$'\t'* ]]; then
+        return 1
+    fi
+    if ! [[ "$value" =~ $SAFE_INPUT_RE ]]; then return 1; fi
+    return 0
+}
+
 # ---------------------------------------------------------------------------
 # PR-number classification (backend_pr_number / frontend_pr_number)
 # ---------------------------------------------------------------------------
@@ -309,4 +327,134 @@ is_valid_sha_override() {
             return 1
         }
     done
+}
+
+# ---------------------------------------------------------------------------
+# Field protection — validate_input(): length cap, control chars, charset
+# ---------------------------------------------------------------------------
+@test "Validate: typical PR number passes" {
+    run validate_input "frontend_pr_number" "PR#373"
+    [ "$status" -eq 0 ]
+}
+
+@test "Validate: typical branch passes" {
+    run validate_input "backend_ref" "feat/dashboard"
+    [ "$status" -eq 0 ]
+}
+
+@test "Validate: 40-char SHA passes" {
+    run validate_input "backend_ref" "0123456789abcdef0123456789abcdef01234567"
+    [ "$status" -eq 0 ]
+}
+
+@test "Validate: empty value rejected by default" {
+    run validate_input "frontend_pr_number" ""
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: empty value accepted when allow_empty=yes (sha_override default)" {
+    run validate_input "frontend_sha_override" "" "yes"
+    [ "$status" -eq 0 ]
+}
+
+@test "Validate: input over 250 chars rejected" {
+    local big
+    big=$(printf 'a%.0s' {1..251})
+    run validate_input "backend_ref" "$big"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: exactly 250 chars accepted" {
+    local big
+    big=$(printf 'a%.0s' {1..250})
+    run validate_input "backend_ref" "$big"
+    [ "$status" -eq 0 ]
+}
+
+@test "Validate: newline character rejected" {
+    local val
+    val=$(printf 'main\nrm -rf')
+    run validate_input "backend_ref" "$val"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: carriage return rejected" {
+    local val
+    val=$(printf 'main\r')
+    run validate_input "backend_ref" "$val"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: tab character rejected" {
+    local val
+    val=$(printf 'main\t')
+    run validate_input "backend_ref" "$val"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: shell metachar ';' rejected" {
+    run validate_input "backend_ref" "main; rm -rf /"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: shell metachar '|' rejected" {
+    run validate_input "backend_ref" "main|whoami"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: backtick rejected" {
+    run validate_input "backend_ref" 'main`id`'
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: dollar sign rejected" {
+    run validate_input "backend_ref" 'main$(id)'
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: ampersand rejected" {
+    run validate_input "backend_ref" "main&background"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: space rejected" {
+    run validate_input "backend_ref" "feature foo"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: parentheses rejected" {
+    run validate_input "backend_ref" "feat(scope)"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: angle brackets rejected" {
+    run validate_input "backend_ref" "feat<x>"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: quotes rejected" {
+    run validate_input "backend_ref" 'feat"x'
+    [ "$status" -ne 0 ]
+    run validate_input "backend_ref" "feat'x"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: backslash rejected" {
+    run validate_input "backend_ref" 'feat\x'
+    [ "$status" -ne 0 ]
+}
+
+@test "Validate: at-sign accepted (allowed in tag refs and emails)" {
+    run validate_input "backend_ref" "release@2026.05"
+    [ "$status" -eq 0 ]
+}
+
+@test "Validate: hash accepted (PR#373)" {
+    run validate_input "frontend_pr_number" "PR#373"
+    [ "$status" -eq 0 ]
+}
+
+@test "Validate: plus sign accepted" {
+    run validate_input "backend_ref" "v1.0+build.5"
+    [ "$status" -eq 0 ]
 }
