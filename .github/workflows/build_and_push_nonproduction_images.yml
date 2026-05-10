@@ -22,24 +22,10 @@ env:
   NODE_ENV: test
 
 jobs:
-  # === BATS JOB (Dispatch-Workflow Regex Regression Tests) ===
-  # Pins the input-classification regexes and field-protection helpers in
-  # dispatch-pr-preview-frontend.yml. Folded into this workflow so the Actions
-  # sidebar stays uncluttered (no separate "Test Dispatch Regex" entry).
-  bats:
-    name: Dispatch Regex Tests
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install bats
-        run: sudo apt-get update && sudo apt-get install -y bats
-
-      - name: Run bats suite
-        run: bats .github/workflows/tests/dispatch-pr-preview-frontend.bats
-
   # === LINT JOB ===
+  # BATS regression suite for the dispatch resolver runs first so a regex
+  # regression fails before ESLint or the Docker build kick in. No separate
+  # "bats" job (keeps the Actions sidebar tidy).
   lint:
     name: Lint & Format Check
     runs-on: ubuntu-24.04
@@ -47,6 +33,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install bats
+        run: sudo apt-get update && sudo apt-get install -y bats
+
+      - name: Run dispatch-workflow regex tests (bats)
+        run: bats .github/workflows/tests/dispatch-pr-preview-frontend.bats
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -75,6 +69,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -83,15 +79,20 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      # 🎯 Next.js build cache (job-specific to prevent race conditions)
+      # 🎯 Next.js build cache (job-specific to prevent race conditions).
+      # The previous key hashed every .js/.jsx/.ts/.tsx file, which evicted
+      # the cache on any non-semantic edit (e.g. comment-only changes).
+      # Now we key on lockfile + Next/TS config; restore-keys still let us
+      # fall back to a same-lockfile-different-config build cache.
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: ${{ runner.os }}-nextjs-test-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-test-${{ hashFiles('package-lock.json', 'next.config.mjs', 'tsconfig.json') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-test-${{ hashFiles('**/package-lock.json') }}-
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-test-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-nextjs-test-
+            ${{ runner.os }}-nextjs-
 
       - name: Install dependencies
         run: npm ci --prefer-offline
@@ -141,6 +142,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

@@ -21,13 +21,18 @@ ARG FRONTEND_SERVICE_PORT
 RUN echo "Build Platform: ${BUILDPLATFORM} -> Target Platform: ${TARGETPLATFORM}"
 
 # Stage 1: Dependencies
+# `npm ci --prefer-offline --no-audit` is deterministic (matches package-lock
+# exactly) and skips the audit/network round-trip. The buildkit cache mount
+# at /root/.npm preserves the npm cache across layers, so warm rebuilds skip
+# the cold tarball fetch entirely.
 FROM base AS deps
 RUN apk update && apk upgrade --no-cache && apk add --no-cache libc6-compat
 
 WORKDIR /app
 COPY package.json ./
 COPY package-lock.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
 
 # Stage 2: Builder
 FROM base AS builder
