@@ -34,15 +34,20 @@ on:
         required: true
         type: string
       frontend_sha_override:
-        description: "Optional: frontend commit SHA on the PR branch (default: HEAD)"
+        description: "Optional: frontend commit treeish — full SHA, 6+ char short SHA, branch, or tag (default: PR HEAD)"
         required: false
         type: string
         default: ""
       backend_ref:
-        description: "Backend ref: main (default), a branch name, a 7+ char SHA, or PR#<num>"
+        description: "Backend ref: main (default), branch, tag, full or 6+ char short SHA, or PR#<num>"
         required: false
         type: string
         default: "main"
+      reset_db:
+        description: "Reset Postgres: drop the per-PR volume and re-seed (default: off — DB preserved across redeploys)"
+        required: false
+        type: boolean
+        default: false
 # Prevent concurrent deployments for the same frontend PR
 concurrency:
   group: pr-preview-frontend-dispatch-${{ inputs.frontend_pr_number }}
@@ -140,34 +145,37 @@ jobs:
           echo "::notice::Frontend PR #$PR_NUMBER is valid (state: $PR_STATE, draft: $PR_IS_DRAFT, branch: $BRANCH_NAME)"
 
           # ------------------------------------------------------------------
-          # Determine the frontend SHA (HEAD of PR branch unless overridden)
+          # Determine the frontend SHA. Accepted forms for the override:
+          #   (empty)    → use the PR branch HEAD
+          #   <treeish>  → anything `gh api commits/<ref>` resolves: full SHA,
+          #                short SHA (≥6 chars), branch, or tag.
           # ------------------------------------------------------------------
           if [[ -n "$INPUT_FRONTEND_SHA_OVERRIDE" ]]; then
-              if ! [[ "$INPUT_FRONTEND_SHA_OVERRIDE" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-                  echo "::error::frontend_sha_override must be a hex SHA (7-40 chars)"
+              if [[ "$INPUT_FRONTEND_SHA_OVERRIDE" =~ ^[0-9a-fA-F]+$ ]] \
+                 && (( ${#INPUT_FRONTEND_SHA_OVERRIDE} < 6 )); then
+                  echo "::error::frontend_sha_override looks like a SHA but is shorter than 6 chars (got ${#INPUT_FRONTEND_SHA_OVERRIDE}). Use at least 6 hex chars, or pass a branch/tag name."
                   exit 1
               fi
               FRONTEND_FULL_SHA=$(gh api "repos/$OWNER/refactor-platform-fe/commits/$INPUT_FRONTEND_SHA_OVERRIDE" \
                   --jq '.sha' 2>&1) || {
-                  echo "::error::Frontend SHA override '$INPUT_FRONTEND_SHA_OVERRIDE' not found in $OWNER/refactor-platform-fe"
+                  echo "::error::Frontend ref '$INPUT_FRONTEND_SHA_OVERRIDE' not found in $OWNER/refactor-platform-fe (tried as full/short SHA, branch, tag). Run list-preview-refs.yml to see available refs."
                   exit 1
               }
-              echo "::notice::Using frontend SHA override: ${FRONTEND_FULL_SHA:0:7}"
+              echo "::notice::Using frontend ref override '$INPUT_FRONTEND_SHA_OVERRIDE' → ${FRONTEND_FULL_SHA:0:7}"
           else
               FRONTEND_FULL_SHA="$PR_HEAD_SHA"
               echo "::notice::Using frontend PR #$PR_NUMBER HEAD: ${FRONTEND_FULL_SHA:0:7}"
           fi
 
           # ------------------------------------------------------------------
-          # Resolve the backend ref. Precedence:
-          #   1. "PR#<num>"                    → look up the PR's HEAD SHA
-          #   2. anything else (SHA or branch) → resolve via `commits/<ref>`
+          # Resolve the backend ref. Two arms:
+          #   1. PR#<num>   → look up the PR's HEAD SHA
+          #   2. <treeish>  → `gh api commits/<ref>` (full/short SHA, branch, tag, HEAD)
           #
-          # The GitHub `commits/<ref>` endpoint is ref-type-agnostic: it
-          # accepts a full/short SHA, a branch name, or a tag. Edge case:
-          # a branch literally named in 7-40 hex chars resolves identically
-          # — only the log line wording would have differed, which is why
-          # the SHA/branch arms are intentionally collapsed.
+          # The commits API is ref-type-agnostic: a branch literally named in
+          # 6-40 hex chars resolves the same way as the SHA itself. The
+          # 6-char floor below applies only to hex-only inputs, to avoid
+          # ambiguity for tiny tokens.
           # ------------------------------------------------------------------
           BE_REPO="$OWNER/refactor-platform-rs"
           if [[ "$INPUT_BACKEND_REF" =~ ^PR#([0-9]+)$ ]]; then
@@ -179,9 +187,14 @@ jobs:
               }
               echo "::notice::Backend ref resolved from PR #$BE_PR: ${BACKEND_FULL_SHA:0:7}"
           else
+              if [[ "$INPUT_BACKEND_REF" =~ ^[0-9a-fA-F]+$ ]] \
+                 && (( ${#INPUT_BACKEND_REF} < 6 )); then
+                  echo "::error::backend_ref looks like a SHA but is shorter than 6 chars (got ${#INPUT_BACKEND_REF}). Use at least 6 hex chars, or pass a branch/tag name."
+                  exit 1
+              fi
               BACKEND_FULL_SHA=$(gh api "repos/$BE_REPO/commits/$INPUT_BACKEND_REF" \
                   --jq '.sha' 2>&1) || {
-                  echo "::error::Backend ref '$INPUT_BACKEND_REF' not found in $BE_REPO (tried as SHA/branch/tag)"
+                  echo "::error::Backend ref '$INPUT_BACKEND_REF' not found in $BE_REPO (tried as full/short SHA, branch, tag). Run list-preview-refs.yml to see available refs."
                   exit 1
               }
               echo "::notice::Backend ref '$INPUT_BACKEND_REF' resolved to: ${BACKEND_FULL_SHA:0:7}"
@@ -207,4 +220,6 @@ jobs:
       backend_sha: ${{ needs.validate.outputs.backend_sha }}
       frontend_sha: ${{ needs.validate.outputs.frontend_sha }}
       force_rebuild: false
+      # Coerce dispatch boolean → string for the reusable workflow.
+      reset_db: ${{ inputs.reset_db && 'true' || 'false' }}
     secrets: inherit

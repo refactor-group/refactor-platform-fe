@@ -34,6 +34,46 @@ is_valid_sha_override() {
     [[ "$1" =~ ^[0-9a-fA-F]{7,40}$ ]]
 }
 
+# Treeish classifier — mirrors the new collapsed resolver in
+# dispatch-pr-preview-frontend.yml. Anything `gh api commits/<ref>` resolves
+# is accepted client-side (full SHA, short SHA ≥6 chars, branch, tag).
+# Returns one of: PR_HASH <num> | TREEISH <ref> | TOO_SHORT_HEX
+classify_treeish_input() {
+    local input="$1"
+    if [[ "$input" =~ ^PR#([0-9]+)$ ]]; then
+        echo "PR_HASH ${BASH_REMATCH[1]}"
+    elif [[ "$input" =~ ^[0-9a-fA-F]+$ ]] && (( ${#input} < 6 )); then
+        echo "TOO_SHORT_HEX"
+    else
+        echo "TREEISH $input"
+    fi
+}
+
+is_valid_treeish() {
+    local v="$1"
+    [[ -z "$v" ]] && return 1
+    if [[ "$v" =~ ^[0-9a-fA-F]+$ ]]; then
+        (( ${#v} >= 6 )) && return 0 || return 1
+    fi
+    return 0
+}
+
+is_reset_requested() {
+    local v="${1:-}"
+    [[ "${v,,}" == "true" ]]
+}
+
+decide_db_lifecycle() {
+    local volume_exists="$1" reset="$2"
+    if is_reset_requested "$reset"; then
+        echo "RESET"
+    elif [[ "$volume_exists" == "no" ]]; then
+        echo "INITIAL"
+    else
+        echo "UPDATE"
+    fi
+}
+
 # Field-protection helper. Mirrors the validate_input function at the top of
 # the dispatch workflow's resolver step. A non-zero return is "rejected".
 MAX_INPUT_LEN=250
@@ -457,4 +497,117 @@ validate_input() {
 @test "Validate: plus sign accepted" {
     run validate_input "backend_ref" "v1.0+build.5"
     [ "$status" -eq 0 ]
+}
+
+# ---------------------------------------------------------------------------
+# Treeish resolver: collapsed SHA/branch arm (the new behavior).
+# ---------------------------------------------------------------------------
+@test "Treeish: 'PR#123' parsed as PR_HASH 123 (precedence over treeish arm)" {
+    run classify_treeish_input "PR#123"
+    [ "$output" = "PR_HASH 123" ]
+}
+
+@test "Treeish: 6-char hex accepted (lower bound)" {
+    run classify_treeish_input "abc123"
+    [ "$output" = "TREEISH abc123" ]
+}
+
+@test "Treeish: 7-char hex accepted" {
+    run classify_treeish_input "abc1234"
+    [ "$output" = "TREEISH abc1234" ]
+}
+
+@test "Treeish: 40-char full SHA accepted" {
+    run classify_treeish_input "0123456789abcdef0123456789abcdef01234567"
+    [ "$output" = "TREEISH 0123456789abcdef0123456789abcdef01234567" ]
+}
+
+@test "Treeish: 5-char hex rejected as TOO_SHORT_HEX" {
+    run classify_treeish_input "abcde"
+    [ "$output" = "TOO_SHORT_HEX" ]
+}
+
+@test "Treeish: branch 'main' accepted" {
+    run classify_treeish_input "main"
+    [ "$output" = "TREEISH main" ]
+}
+
+@test "Treeish: feature branch 'feat/foo' accepted" {
+    run classify_treeish_input "feat/foo"
+    [ "$output" = "TREEISH feat/foo" ]
+}
+
+@test "Treeish: tag-like 'v1.0.0' accepted" {
+    run classify_treeish_input "v1.0.0"
+    [ "$output" = "TREEISH v1.0.0" ]
+}
+
+@test "Treeish: 'HEAD' accepted" {
+    run classify_treeish_input "HEAD"
+    [ "$output" = "TREEISH HEAD" ]
+}
+
+# ---------------------------------------------------------------------------
+# is_valid_treeish
+# ---------------------------------------------------------------------------
+@test "Validator: 6-char hex passes" {
+    is_valid_treeish "abc123"
+}
+
+@test "Validator: 5-char hex fails" {
+    run is_valid_treeish "abcde"
+    [ "$status" -ne 0 ]
+}
+
+@test "Validator: branch with hyphens passes" {
+    is_valid_treeish "fix/my-branch"
+}
+
+@test "Validator: empty string fails" {
+    run is_valid_treeish ""
+    [ "$status" -ne 0 ]
+}
+
+# ---------------------------------------------------------------------------
+# reset_db parsing
+# ---------------------------------------------------------------------------
+@test "reset_db: 'true' parsed as true" {
+    is_reset_requested "true"
+}
+
+@test "reset_db: 'TRUE' parsed as true (case-insensitive)" {
+    is_reset_requested "TRUE"
+}
+
+@test "reset_db: 'false' parsed as false" {
+    run is_reset_requested "false"
+    [ "$status" -ne 0 ]
+}
+
+@test "reset_db: empty string parsed as false (default)" {
+    run is_reset_requested ""
+    [ "$status" -ne 0 ]
+}
+
+# ---------------------------------------------------------------------------
+# DB lifecycle decision
+# ---------------------------------------------------------------------------
+@test "Lifecycle: no volume + reset=false → INITIAL" {
+    run decide_db_lifecycle "no" "false"
+    [ "$output" = "INITIAL" ]
+}
+
+@test "Lifecycle: volume present + reset=false → UPDATE" {
+    run decide_db_lifecycle "yes" "false"
+    [ "$output" = "UPDATE" ]
+}
+
+@test "Lifecycle: volume present + reset=true → RESET" {
+    run decide_db_lifecycle "yes" "true"
+    [ "$output" = "RESET" ]
+}
+
+@test "Lifecycle: no volume + reset=true → RESET" {
+    run decide_db_lifecycle "no" "true"
+    [ "$output" = "RESET" ]
 }
