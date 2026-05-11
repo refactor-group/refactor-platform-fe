@@ -34,12 +34,12 @@ export interface ActionSectionContentProps {
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[]) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => Promise<void>;
   /** Session goals for the goal picker on action cards */
   goals?: Goal[];
   /** Called when user links/unlinks a goal on an action */
   onGoalChange?: (id: Id, goalId: Id | undefined) => void;
-  onActionCreate?: (body: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
+  onActionCreate?: (body: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => Promise<void>;
   onActionDelete?: (id: Id) => void;
   readOnly?: boolean;
   /** Called when the active tab changes so the parent can react (e.g. disable Add button) */
@@ -148,8 +148,13 @@ export function ActionSectionContent({
     return () => clearTimeout(timer);
   }, [highlightTargetId]);
 
-  // Lazy-init placeholder so defaultAction() isn't called at module scope
-  const newActionPlaceholder = useMemo(() => defaultAction(), []);
+  // Lazy-init placeholder so defaultAction() isn't called at module scope.
+  // Seed due_by to +7 days so the picker initially shows the same default
+  // that the backend create handler falls back to when none is selected.
+  const newActionPlaceholder = useMemo(
+    () => ({ ...defaultAction(), due_by: DateTime.now().plus({ days: 7 }) }),
+    []
+  );
 
   const sharedCardProps = {
     locale,
@@ -220,8 +225,8 @@ export function ActionSectionContent({
               onDelete={undefined}
               onDismiss={() => onAddingActionChange(false)}
               {...sharedCardProps}
-              onBodyChange={async (_id, body, assigneeIds, goalId) => {
-                await onActionCreate(body, assigneeIds, goalId);
+              onBodyChange={async (_id, body, assigneeIds, goalId, dueBy) => {
+                await onActionCreate(body, assigneeIds, goalId, dueBy);
                 onAddingActionChange(false);
               }}
             />

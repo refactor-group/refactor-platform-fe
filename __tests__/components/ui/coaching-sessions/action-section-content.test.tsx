@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
@@ -7,6 +7,41 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { ItemStatus } from "@/types/general";
 import { createMockAction } from "../../../test-utils";
+
+// Same DueDatePicker mock as in the action-card test — exposes a stable
+// "pick" button that simulates selecting a date 60 days from "now"
+// (relative so the test stays meaningful as time passes).
+function pickedDate(): DateTime {
+  return DateTime.now().plus({ days: 60 }).startOf("day");
+}
+vi.mock("@/components/ui/coaching-sessions/action-card-parts", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/components/ui/coaching-sessions/action-card-parts")
+  >("@/components/ui/coaching-sessions/action-card-parts");
+  return {
+    ...actual,
+    DueDatePicker: ({
+      value,
+      onChange,
+    }: {
+      value: DateTime;
+      onChange: (date: DateTime) => void;
+      locale: string;
+      variant?: "button" | "text";
+    }) => (
+      <div>
+        <span data-testid="mock-due-date-value">{value.toISODate()}</span>
+        <button
+          type="button"
+          data-testid="mock-due-date-pick"
+          onClick={() => onChange(pickedDate())}
+        >
+          pick
+        </button>
+      </div>
+    ),
+  };
+});
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
@@ -205,6 +240,50 @@ describe("ActionSectionContent", () => {
 
       // Should show a textarea immediately for the new action
       expect(screen.getByRole("textbox")).toBeInTheDocument();
+    });
+
+    it("forwards a user-picked due date through onActionCreate", async () => {
+      const user = userEvent.setup();
+      const onActionCreate = vi.fn().mockResolvedValue(undefined);
+      const onAddingActionChange = vi.fn();
+
+      render(
+        <Wrapper>
+          <ActionSectionContent
+            {...baseProps({
+              isAddingAction: true,
+              onActionCreate,
+              onAddingActionChange,
+            })}
+          />
+        </Wrapper>
+      );
+
+      // Pick a new date in the mocked DueDatePicker.
+      await user.click(screen.getByTestId("mock-due-date-pick"));
+
+      // The picker reflects the new local value (proves state update wiring).
+      const expectedPickedIso = pickedDate().toISODate();
+      expect(
+        screen.getByTestId("mock-due-date-value").textContent
+      ).toBe(expectedPickedIso);
+
+      // Type a body, then save.
+      await user.type(screen.getByRole("textbox"), "Action with picked date");
+      await user.click(screen.getByText("Save"));
+
+      await waitFor(() => {
+        expect(onActionCreate).toHaveBeenCalledTimes(1);
+      });
+
+      const [body, _assigneeIds, _goalId, dueBy] =
+        onActionCreate.mock.calls[0] as [string, unknown, unknown, DateTime];
+      expect(body).toBe("Action with picked date");
+      expect(dueBy).toBeInstanceOf(DateTime);
+      expect(dueBy.toISODate()).toBe(expectedPickedIso);
+
+      // After save, parent is notified that adding is done.
+      expect(onAddingActionChange).toHaveBeenCalledWith(false);
     });
   });
 });

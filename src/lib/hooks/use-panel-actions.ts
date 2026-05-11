@@ -230,7 +230,7 @@ function useActionCrud(
   }, [globalMutate]);
 
   const handleCreate = useCallback(
-    async (body: string, assigneeIds?: Id[], goalId?: Id) => {
+    async (body: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => {
       try {
         const newAction: Action = {
           ...defaultAction(),
@@ -239,7 +239,7 @@ function useActionCrud(
           body,
           goal_id: goalId ? Some(goalId) : None,
           status: ItemStatus.NotStarted,
-          due_by: DateTime.now().plus({ days: 7 }),
+          due_by: dueBy ?? DateTime.now().plus({ days: 7 }),
           assignee_ids: assigneeIds ?? [],
         };
         await create(newAction);
