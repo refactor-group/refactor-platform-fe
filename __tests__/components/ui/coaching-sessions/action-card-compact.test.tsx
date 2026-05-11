@@ -9,6 +9,43 @@ import { ItemStatus } from "@/types/general";
 import { Some } from "@/types/option";
 import { createMockAction, createMockGoal } from "../../../test-utils";
 
+// Mock DueDatePicker to avoid coupling tests to the react-day-picker calendar
+// DOM. The mock exposes a stable test button that simulates picking a date
+// 60 days from "now" — deliberately relative so the test stays meaningful as
+// time passes — plus a label that reflects the current `value` prop so we
+// can assert that local state updates are reflected back into the picker.
+function pickedDate(): DateTime {
+  return DateTime.now().plus({ days: 60 }).startOf("day");
+}
+vi.mock("@/components/ui/coaching-sessions/action-card-parts", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/components/ui/coaching-sessions/action-card-parts")
+  >("@/components/ui/coaching-sessions/action-card-parts");
+  return {
+    ...actual,
+    DueDatePicker: ({
+      value,
+      onChange,
+    }: {
+      value: DateTime;
+      onChange: (date: DateTime) => void;
+      locale: string;
+      variant?: "button" | "text";
+    }) => (
+      <div>
+        <span data-testid="mock-due-date-value">{value.toISODate()}</span>
+        <button
+          type="button"
+          data-testid="mock-due-date-pick"
+          onClick={() => onChange(pickedDate())}
+        >
+          pick
+        </button>
+      </div>
+    ),
+  };
+});
+
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
 }
@@ -327,7 +364,8 @@ describe("CompactActionCard", () => {
           "action-1",
           "Updated action text",
           expect.any(Array),
-          undefined // goalId — no goal selected
+          undefined, // goalId — no goal selected
+          undefined // dueBy — only passed for new (initialEditing) actions
         );
       });
     });
@@ -360,6 +398,64 @@ describe("CompactActionCard", () => {
 
       // Should show a textarea immediately, no flip needed
       expect(screen.getByRole("textbox")).toBeInTheDocument();
+    });
+
+    it("tracks due-date selection locally and passes dueBy to onBodyChange on save", async () => {
+      const user = userEvent.setup();
+      const onBodyChange = vi.fn().mockResolvedValue(undefined);
+      // The non-editing onDueDateChange must NOT be called for new (unsaved)
+      // actions, because the action has no id yet.
+      const onDueDateChange = vi.fn();
+
+      // Relative initial date so the test remains meaningful over time.
+      const initialDueBy = DateTime.now().plus({ days: 1 }).startOf("day");
+      render(
+        <Wrapper>
+          <CompactActionCard
+            {...baseProps({
+              action: createMockAction({ id: "", body: "", due_by: initialDueBy }),
+              initialEditing: true,
+              onBodyChange,
+              onDueDateChange,
+            })}
+          />
+        </Wrapper>
+      );
+
+      // The picker initially reflects the placeholder's due_by.
+      expect(
+        screen.getByTestId("mock-due-date-value").textContent
+      ).toBe(initialDueBy.toISODate());
+
+      // Simulate picking a new date in the calendar.
+      await user.click(screen.getByTestId("mock-due-date-pick"));
+
+      // The picker re-renders with the locally tracked due-date — the bug
+      // was that selections silently no-op'd because action.id is "".
+      const expectedPickedIso = pickedDate().toISODate();
+      expect(
+        screen.getByTestId("mock-due-date-value").textContent
+      ).toBe(expectedPickedIso);
+
+      // The non-editing handler is bypassed for new actions.
+      expect(onDueDateChange).not.toHaveBeenCalled();
+
+      // Type a body so Save isn't disabled, then save.
+      const textarea = screen.getByRole("textbox");
+      await user.type(textarea, "New action body");
+      await user.click(screen.getByText("Save"));
+
+      await waitFor(() => {
+        expect(onBodyChange).toHaveBeenCalled();
+      });
+
+      // Last arg is the locally picked dueBy DateTime.
+      const callArgs = onBodyChange.mock.calls[0];
+      expect(callArgs[0]).toBe(""); // empty id for new action
+      expect(callArgs[1]).toBe("New action body");
+      const passedDueBy = callArgs[4] as DateTime;
+      expect(passedDueBy).toBeInstanceOf(DateTime);
+      expect(passedDueBy.toISODate()).toBe(expectedPickedIso);
     });
 
     it("calls onDismiss when Cancel is clicked in initial editing mode", async () => {

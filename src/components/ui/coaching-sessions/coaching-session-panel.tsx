@@ -84,13 +84,13 @@ export interface CoachingSessionPanelSharedProps {
   coachName: string | undefined;
   coacheeId: Id | undefined;
   coacheeName: string | undefined;
-  onActionCreate?: (body: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
+  onActionCreate?: (body: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => Promise<void>;
   onActionDelete?: (id: Id) => void;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
   onGoalChange?: (id: Id, goalId: Id | undefined) => void;
-  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => Promise<void>;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
   locale: string;

@@ -233,6 +233,42 @@ describe("handleCreate — goal linking", () => {
 
     expect(mockGlobalMutate).not.toHaveBeenCalled();
   });
+
+  // ── Due date plumbing ──────────────────────────────────────────────
+  // Regression: previously handleCreate hard-coded due_by to now()+7 days,
+  // discarding any value picked in the UI when adding a new action.
+
+  it("uses the provided dueBy when creating an action", async () => {
+    const { result } = renderHook(() => usePanelActions(PARAMS));
+    const picked = DateTime.now().plus({ days: 60 }).startOf("day");
+
+    await act(async () => {
+      await result.current.handleCreate("New action", [], undefined, picked);
+    });
+
+    expect(mockCreate).toHaveBeenCalledOnce();
+    const created = mockCreate.mock.calls[0][0] as Action;
+    expect(created.due_by.toISO()).toBe(picked.toISO());
+  });
+
+  it("falls back to now()+7 days when dueBy is omitted", async () => {
+    const { result } = renderHook(() => usePanelActions(PARAMS));
+    const before = DateTime.now();
+
+    await act(async () => {
+      await result.current.handleCreate("New action");
+    });
+
+    const after = DateTime.now();
+    const created = mockCreate.mock.calls[0][0] as Action;
+    // due_by should fall in [before+7d, after+7d] (a few-ms window).
+    expect(created.due_by.toMillis()).toBeGreaterThanOrEqual(
+      before.plus({ days: 7 }).toMillis()
+    );
+    expect(created.due_by.toMillis()).toBeLessThanOrEqual(
+      after.plus({ days: 7 }).toMillis()
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

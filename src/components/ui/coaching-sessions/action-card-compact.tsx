@@ -58,7 +58,7 @@ export interface CompactActionCardProps {
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
-  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id) => Promise<void>;
+  onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => Promise<void>;
   onDelete?: (id: Id) => void;
   /** "review" makes body read-only and hides delete. Defaults to "current". */
   variant?: "current" | "review";
@@ -106,11 +106,16 @@ export function CompactActionCard({
 
   const { linkedGoalId, linkedGoalTitle, resolvedGoals } = useLinkedGoalDisplay(action, goals);
 
-  // For new (unsaved) actions, track goal and assignee changes locally
-  // because the action doesn't exist in the backend yet.
+  // For new (unsaved) actions, track goal, assignee, and due-date changes
+  // locally because the action doesn't exist in the backend yet.
   const [localGoalId, setLocalGoalId] = useState<Id | undefined>(undefined);
   const [localAssigneeIds, setLocalAssigneeIds] = useState<Id[]>(
     action.assignee_ids ?? []
+  );
+  const [localDueBy, setLocalDueBy] = useState<DateTime>(action.due_by);
+  const displayedAction = useMemo(
+    () => (initialEditing ? { ...action, due_by: localDueBy } : action),
+    [initialEditing, action, localDueBy]
   );
   const assigneeIds = useMemo(
     () => initialEditing ? localAssigneeIds : (action.assignee_ids ?? []),
@@ -165,7 +170,7 @@ export function CompactActionCard({
       renderBack={({ onDone, isEditing, onEditStart, onEditEnd }) =>
         isEditing ? (
           <ActionEditForm
-            action={action}
+            action={displayedAction}
             locale={locale}
             initialBody={body}
             allAssignees={allAssignees}
@@ -174,7 +179,13 @@ export function CompactActionCard({
             goals={resolvedGoals}
             selectedGoalId={initialEditing ? localGoalId : linkedGoalId}
             onStatusChange={(newStatus) => onStatusChange(action.id, newStatus)}
-            onDueDateChange={(newDueBy) => onDueDateChange(action.id, newDueBy)}
+            onDueDateChange={(newDueBy) => {
+              if (initialEditing) {
+                setLocalDueBy(newDueBy);
+              } else {
+                onDueDateChange(action.id, newDueBy);
+              }
+            }}
             onAssigneeToggle={handleAssigneeToggle}
             onGoalSelect={resolvedGoals ? (goalId) => {
               if (initialEditing) {
@@ -184,7 +195,13 @@ export function CompactActionCard({
               }
             } : undefined}
             onSave={async (newBody, savedAssigneeIds, goalId) => {
-              await onBodyChange(action.id, newBody, savedAssigneeIds, goalId);
+              await onBodyChange(
+                action.id,
+                newBody,
+                savedAssigneeIds,
+                goalId,
+                initialEditing ? localDueBy : undefined
+              );
               if (!initialEditing) onEditEnd();
             }}
             onCancel={onDismiss ? onDone : onEditEnd}
