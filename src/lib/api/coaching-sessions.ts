@@ -9,6 +9,7 @@ import {
   CoachingSessionInclude,
 } from "@/types/coaching-session";
 import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
+import { CreateRecurringSessionRequest } from "@/types/recurrence";
 import { EntityApi } from "./entity-api";
 import { USERS_BASEURL } from "./users";
 import { DateTime } from "ts-luxon";
@@ -83,6 +84,25 @@ export const CoachingSessionApi = {
     EntityApi.createFn<CoachingSession, CoachingSession>(
       COACHING_SESSIONS_BASEURL,
       coachingSession
+    ),
+
+  /**
+   * Creates a recurring series of coaching sessions in a single request.
+   *
+   * Hits POST /coaching_sessions/recurring. The backend expands the
+   * recurrence rule and persists every occurrence; the first one always
+   * equals `start_at`. Caller is responsible for satisfying the field
+   * rules — see `@/types/recurrence` and the form-side guards.
+   *
+   * @param payload The CreateRecurringSessionRequest payload
+   * @returns Promise resolving to the array of created CoachingSession objects
+   */
+  createRecurring: async (
+    payload: CreateRecurringSessionRequest
+  ): Promise<CoachingSession[]> =>
+    EntityApi.createFn<CreateRecurringSessionRequest, CoachingSession[]>(
+      `${COACHING_SESSIONS_BASEURL}/recurring`,
+      payload
     ),
 
   createNested: async (): Promise<CoachingSession> => {
