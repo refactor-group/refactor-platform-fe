@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { EditorProvider } from "@tiptap/react";
 import { FileText } from "lucide-react";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
@@ -13,6 +14,9 @@ import type { Extensions } from "@tiptap/core";
 import { toast } from "sonner";
 import "@/styles/simple-editor.scss";
 import "@/styles/tiptap-table.scss";
+
+// Suppresses the reassurance hint on the fast path (sub-second joins).
+const PREPARING_HINT_DELAY_MS = 1500;
 
 // Main component: orchestrates editor state and rendering logic
 
@@ -28,30 +32,45 @@ const CoachingNotes = ({ onAddAsAction }: CoachingNotesProps) => {
   }
 
   if (isLoading || extensions.length === 0) {
-    return renderLoadingState();
+    return <LoadingState />;
   }
 
   return renderReadyEditor(extensions, isReady, onAddAsAction);
 };
 
-const renderLoadingState = () => (
-  <div className="coaching-notes-editor">
-    <div className="toolbar-container">
-      <div className="flex items-center gap-2 p-2">
-        <Skeleton className="h-8 w-8 rounded" />
-        <Skeleton className="h-8 w-8 rounded" />
-        <Skeleton className="h-8 w-8 rounded" />
-        <Skeleton className="h-8 w-px bg-border mx-1" />
-        <Skeleton className="h-8 w-8 rounded" />
-        <Skeleton className="h-8 w-8 rounded" />
+const LoadingState = () => {
+  const [showHint, setShowHint] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHint(true), PREPARING_HINT_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="coaching-notes-editor">
+      <div className="toolbar-container">
+        <div className="flex items-center gap-2 p-2">
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-px bg-border mx-1" />
+          <Skeleton className="h-8 w-8 rounded" />
+          <Skeleton className="h-8 w-8 rounded" />
+        </div>
+      </div>
+      <div className="coaching-notes-loading">
+        <Spinner className="size-8" />
+        <p className="text-sm text-muted-foreground">
+          Preparing your coaching notes…
+        </p>
+        {showHint && (
+          <p className="text-xs text-muted-foreground max-w-xs text-center">
+            New sessions can take a few seconds to get ready the first time.
+          </p>
+        )}
       </div>
     </div>
-    <div className="coaching-notes-loading">
-      <Spinner className="size-8" />
-      <p className="text-sm text-muted-foreground">Loading coaching notes...</p>
-    </div>
-  </div>
-);
+  );
+};
 
 const renderErrorState = (error: Error | null, onRetry: () => void) => (
   <div className="coaching-notes-editor">
