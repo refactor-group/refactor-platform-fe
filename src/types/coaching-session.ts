@@ -169,12 +169,16 @@ export function coachingSessionsToString(
  * start plus {@link DEFAULT_SESSION_DURATION_MINUTES}. Callers that need a
  * different boundary — for example end-of-day in the user's timezone — can
  * supply a custom `cutoff` DateTime that overrides the default calculation.
+ *
+ * Callers driving recomputation off a ticking React state (e.g. the dashboard
+ * partition that re-buckets on the minute) can pass an explicit `now` so the
+ * memo's dependency array actually reflects the time read by this helper.
  */
 export function isPastSession(
   session: CoachingSession,
-  options?: { cutoff: DateTime }
+  options?: { cutoff?: DateTime; now?: DateTime }
 ): boolean {
-  const now = DateTime.now();
+  const now = options?.now ?? DateTime.now();
   if (options?.cutoff) {
     return now > options.cutoff;
   }
