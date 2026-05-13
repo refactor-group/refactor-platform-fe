@@ -270,10 +270,11 @@ describe("CoachingSessionsCard", () => {
     const originalNow = LuxonSettings.now;
     LuxonSettings.now = () => fakeNow.toMillis();
     try {
-      const inProgressDate =
-        fakeNow.minus({ minutes: 30 }).toUTC().toISO() ?? "";
-      const endedDate =
-        fakeNow.minus({ minutes: 90 }).toUTC().toISO() ?? "";
+      const inProgressDate = fakeNow.minus({ minutes: 30 }).toUTC().toISO();
+      const endedDate = fakeNow.minus({ minutes: 90 }).toUTC().toISO();
+      if (!inProgressDate || !endedDate) {
+        throw new Error("Luxon returned null ISO from a valid fixed DateTime");
+      }
 
       setupSessionWindows({
         upcoming: {

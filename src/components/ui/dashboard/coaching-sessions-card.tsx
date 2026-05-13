@@ -210,13 +210,11 @@ export function CoachingSessionsCard({
   }, [onRefreshNeeded]);
 
   // A session stays in Upcoming until its full duration has elapsed.
-  // `now` keeps the memo recomputing on the minute tick; `isPastSession`
-  // reads `DateTime.now()` itself.
   const { upcomingSessions, previousSessions } = useMemo(() => {
     const upcoming: EnrichedCoachingSession[] = [];
     const previous: EnrichedCoachingSession[] = [];
     for (const session of allSessions) {
-      if (isPastSession(session)) {
+      if (isPastSession(session, { now })) {
         previous.push(session);
       } else {
         upcoming.push(session);
@@ -224,7 +222,6 @@ export function CoachingSessionsCard({
     }
     previous.reverse();
     return { upcomingSessions: upcoming, previousSessions: previous };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSessions, now]);
 
   // Hover state is owned here — not in `CoachingSessionsListView` — so the
