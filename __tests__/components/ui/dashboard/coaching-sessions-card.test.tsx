@@ -258,6 +258,60 @@ describe("CoachingSessionsCard", () => {
     expect(screen.queryByTestId("session-row-s-future")).not.toBeInTheDocument();
   });
 
+  // Boundary: a session whose start is in the past but whose end
+  // (start + DEFAULT_SESSION_DURATION_MINUTES = 60) is still in the future
+  // remains in Upcoming. Pin the clock per the project's testing rule for
+  // duration-boundary assertions.
+  it("keeps an in-progress session in Upcoming until its full duration elapses", async () => {
+    const user = userEvent.setup();
+    setupBaseAuth();
+
+    const fakeNow = DateTime.fromISO("2026-03-26T17:00:00.000Z");
+    const originalNow = LuxonSettings.now;
+    LuxonSettings.now = () => fakeNow.toMillis();
+    try {
+      const inProgressDate =
+        fakeNow.minus({ minutes: 30 }).toUTC().toISO() ?? "";
+      const endedDate =
+        fakeNow.minus({ minutes: 90 }).toUTC().toISO() ?? "";
+
+      setupSessionWindows({
+        upcoming: {
+          enrichedSessions: [
+            createMockEnrichedSession({
+              id: "s-in-progress",
+              date: inProgressDate,
+            }),
+          ],
+        },
+        previous: {
+          enrichedSessions: [
+            createMockEnrichedSession({ id: "s-ended", date: endedDate }),
+          ],
+        },
+      });
+
+      render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+
+      // Started 30 min ago, 30 min still to go → Upcoming.
+      expect(
+        screen.getByTestId("session-row-s-in-progress")
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("session-row-s-ended")
+      ).not.toBeInTheDocument();
+
+      // Ended 30 min ago (90 min after start) → Previous.
+      await user.click(screen.getByRole("tab", { name: /previous/i }));
+      expect(screen.getByTestId("session-row-s-ended")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("session-row-s-in-progress")
+      ).not.toBeInTheDocument();
+    } finally {
+      LuxonSettings.now = originalNow;
+    }
+  });
+
   it("shows Reschedule for a coach viewer inside the row's kebab menu and fires the callback", async () => {
     const user = userEvent.setup();
     const onReschedule = vi.fn();

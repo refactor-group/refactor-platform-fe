@@ -26,6 +26,7 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
   CoachingSessionInclude,
+  isPastSession,
   type CoachingSession,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
@@ -208,24 +209,22 @@ export function CoachingSessionsCard({
     onRefreshNeeded?.(() => refreshSessionsRef.current());
   }, [onRefreshNeeded]);
 
-  // Sessions starting exactly at `now` belong in Upcoming. Previous is reversed
-  // so the most recent session appears first, matching the prior `desc` fetch.
-  // `{ zone: "utc" }` matches the row formatter (`coaching-sessions-row.tsx`)
-  // because the backend ships naive ISO datetime strings — without it Luxon
-  // parses in the viewer's local zone, shifting the absolute time by the user's
-  // UTC offset and bucketing boundary sessions into the wrong tab.
+  // A session stays in Upcoming until its full duration has elapsed.
+  // `now` keeps the memo recomputing on the minute tick; `isPastSession`
+  // reads `DateTime.now()` itself.
   const { upcomingSessions, previousSessions } = useMemo(() => {
     const upcoming: EnrichedCoachingSession[] = [];
     const previous: EnrichedCoachingSession[] = [];
     for (const session of allSessions) {
-      if (DateTime.fromISO(session.date, { zone: "utc" }) >= now) {
-        upcoming.push(session);
-      } else {
+      if (isPastSession(session)) {
         previous.push(session);
+      } else {
+        upcoming.push(session);
       }
     }
     previous.reverse();
     return { upcomingSessions: upcoming, previousSessions: previous };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allSessions, now]);
 
   // Hover state is owned here — not in `CoachingSessionsListView` — so the
