@@ -304,6 +304,76 @@ function MyCard() {
 - Explain *why* something is done, not just *what* is being done
 - Document external state synchronization patterns (like forceUpdate mechanisms)
 
+## Testing
+
+### No Wall-Clock Time in Time-Sensitive Tests
+
+**Tests must not depend on the real wall clock for any assertion that compares
+against calendar boundaries, day-of-week, AM/PM, timezone offsets, or
+similar.** A test that passes most of the year but fails at 23:59 local time —
+or 04:59 UTC when the user's timezone has just rolled past midnight — is a
+broken test, not "flaky CI." It will eventually fail in CI, on a contributor's
+laptop in another timezone, or on DST transition days.
+
+**Rules:**
+
+1. **Relative offsets are fine** — `DateTime.now().plus({ minutes: 30 })` for a
+   "session 30 minutes from now" is stable, because the assertion only cares
+   about the offset, not where on the calendar "now" sits.
+
+2. **Pin the clock whenever the assertion depends on a calendar position** —
+   "is this today / tomorrow / yesterday", "is this past end-of-day in
+   timezone X", "what day of the week is this", "is this before noon",
+   "does this cross a DST boundary". Use `Settings.now` from `ts-luxon`
+   (or `vi.useFakeTimers()` + `vi.setSystemTime()`) to make "now" deterministic:
+
+   ```typescript
+   import { describe, it, expect, beforeEach, afterEach } from "vitest";
+   import { DateTime, Settings } from "ts-luxon";
+
+   describe("day-relative behaviour", () => {
+     const originalNow = Settings.now;
+     const fakeNow = DateTime.fromISO("2026-03-26T12:00:00.000Z", { zone: "utc" });
+
+     beforeEach(() => {
+       Settings.now = () => fakeNow.toMillis();
+     });
+
+     afterEach(() => {
+       Settings.now = originalNow;
+     });
+
+     it("treats a session 24h later as tomorrow", () => {
+       // Both createSessionAt and the code under test now see the same
+       // fixed "now", so the assertion is stable.
+       const session = createSessionAt(24 * 60);
+       expect(getUrgencyMessage(session, calculateSessionUrgency(session)))
+         .toContain("tomorrow");
+     });
+   });
+   ```
+
+3. **Pin the zone too when timezone-specific behaviour matters.** Either pin
+   `Settings.defaultZone`, or build inputs from an explicit ISO string with
+   `{ zone: "..." }` rather than relying on the host's system timezone.
+   `DateTime.now()` in Node respects `process.env.TZ`, which varies between
+   CI and developer machines.
+
+4. **Anti-pattern — defensive fallbacks that hide flakiness.** If a test
+   needs a `try/catch`, an `if-else` around `urgency`, or "skip the
+   assertion when timing is unlucky" logic, the test is wrong. Pin time
+   instead and assert unconditionally.
+
+5. **`DateTime.now()` is OK for opaque metadata** — `created_at`/`updated_at`
+   on mock objects that nothing in the assertion compares against can use
+   real now without issue.
+
+**Symptom to watch for:** a test creates data with `DateTime.now()`,
+then calls a function that *also* reads `DateTime.now()`, then asserts on
+calendar-day semantics. The two `now`s can land on different calendar days
+(or sides of a DST boundary) — the test passes 99% of the time and fails
+in CI exactly once a year per timezone.
+
 ## Code Review Checklist
 
 When reviewing or writing code, ensure:
@@ -315,3 +385,4 @@ When reviewing or writing code, ensure:
 - [ ] TypeScript types are properly defined and used
 - [ ] Leaf components receive `locale` and config values via props, not `siteConfig` imports
 - [ ] No `|| ""` fallbacks for nullable IDs or dates -- use render guards instead
+- [ ] Tests with calendar-boundary assertions pin `Settings.now` instead of relying on real time
