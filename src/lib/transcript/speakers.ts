@@ -32,19 +32,20 @@ export function buildSpeakerStyles(
   return styles;
 }
 
+const PRIMARY_STYLE: SpeakerStyle = {
+  variant: "primary",
+  alignment: "right",
+  swatchClass: "bg-[#007AFF]",
+};
+
+const SECONDARY_STYLE: SpeakerStyle = {
+  variant: "secondary",
+  alignment: "left",
+  swatchClass: "bg-zinc-400",
+};
+
 function stylesForOrdinal(ordinal: number): SpeakerStyle {
-  if (ordinal === 0) {
-    return {
-      variant: "primary",
-      alignment: "right",
-      swatchClass: "bg-[#007AFF]",
-    };
-  }
-  return {
-    variant: "secondary",
-    alignment: "left",
-    swatchClass: "bg-zinc-400",
-  };
+  return ordinal === 0 ? PRIMARY_STYLE : SECONDARY_STYLE;
 }
 
 /**
@@ -57,11 +58,5 @@ export function speakerStyleFor(
   segment: TranscriptSegment,
   styles: Map<string, SpeakerStyle>
 ): SpeakerStyle {
-  return (
-    styles.get(segment.speaker_label) ?? {
-      variant: "secondary",
-      alignment: "left",
-      swatchClass: "bg-zinc-400",
-    }
-  );
+  return styles.get(segment.speaker_label) ?? SECONDARY_STYLE;
 }

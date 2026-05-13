@@ -96,11 +96,15 @@ export function useTranscriptionToasts({
           : {}),
       });
     }
+    // `recording?.error_message` intentionally omitted — this effect only
+    // fires on the edge into Failed, so a later refinement of the error
+    // string shouldn't re-fire the toast (the prev→curr transition is
+    // Failed→Failed at that point). The message is read at toast time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     sessionId,
     recordingStatus,
     prevRecordingStatus,
-    recording?.error_message,
     onRetryTranscription,
   ]);
 
@@ -123,11 +127,13 @@ export function useTranscriptionToasts({
           : {}),
       });
     }
+    // `transcription?.error_message` intentionally omitted — see the
+    // analogous comment in the recording-failed effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     sessionId,
     transcriptionStatus,
     prevTranscriptionStatus,
-    transcription?.error_message,
     onRetryTranscription,
   ]);
 }

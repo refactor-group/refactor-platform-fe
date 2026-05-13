@@ -91,3 +91,42 @@ export interface TranscriptSegment {
   sentiment?: TranscriptSegmentSentiment;
   created_at: string;
 }
+
+/**
+ * Validates and narrows an API payload to `Transcription`. Throws on
+ * shape drift so SWR surfaces it as `error` rather than silently
+ * narrowing to an invalid TS value.
+ */
+export function parseTranscription(value: unknown): Transcription {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("Transcription payload is not an object");
+  }
+  const record = value as { status?: unknown };
+  if (!isTranscriptionStatus(record.status)) {
+    throw new Error(`Unknown transcription status: ${String(record.status)}`);
+  }
+  return value as Transcription;
+}
+
+/**
+ * Validates a single `TranscriptSegment`. The optional `sentiment` field
+ * is dropped if it's an unrecognized value — segments are still useful
+ * without sentiment, so this is a softer parse than the status-bearing
+ * entities above.
+ */
+export function parseTranscriptSegment(value: unknown): TranscriptSegment {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("TranscriptSegment payload is not an object");
+  }
+  const record = value as { sentiment?: unknown };
+  if (
+    record.sentiment !== undefined &&
+    !isTranscriptSegmentSentiment(record.sentiment)
+  ) {
+    const { sentiment: _drop, ...rest } = value as TranscriptSegment & {
+      sentiment?: unknown;
+    };
+    return rest as TranscriptSegment;
+  }
+  return value as TranscriptSegment;
+}

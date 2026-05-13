@@ -266,7 +266,15 @@ interface LayoutSlots {
   isTranscriptOpen: boolean;
 }
 
-function readSlotsFromParams(searchParams: ReadonlyURLSearchParams): LayoutSlots {
+// `useSearchParams()` may return null during transient render states (e.g.
+// pre-bootstrap in some Next 14 narrowings or under test mocks). Treat
+// absence as "no slots set" rather than NPE-ing on `.get(...)`.
+function readSlotsFromParams(
+  searchParams: ReadonlyURLSearchParams | null
+): LayoutSlots {
+  if (!searchParams) {
+    return { focusedPanel: FocusedPanel.None, isTranscriptOpen: false };
+  }
   const rawFocus = searchParams.get(FOCUS_PARAM);
   const focusedPanel =
     rawFocus && isFocusedPanel(rawFocus) ? rawFocus : FocusedPanel.None;
@@ -277,10 +285,10 @@ function readSlotsFromParams(searchParams: ReadonlyURLSearchParams): LayoutSlots
 function writeSlotsToUrl(
   router: ReturnType<typeof useRouter>,
   pathname: string,
-  existing: ReadonlyURLSearchParams,
+  existing: ReadonlyURLSearchParams | null,
   slots: LayoutSlots
 ): void {
-  const next = new URLSearchParams(existing);
+  const next = new URLSearchParams(existing ?? undefined);
   if (slots.focusedPanel === FocusedPanel.None) next.delete(FOCUS_PARAM);
   else next.set(FOCUS_PARAM, slots.focusedPanel);
   if (slots.isTranscriptOpen) next.set(TRANSCRIPT_PARAM, "1");

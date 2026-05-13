@@ -49,23 +49,33 @@ function deriveEmptyState(
   if (!recording) {
     return { kind: "no-recording" };
   }
-  if (recording.status === MeetingRecordingStatus.Failed) {
-    return { kind: "recording-failed", errorMessage: recording.error_message };
-  }
-  if (recording.status === MeetingRecordingStatus.Completed) {
-    if (transcription?.status === TranscriptionStatus.Failed) {
-      return { kind: "transcription-failed", errorMessage: transcription.error_message };
+  switch (recording.status) {
+    case MeetingRecordingStatus.Failed:
+      return { kind: "recording-failed", errorMessage: recording.error_message };
+    case MeetingRecordingStatus.Completed:
+      if (transcription?.status === TranscriptionStatus.Failed) {
+        return { kind: "transcription-failed", errorMessage: transcription.error_message };
+      }
+      if (transcription?.status === TranscriptionStatus.Completed) {
+        return { kind: "no-speech" };
+      }
+      return { kind: "processing" };
+    case MeetingRecordingStatus.Pending:
+    case MeetingRecordingStatus.Joining:
+    case MeetingRecordingStatus.WaitingRoom:
+    case MeetingRecordingStatus.InMeeting:
+    case MeetingRecordingStatus.Recording:
+    case MeetingRecordingStatus.Processing: {
+      const durationMs = recording.started_at
+        ? Math.max(0, Date.now() - new Date(recording.started_at).getTime())
+        : 0;
+      return { kind: "recording-live", durationMs };
     }
-    if (transcription?.status === TranscriptionStatus.Completed) {
-      return { kind: "no-speech" };
+    default: {
+      const _exhaustive: never = recording.status;
+      return _exhaustive;
     }
-    return { kind: "processing" };
   }
-  // Pending / Joining / WaitingRoom / InMeeting / Recording / Processing
-  const durationMs = recording.started_at
-    ? Math.max(0, Date.now() - new Date(recording.started_at).getTime())
-    : 0;
-  return { kind: "recording-live", durationMs };
 }
 
 export function TranscriptPanel({

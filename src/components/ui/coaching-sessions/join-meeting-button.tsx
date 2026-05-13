@@ -57,7 +57,11 @@ export function JoinMeetingButton({
   const { recording, startRecording, stopRecording } =
     useMeetingRecording(sessionId);
 
-  if (!meetingUrl) {
+  // Disable when either the meeting URL or session isn't available — the
+  // recording lifecycle calls (startRecording/stopRecording) both require a
+  // real sessionId, and the SWR fetcher's `sessionId!` non-null assertion
+  // would crash if invoked without one.
+  if (!meetingUrl || !sessionId) {
     return <DisabledButton />;
   }
 

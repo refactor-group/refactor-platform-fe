@@ -58,6 +58,28 @@ export interface MeetingRecording {
 }
 
 /**
+ * Validates and narrows an API payload to `MeetingRecording`. Throws on
+ * shape drift (e.g. a new backend status enum the frontend doesn't
+ * recognize yet) so SWR surfaces it as `error` rather than silently
+ * narrowing to an invalid TS value.
+ *
+ * `null` is passed through unchanged: the GET endpoint returns null when
+ * no recording exists for the session.
+ */
+export function parseMeetingRecording(value: unknown): MeetingRecording {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("MeetingRecording payload is not an object");
+  }
+  const record = value as { status?: unknown };
+  if (!isMeetingRecordingStatus(record.status)) {
+    throw new Error(
+      `Unknown meeting recording status: ${String(record.status)}`
+    );
+  }
+  return value as MeetingRecording;
+}
+
+/**
  * Recording statuses that represent an active, in-progress lifecycle —
  * i.e., the UI should poll for updates and show live-state chrome.
  */
