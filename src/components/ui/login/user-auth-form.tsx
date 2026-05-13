@@ -133,7 +133,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           <div className="flex justify-end">
             <Link
               href="/forgot-password"
-              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              className="text-xs text-muted-foreground/70 underline-offset-4 hover:text-muted-foreground hover:underline"
             >
               Forgot password?
             </Link>
