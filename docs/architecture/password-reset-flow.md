@@ -13,7 +13,7 @@ User-initiated password reset for users who have forgotten their password. Cross
 
 - Multi-device session invalidation on successful reset — deferred until the persistent session store migration. The existing `SessionCleanupProvider` handles graceful logout on `401` whenever this lands, so no FE code is required in v1.
 - Per-IP rate limiting — BE ships with per-email DB-based limits only.
-- Password strength enforcement beyond the current `min 8 chars + confirm match` — tracked in [#395](https://github.com/refactor-group/refactor-platform-fe/issues/395) as a cross-cutting improvement across setup, reset, and change-password flows.
+- Strength enforcement beyond length-and-confirm-match (e.g. zxcvbn scoring, common-password rejection, HaveIBeenPwned check) — still tracked in [#395](https://github.com/refactor-group/refactor-platform-fe/issues/395). Length policy itself (`12 ≤ length ≤ 128`, no complexity rules) is now enforced per the `password_policy` decision on the coordination board.
 - Auto-login after successful reset — user is redirected to the login page to sign in fresh with the new password.
 
 ## User Flow
@@ -104,6 +104,19 @@ Aligns with the project's nullable-type discipline (CLAUDE.md memory: prefer dis
 - **Two-column auth shell** — extract from `/setup/[token]/page.tsx` if not already shared; if shared, reuse directly.
 - **Form input + error rendering** — match the inline-red-text pattern from setup page and login form.
 - **`useLogoutUser` hook** — invoked on the `success` state transition to clear the FE auth store + SWR cache before redirecting to `/`. Handles the edge case where a logged-in user completes a reset (theirs or another account's).
+
+### Password Policy
+
+Mirrors the server-side `password_policy` decision exactly:
+
+| Rule | Value | Client-side enforcement |
+|---|---|---|
+| Non-empty after trim | required | "Password cannot be empty or whitespace" |
+| Min length | 12 characters (Unicode scalar values, not bytes) | "Password must be at least 12 characters" |
+| Max length | 128 characters | "Password must be at most 128 characters" |
+| Complexity (uppercase / digit / symbol) | NOT enforced — deliberately | — |
+
+Length is counted via `[...password].length` to match the BE's Unicode-scalar counting (so 12 emoji counts as 12 characters, not ~48 bytes). On a server-side 422 the FE surfaces the BE's `message` verbatim — that way any future policy refinement on the BE is reflected without an FE patch.
 
 ## Security Decisions
 

@@ -42,7 +42,16 @@ function getCompleteErrorMessage(error: unknown): string {
         return INVALID_OR_EXPIRED_MESSAGE
     }
     if (isPasswordResetValidationError(error)) {
-        return "Passwords do not match. Please try again."
+        // BE returns a specific per-rule message (e.g. "Password must be at
+        // least 12 characters"). Surface it verbatim so the user sees the
+        // exact policy. Falls back to a generic if the body shape is unexpected.
+        if (error instanceof EntityApiError) {
+            const message = (error.data as { message?: unknown })?.message
+            if (typeof message === "string" && message.length > 0) {
+                return message
+            }
+        }
+        return "Your password does not meet requirements. Please try again."
     }
     return getValidateErrorMessage(error)
 }

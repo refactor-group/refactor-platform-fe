@@ -24,6 +24,13 @@ function getErrorMessage(error: unknown): string {
             return "This account has already been set up."
         }
         if (status === 422) {
+            // BE returns a specific per-rule message (e.g. "Password must be at
+            // least 12 characters"). Surface it verbatim per the password_policy
+            // decision. Falls back to a generic if the body shape is unexpected.
+            const data = error.response?.data as { message?: unknown } | undefined
+            if (typeof data?.message === "string" && data.message.length > 0) {
+                return data.message
+            }
             return "Password does not meet requirements."
         }
         if (status && status >= 500) {

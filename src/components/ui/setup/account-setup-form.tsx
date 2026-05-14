@@ -34,10 +34,14 @@ export function AccountSetupForm({ onSubmit, isSubmitting, error }: AccountSetup
     const validateForm = () => {
         const newErrors: Record<string, string> = {}
 
+        // Mirrors server-side policy: 12 ≤ length ≤ 128, no complexity rules.
+        // See password_policy decision on the coordination board.
         if (!formData.password.trim()) {
-            newErrors.password = "Password is required"
-        } else if (formData.password.length < 8) {
-            newErrors.password = "Password must be at least 8 characters long"
+            newErrors.password = "Password cannot be empty or whitespace"
+        } else if ([...formData.password].length < 12) {
+            newErrors.password = "Password must be at least 12 characters"
+        } else if ([...formData.password].length > 128) {
+            newErrors.password = "Password must be at most 128 characters"
         }
 
         if (!formData.confirm_password.trim()) {
