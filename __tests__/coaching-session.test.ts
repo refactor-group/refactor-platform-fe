@@ -59,14 +59,23 @@ describe("isPastSession", () => {
 
   it("end-of-day cutoff in a specific user timezone keeps same-day session editable", () => {
     // Simulate the exact pattern used in the coaching session page:
-    // session date → convert to user timezone → end of that calendar day
+    // session date → convert to user timezone → end of that calendar day.
+    // Pin "now" to noon Chicago time so the session (3h earlier = 9 AM Chicago)
+    // and "now" are safely on the same Chicago calendar day — without this the
+    // test is flaky when run near midnight Chicago time.
     const userTimezone = "America/Chicago";
-    const session = createSessionAt(-180); // 3 hours ago, well past default 60-min window
-    const cutoff = DateTime.fromISO(session.date, { zone: 'utc' })
-      .setZone(userTimezone)
-      .endOf('day');
-    // Still the same calendar day in the user's timezone
-    expect(isPastSession(session, { cutoff })).toBe(false);
+    const fakeNow = DateTime.fromISO("2026-03-26T17:00:00.000Z"); // noon CDT
+    Settings.now = () => fakeNow.toMillis();
+    try {
+      const session = createSessionAt(-180); // 3 hours ago, well past default 60-min window
+      const cutoff = DateTime.fromISO(session.date, { zone: 'utc' })
+        .setZone(userTimezone)
+        .endOf('day');
+      // Still the same calendar day in the user's timezone
+      expect(isPastSession(session, { cutoff })).toBe(false);
+    } finally {
+      Settings.now = () => Date.now();
+    }
   });
 
   it("end-of-day cutoff marks yesterday's session as past", () => {

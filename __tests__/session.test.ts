@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { DateTime } from "ts-luxon";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { DateTime, Settings } from "ts-luxon";
 import {
   calculateSessionUrgency,
   getUrgencyMessage,
@@ -134,47 +134,56 @@ describe("getUrgencyMessage", () => {
     expect(message).toContain("Scheduled for");
   });
 
-  it("returns 'tomorrow' prefix for sessions scheduled tomorrow", () => {
-    // Create a session 24 hours from now
-    const session = createSessionAt(24 * 60);
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
+  // The "today / tomorrow / yesterday" branches of getUrgencyMessage compare
+  // calendar days using DateTime.now(), so they're sensitive to where the
+  // wall clock sits relative to midnight. Pin "now" to noon UTC for the
+  // remainder of this describe block so the day-prefix assertions are stable
+  // regardless of when CI happens to run.
+  describe("day-relative prefixes", () => {
+    const originalNow = Settings.now;
+    const fakeNow = DateTime.fromISO("2026-03-26T12:00:00.000Z", { zone: "utc" });
 
-    expect(message).toContain("Scheduled for tomorrow");
-  });
-
-  it("returns 'yesterday' prefix for past sessions from yesterday", () => {
-    // Create a session 24 hours ago
-    const session = createSessionAt(-24 * 60);
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
-
-    expect(message).toContain("Ended");
-  });
-
-  it("returns 'this morning/afternoon/evening' for sessions today", () => {
-    // Create a session at 2 PM today to ensure it's beyond the 2 hour threshold
-    // and still definitely today regardless of when the test runs
-    const now = DateTime.now();
-    const todayAt2PM = now.startOf('day').set({ hour: 14 }); // 2:00 PM today
-
-    const session = createMockSession({
-      date: todayAt2PM.toUTC().toISO(),
+    beforeEach(() => {
+      Settings.now = () => fakeNow.toMillis();
     });
 
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
+    afterEach(() => {
+      Settings.now = originalNow;
+    });
 
-    // If we're testing before noon, it should say "this afternoon"
-    // Only assert if it's actually in the "Later" category (> 2 hours away)
-    if (urgency === SessionUrgency.Later) {
+    it("returns 'tomorrow' prefix for sessions scheduled tomorrow", () => {
+      // Create a session 24 hours from now
+      const session = createSessionAt(24 * 60);
+      const urgency = calculateSessionUrgency(session);
+      const message = getUrgencyMessage(session, urgency);
+
+      expect(message).toContain("Scheduled for tomorrow");
+    });
+
+    it("returns 'yesterday' prefix for past sessions from yesterday", () => {
+      // Create a session 24 hours ago
+      const session = createSessionAt(-24 * 60);
+      const urgency = calculateSessionUrgency(session);
+      const message = getUrgencyMessage(session, urgency);
+
+      expect(message).toContain("Ended");
+    });
+
+    it("returns 'this morning/afternoon/evening' for sessions today", () => {
+      // Session at 6 PM UTC; "now" is pinned at noon UTC, so the session is
+      // safely later today (> 2 hour threshold) → Later urgency.
+      const todayAt6PM = fakeNow.set({ hour: 18 });
+
+      const session = createMockSession({
+        date: todayAt6PM.toUTC().toISO(),
+      });
+
+      const urgency = calculateSessionUrgency(session);
+      const message = getUrgencyMessage(session, urgency);
+
+      expect(urgency).toBe(SessionUrgency.Later);
       expect(message).toContain("Scheduled for this");
-    } else {
-      // If it's not Later urgency (because test ran too close to 2 PM),
-      // at least verify it's not tomorrow/yesterday
-      expect(message).not.toContain("tomorrow");
-      expect(message).not.toContain("yesterday");
-    }
+    });
   });
 });
 
