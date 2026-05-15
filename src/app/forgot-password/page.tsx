@@ -36,7 +36,13 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function ForgotPasswordPage() {
-    const initialEmail = useAuthStore((state) => state.userSession.email) ?? ""
+    // Prefill email only when the user is actually signed in. Reading
+    // userSession.email unconditionally would surface the empty-string
+    // default for logged-out users — a falsy sentinel masquerading as data.
+    const isLoggedIn = useAuthStore((state) => state.isLoggedIn)
+    const sessionEmail = useAuthStore((state) => state.userSession.email)
+    const initialEmail = isLoggedIn ? sessionEmail : undefined
+
     const [pageState, setPageState] = useState<ForgotPasswordState>({ kind: "idle" })
     const [formError, setFormError] = useState("")
 

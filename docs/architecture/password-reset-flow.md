@@ -44,10 +44,10 @@ User-initiated password reset for users who have forgotten their password. Cross
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/password-reset/request` | Generate token, email reset link. **Always 200**, regardless of whether the email maps to a real user (enumeration-safe). 429 on rate-limit. |
-| `GET` | `/password-reset/validate?token=<raw>` | Non-destructive token validity check. Returns sanitized `{ first_name, last_name }` only — no email, role, or other PII. |
+| `POST` | `/password-reset/validate` | Non-destructive token validity check. **Token in JSON body** (v1.1 — see Security Decision 2a). Returns sanitized `{ first_name, last_name }` only — no email, role, or other PII. |
 | `POST` | `/password-reset/complete` | Consume token + set new password. Returns updated user. Token is deleted atomically (single-use). |
 
-Full request/response/error schemas live in `PasswordResetEndpoints` v1 on the coordinator board.
+Full request/response/error schemas live in `PasswordResetEndpoints` v1.1 on the coordinator board.
 
 ### Error Discriminators (Specific-Variant Pattern)
 
@@ -92,7 +92,7 @@ The complete-flow state machine follows the existing setup-flow discriminated un
 type PasswordResetPageState =
   | { kind: "validating" }
   | { kind: "ready"; firstName: string; lastName: string }
-  | { kind: "submitting" }
+  | { kind: "submitting"; firstName: string; lastName: string }
   | { kind: "success" }
   | { kind: "error"; message: string };
 ```
@@ -103,7 +103,7 @@ Aligns with the project's nullable-type discipline (CLAUDE.md memory: prefer dis
 
 - **Two-column auth shell** — extract from `/setup/[token]/page.tsx` if not already shared; if shared, reuse directly.
 - **Form input + error rendering** — match the inline-red-text pattern from setup page and login form.
-- **`useLogoutUser` hook** — invoked on the `success` state transition to clear the FE auth store + SWR cache before redirecting to `/`. Handles the edge case where a logged-in user completes a reset (theirs or another account's).
+- **`useLogoutUser` hook** — invoked on the **Sign-In click** from the `success` card (not on state transition) when the user is logged in. Clears the FE auth store + SWR cache and calls `router.replace("/")`. Handles the edge case where a logged-in user completes a reset (theirs or another account's). See Security Decision 9 for why this is click-driven rather than transition-driven.
 
 ### Password Policy
 
@@ -143,6 +143,21 @@ This section is the load-bearing part of the doc. Each decision is recorded with
 - **Matches the existing `/setup/[token]` precedent** — the welcome email already uses path-segment token substitution (verified in backend `domain/src/emails.rs:198`).
 
 **Enforced at:** BE email template (`{token}` placeholder substituted into path segment). FE route at `app/reset-password/[token]/page.tsx`.
+
+### 2a. Token in request body on FE→BE validate, not query string (v1.1)
+
+**Decision:** `POST /password-reset/validate` with `{ "token": "..." }` in the JSON body, **not** `GET ?token=<raw>`. v1 of the contract specified the query-string form; v1.1 (coordinator thread `password_reset_validate_token_transport`, 2026-05-14) corrected this.
+
+**Rationale:** The same argument that drove Decision 2 (path-segment over query-string in the email URL) applies to the FE→BE call. A `GET ?token=<raw>` lands the raw reset token in:
+
+- BE access logs (axum tower-http `TraceLayer` logs query strings by default, as do nginx/Caddy)
+- any reverse-proxy / CDN access log between the FE host and the BE
+- the browser's DevTools network history and `window.history`
+- any error-reporting / APM integration that captures request URLs
+
+JSON body transport bypasses every one of these in a single change. POST-for-a-non-mutating-read is a small REST-semantics tradeoff that's worth it for defense-in-depth and uniformity with `/request` and `/complete` (all three endpoints are now POST-with-body).
+
+**Enforced at:** FE — `axios.post(BASE + "/validate", { token })` in [src/lib/api/password-reset.ts](../../src/lib/api/password-reset.ts). BE — handler takes `Json<ValidateParams>` instead of `Query<ValidateParams>`. Regression-guarded by [__tests__/lib/api/password-reset.test.ts](../../__tests__/lib/api/password-reset.test.ts): the validate spec asserts no `params` config is passed to axios.
 
 ### 3. Strict `Referrer-Policy: no-referrer` on token-bearing pages
 
@@ -200,15 +215,17 @@ The Next.js default policy (`strict-origin-when-cross-origin`) already strips th
 
 **Enforced at:** BE controller projects user model down to the two-field response.
 
-### 9. Force-logout on successful reset
+### 9. Force-logout on successful reset (click-driven, not transition-driven)
 
-**Decision:** When the FE transitions to the `success` state on `/reset-password/[token]`, it calls `useLogoutUser()` to clear the auth store, SWR cache, and BE session cookie before redirecting to `/`.
+**Decision:** When the FE transitions to the `success` state on `/reset-password/[token]`, it shows the "Your password has been updated. Please sign in." card. **If the user was logged in**, clicking the "Go to Sign In" button invokes `useLogoutUser()`, which clears the auth store, SWR cache, and BE session cookie before redirecting to `/`. **If the user was logged out**, the same button is a plain `<Link>` to `/`.
 
 **Rationale:** If a logged-in user (User A) completes a reset for a different account (User B, perhaps because A is helping B on a shared device), simply redirecting to login without clearing A's session would leave A signed in while B is expected to sign in fresh. Force-logout makes the post-reset state unambiguous: nobody is signed in, the user signs in with the new credentials.
 
 This also closes a subtle session-coherence gap when the reset is for the currently-signed-in account: the old session cookie is invalidated alongside the password change, so the user can't accidentally keep using a session that was created under the old password.
 
-**Enforced at:** `success` state transition in `/reset-password/[token]/page.tsx`.
+**Why click-driven, not transition-driven:** An earlier draft invoked `logoutUser()` inside the `complete()` success path, before setting `pageState = "success"`. That had a bug — `useLogoutUser()` calls `router.replace("/")` in its `finally`, so the redirect fired before the success card could render, and the logged-in user never saw the confirmation. Click-driven preserves the success-card UI on both code paths (logged-in and logged-out), and matches the `/setup/[token]` precedent.
+
+**Enforced at:** `handleSignIn` in [src/app/reset-password/[token]/page.tsx](../../src/app/reset-password/[token]/page.tsx). Regression-guarded by the page-state-machine tests in [__tests__/app/reset-password-page.test.tsx](../../__tests__/app/reset-password-page.test.tsx) — one test asserts the success card renders before any logout, another asserts logout fires only after the Sign-In click.
 
 ### 10. BE-side rate limiting (1/60s, 5/24h per email)
 

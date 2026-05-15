@@ -5,7 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 
 import { cn } from "@/components/lib/utils"
-import { buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Icons } from "@/components/ui/icons"
 import { ResetPasswordForm } from "@/components/ui/password-reset/reset-password-form"
 import { PasswordResetApi } from "@/lib/api/password-reset"
@@ -42,14 +42,11 @@ function getCompleteErrorMessage(error: unknown): string {
         return INVALID_OR_EXPIRED_MESSAGE
     }
     if (isPasswordResetValidationError(error)) {
-        // BE returns a specific per-rule message (e.g. "Password must be at
-        // least 12 characters"). Surface it verbatim so the user sees the
-        // exact policy. Falls back to a generic if the body shape is unexpected.
-        if (error instanceof EntityApiError) {
-            const message = (error.data as { message?: unknown })?.message
-            if (typeof message === "string" && message.length > 0) {
-                return message
-            }
+        // BE returns a per-rule message (e.g. "Password must be at least 12
+        // characters") — surface it verbatim so the user sees the exact policy.
+        const message = (error.data as { message?: unknown })?.message
+        if (typeof message === "string" && message.length > 0) {
+            return message
         }
         return "Your password does not meet requirements. Please try again."
     }
@@ -58,18 +55,28 @@ function getCompleteErrorMessage(error: unknown): string {
 
 export default function ResetPasswordPage() {
     const params = useParams<{ token: string }>()
-    const token = params.token
+    const token = typeof params.token === "string" ? params.token : ""
     const isLoggedIn = useAuthStore((state) => state.isLoggedIn)
     const logoutUser = useLogoutUser()
 
-    const [pageState, setPageState] = useState<PasswordResetPageState>({
-        kind: "validating",
-    })
+    // Initial state is derived synchronously from the route param — a missing
+    // token short-circuits straight to the error card without ever hitting the
+    // API. (Computing in the effect would trigger a "setState in effect" lint.)
+    const [pageState, setPageState] = useState<PasswordResetPageState>(() =>
+        token
+            ? { kind: "validating" }
+            : { kind: "error", message: INVALID_OR_EXPIRED_MESSAGE }
+    )
     const [formError, setFormError] = useState("")
+    const [isSigningOut, setIsSigningOut] = useState(false)
 
     useEffect(() => {
+        if (!token) return
+
+        let cancelled = false
         PasswordResetApi.validate(token)
             .then((data) => {
+                if (cancelled) return
                 setPageState({
                     kind: "ready",
                     firstName: data.first_name,
@@ -77,11 +84,15 @@ export default function ResetPasswordPage() {
                 })
             })
             .catch((error) => {
+                if (cancelled) return
                 setPageState({
                     kind: "error",
                     message: getValidateErrorMessage(error),
                 })
             })
+        return () => {
+            cancelled = true
+        }
     }, [token])
 
     const handleSubmit = async (password: string, confirmPassword: string) => {
@@ -97,15 +108,6 @@ export default function ResetPasswordPage() {
                 password,
                 confirm_password: confirmPassword,
             })
-
-            // Force-logout: if the user was signed in (e.g. helped someone else
-            // reset their password on a shared device, or reset their own
-            // account while still signed in), clear local state so the post-
-            // reset "Sign in" CTA lands them on a clean login.
-            if (isLoggedIn) {
-                await logoutUser()
-            }
-
             setPageState({ kind: "success" })
         } catch (error) {
             if (isInvalidOrExpiredTokenError(error)) {
@@ -118,6 +120,18 @@ export default function ResetPasswordPage() {
             setFormError(getCompleteErrorMessage(error))
             setPageState({ kind: "ready", firstName, lastName })
         }
+    }
+
+    // Sign-In click on the success card. If the user was logged in (their own
+    // account or a shared device), force-logout to clear local state + BE
+    // session cookie. logoutUser() handles the router.replace("/").
+    const handleSignIn = async () => {
+        if (isLoggedIn) {
+            setIsSigningOut(true)
+            await logoutUser()
+            return
+        }
+        // Logged-out path: plain navigation, handled by the <Link>.
     }
 
     const greeting =
@@ -211,12 +225,29 @@ export default function ResetPasswordPage() {
                             <p className="text-center text-sm text-muted-foreground">
                                 Your password has been updated. Please sign in with your new password.
                             </p>
-                            <Link
-                                href="/"
-                                className={cn(buttonVariants({ variant: "outline" }), "w-full")}
-                            >
-                                Go to Sign In
-                            </Link>
+                            {isLoggedIn ? (
+                                <Button
+                                    className="w-full"
+                                    onClick={handleSignIn}
+                                    disabled={isSigningOut}
+                                >
+                                    {isSigningOut ? (
+                                        <>
+                                            <span className="mr-2">Sign In</span>
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                        </>
+                                    ) : (
+                                        "Go to Sign In"
+                                    )}
+                                </Button>
+                            ) : (
+                                <Link
+                                    href="/"
+                                    className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+                                >
+                                    Go to Sign In
+                                </Link>
+                            )}
                         </div>
                     )}
 

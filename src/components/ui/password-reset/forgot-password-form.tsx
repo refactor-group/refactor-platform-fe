@@ -9,16 +9,16 @@ interface ForgotPasswordFormProps {
     initialEmail?: string
     onSubmit: (email: string) => Promise<void>
     isSubmitting: boolean
-    error: string
+    error?: string
 }
 
 export function ForgotPasswordForm({
-    initialEmail = "",
+    initialEmail,
     onSubmit,
     isSubmitting,
     error,
 }: ForgotPasswordFormProps) {
-    const [email, setEmail] = useState(initialEmail)
+    const [email, setEmail] = useState(initialEmail ?? "")
     const [fieldError, setFieldError] = useState("")
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {

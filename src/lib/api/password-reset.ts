@@ -5,6 +5,7 @@ import type {
   PasswordResetCompleteParams,
   PasswordResetRequestParams,
   PasswordResetValidateData,
+  PasswordResetValidateParams,
 } from "@/types/password-reset";
 
 const PASSWORD_RESET_BASEURL = `${siteConfig.env.backendServiceURL}/password-reset`;
@@ -46,18 +47,21 @@ export const PasswordResetApi = {
 
   /**
    * Validates a password-reset token without consuming it.
-   * GET /password-reset/validate?token={token}
+   * POST /password-reset/validate  (v1.1 — body, not query string, so the
+   * token never lands in BE access logs, proxy logs, or browser history)
    * Returns sanitized first/last name only — no email or other PII.
    */
   validate: async (token: string): Promise<PasswordResetValidateData> => {
     try {
-      const response = await axios.get<ApiResponse<PasswordResetValidateData>>(
+      const payload: PasswordResetValidateParams = { token };
+      const response = await axios.post<ApiResponse<PasswordResetValidateData>>(
         `${PASSWORD_RESET_BASEURL}/validate`,
-        { ...axiosConfig, params: { token } }
+        payload,
+        axiosConfig
       );
       return response.data.data;
     } catch (error) {
-      throw wrap("GET", "/password-reset/validate", error);
+      throw wrap("POST", "/password-reset/validate", error);
     }
   },
 

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 interface ResetPasswordFormProps {
     onSubmit: (password: string, confirmPassword: string) => Promise<void>
     isSubmitting: boolean
-    error: string
+    error?: string
 }
 
 export function ResetPasswordForm({ onSubmit, isSubmitting, error }: ResetPasswordFormProps) {
