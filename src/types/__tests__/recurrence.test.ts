@@ -1,11 +1,15 @@
 import { describe, it, expect } from "vitest";
+import { DateTime } from "ts-luxon";
 import {
   Frequency,
+  MAX_OCCURRENCES,
+  MAX_SPAN_DAYS,
   Weekday,
   WEEKDAYS_ORDERED,
   frequencyLabel,
   frequencySupportsWeekdays,
   recurrenceToPayload,
+  validateRecurrence,
   weekdayFromLuxon,
   weekdayLabel,
 } from "@/types/recurrence";
@@ -182,5 +186,216 @@ describe("recurrenceToPayload", () => {
         until: "2026-12-31",
       }).frequency
     ).toBe(Frequency.Monthly);
+  });
+});
+
+describe("validateRecurrence", () => {
+  const TZ = "America/Los_Angeles";
+  // Wed, 2026-06-10 in the user's timezone.
+  const start = DateTime.fromISO("2026-06-10T10:00:00", { zone: TZ });
+  const startWeekday = Weekday.Wed;
+
+  const baseInput = {
+    frequency: Frequency.Weekly,
+    interval: 1,
+    byWeekdays: [Weekday.Wed],
+    end: { kind: "count", count: 4 } as const,
+    start,
+    startWeekday,
+    timezone: TZ,
+  };
+
+  it("returns null for a fully valid recurrence", () => {
+    expect(validateRecurrence(baseInput)).toBeNull();
+  });
+
+  it("rejects an interval less than 1", () => {
+    expect(validateRecurrence({ ...baseInput, interval: 0 })).toBe(
+      "Interval must be at least 1."
+    );
+    expect(validateRecurrence({ ...baseInput, interval: -2 })).toBe(
+      "Interval must be at least 1."
+    );
+  });
+
+  it("rejects a non-integer or zero count", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "count", count: 0 },
+      })
+    ).toBe("Number of occurrences must be at least 1.");
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "count", count: 1.5 },
+      })
+    ).toBe("Number of occurrences must be at least 1.");
+  });
+
+  it("rejects a count above the backend cap", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "count", count: MAX_OCCURRENCES + 1 },
+      })
+    ).toBe(`Maximum ${MAX_OCCURRENCES} occurrences.`);
+  });
+
+  it("accepts a count at exactly the backend cap", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "count", count: MAX_OCCURRENCES },
+      })
+    ).toBeNull();
+  });
+
+  it("rejects an empty `until`", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "until", until: "" },
+      })
+    ).toBe("Pick an end date.");
+  });
+
+  it("rejects an invalid `until` string", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "until", until: "not-a-date" },
+      })
+    ).toBe("End date is invalid.");
+  });
+
+  it("rejects an `until` before the first session", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        // First session is 2026-06-10; pick a date before it.
+        end: { kind: "until", until: "2026-06-09" },
+      })
+    ).toBe("End date must be on or after the first session.");
+  });
+
+  it("accepts an `until` on the same day as the first session", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "until", until: "2026-06-10" },
+      })
+    ).toBeNull();
+  });
+
+  it("rejects an `until` beyond the 366-day window", () => {
+    // start + 366 days inclusive — one day past the cap.
+    const tooFar = start.plus({ days: MAX_SPAN_DAYS }).toFormat("yyyy-MM-dd");
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "until", until: tooFar },
+      })
+    ).toBe(`End date is beyond the ${MAX_SPAN_DAYS}-day window.`);
+  });
+
+  it("accepts an `until` exactly at the 366-day cap", () => {
+    // The validator includes the start day in the span — so MAX_SPAN_DAYS
+    // days *inclusive* means start + (MAX_SPAN_DAYS - 1) days.
+    const atCap = start
+      .plus({ days: MAX_SPAN_DAYS - 1 })
+      .toFormat("yyyy-MM-dd");
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        end: { kind: "until", until: atCap },
+      })
+    ).toBeNull();
+  });
+
+  it("skips bounds checks when no start date is set", () => {
+    // No start → no upper bound or before-start check, but `until` itself
+    // must still be present.
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        start: null,
+        startWeekday: null,
+        end: { kind: "until", until: "2026-06-09" },
+      })
+    ).toBeNull();
+  });
+
+  it("rejects empty by_weekdays on weekly frequency", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        byWeekdays: [],
+      })
+    ).toBe("Pick at least one day of the week.");
+  });
+
+  it("rejects empty by_weekdays on biweekly frequency", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        frequency: Frequency.Biweekly,
+        byWeekdays: [],
+      })
+    ).toBe("Pick at least one day of the week.");
+  });
+
+  it("does NOT require by_weekdays for daily frequency", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        frequency: Frequency.Daily,
+        byWeekdays: [],
+      })
+    ).toBeNull();
+  });
+
+  it("does NOT require by_weekdays for monthly frequency", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        frequency: Frequency.Monthly,
+        byWeekdays: [],
+      })
+    ).toBeNull();
+  });
+
+  it("requires the start_at weekday to be included in by_weekdays on weekly", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        // start is a Wednesday but selection only has Friday.
+        byWeekdays: [Weekday.Fri],
+      })
+    ).toBe(
+      `Include ${weekdayLabel(startWeekday)} — it's the day of the week of the first session.`
+    );
+  });
+
+  it("does not check the start_at weekday rule when no start is set", () => {
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        start: null,
+        startWeekday: null,
+        byWeekdays: [Weekday.Fri],
+      })
+    ).toBeNull();
+  });
+
+  it("returns interval error before end-condition error (precedence)", () => {
+    // Both interval and end are invalid; interval check should win.
+    expect(
+      validateRecurrence({
+        ...baseInput,
+        interval: 0,
+        end: { kind: "count", count: 0 },
+      })
+    ).toBe("Interval must be at least 1.");
   });
 });
