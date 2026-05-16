@@ -258,7 +258,7 @@ export default function CoachingSessionForm({
           : error.status === 502
             ? "Could not create Google Meet link due to a connection error. Please try again."
             : error.status === 422 && isRecurring
-              ? "Recurrence is invalid — check weekdays, end condition, and the 365 occurrence / 366 day caps."
+              ? "Recurrence is invalid — check days of the week, end condition, and the 365 occurrence / 366 day caps."
               : `Failed to ${mode} coaching session. Please try again.`;
         toast.error(message);
         console.error(`Failed to ${mode} coaching session:`, error);
@@ -296,10 +296,10 @@ export default function CoachingSessionForm({
     }
     if (frequencySupportsWeekdays(frequency)) {
       if (byWeekdays.length === 0) {
-        return "Pick at least one weekday.";
+        return "Pick at least one day of the week.";
       }
       if (startWeekday && !byWeekdays.includes(startWeekday)) {
-        return `Include ${weekdayLabel(startWeekday)} — it's the weekday of the first session.`;
+        return `Include ${weekdayLabel(startWeekday)} — it's the day of the week of the first session.`;
       }
     }
     return null;
@@ -441,7 +441,7 @@ export default function CoachingSessionForm({
 
                 {frequencySupportsWeekdays(frequency) && (
                   <div className="space-y-2">
-                    <Label>On these weekdays</Label>
+                    <Label>On these days</Label>
                     <ToggleGroup
                       type="multiple"
                       value={byWeekdays}
