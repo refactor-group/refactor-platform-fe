@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/components/lib/utils";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -510,14 +517,52 @@ export default function CoachingSessionForm({
                       <Label htmlFor="end-until" className="cursor-pointer">
                         On
                       </Label>
-                      <Input
-                        type="date"
-                        value={end.kind === "until" ? end.until : ""}
-                        onChange={(e) =>
-                          setEnd({ kind: "until", until: e.target.value })
-                        }
-                        disabled={isSubmitting || end.kind !== "until"}
-                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isSubmitting || end.kind !== "until"}
+                            className={cn(
+                              "h-9 gap-2 font-normal",
+                              end.kind === "until" && end.until
+                                ? ""
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="h-4 w-4" />
+                            {end.kind === "until" && end.until
+                              ? DateTime.fromISO(end.until).toLocaleString(
+                                  DateTime.DATE_MED
+                                )
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-auto p-0"
+                          align="start"
+                        >
+                          <Calendar
+                            mode="single"
+                            selected={
+                              end.kind === "until" && end.until
+                                ? new Date(`${end.until}T00:00:00`)
+                                : undefined
+                            }
+                            onSelect={(date) =>
+                              setEnd({
+                                kind: "until",
+                                until: date
+                                  ? DateTime.fromJSDate(date).toFormat(
+                                      "yyyy-MM-dd"
+                                    )
+                                  : "",
+                              })
+                            }
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </RadioGroup>
                 </div>
