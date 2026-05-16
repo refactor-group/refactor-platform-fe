@@ -46,6 +46,8 @@ import { Provider } from "@/types/provider";
 import {
   CreateRecurringSessionRequest,
   Frequency,
+  MAX_OCCURRENCES,
+  MAX_SPAN_DAYS,
   Recurrence,
   RecurrenceEnd,
   WEEKDAYS_ORDERED,
@@ -53,6 +55,7 @@ import {
   frequencyLabel,
   frequencySupportsWeekdays,
   recurrenceToPayload,
+  validateRecurrence,
   weekdayFromLuxon,
   weekdayLabel,
 } from "@/types/recurrence";
@@ -65,10 +68,6 @@ interface CoachingSessionFormProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Backend caps the expanded series. We clamp the inputs client-side to the
-// same caps so users get immediate feedback instead of a server 422.
-const MAX_OCCURRENCES = 365;
-const MAX_SPAN_DAYS = 366;
 
 export default function CoachingSessionForm({
   existingSession,
@@ -299,41 +298,23 @@ export default function CoachingSessionForm({
     }
   };
 
-  // ── Client-side guards mirroring the backend's field rules. ──────────
-  // We surface these as a single message and use it to gate submission.
+  // Client-side guards mirroring the backend's field rules; surfaced as a
+  // single message and used to gate submission.
   const recurrenceError = useMemo<string | null>(() => {
     if (!isRecurring) return null;
-    if (interval < 1) return "Interval must be at least 1.";
-    if (end.kind === "count") {
-      if (!Number.isInteger(end.count) || end.count < 1) {
-        return "Number of occurrences must be at least 1.";
-      }
-      if (end.count > MAX_OCCURRENCES) {
-        return `Maximum ${MAX_OCCURRENCES} occurrences.`;
-      }
-    } else {
-      if (!end.until) return "Pick an end date.";
-      if (sessionDate) {
-        const userTimezone = userSession?.timezone || getBrowserTimezone();
-        const start = DateTime.fromJSDate(sessionDate).setZone(userTimezone).startOf("day");
-        const until = DateTime.fromISO(end.until, { zone: userTimezone }).startOf("day");
-        if (!until.isValid) return "End date is invalid.";
-        if (until < start) return "End date must be on or after the first session.";
-        const spanDays = Math.floor(until.diff(start, "days").days) + 1;
-        if (spanDays > MAX_SPAN_DAYS) {
-          return `End date is beyond the ${MAX_SPAN_DAYS}-day window.`;
-        }
-      }
-    }
-    if (frequencySupportsWeekdays(frequency)) {
-      if (byWeekdays.length === 0) {
-        return "Pick at least one day of the week.";
-      }
-      if (startWeekday && !byWeekdays.includes(startWeekday)) {
-        return `Include ${weekdayLabel(startWeekday)} — it's the day of the week of the first session.`;
-      }
-    }
-    return null;
+    const userTimezone = userSession?.timezone || getBrowserTimezone();
+    const start = sessionDate
+      ? DateTime.fromJSDate(sessionDate).setZone(userTimezone)
+      : null;
+    return validateRecurrence({
+      frequency,
+      interval,
+      byWeekdays,
+      end,
+      start,
+      startWeekday,
+      timezone: userTimezone,
+    });
   }, [
     isRecurring,
     interval,

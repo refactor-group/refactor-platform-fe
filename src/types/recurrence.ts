@@ -7,6 +7,7 @@
 // - count/until: exactly one must be set
 // - caps: ≤ 365 occurrences AND ≤ 366 days of span
 
+import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 
 export enum Frequency {
@@ -135,4 +136,67 @@ export function recurrenceToPayload(
     recurrence.until = end.until;
   }
   return recurrence;
+}
+
+// Backend caps the expanded series. Mirroring them here so callers can
+// surface inline guidance before submission instead of waiting for a 422.
+export const MAX_OCCURRENCES = 365;
+export const MAX_SPAN_DAYS = 366;
+
+export interface ValidateRecurrenceInput {
+  frequency: Frequency;
+  interval: number;
+  byWeekdays: Weekday[];
+  end: RecurrenceEnd;
+  /** First-session start in the user's timezone; null if no date is picked yet. */
+  start: DateTime | null;
+  /** First-session weekday; null if no date is picked yet. */
+  startWeekday: Weekday | null;
+  /** User's timezone — `end.until` is parsed against the same wall clock as `start`. */
+  timezone: string;
+}
+
+export function validateRecurrence({
+  frequency,
+  interval,
+  byWeekdays,
+  end,
+  start,
+  startWeekday,
+  timezone,
+}: ValidateRecurrenceInput): string | null {
+  if (interval < 1) return "Interval must be at least 1.";
+  if (end.kind === "count") {
+    if (!Number.isInteger(end.count) || end.count < 1) {
+      return "Number of occurrences must be at least 1.";
+    }
+    if (end.count > MAX_OCCURRENCES) {
+      return `Maximum ${MAX_OCCURRENCES} occurrences.`;
+    }
+  } else {
+    if (!end.until) return "Pick an end date.";
+    if (start) {
+      const startOfDay = start.startOf("day");
+      const until = DateTime.fromISO(end.until, { zone: timezone }).startOf(
+        "day"
+      );
+      if (!until.isValid) return "End date is invalid.";
+      if (until < startOfDay) {
+        return "End date must be on or after the first session.";
+      }
+      const spanDays = Math.floor(until.diff(startOfDay, "days").days) + 1;
+      if (spanDays > MAX_SPAN_DAYS) {
+        return `End date is beyond the ${MAX_SPAN_DAYS}-day window.`;
+      }
+    }
+  }
+  if (frequencySupportsWeekdays(frequency)) {
+    if (byWeekdays.length === 0) {
+      return "Pick at least one day of the week.";
+    }
+    if (startWeekday && !byWeekdays.includes(startWeekday)) {
+      return `Include ${weekdayLabel(startWeekday)} — it's the day of the week of the first session.`;
+    }
+  }
+  return null;
 }
