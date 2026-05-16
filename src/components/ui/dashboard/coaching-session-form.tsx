@@ -203,7 +203,10 @@ export default function CoachingSessionForm({
       start_at: dateTime,
       recurrence,
     };
-    await CoachingSessionApi.createRecurring(payload);
+    const created = await CoachingSessionApi.createRecurring(payload);
+    toast.success(
+      `Created ${created.length} recurring session${created.length === 1 ? "" : "s"}.`
+    );
   };
 
   const handleUpdateSession = async (dateTime: string) => {
