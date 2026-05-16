@@ -161,17 +161,26 @@ export default function CoachingSessionForm({
     return weekdayFromLuxon(local.weekday);
   }, [sessionDate, userSession?.timezone]);
 
-  // Auto-seed by_weekdays with the start_at weekday when the user enables
-  // recurring or switches into a weekday-supporting frequency. We never
-  // overwrite an explicit user choice — only fill an empty selection.
+  // Auto-seed by_weekdays so the user never sees an empty selection. Prefer
+  // the start_at weekday; fall back to today's weekday in the user's
+  // timezone when no session date is set yet. We never overwrite an
+  // explicit user choice — only fill an empty selection.
   useEffect(() => {
     if (!isRecurring) return;
     if (!frequencySupportsWeekdays(frequency)) return;
-    if (!startWeekday) return;
-    if (byWeekdays.length === 0) {
-      setByWeekdays([startWeekday]);
-    }
-  }, [isRecurring, frequency, startWeekday, byWeekdays.length]);
+    if (byWeekdays.length !== 0) return;
+    const userTimezone = userSession?.timezone || getBrowserTimezone();
+    const seed =
+      startWeekday ??
+      weekdayFromLuxon(DateTime.now().setZone(userTimezone).weekday);
+    setByWeekdays([seed]);
+  }, [
+    isRecurring,
+    frequency,
+    startWeekday,
+    byWeekdays.length,
+    userSession?.timezone,
+  ]);
 
   const resetForm = () => {
     setSessionDate(undefined);
