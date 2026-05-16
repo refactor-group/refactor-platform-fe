@@ -138,6 +138,18 @@ export default function CoachingSessionForm({
   const [byWeekdays, setByWeekdays] = useState<Weekday[]>([]);
   const [end, setEnd] = useState<RecurrenceEnd>({ kind: "count", count: 4 });
 
+  // Computes a default end date for the "On" option so the user never sees
+  // an empty-state "Pick an end date" error before they've had a chance to
+  // act. Anchored to sessionDate when set, otherwise today; both fall back
+  // to + 4 weeks (matches the count default of 4 occurrences for weekly).
+  const defaultUntilDate = (): string => {
+    const userTimezone = userSession?.timezone || getBrowserTimezone();
+    const anchor = sessionDate
+      ? DateTime.fromJSDate(sessionDate).setZone(userTimezone)
+      : DateTime.now().setZone(userTimezone);
+    return anchor.plus({ weeks: 4 }).toFormat("yyyy-MM-dd");
+  };
+
   // The weekday of the start date (in the user's timezone). When recurring
   // is on with weekly/biweekly + by_weekdays, the backend requires this
   // weekday to be included — otherwise 422. We auto-seed the selection so
@@ -486,7 +498,13 @@ export default function CoachingSessionForm({
                       setEnd(
                         v === "count"
                           ? { kind: "count", count: end.kind === "count" ? end.count : 4 }
-                          : { kind: "until", until: end.kind === "until" ? end.until : "" }
+                          : {
+                              kind: "until",
+                              until:
+                                end.kind === "until" && end.until
+                                  ? end.until
+                                  : defaultUntilDate(),
+                            }
                       )
                     }
                     disabled={isSubmitting}
