@@ -46,8 +46,8 @@ import { Provider } from "@/types/provider";
 import {
   CreateRecurringSessionRequest,
   Frequency,
+  MAX_INTERVAL,
   MAX_OCCURRENCES,
-  MAX_SPAN_DAYS,
   Recurrence,
   RecurrenceEnd,
   WEEKDAYS_ORDERED,
@@ -440,7 +440,7 @@ export default function CoachingSessionForm({
                       id="recurrence-interval"
                       type="number"
                       min={1}
-                      max={MAX_SPAN_DAYS}
+                      max={MAX_INTERVAL}
                       value={interval}
                       onChange={(e) => {
                         const next = parseInt(e.target.value, 10);

@@ -143,6 +143,11 @@ export function recurrenceToPayload(
 export const MAX_OCCURRENCES = 365;
 export const MAX_SPAN_DAYS = 366;
 
+// UX-only guardrail on the "every N <unit>" input. Not a backend rule — the
+// real cap is `MAX_OCCURRENCES` × `MAX_SPAN_DAYS` enforced at submit time. 52
+// reads sensibly across all frequencies (≈ once a year for weekly).
+export const MAX_INTERVAL = 52;
+
 export interface ValidateRecurrenceInput {
   frequency: Frequency;
   interval: number;
