@@ -287,8 +287,8 @@ export default function CoachingSessionForm({
           ? "Could not connect to server. Please check your internet connection."
           : error.status === 502
             ? "Could not create Google Meet link due to a connection error. Please try again."
-            : error.status === 422 && isRecurring
-              ? "Recurrence is invalid — check days of the week, end condition, and the 365 occurrence / 366 day caps."
+            : error.status === 422
+              ? `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"}. Please review the form and try again.`
               : `Failed to ${mode} coaching session. Please try again.`;
         toast.error(message);
         console.error(`Failed to ${mode} coaching session:`, error);
