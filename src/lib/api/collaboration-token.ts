@@ -61,13 +61,13 @@ export const useCollaborationToken = (coachingSessionId: string) => {
         setRetriesExhausted(true);
         return;
       }
-      if (retryCount >= MAX_TOKEN_RETRIES) {
+      if (retryCount > MAX_TOKEN_RETRIES) {
         setRetriesExhausted(true);
         return;
       }
       setTimeout(
         () => revalidate({ retryCount }),
-        TOKEN_RETRY_BASE_MS * 2 ** retryCount
+        TOKEN_RETRY_BASE_MS * 2 ** (retryCount - 1)
       );
     },
   });

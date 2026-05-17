@@ -130,9 +130,8 @@ describe("useCollaborationToken", () => {
   });
 
   it("surfaces isError only after retries are exhausted", async () => {
-    // Always fail. SWR's retryCount is 1-based in onErrorRetry, so with the
-    // `>= MAX_TOKEN_RETRIES` (5) bail we get 4 retries + the initial = 5
-    // total calls before isError surfaces.
+    // Always fail. 5 retries at 300/600/1200/2400/4800ms + the initial =
+    // 6 total calls before isError surfaces.
     mockedGet.mockRejectedValue(httpError(503));
 
     const { result } = renderHook(() => useCollaborationToken("session-1"), {
@@ -142,13 +141,13 @@ describe("useCollaborationToken", () => {
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(1));
     expect(result.current.isError).toBeUndefined();
 
-    // 600 + 1200 + 2400 + 4800 ≈ 9s of backoff; give it some headroom.
+    // 300 + 600 + 1200 + 2400 + 4800 ≈ 9.3s of backoff; give some headroom.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(15_000);
     });
 
     await waitFor(() => expect(result.current.isError).toBeDefined());
-    expect(mockedGet).toHaveBeenCalledTimes(5);
+    expect(mockedGet).toHaveBeenCalledTimes(6);
     expect(result.current.jwt).toBeUndefined();
     expect(result.current.isLoading).toBe(false);
   });
