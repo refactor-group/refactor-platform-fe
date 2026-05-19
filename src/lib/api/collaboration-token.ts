@@ -27,14 +27,14 @@ const fetcher = async ([url, coachingSessionId]: FetcherArgs): Promise<Jwt> => {
  * @returns An object containing the token, loading state, and error state.
  */
 export const useCollaborationToken = (coachingSessionId: string) => {
-  const requestKey = coachingSessionId
+  const requestKey: FetcherArgs | null = coachingSessionId
     ? [
         `${siteConfig.env.backendServiceURL}/jwt/generate_collab_token`,
         coachingSessionId,
       ]
     : null;
 
-  const { data, isLoading, isError } = useSwrWithBackoff<Jwt>(
+  const { data, isLoading, isError } = useSwrWithBackoff<Jwt, FetcherArgs | null>(
     requestKey,
     fetcher,
     {
