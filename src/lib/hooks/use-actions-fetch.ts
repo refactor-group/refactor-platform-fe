@@ -8,28 +8,24 @@ import {
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
+import { type Option, Some, None, unwrapOr } from "@/types/option";
 
 /**
- * Maps a UI-level AssignmentFilter to the relationship-actions API params
- * (assignee + assignee_filter).
- *
- * The `assigneeScope` determines whose actions are returned (coach or coachee),
- * while `assignee_filter` controls assigned/unassigned filtering.
- *
- * Used by both "My Actions" (with coach or coachee scope depending on role)
- * and "Coachee Actions" (always coachee scope).
+ * Maps UI AssignmentFilter + Option<AssigneeScope> to wire params. None scope
+ * omits `assignee` so the backend's visibility predicate handles narrowing.
  */
 export function assignmentFilterToRelationshipActionsParams(
   filter: AssignmentFilter,
-  assigneeScope: AssigneeScope
+  assigneeScope: Option<AssigneeScope>
 ): {
   assignee?: AssigneeScope;
   assigneeFilter?: UserActionsAssigneeFilter;
 } {
+  const scope = unwrapOr(assigneeScope, undefined);
   switch (filter) {
     case AssignmentFilter.Assigned:
       return {
-        assignee: assigneeScope,
+        assignee: scope,
         assigneeFilter: UserActionsAssigneeFilter.Assigned,
       };
     case AssignmentFilter.Unassigned:
@@ -37,7 +33,7 @@ export function assignmentFilterToRelationshipActionsParams(
         assigneeFilter: UserActionsAssigneeFilter.Unassigned,
       };
     case AssignmentFilter.All:
-      return { assignee: assigneeScope };
+      return { assignee: scope };
     default: {
       const _exhaustive: never = filter;
       throw new Error(`Unhandled assignment filter: ${_exhaustive}`);
@@ -45,14 +41,24 @@ export function assignmentFilterToRelationshipActionsParams(
   }
 }
 
+/** None = coachee broad view; lets the backend's visibility predicate narrow. */
+function selectAssigneeScope(
+  isACoach: boolean,
+  isCoacheeMode: boolean
+): Option<AssigneeScope> {
+  if (isCoacheeMode) return Some(AssigneeScope.Coachee);
+  if (isACoach) return Some(AssigneeScope.Coach);
+  return None;
+}
+
 /**
  * Fetches actions via the batch relationship-actions endpoint.
  *
- * Both "My Actions" and "Coachee Actions" use the same endpoint, differentiated
- * by the `assignee` query param:
- * - My Actions (coach user): assignee=coach
- * - My Actions (coachee-only user): assignee=coachee
- * - Coachee Actions: assignee=coachee
+ * All views hit the same endpoint, differentiated by `assignee`:
+ * - Coach "My Actions" toggle: assignee=coach (strict-contains)
+ * - Coach "Coachee Actions" toggle: assignee=coachee (strict-contains)
+ * - Coachee broad view: assignee omitted (backend visibility predicate returns
+ *   self-assigned ∪ unassigned)
  *
  * @param viewMode - Whether to show the user's own actions or their coachees' actions
  * @param relationshipId - Optional server-side filter to a specific coaching relationship
@@ -69,13 +75,7 @@ export function useActionsFetch(
   const { currentOrganizationId } = useCurrentOrganization();
 
   const isCoacheeMode = viewMode === CoachViewMode.CoacheeActions;
-
-  const assigneeScope: AssigneeScope =
-    isCoacheeMode
-      ? AssigneeScope.Coachee
-      : isACoach
-        ? AssigneeScope.Coach
-        : AssigneeScope.Coachee;
+  const assigneeScope = selectAssigneeScope(isACoach, isCoacheeMode);
 
   const params = assignmentFilterToRelationshipActionsParams(assignmentFilter, assigneeScope);
 

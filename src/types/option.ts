@@ -26,3 +26,8 @@ export function isOption(value: unknown): value is Option<unknown> {
   const obj = value as Record<string, unknown>;
   return typeof obj.some === "boolean" && typeof obj.none === "boolean";
 }
+
+/** Unwrap an Option, returning the contained value when Some or the fallback when None. */
+export function unwrapOr<T, U>(opt: Option<T>, fallback: U): T | U {
+  return opt.some ? opt.val : fallback;
+}
