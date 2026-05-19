@@ -39,10 +39,7 @@ test.describe('Coach viewing /actions (regression guard)', () => {
     page,
     context,
   }) => {
-    // Default helper auth has isACoach: true and userId === COACH_ID-adjacent
-    // (MOCK_USER_ID). The wire param we assert on is what the FE *sends*, not
-    // what role the BE would resolve it to — so this still exercises the
-    // coach code path in useActionsFetch.
+    // Helper auth sets isACoach: true → Some(Coach) branch → assignee=coach.
     await setupAuthentication(page, context)
     await mockCommonApiRoutes(page)
 

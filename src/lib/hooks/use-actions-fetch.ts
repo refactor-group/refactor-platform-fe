@@ -8,20 +8,11 @@ import {
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
-import { type Option, Some, None } from "@/types/option";
+import { type Option, Some, None, unwrapOr } from "@/types/option";
 
 /**
- * Maps a UI-level AssignmentFilter to the relationship-actions API params
- * (assignee + assignee_filter).
- *
- * `assigneeScope` is the strict-contains scope (Some(coach) / Some(coachee) /
- * Some(UUID)) or None for "no scope filter." When None, the backend applies
- * a role-aware visibility predicate to narrow the result instead of
- * strict-contains; this is the right shape for a coachee asking for their
- * own broad view (self-assigned ∪ unassigned).
- *
- * `assignee_filter` controls assigned/unassigned filtering and is independent
- * of scope.
+ * Maps UI AssignmentFilter + Option<AssigneeScope> to wire params. None scope
+ * omits `assignee` so the backend's visibility predicate handles narrowing.
  */
 export function assignmentFilterToRelationshipActionsParams(
   filter: AssignmentFilter,
@@ -30,7 +21,7 @@ export function assignmentFilterToRelationshipActionsParams(
   assignee?: AssigneeScope;
   assigneeFilter?: UserActionsAssigneeFilter;
 } {
-  const scope = assigneeScope.some ? assigneeScope.val : undefined;
+  const scope = unwrapOr(assigneeScope, undefined);
   switch (filter) {
     case AssignmentFilter.Assigned:
       return {
@@ -48,6 +39,16 @@ export function assignmentFilterToRelationshipActionsParams(
       throw new Error(`Unhandled assignment filter: ${_exhaustive}`);
     }
   }
+}
+
+/** None = coachee broad view; lets the backend's visibility predicate narrow. */
+function selectAssigneeScope(
+  isACoach: boolean,
+  isCoacheeMode: boolean
+): Option<AssigneeScope> {
+  if (isCoacheeMode) return Some(AssigneeScope.Coachee);
+  if (isACoach) return Some(AssigneeScope.Coach);
+  return None;
 }
 
 /**
@@ -74,16 +75,7 @@ export function useActionsFetch(
   const { currentOrganizationId } = useCurrentOrganization();
 
   const isCoacheeMode = viewMode === CoachViewMode.CoacheeActions;
-
-  // None for the coachee's own broad view: the backend's visibility predicate
-  // returns self-assigned ∪ unassigned. Sending Some(Coachee) instead would
-  // strict-contains-filter and silently drop unassigned actions.
-  const assigneeScope: Option<AssigneeScope> =
-    isCoacheeMode
-      ? Some(AssigneeScope.Coachee)
-      : isACoach
-        ? Some(AssigneeScope.Coach)
-        : None;
+  const assigneeScope = selectAssigneeScope(isACoach, isCoacheeMode);
 
   const params = assignmentFilterToRelationshipActionsParams(assignmentFilter, assigneeScope);
 
