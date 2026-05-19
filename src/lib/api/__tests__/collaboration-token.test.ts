@@ -48,7 +48,7 @@ describe("useCollaborationToken", () => {
       expect(result.current.jwt).toEqual({ token: "tok", sub: "sub-1" })
     );
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.isError).toBeUndefined();
+    expect(result.current.isError).toBe(false);
     expect(mockedGet).toHaveBeenCalledTimes(1);
   });
 
@@ -64,7 +64,7 @@ describe("useCollaborationToken", () => {
 
     expect(mockedGet).not.toHaveBeenCalled();
     expect(result.current.jwt).toBeUndefined();
-    expect(result.current.isError).toBeUndefined();
+    expect(result.current.isError).toBe(false);
   });
 
   it("surfaces isError immediately on a 401 — does not retry", async () => {
@@ -74,7 +74,7 @@ describe("useCollaborationToken", () => {
       wrapper,
     });
 
-    await waitFor(() => expect(result.current.isError).toBeDefined());
+    await waitFor(() => expect(result.current.isError).toBe(true));
 
     // Auth errors are terminal: ensure no further retry scheduled.
     await act(async () => {
@@ -92,7 +92,7 @@ describe("useCollaborationToken", () => {
       wrapper,
     });
 
-    await waitFor(() => expect(result.current.isError).toBeDefined());
+    await waitFor(() => expect(result.current.isError).toBe(true));
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
@@ -113,7 +113,7 @@ describe("useCollaborationToken", () => {
     // After the first failure, SWR's `error` is set, but our hook gates `isError`
     // on retries being exhausted.
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(1));
-    expect(result.current.isError).toBeUndefined();
+    expect(result.current.isError).toBe(false);
     expect(result.current.isLoading).toBe(true);
 
     // Advance past the first retry (~300ms) and the second (~600ms).
@@ -124,7 +124,7 @@ describe("useCollaborationToken", () => {
     await waitFor(() =>
       expect(result.current.jwt).toEqual({ token: "tok", sub: "sub-1" })
     );
-    expect(result.current.isError).toBeUndefined();
+    expect(result.current.isError).toBe(false);
     expect(result.current.isLoading).toBe(false);
     expect(mockedGet).toHaveBeenCalledTimes(3);
   });
@@ -139,14 +139,14 @@ describe("useCollaborationToken", () => {
     });
 
     await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(1));
-    expect(result.current.isError).toBeUndefined();
+    expect(result.current.isError).toBe(false);
 
     // 300 + 600 + 1200 + 2400 + 4800 ≈ 9.3s of backoff; give some headroom.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(15_000);
     });
 
-    await waitFor(() => expect(result.current.isError).toBeDefined());
+    await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockedGet).toHaveBeenCalledTimes(6);
     expect(result.current.jwt).toBeUndefined();
     expect(result.current.isLoading).toBe(false);
@@ -164,7 +164,7 @@ describe("useCollaborationToken", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(15_000);
     });
-    await waitFor(() => expect(result.current.isError).toBeDefined());
+    await waitFor(() => expect(result.current.isError).toBe(true));
 
     // Switch to a new session that will succeed; the prior terminal-error state
     // should not leak — isError must drop to undefined before the new fetch
@@ -176,11 +176,11 @@ describe("useCollaborationToken", () => {
 
     // Right after the id flip (before SWR settles), isError should already be
     // cleared by the render-time reset.
-    expect(result.current.isError).toBeUndefined();
+    expect(result.current.isError).toBe(false);
 
     await waitFor(() =>
       expect(result.current.jwt).toEqual({ token: "tok", sub: "sub-1" })
     );
-    expect(result.current.isError).toBeUndefined();
+    expect(result.current.isError).toBe(false);
   });
 });
