@@ -12,11 +12,13 @@ import {
 // view and render the returned actions in the kanban.
 
 const COACH_ID = SINGLE_RELATIONSHIP[0].coach_id
+const SESSION_ID = 'session-1'
+const RELATIONSHIP_ID = SINGLE_RELATIONSHIP[0].id
 
 function mockAction(id: string, body: string, assigneeIds: string[]) {
   return {
     id,
-    coaching_session_id: 'session-1',
+    coaching_session_id: SESSION_ID,
     body,
     user_id: COACH_ID,
     status: 'NotStarted',
@@ -34,6 +36,17 @@ const COACH_ASSIGNED_ACTION = mockAction(
   [COACH_ID]
 )
 
+// addContextToAction drops actions whose coaching_session_id isn't in the
+// session map AND whose enriched session lacks a relationship. Seed both.
+const ENRICHED_SESSION = {
+  id: SESSION_ID,
+  coaching_relationship_id: RELATIONSHIP_ID,
+  date: '2026-05-01T10:00:00Z',
+  created_at: '2026-05-01T10:00:00Z',
+  updated_at: '2026-05-01T10:00:00Z',
+  relationship: SINGLE_RELATIONSHIP[0],
+}
+
 test.describe('Coach viewing /actions (regression guard)', () => {
   test('sends batch request with assignee=coach for default "My Actions" view', async ({
     page,
@@ -50,6 +63,19 @@ test.describe('Coach viewing /actions (regression guard)', () => {
         body: JSON.stringify({ data: MOCK_ORGANIZATIONS }),
       })
     })
+
+    // Seed the per-user enriched-sessions endpoint so the session map has
+    // an entry for our action's coaching_session_id.
+    await page.route(
+      `**/users/${MOCK_USER_ID}/coaching_sessions**`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [ENRICHED_SESSION] }),
+        })
+      }
+    )
 
     const batchUrls: string[] = []
     await page.route(

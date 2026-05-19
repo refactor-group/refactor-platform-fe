@@ -4,6 +4,7 @@ import {
   ORGANIZATION_STORE_STATE,
   MOCK_USER_ID,
   MOCK_ORGANIZATIONS,
+  SINGLE_RELATIONSHIP,
   mockCommonApiRoutes,
 } from './helpers'
 
@@ -14,10 +15,13 @@ import {
 // Regression guard for: coachees sending assignee=coachee triggers strict-
 // contains scope on the BE and silently drops unassigned actions.
 
+const SESSION_ID = 'session-1'
+const RELATIONSHIP_ID = SINGLE_RELATIONSHIP[0].id
+
 function mockAction(id: string, body: string, assigneeIds: string[]) {
   return {
     id,
-    coaching_session_id: 'session-1',
+    coaching_session_id: SESSION_ID,
     body,
     user_id: MOCK_USER_ID,
     status: 'NotStarted',
@@ -27,6 +31,17 @@ function mockAction(id: string, body: string, assigneeIds: string[]) {
     updated_at: '2026-05-01T10:00:00Z',
     assignee_ids: assigneeIds,
   }
+}
+
+// addContextToAction drops actions whose coaching_session_id isn't in the
+// session map AND whose enriched session lacks a relationship. Seed both.
+const ENRICHED_SESSION = {
+  id: SESSION_ID,
+  coaching_relationship_id: RELATIONSHIP_ID,
+  date: '2026-05-01T10:00:00Z',
+  created_at: '2026-05-01T10:00:00Z',
+  updated_at: '2026-05-01T10:00:00Z',
+  relationship: SINGLE_RELATIONSHIP[0],
 }
 
 const SELF_ASSIGNED_ACTION = mockAction(
@@ -90,6 +105,19 @@ test.describe('Coachee viewing /actions', () => {
         body: JSON.stringify({ data: MOCK_ORGANIZATIONS }),
       })
     })
+
+    // Seed the per-user enriched-sessions endpoint so the session map has
+    // an entry for our action's coaching_session_id.
+    await page.route(
+      `**/users/${MOCK_USER_ID}/coaching_sessions**`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [ENRICHED_SESSION] }),
+        })
+      }
+    )
 
     // Capture every request to the batch endpoint so we can assert on the
     // query string after the page settles.
