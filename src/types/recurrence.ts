@@ -200,7 +200,7 @@ export function validateRecurrence({
       return "Pick at least one day of the week.";
     }
     if (startWeekday && !byWeekdays.includes(startWeekday)) {
-      return `Include ${weekdayLabel(startWeekday)} — it's the day of the week of the first session.`;
+      return `Include ${weekdayLabel(startWeekday)}, which is your first session's day.`;
     }
   }
   return null;

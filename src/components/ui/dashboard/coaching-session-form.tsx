@@ -474,7 +474,7 @@ export default function CoachingSessionForm({
                     </ToggleGroup>
                     {startWeekday && (
                       <p className="text-xs text-muted-foreground">
-                        First session is a {weekdayLabel(startWeekday)} — it must be selected.
+                        Your first session is on a {weekdayLabel(startWeekday)}, which must stay selected.
                       </p>
                     )}
                   </div>

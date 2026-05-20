@@ -373,7 +373,7 @@ describe("validateRecurrence", () => {
         byWeekdays: [Weekday.Fri],
       })
     ).toBe(
-      `Include ${weekdayLabel(startWeekday)} — it's the day of the week of the first session.`
+      `Include ${weekdayLabel(startWeekday)}, which is your first session's day.`
     );
   });
 
