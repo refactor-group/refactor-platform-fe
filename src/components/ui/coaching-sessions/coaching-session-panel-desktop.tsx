@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ChevronLeft, Plus } from "lucide-react";
+import { ChevronLeft, ChevronsLeft, Plus } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,6 +19,14 @@ import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-s
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
   collapsed?: boolean;
+  /**
+   * Optional — when provided, the collapsed rail becomes a clickable
+   * button that expands the panel, and the expanded header renders a
+   * matching collapse button. Lets the user control panel visibility
+   * independently of layout defaults (e.g. keep Goals expanded while
+   * the transcript is also open).
+   */
+  onToggleCollapsed?: () => void;
 }
 
 /** Width the panel expands to during add/create/swap flows (px). */
@@ -31,6 +39,7 @@ export function CoachingSessionPanelDesktop({
   onUpdateGoal,
   readOnly = false,
   collapsed = false,
+  onToggleCollapsed,
   activeSection,
   onSectionChange,
   agreements,
@@ -91,9 +100,29 @@ export function CoachingSessionPanelDesktop({
     };
     const collapsedLabel = sectionLabels[activeSection];
     const collapsedCount = counts[activeSection] || undefined;
+    const railClass =
+      "hidden md:flex md:flex-col md:items-center md:gap-2 md:pt-3 md:pb-3 md:px-1 h-full rounded-lg border border-border/50 bg-card";
+
+    if (onToggleCollapsed) {
+      return (
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          aria-label={`Expand ${collapsedLabel} panel`}
+          className={cn(railClass, "cursor-pointer hover:bg-accent/40 transition-colors")}
+        >
+          <span className="text-[11px] font-medium text-muted-foreground [writing-mode:vertical-lr]">
+            {collapsedLabel}
+          </span>
+          {collapsedCount && (
+            <CountPill count={collapsedCount} className="text-[10px] text-muted-foreground/50" />
+          )}
+        </button>
+      );
+    }
 
     return (
-      <div className="hidden md:flex md:flex-col md:items-center md:gap-2 md:pt-3 md:pb-3 md:px-1 h-full rounded-lg border border-border/50 bg-card">
+      <div className={railClass}>
         <span className="text-[11px] font-medium text-muted-foreground [writing-mode:vertical-lr]">
           {collapsedLabel}
         </span>
@@ -141,27 +170,41 @@ export function CoachingSessionPanelDesktop({
                 />
               )}
             </div>
-            {!isInGoalFlow && !readOnly && (
-              <Button
-                size="sm"
-                className="h-8 gap-1 text-xs"
-                disabled={
-                  (isAddingAgreement && activeSection === PanelSection.Agreements) ||
-                  (isAddingAction && activeSection === PanelSection.Actions) ||
-                  (activeSection === PanelSection.Actions && activeActionTab === "due")
-                }
-                onClick={
-                  activeSection === PanelSection.Goals
-                    ? goalFlow.handleAddGoalClick
-                    : activeSection === PanelSection.Actions
-                      ? () => onAddingActionChange(true)
-                      : () => onAddingAgreementChange(true)
-                }
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {!isInGoalFlow && !readOnly && (
+                <Button
+                  size="sm"
+                  className="h-8 gap-1 text-xs"
+                  disabled={
+                    (isAddingAgreement && activeSection === PanelSection.Agreements) ||
+                    (isAddingAction && activeSection === PanelSection.Actions) ||
+                    (activeSection === PanelSection.Actions && activeActionTab === "due")
+                  }
+                  onClick={
+                    activeSection === PanelSection.Goals
+                      ? goalFlow.handleAddGoalClick
+                      : activeSection === PanelSection.Actions
+                        ? () => onAddingActionChange(true)
+                        : () => onAddingAgreementChange(true)
+                  }
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add
+                </Button>
+              )}
+              {onToggleCollapsed && !isInGoalFlow && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground/60 hover:text-foreground"
+                  onClick={onToggleCollapsed}
+                  aria-label="Collapse panel"
+                  title="Collapse"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin]">

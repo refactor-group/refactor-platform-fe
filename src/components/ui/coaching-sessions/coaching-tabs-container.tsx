@@ -19,14 +19,14 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 
 interface CoachingTabsContainerProps {
   userId: Id;
-  notesMaximized?: boolean;
-  onNotesMaximizedChange?: (maximized: boolean) => void;
+  isMaximized?: boolean;
+  onToggleMaximize?: () => void;
 }
 
 const CoachingTabsContainer = ({
   userId,
-  notesMaximized = false,
-  onNotesMaximizedChange,
+  isMaximized = false,
+  onToggleMaximize,
 }: CoachingTabsContainerProps) => {
   // Get coaching session ID and data from URL
   const { currentCoachingSessionId } = useCurrentCoachingSession();
@@ -102,17 +102,17 @@ const CoachingTabsContainer = ({
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Notes</h3>
-          {onNotesMaximizedChange && (
+          {onToggleMaximize && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
-                  onClick={() => onNotesMaximizedChange(!notesMaximized)}
-                  aria-label={notesMaximized ? "Restore panels" : "Maximize notes"}
+                  onClick={onToggleMaximize}
+                  aria-label={isMaximized ? "Restore panels" : "Maximize notes"}
                 >
-                  {notesMaximized ? (
+                  {isMaximized ? (
                     <Minimize2 className="h-3.5 w-3.5" />
                   ) : (
                     <Maximize2 className="h-3.5 w-3.5" />
@@ -120,7 +120,7 @@ const CoachingTabsContainer = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">
-                <p>{notesMaximized ? "Restore panels" : "Maximize notes"}</p>
+                <p>{isMaximized ? "Restore panels" : "Maximize notes"}</p>
               </TooltipContent>
             </Tooltip>
           )}

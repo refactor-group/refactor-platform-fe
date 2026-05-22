@@ -119,6 +119,24 @@ export type ForceLogoutEvent = BaseSSEEvent<
   }
 >;
 
+// ==================== MEETING RECORDING EVENTS (session-scoped) ====================
+
+export type MeetingRecordingUpdatedEvent = BaseSSEEvent<
+  'meeting_recording_updated',
+  {
+    coaching_session_id: Id;
+  }
+>;
+
+// ==================== TRANSCRIPTION EVENTS (session-scoped) ====================
+
+export type TranscriptionUpdatedEvent = BaseSSEEvent<
+  'transcription_updated',
+  {
+    coaching_session_id: Id;
+  }
+>;
+
 /**
  * Discriminated union of all SSE events
  * TypeScript automatically narrows the type based on the 'type' property
@@ -135,4 +153,6 @@ export type SSEEvent =
   | GoalDeletedEvent
   | CoachingSessionGoalCreatedEvent
   | CoachingSessionGoalDeletedEvent
-  | ForceLogoutEvent;
+  | ForceLogoutEvent
+  | MeetingRecordingUpdatedEvent
+  | TranscriptionUpdatedEvent;
