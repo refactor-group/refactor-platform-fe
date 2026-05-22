@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 
 import { cn } from "@/components/lib/utils";
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
@@ -128,6 +129,14 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               disabled={isLoading}
               onChange={(e) => updatePassword(e.target.value)}
             />
+          </div>
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-xs text-muted-foreground/70 underline-offset-4 hover:text-muted-foreground hover:underline"
+            >
+              Forgot password?
+            </Link>
           </div>
           <Button disabled={isLoading}>
             {isLoading && (

@@ -14,6 +14,22 @@ const nextConfig = {
 			yjs: 'yjs/dist/yjs.mjs',
 		},
 	},
+	// Tokens appear in the URL path on these routes. `no-referrer` prevents
+	// the path (and therefore the token) from being sent in the Referer
+	// header to any outbound request, same-origin or cross-origin.
+	// See docs/architecture/password-reset-flow.md § Security Decision 3.
+	async headers() {
+		return [
+			{
+				source: '/setup/:path*',
+				headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+			},
+			{
+				source: '/reset-password/:path*',
+				headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+			},
+		];
+	},
 };
 
 export default nextConfig;

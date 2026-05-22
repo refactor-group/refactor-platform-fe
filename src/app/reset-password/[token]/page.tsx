@@ -3,88 +3,141 @@
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import axios from "axios"
 
 import { cn } from "@/components/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Icons } from "@/components/ui/icons"
-import { AccountSetupForm } from "@/components/ui/setup/account-setup-form"
-import { MagicLinkApi } from "@/lib/api/magic-links"
+import { ResetPasswordForm } from "@/components/ui/password-reset/reset-password-form"
+import { PasswordResetApi } from "@/lib/api/password-reset"
+import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import { useLogoutUser } from "@/lib/hooks/use-logout-user"
 import { siteConfig } from "@/site.config"
-import type { SetupPageState } from "@/types/magic-link"
+import {
+    isInvalidOrExpiredTokenError,
+    isPasswordResetValidationError,
+    type PasswordResetPageState,
+} from "@/types/password-reset"
+import { EntityApiError } from "@/types/general"
 
-function getErrorMessage(error: unknown): string {
-    if (axios.isAxiosError(error)) {
-        const status = error.response?.status
-        if (status === 404 || status === 410) {
-            return "This setup link is invalid or has expired. Please contact your coach."
-        }
-        if (status === 409) {
-            return "This account has already been set up."
-        }
-        if (status === 422) {
-            // BE returns a specific per-rule message (e.g. "Password must be at
-            // least 12 characters"). Surface it verbatim per the password_policy
-            // decision. Falls back to a generic if the body shape is unexpected.
-            const data = error.response?.data as { message?: unknown } | undefined
-            if (typeof data?.message === "string" && data.message.length > 0) {
-                return data.message
-            }
-            return "Password does not meet requirements."
-        }
-        if (status && status >= 500) {
+const INVALID_OR_EXPIRED_MESSAGE =
+    "This reset link is invalid or has expired. Please request a new one."
+
+function getValidateErrorMessage(error: unknown): string {
+    if (isInvalidOrExpiredTokenError(error)) {
+        return INVALID_OR_EXPIRED_MESSAGE
+    }
+    if (error instanceof EntityApiError) {
+        if (error.isServerError()) {
             return "Something went wrong. Please try again later."
         }
-        if (!error.response) {
+        if (error.isNetworkError()) {
             return "Unable to connect. Please check your connection and try again."
         }
     }
     return "An unexpected error occurred. Please try again."
 }
 
-export default function SetupPage() {
+function getCompleteErrorMessage(error: unknown): string {
+    if (isInvalidOrExpiredTokenError(error)) {
+        return INVALID_OR_EXPIRED_MESSAGE
+    }
+    if (isPasswordResetValidationError(error)) {
+        // BE returns a per-rule message (e.g. "Password must be at least 12
+        // characters") — surface it verbatim so the user sees the exact policy.
+        const message = (error.data as { message?: unknown })?.message
+        if (typeof message === "string" && message.length > 0) {
+            return message
+        }
+        return "Your password does not meet requirements. Please try again."
+    }
+    return getValidateErrorMessage(error)
+}
+
+export default function ResetPasswordPage() {
     const params = useParams<{ token: string }>()
-    const token = params.token
-    const [pageState, setPageState] = useState<SetupPageState>({ kind: "validating" })
-    const [formError, setFormError] = useState("")
-    const [isSigningOut, setIsSigningOut] = useState(false)
+    const token = typeof params.token === "string" ? params.token : ""
+    const isLoggedIn = useAuthStore((state) => state.isLoggedIn)
     const logoutUser = useLogoutUser()
 
-    const handleSignIn = async () => {
-        setIsSigningOut(true)
-        await logoutUser()
-    }
+    // Initial state is derived synchronously from the route param — a missing
+    // token short-circuits straight to the error card without ever hitting the
+    // API. (Computing in the effect would trigger a "setState in effect" lint.)
+    const [pageState, setPageState] = useState<PasswordResetPageState>(() =>
+        token
+            ? { kind: "validating" }
+            : { kind: "error", message: INVALID_OR_EXPIRED_MESSAGE }
+    )
+    const [formError, setFormError] = useState("")
+    const [isSigningOut, setIsSigningOut] = useState(false)
 
     useEffect(() => {
-        MagicLinkApi.validate(token)
-            .then((user) => {
-                setPageState({ kind: "ready", email: user.email })
+        if (!token) return
+
+        let cancelled = false
+        PasswordResetApi.validate(token)
+            .then((data) => {
+                if (cancelled) return
+                setPageState({
+                    kind: "ready",
+                    firstName: data.first_name,
+                    lastName: data.last_name,
+                })
             })
             .catch((error) => {
-                setPageState({ kind: "error", message: getErrorMessage(error) })
+                if (cancelled) return
+                setPageState({
+                    kind: "error",
+                    message: getValidateErrorMessage(error),
+                })
             })
+        return () => {
+            cancelled = true
+        }
     }, [token])
 
     const handleSubmit = async (password: string, confirmPassword: string) => {
-        if (pageState.kind !== "ready" && pageState.kind !== "submitting") return
+        if (pageState.kind !== "ready") return
 
-        const email = pageState.email
-        setPageState({ kind: "submitting", email })
+        const { firstName, lastName } = pageState
+        setPageState({ kind: "submitting", firstName, lastName })
         setFormError("")
 
         try {
-            await MagicLinkApi.completeSetup({
+            await PasswordResetApi.complete({
                 token,
                 password,
                 confirm_password: confirmPassword,
             })
-            setPageState({ kind: "success", email })
+            setPageState({ kind: "success" })
         } catch (error) {
-            setFormError(getErrorMessage(error))
-            setPageState({ kind: "ready", email })
+            if (isInvalidOrExpiredTokenError(error)) {
+                setPageState({
+                    kind: "error",
+                    message: getCompleteErrorMessage(error),
+                })
+                return
+            }
+            setFormError(getCompleteErrorMessage(error))
+            setPageState({ kind: "ready", firstName, lastName })
         }
     }
+
+    // Sign-In click on the success card. If the user was logged in (their own
+    // account or a shared device), force-logout to clear local state + BE
+    // session cookie. logoutUser() handles the router.replace("/").
+    const handleSignIn = async () => {
+        if (isLoggedIn) {
+            setIsSigningOut(true)
+            await logoutUser()
+            return
+        }
+        // Logged-out path: plain navigation, handled by the <Link>.
+    }
+
+    const greeting =
+        pageState.kind === "ready" || pageState.kind === "submitting"
+            ? `Hi ${pageState.firstName}, set a new password below.`
+            : ""
 
     return (
         <main>
@@ -135,7 +188,7 @@ export default function SetupPage() {
                                 </div>
                             </Link>
                             <h1 className="text-2xl font-semibold tracking-tight">
-                                Set Up Your Account
+                                Reset Your Password
                             </h1>
                         </div>
                     </div>
@@ -143,16 +196,18 @@ export default function SetupPage() {
                     {pageState.kind === "validating" && (
                         <div className="flex flex-col items-center space-y-4">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                            <p className="text-sm text-muted-foreground">Validating your setup link...</p>
+                            <p className="text-sm text-muted-foreground">
+                                Validating your reset link...
+                            </p>
                         </div>
                     )}
 
                     {(pageState.kind === "ready" || pageState.kind === "submitting") && (
                         <>
                             <p className="text-center text-sm text-muted-foreground">
-                                Create a password for <span className="font-medium">{pageState.email}</span>
+                                {greeting}
                             </p>
-                            <AccountSetupForm
+                            <ResetPasswordForm
                                 onSubmit={handleSubmit}
                                 isSubmitting={pageState.kind === "submitting"}
                                 error={formError}
@@ -168,22 +223,31 @@ export default function SetupPage() {
                                 </svg>
                             </div>
                             <p className="text-center text-sm text-muted-foreground">
-                                Your account has been set up successfully. Please sign in with your new password.
+                                Your password has been updated. Please sign in with your new password.
                             </p>
-                            <Button
-                                className="w-full"
-                                onClick={handleSignIn}
-                                disabled={isSigningOut}
-                            >
-                                {isSigningOut ? (
-                                    <>
-                                        <span className="mr-2">Sign In</span>
-                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                    </>
-                                ) : (
-                                    "Sign In"
-                                )}
-                            </Button>
+                            {isLoggedIn ? (
+                                <Button
+                                    className="w-full"
+                                    onClick={handleSignIn}
+                                    disabled={isSigningOut}
+                                >
+                                    {isSigningOut ? (
+                                        <>
+                                            <span className="mr-2">Sign In</span>
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                        </>
+                                    ) : (
+                                        "Go to Sign In"
+                                    )}
+                                </Button>
+                            ) : (
+                                <Link
+                                    href="/"
+                                    className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+                                >
+                                    Go to Sign In
+                                </Link>
+                            )}
                         </div>
                     )}
 
@@ -198,10 +262,16 @@ export default function SetupPage() {
                                 {pageState.message}
                             </p>
                             <Link
-                                href="/"
-                                className={cn(buttonVariants({ variant: "outline" }))}
+                                href="/forgot-password"
+                                className={cn(buttonVariants({ variant: "outline" }), "w-full")}
                             >
-                                Go to Sign In
+                                Request a new reset link
+                            </Link>
+                            <Link
+                                href="/"
+                                className="text-sm text-muted-foreground underline hover:text-foreground"
+                            >
+                                Back to sign in
                             </Link>
                         </div>
                     )}

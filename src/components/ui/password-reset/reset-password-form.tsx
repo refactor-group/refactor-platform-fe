@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-interface AccountSetupFormProps {
+interface ResetPasswordFormProps {
     onSubmit: (password: string, confirmPassword: string) => Promise<void>
     isSubmitting: boolean
-    error: string
+    error?: string
 }
 
-export function AccountSetupForm({ onSubmit, isSubmitting, error }: AccountSetupFormProps) {
+export function ResetPasswordForm({ onSubmit, isSubmitting, error }: ResetPasswordFormProps) {
     const [formData, setFormData] = useState({
         password: "",
         confirm_password: "",
@@ -56,25 +56,21 @@ export function AccountSetupForm({ onSubmit, isSubmitting, error }: AccountSetup
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault()
-
-        if (!validateForm()) {
-            return
-        }
-
+        if (!validateForm()) return
         await onSubmit(formData.password, formData.confirm_password)
     }
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">New password</Label>
                 <Input
                     id="password"
                     name="password"
                     type="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="Enter your password"
+                    placeholder="Enter your new password"
                     className={errors.password ? "border-red-500" : ""}
                     autoComplete="new-password"
                     disabled={isSubmitting}
@@ -83,37 +79,37 @@ export function AccountSetupForm({ onSubmit, isSubmitting, error }: AccountSetup
             </div>
 
             <div className="space-y-2">
-                <Label htmlFor="confirm_password">Confirm Password</Label>
+                <Label htmlFor="confirm_password">Confirm new password</Label>
                 <Input
                     id="confirm_password"
                     name="confirm_password"
                     type="password"
                     value={formData.confirm_password}
                     onChange={handleChange}
-                    placeholder="Confirm your password"
+                    placeholder="Confirm your new password"
                     className={errors.confirm_password ? "border-red-500" : ""}
                     autoComplete="new-password"
                     disabled={isSubmitting}
                 />
-                {errors.confirm_password && <p className="text-sm text-red-500">{errors.confirm_password}</p>}
+                {errors.confirm_password && (
+                    <p className="text-sm text-red-500">{errors.confirm_password}</p>
+                )}
             </div>
 
             {error && (
                 <p className="text-center text-sm font-semibold text-red-500">{error}</p>
             )}
 
-            <div className="flex justify-end">
-                <Button type="submit" disabled={isSubmitting} className="w-full">
-                    {isSubmitting ? (
-                        <>
-                            <span className="mr-2">Setting up...</span>
-                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        </>
-                    ) : (
-                        "Set Password"
-                    )}
-                </Button>
-            </div>
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? (
+                    <>
+                        <span className="mr-2">Updating...</span>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    </>
+                ) : (
+                    "Update password"
+                )}
+            </Button>
         </form>
     )
 }
