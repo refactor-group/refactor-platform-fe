@@ -79,6 +79,26 @@ export class EntityApiError extends Error {
   }
 
   /**
+   * Coerces an arbitrary thrown value into an EntityApiError. Passes through
+   * values that are already EntityApiError, wraps Error instances directly,
+   * and stringifies anything else into an Error first.
+   */
+  public static from(
+    method: string,
+    url: string,
+    error: unknown
+  ): EntityApiError {
+    if (error instanceof EntityApiError) {
+      return error;
+    }
+    return new EntityApiError(
+      method,
+      url,
+      error instanceof Error ? error : new Error(String(error))
+    );
+  }
+
+  /**
    * Returns true if this error represents a client error (4xx status codes)
    */
   public isClientError(): boolean {

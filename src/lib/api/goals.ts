@@ -148,9 +148,11 @@ export const GoalApi = {
         { goal_id: goalId }
       ).then(() => undefined),
       (e) =>
-        e instanceof EntityApiError
-          ? e
-          : new EntityApiError("POST", `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`, e as Error)
+        EntityApiError.from(
+          "POST",
+          `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals`,
+          e
+        )
     ),
 
   /**
@@ -166,9 +168,11 @@ export const GoalApi = {
         `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals/${goalId}`
       ).then(() => undefined),
       (e) =>
-        e instanceof EntityApiError
-          ? e
-          : new EntityApiError("DELETE", `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals/${goalId}`, e as Error)
+        EntityApiError.from(
+          "DELETE",
+          `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/goals/${goalId}`,
+          e
+        )
     ),
 };
 

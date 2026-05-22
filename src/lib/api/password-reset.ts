@@ -20,13 +20,6 @@ interface ApiResponse<T> {
   data: T;
 }
 
-function wrap(method: string, path: string, error: unknown): EntityApiError {
-  if (error instanceof Error) {
-    return new EntityApiError(method, path, error);
-  }
-  return new EntityApiError(method, path, new Error(String(error)));
-}
-
 export const PasswordResetApi = {
   /**
    * Requests a password-reset email.
@@ -41,7 +34,7 @@ export const PasswordResetApi = {
         axiosConfig
       );
     } catch (error) {
-      throw wrap("POST", "/password-reset/request", error);
+      throw EntityApiError.from("POST", "/password-reset/request", error);
     }
   },
 
@@ -61,7 +54,7 @@ export const PasswordResetApi = {
       );
       return response.data.data;
     } catch (error) {
-      throw wrap("POST", "/password-reset/validate", error);
+      throw EntityApiError.from("POST", "/password-reset/validate", error);
     }
   },
 
@@ -78,7 +71,7 @@ export const PasswordResetApi = {
         axiosConfig
       );
     } catch (error) {
-      throw wrap("POST", "/password-reset/complete", error);
+      throw EntityApiError.from("POST", "/password-reset/complete", error);
     }
   },
 };

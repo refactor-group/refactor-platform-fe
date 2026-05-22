@@ -70,7 +70,7 @@ export namespace EntityApi {
     } catch (error) {
       // Wrap axios errors in EntityApiError for consistent error handling
       if (axios.isAxiosError(error)) {
-        throw new EntityApiError("get", url, error);
+        throw EntityApiError.from("get", url, error);
       }
 
       // Re-throw non-axios errors as-is
@@ -124,7 +124,7 @@ export namespace EntityApi {
     } catch (error) {
       // Wrap axios errors in EntityApiError for enhanced error handling
       if (axios.isAxiosError(error)) {
-        throw new EntityApiError(method, url, error);
+        throw EntityApiError.from(method, url, error);
       }
 
       // Re-throw non-axios errors as-is
