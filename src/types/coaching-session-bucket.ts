@@ -6,6 +6,11 @@ export enum CoachingSessionBucketKind {
   Past = "past",
 }
 
+export enum CoachingSessionBucketView {
+  Upcoming = "upcoming",
+  Previous = "previous",
+}
+
 export interface CoachingSessionBucketDescriptor {
   kind: CoachingSessionBucketKind;
   start: DateTime;

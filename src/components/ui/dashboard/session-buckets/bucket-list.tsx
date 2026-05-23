@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, Fragment } from "react";
+import type { DateTime } from "ts-luxon";
 import { Button } from "@/components/ui/button";
 import { BucketAccordion } from "./bucket-accordion";
 import { YearDivider } from "./year-divider";
@@ -8,6 +9,7 @@ import { CoachingSessionBuckets } from "@/lib/utils/session";
 import {
   CoachingSessionBucketCount,
   CoachingSessionBucketDescriptor,
+  CoachingSessionBucketView,
 } from "@/types/coaching-session-bucket";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
@@ -16,12 +18,14 @@ export interface BucketListProps {
   buckets: CoachingSessionBucketDescriptor[];
   countsByKey: Map<string, CoachingSessionBucketCount>;
   defaultExpandedKey: string | undefined;
+  view: CoachingSessionBucketView;
+  mountNow: DateTime;
   userId: Id;
   relationshipId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
-  hoveredId: Id | undefined;
-  onHover: (session: EnrichedCoachingSession) => void;
+  selectedId: Id | undefined;
+  onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
   showMoreLabel: string;
@@ -34,12 +38,14 @@ export function BucketList({
   buckets,
   countsByKey,
   defaultExpandedKey,
+  view,
+  mountNow,
   userId,
   relationshipId,
   viewerId,
   userTimezone,
-  hoveredId,
-  onHover,
+  selectedId,
+  onSelect,
   onReschedule,
   onRequestDelete,
   showMoreLabel,
@@ -90,15 +96,21 @@ export function BucketList({
             )}
             <BucketAccordion
               descriptor={bucket}
+              label={CoachingSessionBuckets.displayLabel(
+                bucket,
+                view === CoachingSessionBucketView.Previous,
+                mountNow
+              )}
               count={count}
+              view={view}
               isExpanded={expandedKeys.has(bucket.key)}
               onToggle={() => toggleKey(bucket.key)}
               userId={userId}
               relationshipId={relationshipId}
               viewerId={viewerId}
               userTimezone={userTimezone}
-              hoveredId={hoveredId}
-              onHover={onHover}
+              selectedId={selectedId}
+              onSelect={onSelect}
               onReschedule={onReschedule}
               onRequestDelete={onRequestDelete}
             />

@@ -14,10 +14,11 @@ import {
   useEnrichedCoachingSessionsForUser,
 } from "@/lib/api/coaching-sessions";
 import { calculateSessionUrgency } from "@/lib/utils/session";
+import { Some } from "@/types/option";
 import {
   CoachingSessionBucketCount,
   CoachingSessionBucketDescriptor,
-  CoachingSessionBucketKind,
+  CoachingSessionBucketView,
 } from "@/types/coaching-session-bucket";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
@@ -25,15 +26,21 @@ import { SessionUrgency } from "@/types/session-display";
 
 export interface BucketAccordionProps {
   descriptor: CoachingSessionBucketDescriptor;
+  /** View-aware display label — the overlap bucket renders a clipped
+   *  range (e.g., "May 23 – Jun 30" in Upcoming) instead of the full
+   *  calendar window the descriptor records. Non-overlap buckets pass
+   *  `descriptor.label`. */
+  label: string;
   count: CoachingSessionBucketCount;
+  view: CoachingSessionBucketView;
   isExpanded: boolean;
   onToggle: () => void;
   userId: Id;
   relationshipId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
-  hoveredId: Id | undefined;
-  onHover: (session: EnrichedCoachingSession) => void;
+  selectedId: Id | undefined;
+  onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
 }
@@ -43,17 +50,27 @@ const SESSION_INCLUDES: CoachingSessionInclude[] = [
   CoachingSessionInclude.Goal,
 ];
 
+function matchesView(
+  session: EnrichedCoachingSession,
+  view: CoachingSessionBucketView
+): boolean {
+  const isPast = calculateSessionUrgency(session) === SessionUrgency.Past;
+  return view === CoachingSessionBucketView.Previous ? isPast : !isPast;
+}
+
 export function BucketAccordion({
   descriptor,
+  label,
   count,
+  view,
   isExpanded,
   onToggle,
   userId,
   relationshipId,
   viewerId,
   userTimezone,
-  hoveredId,
-  onHover,
+  selectedId,
+  onSelect,
   onReschedule,
   onRequestDelete,
 }: BucketAccordionProps) {
@@ -73,6 +90,18 @@ export function BucketAccordion({
     relationshipId
   );
 
+  const filteredSessions = (enrichedSessions ?? []).filter((s) =>
+    matchesView(s, view)
+  );
+
+  // Once we've fetched, prefer the view-filtered count over the BE total.
+  // For pure past/future buckets these match; for the overlap (current)
+  // bucket they diverge — the visible badge should agree with the row count.
+  const displayCount: CoachingSessionBucketCount =
+    enrichedSessions && enrichedSessions.length > 0
+      ? Some(filteredSessions.length)
+      : count;
+
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <CollapsibleTrigger asChild>
@@ -82,11 +111,11 @@ export function BucketAccordion({
         >
           <div className="flex items-baseline gap-2 min-w-0">
             <span className="text-[13px] font-medium text-foreground truncate">
-              {descriptor.label}
+              {label}
             </span>
-            {count.some && (
+            {displayCount.some && (
               <span className="text-xs text-muted-foreground tabular-nums">
-                ({count.val})
+                ({displayCount.val})
               </span>
             )}
           </div>
@@ -100,13 +129,13 @@ export function BucketAccordion({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <BucketBody
-          sessions={enrichedSessions ?? []}
+          sessions={filteredSessions}
           isLoading={isLoading}
-          isPast={descriptor.kind === CoachingSessionBucketKind.Past}
+          view={view}
           viewerId={viewerId}
           userTimezone={userTimezone}
-          hoveredId={hoveredId}
-          onHover={onHover}
+          selectedId={selectedId}
+          onSelect={onSelect}
           onReschedule={onReschedule}
           onRequestDelete={onRequestDelete}
         />
@@ -118,11 +147,11 @@ export function BucketAccordion({
 interface BucketBodyProps {
   sessions: EnrichedCoachingSession[];
   isLoading: boolean;
-  isPast: boolean;
+  view: CoachingSessionBucketView;
   viewerId: Id;
   userTimezone: string;
-  hoveredId: Id | undefined;
-  onHover: (session: EnrichedCoachingSession) => void;
+  selectedId: Id | undefined;
+  onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
 }
@@ -130,11 +159,11 @@ interface BucketBodyProps {
 function BucketBody({
   sessions,
   isLoading,
-  isPast,
+  view,
   viewerId,
   userTimezone,
-  hoveredId,
-  onHover,
+  selectedId,
+  onSelect,
   onReschedule,
   onRequestDelete,
 }: BucketBodyProps) {
@@ -154,26 +183,23 @@ function BucketBody({
     );
   }
 
+  const isPastView = view === CoachingSessionBucketView.Previous;
+
   return (
     <div className="px-6 divide-y">
-      {sessions.map((session) => {
-        const rowIsPast =
-          isPast ||
-          calculateSessionUrgency(session) === SessionUrgency.Past;
-        return (
-          <SessionRow
-            key={session.id}
-            session={session}
-            viewerId={viewerId}
-            userTimezone={userTimezone}
-            isPast={rowIsPast}
-            isHovered={hoveredId === session.id}
-            onHover={() => onHover(session)}
-            onReschedule={onReschedule}
-            onRequestDelete={onRequestDelete}
-          />
-        );
-      })}
+      {sessions.map((session) => (
+        <SessionRow
+          key={session.id}
+          session={session}
+          viewerId={viewerId}
+          userTimezone={userTimezone}
+          isPast={isPastView}
+          isSelected={selectedId === session.id}
+          onSelect={() => onSelect(session)}
+          onReschedule={onReschedule}
+          onRequestDelete={onRequestDelete}
+        />
+      ))}
     </div>
   );
 }

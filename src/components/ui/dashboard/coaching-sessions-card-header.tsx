@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, List, X } from "lucide-react";
+import { Clock, List } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/components/lib/utils";
 import type { Id } from "@/types/general";
 
@@ -28,7 +27,6 @@ export interface CoachingSessionsCardHeaderProps {
   relationshipFilter: Id | undefined;
   onRelationshipFilterChange: (id: Id | undefined) => void;
   relationshipOptions: RelationshipOption[];
-  selectedRelationshipLabel: string | undefined;
 }
 
 const ALL_RELATIONSHIPS = "all";
@@ -37,29 +35,12 @@ export function CoachingSessionsCardHeader({
   relationshipFilter,
   onRelationshipFilterChange,
   relationshipOptions,
-  selectedRelationshipLabel,
 }: CoachingSessionsCardHeaderProps) {
   return (
     <div className="px-6 pt-6 pb-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
       <h2 className="text-base font-semibold">Coaching Sessions</h2>
 
       <div className="flex items-center gap-2 flex-wrap">
-        {selectedRelationshipLabel && (
-          <Badge
-            variant="secondary"
-            className="gap-1 text-xs h-7 pl-2.5 pr-1.5"
-          >
-            {selectedRelationshipLabel}
-            <button
-              type="button"
-              aria-label="Clear relationship filter"
-              onClick={() => onRelationshipFilterChange(undefined)}
-              className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        )}
         <Select
           value={relationshipFilter ?? ALL_RELATIONSHIPS}
           onValueChange={(v) =>

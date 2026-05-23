@@ -23,8 +23,8 @@ export interface PinnedWeekSectionProps {
   relationshipId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
-  hoveredId: Id | undefined;
-  onHover: (session: EnrichedCoachingSession) => void;
+  selectedId: Id | undefined;
+  onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
 }
@@ -41,17 +41,19 @@ export function PinnedWeekSection({
   relationshipId,
   viewerId,
   userTimezone,
-  hoveredId,
-  onHover,
+  selectedId,
+  onSelect,
   onReschedule,
   onRequestDelete,
 }: PinnedWeekSectionProps) {
+  const isUpcoming = kind === CoachingSessionBucketKind.Future;
+
   const range = useMemo(
     () =>
-      kind === CoachingSessionBucketKind.Future
+      isUpcoming
         ? CoachingSessionBuckets.currentWeekRange(mountNow)
         : CoachingSessionBuckets.previousWeekRange(mountNow),
-    [kind, mountNow]
+    [isUpcoming, mountNow]
   );
 
   const { enrichedSessions } = useEnrichedCoachingSessionsForUser(
@@ -68,8 +70,11 @@ export function PinnedWeekSection({
     return null;
   }
 
-  const label =
-    kind === CoachingSessionBucketKind.Future ? "This Week" : "Last Week";
+  // Pinned sections are calendar-week spotlights, not upcoming/past
+  // filters. "This Week" includes every Sun–Sat session even if some
+  // have already happened — the row's own urgency drives the View/Join
+  // affordance. "Last Week" is past by construction.
+  const label = isUpcoming ? "This Week" : "Last Week";
 
   return (
     <section aria-label={label}>
@@ -79,7 +84,7 @@ export function PinnedWeekSection({
       <div className="px-6 divide-y">
         {enrichedSessions.map((session) => {
           const rowIsPast =
-            kind === CoachingSessionBucketKind.Past ||
+            !isUpcoming ||
             calculateSessionUrgency(session) === SessionUrgency.Past;
           return (
             <SessionRow
@@ -88,8 +93,8 @@ export function PinnedWeekSection({
               viewerId={viewerId}
               userTimezone={userTimezone}
               isPast={rowIsPast}
-              isHovered={hoveredId === session.id}
-              onHover={() => onHover(session)}
+              isSelected={selectedId === session.id}
+              onSelect={() => onSelect(session)}
               onReschedule={onReschedule}
               onRequestDelete={onRequestDelete}
             />

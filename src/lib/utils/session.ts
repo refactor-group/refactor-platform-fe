@@ -500,6 +500,25 @@ export namespace CoachingSessionBuckets {
     return `${start.toFormat("LLL d")} – ${end.toFormat("LLL d")}`;
   }
 
+  /**
+   * Returns the bucket label as the user should see it in a given column.
+   * For the overlap bucket (the one straddling `mountNow`), the label is
+   * clipped so the Upcoming column never advertises a pre-today date and
+   * the Previous column never advertises a post-today date. Non-overlap
+   * buckets render their natural calendar-window label unchanged.
+   */
+  export function displayLabel(
+    bucket: CoachingSessionBucketDescriptor,
+    isPastView: boolean,
+    mountNow: DateTime
+  ): string {
+    const overlapsNow = bucket.start <= mountNow && bucket.end >= mountNow;
+    if (!overlapsNow) return bucket.label;
+    return isPastView
+      ? formatLabel(bucket.start, mountNow)
+      : formatLabel(mountNow, bucket.end);
+  }
+
   export function generate(
     anchor: DateTime,
     monthsForward: number = DEFAULT_MONTHS_FORWARD,

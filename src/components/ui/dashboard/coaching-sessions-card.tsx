@@ -29,7 +29,6 @@ import {
   isUserCoacheeInRelationship,
   sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
-import { type Id } from "@/types/general";
 
 const matchesUserSessionsCache = (key: unknown): boolean => {
   const url =
@@ -138,10 +137,6 @@ export function CoachingSessionsCard({
     setRelationshipFilter,
   ]);
 
-  const selectedRelationshipLabel = relationshipFilter
-    ? relationshipOptions.find((r) => r.id === relationshipFilter)?.label
-    : undefined;
-
   // `mountNow` is frozen at the card's mount so it drives the bucket grid
   // and pinned-week ranges deterministically across re-renders. Per the
   // BE counts contract, this anchor — and the `tz` it pairs with — control
@@ -238,7 +233,6 @@ export function CoachingSessionsCard({
             relationshipFilter={relationshipFilter}
             onRelationshipFilterChange={setRelationshipFilter}
             relationshipOptions={relationshipOptions}
-            selectedRelationshipLabel={selectedRelationshipLabel}
           />
 
           {userSession && userId && (

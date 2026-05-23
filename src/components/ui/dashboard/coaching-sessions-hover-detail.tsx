@@ -27,7 +27,7 @@ export function SessionHoverDetail({
       <div className="flex flex-col items-center justify-center h-full text-center px-4">
         <MessageSquare className="h-8 w-8 text-muted-foreground/20 mb-3" />
         <p className="text-sm text-muted-foreground/40">
-          Hover over a session to see actions due
+          Click a session to see actions due
         </p>
       </div>
     );

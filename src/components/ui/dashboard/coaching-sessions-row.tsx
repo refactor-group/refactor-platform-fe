@@ -26,8 +26,11 @@ export interface SessionRowProps {
   viewerId: Id;
   userTimezone: string;
   isPast: boolean;
-  isHovered: boolean;
-  onHover: (id: Id | undefined) => void;
+  /** True when this row is the currently-selected one driving the
+   *  right-side preview panel. */
+  isSelected: boolean;
+  /** Fires when the user clicks the row to select it for preview. */
+  onSelect: () => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   /** Hands the session up to the card so it can drive the
    *  `<DeleteSessionDialog>` and the delete mutation. Not invoked on
@@ -40,8 +43,8 @@ export function SessionRow({
   viewerId,
   userTimezone,
   isPast,
-  isHovered,
-  onHover,
+  isSelected,
+  onSelect,
   onReschedule,
   onRequestDelete,
 }: SessionRowProps) {
@@ -80,11 +83,20 @@ export function SessionRow({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
       className={cn(
-        "flex items-center justify-between py-4 group transition-colors rounded-md -mx-2 px-2",
-        isHovered && "bg-muted/40"
+        "flex items-center justify-between py-4 group transition-colors rounded-md -mx-2 px-2 cursor-pointer hover:bg-muted/20",
+        isSelected && "bg-muted/40"
       )}
-      onMouseEnter={() => onHover(session.id)}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
       data-testid={`session-row-${session.id}`}
     >
       <div className="flex gap-3 items-center min-w-0 flex-1">
@@ -119,6 +131,7 @@ export function SessionRow({
           // hovered row (kebab button), so we keep the action group visible.
           "[&:has([data-state=open])]:opacity-100"
         )}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Kebab is rendered unconditionally — Share link is universal so
             the menu is never empty. Reschedule and Delete render only
