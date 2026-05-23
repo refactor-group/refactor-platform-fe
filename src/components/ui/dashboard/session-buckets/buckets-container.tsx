@@ -25,7 +25,6 @@ import { selectReviewActionsForSession } from "@/lib/utils/select-review-actions
 import { Some, None } from "@/types/option";
 import {
   CoachingSessionBucketCount,
-  CoachingSessionBucketKind,
   CoachingSessionBucketView,
 } from "@/types/coaching-session-bucket";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -286,7 +285,8 @@ export function BucketsContainer({
           className="mt-2 flex-1 min-h-0 overflow-y-auto"
         >
           <PinnedWeekSection
-            kind={CoachingSessionBucketKind.Future}
+            week="current"
+            view={CoachingSessionBucketView.Upcoming}
             mountNow={mountNow}
             now={now}
             userId={userId}
@@ -325,7 +325,22 @@ export function BucketsContainer({
           className="mt-2 flex-1 min-h-0 overflow-y-auto"
         >
           <PinnedWeekSection
-            kind={CoachingSessionBucketKind.Past}
+            week="current"
+            view={CoachingSessionBucketView.Previous}
+            mountNow={mountNow}
+            now={now}
+            userId={userId}
+            relationshipId={relationshipFilter}
+            viewerId={viewerId}
+            userTimezone={userTimezone}
+            selectedId={selectedId}
+            onSelect={setSelectedSession}
+            onReschedule={onReschedule}
+            onRequestDelete={onRequestDelete}
+          />
+          <PinnedWeekSection
+            week="previous"
+            view={CoachingSessionBucketView.Previous}
             mountNow={mountNow}
             now={now}
             userId={userId}

@@ -8,18 +8,26 @@ import {
   useEnrichedCoachingSessionsForUser,
 } from "@/lib/api/coaching-sessions";
 import { CoachingSessionBuckets } from "@/lib/utils/session";
-import { CoachingSessionBucketKind } from "@/types/coaching-session-bucket";
+import { CoachingSessionBucketView } from "@/types/coaching-session-bucket";
 import {
   isPastSession,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
 
+export type PinnedWeek = "current" | "previous";
+
 export interface PinnedWeekSectionProps {
-  kind: CoachingSessionBucketKind;
+  /** "current" → this week (Sun–Sat containing mountNow);
+   *  "previous" → the calendar week immediately before. */
+  week: PinnedWeek;
+  /** Drives which side of the `now` cutoff to keep on the current week:
+   *  Upcoming keeps non-past, Previous keeps past. Last week is fully
+   *  past by construction and renders all sessions regardless. */
+  view: CoachingSessionBucketView;
   mountNow: DateTime;
-  /** Ticking "now" — drives the past/future cutoff for the upcoming
-   *  "This Week" view so sessions migrate out as they end. */
+  /** Ticking "now" — slides the past/future cutoff inside the current
+   *  week so sessions migrate between the two tabs as they elapse. */
   now: DateTime;
   userId: Id;
   relationshipId: Id | undefined;
@@ -37,7 +45,8 @@ const SESSION_INCLUDES: CoachingSessionInclude[] = [
 ];
 
 export function PinnedWeekSection({
-  kind,
+  week,
+  view,
   mountNow,
   now,
   userId,
@@ -49,14 +58,15 @@ export function PinnedWeekSection({
   onReschedule,
   onRequestDelete,
 }: PinnedWeekSectionProps) {
-  const isUpcoming = kind === CoachingSessionBucketKind.Future;
+  const isCurrentWeek = week === "current";
+  const isPastView = view === CoachingSessionBucketView.Previous;
 
   const range = useMemo(
     () =>
-      isUpcoming
+      isCurrentWeek
         ? CoachingSessionBuckets.currentWeekRange(mountNow)
         : CoachingSessionBuckets.previousWeekRange(mountNow),
-    [isUpcoming, mountNow]
+    [isCurrentWeek, mountNow]
   );
 
   const { enrichedSessions } = useEnrichedCoachingSessionsForUser(
@@ -69,22 +79,23 @@ export function PinnedWeekSection({
     relationshipId
   );
 
-  // "This Week" filters out past sessions — the calendar-week endpoints
-  // stay anchored Sun–Sat, but the past/future cutoff inside that window
-  // tracks `now`. So a session earlier in this week drops out once it
-  // has fully elapsed. "Last Week" is past by construction.
   const visibleSessions = useMemo(() => {
     const all = enrichedSessions ?? [];
-    return isUpcoming ? all.filter((s) => !isPastSession(s, { now })) : all;
-  }, [enrichedSessions, isUpcoming, now]);
+    if (!isCurrentWeek) return all;
+    return isPastView
+      ? all.filter((s) => isPastSession(s, { now }))
+      : all.filter((s) => !isPastSession(s, { now }));
+  }, [enrichedSessions, isCurrentWeek, isPastView, now]);
 
-  const label = isUpcoming ? "This Week" : "Last Week";
+  const label = isCurrentWeek ? "This Week" : "Last Week";
   const rangeLabel = CoachingSessionBuckets.formatLabel(
     range.start,
     range.end
   );
-  const emptyMessage = isUpcoming
-    ? "No upcoming sessions scheduled for this week."
+  const emptyMessage = isCurrentWeek
+    ? isPastView
+      ? "No previous sessions from this week."
+      : "No upcoming sessions scheduled for this week."
     : "No previous sessions from last week.";
 
   return (
@@ -104,7 +115,7 @@ export function PinnedWeekSection({
               session={session}
               viewerId={viewerId}
               userTimezone={userTimezone}
-              isPast={!isUpcoming}
+              isPast={isPastView}
               isSelected={selectedId === session.id}
               onSelect={() => onSelect(session)}
               onReschedule={onReschedule}
