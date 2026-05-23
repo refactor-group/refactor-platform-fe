@@ -102,6 +102,15 @@ export function BucketAccordion({
       ? Some(filteredSessions.length)
       : count;
 
+  // Hide the accordion entirely when the view filter empties an
+  // otherwise non-empty bucket — relevant only for the overlap bucket
+  // (BE-zero buckets are already filtered upstream by `BucketList`).
+  // We require `hasEverExpanded` so we don't hide collapsed buckets we
+  // haven't fetched yet on the strength of an empty initial `[]`.
+  if (hasEverExpanded && !isLoading && filteredSessions.length === 0) {
+    return null;
+  }
+
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <CollapsibleTrigger asChild>
