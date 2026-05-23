@@ -39,7 +39,11 @@ export interface BucketsContainerProps {
   onRequestDelete: (session: EnrichedCoachingSession) => void;
 }
 
-const SHOW_MORE_INCREMENT_MONTHS = 12;
+const SHOW_MORE_INCREMENT_MONTHS = 6;
+
+// Probe one increment beyond the displayed range so the buttons can be
+// disabled when nothing lives in that window.
+const LOOKAHEAD_MONTHS = SHOW_MORE_INCREMENT_MONTHS;
 
 const TICK_MS = 60_000;
 
@@ -76,9 +80,8 @@ export function BucketsContainer({
 
   // The overlap bucket (one whose calendar window straddles `mountNow`)
   // appears in BOTH columns — Upcoming filters its body to future sessions,
-  // Previous filters to past — so users find a Mon-of-current-month past
-  // session in Previous even though the bucket label spans into the future.
-  const { futureBuckets, pastBuckets, fetchRangeStart, fetchRangeEnd } =
+  // Previous filters to past.
+  const { futureBuckets, pastBuckets, displayRangeStart, displayRangeEnd } =
     useMemo(() => {
       const nowMs = mountNow.toMillis();
       const future = buckets
@@ -94,14 +97,25 @@ export function BucketsContainer({
       return {
         futureBuckets: future,
         pastBuckets: past,
-        fetchRangeStart: DateTime.fromMillis(Math.min(...all), {
+        displayRangeStart: DateTime.fromMillis(Math.min(...all), {
           zone: mountNow.zone,
         }),
-        fetchRangeEnd: DateTime.fromMillis(Math.max(...all), {
+        displayRangeEnd: DateTime.fromMillis(Math.max(...all), {
           zone: mountNow.zone,
         }),
       };
     }, [buckets, mountNow]);
+
+  // Fetch one increment beyond the display range so we can tell whether
+  // the next click would surface anything.
+  const fetchRangeStart = useMemo(
+    () => displayRangeStart.minus({ months: LOOKAHEAD_MONTHS }),
+    [displayRangeStart]
+  );
+  const fetchRangeEnd = useMemo(
+    () => displayRangeEnd.plus({ months: LOOKAHEAD_MONTHS }),
+    [displayRangeEnd]
+  );
 
   const {
     counts: monthCounts,
@@ -115,101 +129,45 @@ export function BucketsContainer({
     relationshipFilter
   );
 
-  // ── Show additional state ────────────────────────────────────────────
-  // Tracks which extension button (if any) is currently loading, whether
-  // we've exhausted sessions in either direction, and which bucket keys
-  // were just added so we can animate them in.
   type ShowMoreDirection = "later" | "earlier";
   const [pendingDirection, setPendingDirection] = useState<
     ShowMoreDirection | undefined
   >();
-  const [outOfFuture, setOutOfFuture] = useState(false);
-  const [outOfPast, setOutOfPast] = useState(false);
   const [recentlyAddedKeys, setRecentlyAddedKeys] = useState<Set<string>>(
     new Set()
   );
-  const previousBoundariesRef = useRef({ monthsForward, monthsBack });
   const previousBucketKeysRef = useRef<Set<string>>(new Set());
   const hasInitializedRef = useRef(false);
 
-  // Reset exhaustion + pending when the relationship filter changes —
-  // a different relationship has its own data range entirely.
+  // Clear the pending direction once new counts have landed, so the
+  // spinner reflects the actual fetch state.
+  const previousMonthCountsRef = useRef(monthCounts);
   useEffect(() => {
-    setOutOfFuture(false);
-    setOutOfPast(false);
-    setPendingDirection(undefined);
-    previousBoundariesRef.current = { monthsForward, monthsBack };
-    // Intentionally only reset on `relationshipFilter` — months* are
-    // read for the ref snapshot but should not retrigger this effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relationshipFilter]);
-
-  // Surface a one-time toast for the initial counts fetch failure too
-  // — without this, the dashboard would silently render no badges
-  // (the existing graceful-fallback path) and a user with a flaky
-  // connection would never know why.
-  const initialCountsErrorToastedRef = useRef(false);
-  useEffect(() => {
-    if (countsError && !initialCountsErrorToastedRef.current && !pendingDirection) {
-      sonnerToast.error("Couldn't load session counts", {
-        description: "Bucket badges may be missing. Refresh to retry.",
-      });
-      initialCountsErrorToastedRef.current = true;
+    if (monthCounts !== previousMonthCountsRef.current) {
+      previousMonthCountsRef.current = monthCounts;
+      if (pendingDirection) setPendingDirection(undefined);
     }
-    if (!countsError) {
-      initialCountsErrorToastedRef.current = false;
+  }, [monthCounts, pendingDirection]);
+
+  useEffect(() => {
+    if (countsError && pendingDirection) {
+      sonnerToast.error("Couldn't load additional sessions", {
+        description: "Please try again.",
+      });
+      setPendingDirection(undefined);
     }
   }, [countsError, pendingDirection]);
 
-  // Mark a direction exhausted via two paths:
-  //   1. Post-click strict check — clicking Show additional extended
-  //      the range but the response brings no new months past the
-  //      previous boundary.
-  //   2. Initial-load heuristic — the response's bounding month is
-  //      ≥ EXHAUSTION_GAP_THRESHOLD_MONTHS inside the requested
-  //      boundary. The gap proves the user has no sessions in those
-  //      tail months; we extrapolate that they have none beyond
-  //      either. False positives are possible for users with a
-  //      multi-month gap before a far-out session.
-  useEffect(() => {
-    if (countsLoading) return;
-    if (countsError) {
-      if (pendingDirection) {
-        sonnerToast.error("Couldn't load additional sessions", {
-          description: "Please try again.",
-        });
-        setPendingDirection(undefined);
-      }
-      return;
-    }
-    const result = CoachingSessionBuckets.detectExhaustion(
-      (monthCounts ?? []).map((c) => c.month),
-      mountNow,
-      monthsForward,
-      monthsBack,
-      pendingDirection
-        ? {
-            pendingDirection,
-            previousMonthsForward: previousBoundariesRef.current.monthsForward,
-            previousMonthsBack: previousBoundariesRef.current.monthsBack,
-          }
-        : undefined
-    );
-    if (result.outOfFuture === true) setOutOfFuture(true);
-    if (result.outOfPast === true) setOutOfPast(true);
-    if (pendingDirection) {
-      previousBoundariesRef.current = { monthsForward, monthsBack };
-      setPendingDirection(undefined);
-    }
-  }, [
-    pendingDirection,
-    countsLoading,
-    countsError,
-    monthCounts,
-    mountNow,
-    monthsForward,
-    monthsBack,
-  ]);
+  const { disableShowMoreLater, disableShowMoreEarlier } = useMemo(
+    () =>
+      CoachingSessionBuckets.computeShowMoreState(
+        (monthCounts ?? []).map((c) => c.month),
+        mountNow,
+        monthsForward,
+        monthsBack
+      ),
+    [monthCounts, mountNow, monthsForward, monthsBack]
+  );
 
   // Identify newly-rendered bucket keys (those not present in the
   // previous bucket set) for the slide-in animation. The initial mount
@@ -290,17 +248,15 @@ export function BucketsContainer({
   }, [allActions, selectedSession, fetchRangeStart]);
 
   const onShowLater = useCallback(() => {
-    if (pendingDirection || outOfFuture) return;
-    previousBoundariesRef.current = { monthsForward, monthsBack };
+    if (pendingDirection || disableShowMoreLater) return;
     setPendingDirection("later");
     setMonthsForward((m) => m + SHOW_MORE_INCREMENT_MONTHS);
-  }, [pendingDirection, outOfFuture, monthsForward, monthsBack]);
+  }, [pendingDirection, disableShowMoreLater]);
   const onShowEarlier = useCallback(() => {
-    if (pendingDirection || outOfPast) return;
-    previousBoundariesRef.current = { monthsForward, monthsBack };
+    if (pendingDirection || disableShowMoreEarlier) return;
     setPendingDirection("earlier");
     setMonthsBack((m) => m + SHOW_MORE_INCREMENT_MONTHS);
-  }, [pendingDirection, outOfPast, monthsForward, monthsBack]);
+  }, [pendingDirection, disableShowMoreEarlier]);
 
   return (
     <div className="flex flex-col md:flex-row flex-1 min-h-0">
@@ -354,7 +310,7 @@ export function BucketsContainer({
             showMoreLabel="Show additional future sessions"
             onShowMore={onShowLater}
             showMoreLoading={pendingDirection === "later"}
-            showMoreHidden={outOfFuture}
+            showMoreDisabled={disableShowMoreLater}
             emptyMessage="No upcoming sessions."
           />
         </TabsContent>
@@ -388,7 +344,7 @@ export function BucketsContainer({
             userTimezone={userTimezone}
             recentlyAddedKeys={recentlyAddedKeys}
             showMoreLoading={pendingDirection === "earlier"}
-            showMoreHidden={outOfPast}
+            showMoreDisabled={disableShowMoreEarlier}
             selectedId={selectedId}
             onSelect={setSelectedSession}
             onReschedule={onReschedule}

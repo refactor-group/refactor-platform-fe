@@ -36,10 +36,9 @@ export interface BucketListProps {
   /** When true, replace the show-more label with a spinner and disable
    *  the button while the new range loads. */
   showMoreLoading: boolean;
-  /** When true, the show-more button is omitted entirely — used once
-   *  the parent has determined no further sessions exist in this
-   *  direction. */
-  showMoreHidden: boolean;
+  /** When true, the button stays visible but is disabled — the lookahead
+   *  probe found no sessions in the next window. */
+  showMoreDisabled: boolean;
   /** Rendered when the visible bucket list is empty. */
   emptyMessage: string;
 }
@@ -62,7 +61,7 @@ export function BucketList({
   showMoreLabel,
   onShowMore,
   showMoreLoading,
-  showMoreHidden,
+  showMoreDisabled,
   emptyMessage,
 }: BucketListProps) {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(
@@ -90,16 +89,13 @@ export function BucketList({
     });
   };
 
-  if (visibleBuckets.length === 0) {
-    return (
-      <div className="px-6 py-8 text-center text-sm text-muted-foreground/60">
-        {emptyMessage}
-      </div>
-    );
-  }
-
   return (
     <div className="divide-y">
+      {visibleBuckets.length === 0 && (
+        <div className="px-6 py-8 text-center text-sm text-muted-foreground/60">
+          {emptyMessage}
+        </div>
+      )}
       {visibleBuckets.map((bucket) => {
         const count = countsByKey.get(bucket.key) ?? { some: false, none: true };
         return (
@@ -131,27 +127,21 @@ export function BucketList({
           </Fragment>
         );
       })}
-      {!showMoreHidden && (
-        // Border-top here (rather than relying on the parent's
-        // `divide-y`) so the rule above the button is present even
-        // when there are no buckets above it — keeps the visual
-        // separator consistent across Upcoming and Previous tabs.
-        <div className="px-6 py-3 flex justify-center border-t">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-muted-foreground gap-1.5"
-            onClick={onShowMore}
-            disabled={showMoreLoading}
-            aria-busy={showMoreLoading}
-          >
-            {showMoreLoading && (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            )}
-            {showMoreLabel}
-          </Button>
-        </div>
-      )}
+      <div className="px-6 py-3 flex justify-center border-t">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-muted-foreground gap-1.5"
+          onClick={onShowMore}
+          disabled={showMoreLoading || showMoreDisabled}
+          aria-busy={showMoreLoading}
+        >
+          {showMoreLoading && (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          )}
+          {showMoreLabel}
+        </Button>
+      </div>
     </div>
   );
 }

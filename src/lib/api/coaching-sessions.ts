@@ -469,7 +469,11 @@ export const useEnrichedCoachingSessionsForUserCounts = (
       : Promise.resolve([]);
 
   const { entities, isLoading, isError, refresh } =
-    EntityApi.useEntityList<CoachingSessionCountByMonth>(url, fetcher, params);
+    EntityApi.useEntityList<CoachingSessionCountByMonth>(url, fetcher, params, {
+      // Avoids a flicker on range expansion where new empty months render
+      // as `None` and then collapse once the response lands.
+      keepPreviousData: true,
+    });
 
   return {
     counts: entities,

@@ -118,14 +118,13 @@ export function SessionRow({
       </div>
 
       {/* Right-side actions. Kebab + Join/View ride together in one block.
-          Mobile (always visible): touch users have no hover, so they need
-          the kebab to reach Delete and the link to navigate. Desktop
-          (hover-revealed): keeps the row visually quiet at rest, surfaces
-          actions when the row is engaged. */}
+          Gated on `(hover: hover)` — capability, not viewport width — so
+          a narrow desktop window still gets the quiet rest state, while
+          touch devices (no hover) keep the actions visible by default. */}
       <div
         className={cn(
           "flex gap-1.5 shrink-0 items-center",
-          "sm:opacity-0 sm:group-hover:opacity-100 sm:transition-opacity",
+          "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:transition-opacity",
           // Keep the menu/popover affordances open while the user is
           // interacting with them — Radix sets `data-state=open` on the
           // hovered row (kebab button), so we keep the action group visible.

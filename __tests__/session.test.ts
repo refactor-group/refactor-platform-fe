@@ -614,211 +614,141 @@ describe("CoachingSessionBuckets.previousWeekRange", () => {
   });
 });
 
-// `detectExhaustion` decides whether the Show-additional buttons should
-// be hidden. Tests anchor everything to May 23 2026 with a ±12 month
-// window unless otherwise stated. Past boundary = "2025-05", future
-// boundary = "2027-05".
-describe("CoachingSessionBuckets.detectExhaustion — initial load", () => {
+// `computeShowMoreState` decides whether the Show additional buttons are
+// disabled. The fetch range covers display + lookahead; this function
+// reads the counts response and reports whether any month falls in the
+// lookahead window past either display boundary. Tests anchor to
+// 2026-05-23 with a ±12-month display range → past boundary "2025-05",
+// future boundary "2027-05". A bucket is in the display range iff its
+// month is in [pastBoundary, futureBoundary]; only months STRICTLY past
+// either boundary enable the corresponding button.
+describe("CoachingSessionBuckets.computeShowMoreState", () => {
   const NOW = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
 
-  it("hides both buttons when the response is empty (no data at all)", () => {
-    const result = CoachingSessionBuckets.detectExhaustion([], NOW, 12, 12);
-    expect(result).toEqual({ outOfFuture: true, outOfPast: true });
+  it("disables both buttons when the response is empty", () => {
+    // No data anywhere → clicking either button can't surface a bucket.
+    const result = CoachingSessionBuckets.computeShowMoreState([], NOW, 12, 12);
+    expect(result).toEqual({
+      disableShowMoreLater: true,
+      disableShowMoreEarlier: true,
+    });
   });
 
-  it("keeps both buttons visible when data reaches both boundaries (gap = 0)", () => {
-    const months = ["2025-05", "2026-05", "2027-05"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result).toEqual({ outOfFuture: false, outOfPast: false });
+  it("treats counts exactly AT the boundaries as inside the display range", () => {
+    // "2025-05" == pastBoundary and "2027-05" == futureBoundary. Both are
+    // in the displayed range, so neither button should enable.
+    const months = ["2025-05", "2027-05"];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result).toEqual({
+      disableShowMoreLater: true,
+      disableShowMoreEarlier: true,
+    });
   });
 
-  it("keeps past button visible at a 1-month gap (below threshold)", () => {
-    // Past boundary "2025-05"; earliest data "2025-06" → 1 month gap.
-    const months = ["2025-06", "2026-05"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfPast).toBe(false);
+  it("enables only the future button when a count is strictly past the future boundary", () => {
+    // "2027-06" > "2027-05" → next click surfaces it; nothing past the
+    // past boundary → earlier stays disabled.
+    const months = ["2025-08", "2027-06"];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result).toEqual({
+      disableShowMoreLater: false,
+      disableShowMoreEarlier: true,
+    });
   });
 
-  it("keeps past button visible at a 2-month gap (below threshold)", () => {
-    // Past boundary "2025-05"; earliest data "2025-07" → 2 month gap.
-    const months = ["2025-07", "2026-05"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfPast).toBe(false);
+  it("enables only the earlier button when a count is strictly before the past boundary", () => {
+    // "2025-04" < "2025-05" → next click surfaces it; nothing past the
+    // future boundary → later stays disabled.
+    const months = ["2025-04", "2026-08"];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result).toEqual({
+      disableShowMoreLater: true,
+      disableShowMoreEarlier: false,
+    });
   });
 
-  it("hides past button at exactly the 3-month gap threshold", () => {
-    // Past boundary "2025-05"; earliest data "2025-08" → 3 month gap.
-    const months = ["2025-08", "2026-05"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfPast).toBe(true);
+  it("enables both buttons when counts exist on both sides of the display range", () => {
+    const months = ["2025-04", "2026-01", "2027-08"];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result).toEqual({
+      disableShowMoreLater: false,
+      disableShowMoreEarlier: false,
+    });
   });
 
-  it("hides past button at large past gap (8 months)", () => {
-    // Earliest "2026-01" → boundary "2025-05" → 8 month gap.
-    const months = ["2026-01", "2026-05"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfPast).toBe(true);
-  });
-
-  it("keeps future button visible at a 1-month gap from future boundary", () => {
-    // Future boundary "2027-05"; latest "2027-04" → 1 month gap.
-    const months = ["2025-05", "2027-04"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfFuture).toBe(false);
-  });
-
-  it("hides future button at exactly the 3-month gap threshold", () => {
-    // Future boundary "2027-05"; latest "2027-02" → 3 month gap.
-    const months = ["2025-05", "2027-02"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfFuture).toBe(true);
-  });
-
-  it("checks each direction independently — future exhausted, past visible", () => {
-    // Only past-side data; future side empty.
-    const months = ["2025-05", "2025-08", "2025-11"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfFuture).toBe(true);
-    expect(result.outOfPast).toBe(false);
-  });
-
-  it("checks each direction independently — past exhausted, future visible", () => {
-    // Only future-side data; past side empty up to boundary.
-    const months = ["2026-08", "2027-05"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfPast).toBe(true);
-    expect(result.outOfFuture).toBe(false);
-  });
-
-  it("matches the real-world all-relationships case (data Jun 2025 – Jun 2026)", () => {
-    // Past gap ≈ 1mo → keep past visible; future gap ≈ 11mo → hide future.
+  it("regression: real-world response Jun 2025–Jun 2026 disables both buttons", () => {
+    // This is the BE response that originally surfaced the false-negative
+    // bug — every count sits inside the ±12-month display range, so
+    // neither button can produce additional buckets.
     const months = [
       "2025-06", "2025-07", "2025-08", "2025-09", "2025-10",
       "2025-11", "2025-12", "2026-01", "2026-02", "2026-03",
       "2026-04", "2026-05", "2026-06",
     ];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfPast).toBe(false);
-    expect(result.outOfFuture).toBe(true);
-  });
-
-  it("matches the James-only case (single session in current month)", () => {
-    // Single entry at current month — gap is 12 in both directions.
-    const months = ["2026-05"];
-    const result = CoachingSessionBuckets.detectExhaustion(months, NOW, 12, 12);
-    expect(result.outOfPast).toBe(true);
-    expect(result.outOfFuture).toBe(true);
-  });
-});
-
-describe("CoachingSessionBuckets.detectExhaustion — post-click later", () => {
-  const NOW = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
-
-  it("evaluates only outOfFuture (outOfPast left undefined)", () => {
-    const result = CoachingSessionBuckets.detectExhaustion(
-      ["2025-06", "2026-06"],
-      NOW,
-      24,
-      12,
-      { pendingDirection: "later", previousMonthsForward: 12 }
-    );
-    expect(result.outOfFuture).toBeDefined();
-    expect(result.outOfPast).toBeUndefined();
-  });
-
-  it("hides future when extension brings no new months past previous boundary", () => {
-    // Prev boundary "2027-05"; response latest "2026-06" ≤ "2027-05".
-    const result = CoachingSessionBuckets.detectExhaustion(
-      ["2025-06", "2026-06"],
-      NOW,
-      24,
-      12,
-      { pendingDirection: "later", previousMonthsForward: 12 }
-    );
-    expect(result.outOfFuture).toBe(true);
-  });
-
-  it("keeps future visible when extension reveals months past previous boundary", () => {
-    // Prev boundary "2027-05"; response latest "2027-08" > "2027-05".
-    const result = CoachingSessionBuckets.detectExhaustion(
-      ["2025-06", "2026-06", "2027-08"],
-      NOW,
-      24,
-      12,
-      { pendingDirection: "later", previousMonthsForward: 12 }
-    );
-    expect(result.outOfFuture).toBe(false);
-  });
-
-  it("treats latest == previous boundary as exhausted (no STRICTLY-greater month)", () => {
-    // Latest "2027-05" equals prev boundary → no months STRICTLY past it.
-    const result = CoachingSessionBuckets.detectExhaustion(
-      ["2025-06", "2027-05"],
-      NOW,
-      24,
-      12,
-      { pendingDirection: "later", previousMonthsForward: 12 }
-    );
-    expect(result.outOfFuture).toBe(true);
-  });
-
-  it("hides future when response is empty", () => {
-    const result = CoachingSessionBuckets.detectExhaustion([], NOW, 24, 12, {
-      pendingDirection: "later",
-      previousMonthsForward: 12,
-    });
-    expect(result.outOfFuture).toBe(true);
-  });
-});
-
-describe("CoachingSessionBuckets.detectExhaustion — post-click earlier", () => {
-  const NOW = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
-
-  it("evaluates only outOfPast (outOfFuture left undefined)", () => {
-    const result = CoachingSessionBuckets.detectExhaustion(
-      ["2025-06", "2026-06"],
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
       NOW,
       12,
-      24,
-      { pendingDirection: "earlier", previousMonthsBack: 12 }
+      12
     );
-    expect(result.outOfPast).toBeDefined();
-    expect(result.outOfFuture).toBeUndefined();
+    expect(result.disableShowMoreEarlier).toBe(true);
+    expect(result.disableShowMoreLater).toBe(true);
   });
 
-  it("hides past when extension brings no new months before previous boundary", () => {
-    // Prev boundary "2025-05"; earliest "2025-06" ≥ "2025-05".
-    const result = CoachingSessionBuckets.detectExhaustion(
-      ["2025-06", "2026-06"],
+  it("compares months correctly across the year boundary", () => {
+    // "2024-12" < "2025-05" must hold as STRING comparison (zero-padded
+    // months make this safe). If the comparison used numeric month
+    // alone this would falsely say December (12) > May (5).
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      ["2024-12"],
       NOW,
       12,
-      24,
-      { pendingDirection: "earlier", previousMonthsBack: 12 }
+      12
     );
-    expect(result.outOfPast).toBe(true);
+    expect(result.disableShowMoreEarlier).toBe(false);
   });
 
-  it("keeps past visible when extension reveals months before previous boundary", () => {
-    // Prev boundary "2025-05"; response includes "2024-12" < "2025-05".
-    const result = CoachingSessionBuckets.detectExhaustion(
-      ["2024-12", "2025-06", "2026-06"],
+  it("respects the current display boundaries (post-click extension)", () => {
+    // After clicking once with a 6-month increment, monthsBack=18 →
+    // pastBoundary = "2024-11". A "2024-08" count is still past it, so
+    // the earlier button stays enabled and the user can click again.
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      ["2024-08", "2025-06", "2026-05"],
       NOW,
       12,
-      24,
-      { pendingDirection: "earlier", previousMonthsBack: 12 }
+      18
     );
-    expect(result.outOfPast).toBe(false);
-  });
+    expect(result.disableShowMoreEarlier).toBe(false);
 
-  it("treats earliest == previous boundary as exhausted", () => {
-    const result = CoachingSessionBuckets.detectExhaustion(
-      ["2025-05", "2026-06"],
+    // But if monthsBack=24, pastBoundary moves to "2024-05" and "2024-08"
+    // is now inside the display — earlier disables.
+    const exhausted = CoachingSessionBuckets.computeShowMoreState(
+      ["2024-08", "2025-06", "2026-05"],
       NOW,
       12,
-      24,
-      { pendingDirection: "earlier", previousMonthsBack: 12 }
+      24
     );
-    expect(result.outOfPast).toBe(true);
+    expect(exhausted.disableShowMoreEarlier).toBe(true);
   });
 });
 

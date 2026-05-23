@@ -460,8 +460,8 @@ export function filterReviewActions(
 }
 
 export namespace CoachingSessionBuckets {
-  export const DEFAULT_MONTHS_FORWARD = 12;
-  export const DEFAULT_MONTHS_BACK = 12;
+  export const DEFAULT_MONTHS_FORWARD = 6;
+  export const DEFAULT_MONTHS_BACK = 6;
 
   export interface WeekRange {
     start: DateTime;
@@ -563,100 +563,40 @@ export namespace CoachingSessionBuckets {
     return { start, end };
   }
 
-  /**
-   * Whole-calendar-month tail-gap between the BE response's bounding
-   * month and the requested boundary that we treat as "no more data
-   * in this direction." A 3-month gap with no sessions is a strong
-   * signal the user has no ongoing data beyond the queried range;
-   * smaller gaps are inconclusive (the user may have continuous data
-   * extending further out).
-   */
-  export const EXHAUSTION_GAP_THRESHOLD_MONTHS = 3;
-
-  /** Either flag set means the caller should mark that direction
-   *  exhausted (and hide the corresponding Show additional button).
-   *  `undefined` means this call didn't evaluate that direction —
-   *  the caller should preserve any existing state. */
-  export interface ExhaustionResult {
-    outOfFuture?: boolean;
-    outOfPast?: boolean;
-  }
-
-  export interface DetectExhaustionOptions {
-    /** Set when this call is responding to a Show additional click.
-     *  Switches to the strict "no new months past previous boundary"
-     *  check for the clicked direction only. */
-    pendingDirection?: "later" | "earlier";
-    /** Pre-click boundary values, required when `pendingDirection`
-     *  is set so the check knows where the previous edge was. */
-    previousMonthsForward?: number;
-    previousMonthsBack?: number;
-  }
-
-  function monthIndex(yyyyMM: string): number {
-    const [y, m] = yyyyMM.split("-").map(Number);
-    return y * 12 + m;
+  /** Whether each Show additional button should be disabled. The probe
+   *  is data in the lookahead window — months past the display boundary
+   *  that the fetch range covered. No probe data on a side means clicking
+   *  that button can't surface anything. */
+  export interface ShowMoreState {
+    disableShowMoreLater: boolean;
+    disableShowMoreEarlier: boolean;
   }
 
   /**
-   * Decides whether to hide the "Show additional later/earlier" buttons
-   * based on the BE counts response. Two modes:
+   * Derives Show additional button enablement from the counts response.
+   * Pure: caller passes month strings (`yyyy-MM`), the current display
+   * boundaries, and `mountNow`; result drives the button `disabled` prop.
    *
-   * - **Post-click** (`pendingDirection` + previous*): strict — the
-   *   click extended the range, and we mark exhausted iff the response
-   *   brings no new months past the previous boundary in that
-   *   direction. The other direction is left undefined.
-   * - **Initial load / filter change** (no `pendingDirection`):
-   *   heuristic — for each direction, the requested-boundary minus the
-   *   bounding month, measured in whole calendar months, must be ≥
-   *   `EXHAUSTION_GAP_THRESHOLD_MONTHS` to mark exhausted.
-   *
-   * Pure: returns flags only; the caller wires them to React state.
+   * A count whose month is strictly past the display boundary means
+   * the next click would surface at least one bucket — so enable.
+   * A count exactly AT the boundary is inside the display range and
+   * doesn't enable the button.
    */
-  export function detectExhaustion(
+  export function computeShowMoreState(
     monthsInResponse: string[],
     mountNow: DateTime,
     monthsForward: number,
-    monthsBack: number,
-    options: DetectExhaustionOptions = {}
-  ): ExhaustionResult {
-    const months = [...monthsInResponse].sort();
-    const latestMonth = months[months.length - 1];
-    const earliestMonth = months[0];
-
-    if (options.pendingDirection === "later") {
-      const prevBoundary = mountNow
-        .plus({ months: options.previousMonthsForward ?? monthsForward })
-        .toFormat("yyyy-MM");
-      return {
-        outOfFuture: !latestMonth || latestMonth <= prevBoundary,
-      };
-    }
-    if (options.pendingDirection === "earlier") {
-      const prevBoundary = mountNow
-        .minus({ months: options.previousMonthsBack ?? monthsBack })
-        .toFormat("yyyy-MM");
-      return {
-        outOfPast: !earliestMonth || earliestMonth >= prevBoundary,
-      };
-    }
-
-    // Initial-load whole-month gap heuristic.
-    const futureBoundaryMonth = mountNow
+    monthsBack: number
+  ): ShowMoreState {
+    const futureBoundary = mountNow
       .plus({ months: monthsForward })
       .toFormat("yyyy-MM");
-    const pastBoundaryMonth = mountNow
+    const pastBoundary = mountNow
       .minus({ months: monthsBack })
       .toFormat("yyyy-MM");
     return {
-      outOfFuture: !latestMonth
-        ? true
-        : monthIndex(futureBoundaryMonth) - monthIndex(latestMonth) >=
-          EXHAUSTION_GAP_THRESHOLD_MONTHS,
-      outOfPast: !earliestMonth
-        ? true
-        : monthIndex(earliestMonth) - monthIndex(pastBoundaryMonth) >=
-          EXHAUSTION_GAP_THRESHOLD_MONTHS,
+      disableShowMoreLater: !monthsInResponse.some((m) => m > futureBoundary),
+      disableShowMoreEarlier: !monthsInResponse.some((m) => m < pastBoundary),
     };
   }
 
