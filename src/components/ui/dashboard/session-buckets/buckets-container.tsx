@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
 import {
   Tabs,
@@ -40,6 +40,8 @@ export interface BucketsContainerProps {
 
 const SHOW_MORE_INCREMENT_MONTHS = 12;
 
+const TICK_MS = 60_000;
+
 export function BucketsContainer({
   userId,
   relationshipFilter,
@@ -55,6 +57,16 @@ export function BucketsContainer({
   const [monthsBack, setMonthsBack] = useState(
     CoachingSessionBuckets.DEFAULT_MONTHS_BACK
   );
+
+  // `mountNow` is frozen and drives the bucket grid for stable SWR keys.
+  // `now` ticks every minute and drives the past/future filter so a session
+  // whose start time crosses the boundary while the dashboard is open
+  // migrates between "This Week" and the past overlap bucket within ≤ 60s.
+  const [now, setNow] = useState<DateTime>(() => DateTime.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(DateTime.now()), TICK_MS);
+    return () => clearInterval(id);
+  }, []);
 
   const buckets = useMemo(
     () => CoachingSessionBuckets.generate(mountNow, monthsForward, monthsBack),
@@ -194,6 +206,7 @@ export function BucketsContainer({
           <PinnedWeekSection
             kind={CoachingSessionBucketKind.Future}
             mountNow={mountNow}
+            now={now}
             userId={userId}
             relationshipId={relationshipFilter}
             viewerId={viewerId}
@@ -230,6 +243,7 @@ export function BucketsContainer({
           <PinnedWeekSection
             kind={CoachingSessionBucketKind.Past}
             mountNow={mountNow}
+            now={now}
             userId={userId}
             relationshipId={relationshipFilter}
             viewerId={viewerId}

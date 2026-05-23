@@ -7,18 +7,20 @@ import {
   CoachingSessionInclude,
   useEnrichedCoachingSessionsForUser,
 } from "@/lib/api/coaching-sessions";
-import {
-  CoachingSessionBuckets,
-  calculateSessionUrgency,
-} from "@/lib/utils/session";
+import { CoachingSessionBuckets } from "@/lib/utils/session";
 import { CoachingSessionBucketKind } from "@/types/coaching-session-bucket";
-import { SessionUrgency } from "@/types/session-display";
-import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import {
+  isPastSession,
+  type EnrichedCoachingSession,
+} from "@/types/coaching-session";
 import type { Id } from "@/types/general";
 
 export interface PinnedWeekSectionProps {
   kind: CoachingSessionBucketKind;
   mountNow: DateTime;
+  /** Ticking "now" — drives the past/future cutoff for the upcoming
+   *  "This Week" view so sessions migrate out as they end. */
+  now: DateTime;
   userId: Id;
   relationshipId: Id | undefined;
   viewerId: Id;
@@ -37,6 +39,7 @@ const SESSION_INCLUDES: CoachingSessionInclude[] = [
 export function PinnedWeekSection({
   kind,
   mountNow,
+  now,
   userId,
   relationshipId,
   viewerId,
@@ -66,44 +69,44 @@ export function PinnedWeekSection({
     relationshipId
   );
 
-  // Pinned sections are calendar-week spotlights, not upcoming/past
-  // filters. "This Week" includes every Sun–Sat session even if some
-  // have already happened — the row's own urgency drives the View/Join
-  // affordance. "Last Week" is past by construction. The section
-  // always renders so its presence is stable across filter changes;
-  // an empty week shows a placeholder line.
+  // "This Week" filters out past sessions — the calendar-week endpoints
+  // stay anchored Sun–Sat, but the past/future cutoff inside that window
+  // tracks `now`. So a session earlier in this week drops out once it
+  // has fully elapsed. "Last Week" is past by construction.
+  const visibleSessions = useMemo(() => {
+    const all = enrichedSessions ?? [];
+    return isUpcoming ? all.filter((s) => !isPastSession(s, { now })) : all;
+  }, [enrichedSessions, isUpcoming, now]);
+
   const label = isUpcoming ? "This Week" : "Last Week";
-  const sessions = enrichedSessions ?? [];
+  const emptyMessage = isUpcoming
+    ? "No upcoming sessions this week."
+    : "No sessions last week.";
 
   return (
     <section aria-label={label}>
       <p className="px-6 pt-3 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
         {label}
       </p>
-      {sessions.length === 0 ? (
+      {visibleSessions.length === 0 ? (
         <p className="px-6 py-3 text-sm text-muted-foreground/60">
-          {isUpcoming ? "No sessions this week." : "No sessions last week."}
+          {emptyMessage}
         </p>
       ) : (
         <div className="px-6 divide-y">
-          {sessions.map((session) => {
-          const rowIsPast =
-            !isUpcoming ||
-            calculateSessionUrgency(session) === SessionUrgency.Past;
-          return (
+          {visibleSessions.map((session) => (
             <SessionRow
               key={session.id}
               session={session}
               viewerId={viewerId}
               userTimezone={userTimezone}
-              isPast={rowIsPast}
+              isPast={!isUpcoming}
               isSelected={selectedId === session.id}
               onSelect={() => onSelect(session)}
               onReschedule={onReschedule}
               onRequestDelete={onRequestDelete}
             />
-          );
-        })}
+          ))}
         </div>
       )}
     </section>
