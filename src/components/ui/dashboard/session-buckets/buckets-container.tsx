@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DateTime } from "ts-luxon";
+import { toast as sonnerToast } from "sonner";
 import {
   Tabs,
   TabsContent,
@@ -102,13 +103,123 @@ export function BucketsContainer({
       };
     }, [buckets, mountNow]);
 
-  const { counts: monthCounts } = useEnrichedCoachingSessionsForUserCounts(
+  const {
+    counts: monthCounts,
+    isLoading: countsLoading,
+    isError: countsError,
+  } = useEnrichedCoachingSessionsForUserCounts(
     userId,
     fetchRangeStart,
     fetchRangeEnd,
     userTimezone,
     relationshipFilter
   );
+
+  // ── Show additional state ────────────────────────────────────────────
+  // Tracks which extension button (if any) is currently loading, whether
+  // we've exhausted sessions in either direction, and which bucket keys
+  // were just added so we can animate them in.
+  type ShowMoreDirection = "later" | "earlier";
+  const [pendingDirection, setPendingDirection] = useState<
+    ShowMoreDirection | undefined
+  >();
+  const [outOfFuture, setOutOfFuture] = useState(false);
+  const [outOfPast, setOutOfPast] = useState(false);
+  const [recentlyAddedKeys, setRecentlyAddedKeys] = useState<Set<string>>(
+    new Set()
+  );
+  const previousBoundariesRef = useRef({ monthsForward, monthsBack });
+  const previousBucketKeysRef = useRef<Set<string>>(new Set());
+  const hasInitializedRef = useRef(false);
+
+  // Reset exhaustion + pending when the relationship filter changes —
+  // a different relationship has its own data range entirely.
+  useEffect(() => {
+    setOutOfFuture(false);
+    setOutOfPast(false);
+    setPendingDirection(undefined);
+    previousBoundariesRef.current = { monthsForward, monthsBack };
+    // Intentionally only reset on `relationshipFilter` — months* are
+    // read for the ref snapshot but should not retrigger this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relationshipFilter]);
+
+  // Surface a one-time toast for the initial counts fetch failure too
+  // — without this, the dashboard would silently render no badges
+  // (the existing graceful-fallback path) and a user with a flaky
+  // connection would never know why.
+  const initialCountsErrorToastedRef = useRef(false);
+  useEffect(() => {
+    if (countsError && !initialCountsErrorToastedRef.current && !pendingDirection) {
+      sonnerToast.error("Couldn't load session counts", {
+        description: "Bucket badges may be missing. Refresh to retry.",
+      });
+      initialCountsErrorToastedRef.current = true;
+    }
+    if (!countsError) {
+      initialCountsErrorToastedRef.current = false;
+    }
+  }, [countsError, pendingDirection]);
+
+  // After a "Show additional" click settles, detect whether the new
+  // counts response actually added months past the previous boundary;
+  // if not, mark the direction exhausted. Errors surface as a toast.
+  useEffect(() => {
+    if (!pendingDirection || countsLoading) return;
+    if (countsError) {
+      sonnerToast.error("Couldn't load additional sessions", {
+        description: "Please try again.",
+      });
+      setPendingDirection(undefined);
+      return;
+    }
+    const prev = previousBoundariesRef.current;
+    const months = (monthCounts ?? []).map((c) => c.month);
+    if (pendingDirection === "later") {
+      const prevBoundary = mountNow
+        .plus({ months: prev.monthsForward })
+        .toFormat("yyyy-MM");
+      const hasNewer = months.some((m) => m > prevBoundary);
+      if (!hasNewer) setOutOfFuture(true);
+    } else {
+      const prevBoundary = mountNow
+        .minus({ months: prev.monthsBack })
+        .toFormat("yyyy-MM");
+      const hasOlder = months.some((m) => m < prevBoundary);
+      if (!hasOlder) setOutOfPast(true);
+    }
+    previousBoundariesRef.current = { monthsForward, monthsBack };
+    setPendingDirection(undefined);
+  }, [
+    pendingDirection,
+    countsLoading,
+    countsError,
+    monthCounts,
+    mountNow,
+    monthsForward,
+    monthsBack,
+  ]);
+
+  // Identify newly-rendered bucket keys (those not present in the
+  // previous bucket set) for the slide-in animation. The initial mount
+  // is skipped so the first render doesn't animate every bucket.
+  useEffect(() => {
+    const currentKeys = new Set(buckets.map((b) => b.key));
+    if (!hasInitializedRef.current) {
+      previousBucketKeysRef.current = currentKeys;
+      hasInitializedRef.current = true;
+      return;
+    }
+    const newKeys = new Set<string>();
+    for (const key of currentKeys) {
+      if (!previousBucketKeysRef.current.has(key)) newKeys.add(key);
+    }
+    previousBucketKeysRef.current = currentKeys;
+    if (newKeys.size === 0) return;
+    setRecentlyAddedKeys(newKeys);
+    const id = setTimeout(() => setRecentlyAddedKeys(new Set()), 600);
+    return () => clearTimeout(id);
+  }, [buckets]);
 
   const countsByKey = useMemo(() => {
     const monthMap = new Map<string, number>();
@@ -173,14 +284,18 @@ export function BucketsContainer({
     );
   }, [allActions, selectedSession, fetchRangeStart]);
 
-  const onShowLater = useCallback(
-    () => setMonthsForward((m) => m + SHOW_MORE_INCREMENT_MONTHS),
-    []
-  );
-  const onShowEarlier = useCallback(
-    () => setMonthsBack((m) => m + SHOW_MORE_INCREMENT_MONTHS),
-    []
-  );
+  const onShowLater = useCallback(() => {
+    if (pendingDirection || outOfFuture) return;
+    previousBoundariesRef.current = { monthsForward, monthsBack };
+    setPendingDirection("later");
+    setMonthsForward((m) => m + SHOW_MORE_INCREMENT_MONTHS);
+  }, [pendingDirection, outOfFuture, monthsForward, monthsBack]);
+  const onShowEarlier = useCallback(() => {
+    if (pendingDirection || outOfPast) return;
+    previousBoundariesRef.current = { monthsForward, monthsBack };
+    setPendingDirection("earlier");
+    setMonthsBack((m) => m + SHOW_MORE_INCREMENT_MONTHS);
+  }, [pendingDirection, outOfPast, monthsForward, monthsBack]);
 
   return (
     <div className="flex flex-col md:flex-row flex-1 min-h-0">
@@ -230,8 +345,11 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
+            recentlyAddedKeys={recentlyAddedKeys}
             showMoreLabel="Show additional future sessions"
             onShowMore={onShowLater}
+            showMoreLoading={pendingDirection === "later"}
+            showMoreHidden={outOfFuture}
             emptyMessage="No upcoming sessions."
           />
         </TabsContent>
@@ -263,6 +381,9 @@ export function BucketsContainer({
             relationshipId={relationshipFilter}
             viewerId={viewerId}
             userTimezone={userTimezone}
+            recentlyAddedKeys={recentlyAddedKeys}
+            showMoreLoading={pendingDirection === "earlier"}
+            showMoreHidden={outOfPast}
             selectedId={selectedId}
             onSelect={setSelectedSession}
             onReschedule={onReschedule}

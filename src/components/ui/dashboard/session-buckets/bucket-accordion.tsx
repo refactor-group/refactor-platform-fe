@@ -33,6 +33,10 @@ export interface BucketAccordionProps {
   label: string;
   count: CoachingSessionBucketCount;
   view: CoachingSessionBucketView;
+  /** True when this bucket just appeared in the visible list — applies
+   *  a brief fade/slide-in animation so the user can spot the new
+   *  rows added by "Show additional…". */
+  animateIn?: boolean;
   isExpanded: boolean;
   onToggle: () => void;
   userId: Id;
@@ -63,6 +67,7 @@ export function BucketAccordion({
   label,
   count,
   view,
+  animateIn,
   isExpanded,
   onToggle,
   userId,
@@ -112,7 +117,13 @@ export function BucketAccordion({
   }
 
   return (
-    <Collapsible open={isExpanded} onOpenChange={onToggle}>
+    <Collapsible
+      open={isExpanded}
+      onOpenChange={onToggle}
+      className={cn(
+        animateIn && "animate-in fade-in slide-in-from-bottom-2 duration-500"
+      )}
+    >
       <CollapsibleTrigger asChild>
         <button
           type="button"

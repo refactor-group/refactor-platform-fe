@@ -79,14 +79,18 @@ export function PinnedWeekSection({
   }, [enrichedSessions, isUpcoming, now]);
 
   const label = isUpcoming ? "This Week" : "Last Week";
+  const rangeLabel = CoachingSessionBuckets.formatLabel(
+    range.start,
+    range.end
+  );
   const emptyMessage = isUpcoming
-    ? "No upcoming sessions this week."
+    ? "No upcoming sessions scheduled for this week."
     : "No sessions last week.";
 
   return (
     <section aria-label={label}>
       <p className="px-6 pt-3 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
-        {label}
+        {label} · {rangeLabel}
       </p>
       {visibleSessions.length === 0 ? (
         <p className="px-6 py-3 text-sm text-muted-foreground/60">
