@@ -130,11 +130,11 @@ export function BucketAccordion({
           className="w-full flex items-center justify-between gap-3 px-6 py-3 hover:bg-muted/20 transition-colors text-left"
         >
           <div className="flex items-baseline gap-2 min-w-0">
-            <span className="text-[13px] font-medium text-foreground truncate">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 truncate">
               {label}
             </span>
             {displayCount.some && (
-              <span className="text-xs text-muted-foreground tabular-nums">
+              <span className="text-xs tabular-nums text-muted-foreground/60">
                 ({displayCount.val})
               </span>
             )}
