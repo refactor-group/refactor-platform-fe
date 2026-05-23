@@ -310,7 +310,6 @@ export function BucketsContainer({
             onShowMore={onShowLater}
             showMoreLoading={pendingDirection === "later"}
             showMoreDisabled={disableShowMoreLater}
-            emptyMessage="No upcoming sessions."
           />
         </TabsContent>
 
@@ -350,7 +349,6 @@ export function BucketsContainer({
             onRequestDelete={onRequestDelete}
             showMoreLabel="Show additional past sessions"
             onShowMore={onShowEarlier}
-            emptyMessage="No previous sessions."
           />
         </TabsContent>
       </Tabs>

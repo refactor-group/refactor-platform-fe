@@ -85,7 +85,7 @@ export function PinnedWeekSection({
   );
   const emptyMessage = isUpcoming
     ? "No upcoming sessions scheduled for this week."
-    : "No sessions last week.";
+    : "No previous sessions from last week.";
 
   return (
     <section aria-label={label} className="mx-3 mb-4 rounded-md bg-muted/30">

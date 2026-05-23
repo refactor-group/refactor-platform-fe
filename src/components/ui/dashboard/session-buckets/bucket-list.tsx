@@ -39,8 +39,6 @@ export interface BucketListProps {
   /** When true, the button stays visible but is disabled — the lookahead
    *  probe found no sessions in the next window. */
   showMoreDisabled: boolean;
-  /** Rendered when the visible bucket list is empty. */
-  emptyMessage: string;
 }
 
 export function BucketList({
@@ -62,7 +60,6 @@ export function BucketList({
   onShowMore,
   showMoreLoading,
   showMoreDisabled,
-  emptyMessage,
 }: BucketListProps) {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(
     defaultExpandedKey ? new Set([defaultExpandedKey]) : new Set()
@@ -89,13 +86,12 @@ export function BucketList({
     });
   };
 
+  // Fully-empty column: pinned-week section already conveys "nothing
+  // here" with its own message, so the bucket list stays silent.
+  if (visibleBuckets.length === 0) return null;
+
   return (
     <div className="divide-y">
-      {visibleBuckets.length === 0 && (
-        <div className="px-6 py-8 text-center text-sm text-muted-foreground/60">
-          {emptyMessage}
-        </div>
-      )}
       {visibleBuckets.map((bucket) => {
         const count = countsByKey.get(bucket.key) ?? { some: false, none: true };
         return (
