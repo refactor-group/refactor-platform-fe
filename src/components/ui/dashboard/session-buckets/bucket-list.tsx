@@ -87,9 +87,10 @@ export function BucketList({
     });
   };
 
-  // Fully-empty column: pinned-week section already conveys "nothing
-  // here" with its own message, so the bucket list stays silent.
-  if (visibleBuckets.length === 0) return null;
+  // Skip the wrapper when there are no buckets AND nothing to fetch —
+  // pinned-week already says "nothing here." When the lookahead has
+  // data the button still needs to render so the user can extend.
+  if (visibleBuckets.length === 0 && showMoreDisabled) return null;
 
   return (
     <div className="divide-y">
