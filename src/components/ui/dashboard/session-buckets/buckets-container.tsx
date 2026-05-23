@@ -406,6 +406,7 @@ export function BucketsContainer({
         <SessionHoverDetail
           session={selectedSession}
           participantName={selectedParticipant?.participantName ?? ""}
+          userTimezone={userTimezone}
           reviewActions={selectedReviewActions}
         />
       </div>

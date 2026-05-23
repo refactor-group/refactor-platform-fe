@@ -2,24 +2,31 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { DateTime } from "ts-luxon";
 import { ChevronRight, MessageSquare } from "lucide-react";
 import { SessionGoalList } from "@/components/ui/session-goal-list";
 import { ActionStatusIcon } from "@/components/ui/coaching-sessions/action-card-parts";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { cn } from "@/components/lib/utils";
+import { formatDateWithTime } from "@/lib/utils/date";
 import type { Action } from "@/types/action";
-import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import {
+  isPastSession,
+  type EnrichedCoachingSession,
+} from "@/types/coaching-session";
 import { ItemStatus } from "@/types/general";
 
 export interface SessionHoverDetailProps {
   session: EnrichedCoachingSession | undefined;
   participantName: string;
+  userTimezone: string;
   reviewActions: Action[];
 }
 
 export function SessionHoverDetail({
   session,
   participantName,
+  userTimezone,
   reviewActions,
 }: SessionHoverDetailProps) {
   if (!session) {
@@ -34,6 +41,13 @@ export function SessionHoverDetail({
   }
 
   const goals = session.goals ?? [];
+  const scheduledLabel = useMemo(() => {
+    const dt = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
+      userTimezone
+    );
+    const prefix = isPastSession(session) ? "Held" : "Scheduled for";
+    return `${prefix} ${formatDateWithTime(dt, "·", true)}`;
+  }, [session, userTimezone]);
 
   // Sections are siblings under the parent's `gap-4` (set by the wrapper in
   // `coaching-sessions-list-view.tsx`), matching the rhythm of
@@ -47,6 +61,9 @@ export function SessionHoverDetail({
             type reads consistently across the dashboard. */}
         <p className="text-base font-semibold text-foreground">
           Session with {participantName}
+        </p>
+        <p className="text-xs text-muted-foreground tabular-nums mt-0.5">
+          {scheduledLabel}
         </p>
         {goals.length > 0 && (
           <SessionGoalList goals={goals} gapClassName="gap-0.5 mt-2" />

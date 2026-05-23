@@ -88,16 +88,16 @@ export function PinnedWeekSection({
     : "No sessions last week.";
 
   return (
-    <section aria-label={label}>
-      <p className="px-6 pt-3 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+    <section aria-label={label} className="mx-3 mb-4 rounded-md bg-muted/30">
+      <p className="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
         {label} · {rangeLabel}
       </p>
       {visibleSessions.length === 0 ? (
-        <p className="px-6 py-3 text-sm text-muted-foreground/60">
+        <p className="px-3 py-3 text-sm text-muted-foreground/60">
           {emptyMessage}
         </p>
       ) : (
-        <div className="px-6 divide-y">
+        <div className="px-3 divide-y">
           {visibleSessions.map((session) => (
             <SessionRow
               key={session.id}
