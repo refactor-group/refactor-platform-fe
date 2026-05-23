@@ -119,7 +119,6 @@ export function BucketsContainer({
 
   const {
     counts: monthCounts,
-    isLoading: countsLoading,
     isError: countsError,
   } = useEnrichedCoachingSessionsForUserCounts(
     userId,
@@ -241,7 +240,7 @@ export function BucketsContainer({
     if (!selectedSession) return [];
     return selectReviewActionsForSession(
       allActions,
-      selectedSession ? [selectedSession] : [],
+      [selectedSession],
       selectedSession.id,
       fetchRangeStart
     );
