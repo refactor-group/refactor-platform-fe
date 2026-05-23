@@ -606,11 +606,15 @@ describe("CoachingSessionBuckets.currentWeekRange", () => {
 });
 
 describe("CoachingSessionBuckets.previousWeekRange", () => {
-  it("returns the Sunday-Saturday week immediately before currentWeekRange", () => {
+  it("starts at the previous calendar Sunday and ends at the anchor day's end", () => {
+    // Anchor: Sat May 23 mid-day (UTC). Previous Sun = May 10. End is
+    // end-of-day on the anchor's day so today's sessions are inside the
+    // fetched window — the ticking past/future filter decides what's
+    // visible.
     const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
     const previous = CoachingSessionBuckets.previousWeekRange(anchor);
     expect(previous.start.toISO()).toBe("2026-05-10T00:00:00.000Z");
-    expect(previous.end.toISO()).toBe("2026-05-16T23:59:59.999Z");
+    expect(previous.end.toISO()).toBe("2026-05-23T23:59:59.999Z");
   });
 });
 

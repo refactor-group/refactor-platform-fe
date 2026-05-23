@@ -325,20 +325,6 @@ export function BucketsContainer({
           className="mt-2 flex-1 min-h-0 overflow-y-auto"
         >
           <PinnedWeekSection
-            week="current"
-            view={CoachingSessionBucketView.Previous}
-            mountNow={mountNow}
-            now={now}
-            userId={userId}
-            relationshipId={relationshipFilter}
-            viewerId={viewerId}
-            userTimezone={userTimezone}
-            selectedId={selectedId}
-            onSelect={setSelectedSession}
-            onReschedule={onReschedule}
-            onRequestDelete={onRequestDelete}
-          />
-          <PinnedWeekSection
             week="previous"
             view={CoachingSessionBucketView.Previous}
             mountNow={mountNow}

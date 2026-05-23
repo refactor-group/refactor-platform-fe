@@ -600,11 +600,19 @@ export namespace CoachingSessionBuckets {
     };
   }
 
+  /**
+   * "Last week" in the Previous tab's pinned section. Spans from the
+   * start of the previous calendar week (Sun-anchored) through the end
+   * of `anchor`'s day, so a session that just ended this week is in the
+   * fetched window and shows up as soon as the `now` filter classifies
+   * it past — matching the user-facing flow where a session moves from
+   * Upcoming "This Week" to Previous "Last Week" once it finishes.
+   */
   export function previousWeekRange(anchor: DateTime): WeekRange {
     const current = currentWeekRange(anchor);
     return {
       start: current.start.minus({ days: 7 }),
-      end: current.start.minus({ milliseconds: 1 }),
+      end: anchor.endOf("day"),
     };
   }
 }

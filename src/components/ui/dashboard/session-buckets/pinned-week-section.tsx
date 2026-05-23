@@ -79,13 +79,16 @@ export function PinnedWeekSection({
     relationshipId
   );
 
+  // Filter using ticking `now` so a session migrates between sections
+  // the moment its duration elapses — Upcoming "This Week" loses it,
+  // Previous "Last Week" gains it (since previousWeekRange's window
+  // already extends through today).
   const visibleSessions = useMemo(() => {
     const all = enrichedSessions ?? [];
-    if (!isCurrentWeek) return all;
     return isPastView
       ? all.filter((s) => isPastSession(s, { now }))
       : all.filter((s) => !isPastSession(s, { now }));
-  }, [enrichedSessions, isCurrentWeek, isPastView, now]);
+  }, [enrichedSessions, isPastView, now]);
 
   const label = isCurrentWeek ? "This Week" : "Last Week";
   const rangeLabel = CoachingSessionBuckets.formatLabel(
