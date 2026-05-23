@@ -41,13 +41,11 @@ export function SessionHoverDetail({
   }
 
   const goals = session.goals ?? [];
-  const scheduledLabel = useMemo(() => {
-    const dt = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
-      userTimezone
-    );
-    const prefix = isPastSession(session) ? "Held" : "Scheduled for";
-    return `${prefix} ${formatDateWithTime(dt, "·", true)}`;
-  }, [session, userTimezone]);
+  const scheduledDateTime = DateTime.fromISO(session.date, {
+    zone: "utc",
+  }).setZone(userTimezone);
+  const scheduledPrefix = isPastSession(session) ? "Held" : "Scheduled for";
+  const scheduledLabel = `${scheduledPrefix} ${formatDateWithTime(scheduledDateTime, "·", true)}`;
 
   // Sections are siblings under the parent's `gap-4` (set by the wrapper in
   // `coaching-sessions-list-view.tsx`), matching the rhythm of
