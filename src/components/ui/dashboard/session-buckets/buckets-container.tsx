@@ -161,9 +161,12 @@ export function BucketsContainer({
     }
   }, [countsError, pendingDirection]);
 
-  // After a "Show additional" click settles, detect whether the new
-  // counts response actually added months past the previous boundary;
-  // if not, mark the direction exhausted. Errors surface as a toast.
+  // Mark a direction exhausted only when a Show additional click
+  // extends the range but the response brings no new months past the
+  // previous boundary — that's the only signal we can trust. The
+  // initial load can't prove exhaustion: even when the response's
+  // bounding month is inside the requested range, the user might
+  // still have sessions beyond it that we haven't queried.
   useEffect(() => {
     if (!pendingDirection || countsLoading) return;
     if (countsError) {
