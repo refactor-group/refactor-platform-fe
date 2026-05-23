@@ -1,4 +1,8 @@
 import { DateTime } from "ts-luxon";
+import {
+  CoachingSessionBucketDescriptor,
+  CoachingSessionBucketKind,
+} from "@/types/coaching-session-bucket";
 import { CoachingSession, DEFAULT_SESSION_DURATION_MINUTES, EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
@@ -453,4 +457,98 @@ export function filterReviewActions(
   });
 
   return sortActionArray(filtered, SortOrder.Desc, "due_by");
+}
+
+export namespace CoachingSessionBuckets {
+  export const DEFAULT_MONTHS_FORWARD = 12;
+  export const DEFAULT_MONTHS_BACK = 12;
+
+  export interface WeekRange {
+    start: DateTime;
+    end: DateTime;
+  }
+
+  function alignToBucketStart(dt: DateTime): DateTime {
+    const offset = dt.month % 2 === 0 ? 1 : 0;
+    return dt.startOf("month").minus({ months: offset });
+  }
+
+  function bucketKey(start: DateTime, end: DateTime): string {
+    return `${start.toFormat("yyyy-MM")}_${end.toFormat("yyyy-MM")}`;
+  }
+
+  function makeDescriptor(
+    start: DateTime,
+    currentBucketStart: DateTime
+  ): CoachingSessionBucketDescriptor {
+    const end = start.plus({ months: 2 }).minus({ milliseconds: 1 });
+    const kind =
+      start < currentBucketStart
+        ? CoachingSessionBucketKind.Past
+        : CoachingSessionBucketKind.Future;
+    return {
+      kind,
+      start,
+      end,
+      label: formatLabel(start, end),
+      key: bucketKey(start, end),
+      crossesYearFromPrevious: false,
+    };
+  }
+
+  export function formatLabel(start: DateTime, end: DateTime): string {
+    return `${start.toFormat("LLL d")} – ${end.toFormat("LLL d")}`;
+  }
+
+  export function generate(
+    anchor: DateTime,
+    monthsForward: number = DEFAULT_MONTHS_FORWARD,
+    monthsBack: number = DEFAULT_MONTHS_BACK
+  ): CoachingSessionBucketDescriptor[] {
+    const currentStart = alignToBucketStart(anchor);
+    const futureCount = Math.ceil(monthsForward / 2) + 1;
+    const pastCount = Math.ceil(monthsBack / 2);
+    const buckets: CoachingSessionBucketDescriptor[] = [];
+
+    for (let i = 0; i < futureCount; i++) {
+      buckets.push(
+        makeDescriptor(currentStart.plus({ months: i * 2 }), currentStart)
+      );
+    }
+    for (let i = 1; i <= pastCount; i++) {
+      buckets.push(
+        makeDescriptor(currentStart.minus({ months: i * 2 }), currentStart)
+      );
+    }
+    return buckets;
+  }
+
+  export function detectYearDividers(
+    bucketsInDisplayOrder: CoachingSessionBucketDescriptor[]
+  ): CoachingSessionBucketDescriptor[] {
+    return bucketsInDisplayOrder.map((bucket, index) => {
+      if (index === 0) {
+        return { ...bucket, crossesYearFromPrevious: false };
+      }
+      const previousYear = bucketsInDisplayOrder[index - 1].start.year;
+      return {
+        ...bucket,
+        crossesYearFromPrevious: bucket.start.year !== previousYear,
+      };
+    });
+  }
+
+  export function currentWeekRange(anchor: DateTime): WeekRange {
+    const start = anchor.minus({ days: anchor.weekday % 7 }).startOf("day");
+    const end = start.plus({ days: 7 }).minus({ milliseconds: 1 });
+    return { start, end };
+  }
+
+  export function previousWeekRange(anchor: DateTime): WeekRange {
+    const current = currentWeekRange(anchor);
+    return {
+      start: current.start.minus({ days: 7 }),
+      end: current.start.minus({ milliseconds: 1 }),
+    };
+  }
 }

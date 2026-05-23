@@ -1,15 +1,12 @@
 import { create } from "zustand";
 import { createJSONStorage, devtools, persist } from "zustand/middleware";
-import { SessionTimeWindow } from "@/components/ui/dashboard/coaching-sessions-filters";
 import type { Id } from "@/types/general";
 
 interface CoachingSessionsCardFilterState {
-  timeWindow: SessionTimeWindow;
   relationshipFilter: Id | undefined;
 }
 
 interface CoachingSessionsCardFilterActions {
-  setTimeWindow: (window: SessionTimeWindow) => void;
   setRelationshipFilter: (id: Id | undefined) => void;
   resetCoachingSessionsCardFilters: () => void;
 }
@@ -18,13 +15,6 @@ export type CoachingSessionsCardFilterStore =
   CoachingSessionsCardFilterState & CoachingSessionsCardFilterActions;
 
 export const defaultInitState: CoachingSessionsCardFilterState = {
-  // Week (a 7-day total span centered on now) instead of Day. Coaching
-  // cadence is weekly, so a 1-day window left common cases (like a session
-  // two days out) silently invisible until the user discovered the Filters
-  // popover. Week matches users' natural mental scheduling unit and surfaces
-  // near-term sessions on first load. The fetch cost difference is
-  // negligible at typical session counts.
-  timeWindow: SessionTimeWindow.Week,
   relationshipFilter: undefined,
 };
 
@@ -37,9 +27,6 @@ export const createCoachingSessionsCardFilterStore = (
         (set) => ({
           ...initState,
 
-          setTimeWindow: (window: SessionTimeWindow) => {
-            set({ timeWindow: window });
-          },
           setRelationshipFilter: (id: Id | undefined) => {
             set({ relationshipFilter: id });
           },
@@ -48,17 +35,21 @@ export const createCoachingSessionsCardFilterStore = (
           },
         }),
         {
-          // Persisted in sessionStorage (cleared on tab close, survives in-tab
-          // navigation + reload). Explicitly reset on logout via
-          // `useLogoutUser` so a different user logging in on the same tab
-          // doesn't inherit the previous user's filter selection. The card's
-          // cleanup effect (`coaching-sessions-card.tsx`) is a secondary
-          // safety net for the rare case where a `relationshipFilter` id
-          // becomes stale within a single session (e.g. relationship deleted
-          // in another tab).
           name: "coaching-sessions-card-filter-store",
           storage: createJSONStorage(() => sessionStorage),
-          version: 1,
+          version: 2,
+          // v1 → v2: dropped legacy `timeWindow` field (replaced by calendar
+          // bucket pagination, which makes a single time-range filter
+          // redundant). Migration strips the stale key from persisted state
+          // so old tabs hydrate cleanly without console errors.
+          migrate: (persistedState, version) => {
+            if (version < 2 && persistedState && typeof persistedState === "object") {
+              const { timeWindow: _legacyTimeWindow, ...rest } =
+                persistedState as Record<string, unknown>;
+              return { ...defaultInitState, ...rest };
+            }
+            return persistedState as CoachingSessionsCardFilterState;
+          },
         }
       )
     )

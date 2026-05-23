@@ -206,10 +206,11 @@ export namespace EntityApi {
    *
    * @template R The type of entity to be returned
    * @param url The API endpoint URL to fetch data from
+   * @param config Optional axios config (e.g. `{ params: { ... } }` for query string)
    * @returns A Promise resolving to an entity of type R
    */
-  export const getFn = async <R>(url: string): Promise<R> => {
-    return fetcher<R>(url, {});
+  export const getFn = async <R>(url: string, config?: any): Promise<R> => {
+    return fetcher<R>(url, config ?? {});
   };
 
   /**

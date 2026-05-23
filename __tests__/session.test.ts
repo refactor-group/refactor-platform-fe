@@ -7,9 +7,11 @@ import {
   selectNextUpcomingSession,
   getSessionParticipantInfo,
   getSessionParticipantName,
+  CoachingSessionBuckets,
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/utils/session";
+import { CoachingSessionBucketKind } from "@/types/coaching-session-bucket";
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
@@ -480,3 +482,135 @@ describe("enrichSessionForDisplay", () => {
     expect(enriched.dateTime).toContain("5:00 PM"); // 2PM PST = 5PM EST
   });
 });
+
+describe("CoachingSessionBuckets.generate", () => {
+  const originalNow = Settings.now;
+  const originalZone = Settings.defaultZone;
+
+  beforeEach(() => {
+    Settings.defaultZone = "utc";
+    const fakeNow = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    Settings.now = () => fakeNow.toMillis();
+  });
+
+  afterEach(() => {
+    Settings.now = originalNow;
+    Settings.defaultZone = originalZone;
+  });
+
+  it("aligns the current bucket to the May-June (odd-month-start) grid for a May anchor", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end);
+    expect(current).toBeDefined();
+    expect(current!.start.toISO()).toBe("2026-05-01T00:00:00.000Z");
+    expect(current!.end.toFormat("yyyy-MM-dd")).toBe("2026-06-30");
+  });
+
+  it("puts a June anchor into the same May-June bucket as a May anchor", () => {
+    const anchor = DateTime.fromISO("2026-06-15T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end);
+    expect(current!.start.toISO()).toBe("2026-05-01T00:00:00.000Z");
+  });
+
+  it("puts a July anchor into the Jul-Aug bucket (next odd-month grid cell)", () => {
+    const anchor = DateTime.fromISO("2026-07-10T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end);
+    expect(current!.start.toISO()).toBe("2026-07-01T00:00:00.000Z");
+  });
+
+  it("formats labels with day precision (May 1 – Jun 30)", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end);
+    expect(current!.label).toBe("May 1 – Jun 30");
+  });
+
+  it("marks past buckets with BucketKind.Past and future-or-current with BucketKind.Future", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end)!;
+    const past = buckets.find((b) => b.end < current.start);
+    const future = buckets.find((b) => b.start > current.end);
+    expect(current.kind).toBe(CoachingSessionBucketKind.Future);
+    expect(past!.kind).toBe(CoachingSessionBucketKind.Past);
+    expect(future!.kind).toBe(CoachingSessionBucketKind.Future);
+  });
+
+  it("returns ceil(monthsForward/2)+1 future-or-current buckets and ceil(monthsBack/2) past buckets", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 12, 12);
+    const futureOrCurrent = buckets.filter(
+      (b) => b.kind === CoachingSessionBucketKind.Future
+    );
+    const past = buckets.filter((b) => b.kind === CoachingSessionBucketKind.Past);
+    expect(futureOrCurrent).toHaveLength(7);
+    expect(past).toHaveLength(6);
+  });
+});
+
+describe("CoachingSessionBuckets.detectYearDividers", () => {
+  it("marks the first bucket whose start.year differs from its predecessor's", () => {
+    const anchor = DateTime.fromISO("2026-11-15T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 6, 0);
+    const sorted = [...buckets].sort(
+      (a, b) => a.start.toMillis() - b.start.toMillis()
+    );
+    const annotated = CoachingSessionBuckets.detectYearDividers(sorted);
+    const yearShifts = annotated.filter((b) => b.crossesYearFromPrevious);
+    expect(yearShifts).toHaveLength(1);
+    expect(yearShifts[0].start.year).toBe(2027);
+  });
+
+  it("never marks the first bucket as crossing the year", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 0);
+    const annotated = CoachingSessionBuckets.detectYearDividers(buckets);
+    expect(annotated[0].crossesYearFromPrevious).toBe(false);
+  });
+});
+
+describe("CoachingSessionBuckets.currentWeekRange", () => {
+  const originalNow = Settings.now;
+  const originalZone = Settings.defaultZone;
+
+  afterEach(() => {
+    Settings.now = originalNow;
+    Settings.defaultZone = originalZone;
+  });
+
+  it("returns Sunday 00:00 through Saturday 23:59:59.999 for a midweek anchor (Sat 2026-05-23 UTC)", () => {
+    // 2026-05-23 is a Saturday (weekday 6 in Luxon, 1=Mon)
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const { start, end } = CoachingSessionBuckets.currentWeekRange(anchor);
+    expect(start.toISO()).toBe("2026-05-17T00:00:00.000Z"); // Sunday before
+    expect(end.toISO()).toBe("2026-05-23T23:59:59.999Z"); // Same Saturday
+  });
+
+  it("treats a Sunday anchor as the start of its own week", () => {
+    // 2026-05-24 is a Sunday (weekday 7)
+    const anchor = DateTime.fromISO("2026-05-24T08:00:00.000Z", { zone: "utc" });
+    const { start, end } = CoachingSessionBuckets.currentWeekRange(anchor);
+    expect(start.toISO()).toBe("2026-05-24T00:00:00.000Z");
+    expect(end.toISO()).toBe("2026-05-30T23:59:59.999Z");
+  });
+
+  it("treats a Monday anchor as one day past Sunday", () => {
+    // 2026-05-25 is a Monday (weekday 1)
+    const anchor = DateTime.fromISO("2026-05-25T08:00:00.000Z", { zone: "utc" });
+    const { start } = CoachingSessionBuckets.currentWeekRange(anchor);
+    expect(start.toISO()).toBe("2026-05-24T00:00:00.000Z"); // Sunday
+  });
+});
+
+describe("CoachingSessionBuckets.previousWeekRange", () => {
+  it("returns the Sunday-Saturday week immediately before currentWeekRange", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const previous = CoachingSessionBuckets.previousWeekRange(anchor);
+    expect(previous.start.toISO()).toBe("2026-05-10T00:00:00.000Z");
+    expect(previous.end.toISO()).toBe("2026-05-16T23:59:59.999Z");
+  });
+});
+
