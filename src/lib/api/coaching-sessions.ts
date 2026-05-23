@@ -227,9 +227,16 @@ export const CoachingSessionApi = {
     tz: string,
     relationshipId?: Id
   ): Promise<CoachingSessionCountByMonth[]> => {
+    const fromIso = fromDate.toISODate();
+    const toIso = toDate.toISODate();
+    if (!fromIso || !toIso) {
+      throw new Error(
+        `listCountsForUser: invalid DateTime input (fromDate=${fromDate.toString()}, toDate=${toDate.toString()})`
+      );
+    }
     const params: Record<string, string> = {
-      from_date: fromDate.toISODate() || '',
-      to_date: toDate.toISODate() || '',
+      from_date: fromIso,
+      to_date: toIso,
       group_by: "month",
       tz,
     };

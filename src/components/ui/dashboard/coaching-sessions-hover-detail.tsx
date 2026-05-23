@@ -17,10 +17,21 @@ import {
 import { ItemStatus } from "@/types/general";
 
 export interface SessionHoverDetailProps {
-  session: EnrichedCoachingSession | undefined;
+  session: EnrichedCoachingSession;
   participantName: string;
   userTimezone: string;
   reviewActions: Action[];
+}
+
+export function SessionHoverDetailEmpty() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-center px-4">
+      <MessageSquare className="h-8 w-8 text-muted-foreground/20 mb-3" />
+      <p className="text-sm text-muted-foreground/40">
+        Click a session to see actions due
+      </p>
+    </div>
+  );
 }
 
 export function SessionHoverDetail({
@@ -29,17 +40,6 @@ export function SessionHoverDetail({
   userTimezone,
   reviewActions,
 }: SessionHoverDetailProps) {
-  if (!session) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center px-4">
-        <MessageSquare className="h-8 w-8 text-muted-foreground/20 mb-3" />
-        <p className="text-sm text-muted-foreground/40">
-          Click a session to see actions due
-        </p>
-      </div>
-    );
-  }
-
   const goals = session.goals ?? [];
   const scheduledDateTime = DateTime.fromISO(session.date, {
     zone: "utc",

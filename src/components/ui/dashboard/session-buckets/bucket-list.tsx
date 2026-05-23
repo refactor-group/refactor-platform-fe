@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BucketAccordion } from "./bucket-accordion";
 import { YearDivider } from "./year-divider";
 import { CoachingSessionBuckets } from "@/lib/utils/session";
+import { None } from "@/types/option";
 import {
   CoachingSessionBucketCount,
   CoachingSessionBucketDescriptor,
@@ -93,7 +94,7 @@ export function BucketList({
   return (
     <div className="divide-y">
       {visibleBuckets.map((bucket) => {
-        const count = countsByKey.get(bucket.key) ?? { some: false, none: true };
+        const count = countsByKey.get(bucket.key) ?? None;
         return (
           <Fragment key={bucket.key}>
             {bucket.crossesYearFromPrevious && (

@@ -9,7 +9,10 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { SessionHoverDetail } from "@/components/ui/dashboard/coaching-sessions-hover-detail";
+import {
+  SessionHoverDetail,
+  SessionHoverDetailEmpty,
+} from "@/components/ui/dashboard/coaching-sessions-hover-detail";
 import { BucketList } from "./bucket-list";
 import { PinnedWeekSection } from "./pinned-week-section";
 import { useEnrichedCoachingSessionsForUserCounts } from "@/lib/api/coaching-sessions";
@@ -356,12 +359,16 @@ export function BucketsContainer({
       <div className="hidden md:block w-px bg-border shrink-0" />
 
       <div className="hidden md:flex flex-col flex-1 min-w-0 min-h-0 p-4 sm:p-6 gap-4 overflow-y-auto">
-        <SessionHoverDetail
-          session={selectedSession}
-          participantName={selectedParticipant?.participantName ?? ""}
-          userTimezone={userTimezone}
-          reviewActions={selectedReviewActions}
-        />
+        {selectedSession && selectedParticipant ? (
+          <SessionHoverDetail
+            session={selectedSession}
+            participantName={selectedParticipant.participantName}
+            userTimezone={userTimezone}
+            reviewActions={selectedReviewActions}
+          />
+        ) : (
+          <SessionHoverDetailEmpty />
+        )}
       </div>
 
       <div className="h-4 md:hidden" />
