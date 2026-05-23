@@ -242,12 +242,6 @@ export function BucketsContainer({
     return result;
   }, [monthCounts, buckets]);
 
-  const currentBucketKey = useMemo(() => {
-    const current = futureBuckets.find(
-      (b) => b.start <= mountNow && mountNow <= b.end
-    );
-    return current?.key;
-  }, [futureBuckets, mountNow]);
 
   const [selectedSession, setSelectedSession] = useState<
     EnrichedCoachingSession | undefined
@@ -334,7 +328,7 @@ export function BucketsContainer({
           <BucketList
             buckets={futureBuckets}
             countsByKey={countsByKey}
-            defaultExpandedKey={currentBucketKey}
+            defaultExpandedKey={undefined}
             view={CoachingSessionBucketView.Upcoming}
             mountNow={mountNow}
             userId={userId}
@@ -374,7 +368,7 @@ export function BucketsContainer({
           <BucketList
             buckets={pastBuckets}
             countsByKey={countsByKey}
-            defaultExpandedKey={currentBucketKey}
+            defaultExpandedKey={undefined}
             view={CoachingSessionBucketView.Previous}
             mountNow={mountNow}
             userId={userId}
