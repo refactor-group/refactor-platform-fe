@@ -54,6 +54,10 @@ const SESSION_INCLUDES: CoachingSessionInclude[] = [
   CoachingSessionInclude.Goal,
 ];
 
+// The overlap bucket fetches its full calendar window even when its
+// label is clipped to start at `mountNow`, so sessions in the current
+// pinned week appear in both places. The duplication is intentional —
+// pinned-week is a spotlight, the bucket is the comprehensive list.
 function matchesView(
   session: EnrichedCoachingSession,
   view: CoachingSessionBucketView
