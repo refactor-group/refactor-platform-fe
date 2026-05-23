@@ -217,7 +217,7 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
-            showMoreLabel="Show more future sessions"
+            showMoreLabel="Show additional future sessions"
             onShowMore={onShowLater}
             emptyMessage="No upcoming sessions."
           />
@@ -253,7 +253,7 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
-            showMoreLabel="Show more past sessions"
+            showMoreLabel="Show additional past sessions"
             onShowMore={onShowEarlier}
             emptyMessage="No previous sessions."
           />
