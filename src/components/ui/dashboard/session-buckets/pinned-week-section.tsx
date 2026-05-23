@@ -66,23 +66,27 @@ export function PinnedWeekSection({
     relationshipId
   );
 
-  if (!enrichedSessions || enrichedSessions.length === 0) {
-    return null;
-  }
-
   // Pinned sections are calendar-week spotlights, not upcoming/past
   // filters. "This Week" includes every Sun–Sat session even if some
   // have already happened — the row's own urgency drives the View/Join
-  // affordance. "Last Week" is past by construction.
+  // affordance. "Last Week" is past by construction. The section
+  // always renders so its presence is stable across filter changes;
+  // an empty week shows a placeholder line.
   const label = isUpcoming ? "This Week" : "Last Week";
+  const sessions = enrichedSessions ?? [];
 
   return (
     <section aria-label={label}>
       <p className="px-6 pt-3 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
         {label}
       </p>
-      <div className="px-6 divide-y">
-        {enrichedSessions.map((session) => {
+      {sessions.length === 0 ? (
+        <p className="px-6 py-3 text-sm text-muted-foreground/60">
+          {isUpcoming ? "No sessions this week." : "No sessions last week."}
+        </p>
+      ) : (
+        <div className="px-6 divide-y">
+          {sessions.map((session) => {
           const rowIsPast =
             !isUpcoming ||
             calculateSessionUrgency(session) === SessionUrgency.Past;
@@ -100,7 +104,8 @@ export function PinnedWeekSection({
             />
           );
         })}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
