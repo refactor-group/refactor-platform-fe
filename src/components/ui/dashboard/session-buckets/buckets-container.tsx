@@ -161,38 +161,46 @@ export function BucketsContainer({
     }
   }, [countsError, pendingDirection]);
 
-  // Mark a direction exhausted only when a Show additional click
-  // extends the range but the response brings no new months past the
-  // previous boundary — that's the only signal we can trust. The
-  // initial load can't prove exhaustion: even when the response's
-  // bounding month is inside the requested range, the user might
-  // still have sessions beyond it that we haven't queried.
+  // Mark a direction exhausted via two paths:
+  //   1. Post-click strict check — clicking Show additional extended
+  //      the range but the response brings no new months past the
+  //      previous boundary.
+  //   2. Initial-load heuristic — the response's bounding month is
+  //      ≥ EXHAUSTION_GAP_THRESHOLD_MONTHS inside the requested
+  //      boundary. The gap proves the user has no sessions in those
+  //      tail months; we extrapolate that they have none beyond
+  //      either. False positives are possible for users with a
+  //      multi-month gap before a far-out session.
   useEffect(() => {
-    if (!pendingDirection || countsLoading) return;
+    if (countsLoading) return;
     if (countsError) {
-      sonnerToast.error("Couldn't load additional sessions", {
-        description: "Please try again.",
-      });
-      setPendingDirection(undefined);
+      if (pendingDirection) {
+        sonnerToast.error("Couldn't load additional sessions", {
+          description: "Please try again.",
+        });
+        setPendingDirection(undefined);
+      }
       return;
     }
-    const prev = previousBoundariesRef.current;
-    const months = (monthCounts ?? []).map((c) => c.month);
-    if (pendingDirection === "later") {
-      const prevBoundary = mountNow
-        .plus({ months: prev.monthsForward })
-        .toFormat("yyyy-MM");
-      const hasNewer = months.some((m) => m > prevBoundary);
-      if (!hasNewer) setOutOfFuture(true);
-    } else {
-      const prevBoundary = mountNow
-        .minus({ months: prev.monthsBack })
-        .toFormat("yyyy-MM");
-      const hasOlder = months.some((m) => m < prevBoundary);
-      if (!hasOlder) setOutOfPast(true);
+    const result = CoachingSessionBuckets.detectExhaustion(
+      (monthCounts ?? []).map((c) => c.month),
+      mountNow,
+      monthsForward,
+      monthsBack,
+      pendingDirection
+        ? {
+            pendingDirection,
+            previousMonthsForward: previousBoundariesRef.current.monthsForward,
+            previousMonthsBack: previousBoundariesRef.current.monthsBack,
+          }
+        : undefined
+    );
+    if (result.outOfFuture === true) setOutOfFuture(true);
+    if (result.outOfPast === true) setOutOfPast(true);
+    if (pendingDirection) {
+      previousBoundariesRef.current = { monthsForward, monthsBack };
+      setPendingDirection(undefined);
     }
-    previousBoundariesRef.current = { monthsForward, monthsBack };
-    setPendingDirection(undefined);
   }, [
     pendingDirection,
     countsLoading,
