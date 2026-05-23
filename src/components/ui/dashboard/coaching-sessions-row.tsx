@@ -78,8 +78,8 @@ export function SessionRow({
     const dt = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
       userTimezone
     );
-    return formatDateWithTime(dt, "·", !isPast);
-  }, [session.date, userTimezone, isPast]);
+    return formatDateWithTime(dt, "·", true);
+  }, [session.date, userTimezone]);
 
   return (
     <div
