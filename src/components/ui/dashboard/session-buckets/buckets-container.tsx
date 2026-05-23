@@ -122,6 +122,7 @@ export function BucketsContainer({
 
   const {
     counts: monthCounts,
+    isLoading: countsLoading,
     isError: countsError,
   } = useEnrichedCoachingSessionsForUserCounts(
     userId,
@@ -197,21 +198,24 @@ export function BucketsContainer({
     for (const entry of monthCounts ?? []) {
       monthMap.set(entry.month, entry.count);
     }
-    const hasAnyCount = (monthCounts?.length ?? 0) > 0;
+    // While the initial fetch is in flight, treat missing months as
+    // "unknown" so we don't briefly filter out buckets we haven't
+    // proven empty yet. Once loading completes, an empty response is
+    // authoritative — every absent month is a real Some(0).
     const result = new Map<string, CoachingSessionBucketCount>();
     for (const bucket of buckets) {
       const firstMonth = bucket.start.toFormat("yyyy-MM");
       const secondMonth = bucket.end.toFormat("yyyy-MM");
       const first = monthMap.get(firstMonth);
       const second = monthMap.get(secondMonth);
-      if (first === undefined && second === undefined && !hasAnyCount) {
+      if (first === undefined && second === undefined && countsLoading) {
         result.set(bucket.key, None);
       } else {
         result.set(bucket.key, Some((first ?? 0) + (second ?? 0)));
       }
     }
     return result;
-  }, [monthCounts, buckets]);
+  }, [monthCounts, buckets, countsLoading]);
 
 
   const [selectedSession, setSelectedSession] = useState<
