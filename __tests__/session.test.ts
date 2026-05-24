@@ -605,16 +605,82 @@ describe("CoachingSessionBuckets.currentWeekRange", () => {
   });
 });
 
-describe("CoachingSessionBuckets.previousWeekRange", () => {
-  it("starts at the previous calendar Sunday and ends at the anchor day's end", () => {
-    // Anchor: Sat May 23 mid-day (UTC). Previous Sun = May 10. End is
-    // end-of-day on the anchor's day so today's sessions are inside the
-    // fetched window — the ticking past/future filter decides what's
-    // visible.
-    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
-    const previous = CoachingSessionBuckets.previousWeekRange(anchor);
-    expect(previous.start.toISO()).toBe("2026-05-10T00:00:00.000Z");
-    expect(previous.end.toISO()).toBe("2026-05-23T23:59:59.999Z");
+describe("CoachingSessionBuckets.todayRange", () => {
+  it("returns the viewer-local calendar day spanning midnight to midnight", () => {
+    // 2026-05-24 12:00 UTC = 07:00 America/Chicago, so "today" in CDT
+    // runs from 05:00 UTC (midnight CDT) through 04:59:59.999 UTC the
+    // next day.
+    const anchor = DateTime.fromISO("2026-05-24T12:00:00.000Z", { zone: "utc" });
+    const range = CoachingSessionBuckets.todayRange(anchor, "America/Chicago");
+    expect(range.start.toUTC().toISO()).toBe("2026-05-24T05:00:00.000Z");
+    expect(range.end.toUTC().toISO()).toBe("2026-05-25T04:59:59.999Z");
+  });
+
+  it("uses the supplied timezone — different tz produces a different day", () => {
+    // Same UTC instant; viewer in Tokyo is well into May 24, but a viewer
+    // in Honolulu is still on May 24 too (just at a different UTC offset).
+    // The point is that the day boundaries shift with the zone.
+    const anchor = DateTime.fromISO("2026-05-24T22:00:00.000Z", { zone: "utc" });
+    const tokyo = CoachingSessionBuckets.todayRange(anchor, "Asia/Tokyo");
+    const honolulu = CoachingSessionBuckets.todayRange(anchor, "Pacific/Honolulu");
+    expect(tokyo.start.toUTC().toISO()).toBe("2026-05-24T15:00:00.000Z");
+    expect(honolulu.start.toUTC().toISO()).toBe("2026-05-24T10:00:00.000Z");
+  });
+});
+
+describe("CoachingSessionBuckets.effectiveBucketRange", () => {
+  // Anchor: Sun May 24 — currentWeekRange covers [May 24 00:00, May 30 23:59:59.999].
+  // The May-Jun bucket (May 1 – Jun 30) is the only bucket overlapping
+  // this week with the current grid.
+  const ANCHOR = DateTime.fromISO("2026-05-24T12:00:00.000Z", { zone: "utc" });
+
+  function mayJunBucket() {
+    const [bucket] = CoachingSessionBuckets.generate(ANCHOR, 2, 0);
+    return bucket;
+  }
+
+  function janFebBucket() {
+    const all = CoachingSessionBuckets.generate(ANCHOR, 0, 6);
+    // Past buckets: Mar-Apr, Jan-Feb, Nov-Dec. Pick the one starting Jan 1.
+    return all.find((b) => b.start.toFormat("yyyy-MM") === "2026-01")!;
+  }
+
+  it("returns the natural bucket window when the bucket doesn't overlap this week", () => {
+    // Jan-Feb bucket is entirely before this week; no clipping.
+    const bucket = janFebBucket();
+    const effective = CoachingSessionBuckets.effectiveBucketRange(
+      bucket,
+      /* isPastView */ true,
+      ANCHOR
+    );
+    expect(effective.start).toEqual(bucket.start);
+    expect(effective.end).toEqual(bucket.end);
+  });
+
+  it("clips an overlap bucket's start to just after this week for the Upcoming view", () => {
+    // May-Jun bucket in Upcoming: clip start past Sat May 30 → start of
+    // May 31 (the next Sun).
+    const bucket = mayJunBucket();
+    const effective = CoachingSessionBuckets.effectiveBucketRange(
+      bucket,
+      /* isPastView */ false,
+      ANCHOR
+    );
+    expect(effective.start.toUTC().toISO()).toBe("2026-05-31T00:00:00.000Z");
+    expect(effective.end).toEqual(bucket.end);
+  });
+
+  it("clips an overlap bucket's end to just before this week for the Previous view", () => {
+    // May-Jun bucket in Previous: clip end back to just before this
+    // week's Sunday (Sat May 23 23:59:59.999).
+    const bucket = mayJunBucket();
+    const effective = CoachingSessionBuckets.effectiveBucketRange(
+      bucket,
+      /* isPastView */ true,
+      ANCHOR
+    );
+    expect(effective.start).toEqual(bucket.start);
+    expect(effective.end.toUTC().toISO()).toBe("2026-05-23T23:59:59.999Z");
   });
 });
 

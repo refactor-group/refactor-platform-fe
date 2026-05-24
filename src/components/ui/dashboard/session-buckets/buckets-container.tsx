@@ -14,7 +14,8 @@ import {
   SessionHoverDetailEmpty,
 } from "@/components/ui/dashboard/coaching-sessions-hover-detail";
 import { BucketList } from "./bucket-list";
-import { PinnedWeekSection } from "./pinned-week-section";
+import { ThisWeekAccordion } from "./this-week-accordion";
+import { TodaySection } from "./today-section";
 import { useEnrichedCoachingSessionsForUserCounts } from "@/lib/api/coaching-sessions";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import {
@@ -284,8 +285,20 @@ export function BucketsContainer({
           value="upcoming"
           className="mt-2 flex-1 min-h-0 overflow-y-auto"
         >
-          <PinnedWeekSection
-            week="current"
+          <TodaySection
+            view={CoachingSessionBucketView.Upcoming}
+            mountNow={mountNow}
+            now={now}
+            userId={userId}
+            relationshipId={relationshipFilter}
+            viewerId={viewerId}
+            userTimezone={userTimezone}
+            selectedId={selectedId}
+            onSelect={setSelectedSession}
+            onReschedule={onReschedule}
+            onRequestDelete={onRequestDelete}
+          />
+          <ThisWeekAccordion
             view={CoachingSessionBucketView.Upcoming}
             mountNow={mountNow}
             now={now}
@@ -324,8 +337,20 @@ export function BucketsContainer({
           value="previous"
           className="mt-2 flex-1 min-h-0 overflow-y-auto"
         >
-          <PinnedWeekSection
-            week="previous"
+          <TodaySection
+            view={CoachingSessionBucketView.Previous}
+            mountNow={mountNow}
+            now={now}
+            userId={userId}
+            relationshipId={relationshipFilter}
+            viewerId={viewerId}
+            userTimezone={userTimezone}
+            selectedId={selectedId}
+            onSelect={setSelectedSession}
+            onReschedule={onReschedule}
+            onRequestDelete={onRequestDelete}
+          />
+          <ThisWeekAccordion
             view={CoachingSessionBucketView.Previous}
             mountNow={mountNow}
             now={now}

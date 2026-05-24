@@ -67,13 +67,29 @@ export function BucketList({
   );
 
   const visibleBuckets = useMemo(() => {
-    const nonEmpty = buckets.filter((b) => {
+    const isPastView = view === CoachingSessionBucketView.Previous;
+    const week = CoachingSessionBuckets.currentWeekRange(mountNow);
+    const withinDisplay = buckets.filter((b) => {
+      // Drop buckets whose entire effective range falls inside this
+      // calendar week — those sessions live in TODAY / THIS WEEK.
+      const effective = CoachingSessionBuckets.effectiveBucketRange(
+        b,
+        isPastView,
+        mountNow
+      );
+      if (effective.end < effective.start) return false;
+      if (
+        effective.start >= week.start &&
+        effective.end <= week.end
+      ) {
+        return false;
+      }
       const count = countsByKey.get(b.key);
       if (!count) return true;
       return !(count.some && count.val === 0);
     });
-    return CoachingSessionBuckets.detectYearDividers(nonEmpty);
-  }, [buckets, countsByKey]);
+    return CoachingSessionBuckets.detectYearDividers(withinDisplay);
+  }, [buckets, countsByKey, view, mountNow]);
 
   const toggleKey = (key: string) => {
     setExpandedKeys((prev) => {
@@ -96,16 +112,23 @@ export function BucketList({
     <div className="divide-y">
       {visibleBuckets.map((bucket) => {
         const count = countsByKey.get(bucket.key) ?? None;
+        const isPastView = view === CoachingSessionBucketView.Previous;
+        const effective = CoachingSessionBuckets.effectiveBucketRange(
+          bucket,
+          isPastView,
+          mountNow
+        );
         return (
           <Fragment key={bucket.key}>
             {bucket.crossesYearFromPrevious && (
               <YearDivider year={bucket.start.year} />
             )}
             <BucketAccordion
-              descriptor={bucket}
+              fetchStart={effective.start}
+              fetchEnd={effective.end}
               label={CoachingSessionBuckets.displayLabel(
                 bucket,
-                view === CoachingSessionBucketView.Previous,
+                isPastView,
                 mountNow
               )}
               count={count}

@@ -501,22 +501,33 @@ export namespace CoachingSessionBuckets {
   }
 
   /**
-   * Returns the bucket label as the user should see it in a given column.
-   * For the overlap bucket (the one straddling `mountNow`), the label is
-   * clipped so the Upcoming column never advertises a pre-today date and
-   * the Previous column never advertises a post-today date. Non-overlap
-   * buckets render their natural calendar-window label unchanged.
+   * Effective fetch + label range for a bucket given the column it's
+   * rendered in. The overlap bucket (one straddling the current calendar
+   * week) is clipped so its contents and label exclude this week —
+   * sessions in this week live in the TODAY pinned section and the
+   * THIS WEEK accordion instead. Non-overlap buckets keep their natural
+   * calendar window.
    */
+  export function effectiveBucketRange(
+    bucket: CoachingSessionBucketDescriptor,
+    isPastView: boolean,
+    mountNow: DateTime
+  ): WeekRange {
+    const week = currentWeekRange(mountNow);
+    const overlapsWeek = bucket.start <= week.end && bucket.end >= week.start;
+    if (!overlapsWeek) return { start: bucket.start, end: bucket.end };
+    return isPastView
+      ? { start: bucket.start, end: week.start.minus({ milliseconds: 1 }) }
+      : { start: week.end.plus({ milliseconds: 1 }), end: bucket.end };
+  }
+
   export function displayLabel(
     bucket: CoachingSessionBucketDescriptor,
     isPastView: boolean,
     mountNow: DateTime
   ): string {
-    const overlapsNow = bucket.start <= mountNow && bucket.end >= mountNow;
-    if (!overlapsNow) return bucket.label;
-    return isPastView
-      ? formatLabel(bucket.start, mountNow)
-      : formatLabel(mountNow, bucket.end);
+    const { start, end } = effectiveBucketRange(bucket, isPastView, mountNow);
+    return formatLabel(start, end);
   }
 
   export function generate(
@@ -563,6 +574,19 @@ export namespace CoachingSessionBuckets {
     return { start, end };
   }
 
+  /**
+   * The viewer's local calendar day. Sets the anchor into the caller's
+   * timezone before computing day boundaries so 'today' matches the
+   * user's perception, regardless of the host's process.env.TZ.
+   */
+  export function todayRange(anchor: DateTime, tz: string): WeekRange {
+    const local = anchor.setZone(tz);
+    return {
+      start: local.startOf("day"),
+      end: local.endOf("day"),
+    };
+  }
+
   /** Whether each Show additional button should be disabled. The probe
    *  is data in the lookahead window — months past the display boundary
    *  that the fetch range covered. No probe data on a side means clicking
@@ -600,19 +624,4 @@ export namespace CoachingSessionBuckets {
     };
   }
 
-  /**
-   * "Last week" in the Previous tab's pinned section. Spans from the
-   * start of the previous calendar week (Sun-anchored) through the end
-   * of `anchor`'s day, so a session that just ended this week is in the
-   * fetched window and shows up as soon as the `now` filter classifies
-   * it past — matching the user-facing flow where a session moves from
-   * Upcoming "This Week" to Previous "Last Week" once it finishes.
-   */
-  export function previousWeekRange(anchor: DateTime): WeekRange {
-    const current = currentWeekRange(anchor);
-    return {
-      start: current.start.minus({ days: 7 }),
-      end: anchor.endOf("day"),
-    };
-  }
 }

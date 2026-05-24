@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { DateTime } from "ts-luxon";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import {
@@ -17,7 +18,6 @@ import { calculateSessionUrgency } from "@/lib/utils/session";
 import { Some } from "@/types/option";
 import {
   CoachingSessionBucketCount,
-  CoachingSessionBucketDescriptor,
   CoachingSessionBucketView,
 } from "@/types/coaching-session-bucket";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -25,11 +25,12 @@ import type { Id } from "@/types/general";
 import { SessionUrgency } from "@/types/session-display";
 
 export interface BucketAccordionProps {
-  descriptor: CoachingSessionBucketDescriptor;
-  /** View-aware display label — the overlap bucket renders a clipped
-   *  range (e.g., "May 23 – Jun 30" in Upcoming) instead of the full
-   *  calendar window the descriptor records. Non-overlap buckets pass
-   *  `descriptor.label`. */
+  /** Effective fetch range, clipped to exclude the current calendar
+   *  week for an overlap bucket — non-overlap buckets pass the full
+   *  bucket window. */
+  fetchStart: DateTime;
+  fetchEnd: DateTime;
+  /** View-aware display label, also clipped for the overlap bucket. */
   label: string;
   count: CoachingSessionBucketCount;
   view: CoachingSessionBucketView;
@@ -67,7 +68,8 @@ function matchesView(
 }
 
 export function BucketAccordion({
-  descriptor,
+  fetchStart,
+  fetchEnd,
   label,
   count,
   view,
@@ -91,8 +93,8 @@ export function BucketAccordion({
 
   const { enrichedSessions, isLoading } = useEnrichedCoachingSessionsForUser(
     hasEverExpanded ? userId : null,
-    descriptor.start,
-    descriptor.end,
+    fetchStart,
+    fetchEnd,
     SESSION_INCLUDES,
     undefined,
     undefined,
