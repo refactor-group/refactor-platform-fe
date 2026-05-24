@@ -8,6 +8,7 @@ import {
   EnrichedCoachingSession,
   CoachingSessionInclude,
 } from "@/types/coaching-session";
+import { CoachingSessionCountByMonth } from "@/types/coaching-session-bucket";
 import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
 import { CreateRecurringSessionRequest } from "@/types/recurrence";
 import { EntityApi } from "./entity-api";
@@ -218,6 +219,38 @@ export const CoachingSessionApi = {
 
     return CoachingSessionApi.listNested(userId, { params });
   },
+
+  listCountsForUser: async (
+    userId: Id,
+    fromDate: DateTime,
+    toDate: DateTime,
+    tz: string,
+    relationshipId?: Id
+  ): Promise<CoachingSessionCountByMonth[]> => {
+    const fromIso = fromDate.toISODate();
+    const toIso = toDate.toISODate();
+    if (!fromIso || !toIso) {
+      throw new Error(
+        `listCountsForUser: invalid DateTime input (fromDate=${fromDate.toString()}, toDate=${toDate.toString()})`
+      );
+    }
+    const params: Record<string, string> = {
+      from_date: fromIso,
+      to_date: toIso,
+      group_by: "month",
+      tz,
+    };
+    if (relationshipId) {
+      params.coaching_relationship_id = relationshipId;
+    }
+
+    const url = `${USERS_BASEURL}/${userId}/coaching_sessions/counts`;
+    const response = await EntityApi.getFn<{ counts: CoachingSessionCountByMonth[] }>(
+      url,
+      { params }
+    );
+    return response.counts;
+  },
 };
 
 /**
@@ -390,6 +423,67 @@ export const useEnrichedCoachingSessionsForUser = (
 
   return {
     enrichedSessions: entities,
+    isLoading: userId ? isLoading : false,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * Custom React hook that fetches per-month coaching-session counts for a user
+ * within a date range. Used by the dashboard bucket UI to display count badges
+ * on collapsed bucket headers without loading full session rows.
+ *
+ * @param userId The ID of the user (coach or coachee). Null skips the fetch.
+ * @param fromDate Start date for the count window
+ * @param toDate End date for the count window
+ * @param tz IANA timezone for local-calendar month aggregation on the BE
+ * @param relationshipId Optional relationship to narrow counts to one coachee
+ * @returns counts, loading/error state, and a refresh fn. On error or 404,
+ *   counts is an empty array — caller falls back to "no badge" rendering.
+ */
+export const useEnrichedCoachingSessionsForUserCounts = (
+  userId: Id | null,
+  fromDate: DateTime,
+  toDate: DateTime,
+  tz: string,
+  relationshipId?: Id
+) => {
+  const params = userId
+    ? {
+        user_id: userId,
+        from_date: fromDate.toISODate(),
+        to_date: toDate.toISODate(),
+        group_by: "month",
+        tz,
+        ...(relationshipId && { coaching_relationship_id: relationshipId }),
+      }
+    : null;
+
+  const url = userId
+    ? `${USERS_BASEURL}/${userId}/coaching_sessions/counts`
+    : '';
+
+  const fetcher = () =>
+    userId
+      ? CoachingSessionApi.listCountsForUser(
+          userId,
+          fromDate,
+          toDate,
+          tz,
+          relationshipId
+        )
+      : Promise.resolve([]);
+
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<CoachingSessionCountByMonth>(url, fetcher, params, {
+      // Avoids a flicker on range expansion where new empty months render
+      // as `None` and then collapse once the response lands.
+      keepPreviousData: true,
+    });
+
+  return {
+    counts: entities,
     isLoading: userId ? isLoading : false,
     isError,
     refresh,

@@ -3,30 +3,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { toast as sonnerToast } from "sonner";
+import { useSWRConfig } from "swr";
 import { Card, CardContent } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { CoachingSessionsCardHeader } from "@/components/ui/dashboard/coaching-sessions-card-header";
 import {
-  TIME_WINDOW_DURATIONS,
+  CoachingSessionsCardHeader,
   type RelationshipOption,
-} from "@/components/ui/dashboard/coaching-sessions-filters";
-import { CoachingSessionsListView } from "@/components/ui/dashboard/coaching-sessions-list-view";
+} from "@/components/ui/dashboard/coaching-sessions-card-header";
+import { BucketsContainer } from "@/components/ui/dashboard/session-buckets/buckets-container";
 import { DeleteSessionDialog } from "@/components/ui/dashboard/delete-session-dialog";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import {
-  useCoachingSessionMutation,
-  useEnrichedCoachingSessionsForUser,
-} from "@/lib/api/coaching-sessions";
-import { useUserActionsList } from "@/lib/api/user-actions";
+import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
+import { USERS_BASEURL } from "@/lib/api/users";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
-  CoachingSessionInclude,
-  isPastSession,
   type CoachingSession,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
@@ -35,13 +29,16 @@ import {
   isUserCoacheeInRelationship,
   sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
-import { type Id } from "@/types/general";
-import { UserActionsScope } from "@/types/assigned-actions";
 
-const ENRICHMENT_INCLUDES = [
-  CoachingSessionInclude.Relationship,
-  CoachingSessionInclude.Goal,
-];
+const matchesUserSessionsCache = (key: unknown): boolean => {
+  const url =
+    typeof key === "string"
+      ? key
+      : Array.isArray(key) && typeof key[0] === "string"
+        ? key[0]
+        : null;
+  return url !== null && url.includes(USERS_BASEURL);
+};
 
 /**
  * Models the only legal states of the delete-confirmation flow. Using a
@@ -83,15 +80,11 @@ export function CoachingSessionsCard({
   const userSession = useAuthStore((s) => s.userSession);
   const userId = userSession?.id;
   const { currentOrganizationId } = useCurrentOrganization();
+  const { mutate } = useSWRConfig();
 
-  // ── Filter state ─────────────────────────────────────────────────────
   // Persisted in sessionStorage via the dedicated card filter store, so the
-  // user's last-used time range and relationship filter survive navigation
-  // away from the dashboard and reloads within the same browser tab session.
-  const timeWindow = useCoachingSessionsCardFilterStore((s) => s.timeWindow);
-  const setTimeWindow = useCoachingSessionsCardFilterStore(
-    (s) => s.setTimeWindow
-  );
+  // user's last-used relationship filter survives navigation away from the
+  // dashboard and reloads within the same browser tab session.
   const relationshipFilter = useCoachingSessionsCardFilterStore(
     (s) => s.relationshipFilter
   );
@@ -144,112 +137,28 @@ export function CoachingSessionsCard({
     setRelationshipFilter,
   ]);
 
-  const selectedRelationshipLabel = relationshipFilter
-    ? relationshipOptions.find((r) => r.id === relationshipFilter)?.label
-    : undefined;
-
-  // ── Date window — symmetric around `now`, sized by the time-window filter ─
-  // Single fetch over `[now − window, now + window]`, partitioned client-side at
-  // full timestamp precision against `now`. This avoids the day-precision overlap
-  // a dual-fetch would produce: backend `from_date`/`to_date` are `[from, to]`
-  // inclusive at calendar-day precision, so two queries meeting at `now` would
-  // both return today's sessions and render them in both tabs.
-  //
-  // Two distinct "now"s on purpose:
-  //   - `mountNow` is frozen at mount and drives `fromDate`/`toDate` so the SWR
-  //     fetch key stays stable. Re-deriving it on every tick would refetch the
-  //     session list every minute for no benefit.
-  //   - `now` ticks every minute and drives the partition so a session whose
-  //     start time crosses the boundary while the dashboard is open migrates
-  //     from Upcoming to Previous within ≤ 60s. SWR's revalidate-on-focus is
-  //     the orthogonal mechanism for picking up *new* sessions.
+  // `mountNow` is frozen at the card's mount so it drives the bucket grid
+  // and pinned-week ranges deterministically across re-renders. Per the
+  // BE counts contract, this anchor — and the `tz` it pairs with — control
+  // local-calendar alignment of bucket boundaries with response month keys.
   const mountNow = useMemo(() => DateTime.now(), []);
-  const [now, setNow] = useState(() => DateTime.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(DateTime.now()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  const windowDuration = TIME_WINDOW_DURATIONS[timeWindow];
-  const fromDate = useMemo(
-    () => mountNow.minus(windowDuration),
-    [mountNow, windowDuration]
-  );
-  const toDate = useMemo(
-    () => mountNow.plus(windowDuration),
-    [mountNow, windowDuration]
-  );
 
-  const {
-    enrichedSessions: allSessions,
-    isLoading,
-    isError,
-    refresh: refreshSessions,
-  } = useEnrichedCoachingSessionsForUser(
-    userId ?? null,
-    fromDate,
-    toDate,
-    ENRICHMENT_INCLUDES,
-    "date",
-    "asc",
-    relationshipFilter
-  );
+  // Manual invalidation for user-scoped session caches. `useEntityMutation`'s
+  // built-in invalidator matches keys by baseUrl string membership only, but
+  // `useEntityList`'s SWR keys are tuples `[url, params]` — so the user-scoped
+  // bucket / pinned / counts fetches need a tuple-aware matcher to revalidate
+  // after create / edit / delete.
+  const refreshBucketData = useCallback(() => {
+    mutate(matchesUserSessionsCache);
+  }, [mutate]);
 
-  // Surface refresh to the parent so dialog-close (after create/edit) can
-  // force a revalidate. We pass an identity-stable wrapper that delegates
-  // to whatever `refreshSessions` is current at call time — keeps the
-  // parent's stored callback stable (no re-register storms on every
-  // window-tick re-render) without relying on SWR's mutate identity
-  // being stable, which is an undocumented implementation detail. Pattern
-  // mirrors the userland equivalent of `useEffectEvent`.
-  const refreshSessionsRef = useRef(refreshSessions);
+  const refreshBucketDataRef = useRef(refreshBucketData);
   useEffect(() => {
-    refreshSessionsRef.current = refreshSessions;
+    refreshBucketDataRef.current = refreshBucketData;
   });
   useEffect(() => {
-    onRefreshNeeded?.(() => refreshSessionsRef.current());
+    onRefreshNeeded?.(() => refreshBucketDataRef.current());
   }, [onRefreshNeeded]);
-
-  // A session stays in Upcoming until its full duration has elapsed.
-  const { upcomingSessions, previousSessions } = useMemo(() => {
-    const upcoming: EnrichedCoachingSession[] = [];
-    const previous: EnrichedCoachingSession[] = [];
-    for (const session of allSessions) {
-      if (isPastSession(session, { now })) {
-        previous.push(session);
-      } else {
-        upcoming.push(session);
-      }
-    }
-    previous.reverse();
-    return { upcomingSessions: upcoming, previousSessions: previous };
-  }, [allSessions, now]);
-
-  // Hover state is owned here — not in `CoachingSessionsListView` — so the
-  // hovered session's relationship can key the action fetch below. This
-  // mirrors `usePanelActions::useReviewWindow` on the session page: actions
-  // are scoped at the API layer by `coaching_relationship_id`, never
-  // post-filtered client-side. Without this, the hover preview would surface
-  // actions from other coachees' relationships.
-  const [hoveredSessionId, setHoveredSessionId] = useState<Id | undefined>();
-  const hoveredSession = useMemo(
-    () => allSessions.find((s) => s.id === hoveredSessionId),
-    [allSessions, hoveredSessionId]
-  );
-
-  // The relationship to scope actions by: an explicit filter takes priority,
-  // otherwise follow the hovered session. When neither is set, skip the
-  // fetch entirely (passing `null` as `userId`) — there's nothing to show.
-  const actionsRelationshipId =
-    relationshipFilter ?? hoveredSession?.coaching_relationship_id;
-  const { actions: allActions } = useUserActionsList(
-    actionsRelationshipId ? (userId ?? null) : null,
-    actionsRelationshipId
-      ? {
-          scope: UserActionsScope.Sessions,
-          coaching_relationship_id: actionsRelationshipId,
-        }
-      : undefined
-  );
 
   // ── Delete flow ──────────────────────────────────────────────────────
   // The dialog and mutation live here (alongside SWR) so a single dialog
@@ -294,14 +203,11 @@ export function CoachingSessionsCard({
       await deleteSession(session.id);
       // `useEntityMutation`'s built-in cache invalidation matches keys
       // containing the entity baseUrl (`coaching_sessions/`), but the
-      // dashboard fetches via `useEnrichedCoachingSessionsForUser` which
-      // hits a *user-scoped* endpoint — its cache key doesn't match, so
-      // the deleted row would linger until a hard refresh. Pull the
-      // hook's own `refresh()` instead. Disappearance of the row is the
-      // only feedback the user gets (no success toast — confirmation
-      // already happened via the dialog), so this revalidate is
-      // load-bearing.
-      refreshSessions();
+      // dashboard fetches go through the user-scoped endpoint — those
+      // cache keys are tuples that the string-only matcher misses.
+      // Disappearance of the row is the only feedback the user gets,
+      // so this revalidate is load-bearing.
+      refreshBucketData();
       setDeleteState({ kind: "closed" });
     } catch (err) {
       sonnerToast.error("Failed to delete session", {
@@ -310,7 +216,7 @@ export function CoachingSessionsCard({
       });
       setDeleteState({ kind: "closed" });
     }
-  }, [deleteState, deleteSession, refreshSessions]);
+  }, [deleteState, deleteSession, refreshBucketData]);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -324,29 +230,18 @@ export function CoachingSessionsCard({
       <Card className="border shadow-none flex flex-col md:h-[360px] overflow-hidden">
         <CardContent className="p-0 flex flex-col flex-1 min-h-0">
           <CoachingSessionsCardHeader
-            timeWindow={timeWindow}
-            onTimeWindowChange={setTimeWindow}
             relationshipFilter={relationshipFilter}
             onRelationshipFilterChange={setRelationshipFilter}
             relationshipOptions={relationshipOptions}
-            selectedRelationshipLabel={selectedRelationshipLabel}
-            now={mountNow}
           />
 
-          {!userSession || isLoading ? (
-            <StateLoading />
-          ) : isError ? (
-            <StateError />
-          ) : (
-            <CoachingSessionsListView
-              upcomingSessions={upcomingSessions}
-              previousSessions={previousSessions}
-              allActions={allActions}
+          {userSession && userId && (
+            <BucketsContainer
+              userId={userId}
+              relationshipFilter={relationshipFilter}
               viewerId={userSession.id}
               userTimezone={userSession.timezone || getBrowserTimezone()}
-              fallbackPriorSessionDate={fromDate}
-              hoveredSession={hoveredSession}
-              onHoverChange={setHoveredSessionId}
+              mountNow={mountNow}
               onReschedule={onReschedule}
               onRequestDelete={handleRequestDelete}
             />
@@ -370,25 +265,3 @@ export function CoachingSessionsCard({
   );
 }
 
-// ── Inline states (small enough to keep with the orchestrator) ──────────
-
-function StateLoading() {
-  return (
-    <div className="flex flex-col items-center justify-center flex-1 min-h-[160px] gap-2 py-8">
-      <Spinner />
-      <p className="text-xs text-muted-foreground">
-        Loading your coaching sessions…
-      </p>
-    </div>
-  );
-}
-
-function StateError() {
-  return (
-    <div className="flex items-center justify-center flex-1 min-h-[160px] py-8">
-      <p className="text-sm text-destructive">
-        Couldn&apos;t load your coaching sessions. Please refresh.
-      </p>
-    </div>
-  );
-}

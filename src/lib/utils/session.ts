@@ -1,4 +1,9 @@
 import { DateTime } from "ts-luxon";
+import {
+  CoachingSessionBucketCount,
+  CoachingSessionBucketDescriptor,
+  CoachingSessionBucketKind,
+} from "@/types/coaching-session-bucket";
 import { CoachingSession, DEFAULT_SESSION_DURATION_MINUTES, EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
@@ -17,6 +22,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import type { Action } from "@/types/action";
 import { sortActionArray } from "@/types/action";
 import { SortOrder } from "@/types/sorting";
+import { Some } from "@/types/option";
 
 /**
  * Session Utility Functions
@@ -453,4 +459,198 @@ export function filterReviewActions(
   });
 
   return sortActionArray(filtered, SortOrder.Desc, "due_by");
+}
+
+export namespace CoachingSessionBuckets {
+  export const DEFAULT_MONTHS_FORWARD = 6;
+  export const DEFAULT_MONTHS_BACK = 6;
+
+  export interface WeekRange {
+    start: DateTime;
+    end: DateTime;
+  }
+
+  function alignToBucketStart(dt: DateTime): DateTime {
+    const offset = dt.month % 2 === 0 ? 1 : 0;
+    return dt.startOf("month").minus({ months: offset });
+  }
+
+  function bucketKey(start: DateTime, end: DateTime): string {
+    return `${start.toFormat("yyyy-MM")}_${end.toFormat("yyyy-MM")}`;
+  }
+
+  function makeDescriptor(
+    start: DateTime,
+    currentBucketStart: DateTime
+  ): CoachingSessionBucketDescriptor {
+    const end = start.plus({ months: 2 }).minus({ milliseconds: 1 });
+    const kind =
+      start < currentBucketStart
+        ? CoachingSessionBucketKind.Past
+        : CoachingSessionBucketKind.Future;
+    return {
+      kind,
+      start,
+      end,
+      label: formatLabel(start, end),
+      key: bucketKey(start, end),
+      crossesYearFromPrevious: false,
+    };
+  }
+
+  export function formatLabel(start: DateTime, end: DateTime): string {
+    return `${start.toFormat("LLL d")} – ${end.toFormat("LLL d")}`;
+  }
+
+  /**
+   * Effective fetch + label range for a bucket given the column it's
+   * rendered in. The overlap bucket (one straddling the current calendar
+   * week) is clipped so its contents and label exclude this week —
+   * sessions in this week live in the TODAY pinned section and the
+   * THIS WEEK accordion instead. Non-overlap buckets keep their natural
+   * calendar window.
+   */
+  export function effectiveBucketRange(
+    bucket: CoachingSessionBucketDescriptor,
+    isPastView: boolean,
+    mountNow: DateTime
+  ): WeekRange {
+    const week = currentWeekRange(mountNow);
+    const overlapsWeek = bucket.start <= week.end && bucket.end >= week.start;
+    if (!overlapsWeek) return { start: bucket.start, end: bucket.end };
+    return isPastView
+      ? { start: bucket.start, end: week.start.minus({ milliseconds: 1 }) }
+      : { start: week.end.plus({ milliseconds: 1 }), end: bucket.end };
+  }
+
+  export function displayLabel(
+    bucket: CoachingSessionBucketDescriptor,
+    isPastView: boolean,
+    mountNow: DateTime
+  ): string {
+    const { start, end } = effectiveBucketRange(bucket, isPastView, mountNow);
+    return formatLabel(start, end);
+  }
+
+  /**
+   * Corrects the BE per-month aggregate for the overlap bucket only.
+   * The aggregate over-counts because it sums full months including
+   * the current calendar week — but the bucket's clipped fetch
+   * excludes that week (those sessions live in TODAY / THIS WEEK
+   * upstream). Subtracting `thisWeekCountInView` brings the badge
+   * back in line with what the bucket will actually render.
+   *
+   * Non-overlap buckets pass through unchanged. `None` passes through
+   * unchanged (still loading). Negative results clamp to `Some(0)`,
+   * which BucketList's existing zero-filter then drops.
+   */
+  export function adjustOverlapBucketCount(
+    bucket: CoachingSessionBucketDescriptor,
+    baseCount: CoachingSessionBucketCount,
+    thisWeekCountInView: number,
+    isPastView: boolean,
+    mountNow: DateTime
+  ): CoachingSessionBucketCount {
+    const effective = effectiveBucketRange(bucket, isPastView, mountNow);
+    const isOverlap =
+      effective.start.toMillis() !== bucket.start.toMillis() ||
+      effective.end.toMillis() !== bucket.end.toMillis();
+    if (!isOverlap || !baseCount.some) return baseCount;
+    return Some(Math.max(0, baseCount.val - thisWeekCountInView));
+  }
+
+  export function generate(
+    anchor: DateTime,
+    monthsForward: number = DEFAULT_MONTHS_FORWARD,
+    monthsBack: number = DEFAULT_MONTHS_BACK
+  ): CoachingSessionBucketDescriptor[] {
+    const currentStart = alignToBucketStart(anchor);
+    const futureCount = Math.ceil(monthsForward / 2) + 1;
+    const pastCount = Math.ceil(monthsBack / 2);
+    const buckets: CoachingSessionBucketDescriptor[] = [];
+
+    for (let i = 0; i < futureCount; i++) {
+      buckets.push(
+        makeDescriptor(currentStart.plus({ months: i * 2 }), currentStart)
+      );
+    }
+    for (let i = 1; i <= pastCount; i++) {
+      buckets.push(
+        makeDescriptor(currentStart.minus({ months: i * 2 }), currentStart)
+      );
+    }
+    return buckets;
+  }
+
+  export function detectYearDividers(
+    bucketsInDisplayOrder: CoachingSessionBucketDescriptor[]
+  ): CoachingSessionBucketDescriptor[] {
+    return bucketsInDisplayOrder.map((bucket, index) => {
+      if (index === 0) {
+        return { ...bucket, crossesYearFromPrevious: false };
+      }
+      const previousYear = bucketsInDisplayOrder[index - 1].start.year;
+      return {
+        ...bucket,
+        crossesYearFromPrevious: bucket.start.year !== previousYear,
+      };
+    });
+  }
+
+  export function currentWeekRange(anchor: DateTime): WeekRange {
+    const start = anchor.minus({ days: anchor.weekday % 7 }).startOf("day");
+    const end = start.plus({ days: 7 }).minus({ milliseconds: 1 });
+    return { start, end };
+  }
+
+  /**
+   * The viewer's local calendar day. Sets the anchor into the caller's
+   * timezone before computing day boundaries so 'today' matches the
+   * user's perception, regardless of the host's process.env.TZ.
+   */
+  export function todayRange(anchor: DateTime, tz: string): WeekRange {
+    const local = anchor.setZone(tz);
+    return {
+      start: local.startOf("day"),
+      end: local.endOf("day"),
+    };
+  }
+
+  /** Whether each Show additional button should be disabled. The probe
+   *  is data in the lookahead window — months past the display boundary
+   *  that the fetch range covered. No probe data on a side means clicking
+   *  that button can't surface anything. */
+  export interface ShowMoreState {
+    disableShowMoreLater: boolean;
+    disableShowMoreEarlier: boolean;
+  }
+
+  /**
+   * Derives Show additional button enablement from the counts response.
+   * Pure: caller passes month strings (`yyyy-MM`), the current display
+   * boundaries, and `mountNow`; result drives the button `disabled` prop.
+   *
+   * A count whose month is strictly past the display boundary means
+   * the next click would surface at least one bucket — so enable.
+   * A count exactly AT the boundary is inside the display range and
+   * doesn't enable the button.
+   */
+  export function computeShowMoreState(
+    monthsInResponse: string[],
+    mountNow: DateTime,
+    monthsForward: number,
+    monthsBack: number
+  ): ShowMoreState {
+    const futureBoundary = mountNow
+      .plus({ months: monthsForward })
+      .toFormat("yyyy-MM");
+    const pastBoundary = mountNow
+      .minus({ months: monthsBack })
+      .toFormat("yyyy-MM");
+    return {
+      disableShowMoreLater: !monthsInResponse.some((m) => m > futureBoundary),
+      disableShowMoreEarlier: !monthsInResponse.some((m) => m < pastBoundary),
+    };
+  }
+
 }

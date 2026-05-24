@@ -2,38 +2,50 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { DateTime } from "ts-luxon";
 import { ChevronRight, MessageSquare } from "lucide-react";
 import { SessionGoalList } from "@/components/ui/session-goal-list";
 import { ActionStatusIcon } from "@/components/ui/coaching-sessions/action-card-parts";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { cn } from "@/components/lib/utils";
+import { formatDateWithTime } from "@/lib/utils/date";
 import type { Action } from "@/types/action";
-import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import {
+  isPastSession,
+  type EnrichedCoachingSession,
+} from "@/types/coaching-session";
 import { ItemStatus } from "@/types/general";
 
 export interface SessionHoverDetailProps {
-  session: EnrichedCoachingSession | undefined;
+  session: EnrichedCoachingSession;
   participantName: string;
+  userTimezone: string;
   reviewActions: Action[];
+}
+
+export function SessionHoverDetailEmpty() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-center px-4">
+      <MessageSquare className="h-8 w-8 text-muted-foreground/20 mb-3" />
+      <p className="text-sm text-muted-foreground/40">
+        Click a session to see actions due
+      </p>
+    </div>
+  );
 }
 
 export function SessionHoverDetail({
   session,
   participantName,
+  userTimezone,
   reviewActions,
 }: SessionHoverDetailProps) {
-  if (!session) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center px-4">
-        <MessageSquare className="h-8 w-8 text-muted-foreground/20 mb-3" />
-        <p className="text-sm text-muted-foreground/40">
-          Hover over a session to see actions due
-        </p>
-      </div>
-    );
-  }
-
   const goals = session.goals ?? [];
+  const scheduledDateTime = DateTime.fromISO(session.date, {
+    zone: "utc",
+  }).setZone(userTimezone);
+  const scheduledPrefix = isPastSession(session) ? "Held" : "Scheduled for";
+  const scheduledLabel = `${scheduledPrefix} ${formatDateWithTime(scheduledDateTime, "·", true)}`;
 
   // Sections are siblings under the parent's `gap-4` (set by the wrapper in
   // `coaching-sessions-list-view.tsx`), matching the rhythm of
@@ -47,6 +59,9 @@ export function SessionHoverDetail({
             type reads consistently across the dashboard. */}
         <p className="text-base font-semibold text-foreground">
           Session with {participantName}
+        </p>
+        <p className="text-xs text-muted-foreground tabular-nums mt-0.5">
+          {scheduledLabel}
         </p>
         {goals.length > 0 && (
           <SessionGoalList goals={goals} gapClassName="gap-0.5 mt-2" />

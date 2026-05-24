@@ -2,7 +2,7 @@ import { Id, EntityApiError, EMPTY_ARRAY } from "@/types/general";
 import { useState } from "react";
 import useSWR, { KeyedMutator, SWRConfiguration, useSWRConfig } from "swr";
 import { sessionGuard } from "@/lib/auth/session-guard";
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 
 // Re-export EntityApiError for easy access
 export { EntityApiError } from "@/types/general";
@@ -206,10 +206,14 @@ export namespace EntityApi {
    *
    * @template R The type of entity to be returned
    * @param url The API endpoint URL to fetch data from
+   * @param config Optional axios config (e.g. `{ params: { ... } }` for query string)
    * @returns A Promise resolving to an entity of type R
    */
-  export const getFn = async <R>(url: string): Promise<R> => {
-    return fetcher<R>(url, {});
+  export const getFn = async <R>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<R> => {
+    return fetcher<R>(url, config ?? {});
   };
 
   /**

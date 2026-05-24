@@ -7,9 +7,12 @@ import {
   selectNextUpcomingSession,
   getSessionParticipantInfo,
   getSessionParticipantName,
+  CoachingSessionBuckets,
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/utils/session";
+import { CoachingSessionBucketKind } from "@/types/coaching-session-bucket";
+import { Some, None } from "@/types/option";
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
@@ -480,3 +483,455 @@ describe("enrichSessionForDisplay", () => {
     expect(enriched.dateTime).toContain("5:00 PM"); // 2PM PST = 5PM EST
   });
 });
+
+describe("CoachingSessionBuckets.generate", () => {
+  const originalNow = Settings.now;
+  const originalZone = Settings.defaultZone;
+
+  beforeEach(() => {
+    Settings.defaultZone = "utc";
+    const fakeNow = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    Settings.now = () => fakeNow.toMillis();
+  });
+
+  afterEach(() => {
+    Settings.now = originalNow;
+    Settings.defaultZone = originalZone;
+  });
+
+  it("aligns the current bucket to the May-June (odd-month-start) grid for a May anchor", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end);
+    expect(current).toBeDefined();
+    expect(current!.start.toISO()).toBe("2026-05-01T00:00:00.000Z");
+    expect(current!.end.toFormat("yyyy-MM-dd")).toBe("2026-06-30");
+  });
+
+  it("puts a June anchor into the same May-June bucket as a May anchor", () => {
+    const anchor = DateTime.fromISO("2026-06-15T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end);
+    expect(current!.start.toISO()).toBe("2026-05-01T00:00:00.000Z");
+  });
+
+  it("puts a July anchor into the Jul-Aug bucket (next odd-month grid cell)", () => {
+    const anchor = DateTime.fromISO("2026-07-10T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end);
+    expect(current!.start.toISO()).toBe("2026-07-01T00:00:00.000Z");
+  });
+
+  it("formats labels with day precision (May 1 – Jun 30)", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end);
+    expect(current!.label).toBe("May 1 – Jun 30");
+  });
+
+  it("marks past buckets with BucketKind.Past and future-or-current with BucketKind.Future", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 4);
+    const current = buckets.find((b) => b.start <= anchor && anchor <= b.end)!;
+    const past = buckets.find((b) => b.end < current.start);
+    const future = buckets.find((b) => b.start > current.end);
+    expect(current.kind).toBe(CoachingSessionBucketKind.Future);
+    expect(past!.kind).toBe(CoachingSessionBucketKind.Past);
+    expect(future!.kind).toBe(CoachingSessionBucketKind.Future);
+  });
+
+  it("returns ceil(monthsForward/2)+1 future-or-current buckets and ceil(monthsBack/2) past buckets", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 12, 12);
+    const futureOrCurrent = buckets.filter(
+      (b) => b.kind === CoachingSessionBucketKind.Future
+    );
+    const past = buckets.filter((b) => b.kind === CoachingSessionBucketKind.Past);
+    expect(futureOrCurrent).toHaveLength(7);
+    expect(past).toHaveLength(6);
+  });
+});
+
+describe("CoachingSessionBuckets.detectYearDividers", () => {
+  it("marks the first bucket whose start.year differs from its predecessor's", () => {
+    const anchor = DateTime.fromISO("2026-11-15T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 6, 0);
+    const sorted = [...buckets].sort(
+      (a, b) => a.start.toMillis() - b.start.toMillis()
+    );
+    const annotated = CoachingSessionBuckets.detectYearDividers(sorted);
+    const yearShifts = annotated.filter((b) => b.crossesYearFromPrevious);
+    expect(yearShifts).toHaveLength(1);
+    expect(yearShifts[0].start.year).toBe(2027);
+  });
+
+  it("never marks the first bucket as crossing the year", () => {
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const buckets = CoachingSessionBuckets.generate(anchor, 4, 0);
+    const annotated = CoachingSessionBuckets.detectYearDividers(buckets);
+    expect(annotated[0].crossesYearFromPrevious).toBe(false);
+  });
+});
+
+describe("CoachingSessionBuckets.currentWeekRange", () => {
+  const originalNow = Settings.now;
+  const originalZone = Settings.defaultZone;
+
+  afterEach(() => {
+    Settings.now = originalNow;
+    Settings.defaultZone = originalZone;
+  });
+
+  it("returns Sunday 00:00 through Saturday 23:59:59.999 for a midweek anchor (Sat 2026-05-23 UTC)", () => {
+    // 2026-05-23 is a Saturday (weekday 6 in Luxon, 1=Mon)
+    const anchor = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+    const { start, end } = CoachingSessionBuckets.currentWeekRange(anchor);
+    expect(start.toISO()).toBe("2026-05-17T00:00:00.000Z"); // Sunday before
+    expect(end.toISO()).toBe("2026-05-23T23:59:59.999Z"); // Same Saturday
+  });
+
+  it("treats a Sunday anchor as the start of its own week", () => {
+    // 2026-05-24 is a Sunday (weekday 7)
+    const anchor = DateTime.fromISO("2026-05-24T08:00:00.000Z", { zone: "utc" });
+    const { start, end } = CoachingSessionBuckets.currentWeekRange(anchor);
+    expect(start.toISO()).toBe("2026-05-24T00:00:00.000Z");
+    expect(end.toISO()).toBe("2026-05-30T23:59:59.999Z");
+  });
+
+  it("treats a Monday anchor as one day past Sunday", () => {
+    // 2026-05-25 is a Monday (weekday 1)
+    const anchor = DateTime.fromISO("2026-05-25T08:00:00.000Z", { zone: "utc" });
+    const { start } = CoachingSessionBuckets.currentWeekRange(anchor);
+    expect(start.toISO()).toBe("2026-05-24T00:00:00.000Z"); // Sunday
+  });
+});
+
+describe("CoachingSessionBuckets.todayRange", () => {
+  it("returns the viewer-local calendar day spanning midnight to midnight", () => {
+    // 2026-05-24 12:00 UTC = 07:00 America/Chicago, so "today" in CDT
+    // runs from 05:00 UTC (midnight CDT) through 04:59:59.999 UTC the
+    // next day.
+    const anchor = DateTime.fromISO("2026-05-24T12:00:00.000Z", { zone: "utc" });
+    const range = CoachingSessionBuckets.todayRange(anchor, "America/Chicago");
+    expect(range.start.toUTC().toISO()).toBe("2026-05-24T05:00:00.000Z");
+    expect(range.end.toUTC().toISO()).toBe("2026-05-25T04:59:59.999Z");
+  });
+
+  it("uses the supplied timezone — different tz produces a different day", () => {
+    // Same UTC instant; viewer in Tokyo is well into May 24, but a viewer
+    // in Honolulu is still on May 24 too (just at a different UTC offset).
+    // The point is that the day boundaries shift with the zone.
+    const anchor = DateTime.fromISO("2026-05-24T22:00:00.000Z", { zone: "utc" });
+    const tokyo = CoachingSessionBuckets.todayRange(anchor, "Asia/Tokyo");
+    const honolulu = CoachingSessionBuckets.todayRange(anchor, "Pacific/Honolulu");
+    expect(tokyo.start.toUTC().toISO()).toBe("2026-05-24T15:00:00.000Z");
+    expect(honolulu.start.toUTC().toISO()).toBe("2026-05-24T10:00:00.000Z");
+  });
+});
+
+describe("CoachingSessionBuckets.effectiveBucketRange", () => {
+  // Anchor: Sun May 24 — currentWeekRange covers [May 24 00:00, May 30 23:59:59.999].
+  // The May-Jun bucket (May 1 – Jun 30) is the only bucket overlapping
+  // this week with the current grid.
+  const ANCHOR = DateTime.fromISO("2026-05-24T12:00:00.000Z", { zone: "utc" });
+
+  function mayJunBucket() {
+    const [bucket] = CoachingSessionBuckets.generate(ANCHOR, 2, 0);
+    return bucket;
+  }
+
+  function janFebBucket() {
+    const all = CoachingSessionBuckets.generate(ANCHOR, 0, 6);
+    // Past buckets: Mar-Apr, Jan-Feb, Nov-Dec. Pick the one starting Jan 1.
+    return all.find((b) => b.start.toFormat("yyyy-MM") === "2026-01")!;
+  }
+
+  it("returns the natural bucket window when the bucket doesn't overlap this week", () => {
+    // Jan-Feb bucket is entirely before this week; no clipping.
+    const bucket = janFebBucket();
+    const effective = CoachingSessionBuckets.effectiveBucketRange(
+      bucket,
+      /* isPastView */ true,
+      ANCHOR
+    );
+    expect(effective.start).toEqual(bucket.start);
+    expect(effective.end).toEqual(bucket.end);
+  });
+
+  it("clips an overlap bucket's start to just after this week for the Upcoming view", () => {
+    // May-Jun bucket in Upcoming: clip start past Sat May 30 → start of
+    // May 31 (the next Sun).
+    const bucket = mayJunBucket();
+    const effective = CoachingSessionBuckets.effectiveBucketRange(
+      bucket,
+      /* isPastView */ false,
+      ANCHOR
+    );
+    expect(effective.start.toUTC().toISO()).toBe("2026-05-31T00:00:00.000Z");
+    expect(effective.end).toEqual(bucket.end);
+  });
+
+  it("clips an overlap bucket's end to just before this week for the Previous view", () => {
+    // May-Jun bucket in Previous: clip end back to just before this
+    // week's Sunday (Sat May 23 23:59:59.999).
+    const bucket = mayJunBucket();
+    const effective = CoachingSessionBuckets.effectiveBucketRange(
+      bucket,
+      /* isPastView */ true,
+      ANCHOR
+    );
+    expect(effective.start).toEqual(bucket.start);
+    expect(effective.end.toUTC().toISO()).toBe("2026-05-23T23:59:59.999Z");
+  });
+});
+
+// `adjustOverlapBucketCount` corrects the BE per-month aggregate for
+// the overlap bucket only: it subtracts the count of sessions in the
+// current week (matching the view) so the badge reflects what the
+// clipped fetch will actually return — not the inflated month sum
+// that includes this-week sessions surfaced in TODAY / THIS WEEK
+// above. Non-overlap buckets pass through unchanged.
+describe("CoachingSessionBuckets.adjustOverlapBucketCount", () => {
+  const ANCHOR = DateTime.fromISO("2026-05-24T12:00:00.000Z", { zone: "utc" });
+
+  function mayJunBucket() {
+    const [bucket] = CoachingSessionBuckets.generate(ANCHOR, 2, 0);
+    return bucket;
+  }
+
+  function janFebBucket() {
+    const all = CoachingSessionBuckets.generate(ANCHOR, 0, 6);
+    return all.find((b) => b.start.toFormat("yyyy-MM") === "2026-01")!;
+  }
+
+  it("returns a non-overlap bucket's count unchanged regardless of view", () => {
+    // Jan-Feb bucket is entirely before this week → not an overlap
+    // bucket → no adjustment, even if a this-week count is supplied.
+    const bucket = janFebBucket();
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(5),
+        /* thisWeekCountInView */ 3,
+        /* isPastView */ true,
+        ANCHOR
+      )
+    ).toEqual(Some(5));
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(5),
+        3,
+        /* isPastView */ false,
+        ANCHOR
+      )
+    ).toEqual(Some(5));
+  });
+
+  it("subtracts this-week count from the overlap bucket in the Upcoming view", () => {
+    // Coach has 3 sessions this week + 4 in late June (post-this-week).
+    // BE month sum for May+Jun = 7; clipped Upcoming fetch returns 4.
+    // The badge should read 4, not 7.
+    const bucket = mayJunBucket();
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(7),
+        /* thisWeekCountInView */ 3,
+        /* isPastView */ false,
+        ANCHOR
+      )
+    ).toEqual(Some(4));
+  });
+
+  it("subtracts this-week count from the overlap bucket in the Previous view", () => {
+    const bucket = mayJunBucket();
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(6),
+        /* thisWeekCountInView */ 2,
+        /* isPastView */ true,
+        ANCHOR
+      )
+    ).toEqual(Some(4));
+  });
+
+  it("clamps to Some(0) when this-week count meets or exceeds the base count", () => {
+    // Coach's only scheduled sessions ARE this week (greptile's
+    // motivating case): BE month sum says 3; this-week count for the
+    // view is also 3; corrected = 0 → BucketList pre-filter drops it.
+    const bucket = mayJunBucket();
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(3),
+        3,
+        false,
+        ANCHOR
+      )
+    ).toEqual(Some(0));
+    // And a > case (defensive — shouldn't happen unless counts are
+    // stale, but still must not produce a negative count).
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(2),
+        5,
+        false,
+        ANCHOR
+      )
+    ).toEqual(Some(0));
+  });
+
+  it("passes None through unchanged for the overlap bucket — nothing to subtract from", () => {
+    const bucket = mayJunBucket();
+    const result = CoachingSessionBuckets.adjustOverlapBucketCount(
+      bucket,
+      None,
+      3,
+      false,
+      ANCHOR
+    );
+    expect(result).toEqual(None);
+  });
+});
+
+// `computeShowMoreState` decides whether the Show additional buttons are
+// disabled. The fetch range covers display + lookahead; this function
+// reads the counts response and reports whether any month falls in the
+// lookahead window past either display boundary. Tests anchor to
+// 2026-05-23 with a ±12-month display range → past boundary "2025-05",
+// future boundary "2027-05". A bucket is in the display range iff its
+// month is in [pastBoundary, futureBoundary]; only months STRICTLY past
+// either boundary enable the corresponding button.
+describe("CoachingSessionBuckets.computeShowMoreState", () => {
+  const NOW = DateTime.fromISO("2026-05-23T12:00:00.000Z", { zone: "utc" });
+
+  it("disables both buttons when the response is empty", () => {
+    // No data anywhere → clicking either button can't surface a bucket.
+    const result = CoachingSessionBuckets.computeShowMoreState([], NOW, 12, 12);
+    expect(result).toEqual({
+      disableShowMoreLater: true,
+      disableShowMoreEarlier: true,
+    });
+  });
+
+  it("treats counts exactly AT the boundaries as inside the display range", () => {
+    // "2025-05" == pastBoundary and "2027-05" == futureBoundary. Both are
+    // in the displayed range, so neither button should enable.
+    const months = ["2025-05", "2027-05"];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result).toEqual({
+      disableShowMoreLater: true,
+      disableShowMoreEarlier: true,
+    });
+  });
+
+  it("enables only the future button when a count is strictly past the future boundary", () => {
+    // "2027-06" > "2027-05" → next click surfaces it; nothing past the
+    // past boundary → earlier stays disabled.
+    const months = ["2025-08", "2027-06"];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result).toEqual({
+      disableShowMoreLater: false,
+      disableShowMoreEarlier: true,
+    });
+  });
+
+  it("enables only the earlier button when a count is strictly before the past boundary", () => {
+    // "2025-04" < "2025-05" → next click surfaces it; nothing past the
+    // future boundary → later stays disabled.
+    const months = ["2025-04", "2026-08"];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result).toEqual({
+      disableShowMoreLater: true,
+      disableShowMoreEarlier: false,
+    });
+  });
+
+  it("enables both buttons when counts exist on both sides of the display range", () => {
+    const months = ["2025-04", "2026-01", "2027-08"];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result).toEqual({
+      disableShowMoreLater: false,
+      disableShowMoreEarlier: false,
+    });
+  });
+
+  it("regression: real-world response Jun 2025–Jun 2026 disables both buttons", () => {
+    // This is the BE response that originally surfaced the false-negative
+    // bug — every count sits inside the ±12-month display range, so
+    // neither button can produce additional buckets.
+    const months = [
+      "2025-06", "2025-07", "2025-08", "2025-09", "2025-10",
+      "2025-11", "2025-12", "2026-01", "2026-02", "2026-03",
+      "2026-04", "2026-05", "2026-06",
+    ];
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      months,
+      NOW,
+      12,
+      12
+    );
+    expect(result.disableShowMoreEarlier).toBe(true);
+    expect(result.disableShowMoreLater).toBe(true);
+  });
+
+  it("compares months correctly across the year boundary", () => {
+    // "2024-12" < "2025-05" must hold as STRING comparison (zero-padded
+    // months make this safe). If the comparison used numeric month
+    // alone this would falsely say December (12) > May (5).
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      ["2024-12"],
+      NOW,
+      12,
+      12
+    );
+    expect(result.disableShowMoreEarlier).toBe(false);
+  });
+
+  it("respects the current display boundaries (post-click extension)", () => {
+    // After clicking once with a 6-month increment, monthsBack=18 →
+    // pastBoundary = "2024-11". A "2024-08" count is still past it, so
+    // the earlier button stays enabled and the user can click again.
+    const result = CoachingSessionBuckets.computeShowMoreState(
+      ["2024-08", "2025-06", "2026-05"],
+      NOW,
+      12,
+      18
+    );
+    expect(result.disableShowMoreEarlier).toBe(false);
+
+    // But if monthsBack=24, pastBoundary moves to "2024-05" and "2024-08"
+    // is now inside the display — earlier disables.
+    const exhausted = CoachingSessionBuckets.computeShowMoreState(
+      ["2024-08", "2025-06", "2026-05"],
+      NOW,
+      12,
+      24
+    );
+    expect(exhausted.disableShowMoreEarlier).toBe(true);
+  });
+});
+

@@ -299,10 +299,34 @@ function MyCard() {
 - Follows the same pattern used by `CoachingSessionTitle` and action card components
 - Allows tests to supply locale without mocking `siteConfig`
 
-### Documentation
-- Add JSDoc comments for complex logic or non-obvious patterns
-- Explain *why* something is done, not just *what* is being done
-- Document external state synchronization patterns (like forceUpdate mechanisms)
+### Comments
+
+Default to no comment. Add one only when the *why* is non-obvious — a hidden constraint, a subtle invariant, a workaround for a specific bug, behavior that would surprise a reader. Never describe *what* the code does; well-named identifiers do that. Don't reference current tasks, PRs, or callers — those rot.
+
+**When you do comment, write the most minimal version that still captures the reason.** Prefer one short line. Trim until removing another word would lose the reason.
+
+```typescript
+// ✅ Good — terse, captures the non-obvious reason
+// Backend returns naive ISO strings; interpret as UTC before zone conversion.
+const dt = DateTime.fromISO(session.date, { zone: "utc" }).setZone(tz);
+
+// ✅ Good — single line, names the invariant
+keepPreviousData: true, // avoids a flicker on range expansion.
+
+// ❌ Too verbose — restates what the code does, narrates the design
+// Use SWR's `keepPreviousData` option so that when the user clicks
+// "Show additional …" and the SWR key changes, the previous data
+// is retained while the new request loads, which prevents the
+// list from briefly rendering empty buckets that then collapse
+// when the response lands.
+keepPreviousData: true,
+
+// ❌ No comment needed — the code already says this
+// Loop through sessions and check if any are past
+const hasPast = sessions.some(isPast);
+```
+
+JSDoc on exported APIs is welcome when it documents a contract a caller can't infer from the signature (units, ranges, error conditions). Same brevity rule applies.
 
 ## Testing
 
@@ -380,7 +404,7 @@ When reviewing or writing code, ensure:
 - [ ] React hooks are imported directly, not accessed via `React.`
 - [ ] Components follow the established import patterns
 - [ ] Enum types and values use PascalCase
-- [ ] Complex logic has explanatory comments
+- [ ] Comments are terse and explain *why*, not *what* — default to none
 - [ ] Tests are updated to match code changes
 - [ ] TypeScript types are properly defined and used
 - [ ] Leaf components receive `locale` and config values via props, not `siteConfig` imports
