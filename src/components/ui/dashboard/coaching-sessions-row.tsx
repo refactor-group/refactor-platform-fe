@@ -87,8 +87,11 @@ export function SessionRow({
       tabIndex={0}
       aria-pressed={isSelected}
       className={cn(
-        "flex items-center justify-between py-4 group transition-colors rounded-md -mx-2 px-2 cursor-pointer hover:bg-muted/20",
-        isSelected && "bg-muted/40"
+        // Dark-mode bumps: `muted` is near-black there so /20 over a
+        // near-black card barely registers — boost to /50 hover, /70
+        // selected so the interaction states actually read.
+        "flex items-center justify-between py-4 group transition-colors rounded-md -mx-2 px-2 cursor-pointer hover:bg-muted/20 dark:hover:bg-muted/50",
+        isSelected && "bg-muted/40 dark:bg-muted/70"
       )}
       onClick={onSelect}
       onKeyDown={(e) => {

@@ -130,6 +130,7 @@ export function BucketAccordion({
       open={isExpanded}
       onOpenChange={onToggle}
       className={cn(
+        "group",
         animateIn && "animate-in fade-in slide-in-from-bottom-2 duration-500"
       )}
     >
@@ -139,18 +140,18 @@ export function BucketAccordion({
           className="w-full flex items-center justify-between gap-3 px-6 py-3 hover:bg-muted/20 transition-colors text-left"
         >
           <div className="flex items-baseline gap-2 min-w-0">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 truncate">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 transition-colors group-hover:text-muted-foreground truncate">
               {label}
             </span>
             {displayCount.some && (
-              <span className="text-xs tabular-nums text-muted-foreground/60">
+              <span className="text-xs tabular-nums text-muted-foreground/60 transition-colors group-hover:text-muted-foreground">
                 ({displayCount.val})
               </span>
             )}
           </div>
           <ChevronDown
             className={cn(
-              "h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200",
+              "h-4 w-4 shrink-0 text-muted-foreground/60 transition-colors group-hover:text-muted-foreground duration-200",
               isExpanded && "rotate-180"
             )}
           />

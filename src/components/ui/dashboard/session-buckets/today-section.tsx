@@ -83,8 +83,11 @@ export function TodaySection({
     : "No upcoming sessions scheduled for today.";
 
   return (
-    <section aria-label="Today" className="mx-3 mb-4 rounded-md bg-muted/30">
-      <p className="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+    <section
+      aria-label="Today"
+      className="group mx-3 mb-4 rounded-md border-[0.5px] border-border"
+    >
+      <p className="px-3 pt-3 pb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60 transition-colors group-hover:text-muted-foreground">
         Today
       </p>
       {visibleSessions.length === 0 ? (
