@@ -137,6 +137,8 @@ export default function CoachingSessionForm({
   const [byWeekdays, setByWeekdays] = useState<Weekday[]>([]);
   const [end, setEnd] = useState<RecurrenceEnd>({ kind: "count", count: 4 });
 
+  const showTwoCol = mode === "create";
+
   // Computes a default end date for the "On" option so the user never sees
   // an empty-state "Pick an end date" error before they've had a chance to
   // act. Anchored to sessionDate when set, otherwise today; both fall back
@@ -345,36 +347,39 @@ export default function CoachingSessionForm({
         : "Create Session";
 
   return (
-    <div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Coachee selector - only shown in create mode */}
-        {mode === "create" && (
-          <div className="space-y-2">
-            <Label htmlFor="coachee-select">Select Coachee</Label>
-            <Select
-              value={selectedRelationshipId}
-              onValueChange={setSelectedRelationshipId}
-              disabled={isLoadingRelationships || isSubmitting}
-            >
-              <SelectTrigger id="coachee-select">
-                <SelectValue placeholder="Select a coachee" />
-              </SelectTrigger>
-              <SelectContent>
-                {coacheeRelationships.length === 0 ? (
-                  <SelectItem value="_no_coachees" disabled>
-                    No coachees available
+    <form
+      onSubmit={handleSubmit}
+      className={cn("grid gap-6", showTwoCol && "sm:grid-cols-2 sm:items-start")}
+    >
+      {/* Coachee selector - only shown in create mode */}
+      {mode === "create" && (
+        <div className={cn("space-y-2", showTwoCol && "sm:col-span-2")}>
+          <Label htmlFor="coachee-select">Select Coachee</Label>
+          <Select
+            value={selectedRelationshipId}
+            onValueChange={setSelectedRelationshipId}
+            disabled={isLoadingRelationships || isSubmitting}
+          >
+            <SelectTrigger id="coachee-select">
+              <SelectValue placeholder="Select a coachee" />
+            </SelectTrigger>
+            <SelectContent>
+              {coacheeRelationships.length === 0 ? (
+                <SelectItem value="_no_coachees" disabled>
+                  No coachees available
+                </SelectItem>
+              ) : (
+                coacheeRelationships.map((rel) => (
+                  <SelectItem key={rel.id} value={rel.id}>
+                    {rel.coachee_first_name} {rel.coachee_last_name}
                   </SelectItem>
-                ) : (
-                  coacheeRelationships.map((rel) => (
-                    <SelectItem key={rel.id} value={rel.id}>
-                      {rel.coachee_first_name} {rel.coachee_last_name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="session-date">Session Date</Label>
           <Calendar
@@ -395,11 +400,12 @@ export default function CoachingSessionForm({
             disabled={isSubmitting}
           />
         </div>
+      </div>
 
-        {/* Recurring section — create mode only. Editing a recurrence rule
-            is a different operation that isn't supported by this dialog. */}
-        {mode === "create" && (
-          <div className="space-y-3 rounded-md border p-3">
+      {/* Recurring section — create mode only. Editing a recurrence rule
+          is a different operation that isn't supported by this dialog. */}
+      {mode === "create" && (
+        <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label htmlFor="recurring-switch" className="cursor-pointer">
                 Repeats
@@ -586,11 +592,14 @@ export default function CoachingSessionForm({
           </div>
         )}
 
-        <Button type="submit" disabled={!canSubmit}>
-          {isSubmitting && <Spinner className="mr-2" />}
-          {buttonText}
-        </Button>
-      </form>
-    </div>
+      <Button
+        type="submit"
+        disabled={!canSubmit}
+        className={cn(showTwoCol && "sm:col-span-2 sm:justify-self-start")}
+      >
+        {isSubmitting && <Spinner className="mr-2" />}
+        {buttonText}
+      </Button>
+    </form>
   );
 }

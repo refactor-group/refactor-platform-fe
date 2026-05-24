@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/components/lib/utils";
 import CoachingSessionForm, { CoachingSessionFormMode } from "./coaching-session-form";
 import type { CoachingSession } from "@/types/coaching-session";
 
@@ -24,7 +25,12 @@ export function CoachingSessionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent
+        className={cn(
+          "max-h-[90dvh] overflow-y-auto",
+          mode === "create" ? "sm:max-w-3xl" : "sm:max-w-lg"
+        )}
+      >
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Create New Coaching Session" : "Update Coaching Session"}
