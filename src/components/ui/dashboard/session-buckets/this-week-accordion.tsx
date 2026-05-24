@@ -64,13 +64,15 @@ export function ThisWeekAccordion({
     [mountNow]
   );
 
+  // BE sort: ascending for Upcoming, descending for Previous. The FE
+  // past/future filter below preserves the ordering.
   const { enrichedSessions, isLoading } = useEnrichedCoachingSessionsForUser(
     userId,
     range.start,
     range.end,
     SESSION_INCLUDES,
-    undefined,
-    undefined,
+    "date",
+    isPastView ? "desc" : "asc",
     relationshipId
   );
 

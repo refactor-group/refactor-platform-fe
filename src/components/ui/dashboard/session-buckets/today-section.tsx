@@ -59,13 +59,15 @@ export function TodaySection({
     [mountNow, userTimezone]
   );
 
+  // BE sort: ascending for Upcoming (soonest first), descending for
+  // Previous (most recent first). The FE filter below preserves order.
   const { enrichedSessions } = useEnrichedCoachingSessionsForUser(
     userId,
     range.start,
     range.end,
     SESSION_INCLUDES,
-    undefined,
-    undefined,
+    "date",
+    isPastView ? "desc" : "asc",
     relationshipId
   );
 

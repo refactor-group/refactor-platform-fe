@@ -91,13 +91,16 @@ export function BucketAccordion({
     setHasEverExpanded(true);
   }
 
+  const isPastView = view === CoachingSessionBucketView.Previous;
+  // BE sort: ascending for Upcoming, descending for Previous. The
+  // matchesView filter below preserves the ordering.
   const { enrichedSessions, isLoading } = useEnrichedCoachingSessionsForUser(
     hasEverExpanded ? userId : null,
     fetchStart,
     fetchEnd,
     SESSION_INCLUDES,
-    undefined,
-    undefined,
+    "date",
+    isPastView ? "desc" : "asc",
     relationshipId
   );
 

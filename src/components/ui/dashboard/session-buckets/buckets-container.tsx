@@ -16,7 +16,10 @@ import {
 import { BucketList } from "./bucket-list";
 import { ThisWeekAccordion } from "./this-week-accordion";
 import { TodaySection } from "./today-section";
-import { useEnrichedCoachingSessionsForUserCounts } from "@/lib/api/coaching-sessions";
+import {
+  useCoachingSessionList,
+  useEnrichedCoachingSessionsForUserCounts,
+} from "@/lib/api/coaching-sessions";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import {
   CoachingSessionBuckets,
@@ -49,6 +52,14 @@ const SHOW_MORE_INCREMENT_MONTHS = 6;
 const LOOKAHEAD_MONTHS = SHOW_MORE_INCREMENT_MONTHS;
 
 const TICK_MS = 60_000;
+
+// Matches the coaching-session page's Actions/Due tab — see
+// SESSION_LOOKBACK / SESSION_LOOKAHEAD in `use-panel-actions.ts`. The
+// wide window guarantees the prior session is in the list, so the
+// shared `selectReviewActionsForSession` helper computes the same
+// review window the panel does.
+const PRIOR_SESSION_LOOKBACK_YEARS = 5;
+const PRIOR_SESSION_LOOKAHEAD_YEARS = 1;
 
 export function BucketsContainer({
   userId,
@@ -235,6 +246,26 @@ export function BucketsContainer({
       : undefined
   );
 
+  // Walked by selectReviewActionsForSession to find the prior session
+  // in the relationship — same fetch shape as the coaching-session
+  // page's Actions/Due tab, so both surfaces compute the same review
+  // window. Range derived from mountNow → stable SWR key, one fetch
+  // per relationship.
+  const priorSessionLookupRange = useMemo(
+    () => ({
+      from: mountNow.minus({ years: PRIOR_SESSION_LOOKBACK_YEARS }),
+      to: mountNow.plus({ years: PRIOR_SESSION_LOOKAHEAD_YEARS }),
+    }),
+    [mountNow]
+  );
+  const { coachingSessions: relationshipSessionsContext } = useCoachingSessionList(
+    actionsRelationshipId ?? null,
+    priorSessionLookupRange.from,
+    priorSessionLookupRange.to,
+    "date",
+    "asc"
+  );
+
   const selectedParticipant = useMemo(
     () =>
       selectedSession
@@ -245,13 +276,22 @@ export function BucketsContainer({
 
   const selectedReviewActions = useMemo(() => {
     if (!selectedSession) return [];
+    // Merge selectedSession in case the relationship fetch hasn't
+    // returned yet — the helper finds the target via `.id`. The
+    // 5y/1y window means the actual prior session is almost always
+    // in `relationshipSessionsContext`; no fallback floor needed,
+    // matching the Due tab's `undefined`.
+    const context = relationshipSessionsContext;
+    const sessions = context.some((s) => s.id === selectedSession.id)
+      ? context
+      : [...context, selectedSession];
     return selectReviewActionsForSession(
       allActions,
-      [selectedSession],
+      sessions,
       selectedSession.id,
-      fetchRangeStart
+      undefined
     );
-  }, [allActions, selectedSession, fetchRangeStart]);
+  }, [allActions, relationshipSessionsContext, selectedSession]);
 
   const onShowLater = useCallback(() => {
     if (pendingDirection || disableShowMoreLater) return;
