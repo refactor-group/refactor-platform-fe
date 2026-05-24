@@ -40,6 +40,11 @@ export interface BucketListProps {
   /** When true, the button stays visible but is disabled — the lookahead
    *  probe found no sessions in the next window. */
   showMoreDisabled: boolean;
+  /** Count of sessions in the current calendar week that match this
+   *  list's view. Subtracted from the overlap bucket's BE-aggregate
+   *  count so the badge doesn't double-count sessions surfaced above
+   *  in TODAY / THIS WEEK. */
+  thisWeekCountInView: number;
 }
 
 export function BucketList({
@@ -61,13 +66,26 @@ export function BucketList({
   onShowMore,
   showMoreLoading,
   showMoreDisabled,
+  thisWeekCountInView,
 }: BucketListProps) {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(
     defaultExpandedKey ? new Set([defaultExpandedKey]) : new Set()
   );
 
+  const isPastView = view === CoachingSessionBucketView.Previous;
+
+  const adjustedCount = (
+    bucket: CoachingSessionBucketDescriptor
+  ): CoachingSessionBucketCount =>
+    CoachingSessionBuckets.adjustOverlapBucketCount(
+      bucket,
+      countsByKey.get(bucket.key) ?? None,
+      thisWeekCountInView,
+      isPastView,
+      mountNow
+    );
+
   const visibleBuckets = useMemo(() => {
-    const isPastView = view === CoachingSessionBucketView.Previous;
     const week = CoachingSessionBuckets.currentWeekRange(mountNow);
     const withinDisplay = buckets.filter((b) => {
       // Drop buckets whose entire effective range falls inside this
@@ -84,12 +102,18 @@ export function BucketList({
       ) {
         return false;
       }
-      const count = countsByKey.get(b.key);
-      if (!count) return true;
-      return !(count.some && count.val === 0);
+      const count = CoachingSessionBuckets.adjustOverlapBucketCount(
+        b,
+        countsByKey.get(b.key) ?? None,
+        thisWeekCountInView,
+        isPastView,
+        mountNow
+      );
+      if (!count.some) return true;
+      return count.val > 0;
     });
     return CoachingSessionBuckets.detectYearDividers(withinDisplay);
-  }, [buckets, countsByKey, view, mountNow]);
+  }, [buckets, countsByKey, isPastView, mountNow, thisWeekCountInView]);
 
   const toggleKey = (key: string) => {
     setExpandedKeys((prev) => {
@@ -111,8 +135,7 @@ export function BucketList({
   return (
     <div className="divide-y">
       {visibleBuckets.map((bucket) => {
-        const count = countsByKey.get(bucket.key) ?? None;
-        const isPastView = view === CoachingSessionBucketView.Previous;
+        const count = adjustedCount(bucket);
         const effective = CoachingSessionBuckets.effectiveBucketRange(
           bucket,
           isPastView,

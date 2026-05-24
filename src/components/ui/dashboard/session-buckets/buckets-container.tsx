@@ -17,7 +17,9 @@ import { BucketList } from "./bucket-list";
 import { ThisWeekAccordion } from "./this-week-accordion";
 import { TodaySection } from "./today-section";
 import {
+  CoachingSessionInclude,
   useCoachingSessionList,
+  useEnrichedCoachingSessionsForUser,
   useEnrichedCoachingSessionsForUserCounts,
 } from "@/lib/api/coaching-sessions";
 import { useUserActionsList } from "@/lib/api/user-actions";
@@ -31,7 +33,10 @@ import {
   CoachingSessionBucketCount,
   CoachingSessionBucketView,
 } from "@/types/coaching-session-bucket";
-import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import {
+  isPastSession,
+  type EnrichedCoachingSession,
+} from "@/types/coaching-session";
 import type { Id } from "@/types/general";
 import { UserActionsScope } from "@/types/assigned-actions";
 
@@ -60,6 +65,10 @@ const TICK_MS = 60_000;
 // review window the panel does.
 const PRIOR_SESSION_LOOKBACK_YEARS = 5;
 const PRIOR_SESSION_LOOKAHEAD_YEARS = 1;
+
+// Minimal include set for the week-sessions count subtraction —
+// we only inspect `date`, so relationships/goals would be wasted bytes.
+const WEEK_INCLUDES: CoachingSessionInclude[] = [];
 
 export function BucketsContainer({
   userId,
@@ -229,6 +238,37 @@ export function BucketsContainer({
   }, [monthCounts, buckets, countsLoading]);
 
 
+  // Sessions in the current calendar week — driven by mountNow so the
+  // SWR key dedupes with `ThisWeekAccordion`'s identical fetch. Used
+  // to correct the overlap bucket's badge: the BE month aggregate
+  // counts all sessions in May+June including those landing in this
+  // week (May 24-30 for Sun-anchored), but the bucket's clipped fetch
+  // excludes them. Subtracting the view-matching count brings the
+  // badge in line with what'll actually render.
+  const weekRange = useMemo(
+    () => CoachingSessionBuckets.currentWeekRange(mountNow),
+    [mountNow]
+  );
+  const { enrichedSessions: weekSessions } = useEnrichedCoachingSessionsForUser(
+    userId,
+    weekRange.start,
+    weekRange.end,
+    WEEK_INCLUDES,
+    undefined,
+    undefined,
+    relationshipFilter
+  );
+  const { thisWeekUpcomingCount, thisWeekPreviousCount } = useMemo(() => {
+    const all = weekSessions ?? [];
+    let past = 0;
+    let upcoming = 0;
+    for (const s of all) {
+      if (isPastSession(s, { now })) past += 1;
+      else upcoming += 1;
+    }
+    return { thisWeekUpcomingCount: upcoming, thisWeekPreviousCount: past };
+  }, [weekSessions, now]);
+
   const [selectedSession, setSelectedSession] = useState<
     EnrichedCoachingSession | undefined
   >();
@@ -354,6 +394,7 @@ export function BucketsContainer({
           <BucketList
             buckets={futureBuckets}
             countsByKey={countsByKey}
+            thisWeekCountInView={thisWeekUpcomingCount}
             defaultExpandedKey={undefined}
             view={CoachingSessionBucketView.Upcoming}
             mountNow={mountNow}
@@ -406,6 +447,7 @@ export function BucketsContainer({
           <BucketList
             buckets={pastBuckets}
             countsByKey={countsByKey}
+            thisWeekCountInView={thisWeekPreviousCount}
             defaultExpandedKey={undefined}
             view={CoachingSessionBucketView.Previous}
             mountNow={mountNow}

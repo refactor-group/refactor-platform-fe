@@ -12,6 +12,7 @@ import {
   SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/utils/session";
 import { CoachingSessionBucketKind } from "@/types/coaching-session-bucket";
+import { Some, None } from "@/types/option";
 import {
   getOtherParticipantName,
   getUserRoleInRelationship,
@@ -681,6 +682,118 @@ describe("CoachingSessionBuckets.effectiveBucketRange", () => {
     );
     expect(effective.start).toEqual(bucket.start);
     expect(effective.end.toUTC().toISO()).toBe("2026-05-23T23:59:59.999Z");
+  });
+});
+
+// `adjustOverlapBucketCount` corrects the BE per-month aggregate for
+// the overlap bucket only: it subtracts the count of sessions in the
+// current week (matching the view) so the badge reflects what the
+// clipped fetch will actually return — not the inflated month sum
+// that includes this-week sessions surfaced in TODAY / THIS WEEK
+// above. Non-overlap buckets pass through unchanged.
+describe("CoachingSessionBuckets.adjustOverlapBucketCount", () => {
+  const ANCHOR = DateTime.fromISO("2026-05-24T12:00:00.000Z", { zone: "utc" });
+
+  function mayJunBucket() {
+    const [bucket] = CoachingSessionBuckets.generate(ANCHOR, 2, 0);
+    return bucket;
+  }
+
+  function janFebBucket() {
+    const all = CoachingSessionBuckets.generate(ANCHOR, 0, 6);
+    return all.find((b) => b.start.toFormat("yyyy-MM") === "2026-01")!;
+  }
+
+  it("returns a non-overlap bucket's count unchanged regardless of view", () => {
+    // Jan-Feb bucket is entirely before this week → not an overlap
+    // bucket → no adjustment, even if a this-week count is supplied.
+    const bucket = janFebBucket();
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(5),
+        /* thisWeekCountInView */ 3,
+        /* isPastView */ true,
+        ANCHOR
+      )
+    ).toEqual(Some(5));
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(5),
+        3,
+        /* isPastView */ false,
+        ANCHOR
+      )
+    ).toEqual(Some(5));
+  });
+
+  it("subtracts this-week count from the overlap bucket in the Upcoming view", () => {
+    // Coach has 3 sessions this week + 4 in late June (post-this-week).
+    // BE month sum for May+Jun = 7; clipped Upcoming fetch returns 4.
+    // The badge should read 4, not 7.
+    const bucket = mayJunBucket();
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(7),
+        /* thisWeekCountInView */ 3,
+        /* isPastView */ false,
+        ANCHOR
+      )
+    ).toEqual(Some(4));
+  });
+
+  it("subtracts this-week count from the overlap bucket in the Previous view", () => {
+    const bucket = mayJunBucket();
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(6),
+        /* thisWeekCountInView */ 2,
+        /* isPastView */ true,
+        ANCHOR
+      )
+    ).toEqual(Some(4));
+  });
+
+  it("clamps to Some(0) when this-week count meets or exceeds the base count", () => {
+    // Coach's only scheduled sessions ARE this week (greptile's
+    // motivating case): BE month sum says 3; this-week count for the
+    // view is also 3; corrected = 0 → BucketList pre-filter drops it.
+    const bucket = mayJunBucket();
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(3),
+        3,
+        false,
+        ANCHOR
+      )
+    ).toEqual(Some(0));
+    // And a > case (defensive — shouldn't happen unless counts are
+    // stale, but still must not produce a negative count).
+    expect(
+      CoachingSessionBuckets.adjustOverlapBucketCount(
+        bucket,
+        Some(2),
+        5,
+        false,
+        ANCHOR
+      )
+    ).toEqual(Some(0));
+  });
+
+  it("passes None through unchanged for the overlap bucket — nothing to subtract from", () => {
+    const bucket = mayJunBucket();
+    const result = CoachingSessionBuckets.adjustOverlapBucketCount(
+      bucket,
+      None,
+      3,
+      false,
+      ANCHOR
+    );
+    expect(result).toEqual(None);
   });
 });
 

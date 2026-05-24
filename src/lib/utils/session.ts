@@ -1,5 +1,6 @@
 import { DateTime } from "ts-luxon";
 import {
+  CoachingSessionBucketCount,
   CoachingSessionBucketDescriptor,
   CoachingSessionBucketKind,
 } from "@/types/coaching-session-bucket";
@@ -21,6 +22,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import type { Action } from "@/types/action";
 import { sortActionArray } from "@/types/action";
 import { SortOrder } from "@/types/sorting";
+import { Some } from "@/types/option";
 
 /**
  * Session Utility Functions
@@ -528,6 +530,33 @@ export namespace CoachingSessionBuckets {
   ): string {
     const { start, end } = effectiveBucketRange(bucket, isPastView, mountNow);
     return formatLabel(start, end);
+  }
+
+  /**
+   * Corrects the BE per-month aggregate for the overlap bucket only.
+   * The aggregate over-counts because it sums full months including
+   * the current calendar week — but the bucket's clipped fetch
+   * excludes that week (those sessions live in TODAY / THIS WEEK
+   * upstream). Subtracting `thisWeekCountInView` brings the badge
+   * back in line with what the bucket will actually render.
+   *
+   * Non-overlap buckets pass through unchanged. `None` passes through
+   * unchanged (still loading). Negative results clamp to `Some(0)`,
+   * which BucketList's existing zero-filter then drops.
+   */
+  export function adjustOverlapBucketCount(
+    bucket: CoachingSessionBucketDescriptor,
+    baseCount: CoachingSessionBucketCount,
+    thisWeekCountInView: number,
+    isPastView: boolean,
+    mountNow: DateTime
+  ): CoachingSessionBucketCount {
+    const effective = effectiveBucketRange(bucket, isPastView, mountNow);
+    const isOverlap =
+      effective.start.toMillis() !== bucket.start.toMillis() ||
+      effective.end.toMillis() !== bucket.end.toMillis();
+    if (!isOverlap || !baseCount.some) return baseCount;
+    return Some(Math.max(0, baseCount.val - thisWeekCountInView));
   }
 
   export function generate(
