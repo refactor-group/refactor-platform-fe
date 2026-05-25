@@ -101,7 +101,8 @@ export function BucketAccordion({
     SESSION_INCLUDES,
     "date",
     isPastView ? "desc" : "asc",
-    relationshipId
+    relationshipId,
+    userTimezone
   );
 
   const filteredSessions = (enrichedSessions ?? []).filter((s) =>
