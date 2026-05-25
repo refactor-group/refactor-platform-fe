@@ -406,196 +406,196 @@ export default function CoachingSessionForm({
           is a different operation that isn't supported by this dialog. */}
       {mode === "create" && (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="recurring-switch" className="cursor-pointer">
-                Repeats
-              </Label>
-              <Switch
-                id="recurring-switch"
-                checked={isRecurring}
-                onCheckedChange={setIsRecurring}
-                disabled={isSubmitting}
-              />
-            </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="recurring-switch" className="cursor-pointer">
+              Repeats
+            </Label>
+            <Switch
+              id="recurring-switch"
+              checked={isRecurring}
+              onCheckedChange={setIsRecurring}
+              disabled={isSubmitting}
+            />
+          </div>
 
-            {isRecurring && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="recurrence-frequency">Frequency</Label>
-                    <Select
-                      value={frequency}
-                      onValueChange={(v) => setFrequency(v as Frequency)}
-                      disabled={isSubmitting}
-                    >
-                      <SelectTrigger id="recurrence-frequency">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(Frequency).map((f) => (
-                          <SelectItem key={f} value={f}>
-                            {frequencyLabel(f)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="recurrence-interval">Every</Label>
-                    <Input
-                      id="recurrence-interval"
-                      type="number"
-                      min={1}
-                      max={MAX_INTERVAL}
-                      value={interval}
-                      onChange={(e) => {
-                        const next = parseInt(e.target.value, 10);
-                        setInterval(Number.isFinite(next) && next >= 1 ? next : 1);
-                      }}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-
-                {frequencySupportsWeekdays(frequency) && (
-                  <div className="space-y-2">
-                    <Label>On these days</Label>
-                    <ToggleGroup
-                      type="multiple"
-                      value={byWeekdays}
-                      onValueChange={(v) => setByWeekdays(v as Weekday[])}
-                      disabled={isSubmitting}
-                      className="justify-start flex-wrap"
-                    >
-                      {WEEKDAYS_ORDERED.map((d) => (
-                        <ToggleGroupItem
-                          key={d}
-                          value={d}
-                          aria-label={weekdayLabel(d)}
-                          className="w-10"
-                        >
-                          {weekdayLabel(d).slice(0, 1)}
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                    {startWeekday && (
-                      <p className="text-xs text-muted-foreground">
-                        Your first session is on a {weekdayLabel(startWeekday)}, which must stay selected.
-                      </p>
-                    )}
-                  </div>
-                )}
-
+          {isRecurring && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Ends</Label>
-                  <RadioGroup
-                    value={end.kind}
-                    onValueChange={(v) =>
-                      setEnd(
-                        v === "count"
-                          ? { kind: "count", count: end.kind === "count" ? end.count : 4 }
-                          : {
-                              kind: "until",
-                              until:
-                                end.kind === "until" && end.until
-                                  ? end.until
-                                  : defaultUntilDate(),
-                            }
-                      )
-                    }
+                  <Label htmlFor="recurrence-frequency">Frequency</Label>
+                  <Select
+                    value={frequency}
+                    onValueChange={(v) => setFrequency(v as Frequency)}
                     disabled={isSubmitting}
                   >
-                    <div className="flex items-center gap-3">
-                      <RadioGroupItem id="end-count" value="count" />
-                      <Label htmlFor="end-count" className="cursor-pointer">
-                        After
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={MAX_OCCURRENCES}
-                        value={end.kind === "count" ? end.count : ""}
-                        onChange={(e) => {
-                          const next = parseInt(e.target.value, 10);
-                          setEnd({
-                            kind: "count",
-                            count: Number.isFinite(next) && next >= 1 ? next : 1,
-                          });
-                        }}
-                        disabled={isSubmitting || end.kind !== "count"}
-                        className="w-20"
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        occurrences
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <RadioGroupItem id="end-until" value="until" />
-                      <Label htmlFor="end-until" className="cursor-pointer">
-                        On
-                      </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={isSubmitting || end.kind !== "until"}
-                            className={cn(
-                              "h-9 gap-2 font-normal",
-                              end.kind === "until" && end.until
-                                ? ""
-                                : "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="h-4 w-4" />
-                            {end.kind === "until" && end.until
-                              ? DateTime.fromISO(end.until).toLocaleString(
-                                  DateTime.DATE_MED
-                                )
-                              : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-auto p-0"
-                          align="start"
-                        >
-                          <Calendar
-                            mode="single"
-                            selected={
-                              end.kind === "until" && end.until
-                                ? new Date(`${end.until}T00:00:00`)
-                                : undefined
-                            }
-                            onSelect={(date) =>
-                              setEnd({
-                                kind: "until",
-                                until: date
-                                  ? DateTime.fromJSDate(date).toFormat(
-                                      "yyyy-MM-dd"
-                                    )
-                                  : "",
-                              })
-                            }
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </RadioGroup>
+                    <SelectTrigger id="recurrence-frequency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(Frequency).map((f) => (
+                        <SelectItem key={f} value={f}>
+                          {frequencyLabel(f)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-
-                {recurrenceError && (
-                  <p className="text-sm text-destructive">{recurrenceError}</p>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence-interval">Every</Label>
+                  <Input
+                    id="recurrence-interval"
+                    type="number"
+                    min={1}
+                    max={MAX_INTERVAL}
+                    value={interval}
+                    onChange={(e) => {
+                      const next = parseInt(e.target.value, 10);
+                      setInterval(Number.isFinite(next) && next >= 1 ? next : 1);
+                    }}
+                    disabled={isSubmitting}
+                  />
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              {frequencySupportsWeekdays(frequency) && (
+                <div className="space-y-2">
+                  <Label>On these days</Label>
+                  <ToggleGroup
+                    type="multiple"
+                    value={byWeekdays}
+                    onValueChange={(v) => setByWeekdays(v as Weekday[])}
+                    disabled={isSubmitting}
+                    className="justify-start flex-wrap"
+                  >
+                    {WEEKDAYS_ORDERED.map((d) => (
+                      <ToggleGroupItem
+                        key={d}
+                        value={d}
+                        aria-label={weekdayLabel(d)}
+                        className="w-10"
+                      >
+                        {weekdayLabel(d).slice(0, 1)}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                  {startWeekday && (
+                    <p className="text-xs text-muted-foreground">
+                      Your first session is on a {weekdayLabel(startWeekday)}, which must stay selected.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Ends</Label>
+                <RadioGroup
+                  value={end.kind}
+                  onValueChange={(v) =>
+                    setEnd(
+                      v === "count"
+                        ? { kind: "count", count: end.kind === "count" ? end.count : 4 }
+                        : {
+                            kind: "until",
+                            until:
+                              end.kind === "until" && end.until
+                                ? end.until
+                                : defaultUntilDate(),
+                          }
+                    )
+                  }
+                  disabled={isSubmitting}
+                >
+                  <div className="flex items-center gap-3">
+                    <RadioGroupItem id="end-count" value="count" />
+                    <Label htmlFor="end-count" className="cursor-pointer">
+                      After
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={MAX_OCCURRENCES}
+                      value={end.kind === "count" ? end.count : ""}
+                      onChange={(e) => {
+                        const next = parseInt(e.target.value, 10);
+                        setEnd({
+                          kind: "count",
+                          count: Number.isFinite(next) && next >= 1 ? next : 1,
+                        });
+                      }}
+                      disabled={isSubmitting || end.kind !== "count"}
+                      className="w-20"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      occurrences
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <RadioGroupItem id="end-until" value="until" />
+                    <Label htmlFor="end-until" className="cursor-pointer">
+                      On
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isSubmitting || end.kind !== "until"}
+                          className={cn(
+                            "h-9 gap-2 font-normal",
+                            end.kind === "until" && end.until
+                              ? ""
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="h-4 w-4" />
+                          {end.kind === "until" && end.until
+                            ? DateTime.fromISO(end.until).toLocaleString(
+                                DateTime.DATE_MED
+                              )
+                            : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-auto p-0"
+                        align="start"
+                      >
+                        <Calendar
+                          mode="single"
+                          selected={
+                            end.kind === "until" && end.until
+                              ? new Date(`${end.until}T00:00:00`)
+                              : undefined
+                          }
+                          onSelect={(date) =>
+                            setEnd({
+                              kind: "until",
+                              until: date
+                                ? DateTime.fromJSDate(date).toFormat(
+                                    "yyyy-MM-dd"
+                                  )
+                                : "",
+                            })
+                          }
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {recurrenceError && (
+                <p className="text-sm text-destructive">{recurrenceError}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <Button
         type="submit"
         disabled={!canSubmit}
-        className={cn(showTwoCol && "sm:col-span-2 sm:justify-self-start")}
+        className={cn("justify-self-start", showTwoCol && "sm:col-span-2")}
       >
         {isSubmitting && <Spinner className="mr-2" />}
         {buttonText}
