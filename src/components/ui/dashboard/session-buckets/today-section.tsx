@@ -61,9 +61,7 @@ export function TodaySection({
 
   // BE sort: ascending for Upcoming (soonest first), descending for
   // Previous (most recent first). The FE filter below preserves order.
-  // `tz` makes the BE evaluate `from_date`/`to_date` as local-calendar-day
-  // boundaries — load-bearing for the 1-day window so a session whose UTC
-  // date differs from the viewer's local date still lands here.
+  // `tz` shifts BE date boundaries to the viewer's local day — without it, cross-midnight sessions fall out.
   const { enrichedSessions } = useEnrichedCoachingSessionsForUser(
     userId,
     range.start,
