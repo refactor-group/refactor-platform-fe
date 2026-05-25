@@ -195,7 +195,8 @@ export const CoachingSessionApi = {
     include?: CoachingSessionInclude[],
     sortBy?: CoachingSessionSortField,
     sortOrder?: ApiSortOrder,
-    relationshipId?: Id
+    relationshipId?: Id,
+    tz?: string
   ): Promise<EnrichedCoachingSession[]> => {
     const params: Record<string, string> = {
       from_date: fromDate.toISODate() || '',
@@ -215,6 +216,9 @@ export const CoachingSessionApi = {
     }
     if (sortOrder) {
       params.sort_order = sortOrder;
+    }
+    if (tz) {
+      params.tz = tz;
     }
 
     return CoachingSessionApi.listNested(userId, { params });
@@ -384,7 +388,8 @@ export const useEnrichedCoachingSessionsForUser = (
   include?: CoachingSessionInclude[],
   sortBy?: CoachingSessionSortField,
   sortOrder?: ApiSortOrder,
-  relationshipId?: Id
+  relationshipId?: Id,
+  tz?: string
 ) => {
   // Only create params when userId is valid - null params skips the SWR fetch
   const params = userId
@@ -396,6 +401,7 @@ export const useEnrichedCoachingSessionsForUser = (
         ...(relationshipId && { coaching_relationship_id: relationshipId }),
         ...(sortBy && { sort_by: sortBy }),
         ...(sortOrder && { sort_order: sortOrder }),
+        ...(tz && { tz }),
       }
     : null;
 
@@ -410,7 +416,8 @@ export const useEnrichedCoachingSessionsForUser = (
           include,
           sortBy,
           sortOrder,
-          relationshipId
+          relationshipId,
+          tz
         )
       : Promise.resolve([]);
 

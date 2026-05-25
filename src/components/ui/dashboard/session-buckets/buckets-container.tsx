@@ -256,7 +256,8 @@ export function BucketsContainer({
     WEEK_INCLUDES,
     undefined,
     undefined,
-    relationshipFilter
+    relationshipFilter,
+    userTimezone
   );
   const { thisWeekUpcomingCount, thisWeekPreviousCount } = useMemo(() => {
     const all = weekSessions ?? [];
