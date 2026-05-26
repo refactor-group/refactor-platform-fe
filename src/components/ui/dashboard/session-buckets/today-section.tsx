@@ -61,6 +61,7 @@ export function TodaySection({
 
   // BE sort: ascending for Upcoming (soonest first), descending for
   // Previous (most recent first). The FE filter below preserves order.
+  // `tz` shifts BE date boundaries to the viewer's local day — without it, cross-midnight sessions fall out.
   const { enrichedSessions } = useEnrichedCoachingSessionsForUser(
     userId,
     range.start,
@@ -68,7 +69,8 @@ export function TodaySection({
     SESSION_INCLUDES,
     "date",
     isPastView ? "desc" : "asc",
-    relationshipId
+    relationshipId,
+    userTimezone
   );
 
   const visibleSessions = useMemo(() => {
