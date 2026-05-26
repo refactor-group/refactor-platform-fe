@@ -141,6 +141,17 @@ export default function CoachingSessionForm({
     () => existingSession?.duration_minutes ?? defaultDurationMinutes
   );
 
+  // Sync with the coach's stored default once user data loads. Only in create
+  // mode — update mode pre-fills from the existing session, which doesn't
+  // change after mount. Without this, a cold-load dialog seeds the duration
+  // from FALLBACK_DURATION_MINUTES (60) before useUser resolves, and the
+  // coach's real default (e.g. 45) never makes it into the form state.
+  useEffect(() => {
+    if (mode === "create") {
+      setDurationMinutes(defaultDurationMinutes);
+    }
+  }, [defaultDurationMinutes, mode]);
+
   // ── Recurrence state (create mode only) ─────────────────────────────
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>(Frequency.Weekly);
