@@ -36,7 +36,7 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useState, useMemo, useEffect, type FormEvent } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
@@ -141,15 +141,24 @@ export default function CoachingSessionForm({
     () => existingSession?.duration_minutes ?? defaultDurationMinutes
   );
 
+  // Tracks whether the coach has manually edited the duration field this
+  // session. Set on any user-driven change; checked by the sync effect so
+  // that the cold-load default-load doesn't clobber deliberate edits.
+  const hasUserEditedDurationRef = useRef(false);
+
+  const handleDurationChange = useCallback((next: number) => {
+    hasUserEditedDurationRef.current = true;
+    setDurationMinutes(next);
+  }, []);
+
   // Sync with the coach's stored default once user data loads. Only in create
-  // mode — update mode pre-fills from the existing session, which doesn't
-  // change after mount. Without this, a cold-load dialog seeds the duration
-  // from FALLBACK_DURATION_MINUTES (60) before useUser resolves, and the
-  // coach's real default (e.g. 45) never makes it into the form state.
+  // mode (update mode pre-fills from the existing session), and only while the
+  // coach hasn't manually edited the field yet — otherwise a cold-load fetch
+  // resolving mid-edit would silently overwrite a deliberate value.
   useEffect(() => {
-    if (mode === "create") {
-      setDurationMinutes(defaultDurationMinutes);
-    }
+    if (mode !== "create") return;
+    if (hasUserEditedDurationRef.current) return;
+    setDurationMinutes(defaultDurationMinutes);
   }, [defaultDurationMinutes, mode]);
 
   // ── Recurrence state (create mode only) ─────────────────────────────
@@ -211,6 +220,7 @@ export default function CoachingSessionForm({
     setDurationMinutes(
       existingSession?.duration_minutes ?? defaultDurationMinutes
     );
+    hasUserEditedDurationRef.current = false;
     setSelectedRelationshipId(currentCoachingRelationshipId ?? "");
     setIsRecurring(false);
     setFrequency(Frequency.Weekly);
@@ -442,7 +452,7 @@ export default function CoachingSessionForm({
             <CoachingSessionDurationInput
               id="session-duration"
               value={durationMinutes}
-              onChange={setDurationMinutes}
+              onChange={handleDurationChange}
               disabled={isSubmitting}
               error={durationValidation.match(() => undefined, (msg) => msg)}
             />
