@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Puzzle, Video } from "lucide-react";
+import { Clock, Puzzle, Settings, Video } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 
 import type { FC, ComponentType } from "react";
@@ -20,6 +20,13 @@ interface NavGroup {
 }
 
 const NAV_GROUPS: NavGroup[] = [
+  {
+    title: "Preferences",
+    icon: Settings,
+    children: [
+      { title: "Coaching Sessions", href: "/settings/preferences", icon: Clock },
+    ],
+  },
   {
     title: "Integrations",
     icon: Puzzle,

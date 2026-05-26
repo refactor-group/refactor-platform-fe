@@ -25,6 +25,15 @@ describe("isPastSession", () => {
     expect(isPastSession(session)).toBe(false);
   });
 
+  it("uses the session's own duration_minutes (30-min session is past at minute 31)", () => {
+    // Phase 2 rewire: this would have returned false under the old constant
+    // (60-min default) because 31 min < 60. The session's own duration drives
+    // the calculation now.
+    const session = createSessionAt(-31);
+    session.duration_minutes = 30;
+    expect(isPastSession(session)).toBe(true);
+  });
+
   it("returns true when now is past the custom cutoff", () => {
     const session = createSessionAt(-30); // 30 min ago, normally still active
     const cutoff = DateTime.now().minus({ minutes: 5 }); // cutoff was 5 min ago
@@ -126,6 +135,15 @@ describe("isUnderwaySession", () => {
 
   it("returns false when session has not started yet", () => {
     const session = createSessionAt(30);
+    expect(isUnderwaySession(session)).toBe(false);
+  });
+
+  it("uses the session's own duration_minutes (90-min session is not underway at minute 91)", () => {
+    // Phase 2 rewire: with a longer custom duration, the underway window
+    // extends to match. Boundary check confirms isUnderwaySession reads
+    // session.duration_minutes (not the constant).
+    const session = createSessionAt(-91);
+    session.duration_minutes = 90;
     expect(isUnderwaySession(session)).toBe(false);
   });
 });

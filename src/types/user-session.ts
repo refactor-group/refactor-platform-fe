@@ -28,6 +28,7 @@ export function defaultUserSession(): UserSession {
     last_name: "",
     display_name: "",
     timezone: "UTC",
+    default_coaching_session_duration_minutes: 60,
     role: Role.User,
     roles: [],
     invite_status: null,

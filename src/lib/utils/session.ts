@@ -4,7 +4,7 @@ import {
   CoachingSessionBucketDescriptor,
   CoachingSessionBucketKind,
 } from "@/types/coaching-session-bucket";
-import { CoachingSession, DEFAULT_SESSION_DURATION_MINUTES, EnrichedCoachingSession } from "@/types/coaching-session";
+import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import { Id } from "@/types/general";
@@ -57,7 +57,7 @@ export function calculateSessionUrgency(
   const now = DateTime.now();
   // Parse session date as UTC (backend stores in UTC)
   const sessionTime = DateTime.fromISO(session.date, { zone: 'utc' });
-  const sessionEndTime = sessionTime.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
+  const sessionEndTime = sessionTime.plus({ minutes: session.duration_minutes });
   const minutesUntilSession = sessionTime.diff(now, "minutes").minutes;
   const minutesUntilEnd = sessionEndTime.diff(now, "minutes").minutes;
 
@@ -100,7 +100,7 @@ export function getUrgencyMessage(
 
   switch (urgency) {
     case SessionUrgency.Past: {
-      const sessionEndTimeUTC = sessionTimeUTC.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
+      const sessionEndTimeUTC = sessionTimeUTC.plus({ minutes: session.duration_minutes });
       const minutesSinceEnd = Math.abs(
         sessionEndTimeUTC.diff(now, "minutes").minutes
       );

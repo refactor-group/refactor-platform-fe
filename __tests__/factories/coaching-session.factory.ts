@@ -21,6 +21,7 @@ export function createMockCoachingSession(
     id: 'session-123',
     coaching_relationship_id: 'rel-123',
     date: now,
+    duration_minutes: 60,
     created_at: now,
     updated_at: now,
     ...overrides,

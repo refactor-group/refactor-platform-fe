@@ -25,7 +25,6 @@ import {
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import {
-  DEFAULT_SESSION_DURATION_MINUTES,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
 import { SessionUrgency } from "@/types/session-display";
@@ -223,6 +222,7 @@ function PopulatedBody({
       <HeaderRow
         participantName={participant.participantName}
         timeStr={timeStr}
+        durationMinutes={session.duration_minutes}
       />
 
       <ParticipantRow initials={initials} actionsDueCount={actionsDueCount} />
@@ -245,9 +245,11 @@ function PopulatedBody({
 function HeaderRow({
   participantName,
   timeStr,
+  durationMinutes,
 }: {
   participantName: string;
   timeStr: string;
+  durationMinutes: number;
 }) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -264,7 +266,7 @@ function HeaderRow({
           {timeStr}
         </span>
         <span className="text-[11px] text-muted-foreground/60 tabular-nums whitespace-nowrap">
-          {DEFAULT_SESSION_DURATION_MINUTES} min
+          {durationMinutes} min
         </span>
       </div>
     </div>

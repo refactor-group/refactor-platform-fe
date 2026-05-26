@@ -59,6 +59,11 @@ import {
   weekdayFromLuxon,
   weekdayLabel,
 } from "@/types/recurrence";
+import { CoachingSessionDurationInput } from "@/components/ui/coaching-sessions/coaching-session-duration-input";
+import {
+  DurationErrorCode,
+  validateDurationMinutes,
+} from "@/types/coaching-session-duration";
 
 export type CoachingSessionFormMode = "create" | "update";
 
@@ -66,6 +71,7 @@ interface CoachingSessionFormProps {
   existingSession?: CoachingSession;
   mode: CoachingSessionFormMode;
   onOpenChange: (open: boolean) => void;
+  defaultDurationMinutes: number;
 }
 
 
@@ -73,6 +79,7 @@ export default function CoachingSessionForm({
   existingSession,
   mode,
   onOpenChange,
+  defaultDurationMinutes,
 }: CoachingSessionFormProps) {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
     (state) => state
@@ -130,6 +137,10 @@ export default function CoachingSessionForm({
     return localDateTime.toFormat("HH:mm");
   });
 
+  const [durationMinutes, setDurationMinutes] = useState<number>(
+    () => existingSession?.duration_minutes ?? defaultDurationMinutes
+  );
+
   // ── Recurrence state (create mode only) ─────────────────────────────
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>(Frequency.Weekly);
@@ -186,6 +197,9 @@ export default function CoachingSessionForm({
   const resetForm = () => {
     setSessionDate(undefined);
     setSessionTime("");
+    setDurationMinutes(
+      existingSession?.duration_minutes ?? defaultDurationMinutes
+    );
     setSelectedRelationshipId(currentCoachingRelationshipId ?? "");
     setIsRecurring(false);
     setFrequency(Frequency.Weekly);
@@ -205,6 +219,7 @@ export default function CoachingSessionForm({
       ...defaultCoachingSession(),
       coaching_relationship_id: relationshipId,
       date: dateTime,
+      duration_minutes: durationMinutes,
       provider: activeProvider ? activeProvider as Provider : undefined
     };
     await createCoachingSession(newCoachingSession);
@@ -224,6 +239,7 @@ export default function CoachingSessionForm({
       coaching_relationship_id: relationshipId,
       start_at: dateTime,
       recurrence,
+      duration_minutes: durationMinutes,
     };
     const created = await CoachingSessionApi.createRecurring(payload);
     toast.success(
@@ -236,6 +252,7 @@ export default function CoachingSessionForm({
     await update(existingSession.id, {
       ...existingSession,
       date: dateTime,
+      duration_minutes: durationMinutes,
       updated_at: DateTime.now().toUTC(),
     });
   };
@@ -285,13 +302,21 @@ export default function CoachingSessionForm({
         toast.error("Your Google Meet integration has been disconnected. Please reconnect in Settings.");
         router.push("/settings/integrations");
       } else {
-        const message = error.isNetworkError()
-          ? "Could not connect to server. Please check your internet connection."
-          : error.status === 502
-            ? "Could not create Google Meet link due to a connection error. Please try again."
-            : error.status === 422
-              ? `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"}. Please review the form and try again.`
-              : `Failed to ${mode} coaching session. Please try again.`;
+        const errorData = error.data as { error?: string; message?: string } | null | undefined;
+        const isDurationValidationError =
+          error.status === 422 && errorData?.error === DurationErrorCode.ValidationError;
+        let message: string;
+        if (isDurationValidationError) {
+          message = errorData?.message ?? "Invalid duration.";
+        } else if (error.isNetworkError()) {
+          message = "Could not connect to server. Please check your internet connection.";
+        } else if (error.status === 502) {
+          message = "Could not create Google Meet link due to a connection error. Please try again.";
+        } else if (error.status === 422) {
+          message = `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"}. Please review the form and try again.`;
+        } else {
+          message = `Failed to ${mode} coaching session. Please try again.`;
+        }
         toast.error(message);
         console.error(`Failed to ${mode} coaching session:`, error);
       }
@@ -328,6 +353,8 @@ export default function CoachingSessionForm({
     userSession?.timezone,
   ]);
 
+  const durationError = validateDurationMinutes(durationMinutes);
+
   // Determine if form can be submitted
   const canSubmit = (() => {
     if (!sessionDate || !sessionTime || isSubmitting) return false;
@@ -336,6 +363,7 @@ export default function CoachingSessionForm({
       if (!relationshipId) return false;
     }
     if (recurrenceError) return false;
+    if (durationError) return false;
     return true;
   })();
 
@@ -388,17 +416,29 @@ export default function CoachingSessionForm({
             onSelect={(date) => setSessionDate(date)}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="session-time">Session Time</Label>
-          <input
-            type="time"
-            id="session-time"
-            value={sessionTime}
-            onChange={(e) => setSessionTime(e.target.value)}
-            className="w-full border rounded p-2"
-            required
-            disabled={isSubmitting}
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="session-time">Session Time</Label>
+            <input
+              type="time"
+              id="session-time"
+              value={sessionTime}
+              onChange={(e) => setSessionTime(e.target.value)}
+              className="w-full border rounded p-2"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="session-duration">Duration</Label>
+            <CoachingSessionDurationInput
+              id="session-duration"
+              value={durationMinutes}
+              onChange={setDurationMinutes}
+              disabled={isSubmitting}
+              error={durationError}
+            />
+          </div>
         </div>
       </div>
 
