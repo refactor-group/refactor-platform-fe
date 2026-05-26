@@ -1,4 +1,5 @@
 import { User, Role } from "@/types/user";
+import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 
 /**
  * This is an intersection type that combines the User type with additional properties.
@@ -28,7 +29,7 @@ export function defaultUserSession(): UserSession {
     last_name: "",
     display_name: "",
     timezone: "UTC",
-    default_coaching_session_duration_minutes: 60,
+    default_coaching_session_duration_minutes: FALLBACK_DURATION_MINUTES,
     role: Role.User,
     roles: [],
     invite_status: null,

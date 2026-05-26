@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState } from "react";
 import type { FC } from "react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -31,9 +31,9 @@ export const CoachingPreferencesSection: FC = () => {
   const savedValue =
     user?.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES;
   const [durationMinutes, setDurationMinutes] =
-    React.useState<number>(savedValue);
+    useState<number>(savedValue);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setDurationMinutes(savedValue);
   }, [savedValue]);
 
@@ -42,7 +42,7 @@ export const CoachingPreferencesSection: FC = () => {
 
   // Auto-save on value change, debounced so rapid edits (e.g. per-keystroke
   // onChange from the custom numeric input) coalesce into a single PUT.
-  React.useEffect(() => {
+  useEffect(() => {
     if (!user || !isDirty || validationError !== null) return;
     const timer = setTimeout(() => {
       void (async () => {

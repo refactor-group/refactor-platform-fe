@@ -1,6 +1,7 @@
 "use client";
 
-import * as React from "react";
+import { useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,10 +27,10 @@ export function CoachingSessionDurationInput({
   id,
   error,
 }: CoachingSessionDurationInputProps) {
-  const [open, setOpen] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const next = parseInt(e.target.value, 10);
     if (Number.isFinite(next)) {
       onChange(next);
