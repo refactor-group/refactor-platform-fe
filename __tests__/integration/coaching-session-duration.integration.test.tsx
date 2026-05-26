@@ -122,10 +122,10 @@ describe("Coaching session duration integration", () => {
   describe("create mode: pre-populates from coach default and sends duration_minutes", () => {
     it("opens with coach's stored default (50) in the duration input", async () => {
       render(<CoachingSessionDialog open onOpenChange={vi.fn()} />);
-      const durationInput = await screen.findByRole("spinbutton", {
+      const durationInput = await screen.findByRole("combobox", {
         name: /duration in minutes/i,
       });
-      expect(durationInput).toHaveValue(50);
+      expect(durationInput).toHaveValue("50");
     });
 
     it("includes duration_minutes in the POST /coaching_sessions payload", async () => {
@@ -143,7 +143,7 @@ describe("Coaching session duration integration", () => {
       ) as HTMLInputElement;
       fireEvent.change(timeInput, { target: { value: "10:00" } });
 
-      const durationInput = screen.getByRole("spinbutton", {
+      const durationInput = screen.getByRole("combobox", {
         name: /duration in minutes/i,
       });
       fireEvent.change(durationInput, { target: { value: "30" } });
@@ -174,11 +174,11 @@ describe("Coaching session duration integration", () => {
           coachingSessionToEdit={existing}
         />
       );
-      const durationInput = await screen.findByRole("spinbutton", {
+      const durationInput = await screen.findByRole("combobox", {
         name: /duration in minutes/i,
       });
       // 90 != coach default 50 — proves the existing session's value wins.
-      expect(durationInput).toHaveValue(90);
+      expect(durationInput).toHaveValue("90");
     });
 
     it("sends the new duration_minutes in PUT /coaching_sessions/{id} payload", async () => {
@@ -196,7 +196,7 @@ describe("Coaching session duration integration", () => {
         />
       );
 
-      const durationInput = screen.getByRole("spinbutton", {
+      const durationInput = screen.getByRole("combobox", {
         name: /duration in minutes/i,
       });
       fireEvent.change(durationInput, { target: { value: "100" } });

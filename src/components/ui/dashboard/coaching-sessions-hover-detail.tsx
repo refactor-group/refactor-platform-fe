@@ -45,7 +45,7 @@ export function SessionHoverDetail({
     zone: "utc",
   }).setZone(userTimezone);
   const scheduledPrefix = isPastSession(session) ? "Held" : "Scheduled for";
-  const scheduledLabel = `${scheduledPrefix} ${formatDateWithTime(scheduledDateTime, "·", true)}`;
+  const scheduledLabel = `${scheduledPrefix} ${formatDateWithTime(scheduledDateTime, "·", true)} · ${session.duration_minutes} min`;
 
   // Sections are siblings under the parent's `gap-4` (set by the wrapper in
   // `coaching-sessions-list-view.tsx`), matching the rhythm of

@@ -82,7 +82,7 @@ describe("CoachingPreferencesSection", () => {
       mockUpdate.mockResolvedValue(undefined);
       render(<CoachingPreferencesSection />);
 
-      const numericInput = screen.getByRole("spinbutton");
+      const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "45" } });
 
       // Before the debounce elapses, no save has fired.
@@ -102,7 +102,7 @@ describe("CoachingPreferencesSection", () => {
       mockUpdate.mockResolvedValue(undefined);
       render(<CoachingPreferencesSection />);
 
-      const numericInput = screen.getByRole("spinbutton");
+      const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "30" } });
       fireEvent.change(numericInput, { target: { value: "45" } });
       fireEvent.change(numericInput, { target: { value: "60" } });
@@ -123,7 +123,7 @@ describe("CoachingPreferencesSection", () => {
       mockUpdate.mockResolvedValue(undefined);
       render(<CoachingPreferencesSection />);
 
-      const numericInput = screen.getByRole("spinbutton");
+      const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "999" } });
 
       await act(async () => {
@@ -144,7 +144,7 @@ describe("CoachingPreferencesSection", () => {
       );
       render(<CoachingPreferencesSection />);
 
-      const numericInput = screen.getByRole("spinbutton");
+      const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "45" } });
 
       await act(async () => {
@@ -163,7 +163,7 @@ describe("CoachingPreferencesSection", () => {
       );
       render(<CoachingPreferencesSection />);
 
-      const numericInput = screen.getByRole("spinbutton");
+      const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "45" } });
 
       await act(async () => {
