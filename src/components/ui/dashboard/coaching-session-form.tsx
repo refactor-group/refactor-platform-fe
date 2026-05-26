@@ -61,7 +61,7 @@ import {
 } from "@/types/recurrence";
 import { CoachingSessionDurationInput } from "@/components/ui/coaching-sessions/coaching-session-duration-input";
 import {
-  DurationErrorCode,
+  isDurationValidationError,
   validateDurationMinutes,
 } from "@/types/coaching-session-duration";
 
@@ -302,12 +302,9 @@ export default function CoachingSessionForm({
         toast.error("Your Google Meet integration has been disconnected. Please reconnect in Settings.");
         router.push("/settings/integrations");
       } else {
-        const errorData = error.data as { error?: string; message?: string } | null | undefined;
-        const isDurationValidationError =
-          error.status === 422 && errorData?.error === DurationErrorCode.ValidationError;
         let message: string;
-        if (isDurationValidationError) {
-          message = errorData?.message ?? "Invalid duration.";
+        if (isDurationValidationError(error)) {
+          message = error.data.message;
         } else if (error.isNetworkError()) {
           message = "Could not connect to server. Please check your internet connection.";
         } else if (error.status === 502) {
@@ -353,7 +350,7 @@ export default function CoachingSessionForm({
     userSession?.timezone,
   ]);
 
-  const durationError = validateDurationMinutes(durationMinutes);
+  const durationValidation = validateDurationMinutes(durationMinutes);
 
   // Determine if form can be submitted
   const canSubmit = (() => {
@@ -363,7 +360,7 @@ export default function CoachingSessionForm({
       if (!relationshipId) return false;
     }
     if (recurrenceError) return false;
-    if (durationError) return false;
+    if (durationValidation.isErr()) return false;
     return true;
   })();
 
@@ -436,7 +433,7 @@ export default function CoachingSessionForm({
               value={durationMinutes}
               onChange={setDurationMinutes}
               disabled={isSubmitting}
-              error={durationError}
+              error={durationValidation.match(() => undefined, (msg) => msg)}
             />
           </div>
         </div>

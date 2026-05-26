@@ -37,13 +37,14 @@ export const CoachingPreferencesSection: FC = () => {
     setDurationMinutes(savedValue);
   }, [savedValue]);
 
-  const validationError = validateDurationMinutes(durationMinutes);
+  const durationValidation = validateDurationMinutes(durationMinutes);
   const isDirty = durationMinutes !== savedValue;
+  const isValid = durationValidation.isOk();
 
   // Auto-save on value change, debounced so rapid edits (e.g. per-keystroke
   // onChange from the custom numeric input) coalesce into a single PUT.
   useEffect(() => {
-    if (!user || !isDirty || validationError !== null) return;
+    if (!user || !isDirty || !isValid) return;
     const timer = setTimeout(() => {
       void (async () => {
         try {
@@ -54,10 +55,7 @@ export const CoachingPreferencesSection: FC = () => {
           refresh();
         } catch (error) {
           if (isDurationValidationError(error)) {
-            toast.error(
-              (error.data as { message?: string }).message ??
-                "Invalid duration."
-            );
+            toast.error(error.data.message);
           } else {
             toast.error("Couldn't save preferences. Please try again.");
           }
@@ -68,7 +66,7 @@ export const CoachingPreferencesSection: FC = () => {
   }, [
     durationMinutes,
     isDirty,
-    validationError,
+    isValid,
     user,
     userId,
     update,
@@ -96,7 +94,11 @@ export const CoachingPreferencesSection: FC = () => {
               value={durationMinutes}
               onChange={setDurationMinutes}
               disabled={isLoading}
-              error={isDirty ? validationError : null}
+              error={
+                isDirty
+                  ? durationValidation.match(() => undefined, (msg) => msg)
+                  : undefined
+              }
             />
           </FieldContent>
         </Field>

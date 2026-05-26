@@ -1,3 +1,4 @@
+import { Result, ok, err } from "neverthrow";
 import { EntityApiError } from "@/types/general";
 
 export const MIN_DURATION_MINUTES = 1;
@@ -10,38 +11,39 @@ export enum DurationErrorCode {
   ValidationError = "validation_error",
 }
 
-interface DurationErrorBody {
+export interface DurationErrorBody {
   status_code?: number;
-  error?: string;
-  message?: string;
+  error: DurationErrorCode.ValidationError;
+  message: string;
 }
 
-export function validateDurationMinutes(value: number): string | null {
+export function validateDurationMinutes(value: number): Result<number, string> {
   if (!Number.isFinite(value)) {
-    return "Duration must be a number.";
+    return err("Duration must be a number.");
   }
   if (!Number.isInteger(value)) {
-    return "Duration must be a whole number of minutes.";
+    return err("Duration must be a whole number of minutes.");
   }
   if (value < MIN_DURATION_MINUTES) {
-    return `Duration must be at least ${MIN_DURATION_MINUTES} minute.`;
+    return err(`Duration must be at least ${MIN_DURATION_MINUTES} minute.`);
   }
   if (value > MAX_DURATION_MINUTES) {
-    return `Duration must be at most ${MAX_DURATION_MINUTES} minutes.`;
+    return err(`Duration must be at most ${MAX_DURATION_MINUTES} minutes.`);
   }
-  return null;
+  return ok(value);
 }
 
 export function isDurationValidationError(
-  err: unknown
-): err is EntityApiError {
-  if (!(err instanceof EntityApiError) || err.status !== 422) {
+  error: unknown
+): error is EntityApiError & { data: DurationErrorBody } {
+  if (!(error instanceof EntityApiError) || error.status !== 422) {
     return false;
   }
-  const data = err.data as DurationErrorBody | null | undefined;
+  const data = error.data as Partial<DurationErrorBody> | null | undefined;
   return (
     !!data &&
     typeof data === "object" &&
-    data.error === DurationErrorCode.ValidationError
+    data.error === DurationErrorCode.ValidationError &&
+    typeof data.message === "string"
   );
 }

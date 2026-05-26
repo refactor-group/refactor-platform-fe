@@ -17,7 +17,7 @@ export interface CoachingSessionDurationInputProps {
   onChange: (minutes: number) => void;
   disabled?: boolean;
   id?: string;
-  error?: string | null;
+  error?: string;
 }
 
 export function CoachingSessionDurationInput({

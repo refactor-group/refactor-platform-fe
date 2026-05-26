@@ -16,35 +16,39 @@ function makeEntityApiError(status: number, data: unknown): EntityApiError {
 
 describe("validateDurationMinutes", () => {
   it("rejects zero (below MIN_DURATION_MINUTES)", () => {
-    expect(validateDurationMinutes(0)).not.toBeNull();
+    expect(validateDurationMinutes(0).isErr()).toBe(true);
   });
 
   it("accepts 1 (the minimum)", () => {
-    expect(validateDurationMinutes(1)).toBeNull();
+    const result = validateDurationMinutes(1);
+    expect(result.isOk()).toBe(true);
+    expect(result._unsafeUnwrap()).toBe(1);
   });
 
   it("accepts 60 (typical default)", () => {
-    expect(validateDurationMinutes(60)).toBeNull();
+    const result = validateDurationMinutes(60);
+    expect(result.isOk()).toBe(true);
+    expect(result._unsafeUnwrap()).toBe(60);
   });
 
   it("accepts 480 (the maximum)", () => {
-    expect(validateDurationMinutes(480)).toBeNull();
+    expect(validateDurationMinutes(480).isOk()).toBe(true);
   });
 
   it("rejects 481 (above MAX_DURATION_MINUTES)", () => {
-    expect(validateDurationMinutes(481)).not.toBeNull();
+    expect(validateDurationMinutes(481).isErr()).toBe(true);
   });
 
   it("rejects negative values", () => {
-    expect(validateDurationMinutes(-30)).not.toBeNull();
+    expect(validateDurationMinutes(-30).isErr()).toBe(true);
   });
 
   it("rejects non-integer values", () => {
-    expect(validateDurationMinutes(1.5)).not.toBeNull();
+    expect(validateDurationMinutes(1.5).isErr()).toBe(true);
   });
 
   it("rejects NaN", () => {
-    expect(validateDurationMinutes(NaN)).not.toBeNull();
+    expect(validateDurationMinutes(NaN).isErr()).toBe(true);
   });
 });
 
