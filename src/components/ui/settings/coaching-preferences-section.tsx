@@ -26,7 +26,7 @@ const AUTOSAVE_DEBOUNCE_MS = 400;
 export const CoachingPreferencesSection: FC = () => {
   const { isACoach, userId } = useAuthStore((state) => state);
   const { user, isLoading, refresh } = useUser(userId);
-  const { update } = useUserMutation();
+  const { update, isLoading: isSaving } = useUserMutation();
 
   const savedValue =
     user?.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES;
@@ -43,8 +43,10 @@ export const CoachingPreferencesSection: FC = () => {
 
   // Auto-save on value change, debounced so rapid edits (e.g. per-keystroke
   // onChange from the custom numeric input) coalesce into a single PUT.
+  // `isSaving` gates re-entry so an in-flight save doesn't trigger a second
+  // PUT when `update`'s identity changes mid-request and reruns the effect.
   useEffect(() => {
-    if (!user || !isDirty || !isValid) return;
+    if (!user || !isDirty || !isValid || isSaving) return;
     const timer = setTimeout(() => {
       void (async () => {
         try {
@@ -67,6 +69,7 @@ export const CoachingPreferencesSection: FC = () => {
     durationMinutes,
     isDirty,
     isValid,
+    isSaving,
     user,
     userId,
     update,
