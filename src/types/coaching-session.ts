@@ -7,11 +7,7 @@ import { Organization } from "@/types/organization";
 import { Goal } from "@/types/goal";
 import { Agreement } from "@/types/agreement";
 import { Provider } from "@/types/provider";
-/**
- * Default session duration in minutes (used until backend provides per-session duration).
- * TODO: replace this constant once full session duration has been implemented in the entire system.
- */
-export const DEFAULT_SESSION_DURATION_MINUTES = 60;
+import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
@@ -19,6 +15,7 @@ export interface CoachingSession {
   id: Id;
   coaching_relationship_id: Id;
   date: string;
+  duration_minutes: number;
   meeting_url?: string;
   provider?: Provider;
   created_at: DateTime;
@@ -79,6 +76,7 @@ export function isCoachingSession(value: unknown): value is CoachingSession {
     typeof object.id === "string" &&
     typeof object.coaching_relationship_id === "string" &&
     typeof object.date === "string" &&
+    typeof object.duration_minutes === "number" &&
     typeof object.created_at === "string" &&
     typeof object.updated_at === "string"
   );
@@ -141,6 +139,7 @@ export function defaultCoachingSession(): CoachingSession {
     id: "",
     coaching_relationship_id: "",
     date: "",
+    duration_minutes: FALLBACK_DURATION_MINUTES,
     created_at: now,
     updated_at: now,
   };
@@ -166,7 +165,7 @@ export function coachingSessionsToString(
  * Returns true when the coaching session is considered "past."
  *
  * By default a session is past once the current time exceeds the session
- * start plus {@link DEFAULT_SESSION_DURATION_MINUTES}. Callers that need a
+ * start plus the session's own `duration_minutes`. Callers that need a
  * different boundary — for example end-of-day in the user's timezone — can
  * supply a custom `cutoff` DateTime that overrides the default calculation.
  *
@@ -183,7 +182,7 @@ export function isPastSession(
     return now > options.cutoff;
   }
   const sessionDate = DateTime.fromISO(session.date, { zone: 'utc' });
-  const sessionEnd = sessionDate.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
+  const sessionEnd = sessionDate.plus({ minutes: session.duration_minutes });
   return sessionEnd < now;
 }
 
@@ -201,7 +200,7 @@ export function isFutureSession(session: CoachingSession): boolean {
 
 export function isUnderwaySession(session: CoachingSession): boolean {
   const sessionStart = DateTime.fromISO(session.date, { zone: 'utc' });
-  const sessionEnd = sessionStart.plus({ minutes: DEFAULT_SESSION_DURATION_MINUTES });
+  const sessionEnd = sessionStart.plus({ minutes: session.duration_minutes });
   const now = DateTime.now();
   return now >= sessionStart && now < sessionEnd;
 }

@@ -5,8 +5,8 @@ import {
   isFutureSession,
   isUnderwaySession,
   isSessionToday,
-  DEFAULT_SESSION_DURATION_MINUTES,
 } from "@/types/coaching-session";
+import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 import { createSessionAt, createMockSession } from "./test-utils";
 
 describe("isPastSession", () => {
@@ -23,6 +23,15 @@ describe("isPastSession", () => {
   it("returns false for a future session", () => {
     const session = createSessionAt(60);
     expect(isPastSession(session)).toBe(false);
+  });
+
+  it("uses the session's own duration_minutes (30-min session is past at minute 31)", () => {
+    // Phase 2 rewire: this would have returned false under the old constant
+    // (60-min default) because 31 min < 60. The session's own duration drives
+    // the calculation now.
+    const session = createSessionAt(-31);
+    session.duration_minutes = 30;
+    expect(isPastSession(session)).toBe(true);
   });
 
   it("returns true when now is past the custom cutoff", () => {
@@ -115,7 +124,7 @@ describe("isUnderwaySession", () => {
   });
 
   it("returns true near the end of the session duration", () => {
-    const session = createSessionAt(-(DEFAULT_SESSION_DURATION_MINUTES - 1)); // 1 min before end
+    const session = createSessionAt(-(FALLBACK_DURATION_MINUTES - 1)); // 1 min before end
     expect(isUnderwaySession(session)).toBe(true);
   });
 
@@ -126,6 +135,15 @@ describe("isUnderwaySession", () => {
 
   it("returns false when session has not started yet", () => {
     const session = createSessionAt(30);
+    expect(isUnderwaySession(session)).toBe(false);
+  });
+
+  it("uses the session's own duration_minutes (90-min session is not underway at minute 91)", () => {
+    // Phase 2 rewire: with a longer custom duration, the underway window
+    // extends to match. Boundary check confirms isUnderwaySession reads
+    // session.duration_minutes (not the constant).
+    const session = createSessionAt(-91);
+    session.duration_minutes = 90;
     expect(isUnderwaySession(session)).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 import { Id } from "@/types/general";
+import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 
 /**
  * Represents a user role assignment within an organization or at the system level.
@@ -33,6 +34,7 @@ export interface User {
   last_name: string;
   display_name: string;
   timezone: string;
+  default_coaching_session_duration_minutes: number;
   /**
    * @deprecated Use roles array with getUserRoleForOrganization() instead
    */
@@ -74,6 +76,8 @@ export function parseUser(data: unknown): User {
     last_name: data.last_name,
     display_name: data.display_name,
     timezone: data.timezone || "UTC",
+    default_coaching_session_duration_minutes:
+      data.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,
     role: data.role,
     roles: data.roles,
     invite_status: data.invite_status,
@@ -105,6 +109,7 @@ export function defaultUser(): User {
     last_name: "",
     display_name: "",
     timezone: "UTC",
+    default_coaching_session_duration_minutes: FALLBACK_DURATION_MINUTES,
     role: Role.User,
     roles: [],
     invite_status: null,

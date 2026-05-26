@@ -1,6 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { getUserRoleForOrganization, Role } from '@/types/user';
+import { getUserRoleForOrganization, parseUser, Role } from '@/types/user';
 import type { UserRole } from '@/types/user';
+
+describe('parseUser', () => {
+  it('falls back to 60 for default_coaching_session_duration_minutes when the upstream payload omits it', () => {
+    // Defense-in-depth: BE guarantees the field per CoachingSessionDurationFeature v2,
+    // but a stale cache or test fixture might omit it; the parser shouldn't crash.
+    const payload = {
+      id: 'user-1',
+      email: 'jim@example.com',
+      password: 'irrelevant',
+      first_name: 'Jim',
+      last_name: 'Hodapp',
+      display_name: 'Jim Hodapp',
+      timezone: 'America/Los_Angeles',
+      role: Role.User,
+      roles: [],
+      invite_status: null,
+    };
+    const user = parseUser(payload);
+    expect(user.default_coaching_session_duration_minutes).toBe(60);
+  });
+});
 
 describe('getUserRoleForOrganization', () => {
   it('should prioritize SuperAdmin role', () => {

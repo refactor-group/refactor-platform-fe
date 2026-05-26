@@ -109,7 +109,7 @@ describe("CoachingSessionForm – coachee dropdown ordering", () => {
   function renderCreateForm() {
     render(
       <Wrapper>
-        <CoachingSessionForm mode="create" onOpenChange={vi.fn()} />
+        <CoachingSessionForm mode="create" onOpenChange={vi.fn()} defaultDurationMinutes={60} />
       </Wrapper>
     );
   }
@@ -143,7 +143,7 @@ describe("CoachingSessionForm – coachee dropdown ordering", () => {
 
     renderCreateForm();
 
-    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(screen.getByLabelText("Select Coachee"));
 
     const optionNames = screen
       .getAllByRole("option")
@@ -169,6 +169,7 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
           mode="update"
           existingSession={existingSession}
           onOpenChange={vi.fn()}
+          defaultDurationMinutes={60}
         />
       </Wrapper>
     );

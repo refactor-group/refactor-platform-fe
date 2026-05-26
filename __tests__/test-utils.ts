@@ -24,6 +24,7 @@ export function createMockUser(overrides?: Partial<User>): User {
     last_name: "Hodapp",
     display_name: "Jim Hodapp",
     timezone: "America/Los_Angeles",
+    default_coaching_session_duration_minutes: 60,
     role: "coach",
     roles: [],
     invite_status: null,
@@ -74,6 +75,7 @@ export function createMockSession(
     id: "session-1",
     coaching_relationship_id: "rel-1",
     date: now.plus({ hours: 2 }).toISO() ?? '', // Date is ISO string
+    duration_minutes: 60,
     created_at: now, // CoachingSession expects DateTime object
     updated_at: now,
     ...overrides,
@@ -103,6 +105,7 @@ export function createMockEnrichedSession(
     id: "session-1",
     coaching_relationship_id: "rel-1",
     date: now.plus({ hours: 2 }).toISO() ?? "",
+    duration_minutes: 60,
     created_at: now,
     updated_at: now,
     relationship: {
@@ -120,6 +123,7 @@ export function createMockEnrichedSession(
       last_name: "Hodapp",
       display_name: "Jim Hodapp",
       timezone: "America/Los_Angeles",
+      default_coaching_session_duration_minutes: 60,
       role: "coach",
       roles: [],
       created_at: now.toISO() ?? "",
@@ -132,6 +136,7 @@ export function createMockEnrichedSession(
       last_name: "Chen",
       display_name: "Alex Chen",
       timezone: "America/Los_Angeles",
+      default_coaching_session_duration_minutes: 60,
       role: "user",
       roles: [],
       created_at: now.toISO() ?? "",

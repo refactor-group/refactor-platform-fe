@@ -36,7 +36,7 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useState, useMemo, useEffect, type FormEvent } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
@@ -59,6 +59,11 @@ import {
   weekdayFromLuxon,
   weekdayLabel,
 } from "@/types/recurrence";
+import { CoachingSessionDurationInput } from "@/components/ui/coaching-sessions/coaching-session-duration-input";
+import {
+  isDurationValidationError,
+  validateDurationMinutes,
+} from "@/types/coaching-session-duration";
 
 export type CoachingSessionFormMode = "create" | "update";
 
@@ -66,6 +71,7 @@ interface CoachingSessionFormProps {
   existingSession?: CoachingSession;
   mode: CoachingSessionFormMode;
   onOpenChange: (open: boolean) => void;
+  defaultDurationMinutes: number;
 }
 
 
@@ -73,6 +79,7 @@ export default function CoachingSessionForm({
   existingSession,
   mode,
   onOpenChange,
+  defaultDurationMinutes,
 }: CoachingSessionFormProps) {
   const { currentCoachingRelationshipId } = useCoachingRelationshipStateStore(
     (state) => state
@@ -130,6 +137,30 @@ export default function CoachingSessionForm({
     return localDateTime.toFormat("HH:mm");
   });
 
+  const [durationMinutes, setDurationMinutes] = useState<number>(
+    () => existingSession?.duration_minutes ?? defaultDurationMinutes
+  );
+
+  // Tracks whether the coach has manually edited the duration field this
+  // session. Set on any user-driven change; checked by the sync effect so
+  // that the cold-load default-load doesn't clobber deliberate edits.
+  const hasUserEditedDurationRef = useRef(false);
+
+  const handleDurationChange = useCallback((next: number) => {
+    hasUserEditedDurationRef.current = true;
+    setDurationMinutes(next);
+  }, []);
+
+  // Sync with the coach's stored default once user data loads. Only in create
+  // mode (update mode pre-fills from the existing session), and only while the
+  // coach hasn't manually edited the field yet — otherwise a cold-load fetch
+  // resolving mid-edit would silently overwrite a deliberate value.
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (hasUserEditedDurationRef.current) return;
+    setDurationMinutes(defaultDurationMinutes);
+  }, [defaultDurationMinutes, mode]);
+
   // ── Recurrence state (create mode only) ─────────────────────────────
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>(Frequency.Weekly);
@@ -186,6 +217,10 @@ export default function CoachingSessionForm({
   const resetForm = () => {
     setSessionDate(undefined);
     setSessionTime("");
+    setDurationMinutes(
+      existingSession?.duration_minutes ?? defaultDurationMinutes
+    );
+    hasUserEditedDurationRef.current = false;
     setSelectedRelationshipId(currentCoachingRelationshipId ?? "");
     setIsRecurring(false);
     setFrequency(Frequency.Weekly);
@@ -205,6 +240,7 @@ export default function CoachingSessionForm({
       ...defaultCoachingSession(),
       coaching_relationship_id: relationshipId,
       date: dateTime,
+      duration_minutes: durationMinutes,
       provider: activeProvider ? activeProvider as Provider : undefined
     };
     await createCoachingSession(newCoachingSession);
@@ -224,6 +260,7 @@ export default function CoachingSessionForm({
       coaching_relationship_id: relationshipId,
       start_at: dateTime,
       recurrence,
+      duration_minutes: durationMinutes,
     };
     const created = await CoachingSessionApi.createRecurring(payload);
     toast.success(
@@ -236,6 +273,7 @@ export default function CoachingSessionForm({
     await update(existingSession.id, {
       ...existingSession,
       date: dateTime,
+      duration_minutes: durationMinutes,
       updated_at: DateTime.now().toUTC(),
     });
   };
@@ -285,13 +323,18 @@ export default function CoachingSessionForm({
         toast.error("Your Google Meet integration has been disconnected. Please reconnect in Settings.");
         router.push("/settings/integrations");
       } else {
-        const message = error.isNetworkError()
-          ? "Could not connect to server. Please check your internet connection."
-          : error.status === 502
-            ? "Could not create Google Meet link due to a connection error. Please try again."
-            : error.status === 422
-              ? `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"}. Please review the form and try again.`
-              : `Failed to ${mode} coaching session. Please try again.`;
+        let message: string;
+        if (isDurationValidationError(error)) {
+          message = error.data.message;
+        } else if (error.isNetworkError()) {
+          message = "Could not connect to server. Please check your internet connection.";
+        } else if (error.status === 502) {
+          message = "Could not create Google Meet link due to a connection error. Please try again.";
+        } else if (error.status === 422) {
+          message = `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"}. Please review the form and try again.`;
+        } else {
+          message = `Failed to ${mode} coaching session. Please try again.`;
+        }
         toast.error(message);
         console.error(`Failed to ${mode} coaching session:`, error);
       }
@@ -328,6 +371,8 @@ export default function CoachingSessionForm({
     userSession?.timezone,
   ]);
 
+  const durationValidation = validateDurationMinutes(durationMinutes);
+
   // Determine if form can be submitted
   const canSubmit = (() => {
     if (!sessionDate || !sessionTime || isSubmitting) return false;
@@ -336,6 +381,7 @@ export default function CoachingSessionForm({
       if (!relationshipId) return false;
     }
     if (recurrenceError) return false;
+    if (durationValidation.isErr()) return false;
     return true;
   })();
 
@@ -388,17 +434,29 @@ export default function CoachingSessionForm({
             onSelect={(date) => setSessionDate(date)}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="session-time">Session Time</Label>
-          <input
-            type="time"
-            id="session-time"
-            value={sessionTime}
-            onChange={(e) => setSessionTime(e.target.value)}
-            className="w-full border rounded p-2"
-            required
-            disabled={isSubmitting}
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="session-time">Session Time</Label>
+            <input
+              type="time"
+              id="session-time"
+              value={sessionTime}
+              onChange={(e) => setSessionTime(e.target.value)}
+              className="w-full border rounded p-2"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="session-duration">Duration</Label>
+            <CoachingSessionDurationInput
+              id="session-duration"
+              value={durationMinutes}
+              onChange={handleDurationChange}
+              disabled={isSubmitting}
+              error={durationValidation.match(() => undefined, (msg) => msg)}
+            />
+          </div>
         </div>
       </div>
 

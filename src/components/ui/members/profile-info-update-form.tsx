@@ -32,6 +32,8 @@ export function ProfileInfoUpdateForm({
     last_name: user.last_name,
     display_name: user.display_name,
     timezone: user.timezone || getBrowserTimezone(),
+    default_coaching_session_duration_minutes:
+      user.default_coaching_session_duration_minutes,
     role: user.role,
     roles: user.roles,
     invite_status: user.invite_status,

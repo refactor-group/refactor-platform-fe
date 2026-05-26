@@ -112,6 +112,7 @@ export interface CreateRecurringSessionRequest {
   coaching_relationship_id: Id;
   start_at: string;
   recurrence: Recurrence;
+  duration_minutes?: number;
 }
 
 export function recurrenceToPayload(
