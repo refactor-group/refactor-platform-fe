@@ -5,8 +5,8 @@ import {
   isFutureSession,
   isUnderwaySession,
   isSessionToday,
-  DEFAULT_SESSION_DURATION_MINUTES,
 } from "@/types/coaching-session";
+import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 import { createSessionAt, createMockSession } from "./test-utils";
 
 describe("isPastSession", () => {
@@ -124,7 +124,7 @@ describe("isUnderwaySession", () => {
   });
 
   it("returns true near the end of the session duration", () => {
-    const session = createSessionAt(-(DEFAULT_SESSION_DURATION_MINUTES - 1)); // 1 min before end
+    const session = createSessionAt(-(FALLBACK_DURATION_MINUTES - 1)); // 1 min before end
     expect(isUnderwaySession(session)).toBe(true);
   });
 

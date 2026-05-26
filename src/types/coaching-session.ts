@@ -7,12 +7,7 @@ import { Organization } from "@/types/organization";
 import { Goal } from "@/types/goal";
 import { Agreement } from "@/types/agreement";
 import { Provider } from "@/types/provider";
-/**
- * Fallback session duration in minutes, used when a CoachingSession is not
- * available in the calling context. Concrete sessions carry their own
- * `duration_minutes` and should be preferred.
- */
-export const DEFAULT_SESSION_DURATION_MINUTES = 60;
+import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
@@ -144,7 +139,7 @@ export function defaultCoachingSession(): CoachingSession {
     id: "",
     coaching_relationship_id: "",
     date: "",
-    duration_minutes: DEFAULT_SESSION_DURATION_MINUTES,
+    duration_minutes: FALLBACK_DURATION_MINUTES,
     created_at: now,
     updated_at: now,
   };
