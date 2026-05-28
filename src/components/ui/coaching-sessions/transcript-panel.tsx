@@ -53,6 +53,9 @@ function deriveEmptyState(
     case MeetingRecordingStatus.Failed:
       return { kind: "recording-failed", errorMessage: recording.error_message };
     case MeetingRecordingStatus.Completed:
+    case MeetingRecordingStatus.Cancelled:
+      // Cancelled = user stopped early; bot may have produced a partial
+      // transcript. Downstream pipeline is identical to Completed.
       if (transcription?.status === TranscriptionStatus.Failed) {
         return { kind: "transcription-failed", errorMessage: transcription.error_message };
       }

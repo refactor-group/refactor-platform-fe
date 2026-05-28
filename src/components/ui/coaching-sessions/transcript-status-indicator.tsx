@@ -7,23 +7,12 @@ import { IndicatorStatus } from "@/lib/transcript/indicator-status";
 
 interface TranscriptStatusIndicatorProps {
   status: IndicatorStatus;
-  /** Optional extra classes for absolute positioning on a parent icon. */
   className?: string;
 }
 
-/**
- * The dot/glyph rendered on top of the transcript toggle button.
- *
- * Three visible states:
- *   - Recording       → slow-pulsing red dot
- *   - TranscriptReady → solid green dot
- *   - Failed          → small amber ! glyph
- *
- * Renders nothing for `None`.
- *
- * The indicator is decorative (`aria-hidden`); the button's tooltip
- * carries the authoritative text description.
- */
+// Decorative dot/glyph on the transcript-toggle button. Live recording
+// indicator lives on the camera/join button (meeting-level state, not a
+// transcript-artifact state).
 export function TranscriptStatusIndicator({
   status,
   className,
@@ -45,18 +34,7 @@ export function TranscriptStatusIndicator({
   return (
     <span
       aria-hidden="true"
-      className={cn(
-        "h-2 w-2 rounded-full",
-        dotColorClass(status),
-        status === IndicatorStatus.Recording && "motion-safe:animate-pulse",
-        className
-      )}
+      className={cn("h-2 w-2 rounded-full bg-emerald-500", className)}
     />
   );
-}
-
-function dotColorClass(status: IndicatorStatus): string {
-  if (status === IndicatorStatus.Recording) return "bg-red-500";
-  if (status === IndicatorStatus.TranscriptReady) return "bg-emerald-500";
-  return "";
 }

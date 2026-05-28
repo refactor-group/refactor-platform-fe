@@ -12,17 +12,6 @@ describe("TranscriptStatusIndicator", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders a red pulsing dot for Recording", () => {
-    const { container } = render(
-      <TranscriptStatusIndicator status={IndicatorStatus.Recording} />
-    );
-    const dot = container.firstChild as HTMLElement;
-    expect(dot).not.toBeNull();
-    expect(dot.className).toContain("bg-red-500");
-    expect(dot.className).toContain("motion-safe:animate-pulse");
-    expect(dot.className).toContain("rounded-full");
-  });
-
   it("renders a solid green dot for TranscriptReady", () => {
     const { container } = render(
       <TranscriptStatusIndicator status={IndicatorStatus.TranscriptReady} />
@@ -45,7 +34,7 @@ describe("TranscriptStatusIndicator", () => {
 
   it("is decorative (aria-hidden) — parent button carries the label", () => {
     const { container } = render(
-      <TranscriptStatusIndicator status={IndicatorStatus.Recording} />
+      <TranscriptStatusIndicator status={IndicatorStatus.TranscriptReady} />
     );
     const dot = container.firstChild as HTMLElement;
     expect(dot.getAttribute("aria-hidden")).toBe("true");

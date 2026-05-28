@@ -27,23 +27,19 @@ describe("deriveIndicatorStatus — failure takes precedence", () => {
   });
 });
 
-describe("deriveIndicatorStatus — live recording", () => {
-  it("returns Recording when the bot is actively recording", () => {
-    expect(
-      deriveIndicatorStatus({
-        recordingStatus: MeetingRecordingStatus.Recording,
-      })
-    ).toBe(IndicatorStatus.Recording);
-  });
-
-  it("does not pulse during non-Recording live states (joining/in-meeting/processing)", () => {
-    const quietLiveStates: MeetingRecordingStatus[] = [
+// Live "Recording" state intentionally does NOT surface here — the
+// pulsing red dot lives on the camera/join button, not on the
+// transcript-toggle indicator.
+describe("deriveIndicatorStatus — live recording is NOT a transcript-toggle state", () => {
+  it("returns None across every live/in-progress recording status", () => {
+    const liveStates: MeetingRecordingStatus[] = [
       MeetingRecordingStatus.Joining,
       MeetingRecordingStatus.WaitingRoom,
       MeetingRecordingStatus.InMeeting,
+      MeetingRecordingStatus.Recording,
       MeetingRecordingStatus.Processing,
     ];
-    for (const status of quietLiveStates) {
+    for (const status of liveStates) {
       expect(
         deriveIndicatorStatus({ recordingStatus: status })
       ).toBe(IndicatorStatus.None);
@@ -90,12 +86,32 @@ describe("deriveIndicatorStatus — default", () => {
     ).toBe(IndicatorStatus.None);
   });
 
-  it("recording=Recording takes priority over transcript=Completed (e.g. re-recording a session)", () => {
+  it("returns TranscriptReady when transcript completed even if recording=Recording (re-recording case)", () => {
+    // Recording state lives on the camera button, not here, so a fresh
+    // re-recording with a still-readable prior transcript surfaces the
+    // ready-to-view artifact rather than a (no-op) live indicator.
     expect(
       deriveIndicatorStatus({
         recordingStatus: MeetingRecordingStatus.Recording,
         transcriptionStatus: TranscriptionStatus.Completed,
       })
-    ).toBe(IndicatorStatus.Recording);
+    ).toBe(IndicatorStatus.TranscriptReady);
+  });
+
+  it("returns None for a Cancelled recording with no transcription artifact yet", () => {
+    expect(
+      deriveIndicatorStatus({
+        recordingStatus: MeetingRecordingStatus.Cancelled,
+      })
+    ).toBe(IndicatorStatus.None);
+  });
+
+  it("returns TranscriptReady when a Cancelled recording produced a Completed transcript", () => {
+    expect(
+      deriveIndicatorStatus({
+        recordingStatus: MeetingRecordingStatus.Cancelled,
+        transcriptionStatus: TranscriptionStatus.Completed,
+      })
+    ).toBe(IndicatorStatus.TranscriptReady);
   });
 });

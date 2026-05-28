@@ -4,10 +4,15 @@ import userEvent from "@testing-library/user-event";
 
 import { JoinMeetingButton } from "@/components/ui/coaching-sessions/join-meeting-button";
 import { MeetingRecordingStatus } from "@/types/meeting-recording";
+import { TranscriptionStatus } from "@/types/transcription";
 
 const recordingHookState: {
   recording: { status: MeetingRecordingStatus; started_at?: string } | null;
 } = { recording: null };
+
+const transcriptionHookState: {
+  transcription: { id: string; status: TranscriptionStatus } | null;
+} = { transcription: null };
 
 const startRecording = vi.fn(() => Promise.resolve({}));
 const stopRecording = vi.fn(() => Promise.resolve({}));
@@ -17,6 +22,12 @@ vi.mock("@/lib/api/meeting-recordings", () => ({
     recording: recordingHookState.recording,
     startRecording,
     stopRecording,
+  }),
+}));
+
+vi.mock("@/lib/api/transcriptions", () => ({
+  useTranscription: () => ({
+    transcription: transcriptionHookState.transcription,
   }),
 }));
 
@@ -34,6 +45,7 @@ let openSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   recordingHookState.recording = null;
+  transcriptionHookState.transcription = null;
   startRecording.mockClear();
   stopRecording.mockClear();
   toastError.mockClear();
@@ -65,9 +77,9 @@ describe("JoinMeetingButton — disabled (no meeting URL)", () => {
   });
 });
 
-// ── Idle (dropdown) state ────────────────────────────────────────────
+// ── Coach idle (dropdown) state ──────────────────────────────────────
 
-describe("JoinMeetingButton — idle dropdown", () => {
+describe("JoinMeetingButton — coach idle dropdown", () => {
   it("calls window.open synchronously BEFORE startRecording when 'Join with transcription' is clicked", async () => {
     const user = userEvent.setup();
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
@@ -127,40 +139,211 @@ describe("JoinMeetingButton — idle dropdown", () => {
   });
 });
 
-// ── Joining (in-progress, pre-live) state ─────────────────────────────
+// ── Coach idle + existing transcription: replacement confirmation ────
+
+describe("JoinMeetingButton — coach idle, existing transcription on the session", () => {
+  it("'Join with transcription' opens a replacement confirmation dialog instead of firing the API", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Completed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /join with transcription/i })
+    );
+
+    expect(
+      await screen.findByText(/replace existing transcription/i)
+    ).toBeInTheDocument();
+    // Crucially, neither side-effect fires before the user confirms.
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(startRecording).not.toHaveBeenCalled();
+  });
+
+  it("confirming the replacement dialog fires window.open and startRecording (same as the no-transcription path)", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Completed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /join with transcription/i })
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /replace transcription/i })
+    );
+
+    expect(openSpy).toHaveBeenCalledWith(
+      MEETING_URL,
+      "_blank",
+      "noopener,noreferrer"
+    );
+    expect(startRecording).toHaveBeenCalledWith(MEETING_URL);
+    const openOrder = openSpy.mock.invocationCallOrder[0];
+    const startOrder = startRecording.mock.invocationCallOrder[0];
+    expect(openOrder).toBeLessThan(startOrder);
+  });
+
+  it("cancelling the replacement dialog does NOT call window.open or startRecording", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Completed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /join with transcription/i })
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /keep existing transcript/i })
+    );
+
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(startRecording).not.toHaveBeenCalled();
+  });
+
+  it("'Join WITHOUT transcription' bypasses the confirmation dialog (only the transcribing path is gated)", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Completed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: /join without transcription/i,
+      })
+    );
+
+    expect(
+      screen.queryByText(/replace existing transcription/i)
+    ).not.toBeInTheDocument();
+    expect(openSpy).toHaveBeenCalledWith(
+      MEETING_URL,
+      "_blank",
+      "noopener,noreferrer"
+    );
+    expect(startRecording).not.toHaveBeenCalled();
+  });
+
+  it("a Failed transcription is NOT treated as an existing transcription — no confirmation prompt", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Failed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /join with transcription/i })
+    );
+
+    expect(
+      screen.queryByText(/replace existing transcription/i)
+    ).not.toBeInTheDocument();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(startRecording).toHaveBeenCalledWith(MEETING_URL);
+  });
+});
+
+// ── Coach joining (pre-live) state ───────────────────────────────────
 
 describe.each([
   MeetingRecordingStatus.Pending,
   MeetingRecordingStatus.Joining,
   MeetingRecordingStatus.WaitingRoom,
-])("JoinMeetingButton — joining (status=%s)", (status) => {
-  it("renders a disabled icon button with the joining-meeting accessible name", () => {
+])("JoinMeetingButton — coach joining (status=%s)", (status) => {
+  it("renders the camera dropdown with 'Open meeting' and no 'stop recording' item yet", async () => {
+    const user = userEvent.setup();
     recordingHookState.recording = { status };
+
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
-    const button = screen.getByRole("button", { name: /joining meeting/i });
-    expect(button).toBeDisabled();
+
+    const trigger = screen.getByRole("button", { name: /join meeting/i });
+    expect(trigger).not.toBeDisabled();
+
+    await user.click(trigger);
+
+    expect(
+      await screen.findByRole("menuitem", { name: /open meeting/i })
+    ).toBeInTheDocument();
+    // The bot is still joining — nothing to stop.
+    expect(
+      screen.queryByRole("menuitem", { name: /stop recording/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("'Open meeting' opens the meeting URL", async () => {
+    const user = userEvent.setup();
+    recordingHookState.recording = { status };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /open meeting/i })
+    );
+
+    expect(openSpy).toHaveBeenCalledWith(
+      MEETING_URL,
+      "_blank",
+      "noopener,noreferrer"
+    );
   });
 });
 
-// ── Live state ────────────────────────────────────────────────────────
+// ── Coach live state ─────────────────────────────────────────────────
 
 describe.each([
   MeetingRecordingStatus.InMeeting,
   MeetingRecordingStatus.Recording,
-])("JoinMeetingButton — live (status=%s)", (status) => {
-  it("shows the Transcribing live pill with a duration timer", () => {
-    const startedAt = new Date(Date.now() - 65_000).toISOString();
-    recordingHookState.recording = { status, started_at: startedAt };
+])("JoinMeetingButton — coach live (status=%s)", (status) => {
+  it("exposes elapsed-time label, 'Open meeting', and 'stop recording' items", async () => {
+    const user = userEvent.setup();
+    recordingHookState.recording = {
+      status,
+      started_at: new Date(Date.now() - 65_000).toISOString(),
+    };
 
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+
+    const label = await screen.findByTestId("join-meeting-elapsed-label");
+    expect(label).toHaveTextContent(/recording/i);
+    expect(label).toHaveTextContent(/1:05/);
     expect(
-      screen.getByRole("button", { name: /stop transcription/i })
+      await screen.findByRole("menuitem", { name: /open meeting/i })
     ).toBeInTheDocument();
-    expect(screen.getByText(/transcribing/i)).toBeInTheDocument();
-    expect(screen.getByText(/1:05/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("menuitem", { name: /stop recording/i })
+    ).toBeInTheDocument();
   });
 
-  it("opens the AlertDialog on click; confirming calls stopRecording", async () => {
+  it("renders the label without a timer when started_at is absent (bot in InMeeting before BE sets started_at)", async () => {
+    const user = userEvent.setup();
+    recordingHookState.recording = { status };
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+
+    const label = await screen.findByTestId("join-meeting-elapsed-label");
+    expect(label).toHaveTextContent(/recording/i);
+    // No m:ss text — only the "Recording" word and the glyph.
+    expect(label.textContent).not.toMatch(/\d+:\d{2}/);
+  });
+
+  it("the elapsed-time label is the FIRST entry in the dropdown (above 'Open meeting')", async () => {
     const user = userEvent.setup();
     recordingHookState.recording = {
       status,
@@ -168,12 +351,33 @@ describe.each([
     };
 
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+
+    const label = await screen.findByTestId("join-meeting-elapsed-label");
+    const openItem = await screen.findByRole("menuitem", {
+      name: /open meeting/i,
+    });
+    expect(
+      label.compareDocumentPosition(openItem) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("selecting 'stop recording' opens the AlertDialog; confirming calls stopRecording", async () => {
+    const user = userEvent.setup();
+    recordingHookState.recording = {
+      status,
+      started_at: new Date().toISOString(),
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
-      screen.getByRole("button", { name: /stop transcription/i })
+      await screen.findByRole("menuitem", { name: /stop recording/i })
     );
 
     const confirm = await screen.findByRole("button", {
-      name: /^stop transcription$/i,
+      name: /^stop recording$/i,
     });
     await user.click(confirm);
 
@@ -188,12 +392,13 @@ describe.each([
     };
 
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
-      screen.getByRole("button", { name: /stop transcription/i })
+      await screen.findByRole("menuitem", { name: /stop recording/i })
     );
 
     const cancel = await screen.findByRole("button", {
-      name: /keep transcribing/i,
+      name: /keep recording/i,
     });
     await user.click(cancel);
 
@@ -201,18 +406,28 @@ describe.each([
   });
 });
 
-// ── Processing state ─────────────────────────────────────────────────
+// ── Coach processing state ───────────────────────────────────────────
 
-describe("JoinMeetingButton — processing", () => {
-  it("renders a disabled icon button with the processing accessible name", () => {
+describe("JoinMeetingButton — coach processing", () => {
+  it("renders the camera dropdown with only 'Open meeting' (recording is done)", async () => {
+    const user = userEvent.setup();
     recordingHookState.recording = {
       status: MeetingRecordingStatus.Processing,
     };
+
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
-    const button = screen.getByRole("button", {
-      name: /processing transcription/i,
-    });
-    expect(button).toBeDisabled();
+
+    const trigger = screen.getByRole("button", { name: /join meeting/i });
+    expect(trigger).not.toBeDisabled();
+
+    await user.click(trigger);
+
+    expect(
+      await screen.findByRole("menuitem", { name: /open meeting/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /stop recording/i })
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -221,7 +436,8 @@ describe("JoinMeetingButton — processing", () => {
 describe.each([
   MeetingRecordingStatus.Completed,
   MeetingRecordingStatus.Failed,
-])("JoinMeetingButton — terminal (status=%s) returns to idle", (status) => {
+  MeetingRecordingStatus.Cancelled,
+])("JoinMeetingButton — coach terminal (status=%s) returns to idle", (status) => {
   it("renders the Join Meeting dropdown trigger", () => {
     recordingHookState.recording = { status };
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
@@ -239,9 +455,13 @@ describe.each([
 //   (1) start a recording (consent ownership)
 //   (2) stop a recording (lifecycle ownership)
 //   (3) silently disable transcription mid-session
+// The coachee must ALWAYS be able to:
+//   (4) open the meeting URL — regardless of recording status
 //
 // These tests guard those invariants at the component boundary so a
-// future refactor can't accidentally regress consent semantics.
+// future refactor can't accidentally regress consent semantics or
+// re-introduce the regression where the coachee lost their join button
+// once the coach started recording.
 // ─────────────────────────────────────────────────────────────────────
 
 describe("JoinMeetingButton — coachee idle", () => {
@@ -332,96 +552,144 @@ describe("JoinMeetingButton — coachee idle", () => {
   });
 });
 
-describe("JoinMeetingButton — coachee live (transparency, no controls)", () => {
-  it("renders the pulsing Transcribing pill so the coachee sees it's being recorded", () => {
-    recordingHookState.recording = {
-      status: MeetingRecordingStatus.Recording,
-      started_at: new Date(Date.now() - 65_000).toISOString(),
-    };
-    render(
-      <JoinMeetingButton
-        sessionId="s-1"
-        meetingUrl={MEETING_URL}
-        isCoach={false}
-      />
-    );
-    expect(screen.getByText(/transcribing/i)).toBeInTheDocument();
-    expect(screen.getByText(/1:05/)).toBeInTheDocument();
-  });
-
-  it("the live pill carries a non-interactive accessible name and aria-disabled", () => {
-    recordingHookState.recording = {
-      status: MeetingRecordingStatus.Recording,
-      started_at: new Date().toISOString(),
-    };
-    render(
-      <JoinMeetingButton
-        sessionId="s-1"
-        meetingUrl={MEETING_URL}
-        isCoach={false}
-      />
-    );
-    const pill = screen.getByRole("button", {
-      name: /transcription in progress/i,
-    });
-    expect(pill).toHaveAttribute("aria-disabled", "true");
-    // The coach's pill is named "Stop transcription"; a coachee with that
-    // accessible name would be a regression we must catch.
-    expect(
-      screen.queryByRole("button", { name: /stop transcription/i })
-    ).not.toBeInTheDocument();
-  });
-
-  it("INVARIANT: clicking the coachee live pill does NOT open the stop-confirm AlertDialog", async () => {
-    const user = userEvent.setup();
-    recordingHookState.recording = {
-      status: MeetingRecordingStatus.Recording,
-      started_at: new Date().toISOString(),
-    };
-    render(
-      <JoinMeetingButton
-        sessionId="s-1"
-        meetingUrl={MEETING_URL}
-        isCoach={false}
-      />
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: /transcription in progress/i })
-    );
-
-    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(/stop transcription\?/i)
-    ).not.toBeInTheDocument();
-  });
-
-  it("INVARIANT: coachee can NEVER call stopRecording, even via repeated clicks", async () => {
-    const user = userEvent.setup();
-    recordingHookState.recording = {
-      status: MeetingRecordingStatus.Recording,
-      started_at: new Date().toISOString(),
-    };
-    render(
-      <JoinMeetingButton
-        sessionId="s-1"
-        meetingUrl={MEETING_URL}
-        isCoach={false}
-      />
-    );
-    const pill = screen.getByRole("button", {
-      name: /transcription in progress/i,
+// Coachee in non-live, non-idle states (Pending / Joining /
+// WaitingRoom / Processing): plain icon, single click opens the URL.
+// No dropdown (no elapsed time to show yet, no recording).
+describe.each([
+  MeetingRecordingStatus.Pending,
+  MeetingRecordingStatus.Joining,
+  MeetingRecordingStatus.WaitingRoom,
+  MeetingRecordingStatus.Processing,
+])(
+  "JoinMeetingButton — coachee pre/post-live (status=%s) keeps the plain join icon",
+  (status) => {
+    it("renders the plain camera join button (no chevron)", () => {
+      recordingHookState.recording = {
+        status,
+        started_at: new Date().toISOString(),
+      };
+      render(
+        <JoinMeetingButton
+          sessionId="s-1"
+          meetingUrl={MEETING_URL}
+          isCoach={false}
+        />
+      );
+      const button = screen.getByRole("button", { name: /join meeting/i });
+      expect(button).not.toBeDisabled();
+      expect(button).not.toHaveAttribute("aria-haspopup", "menu");
     });
 
-    await user.click(pill);
-    await user.click(pill);
-    await user.click(pill);
+    it("single click opens the meeting URL — no startRecording / stopRecording", async () => {
+      const user = userEvent.setup();
+      recordingHookState.recording = {
+        status,
+        started_at: new Date().toISOString(),
+      };
+      render(
+        <JoinMeetingButton
+          sessionId="s-1"
+          meetingUrl={MEETING_URL}
+          isCoach={false}
+        />
+      );
+      await user.click(screen.getByRole("button", { name: /join meeting/i }));
 
-    expect(stopRecording).not.toHaveBeenCalled();
-  });
-});
+      expect(openSpy).toHaveBeenCalledWith(
+        MEETING_URL,
+        "_blank",
+        "noopener,noreferrer"
+      );
+      expect(startRecording).not.toHaveBeenCalled();
+      expect(stopRecording).not.toHaveBeenCalled();
+    });
 
-describe("JoinMeetingButton — role-agnostic states", () => {
+    it("does NOT render legacy 'Transcribing' / 'Transcription in progress' affordance", () => {
+      recordingHookState.recording = {
+        status,
+        started_at: new Date().toISOString(),
+      };
+      render(
+        <JoinMeetingButton
+          sessionId="s-1"
+          meetingUrl={MEETING_URL}
+          isCoach={false}
+        />
+      );
+      expect(screen.queryByText(/transcribing/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /transcription in progress/i })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /stop recording/i })
+      ).not.toBeInTheDocument();
+    });
+  }
+);
+
+// Coachee in LIVE states (InMeeting / Recording): still plain
+// single-click camera icon. The red dot conveys "the coach is recording"
+// passively; we do NOT restructure the coachee's join affordance around
+// lifecycle they don't own. No dropdown, no elapsed label — those would
+// imply the coachee is in the meeting when they might not be yet, and
+// add a click to their join flow.
+describe.each([
+  MeetingRecordingStatus.InMeeting,
+  MeetingRecordingStatus.Recording,
+])(
+  "JoinMeetingButton — coachee live (status=%s) — passive recording transparency only",
+  (status) => {
+    it("renders the plain camera icon with the red recording dot — no chevron, no dropdown", () => {
+      recordingHookState.recording = {
+        status,
+        started_at: new Date(Date.now() - 65_000).toISOString(),
+      };
+      render(
+        <JoinMeetingButton
+          sessionId="s-1"
+          meetingUrl={MEETING_URL}
+          isCoach={false}
+        />
+      );
+
+      const button = screen.getByRole("button", { name: /join meeting/i });
+      expect(button).not.toBeDisabled();
+      expect(button).not.toHaveAttribute("aria-haspopup", "menu");
+      expect(screen.getByTestId("join-meeting-recording-dot")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("join-meeting-elapsed-label")
+      ).not.toBeInTheDocument();
+    });
+
+    it("single click opens the meeting URL — no startRecording / stopRecording / dropdown", async () => {
+      const user = userEvent.setup();
+      recordingHookState.recording = {
+        status,
+        started_at: new Date().toISOString(),
+      };
+      render(
+        <JoinMeetingButton
+          sessionId="s-1"
+          meetingUrl={MEETING_URL}
+          isCoach={false}
+        />
+      );
+
+      await user.click(screen.getByRole("button", { name: /join meeting/i }));
+
+      expect(openSpy).toHaveBeenCalledWith(
+        MEETING_URL,
+        "_blank",
+        "noopener,noreferrer"
+      );
+      expect(startRecording).not.toHaveBeenCalled();
+      expect(stopRecording).not.toHaveBeenCalled();
+      expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+    });
+  }
+);
+
+describe("JoinMeetingButton — role-agnostic disabled state", () => {
   it("disabled (no meeting URL) state is identical for coach and coachee", () => {
     const { rerender } = render(
       <JoinMeetingButton
@@ -448,62 +716,79 @@ describe("JoinMeetingButton — role-agnostic states", () => {
       screen.getByRole("button", { name: /join meeting/i })
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: /join meeting/i }).getAttribute(
-        "aria-label"
-      )
+      screen
+        .getByRole("button", { name: /join meeting/i })
+        .getAttribute("aria-label")
     ).toBe(coachLabel);
   });
+});
 
-  it("joining state renders identically regardless of role", () => {
-    recordingHookState.recording = { status: MeetingRecordingStatus.Joining };
-    const { rerender } = render(
-      <JoinMeetingButton
-        sessionId="s-1"
-        meetingUrl={MEETING_URL}
-        isCoach={true}
-      />
-    );
-    expect(
-      screen.getByRole("button", { name: /joining meeting/i })
-    ).toBeDisabled();
+// Red pulsing dot lives on the camera/join button while the bot is in
+// the meeting (InMeeting or Recording) — matches what the BE actually
+// emits during a live session; bots commonly sit on InMeeting without
+// ever transitioning to a literal Recording status.
+describe("JoinMeetingButton — recording dot on camera icon", () => {
+  const RECORDING_DOT = "join-meeting-recording-dot";
 
-    rerender(
-      <JoinMeetingButton
-        sessionId="s-1"
-        meetingUrl={MEETING_URL}
-        isCoach={false}
-      />
-    );
-    expect(
-      screen.getByRole("button", { name: /joining meeting/i })
-    ).toBeDisabled();
+  it.each([
+    MeetingRecordingStatus.InMeeting,
+    MeetingRecordingStatus.Recording,
+  ])("renders a red pulsing dot for the coach during status=%s", (status) => {
+    recordingHookState.recording = {
+      status,
+      started_at: new Date().toISOString(),
+    };
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    const dot = screen.getByTestId(RECORDING_DOT);
+    expect(dot.className).toContain("bg-red-500");
+    expect(dot.className).toContain("motion-safe:animate-pulse");
   });
 
-  it("processing state renders identically regardless of role", () => {
+  it.each([
+    MeetingRecordingStatus.InMeeting,
+    MeetingRecordingStatus.Recording,
+  ])("renders a red pulsing dot for the coachee during status=%s (transparency)", (status) => {
     recordingHookState.recording = {
-      status: MeetingRecordingStatus.Processing,
+      status,
+      started_at: new Date().toISOString(),
     };
-    const { rerender } = render(
-      <JoinMeetingButton
-        sessionId="s-1"
-        meetingUrl={MEETING_URL}
-        isCoach={true}
-      />
-    );
-    expect(
-      screen.getByRole("button", { name: /processing transcription/i })
-    ).toBeDisabled();
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={false} />);
+    const dot = screen.getByTestId(RECORDING_DOT);
+    expect(dot.className).toContain("bg-red-500");
+    expect(dot.className).toContain("motion-safe:animate-pulse");
+  });
 
-    rerender(
-      <JoinMeetingButton
-        sessionId="s-1"
-        meetingUrl={MEETING_URL}
-        isCoach={false}
-      />
-    );
-    expect(
-      screen.getByRole("button", { name: /processing transcription/i })
-    ).toBeDisabled();
+  it.each([
+    MeetingRecordingStatus.Pending,
+    MeetingRecordingStatus.Joining,
+    MeetingRecordingStatus.WaitingRoom,
+    MeetingRecordingStatus.Processing,
+    MeetingRecordingStatus.Completed,
+    MeetingRecordingStatus.Failed,
+    MeetingRecordingStatus.Cancelled,
+  ])("does NOT render the dot for status=%s (coach)", (status) => {
+    recordingHookState.recording = { status };
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    expect(screen.queryByTestId(RECORDING_DOT)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    MeetingRecordingStatus.Pending,
+    MeetingRecordingStatus.Joining,
+    MeetingRecordingStatus.WaitingRoom,
+    MeetingRecordingStatus.Processing,
+    MeetingRecordingStatus.Completed,
+    MeetingRecordingStatus.Failed,
+    MeetingRecordingStatus.Cancelled,
+  ])("does NOT render the dot for status=%s (coachee)", (status) => {
+    recordingHookState.recording = { status };
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={false} />);
+    expect(screen.queryByTestId(RECORDING_DOT)).not.toBeInTheDocument();
+  });
+
+  it("does NOT render the dot when idle (no recording)", () => {
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    expect(screen.queryByTestId(RECORDING_DOT)).not.toBeInTheDocument();
   });
 });
 
@@ -522,10 +807,14 @@ describe("JoinMeetingButton — role transitions don't leak privileges", () => {
         isCoach={true}
       />
     );
-    // Coach can stop.
+
+    // Coach: dropdown trigger present; opening it reveals the stop item.
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
     expect(
-      screen.getByRole("button", { name: /stop transcription/i })
+      await screen.findByRole("menuitem", { name: /stop recording/i })
     ).toBeInTheDocument();
+    // Close the menu so the rerender swaps a clean closed dropdown in.
+    await user.keyboard("{Escape}");
 
     // Role flips to coachee (e.g., role hook re-derives mid-session).
     rerender(
@@ -536,15 +825,12 @@ describe("JoinMeetingButton — role transitions don't leak privileges", () => {
       />
     );
 
-    expect(
-      screen.queryByRole("button", { name: /stop transcription/i })
-    ).not.toBeInTheDocument();
-
-    // Clicking the now-coachee pill must not trigger stop.
-    const pill = screen.getByRole("button", {
-      name: /transcription in progress/i,
-    });
-    await user.click(pill);
+    // Coachee live: plain single-click camera icon — no chevron, no menu
+    // items. Clicking opens the URL and cannot trigger stopRecording.
+    const button = screen.getByRole("button", { name: /join meeting/i });
+    expect(button).not.toHaveAttribute("aria-haspopup", "menu");
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+    await user.click(button);
     expect(stopRecording).not.toHaveBeenCalled();
   });
 });

@@ -18,6 +18,8 @@ export enum MeetingRecordingStatus {
   Processing = "processing",
   Completed = "completed",
   Failed = "failed",
+  /** User cancelled mid-recording; terminal, may have a partial transcript. */
+  Cancelled = "cancelled",
 }
 
 export function isMeetingRecordingStatus(
@@ -31,7 +33,8 @@ export function isMeetingRecordingStatus(
     value === MeetingRecordingStatus.Recording ||
     value === MeetingRecordingStatus.Processing ||
     value === MeetingRecordingStatus.Completed ||
-    value === MeetingRecordingStatus.Failed
+    value === MeetingRecordingStatus.Failed ||
+    value === MeetingRecordingStatus.Cancelled
   );
 }
 
@@ -98,6 +101,7 @@ export function isRecordingInProgress(status: MeetingRecordingStatus): boolean {
 export function isRecordingTerminal(status: MeetingRecordingStatus): boolean {
   return (
     status === MeetingRecordingStatus.Completed ||
-    status === MeetingRecordingStatus.Failed
+    status === MeetingRecordingStatus.Failed ||
+    status === MeetingRecordingStatus.Cancelled
   );
 }

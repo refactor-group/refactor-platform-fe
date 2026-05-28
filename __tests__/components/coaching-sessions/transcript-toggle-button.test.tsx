@@ -48,17 +48,19 @@ describe("TranscriptToggleButton — status indicator", () => {
     expect(container.querySelector(".bg-emerald-500")).toBeNull();
   });
 
-  it("renders the red pulsing dot for Recording", () => {
+  it("does NOT render a red pulsing dot — that indicator lives on the camera/join button", () => {
+    // The transcript toggle never carries the live-recording dot anymore;
+    // even if a caller somehow passed an unrelated status, no red dot
+    // should appear here.
     const { container } = render(
       <TranscriptToggleButton
         isOpen={false}
         onToggle={vi.fn()}
-        indicatorStatus={IndicatorStatus.Recording}
+        indicatorStatus={IndicatorStatus.TranscriptReady}
       />
     );
-    const dot = container.querySelector(".bg-red-500");
-    expect(dot).not.toBeNull();
-    expect(dot?.className).toContain("motion-safe:animate-pulse");
+    expect(container.querySelector(".bg-red-500")).toBeNull();
+    expect(container.querySelector(".animate-pulse")).toBeNull();
   });
 
   it("renders the green solid dot for TranscriptReady", () => {
