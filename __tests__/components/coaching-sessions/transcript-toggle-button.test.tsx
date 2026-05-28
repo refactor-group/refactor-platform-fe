@@ -48,7 +48,7 @@ describe("TranscriptToggleButton — status indicator", () => {
     expect(container.querySelector(".bg-emerald-500")).toBeNull();
   });
 
-  it("does NOT render a red pulsing dot — that indicator lives on the camera/join button (issue #404)", () => {
+  it("does NOT render a red pulsing dot — that indicator lives on the camera/join button", () => {
     // The transcript toggle never carries the live-recording dot anymore;
     // even if a caller somehow passed an unrelated status, no red dot
     // should appear here.

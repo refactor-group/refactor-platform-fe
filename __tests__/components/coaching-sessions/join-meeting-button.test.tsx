@@ -455,12 +455,12 @@ describe.each([
 //   (2) stop a recording (lifecycle ownership)
 //   (3) silently disable transcription mid-session
 // The coachee must ALWAYS be able to:
-//   (4) open the meeting URL — regardless of recording status (#404)
+//   (4) open the meeting URL — regardless of recording status
 //
 // These tests guard those invariants at the component boundary so a
 // future refactor can't accidentally regress consent semantics or
-// re-introduce the bug where the coachee lost their join button once
-// the coach started recording.
+// re-introduce the regression where the coachee lost their join button
+// once the coach started recording.
 // ─────────────────────────────────────────────────────────────────────
 
 describe("JoinMeetingButton — coachee idle", () => {
@@ -551,16 +551,16 @@ describe("JoinMeetingButton — coachee idle", () => {
   });
 });
 
-// #404 regression — coachee in non-live, non-idle states (Pending /
-// Joining / WaitingRoom / Processing): plain icon, single click opens
-// the URL. No dropdown (no elapsed time to show yet, no recording).
+// Coachee in non-live, non-idle states (Pending / Joining /
+// WaitingRoom / Processing): plain icon, single click opens the URL.
+// No dropdown (no elapsed time to show yet, no recording).
 describe.each([
   MeetingRecordingStatus.Pending,
   MeetingRecordingStatus.Joining,
   MeetingRecordingStatus.WaitingRoom,
   MeetingRecordingStatus.Processing,
 ])(
-  "JoinMeetingButton — coachee pre/post-live (status=%s) — issue #404 regression",
+  "JoinMeetingButton — coachee pre/post-live (status=%s) keeps the plain join icon",
   (status) => {
     it("renders the plain camera join button (no chevron)", () => {
       recordingHookState.recording = {
@@ -626,12 +626,12 @@ describe.each([
   }
 );
 
-// #404 regression — coachee in LIVE states (InMeeting / Recording):
-// still plain single-click camera icon. The red dot conveys "the coach
-// is recording" passively; we do NOT restructure the coachee's join
-// affordance around lifecycle they don't own. No dropdown, no elapsed
-// label — those would imply the coachee is in the meeting when they
-// might not be yet, and add a click to their join flow.
+// Coachee in LIVE states (InMeeting / Recording): still plain
+// single-click camera icon. The red dot conveys "the coach is recording"
+// passively; we do NOT restructure the coachee's join affordance around
+// lifecycle they don't own. No dropdown, no elapsed label — those would
+// imply the coachee is in the meeting when they might not be yet, and
+// add a click to their join flow.
 describe.each([
   MeetingRecordingStatus.InMeeting,
   MeetingRecordingStatus.Recording,

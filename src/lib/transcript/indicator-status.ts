@@ -2,7 +2,8 @@ import { MeetingRecordingStatus } from "@/types/meeting-recording";
 import { TranscriptionStatus } from "@/types/transcription";
 
 // Transcript-toggle button states. Live "recording in progress" lives on
-// the camera/join button (see [[issue 404]]), not on the transcript toggle.
+// the camera/join button (the meeting-level control), not on the transcript
+// toggle (the artifact-level control).
 export enum IndicatorStatus {
   None = "none",
   TranscriptReady = "transcript-ready",

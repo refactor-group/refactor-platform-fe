@@ -28,7 +28,8 @@ describe("deriveIndicatorStatus — failure takes precedence", () => {
 });
 
 // Live "Recording" state intentionally does NOT surface here — the
-// pulsing red dot lives on the camera/join button (issue #404).
+// pulsing red dot lives on the camera/join button, not on the
+// transcript-toggle indicator.
 describe("deriveIndicatorStatus — live recording is NOT a transcript-toggle state", () => {
   it("returns None across every live/in-progress recording status", () => {
     const liveStates: MeetingRecordingStatus[] = [
@@ -86,9 +87,9 @@ describe("deriveIndicatorStatus — default", () => {
   });
 
   it("returns TranscriptReady when transcript completed even if recording=Recording (re-recording case)", () => {
-    // Pre-#404 this returned Recording (recording took priority). Now the
-    // recording state lives on the camera button, so the transcript-toggle
-    // surfaces the ready-to-view artifact instead.
+    // Recording state lives on the camera button, not here, so a fresh
+    // re-recording with a still-readable prior transcript surfaces the
+    // ready-to-view artifact rather than a (no-op) live indicator.
     expect(
       deriveIndicatorStatus({
         recordingStatus: MeetingRecordingStatus.Recording,

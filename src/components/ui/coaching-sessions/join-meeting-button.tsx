@@ -136,12 +136,12 @@ function RecordingDot() {
 }
 
 // Duration recomputed from started_at each tick — never accumulate
-// locally (backgrounded tabs throttle accumulators). When the BE
-// hasn't populated started_at yet (bot in InMeeting before recording
-// actually starts), we render just "Recording" without the timer.
+// locally (backgrounded tabs throttle accumulators).
 function ElapsedTimeLabel({ startedAt }: { startedAt: Option<string> }) {
   const [, setTick] = useState(0);
-  useInterval(() => setTick((t) => t + 1), 1000);
+  // Pause the interval when there's nothing to count — re-renders
+  // wouldn't change the rendered output anyway.
+  useInterval(() => setTick((t) => t + 1), startedAt.some ? 1000 : null);
 
   return (
     <DropdownMenuLabel

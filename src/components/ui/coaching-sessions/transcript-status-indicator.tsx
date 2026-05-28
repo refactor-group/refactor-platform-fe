@@ -11,7 +11,8 @@ interface TranscriptStatusIndicatorProps {
 }
 
 // Decorative dot/glyph on the transcript-toggle button. Live recording
-// indicator lives on the camera/join button instead (see [[issue 404]]).
+// indicator lives on the camera/join button (meeting-level state, not a
+// transcript-artifact state).
 export function TranscriptStatusIndicator({
   status,
   className,
