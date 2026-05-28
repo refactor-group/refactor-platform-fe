@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useRouter, useParams, useSearchParams, usePathname } from 'next/navigation'
 import CoachingSessionsPage from '@/app/coaching-sessions/[id]/page'
@@ -79,14 +80,27 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
-  CoachingSessionPanel: ({ readOnly }: { readOnly?: boolean }) => (
-    <div data-testid="coaching-session-panel" data-readonly={String(!!readOnly)}>Goals</div>
+  CoachingSessionPanel: ({ readOnly, actionDraft }: any) => (
+    <div
+      data-testid="coaching-session-panel"
+      data-readonly={String(!!readOnly)}
+      data-draft-body={actionDraft?.some ? actionDraft.val.body : ''}
+    >Goals</div>
   )
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-tabs-container', () => ({
-  CoachingTabsContainer: () => (
-    <div data-testid="coaching-tabs-container">Notes</div>
+  CoachingTabsContainer: ({ onAddActionFromNote }: any) => (
+    <div data-testid="coaching-tabs-container">
+      <button
+        data-testid="trigger-add-from-note"
+        onClick={() => onAddActionFromNote('  Hello from the notes  ')}
+      >Add from note</button>
+      <button
+        data-testid="trigger-add-from-note-blank"
+        onClick={() => onAddActionFromNote('   ')}
+      >Add from blank note</button>
+    </div>
   )
 }))
 
@@ -673,5 +687,91 @@ describe('CoachingSessionsPage - Panel visibility across URL states', () => {
     expect(screen.queryByRole('heading', { name: 'Transcript' })).not.toBeInTheDocument()
     expect(screen.getByTestId('coaching-tabs-container')).toBeInTheDocument()
     expect(screen.getByTestId('coaching-session-panel')).toBeInTheDocument()
+  })
+})
+
+/**
+ * Test Suite: Add action from notes selection
+ *
+ * Validates the page-level bridge from the notes "Add as Action" affordance:
+ * the selected text is trimmed and handed to the panel as the action draft,
+ * and (when the panel is already expanded) the URL is pinned to panel=actions.
+ */
+describe('CoachingSessionsPage - Add action from notes selection', () => {
+  const mockReplace = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: mockReplace })
+    ;(useParams as any).mockReturnValue({ id: 'session-123' })
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
+    mockRoleAsCoach()
+
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: createMockCoachingSession({
+        id: 'session-123',
+        coaching_relationship_id: 'rel-123',
+      }),
+      isError: false,
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123',
+      setCurrentCoachingRelationshipId: vi.fn(),
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: vi.fn(),
+    })
+  })
+
+  it('passes the trimmed selection to the panel and pins panel=actions in the URL', async () => {
+    const user = userEvent.setup()
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    await user.click(screen.getByTestId('trigger-add-from-note'))
+
+    // Trim guard: surrounding whitespace from the selection is stripped.
+    expect(
+      screen.getByTestId('coaching-session-panel').getAttribute('data-draft-body')
+    ).toBe('Hello from the notes')
+
+    // Panel is expanded by default, so the deferred URL sync fires.
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.stringContaining('panel=actions'),
+        expect.objectContaining({ scroll: false })
+      )
+    })
+  })
+
+  it('ignores a whitespace-only selection (no draft, no URL change)', async () => {
+    const user = userEvent.setup()
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    await user.click(screen.getByTestId('trigger-add-from-note-blank'))
+
+    // Guard bails before setting a draft or touching the URL.
+    expect(
+      screen.getByTestId('coaching-session-panel').getAttribute('data-draft-body')
+    ).toBe('')
+    expect(mockReplace).not.toHaveBeenCalledWith(
+      expect.stringContaining('panel=actions'),
+      expect.anything()
+    )
   })
 })
