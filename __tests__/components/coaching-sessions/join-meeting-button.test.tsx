@@ -495,16 +495,18 @@ describe.each([
 );
 
 // #404 regression — coachee in LIVE states (InMeeting / Recording):
-// dropdown surfaces the elapsed-time label + an "Open meeting" item.
-// Coachee still can never start / stop a recording.
+// still plain single-click camera icon. The red dot conveys "the coach
+// is recording" passively; we do NOT restructure the coachee's join
+// affordance around lifecycle they don't own. No dropdown, no elapsed
+// label — those would imply the coachee is in the meeting when they
+// might not be yet, and add a click to their join flow.
 describe.each([
   MeetingRecordingStatus.InMeeting,
   MeetingRecordingStatus.Recording,
 ])(
-  "JoinMeetingButton — coachee live (status=%s) — elapsed time + open meeting",
+  "JoinMeetingButton — coachee live (status=%s) — passive recording transparency only",
   (status) => {
-    it("exposes the elapsed-time label and 'Open meeting' item; NO 'Stop transcription'", async () => {
-      const user = userEvent.setup();
+    it("renders the plain camera icon with the red recording dot — no chevron, no dropdown", () => {
       recordingHookState.recording = {
         status,
         started_at: new Date(Date.now() - 65_000).toISOString(),
@@ -517,50 +519,16 @@ describe.each([
         />
       );
 
-      await user.click(screen.getByRole("button", { name: /join meeting/i }));
-
-      const label = await screen.findByTestId("join-meeting-elapsed-label");
-      expect(label).toHaveTextContent(/recording/i);
-      expect(label).toHaveTextContent(/1:05/);
-
+      const button = screen.getByRole("button", { name: /join meeting/i });
+      expect(button).not.toBeDisabled();
+      expect(button).not.toHaveAttribute("aria-haspopup", "menu");
+      expect(screen.getByTestId("join-meeting-recording-dot")).toBeInTheDocument();
       expect(
-        await screen.findByRole("menuitem", { name: /open meeting/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole("menuitem", { name: /stop transcription/i })
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByText(/join with transcription/i)
+        screen.queryByTestId("join-meeting-elapsed-label")
       ).not.toBeInTheDocument();
     });
 
-    it("the elapsed-time label is the FIRST entry in the dropdown", async () => {
-      const user = userEvent.setup();
-      recordingHookState.recording = {
-        status,
-        started_at: new Date().toISOString(),
-      };
-      render(
-        <JoinMeetingButton
-          sessionId="s-1"
-          meetingUrl={MEETING_URL}
-          isCoach={false}
-        />
-      );
-      await user.click(screen.getByRole("button", { name: /join meeting/i }));
-
-      const label = await screen.findByTestId("join-meeting-elapsed-label");
-      const openItem = await screen.findByRole("menuitem", {
-        name: /open meeting/i,
-      });
-      // Document order: label appears before the menu item.
-      expect(
-        label.compareDocumentPosition(openItem) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-      ).toBeTruthy();
-    });
-
-    it("'Open meeting' menuitem opens the URL — and never calls startRecording / stopRecording", async () => {
+    it("single click opens the meeting URL — no startRecording / stopRecording / dropdown", async () => {
       const user = userEvent.setup();
       recordingHookState.recording = {
         status,
@@ -575,9 +543,6 @@ describe.each([
       );
 
       await user.click(screen.getByRole("button", { name: /join meeting/i }));
-      await user.click(
-        await screen.findByRole("menuitem", { name: /open meeting/i })
-      );
 
       expect(openSpy).toHaveBeenCalledWith(
         MEETING_URL,
@@ -586,6 +551,7 @@ describe.each([
       );
       expect(startRecording).not.toHaveBeenCalled();
       expect(stopRecording).not.toHaveBeenCalled();
+      expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
     });
   }
 );
@@ -724,16 +690,12 @@ describe("JoinMeetingButton — role transitions don't leak privileges", () => {
       />
     );
 
-    // Coachee live: still has a dropdown with the elapsed label and "Open
-    // meeting" — but Stop must be gone, and clicking the trigger cannot
-    // call stopRecording.
-    await user.click(screen.getByRole("button", { name: /join meeting/i }));
-    expect(
-      await screen.findByRole("menuitem", { name: /open meeting/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("menuitem", { name: /stop transcription/i })
-    ).not.toBeInTheDocument();
+    // Coachee live: plain single-click camera icon — no chevron, no menu
+    // items. Clicking opens the URL and cannot trigger stopRecording.
+    const button = screen.getByRole("button", { name: /join meeting/i });
+    expect(button).not.toHaveAttribute("aria-haspopup", "menu");
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+    await user.click(button);
     expect(stopRecording).not.toHaveBeenCalled();
   });
 });

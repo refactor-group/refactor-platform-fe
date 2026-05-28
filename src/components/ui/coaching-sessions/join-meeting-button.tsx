@@ -68,18 +68,11 @@ export function JoinMeetingButton({
   const liveStartedAt: Option<string> =
     isLive && recording?.started_at ? Some(recording.started_at) : None;
 
+  // Coachee: plain single-click camera icon in every state. Dot conveys
+  // "the coach started a recording" passively; we don't restructure the
+  // coachee's join affordance around lifecycle they don't own.
   if (!isCoach) {
-    if (isLive) {
-      return (
-        <ActiveDropdownButton
-          onOpenMeeting={openMeeting}
-          showRecordingDot={true}
-          startedAt={liveStartedAt}
-          onStop={undefined}
-        />
-      );
-    }
-    return <CoacheeIdleButton onJoin={openMeeting} />;
+    return <CoacheeIdleButton onJoin={openMeeting} showRecordingDot={isLive} />;
   }
 
   const isIdle = !status || isRecordingTerminal(status);
@@ -342,9 +335,10 @@ function ActiveDropdownButton({
 
 interface CoacheeIdleButtonProps {
   onJoin: () => void;
+  showRecordingDot: boolean;
 }
 
-function CoacheeIdleButton({ onJoin }: CoacheeIdleButtonProps) {
+function CoacheeIdleButton({ onJoin, showRecordingDot }: CoacheeIdleButtonProps) {
   return (
     <TooltipProvider>
       <Tooltip>
@@ -352,11 +346,12 @@ function CoacheeIdleButton({ onJoin }: CoacheeIdleButtonProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10"
+            className="relative h-10 w-10"
             aria-label="Join meeting"
             onClick={onJoin}
           >
             <Video className="!h-6 !w-6" />
+            {showRecordingDot && <RecordingDot />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
