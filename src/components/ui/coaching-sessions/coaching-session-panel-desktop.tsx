@@ -65,6 +65,7 @@ export function CoachingSessionPanelDesktop({
   onBodyChange,
   isAddingAction,
   onAddingActionChange,
+  actionBodyAppend,
   activeActionTab,
   onActiveActionTabChange,
   locale,
@@ -239,6 +240,7 @@ export function CoachingSessionPanelDesktop({
               coacheeName={coacheeName}
               isAddingAction={isAddingAction}
               onAddingActionChange={onAddingActionChange}
+              actionBodyAppend={actionBodyAppend}
               onStatusChange={onStatusChange}
               onDueDateChange={onDueDateChange}
               onAssigneesChange={onAssigneesChange}

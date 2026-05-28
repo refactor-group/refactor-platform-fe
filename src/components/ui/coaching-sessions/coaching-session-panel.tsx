@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -43,6 +43,7 @@ import {
 } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
+import { type Option, Some, None } from "@/types/option";
 import { DateTime } from "ts-luxon";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { siteConfig } from "@/site.config";
@@ -93,6 +94,8 @@ export interface CoachingSessionPanelSharedProps {
   onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => Promise<void>;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
+  /** Selected notes text to seed/append into the add-action form. */
+  actionBodyAppend: Option<{ text: string; nonce: number }>;
   locale: string;
   activeActionTab: ActionTab;
   onActiveActionTabChange: (tab: ActionTab) => void;
@@ -273,6 +276,8 @@ interface CoachingSessionPanelProps {
   defaultSection?: PanelSection;
   /** Called when the user switches sections, so the page can sync to URL */
   onSectionChange?: (section: PanelSection) => void;
+  /** Notes "Add as Action" selection; a new nonce opens/seeds the add-form. */
+  actionDraft?: Option<{ body: string; nonce: number }>;
 }
 
 export function CoachingSessionPanel({
@@ -283,6 +288,7 @@ export function CoachingSessionPanel({
   readOnly = false,
   defaultSection = PanelSection.Goals,
   onSectionChange: onSectionChangeExternal,
+  actionDraft = None,
 }: CoachingSessionPanelProps) {
   // ── Resolve user/relationship context for actions ───────────────
   const userId = useAuthStore((state) => state.userId);
@@ -683,6 +689,27 @@ export function CoachingSessionPanel({
   const [isAddingAction, setIsAddingAction] = useState(false);
   const [activeActionTab, setActiveActionTab] = useState<ActionTab>("new");
 
+  // Notes selection routed into the add-action form; appending to an empty
+  // body seeds it, so one signal covers both fresh-open and in-progress.
+  const [actionBodyAppend, setActionBodyAppend] =
+    useState<Option<{ text: string; nonce: number }>>(None);
+  const handledDraftNonce = useRef(0);
+
+  // Open the Actions add-form on a new draft nonce (render-time own-state
+  // adjustment, mirroring action-section-content's requiredTab pattern).
+  if (actionDraft.some && actionDraft.val.nonce !== handledDraftNonce.current) {
+    handledDraftNonce.current = actionDraft.val.nonce;
+    setActiveSection(PanelSection.Actions);
+    if (!isAddingAction) setIsAddingAction(true);
+    setActionBodyAppend(Some({ text: actionDraft.val.body, nonce: actionDraft.val.nonce }));
+  }
+
+  // Clear the append signal on close so a later fresh "Add" starts blank.
+  const handleAddingActionChange = useCallback((adding: boolean) => {
+    setIsAddingAction(adding);
+    if (!adding) setActionBodyAppend(None);
+  }, []);
+
   // ── Agreement state & handlers ──────────────────────────────────
 
   const [isAddingAgreement, setIsAddingAgreement] = useState(false);
@@ -803,7 +830,8 @@ export function CoachingSessionPanel({
     onGoalChange: handleGoalChange,
     onBodyChange: handleBodyChange,
     isAddingAction,
-    onAddingActionChange: setIsAddingAction,
+    onAddingActionChange: handleAddingActionChange,
+    actionBodyAppend,
     locale: siteConfig.locale,
     activeActionTab,
     onActiveActionTabChange: setActiveActionTab,
