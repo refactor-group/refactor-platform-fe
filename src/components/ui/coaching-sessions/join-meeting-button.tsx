@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Video } from "lucide-react";
+import { ChevronDown, Radio, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -28,11 +30,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useMeetingRecording } from "@/lib/api/meeting-recordings";
+import { useInterval } from "@/lib/hooks/use-interval";
+import { formatTimestamp } from "@/lib/transcript/format-timestamp";
 import {
   MeetingRecordingStatus,
   isRecordingTerminal,
 } from "@/types/meeting-recording";
 import type { Id } from "@/types/general";
+import { type Option, Some, None } from "@/types/option";
 
 interface JoinMeetingButtonProps {
   sessionId: Id | null;
@@ -60,11 +65,21 @@ export function JoinMeetingButton({
   const isLive =
     status === MeetingRecordingStatus.InMeeting ||
     status === MeetingRecordingStatus.Recording;
+  const liveStartedAt: Option<string> =
+    isLive && recording?.started_at ? Some(recording.started_at) : None;
 
   if (!isCoach) {
-    return (
-      <CoacheeIdleButton onJoin={openMeeting} showRecordingDot={isLive} />
-    );
+    if (isLive) {
+      return (
+        <ActiveDropdownButton
+          onOpenMeeting={openMeeting}
+          showRecordingDot={true}
+          startedAt={liveStartedAt}
+          onStop={undefined}
+        />
+      );
+    }
+    return <CoacheeIdleButton onJoin={openMeeting} />;
   }
 
   const isIdle = !status || isRecordingTerminal(status);
@@ -89,9 +104,10 @@ export function JoinMeetingButton({
   }
 
   return (
-    <CoachActiveDropdownButton
+    <ActiveDropdownButton
       onOpenMeeting={openMeeting}
       showRecordingDot={isLive}
+      startedAt={liveStartedAt}
       onStop={
         isLive
           ? () =>
@@ -114,6 +130,36 @@ function RecordingDot() {
       data-testid="join-meeting-recording-dot"
       className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 motion-safe:animate-pulse"
     />
+  );
+}
+
+// Duration recomputed from started_at each tick — never accumulate
+// locally (backgrounded tabs throttle accumulators). When the BE
+// hasn't populated started_at yet (bot in InMeeting before recording
+// actually starts), we render just "Recording" without the timer.
+function ElapsedTimeLabel({ startedAt }: { startedAt: Option<string> }) {
+  const [, setTick] = useState(0);
+  useInterval(() => setTick((t) => t + 1), 1000);
+
+  return (
+    <DropdownMenuLabel
+      data-testid="join-meeting-elapsed-label"
+      className="flex items-center gap-1.5 text-red-700 dark:text-red-300"
+    >
+      <Radio
+        aria-hidden="true"
+        className="h-3.5 w-3.5 motion-safe:animate-pulse"
+        fill="currentColor"
+      />
+      <span>Recording</span>
+      {startedAt.some && (
+        <span className="ml-auto tabular-nums text-xs opacity-80">
+          {formatTimestamp(
+            Math.max(0, Date.now() - new Date(startedAt.val).getTime())
+          )}
+        </span>
+      )}
+    </DropdownMenuLabel>
   );
 }
 
@@ -198,18 +244,21 @@ function CoachIdleDropdownButton({
   );
 }
 
-interface CoachActiveDropdownButtonProps {
+interface ActiveDropdownButtonProps {
   onOpenMeeting: () => void;
   showRecordingDot: boolean;
+  /** When Some, dropdown leads with a live "Recording · m:ss" label. */
+  startedAt: Option<string>;
   /** When set, dropdown exposes "Stop transcription"; otherwise just "Open meeting". */
   onStop: (() => void) | undefined;
 }
 
-function CoachActiveDropdownButton({
+function ActiveDropdownButton({
   onOpenMeeting,
   showRecordingDot,
+  startedAt,
   onStop,
-}: CoachActiveDropdownButtonProps) {
+}: ActiveDropdownButtonProps) {
   const [stopOpen, setStopOpen] = useState(false);
   const canStop = !!onStop;
 
@@ -237,6 +286,12 @@ function CoachActiveDropdownButton({
           </Tooltip>
         </TooltipProvider>
         <DropdownMenuContent align="end" className="w-64">
+          {showRecordingDot && (
+            <>
+              <ElapsedTimeLabel startedAt={startedAt} />
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem
             onSelect={onOpenMeeting}
             className="flex-col items-start gap-0.5"
@@ -287,10 +342,9 @@ function CoachActiveDropdownButton({
 
 interface CoacheeIdleButtonProps {
   onJoin: () => void;
-  showRecordingDot: boolean;
 }
 
-function CoacheeIdleButton({ onJoin, showRecordingDot }: CoacheeIdleButtonProps) {
+function CoacheeIdleButton({ onJoin }: CoacheeIdleButtonProps) {
   return (
     <TooltipProvider>
       <Tooltip>
@@ -298,12 +352,11 @@ function CoacheeIdleButton({ onJoin, showRecordingDot }: CoacheeIdleButtonProps)
           <Button
             variant="ghost"
             size="icon"
-            className="relative h-10 w-10"
+            className="h-10 w-10"
             aria-label="Join meeting"
             onClick={onJoin}
           >
             <Video className="!h-6 !w-6" />
-            {showRecordingDot && <RecordingDot />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
