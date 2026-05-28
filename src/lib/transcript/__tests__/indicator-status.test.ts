@@ -27,23 +27,18 @@ describe("deriveIndicatorStatus — failure takes precedence", () => {
   });
 });
 
-describe("deriveIndicatorStatus — live recording", () => {
-  it("returns Recording when the bot is actively recording", () => {
-    expect(
-      deriveIndicatorStatus({
-        recordingStatus: MeetingRecordingStatus.Recording,
-      })
-    ).toBe(IndicatorStatus.Recording);
-  });
-
-  it("does not pulse during non-Recording live states (joining/in-meeting/processing)", () => {
-    const quietLiveStates: MeetingRecordingStatus[] = [
+// Live "Recording" state intentionally does NOT surface here — the
+// pulsing red dot lives on the camera/join button (issue #404).
+describe("deriveIndicatorStatus — live recording is NOT a transcript-toggle state", () => {
+  it("returns None across every live/in-progress recording status", () => {
+    const liveStates: MeetingRecordingStatus[] = [
       MeetingRecordingStatus.Joining,
       MeetingRecordingStatus.WaitingRoom,
       MeetingRecordingStatus.InMeeting,
+      MeetingRecordingStatus.Recording,
       MeetingRecordingStatus.Processing,
     ];
-    for (const status of quietLiveStates) {
+    for (const status of liveStates) {
       expect(
         deriveIndicatorStatus({ recordingStatus: status })
       ).toBe(IndicatorStatus.None);
@@ -90,12 +85,15 @@ describe("deriveIndicatorStatus — default", () => {
     ).toBe(IndicatorStatus.None);
   });
 
-  it("recording=Recording takes priority over transcript=Completed (e.g. re-recording a session)", () => {
+  it("returns TranscriptReady when transcript completed even if recording=Recording (re-recording case)", () => {
+    // Pre-#404 this returned Recording (recording took priority). Now the
+    // recording state lives on the camera button, so the transcript-toggle
+    // surfaces the ready-to-view artifact instead.
     expect(
       deriveIndicatorStatus({
         recordingStatus: MeetingRecordingStatus.Recording,
         transcriptionStatus: TranscriptionStatus.Completed,
       })
-    ).toBe(IndicatorStatus.Recording);
+    ).toBe(IndicatorStatus.TranscriptReady);
   });
 });
