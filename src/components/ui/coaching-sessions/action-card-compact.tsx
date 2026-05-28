@@ -26,6 +26,7 @@ import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import { useLinkedGoalDisplay } from "@/lib/hooks/use-linked-goal-display";
 import { ItemStatus, Id } from "@/types/general";
+import { type Option, None } from "@/types/option";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
@@ -74,6 +75,8 @@ export interface CompactActionCardProps {
   onGoalChange?: (id: Id, goalId: Id | undefined) => void;
   /** When true, card starts in edit mode (used for new actions). */
   initialEditing?: boolean;
+  /** Text appended into the edit body on nonce change (add-card seeding). */
+  bodyAppend?: Option<{ text: string; nonce: number }>;
   /** Called when the user dismisses an initial-editing card. */
   onDismiss?: () => void;
   className?: string;
@@ -98,6 +101,7 @@ export function CompactActionCard({
   onGoalChange,
   highlighted = false,
   initialEditing = false,
+  bodyAppend = None,
   onDismiss,
   className,
 }: CompactActionCardProps) {
@@ -173,6 +177,7 @@ export function CompactActionCard({
             action={displayedAction}
             locale={locale}
             initialBody={body}
+            bodyAppend={bodyAppend}
             allAssignees={allAssignees}
             resolvedAssignees={resolvedAssignees}
             assigneeIds={assigneeIds}
@@ -483,6 +488,7 @@ function ActionEditForm({
   action,
   locale,
   initialBody,
+  bodyAppend = None,
   allAssignees,
   resolvedAssignees,
   assigneeIds,
@@ -498,6 +504,7 @@ function ActionEditForm({
   action: Action;
   locale: string;
   initialBody: string;
+  bodyAppend?: Option<{ text: string; nonce: number }>;
   allAssignees: { id: Id; name: string; initials: string }[];
   resolvedAssignees: { id: Id; name: string; initials: string }[];
   assigneeIds: Id[];
@@ -514,6 +521,16 @@ function ActionEditForm({
   const [isSaving, setIsSaving] = useState(false);
   const markdownRef = useRef<TextareaMarkdownRef>(null);
   const textareaWrapRef = useRef<HTMLDivElement>(null);
+
+  // Append notes-selection text once per nonce (empty body → seed).
+  const lastAppendNonce = useRef(0);
+  useEffect(() => {
+    if (!bodyAppend.some) return;
+    const { text, nonce } = bodyAppend.val;
+    if (nonce === lastAppendNonce.current) return;
+    lastAppendNonce.current = nonce;
+    setBody((prev) => (prev.trim() ? `${prev}\n\n${text}` : text));
+  }, [bodyAppend]);
 
   // Trap scroll inside the textarea when it has overflow.
   // React's onWheel is passive so preventDefault is ignored. We attach a

@@ -49,6 +49,7 @@ export function CoachingSessionPanelMobile({
   onBodyChange,
   isAddingAction,
   onAddingActionChange,
+  actionBodyAppend,
   activeActionTab,
   onActiveActionTabChange,
   locale,
@@ -189,6 +190,7 @@ export function CoachingSessionPanelMobile({
                 coacheeName={coacheeName}
                 isAddingAction={isAddingAction}
                 onAddingActionChange={onAddingActionChange}
+                actionBodyAppend={actionBodyAppend}
                 onStatusChange={onStatusChange}
                 onDueDateChange={onDueDateChange}
                 onAssigneesChange={onAssigneesChange}

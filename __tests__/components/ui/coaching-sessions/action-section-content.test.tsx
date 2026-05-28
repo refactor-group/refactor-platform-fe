@@ -6,6 +6,7 @@ import { DateTime } from "ts-luxon";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { ItemStatus } from "@/types/general";
+import { Some } from "@/types/option";
 import { createMockAction } from "../../../test-utils";
 
 // Same DueDatePicker mock as in the action-card test — exposes a stable
@@ -284,6 +285,38 @@ describe("ActionSectionContent", () => {
 
       // After save, parent is notified that adding is done.
       expect(onAddingActionChange).toHaveBeenCalledWith(false);
+    });
+
+    it("seeds the add-form body from a notes selection, then appends on a new nonce", async () => {
+      const { rerender } = render(
+        <Wrapper>
+          <ActionSectionContent
+            {...baseProps({
+              isAddingAction: true,
+              actionBodyAppend: Some({ text: "First selection", nonce: 1 }),
+            })}
+          />
+        </Wrapper>
+      );
+
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+      await waitFor(() => expect(textarea.value).toBe("First selection"));
+
+      // A new nonce appends as a new paragraph rather than replacing.
+      rerender(
+        <Wrapper>
+          <ActionSectionContent
+            {...baseProps({
+              isAddingAction: true,
+              actionBodyAppend: Some({ text: "Second selection", nonce: 2 }),
+            })}
+          />
+        </Wrapper>
+      );
+
+      await waitFor(() =>
+        expect(textarea.value).toBe("First selection\n\nSecond selection")
+      );
     });
   });
 });

@@ -8,6 +8,7 @@ import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
+import { type Option, None } from "@/types/option";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTime } from "ts-luxon";
 
@@ -31,6 +32,8 @@ export interface ActionSectionContentProps {
   coacheeName: string;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
+  /** Selected notes text to seed/append into the add-action form body. */
+  actionBodyAppend?: Option<{ text: string; nonce: number }>;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
@@ -57,6 +60,7 @@ export function ActionSectionContent({
   coacheeName,
   isAddingAction,
   onAddingActionChange,
+  actionBodyAppend = None,
   onStatusChange,
   onDueDateChange,
   onAssigneesChange,
@@ -222,6 +226,7 @@ export function ActionSectionContent({
             <CompactActionCard
               action={newActionPlaceholder}
               initialEditing
+              bodyAppend={actionBodyAppend}
               onDelete={undefined}
               onDismiss={() => onAddingActionChange(false)}
               {...sharedCardProps}

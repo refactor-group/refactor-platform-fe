@@ -2,11 +2,12 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector"
 import { createMockGoal, createMockAgreement } from "../../../test-utils"
 import { ItemStatus } from "@/types/general"
 import { GoalProgress } from "@/types/goal-progress"
-import { None } from "@/types/option"
+import { Some, None } from "@/types/option"
 import { DateTime } from "ts-luxon"
 
 // Mock matchMedia to simulate desktop viewport (md+ breakpoint)
@@ -33,6 +34,12 @@ const mockUpdateGoal = vi.fn()
 vi.mock("@/lib/api/goals", () => ({
   useGoalsBySession: vi.fn(),
   useGoalList: vi.fn(),
+  useGoal: vi.fn(() => ({
+    goal: undefined,
+    isLoading: false,
+    isError: false,
+    refresh: vi.fn(),
+  })),
   useGoalMutation: vi.fn(() => ({
     create: mockCreateGoal,
     update: mockUpdateGoal,
@@ -332,6 +339,58 @@ describe("CoachingSessionPanel", () => {
           action: expect.objectContaining({ label: "Undo" }),
         })
       )
+    })
+  })
+
+  it("opens the Actions add-form seeded with a notes selection", async () => {
+    setupMocks()
+    render(
+      <TooltipProvider>
+        <CoachingSessionPanel
+          coachingSessionId="session-1"
+          coachingRelationshipId="rel-1"
+          actionDraft={Some({ body: "Follow up on hiring plan", nonce: 1 })}
+        />
+      </TooltipProvider>
+    )
+
+    // The render-time draft handler switches to Actions and opens the add
+    // form; the append signal seeds its body.
+    await waitFor(() => {
+      const textarea = screen.getAllByRole("textbox")[0] as HTMLTextAreaElement
+      expect(textarea.value).toBe("Follow up on hiring plan")
+    })
+  })
+
+  it("starts a fresh Add blank after a seeded form is closed", async () => {
+    const user = userEvent.setup()
+    setupMocks()
+    render(
+      <TooltipProvider>
+        <CoachingSessionPanel
+          coachingSessionId="session-1"
+          coachingRelationshipId="rel-1"
+          actionDraft={Some({ body: "Seeded from note", nonce: 1 })}
+        />
+      </TooltipProvider>
+    )
+
+    await waitFor(() => {
+      expect(
+        (screen.getAllByRole("textbox")[0] as HTMLTextAreaElement).value
+      ).toBe("Seeded from note")
+    })
+
+    // Close the seeded form, then re-open via the Add button. The append
+    // signal must have been cleared so the fresh form starts blank — and the
+    // still-present actionDraft prop must NOT re-seed it (nonce dedup).
+    await user.click(screen.getAllByRole("button", { name: /cancel/i })[0])
+    await user.click(screen.getAllByRole("button", { name: /^add$/i })[0])
+
+    await waitFor(() => {
+      expect(
+        (screen.getAllByRole("textbox")[0] as HTMLTextAreaElement).value
+      ).toBe("")
     })
   })
 

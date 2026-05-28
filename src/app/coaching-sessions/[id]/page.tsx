@@ -1,7 +1,8 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { type Option, Some, None } from "@/types/option";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 
@@ -120,8 +121,7 @@ export default function CoachingSessionsPage() {
       ? PanelSection.Actions
       : PanelSection.Goals;
 
-  const { userId, userSession } = useAuthStore((state) => ({
-    userId: state.userId,
+  const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
 
@@ -137,6 +137,52 @@ export default function CoachingSessionsPage() {
 
   // Three-pane layout state (focus mode + transcript visibility). URL-backed.
   const layout = useCoachingSessionLayout();
+
+  // Bridge from the notes "Add as Action" selection to the panel's add-action
+  // form: bump a monotonic nonce so the panel reacts once per selection.
+  const [actionDraft, setActionDraft] =
+    useState<Option<{ body: string; nonce: number }>>(None);
+  const actionDraftNonce = useRef(0);
+  const syncedSectionNonce = useRef(0);
+
+  const handlePanelSectionChange = useCallback(
+    (section: PanelSection) => {
+      const newSearchParams = new URLSearchParams(searchParams);
+      if (section === PanelSection.Goals) {
+        // Remove panel parameter for default section to keep URL clean
+        newSearchParams.delete("panel");
+      } else {
+        newSearchParams.set("panel", section);
+      }
+
+      const newUrl = newSearchParams.toString()
+        ? `${window.location.pathname}?${newSearchParams.toString()}`
+        : window.location.pathname;
+
+      router.replace(newUrl, { scroll: false });
+    },
+    [searchParams, router]
+  );
+
+  const handleAddActionFromNote = useCallback(
+    (selectedText: string) => {
+      const trimmed = selectedText.trim();
+      if (!trimmed) return;
+      if (layout.isGoalsCollapsed) layout.toggleGoalsCollapsed();
+      actionDraftNonce.current += 1;
+      setActionDraft(Some({ body: trimmed, nonce: actionDraftNonce.current }));
+    },
+    [layout]
+  );
+
+  // Pin panel=actions once per draft, but only after the panel is expanded;
+  // gating on !isGoalsCollapsed avoids clobbering the focus/transcript params.
+  useEffect(() => {
+    if (!actionDraft.some || layout.isGoalsCollapsed) return;
+    if (actionDraft.val.nonce === syncedSectionNonce.current) return;
+    syncedSectionNonce.current = actionDraft.val.nonce;
+    handlePanelSectionChange(PanelSection.Actions);
+  }, [actionDraft, layout.isGoalsCollapsed, handlePanelSectionChange]);
 
   // Recording and transcription status — used for the header indicator.
   // TranscriptPanel calls the same hooks internally; SWR deduplicates the requests.
@@ -251,22 +297,6 @@ export default function CoachingSessionsPage() {
     toast.error("Failed to copy session link.");
   };
 
-  const handlePanelSectionChange = (section: PanelSection) => {
-    const newSearchParams = new URLSearchParams(searchParams);
-    if (section === PanelSection.Goals) {
-      // Remove panel parameter for default section to keep URL clean
-      newSearchParams.delete("panel");
-    } else {
-      newSearchParams.set("panel", section);
-    }
-
-    const newUrl = newSearchParams.toString()
-      ? `${window.location.pathname}?${newSearchParams.toString()}`
-      : window.location.pathname;
-
-    router.replace(newUrl, { scroll: false });
-  };
-
   const gridColumns = computeGridColumns(
     layout.focusedPanel,
     layout.isTranscriptOpen,
@@ -333,6 +363,7 @@ export default function CoachingSessionsPage() {
                 : false}
               defaultSection={panelSection}
               onSectionChange={handlePanelSectionChange}
+              actionDraft={actionDraft}
             />
           )}
 
@@ -348,9 +379,9 @@ export default function CoachingSessionsPage() {
 
           {shouldRenderNotes && (
             <CoachingTabsContainer
-              userId={userId}
               isMaximized={layout.isNotesMaximized}
               onToggleMaximize={layout.toggleNotesMaximized}
+              onAddActionFromNote={handleAddActionFromNote}
             />
           )}
         </div>
