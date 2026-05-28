@@ -114,7 +114,7 @@ export function JoinMeetingButton({
         isLive
           ? () =>
               stopRecording().catch((err) =>
-                toast.error("Couldn't stop transcription.", {
+                toast.error("Couldn't stop recording.", {
                   description:
                     err instanceof Error ? err.message : undefined,
                 })
@@ -352,9 +352,9 @@ function ActiveDropdownButton({
               onSelect={() => setStopOpen(true)}
               className="flex-col items-start gap-0.5"
             >
-              <span className="font-medium">Stop transcription</span>
+              <span className="font-medium">Stop recording</span>
               <span className="text-xs text-muted-foreground">
-                Stop the recording and finalize the transcript.
+                A transcription of this meeting won&apos;t be generated.
               </span>
             </DropdownMenuItem>
           )}
@@ -363,21 +363,21 @@ function ActiveDropdownButton({
       <AlertDialog open={stopOpen} onOpenChange={setStopOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Stop transcription?</AlertDialogTitle>
+            <AlertDialogTitle>Stop recording?</AlertDialogTitle>
             <AlertDialogDescription>
-              The bot will leave the meeting and finalize the transcript. You
-              can&apos;t resume the same transcription afterward.
+              The bot will leave the meeting. A transcription of this session
+              won&apos;t be generated. This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep transcribing</AlertDialogCancel>
+            <AlertDialogCancel>Keep recording</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 setStopOpen(false);
                 onStop?.();
               }}
             >
-              Stop transcription
+              Stop recording
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

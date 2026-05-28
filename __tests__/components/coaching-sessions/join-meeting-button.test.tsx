@@ -266,7 +266,7 @@ describe.each([
   MeetingRecordingStatus.Joining,
   MeetingRecordingStatus.WaitingRoom,
 ])("JoinMeetingButton — coach joining (status=%s)", (status) => {
-  it("renders the camera dropdown with 'Open meeting' and no 'Stop transcription' item yet", async () => {
+  it("renders the camera dropdown with 'Open meeting' and no 'stop recording' item yet", async () => {
     const user = userEvent.setup();
     recordingHookState.recording = { status };
 
@@ -282,7 +282,7 @@ describe.each([
     ).toBeInTheDocument();
     // The bot is still joining — nothing to stop.
     expect(
-      screen.queryByRole("menuitem", { name: /stop transcription/i })
+      screen.queryByRole("menuitem", { name: /stop recording/i })
     ).not.toBeInTheDocument();
   });
 
@@ -310,7 +310,7 @@ describe.each([
   MeetingRecordingStatus.InMeeting,
   MeetingRecordingStatus.Recording,
 ])("JoinMeetingButton — coach live (status=%s)", (status) => {
-  it("exposes elapsed-time label, 'Open meeting', and 'Stop transcription' items", async () => {
+  it("exposes elapsed-time label, 'Open meeting', and 'stop recording' items", async () => {
     const user = userEvent.setup();
     recordingHookState.recording = {
       status,
@@ -327,7 +327,7 @@ describe.each([
       await screen.findByRole("menuitem", { name: /open meeting/i })
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole("menuitem", { name: /stop transcription/i })
+      await screen.findByRole("menuitem", { name: /stop recording/i })
     ).toBeInTheDocument();
   });
 
@@ -363,7 +363,7 @@ describe.each([
     ).toBeTruthy();
   });
 
-  it("selecting 'Stop transcription' opens the AlertDialog; confirming calls stopRecording", async () => {
+  it("selecting 'stop recording' opens the AlertDialog; confirming calls stopRecording", async () => {
     const user = userEvent.setup();
     recordingHookState.recording = {
       status,
@@ -373,11 +373,11 @@ describe.each([
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
-      await screen.findByRole("menuitem", { name: /stop transcription/i })
+      await screen.findByRole("menuitem", { name: /stop recording/i })
     );
 
     const confirm = await screen.findByRole("button", {
-      name: /^stop transcription$/i,
+      name: /^stop recording$/i,
     });
     await user.click(confirm);
 
@@ -394,11 +394,11 @@ describe.each([
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
-      await screen.findByRole("menuitem", { name: /stop transcription/i })
+      await screen.findByRole("menuitem", { name: /stop recording/i })
     );
 
     const cancel = await screen.findByRole("button", {
-      name: /keep transcribing/i,
+      name: /keep recording/i,
     });
     await user.click(cancel);
 
@@ -426,7 +426,7 @@ describe("JoinMeetingButton — coach processing", () => {
       await screen.findByRole("menuitem", { name: /open meeting/i })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("menuitem", { name: /stop transcription/i })
+      screen.queryByRole("menuitem", { name: /stop recording/i })
     ).not.toBeInTheDocument();
   });
 });
@@ -436,6 +436,7 @@ describe("JoinMeetingButton — coach processing", () => {
 describe.each([
   MeetingRecordingStatus.Completed,
   MeetingRecordingStatus.Failed,
+  MeetingRecordingStatus.Cancelled,
 ])("JoinMeetingButton — coach terminal (status=%s) returns to idle", (status) => {
   it("renders the Join Meeting dropdown trigger", () => {
     recordingHookState.recording = { status };
@@ -620,7 +621,7 @@ describe.each([
         screen.queryByRole("button", { name: /transcription in progress/i })
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /stop transcription/i })
+        screen.queryByRole("button", { name: /stop recording/i })
       ).not.toBeInTheDocument();
     });
   }
@@ -764,6 +765,7 @@ describe("JoinMeetingButton — recording dot on camera icon", () => {
     MeetingRecordingStatus.Processing,
     MeetingRecordingStatus.Completed,
     MeetingRecordingStatus.Failed,
+    MeetingRecordingStatus.Cancelled,
   ])("does NOT render the dot for status=%s (coach)", (status) => {
     recordingHookState.recording = { status };
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
@@ -777,6 +779,7 @@ describe("JoinMeetingButton — recording dot on camera icon", () => {
     MeetingRecordingStatus.Processing,
     MeetingRecordingStatus.Completed,
     MeetingRecordingStatus.Failed,
+    MeetingRecordingStatus.Cancelled,
   ])("does NOT render the dot for status=%s (coachee)", (status) => {
     recordingHookState.recording = { status };
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={false} />);
@@ -808,7 +811,7 @@ describe("JoinMeetingButton — role transitions don't leak privileges", () => {
     // Coach: dropdown trigger present; opening it reveals the stop item.
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     expect(
-      await screen.findByRole("menuitem", { name: /stop transcription/i })
+      await screen.findByRole("menuitem", { name: /stop recording/i })
     ).toBeInTheDocument();
     // Close the menu so the rerender swaps a clean closed dropdown in.
     await user.keyboard("{Escape}");

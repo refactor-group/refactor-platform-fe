@@ -97,4 +97,21 @@ describe("deriveIndicatorStatus — default", () => {
       })
     ).toBe(IndicatorStatus.TranscriptReady);
   });
+
+  it("returns None for a Cancelled recording with no transcription artifact yet", () => {
+    expect(
+      deriveIndicatorStatus({
+        recordingStatus: MeetingRecordingStatus.Cancelled,
+      })
+    ).toBe(IndicatorStatus.None);
+  });
+
+  it("returns TranscriptReady when a Cancelled recording produced a Completed transcript", () => {
+    expect(
+      deriveIndicatorStatus({
+        recordingStatus: MeetingRecordingStatus.Cancelled,
+        transcriptionStatus: TranscriptionStatus.Completed,
+      })
+    ).toBe(IndicatorStatus.TranscriptReady);
+  });
 });
