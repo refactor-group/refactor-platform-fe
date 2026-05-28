@@ -4,10 +4,15 @@ import userEvent from "@testing-library/user-event";
 
 import { JoinMeetingButton } from "@/components/ui/coaching-sessions/join-meeting-button";
 import { MeetingRecordingStatus } from "@/types/meeting-recording";
+import { TranscriptionStatus } from "@/types/transcription";
 
 const recordingHookState: {
   recording: { status: MeetingRecordingStatus; started_at?: string } | null;
 } = { recording: null };
+
+const transcriptionHookState: {
+  transcription: { id: string; status: TranscriptionStatus } | null;
+} = { transcription: null };
 
 const startRecording = vi.fn(() => Promise.resolve({}));
 const stopRecording = vi.fn(() => Promise.resolve({}));
@@ -17,6 +22,12 @@ vi.mock("@/lib/api/meeting-recordings", () => ({
     recording: recordingHookState.recording,
     startRecording,
     stopRecording,
+  }),
+}));
+
+vi.mock("@/lib/api/transcriptions", () => ({
+  useTranscription: () => ({
+    transcription: transcriptionHookState.transcription,
   }),
 }));
 
@@ -34,6 +45,7 @@ let openSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   recordingHookState.recording = null;
+  transcriptionHookState.transcription = null;
   startRecording.mockClear();
   stopRecording.mockClear();
   toastError.mockClear();
@@ -124,6 +136,126 @@ describe("JoinMeetingButton — coach idle dropdown", () => {
 
     expect(toastError).toHaveBeenCalledTimes(1);
     expect(toastError.mock.calls[0][0]).toMatch(/couldn't start transcription/i);
+  });
+});
+
+// ── Coach idle + existing transcription: replacement confirmation ────
+
+describe("JoinMeetingButton — coach idle, existing transcription on the session", () => {
+  it("'Join with transcription' opens a replacement confirmation dialog instead of firing the API", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Completed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /join with transcription/i })
+    );
+
+    expect(
+      await screen.findByText(/replace existing transcription/i)
+    ).toBeInTheDocument();
+    // Crucially, neither side-effect fires before the user confirms.
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(startRecording).not.toHaveBeenCalled();
+  });
+
+  it("confirming the replacement dialog fires window.open and startRecording (same as the no-transcription path)", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Completed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /join with transcription/i })
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /replace transcription/i })
+    );
+
+    expect(openSpy).toHaveBeenCalledWith(
+      MEETING_URL,
+      "_blank",
+      "noopener,noreferrer"
+    );
+    expect(startRecording).toHaveBeenCalledWith(MEETING_URL);
+    const openOrder = openSpy.mock.invocationCallOrder[0];
+    const startOrder = startRecording.mock.invocationCallOrder[0];
+    expect(openOrder).toBeLessThan(startOrder);
+  });
+
+  it("cancelling the replacement dialog does NOT call window.open or startRecording", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Completed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /join with transcription/i })
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /keep existing transcript/i })
+    );
+
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(startRecording).not.toHaveBeenCalled();
+  });
+
+  it("'Join WITHOUT transcription' bypasses the confirmation dialog (only the transcribing path is gated)", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Completed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: /join without transcription/i,
+      })
+    );
+
+    expect(
+      screen.queryByText(/replace existing transcription/i)
+    ).not.toBeInTheDocument();
+    expect(openSpy).toHaveBeenCalledWith(
+      MEETING_URL,
+      "_blank",
+      "noopener,noreferrer"
+    );
+    expect(startRecording).not.toHaveBeenCalled();
+  });
+
+  it("a Failed transcription is NOT treated as an existing transcription — no confirmation prompt", async () => {
+    const user = userEvent.setup();
+    transcriptionHookState.transcription = {
+      id: "t-1",
+      status: TranscriptionStatus.Failed,
+    };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /join with transcription/i })
+    );
+
+    expect(
+      screen.queryByText(/replace existing transcription/i)
+    ).not.toBeInTheDocument();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(startRecording).toHaveBeenCalledWith(MEETING_URL);
   });
 });
 

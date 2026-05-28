@@ -30,12 +30,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useMeetingRecording } from "@/lib/api/meeting-recordings";
+import { useTranscription } from "@/lib/api/transcriptions";
 import { useInterval } from "@/lib/hooks/use-interval";
 import { formatTimestamp } from "@/lib/transcript/format-timestamp";
 import {
   MeetingRecordingStatus,
   isRecordingTerminal,
 } from "@/types/meeting-recording";
+import { TranscriptionStatus } from "@/types/transcription";
 import type { Id } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 
@@ -53,6 +55,12 @@ export function JoinMeetingButton({
 }: JoinMeetingButtonProps) {
   const { recording, startRecording, stopRecording } =
     useMeetingRecording(sessionId);
+  const { transcription } = useTranscription(sessionId);
+  // Failed transcriptions hold no content worth confirming over; any
+  // other lifecycle state implies the coach is about to overwrite real
+  // (or in-progress) data and should be prompted.
+  const hasExistingTranscription =
+    !!transcription && transcription.status !== TranscriptionStatus.Failed;
 
   if (!meetingUrl || !sessionId) {
     return <DisabledButton />;
@@ -92,6 +100,7 @@ export function JoinMeetingButton({
       <CoachIdleDropdownButton
         onJoinWithTranscription={handleJoinWithTranscription}
         onJoinWithoutTranscription={openMeeting}
+        hasExistingTranscription={hasExistingTranscription}
       />
     );
   }
@@ -186,54 +195,98 @@ function DisabledButton() {
 interface CoachIdleDropdownButtonProps {
   onJoinWithTranscription: () => void;
   onJoinWithoutTranscription: () => void;
+  /** When true, "Join with transcription" prompts for replacement confirmation. */
+  hasExistingTranscription: boolean;
 }
 
 function CoachIdleDropdownButton({
   onJoinWithTranscription,
   onJoinWithoutTranscription,
+  hasExistingTranscription,
 }: CoachIdleDropdownButtonProps) {
+  const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
+
+  const handleJoinWithTranscriptionSelect = () => {
+    if (hasExistingTranscription) {
+      setConfirmReplaceOpen(true);
+      return;
+    }
+    onJoinWithTranscription();
+  };
+
   return (
-    <DropdownMenu>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-10 px-2 gap-0.5"
-                aria-label="Join meeting"
-              >
-                <Video className="!h-6 !w-6" />
-                <ChevronDown className="!h-3 !w-3 opacity-70" />
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Join Meeting</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuItem
-          onSelect={onJoinWithTranscription}
-          className="flex-col items-start gap-0.5"
-        >
-          <span className="font-medium">Join with transcription</span>
-          <span className="text-xs text-muted-foreground">
-            The meeting will be recorded and transcribed.
-          </span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={onJoinWithoutTranscription}
-          className="flex-col items-start gap-0.5"
-        >
-          <span className="font-medium">Join without transcription</span>
-          <span className="text-xs text-muted-foreground">
-            The meeting will not be recorded or transcribed.
-          </span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-10 px-2 gap-0.5"
+                  aria-label="Join meeting"
+                >
+                  <Video className="!h-6 !w-6" />
+                  <ChevronDown className="!h-3 !w-3 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Join Meeting</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuItem
+            onSelect={handleJoinWithTranscriptionSelect}
+            className="flex-col items-start gap-0.5"
+          >
+            <span className="font-medium">Join with transcription</span>
+            <span className="text-xs text-muted-foreground">
+              The meeting will be recorded and transcribed.
+            </span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={onJoinWithoutTranscription}
+            className="flex-col items-start gap-0.5"
+          >
+            <span className="font-medium">Join without transcription</span>
+            <span className="text-xs text-muted-foreground">
+              The meeting will not be recorded or transcribed.
+            </span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <AlertDialog
+        open={confirmReplaceOpen}
+        onOpenChange={setConfirmReplaceOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace existing transcription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This coaching session already has a transcription. Joining with
+              transcription again will start a new recording and replace the
+              existing transcript. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep existing transcript</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmReplaceOpen(false);
+                // Synchronous user gesture from this click — window.open
+                // inside onJoinWithTranscription still bypasses pop-up
+                // blockers because we're inside the confirm handler.
+                onJoinWithTranscription();
+              }}
+            >
+              Replace transcription
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
