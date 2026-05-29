@@ -6,6 +6,7 @@ import { FileText } from "lucide-react";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
 import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu/link-bubble-menu";
 import { SelectionBubbleMenu } from "@/components/ui/tiptap-ui/selection-bubble-menu/selection-bubble-menu";
+import type { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,10 +22,10 @@ const PREPARING_HINT_DELAY_MS = 1500;
 // Main component: orchestrates editor state and rendering logic
 
 interface CoachingNotesProps {
-  onAddAsAction?: (selectedText: string) => void;
+  onAddAs?: (section: PanelSection, selectedText: string) => void;
 }
 
-const CoachingNotes = ({ onAddAsAction }: CoachingNotesProps) => {
+const CoachingNotes = ({ onAddAs }: CoachingNotesProps) => {
   const { extensions, isReady, isLoading, error, resetCache } = useEditorCache();
 
   if (error) {
@@ -35,7 +36,7 @@ const CoachingNotes = ({ onAddAsAction }: CoachingNotesProps) => {
     return <LoadingState />;
   }
 
-  return renderReadyEditor(extensions, isReady, onAddAsAction);
+  return renderReadyEditor(extensions, isReady, onAddAs);
 };
 
 const LoadingState = () => {
@@ -93,10 +94,10 @@ const renderErrorState = (error: Error | null, onRetry: () => void) => (
 const renderReadyEditor = (
   extensions: Extensions,
   isReady: boolean,
-  onAddAsAction?: (selectedText: string) => void,
+  onAddAs?: (section: PanelSection, selectedText: string) => void,
 ) => {
   try {
-    return renderReadyEditorContent(extensions, isReady, onAddAsAction);
+    return renderReadyEditorContent(extensions, isReady, onAddAs);
   } catch (error) {
     console.error("Editor initialization failed:", error);
     return (
@@ -119,7 +120,7 @@ const renderReadyEditor = (
 const renderReadyEditorContent = (
   extensions: Extensions,
   isReady: boolean,
-  onAddAsAction?: (selectedText: string) => void,
+  onAddAs?: (section: PanelSection, selectedText: string) => void,
 ) => (
   <div className="coaching-notes-editor">
     <EditorProvider
@@ -145,7 +146,7 @@ const renderReadyEditorContent = (
       }
     >
       <LinkBubbleMenu />
-      {onAddAsAction && <SelectionBubbleMenu onAddAsAction={onAddAsAction} />}
+      {onAddAs && <SelectionBubbleMenu onAddAs={onAddAs} />}
     </EditorProvider>
   </div>
 );

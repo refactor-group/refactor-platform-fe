@@ -48,6 +48,8 @@ export function CoachingSessionPanelDesktop({
   onAgreementCreate,
   isAddingAgreement,
   onAddingAgreementChange,
+  agreementBodyAppend,
+  goalTitleSeed,
   // Action props
   reviewActions,
   sessionActions,
@@ -216,6 +218,7 @@ export function CoachingSessionPanelDesktop({
               readOnly={readOnly}
               onUnlink={onUnlink}
               onUpdateGoal={onUpdateGoal}
+              titleSeed={goalTitleSeed}
             />
           ) : activeSection === PanelSection.Agreements ? (
             <AgreementSectionContent
@@ -223,6 +226,7 @@ export function CoachingSessionPanelDesktop({
               locale={locale}
               isAddingAgreement={isAddingAgreement}
               onAddingAgreementChange={onAddingAgreementChange}
+              agreementBodyAppend={agreementBodyAppend}
               onAgreementCreate={onAgreementCreate}
               onAgreementEdit={onAgreementEdit}
               onAgreementDelete={onAgreementDelete}

@@ -80,25 +80,34 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
-  CoachingSessionPanel: ({ readOnly, actionDraft }: any) => (
+  CoachingSessionPanel: ({ readOnly, noteSelection }: any) => (
     <div
       data-testid="coaching-session-panel"
       data-readonly={String(!!readOnly)}
-      data-draft-body={actionDraft?.some ? actionDraft.val.body : ''}
+      data-draft-section={noteSelection?.some ? noteSelection.val.section : ''}
+      data-draft-text={noteSelection?.some ? noteSelection.val.text : ''}
     >Goals</div>
   )
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-tabs-container', () => ({
-  CoachingTabsContainer: ({ onAddActionFromNote }: any) => (
+  CoachingTabsContainer: ({ onAddFromNote }: any) => (
     <div data-testid="coaching-tabs-container">
       <button
-        data-testid="trigger-add-from-note"
-        onClick={() => onAddActionFromNote('  Hello from the notes  ')}
-      >Add from note</button>
+        data-testid="trigger-add-action"
+        onClick={() => onAddFromNote('actions', '  Hello from the notes  ')}
+      >Add as action</button>
       <button
-        data-testid="trigger-add-from-note-blank"
-        onClick={() => onAddActionFromNote('   ')}
+        data-testid="trigger-add-agreement"
+        onClick={() => onAddFromNote('agreements', 'Weekly retro every Friday')}
+      >Add as agreement</button>
+      <button
+        data-testid="trigger-add-goal"
+        onClick={() => onAddFromNote('goals', 'Ship the onboarding revamp')}
+      >Add as goal</button>
+      <button
+        data-testid="trigger-add-blank"
+        onClick={() => onAddFromNote('actions', '   ')}
       >Add from blank note</button>
     </div>
   )
@@ -691,13 +700,14 @@ describe('CoachingSessionsPage - Panel visibility across URL states', () => {
 })
 
 /**
- * Test Suite: Add action from notes selection
+ * Test Suite: Add from notes selection
  *
- * Validates the page-level bridge from the notes "Add as Action" affordance:
- * the selected text is trimmed and handed to the panel as the action draft,
- * and (when the panel is already expanded) the URL is pinned to panel=actions.
+ * Validates the page-level bridge from the notes "Add as …" affordance: the
+ * selected text is trimmed and handed to the panel as a NoteSelection carrying
+ * its target section, and (when the panel is already expanded) the URL is
+ * pinned to panel=<section>. One mechanism, all three entity sections.
  */
-describe('CoachingSessionsPage - Add action from notes selection', () => {
+describe('CoachingSessionsPage - Add from notes selection', () => {
   const mockReplace = vi.fn()
 
   beforeEach(() => {
@@ -731,29 +741,40 @@ describe('CoachingSessionsPage - Add action from notes selection', () => {
     })
   })
 
-  it('passes the trimmed selection to the panel and pins panel=actions in the URL', async () => {
-    const user = userEvent.setup()
-    render(
-      <TestProviders>
-        <CoachingSessionsPage />
-      </TestProviders>
-    )
-
-    await user.click(screen.getByTestId('trigger-add-from-note'))
-
-    // Trim guard: surrounding whitespace from the selection is stripped.
-    expect(
-      screen.getByTestId('coaching-session-panel').getAttribute('data-draft-body')
-    ).toBe('Hello from the notes')
-
-    // Panel is expanded by default, so the deferred URL sync fires.
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith(
-        expect.stringContaining('panel=actions'),
-        expect.objectContaining({ scroll: false })
+  it.each([
+    { testId: 'trigger-add-action', section: 'actions', text: 'Hello from the notes' },
+    { testId: 'trigger-add-agreement', section: 'agreements', text: 'Weekly retro every Friday' },
+    { testId: 'trigger-add-goal', section: 'goals', text: 'Ship the onboarding revamp' },
+  ])(
+    'passes the trimmed selection to the panel and pins panel=$section in the URL',
+    async ({ testId, section, text }) => {
+      const user = userEvent.setup()
+      render(
+        <TestProviders>
+          <CoachingSessionsPage />
+        </TestProviders>
       )
-    })
-  })
+
+      await user.click(screen.getByTestId(testId))
+
+      // Trim guard + correct section/text handed to the panel.
+      const panel = screen.getByTestId('coaching-session-panel')
+      expect(panel.getAttribute('data-draft-section')).toBe(section)
+      expect(panel.getAttribute('data-draft-text')).toBe(text)
+
+      // Panel is expanded by default, so the deferred URL sync fires. Goals is
+      // the default section, so its param is removed to keep the URL clean;
+      // the other two pin panel=<section>.
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith(
+          section === 'goals'
+            ? expect.not.stringContaining('panel=')
+            : expect.stringContaining(`panel=${section}`),
+          expect.objectContaining({ scroll: false })
+        )
+      })
+    }
+  )
 
   it('ignores a whitespace-only selection (no draft, no URL change)', async () => {
     const user = userEvent.setup()
@@ -763,14 +784,14 @@ describe('CoachingSessionsPage - Add action from notes selection', () => {
       </TestProviders>
     )
 
-    await user.click(screen.getByTestId('trigger-add-from-note-blank'))
+    await user.click(screen.getByTestId('trigger-add-blank'))
 
     // Guard bails before setting a draft or touching the URL.
     expect(
-      screen.getByTestId('coaching-session-panel').getAttribute('data-draft-body')
+      screen.getByTestId('coaching-session-panel').getAttribute('data-draft-text')
     ).toBe('')
     expect(mockReplace).not.toHaveBeenCalledWith(
-      expect.stringContaining('panel=actions'),
+      expect.stringContaining('panel='),
       expect.anything()
     )
   })

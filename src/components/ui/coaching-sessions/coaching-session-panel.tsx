@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -44,6 +44,7 @@ import {
 import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
+import type { NoteField, NoteSelection } from "@/types/note-selection";
 import { DateTime } from "ts-luxon";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { siteConfig } from "@/site.config";
@@ -75,6 +76,8 @@ export interface CoachingSessionPanelSharedProps {
   onAgreementCreate?: (body: string) => Promise<void>;
   isAddingAgreement: boolean;
   onAddingAgreementChange: (adding: boolean) => void;
+  /** Selected notes text to seed/append into the add-agreement form. */
+  agreementBodyAppend: Option<NoteField>;
   // Action data
   reviewActions: Action[];
   sessionActions: Action[];
@@ -95,10 +98,24 @@ export interface CoachingSessionPanelSharedProps {
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
   /** Selected notes text to seed/append into the add-action form. */
-  actionBodyAppend: Option<{ text: string; nonce: number }>;
+  actionBodyAppend: Option<NoteField>;
+  /** Selected notes text to seed the new-goal title field. */
+  goalTitleSeed: Option<NoteField>;
   locale: string;
   activeActionTab: ActionTab;
   onActiveActionTabChange: (tab: ActionTab) => void;
+}
+
+// A section's hooks for receiving a notes selection. Every section supplies
+// the same three methods, so routing a selection (and clearing it on close)
+// needs no per-entity branching at the call sites.
+interface NoteSelectionTarget {
+  /** Enter this section's add-flow. */
+  open(): void;
+  /** Route the selected text into this section's seeded field. */
+  seed(field: Option<NoteField>): void;
+  /** Drop the seed when the add-flow closes. */
+  clear(): void;
 }
 
 // ── Shared helpers for desktop and mobile layouts ─────────────────────
@@ -161,12 +178,15 @@ export function GoalFlowPages({
   readOnly,
   onUnlink,
   onUpdateGoal,
+  titleSeed = None,
 }: {
   linkedGoals: Goal[];
   goalFlow: ReturnType<typeof useGoalFlow>;
   readOnly: boolean;
   onUnlink: (goalId: string) => void;
   onUpdateGoal: (goalId: string, title: string, body: string) => Promise<void>;
+  /** Notes selection seeding the new-goal title (replace-if-empty). */
+  titleSeed?: Option<NoteField>;
 }) {
   const { flow } = goalFlow;
 
@@ -247,6 +267,7 @@ export function GoalFlowPages({
             onSubmit={goalFlow.handleFormSubmit}
             onCancel={goalFlow.handleBack}
             submitLabel="Save"
+            titleSeed={titleSeed}
           />
         </SlidePanel>
       );
@@ -276,8 +297,11 @@ interface CoachingSessionPanelProps {
   defaultSection?: PanelSection;
   /** Called when the user switches sections, so the page can sync to URL */
   onSectionChange?: (section: PanelSection) => void;
-  /** Notes "Add as Action" selection; a new nonce opens/seeds the add-form. */
-  actionDraft?: Option<{ body: string; nonce: number }>;
+  /**
+   * Notes "Add as …" selection routed to a section's add-flow; a new nonce
+   * opens that section's add-form and seeds the appropriate field.
+   */
+  noteSelection?: Option<NoteSelection>;
 }
 
 export function CoachingSessionPanel({
@@ -288,7 +312,7 @@ export function CoachingSessionPanel({
   readOnly = false,
   defaultSection = PanelSection.Goals,
   onSectionChange: onSectionChangeExternal,
-  actionDraft = None,
+  noteSelection = None,
 }: CoachingSessionPanelProps) {
   // ── Resolve user/relationship context for actions ───────────────
   const userId = useAuthStore((state) => state.userId);
@@ -688,31 +712,66 @@ export function CoachingSessionPanel({
 
   const [isAddingAction, setIsAddingAction] = useState(false);
   const [activeActionTab, setActiveActionTab] = useState<ActionTab>("new");
+  const [isAddingAgreement, setIsAddingAgreement] = useState(false);
 
-  // Notes selection routed into the add-action form; appending to an empty
-  // body seeds it, so one signal covers both fresh-open and in-progress.
-  const [actionBodyAppend, setActionBodyAppend] =
-    useState<Option<{ text: string; nonce: number }>>(None);
-  const handledDraftNonce = useRef(0);
+  // Notes "Add as …" seeds. Appending to an empty body seeds it, so one
+  // signal covers both fresh-open and in-progress add-forms; goals seed the
+  // title (replace-if-empty) since that is their primary field.
+  const [actionBodyAppend, setActionBodyAppend] = useState<Option<NoteField>>(None);
+  const [agreementBodyAppend, setAgreementBodyAppend] = useState<Option<NoteField>>(None);
+  const [goalTitleSeed, setGoalTitleSeed] = useState<Option<NoteField>>(None);
+  const handledNonce = useRef(0);
 
-  // Open the Actions add-form on a new draft nonce (render-time own-state
-  // adjustment, mirroring action-section-content's requiredTab pattern).
-  if (actionDraft.some && actionDraft.val.nonce !== handledDraftNonce.current) {
-    handledDraftNonce.current = actionDraft.val.nonce;
-    setActiveSection(PanelSection.Actions);
-    if (!isAddingAction) setIsAddingAction(true);
-    setActionBodyAppend(Some({ text: actionDraft.val.body, nonce: actionDraft.val.nonce }));
+  // Each section receives a notes selection through the same interface, so the
+  // dispatch below and the clear-on-close handlers need no per-entity switch.
+  const noteTargets: Record<PanelSection, NoteSelectionTarget> = {
+    [PanelSection.Goals]: {
+      // At the goal cap, creation requires a swap first; both routes land on
+      // the create form, where the seeded title is applied on mount.
+      open: () => (atLimit ? goalFlow.handleAddGoalClick() : goalFlow.handleCreateNewClick()),
+      seed: setGoalTitleSeed,
+      clear: () => setGoalTitleSeed(None),
+    },
+    [PanelSection.Agreements]: {
+      open: () => setIsAddingAgreement(true),
+      seed: setAgreementBodyAppend,
+      clear: () => setAgreementBodyAppend(None),
+    },
+    [PanelSection.Actions]: {
+      open: () => setIsAddingAction(true),
+      seed: setActionBodyAppend,
+      clear: () => setActionBodyAppend(None),
+    },
+  };
+
+  // Open the target section's add-form on a new selection nonce (render-time
+  // own-state adjustment, mirroring action-section-content's requiredTab).
+  if (noteSelection.some && noteSelection.val.nonce !== handledNonce.current) {
+    handledNonce.current = noteSelection.val.nonce;
+    const { section, text, nonce } = noteSelection.val;
+    setActiveSection(section);
+    noteTargets[section].open();
+    noteTargets[section].seed(Some({ text, nonce }));
   }
 
-  // Clear the append signal on close so a later fresh "Add" starts blank.
-  const handleAddingActionChange = useCallback((adding: boolean) => {
+  // Clear a section's seed when its add-flow closes, so a later fresh "Add"
+  // starts blank and the still-present selection (same nonce) won't re-seed.
+  const handleAddingActionChange = (adding: boolean) => {
     setIsAddingAction(adding);
-    if (!adding) setActionBodyAppend(None);
-  }, []);
+    if (!adding) noteTargets[PanelSection.Actions].clear();
+  };
+  const handleAddingAgreementChange = (adding: boolean) => {
+    setIsAddingAgreement(adding);
+    if (!adding) noteTargets[PanelSection.Agreements].clear();
+  };
+
+  // The goal create form unmounts when the flow leaves Creating; drop the
+  // title seed once it returns to Idle so a manual "Add Goal" starts blank.
+  useEffect(() => {
+    if (goalFlow.flow.step === GoalFlowStep.Idle) setGoalTitleSeed(None);
+  }, [goalFlow.flow.step]);
 
   // ── Agreement state & handlers ──────────────────────────────────
-
-  const [isAddingAgreement, setIsAddingAgreement] = useState(false);
 
   const handleAgreementCreate = useCallback(async (body: string) => {
     try {
@@ -813,7 +872,8 @@ export function CoachingSessionPanel({
     onAgreementDelete: handleAgreementDelete,
     onAgreementCreate: handleAgreementCreate,
     isAddingAgreement,
-    onAddingAgreementChange: setIsAddingAgreement,
+    onAddingAgreementChange: handleAddingAgreementChange,
+    agreementBodyAppend,
     // Action data
     reviewActions: panelReviewActions,
     sessionActions,
@@ -832,6 +892,7 @@ export function CoachingSessionPanel({
     isAddingAction,
     onAddingActionChange: handleAddingActionChange,
     actionBodyAppend,
+    goalTitleSeed,
     locale: siteConfig.locale,
     activeActionTab,
     onActiveActionTabChange: setActiveActionTab,

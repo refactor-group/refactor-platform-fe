@@ -27,6 +27,8 @@ import type { Goal } from "@/types/goal";
 import { useLinkedGoalDisplay } from "@/lib/hooks/use-linked-goal-display";
 import { ItemStatus, Id } from "@/types/general";
 import { type Option, None } from "@/types/option";
+import type { NoteField } from "@/types/note-selection";
+import { useSeededField } from "@/lib/hooks/use-seeded-field";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
@@ -76,7 +78,7 @@ export interface CompactActionCardProps {
   /** When true, card starts in edit mode (used for new actions). */
   initialEditing?: boolean;
   /** Text appended into the edit body on nonce change (add-card seeding). */
-  bodyAppend?: Option<{ text: string; nonce: number }>;
+  bodyAppend?: Option<NoteField>;
   /** Called when the user dismisses an initial-editing card. */
   onDismiss?: () => void;
   className?: string;
@@ -504,7 +506,7 @@ function ActionEditForm({
   action: Action;
   locale: string;
   initialBody: string;
-  bodyAppend?: Option<{ text: string; nonce: number }>;
+  bodyAppend?: Option<NoteField>;
   allAssignees: { id: Id; name: string; initials: string }[];
   resolvedAssignees: { id: Id; name: string; initials: string }[];
   assigneeIds: Id[];
@@ -523,14 +525,9 @@ function ActionEditForm({
   const textareaWrapRef = useRef<HTMLDivElement>(null);
 
   // Append notes-selection text once per nonce (empty body → seed).
-  const lastAppendNonce = useRef(0);
-  useEffect(() => {
-    if (!bodyAppend.some) return;
-    const { text, nonce } = bodyAppend.val;
-    if (nonce === lastAppendNonce.current) return;
-    lastAppendNonce.current = nonce;
-    setBody((prev) => (prev.trim() ? `${prev}\n\n${text}` : text));
-  }, [bodyAppend]);
+  useSeededField(bodyAppend, (text) =>
+    setBody((prev) => (prev.trim() ? `${prev}\n\n${text}` : text))
+  );
 
   // Trap scroll inside the textarea when it has overflow.
   // React's onWheel is passive so preventDefault is ignored. We attach a
