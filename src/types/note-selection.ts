@@ -7,9 +7,9 @@ export interface NoteField {
   nonce: number;
 }
 
-// Page → panel signal: which add-flow to open, with the selected text.
-export interface NoteSelection {
+// Page → panel signal: a NoteField destined for a specific section's
+// add-flow. Extending NoteField makes the seed conversion (a NoteSelection IS
+// a NoteField plus a section) type-checked rather than reconstructed by hand.
+export interface NoteSelection extends NoteField {
   section: PanelSection;
-  text: string;
-  nonce: number;
 }

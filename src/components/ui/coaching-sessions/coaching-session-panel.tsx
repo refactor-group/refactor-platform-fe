@@ -106,16 +106,15 @@ export interface CoachingSessionPanelSharedProps {
   onActiveActionTabChange: (tab: ActionTab) => void;
 }
 
-// A section's hooks for receiving a notes selection. Every section supplies
-// the same three methods, so routing a selection (and clearing it on close)
-// needs no per-entity branching at the call sites.
+// How a section receives a routed notes selection. Every section supplies the
+// same two methods, so the render-time dispatch needs no per-entity branching.
+// (Clearing the seed on close is a stable operation handled separately via
+// `clearSeed` so the change handlers can stay memoized.)
 interface NoteSelectionTarget {
   /** Enter this section's add-flow. */
   open(): void;
   /** Route the selected text into this section's seeded field. */
   seed(field: Option<NoteField>): void;
-  /** Drop the seed when the add-flow closes. */
-  clear(): void;
 }
 
 // ── Shared helpers for desktop and mobile layouts ─────────────────────
@@ -722,27 +721,38 @@ export function CoachingSessionPanel({
   const [goalTitleSeed, setGoalTitleSeed] = useState<Option<NoteField>>(None);
   const handledNonce = useRef(0);
 
-  // Each section receives a notes selection through the same interface, so the
-  // dispatch below and the clear-on-close handlers need no per-entity switch.
+  // Render-time dispatch targets: each section opens its add-flow and seeds
+  // its field through the same interface, so the dispatch below needs no
+  // per-entity switch. Rebuilt each render because `open` reads the live
+  // `atLimit`/`goalFlow`; clearing is hoisted to `clearSeed` (below) instead.
   const noteTargets: Record<PanelSection, NoteSelectionTarget> = {
     [PanelSection.Goals]: {
       // At the goal cap, creation requires a swap first; both routes land on
       // the create form, where the seeded title is applied on mount.
       open: () => (atLimit ? goalFlow.handleAddGoalClick() : goalFlow.handleCreateNewClick()),
       seed: setGoalTitleSeed,
-      clear: () => setGoalTitleSeed(None),
     },
     [PanelSection.Agreements]: {
       open: () => setIsAddingAgreement(true),
       seed: setAgreementBodyAppend,
-      clear: () => setAgreementBodyAppend(None),
     },
     [PanelSection.Actions]: {
       open: () => setIsAddingAction(true),
       seed: setActionBodyAppend,
-      clear: () => setActionBodyAppend(None),
     },
   };
+
+  // One uniform clear mechanism, shared by the change handlers and the
+  // goal-idle effect. Stable (useState setters never change identity), so the
+  // handlers below can stay memoized.
+  const clearSeed = useMemo<Record<PanelSection, () => void>>(
+    () => ({
+      [PanelSection.Goals]: () => setGoalTitleSeed(None),
+      [PanelSection.Agreements]: () => setAgreementBodyAppend(None),
+      [PanelSection.Actions]: () => setActionBodyAppend(None),
+    }),
+    []
+  );
 
   // Open the target section's add-form on a new selection nonce (render-time
   // own-state adjustment, mirroring action-section-content's requiredTab).
@@ -756,20 +766,26 @@ export function CoachingSessionPanel({
 
   // Clear a section's seed when its add-flow closes, so a later fresh "Add"
   // starts blank and the still-present selection (same nonce) won't re-seed.
-  const handleAddingActionChange = (adding: boolean) => {
-    setIsAddingAction(adding);
-    if (!adding) noteTargets[PanelSection.Actions].clear();
-  };
-  const handleAddingAgreementChange = (adding: boolean) => {
-    setIsAddingAgreement(adding);
-    if (!adding) noteTargets[PanelSection.Agreements].clear();
-  };
+  const handleAddingActionChange = useCallback(
+    (adding: boolean) => {
+      setIsAddingAction(adding);
+      if (!adding) clearSeed[PanelSection.Actions]();
+    },
+    [clearSeed]
+  );
+  const handleAddingAgreementChange = useCallback(
+    (adding: boolean) => {
+      setIsAddingAgreement(adding);
+      if (!adding) clearSeed[PanelSection.Agreements]();
+    },
+    [clearSeed]
+  );
 
   // The goal create form unmounts when the flow leaves Creating; drop the
   // title seed once it returns to Idle so a manual "Add Goal" starts blank.
   useEffect(() => {
-    if (goalFlow.flow.step === GoalFlowStep.Idle) setGoalTitleSeed(None);
-  }, [goalFlow.flow.step]);
+    if (goalFlow.flow.step === GoalFlowStep.Idle) clearSeed[PanelSection.Goals]();
+  }, [goalFlow.flow.step, clearSeed]);
 
   // ── Agreement state & handlers ──────────────────────────────────
 
