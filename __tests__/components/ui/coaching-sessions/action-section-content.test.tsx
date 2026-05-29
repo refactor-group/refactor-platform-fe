@@ -287,7 +287,7 @@ describe("ActionSectionContent", () => {
       expect(onAddingActionChange).toHaveBeenCalledWith(false);
     });
 
-    it("seeds the add-form body from a notes selection, then appends on a new nonce", async () => {
+    it("fills the add-form body from a notes selection, then appends on a new nonce", async () => {
       const { rerender } = render(
         <Wrapper>
           <ActionSectionContent

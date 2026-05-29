@@ -32,6 +32,8 @@ export function CoachingSessionPanelMobile({
   onAgreementCreate,
   isAddingAgreement,
   onAddingAgreementChange,
+  agreementBodyAppend,
+  goalTitlePrefill,
   // Action props
   reviewActions,
   sessionActions,
@@ -166,6 +168,7 @@ export function CoachingSessionPanelMobile({
                 readOnly={readOnly}
                 onUnlink={handleUnlink}
                 onUpdateGoal={onUpdateGoal}
+                titlePrefill={goalTitlePrefill}
               />
             ) : activeSection === PanelSection.Agreements ? (
               <AgreementSectionContent
@@ -173,6 +176,7 @@ export function CoachingSessionPanelMobile({
                 locale={locale}
                 isAddingAgreement={isAddingAgreement}
                 onAddingAgreementChange={onAddingAgreementChange}
+                agreementBodyAppend={agreementBodyAppend}
                 onAgreementCreate={onAgreementCreate}
                 onAgreementEdit={onAgreementEdit}
                 onAgreementDelete={onAgreementDelete}

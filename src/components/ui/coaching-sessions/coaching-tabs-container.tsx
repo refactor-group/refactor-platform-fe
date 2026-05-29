@@ -5,18 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
+import type { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 
 interface CoachingTabsContainerProps {
   isMaximized?: boolean;
   onToggleMaximize?: () => void;
-  /** Forwards text selected in the notes to the panel's add-action flow. */
-  onAddActionFromNote: (selectedText: string) => void;
+  /** Forwards text selected in the notes to a panel section's add-flow. */
+  onAddFromNote: (section: PanelSection, selectedText: string) => void;
 }
 
 const CoachingTabsContainer = ({
   isMaximized = false,
   onToggleMaximize,
-  onAddActionFromNote,
+  onAddFromNote,
 }: CoachingTabsContainerProps) => {
   return (
     <Card className="row-span-1 h-full flex flex-col min-h-0 min-w-0">
@@ -50,7 +51,7 @@ const CoachingTabsContainer = ({
 
       <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0 min-w-0">
         <div className="mt-4 flex-1 flex flex-col min-h-0 min-w-0">
-          <CoachingNotes onAddAsAction={onAddActionFromNote} />
+          <CoachingNotes onAddAs={onAddFromNote} />
         </div>
       </CardContent>
     </Card>

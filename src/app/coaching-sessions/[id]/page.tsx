@@ -1,10 +1,10 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { type Option, Some, None } from "@/types/option";
+import { useCallback, useEffect, useRef } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useAddFromNotes } from "@/lib/hooks/use-add-from-notes";
 
 import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
@@ -138,13 +138,6 @@ export default function CoachingSessionsPage() {
   // Three-pane layout state (focus mode + transcript visibility). URL-backed.
   const layout = useCoachingSessionLayout();
 
-  // Bridge from the notes "Add as Action" selection to the panel's add-action
-  // form: bump a monotonic nonce so the panel reacts once per selection.
-  const [actionDraft, setActionDraft] =
-    useState<Option<{ body: string; nonce: number }>>(None);
-  const actionDraftNonce = useRef(0);
-  const syncedSectionNonce = useRef(0);
-
   const handlePanelSectionChange = useCallback(
     (section: PanelSection) => {
       const newSearchParams = new URLSearchParams(searchParams);
@@ -164,25 +157,13 @@ export default function CoachingSessionsPage() {
     [searchParams, router]
   );
 
-  const handleAddActionFromNote = useCallback(
-    (selectedText: string) => {
-      const trimmed = selectedText.trim();
-      if (!trimmed) return;
-      if (layout.isGoalsCollapsed) layout.toggleGoalsCollapsed();
-      actionDraftNonce.current += 1;
-      setActionDraft(Some({ body: trimmed, nonce: actionDraftNonce.current }));
-    },
-    [layout]
-  );
-
-  // Pin panel=actions once per draft, but only after the panel is expanded;
-  // gating on !isGoalsCollapsed avoids clobbering the focus/transcript params.
-  useEffect(() => {
-    if (!actionDraft.some || layout.isGoalsCollapsed) return;
-    if (actionDraft.val.nonce === syncedSectionNonce.current) return;
-    syncedSectionNonce.current = actionDraft.val.nonce;
-    handlePanelSectionChange(PanelSection.Actions);
-  }, [actionDraft, layout.isGoalsCollapsed, handlePanelSectionChange]);
+  // Bridge the notes "Add as …" affordance to the panel: a selection becomes a
+  // NoteSelection carrying its target section, pinned to the URL once expanded.
+  const { selection: noteSelection, addFromNote } = useAddFromNotes({
+    isGoalsCollapsed: layout.isGoalsCollapsed,
+    toggleGoalsCollapsed: layout.toggleGoalsCollapsed,
+    pinSection: handlePanelSectionChange,
+  });
 
   // Recording and transcription status — used for the header indicator.
   // TranscriptPanel calls the same hooks internally; SWR deduplicates the requests.
@@ -363,7 +344,7 @@ export default function CoachingSessionsPage() {
                 : false}
               defaultSection={panelSection}
               onSectionChange={handlePanelSectionChange}
-              actionDraft={actionDraft}
+              noteSelection={noteSelection}
             />
           )}
 
@@ -381,7 +362,7 @@ export default function CoachingSessionsPage() {
             <CoachingTabsContainer
               isMaximized={layout.isNotesMaximized}
               onToggleMaximize={layout.toggleNotesMaximized}
-              onAddActionFromNote={handleAddActionFromNote}
+              onAddFromNote={addFromNote}
             />
           )}
         </div>

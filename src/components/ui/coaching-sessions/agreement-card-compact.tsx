@@ -12,6 +12,9 @@ import {
 import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
 import { ContentExpandable } from "@/components/ui/content-expandable";
 import type { Agreement } from "@/types/agreement";
+import { type Option, None } from "@/types/option";
+import type { NoteField } from "@/types/note-selection";
+import { useFieldPrefill } from "@/lib/hooks/use-field-prefill";
 
 // ── Compact Agreement Card (flip-card interaction) ───────────────────
 //
@@ -27,6 +30,8 @@ export interface CompactAgreementCardProps {
   onDelete?: (id: string) => void;
   /** When true, card starts flipped to edit mode (used for new agreements). */
   initialEditing?: boolean;
+  /** Notes selection appended into the edit body on nonce change. */
+  bodyAppend?: Option<NoteField>;
   /** Called when the user cancels out of initial editing (dismisses the card). */
   onDismiss?: () => void;
 }
@@ -37,6 +42,7 @@ export function CompactAgreementCard({
   onSave,
   onDelete,
   initialEditing = false,
+  bodyAppend = None,
   onDismiss,
 }: CompactAgreementCardProps) {
   const canInteract = Boolean(onSave || onDelete || initialEditing);
@@ -67,6 +73,7 @@ export function CompactAgreementCard({
         isEditing ? (
           <AgreementEditForm
             initialBody={body}
+            bodyAppend={bodyAppend}
             onSave={async (newBody) => {
               if (onSave) await onSave(newBody);
               if (!initialEditing) onEditEnd();
@@ -212,15 +219,22 @@ function AgreementBackFace({
 
 function AgreementEditForm({
   initialBody,
+  bodyAppend = None,
   onSave,
   onCancel,
 }: {
   initialBody: string;
+  bodyAppend?: Option<NoteField>;
   onSave: (body: string) => Promise<void>;
   onCancel: () => void;
 }) {
   const [body, setBody] = useState(initialBody);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Append the notes selection once per nonce (an empty body is just filled).
+  useFieldPrefill(bodyAppend, (text) =>
+    setBody((prev) => (prev.trim() ? `${prev}\n\n${text}` : text))
+  );
 
   const handleSave = useCallback(async () => {
     if (!body.trim()) return;

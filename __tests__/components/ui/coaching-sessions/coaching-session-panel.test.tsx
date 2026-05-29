@@ -342,57 +342,81 @@ describe("CoachingSessionPanel", () => {
     })
   })
 
-  it("opens the Actions add-form seeded with a notes selection", async () => {
-    setupMocks()
-    render(
-      <TooltipProvider>
-        <CoachingSessionPanel
-          coachingSessionId="session-1"
-          coachingRelationshipId="rel-1"
-          actionDraft={Some({ body: "Follow up on hiring plan", nonce: 1 })}
-        />
-      </TooltipProvider>
-    )
+  // One mechanism, three entities — a NoteSelection for section X opens X's
+  // add-form prefilled with the text in its primary field (body for Actions /
+  // Agreements, title for Goals). Asserts observable form state, not the
+  // internal target registry.
+  const prefillCases = [
+    { section: PanelSection.Actions, text: "Follow up on hiring plan" },
+    { section: PanelSection.Agreements, text: "Weekly retro every Friday" },
+    { section: PanelSection.Goals, text: "Ship the onboarding revamp" },
+  ] as const
 
-    // The render-time draft handler switches to Actions and opens the add
-    // form; the append signal seeds its body.
-    await waitFor(() => {
-      const textarea = screen.getAllByRole("textbox")[0] as HTMLTextAreaElement
-      expect(textarea.value).toBe("Follow up on hiring plan")
-    })
-  })
+  it.each(prefillCases)(
+    "opens the $section add-form prefilled with a notes selection",
+    async ({ section, text }) => {
+      setupMocks()
+      render(
+        <TooltipProvider>
+          <CoachingSessionPanel
+            coachingSessionId="session-1"
+            coachingRelationshipId="rel-1"
+            noteSelection={Some({ section, text, nonce: 1 })}
+          />
+        </TooltipProvider>
+      )
 
-  it("starts a fresh Add blank after a seeded form is closed", async () => {
-    const user = userEvent.setup()
-    setupMocks()
-    render(
-      <TooltipProvider>
-        <CoachingSessionPanel
-          coachingSessionId="session-1"
-          coachingRelationshipId="rel-1"
-          actionDraft={Some({ body: "Seeded from note", nonce: 1 })}
-        />
-      </TooltipProvider>
-    )
+      await waitFor(() => {
+        const values = screen
+          .getAllByRole("textbox")
+          .map((el) => (el as HTMLInputElement | HTMLTextAreaElement).value)
+        expect(values).toContain(text)
+      })
+    }
+  )
 
-    await waitFor(() => {
-      expect(
-        (screen.getAllByRole("textbox")[0] as HTMLTextAreaElement).value
-      ).toBe("Seeded from note")
-    })
+  // Body-prefilled entities (Actions, Agreements) reuse the same card with a
+  // persistent add-state, so the prefill must be cleared on close or a fresh
+  // "Add" would re-show it.
+  it.each([
+    { section: PanelSection.Actions, text: "Prefilled action" },
+    { section: PanelSection.Agreements, text: "Prefilled agreement" },
+  ] as const)(
+    "starts a fresh $section Add blank after a prefilled form is closed",
+    async ({ section, text }) => {
+      const user = userEvent.setup()
+      setupMocks()
+      render(
+        <TooltipProvider>
+          <CoachingSessionPanel
+            coachingSessionId="session-1"
+            coachingRelationshipId="rel-1"
+            noteSelection={Some({ section, text, nonce: 1 })}
+          />
+        </TooltipProvider>
+      )
 
-    // Close the seeded form, then re-open via the Add button. The append
-    // signal must have been cleared so the fresh form starts blank — and the
-    // still-present actionDraft prop must NOT re-seed it (nonce dedup).
-    await user.click(screen.getAllByRole("button", { name: /cancel/i })[0])
-    await user.click(screen.getAllByRole("button", { name: /^add$/i })[0])
+      await waitFor(() => {
+        const values = screen
+          .getAllByRole("textbox")
+          .map((el) => (el as HTMLTextAreaElement).value)
+        expect(values).toContain(text)
+      })
 
-    await waitFor(() => {
-      expect(
-        (screen.getAllByRole("textbox")[0] as HTMLTextAreaElement).value
-      ).toBe("")
-    })
-  })
+      // Close the prefilled form, then re-open via Add. The prefill must have been
+      // cleared, and the still-present noteSelection (same nonce) must NOT
+      // re-prefill it.
+      await user.click(screen.getAllByRole("button", { name: /cancel/i })[0])
+      await user.click(screen.getAllByRole("button", { name: /^add$/i })[0])
+
+      await waitFor(() => {
+        const values = screen
+          .getAllByRole("textbox")
+          .map((el) => (el as HTMLTextAreaElement).value)
+        expect(values).not.toContain(text)
+      })
+    }
+  )
 
   it("undo restores the deleted agreement", async () => {
     const user = userEvent.setup()

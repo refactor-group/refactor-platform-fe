@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import type { Editor } from "@tiptap/react";
 import { BubbleMenu, type BubbleMenuProps } from "@tiptap/react/menus";
-import { Copy, ListPlus, X } from "lucide-react";
+import { Copy, Handshake, ListPlus, Target, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTiptapEditor } from "@/lib/hooks/use-tiptap-editor";
 import { Button } from "@/components/ui/tiptap-ui-primitive/button";
 import { Separator } from "@/components/ui/tiptap-ui-primitive/separator";
+import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 
 import "@/components/ui/tiptap-ui/selection-bubble-menu/selection-bubble-menu.scss";
 
@@ -56,12 +57,13 @@ export function shouldShowSelectionMenu({
 
 export interface SelectionBubbleMenuProps {
   editor?: Editor | null;
-  onAddAsAction: (selectedText: string) => void;
+  /** Routes the trimmed selection to a panel section's add-flow. */
+  onAddAs: (section: PanelSection, selectedText: string) => void;
 }
 
 export function SelectionBubbleMenu({
   editor: providedEditor,
-  onAddAsAction,
+  onAddAs,
 }: SelectionBubbleMenuProps) {
   const editor = useTiptapEditor(providedEditor);
   const [dismissed, setDismissed] = useState(false);
@@ -142,12 +144,15 @@ export function SelectionBubbleMenu({
     }
   }, [getSelectedText]);
 
-  const handleAddAsAction = useCallback(() => {
-    const text = getSelectedText().trim();
-    if (!text) return;
-    setDismissed(true);
-    onAddAsAction(text);
-  }, [getSelectedText, onAddAsAction]);
+  const handleAddAs = useCallback(
+    (section: PanelSection) => {
+      const text = getSelectedText().trim();
+      if (!text) return;
+      setDismissed(true);
+      onAddAs(section, text);
+    },
+    [getSelectedText, onAddAs]
+  );
 
   const handleDismiss = useCallback(() => {
     setDismissed(true);
@@ -198,12 +203,32 @@ export function SelectionBubbleMenu({
 
         <Button
           type="button"
-          onClick={handleAddAsAction}
+          onClick={() => handleAddAs(PanelSection.Actions)}
           tooltip="Add as Action"
           data-style="ghost"
           aria-label="Add as Action"
         >
           <ListPlus className="tiptap-button-icon" />
+        </Button>
+
+        <Button
+          type="button"
+          onClick={() => handleAddAs(PanelSection.Agreements)}
+          tooltip="Add as Agreement"
+          data-style="ghost"
+          aria-label="Add as Agreement"
+        >
+          <Handshake className="tiptap-button-icon" />
+        </Button>
+
+        <Button
+          type="button"
+          onClick={() => handleAddAs(PanelSection.Goals)}
+          tooltip="Add as Goal"
+          data-style="ghost"
+          aria-label="Add as Goal"
+        >
+          <Target className="tiptap-button-icon" />
         </Button>
 
         <Separator orientation="vertical" />

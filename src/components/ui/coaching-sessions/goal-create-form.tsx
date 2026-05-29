@@ -2,6 +2,9 @@
 
 import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { type Option, None } from "@/types/option";
+import type { NoteField } from "@/types/note-selection";
+import { useFieldPrefill } from "@/lib/hooks/use-field-prefill";
 
 // ── Goal Create Form ────────────────────────────────────────────────
 
@@ -10,17 +13,26 @@ export interface GoalCreateFormProps {
   onCancel: () => void;
   /** Label for the submit button */
   submitLabel: string;
+  /** Notes selection prefilling the title once, only while it is still empty. */
+  titlePrefill?: Option<NoteField>;
 }
 
 export function GoalCreateForm({
   onSubmit,
   onCancel,
   submitLabel,
+  titlePrefill = None,
 }: GoalCreateFormProps) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [showBody, setShowBody] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Prefill the title from a notes selection, but never clobber what the coach
+  // has already typed.
+  useFieldPrefill(titlePrefill, (text) =>
+    setTitle((prev) => (prev.trim() ? prev : text))
+  );
 
   // Auto-focus on mount
   const setInputRef = useCallback((el: HTMLInputElement | null) => {

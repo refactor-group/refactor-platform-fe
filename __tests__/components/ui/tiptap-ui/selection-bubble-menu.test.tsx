@@ -1,7 +1,6 @@
 import type { ReactElement } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import userEvent from "@testing-library/user-event";
 import { EditorProvider } from "@tiptap/react";
 import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
@@ -135,7 +134,7 @@ describe("shouldShowSelectionMenu", () => {
 // ---------------------------------------------------------------------------
 
 describe("SelectionBubbleMenu", () => {
-  const mockOnAddAsAction = vi.fn();
+  const mockOnAddAs = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -152,16 +151,14 @@ describe("SelectionBubbleMenu", () => {
         content={content}
         immediatelyRender={false}
       >
-        <SelectionBubbleMenu onAddAsAction={mockOnAddAsAction} />
+        <SelectionBubbleMenu onAddAs={mockOnAddAs} />
       </EditorProvider>
     );
   };
 
   it("renders without crashing when no editor is available", () => {
     // SelectionBubbleMenu without an EditorProvider should return null
-    renderWithProviders(
-      <SelectionBubbleMenu onAddAsAction={mockOnAddAsAction} />
-    );
+    renderWithProviders(<SelectionBubbleMenu onAddAs={mockOnAddAs} />);
     // No errors thrown = pass
   });
 
@@ -179,7 +176,7 @@ describe("SelectionBubbleMenu", () => {
     // tests require programmatic selection which is limited in jsdom.
   });
 
-  it("does not call onAddAsAction before user interaction", async () => {
+  it("does not call onAddAs before user interaction", async () => {
     renderEditor("<p>Some note text to select</p>");
 
     await waitFor(() => {
@@ -187,7 +184,7 @@ describe("SelectionBubbleMenu", () => {
       expect(editor).toBeInTheDocument();
     });
 
-    expect(mockOnAddAsAction).not.toHaveBeenCalled();
+    expect(mockOnAddAs).not.toHaveBeenCalled();
   });
 
   it("does not call clipboard.writeText before user interaction", async () => {
@@ -204,10 +201,7 @@ describe("SelectionBubbleMenu", () => {
   it("accepts an optional editor prop", () => {
     // Passing editor=null should not crash
     renderWithProviders(
-      <SelectionBubbleMenu
-        editor={null}
-        onAddAsAction={mockOnAddAsAction}
-      />
+      <SelectionBubbleMenu editor={null} onAddAs={mockOnAddAs} />
     );
     // No errors thrown = pass
   });

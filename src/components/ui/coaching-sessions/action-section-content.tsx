@@ -32,7 +32,7 @@ export interface ActionSectionContentProps {
   coacheeName: string;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
-  /** Selected notes text to seed/append into the add-action form body. */
+  /** Selected notes text appended into the add-action form body. */
   actionBodyAppend?: Option<{ text: string; nonce: number }>;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;

@@ -4,12 +4,16 @@ import { useMemo } from "react";
 import { CompactAgreementCard } from "@/components/ui/coaching-sessions/agreement-card-compact";
 import { defaultAgreement } from "@/types/agreement";
 import type { Agreement } from "@/types/agreement";
+import { type Option, None } from "@/types/option";
+import type { NoteField } from "@/types/note-selection";
 
 export interface AgreementSectionContentProps {
   agreements: Agreement[];
   locale: string;
   isAddingAgreement: boolean;
   onAddingAgreementChange: (adding: boolean) => void;
+  /** Selected notes text appended into the add-agreement form body. */
+  agreementBodyAppend?: Option<NoteField>;
   onAgreementCreate?: (body: string) => Promise<void>;
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
   onAgreementDelete?: (id: string) => void;
@@ -21,6 +25,7 @@ export function AgreementSectionContent({
   locale,
   isAddingAgreement,
   onAddingAgreementChange,
+  agreementBodyAppend = None,
   onAgreementCreate,
   onAgreementEdit,
   onAgreementDelete,
@@ -37,6 +42,7 @@ export function AgreementSectionContent({
           agreement={newAgreementPlaceholder}
           locale={locale}
           initialEditing
+          bodyAppend={agreementBodyAppend}
           onSave={onAgreementCreate}
           onDismiss={() => onAddingAgreementChange(false)}
         />
