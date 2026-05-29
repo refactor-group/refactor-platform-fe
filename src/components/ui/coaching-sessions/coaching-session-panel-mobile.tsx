@@ -32,7 +32,7 @@ export function CoachingSessionPanelMobile({
   onAgreementCreate,
   isAddingAgreement,
   onAddingAgreementChange,
-  agreementBodyPrefill,
+  agreementBodyAppend,
   goalTitlePrefill,
   // Action props
   reviewActions,
@@ -51,7 +51,7 @@ export function CoachingSessionPanelMobile({
   onBodyChange,
   isAddingAction,
   onAddingActionChange,
-  actionBodyPrefill,
+  actionBodyAppend,
   activeActionTab,
   onActiveActionTabChange,
   locale,
@@ -176,7 +176,7 @@ export function CoachingSessionPanelMobile({
                 locale={locale}
                 isAddingAgreement={isAddingAgreement}
                 onAddingAgreementChange={onAddingAgreementChange}
-                agreementBodyPrefill={agreementBodyPrefill}
+                agreementBodyAppend={agreementBodyAppend}
                 onAgreementCreate={onAgreementCreate}
                 onAgreementEdit={onAgreementEdit}
                 onAgreementDelete={onAgreementDelete}
@@ -194,7 +194,7 @@ export function CoachingSessionPanelMobile({
                 coacheeName={coacheeName}
                 isAddingAction={isAddingAction}
                 onAddingActionChange={onAddingActionChange}
-                actionBodyPrefill={actionBodyPrefill}
+                actionBodyAppend={actionBodyAppend}
                 onStatusChange={onStatusChange}
                 onDueDateChange={onDueDateChange}
                 onAssigneesChange={onAssigneesChange}

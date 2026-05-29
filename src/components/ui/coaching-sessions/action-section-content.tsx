@@ -32,8 +32,8 @@ export interface ActionSectionContentProps {
   coacheeName: string;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
-  /** Selected notes text to prefill (append into) the add-action form body. */
-  actionBodyPrefill?: Option<{ text: string; nonce: number }>;
+  /** Selected notes text appended into the add-action form body. */
+  actionBodyAppend?: Option<{ text: string; nonce: number }>;
   onStatusChange: (id: Id, newStatus: ItemStatus) => void;
   onDueDateChange: (id: Id, newDueBy: DateTime) => void;
   onAssigneesChange: (id: Id, assigneeIds: Id[]) => void;
@@ -60,7 +60,7 @@ export function ActionSectionContent({
   coacheeName,
   isAddingAction,
   onAddingActionChange,
-  actionBodyPrefill = None,
+  actionBodyAppend = None,
   onStatusChange,
   onDueDateChange,
   onAssigneesChange,
@@ -226,7 +226,7 @@ export function ActionSectionContent({
             <CompactActionCard
               action={newActionPlaceholder}
               initialEditing
-              bodyPrefill={actionBodyPrefill}
+              bodyAppend={actionBodyAppend}
               onDelete={undefined}
               onDismiss={() => onAddingActionChange(false)}
               {...sharedCardProps}

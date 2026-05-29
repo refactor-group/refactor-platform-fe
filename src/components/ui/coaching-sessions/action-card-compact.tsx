@@ -77,8 +77,8 @@ export interface CompactActionCardProps {
   onGoalChange?: (id: Id, goalId: Id | undefined) => void;
   /** When true, card starts in edit mode (used for new actions). */
   initialEditing?: boolean;
-  /** Text appended into the edit body on nonce change (add-card prefilling). */
-  bodyPrefill?: Option<NoteField>;
+  /** Notes selection appended into the edit body on nonce change. */
+  bodyAppend?: Option<NoteField>;
   /** Called when the user dismisses an initial-editing card. */
   onDismiss?: () => void;
   className?: string;
@@ -103,7 +103,7 @@ export function CompactActionCard({
   onGoalChange,
   highlighted = false,
   initialEditing = false,
-  bodyPrefill = None,
+  bodyAppend = None,
   onDismiss,
   className,
 }: CompactActionCardProps) {
@@ -179,7 +179,7 @@ export function CompactActionCard({
             action={displayedAction}
             locale={locale}
             initialBody={body}
-            bodyPrefill={bodyPrefill}
+            bodyAppend={bodyAppend}
             allAssignees={allAssignees}
             resolvedAssignees={resolvedAssignees}
             assigneeIds={assigneeIds}
@@ -490,7 +490,7 @@ function ActionEditForm({
   action,
   locale,
   initialBody,
-  bodyPrefill = None,
+  bodyAppend = None,
   allAssignees,
   resolvedAssignees,
   assigneeIds,
@@ -506,7 +506,7 @@ function ActionEditForm({
   action: Action;
   locale: string;
   initialBody: string;
-  bodyPrefill?: Option<NoteField>;
+  bodyAppend?: Option<NoteField>;
   allAssignees: { id: Id; name: string; initials: string }[];
   resolvedAssignees: { id: Id; name: string; initials: string }[];
   assigneeIds: Id[];
@@ -524,8 +524,8 @@ function ActionEditForm({
   const markdownRef = useRef<TextareaMarkdownRef>(null);
   const textareaWrapRef = useRef<HTMLDivElement>(null);
 
-  // Append notes-selection text once per nonce (empty body → prefill).
-  useFieldPrefill(bodyPrefill, (text) =>
+  // Append the notes selection once per nonce (an empty body is just filled).
+  useFieldPrefill(bodyAppend, (text) =>
     setBody((prev) => (prev.trim() ? `${prev}\n\n${text}` : text))
   );
 

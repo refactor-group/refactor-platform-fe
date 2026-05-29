@@ -76,8 +76,8 @@ export interface CoachingSessionPanelSharedProps {
   onAgreementCreate?: (body: string) => Promise<void>;
   isAddingAgreement: boolean;
   onAddingAgreementChange: (adding: boolean) => void;
-  /** Selected notes text to prefill into the add-agreement form. */
-  agreementBodyPrefill: Option<NoteField>;
+  /** Selected notes text appended into the add-agreement form body. */
+  agreementBodyAppend: Option<NoteField>;
   // Action data
   reviewActions: Action[];
   sessionActions: Action[];
@@ -97,8 +97,8 @@ export interface CoachingSessionPanelSharedProps {
   onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => Promise<void>;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
-  /** Selected notes text to prefill into the add-action form. */
-  actionBodyPrefill: Option<NoteField>;
+  /** Selected notes text appended into the add-action form body. */
+  actionBodyAppend: Option<NoteField>;
   /** Selected notes text to prefill the new-goal title field. */
   goalTitlePrefill: Option<NoteField>;
   locale: string;
@@ -716,8 +716,8 @@ export function CoachingSessionPanel({
   // Notes "Add as …" prefill signals. Appending to an empty body fills it, so
   // one signal covers both fresh-open and in-progress add-forms; goals prefill
   // the title (replace-if-empty) since that is their primary field.
-  const [actionBodyPrefill, setActionBodyPrefill] = useState<Option<NoteField>>(None);
-  const [agreementBodyPrefill, setAgreementBodyPrefill] = useState<Option<NoteField>>(None);
+  const [actionBodyAppend, setActionBodyAppend] = useState<Option<NoteField>>(None);
+  const [agreementBodyAppend, setAgreementBodyAppend] = useState<Option<NoteField>>(None);
   const [goalTitlePrefill, setGoalTitlePrefill] = useState<Option<NoteField>>(None);
   const handledNonce = useRef(0);
 
@@ -734,11 +734,11 @@ export function CoachingSessionPanel({
     },
     [PanelSection.Agreements]: {
       open: () => setIsAddingAgreement(true),
-      prefill: setAgreementBodyPrefill,
+      prefill: setAgreementBodyAppend,
     },
     [PanelSection.Actions]: {
       open: () => setIsAddingAction(true),
-      prefill: setActionBodyPrefill,
+      prefill: setActionBodyAppend,
     },
   };
 
@@ -748,8 +748,8 @@ export function CoachingSessionPanel({
   const clearPrefill = useMemo<Record<PanelSection, () => void>>(
     () => ({
       [PanelSection.Goals]: () => setGoalTitlePrefill(None),
-      [PanelSection.Agreements]: () => setAgreementBodyPrefill(None),
-      [PanelSection.Actions]: () => setActionBodyPrefill(None),
+      [PanelSection.Agreements]: () => setAgreementBodyAppend(None),
+      [PanelSection.Actions]: () => setActionBodyAppend(None),
     }),
     []
   );
@@ -889,7 +889,7 @@ export function CoachingSessionPanel({
     onAgreementCreate: handleAgreementCreate,
     isAddingAgreement,
     onAddingAgreementChange: handleAddingAgreementChange,
-    agreementBodyPrefill,
+    agreementBodyAppend,
     // Action data
     reviewActions: panelReviewActions,
     sessionActions,
@@ -907,7 +907,7 @@ export function CoachingSessionPanel({
     onBodyChange: handleBodyChange,
     isAddingAction,
     onAddingActionChange: handleAddingActionChange,
-    actionBodyPrefill,
+    actionBodyAppend,
     goalTitlePrefill,
     locale: siteConfig.locale,
     activeActionTab,

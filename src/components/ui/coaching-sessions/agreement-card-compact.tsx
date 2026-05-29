@@ -30,8 +30,8 @@ export interface CompactAgreementCardProps {
   onDelete?: (id: string) => void;
   /** When true, card starts flipped to edit mode (used for new agreements). */
   initialEditing?: boolean;
-  /** Text appended into the edit body on nonce change (add-card prefilling). */
-  bodyPrefill?: Option<NoteField>;
+  /** Notes selection appended into the edit body on nonce change. */
+  bodyAppend?: Option<NoteField>;
   /** Called when the user cancels out of initial editing (dismisses the card). */
   onDismiss?: () => void;
 }
@@ -42,7 +42,7 @@ export function CompactAgreementCard({
   onSave,
   onDelete,
   initialEditing = false,
-  bodyPrefill = None,
+  bodyAppend = None,
   onDismiss,
 }: CompactAgreementCardProps) {
   const canInteract = Boolean(onSave || onDelete || initialEditing);
@@ -73,7 +73,7 @@ export function CompactAgreementCard({
         isEditing ? (
           <AgreementEditForm
             initialBody={body}
-            bodyPrefill={bodyPrefill}
+            bodyAppend={bodyAppend}
             onSave={async (newBody) => {
               if (onSave) await onSave(newBody);
               if (!initialEditing) onEditEnd();
@@ -219,20 +219,20 @@ function AgreementBackFace({
 
 function AgreementEditForm({
   initialBody,
-  bodyPrefill = None,
+  bodyAppend = None,
   onSave,
   onCancel,
 }: {
   initialBody: string;
-  bodyPrefill?: Option<NoteField>;
+  bodyAppend?: Option<NoteField>;
   onSave: (body: string) => Promise<void>;
   onCancel: () => void;
 }) {
   const [body, setBody] = useState(initialBody);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Append notes-selection text once per nonce (empty body → prefill).
-  useFieldPrefill(bodyPrefill, (text) =>
+  // Append the notes selection once per nonce (an empty body is just filled).
+  useFieldPrefill(bodyAppend, (text) =>
     setBody((prev) => (prev.trim() ? `${prev}\n\n${text}` : text))
   );
 

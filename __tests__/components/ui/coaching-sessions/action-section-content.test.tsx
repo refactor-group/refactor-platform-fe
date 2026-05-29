@@ -287,13 +287,13 @@ describe("ActionSectionContent", () => {
       expect(onAddingActionChange).toHaveBeenCalledWith(false);
     });
 
-    it("prefills the add-form body from a notes selection, then appends on a new nonce", async () => {
+    it("fills the add-form body from a notes selection, then appends on a new nonce", async () => {
       const { rerender } = render(
         <Wrapper>
           <ActionSectionContent
             {...baseProps({
               isAddingAction: true,
-              actionBodyPrefill: Some({ text: "First selection", nonce: 1 }),
+              actionBodyAppend: Some({ text: "First selection", nonce: 1 }),
             })}
           />
         </Wrapper>
@@ -308,7 +308,7 @@ describe("ActionSectionContent", () => {
           <ActionSectionContent
             {...baseProps({
               isAddingAction: true,
-              actionBodyPrefill: Some({ text: "Second selection", nonce: 2 }),
+              actionBodyAppend: Some({ text: "Second selection", nonce: 2 }),
             })}
           />
         </Wrapper>
