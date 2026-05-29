@@ -48,8 +48,8 @@ export function CoachingSessionPanelDesktop({
   onAgreementCreate,
   isAddingAgreement,
   onAddingAgreementChange,
-  agreementBodyAppend,
-  goalTitleSeed,
+  agreementBodyPrefill,
+  goalTitlePrefill,
   // Action props
   reviewActions,
   sessionActions,
@@ -67,7 +67,7 @@ export function CoachingSessionPanelDesktop({
   onBodyChange,
   isAddingAction,
   onAddingActionChange,
-  actionBodyAppend,
+  actionBodyPrefill,
   activeActionTab,
   onActiveActionTabChange,
   locale,
@@ -218,7 +218,7 @@ export function CoachingSessionPanelDesktop({
               readOnly={readOnly}
               onUnlink={onUnlink}
               onUpdateGoal={onUpdateGoal}
-              titleSeed={goalTitleSeed}
+              titlePrefill={goalTitlePrefill}
             />
           ) : activeSection === PanelSection.Agreements ? (
             <AgreementSectionContent
@@ -226,7 +226,7 @@ export function CoachingSessionPanelDesktop({
               locale={locale}
               isAddingAgreement={isAddingAgreement}
               onAddingAgreementChange={onAddingAgreementChange}
-              agreementBodyAppend={agreementBodyAppend}
+              agreementBodyPrefill={agreementBodyPrefill}
               onAgreementCreate={onAgreementCreate}
               onAgreementEdit={onAgreementEdit}
               onAgreementDelete={onAgreementDelete}
@@ -244,7 +244,7 @@ export function CoachingSessionPanelDesktop({
               coacheeName={coacheeName}
               isAddingAction={isAddingAction}
               onAddingActionChange={onAddingActionChange}
-              actionBodyAppend={actionBodyAppend}
+              actionBodyPrefill={actionBodyPrefill}
               onStatusChange={onStatusChange}
               onDueDateChange={onDueDateChange}
               onAssigneesChange={onAssigneesChange}

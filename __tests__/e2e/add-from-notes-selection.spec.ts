@@ -9,7 +9,7 @@ import {
 // ---------------------------------------------------------------------------
 // Lean E2E for the "Add as …" notes-selection feature.
 //
-// The seed itself originates in the TipTap collab notes editor, which is not
+// The prefill itself originates in the TipTap collab notes editor, which is not
 // reachable under mocked routes (it needs a live collab JWT + websocket and a
 // 10s offline-editing fallback). That seam is covered by unit/integration
 // tests and verified manually. This spec covers the part that IS reachable in

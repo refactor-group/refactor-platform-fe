@@ -8,7 +8,7 @@ export interface NoteField {
 }
 
 // Page → panel signal: a NoteField destined for a specific section's
-// add-flow. Extending NoteField makes the seed conversion (a NoteSelection IS
+// add-flow. Extending NoteField makes the prefill conversion (a NoteSelection IS
 // a NoteField plus a section) type-checked rather than reconstructed by hand.
 export interface NoteSelection extends NoteField {
   section: PanelSection;

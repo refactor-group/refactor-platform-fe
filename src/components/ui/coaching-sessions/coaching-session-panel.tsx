@@ -76,8 +76,8 @@ export interface CoachingSessionPanelSharedProps {
   onAgreementCreate?: (body: string) => Promise<void>;
   isAddingAgreement: boolean;
   onAddingAgreementChange: (adding: boolean) => void;
-  /** Selected notes text to seed/append into the add-agreement form. */
-  agreementBodyAppend: Option<NoteField>;
+  /** Selected notes text to prefill into the add-agreement form. */
+  agreementBodyPrefill: Option<NoteField>;
   // Action data
   reviewActions: Action[];
   sessionActions: Action[];
@@ -97,10 +97,10 @@ export interface CoachingSessionPanelSharedProps {
   onBodyChange: (id: Id, newBody: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => Promise<void>;
   isAddingAction: boolean;
   onAddingActionChange: (adding: boolean) => void;
-  /** Selected notes text to seed/append into the add-action form. */
-  actionBodyAppend: Option<NoteField>;
-  /** Selected notes text to seed the new-goal title field. */
-  goalTitleSeed: Option<NoteField>;
+  /** Selected notes text to prefill into the add-action form. */
+  actionBodyPrefill: Option<NoteField>;
+  /** Selected notes text to prefill the new-goal title field. */
+  goalTitlePrefill: Option<NoteField>;
   locale: string;
   activeActionTab: ActionTab;
   onActiveActionTabChange: (tab: ActionTab) => void;
@@ -108,13 +108,13 @@ export interface CoachingSessionPanelSharedProps {
 
 // How a section receives a routed notes selection. Every section supplies the
 // same two methods, so the render-time dispatch needs no per-entity branching.
-// (Clearing the seed on close is a stable operation handled separately via
-// `clearSeed` so the change handlers can stay memoized.)
+// (Clearing the prefill on close is a stable operation handled separately via
+// `clearPrefill` so the change handlers can stay memoized.)
 interface NoteSelectionTarget {
   /** Enter this section's add-flow. */
   open(): void;
-  /** Route the selected text into this section's seeded field. */
-  seed(field: Option<NoteField>): void;
+  /** Route the selected text into this section's prefilled field. */
+  prefill(field: Option<NoteField>): void;
 }
 
 // ── Shared helpers for desktop and mobile layouts ─────────────────────
@@ -177,15 +177,15 @@ export function GoalFlowPages({
   readOnly,
   onUnlink,
   onUpdateGoal,
-  titleSeed = None,
+  titlePrefill = None,
 }: {
   linkedGoals: Goal[];
   goalFlow: ReturnType<typeof useGoalFlow>;
   readOnly: boolean;
   onUnlink: (goalId: string) => void;
   onUpdateGoal: (goalId: string, title: string, body: string) => Promise<void>;
-  /** Notes selection seeding the new-goal title (replace-if-empty). */
-  titleSeed?: Option<NoteField>;
+  /** Notes selection prefilling the new-goal title (replace-if-empty). */
+  titlePrefill?: Option<NoteField>;
 }) {
   const { flow } = goalFlow;
 
@@ -266,7 +266,7 @@ export function GoalFlowPages({
             onSubmit={goalFlow.handleFormSubmit}
             onCancel={goalFlow.handleBack}
             submitLabel="Save"
-            titleSeed={titleSeed}
+            titlePrefill={titlePrefill}
           />
         </SlidePanel>
       );
@@ -298,7 +298,7 @@ interface CoachingSessionPanelProps {
   onSectionChange?: (section: PanelSection) => void;
   /**
    * Notes "Add as …" selection routed to a section's add-flow; a new nonce
-   * opens that section's add-form and seeds the appropriate field.
+   * opens that section's add-form and prefills the appropriate field.
    */
   noteSelection?: Option<NoteSelection>;
 }
@@ -713,43 +713,43 @@ export function CoachingSessionPanel({
   const [activeActionTab, setActiveActionTab] = useState<ActionTab>("new");
   const [isAddingAgreement, setIsAddingAgreement] = useState(false);
 
-  // Notes "Add as …" seeds. Appending to an empty body seeds it, so one
-  // signal covers both fresh-open and in-progress add-forms; goals seed the
-  // title (replace-if-empty) since that is their primary field.
-  const [actionBodyAppend, setActionBodyAppend] = useState<Option<NoteField>>(None);
-  const [agreementBodyAppend, setAgreementBodyAppend] = useState<Option<NoteField>>(None);
-  const [goalTitleSeed, setGoalTitleSeed] = useState<Option<NoteField>>(None);
+  // Notes "Add as …" prefill signals. Appending to an empty body fills it, so
+  // one signal covers both fresh-open and in-progress add-forms; goals prefill
+  // the title (replace-if-empty) since that is their primary field.
+  const [actionBodyPrefill, setActionBodyPrefill] = useState<Option<NoteField>>(None);
+  const [agreementBodyPrefill, setAgreementBodyPrefill] = useState<Option<NoteField>>(None);
+  const [goalTitlePrefill, setGoalTitlePrefill] = useState<Option<NoteField>>(None);
   const handledNonce = useRef(0);
 
-  // Render-time dispatch targets: each section opens its add-flow and seeds
+  // Render-time dispatch targets: each section opens its add-flow and prefills
   // its field through the same interface, so the dispatch below needs no
   // per-entity switch. Rebuilt each render because `open` reads the live
-  // `atLimit`/`goalFlow`; clearing is hoisted to `clearSeed` (below) instead.
+  // `atLimit`/`goalFlow`; clearing is hoisted to `clearPrefill` (below) instead.
   const noteTargets: Record<PanelSection, NoteSelectionTarget> = {
     [PanelSection.Goals]: {
       // At the goal cap, creation requires a swap first; both routes land on
-      // the create form, where the seeded title is applied on mount.
+      // the create form, where the prefilled title is applied on mount.
       open: () => (atLimit ? goalFlow.handleAddGoalClick() : goalFlow.handleCreateNewClick()),
-      seed: setGoalTitleSeed,
+      prefill: setGoalTitlePrefill,
     },
     [PanelSection.Agreements]: {
       open: () => setIsAddingAgreement(true),
-      seed: setAgreementBodyAppend,
+      prefill: setAgreementBodyPrefill,
     },
     [PanelSection.Actions]: {
       open: () => setIsAddingAction(true),
-      seed: setActionBodyAppend,
+      prefill: setActionBodyPrefill,
     },
   };
 
   // One uniform clear mechanism, shared by the change handlers and the
   // goal-idle effect. Stable (useState setters never change identity), so the
   // handlers below can stay memoized.
-  const clearSeed = useMemo<Record<PanelSection, () => void>>(
+  const clearPrefill = useMemo<Record<PanelSection, () => void>>(
     () => ({
-      [PanelSection.Goals]: () => setGoalTitleSeed(None),
-      [PanelSection.Agreements]: () => setAgreementBodyAppend(None),
-      [PanelSection.Actions]: () => setActionBodyAppend(None),
+      [PanelSection.Goals]: () => setGoalTitlePrefill(None),
+      [PanelSection.Agreements]: () => setAgreementBodyPrefill(None),
+      [PanelSection.Actions]: () => setActionBodyPrefill(None),
     }),
     []
   );
@@ -761,31 +761,31 @@ export function CoachingSessionPanel({
     const { section, text, nonce } = noteSelection.val;
     setActiveSection(section);
     noteTargets[section].open();
-    noteTargets[section].seed(Some({ text, nonce }));
+    noteTargets[section].prefill(Some({ text, nonce }));
   }
 
-  // Clear a section's seed when its add-flow closes, so a later fresh "Add"
-  // starts blank and the still-present selection (same nonce) won't re-seed.
+  // Clear a section's prefill when its add-flow closes, so a later fresh "Add"
+  // starts blank and the still-present selection (same nonce) won't re-prefill.
   const handleAddingActionChange = useCallback(
     (adding: boolean) => {
       setIsAddingAction(adding);
-      if (!adding) clearSeed[PanelSection.Actions]();
+      if (!adding) clearPrefill[PanelSection.Actions]();
     },
-    [clearSeed]
+    [clearPrefill]
   );
   const handleAddingAgreementChange = useCallback(
     (adding: boolean) => {
       setIsAddingAgreement(adding);
-      if (!adding) clearSeed[PanelSection.Agreements]();
+      if (!adding) clearPrefill[PanelSection.Agreements]();
     },
-    [clearSeed]
+    [clearPrefill]
   );
 
   // The goal create form unmounts when the flow leaves Creating; drop the
-  // title seed once it returns to Idle so a manual "Add Goal" starts blank.
+  // title prefill once it returns to Idle so a manual "Add Goal" starts blank.
   useEffect(() => {
-    if (goalFlow.flow.step === GoalFlowStep.Idle) clearSeed[PanelSection.Goals]();
-  }, [goalFlow.flow.step, clearSeed]);
+    if (goalFlow.flow.step === GoalFlowStep.Idle) clearPrefill[PanelSection.Goals]();
+  }, [goalFlow.flow.step, clearPrefill]);
 
   // ── Agreement state & handlers ──────────────────────────────────
 
@@ -889,7 +889,7 @@ export function CoachingSessionPanel({
     onAgreementCreate: handleAgreementCreate,
     isAddingAgreement,
     onAddingAgreementChange: handleAddingAgreementChange,
-    agreementBodyAppend,
+    agreementBodyPrefill,
     // Action data
     reviewActions: panelReviewActions,
     sessionActions,
@@ -907,8 +907,8 @@ export function CoachingSessionPanel({
     onBodyChange: handleBodyChange,
     isAddingAction,
     onAddingActionChange: handleAddingActionChange,
-    actionBodyAppend,
-    goalTitleSeed,
+    actionBodyPrefill,
+    goalTitlePrefill,
     locale: siteConfig.locale,
     activeActionTab,
     onActiveActionTabChange: setActiveActionTab,

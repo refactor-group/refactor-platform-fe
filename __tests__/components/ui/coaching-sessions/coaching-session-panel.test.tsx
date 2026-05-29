@@ -343,17 +343,17 @@ describe("CoachingSessionPanel", () => {
   })
 
   // One mechanism, three entities — a NoteSelection for section X opens X's
-  // add-form seeded with the text in its primary field (body for Actions /
+  // add-form prefilled with the text in its primary field (body for Actions /
   // Agreements, title for Goals). Asserts observable form state, not the
   // internal target registry.
-  const seedCases = [
+  const prefillCases = [
     { section: PanelSection.Actions, text: "Follow up on hiring plan" },
     { section: PanelSection.Agreements, text: "Weekly retro every Friday" },
     { section: PanelSection.Goals, text: "Ship the onboarding revamp" },
   ] as const
 
-  it.each(seedCases)(
-    "opens the $section add-form seeded with a notes selection",
+  it.each(prefillCases)(
+    "opens the $section add-form prefilled with a notes selection",
     async ({ section, text }) => {
       setupMocks()
       render(
@@ -375,14 +375,14 @@ describe("CoachingSessionPanel", () => {
     }
   )
 
-  // Body-seeded entities (Actions, Agreements) reuse the same card with a
-  // persistent add-state, so the seed must be cleared on close or a fresh
+  // Body-prefilled entities (Actions, Agreements) reuse the same card with a
+  // persistent add-state, so the prefill must be cleared on close or a fresh
   // "Add" would re-show it.
   it.each([
-    { section: PanelSection.Actions, text: "Seeded action" },
-    { section: PanelSection.Agreements, text: "Seeded agreement" },
+    { section: PanelSection.Actions, text: "Prefilled action" },
+    { section: PanelSection.Agreements, text: "Prefilled agreement" },
   ] as const)(
-    "starts a fresh $section Add blank after a seeded form is closed",
+    "starts a fresh $section Add blank after a prefilled form is closed",
     async ({ section, text }) => {
       const user = userEvent.setup()
       setupMocks()
@@ -403,9 +403,9 @@ describe("CoachingSessionPanel", () => {
         expect(values).toContain(text)
       })
 
-      // Close the seeded form, then re-open via Add. The seed must have been
+      // Close the prefilled form, then re-open via Add. The prefill must have been
       // cleared, and the still-present noteSelection (same nonce) must NOT
-      // re-seed it.
+      // re-prefill it.
       await user.click(screen.getAllByRole("button", { name: /cancel/i })[0])
       await user.click(screen.getAllByRole("button", { name: /^add$/i })[0])
 

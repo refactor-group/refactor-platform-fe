@@ -28,7 +28,7 @@ import { useLinkedGoalDisplay } from "@/lib/hooks/use-linked-goal-display";
 import { ItemStatus, Id } from "@/types/general";
 import { type Option, None } from "@/types/option";
 import type { NoteField } from "@/types/note-selection";
-import { useSeededField } from "@/lib/hooks/use-seeded-field";
+import { useFieldPrefill } from "@/lib/hooks/use-field-prefill";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
@@ -77,8 +77,8 @@ export interface CompactActionCardProps {
   onGoalChange?: (id: Id, goalId: Id | undefined) => void;
   /** When true, card starts in edit mode (used for new actions). */
   initialEditing?: boolean;
-  /** Text appended into the edit body on nonce change (add-card seeding). */
-  bodyAppend?: Option<NoteField>;
+  /** Text appended into the edit body on nonce change (add-card prefilling). */
+  bodyPrefill?: Option<NoteField>;
   /** Called when the user dismisses an initial-editing card. */
   onDismiss?: () => void;
   className?: string;
@@ -103,7 +103,7 @@ export function CompactActionCard({
   onGoalChange,
   highlighted = false,
   initialEditing = false,
-  bodyAppend = None,
+  bodyPrefill = None,
   onDismiss,
   className,
 }: CompactActionCardProps) {
@@ -179,7 +179,7 @@ export function CompactActionCard({
             action={displayedAction}
             locale={locale}
             initialBody={body}
-            bodyAppend={bodyAppend}
+            bodyPrefill={bodyPrefill}
             allAssignees={allAssignees}
             resolvedAssignees={resolvedAssignees}
             assigneeIds={assigneeIds}
@@ -490,7 +490,7 @@ function ActionEditForm({
   action,
   locale,
   initialBody,
-  bodyAppend = None,
+  bodyPrefill = None,
   allAssignees,
   resolvedAssignees,
   assigneeIds,
@@ -506,7 +506,7 @@ function ActionEditForm({
   action: Action;
   locale: string;
   initialBody: string;
-  bodyAppend?: Option<NoteField>;
+  bodyPrefill?: Option<NoteField>;
   allAssignees: { id: Id; name: string; initials: string }[];
   resolvedAssignees: { id: Id; name: string; initials: string }[];
   assigneeIds: Id[];
@@ -524,8 +524,8 @@ function ActionEditForm({
   const markdownRef = useRef<TextareaMarkdownRef>(null);
   const textareaWrapRef = useRef<HTMLDivElement>(null);
 
-  // Append notes-selection text once per nonce (empty body → seed).
-  useSeededField(bodyAppend, (text) =>
+  // Append notes-selection text once per nonce (empty body → prefill).
+  useFieldPrefill(bodyPrefill, (text) =>
     setBody((prev) => (prev.trim() ? `${prev}\n\n${text}` : text))
   );
 

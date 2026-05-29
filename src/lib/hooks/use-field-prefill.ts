@@ -3,17 +3,17 @@ import type { Option } from "@/types/option";
 import type { NoteField } from "@/types/note-selection";
 
 /**
- * Applies a {@link NoteField}'s text once per distinct nonce. The caller's
- * `apply` closure owns the append-vs-replace policy; this hook only handles
- * the nonce dedup so the same selection is never applied twice.
+ * Prefills a form field from a {@link NoteField}, once per distinct nonce. The
+ * caller's `apply` closure owns the append-vs-replace policy; this hook only
+ * handles the nonce dedup so the same value is never applied twice.
  */
-export function useSeededField(
+export function useFieldPrefill(
   field: Option<NoteField>,
   apply: (text: string) => void
 ): void {
   const lastNonce = useRef(0);
-  // Keep the latest closure without re-firing the seed effect on its identity.
-  // Declared before the seed effect so it commits first on every render.
+  // Keep the latest closure without re-firing the prefill effect on its
+  // identity. Declared before the prefill effect so it commits first.
   const applyRef = useRef(apply);
   useEffect(() => {
     applyRef.current = apply;

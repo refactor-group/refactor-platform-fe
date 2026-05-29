@@ -12,8 +12,8 @@ export interface AgreementSectionContentProps {
   locale: string;
   isAddingAgreement: boolean;
   onAddingAgreementChange: (adding: boolean) => void;
-  /** Selected notes text to seed/append into the add-agreement form body. */
-  agreementBodyAppend?: Option<NoteField>;
+  /** Selected notes text to prefill into the add-agreement form body. */
+  agreementBodyPrefill?: Option<NoteField>;
   onAgreementCreate?: (body: string) => Promise<void>;
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
   onAgreementDelete?: (id: string) => void;
@@ -25,7 +25,7 @@ export function AgreementSectionContent({
   locale,
   isAddingAgreement,
   onAddingAgreementChange,
-  agreementBodyAppend = None,
+  agreementBodyPrefill = None,
   onAgreementCreate,
   onAgreementEdit,
   onAgreementDelete,
@@ -42,7 +42,7 @@ export function AgreementSectionContent({
           agreement={newAgreementPlaceholder}
           locale={locale}
           initialEditing
-          bodyAppend={agreementBodyAppend}
+          bodyPrefill={agreementBodyPrefill}
           onSave={onAgreementCreate}
           onDismiss={() => onAddingAgreementChange(false)}
         />
