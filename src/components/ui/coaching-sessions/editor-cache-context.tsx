@@ -278,7 +278,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
   // Provider initialization: sets up TipTap collaboration with awareness
   const initializeProvider = useCallback(async () => {
-    if (!jwt || !siteConfig.env.tiptapAppId || !userSession) {
+    if (!jwt || !siteConfig.env.docsCollabUrl || !userSession) {
       return;
     }
 
@@ -287,7 +287,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     try {
       const provider = new TiptapCollabProvider({
         name: jwt.sub,
-        appId: siteConfig.env.tiptapAppId,
+        baseUrl: siteConfig.env.docsCollabUrl,
         token: jwt.token,
         document: doc,
         user: userSession.display_name,
