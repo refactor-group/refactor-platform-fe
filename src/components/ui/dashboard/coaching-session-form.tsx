@@ -141,6 +141,9 @@ export default function CoachingSessionForm({
     () => existingSession?.duration_minutes ?? defaultDurationMinutes
   );
 
+  // Surfaced only after a submit attempt; cleared as soon as the coach edits.
+  const [durationError, setDurationError] = useState("");
+
   // Tracks whether the coach has manually edited the duration field this
   // session. Set on any user-driven change; checked by the sync effect so
   // that the cold-load default-load doesn't clobber deliberate edits.
@@ -149,6 +152,7 @@ export default function CoachingSessionForm({
   const handleDurationChange = useCallback((next: number) => {
     hasUserEditedDurationRef.current = true;
     setDurationMinutes(next);
+    setDurationError("");
   }, []);
 
   // Sync with the coach's stored default once user data loads. Only in create
@@ -221,6 +225,7 @@ export default function CoachingSessionForm({
       existingSession?.duration_minutes ?? defaultDurationMinutes
     );
     hasUserEditedDurationRef.current = false;
+    setDurationError("");
     setSelectedRelationshipId(currentCoachingRelationshipId ?? "");
     setIsRecurring(false);
     setFrequency(Frequency.Weekly);
@@ -292,6 +297,12 @@ export default function CoachingSessionForm({
       ? (selectedRelationshipId || currentCoachingRelationshipId)
       : existingSession?.coaching_relationship_id;
     if (mode === "create" && !relationshipId) return;
+
+    const durationResult = validateDurationMinutes(durationMinutes);
+    if (durationResult.isErr()) {
+      setDurationError(durationResult.error);
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -371,19 +382,19 @@ export default function CoachingSessionForm({
     userSession?.timezone,
   ]);
 
-  const durationValidation = validateDurationMinutes(durationMinutes);
+  // Determine if form can be submitted. A coachee is only required in create
+  // mode; update mode inherits it from the existing session.
+  const hasCoachee =
+    mode !== "create" ||
+    !!(selectedRelationshipId || currentCoachingRelationshipId);
 
-  // Determine if form can be submitted
-  const canSubmit = (() => {
-    if (!sessionDate || !sessionTime || isSubmitting) return false;
-    if (mode === "create") {
-      const relationshipId = selectedRelationshipId || currentCoachingRelationshipId;
-      if (!relationshipId) return false;
-    }
-    if (recurrenceError) return false;
-    if (durationValidation.isErr()) return false;
-    return true;
-  })();
+  const canSubmit =
+    !!sessionDate &&
+    !!sessionTime &&
+    !isSubmitting &&
+    !recurrenceError &&
+    hasCoachee &&
+    validateDurationMinutes(durationMinutes).isOk();
 
   const buttonText =
     mode === "update"
@@ -454,7 +465,7 @@ export default function CoachingSessionForm({
               value={durationMinutes}
               onChange={handleDurationChange}
               disabled={isSubmitting}
-              error={durationValidation.match(() => undefined, (msg) => msg)}
+              error={durationError}
             />
           </div>
         </div>
