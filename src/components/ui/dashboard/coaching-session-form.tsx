@@ -371,19 +371,19 @@ export default function CoachingSessionForm({
     userSession?.timezone,
   ]);
 
-  const durationValidation = validateDurationMinutes(durationMinutes);
+  // Determine if form can be submitted. A coachee is only required in create
+  // mode; update mode inherits it from the existing session.
+  const hasCoachee =
+    mode !== "create" ||
+    !!(selectedRelationshipId || currentCoachingRelationshipId);
 
-  // Determine if form can be submitted
-  const canSubmit = (() => {
-    if (!sessionDate || !sessionTime || isSubmitting) return false;
-    if (mode === "create") {
-      const relationshipId = selectedRelationshipId || currentCoachingRelationshipId;
-      if (!relationshipId) return false;
-    }
-    if (recurrenceError) return false;
-    if (durationValidation.isErr()) return false;
-    return true;
-  })();
+  const canSubmit =
+    !!sessionDate &&
+    !!sessionTime &&
+    !isSubmitting &&
+    !recurrenceError &&
+    hasCoachee &&
+    validateDurationMinutes(durationMinutes).isOk();
 
   const buttonText =
     mode === "update"
@@ -454,7 +454,6 @@ export default function CoachingSessionForm({
               value={durationMinutes}
               onChange={handleDurationChange}
               disabled={isSubmitting}
-              error={durationValidation.match(() => undefined, (msg) => msg)}
             />
           </div>
         </div>

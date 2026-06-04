@@ -22,13 +22,14 @@ describe("CoachingSessionDurationInput", () => {
     expect(onChange).toHaveBeenLastCalledWith(75);
   });
 
-  it("does not emit onChange with NaN when the input is cleared", () => {
+  it("lets the field be fully cleared without snapping back", () => {
     const onChange = vi.fn();
     render(<CoachingSessionDurationInput value={60} onChange={onChange} />);
     const input = screen.getByRole("combobox", {
       name: /duration in minutes/i,
     });
     fireEvent.change(input, { target: { value: "" } });
+    expect(input).toHaveValue("");
     const nanCalls = onChange.mock.calls.filter((call) =>
       Number.isNaN(call[0])
     );
