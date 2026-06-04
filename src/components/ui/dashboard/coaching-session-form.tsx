@@ -141,9 +141,6 @@ export default function CoachingSessionForm({
     () => existingSession?.duration_minutes ?? defaultDurationMinutes
   );
 
-  // Surfaced only after a submit attempt; cleared as soon as the coach edits.
-  const [durationError, setDurationError] = useState("");
-
   // Tracks whether the coach has manually edited the duration field this
   // session. Set on any user-driven change; checked by the sync effect so
   // that the cold-load default-load doesn't clobber deliberate edits.
@@ -152,7 +149,6 @@ export default function CoachingSessionForm({
   const handleDurationChange = useCallback((next: number) => {
     hasUserEditedDurationRef.current = true;
     setDurationMinutes(next);
-    setDurationError("");
   }, []);
 
   // Sync with the coach's stored default once user data loads. Only in create
@@ -225,7 +221,6 @@ export default function CoachingSessionForm({
       existingSession?.duration_minutes ?? defaultDurationMinutes
     );
     hasUserEditedDurationRef.current = false;
-    setDurationError("");
     setSelectedRelationshipId(currentCoachingRelationshipId ?? "");
     setIsRecurring(false);
     setFrequency(Frequency.Weekly);
@@ -297,12 +292,6 @@ export default function CoachingSessionForm({
       ? (selectedRelationshipId || currentCoachingRelationshipId)
       : existingSession?.coaching_relationship_id;
     if (mode === "create" && !relationshipId) return;
-
-    const durationResult = validateDurationMinutes(durationMinutes);
-    if (durationResult.isErr()) {
-      setDurationError(durationResult.error);
-      return;
-    }
 
     setIsSubmitting(true);
 
@@ -465,7 +454,6 @@ export default function CoachingSessionForm({
               value={durationMinutes}
               onChange={handleDurationChange}
               disabled={isSubmitting}
-              error={durationError}
             />
           </div>
         </div>

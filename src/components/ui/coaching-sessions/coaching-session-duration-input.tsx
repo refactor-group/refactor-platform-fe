@@ -98,7 +98,7 @@ export function CoachingSessionDurationInput({
                     onClick={() => handlePresetSelect(m)}
                     className={cn(
                       "w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent",
-                      value === m && "bg-accent/50 font-medium"
+                      value === m && "bg-accent/50 font-medium",
                     )}
                   >
                     {m} minutes
