@@ -53,3 +53,6 @@ playwright-report/
 
 # prototype
 prototype/
+
+# overseer-handoff-workflow: per-phase implementer handoffs are throwaway working docs
+.overseer-handoffs/
