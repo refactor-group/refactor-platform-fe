@@ -189,14 +189,44 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
   + still `0444`. **Follow-up (known gap):** `CoachingSessionTopicApi.reorder` propagates the raw
   axios error (no `EntityApiError` wrapping, since `entity-api.ts` was out of scope) — revisit
   when wiring reorder UI (Phase 3) or when the BE lands.
-- **Phase 2 — Title field + `coachingSessionTitle()` fallback.** Add
-  `CoachingSession.title: Option<string>` (`src/types/coaching-session.ts`) and normalize the raw
-  wire `title` (`string | null | undefined`) → `Some`/`None` at the fetch boundary (update
-  `defaultCoachingSession` → `None`). Then the helper (title → first goal → "Coaching Session"),
-  migrate the goal-as-title call sites (`join-session-popover.tsx`, `coaching-session-selector.tsx`,
-  `lib/utils/session.ts` + `session-display.ts`), and the editable title header (Option A). Leave
-  goal-based *action grouping* (`assigned-actions.ts`) untouched. (Title moved here from Phase 1 so
-  Phase 1 stays new-files-only.)
+- **Phase 2 — Title data layer + `coachingSessionTitle()` fallback + call-site migration.**
+  BE-aligned with board contract **`CoachingSessionTitleField` v1** (backend confirmed our house
+  pattern: wire `title: string | null`, always present, null when unset, never `""`/whitespace —
+  BE trims + empties→null on write; `PUT` is three-state: set / `null`=clear / omit=no-op; **no 422
+  for title in v1**). Decision **A′** (chosen over a bare nullable after studying `Action.goal_id`):
+  model `title` the house way — **`CoachingSession.title: Option<string>` (required field)** with a
+  read transform + write serialize, mirroring `transformAction`/`serializeAction`.
+  - `src/types/coaching-session.ts`: `title: Option<string>`; `CoachingSessionWire`
+    (`Omit<…,"title"> & { title: string | null }`); `transformCoachingSession(raw)`
+    (`typeof raw.title === "string" ? Some : None` — **no FE trim/empty hack; BE owns
+    normalization**, per [no FE hacks for BE bugs]); `serializeCoachingSession`
+    (`title.some ? title.val : null`); `defaultCoachingSession().title = None`;
+    `coachingSessionTitle(session)` → title → first `session.goals` title → `"Coaching Session"`
+    (FIRST goal, not the joined `goalsTitle`).
+  - `src/lib/api/coaching-sessions.ts`: apply `transformCoachingSession` on reads (`get`/`list`/
+    `listNested`) and `serializeCoachingSession` on writes (`create`/`update`). **Required because**
+    the existing reschedule/create path spreads the whole session into the body — without serialize,
+    the `Option` wrapper object leaks onto the wire. (This interaction is pinned by the wire frozen test.)
+  - Making `title` **required** ripples to every `CoachingSession`/`EnrichedCoachingSession` literal:
+    update the factories `createMockSession`/`createMockEnrichedSession` (`__tests__/test-utils.ts`)
+    + `defaultCoachingSession` + the create-session form's new-session object; tsc flags the rest.
+  - Migrate goal-as-title display call sites to prefer the title: `join-session-popover.tsx:368`
+    and `coaching-session-selector.tsx:147` → `coachingSessionTitle(session)`;
+    `coaching-session-selector.tsx:203` (relationship-goal label) → prefer `currentCoachingSession`
+    title, else keep `goalTitle(goal)`; `enrichSessionForDisplay` (`lib/utils/session.ts:239`) →
+    prefer `session.title`, else existing goal logic (keep the `EnrichedSessionDisplay.goalTitle`
+    field name). Update the non-frozen `__tests__/session.test.ts` to match + add a title-precedence
+    case. Leave goal-based *action grouping* (`assigned-actions.ts`) untouched.
+  - Behavior-preserving today (title is always `None` until a user can set one), so it's a safe
+    additive slice. Frozen files: `__tests__/types/coaching-session-title.test.ts`,
+    `__tests__/lib/api/coaching-session-title-wire.test.ts`. Handoff:
+    `.overseer-handoffs/phase-2-title-and-fallback.md`.
+- **Phase 2b — Editable title header (Option A UI).** Rework `coaching-session-title.tsx`
+  (currently renders the name-based `generateSessionTitle()` "Coach / Coachee" heading): the Title
+  becomes the primary editable heading (click-to-edit), with participants + presence dots + date
+  demoted to the subtitle; writes via `CoachingSessionApi.update` (three-state `title`). **UI phase
+  → follows `.claude/style-guide.md`.** Split out of Phase 2 because it's a style-guide-bearing UI
+  rework, not the data slice. (Was bundled into Phase 2 in the original plan.)
 - **Phase 3 — Topics section in the panel switcher.** Add `Topics` to `PanelSection` (default);
   build the section content (list, add inline/sheet, edit, author-only delete, drag-reorder via
   `@dnd-kit/core` + `DragOverlay`), wired to the Phase 1 hooks (optimistic where the prototype is).
