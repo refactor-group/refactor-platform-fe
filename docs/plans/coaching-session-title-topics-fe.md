@@ -150,8 +150,13 @@ whole `tsc`/Vitest run is red** because of these imports — expected, not a reg
 Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
 `src/test-utils/setup.ts`).
 
-## Conventions (enforced in review — see `.claude/coding-standards.md`)
+## Conventions (enforced in review — see `.claude/coding-standards.md` + `.claude/style-guide.md`)
 
+- **Visual style:** every UI-bearing phase (3–5) follows `.claude/style-guide.md` — the project's
+  frontend visual language (neutral shadcn tokens, flat `border shadow-none` cards, quiet
+  hover-revealed affordances, `tabular-nums`, hue-never-the-only-signal). It's a standing review
+  gate, not optional polish. Feature-scoped accent hues (relevance = indigo, immediacy = amber,
+  "new" dot = violet) live in this feature; do **not** repaint the global neutral `primary` token.
 - `Option<T>` for presence/absence (no `T | null`/`T | undefined`); **TS enums** for fixed-set
   status; discriminated unions for variant state.
 - Name it `coaching_session`/`CoachingSession*`, never abbreviated `session` (disambiguates from
@@ -163,6 +168,13 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
 
 ## Phase plan (living — update as you go)
 
+- **Step 0 — Visual style guide (cross-cutting; established mid-Phase-1).** Author
+  `.claude/style-guide.md` (linked from `.claude/CLAUDE.md` like `coding-standards.md`): the
+  project's frontend visual language, grounded in the live theme (`src/styles/globals.css`,
+  `tailwind.config.ts`) and the shipped dashboard (`src/components/ui/dashboard/**`), with the
+  north-star reference dashboard's observed-vs-adopted idioms made explicit. **Not** a numbered
+  feature phase and **not** a gate on the data-layer phases (1–2); it is the standing acceptance
+  gate the overseer checks every **UI** phase (3–5) against. Living doc — grows over time.
 - **Phase 1 — Types + stubbed API foundation (NEW FILES ONLY).** Create
   `src/types/coaching-session-topic.ts` (`CoachingSessionTopic` type + `TopicRelevance`/
   `TopicImmediacy` enums + `defaultCoachingSessionTopic` + `transformCoachingSessionTopic`) and
@@ -200,4 +212,6 @@ other; either can follow Phase 1. Rating (4) and provenance (5) layer onto the P
    back, STOPS.
 3. You **independently review** (`review-checklist.md`): re-run `tsc` + tests yourself, read the
    full diff (`git show --stat`), confirm only intended files changed, confirm tests have teeth.
+   For **UI phases (3–5)**, also check the diff against `.claude/style-guide.md` (tokens not raw
+   hex, flat `border shadow-none` cards, `tabular-nums`, quiet affordances, hue-never-alone).
 4. Human approves (or you send it back). Update this plan + memory; write the next handoff.

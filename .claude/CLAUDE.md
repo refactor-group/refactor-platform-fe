@@ -3,6 +3,7 @@
 ## Mandatory File Consultations
 
 **Code Implementation/Editing** → Read `.claude/coding-standards.md` FIRST
+**UI / Component Work** → Read `.claude/style-guide.md` FIRST (visual language, tokens, idioms)
 **Pull Request Operations** → Read `.claude/pr-instructions.md` FIRST
 
 ## Rules
