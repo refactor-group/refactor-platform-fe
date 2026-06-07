@@ -183,6 +183,12 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
   to existing types/components; no UI wiring** — keeps the phase isolated and additive. Done =
   the two frozen acceptance tests above pass + `tsc` clean + suite green. Handoff:
   `.overseer-handoffs/phase-1-types-and-api.md`.
+  **✅ DONE — commit `feefe41f` (3 new files only).** Independently reviewed by the overseer:
+  `tsc --noEmit` clean; frozen tests green (3 files / 18 tests); full suite 124 files / 1383
+  tests; lint 0 errors (7 pre-existing warnings, none in new files); frozen files byte-identical
+  + still `0444`. **Follow-up (known gap):** `CoachingSessionTopicApi.reorder` propagates the raw
+  axios error (no `EntityApiError` wrapping, since `entity-api.ts` was out of scope) — revisit
+  when wiring reorder UI (Phase 3) or when the BE lands.
 - **Phase 2 — Title field + `coachingSessionTitle()` fallback.** Add
   `CoachingSession.title: Option<string>` (`src/types/coaching-session.ts`) and normalize the raw
   wire `title` (`string | null | undefined`) → `Some`/`None` at the fetch boundary (update
