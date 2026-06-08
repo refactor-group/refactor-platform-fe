@@ -13,7 +13,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { ArrowRightToLine, GripVertical, Plus, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,8 @@ export interface TopicSectionContentProps {
     id: Id,
     fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
   ) => void;
+  /** Inserts the topic body into the coaching notes as an H3 heading. */
+  onInsertToNotes?: (body: string) => void;
   /** Resolves a topic author's user id to a display name for the badge. */
   resolveAuthorName?: (userId: Id) => string;
   /** FE-derived previous-session anchor; drives the "new since" dot. */
@@ -85,6 +87,7 @@ function TopicRow({
   onEdit,
   onDelete,
   onRate,
+  onInsertToNotes,
 }: {
   topic: CoachingSessionTopic;
   isAuthor: boolean;
@@ -99,6 +102,7 @@ function TopicRow({
     id: Id,
     fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
   ) => void;
+  onInsertToNotes?: (body: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(topic.body);
@@ -203,16 +207,30 @@ function TopicRow({
               onImmediacy={(v) => onRate(topic.id, { immediacy: v })}
             />
 
-            {isAuthor && !readOnly && (
-              <button
-                type="button"
-                aria-label="Delete topic"
-                onClick={() => onDelete(topic.id)}
-                className="ml-auto shrink-0 rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
+            <div className="ml-auto flex shrink-0 items-center gap-0.5">
+              {!readOnly && onInsertToNotes && (
+                <button
+                  type="button"
+                  aria-label="Insert into notes"
+                  title="Insert into notes as a heading"
+                  onClick={() => onInsertToNotes(topic.body)}
+                  className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover/topic:opacity-100"
+                >
+                  <ArrowRightToLine className="h-4 w-4" />
+                </button>
+              )}
+
+              {isAuthor && !readOnly && (
+                <button
+                  type="button"
+                  aria-label="Delete topic"
+                  onClick={() => onDelete(topic.id)}
+                  className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -230,6 +248,7 @@ export function TopicSectionContent({
   readOnly = false,
   canRate = false,
   onRate = () => {},
+  onInsertToNotes,
   resolveAuthorName = () => "",
   previousSessionDate = None,
 }: TopicSectionContentProps) {
@@ -280,6 +299,7 @@ export function TopicSectionContent({
       onEdit={onEdit}
       onDelete={onDelete}
       onRate={onRate}
+      onInsertToNotes={onInsertToNotes}
     />
   ));
 

@@ -32,6 +32,7 @@ export function CoachingSessionPanelMobile({
   onTopicCreate,
   onTopicEdit,
   onTopicDelete,
+  onTopicInsertToNotes,
   onTopicReorder,
   canRateTopics,
   onTopicRate,
@@ -184,6 +185,7 @@ export function CoachingSessionPanelMobile({
                 readOnly={readOnly}
                 canRate={canRateTopics}
                 onRate={onTopicRate}
+                onInsertToNotes={onTopicInsertToNotes}
                 resolveAuthorName={resolveTopicAuthorName}
                 previousSessionDate={previousSessionDate}
               />

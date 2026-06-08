@@ -88,6 +88,13 @@ vi.mock("@/lib/api/goal-progress", () => ({
 }));
 
 let mockUserId = "coachee-1";
+vi.mock("@/components/ui/coaching-sessions/editor-cache-context", () => ({
+  useEditorCache: () => ({
+    insertHeadingIntoNotes: vi.fn(() => true),
+    registerEditor: vi.fn(),
+    presenceState: { users: new Map(), currentUser: null, isLoading: false },
+  }),
+}));
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: vi.fn((selector: (state: any) => any) => selector({ userId: mockUserId })),
 }));

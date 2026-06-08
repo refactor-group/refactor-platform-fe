@@ -51,6 +51,7 @@ export function CoachingSessionPanelDesktop({
   onTopicReorder,
   canRateTopics,
   onTopicRate,
+  onTopicInsertToNotes,
   resolveTopicAuthorName,
   previousSessionDate,
   agreements,
@@ -234,6 +235,7 @@ export function CoachingSessionPanelDesktop({
               readOnly={readOnly}
               canRate={canRateTopics}
               onRate={onTopicRate}
+              onInsertToNotes={onTopicInsertToNotes}
               resolveAuthorName={resolveTopicAuthorName}
               previousSessionDate={previousSessionDate}
             />

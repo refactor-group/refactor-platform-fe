@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { toast as sonnerToast } from "sonner";
+import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import { CompactGoalCard } from "@/components/ui/coaching-sessions/goal-card-compact";
 import { GoalBrowseView } from "@/components/ui/coaching-sessions/goal-browse-view";
 import { GoalCreateForm } from "@/components/ui/coaching-sessions/goal-create-form";
@@ -94,6 +95,8 @@ export interface CoachingSessionPanelSharedProps {
     id: Id,
     fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
   ) => void;
+  /** Inserts the topic's text into the notes as an H3 heading at the cursor. */
+  onTopicInsertToNotes: (body: string) => void;
   /** Resolves a topic author's user id to a display name for the badge. */
   resolveTopicAuthorName: (userId: Id) => string;
   /** FE-derived previous-session anchor; drives the "new since" dot. */
@@ -426,6 +429,8 @@ export function CoachingSessionPanel({
     reorder: reorderTopics,
     rate: rateTopic,
   } = useCoachingSessionTopicMutation(coachingSessionId);
+
+  const { insertHeadingIntoNotes } = useEditorCache();
 
   // ── Goal handlers ────────────────────────────────────────────────
 
@@ -1058,6 +1063,20 @@ export function CoachingSessionPanel({
     [rateTopic, refreshTopics]
   );
 
+  const handleTopicInsertToNotes = useCallback(
+    (body: string) => {
+      const inserted = insertHeadingIntoNotes(body);
+      if (!inserted) {
+        toast({
+          variant: "destructive",
+          title: "Notes aren't ready yet",
+          description: "Wait for the notes editor to finish loading, then try again.",
+        });
+      }
+    },
+    [insertHeadingIntoNotes]
+  );
+
   // ── Shared props ─────────────────────────────────────────────────
 
   const sharedProps: CoachingSessionPanelSharedProps = {
@@ -1083,6 +1102,7 @@ export function CoachingSessionPanel({
     onTopicReorder: handleTopicReorder,
     canRateTopics: Boolean(userId && coacheeId && userId === coacheeId),
     onTopicRate: handleTopicRate,
+    onTopicInsertToNotes: handleTopicInsertToNotes,
     resolveTopicAuthorName,
     previousSessionDate,
     agreements,

@@ -86,6 +86,14 @@ vi.mock("@/lib/api/goal-progress", () => ({
   })),
 }))
 
+vi.mock("@/components/ui/coaching-sessions/editor-cache-context", () => ({
+  useEditorCache: () => ({
+    insertHeadingIntoNotes: vi.fn(() => true),
+    registerEditor: vi.fn(),
+    presenceState: { users: new Map(), currentUser: null, isLoading: false },
+  }),
+}));
+
 // Mock auth store
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: vi.fn((selector: (state: any) => any) =>

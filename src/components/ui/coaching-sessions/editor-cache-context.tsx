@@ -13,7 +13,7 @@ import {
 } from "react";
 import * as Y from "yjs";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
-import type { Extensions } from "@tiptap/core";
+import type { Editor, Extensions } from "@tiptap/core";
 import { Extensions as createExtensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
 import { useCollaborationToken } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -60,6 +60,13 @@ interface EditorCacheState {
 
 interface EditorCacheContextType extends EditorCacheState {
   resetCache: () => void;
+  /** The notes editor registers its instance here so non-editor descendants
+   * (e.g. the Topics panel) can issue commands without being inside the
+   * EditorProvider tree. */
+  registerEditor: (editor: Editor | null) => void;
+  /** Inserts `text` into the notes as an H3 heading at the cursor.
+   * Returns false when the editor isn't ready or the text is blank. */
+  insertHeadingIntoNotes: (text: string) => boolean;
 }
 
 // Provider lifecycle action types (discriminated union)
@@ -244,6 +251,8 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
   // Store provider ref to prevent recreation
   const providerRef = useRef<TiptapCollabProvider | null>(null);
+  // The live notes editor instance, registered by CoachingNotes once mounted.
+  const editorRef = useRef<Editor | null>(null);
   const yDocRef = useRef<Y.Doc | null>(null);
   const lastSessionIdRef = useRef<string | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -678,6 +687,26 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     }, [clearSyncTimeout]),
   );
 
+  const registerEditor = useCallback((editor: Editor | null) => {
+    editorRef.current = editor;
+  }, []);
+
+  const insertHeadingIntoNotes = useCallback((text: string): boolean => {
+    const editor = editorRef.current;
+    const trimmed = text.trim();
+    if (!editor || editor.isDestroyed || !trimmed) return false;
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: "heading",
+        attrs: { level: 3 },
+        content: [{ type: "text", text: trimmed }],
+      })
+      .run();
+    return true;
+  }, []);
+
   // Cache reset: clears all state for fresh initialization
   const resetCache = useCallback(() => {
     clearSyncTimeout();
@@ -705,8 +734,10 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     () => ({
       ...cache,
       resetCache,
+      registerEditor,
+      insertHeadingIntoNotes,
     }),
-    [cache, resetCache],
+    [cache, resetCache, registerEditor, insertHeadingIntoNotes],
   );
 
   return (
