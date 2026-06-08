@@ -339,6 +339,22 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
   earlier frozen tests green). Frozen file:
   `__tests__/components/ui/coaching-sessions/topic-provenance.test.tsx`. Handoff:
   `.overseer-handoffs/phase-5-provenance-new-dot.md`.
+  **✅ DONE — commit `c9e556d6` (8 files).** Independently reviewed: `tsc` clean; frozen provenance
+  9/9; all earlier frozen tests still green; wiring test 8/8 (teeth — strict-before selection,
+  `<=` breaks 2, mis-resolved name breaks 1); full suite 136/1471; lint 0 errors; frozen files
+  untouched + `0444`. `isTopicNew`/`topicWasUpdated` pure + real; anchor via new pure
+  `selectPreviousSessionDate` in `session.ts` (latest session strictly before current, UTC) fed by a
+  wide-window relationship session fetch; HoverCard shows Added always + Updated only when changed
+  ("Updated", not "Edited"); violet dot carries the `sr-only` label. New section props optional
+  (earlier frozen tests stay green). Avatar uses neutral fallback (role-tint not in spec).
+
+**🏁 BUILD COMPLETE — all phases (1, 2, 2b, 3a, 3b, 4, 5) done + independently reviewed.** Per the
+testing-discipline rule, all frozen acceptance tests were restored to writable (`chmod +w`) after
+final approval so they can be maintained normally. Open follow-ups: the BE Topics wire contract
+(board `coaching_session_topics_wire_contract`, incl. Q6 on whether the server provides the
+previous-session anchor) is still pending — reconcile the FE-derived anchor + any wire deltas when
+it lands; and `CoachingSessionTopicApi.reorder` still propagates the raw axios error (Phase 1 gap).
+End-to-end verification against the real backend remains for when the BE ships.
 - **Later (post-BE):** end-to-end verification against the real backend; Phase 3/4 backlog (#416,
   #417). Coordinate wire format with the BE via the issues / coordination board.
 
