@@ -48,6 +48,7 @@ export function CoachingSessionPanelDesktop({
   onTopicCreate,
   onTopicEdit,
   onTopicDelete,
+  onTopicReorder,
   agreements,
   onAgreementEdit,
   onAgreementDelete,
@@ -225,6 +226,7 @@ export function CoachingSessionPanelDesktop({
               onCreate={onTopicCreate}
               onEdit={onTopicEdit}
               onDelete={onTopicDelete}
+              onReorder={onTopicReorder}
               readOnly={readOnly}
             />
           ) : activeSection === PanelSection.Goals ? (

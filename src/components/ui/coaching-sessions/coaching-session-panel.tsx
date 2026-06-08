@@ -81,6 +81,7 @@ export interface CoachingSessionPanelSharedProps {
   onTopicCreate: (body: string) => void;
   onTopicEdit: (id: Id, body: string) => void;
   onTopicDelete: (id: Id) => void;
+  onTopicReorder: (orderedIds: Id[]) => void;
   // Agreement data
   agreements: Agreement[];
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
@@ -376,6 +377,7 @@ export function CoachingSessionPanel({
     create: createTopic,
     update: updateTopic,
     delete: deleteTopic,
+    reorder: reorderTopics,
   } = useCoachingSessionTopicMutation(coachingSessionId);
 
   // ── Goal handlers ────────────────────────────────────────────────
@@ -971,6 +973,24 @@ export function CoachingSessionPanel({
     [topics, deleteTopic, createTopic, refreshTopics]
   );
 
+  const handleTopicReorder = useCallback(
+    async (orderedIds: Id[]) => {
+      try {
+        await reorderTopics(orderedIds);
+        refreshTopics();
+      } catch (err) {
+        console.error("Failed to reorder topics:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to reorder topics",
+          description: "An error occurred while saving the new order.",
+        });
+        refreshTopics();
+      }
+    },
+    [reorderTopics, refreshTopics]
+  );
+
   // ── Shared props ─────────────────────────────────────────────────
 
   const sharedProps: CoachingSessionPanelSharedProps = {
@@ -993,6 +1013,7 @@ export function CoachingSessionPanel({
     onTopicCreate: handleTopicCreate,
     onTopicEdit: handleTopicEdit,
     onTopicDelete: handleTopicDelete,
+    onTopicReorder: handleTopicReorder,
     agreements,
     onAgreementEdit: handleAgreementEdit,
     onAgreementDelete: handleAgreementDelete,

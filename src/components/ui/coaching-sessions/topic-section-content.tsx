@@ -1,7 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,11 +27,36 @@ export interface TopicSectionContentProps {
   onCreate: (body: string) => void;
   onEdit: (id: Id, body: string) => void;
   onDelete: (id: Id) => void;
+  onReorder: (orderedIds: Id[]) => void;
   readOnly?: boolean;
 }
 
 const initials = (userId: Id): string =>
   userId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?";
+
+function arrayMove<T>(arr: T[], from: number, to: number): T[] {
+  const next = arr.slice();
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
+/**
+ * Whole-list reorder: returns the FULL ordered id list after moving `activeId`
+ * to where `overId` sits. Order is conveyed by array position. No-op (returns a
+ * copy in the original order) when either id is missing or they are the same.
+ * Never mutates the input.
+ */
+export function reorderTopicIds(
+  orderedIds: Id[],
+  activeId: Id,
+  overId: Id
+): Id[] {
+  const from = orderedIds.indexOf(activeId);
+  const to = orderedIds.indexOf(overId);
+  if (from < 0 || to < 0 || from === to) return orderedIds.slice();
+  return arrayMove(orderedIds.slice(), from, to);
+}
 
 function TopicRow({
   topic,
@@ -37,6 +74,18 @@ function TopicRow({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(topic.body);
 
+  const { attributes, listeners, setNodeRef: dragRef, isDragging } =
+    useDraggable({ id: topic.id });
+  const { setNodeRef: dropRef, isOver, active } = useDroppable({ id: topic.id });
+  const setRef = useCallback(
+    (node: HTMLElement | null) => {
+      dragRef(node);
+      dropRef(node);
+    },
+    [dragRef, dropRef]
+  );
+  const showDropLine = isOver && active?.id !== topic.id;
+
   const commit = () => {
     const trimmed = draft.trim();
     if (trimmed && trimmed !== topic.body) onEdit(topic.id, trimmed);
@@ -49,7 +98,30 @@ function TopicRow({
   };
 
   return (
-    <div className="group/topic flex items-start gap-2 rounded-lg border border-border/50 bg-card px-2 py-1.5 transition-colors hover:border-border">
+    <div
+      ref={readOnly ? undefined : setRef}
+      className={cn(
+        "group/topic relative flex items-start gap-2 rounded-lg border bg-card px-2 py-1.5 transition-colors",
+        showDropLine ? "border-foreground/30" : "border-border/50 hover:border-border",
+        isDragging && "opacity-40"
+      )}
+    >
+      {showDropLine && (
+        <span className="absolute -top-[5px] left-3 right-3 h-0.5 rounded-full bg-foreground/40" />
+      )}
+
+      {!readOnly && (
+        <button
+          type="button"
+          aria-label="Reorder topic"
+          className="mt-0.5 shrink-0 cursor-grab touch-none rounded p-1 text-muted-foreground/30 transition-colors hover:text-muted-foreground active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      )}
+
       <Avatar className="mt-0.5 h-6 w-6 shrink-0">
         <AvatarFallback className="bg-muted text-[10px] font-medium text-muted-foreground">
           {initials(topic.user_id)}
@@ -105,9 +177,35 @@ export function TopicSectionContent({
   onCreate,
   onEdit,
   onDelete,
+  onReorder,
   readOnly = false,
 }: TopicSectionContentProps) {
   const [newBody, setNewBody] = useState("");
+  const [activeId, setActiveId] = useState<Id | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor)
+  );
+  const activeTopic = useMemo(
+    () => topics.find((t) => t.id === activeId) ?? null,
+    [topics, activeId]
+  );
+
+  const onDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
+  const onDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (over && active.id !== over.id) {
+      onReorder(
+        reorderTopicIds(
+          topics.map((t) => t.id),
+          String(active.id),
+          String(over.id)
+        )
+      );
+    }
+    setActiveId(null);
+  };
 
   const add = () => {
     const trimmed = newBody.trim();
@@ -115,6 +213,17 @@ export function TopicSectionContent({
     onCreate(trimmed);
     setNewBody("");
   };
+
+  const rows = topics.map((topic) => (
+    <TopicRow
+      key={topic.id}
+      topic={topic}
+      isAuthor={viewerId === topic.user_id}
+      readOnly={readOnly}
+      onEdit={onEdit}
+      onDelete={onDelete}
+    />
+  ));
 
   return (
     <div className="space-y-2">
@@ -124,17 +233,34 @@ export function TopicSectionContent({
             No topics yet. Add what you&apos;d like to focus on this session.
           </p>
         </div>
+      ) : readOnly ? (
+        <div className="space-y-2">{rows}</div>
       ) : (
-        topics.map((topic) => (
-          <TopicRow
-            key={topic.id}
-            topic={topic}
-            isAuthor={viewerId === topic.user_id}
-            readOnly={readOnly}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setActiveId(null)}
+        >
+          <div className="space-y-2">{rows}</div>
+
+          <DragOverlay>
+            {activeTopic ? (
+              <div className="flex items-start gap-2 rounded-lg border border-border bg-card px-2 py-1.5 shadow-lg">
+                <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40" />
+                <Avatar className="mt-0.5 h-6 w-6 shrink-0">
+                  <AvatarFallback className="bg-muted text-[10px] font-medium text-muted-foreground">
+                    {initials(activeTopic.user_id)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="px-1.5 py-1 text-[13px] leading-snug line-clamp-3">
+                  {activeTopic.body}
+                </span>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {!readOnly && (
