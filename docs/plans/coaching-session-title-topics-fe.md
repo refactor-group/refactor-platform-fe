@@ -235,6 +235,25 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
   demoted to the subtitle; writes via `CoachingSessionApi.update` (three-state `title`). **UI phase
   → follows `.claude/style-guide.md`.** Split out of Phase 2 because it's a style-guide-bearing UI
   rework, not the data slice. (Was bundled into Phase 2 in the original plan.)
+  - **Structure:** a new presentational `EditableSessionTitle`
+    (`src/components/ui/coaching-sessions/editable-session-title.tsx`) — props
+    `{ title: Option<string>; fallbackTitle: string; onSave: (next: string) => void }` — handles
+    display (title vs muted fallback + "fallback" badge), click-to-edit (a11y names "Edit title"/
+    "Add a title"; input named "Session title"), and three-state commit (Enter/blur/✓ commits the
+    trimmed draft; `""` clears; Escape cancels; unchanged → no save). Parent `CoachingSessionTitle`
+    wires it: `title = currentCoachingSession.title`; `fallbackTitle =
+    coachingSessionTitle({ title: None, goals: [goal] })` reusing the Phase 2 helper with the
+    relationship goal from `useGoalByRelationship` (→ goal title, else "Coaching Session");
+    `onSave` → `useCoachingSessionMutation().update(id, { ...session, title: trimmed ? Some : None })`
+    then `refresh()` + keep the `document.title` sync; subtitle = coach/coachee names +
+    `PresenceIndicator` (existing `useEditorCache` presence) + formatted date. Editable by **either**
+    party (title is not role-gated). Stop using `generateSessionTitle` in this component (leave
+    `@/types/session-title` itself alone — out of scope). UX source of truth: the prototype
+    `EditableTitle`/`ParticipantsSubtitle` (`src/app/prototype/session-title-topics/page.tsx`).
+    Mind the header row's `md:h-16` layout + the action buttons beside it.
+  - Frozen file: `__tests__/components/ui/coaching-sessions/editable-session-title.test.tsx` (the
+    presentational contract). Parent wiring is non-frozen — implementer adds a test, overseer
+    verifies teeth. Handoff: `.overseer-handoffs/phase-2b-editable-title-header.md`.
 - **Phase 3 — Topics section in the panel switcher.** Add `Topics` to `PanelSection` (default);
   build the section content (list, add inline/sheet, edit, author-only delete, drag-reorder via
   `@dnd-kit/core` + `DragOverlay`), wired to the Phase 1 hooks (optimistic where the prototype is).
