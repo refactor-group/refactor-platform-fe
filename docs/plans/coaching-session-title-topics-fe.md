@@ -254,6 +254,18 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
   - Frozen file: `__tests__/components/ui/coaching-sessions/editable-session-title.test.tsx` (the
     presentational contract). Parent wiring is non-frozen — implementer adds a test, overseer
     verifies teeth. Handoff: `.overseer-handoffs/phase-2b-editable-title-header.md`.
+  - **✅ DONE — commit `9263d098` (4 files).** Independently reviewed: `tsc` clean; frozen
+    presentational test green (8 tests); parent wiring test green (6 tests, has teeth — exercises
+    fallback + `update(Some/None)` + `refresh`); full suite 128 files / 1419 tests; lint 0 errors
+    (7 pre-existing, none in 2b files); frozen file untouched + `0444`. Component + header faithful
+    to the spec/prototype and style-guide-adherent (page-heading scale, muted-italic fallback +
+    badge, circular ✓ button, `tabular-nums` date, aria-labels). **Process note:** the implementer
+    agent's connection dropped after writing all files but before committing; the overseer ran the
+    gates, found the only failure was a mock-path typo in the implementer's NON-frozen parent test
+    (`vi.mock("./editor-cache-context")` → the `@/`-aliased path so it intercepts the component's
+    import), fixed that one line (harness repair — no feature code, frozen gate untouched), then
+    finalized the commit. Dropped `style` prop from `CoachingSessionTitle` + its `[id]/page.tsx`
+    call site.
 - **Phase 3 — Topics section in the panel switcher.** Add `Topics` to `PanelSection` (default);
   build the section content (list, add inline/sheet, edit, author-only delete, drag-reorder via
   `@dnd-kit/core` + `DragOverlay`), wired to the Phase 1 hooks (optimistic where the prototype is).
