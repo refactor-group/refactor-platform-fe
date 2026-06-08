@@ -318,6 +318,13 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
   Phase 1 `update(topicId, { relevance|immediacy })` + refresh. Frozen file:
   `__tests__/components/ui/coaching-sessions/topic-rating-chip.test.tsx`. Handoff:
   `.overseer-handoffs/phase-4-rating-chips.md`.
+  **✅ DONE — commit `27ee9db7` (6 files).** Independently reviewed: `tsc` clean; frozen chip 6/6;
+  3a/3b frozen still green (20 total); wiring test green (teeth — flips viewer coachee↔coach,
+  asserts exact `{relevance}`/`{immediacy}` payloads + toggle-clear + coach read-only no-update);
+  full suite 134/1454; lint 0 errors; frozen files untouched + `0444`. Toggle-to-clear real
+  (`onChange(selected ? Neutral : level)`); coachee gate `userId === coacheeId`; new section props
+  `canRate`/`onRate` are **optional** (keeps 3a/3b frozen tests green). (Report's "4 frozen" was a
+  misreport — actual 6, verified.)
 - **Phase 5 — Provenance HoverCard + "new since last session" dot.** As specced above.
 - **Later (post-BE):** end-to-end verification against the real backend; Phase 3/4 backlog (#416,
   #417). Coordinate wire format with the BE via the issues / coordination board.
