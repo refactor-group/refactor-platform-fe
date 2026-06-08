@@ -8,6 +8,7 @@ import { Goal } from "@/types/goal";
 import { Agreement } from "@/types/agreement";
 import { Provider } from "@/types/provider";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
+import { type Option, Some, None } from "@/types/option";
 
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
@@ -16,6 +17,7 @@ export interface CoachingSession {
   coaching_relationship_id: Id;
   date: string;
   duration_minutes: number;
+  title: Option<string>; // None = no human-set title
   meeting_url?: string;
   provider?: Provider;
   created_at: DateTime;
@@ -133,6 +135,40 @@ export function getCoachingSessionById(
   return session ? session : defaultCoachingSession();
 }
 
+/** Wire shape where Option fields are unwrapped to string | null for JSON. */
+export type CoachingSessionWire = Omit<CoachingSession, "title"> & {
+  title: string | null;
+};
+
+/** Parse boundary transform: wraps the wire title into Option<string>. */
+export function transformCoachingSession(raw: any): CoachingSession {
+  return {
+    ...raw,
+    title: typeof raw.title === "string" ? Some(raw.title) : None,
+  };
+}
+
+/** Converts a CoachingSession to wire format, unwrapping the Option title. */
+export function serializeCoachingSession(
+  session: CoachingSession
+): CoachingSessionWire {
+  return {
+    ...session,
+    title: session.title.some ? session.title.val : null,
+  };
+}
+
+/**
+ * Display title for a coaching session: the human-set title when present,
+ * else the first linked goal's title, else the literal "Coaching Session".
+ */
+export function coachingSessionTitle(
+  session: { title: Option<string>; goals?: readonly Pick<Goal, "title">[] }
+): string {
+  if (session.title.some) return session.title.val;
+  return session.goals?.[0]?.title || "Coaching Session";
+}
+
 export function defaultCoachingSession(): CoachingSession {
   var now = DateTime.now();
   return {
@@ -140,6 +176,7 @@ export function defaultCoachingSession(): CoachingSession {
     coaching_relationship_id: "",
     date: "",
     duration_minutes: FALLBACK_DURATION_MINUTES,
+    title: None,
     created_at: now,
     updated_at: now,
   };

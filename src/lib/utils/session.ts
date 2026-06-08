@@ -236,7 +236,11 @@ export function enrichSessionForDisplay(
 
   return {
     id: session.id,
-    goalTitle: goal ? goalTitle(goal, "Coaching Session") : "Coaching Session",
+    goalTitle: session.title.some
+      ? session.title.val
+      : goal
+        ? goalTitle(goal, "Coaching Session")
+        : "Coaching Session",
     participantName: getOtherParticipantName(relationship, user),
     userRole: getUserRoleInRelationship(relationship, user),
     dateTime: formatSessionDateTime(session.date, timezone),

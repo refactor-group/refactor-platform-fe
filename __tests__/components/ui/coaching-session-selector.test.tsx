@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DateTime } from 'ts-luxon'
 import CoachingSessionSelector from '@/components/ui/coaching-session-selector'
 import { TestProviders } from '@/test-utils/providers'
+import { None } from '@/types/option'
 
 // Mock dependencies
 vi.mock('next/navigation', () => ({
@@ -96,12 +97,14 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
         id: 'upcoming-1',
         date: now.plus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
+        title: None,
         goals: [{ title: 'Upcoming Goal' }],
       },
       {
         id: 'previous-1',
         date: now.minus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
+        title: None,
         goals: [{ title: 'Previous Goal' }],
       },
     ]
@@ -138,6 +141,7 @@ describe('CoachingSessionSelector - Sorting & Grouping', () => {
         id: 'upcoming-1',
         date: now.plus({ days: 1 }).toISO(),
         coaching_relationship_id: relationshipId,
+        title: None,
         goals: [{ title: 'Test Goal' }],
       },
     ]

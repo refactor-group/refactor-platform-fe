@@ -7,6 +7,8 @@ import {
   defaultCoachingSession,
   EnrichedCoachingSession,
   CoachingSessionInclude,
+  transformCoachingSession,
+  serializeCoachingSession,
 } from "@/types/coaching-session";
 import { CoachingSessionCountByMonth } from "@/types/coaching-session-bucket";
 import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
@@ -61,9 +63,9 @@ export const CoachingSessionApi = {
       params.sort_order = sortOrder;
     }
 
-    return EntityApi.listFn<CoachingSession>(COACHING_SESSIONS_BASEURL, {
-      params,
-    });
+    return (
+      await EntityApi.listFn<any>(COACHING_SESSIONS_BASEURL, { params })
+    ).map(transformCoachingSession);
   },
 
   /**
@@ -73,7 +75,9 @@ export const CoachingSessionApi = {
    * @returns Promise resolving to the CoachingSession object
    */
   get: async (id: Id): Promise<CoachingSession> =>
-    EntityApi.getFn<CoachingSession>(`${COACHING_SESSIONS_BASEURL}/${id}`),
+    transformCoachingSession(
+      await EntityApi.getFn<any>(`${COACHING_SESSIONS_BASEURL}/${id}`)
+    ),
 
   /**
    * Creates a new coaching session.
@@ -82,9 +86,11 @@ export const CoachingSessionApi = {
    * @returns Promise resolving to the created CoachingSession object
    */
   create: async (coachingSession: CoachingSession): Promise<CoachingSession> =>
-    EntityApi.createFn<CoachingSession, CoachingSession>(
-      COACHING_SESSIONS_BASEURL,
-      coachingSession
+    transformCoachingSession(
+      await EntityApi.createFn<any, any>(
+        COACHING_SESSIONS_BASEURL,
+        serializeCoachingSession(coachingSession)
+      )
     ),
 
   /**
@@ -101,10 +107,12 @@ export const CoachingSessionApi = {
   createRecurring: async (
     payload: CreateRecurringSessionRequest
   ): Promise<CoachingSession[]> =>
-    EntityApi.createFn<CreateRecurringSessionRequest, CoachingSession[]>(
-      `${COACHING_SESSIONS_BASEURL}/recurring`,
-      payload
-    ),
+    (
+      await EntityApi.createFn<CreateRecurringSessionRequest, any[]>(
+        `${COACHING_SESSIONS_BASEURL}/recurring`,
+        payload
+      )
+    ).map(transformCoachingSession),
 
   createNested: async (): Promise<CoachingSession> => {
     throw new Error("Create nested operation not implemented");
@@ -121,9 +129,11 @@ export const CoachingSessionApi = {
     id: Id,
     coachingSession: CoachingSession
   ): Promise<CoachingSession> =>
-    EntityApi.updateFn<CoachingSession, CoachingSession>(
-      `${COACHING_SESSIONS_BASEURL}/${id}`,
-      coachingSession
+    transformCoachingSession(
+      await EntityApi.updateFn<any, any>(
+        `${COACHING_SESSIONS_BASEURL}/${id}`,
+        serializeCoachingSession(coachingSession)
+      )
     ),
 
   /**
@@ -165,12 +175,14 @@ export const CoachingSessionApi = {
     userId: Id,
     params?: any
   ): Promise<EnrichedCoachingSession[]> => {
-    return EntityApi.listNestedFn<EnrichedCoachingSession>(
-      USERS_BASEURL,
-      userId,
-      'coaching_sessions',
-      params
-    );
+    return (
+      await EntityApi.listNestedFn<any>(
+        USERS_BASEURL,
+        userId,
+        'coaching_sessions',
+        params
+      )
+    ).map(transformCoachingSession) as EnrichedCoachingSession[];
   },
 
   /**
