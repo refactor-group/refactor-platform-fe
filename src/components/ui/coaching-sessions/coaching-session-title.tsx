@@ -1,128 +1,100 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import {
-  defaultSessionTitle,
-  generateSessionTitle,
-  SessionTitleStyle,
-} from "@/types/session-title";
+import { useEffect } from "react";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
-import { isPastSession, isUnderwaySession } from "@/types/coaching-session";
+import { useGoalByRelationship } from "@/lib/api/goals";
+import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
+import {
+  coachingSessionTitle,
+  isPastSession,
+  isUnderwaySession,
+} from "@/types/coaching-session";
+import { Some, None } from "@/types/option";
 import {
   formatDateInUserTimezoneWithTZ,
   getBrowserTimezone,
 } from "@/lib/timezone-utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useEditorCache } from "./editor-cache-context";
+import { EditableSessionTitle } from "./editable-session-title";
 import { PresenceIndicator } from "@/components/ui/presence-indicator";
 import { UserPresence } from "@/types/presence";
 import { RelationshipRole } from "@/types/relationship-role";
 
-const CoachingSessionTitle: React.FC<{
-  locale: string | "us";
-  style: SessionTitleStyle;
-}> = ({ locale, style }) => {
+const CoachingSessionTitle: React.FC<{ locale: string }> = () => {
   const { userSession } = useAuthStore((state) => state);
 
-  // Get coaching session from URL path parameter
-  const { currentCoachingSession, isLoading: sessionLoading } =
-    useCurrentCoachingSession();
-
-  // Get coaching relationship from simplified store
-  const { currentCoachingRelationship, isLoading: relationshipLoading } =
+  const { currentCoachingSession, refresh } = useCurrentCoachingSession();
+  const { currentCoachingRelationship, currentCoachingRelationshipId } =
     useCurrentCoachingRelationship();
-
-  // Get presence state from editor cache
+  const { goal } = useGoalByRelationship(currentCoachingRelationshipId);
+  const { update } = useCoachingSessionMutation();
   const { presenceState } = useEditorCache();
 
-  // Compute session title - memoized to prevent unnecessary recalculations
-  const sessionTitle = useMemo(() => {
-    if (sessionLoading || relationshipLoading) return null;
-    if (!currentCoachingSession || !currentCoachingRelationship) return null;
+  const session = currentCoachingSession;
+  const relationship = currentCoachingRelationship;
 
-    return generateSessionTitle(
-      currentCoachingSession,
-      currentCoachingRelationship,
-      style,
-      locale
-    );
-  }, [
-    currentCoachingSession,
-    currentCoachingRelationship,
-    style,
-    locale,
-    sessionLoading,
-    relationshipLoading,
-  ]);
+  const fallback = coachingSessionTitle({ title: None, goals: [goal] });
+  const displayedTitle = session?.title.some ? session.title.val : fallback;
 
-  // Sync document title as a side effect when the computed title changes
   useEffect(() => {
-    if (sessionTitle) {
-      document.title = sessionTitle.title;
-    }
-  }, [sessionTitle]);
+    if (session) document.title = displayedTitle;
+  }, [session, displayedTitle]);
 
-  const displayTitle = sessionTitle?.title || defaultSessionTitle().title;
+  const handleSave = async (next: string) => {
+    if (!session) return;
+    const title = next ? Some(next) : None;
+    await update(session.id, { ...session, title });
+    await refresh();
+  };
 
-  // Helper to get presence by role
   const getPresenceByRole = (
     role: RelationshipRole
   ): UserPresence | undefined => {
     if (!presenceState) return undefined;
-
-    // Iterate Map directly without array conversion
     for (const user of presenceState.users.values()) {
-      if (user.relationshipRole === role) {
-        return user;
-      }
+      if (user.relationshipRole === role) return user;
     }
     return undefined;
   };
 
-  // Enhanced title rendering with presence indicators
-  const renderTitleWithPresence = () => {
-    if (!sessionTitle || !currentCoachingRelationship) return displayTitle;
+  if (!session || !relationship) return null;
 
-    const coachPresence = getPresenceByRole(RelationshipRole.Coach);
-    const coacheePresence = getPresenceByRole(RelationshipRole.Coachee);
-
-    // Parse the existing title format: "Coach Name / Coachee Name"
-    const parts = displayTitle.split(" / ");
-    if (parts.length !== 2 || !parts[0]?.trim() || !parts[1]?.trim()) {
-      return displayTitle; // Fallback for malformed titles or default titles
-    }
-
-    const [coachName, coacheeName] = parts;
-
-    return (
-      <span className="flex items-center gap-1">
-        <PresenceIndicator presence={coachPresence} />
-        <span>{coachName}</span>
-        <span className="mx-2">/</span>
-        <PresenceIndicator presence={coacheePresence} />
-        <span>{coacheeName}</span>
-      </span>
-    );
-  };
+  const coachName =
+    `${relationship.coach_first_name} ${relationship.coach_last_name}`.trim();
+  const coacheeName =
+    `${relationship.coachee_first_name} ${relationship.coachee_last_name}`.trim();
+  const timezone = userSession?.timezone || getBrowserTimezone();
 
   return (
     <div>
-      <h4 className="font-semibold break-words w-full md:text-clip">
-        {renderTitleWithPresence()}
-      </h4>
-      {currentCoachingSession && (
-        <p className="text-xs text-muted-foreground mt-1">
-          {isPastSession(currentCoachingSession) && "Held on "}
-          {!isPastSession(currentCoachingSession) &&
-            !isUnderwaySession(currentCoachingSession) &&
+      <EditableSessionTitle
+        title={session.title}
+        fallbackTitle={fallback}
+        onSave={handleSave}
+      />
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <PresenceIndicator presence={getPresenceByRole(RelationshipRole.Coach)} />
+          {coachName}
+        </span>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="inline-flex items-center gap-1.5">
+          <PresenceIndicator
+            presence={getPresenceByRole(RelationshipRole.Coachee)}
+          />
+          {coacheeName}
+        </span>
+        <span className="text-muted-foreground/40">·</span>
+        <span className="tabular-nums">
+          {isPastSession(session) && "Held on "}
+          {!isPastSession(session) &&
+            !isUnderwaySession(session) &&
             "Scheduled for "}
-          {formatDateInUserTimezoneWithTZ(
-            currentCoachingSession.date,
-            userSession?.timezone || getBrowserTimezone()
-          )}
-        </p>
-      )}
+          {formatDateInUserTimezoneWithTZ(session.date, timezone)}
+        </span>
+      </p>
     </div>
   );
 };

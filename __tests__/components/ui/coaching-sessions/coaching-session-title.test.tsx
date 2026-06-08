@@ -1,0 +1,153 @@
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Some, None, type Option } from "@/types/option";
+import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
+
+const mockUpdate = vi.fn();
+const mockRefresh = vi.fn();
+
+let sessionTitle: Option<string> = None;
+let goalTitle = "";
+
+vi.mock("@/lib/hooks/use-current-coaching-session", () => ({
+  useCurrentCoachingSession: vi.fn(() => ({
+    currentCoachingSessionId: "session-1",
+    currentCoachingSession: {
+      id: "session-1",
+      coaching_relationship_id: "rel-1",
+      date: "2026-06-08T10:00:00.000Z",
+      duration_minutes: 60,
+      title: sessionTitle,
+    },
+    isLoading: false,
+    isError: false,
+    refresh: mockRefresh,
+  })),
+}));
+
+vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
+  useCurrentCoachingRelationship: vi.fn(() => ({
+    currentCoachingRelationshipId: "rel-1",
+    currentCoachingRelationship: {
+      id: "rel-1",
+      coach_id: "coach-1",
+      coachee_id: "coachee-1",
+      organization_id: "org-1",
+      coach_first_name: "Jordan",
+      coach_last_name: "Smith",
+      coachee_first_name: "Alex",
+      coachee_last_name: "Chen",
+    },
+    isLoading: false,
+    isError: false,
+    setCurrentCoachingRelationshipId: vi.fn(),
+    refresh: vi.fn(),
+  })),
+}));
+
+vi.mock("@/lib/api/goals", () => ({
+  useGoalByRelationship: vi.fn(() => ({
+    goal: { title: goalTitle },
+    isLoading: false,
+    isError: false,
+    refresh: vi.fn(),
+  })),
+}));
+
+vi.mock("@/lib/api/coaching-sessions", () => ({
+  useCoachingSessionMutation: vi.fn(() => ({
+    update: mockUpdate,
+    create: vi.fn(),
+    delete: vi.fn(),
+    isLoading: false,
+    error: null,
+  })),
+}));
+
+vi.mock("@/components/ui/coaching-sessions/editor-cache-context", () => ({
+  useEditorCache: vi.fn(() => ({
+    presenceState: { users: new Map(), currentUser: null, isLoading: false },
+  })),
+}));
+
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: vi.fn((selector: (state: any) => any) =>
+    selector({ userSession: { timezone: "America/Chicago" } })
+  ),
+}));
+
+describe("CoachingSessionTitle — fallback resolution", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionTitle = None;
+    goalTitle = "";
+    mockUpdate.mockResolvedValue(undefined);
+    mockRefresh.mockResolvedValue(undefined);
+  });
+
+  it("shows the human title when set", () => {
+    sessionTitle = Some("Quarterly planning");
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(screen.getByText("Quarterly planning")).toBeInTheDocument();
+  });
+
+  it("falls back to the linked goal title when unset", () => {
+    sessionTitle = None;
+    goalTitle = "Improve leadership";
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(screen.getByText("Improve leadership")).toBeInTheDocument();
+  });
+
+  it("falls back to 'Coaching Session' when unset and no goal", () => {
+    sessionTitle = None;
+    goalTitle = "";
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(screen.getByText("Coaching Session")).toBeInTheDocument();
+  });
+
+  it("renders both participant names", () => {
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(screen.getByText("Jordan Smith")).toBeInTheDocument();
+    expect(screen.getByText("Alex Chen")).toBeInTheDocument();
+  });
+});
+
+describe("CoachingSessionTitle — save wiring", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionTitle = None;
+    goalTitle = "";
+    mockUpdate.mockResolvedValue(undefined);
+    mockRefresh.mockResolvedValue(undefined);
+  });
+
+  it("commits a new title as Some and refreshes", async () => {
+    render(<CoachingSessionTitle locale="en-US" />);
+    fireEvent.click(screen.getByRole("button", { name: /add a title/i }));
+    const input = screen.getByRole("textbox", { name: /session title/i });
+    fireEvent.change(input, { target: { value: "New plan" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "session-1",
+      expect.objectContaining({ id: "session-1", title: Some("New plan") })
+    );
+    await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
+  });
+
+  it("commits an emptied title as None (clear)", async () => {
+    sessionTitle = Some("Old title");
+    render(<CoachingSessionTitle locale="en-US" />);
+    fireEvent.click(screen.getByRole("button", { name: /edit title/i }));
+    const input = screen.getByRole("textbox", { name: /session title/i });
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "session-1",
+      expect.objectContaining({ title: None })
+    );
+  });
+});
