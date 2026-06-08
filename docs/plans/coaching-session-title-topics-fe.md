@@ -221,6 +221,14 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
     additive slice. Frozen files: `__tests__/types/coaching-session-title.test.ts`,
     `__tests__/lib/api/coaching-session-title-wire.test.ts`. Handoff:
     `.overseer-handoffs/phase-2-title-and-fallback.md`.
+  - **✅ DONE — commit `45a7610` (8 files).** Independently reviewed: `tsc` clean; both frozen
+    files green (2 files / 21 tests); full suite 126 files / 1405 tests (clean run — an earlier
+    "1 fail" was a two-Vitest-run collision, not real); lint 0 errors (7 pre-existing warnings,
+    none in changed files); frozen files byte-identical + `0444`. Transform/serialize/helper match
+    the `Action.goal_id` house pattern; the added `session.test.ts` title-precedence case has teeth.
+    Create form inherits `title: None` via its `defaultCoachingSession()` spread. One extra file
+    beyond named scope — `coaching-session-selector.test.tsx` inline fixtures got `title: None`
+    (sound required-field ripple; test fixtures, not a prod raw path).
 - **Phase 2b — Editable title header (Option A UI).** Rework `coaching-session-title.tsx`
   (currently renders the name-based `generateSessionTitle()` "Coach / Coachee" heading): the Title
   becomes the primary editable heading (click-to-edit), with participants + presence dots + date
