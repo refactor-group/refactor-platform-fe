@@ -140,8 +140,11 @@ export type CoachingSessionWire = Omit<CoachingSession, "title"> & {
   title: string | null;
 };
 
-/** Parse boundary transform: wraps the wire title into Option<string>. */
+/** Parse boundary transform: wraps the wire title into Option<string>.
+ * Tolerates an empty response body (the BE returns 204/`data: null` on PUT) —
+ * callers revalidate via SWR, so a default placeholder is harmless. */
 export function transformCoachingSession(raw: any): CoachingSession {
+  if (raw == null) return defaultCoachingSession();
   return {
     ...raw,
     title: typeof raw.title === "string" ? Some(raw.title) : None,

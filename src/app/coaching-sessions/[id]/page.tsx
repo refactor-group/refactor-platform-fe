@@ -115,11 +115,13 @@ export default function CoachingSessionsPage() {
   // Panel section persisted via URL param "panel".
   // Also recognize the legacy "tab" param so old bookmarks still work.
   const panelParam = searchParams.get("panel") ?? searchParams.get("tab");
-  const panelSection = panelParam === PanelSection.Agreements
-    ? PanelSection.Agreements
-    : panelParam === PanelSection.Actions
-      ? PanelSection.Actions
-      : PanelSection.Goals;
+  const panelSection = panelParam === PanelSection.Goals
+    ? PanelSection.Goals
+    : panelParam === PanelSection.Agreements
+      ? PanelSection.Agreements
+      : panelParam === PanelSection.Actions
+        ? PanelSection.Actions
+        : PanelSection.Topics;
 
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -141,8 +143,8 @@ export default function CoachingSessionsPage() {
   const handlePanelSectionChange = useCallback(
     (section: PanelSection) => {
       const newSearchParams = new URLSearchParams(searchParams);
-      if (section === PanelSection.Goals) {
-        // Remove panel parameter for default section to keep URL clean
+      if (section === PanelSection.Topics) {
+        // Remove panel parameter for the default section to keep URL clean
         newSearchParams.delete("panel");
       } else {
         newSearchParams.set("panel", section);

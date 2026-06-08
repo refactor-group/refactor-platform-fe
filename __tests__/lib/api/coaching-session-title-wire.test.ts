@@ -135,4 +135,16 @@ describe("CoachingSessionApi writes serialize Option<string> -> wire string | nu
     const body = vi.mocked(EntityApi.createFn).mock.calls[0][1] as { title: unknown };
     expect(body.title).toBe(null);
   });
+
+  // The backend returns 204 / `data: null` on PUT — transforming that must not
+  // throw (regression: it crashed reschedule + title-save against the live BE).
+  it("tolerates an empty (204/null) update response without throwing", async () => {
+    vi.mocked(EntityApi.updateFn).mockResolvedValue(null as never);
+    const s = await CoachingSessionApi.update("s1", {
+      ...defaultCoachingSession(),
+      id: "s1",
+      title: Some("Renamed"),
+    });
+    expect(s.title.none).toBe(true);
+  });
 });

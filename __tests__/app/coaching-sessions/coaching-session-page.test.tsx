@@ -762,14 +762,12 @@ describe('CoachingSessionsPage - Add from notes selection', () => {
       expect(panel.getAttribute('data-draft-section')).toBe(section)
       expect(panel.getAttribute('data-draft-text')).toBe(text)
 
-      // Panel is expanded by default, so the deferred URL sync fires. Goals is
-      // the default section, so its param is removed to keep the URL clean;
-      // the other two pin panel=<section>.
+      // Panel is expanded by default, so the deferred URL sync fires. Topics is
+      // the default section now, so every notes-routing target (actions,
+      // agreements, goals) pins panel=<section>.
       await waitFor(() => {
         expect(mockReplace).toHaveBeenCalledWith(
-          section === 'goals'
-            ? expect.not.stringContaining('panel=')
-            : expect.stringContaining(`panel=${section}`),
+          expect.stringContaining(`panel=${section}`),
           expect.objectContaining({ scroll: false })
         )
       })
