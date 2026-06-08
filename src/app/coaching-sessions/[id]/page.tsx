@@ -46,7 +46,7 @@ import { SidebarState, StateChangeSource } from "@/types/sidebar";
 // Width of the shared left side panel (Topics / Goals / Actions / Agreements).
 // One value drives all four sections so spacing stays consistent.
 const COLLAPSED_PANEL_WIDTH = "40px";
-const EXPANDED_PANEL_WIDTH = "360px";
+const EXPANDED_PANEL_WIDTH = "400px";
 // `minmax(280px, 440px)` lets the transcript shrink from 440 down to a
 // 280-px readability floor when the viewport gets tight between md: and
 // wider desktop widths — keeps Notes from being crushed.
