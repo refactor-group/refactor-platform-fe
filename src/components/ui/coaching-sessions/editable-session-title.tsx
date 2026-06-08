@@ -4,11 +4,10 @@ import { useState, type JSX } from "react";
 import { Check, Pencil } from "lucide-react";
 import { type Option } from "@/types/option";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/components/lib/utils";
 
-const HEADING_CLASS = "text-xl sm:text-2xl font-semibold tracking-tight";
+const HEADING_CLASS = "text-lg sm:text-xl font-semibold tracking-tight";
 
 export interface EditableSessionTitleProps {
   title: Option<string>;
@@ -82,21 +81,13 @@ export function EditableSessionTitle({
         <span
           className={cn(
             HEADING_CLASS,
-            title.none && "text-muted-foreground/70 italic font-medium"
+            title.none && "text-muted-foreground/70 font-medium"
           )}
         >
           {title.some ? title.val : fallbackTitle}
         </span>
-        <Pencil className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors shrink-0 mt-2" />
+        <Pencil className="h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors shrink-0" />
       </button>
-      {title.none && (
-        <Badge
-          variant="outline"
-          className="mt-1.5 shrink-0 text-[10px] font-normal text-muted-foreground/70 border-border/60"
-        >
-          fallback
-        </Badge>
-      )}
     </div>
   );
 }

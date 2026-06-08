@@ -297,7 +297,7 @@ export default function CoachingSessionsPage() {
     <div className="max-w-screen-2xl flex-1 flex flex-col min-h-0 md:overflow-hidden">
       <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
         <div className="flex-col pl-4 md:flex">
-          <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
+          <div className="flex flex-col items-start justify-between space-y-2 py-5 px-4 sm:flex-row sm:items-center sm:space-y-0 md:min-h-16">
             <CoachingSessionTitle locale={siteConfig.locale} />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
               <JoinMeetingButton
