@@ -302,6 +302,13 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
     Frozen file: `__tests__/components/ui/coaching-sessions/topic-reorder.test.ts` (the pure helper;
     dnd interaction is non-frozen — implementer drives `onDragEnd`). Handoff:
     `.overseer-handoffs/phase-3b-topics-reorder.md`.
+    **✅ DONE — commit `03c3d0e8` (5 files).** Independently reviewed: `tsc` clean; frozen helper
+    7/7; 3a frozen still 7/7 (no regression — report's "5 passed" was a misreport, verified); wiring
+    test 5/5 (teeth confirmed via partial-payload revert check); full suite 132/1444; lint 0 errors;
+    **no dependency added** (`@dnd-kit/core` `useDraggable`/`useDroppable` only); frozen files
+    untouched + `0444`. `reorderTopicIds` non-mutating arrayMove; `onDragEnd` → `onReorder(full id
+    list)`; readOnly disables dnd. Minor: `onReorder` is a required prop while the frozen 3a test
+    omits it — fine because tsc excludes test files (clean tsc); reorder→refresh (no local optimism).
 - **Phase 4 — Rating chips + popover.** Coachee-set relevance/immediacy; coach read-only; click-
   to-expand popover with toggle-to-clear; the subtitles above.
 - **Phase 5 — Provenance HoverCard + "new since last session" dot.** As specced above.
