@@ -33,7 +33,7 @@ const AXIS_CONFIG: Record<Axis, AxisConfig> = {
     subtitle: "How relevant is this topic to you today?",
     neutral: TopicRelevance.Neutral,
     levels: [
-      { value: TopicRelevance.Background, label: "Background" },
+      { value: TopicRelevance.Peripheral, label: "Peripheral" },
       { value: TopicRelevance.WorthExploring, label: "Worth exploring" },
       { value: TopicRelevance.Central, label: "Central" },
     ],

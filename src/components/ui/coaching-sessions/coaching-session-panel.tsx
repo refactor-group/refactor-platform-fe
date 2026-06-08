@@ -424,6 +424,7 @@ export function CoachingSessionPanel({
     update: updateTopic,
     delete: deleteTopic,
     reorder: reorderTopics,
+    rate: rateTopic,
   } = useCoachingSessionTopicMutation(coachingSessionId);
 
   // ── Goal handlers ────────────────────────────────────────────────
@@ -1043,7 +1044,7 @@ export function CoachingSessionPanel({
       fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
     ) => {
       try {
-        await updateTopic(id, fields);
+        await rateTopic(id, fields);
         refreshTopics();
       } catch (err) {
         console.error("Failed to rate topic:", err);
@@ -1054,7 +1055,7 @@ export function CoachingSessionPanel({
         });
       }
     },
-    [updateTopic, refreshTopics]
+    [rateTopic, refreshTopics]
   );
 
   // ── Shared props ─────────────────────────────────────────────────

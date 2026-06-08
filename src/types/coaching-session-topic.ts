@@ -2,18 +2,20 @@ import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import { type Option } from "@/types/option";
 
+// Wire values are PascalCase to match Rust serde (same convention as goal
+// `status`); see the `CoachingSessionTopics` v1 board contract.
 export enum TopicRelevance {
-  Neutral = "neutral",
-  Background = "background",
-  WorthExploring = "worth_exploring",
-  Central = "central",
+  Neutral = "Neutral",
+  Peripheral = "Peripheral",
+  WorthExploring = "WorthExploring",
+  Central = "Central",
 }
 
 export enum TopicImmediacy {
-  Neutral = "neutral",
-  CanWait = "can_wait",
-  Soon = "soon",
-  Pressing = "pressing",
+  Neutral = "Neutral",
+  CanWait = "CanWait",
+  Soon = "Soon",
+  Pressing = "Pressing",
 }
 
 // This must always reflect the Rust struct on the backend.

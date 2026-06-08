@@ -55,15 +55,26 @@ describe("useCoachingSessionTopicMutation", () => {
     expect(EntityApi.deleteFn).not.toHaveBeenCalled();
   });
 
-  it("update PUTs only changed fields under the topic id", async () => {
+  it("update PUTs the body under the topic id", async () => {
     const { result } = render();
     await act(async () => {
-      await result.current.update("t1", { relevance: TopicRelevance.Central });
+      await result.current.update("t1", { body: "edited body" });
     });
     expect(EntityApi.updateFn).toHaveBeenCalledWith(`${TOPICS}/t1`, {
-      relevance: "central",
+      body: "edited body",
     });
     expect(EntityApi.createFn).not.toHaveBeenCalled();
+  });
+
+  it("rate PATCHes the dedicated rating sub-route", async () => {
+    const { result } = render();
+    await act(async () => {
+      await result.current.rate("t1", { relevance: TopicRelevance.Central });
+    });
+    expect(sessionGuard.patch).toHaveBeenCalledWith(`${TOPICS}/t1/rating`, {
+      relevance: "Central",
+    });
+    expect(EntityApi.updateFn).not.toHaveBeenCalled();
   });
 
   it("delete DELETEs the nested topic", async () => {
@@ -81,7 +92,7 @@ describe("useCoachingSessionTopicMutation", () => {
       await result.current.reorder(["t3", "t1", "t2"]);
     });
     expect(sessionGuard.patch).toHaveBeenCalledWith(`${TOPICS}/reorder`, {
-      topic_ids: ["t3", "t1", "t2"],
+      ordered_ids: ["t3", "t1", "t2"],
     });
   });
 });

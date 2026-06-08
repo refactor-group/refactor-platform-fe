@@ -64,6 +64,7 @@ vi.mock("@/lib/api/agreements", () => ({
 
 const mockRefreshTopics = vi.fn();
 const mockUpdateTopic = vi.fn();
+const mockRateTopic = vi.fn();
 
 vi.mock("@/lib/api/coaching-session-topics", () => ({
   useCoachingSessionTopicList: vi.fn(),
@@ -72,6 +73,7 @@ vi.mock("@/lib/api/coaching-session-topics", () => ({
     update: mockUpdateTopic,
     delete: vi.fn(),
     reorder: vi.fn(),
+    rate: mockRateTopic,
     isLoading: false,
     error: null,
   })),
@@ -191,7 +193,7 @@ describe("CoachingSessionPanel — rating wiring", () => {
     await user.click(central);
 
     await waitFor(() => {
-      expect(mockUpdateTopic).toHaveBeenCalledWith("t1", {
+      expect(mockRateTopic).toHaveBeenCalledWith("t1", {
         relevance: TopicRelevance.Central,
       });
     });
@@ -208,7 +210,7 @@ describe("CoachingSessionPanel — rating wiring", () => {
     await user.click(soon);
 
     await waitFor(() => {
-      expect(mockUpdateTopic).toHaveBeenCalledWith("t1", {
+      expect(mockRateTopic).toHaveBeenCalledWith("t1", {
         immediacy: TopicImmediacy.Soon,
       });
     });
@@ -227,7 +229,7 @@ describe("CoachingSessionPanel — rating wiring", () => {
     await user.click(central);
 
     await waitFor(() => {
-      expect(mockUpdateTopic).toHaveBeenCalledWith("t1", {
+      expect(mockRateTopic).toHaveBeenCalledWith("t1", {
         relevance: TopicRelevance.Neutral,
       });
     });
@@ -247,6 +249,6 @@ describe("CoachingSessionPanel — rating wiring", () => {
     expect(screen.getByText(/set by the coachee/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Soon" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pressing" })).not.toBeInTheDocument();
-    expect(mockUpdateTopic).not.toHaveBeenCalled();
+    expect(mockRateTopic).not.toHaveBeenCalled();
   });
 });

@@ -59,14 +59,17 @@ describe("CoachingSessionTopicApi", () => {
     });
   });
 
-  it("update PUTs only changed fields, serializing the rating enum to its snake_case wire value", async () => {
-    vi.mocked(EntityApi.updateFn).mockResolvedValue({});
-    await CoachingSessionTopicApi.update("s1", "t1", {
+  it("rate PATCHes the dedicated rating sub-route with the PascalCase enum wire value", async () => {
+    vi.mocked(sessionGuard.patch).mockResolvedValue({
+      data: { data: {} },
+    } as never);
+    await CoachingSessionTopicApi.rate("s1", "t1", {
       relevance: TopicRelevance.Central,
     });
-    expect(EntityApi.updateFn).toHaveBeenCalledWith(`${BASE}/s1/topics/t1`, {
-      relevance: "central",
-    });
+    expect(sessionGuard.patch).toHaveBeenCalledWith(
+      `${BASE}/s1/topics/t1/rating`,
+      { relevance: "Central" }
+    );
   });
 
   it("update PUTs a body edit", async () => {
@@ -89,7 +92,7 @@ describe("CoachingSessionTopicApi", () => {
     } as never);
     await CoachingSessionTopicApi.reorder("s1", ["t3", "t1", "t2"]);
     expect(sessionGuard.patch).toHaveBeenCalledWith(`${BASE}/s1/topics/reorder`, {
-      topic_ids: ["t3", "t1", "t2"],
+      ordered_ids: ["t3", "t1", "t2"],
     });
   });
 });

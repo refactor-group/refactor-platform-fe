@@ -1,4 +1,5 @@
 // Interacts with the coaching session topics endpoints
+// Wire contract: `CoachingSessionTopics` v1 (coordination board).
 
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
@@ -16,8 +17,12 @@ const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/c
 const topicsUrl = (coachingSessionId: Id): string =>
   `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/topics`;
 
-interface CoachingSessionTopicFields {
-  body?: string;
+// PUT body is body-only; ratings go through the dedicated rating sub-route.
+interface UpdateTopicFields {
+  body: string;
+}
+
+interface RateTopicFields {
   relevance?: TopicRelevance;
   immediacy?: TopicImmediacy;
 }
@@ -48,16 +53,17 @@ export const CoachingSessionTopicApi = {
       )
     ),
 
+  // PUT carries only the body; rating is a separate route (see `rate`).
   update: async (
     coachingSessionId: Id,
     topicId: Id,
-    fields: CoachingSessionTopicFields
+    fields: UpdateTopicFields
   ): Promise<CoachingSessionTopic> =>
     transformCoachingSessionTopic(
-      await EntityApi.updateFn<
-        CoachingSessionTopicFields,
-        CoachingSessionTopic
-      >(`${topicsUrl(coachingSessionId)}/${topicId}`, fields)
+      await EntityApi.updateFn<UpdateTopicFields, CoachingSessionTopic>(
+        `${topicsUrl(coachingSessionId)}/${topicId}`,
+        fields
+      )
     ),
 
   delete: async (
@@ -71,16 +77,31 @@ export const CoachingSessionTopicApi = {
     ),
 
   // EntityApi has no PATCH helper; call sessionGuard.patch directly.
-  // Whole-list reorder: the FE sends the full ordered id list, never display_order.
+  // Whole-list reorder: the FE sends the full ordered id list (`ordered_ids`),
+  // never display_order. A non-permutation is rejected 422.
   reorder: async (
     coachingSessionId: Id,
     orderedTopicIds: Id[]
   ): Promise<CoachingSessionTopic[]> => {
     const res = await sessionGuard.patch<ApiResponse<any[]>>(
       `${topicsUrl(coachingSessionId)}/reorder`,
-      { topic_ids: orderedTopicIds }
+      { ordered_ids: orderedTopicIds }
     );
     return res.data.data.map(transformCoachingSessionTopic);
+  },
+
+  // Coachee-only rating (BE-enforced; coach write → 403). Dedicated sub-route;
+  // send either or both axes.
+  rate: async (
+    coachingSessionId: Id,
+    topicId: Id,
+    fields: RateTopicFields
+  ): Promise<CoachingSessionTopic> => {
+    const res = await sessionGuard.patch<ApiResponse<any>>(
+      `${topicsUrl(coachingSessionId)}/${topicId}/rating`,
+      fields
+    );
+    return transformCoachingSessionTopic(res.data.data);
   },
 };
 
@@ -110,15 +131,15 @@ export const useCoachingSessionTopicList = (coachingSessionId: Id) => {
 /**
  * Mutation operations for a coaching session's topics, scoped to one session.
  * Composes useEntityMutation (keyed on the topics URL so its successful
- * mutations invalidate the topic list) and adds reorder alongside.
+ * mutations invalidate the topic list) and adds reorder + rate alongside.
  */
 export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
   const mutation = EntityApi.useEntityMutation<
-    CoachingSessionTopicFields,
+    UpdateTopicFields,
     CoachingSessionTopic
   >(topicsUrl(coachingSessionId), {
     create: (fields) =>
-      CoachingSessionTopicApi.create(coachingSessionId, fields.body ?? ""),
+      CoachingSessionTopicApi.create(coachingSessionId, fields.body),
     update: (topicId, fields) =>
       CoachingSessionTopicApi.update(coachingSessionId, topicId, fields),
     delete: (topicId) =>
@@ -127,11 +148,13 @@ export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
 
   return {
     create: (body: string) => mutation.create({ body }),
-    update: (topicId: Id, fields: CoachingSessionTopicFields) =>
+    update: (topicId: Id, fields: UpdateTopicFields) =>
       mutation.update(topicId, fields),
     delete: (topicId: Id) => mutation.delete(topicId),
     reorder: (orderedIds: Id[]) =>
       CoachingSessionTopicApi.reorder(coachingSessionId, orderedIds),
+    rate: (topicId: Id, fields: RateTopicFields) =>
+      CoachingSessionTopicApi.rate(coachingSessionId, topicId, fields),
     isLoading: mutation.isLoading,
     error: mutation.error,
   };

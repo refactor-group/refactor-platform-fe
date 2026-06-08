@@ -13,19 +13,19 @@ import {
   defaultCoachingSessionTopic,
 } from "@/types/coaching-session-topic";
 
-describe("Topic rating enums — snake_case wire values (must match Rust serde)", () => {
+describe("Topic rating enums — PascalCase wire values (must match Rust serde)", () => {
   it("TopicRelevance values", () => {
-    expect(TopicRelevance.Neutral).toBe("neutral");
-    expect(TopicRelevance.Background).toBe("background");
-    expect(TopicRelevance.WorthExploring).toBe("worth_exploring");
-    expect(TopicRelevance.Central).toBe("central");
+    expect(TopicRelevance.Neutral).toBe("Neutral");
+    expect(TopicRelevance.Peripheral).toBe("Peripheral");
+    expect(TopicRelevance.WorthExploring).toBe("WorthExploring");
+    expect(TopicRelevance.Central).toBe("Central");
   });
 
   it("TopicImmediacy values", () => {
-    expect(TopicImmediacy.Neutral).toBe("neutral");
-    expect(TopicImmediacy.CanWait).toBe("can_wait");
-    expect(TopicImmediacy.Soon).toBe("soon");
-    expect(TopicImmediacy.Pressing).toBe("pressing");
+    expect(TopicImmediacy.Neutral).toBe("Neutral");
+    expect(TopicImmediacy.CanWait).toBe("CanWait");
+    expect(TopicImmediacy.Soon).toBe("Soon");
+    expect(TopicImmediacy.Pressing).toBe("Pressing");
   });
 });
 
@@ -35,8 +35,8 @@ describe("transformCoachingSessionTopic", () => {
     coaching_session_id: "s1",
     user_id: "u1",
     body: "Talk about the reorg",
-    relevance: "worth_exploring",
-    immediacy: "pressing",
+    relevance: "WorthExploring",
+    immediacy: "Pressing",
     display_order: 4,
     created_at: "2026-06-05T09:00:00Z",
     updated_at: "2026-06-07T13:00:00Z",
@@ -50,7 +50,7 @@ describe("transformCoachingSessionTopic", () => {
     expect(t.updated_at.isValid).toBe(true);
   });
 
-  it("maps snake_case wire values onto the enum members", () => {
+  it("maps PascalCase wire values onto the enum members", () => {
     const t = transformCoachingSessionTopic(raw);
     expect(t.relevance).toBe(TopicRelevance.WorthExploring);
     expect(t.immediacy).toBe(TopicImmediacy.Pressing);
