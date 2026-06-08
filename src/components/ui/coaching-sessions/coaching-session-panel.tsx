@@ -23,6 +23,10 @@ import {
   GoalApi,
 } from "@/lib/api/goals";
 import { useAgreementList, useAgreementMutation } from "@/lib/api/agreements";
+import {
+  useCoachingSessionTopicList,
+  useCoachingSessionTopicMutation,
+} from "@/lib/api/coaching-session-topics";
 import { usePanelActions } from "@/lib/hooks/use-panel-actions";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
@@ -31,6 +35,7 @@ import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
+import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
 import { defaultAgreement } from "@/types/agreement";
 import {
   defaultGoal,
@@ -69,6 +74,13 @@ export interface CoachingSessionPanelSharedProps {
   // Panel section state
   activeSection: PanelSection;
   onSectionChange: (section: PanelSection) => void;
+  // Topic data
+  topics: CoachingSessionTopic[];
+  /** Current user; a topic's delete affordance shows only on their own topics. */
+  viewerId: Id;
+  onTopicCreate: (body: string) => void;
+  onTopicEdit: (id: Id, body: string) => void;
+  onTopicDelete: (id: Id) => void;
   // Agreement data
   agreements: Agreement[];
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
@@ -124,9 +136,13 @@ export function computePanelCounts(
   agreements: Agreement[],
   reviewActions: Action[],
   sessionActions: Action[],
+  topics: CoachingSessionTopic[],
 ): Record<PanelSection, string> {
   const totalActions = reviewActions.length + sessionActions.length;
   return {
+    [PanelSection.Topics]: topics.length > 0
+      ? `${topics.length}`
+      : "",
     [PanelSection.Goals]: linkedGoals.length > 0
       ? `${linkedGoals.length}/${maxActiveGoals()}`
       : "",
@@ -143,7 +159,7 @@ export function computeHeaderTitle(
   activeSection: PanelSection,
   goalFlowStep: GoalFlowStep,
 ): string | undefined {
-  if (activeSection === PanelSection.Agreements || activeSection === PanelSection.Actions) return undefined;
+  if (activeSection !== PanelSection.Goals) return undefined;
   if (goalFlowStep === GoalFlowStep.Idle || goalFlowStep === GoalFlowStep.SelectingSwap) return undefined;
   return goalFlowStep === GoalFlowStep.Browsing ? "Add goal" : "New goal";
 }
@@ -309,7 +325,7 @@ export function CoachingSessionPanel({
   collapsed = false,
   onToggleCollapsed,
   readOnly = false,
-  defaultSection = PanelSection.Goals,
+  defaultSection = PanelSection.Topics,
   onSectionChange: onSectionChangeExternal,
   noteSelection = None,
 }: CoachingSessionPanelProps) {
@@ -352,6 +368,15 @@ export function CoachingSessionPanel({
     useAgreementList(coachingSessionId);
   const { create: createAgreement, update: updateAgreement, delete: deleteAgreement } =
     useAgreementMutation();
+
+  // ── Topic hooks ──────────────────────────────────────────────────
+  const { topics, refresh: refreshTopics } =
+    useCoachingSessionTopicList(coachingSessionId);
+  const {
+    create: createTopic,
+    update: updateTopic,
+    delete: deleteTopic,
+  } = useCoachingSessionTopicMutation(coachingSessionId);
 
   // ── Goal handlers ────────────────────────────────────────────────
 
@@ -726,6 +751,9 @@ export function CoachingSessionPanel({
   // per-entity switch. Rebuilt each render because `open` reads the live
   // `atLimit`/`goalFlow`; clearing is hoisted to `clearPrefill` (below) instead.
   const noteTargets: Record<PanelSection, NoteSelectionTarget> = {
+    // Topics aren't a notes-routing target: the add input is a persistent
+    // inline field with no host-owned open/prefill state.
+    [PanelSection.Topics]: { open: () => {}, prefill: () => {} },
     [PanelSection.Goals]: {
       // At the goal cap, creation requires a swap first; both routes land on
       // the create form, where the prefilled title is applied on mount.
@@ -747,6 +775,7 @@ export function CoachingSessionPanel({
   // handlers below can stay memoized.
   const clearPrefill = useMemo<Record<PanelSection, () => void>>(
     () => ({
+      [PanelSection.Topics]: () => {},
       [PanelSection.Goals]: () => setGoalTitlePrefill(None),
       [PanelSection.Agreements]: () => setAgreementBodyAppend(None),
       [PanelSection.Actions]: () => setActionBodyAppend(None),
@@ -866,6 +895,82 @@ export function CoachingSessionPanel({
     [agreements, deleteAgreement, createAgreement, refreshAgreements]
   );
 
+  // ── Topic handlers ──────────────────────────────────────────────
+
+  const handleTopicCreate = useCallback(
+    async (body: string) => {
+      try {
+        await createTopic(body);
+        refreshTopics();
+      } catch (err) {
+        console.error("Failed to create topic:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to add topic",
+          description: "An error occurred while adding the topic.",
+        });
+      }
+    },
+    [createTopic, refreshTopics]
+  );
+
+  const handleTopicEdit = useCallback(
+    async (id: Id, body: string) => {
+      try {
+        await updateTopic(id, { body });
+        refreshTopics();
+      } catch (err) {
+        console.error("Failed to update topic:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to update topic",
+          description: "An error occurred while saving changes.",
+        });
+      }
+    },
+    [updateTopic, refreshTopics]
+  );
+
+  const handleTopicDelete = useCallback(
+    async (id: Id) => {
+      const topic = topics.find((t) => t.id === id);
+      try {
+        await deleteTopic(id);
+        refreshTopics();
+
+        const preview = topic?.body
+          ? topic.body.length > 40
+            ? `${topic.body.slice(0, 40)}...`
+            : topic.body
+          : "Topic";
+        sonnerToast(`"${preview}" deleted`, {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              if (!topic) return;
+              try {
+                await createTopic(topic.body);
+                refreshTopics();
+              } catch {
+                sonnerToast.error("Failed to undo", {
+                  description: "Could not restore the topic.",
+                });
+              }
+            },
+          },
+        });
+      } catch (err) {
+        console.error("Failed to delete topic:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to delete topic",
+          description: "An error occurred while deleting the topic.",
+        });
+      }
+    },
+    [topics, deleteTopic, createTopic, refreshTopics]
+  );
+
   // ── Shared props ─────────────────────────────────────────────────
 
   const sharedProps: CoachingSessionPanelSharedProps = {
@@ -883,6 +988,11 @@ export function CoachingSessionPanel({
     readOnly,
     activeSection,
     onSectionChange: handleSectionChange,
+    topics,
+    viewerId: userId,
+    onTopicCreate: handleTopicCreate,
+    onTopicEdit: handleTopicEdit,
+    onTopicDelete: handleTopicDelete,
     agreements,
     onAgreementEdit: handleAgreementEdit,
     onAgreementDelete: handleAgreementDelete,

@@ -15,6 +15,7 @@ import { GoalFlowPages, computePanelCounts, computeHeaderTitle } from "@/compone
 import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
+import { TopicSectionContent } from "@/components/ui/coaching-sessions/topic-section-content";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
@@ -42,6 +43,11 @@ export function CoachingSessionPanelDesktop({
   onToggleCollapsed,
   activeSection,
   onSectionChange,
+  topics,
+  viewerId,
+  onTopicCreate,
+  onTopicEdit,
+  onTopicDelete,
   agreements,
   onAgreementEdit,
   onAgreementDelete,
@@ -93,10 +99,11 @@ export function CoachingSessionPanelDesktop({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [flow.step, goalFlow]);
 
-  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions);
+  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions, topics);
 
   if (collapsed) {
     const sectionLabels: Record<PanelSection, string> = {
+      [PanelSection.Topics]: "Topics",
       [PanelSection.Goals]: "Goals",
       [PanelSection.Agreements]: "Agreements",
       [PanelSection.Actions]: "Actions",
@@ -174,7 +181,7 @@ export function CoachingSessionPanelDesktop({
               )}
             </div>
             <div className="flex items-center gap-1">
-              {!isInGoalFlow && !readOnly && (
+              {!isInGoalFlow && !readOnly && activeSection !== PanelSection.Topics && (
                 <Button
                   size="sm"
                   className="h-8 gap-1 text-xs"
@@ -211,7 +218,16 @@ export function CoachingSessionPanelDesktop({
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin]">
-          {activeSection === PanelSection.Goals ? (
+          {activeSection === PanelSection.Topics ? (
+            <TopicSectionContent
+              topics={topics}
+              viewerId={viewerId}
+              onCreate={onTopicCreate}
+              onEdit={onTopicEdit}
+              onDelete={onTopicDelete}
+              readOnly={readOnly}
+            />
+          ) : activeSection === PanelSection.Goals ? (
             <GoalFlowPages
               linkedGoals={linkedGoals}
               goalFlow={goalFlow}

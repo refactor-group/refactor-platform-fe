@@ -230,7 +230,22 @@ describe("CoachingSessionPanel", () => {
     vi.clearAllMocks()
   })
 
-  it("defaults to Goals section with goal content visible", () => {
+  it("shows goal content when the Goals section is active", () => {
+    setupMocks()
+    render(
+      <CoachingSessionPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Goals}
+      />
+    )
+
+    // Goal title should be visible
+    const titles = screen.getAllByText("Improve technical leadership")
+    expect(titles.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it("defaults to the Topics section", () => {
     setupMocks()
     render(
       <CoachingSessionPanel
@@ -239,9 +254,10 @@ describe("CoachingSessionPanel", () => {
       />
     )
 
-    // Goal title should be visible
-    const titles = screen.getAllByText("Improve technical leadership")
-    expect(titles.length).toBeGreaterThanOrEqual(1)
+    // Topics is the default section: its selector label is shown and the
+    // Goals-only goal content is not rendered.
+    expect(screen.getAllByText("Topics").length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryByText("Improve technical leadership")).not.toBeInTheDocument()
   })
 
   it("renders the section selector dropdown", () => {
@@ -264,6 +280,7 @@ describe("CoachingSessionPanel", () => {
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Goals}
       />
     )
 
@@ -290,6 +307,7 @@ describe("CoachingSessionPanel", () => {
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Goals}
       />
     )
 
