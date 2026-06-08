@@ -266,9 +266,27 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
     import), fixed that one line (harness repair — no feature code, frozen gate untouched), then
     finalized the commit. Dropped `style` prop from `CoachingSessionTitle` + its `[id]/page.tsx`
     call site.
-- **Phase 3 — Topics section in the panel switcher.** Add `Topics` to `PanelSection` (default);
-  build the section content (list, add inline/sheet, edit, author-only delete, drag-reorder via
-  `@dnd-kit/core` + `DragOverlay`), wired to the Phase 1 hooks (optimistic where the prototype is).
+- **Phase 3 — Topics section in the panel switcher.** Sliced into 3a + 3b for reviewability
+  (drag-reorder is complex + independent of CRUD). Both wire to the Phase 1 hooks
+  (`useCoachingSessionTopicList`/`useCoachingSessionTopicMutation`). The BE Topics wire contract is
+  posted on the board (`coaching_session_topics_wire_contract`, pending) — Phase 1 already locked the
+  API, so the UI is unblocked; reconcile if the BE diverges.
+  - **Phase 3a — Topics section + CRUD.** Add `Topics` to `PanelSection` as the **new default**
+    section (integrate exactly like Agreements: selector enum + `SECTION_NAMES`; panel host
+    (`coaching-session-panel.tsx`) hooks + `handleTopicCreate/Edit/Delete` + `computePanelCounts`;
+    a `Topics` branch in both layouts (`coaching-session-panel-desktop/mobile.tsx`)). Build a
+    **self-contained** `TopicSectionContent` (`src/components/ui/coaching-sessions/topic-section-content.tsx`):
+    list + empty state + **persistent inline "Add a topic…" input** (desktop) / sheet (mobile) +
+    click-to-edit body + **author-only delete** (`viewerId === topic.user_id`). Plain author avatar
+    only — NO drag handle (3b), NO rating chips (Phase 4), NO provenance HoverCard/"new" dot
+    (Phase 5). Add UX follows the prototype's `TopicsSection` (always-visible inline add), NOT the
+    Agreements `isAdding` toggle. UI phase → follows `.claude/style-guide.md`. Frozen file:
+    `__tests__/components/ui/coaching-sessions/topic-section-content.test.tsx` (presentational
+    contract incl. author-only delete). Data-connected wiring is non-frozen (implementer tests it).
+    Handoff: `.overseer-handoffs/phase-3a-topics-section-crud.md`.
+  - **Phase 3b — Drag-reorder.** Add the drag handle + `@dnd-kit/core` (`DndContext`, sensors,
+    `closestCenter`) + `DragOverlay` to the Topics list, calling the Phase 1 `reorder(orderedIds)`
+    hook (whole-list; optimistic). Layer onto the 3a row/list.
 - **Phase 4 — Rating chips + popover.** Coachee-set relevance/immediacy; coach read-only; click-
   to-expand popover with toggle-to-clear; the subtitles above.
 - **Phase 5 — Provenance HoverCard + "new since last session" dot.** As specced above.
