@@ -284,6 +284,16 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
     `__tests__/components/ui/coaching-sessions/topic-section-content.test.tsx` (presentational
     contract incl. author-only delete). Data-connected wiring is non-frozen (implementer tests it).
     Handoff: `.overseer-handoffs/phase-3a-topics-section-crud.md`.
+    **✅ DONE — commit `ab77799` (7 files).** Independently reviewed: `tsc` clean; frozen test green
+    (7); non-frozen wiring test green (5, has teeth — exact create/update args, delete fires "mine"
+    + `not.toHaveBeenCalledWith("theirs")`); full suite 130 files / 1432 tests; lint 0 errors (7
+    pre-existing, none in changed files); frozen file untouched + `0444`. Author-only delete is a
+    real gate (`viewerId === topic.user_id`); integration mirrors Agreements; Topics is the new
+    default section. Sound divergences: updated `coaching-session-panel.test.tsx` (not weakened —
+    goal tests pass explicit `defaultSection={Goals}`, + new "defaults to Topics" test); added no-op
+    `Topics` entries to the host's `Record<PanelSection,…>` notes-routing maps (forced by TS
+    exhaustiveness; Topics' add is inline, not a notes target). Mobile uses the same inline
+    add/edit (no separate Sheet) — acceptable simplification.
   - **Phase 3b — Drag-reorder.** Add the drag handle + `@dnd-kit/core` (`DndContext`, sensors,
     `closestCenter`) + `DragOverlay` to the Topics list, calling the Phase 1 `reorder(orderedIds)`
     hook (whole-list; optimistic). Layer onto the 3a row/list.
