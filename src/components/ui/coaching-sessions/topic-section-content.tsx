@@ -316,7 +316,7 @@ export function TopicSectionContent({
       )}
 
       {!readOnly && (
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2 pt-3">
           <Input
             value={newBody}
             onChange={(e) => setNewBody(e.target.value)}
