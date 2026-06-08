@@ -310,7 +310,14 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
     list)`; readOnly disables dnd. Minor: `onReorder` is a required prop while the frozen 3a test
     omits it — fine because tsc excludes test files (clean tsc); reorder→refresh (no local optimism).
 - **Phase 4 — Rating chips + popover.** Coachee-set relevance/immediacy; coach read-only; click-
-  to-expand popover with toggle-to-clear; the subtitles above.
+  to-expand popover with toggle-to-clear; the subtitles above. Presentational `TopicRatingChip` +
+  `TopicRatings` (`src/components/ui/coaching-sessions/topic-rating-chip.tsx`), enum-valued
+  (`Neutral` = unset), feature-scoped accent hues (relevance = indigo/Star, immediacy = amber/Clock).
+  Labels pinned: relevance `Background`/`Worth exploring`/`Central`; immediacy `Can wait`/`Soon`/
+  `Pressing`. Integrated into `TopicRow`; coachee gate `canRate = userId === coacheeId`; change →
+  Phase 1 `update(topicId, { relevance|immediacy })` + refresh. Frozen file:
+  `__tests__/components/ui/coaching-sessions/topic-rating-chip.test.tsx`. Handoff:
+  `.overseer-handoffs/phase-4-rating-chips.md`.
 - **Phase 5 — Provenance HoverCard + "new since last session" dot.** As specced above.
 - **Later (post-BE):** end-to-end verification against the real backend; Phase 3/4 backlog (#416,
   #417). Coordinate wire format with the BE via the issues / coordination board.
