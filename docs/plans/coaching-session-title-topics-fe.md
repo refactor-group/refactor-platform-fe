@@ -294,9 +294,14 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
     `Topics` entries to the host's `Record<PanelSection,…>` notes-routing maps (forced by TS
     exhaustiveness; Topics' add is inline, not a notes target). Mobile uses the same inline
     add/edit (no separate Sheet) — acceptable simplification.
-  - **Phase 3b — Drag-reorder.** Add the drag handle + `@dnd-kit/core` (`DndContext`, sensors,
-    `closestCenter`) + `DragOverlay` to the Topics list, calling the Phase 1 `reorder(orderedIds)`
-    hook (whole-list; optimistic). Layer onto the 3a row/list.
+  - **Phase 3b — Drag-reorder.** Add the drag handle + `@dnd-kit/core` (`useDraggable` +
+    `useDroppable` per row — **NOT** `@dnd-kit/sortable`, which is not a dep; no new deps) +
+    `DndContext`/sensors/`closestCenter` + `DragOverlay` to the Topics list, calling the Phase 1
+    `reorder(orderedIds)` hook (whole-list; optimistic). Pure `reorderTopicIds(orderedIds,
+    activeId, overId)` helper exported from `topic-section-content.tsx`. Layer onto the 3a row/list.
+    Frozen file: `__tests__/components/ui/coaching-sessions/topic-reorder.test.ts` (the pure helper;
+    dnd interaction is non-frozen — implementer drives `onDragEnd`). Handoff:
+    `.overseer-handoffs/phase-3b-topics-reorder.md`.
 - **Phase 4 — Rating chips + popover.** Coachee-set relevance/immediacy; coach read-only; click-
   to-expand popover with toggle-to-clear; the subtitles above.
 - **Phase 5 — Provenance HoverCard + "new since last session" dot.** As specced above.
