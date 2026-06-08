@@ -93,30 +93,57 @@ describe("defaultCoachingSession", () => {
   });
 });
 
-describe("coachingSessionTitle — fallback chain: title -> first goal -> 'Coaching Session'", () => {
-  it("returns the session title when set, ignoring goals", () => {
+describe("coachingSessionTitle — fallback chain: title -> first topic -> first goal -> 'Coaching Session'", () => {
+  it("returns the session title when set, ignoring topics and goals", () => {
     expect(
-      coachingSessionTitle({ title: Some("Custom title"), goals: [{ title: "Goal A" }] })
+      coachingSessionTitle({
+        title: Some("Custom title"),
+        topics: [{ body: "Topic A" }],
+        goals: [{ title: "Goal A" }],
+      })
     ).toBe("Custom title");
   });
 
-  it("falls back to the FIRST goal's title when no session title (not a joined list)", () => {
+  it("falls back to the FIRST topic (drag-and-drop order) when no title, ahead of goals", () => {
     expect(
       coachingSessionTitle({
         title: None,
+        topics: [{ body: "First topic" }, { body: "Second topic" }],
+        goals: [{ title: "First goal" }],
+      })
+    ).toBe("First topic");
+  });
+
+  it("falls back to the FIRST goal's title when no title and no topics", () => {
+    expect(
+      coachingSessionTitle({
+        title: None,
+        topics: [],
         goals: [{ title: "First goal" }, { title: "Second goal" }],
       })
     ).toBe("First goal");
   });
 
-  it("falls back to 'Coaching Session' when no title and no goals", () => {
-    expect(coachingSessionTitle({ title: None, goals: [] })).toBe("Coaching Session");
+  it("falls through an empty first topic body to the first goal", () => {
+    expect(
+      coachingSessionTitle({
+        title: None,
+        topics: [{ body: "" }],
+        goals: [{ title: "First goal" }],
+      })
+    ).toBe("First goal");
+  });
+
+  it("falls back to 'Coaching Session' when no title, no topics, and no goals", () => {
+    expect(coachingSessionTitle({ title: None, topics: [], goals: [] })).toBe(
+      "Coaching Session"
+    );
     expect(coachingSessionTitle({ title: None })).toBe("Coaching Session");
   });
 
-  it("falls back to 'Coaching Session' when the first goal's title is empty", () => {
-    expect(coachingSessionTitle({ title: None, goals: [{ title: "" }] })).toBe(
-      "Coaching Session"
-    );
+  it("falls back to 'Coaching Session' when first topic body and first goal title are both empty", () => {
+    expect(
+      coachingSessionTitle({ title: None, topics: [{ body: "" }], goals: [{ title: "" }] })
+    ).toBe("Coaching Session");
   });
 });

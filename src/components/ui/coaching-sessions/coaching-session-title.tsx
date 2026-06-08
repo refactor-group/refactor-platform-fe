@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
-import { useGoalByRelationship } from "@/lib/api/goals";
+import { useGoalsBySession } from "@/lib/api/goals";
+import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import {
   coachingSessionTitle,
@@ -26,16 +27,17 @@ const CoachingSessionTitle: React.FC<{ locale: string }> = () => {
   const { userSession } = useAuthStore((state) => state);
 
   const { currentCoachingSession, refresh } = useCurrentCoachingSession();
-  const { currentCoachingRelationship, currentCoachingRelationshipId } =
-    useCurrentCoachingRelationship();
-  const { goal } = useGoalByRelationship(currentCoachingRelationshipId);
+  const { currentCoachingRelationship } = useCurrentCoachingRelationship();
+  const sessionId = currentCoachingSession?.id ?? "";
+  const { goals } = useGoalsBySession(sessionId || null);
+  const { topics } = useCoachingSessionTopicList(sessionId);
   const { update } = useCoachingSessionMutation();
   const { presenceState } = useEditorCache();
 
   const session = currentCoachingSession;
   const relationship = currentCoachingRelationship;
 
-  const fallback = coachingSessionTitle({ title: None, goals: [goal] });
+  const fallback = coachingSessionTitle({ title: None, topics, goals });
   const displayedTitle = session?.title.some ? session.title.val : fallback;
 
   useEffect(() => {

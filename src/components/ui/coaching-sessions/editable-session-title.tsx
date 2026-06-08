@@ -53,7 +53,7 @@ export function EditableSessionTitle({
             if (e.key === "Escape") cancel();
           }}
           onBlur={commit}
-          placeholder="Name this coaching session…"
+          placeholder="Summarize the main purpose of this session…"
           className={cn("h-auto px-2 py-1", HEADING_CLASS)}
         />
         <Button

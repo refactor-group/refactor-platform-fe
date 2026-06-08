@@ -8,6 +8,7 @@ const mockRefresh = vi.fn();
 
 let sessionTitle: Option<string> = None;
 let goalTitle = "";
+let topicBodies: string[] = [];
 
 vi.mock("@/lib/hooks/use-current-coaching-session", () => ({
   useCurrentCoachingSession: vi.fn(() => ({
@@ -46,8 +47,17 @@ vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
 }));
 
 vi.mock("@/lib/api/goals", () => ({
-  useGoalByRelationship: vi.fn(() => ({
-    goal: { title: goalTitle },
+  useGoalsBySession: vi.fn(() => ({
+    goals: goalTitle ? [{ title: goalTitle }] : [],
+    isLoading: false,
+    isError: false,
+    refresh: vi.fn(),
+  })),
+}));
+
+vi.mock("@/lib/api/coaching-session-topics", () => ({
+  useCoachingSessionTopicList: vi.fn(() => ({
+    topics: topicBodies.map((body) => ({ body })),
     isLoading: false,
     isError: false,
     refresh: vi.fn(),
@@ -81,6 +91,7 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     vi.clearAllMocks();
     sessionTitle = None;
     goalTitle = "";
+    topicBodies = [];
     mockUpdate.mockResolvedValue(undefined);
     mockRefresh.mockResolvedValue(undefined);
   });
@@ -91,7 +102,16 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     expect(screen.getByText("Quarterly planning")).toBeInTheDocument();
   });
 
-  it("falls back to the linked goal title when unset", () => {
+  it("falls back to the first topic (display order) ahead of the goal when unset", () => {
+    sessionTitle = None;
+    topicBodies = ["Career direction", "Team conflict"];
+    goalTitle = "Improve leadership";
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(screen.getByText("Career direction")).toBeInTheDocument();
+    expect(screen.queryByText("Improve leadership")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the linked goal title when unset and no topics", () => {
     sessionTitle = None;
     goalTitle = "Improve leadership";
     render(<CoachingSessionTitle locale="en-US" />);
@@ -101,6 +121,7 @@ describe("CoachingSessionTitle — fallback resolution", () => {
   it("falls back to 'Coaching Session' when unset and no goal", () => {
     sessionTitle = None;
     goalTitle = "";
+    topicBodies = [];
     render(<CoachingSessionTitle locale="en-US" />);
     expect(screen.getByText("Coaching Session")).toBeInTheDocument();
   });
@@ -117,6 +138,7 @@ describe("CoachingSessionTitle — save wiring", () => {
     vi.clearAllMocks();
     sessionTitle = None;
     goalTitle = "";
+    topicBodies = [];
     mockUpdate.mockResolvedValue(undefined);
     mockRefresh.mockResolvedValue(undefined);
   });
