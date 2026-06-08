@@ -326,6 +326,19 @@ Gates every phase: `npx tsc --noEmit` and `npm run test:run` (Vitest; MSW per
   `canRate`/`onRate` are **optional** (keeps 3a/3b frozen tests green). (Report's "4 frozen" was a
   misreport — actual 6, verified.)
 - **Phase 5 — Provenance HoverCard + "new since last session" dot.** As specced above.
+  Presentational `TopicAuthorBadge` (`src/components/ui/coaching-sessions/topic-provenance.tsx`):
+  author avatar + HoverCard (name + "Added <relative>" + "Updated <relative>" only when
+  `topicWasUpdated`; label "Updated", never "Edited") + violet "new" dot with `sr-only` "New since
+  your last session" (accessibility from text/position, not hue). Pure helpers `isTopicNew(topic,
+  viewerId, previousSessionDate: Option<DateTime>)` + `topicWasUpdated(topic)` in
+  `@/types/coaching-session-topic`. **Anchor is FE-derived** (human-confirmed): host fetches the
+  relationship's sessions (wide window; the list endpoint's date filter is BE-ignored) and selects
+  the latest session strictly before the current one → `Some/None`, threaded down with an
+  author-name resolver. (BE Topics Q6 on whether the server provides this is still open — reconcile
+  if it lands.) Section props `resolveAuthorName`/`previousSessionDate` are **optional** (keep
+  earlier frozen tests green). Frozen file:
+  `__tests__/components/ui/coaching-sessions/topic-provenance.test.tsx`. Handoff:
+  `.overseer-handoffs/phase-5-provenance-new-dot.md`.
 - **Later (post-BE):** end-to-end verification against the real backend; Phase 3/4 backlog (#416,
   #417). Coordinate wire format with the BE via the issues / coordination board.
 
