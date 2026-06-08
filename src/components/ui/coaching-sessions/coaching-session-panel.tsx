@@ -35,7 +35,11 @@ import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
-import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
+import type {
+  CoachingSessionTopic,
+  TopicImmediacy,
+  TopicRelevance,
+} from "@/types/coaching-session-topic";
 import { defaultAgreement } from "@/types/agreement";
 import {
   defaultGoal,
@@ -82,6 +86,12 @@ export interface CoachingSessionPanelSharedProps {
   onTopicEdit: (id: Id, body: string) => void;
   onTopicDelete: (id: Id) => void;
   onTopicReorder: (orderedIds: Id[]) => void;
+  /** True only when the viewer is the coachee; ratings are coachee-only. */
+  canRateTopics: boolean;
+  onTopicRate: (
+    id: Id,
+    fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
+  ) => void;
   // Agreement data
   agreements: Agreement[];
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
@@ -991,6 +1001,26 @@ export function CoachingSessionPanel({
     [reorderTopics, refreshTopics]
   );
 
+  const handleTopicRate = useCallback(
+    async (
+      id: Id,
+      fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
+    ) => {
+      try {
+        await updateTopic(id, fields);
+        refreshTopics();
+      } catch (err) {
+        console.error("Failed to rate topic:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to save rating",
+          description: "An error occurred while saving the rating.",
+        });
+      }
+    },
+    [updateTopic, refreshTopics]
+  );
+
   // ── Shared props ─────────────────────────────────────────────────
 
   const sharedProps: CoachingSessionPanelSharedProps = {
@@ -1014,6 +1044,8 @@ export function CoachingSessionPanel({
     onTopicEdit: handleTopicEdit,
     onTopicDelete: handleTopicDelete,
     onTopicReorder: handleTopicReorder,
+    canRateTopics: Boolean(userId && coacheeId && userId === coacheeId),
+    onTopicRate: handleTopicRate,
     agreements,
     onAgreementEdit: handleAgreementEdit,
     onAgreementDelete: handleAgreementDelete,

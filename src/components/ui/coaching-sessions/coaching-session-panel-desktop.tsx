@@ -49,6 +49,8 @@ export function CoachingSessionPanelDesktop({
   onTopicEdit,
   onTopicDelete,
   onTopicReorder,
+  canRateTopics,
+  onTopicRate,
   agreements,
   onAgreementEdit,
   onAgreementDelete,
@@ -228,6 +230,8 @@ export function CoachingSessionPanelDesktop({
               onDelete={onTopicDelete}
               onReorder={onTopicReorder}
               readOnly={readOnly}
+              canRate={canRateTopics}
+              onRate={onTopicRate}
             />
           ) : activeSection === PanelSection.Goals ? (
             <GoalFlowPages

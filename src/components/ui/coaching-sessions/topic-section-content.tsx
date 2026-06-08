@@ -18,7 +18,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/components/lib/utils";
+import { TopicRatings } from "@/components/ui/coaching-sessions/topic-rating-chip";
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
+import type { TopicImmediacy, TopicRelevance } from "@/types/coaching-session-topic";
 import type { Id } from "@/types/general";
 
 export interface TopicSectionContentProps {
@@ -29,6 +31,12 @@ export interface TopicSectionContentProps {
   onDelete: (id: Id) => void;
   onReorder: (orderedIds: Id[]) => void;
   readOnly?: boolean;
+  /** True only for the coachee; chips render read-only otherwise. */
+  canRate?: boolean;
+  onRate?: (
+    id: Id,
+    fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
+  ) => void;
 }
 
 const initials = (userId: Id): string =>
@@ -62,14 +70,21 @@ function TopicRow({
   topic,
   isAuthor,
   readOnly,
+  canRate,
   onEdit,
   onDelete,
+  onRate,
 }: {
   topic: CoachingSessionTopic;
   isAuthor: boolean;
   readOnly: boolean;
+  canRate: boolean;
   onEdit: (id: Id, body: string) => void;
   onDelete: (id: Id) => void;
+  onRate: (
+    id: Id,
+    fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
+  ) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(topic.body);
@@ -155,17 +170,29 @@ function TopicRow({
         </button>
       )}
 
-      <div className="flex w-7 shrink-0 justify-end">
-        {isAuthor && !readOnly && !editing && (
-          <button
-            type="button"
-            aria-label="Delete topic"
-            onClick={() => onDelete(topic.id)}
-            className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+      <div className="ml-auto flex shrink-0 items-center gap-1.5 self-center">
+        {!editing && (
+          <TopicRatings
+            relevance={topic.relevance}
+            immediacy={topic.immediacy}
+            editable={canRate && !readOnly}
+            onRelevance={(v) => onRate(topic.id, { relevance: v })}
+            onImmediacy={(v) => onRate(topic.id, { immediacy: v })}
+          />
         )}
+
+        <div className="flex w-7 shrink-0 justify-end">
+          {isAuthor && !readOnly && !editing && (
+            <button
+              type="button"
+              aria-label="Delete topic"
+              onClick={() => onDelete(topic.id)}
+              className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -179,6 +206,8 @@ export function TopicSectionContent({
   onDelete,
   onReorder,
   readOnly = false,
+  canRate = false,
+  onRate = () => {},
 }: TopicSectionContentProps) {
   const [newBody, setNewBody] = useState("");
   const [activeId, setActiveId] = useState<Id | null>(null);
@@ -220,8 +249,10 @@ export function TopicSectionContent({
       topic={topic}
       isAuthor={viewerId === topic.user_id}
       readOnly={readOnly}
+      canRate={canRate}
       onEdit={onEdit}
       onDelete={onDelete}
+      onRate={onRate}
     />
   ));
 
