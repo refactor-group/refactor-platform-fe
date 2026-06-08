@@ -159,56 +159,56 @@ function TopicRow({
         previousSessionDate={previousSessionDate}
       />
 
-      {editing && !readOnly ? (
-        <Input
-          autoFocus
-          aria-label="Edit topic"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") cancel();
-          }}
-          onBlur={commit}
-          className="h-8 flex-1 text-[13px]"
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={readOnly ? undefined : () => setEditing(true)}
-          disabled={readOnly}
-          className={cn(
-            "flex-1 rounded-md px-1.5 py-1 text-left text-[13px] leading-snug transition-colors",
-            !readOnly && "hover:bg-muted/50"
-          )}
-        >
-          <span className="line-clamp-3">{topic.body}</span>
-        </button>
-      )}
-
-      <div className="ml-auto flex shrink-0 items-center gap-1.5 self-center">
-        {!editing && (
-          <TopicRatings
-            relevance={topic.relevance}
-            immediacy={topic.immediacy}
-            editable={canRate && !readOnly}
-            onRelevance={(v) => onRate(topic.id, { relevance: v })}
-            onImmediacy={(v) => onRate(topic.id, { immediacy: v })}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        {editing && !readOnly ? (
+          <Input
+            autoFocus
+            aria-label="Edit topic"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              if (e.key === "Escape") cancel();
+            }}
+            onBlur={commit}
+            className="h-8 text-[13px]"
           />
+        ) : (
+          <button
+            type="button"
+            onClick={readOnly ? undefined : () => setEditing(true)}
+            disabled={readOnly}
+            className={cn(
+              "rounded-md px-1.5 py-1 text-left text-[13px] leading-snug transition-colors",
+              !readOnly && "hover:bg-muted/50"
+            )}
+          >
+            <span className="line-clamp-3">{topic.body}</span>
+          </button>
         )}
 
-        <div className="flex w-7 shrink-0 justify-end">
-          {isAuthor && !readOnly && !editing && (
-            <button
-              type="button"
-              aria-label="Delete topic"
-              onClick={() => onDelete(topic.id)}
-              className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        {!editing && (
+          <div className="flex items-center gap-1.5 px-1.5">
+            <TopicRatings
+              relevance={topic.relevance}
+              immediacy={topic.immediacy}
+              editable={canRate && !readOnly}
+              onRelevance={(v) => onRate(topic.id, { relevance: v })}
+              onImmediacy={(v) => onRate(topic.id, { immediacy: v })}
+            />
+
+            {isAuthor && !readOnly && (
+              <button
+                type="button"
+                aria-label="Delete topic"
+                onClick={() => onDelete(topic.id)}
+                className="ml-auto shrink-0 rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
