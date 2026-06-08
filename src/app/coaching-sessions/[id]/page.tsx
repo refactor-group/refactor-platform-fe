@@ -43,8 +43,10 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
-const COLLAPSED_GOALS_WIDTH = "40px";
-const EXPANDED_GOALS_WIDTH = "300px";
+// Width of the shared left side panel (Topics / Goals / Actions / Agreements).
+// One value drives all four sections so spacing stays consistent.
+const COLLAPSED_PANEL_WIDTH = "40px";
+const EXPANDED_PANEL_WIDTH = "360px";
 // `minmax(280px, 440px)` lets the transcript shrink from 440 down to a
 // 280-px readability floor when the viewport gets tight between md: and
 // wider desktop widths — keeps Notes from being crushed.
@@ -98,13 +100,13 @@ function computeGridColumns(
   isTranscriptOpen: boolean,
   isGoalsCollapsed: boolean
 ): string {
-  const goalsColumn = isGoalsCollapsed ? COLLAPSED_GOALS_WIDTH : EXPANDED_GOALS_WIDTH;
+  const panelColumn = isGoalsCollapsed ? COLLAPSED_PANEL_WIDTH : EXPANDED_PANEL_WIDTH;
   const isDockedThreeColumn =
     focusedPanel === FocusedPanel.None && isTranscriptOpen;
   if (isDockedThreeColumn) {
-    return `${goalsColumn} ${DOCKED_TRANSCRIPT_WIDTH} ${FLEX_COL}`;
+    return `${panelColumn} ${DOCKED_TRANSCRIPT_WIDTH} ${FLEX_COL}`;
   }
-  return `${goalsColumn} ${FLEX_COL}`;
+  return `${panelColumn} ${FLEX_COL}`;
 }
 
 export default function CoachingSessionsPage() {
