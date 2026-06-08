@@ -17,6 +17,7 @@ import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/lib/utils";
 import { TopicRatings } from "@/components/ui/coaching-sessions/topic-rating-chip";
 import { TopicAuthorBadge } from "@/components/ui/coaching-sessions/topic-provenance";
@@ -161,17 +162,22 @@ function TopicRow({
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {editing && !readOnly ? (
-          <Input
+          <Textarea
             autoFocus
             aria-label="Edit topic"
+            rows={2}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") commit();
+              // Enter commits; Shift+Enter inserts a newline.
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                commit();
+              }
               if (e.key === "Escape") cancel();
             }}
             onBlur={commit}
-            className="h-8 text-[13px]"
+            className="min-h-[3.5rem] resize-none text-[13px] leading-snug"
           />
         ) : (
           <button
