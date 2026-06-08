@@ -1,5 +1,6 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
+import { type Option } from "@/types/option";
 
 export enum TopicRelevance {
   Neutral = "neutral",
@@ -59,6 +60,29 @@ export function transformCoachingSessionTopic(data: any): CoachingSessionTopic {
     created_at: toDateTime(data.created_at),
     updated_at: toDateTime(data.updated_at),
   };
+}
+
+// "New since last session" = created after the previous session, by the OTHER
+// party. No previous session anchor → never new. `>` on ts-luxon DateTime
+// compares instants.
+export function isTopicNew(
+  topic: Pick<CoachingSessionTopic, "user_id" | "created_at">,
+  viewerId: Id,
+  previousSessionDate: Option<DateTime>
+): boolean {
+  return (
+    previousSessionDate.some &&
+    topic.user_id !== viewerId &&
+    topic.created_at > previousSessionDate.val
+  );
+}
+
+// `updated_at` is coarse — any mutation bumps it, so this gates a "Updated"
+// (never "Edited") provenance line.
+export function topicWasUpdated(
+  topic: Pick<CoachingSessionTopic, "created_at" | "updated_at">
+): boolean {
+  return topic.updated_at > topic.created_at;
 }
 
 export function defaultCoachingSessionTopic(): CoachingSessionTopic {

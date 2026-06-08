@@ -19,9 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/components/lib/utils";
 import { TopicRatings } from "@/components/ui/coaching-sessions/topic-rating-chip";
+import { TopicAuthorBadge } from "@/components/ui/coaching-sessions/topic-provenance";
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
 import type { TopicImmediacy, TopicRelevance } from "@/types/coaching-session-topic";
 import type { Id } from "@/types/general";
+import { type Option, None } from "@/types/option";
+import type { DateTime } from "ts-luxon";
 
 export interface TopicSectionContentProps {
   topics: CoachingSessionTopic[];
@@ -37,6 +40,10 @@ export interface TopicSectionContentProps {
     id: Id,
     fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
   ) => void;
+  /** Resolves a topic author's user id to a display name for the badge. */
+  resolveAuthorName?: (userId: Id) => string;
+  /** FE-derived previous-session anchor; drives the "new since" dot. */
+  previousSessionDate?: Option<DateTime>;
 }
 
 const initials = (userId: Id): string =>
@@ -69,6 +76,9 @@ export function reorderTopicIds(
 function TopicRow({
   topic,
   isAuthor,
+  viewerId,
+  authorName,
+  previousSessionDate,
   readOnly,
   canRate,
   onEdit,
@@ -77,6 +87,9 @@ function TopicRow({
 }: {
   topic: CoachingSessionTopic;
   isAuthor: boolean;
+  viewerId: Id;
+  authorName: string;
+  previousSessionDate: Option<DateTime>;
   readOnly: boolean;
   canRate: boolean;
   onEdit: (id: Id, body: string) => void;
@@ -137,11 +150,14 @@ function TopicRow({
         </button>
       )}
 
-      <Avatar className="mt-0.5 h-6 w-6 shrink-0">
-        <AvatarFallback className="bg-muted text-[10px] font-medium text-muted-foreground">
-          {initials(topic.user_id)}
-        </AvatarFallback>
-      </Avatar>
+      <TopicAuthorBadge
+        authorName={authorName}
+        authorId={topic.user_id}
+        viewerId={viewerId}
+        createdAt={topic.created_at}
+        updatedAt={topic.updated_at}
+        previousSessionDate={previousSessionDate}
+      />
 
       {editing && !readOnly ? (
         <Input
@@ -208,6 +224,8 @@ export function TopicSectionContent({
   readOnly = false,
   canRate = false,
   onRate = () => {},
+  resolveAuthorName = () => "",
+  previousSessionDate = None,
 }: TopicSectionContentProps) {
   const [newBody, setNewBody] = useState("");
   const [activeId, setActiveId] = useState<Id | null>(null);
@@ -248,6 +266,9 @@ export function TopicSectionContent({
       key={topic.id}
       topic={topic}
       isAuthor={viewerId === topic.user_id}
+      viewerId={viewerId}
+      authorName={resolveAuthorName(topic.user_id)}
+      previousSessionDate={previousSessionDate}
       readOnly={readOnly}
       canRate={canRate}
       onEdit={onEdit}

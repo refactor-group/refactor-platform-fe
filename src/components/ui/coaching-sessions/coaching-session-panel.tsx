@@ -28,10 +28,12 @@ import {
   useCoachingSessionTopicMutation,
 } from "@/lib/api/coaching-session-topics";
 import { usePanelActions } from "@/lib/hooks/use-panel-actions";
+import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
+import { selectPreviousSessionDate } from "@/lib/utils/session";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
@@ -92,6 +94,10 @@ export interface CoachingSessionPanelSharedProps {
     id: Id,
     fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
   ) => void;
+  /** Resolves a topic author's user id to a display name for the badge. */
+  resolveTopicAuthorName: (userId: Id) => string;
+  /** FE-derived previous-session anchor; drives the "new since" dot. */
+  previousSessionDate: Option<DateTime>;
   // Agreement data
   agreements: Agreement[];
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
@@ -354,6 +360,36 @@ export function CoachingSessionPanel({
   const coacheeName = currentCoachingRelationship
     ? getCoacheeName(currentCoachingRelationship)
     : undefined;
+
+  // ── Topic provenance: author-name resolver + previous-session anchor ──
+  // Names come from the resolved relationship; while it loads, ids resolve to
+  // "" and the badge degrades to initials-of-empty.
+  const resolveTopicAuthorName = useCallback(
+    (id: Id): string => {
+      if (id === coachId && coachName) return coachName;
+      if (id === coacheeId && coacheeName) return coacheeName;
+      return "";
+    },
+    [coachId, coachName, coacheeId, coacheeName]
+  );
+
+  // The relationship list endpoint's date filter is BE-ignored, so fetch a wide
+  // window (frozen at mount) and select the previous session client-side.
+  const sessionsFrom = useMemo(() => DateTime.now().minus({ years: 5 }), []);
+  const sessionsTo = useMemo(() => DateTime.now().plus({ years: 1 }), []);
+  const { coachingSessions: relationshipSessions } = useCoachingSessionList(
+    coachingRelationshipId,
+    sessionsFrom,
+    sessionsTo,
+    "date",
+    "asc"
+  );
+
+  const previousSessionDate = useMemo<Option<DateTime>>(() => {
+    if (!sessionDate) return None;
+    const currentDate = DateTime.fromISO(sessionDate, { zone: "utc" });
+    return selectPreviousSessionDate(relationshipSessions, currentDate);
+  }, [relationshipSessions, sessionDate]);
 
   // ── Section state ────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<PanelSection>(defaultSection);
@@ -1046,6 +1082,8 @@ export function CoachingSessionPanel({
     onTopicReorder: handleTopicReorder,
     canRateTopics: Boolean(userId && coacheeId && userId === coacheeId),
     onTopicRate: handleTopicRate,
+    resolveTopicAuthorName,
+    previousSessionDate,
     agreements,
     onAgreementEdit: handleAgreementEdit,
     onAgreementDelete: handleAgreementDelete,

@@ -35,6 +35,8 @@ export function CoachingSessionPanelMobile({
   onTopicReorder,
   canRateTopics,
   onTopicRate,
+  resolveTopicAuthorName,
+  previousSessionDate,
   agreements,
   onAgreementEdit,
   onAgreementDelete,
@@ -182,6 +184,8 @@ export function CoachingSessionPanelMobile({
                 readOnly={readOnly}
                 canRate={canRateTopics}
                 onRate={onTopicRate}
+                resolveAuthorName={resolveTopicAuthorName}
+                previousSessionDate={previousSessionDate}
               />
             ) : activeSection === PanelSection.Goals ? (
               <GoalFlowPages

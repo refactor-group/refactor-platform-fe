@@ -22,7 +22,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import type { Action } from "@/types/action";
 import { sortActionArray } from "@/types/action";
 import { SortOrder } from "@/types/sorting";
-import { Some } from "@/types/option";
+import { type Option, Some, None } from "@/types/option";
 
 /**
  * Session Utility Functions
@@ -268,6 +268,29 @@ interface SessionWithRelationshipAndDate {
  * @param sessions - Array of sessions with relationship ID and date
  * @returns Map of relationship ID to the next upcoming session
  */
+/**
+ * Select the date of the session immediately before `currentSessionDate` for a
+ * single relationship's session list — the FE-derived "previous session" anchor
+ * used to flag topics added since the viewer last met.
+ *
+ * Pure: caller supplies the already-fetched sessions (a wide window, since the
+ * relationship list endpoint's date filter is BE-ignored). Dates are
+ * interpreted as UTC, matching the rest of the app. Returns `None` when there
+ * is no strictly-earlier session.
+ */
+export function selectPreviousSessionDate<
+  T extends { date: string },
+>(sessions: T[], currentSessionDate: DateTime): Option<DateTime> {
+  let prev: Option<DateTime> = None;
+  for (const session of sessions) {
+    const sessionDate = DateTime.fromISO(session.date, { zone: "utc" });
+    if (sessionDate < currentSessionDate && (prev.none || sessionDate > prev.val)) {
+      prev = Some(sessionDate);
+    }
+  }
+  return prev;
+}
+
 export function findNextSessionsByRelationship<
   T extends SessionWithRelationshipAndDate,
 >(sessions: T[]): Map<Id, T> {
