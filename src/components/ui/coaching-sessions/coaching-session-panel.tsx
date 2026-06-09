@@ -430,7 +430,7 @@ export function CoachingSessionPanel({
     rate: rateTopic,
   } = useCoachingSessionTopicMutation(coachingSessionId);
 
-  const { insertHeadingIntoNotes } = useEditorCache();
+  const { insertTextIntoNotes } = useEditorCache();
 
   // ── Goal handlers ────────────────────────────────────────────────
 
@@ -1065,7 +1065,7 @@ export function CoachingSessionPanel({
 
   const handleTopicInsertToNotes = useCallback(
     (body: string) => {
-      const inserted = insertHeadingIntoNotes(body);
+      const inserted = insertTextIntoNotes(body);
       if (!inserted) {
         toast({
           variant: "destructive",
@@ -1074,7 +1074,7 @@ export function CoachingSessionPanel({
         });
       }
     },
-    [insertHeadingIntoNotes]
+    [insertTextIntoNotes]
   );
 
   // ── Shared props ─────────────────────────────────────────────────

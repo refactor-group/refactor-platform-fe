@@ -92,7 +92,7 @@ vi.mock("@/lib/api/goal-progress", () => ({
 let mockUserId = "coachee-1";
 vi.mock("@/components/ui/coaching-sessions/editor-cache-context", () => ({
   useEditorCache: () => ({
-    insertHeadingIntoNotes: vi.fn(() => true),
+    insertTextIntoNotes: vi.fn(() => true),
     registerEditor: vi.fn(),
     presenceState: { users: new Map(), currentUser: null, isLoading: false },
   }),

@@ -64,9 +64,10 @@ interface EditorCacheContextType extends EditorCacheState {
    * (e.g. the Topics panel) can issue commands without being inside the
    * EditorProvider tree. */
   registerEditor: (editor: Editor | null) => void;
-  /** Inserts `text` into the notes as an H3 heading at the cursor.
-   * Returns false when the editor isn't ready or the text is blank. */
-  insertHeadingIntoNotes: (text: string) => boolean;
+  /** Inserts `text` into the notes at the cursor, inheriting the formatting
+   * of the block the cursor is in. Returns false when the editor isn't ready
+   * or the text is blank. */
+  insertTextIntoNotes: (text: string) => boolean;
 }
 
 // Provider lifecycle action types (discriminated union)
@@ -691,19 +692,13 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     editorRef.current = editor;
   }, []);
 
-  const insertHeadingIntoNotes = useCallback((text: string): boolean => {
+  const insertTextIntoNotes = useCallback((text: string): boolean => {
     const editor = editorRef.current;
     const trimmed = text.trim();
     if (!editor || editor.isDestroyed || !trimmed) return false;
-    editor
-      .chain()
-      .focus()
-      .insertContent({
-        type: "heading",
-        attrs: { level: 3 },
-        content: [{ type: "text", text: trimmed }],
-      })
-      .run();
+    // Plain text insert: inherits the formatting of the block at the cursor
+    // rather than forcing a node type.
+    editor.chain().focus().insertContent(trimmed).run();
     return true;
   }, []);
 
@@ -735,9 +730,9 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       ...cache,
       resetCache,
       registerEditor,
-      insertHeadingIntoNotes,
+      insertTextIntoNotes,
     }),
-    [cache, resetCache, registerEditor, insertHeadingIntoNotes],
+    [cache, resetCache, registerEditor, insertTextIntoNotes],
   );
 
   return (

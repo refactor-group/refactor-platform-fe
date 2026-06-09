@@ -212,7 +212,7 @@ function TopicRow({
                 <button
                   type="button"
                   aria-label="Insert into notes"
-                  title="Insert into notes as a heading"
+                  title="Insert into notes at the cursor"
                   onClick={() => onInsertToNotes(topic.body)}
                   className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover/topic:opacity-100"
                 >
