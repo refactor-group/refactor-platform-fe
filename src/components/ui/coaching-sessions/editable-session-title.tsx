@@ -77,10 +77,10 @@ export function EditableSessionTitle({
             }}
             onBlur={commit}
             placeholder={PLACEHOLDER}
-            // Borderless; the base Textarea's focus ring outlines the box on
-            // edit (same affordance as the topic editor).
+            // Borderless; a soft, thin focus ring outlines the box on edit
+            // (lighter than the base ring so it doesn't read as a hard border).
             className={cn(
-              "col-start-1 row-start-1 min-h-0 resize-none overflow-hidden rounded-md border-0 px-1 py-0 shadow-none",
+              "col-start-1 row-start-1 min-h-0 resize-none overflow-hidden rounded-md border-0 px-1 py-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:ring-offset-0",
               HEADING_CLASS
             )}
           />
