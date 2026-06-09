@@ -1,9 +1,19 @@
+// Hook-level test for useCoachingSessionTopicMutation. Scope is intentionally
+// narrow: the exact URL/payload of each API call is owned by
+// coaching-session-topics.test.ts. Here we only assert the hook's OWN mapping
+// logic that no other layer exercises — `create` wraps a bare body, and
+// `restore` reconstructs a deleted topic, carrying its priority forward (or
+// omitting it when unset).
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useCoachingSessionTopicMutation } from "@/lib/api/coaching-session-topics";
-import { TopicPriority, TopicStatus } from "@/types/coaching-session-topic";
+import {
+  defaultCoachingSessionTopic,
+  TopicPriority,
+} from "@/types/coaching-session-topic";
+import { Some, None } from "@/types/option";
 import { EntityApi } from "@/lib/api/entity-api";
-import { sessionGuard } from "@/lib/auth/session-guard";
 import { TestProviders } from "@/test-utils/providers";
 
 vi.mock("@/lib/api/entity-api", () => ({
@@ -13,8 +23,7 @@ vi.mock("@/lib/api/entity-api", () => ({
     updateFn: vi.fn().mockResolvedValue({}),
     deleteFn: vi.fn().mockResolvedValue({}),
     useEntityList: vi.fn(),
-    // Pass-through mutation wrapper: invoke the provided api method directly so
-    // the test asserts which underlying call the hook wires each action to.
+    // Pass-through mutation wrapper: invoke the provided api method directly.
     useEntityMutation: vi.fn((_baseUrl, api) => ({
       create: api.create,
       update: api.update,
@@ -35,7 +44,9 @@ vi.mock("@/site.config", () => ({
 
 const TOPICS = "http://localhost:3000/coaching_sessions/s1/topics";
 
-describe("useCoachingSessionTopicMutation", () => {
+const topic = (over = {}) => ({ ...defaultCoachingSessionTopic(), ...over });
+
+describe("useCoachingSessionTopicMutation — hook-specific mapping", () => {
   beforeEach(() => vi.clearAllMocks());
 
   const render = () =>
@@ -43,7 +54,7 @@ describe("useCoachingSessionTopicMutation", () => {
       wrapper: TestProviders,
     });
 
-  it("create POSTs just the body to the nested topics collection", async () => {
+  it("create wraps a bare body (never sends a priority)", async () => {
     const { result } = render();
     await act(async () => {
       await result.current.create("Talk about the reorg");
@@ -51,59 +62,26 @@ describe("useCoachingSessionTopicMutation", () => {
     expect(EntityApi.createFn).toHaveBeenCalledWith(TOPICS, {
       body: "Talk about the reorg",
     });
-    expect(EntityApi.updateFn).not.toHaveBeenCalled();
-    expect(EntityApi.deleteFn).not.toHaveBeenCalled();
   });
 
-  it("update PUTs the body under the topic id", async () => {
+  it("restore re-creates a deleted topic, carrying its priority forward", async () => {
     const { result } = render();
     await act(async () => {
-      await result.current.update("t1", { body: "edited body" });
+      await result.current.restore(
+        topic({ body: "Reorg", priority: Some(TopicPriority.High) })
+      );
     });
-    expect(EntityApi.updateFn).toHaveBeenCalledWith(`${TOPICS}/t1`, {
-      body: "edited body",
-    });
-    expect(EntityApi.createFn).not.toHaveBeenCalled();
-  });
-
-  it("rate PATCHes the dedicated rating sub-route", async () => {
-    const { result } = render();
-    await act(async () => {
-      await result.current.rate("t1", { priority: TopicPriority.High });
-    });
-    expect(sessionGuard.patch).toHaveBeenCalledWith(`${TOPICS}/t1/rating`, {
+    expect(EntityApi.createFn).toHaveBeenCalledWith(TOPICS, {
+      body: "Reorg",
       priority: "High",
     });
-    expect(EntityApi.updateFn).not.toHaveBeenCalled();
   });
 
-  it("setStatus PATCHes the dedicated status sub-route", async () => {
+  it("restore omits priority when the deleted topic had none", async () => {
     const { result } = render();
     await act(async () => {
-      await result.current.setStatus("t1", TopicStatus.Discussed);
+      await result.current.restore(topic({ body: "Reorg", priority: None }));
     });
-    expect(sessionGuard.patch).toHaveBeenCalledWith(`${TOPICS}/t1/status`, {
-      status: "Discussed",
-    });
-    expect(EntityApi.updateFn).not.toHaveBeenCalled();
-  });
-
-  it("delete DELETEs the nested topic", async () => {
-    const { result } = render();
-    await act(async () => {
-      await result.current.delete("t1");
-    });
-    expect(EntityApi.deleteFn).toHaveBeenCalledWith(`${TOPICS}/t1`);
-    expect(EntityApi.createFn).not.toHaveBeenCalled();
-  });
-
-  it("reorder PATCHes the full ordered id list to the reorder endpoint", async () => {
-    const { result } = render();
-    await act(async () => {
-      await result.current.reorder(["t3", "t1", "t2"]);
-    });
-    expect(sessionGuard.patch).toHaveBeenCalledWith(`${TOPICS}/reorder`, {
-      ordered_ids: ["t3", "t1", "t2"],
-    });
+    expect(EntityApi.createFn).toHaveBeenCalledWith(TOPICS, { body: "Reorg" });
   });
 });
