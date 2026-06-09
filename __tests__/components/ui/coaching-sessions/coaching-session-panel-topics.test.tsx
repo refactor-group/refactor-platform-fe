@@ -2,7 +2,11 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel"
-import { defaultCoachingSessionTopic } from "@/types/coaching-session-topic"
+import {
+  defaultCoachingSessionTopic,
+  TopicRelevance,
+  TopicImmediacy,
+} from "@/types/coaching-session-topic"
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic"
 import { None } from "@/types/option"
 
@@ -49,16 +53,19 @@ vi.mock("@/lib/api/agreements", () => ({
 // Topic API hooks under test
 const mockRefreshTopics = vi.fn()
 const mockCreateTopic = vi.fn()
+const mockRestoreTopic = vi.fn()
 const mockUpdateTopic = vi.fn()
 const mockDeleteTopic = vi.fn()
+const mockReorderTopics = vi.fn()
 
 vi.mock("@/lib/api/coaching-session-topics", () => ({
   useCoachingSessionTopicList: vi.fn(),
   useCoachingSessionTopicMutation: vi.fn(() => ({
     create: mockCreateTopic,
+    restore: mockRestoreTopic,
     update: mockUpdateTopic,
     delete: mockDeleteTopic,
-    reorder: vi.fn(),
+    reorder: mockReorderTopics,
     isLoading: false,
     error: null,
   })),
@@ -136,6 +143,7 @@ vi.mock("sonner", () => ({
 }))
 
 import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics"
+import { toast as sonnerToast } from "sonner"
 
 const topic = (over: Partial<CoachingSessionTopic>): CoachingSessionTopic => ({
   ...defaultCoachingSessionTopic(),
@@ -232,5 +240,47 @@ describe("CoachingSessionPanel — Topics wiring", () => {
       expect(mockDeleteTopic).toHaveBeenCalledWith("mine")
     })
     expect(mockDeleteTopic).not.toHaveBeenCalledWith("theirs")
+  })
+
+  it("undo restores the deleted topic with its ratings and original position", async () => {
+    const user = userEvent.setup()
+    const middle = topic({
+      id: "t2",
+      user_id: "user-1",
+      body: "Middle topic",
+      relevance: TopicRelevance.Central,
+      immediacy: TopicImmediacy.Pressing,
+    })
+    setTopics([
+      topic({ id: "t1", user_id: "user-1", body: "First topic" }),
+      middle,
+      topic({ id: "t3", user_id: "user-1", body: "Last topic" }),
+    ])
+    // The restore POST returns a brand-new id (no soft-delete on the BE).
+    mockRestoreTopic.mockResolvedValue(topic({ ...middle, id: "t2-new" }))
+    renderPanel()
+
+    const deleteButtons = screen.getAllByRole("button", { name: /delete topic/i })
+    await user.click(deleteButtons[1]) // the middle topic
+    await waitFor(() => expect(mockDeleteTopic).toHaveBeenCalledWith("t2"))
+
+    // Grab the Undo action the delete toast registered, and fire it.
+    const toastCall = vi.mocked(sonnerToast).mock.calls.at(-1)
+    const undo = (toastCall?.[1] as any)?.action?.onClick as () => Promise<void>
+    expect(typeof undo).toBe("function")
+    await undo()
+
+    // Recreated with ratings preserved...
+    await waitFor(() =>
+      expect(mockRestoreTopic).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: "Middle topic",
+          relevance: TopicRelevance.Central,
+          immediacy: TopicImmediacy.Pressing,
+        })
+      )
+    )
+    // ...and reordered back into the middle slot using the new id.
+    expect(mockReorderTopics).toHaveBeenCalledWith(["t1", "t2-new", "t3"])
   })
 })

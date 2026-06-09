@@ -1,5 +1,4 @@
 // Interacts with the coaching session topics endpoints
-// Wire contract: `CoachingSessionTopics` v1 (coordination board).
 
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
@@ -27,6 +26,15 @@ interface RateTopicFields {
   immediacy?: TopicImmediacy;
 }
 
+// POST body: `body` required; `relevance`/`immediacy` optional so an undo can
+// recreate a deleted topic with its ratings intact. Omitting an axis defaults
+// it to "Neutral" server-side.
+interface CreateTopicBody {
+  body: string;
+  relevance?: TopicRelevance;
+  immediacy?: TopicImmediacy;
+}
+
 /**
  * API client for coaching session topic operations.
  *
@@ -42,14 +50,17 @@ export const CoachingSessionTopicApi = {
       {}
     ),
 
+  // `ratings` is optional; supply it to recreate a topic with its
+  // relevance/immediacy preserved (undo of a delete).
   create: async (
     coachingSessionId: Id,
-    body: string
+    body: string,
+    ratings?: RateTopicFields
   ): Promise<CoachingSessionTopic> =>
     transformCoachingSessionTopic(
-      await EntityApi.createFn<{ body: string }, CoachingSessionTopic>(
+      await EntityApi.createFn<CreateTopicBody, CoachingSessionTopic>(
         topicsUrl(coachingSessionId),
-        { body }
+        { body, ...ratings }
       )
     ),
 
@@ -148,6 +159,14 @@ export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
 
   return {
     create: (body: string) => mutation.create({ body }),
+    // Recreate a deleted topic preserving its ratings (undo). Returns the new
+    // topic — note it gets a fresh id; the BE has no soft-delete. Callers that
+    // need the original position should follow with `reorder`.
+    restore: (topic: CoachingSessionTopic) =>
+      CoachingSessionTopicApi.create(coachingSessionId, topic.body, {
+        relevance: topic.relevance,
+        immediacy: topic.immediacy,
+      }),
     update: (topicId: Id, fields: UpdateTopicFields) =>
       mutation.update(topicId, fields),
     delete: (topicId: Id) => mutation.delete(topicId),

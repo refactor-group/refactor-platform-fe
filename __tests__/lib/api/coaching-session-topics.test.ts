@@ -12,7 +12,7 @@ import {
   CoachingSessionTopicApi,
   useCoachingSessionTopicList,
 } from "@/lib/api/coaching-session-topics";
-import { TopicRelevance } from "@/types/coaching-session-topic";
+import { TopicRelevance, TopicImmediacy } from "@/types/coaching-session-topic";
 import { EntityApi } from "@/lib/api/entity-api";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { renderHook } from "@testing-library/react";
@@ -56,6 +56,19 @@ describe("CoachingSessionTopicApi", () => {
     await CoachingSessionTopicApi.create("s1", "Talk about the reorg");
     expect(EntityApi.createFn).toHaveBeenCalledWith(`${BASE}/s1/topics`, {
       body: "Talk about the reorg",
+    });
+  });
+
+  it("create includes ratings when supplied (restore path)", async () => {
+    vi.mocked(EntityApi.createFn).mockResolvedValue({});
+    await CoachingSessionTopicApi.create("s1", "Restored topic", {
+      relevance: TopicRelevance.Central,
+      immediacy: TopicImmediacy.Pressing,
+    });
+    expect(EntityApi.createFn).toHaveBeenCalledWith(`${BASE}/s1/topics`, {
+      body: "Restored topic",
+      relevance: "Central",
+      immediacy: "Pressing",
     });
   });
 

@@ -424,6 +424,7 @@ export function CoachingSessionPanel({
     useCoachingSessionTopicList(coachingSessionId);
   const {
     create: createTopic,
+    restore: restoreTopic,
     update: updateTopic,
     delete: deleteTopic,
     reorder: reorderTopics,
@@ -988,6 +989,8 @@ export function CoachingSessionPanel({
   const handleTopicDelete = useCallback(
     async (id: Id) => {
       const topic = topics.find((t) => t.id === id);
+      // Snapshot the pre-delete order so undo can restore the topic's position.
+      const orderBeforeDelete = topics.map((t) => t.id);
       try {
         await deleteTopic(id);
         refreshTopics();
@@ -1003,7 +1006,20 @@ export function CoachingSessionPanel({
             onClick: async () => {
               if (!topic) return;
               try {
-                await createTopic(topic.body);
+                // Recreate with ratings intact (gets a fresh id).
+                const restored = await restoreTopic(topic);
+                // Slot it back into its original position: the pre-delete order
+                // with the old id swapped for the new one. Best-effort — if the
+                // list changed meanwhile the reorder 422s and the restored topic
+                // simply stays appended.
+                const restoredOrder = orderBeforeDelete.map((tid) =>
+                  tid === id ? restored.id : tid
+                );
+                try {
+                  await reorderTopics(restoredOrder);
+                } catch {
+                  /* position not restorable; topic is still back */
+                }
                 refreshTopics();
               } catch {
                 sonnerToast.error("Failed to undo", {
@@ -1022,7 +1038,7 @@ export function CoachingSessionPanel({
         });
       }
     },
-    [topics, deleteTopic, createTopic, refreshTopics]
+    [topics, deleteTopic, restoreTopic, reorderTopics, refreshTopics]
   );
 
   const handleTopicReorder = useCallback(
