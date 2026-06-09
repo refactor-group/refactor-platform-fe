@@ -1,21 +1,19 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
-import { type Option } from "@/types/option";
+import { type Option, Some, None } from "@/types/option";
 
 // Wire values are PascalCase to match Rust serde (same convention as goal
-// `status`); see the `CoachingSessionTopics` v1 board contract.
-export enum TopicRelevance {
-  Neutral = "Neutral",
-  Peripheral = "Peripheral",
-  WorthExploring = "WorthExploring",
-  Central = "Central",
+// `status`).
+export enum TopicPriority {
+  Low = "Low",
+  Medium = "Medium",
+  High = "High",
 }
 
-export enum TopicImmediacy {
-  Neutral = "Neutral",
-  CanWait = "CanWait",
-  Soon = "Soon",
-  Pressing = "Pressing",
+export enum TopicStatus {
+  Open = "Open",
+  Discussed = "Discussed",
+  Deferred = "Deferred",
 }
 
 // This must always reflect the Rust struct on the backend.
@@ -25,8 +23,12 @@ export interface CoachingSessionTopic {
   coaching_session_id: Id;
   user_id: Id;
   body: string;
-  relevance: TopicRelevance;
-  immediacy: TopicImmediacy;
+  // Coachee-set; None = unset (no forced rating).
+  priority: Option<TopicPriority>;
+  // Always present; lifecycle defaults to Open.
+  status: TopicStatus;
+  // Some on a topic the backend copied forward from a Deferred source.
+  carried_from_topic_id: Option<Id>;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -39,15 +41,18 @@ const toDateTime = (value: unknown): DateTime => {
   return DateTime.now();
 };
 
-const toRelevance = (value: unknown): TopicRelevance =>
-  Object.values(TopicRelevance).includes(value as TopicRelevance)
-    ? (value as TopicRelevance)
-    : TopicRelevance.Neutral;
+const toPriority = (value: unknown): Option<TopicPriority> =>
+  Object.values(TopicPriority).includes(value as TopicPriority)
+    ? Some(value as TopicPriority)
+    : None;
 
-const toImmediacy = (value: unknown): TopicImmediacy =>
-  Object.values(TopicImmediacy).includes(value as TopicImmediacy)
-    ? (value as TopicImmediacy)
-    : TopicImmediacy.Neutral;
+const toStatus = (value: unknown): TopicStatus =>
+  Object.values(TopicStatus).includes(value as TopicStatus)
+    ? (value as TopicStatus)
+    : TopicStatus.Open;
+
+const toOptionalId = (value: unknown): Option<Id> =>
+  typeof value === "string" && value.length > 0 ? Some(value) : None;
 
 // Build the FE object explicitly from known fields so wire-only fields
 // (e.g. display_order) never leak onto the FE type.
@@ -57,8 +62,9 @@ export function transformCoachingSessionTopic(data: any): CoachingSessionTopic {
     coaching_session_id: data.coaching_session_id,
     user_id: data.user_id,
     body: data.body,
-    relevance: toRelevance(data.relevance),
-    immediacy: toImmediacy(data.immediacy),
+    priority: toPriority(data.priority),
+    status: toStatus(data.status),
+    carried_from_topic_id: toOptionalId(data.carried_from_topic_id),
     created_at: toDateTime(data.created_at),
     updated_at: toDateTime(data.updated_at),
   };
@@ -94,8 +100,9 @@ export function defaultCoachingSessionTopic(): CoachingSessionTopic {
     coaching_session_id: "",
     user_id: "",
     body: "",
-    relevance: TopicRelevance.Neutral,
-    immediacy: TopicImmediacy.Neutral,
+    priority: None,
+    status: TopicStatus.Open,
+    carried_from_topic_id: None,
     created_at: now,
     updated_at: now,
   };

@@ -1,8 +1,6 @@
-// FROZEN ACCEPTANCE TEST (overseer-handoff-workflow).
-// These assertions define the Phase 1 wire contract for CoachingSessionTopicApi.
-// This file is set read-only (chmod 0444) and is on the freeze list: an
-// IMPLEMENTER must NOT edit it. Only the overseer may unlock it, and only to
-// correct a genuine spec/harness error — never to fit the implementation.
+// ACCEPTANCE TEST — re-baselined to the CoachingSessionTopics v4 contract
+// (single `priority` + `status` lifecycle; `relevance`/`immediacy` removed).
+// Defines the wire contract for CoachingSessionTopicApi.
 //
 // Pattern mirrors __tests__/lib/api/goals.test.ts: mock EntityApi + siteConfig +
 // sessionGuard, then assert the API module builds the exact URL / payload.
@@ -12,7 +10,7 @@ import {
   CoachingSessionTopicApi,
   useCoachingSessionTopicList,
 } from "@/lib/api/coaching-session-topics";
-import { TopicRelevance, TopicImmediacy } from "@/types/coaching-session-topic";
+import { TopicPriority, TopicStatus } from "@/types/coaching-session-topic";
 import { EntityApi } from "@/lib/api/entity-api";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { renderHook } from "@testing-library/react";
@@ -30,8 +28,8 @@ vi.mock("@/lib/api/entity-api", () => ({
   },
 }));
 
-// reorder uses PATCH, which EntityApi does not provide a helper for, so the
-// module calls sessionGuard.patch directly.
+// reorder/rate/status use PATCH, which EntityApi does not provide a helper for,
+// so the module calls sessionGuard.patch directly.
 vi.mock("@/lib/auth/session-guard", () => ({
   sessionGuard: { patch: vi.fn() },
 }));
@@ -59,29 +57,47 @@ describe("CoachingSessionTopicApi", () => {
     });
   });
 
-  it("create includes ratings when supplied (restore path)", async () => {
+  it("create includes priority when supplied (restore path)", async () => {
     vi.mocked(EntityApi.createFn).mockResolvedValue({});
-    await CoachingSessionTopicApi.create("s1", "Restored topic", {
-      relevance: TopicRelevance.Central,
-      immediacy: TopicImmediacy.Pressing,
-    });
+    await CoachingSessionTopicApi.create("s1", "Restored topic", TopicPriority.High);
     expect(EntityApi.createFn).toHaveBeenCalledWith(`${BASE}/s1/topics`, {
       body: "Restored topic",
-      relevance: "Central",
-      immediacy: "Pressing",
+      priority: "High",
     });
   });
 
-  it("rate PATCHes the dedicated rating sub-route with the PascalCase enum wire value", async () => {
+  it("rate PATCHes the dedicated rating sub-route with the PascalCase priority", async () => {
     vi.mocked(sessionGuard.patch).mockResolvedValue({
       data: { data: {} },
     } as never);
     await CoachingSessionTopicApi.rate("s1", "t1", {
-      relevance: TopicRelevance.Central,
+      priority: TopicPriority.High,
     });
     expect(sessionGuard.patch).toHaveBeenCalledWith(
       `${BASE}/s1/topics/t1/rating`,
-      { relevance: "Central" }
+      { priority: "High" }
+    );
+  });
+
+  it("rate PATCHes priority: null to clear", async () => {
+    vi.mocked(sessionGuard.patch).mockResolvedValue({
+      data: { data: {} },
+    } as never);
+    await CoachingSessionTopicApi.rate("s1", "t1", { priority: null });
+    expect(sessionGuard.patch).toHaveBeenCalledWith(
+      `${BASE}/s1/topics/t1/rating`,
+      { priority: null }
+    );
+  });
+
+  it("setStatus PATCHes the dedicated status sub-route with the PascalCase status", async () => {
+    vi.mocked(sessionGuard.patch).mockResolvedValue({
+      data: { data: {} },
+    } as never);
+    await CoachingSessionTopicApi.setStatus("s1", "t1", TopicStatus.Deferred);
+    expect(sessionGuard.patch).toHaveBeenCalledWith(
+      `${BASE}/s1/topics/t1/status`,
+      { status: "Deferred" }
     );
   });
 

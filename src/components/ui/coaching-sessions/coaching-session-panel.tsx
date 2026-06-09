@@ -40,8 +40,8 @@ import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
 import type {
   CoachingSessionTopic,
-  TopicImmediacy,
-  TopicRelevance,
+  TopicPriority,
+  TopicStatus,
 } from "@/types/coaching-session-topic";
 import { defaultAgreement } from "@/types/agreement";
 import {
@@ -89,12 +89,11 @@ export interface CoachingSessionPanelSharedProps {
   onTopicEdit: (id: Id, body: string) => void;
   onTopicDelete: (id: Id) => void;
   onTopicReorder: (orderedIds: Id[]) => void;
-  /** True only when the viewer is the coachee; ratings are coachee-only. */
+  /** True only when the viewer is the coachee; priority is coachee-only. */
   canRateTopics: boolean;
-  onTopicRate: (
-    id: Id,
-    fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
-  ) => void;
+  onTopicPriority: (id: Id, priority: Option<TopicPriority>) => void;
+  /** Lifecycle (Open/Discussed/Deferred) — either participant may set it. */
+  onTopicStatus: (id: Id, status: TopicStatus) => void;
   /** Inserts the topic's text into the notes as an H3 heading at the cursor. */
   onTopicInsertToNotes: (body: string) => void;
   /** Resolves a topic author's user id to a display name for the badge. */
@@ -429,6 +428,7 @@ export function CoachingSessionPanel({
     delete: deleteTopic,
     reorder: reorderTopics,
     rate: rateTopic,
+    setStatus: setTopicStatus,
   } = useCoachingSessionTopicMutation(coachingSessionId);
 
   const { insertTextIntoNotes } = useEditorCache();
@@ -1059,24 +1059,38 @@ export function CoachingSessionPanel({
     [reorderTopics, refreshTopics]
   );
 
-  const handleTopicRate = useCallback(
-    async (
-      id: Id,
-      fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
-    ) => {
+  const handleTopicPriority = useCallback(
+    async (id: Id, priority: Option<TopicPriority>) => {
       try {
-        await rateTopic(id, fields);
+        await rateTopic(id, { priority: priority.some ? priority.val : null });
         refreshTopics();
       } catch (err) {
-        console.error("Failed to rate topic:", err);
+        console.error("Failed to set topic priority:", err);
         toast({
           variant: "destructive",
-          title: "Failed to save rating",
-          description: "An error occurred while saving the rating.",
+          title: "Failed to save priority",
+          description: "An error occurred while saving the priority.",
         });
       }
     },
     [rateTopic, refreshTopics]
+  );
+
+  const handleTopicStatus = useCallback(
+    async (id: Id, status: TopicStatus) => {
+      try {
+        await setTopicStatus(id, status);
+        refreshTopics();
+      } catch (err) {
+        console.error("Failed to set topic status:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to update topic",
+          description: "An error occurred while updating the topic.",
+        });
+      }
+    },
+    [setTopicStatus, refreshTopics]
   );
 
   const handleTopicInsertToNotes = useCallback(
@@ -1117,7 +1131,8 @@ export function CoachingSessionPanel({
     onTopicDelete: handleTopicDelete,
     onTopicReorder: handleTopicReorder,
     canRateTopics: Boolean(userId && coacheeId && userId === coacheeId),
-    onTopicRate: handleTopicRate,
+    onTopicPriority: handleTopicPriority,
+    onTopicStatus: handleTopicStatus,
     onTopicInsertToNotes: handleTopicInsertToNotes,
     resolveTopicAuthorName,
     previousSessionDate,

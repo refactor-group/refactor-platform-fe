@@ -4,11 +4,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel"
 import {
   defaultCoachingSessionTopic,
-  TopicRelevance,
-  TopicImmediacy,
+  TopicPriority,
 } from "@/types/coaching-session-topic"
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic"
-import { None } from "@/types/option"
+import { Some, None } from "@/types/option"
 
 // Desktop viewport so the desktop layout (and its inline Topics add) renders.
 Object.defineProperty(window, "matchMedia", {
@@ -66,6 +65,7 @@ vi.mock("@/lib/api/coaching-session-topics", () => ({
     update: mockUpdateTopic,
     delete: mockDeleteTopic,
     reorder: mockReorderTopics,
+    setStatus: vi.fn(),
     isLoading: false,
     error: null,
   })),
@@ -242,14 +242,13 @@ describe("CoachingSessionPanel — Topics wiring", () => {
     expect(mockDeleteTopic).not.toHaveBeenCalledWith("theirs")
   })
 
-  it("undo restores the deleted topic with its ratings and original position", async () => {
+  it("undo restores the deleted topic with its priority and original position", async () => {
     const user = userEvent.setup()
     const middle = topic({
       id: "t2",
       user_id: "user-1",
       body: "Middle topic",
-      relevance: TopicRelevance.Central,
-      immediacy: TopicImmediacy.Pressing,
+      priority: Some(TopicPriority.High),
     })
     setTopics([
       topic({ id: "t1", user_id: "user-1", body: "First topic" }),
@@ -270,13 +269,12 @@ describe("CoachingSessionPanel — Topics wiring", () => {
     expect(typeof undo).toBe("function")
     await undo()
 
-    // Recreated with ratings preserved...
+    // Recreated with priority preserved...
     await waitFor(() =>
       expect(mockRestoreTopic).toHaveBeenCalledWith(
         expect.objectContaining({
           body: "Middle topic",
-          relevance: TopicRelevance.Central,
-          immediacy: TopicImmediacy.Pressing,
+          priority: Some(TopicPriority.High),
         })
       )
     )

@@ -4,8 +4,8 @@ import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import {
   CoachingSessionTopic,
-  TopicRelevance,
-  TopicImmediacy,
+  TopicPriority,
+  TopicStatus,
   transformCoachingSessionTopic,
 } from "@/types/coaching-session-topic";
 import { sessionGuard } from "@/lib/auth/session-guard";
@@ -16,23 +16,22 @@ const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/c
 const topicsUrl = (coachingSessionId: Id): string =>
   `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/topics`;
 
-// PUT body is body-only; ratings go through the dedicated rating sub-route.
+// PUT body is body-only; priority goes through the dedicated rating sub-route,
+// status through the dedicated status sub-route.
 interface UpdateTopicFields {
   body: string;
 }
 
+// Coachee-only. Send `priority` to set; `null` to clear; omit for a no-op.
 interface RateTopicFields {
-  relevance?: TopicRelevance;
-  immediacy?: TopicImmediacy;
+  priority?: TopicPriority | null;
 }
 
-// POST body: `body` required; `relevance`/`immediacy` optional so an undo can
-// recreate a deleted topic with its ratings intact. Omitting an axis defaults
-// it to "Neutral" server-side.
+// POST body: `body` required; `priority` optional so an undo can recreate a
+// deleted topic with its priority intact. Omitting it leaves the topic unset.
 interface CreateTopicBody {
   body: string;
-  relevance?: TopicRelevance;
-  immediacy?: TopicImmediacy;
+  priority?: TopicPriority;
 }
 
 /**
@@ -50,17 +49,17 @@ export const CoachingSessionTopicApi = {
       {}
     ),
 
-  // `ratings` is optional; supply it to recreate a topic with its
-  // relevance/immediacy preserved (undo of a delete).
+  // `priority` is optional; supply it to recreate a topic with its priority
+  // preserved (undo of a delete).
   create: async (
     coachingSessionId: Id,
     body: string,
-    ratings?: RateTopicFields
+    priority?: TopicPriority
   ): Promise<CoachingSessionTopic> =>
     transformCoachingSessionTopic(
       await EntityApi.createFn<CreateTopicBody, CoachingSessionTopic>(
         topicsUrl(coachingSessionId),
-        { body, ...ratings }
+        priority ? { body, priority } : { body }
       )
     ),
 
@@ -101,8 +100,8 @@ export const CoachingSessionTopicApi = {
     return res.data.data.map(transformCoachingSessionTopic);
   },
 
-  // Coachee-only rating (BE-enforced; coach write → 403). Dedicated sub-route;
-  // send either or both axes.
+  // Coachee-only priority (BE-enforced; coach write → 403). Dedicated sub-route;
+  // `priority: null` clears, omitting it is a no-op.
   rate: async (
     coachingSessionId: Id,
     topicId: Id,
@@ -111,6 +110,20 @@ export const CoachingSessionTopicApi = {
     const res = await sessionGuard.patch<ApiResponse<any>>(
       `${topicsUrl(coachingSessionId)}/${topicId}/rating`,
       fields
+    );
+    return transformCoachingSessionTopic(res.data.data);
+  },
+
+  // Lifecycle write (Open/Discussed/Deferred). Either participant may set it.
+  // Setting Deferred triggers server-side carry-over to the next session.
+  setStatus: async (
+    coachingSessionId: Id,
+    topicId: Id,
+    status: TopicStatus
+  ): Promise<CoachingSessionTopic> => {
+    const res = await sessionGuard.patch<ApiResponse<any>>(
+      `${topicsUrl(coachingSessionId)}/${topicId}/status`,
+      { status }
     );
     return transformCoachingSessionTopic(res.data.data);
   },
@@ -159,14 +172,15 @@ export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
 
   return {
     create: (body: string) => mutation.create({ body }),
-    // Recreate a deleted topic preserving its ratings (undo). Returns the new
+    // Recreate a deleted topic preserving its priority (undo). Returns the new
     // topic — note it gets a fresh id; the BE has no soft-delete. Callers that
     // need the original position should follow with `reorder`.
     restore: (topic: CoachingSessionTopic) =>
-      CoachingSessionTopicApi.create(coachingSessionId, topic.body, {
-        relevance: topic.relevance,
-        immediacy: topic.immediacy,
-      }),
+      CoachingSessionTopicApi.create(
+        coachingSessionId,
+        topic.body,
+        topic.priority.some ? topic.priority.val : undefined
+      ),
     update: (topicId: Id, fields: UpdateTopicFields) =>
       mutation.update(topicId, fields),
     delete: (topicId: Id) => mutation.delete(topicId),
@@ -174,6 +188,8 @@ export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
       CoachingSessionTopicApi.reorder(coachingSessionId, orderedIds),
     rate: (topicId: Id, fields: RateTopicFields) =>
       CoachingSessionTopicApi.rate(coachingSessionId, topicId, fields),
+    setStatus: (topicId: Id, status: TopicStatus) =>
+      CoachingSessionTopicApi.setStatus(coachingSessionId, topicId, status),
     isLoading: mutation.isLoading,
     error: mutation.error,
   };

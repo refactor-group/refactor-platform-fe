@@ -25,10 +25,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/lib/utils";
-import { TopicRatings } from "@/components/ui/coaching-sessions/topic-rating-chip";
+import { TopicPrioritySelect } from "@/components/ui/coaching-sessions/topic-priority-select";
+import { TopicStatusControls } from "@/components/ui/coaching-sessions/topic-status-controls";
 import { TopicAuthorBadge } from "@/components/ui/coaching-sessions/topic-provenance";
-import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
-import type { TopicImmediacy, TopicRelevance } from "@/types/coaching-session-topic";
+import { TopicStatus } from "@/types/coaching-session-topic";
+import type {
+  CoachingSessionTopic,
+  TopicPriority,
+} from "@/types/coaching-session-topic";
 import type { Id } from "@/types/general";
 import { type Option, None } from "@/types/option";
 import type { DateTime } from "ts-luxon";
@@ -41,12 +45,11 @@ export interface TopicSectionContentProps {
   onDelete: (id: Id) => void;
   onReorder: (orderedIds: Id[]) => void;
   readOnly?: boolean;
-  /** True only for the coachee; chips render read-only otherwise. */
+  /** True only for the coachee; the priority control is read-only otherwise. */
   canRate?: boolean;
-  onRate?: (
-    id: Id,
-    fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
-  ) => void;
+  onPriority?: (id: Id, priority: Option<TopicPriority>) => void;
+  /** Lifecycle (Open/Discussed/Deferred) — either participant may set it. */
+  onStatus?: (id: Id, status: TopicStatus) => void;
   /** Inserts the topic body into the coaching notes as an H3 heading. */
   onInsertToNotes?: (body: string) => void;
   /** Resolves a topic author's user id to a display name for the badge. */
@@ -92,7 +95,8 @@ function TopicRow({
   canRate,
   onEdit,
   onDelete,
-  onRate,
+  onPriority,
+  onStatus,
   onInsertToNotes,
 }: {
   topic: CoachingSessionTopic;
@@ -104,10 +108,8 @@ function TopicRow({
   canRate: boolean;
   onEdit: (id: Id, body: string) => void;
   onDelete: (id: Id) => void;
-  onRate: (
-    id: Id,
-    fields: { relevance?: TopicRelevance; immediacy?: TopicImmediacy }
-  ) => void;
+  onPriority: (id: Id, priority: Option<TopicPriority>) => void;
+  onStatus: (id: Id, status: TopicStatus) => void;
   onInsertToNotes?: (body: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -145,6 +147,7 @@ function TopicRow({
     [dragRef, dropRef]
   );
   const showDropLine = isOver && active?.id !== topic.id;
+  const discussed = topic.status === TopicStatus.Discussed;
 
   const commit = () => {
     const trimmed = draft.trim();
@@ -189,6 +192,7 @@ function TopicRow({
         createdAt={topic.created_at}
         updatedAt={topic.updated_at}
         previousSessionDate={previousSessionDate}
+        isCarriedOver={topic.carried_from_topic_id.some}
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -223,19 +227,29 @@ function TopicRow({
               !readOnly && "hover:bg-muted/50"
             )}
           >
-            <span className="line-clamp-3">{topic.body}</span>
+            <span
+              className={cn(
+                "line-clamp-3",
+                discussed && "text-muted-foreground/60 line-through"
+              )}
+            >
+              {topic.body}
+            </span>
           </button>
         )}
 
         {/* Always render the action row — keeping it visible while editing
             keeps the card's footprint stable instead of jumping. */}
         <div className="flex items-center gap-1.5 px-1.5">
-          <TopicRatings
-            relevance={topic.relevance}
-            immediacy={topic.immediacy}
+          <TopicPrioritySelect
+            priority={topic.priority}
             editable={canRate && !readOnly}
-            onRelevance={(v) => onRate(topic.id, { relevance: v })}
-            onImmediacy={(v) => onRate(topic.id, { immediacy: v })}
+            onChange={(p) => onPriority(topic.id, p)}
+          />
+          <TopicStatusControls
+            status={topic.status}
+            editable={!readOnly}
+            onChange={(s) => onStatus(topic.id, s)}
           />
 
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
@@ -277,7 +291,8 @@ export function TopicSectionContent({
   onReorder,
   readOnly = false,
   canRate = false,
-  onRate = () => {},
+  onPriority = () => {},
+  onStatus = () => {},
   onInsertToNotes,
   resolveAuthorName = () => "",
   previousSessionDate = None,
@@ -348,7 +363,8 @@ export function TopicSectionContent({
       canRate={canRate}
       onEdit={onEdit}
       onDelete={onDelete}
-      onRate={onRate}
+      onPriority={onPriority}
+      onStatus={onStatus}
       onInsertToNotes={onInsertToNotes}
     />
   ));

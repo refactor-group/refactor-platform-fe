@@ -8,6 +8,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { CalendarClock } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { isTopicNew, topicWasUpdated } from "@/types/coaching-session-topic";
 import type { Option } from "@/types/option";
@@ -20,6 +21,8 @@ export interface TopicAuthorBadgeProps {
   createdAt: DateTime;
   updatedAt: DateTime;
   previousSessionDate: Option<DateTime>;
+  /** Topic the backend copied forward from a deferred prior-session topic. */
+  isCarriedOver?: boolean;
 }
 
 const initials = (name: string): string =>
@@ -40,6 +43,7 @@ export function TopicAuthorBadge({
   createdAt,
   updatedAt,
   previousSessionDate,
+  isCarriedOver = false,
 }: TopicAuthorBadgeProps): JSX.Element {
   const isNew = isTopicNew(
     { user_id: authorId, created_at: createdAt },
@@ -92,6 +96,12 @@ export function TopicAuthorBadge({
           >
             <span className="h-2 w-2 rounded-full bg-violet-500" />
             New since your last session
+          </p>
+        )}
+        {isCarriedOver && (
+          <p className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-sky-600 dark:text-sky-400">
+            <CalendarClock className="h-3 w-3" />
+            Carried over from a previous session
           </p>
         )}
       </HoverCardContent>

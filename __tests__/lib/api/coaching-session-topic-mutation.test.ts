@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useCoachingSessionTopicMutation } from "@/lib/api/coaching-session-topics";
-import { TopicRelevance } from "@/types/coaching-session-topic";
+import { TopicPriority, TopicStatus } from "@/types/coaching-session-topic";
 import { EntityApi } from "@/lib/api/entity-api";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { TestProviders } from "@/test-utils/providers";
@@ -69,10 +69,21 @@ describe("useCoachingSessionTopicMutation", () => {
   it("rate PATCHes the dedicated rating sub-route", async () => {
     const { result } = render();
     await act(async () => {
-      await result.current.rate("t1", { relevance: TopicRelevance.Central });
+      await result.current.rate("t1", { priority: TopicPriority.High });
     });
     expect(sessionGuard.patch).toHaveBeenCalledWith(`${TOPICS}/t1/rating`, {
-      relevance: "Central",
+      priority: "High",
+    });
+    expect(EntityApi.updateFn).not.toHaveBeenCalled();
+  });
+
+  it("setStatus PATCHes the dedicated status sub-route", async () => {
+    const { result } = render();
+    await act(async () => {
+      await result.current.setStatus("t1", TopicStatus.Discussed);
+    });
+    expect(sessionGuard.patch).toHaveBeenCalledWith(`${TOPICS}/t1/status`, {
+      status: "Discussed",
     });
     expect(EntityApi.updateFn).not.toHaveBeenCalled();
   });

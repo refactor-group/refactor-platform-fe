@@ -1,26 +1,23 @@
-// Phase 4 — rating-chip WIRING test (non-frozen, has teeth).
+// Panel-host WIRING test (non-frozen, has teeth) for the v4 topic controls.
 //
-// The frozen `topic-rating-chip.test.tsx` pins the presentational chip
-// (labels, popover, toggle-to-clear, coachee-only). This test proves the
-// *panel host* wiring: it computes `canRate = userId === coacheeId` and routes
-// a chip change to the Phase 1 `update` mutation with the exact `{ relevance }`
-// / `{ immediacy }` enum payload. With a coach viewer the chips are read-only —
-// no chooser is offered and `update` is never called for a rating.
-//
-// It fails if the coachee/coach gate is wrong, if a non-coachee can rate, or if
-// the enum payload sent to `update` is wrong.
+// Proves the panel routes:
+//  - a coachee's PRIORITY pick to `rate` with the exact `{ priority }` payload,
+//    and a clear to `{ priority: null }`. Priority is coachee-only — a coach's
+//    priority control is disabled.
+//  - a STATUS toggle (Discussed/Defer) to `setStatus`, for EITHER participant
+//    (here proven with a coach viewer, who may set status but not priority).
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import {
   defaultCoachingSessionTopic,
-  TopicImmediacy,
-  TopicRelevance,
+  TopicPriority,
+  TopicStatus,
 } from "@/types/coaching-session-topic";
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
-import { None } from "@/types/option";
+import { Some, None } from "@/types/option";
 
 // Desktop viewport so the desktop layout renders (the mobile sheet is closed).
 Object.defineProperty(window, "matchMedia", {
@@ -63,17 +60,19 @@ vi.mock("@/lib/api/agreements", () => ({
 }));
 
 const mockRefreshTopics = vi.fn();
-const mockUpdateTopic = vi.fn();
 const mockRateTopic = vi.fn();
+const mockSetStatus = vi.fn();
 
 vi.mock("@/lib/api/coaching-session-topics", () => ({
   useCoachingSessionTopicList: vi.fn(),
   useCoachingSessionTopicMutation: vi.fn(() => ({
     create: vi.fn(),
-    update: mockUpdateTopic,
+    restore: vi.fn(),
+    update: vi.fn(),
     delete: vi.fn(),
     reorder: vi.fn(),
     rate: mockRateTopic,
+    setStatus: mockSetStatus,
     isLoading: false,
     error: null,
   })),
@@ -177,85 +176,82 @@ function renderPanel() {
   );
 }
 
-// In the desktop layout the relevance chip's collapsed trigger is the first
-// match; pick it explicitly to avoid the (closed) mobile layout's duplicate.
-function firstChip(name: RegExp) {
-  return screen.getAllByRole("button", { name })[0];
-}
+// The desktop + (closed) mobile layouts each mount a control; pick the first.
+const firstByRole = (role: string, name: RegExp) =>
+  screen.getAllByRole(role, { name })[0];
 
-describe("CoachingSessionPanel — rating wiring", () => {
+describe("CoachingSessionPanel — priority wiring (coachee-only)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUserId = "coachee-1";
   });
 
-  it("routes a coachee's relevance pick to update with the exact enum payload", async () => {
+  it("routes a coachee's priority pick to rate with the exact payload", async () => {
     const user = userEvent.setup();
-    mockUserId = "coachee-1";
     setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
     renderPanel();
 
-    await user.click(firstChip(/relevance: unrated/i));
-    const central = screen.getByRole("button", { name: "Central" });
-    await user.click(central);
+    await user.click(firstByRole("combobox", /priority/i));
+    const listbox = screen.getByRole("listbox");
+    await user.click(within(listbox).getByText("High"));
 
     await waitFor(() => {
       expect(mockRateTopic).toHaveBeenCalledWith("t1", {
-        relevance: TopicRelevance.Central,
+        priority: TopicPriority.High,
       });
     });
   });
 
-  it("routes a coachee's immediacy pick to update with the exact enum payload", async () => {
+  it("routes a clear to rate with priority: null", async () => {
     const user = userEvent.setup();
-    mockUserId = "coachee-1";
-    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
-    renderPanel();
-
-    await user.click(firstChip(/immediacy: unrated/i));
-    const soon = screen.getByRole("button", { name: "Soon" });
-    await user.click(soon);
-
-    await waitFor(() => {
-      expect(mockRateTopic).toHaveBeenCalledWith("t1", {
-        immediacy: TopicImmediacy.Soon,
-      });
-    });
-  });
-
-  it("clears to Neutral when the coachee re-picks the selected level", async () => {
-    const user = userEvent.setup();
-    mockUserId = "coachee-1";
     setTopics([
-      topic({ id: "t1", user_id: "coachee-1", body: "Reorg", relevance: TopicRelevance.Central }),
+      topic({ id: "t1", user_id: "coachee-1", body: "Reorg", priority: Some(TopicPriority.High) }),
     ]);
     renderPanel();
 
-    await user.click(firstChip(/relevance: central/i));
-    const central = screen.getByRole("button", { name: "Central" });
-    await user.click(central);
+    await user.click(firstByRole("combobox", /priority/i));
+    const listbox = screen.getByRole("listbox");
+    await user.click(within(listbox).getByText("Clear"));
 
     await waitFor(() => {
-      expect(mockRateTopic).toHaveBeenCalledWith("t1", {
-        relevance: TopicRelevance.Neutral,
-      });
+      expect(mockRateTopic).toHaveBeenCalledWith("t1", { priority: null });
     });
   });
 
-  it("renders read-only chips for a coach: no chooser, no rating update", async () => {
+  it("disables the priority control for a coach viewer", () => {
+    mockUserId = "coach-1";
+    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
+    renderPanel();
+    expect(firstByRole("combobox", /priority/i)).toBeDisabled();
+  });
+});
+
+describe("CoachingSessionPanel — status wiring (either participant)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("routes a coach's Discussed toggle to setStatus", async () => {
     const user = userEvent.setup();
     mockUserId = "coach-1";
-    setTopics([
-      topic({ id: "t1", user_id: "coachee-1", body: "Reorg", immediacy: TopicImmediacy.Soon }),
-    ]);
+    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
     renderPanel();
 
-    await user.click(firstChip(/immediacy: soon/i));
+    await user.click(firstByRole("button", /mark as discussed/i));
 
-    // Read-only popover: a "set by the coachee" hint and no clickable level.
-    expect(screen.getByText(/set by the coachee/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Soon" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Pressing" })).not.toBeInTheDocument();
-    expect(mockRateTopic).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockSetStatus).toHaveBeenCalledWith("t1", TopicStatus.Discussed);
+    });
+  });
+
+  it("routes a Defer toggle to setStatus", async () => {
+    const user = userEvent.setup();
+    mockUserId = "coachee-1";
+    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
+    renderPanel();
+
+    await user.click(firstByRole("button", /defer to next session/i));
+
+    await waitFor(() => {
+      expect(mockSetStatus).toHaveBeenCalledWith("t1", TopicStatus.Deferred);
+    });
   });
 });
