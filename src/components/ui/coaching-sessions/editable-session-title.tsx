@@ -12,6 +12,10 @@ const PLACEHOLDER = "Summarize the main purpose of this session…";
 // Clamp the title width so long titles wrap to a few lines instead of growing
 // across the whole header. Shared by display + edit so wrapping stays aligned.
 const TITLE_MAX_W = "max-w-xl";
+// On non-mobile, cap the title at 3 lines (display clamps, edit scrolls) so a
+// long title can't balloon the header. Mobile is left free to grow.
+const TITLE_MAX_LINES = "sm:line-clamp-3";
+const TITLE_MAX_EDIT_H = "sm:max-h-[5.25rem]"; // 3 × 1.75rem line-height
 
 export interface EditableSessionTitleProps {
   title: Option<string>;
@@ -54,7 +58,8 @@ export function EditableSessionTitle({
           <span
             aria-hidden
             className={cn(
-              "invisible col-start-1 row-start-1 whitespace-pre-wrap break-words px-1",
+              "invisible col-start-1 row-start-1 whitespace-pre-wrap break-words overflow-hidden px-1",
+              TITLE_MAX_EDIT_H,
               HEADING_CLASS
             )}
           >
@@ -80,7 +85,8 @@ export function EditableSessionTitle({
             // Borderless; a soft, thin focus ring outlines the box on edit
             // (lighter than the base ring so it doesn't read as a hard border).
             className={cn(
-              "col-start-1 row-start-1 min-h-0 resize-none overflow-hidden rounded-md border-0 px-1 py-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:ring-offset-0",
+              "col-start-1 row-start-1 min-h-0 resize-none overflow-hidden rounded-md border-0 px-1 py-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring/40 focus-visible:ring-offset-0 sm:overflow-y-auto",
+              TITLE_MAX_EDIT_H,
               HEADING_CLASS
             )}
           />
@@ -112,6 +118,7 @@ export function EditableSessionTitle({
         <span
           className={cn(
             "block break-words",
+            TITLE_MAX_LINES,
             HEADING_CLASS,
             title.none && "text-muted-foreground/70 font-medium"
           )}
