@@ -138,4 +138,12 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   useSSEEventHandler(eventSource, 'transcription_updated', () => {
     invalidateEndpoint('/transcriptions', 'transcription_updated');
   });
+
+  // TOPIC EVENTS - Invalidate session-scoped topic lists
+  // (/coaching_sessions/{id}/topics). Coarse-by-design: the event carries no
+  // topic data, so we refetch. Covers the other participant's edits AND the
+  // server-side carry-over copy on a new session's first read.
+  useSSEEventHandler(eventSource, 'topics_changed', () => {
+    invalidateEndpoint('/topics', 'topics_changed');
+  });
 }
