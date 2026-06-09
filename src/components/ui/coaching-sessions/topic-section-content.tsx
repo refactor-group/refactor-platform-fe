@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -16,7 +16,6 @@ import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { TextCursorInput, GripVertical, Plus, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/lib/utils";
 import { TopicRatings } from "@/components/ui/coaching-sessions/topic-rating-chip";
@@ -286,6 +285,26 @@ export function TopicSectionContent({
     setNewBody("");
   };
 
+  // Grow the add-topic input with its content up to MAX_ADD_ROWS, then scroll.
+  const MAX_ADD_ROWS = 3;
+  const addInputRef = useRef<HTMLTextAreaElement>(null);
+  const autosizeAddInput = useCallback(() => {
+    const el = addInputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const cs = window.getComputedStyle(el);
+    const lineHeight = parseFloat(cs.lineHeight) || 18;
+    const paddingY =
+      parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const borderY =
+      parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+    const maxHeight = lineHeight * MAX_ADD_ROWS + paddingY + borderY;
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, []);
+  // Re-measure on every value change — covers both typing and the reset after add.
+  useEffect(() => autosizeAddInput(), [newBody, autosizeAddInput]);
+
   const rows = topics.map((topic) => (
     <TopicRow
       key={topic.id}
@@ -342,15 +361,21 @@ export function TopicSectionContent({
       )}
 
       {!readOnly && (
-        <div className="flex items-center gap-2 pt-3">
-          <Input
+        <div className="flex items-end gap-2 pt-3">
+          <Textarea
+            ref={addInputRef}
+            rows={1}
             value={newBody}
             onChange={(e) => setNewBody(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") add();
+              // Enter submits; Shift+Enter inserts a newline.
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                add();
+              }
             }}
             placeholder="Add a topic…"
-            className="h-9 text-[13px]"
+            className="min-h-9 resize-none py-2 text-[13px] leading-snug"
           />
           <Button
             size="sm"
