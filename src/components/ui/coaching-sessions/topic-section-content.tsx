@@ -13,7 +13,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
-import { ArrowRightToLine, GripVertical, Plus, Trash2 } from "lucide-react";
+import { TextCursorInput, GripVertical, Plus, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,7 +216,7 @@ function TopicRow({
                   onClick={() => onInsertToNotes(topic.body)}
                   className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover/topic:opacity-100"
                 >
-                  <ArrowRightToLine className="h-4 w-4" />
+                  <TextCursorInput className="h-4 w-4" />
                 </button>
               )}
 
