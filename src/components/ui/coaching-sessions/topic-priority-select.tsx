@@ -38,10 +38,37 @@ export function TopicPrioritySelect({
 }: TopicPrioritySelectProps) {
   const current = levelOf(priority);
 
+  // Read-only (coach): a static chip — never the dropdown affordance, so it
+  // can't imply the priority is settable. Unset shows an explicit muted label.
+  if (!editable) {
+    if (!current) {
+      return (
+        <span
+          aria-label="Priority: not set"
+          className="inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px] text-muted-foreground/50"
+        >
+          <span className="h-1.5 w-1.5 rounded-full border border-muted-foreground/40" />
+          Priority Not Set
+        </span>
+      );
+    }
+    return (
+      <span
+        aria-label={`Priority: ${current.label}`}
+        className={cn(
+          "inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-[11px]",
+          current.text
+        )}
+      >
+        <span className={cn("h-1.5 w-1.5 rounded-full", current.dot)} />
+        {current.label}
+      </span>
+    );
+  }
+
   return (
     <Select
       value={priority.some ? priority.val : undefined}
-      disabled={!editable}
       onValueChange={(v) =>
         onChange(v === CLEAR ? None : Some(v as TopicPriority))
       }

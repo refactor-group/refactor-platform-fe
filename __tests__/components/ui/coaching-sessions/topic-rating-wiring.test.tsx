@@ -218,11 +218,17 @@ describe("CoachingSessionPanel — priority wiring (coachee-only)", () => {
     });
   });
 
-  it("disables the priority control for a coach viewer", () => {
+  it("shows priority read-only (no dropdown) for a coach viewer", () => {
     mockUserId = "coach-1";
-    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
+    setTopics([
+      topic({ id: "t1", user_id: "coachee-1", body: "Reorg", priority: Some(TopicPriority.High) }),
+    ]);
     renderPanel();
-    expect(firstByRole("combobox", /priority/i)).toBeDisabled();
+    // The coach gets a static chip, never an editable Priority dropdown.
+    expect(
+      screen.queryByRole("combobox", { name: /priority/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("High").length).toBeGreaterThanOrEqual(1);
   });
 });
 

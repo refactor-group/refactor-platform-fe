@@ -27,7 +27,7 @@ describe("TopicPrioritySelect — display + gating", () => {
     ).toHaveTextContent("High");
   });
 
-  it("disables the trigger when not editable (coach view)", () => {
+  it("renders a static read-only chip (no dropdown) for a coach when set", () => {
     render(
       <TopicPrioritySelect
         priority={Some(TopicPriority.Medium)}
@@ -35,7 +35,17 @@ describe("TopicPrioritySelect — display + gating", () => {
         onChange={vi.fn()}
       />
     );
-    expect(screen.getByRole("combobox", { name: /priority/i })).toBeDisabled();
+    // No dropdown affordance at all — it must not imply the coach can set it.
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByText("Medium")).toBeInTheDocument();
+  });
+
+  it("shows an explicit 'Priority Not Set' label (no dropdown) for a coach when unset", () => {
+    render(
+      <TopicPrioritySelect priority={None} editable={false} onChange={vi.fn()} />
+    );
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByText("Priority Not Set")).toBeInTheDocument();
   });
 });
 
