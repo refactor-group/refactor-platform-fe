@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   DndContext,
   DragOverlay,
@@ -106,6 +113,27 @@ function TopicRow({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(topic.body);
 
+  // Auto-size the edit textarea to its content (cap 3 rows, then scroll) so it
+  // matches the display label's height exactly — no bounce when toggling edit.
+  const editRef = useRef<HTMLTextAreaElement>(null);
+  const autosizeEdit = useCallback(() => {
+    const el = editRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const cs = window.getComputedStyle(el);
+    const lineHeight = parseFloat(cs.lineHeight) || 18;
+    const paddingY =
+      parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const maxHeight = lineHeight * 3 + paddingY;
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, []);
+  // useLayoutEffect so the height is set before paint (avoids a 1-frame flash
+  // when entering edit). Runs on enter and on every keystroke.
+  useLayoutEffect(() => {
+    if (editing) autosizeEdit();
+  }, [editing, draft, autosizeEdit]);
+
   const { attributes, listeners, setNodeRef: dragRef, isDragging } =
     useDraggable({ id: topic.id });
   const { setNodeRef: dropRef, isOver, active } = useDroppable({ id: topic.id });
@@ -166,9 +194,10 @@ function TopicRow({
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {editing && !readOnly ? (
           <Textarea
+            ref={editRef}
             autoFocus
             aria-label="Edit topic"
-            rows={2}
+            rows={1}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -180,7 +209,9 @@ function TopicRow({
               if (e.key === "Escape") cancel();
             }}
             onBlur={commit}
-            className="min-h-[3.5rem] resize-none text-[13px] leading-snug"
+            // Match the display label's box model (px-1.5 py-1, no border) so
+            // the card height is identical in display and edit.
+            className="min-h-0 resize-none rounded-md border-0 px-1.5 py-1 text-[13px] leading-snug shadow-none"
           />
         ) : (
           <button
