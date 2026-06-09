@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useGoalsBySession } from "@/lib/api/goals";
@@ -11,7 +11,7 @@ import {
   isPastSession,
   isUnderwaySession,
 } from "@/types/coaching-session";
-import { Some, None } from "@/types/option";
+import { Some, None, type Option } from "@/types/option";
 import {
   formatDateInUserTimezoneWithTZ,
   getBrowserTimezone,
@@ -37,8 +37,17 @@ const CoachingSessionTitle: React.FC<{ locale: string }> = () => {
   const session = currentCoachingSession;
   const relationship = currentCoachingRelationship;
 
+  // Optimistic override: while a save is in flight, show the just-saved title
+  // immediately instead of letting the display fall back to the stale server
+  // value during the PUT + refetch window (which caused a new→old→new flash).
+  const [save, setSave] = useState<
+    { kind: "idle" } | { kind: "saving"; title: Option<string> }
+  >({ kind: "idle" });
+  const effectiveTitle =
+    save.kind === "saving" ? save.title : session?.title ?? None;
+
   const fallback = coachingSessionTitle({ title: None, topics, goals });
-  const displayedTitle = session?.title.some ? session.title.val : fallback;
+  const displayedTitle = effectiveTitle.some ? effectiveTitle.val : fallback;
 
   useEffect(() => {
     if (session) document.title = displayedTitle;
@@ -47,8 +56,13 @@ const CoachingSessionTitle: React.FC<{ locale: string }> = () => {
   const handleSave = async (next: string) => {
     if (!session) return;
     const title = next ? Some(next) : None;
-    await update(session.id, { ...session, title });
-    await refresh();
+    setSave({ kind: "saving", title });
+    try {
+      await update(session.id, { ...session, title });
+      await refresh();
+    } finally {
+      setSave({ kind: "idle" });
+    }
   };
 
   const getPresenceByRole = (
@@ -72,7 +86,7 @@ const CoachingSessionTitle: React.FC<{ locale: string }> = () => {
   return (
     <div>
       <EditableSessionTitle
-        title={session.title}
+        title={effectiveTitle}
         fallbackTitle={fallback}
         onSave={handleSave}
       />
