@@ -12,10 +12,10 @@ const PLACEHOLDER = "Summarize the main purpose of this session…";
 // Clamp the title width so long titles wrap to a few lines instead of growing
 // across the whole header. Shared by display + edit so wrapping stays aligned.
 const TITLE_MAX_W = "max-w-xl";
-// On non-mobile, cap the title at 3 lines (display clamps, edit scrolls) so a
+// On non-mobile, cap the title at 2 lines (display clamps, edit scrolls) so a
 // long title can't balloon the header. Mobile is left free to grow.
-const TITLE_MAX_LINES = "sm:line-clamp-3";
-const TITLE_MAX_EDIT_H = "sm:max-h-[5.25rem]"; // 3 × 1.75rem line-height
+const TITLE_MAX_LINES = "sm:line-clamp-2";
+const TITLE_MAX_EDIT_H = "sm:max-h-[3.5rem]"; // 2 × 1.75rem line-height
 
 export interface EditableSessionTitleProps {
   title: Option<string>;
