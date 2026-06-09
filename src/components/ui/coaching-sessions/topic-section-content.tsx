@@ -196,42 +196,42 @@ function TopicRow({
           </button>
         )}
 
-        {!editing && (
-          <div className="flex items-center gap-1.5 px-1.5">
-            <TopicRatings
-              relevance={topic.relevance}
-              immediacy={topic.immediacy}
-              editable={canRate && !readOnly}
-              onRelevance={(v) => onRate(topic.id, { relevance: v })}
-              onImmediacy={(v) => onRate(topic.id, { immediacy: v })}
-            />
+        {/* Always render the action row — keeping it visible while editing
+            keeps the card's footprint stable instead of jumping. */}
+        <div className="flex items-center gap-1.5 px-1.5">
+          <TopicRatings
+            relevance={topic.relevance}
+            immediacy={topic.immediacy}
+            editable={canRate && !readOnly}
+            onRelevance={(v) => onRate(topic.id, { relevance: v })}
+            onImmediacy={(v) => onRate(topic.id, { immediacy: v })}
+          />
 
-            <div className="ml-auto flex shrink-0 items-center gap-0.5">
-              {!readOnly && onInsertToNotes && (
-                <button
-                  type="button"
-                  aria-label="Insert into notes"
-                  title="Insert into notes at the cursor"
-                  onClick={() => onInsertToNotes(topic.body)}
-                  className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover/topic:opacity-100"
-                >
-                  <TextCursorInput className="h-4 w-4" />
-                </button>
-              )}
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
+            {!readOnly && onInsertToNotes && (
+              <button
+                type="button"
+                aria-label="Insert into notes"
+                title="Insert into notes at the cursor"
+                onClick={() => onInsertToNotes(topic.body)}
+                className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover/topic:opacity-100"
+              >
+                <TextCursorInput className="h-4 w-4" />
+              </button>
+            )}
 
-              {isAuthor && !readOnly && (
-                <button
-                  type="button"
-                  aria-label="Delete topic"
-                  onClick={() => onDelete(topic.id)}
-                  className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            {isAuthor && !readOnly && (
+              <button
+                type="button"
+                aria-label="Delete topic"
+                onClick={() => onDelete(topic.id)}
+                className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
