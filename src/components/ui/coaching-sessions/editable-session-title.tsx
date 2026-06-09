@@ -9,6 +9,9 @@ import { cn } from "@/components/lib/utils";
 
 const HEADING_CLASS = "text-lg sm:text-xl font-semibold tracking-tight";
 const PLACEHOLDER = "Summarize the main purpose of this session…";
+// Clamp the title width so long titles wrap to a few lines instead of growing
+// across the whole header. Shared by display + edit so wrapping stays aligned.
+const TITLE_MAX_W = "max-w-xl";
 
 export interface EditableSessionTitleProps {
   title: Option<string>;
@@ -43,11 +46,11 @@ export function EditableSessionTitle({
 
   if (editing) {
     return (
-      <div className="flex items-start gap-2">
+      <div className={cn("flex items-start gap-2", TITLE_MAX_W)}>
         {/* Invisible sizer in the same grid cell makes the textarea exactly as
             wide and tall as its content (matching the display label), so the
             save button lands where the pencil sits and the box never bounces. */}
-        <div className="grid max-w-full -mx-1">
+        <div className="grid min-w-0 max-w-full -mx-1">
           <span
             aria-hidden
             className={cn(
@@ -74,8 +77,10 @@ export function EditableSessionTitle({
             }}
             onBlur={commit}
             placeholder={PLACEHOLDER}
+            // Borderless; the base Textarea's focus ring outlines the box on
+            // edit (same affordance as the topic editor).
             className={cn(
-              "col-start-1 row-start-1 min-h-0 resize-none overflow-hidden rounded-md border-0 bg-muted/40 px-1 py-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
+              "col-start-1 row-start-1 min-h-0 resize-none overflow-hidden rounded-md border-0 px-1 py-0 shadow-none",
               HEADING_CLASS
             )}
           />
@@ -97,15 +102,16 @@ export function EditableSessionTitle({
   // The pencil mirrors the edit-mode save button exactly (same h-7 ghost
   // button, same row gap) so the affordance never shifts when toggling.
   return (
-    <div className="group flex items-start gap-2">
+    <div className={cn("group flex items-start gap-2", TITLE_MAX_W)}>
       <button
         type="button"
         aria-label={title.some ? "Edit title" : "Add a title"}
         onClick={start}
-        className="rounded-md -mx-1 px-1 text-left hover:bg-muted/50 transition-colors"
+        className="min-w-0 rounded-md -mx-1 px-1 text-left hover:bg-muted/50 transition-colors"
       >
         <span
           className={cn(
+            "block break-words",
             HEADING_CLASS,
             title.none && "text-muted-foreground/70 font-medium"
           )}
