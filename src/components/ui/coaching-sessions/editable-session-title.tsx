@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type JSX } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type JSX } from "react";
 import { Check, Pencil } from "lucide-react";
 import { type Option } from "@/types/option";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/lib/utils";
 
 const HEADING_CLASS = "text-lg sm:text-xl font-semibold tracking-tight";
@@ -24,6 +24,19 @@ export function EditableSessionTitle({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(currentValue);
 
+  // Auto-size the edit textarea to its content so it occupies the same height
+  // as the wrapping display label — no vertical jump when toggling edit.
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const autosize = useCallback(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+  useLayoutEffect(() => {
+    if (editing) autosize();
+  }, [editing, draft, autosize]);
+
   const start = () => {
     setDraft(currentValue);
     setEditing(true);
@@ -42,25 +55,36 @@ export function EditableSessionTitle({
 
   if (editing) {
     return (
-      <div className="flex items-center gap-2">
-        <Input
+      <div className="flex items-start gap-2">
+        <Textarea
+          ref={taRef}
           autoFocus
           aria-label="Session title"
+          rows={1}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
+            // Title is conceptually single-line: Enter saves (no newline).
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            }
             if (e.key === "Escape") cancel();
           }}
           onBlur={commit}
           placeholder="Summarize the main purpose of this session…"
-          className={cn("h-auto px-2 py-1", HEADING_CLASS)}
+          // Match the display label's box model (no border, -mx-1 px-1, no
+          // vertical padding) + a faint bg to signal the active edit.
+          className={cn(
+            "-mx-1 min-h-0 resize-none overflow-hidden rounded-md border-0 bg-muted/40 px-1 py-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0",
+            HEADING_CLASS
+          )}
         />
         <Button
           size="icon"
           variant="ghost"
           aria-label="Save title"
-          className="h-8 w-8 shrink-0 rounded-full text-muted-foreground/60 hover:text-foreground"
+          className="h-7 w-7 shrink-0 rounded-full text-muted-foreground/60 hover:text-foreground"
           onMouseDown={(e) => e.preventDefault()}
           onClick={commit}
         >
