@@ -52,21 +52,20 @@ vi.mock("@/lib/api/agreements", () => ({
 // Topic API hooks under test
 const mockRefreshTopics = vi.fn()
 const mockCreateTopic = vi.fn()
-const mockRestoreTopic = vi.fn()
 const mockUpdateTopic = vi.fn()
 const mockDeleteTopic = vi.fn()
 const mockReorderTopics = vi.fn()
+const mockUndoTopic = vi.fn()
 
 vi.mock("@/lib/api/coaching-session-topics", () => ({
   useCoachingSessionTopicList: vi.fn(),
   useCoachingSessionTopicMutation: vi.fn(() => ({
     create: mockCreateTopic,
-    restore: mockRestoreTopic,
     update: mockUpdateTopic,
     delete: mockDeleteTopic,
     reorder: mockReorderTopics,
     setStatus: vi.fn(),
-    undefer: vi.fn(),
+    undo: mockUndoTopic,
     isLoading: false,
     error: null,
   })),
@@ -243,43 +242,29 @@ describe("CoachingSessionPanel — Topics wiring", () => {
     expect(mockDeleteTopic).not.toHaveBeenCalledWith("theirs")
   })
 
-  it("undo restores the deleted topic with its priority and original position", async () => {
+  it("undo of a delete calls the unified undo at the topic's session (no re-create/reorder)", async () => {
     const user = userEvent.setup()
-    const middle = topic({
-      id: "t2",
-      user_id: "user-1",
-      body: "Middle topic",
-      priority: Some(TopicPriority.High),
-    })
     setTopics([
       topic({ id: "t1", user_id: "user-1", body: "First topic" }),
-      middle,
+      topic({ id: "t2", user_id: "user-1", body: "Middle topic", priority: Some(TopicPriority.High) }),
       topic({ id: "t3", user_id: "user-1", body: "Last topic" }),
     ])
-    // The restore POST returns a brand-new id (no soft-delete on the BE).
-    mockRestoreTopic.mockResolvedValue(topic({ ...middle, id: "t2-new" }))
     renderPanel()
 
     const deleteButtons = screen.getAllByRole("button", { name: /delete topic/i })
     await user.click(deleteButtons[1]) // the middle topic
     await waitFor(() => expect(mockDeleteTopic).toHaveBeenCalledWith("t2"))
 
-    // Grab the Undo action the delete toast registered, and fire it.
+    // Fire the Undo action the delete toast registered.
     const toastCall = vi.mocked(sonnerToast).mock.calls.at(-1)
     const undo = (toastCall?.[1] as any)?.action?.onClick as () => Promise<void>
     expect(typeof undo).toBe("function")
     await undo()
 
-    // Recreated with priority preserved...
-    await waitFor(() =>
-      expect(mockRestoreTopic).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: "Middle topic",
-          priority: Some(TopicPriority.High),
-        })
-      )
-    )
-    // ...and reordered back into the middle slot using the new id.
-    expect(mockReorderTopics).toHaveBeenCalledWith(["t1", "t2-new", "t3"])
+    // v6: faithful soft-delete restore via the unified undo endpoint, addressed
+    // at the topic's session — no FE re-create, no reorder (the BE restores the
+    // exact row incl. id/status/priority/position).
+    await waitFor(() => expect(mockUndoTopic).toHaveBeenCalledWith("session-1", "t2"))
+    expect(mockReorderTopics).not.toHaveBeenCalled()
   })
 })

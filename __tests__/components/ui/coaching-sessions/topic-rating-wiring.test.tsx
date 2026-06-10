@@ -62,19 +62,18 @@ vi.mock("@/lib/api/agreements", () => ({
 const mockRefreshTopics = vi.fn();
 const mockRateTopic = vi.fn();
 const mockSetStatus = vi.fn();
-const mockUndefer = vi.fn();
+const mockUndo = vi.fn();
 
 vi.mock("@/lib/api/coaching-session-topics", () => ({
   useCoachingSessionTopicList: vi.fn(),
   useCoachingSessionTopicMutation: vi.fn(() => ({
     create: vi.fn(),
-    restore: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
     reorder: vi.fn(),
     rate: mockRateTopic,
     setStatus: mockSetStatus,
-    undefer: mockUndefer,
+    undo: mockUndo,
     isLoading: false,
     error: null,
   })),
@@ -271,10 +270,10 @@ describe("CoachingSessionPanel — status wiring (either participant)", () => {
     const undo = (toastCall?.[1] as any)?.action?.onClick as () => Promise<void>;
     expect(typeof undo).toBe("function");
     await undo();
-    expect(mockUndefer).toHaveBeenCalledWith("session-2", "t1");
+    expect(mockUndo).toHaveBeenCalledWith("session-2", "t1");
   });
 
-  it("un-defers a HELD Deferred topic via the undefer endpoint, not a status write", async () => {
+  it("un-defers a HELD Deferred topic via the unified undo endpoint, not a status write", async () => {
     const user = userEvent.setup();
     mockUserId = "coachee-1";
     setTopics([
@@ -283,10 +282,11 @@ describe("CoachingSessionPanel — status wiring (either participant)", () => {
     renderPanel();
 
     // A held topic shows the defer toggle active ("Undo defer"); clicking it
-    // reverses via undefer at the topic's current session — never PATCH status.
+    // reverses via the undo endpoint at the topic's current session — never
+    // PATCH status {Open}.
     await user.click(firstByRole("button", /undo defer/i));
     await waitFor(() => {
-      expect(mockUndefer).toHaveBeenCalledWith("session-1", "t1");
+      expect(mockUndo).toHaveBeenCalledWith("session-1", "t1");
     });
     expect(mockSetStatus).not.toHaveBeenCalled();
   });

@@ -101,12 +101,12 @@ describe("CoachingSessionTopicApi", () => {
     );
   });
 
-  it("undefer POSTs to the dedicated undefer sub-route (no body)", async () => {
+  it("undo POSTs to the unified undo sub-route (no body)", async () => {
     vi.mocked(sessionGuard.post).mockResolvedValue({
       data: { data: {} },
     } as never);
-    await CoachingSessionTopicApi.undefer("s1", "t1");
-    expect(sessionGuard.post).toHaveBeenCalledWith(`${BASE}/s1/topics/t1/undefer`);
+    await CoachingSessionTopicApi.undo("s1", "t1");
+    expect(sessionGuard.post).toHaveBeenCalledWith(`${BASE}/s1/topics/t1/undo`);
   });
 
   it("update PUTs a body edit", async () => {

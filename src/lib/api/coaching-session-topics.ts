@@ -130,15 +130,17 @@ export const CoachingSessionTopicApi = {
     return transformCoachingSessionTopic(res.data.data);
   },
 
-  // Reverses a defer (either participant). Address it at the topic's CURRENT
-  // session: a moved topic re-parents back to its origin; a held topic just
-  // returns to Open in place. No body.
-  undefer: async (
+  // Unified undo (either participant; author-only when undoing a delete).
+  // State-derived: reverses whatever undoable op last happened to the topic —
+  // a defer/move (returns it to origin, status restored) OR a delete (faithful
+  // soft-delete restore: same id/status/priority/position). 422 if nothing to
+  // undo. Address it at the topic's CURRENT session. No body.
+  undo: async (
     coachingSessionId: Id,
     topicId: Id
   ): Promise<CoachingSessionTopic> => {
     const res = await sessionGuard.post<ApiResponse<any>>(
-      `${topicsUrl(coachingSessionId)}/${topicId}/undefer`
+      `${topicsUrl(coachingSessionId)}/${topicId}/undo`
     );
     return transformCoachingSessionTopic(res.data.data);
   },
@@ -187,15 +189,6 @@ export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
 
   return {
     create: (body: string) => mutation.create({ body }),
-    // Recreate a deleted topic preserving its priority (undo). Returns the new
-    // topic — note it gets a fresh id; the BE has no soft-delete. Callers that
-    // need the original position should follow with `reorder`.
-    restore: (topic: CoachingSessionTopic) =>
-      CoachingSessionTopicApi.create(
-        coachingSessionId,
-        topic.body,
-        topic.priority.some ? topic.priority.val : undefined
-      ),
     update: (topicId: Id, fields: UpdateTopicFields) =>
       mutation.update(topicId, fields),
     delete: (topicId: Id) => mutation.delete(topicId),
@@ -205,11 +198,11 @@ export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
       CoachingSessionTopicApi.rate(coachingSessionId, topicId, fields),
     setStatus: (topicId: Id, status: TopicStatus) =>
       CoachingSessionTopicApi.setStatus(coachingSessionId, topicId, status),
-    // Address undefer at the topic's CURRENT session, which after a move is the
-    // destination — not necessarily this hook's bound session. So it takes an
-    // explicit session id.
-    undefer: (sessionId: Id, topicId: Id) =>
-      CoachingSessionTopicApi.undefer(sessionId, topicId),
+    // Address undo at the topic's CURRENT session — after a move that's the
+    // destination (not this hook's bound session), so it takes an explicit id.
+    // Faithfully reverses a defer OR a delete; the server derives which.
+    undo: (sessionId: Id, topicId: Id) =>
+      CoachingSessionTopicApi.undo(sessionId, topicId),
     isLoading: mutation.isLoading,
     error: mutation.error,
   };

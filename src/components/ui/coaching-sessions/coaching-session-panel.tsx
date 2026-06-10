@@ -423,13 +423,12 @@ export function CoachingSessionPanel({
     useCoachingSessionTopicList(coachingSessionId);
   const {
     create: createTopic,
-    restore: restoreTopic,
     update: updateTopic,
     delete: deleteTopic,
     reorder: reorderTopics,
     rate: rateTopic,
     setStatus: setTopicStatus,
-    undefer: undeferTopic,
+    undo: undoTopic,
   } = useCoachingSessionTopicMutation(coachingSessionId);
 
   const { insertTextIntoNotes } = useEditorCache();
@@ -990,8 +989,6 @@ export function CoachingSessionPanel({
   const handleTopicDelete = useCallback(
     async (id: Id) => {
       const topic = topics.find((t) => t.id === id);
-      // Snapshot the pre-delete order so undo can restore the topic's position.
-      const orderBeforeDelete = topics.map((t) => t.id);
       try {
         await deleteTopic(id);
         refreshTopics();
@@ -1001,26 +998,15 @@ export function CoachingSessionPanel({
             ? `${topic.body.slice(0, 40)}...`
             : topic.body
           : "Topic";
+        // Delete is a soft-delete server-side; undo faithfully restores the
+        // exact row (id, status, priority, position, timestamps). Delete never
+        // moves the topic, so undo is addressed at this session.
         sonnerToast(`"${preview}" deleted`, {
           action: {
             label: "Undo",
             onClick: async () => {
-              if (!topic) return;
               try {
-                // Recreate with ratings intact (gets a fresh id).
-                const restored = await restoreTopic(topic);
-                // Slot it back into its original position: the pre-delete order
-                // with the old id swapped for the new one. Best-effort — if the
-                // list changed meanwhile the reorder 422s and the restored topic
-                // simply stays appended.
-                const restoredOrder = orderBeforeDelete.map((tid) =>
-                  tid === id ? restored.id : tid
-                );
-                try {
-                  await reorderTopics(restoredOrder);
-                } catch {
-                  /* position not restorable; topic is still back */
-                }
+                await undoTopic(coachingSessionId, id);
                 refreshTopics();
               } catch {
                 sonnerToast.error("Failed to undo", {
@@ -1039,7 +1025,7 @@ export function CoachingSessionPanel({
         });
       }
     },
-    [topics, deleteTopic, restoreTopic, reorderTopics, refreshTopics]
+    [topics, deleteTopic, undoTopic, refreshTopics, coachingSessionId]
   );
 
   const handleTopicReorder = useCallback(
@@ -1080,14 +1066,14 @@ export function CoachingSessionPanel({
   const handleTopicStatus = useCallback(
     async (id: Id, status: TopicStatus) => {
       const topic = topics.find((t) => t.id === id);
-      // Un-deferring a held topic uses the dedicated endpoint — the BE does not
-      // overload PATCH status {Open} for undo.
+      // Un-deferring a held topic goes through the unified undo endpoint — the
+      // BE does not overload PATCH status {Open} for undo.
       if (status === TopicStatus.Open && topic?.status === TopicStatus.Deferred) {
         try {
-          await undeferTopic(coachingSessionId, id);
+          await undoTopic(coachingSessionId, id);
           refreshTopics();
         } catch (err) {
-          console.error("Failed to undefer topic:", err);
+          console.error("Failed to undo topic defer:", err);
           toast({
             variant: "destructive",
             title: "Failed to update topic",
@@ -1108,7 +1094,7 @@ export function CoachingSessionPanel({
               label: "Undo",
               onClick: async () => {
                 try {
-                  await undeferTopic(destination, id);
+                  await undoTopic(destination, id);
                   refreshTopics();
                 } catch {
                   sonnerToast.error("Failed to undo", {
@@ -1128,7 +1114,7 @@ export function CoachingSessionPanel({
         });
       }
     },
-    [topics, setTopicStatus, undeferTopic, refreshTopics, coachingSessionId]
+    [topics, setTopicStatus, undoTopic, refreshTopics, coachingSessionId]
   );
 
   const handleTopicInsertToNotes = useCallback(
