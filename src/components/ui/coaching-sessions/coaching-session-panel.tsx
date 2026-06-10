@@ -29,12 +29,11 @@ import {
   useCoachingSessionTopicMutation,
 } from "@/lib/api/coaching-session-topics";
 import { usePanelActions } from "@/lib/hooks/use-panel-actions";
-import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
+import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
-import { selectPreviousSessionDate } from "@/lib/utils/session";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
@@ -98,8 +97,8 @@ export interface CoachingSessionPanelSharedProps {
   onTopicInsertToNotes: (body: string) => void;
   /** Resolves a topic author's user id to a display name for the badge. */
   resolveTopicAuthorName: (userId: Id) => string;
-  /** FE-derived previous-session anchor; drives the "new since" dot. */
-  previousSessionDate: Option<DateTime>;
+  /** Viewer's last-viewed marker for this session; drives the "new since" dot. */
+  lastViewedAt: Option<DateTime>;
   // Agreement data
   agreements: Agreement[];
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
@@ -375,23 +374,27 @@ export function CoachingSessionPanel({
     [coachId, coachName, coacheeId, coacheeName]
   );
 
-  // The relationship list endpoint's date filter is BE-ignored, so fetch a wide
-  // window (frozen at mount) and select the previous session client-side.
-  const sessionsFrom = useMemo(() => DateTime.now().minus({ years: 5 }), []);
-  const sessionsTo = useMemo(() => DateTime.now().plus({ years: 1 }), []);
-  const { coachingSessions: relationshipSessions } = useCoachingSessionList(
-    coachingRelationshipId,
-    sessionsFrom,
-    sessionsTo,
-    "date",
-    "asc"
-  );
-
-  const previousSessionDate = useMemo<Option<DateTime>>(() => {
-    if (!sessionDate) return None;
-    const currentDate = DateTime.fromISO(sessionDate, { zone: "utc" });
-    return selectPreviousSessionDate(relationshipSessions, currentDate);
-  }, [relationshipSessions, sessionDate]);
+  // "New since I last viewed this session" anchor: mark the session viewed on
+  // open (exactly once) and keep the PRIOR marker — unread renders against it.
+  // Marking advances the marker server-side, so a double-fire (incl. React
+  // strict-mode) would wipe the anchor; the ref guards one call per session.
+  // Anchor stays None until the mark resolves (so no dots flash early) and on
+  // failure (graceful: no dots rather than a crash).
+  const [lastViewedAt, setLastViewedAt] = useState<Option<DateTime>>(None);
+  const markedViewedRef = useRef<Id | null>(null);
+  useEffect(() => {
+    if (!coachingSessionId || markedViewedRef.current === coachingSessionId) return;
+    markedViewedRef.current = coachingSessionId;
+    let cancelled = false;
+    CoachingSessionViewApi.markViewed(coachingSessionId)
+      .then((result) => {
+        if (!cancelled) setLastViewedAt(result.previousLastViewedAt);
+      })
+      .catch((err) => console.error("Failed to mark session viewed:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [coachingSessionId]);
 
   // ── Section state ────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<PanelSection>(defaultSection);
@@ -1159,7 +1162,7 @@ export function CoachingSessionPanel({
     onTopicStatus: handleTopicStatus,
     onTopicInsertToNotes: handleTopicInsertToNotes,
     resolveTopicAuthorName,
-    previousSessionDate,
+    lastViewedAt,
     agreements,
     onAgreementEdit: handleAgreementEdit,
     onAgreementDelete: handleAgreementDelete,

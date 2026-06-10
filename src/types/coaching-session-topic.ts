@@ -73,17 +73,18 @@ export function transformCoachingSessionTopic(data: any): CoachingSessionTopic {
 }
 
 // "New since last session" = created after the previous session, by the OTHER
-// party. No previous session anchor → never new. `>` on ts-luxon DateTime
-// compares instants.
+// party. No anchor (never viewed) → never new. `>` on ts-luxon DateTime
+// compares instants. `lastViewedAt` is the viewer's last-viewed marker for
+// this session — "new since I last viewed."
 export function isTopicNew(
   topic: Pick<CoachingSessionTopic, "user_id" | "created_at">,
   viewerId: Id,
-  previousSessionDate: Option<DateTime>
+  lastViewedAt: Option<DateTime>
 ): boolean {
   return (
-    previousSessionDate.some &&
+    lastViewedAt.some &&
     topic.user_id !== viewerId &&
-    topic.created_at > previousSessionDate.val
+    topic.created_at > lastViewedAt.val
   );
 }
 

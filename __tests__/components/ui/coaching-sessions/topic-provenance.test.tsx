@@ -72,8 +72,8 @@ describe("topicWasUpdated — updated strictly after created", () => {
   });
 });
 
-describe("TopicAuthorBadge — 'new since last session' dot accessibility", () => {
-  it("renders an sr-only 'New since your last session' label when the topic is new", () => {
+describe("TopicAuthorBadge — 'new since last visit' dot accessibility", () => {
+  it("renders an sr-only 'New since your last visit' label when the topic is new", () => {
     render(
       <TopicAuthorBadge
         authorName="Alex Chen"
@@ -81,11 +81,11 @@ describe("TopicAuthorBadge — 'new since last session' dot accessibility", () =
         viewerId="me"
         createdAt={AFTER}
         updatedAt={AFTER}
-        previousSessionDate={Some(PREV)}
+        lastViewedAt={Some(PREV)}
       />
     );
     expect(
-      screen.getByText(/new since your last session/i)
+      screen.getByText(/new since your last visit/i)
     ).toBeInTheDocument();
   });
 
@@ -97,15 +97,15 @@ describe("TopicAuthorBadge — 'new since last session' dot accessibility", () =
         viewerId="me"
         createdAt={AFTER}
         updatedAt={AFTER}
-        previousSessionDate={Some(PREV)}
+        lastViewedAt={Some(PREV)}
       />
     );
     expect(
-      screen.queryByText(/new since your last session/i)
+      screen.queryByText(/new since your last visit/i)
     ).not.toBeInTheDocument();
   });
 
-  it("does NOT render the 'new' label when there is no previous session", () => {
+  it("does NOT render the 'new' label when never viewed (None)", () => {
     render(
       <TopicAuthorBadge
         authorName="Alex Chen"
@@ -113,11 +113,11 @@ describe("TopicAuthorBadge — 'new since last session' dot accessibility", () =
         viewerId="me"
         createdAt={AFTER}
         updatedAt={AFTER}
-        previousSessionDate={None}
+        lastViewedAt={None}
       />
     );
     expect(
-      screen.queryByText(/new since your last session/i)
+      screen.queryByText(/new since your last visit/i)
     ).not.toBeInTheDocument();
   });
 });

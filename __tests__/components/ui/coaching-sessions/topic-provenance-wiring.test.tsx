@@ -1,30 +1,20 @@
-// Phase 5 — provenance WIRING test (non-frozen, has teeth).
+// Provenance WIRING test (non-frozen, has teeth).
 //
-// The frozen `topic-provenance.test.tsx` pins the pure decision helpers
-// (`isTopicNew` / `topicWasUpdated`) and the dot's a11y label in isolation.
-// This test proves the *host derivation* the plan calls for:
-//
-//   1. `selectPreviousSessionDate` (the FE-derived previous-session anchor)
-//      picks the latest session STRICTLY BEFORE the current one, and is `None`
-//      when there is no earlier session. The relationship list endpoint's date
-//      filter is BE-ignored, so the panel fetches a wide window and selects
-//      client-side — this helper is that selection.
-//   2. The panel threads that anchor + an author-name resolver into the row's
-//      `TopicAuthorBadge`: a topic authored by the OTHER party AFTER the
-//      previous session shows the "new" dot; the badge's initials come from the
-//      resolver mapping coach/coachee ids to names.
-//
-// It fails if the wrong session is chosen, if names are misresolved (initials
-// would be "?" or the wrong person's), or if the anchor isn't threaded (no dot).
+// The frozen `topic-provenance.test.tsx` pins the pure decision helper
+// (`isTopicNew`) and the dot's a11y label in isolation. This test proves the
+// *host derivation* under CoachingSessionViews: the panel marks the session
+// viewed on open (exactly once) and threads the returned PRIOR last-viewed
+// marker into the row's `TopicAuthorBadge` as the unread anchor — a topic
+// authored by the OTHER party AFTER that marker shows the "new since your last
+// visit" dot; the badge's initials come from the author-name resolver.
 
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { DateTime, Settings } from "ts-luxon";
+import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DateTime } from "ts-luxon";
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
-import { selectPreviousSessionDate } from "@/lib/utils/session";
 import { defaultCoachingSessionTopic } from "@/types/coaching-session-topic";
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
-import { None } from "@/types/option";
+import { Some, None } from "@/types/option";
 
 // Desktop viewport so the desktop layout renders (mobile sheet stays closed).
 Object.defineProperty(window, "matchMedia", {
@@ -76,6 +66,12 @@ vi.mock("@/lib/api/coaching-session-topics", () => ({
     isLoading: false,
     error: null,
   })),
+}));
+
+// The panel marks the session viewed on open; the returned prior marker is the
+// unread anchor. Mock it so we control the anchor deterministically.
+vi.mock("@/lib/api/coaching-session-views", () => ({
+  CoachingSessionViewApi: { markViewed: vi.fn() },
 }));
 
 vi.mock("@/lib/api/goal-progress", () => ({
@@ -137,10 +133,6 @@ vi.mock("@/lib/api/user-actions", () => ({
   useUserActionsList: vi.fn(() => ({ actions: [], isLoading: false, isError: false, refresh: vi.fn() })),
 }));
 
-vi.mock("@/lib/api/coaching-sessions", () => ({
-  useCoachingSessionList: vi.fn(() => ({ coachingSessions: [], isLoading: false, isError: false, refresh: vi.fn() })),
-}));
-
 vi.mock("@/site.config", () => ({
   siteConfig: { locale: "en-US", env: { backendServiceURL: "http://localhost:3000" } },
 }));
@@ -150,7 +142,7 @@ vi.mock("sonner", () => ({
 }));
 
 import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics";
-import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
+import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
 
 const topic = (over: Partial<CoachingSessionTopic>): CoachingSessionTopic => ({
   ...defaultCoachingSessionTopic(),
@@ -166,14 +158,16 @@ function setTopics(topics: CoachingSessionTopic[]) {
   });
 }
 
-function setRelationshipSessions(dates: string[]) {
-  vi.mocked(useCoachingSessionList).mockReturnValue({
-    coachingSessions: dates.map((date, i) => ({ id: `s${i}`, date })) as any,
-    isLoading: false,
-    isError: false,
-    refresh: vi.fn(),
+// Control the viewer's PRIOR last-viewed marker (the unread anchor). `null`
+// models a never-viewed session (first open).
+function setLastViewed(prev: DateTime | null) {
+  vi.mocked(CoachingSessionViewApi.markViewed).mockResolvedValue({
+    previousLastViewedAt: prev ? Some(prev) : None,
+    lastViewedAt: DateTime.fromISO("2026-06-07T12:00:00.000Z"),
   });
 }
+
+const at = (iso: string) => DateTime.fromISO(iso, { zone: "utc" });
 
 function renderPanel() {
   return render(
@@ -185,140 +179,80 @@ function renderPanel() {
   );
 }
 
-// ── 1. Pure previous-session selection ────────────────────────────────
-
-describe("selectPreviousSessionDate — latest session strictly before current", () => {
-  const dt = (iso: string) => DateTime.fromISO(iso, { zone: "utc" });
-
-  it("picks the latest session strictly before the current date", () => {
-    const current = dt("2026-06-07T10:00:00.000Z");
-    const result = selectPreviousSessionDate(
-      [
-        { date: "2026-05-10T10:00:00.000Z" },
-        { date: "2026-05-31T17:00:00.000Z" }, // expected previous
-        { date: "2026-04-01T09:00:00.000Z" },
-      ],
-      current
-    );
-    expect(result.some).toBe(true);
-    if (result.some) {
-      expect(result.val.toUTC().toISO()).toBe(
-        dt("2026-05-31T17:00:00.000Z").toUTC().toISO()
-      );
-    }
-  });
-
-  it("ignores the current and any future sessions", () => {
-    const current = dt("2026-06-07T10:00:00.000Z");
-    const result = selectPreviousSessionDate(
-      [
-        { date: "2026-06-07T10:00:00.000Z" }, // the current one — excluded (not strictly before)
-        { date: "2026-06-21T10:00:00.000Z" }, // future
-        { date: "2026-05-24T10:00:00.000Z" }, // expected previous
-      ],
-      current
-    );
-    expect(result.some).toBe(true);
-    if (result.some) {
-      expect(result.val.toUTC().toISO()).toBe(
-        dt("2026-05-24T10:00:00.000Z").toUTC().toISO()
-      );
-    }
-  });
-
-  it("is None when there is no earlier session", () => {
-    const current = dt("2026-06-07T10:00:00.000Z");
-    expect(
-      selectPreviousSessionDate([{ date: "2026-06-21T10:00:00.000Z" }], current).none
-    ).toBe(true);
-    expect(selectPreviousSessionDate([], current).none).toBe(true);
-  });
-});
-
-// ── 2. Panel threads anchor + resolver into the badge ─────────────────
-
-describe("CoachingSessionPanel — provenance wiring", () => {
-  const originalNow = Settings.now;
-  const fakeNow = DateTime.fromISO("2026-06-07T12:00:00.000Z", { zone: "utc" });
-
+describe("CoachingSessionPanel — provenance wiring (CoachingSessionViews)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Settings.now = () => fakeNow.toMillis();
     mockUserId = "coachee-1";
-    setRelationshipSessions([
-      "2026-05-31T17:00:00.000Z", // previous session (before current 2026-06-07)
-      "2026-06-07T10:00:00.000Z", // the current session itself
-    ]);
+    setLastViewed(null); // default: never viewed
+    setTopics([]);
   });
 
-  afterEach(() => {
-    Settings.now = originalNow;
+  it("marks the session viewed exactly once on open", async () => {
+    renderPanel();
+    await waitFor(() =>
+      expect(CoachingSessionViewApi.markViewed).toHaveBeenCalledWith("session-1")
+    );
+    expect(CoachingSessionViewApi.markViewed).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the 'new' dot for the OTHER party's topic created after the previous session", () => {
+  it("shows the 'new' dot for the OTHER party's topic created after the last-viewed marker", async () => {
+    setLastViewed(at("2026-05-31T17:00:00.000Z"));
     setTopics([
       topic({
         id: "t1",
         user_id: "coach-1", // not the viewer (coachee-1)
         body: "Discuss the promotion path",
-        created_at: DateTime.fromISO("2026-06-03T09:00:00.000Z", { zone: "utc" }),
+        created_at: at("2026-06-03T09:00:00.000Z"),
       }),
     ]);
     renderPanel();
-    // Both layouts render in the DOM (mobile hidden via CSS); the dot's sr-only
-    // label is present in each, so there is at least one match.
     expect(
-      screen.getAllByText(/new since your last session/i).length
+      (await screen.findAllByText(/new since your last visit/i)).length
     ).toBeGreaterThan(0);
   });
 
-  it("does NOT show the 'new' dot for the viewer's own topic", () => {
+  it("does NOT show the 'new' dot for the viewer's own topic", async () => {
+    setLastViewed(at("2026-05-31T17:00:00.000Z"));
     setTopics([
       topic({
         id: "t1",
         user_id: "coachee-1", // the viewer
         body: "My own topic",
-        created_at: DateTime.fromISO("2026-06-03T09:00:00.000Z", { zone: "utc" }),
+        created_at: at("2026-06-03T09:00:00.000Z"),
       }),
     ]);
     renderPanel();
-    expect(
-      screen.queryByText(/new since your last session/i)
-    ).not.toBeInTheDocument();
+    await screen.findAllByText("My own topic");
+    await waitFor(() => expect(CoachingSessionViewApi.markViewed).toHaveBeenCalled());
+    expect(screen.queryByText(/new since your last visit/i)).not.toBeInTheDocument();
   });
 
-  it("does NOT show the 'new' dot when there is no previous session", () => {
-    setRelationshipSessions(["2026-06-07T10:00:00.000Z"]); // only the current
+  it("does NOT show the 'new' dot when the session was never viewed (null marker)", async () => {
+    setLastViewed(null);
     setTopics([
       topic({
         id: "t1",
         user_id: "coach-1",
         body: "Discuss the promotion path",
-        created_at: DateTime.fromISO("2026-06-03T09:00:00.000Z", { zone: "utc" }),
+        created_at: at("2026-06-03T09:00:00.000Z"),
       }),
     ]);
     renderPanel();
-    expect(
-      screen.queryByText(/new since your last session/i)
-    ).not.toBeInTheDocument();
+    await screen.findAllByText("Discuss the promotion path");
+    await waitFor(() => expect(CoachingSessionViewApi.markViewed).toHaveBeenCalled());
+    expect(screen.queryByText(/new since your last visit/i)).not.toBeInTheDocument();
   });
 
   it("resolves the author's name: a coach-authored topic renders the coach's initials", () => {
-    setTopics([
-      topic({ id: "t1", user_id: "coach-1", body: "Reorg" }),
-    ]);
+    setTopics([topic({ id: "t1", user_id: "coach-1", body: "Reorg" })]);
     renderPanel();
-    // "Jim Hodapp" → "JH" (not "?" and not the coachee's "CB").
     expect(screen.getAllByText("JH").length).toBeGreaterThan(0);
     expect(screen.queryByText("CB")).not.toBeInTheDocument();
   });
 
   it("resolves the author's name: a coachee-authored topic renders the coachee's initials", () => {
-    setTopics([
-      topic({ id: "t1", user_id: "coachee-1", body: "Reorg" }),
-    ]);
+    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
     renderPanel();
-    // "Caleb Bourg" → "CB".
     expect(screen.getAllByText("CB").length).toBeGreaterThan(0);
     expect(screen.queryByText("JH")).not.toBeInTheDocument();
   });

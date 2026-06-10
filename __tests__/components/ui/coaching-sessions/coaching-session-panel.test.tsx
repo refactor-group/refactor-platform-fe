@@ -70,6 +70,14 @@ vi.mock("@/lib/api/agreements", () => ({
   })),
 }))
 
+vi.mock("@/lib/api/coaching-session-views", () => ({
+  CoachingSessionViewApi: {
+    markViewed: vi
+      .fn()
+      .mockResolvedValue({ previousLastViewedAt: { some: false }, lastViewedAt: null }),
+  },
+}));
+
 vi.mock("@/lib/api/goal-progress", () => ({
   useGoalProgress: vi.fn(() => ({
     progressMetrics: {

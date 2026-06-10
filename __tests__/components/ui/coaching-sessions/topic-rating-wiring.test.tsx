@@ -79,6 +79,14 @@ vi.mock("@/lib/api/coaching-session-topics", () => ({
   })),
 }));
 
+vi.mock("@/lib/api/coaching-session-views", () => ({
+  CoachingSessionViewApi: {
+    markViewed: vi
+      .fn()
+      .mockResolvedValue({ previousLastViewedAt: { some: false }, lastViewedAt: null }),
+  },
+}));
+
 vi.mock("@/lib/api/goal-progress", () => ({
   useGoalProgress: vi.fn(() => ({
     progressMetrics: undefined,

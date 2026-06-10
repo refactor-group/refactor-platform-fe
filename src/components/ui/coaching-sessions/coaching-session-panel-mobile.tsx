@@ -38,7 +38,7 @@ export function CoachingSessionPanelMobile({
   onTopicPriority,
   onTopicStatus,
   resolveTopicAuthorName,
-  previousSessionDate,
+  lastViewedAt,
   agreements,
   onAgreementEdit,
   onAgreementDelete,
@@ -189,7 +189,7 @@ export function CoachingSessionPanelMobile({
                 onStatus={onTopicStatus}
                 onInsertToNotes={onTopicInsertToNotes}
                 resolveAuthorName={resolveTopicAuthorName}
-                previousSessionDate={previousSessionDate}
+                lastViewedAt={lastViewedAt}
               />
             ) : activeSection === PanelSection.Goals ? (
               <GoalFlowPages

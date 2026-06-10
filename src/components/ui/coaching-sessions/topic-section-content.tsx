@@ -55,7 +55,7 @@ export interface TopicSectionContentProps {
   /** Resolves a topic author's user id to a display name for the badge. */
   resolveAuthorName?: (userId: Id) => string;
   /** FE-derived previous-session anchor; drives the "new since" dot. */
-  previousSessionDate?: Option<DateTime>;
+  lastViewedAt?: Option<DateTime>;
 }
 
 const initials = (userId: Id): string =>
@@ -90,7 +90,7 @@ function TopicRow({
   isAuthor,
   viewerId,
   authorName,
-  previousSessionDate,
+  lastViewedAt,
   readOnly,
   canRate,
   onEdit,
@@ -103,7 +103,7 @@ function TopicRow({
   isAuthor: boolean;
   viewerId: Id;
   authorName: string;
-  previousSessionDate: Option<DateTime>;
+  lastViewedAt: Option<DateTime>;
   readOnly: boolean;
   canRate: boolean;
   onEdit: (id: Id, body: string) => void;
@@ -191,7 +191,7 @@ function TopicRow({
         viewerId={viewerId}
         createdAt={topic.created_at}
         updatedAt={topic.updated_at}
-        previousSessionDate={previousSessionDate}
+        lastViewedAt={lastViewedAt}
         isMovedOver={topic.moved_from_session_id.some}
       />
 
@@ -295,7 +295,7 @@ export function TopicSectionContent({
   onStatus = () => {},
   onInsertToNotes,
   resolveAuthorName = () => "",
-  previousSessionDate = None,
+  lastViewedAt = None,
 }: TopicSectionContentProps) {
   const [newBody, setNewBody] = useState("");
   const [activeId, setActiveId] = useState<Id | null>(null);
@@ -358,7 +358,7 @@ export function TopicSectionContent({
       isAuthor={viewerId === topic.user_id}
       viewerId={viewerId}
       authorName={resolveAuthorName(topic.user_id)}
-      previousSessionDate={previousSessionDate}
+      lastViewedAt={lastViewedAt}
       readOnly={readOnly}
       canRate={canRate}
       onEdit={onEdit}

@@ -20,7 +20,7 @@ export interface TopicAuthorBadgeProps {
   viewerId: Id;
   createdAt: DateTime;
   updatedAt: DateTime;
-  previousSessionDate: Option<DateTime>;
+  lastViewedAt: Option<DateTime>;
   /** Topic the backend moved here from a prior session (deferral). */
   isMovedOver?: boolean;
 }
@@ -42,13 +42,13 @@ export function TopicAuthorBadge({
   viewerId,
   createdAt,
   updatedAt,
-  previousSessionDate,
+  lastViewedAt,
   isMovedOver = false,
 }: TopicAuthorBadgeProps): JSX.Element {
   const isNew = isTopicNew(
     { user_id: authorId, created_at: createdAt },
     viewerId,
-    previousSessionDate
+    lastViewedAt
   );
   const showUpdated = topicWasUpdated({
     created_at: createdAt,
@@ -67,7 +67,7 @@ export function TopicAuthorBadge({
           </Avatar>
           {isNew && (
             <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-violet-500 ring-2 ring-card">
-              <span className="sr-only">New since your last session</span>
+              <span className="sr-only">New since your last visit</span>
             </span>
           )}
         </span>
@@ -95,7 +95,7 @@ export function TopicAuthorBadge({
             )}
           >
             <span className="h-2 w-2 rounded-full bg-violet-500" />
-            New since your last session
+            New since your last visit
           </p>
         )}
         {isMovedOver && (
