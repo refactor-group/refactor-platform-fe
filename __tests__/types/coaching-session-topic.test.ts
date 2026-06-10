@@ -33,7 +33,7 @@ describe("transformCoachingSessionTopic", () => {
     body: "Talk about the reorg",
     priority: "High",
     status: "Discussed",
-    carried_from_topic_id: "t0",
+    moved_from_session_id: "s0",
     display_order: 4,
     created_at: "2026-06-05T09:00:00Z",
     updated_at: "2026-06-07T13:00:00Z",
@@ -58,11 +58,11 @@ describe("transformCoachingSessionTopic", () => {
     expect(t.status).toBe(TopicStatus.Discussed);
   });
 
-  it("wraps a present carried_from_topic_id in Some", () => {
+  it("wraps a present moved_from_session_id in Some", () => {
     const t = transformCoachingSessionTopic(raw);
-    expect(t.carried_from_topic_id.some).toBe(true);
-    expect(t.carried_from_topic_id.some && t.carried_from_topic_id.val).toBe(
-      "t0"
+    expect(t.moved_from_session_id.some).toBe(true);
+    expect(t.moved_from_session_id.some && t.moved_from_session_id.val).toBe(
+      "s0"
     );
   });
 
@@ -92,20 +92,20 @@ describe("transformCoachingSessionTopic", () => {
     );
   });
 
-  it("treats null/absent carried_from_topic_id as None", () => {
+  it("treats null/absent moved_from_session_id as None", () => {
     expect(
-      transformCoachingSessionTopic({ ...raw, carried_from_topic_id: null })
-        .carried_from_topic_id.some
+      transformCoachingSessionTopic({ ...raw, moved_from_session_id: null })
+        .moved_from_session_id.some
     ).toBe(false);
   });
 });
 
 describe("defaultCoachingSessionTopic", () => {
-  it("returns unset priority, Open status, no carry-over, and DateTime timestamps", () => {
+  it("returns unset priority, Open status, no move-origin, and DateTime timestamps", () => {
     const t = defaultCoachingSessionTopic();
     expect(t.priority.some).toBe(false);
     expect(t.status).toBe(TopicStatus.Open);
-    expect(t.carried_from_topic_id.some).toBe(false);
+    expect(t.moved_from_session_id.some).toBe(false);
     expect(t.id).toBe("");
     expect(t.coaching_session_id).toBe("");
     expect(t.user_id).toBe("");

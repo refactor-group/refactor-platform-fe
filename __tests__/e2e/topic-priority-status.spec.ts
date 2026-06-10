@@ -43,7 +43,7 @@ const makeTopic = (over: Record<string, unknown> = {}) => ({
   body: 'Discuss the roadmap',
   priority: null,
   status: 'Open',
-  carried_from_topic_id: null,
+  moved_from_session_id: null,
   created_at: '2026-03-10T00:00:00Z',
   updated_at: '2026-03-10T00:00:00Z',
   ...over,
@@ -74,7 +74,7 @@ async function mockTopicRoutes(page: Page, topics: unknown[]) {
   return { ratingPayloads }
 }
 
-test.describe('CoachingSessionTopics v4 — priority + carry-over (e2e)', () => {
+test.describe('CoachingSessionTopics v5 — priority + defer/move (e2e)', () => {
   test.beforeEach(async ({ page, context }) => {
     // Force the desktop layout so the inline Topics panel renders (mobile keeps
     // it in a closed sheet).
@@ -119,7 +119,7 @@ test.describe('CoachingSessionTopics v4 — priority + carry-over (e2e)', () => 
     expect(ratingPayloads[0]).toEqual({ priority: 'High' })
   })
 
-  test('carried-over topic shows its provenance line on avatar hover', async ({
+  test('moved-over topic shows its provenance line on avatar hover', async ({
     page,
   }) => {
     test.skip(
@@ -129,9 +129,9 @@ test.describe('CoachingSessionTopics v4 — priority + carry-over (e2e)', () => 
 
     await mockTopicRoutes(page, [
       makeTopic({
-        id: 'topic-carried',
+        id: 'topic-moved',
         body: 'Returning topic',
-        carried_from_topic_id: 'prev-session-topic',
+        moved_from_session_id: 'prev-session',
       }),
     ])
 
@@ -142,7 +142,7 @@ test.describe('CoachingSessionTopics v4 — priority + carry-over (e2e)', () => 
     await page.locator('span.relative.inline-flex.shrink-0').first().hover()
 
     await expect(
-      page.getByText('Carried over from a previous session')
+      page.getByText('Moved from a previous session')
     ).toBeVisible()
   })
 })

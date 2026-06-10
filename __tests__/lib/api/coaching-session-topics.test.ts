@@ -31,7 +31,7 @@ vi.mock("@/lib/api/entity-api", () => ({
 // reorder/rate/status use PATCH, which EntityApi does not provide a helper for,
 // so the module calls sessionGuard.patch directly.
 vi.mock("@/lib/auth/session-guard", () => ({
-  sessionGuard: { patch: vi.fn() },
+  sessionGuard: { patch: vi.fn(), post: vi.fn() },
 }));
 
 vi.mock("@/site.config", () => ({
@@ -99,6 +99,14 @@ describe("CoachingSessionTopicApi", () => {
       `${BASE}/s1/topics/t1/status`,
       { status: "Deferred" }
     );
+  });
+
+  it("undefer POSTs to the dedicated undefer sub-route (no body)", async () => {
+    vi.mocked(sessionGuard.post).mockResolvedValue({
+      data: { data: {} },
+    } as never);
+    await CoachingSessionTopicApi.undefer("s1", "t1");
+    expect(sessionGuard.post).toHaveBeenCalledWith(`${BASE}/s1/topics/t1/undefer`);
   });
 
   it("update PUTs a body edit", async () => {

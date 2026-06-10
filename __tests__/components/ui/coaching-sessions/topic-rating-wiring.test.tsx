@@ -62,6 +62,7 @@ vi.mock("@/lib/api/agreements", () => ({
 const mockRefreshTopics = vi.fn();
 const mockRateTopic = vi.fn();
 const mockSetStatus = vi.fn();
+const mockUndefer = vi.fn();
 
 vi.mock("@/lib/api/coaching-session-topics", () => ({
   useCoachingSessionTopicList: vi.fn(),
@@ -73,6 +74,7 @@ vi.mock("@/lib/api/coaching-session-topics", () => ({
     reorder: vi.fn(),
     rate: mockRateTopic,
     setStatus: mockSetStatus,
+    undefer: mockUndefer,
     isLoading: false,
     error: null,
   })),
@@ -151,6 +153,7 @@ vi.mock("sonner", () => ({
 }));
 
 import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics";
+import { toast as sonnerToast } from "sonner";
 
 const topic = (over: Partial<CoachingSessionTopic>): CoachingSessionTopic => ({
   ...defaultCoachingSessionTopic(),
@@ -248,16 +251,43 @@ describe("CoachingSessionPanel — status wiring (either participant)", () => {
     });
   });
 
-  it("routes a Defer toggle to setStatus", async () => {
+  it("defers via setStatus and offers an undo that un-defers at the destination", async () => {
     const user = userEvent.setup();
     mockUserId = "coachee-1";
+    // The defer response is the topic at its NEW location (the next session).
+    mockSetStatus.mockResolvedValue(
+      topic({ id: "t1", coaching_session_id: "session-2" })
+    );
     setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
     renderPanel();
 
     await user.click(firstByRole("button", /defer to next session/i));
-
     await waitFor(() => {
       expect(mockSetStatus).toHaveBeenCalledWith("t1", TopicStatus.Deferred);
     });
+
+    // Undo targets wherever the topic landed (the destination session).
+    const toastCall = vi.mocked(sonnerToast).mock.calls.at(-1);
+    const undo = (toastCall?.[1] as any)?.action?.onClick as () => Promise<void>;
+    expect(typeof undo).toBe("function");
+    await undo();
+    expect(mockUndefer).toHaveBeenCalledWith("session-2", "t1");
+  });
+
+  it("un-defers a HELD Deferred topic via the undefer endpoint, not a status write", async () => {
+    const user = userEvent.setup();
+    mockUserId = "coachee-1";
+    setTopics([
+      topic({ id: "t1", user_id: "coachee-1", body: "Reorg", status: TopicStatus.Deferred }),
+    ]);
+    renderPanel();
+
+    // A held topic shows the defer toggle active ("Undo defer"); clicking it
+    // reverses via undefer at the topic's current session — never PATCH status.
+    await user.click(firstByRole("button", /undo defer/i));
+    await waitFor(() => {
+      expect(mockUndefer).toHaveBeenCalledWith("session-1", "t1");
+    });
+    expect(mockSetStatus).not.toHaveBeenCalled();
   });
 });

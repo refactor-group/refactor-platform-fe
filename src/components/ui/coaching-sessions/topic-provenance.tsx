@@ -21,8 +21,8 @@ export interface TopicAuthorBadgeProps {
   createdAt: DateTime;
   updatedAt: DateTime;
   previousSessionDate: Option<DateTime>;
-  /** Topic the backend copied forward from a deferred prior-session topic. */
-  isCarriedOver?: boolean;
+  /** Topic the backend moved here from a prior session (deferral). */
+  isMovedOver?: boolean;
 }
 
 const initials = (name: string): string =>
@@ -43,7 +43,7 @@ export function TopicAuthorBadge({
   createdAt,
   updatedAt,
   previousSessionDate,
-  isCarriedOver = false,
+  isMovedOver = false,
 }: TopicAuthorBadgeProps): JSX.Element {
   const isNew = isTopicNew(
     { user_id: authorId, created_at: createdAt },
@@ -98,10 +98,10 @@ export function TopicAuthorBadge({
             New since your last session
           </p>
         )}
-        {isCarriedOver && (
+        {isMovedOver && (
           <p className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-sky-600 dark:text-sky-400">
             <CalendarClock className="h-3 w-3" />
-            Carried over from a previous session
+            Moved from a previous session
           </p>
         )}
       </HoverCardContent>

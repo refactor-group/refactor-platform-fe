@@ -66,6 +66,7 @@ vi.mock("@/lib/api/coaching-session-topics", () => ({
     delete: mockDeleteTopic,
     reorder: mockReorderTopics,
     setStatus: vi.fn(),
+    undefer: vi.fn(),
     isLoading: false,
     error: null,
   })),

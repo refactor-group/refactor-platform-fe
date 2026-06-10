@@ -192,7 +192,7 @@ function TopicRow({
         createdAt={topic.created_at}
         updatedAt={topic.updated_at}
         previousSessionDate={previousSessionDate}
-        isCarriedOver={topic.carried_from_topic_id.some}
+        isMovedOver={topic.moved_from_session_id.some}
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">

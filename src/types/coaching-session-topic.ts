@@ -25,10 +25,12 @@ export interface CoachingSessionTopic {
   body: string;
   // Coachee-set; None = unset (no forced rating).
   priority: Option<TopicPriority>;
-  // Always present; lifecycle defaults to Open.
+  // Always present; lifecycle defaults to Open. Deferred only persists while
+  // the topic is held (no next session to move into yet).
   status: TopicStatus;
-  // Some on a topic the backend copied forward from a Deferred source.
-  carried_from_topic_id: Option<Id>;
+  // The session this topic was last moved OUT of (deferral re-parents it).
+  // Some after a move; cleared on undo. Powers the "moved from" badge + undo.
+  moved_from_session_id: Option<Id>;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -64,7 +66,7 @@ export function transformCoachingSessionTopic(data: any): CoachingSessionTopic {
     body: data.body,
     priority: toPriority(data.priority),
     status: toStatus(data.status),
-    carried_from_topic_id: toOptionalId(data.carried_from_topic_id),
+    moved_from_session_id: toOptionalId(data.moved_from_session_id),
     created_at: toDateTime(data.created_at),
     updated_at: toDateTime(data.updated_at),
   };
@@ -102,7 +104,7 @@ export function defaultCoachingSessionTopic(): CoachingSessionTopic {
     body: "",
     priority: None,
     status: TopicStatus.Open,
-    carried_from_topic_id: None,
+    moved_from_session_id: None,
     created_at: now,
     updated_at: now,
   };

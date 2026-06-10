@@ -38,9 +38,9 @@ import { selectPreviousSessionDate } from "@/lib/utils/session";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
-import type {
-  CoachingSessionTopic,
-  TopicPriority,
+import {
+  type CoachingSessionTopic,
+  type TopicPriority,
   TopicStatus,
 } from "@/types/coaching-session-topic";
 import { defaultAgreement } from "@/types/agreement";
@@ -429,6 +429,7 @@ export function CoachingSessionPanel({
     reorder: reorderTopics,
     rate: rateTopic,
     setStatus: setTopicStatus,
+    undefer: undeferTopic,
   } = useCoachingSessionTopicMutation(coachingSessionId);
 
   const { insertTextIntoNotes } = useEditorCache();
@@ -1078,9 +1079,46 @@ export function CoachingSessionPanel({
 
   const handleTopicStatus = useCallback(
     async (id: Id, status: TopicStatus) => {
+      const topic = topics.find((t) => t.id === id);
+      // Un-deferring a held topic uses the dedicated endpoint — the BE does not
+      // overload PATCH status {Open} for undo.
+      if (status === TopicStatus.Open && topic?.status === TopicStatus.Deferred) {
+        try {
+          await undeferTopic(coachingSessionId, id);
+          refreshTopics();
+        } catch (err) {
+          console.error("Failed to undefer topic:", err);
+          toast({
+            variant: "destructive",
+            title: "Failed to update topic",
+            description: "An error occurred while updating the topic.",
+          });
+        }
+        return;
+      }
       try {
-        await setTopicStatus(id, status);
+        const updated = await setTopicStatus(id, status);
         refreshTopics();
+        // Deferring re-parents the topic (it leaves this list), so offer an
+        // undo — addressed at wherever it landed.
+        if (status === TopicStatus.Deferred) {
+          const destination = updated.coaching_session_id;
+          sonnerToast("Topic deferred to the next session", {
+            action: {
+              label: "Undo",
+              onClick: async () => {
+                try {
+                  await undeferTopic(destination, id);
+                  refreshTopics();
+                } catch {
+                  sonnerToast.error("Failed to undo", {
+                    description: "Could not bring the topic back.",
+                  });
+                }
+              },
+            },
+          });
+        }
       } catch (err) {
         console.error("Failed to set topic status:", err);
         toast({
@@ -1090,7 +1128,7 @@ export function CoachingSessionPanel({
         });
       }
     },
-    [setTopicStatus, refreshTopics]
+    [topics, setTopicStatus, undeferTopic, refreshTopics, coachingSessionId]
   );
 
   const handleTopicInsertToNotes = useCallback(
