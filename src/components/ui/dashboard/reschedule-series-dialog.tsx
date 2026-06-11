@@ -52,7 +52,7 @@ export function RescheduleSeriesDialog({
       open={series !== null}
       onOpenChange={(next) => !next && onClose()}
     >
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Reschedule recurring series</DialogTitle>
           <DialogDescription>
@@ -208,16 +208,20 @@ function RescheduleSeriesForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6">
+    <form
+      onSubmit={handleSubmit}
+      className="grid gap-6 sm:grid-cols-2 sm:items-start"
+    >
+      <div className="space-y-2">
+        <Label htmlFor="reschedule-date">First session date</Label>
+        <Calendar
+          mode="single"
+          selected={sessionDate}
+          onSelect={(date) => setSessionDate(date)}
+        />
+      </div>
+
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="reschedule-date">First session date</Label>
-          <Calendar
-            mode="single"
-            selected={sessionDate}
-            onSelect={(date) => setSessionDate(date)}
-          />
-        </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="reschedule-time">First session time</Label>
@@ -241,29 +245,33 @@ function RescheduleSeriesForm({
             />
           </div>
         </div>
+
+        <RecurrenceFields
+          frequency={frequency}
+          onFrequencyChange={setFrequency}
+          interval={interval}
+          onIntervalChange={setInterval}
+          byWeekdays={byWeekdays}
+          onByWeekdaysChange={setByWeekdays}
+          end={end}
+          onEndChange={setEnd}
+          startWeekday={startWeekday}
+          startDate={
+            sessionDate
+              ? DateTime.fromJSDate(sessionDate).setZone(userTimezone)
+              : null
+          }
+          timezone={userTimezone}
+          disabled={isSubmitting}
+          error={recurrenceError}
+        />
       </div>
 
-      <RecurrenceFields
-        frequency={frequency}
-        onFrequencyChange={setFrequency}
-        interval={interval}
-        onIntervalChange={setInterval}
-        byWeekdays={byWeekdays}
-        onByWeekdaysChange={setByWeekdays}
-        end={end}
-        onEndChange={setEnd}
-        startWeekday={startWeekday}
-        startDate={
-          sessionDate
-            ? DateTime.fromJSDate(sessionDate).setZone(userTimezone)
-            : null
-        }
-        timezone={userTimezone}
-        disabled={isSubmitting}
-        error={recurrenceError}
-      />
-
-      <Button type="submit" disabled={!canSubmit} className="justify-self-start">
+      <Button
+        type="submit"
+        disabled={!canSubmit}
+        className="justify-self-start sm:col-span-2"
+      >
         {isSubmitting && <Spinner className="mr-2" />}
         Reschedule sessions
       </Button>
