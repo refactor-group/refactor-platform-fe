@@ -378,22 +378,23 @@ export function CoachingSessionPanel({
   // open (exactly once) and keep the PRIOR marker — unread renders against it.
   // Marking advances the marker server-side, so a double-fire (incl. React
   // strict-mode) would wipe the anchor; the ref guards one call per session.
-  // Anchor stays None until the mark resolves (so no dots flash early) and on
-  // failure (graceful: no dots rather than a crash).
+  // The write is gated on the ref still owning this session at resolve time —
+  // that survives strict-mode's setup/cleanup/setup (a cleanup must NOT cancel
+  // the lone surviving call) while still rejecting a stale write after a fast
+  // session switch. Anchor stays None until the mark resolves (no dots flash
+  // early) and on failure (graceful: no dots rather than a crash).
   const [lastViewedAt, setLastViewedAt] = useState<Option<DateTime>>(None);
   const markedViewedRef = useRef<Id | null>(null);
   useEffect(() => {
     if (!coachingSessionId || markedViewedRef.current === coachingSessionId) return;
     markedViewedRef.current = coachingSessionId;
-    let cancelled = false;
     CoachingSessionViewApi.markViewed(coachingSessionId)
       .then((result) => {
-        if (!cancelled) setLastViewedAt(result.previousLastViewedAt);
+        if (markedViewedRef.current === coachingSessionId) {
+          setLastViewedAt(result.previousLastViewedAt);
+        }
       })
       .catch((err) => console.error("Failed to mark session viewed:", err));
-    return () => {
-      cancelled = true;
-    };
   }, [coachingSessionId]);
 
   // ── Section state ────────────────────────────────────────────────
