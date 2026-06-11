@@ -133,6 +133,11 @@ const TopicRow = memo(function TopicRow({
   const showDropLine = isOver && active?.id !== topic.id;
   const discussed = topic.status === TopicStatus.Discussed;
 
+  const startEditing = () => {
+    setDraft(topic.body);
+    setEditing(true);
+  };
+
   const commit = () => {
     const trimmed = draft.trim();
     if (trimmed && trimmed !== topic.body) onEdit(topic.id, trimmed);
@@ -204,7 +209,7 @@ const TopicRow = memo(function TopicRow({
         ) : (
           <button
             type="button"
-            onClick={readOnly ? undefined : () => setEditing(true)}
+            onClick={readOnly ? undefined : startEditing}
             disabled={readOnly}
             className={cn(
               "rounded-md px-1.5 py-1 text-left text-[13px] leading-snug transition-colors",
