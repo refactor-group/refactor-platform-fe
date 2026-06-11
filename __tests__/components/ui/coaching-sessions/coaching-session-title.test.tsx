@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Some, None, type Option } from "@/types/option";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
 
-const mockUpdate = vi.fn();
+const mockUpdateTitle = vi.fn();
 const mockRefresh = vi.fn();
 
 let sessionTitle: Option<string> = None;
@@ -65,13 +65,9 @@ vi.mock("@/lib/api/coaching-session-topics", () => ({
 }));
 
 vi.mock("@/lib/api/coaching-sessions", () => ({
-  useCoachingSessionMutation: vi.fn(() => ({
-    update: mockUpdate,
-    create: vi.fn(),
-    delete: vi.fn(),
-    isLoading: false,
-    error: null,
-  })),
+  CoachingSessionApi: {
+    updateTitle: (...args: unknown[]) => mockUpdateTitle(...args),
+  },
 }));
 
 vi.mock("@/components/ui/coaching-sessions/editor-cache-context", () => ({
@@ -92,7 +88,7 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     sessionTitle = None;
     goalTitle = "";
     topicBodies = [];
-    mockUpdate.mockResolvedValue(undefined);
+    mockUpdateTitle.mockResolvedValue(undefined);
     mockRefresh.mockResolvedValue(undefined);
   });
 
@@ -139,7 +135,7 @@ describe("CoachingSessionTitle — save wiring", () => {
     sessionTitle = None;
     goalTitle = "";
     topicBodies = [];
-    mockUpdate.mockResolvedValue(undefined);
+    mockUpdateTitle.mockResolvedValue(undefined);
     mockRefresh.mockResolvedValue(undefined);
   });
 
@@ -150,11 +146,8 @@ describe("CoachingSessionTitle — save wiring", () => {
     fireEvent.change(input, { target: { value: "New plan" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-    expect(mockUpdate).toHaveBeenCalledWith(
-      "session-1",
-      expect.objectContaining({ id: "session-1", title: Some("New plan") })
-    );
+    await waitFor(() => expect(mockUpdateTitle).toHaveBeenCalledTimes(1));
+    expect(mockUpdateTitle).toHaveBeenCalledWith("session-1", Some("New plan"));
     await waitFor(() => expect(mockRefresh).toHaveBeenCalled());
   });
 
@@ -166,10 +159,7 @@ describe("CoachingSessionTitle — save wiring", () => {
     fireEvent.change(input, { target: { value: "" } });
     fireEvent.keyDown(input, { key: "Enter" });
 
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
-    expect(mockUpdate).toHaveBeenCalledWith(
-      "session-1",
-      expect.objectContaining({ title: None })
-    );
+    await waitFor(() => expect(mockUpdateTitle).toHaveBeenCalledTimes(1));
+    expect(mockUpdateTitle).toHaveBeenCalledWith("session-1", None);
   });
 });

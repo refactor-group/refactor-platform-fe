@@ -13,8 +13,10 @@ import {
 import { CoachingSessionCountByMonth } from "@/types/coaching-session-bucket";
 import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
 import { CreateRecurringSessionRequest } from "@/types/recurrence";
-import { EntityApi } from "./entity-api";
+import { EntityApi, ApiResponse } from "./entity-api";
 import { USERS_BASEURL } from "./users";
+import { sessionGuard } from "@/lib/auth/session-guard";
+import { Option } from "@/types/option";
 import { DateTime } from "ts-luxon";
 
 // Re-export for convenience
@@ -135,6 +137,30 @@ export const CoachingSessionApi = {
         serializeCoachingSession(coachingSession)
       )
     ),
+
+  /**
+   * Updates only a coaching session's title via the dedicated participant-gated
+   * endpoint. Unlike `update` (PUT, coach-only scheduling), this PATCH is
+   * authorized for either participant, so a coachee can rename a session.
+   *
+   * Three-state title: `Some(s)` sets it (trimmed BE-side), `None` clears it to
+   * null. Omitting it would be a no-op, but the title editor always sends an
+   * explicit value.
+   *
+   * @param id The ID of the coaching session to retitle
+   * @param title The new title, or None to clear
+   * @returns Promise resolving to the updated CoachingSession object
+   */
+  updateTitle: async (
+    id: Id,
+    title: Option<string>
+  ): Promise<CoachingSession> => {
+    const res = await sessionGuard.patch<ApiResponse<any>>(
+      `${COACHING_SESSIONS_BASEURL}/${id}/title`,
+      { title: title.some ? title.val : null }
+    );
+    return transformCoachingSession(res.data.data);
+  },
 
   /**
    * Deletes an coaching session.

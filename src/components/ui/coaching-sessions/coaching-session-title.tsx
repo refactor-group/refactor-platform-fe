@@ -6,7 +6,7 @@ import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-sess
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useGoalsBySession } from "@/lib/api/goals";
 import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics";
-import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
+import { CoachingSessionApi } from "@/lib/api/coaching-sessions";
 import {
   coachingSessionTitle,
   isPastSession,
@@ -33,7 +33,6 @@ const CoachingSessionTitle: FC = () => {
   const sessionId = currentCoachingSession?.id ?? "";
   const { goals } = useGoalsBySession(sessionId || null);
   const { topics } = useCoachingSessionTopicList(sessionId);
-  const { update } = useCoachingSessionMutation();
   const { presenceState } = useEditorCache();
 
   const session = currentCoachingSession;
@@ -60,7 +59,7 @@ const CoachingSessionTitle: FC = () => {
     const title = next ? Some(next) : None;
     setSave({ kind: "saving", title });
     try {
-      await update(session.id, { ...session, title });
+      await CoachingSessionApi.updateTitle(session.id, title);
       await refresh();
     } finally {
       setSave({ kind: "idle" });
