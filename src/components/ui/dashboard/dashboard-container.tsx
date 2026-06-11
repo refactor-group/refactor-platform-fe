@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
+import { CoachingSeriesCard } from "@/components/ui/dashboard/coaching-series-card";
 import { CoachingSessionsCard } from "@/components/ui/dashboard/coaching-sessions-card";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
@@ -88,6 +89,10 @@ export function DashboardContainer() {
           onReschedule={handleOpenDialog}
           onRefreshNeeded={handleSessionsCardRefreshNeeded}
         />
+      </div>
+
+      <div className="w-full mt-8">
+        <CoachingSeriesCard relationshipId={currentCoachingRelationshipId || null} />
       </div>
       <CoachingSessionDialog
         open={dialogOpen}
