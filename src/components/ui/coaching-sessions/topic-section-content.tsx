@@ -47,6 +47,8 @@ export interface TopicSectionContentProps {
   readOnly?: boolean;
   /** True only for the coachee; the priority control is read-only otherwise. */
   canRate?: boolean;
+  /** True for the coach: may delete ANY topic, not just their own. */
+  canDeleteAny?: boolean;
   onPriority?: (id: Id, priority: Option<TopicPriority>) => void;
   /** Lifecycle (Open/Discussed/Deferred) — either participant may set it. */
   onStatus?: (id: Id, status: TopicStatus) => void;
@@ -93,6 +95,7 @@ function TopicRow({
   viewedAnchor,
   readOnly,
   canRate,
+  canDeleteAny,
   onEdit,
   onDelete,
   onPriority,
@@ -106,6 +109,7 @@ function TopicRow({
   viewedAnchor: LastViewedAnchor;
   readOnly: boolean;
   canRate: boolean;
+  canDeleteAny: boolean;
   onEdit: (id: Id, body: string) => void;
   onDelete: (id: Id) => void;
   onPriority: (id: Id, priority: Option<TopicPriority>) => void;
@@ -265,7 +269,7 @@ function TopicRow({
               </button>
             )}
 
-            {isAuthor && !readOnly && (
+            {(isAuthor || canDeleteAny) && !readOnly && (
               <button
                 type="button"
                 aria-label="Delete topic"
@@ -291,6 +295,7 @@ export function TopicSectionContent({
   onReorder,
   readOnly = false,
   canRate = false,
+  canDeleteAny = false,
   onPriority = () => {},
   onStatus = () => {},
   onInsertToNotes,
@@ -361,6 +366,7 @@ export function TopicSectionContent({
       viewedAnchor={viewedAnchor}
       readOnly={readOnly}
       canRate={canRate}
+      canDeleteAny={canDeleteAny}
       onEdit={onEdit}
       onDelete={onDelete}
       onPriority={onPriority}

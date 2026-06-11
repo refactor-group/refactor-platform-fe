@@ -50,6 +50,7 @@ export function CoachingSessionPanelDesktop({
   onTopicDelete,
   onTopicReorder,
   canRateTopics,
+  canDeleteAnyTopic,
   onTopicPriority,
   onTopicStatus,
   onTopicInsertToNotes,
@@ -235,6 +236,7 @@ export function CoachingSessionPanelDesktop({
               onReorder={onTopicReorder}
               readOnly={readOnly}
               canRate={canRateTopics}
+              canDeleteAny={canDeleteAnyTopic}
               onPriority={onTopicPriority}
               onStatus={onTopicStatus}
               onInsertToNotes={onTopicInsertToNotes}

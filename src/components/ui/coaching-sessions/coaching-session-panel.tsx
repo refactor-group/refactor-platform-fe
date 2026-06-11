@@ -92,6 +92,8 @@ export interface CoachingSessionPanelSharedProps {
   onTopicReorder: (orderedIds: Id[]) => void;
   /** True only when the viewer is the coachee; priority is coachee-only. */
   canRateTopics: boolean;
+  /** Coach-only: may delete ANY topic; the coachee may delete only their own. */
+  canDeleteAnyTopic: boolean;
   onTopicPriority: (id: Id, priority: Option<TopicPriority>) => void;
   /** Lifecycle (Open/Discussed/Deferred) — either participant may set it. */
   onTopicStatus: (id: Id, status: TopicStatus) => void;
@@ -1163,6 +1165,7 @@ export function CoachingSessionPanel({
     onTopicDelete: handleTopicDelete,
     onTopicReorder: handleTopicReorder,
     canRateTopics: Boolean(userId && coacheeId && userId === coacheeId),
+    canDeleteAnyTopic: Boolean(userId && coachId && userId === coachId),
     onTopicPriority: handleTopicPriority,
     onTopicStatus: handleTopicStatus,
     onTopicInsertToNotes: handleTopicInsertToNotes,

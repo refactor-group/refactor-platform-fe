@@ -299,3 +299,35 @@ describe("CoachingSessionPanel — status wiring (either participant)", () => {
     expect(mockSetStatus).not.toHaveBeenCalled();
   });
 });
+
+describe("CoachingSessionPanel — delete permission (coach deletes any, coachee only own)", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("shows the coach a delete affordance on the coachee's topic", () => {
+    mockUserId = "coach-1";
+    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Coachee's topic" })]);
+    renderPanel();
+    // The coach may delete a topic they did not author.
+    expect(
+      screen.getAllByRole("button", { name: /delete topic/i }).length
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does NOT show the coachee a delete affordance on the coach's topic", () => {
+    mockUserId = "coachee-1";
+    setTopics([topic({ id: "t1", user_id: "coach-1", body: "Coach's topic" })]);
+    renderPanel();
+    expect(
+      screen.queryByRole("button", { name: /delete topic/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the coachee a delete affordance on their own topic", () => {
+    mockUserId = "coachee-1";
+    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "My topic" })]);
+    renderPanel();
+    expect(
+      screen.getAllByRole("button", { name: /delete topic/i }).length
+    ).toBeGreaterThanOrEqual(1);
+  });
+});

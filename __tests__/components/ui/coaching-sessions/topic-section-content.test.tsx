@@ -1,7 +1,8 @@
 // FROZEN ACCEPTANCE TEST (overseer-handoff-workflow).
 // Pins the Phase 3a contract for the Topics section: the presentational
 // <TopicSectionContent> — list render, empty state, inline add, click-to-edit,
-// and the load-bearing permission rule **delete is author-only**. Reorder
+// and the load-bearing permission rule **delete: your own topic, or ANY topic
+// when you're the coach** (`canDeleteAny`). Reorder
 // (Phase 3b), rating chips (Phase 4), and provenance/"new" dot (Phase 5) are
 // NOT part of this phase. Data wiring (Phase 1 hooks -> props, panel-switcher
 // integration) lives in the data-connected section + panel host and is covered
@@ -116,7 +117,7 @@ describe("TopicSectionContent — click to edit", () => {
   });
 });
 
-describe("TopicSectionContent — delete is author-only", () => {
+describe("TopicSectionContent — delete: own topic, or any topic for a coach", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("shows a delete affordance on the viewer's own topic and fires onDelete", () => {
@@ -135,7 +136,7 @@ describe("TopicSectionContent — delete is author-only", () => {
     expect(onDelete).toHaveBeenCalledWith("t1");
   });
 
-  it("does NOT render a delete affordance on another author's topic", () => {
+  it("does NOT render a delete affordance on another author's topic (non-coach viewer)", () => {
     render(
       <TopicSectionContent
         topics={[topic({ id: "t2", user_id: "them", body: "Their topic" })]}
@@ -148,5 +149,22 @@ describe("TopicSectionContent — delete is author-only", () => {
     expect(
       screen.queryByRole("button", { name: /delete topic/i })
     ).not.toBeInTheDocument();
+  });
+
+  it("renders a delete affordance on another author's topic when the viewer is the coach (canDeleteAny) and fires onDelete", () => {
+    const onDelete = vi.fn();
+    render(
+      <TopicSectionContent
+        topics={[topic({ id: "t2", user_id: "them", body: "Their topic" })]}
+        viewerId="me"
+        canDeleteAny
+        onCreate={noop}
+        onEdit={noop}
+        onDelete={onDelete}
+      />
+    );
+    const del = screen.getByRole("button", { name: /delete topic/i });
+    fireEvent.click(del);
+    expect(onDelete).toHaveBeenCalledWith("t2");
   });
 });

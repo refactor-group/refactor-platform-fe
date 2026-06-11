@@ -237,9 +237,10 @@ describe("CoachingSessionPanel — Topics wiring", () => {
     ])
     renderPanel()
 
-    // Exactly one delete affordance — the viewer's own topic in the visible
-    // (desktop) layout. The other author's topic contributes none, proving the
-    // author-only gate (the mobile sheet is closed, so it renders nothing).
+    // Viewer "user-1" is neither coach nor coachee here, so the coach
+    // delete-any override is off and the author-only gate applies: exactly one
+    // delete affordance (the viewer's own topic) in the visible desktop layout.
+    // The other author's topic contributes none (the mobile sheet is closed).
     const deleteButtons = screen.getAllByRole("button", { name: /delete topic/i })
     expect(deleteButtons).toHaveLength(1)
     await user.click(deleteButtons[0])
