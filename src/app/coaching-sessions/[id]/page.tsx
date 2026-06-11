@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useAddFromNotes } from "@/lib/hooks/use-add-from-notes";
 
-import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
@@ -300,7 +299,7 @@ export default function CoachingSessionsPage() {
       <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
         <div className="flex-col pl-4 md:flex">
           <div className="flex flex-col items-start justify-between space-y-2 py-5 px-4 sm:flex-row sm:items-center sm:space-y-0 md:min-h-16">
-            <CoachingSessionTitle locale={siteConfig.locale} />
+            <CoachingSessionTitle />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
               <JoinMeetingButton
                 sessionId={currentCoachingSessionId ?? null}

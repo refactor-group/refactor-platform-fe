@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { FC } from "react";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useGoalsBySession } from "@/lib/api/goals";
@@ -23,7 +24,7 @@ import { PresenceIndicator } from "@/components/ui/presence-indicator";
 import { UserPresence } from "@/types/presence";
 import { RelationshipRole } from "@/types/relationship-role";
 
-const CoachingSessionTitle: React.FC<{ locale: string }> = () => {
+const CoachingSessionTitle: FC = () => {
   const { userSession } = useAuthStore((state) => state);
 
   const { currentCoachingSession, refresh } = useCurrentCoachingSession();
