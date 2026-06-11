@@ -8,6 +8,7 @@ import {
   CoachingSessionSeriesWithSessions,
   CoachingSessionSeriesRaw,
   CoachingSessionSeriesWithSessionsRaw,
+  defaultCoachingSessionSeries,
   defaultCoachingSessionSeriesWithSessions,
   parseCoachingSessionSeries,
   parseCoachingSessionSeriesWithSessions,
@@ -78,10 +79,12 @@ export const CoachingSessionSeriesApi = {
   /**
    * Deletes a series and its future sessions; past sessions survive.
    */
-  delete: (id: Id): Promise<CoachingSessionSeries> =>
-    EntityApi.deleteFn<null, CoachingSessionSeriesRaw>(
+  delete: async (id: Id): Promise<CoachingSessionSeries> => {
+    await EntityApi.deleteFn<null, void>(
       `${COACHING_SESSION_SERIES_BASEURL}/${id}`
-    ).then(parseCoachingSessionSeries),
+    );
+    return defaultCoachingSessionSeries();
+  },
 };
 
 /**

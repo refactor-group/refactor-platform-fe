@@ -23,7 +23,6 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { EntityApiError } from "@/types/entity-api-error";
 import {
   CoachingSessionSeries,
-  formatSeriesRule,
   seriesRecurrenceToEnd,
 } from "@/types/coaching-session-series";
 import {
@@ -61,8 +60,6 @@ export function RescheduleSeriesDialog({
           </DialogDescription>
         </DialogHeader>
         {series && (
-          // Key by id so the form re-seeds from scratch when a different
-          // series is opened.
           <RescheduleSeriesForm
             key={series.id}
             series={series}
@@ -264,7 +261,7 @@ function RescheduleSeriesForm({
 
       <Button type="submit" disabled={!canSubmit} className="justify-self-start">
         {isSubmitting && <Spinner className="mr-2" />}
-        Reschedule {formatSeriesRule(series.rule)}
+        Reschedule sessions
       </Button>
     </form>
   );

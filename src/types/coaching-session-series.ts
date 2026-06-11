@@ -14,9 +14,9 @@ import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 interface SeriesRecurrenceRaw {
   frequency: Frequency;
   interval: number;
-  by_weekdays?: Weekday[];
-  count: number | null;
-  until: string | null;
+  by_weekdays?: Weekday[] | null;
+  count?: number | null;
+  until?: string | null;
 }
 
 interface SeriesRuleRaw {
@@ -34,9 +34,9 @@ export interface CoachingSessionSeriesRaw {
   updated_at: string;
 }
 
-export interface CoachingSessionSeriesWithSessionsRaw
-  extends CoachingSessionSeriesRaw {
-  coaching_sessions: CoachingSession[];
+export interface CoachingSessionSeriesWithSessionsRaw {
+  series: CoachingSessionSeriesRaw;
+  sessions: CoachingSession[];
 }
 
 // ─── Domain shapes ───────────────────────────────────────────────────
@@ -71,17 +71,25 @@ export interface CoachingSessionSeriesWithSessions extends CoachingSessionSeries
 }
 
 function parseSeriesRule(raw: SeriesRuleRaw): SeriesRule {
+  const { recurrence } = raw;
+  // count/until are one-of, and the absent one may be null or omitted — treat
+  // both as None. `?? null` collapses undefined so the !== null guard covers
+  // both cases.
+  const count = recurrence.count ?? null;
+  const until = recurrence.until ?? null;
   return {
     start_at: raw.start_at,
     duration_minutes: raw.duration_minutes,
     recurrence: {
-      frequency: raw.recurrence.frequency,
-      interval: raw.recurrence.interval,
-      ...(raw.recurrence.by_weekdays
-        ? { by_weekdays: raw.recurrence.by_weekdays }
+      frequency: recurrence.frequency,
+      interval: recurrence.interval,
+      ...(recurrence.by_weekdays
+        ? { by_weekdays: recurrence.by_weekdays }
         : {}),
-      count: raw.recurrence.count !== null ? Some(raw.recurrence.count) : None,
-      until: raw.recurrence.until !== null ? Some(raw.recurrence.until) : None,
+      count: count !== null ? Some(count) : None,
+      // `until` is a date in the domain (the form's end-picker); keep only the
+      // date part in case the backend serializes it as a datetime.
+      until: until !== null ? Some(until.slice(0, 10)) : None,
     },
   };
 }
@@ -103,8 +111,8 @@ export function parseCoachingSessionSeriesWithSessions(
   raw: CoachingSessionSeriesWithSessionsRaw
 ): CoachingSessionSeriesWithSessions {
   return {
-    ...parseCoachingSessionSeries(raw),
-    coaching_sessions: raw.coaching_sessions,
+    ...parseCoachingSessionSeries(raw.series),
+    coaching_sessions: raw.sessions,
   };
 }
 

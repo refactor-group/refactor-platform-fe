@@ -91,6 +91,16 @@ describe("parseCoachingSessionSeries", () => {
     ).toBe("2026-08-15");
   });
 
+  it("treats an omitted (not just null) count/until as None", () => {
+    const raw = rawSeries();
+    // Backend may omit the unused end-condition entirely rather than send null.
+    delete raw.rule.recurrence.until;
+    const result = parseCoachingSessionSeries(raw);
+
+    expect(result.rule.recurrence.until.none).toBe(true);
+    expect(result.rule.recurrence.count.some).toBe(true);
+  });
+
   it("omits by_weekdays when absent rather than emitting undefined", () => {
     const raw = rawSeries();
     delete raw.rule.recurrence.by_weekdays;
@@ -119,8 +129,8 @@ describe("parseCoachingSessionSeriesWithSessions", () => {
       { ...defaultCoachingSession(), id: "cs-2" },
     ];
     const raw: CoachingSessionSeriesWithSessionsRaw = {
-      ...rawSeries(),
-      coaching_sessions: sessions,
+      series: rawSeries(),
+      sessions,
     };
 
     const result = parseCoachingSessionSeriesWithSessions(raw);

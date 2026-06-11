@@ -124,6 +124,15 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
     selector({ userSession: undefined }),
 }));
 
+vi.mock(
+  "@/lib/providers/coaching-sessions-card-filter-store-provider",
+  () => ({
+    useCoachingSessionsCardFilterStore: (
+      selector: (s: { relationshipFilter: string | undefined }) => unknown
+    ) => selector({ relationshipFilter: undefined }),
+  })
+);
+
 describe("DashboardContainer auto-refresh wiring", () => {
   beforeEach(() => {
     vi.clearAllMocks();

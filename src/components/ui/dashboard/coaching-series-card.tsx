@@ -77,8 +77,6 @@ export function CoachingSeriesCard({
         "Recurring series deleted. Future sessions were removed; past sessions were kept."
       );
       setDeleteState({ kind: "closed" });
-      // The series list uses a tuple SWR key the mutation hook can't
-      // auto-invalidate, and deleting drops future sessions — refresh both.
       refresh();
       onSeriesMutated?.();
     } catch {

@@ -12,6 +12,7 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { isUserCoachInRelationship } from "@/types/coaching-relationship";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
@@ -27,13 +28,22 @@ export function DashboardContainer() {
   const {
     currentCoachingRelationshipId,
     setCurrentCoachingRelationshipId,
-    currentCoachingRelationship,
   } = useCurrentCoachingRelationship();
   const userId = useAuthStore((s) => s.userSession?.id);
+
+  // Scope the series card to the relationship the user actually picks in the
+  // sessions-card filter (its own store). `currentCoachingRelationshipId` is
+  // not driven by that selector, so the card would otherwise never see one.
+  const seriesRelationshipId = useCoachingSessionsCardFilterStore(
+    (s) => s.relationshipFilter
+  );
+  const seriesRelationship = relationships?.find(
+    (r) => r.id === seriesRelationshipId
+  );
   const canManageSeries =
     !!userId &&
-    !!currentCoachingRelationship &&
-    isUserCoachInRelationship(userId, currentCoachingRelationship);
+    !!seriesRelationship &&
+    isUserCoachInRelationship(userId, seriesRelationship);
   useAutoSelectSingleRelationship(
     relationships,
     isLoadingRelationships,
@@ -106,7 +116,7 @@ export function DashboardContainer() {
 
       <div className="w-full mt-8">
         <CoachingSeriesCard
-          relationshipId={currentCoachingRelationshipId || null}
+          relationshipId={seriesRelationshipId ?? null}
           canManage={canManageSeries}
           onSeriesMutated={handleSeriesMutated}
         />
