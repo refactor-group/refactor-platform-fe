@@ -18,6 +18,7 @@ export interface CoachingSession {
   duration_minutes: number;
   meeting_url?: string;
   provider?: Provider;
+  coaching_session_series_id?: Id;
   created_at: DateTime;
   updated_at: DateTime;
 }
