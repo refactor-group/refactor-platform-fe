@@ -1040,9 +1040,19 @@ export function CoachingSessionPanel({
 
   const handleTopicReorder = useCallback(
     async (orderedIds: Id[]) => {
+      // Show the new order instantly and persist without a refetch — the
+      // reorder response is the authoritative list, so no GET round-trip (which
+      // is what made the cards snap back, then jump).
+      const byId = new Map(topics.map((t) => [t.id, t]));
+      const optimistic = orderedIds
+        .map((id) => byId.get(id))
+        .filter((t): t is CoachingSessionTopic => Boolean(t));
       try {
-        await reorderTopics(orderedIds);
-        refreshTopics();
+        await refreshTopics(reorderTopics(orderedIds), {
+          optimisticData: optimistic,
+          revalidate: false,
+          rollbackOnError: true,
+        });
       } catch (err) {
         console.error("Failed to reorder topics:", err);
         toast({
@@ -1050,17 +1060,28 @@ export function CoachingSessionPanel({
           title: "Failed to reorder topics",
           description: "An error occurred while saving the new order.",
         });
-        refreshTopics();
       }
     },
-    [reorderTopics, refreshTopics]
+    [topics, reorderTopics, refreshTopics]
   );
 
   const handleTopicPriority = useCallback(
     async (id: Id, priority: Option<TopicPriority>) => {
+      const next = priority.some ? priority.val : null;
+      // Splice the new priority into the cached list in place; no refetch.
       try {
-        await rateTopic(id, { priority: priority.some ? priority.val : null });
-        refreshTopics();
+        await refreshTopics(
+          rateTopic(id, { priority: next }).then((updated) =>
+            topics.map((t) => (t.id === id ? updated : t))
+          ),
+          {
+            optimisticData: topics.map((t) =>
+              t.id === id ? { ...t, priority: next ? Some(next) : None } : t
+            ),
+            revalidate: false,
+            rollbackOnError: true,
+          }
+        );
       } catch (err) {
         console.error("Failed to set topic priority:", err);
         toast({
@@ -1070,7 +1091,7 @@ export function CoachingSessionPanel({
         });
       }
     },
-    [rateTopic, refreshTopics]
+    [topics, rateTopic, refreshTopics]
   );
 
   const handleTopicStatus = useCallback(

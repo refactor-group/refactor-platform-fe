@@ -42,12 +42,14 @@ interface CreateTopicBody {
  */
 export const CoachingSessionTopicApi = {
   list: async (coachingSessionId: Id): Promise<CoachingSessionTopic[]> =>
-    EntityApi.listNestedFn<CoachingSessionTopic>(
-      COACHING_SESSIONS_BASEURL,
-      coachingSessionId,
-      "topics",
-      {}
-    ),
+    (
+      await EntityApi.listNestedFn<CoachingSessionTopic>(
+        COACHING_SESSIONS_BASEURL,
+        coachingSessionId,
+        "topics",
+        {}
+      )
+    ).map(transformCoachingSessionTopic),
 
   // `priority` is optional; supply it to recreate a topic with its priority
   // preserved (undo of a delete).
@@ -149,17 +151,18 @@ export const CoachingSessionTopicApi = {
 /**
  * Fetches topics for a coaching session. Keyed on the session-scoped topics
  * URL so topic mutations (which invalidate by URL substring) revalidate it.
+ *
+ * The fetcher already transforms, so the SWR cache holds wire-normalized
+ * `CoachingSessionTopic`s and `topics` keeps a stable reference between renders
+ * — letting optimistic writes splice the cache in place (no refetch, no flash).
  */
 export const useCoachingSessionTopicList = (coachingSessionId: Id) => {
-  const { entities, isLoading, isError, refresh } = EntityApi.useEntityList<
-    CoachingSessionTopic,
-    CoachingSessionTopic
-  >(
-    topicsUrl(coachingSessionId),
-    () => CoachingSessionTopicApi.list(coachingSessionId),
-    transformCoachingSessionTopic,
-    coachingSessionId
-  );
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<CoachingSessionTopic>(
+      topicsUrl(coachingSessionId),
+      () => CoachingSessionTopicApi.list(coachingSessionId),
+      coachingSessionId
+    );
 
   return {
     topics: entities,

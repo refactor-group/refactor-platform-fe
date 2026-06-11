@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -87,7 +88,9 @@ export function reorderTopicIds(
   return arrayMove(orderedIds.slice(), from, to);
 }
 
-function TopicRow({
+// Memoized so a list-level re-render (e.g. one topic's priority changing)
+// repaints only the row whose props actually changed, not every row.
+const TopicRow = memo(function TopicRow({
   topic,
   isAuthor,
   viewerId,
@@ -284,7 +287,7 @@ function TopicRow({
       </div>
     </div>
   );
-}
+});
 
 export function TopicSectionContent({
   topics,
