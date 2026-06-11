@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/lib/utils";
 
 const HEADING_CLASS = "text-lg sm:text-xl font-semibold tracking-tight";
-const PLACEHOLDER = "Summarize the main purpose of this session…";
+const PLACEHOLDER = "Add a session title…";
 // Clamp the title width so long titles wrap to a few lines instead of growing
 // across the whole header. Shared by display + edit so wrapping stays aligned.
 const TITLE_MAX_W = "max-w-xl";
