@@ -1,12 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import { Frequency, Weekday } from "@/types/recurrence";
+import { Some, None } from "@/types/option";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import {
   CoachingSessionSeriesRaw,
   CoachingSessionSeriesWithSessionsRaw,
+  SeriesRule,
   defaultCoachingSessionSeries,
   defaultCoachingSessionSeriesWithSessions,
+  formatSeriesRule,
   isCoachingSessionSeries,
   parseCoachingSessionSeries,
   parseCoachingSessionSeriesWithSessions,
@@ -151,5 +154,52 @@ describe("defaults", () => {
     expect(defaultCoachingSessionSeriesWithSessions().coaching_sessions).toEqual(
       []
     );
+  });
+});
+
+describe("formatSeriesRule", () => {
+  function rule(overrides: Partial<SeriesRule["recurrence"]>): SeriesRule {
+    return {
+      start_at: "2026-05-15T10:00:00",
+      duration_minutes: 60,
+      recurrence: {
+        frequency: Frequency.Weekly,
+        interval: 1,
+        count: Some(24),
+        until: None,
+        ...overrides,
+      },
+    };
+  }
+
+  it("summarizes a weekly count-based rule with weekdays", () => {
+    expect(
+      formatSeriesRule(rule({ by_weekdays: [Weekday.Mon, Weekday.Wed] }))
+    ).toBe("Weekly on Mon, Wed · 24 sessions");
+  });
+
+  it("summarizes an until-based rule with a formatted date", () => {
+    expect(
+      formatSeriesRule(
+        rule({
+          frequency: Frequency.Biweekly,
+          by_weekdays: [Weekday.Mon],
+          count: None,
+          until: Some("2026-08-15"),
+        })
+      )
+    ).toBe("Bi-weekly on Mon · until Aug 15, 2026");
+  });
+
+  it("uses 'Every N <unit>' phrasing when interval > 1 and singularizes one session", () => {
+    expect(
+      formatSeriesRule(rule({ frequency: Frequency.Daily, interval: 2, count: Some(1) }))
+    ).toBe("Every 2 days · 1 session");
+  });
+
+  it("omits the weekday clause when there are no weekdays", () => {
+    expect(
+      formatSeriesRule(rule({ frequency: Frequency.Monthly, count: Some(6) }))
+    ).toBe("Monthly · 6 sessions");
   });
 });

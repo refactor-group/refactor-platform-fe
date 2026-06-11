@@ -1,6 +1,11 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
-import { Frequency, Weekday } from "@/types/recurrence";
+import {
+  Frequency,
+  Weekday,
+  frequencyLabel,
+  weekdayLabel,
+} from "@/types/recurrence";
 import { type Option, Some, None } from "@/types/option";
 import { CoachingSession } from "@/types/coaching-session";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
@@ -141,4 +146,49 @@ export function isCoachingSessionSeries(
     typeof object.rule === "object" &&
     object.rule !== null
   );
+}
+
+function frequencyPhrase(frequency: Frequency, interval: number): string {
+  if (interval <= 1) {
+    return frequencyLabel(frequency);
+  }
+  switch (frequency) {
+    case Frequency.Daily:
+      return `Every ${interval} days`;
+    case Frequency.Weekly:
+      return `Every ${interval} weeks`;
+    case Frequency.Biweekly:
+      return `Every ${interval * 2} weeks`;
+    case Frequency.Monthly:
+      return `Every ${interval} months`;
+    default: {
+      const _exhaustive: never = frequency;
+      throw new Error(`Unhandled frequency: ${_exhaustive}`);
+    }
+  }
+}
+
+/**
+ * Renders a series' recurrence rule as a single human-readable line, e.g.
+ * "Weekly on Mon, Wed · 24 sessions" or "Bi-weekly on Mon · until Aug 15, 2026".
+ */
+export function formatSeriesRule(rule: SeriesRule): string {
+  const { recurrence } = rule;
+  const base = frequencyPhrase(recurrence.frequency, recurrence.interval);
+  const onDays =
+    recurrence.by_weekdays && recurrence.by_weekdays.length > 0
+      ? ` on ${recurrence.by_weekdays.map(weekdayLabel).join(", ")}`
+      : "";
+
+  let end: string;
+  if (recurrence.count.some) {
+    const n = recurrence.count.val;
+    end = `${n} session${n === 1 ? "" : "s"}`;
+  } else if (recurrence.until.some) {
+    end = `until ${DateTime.fromISO(recurrence.until.val).toFormat("LLL d, yyyy")}`;
+  } else {
+    end = "no end date";
+  }
+
+  return `${base}${onDays} · ${end}`;
 }
