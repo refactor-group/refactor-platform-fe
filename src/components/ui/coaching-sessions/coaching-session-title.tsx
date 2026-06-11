@@ -18,6 +18,7 @@ import {
   getBrowserTimezone,
 } from "@/lib/timezone-utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import { useEditorCache } from "./editor-cache-context";
 import { EditableSessionTitle } from "./editable-session-title";
 import { PresenceIndicator } from "@/components/ui/presence-indicator";
@@ -78,10 +79,8 @@ const CoachingSessionTitle: FC = () => {
 
   if (!session || !relationship) return null;
 
-  const coachName =
-    `${relationship.coach_first_name} ${relationship.coach_last_name}`.trim();
-  const coacheeName =
-    `${relationship.coachee_first_name} ${relationship.coachee_last_name}`.trim();
+  const coachName = getCoachName(relationship);
+  const coacheeName = getCoacheeName(relationship);
   const timezone = userSession?.timezone || getBrowserTimezone();
 
   return (

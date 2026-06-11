@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -28,7 +20,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/lib/utils";
 import { TopicPrioritySelect } from "@/components/ui/coaching-sessions/topic-priority-select";
 import { TopicStatusControls } from "@/components/ui/coaching-sessions/topic-status-controls";
-import { TopicAuthorBadge } from "@/components/ui/coaching-sessions/topic-provenance";
+import {
+  TopicAuthorBadge,
+  nameInitials,
+} from "@/components/ui/coaching-sessions/topic-provenance";
+import { useAutosizeTextarea } from "@/lib/hooks/use-autosize-textarea";
 import { TopicStatus } from "@/types/coaching-session-topic";
 import type {
   CoachingSessionTopic,
@@ -60,9 +56,6 @@ export interface TopicSectionContentProps {
   /** Viewer's read-state for this session; drives the "new since" dot. */
   viewedAnchor?: LastViewedAnchor;
 }
-
-const initials = (userId: Id): string =>
-  userId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "?";
 
 function arrayMove<T>(arr: T[], from: number, to: number): T[] {
   const next = arr.slice();
@@ -125,23 +118,7 @@ const TopicRow = memo(function TopicRow({
   // Auto-size the edit textarea to its content (cap 3 rows, then scroll) so it
   // matches the display label's height exactly — no bounce when toggling edit.
   const editRef = useRef<HTMLTextAreaElement>(null);
-  const autosizeEdit = useCallback(() => {
-    const el = editRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const cs = window.getComputedStyle(el);
-    const lineHeight = parseFloat(cs.lineHeight) || 18;
-    const paddingY =
-      parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const maxHeight = lineHeight * 3 + paddingY;
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, []);
-  // useLayoutEffect so the height is set before paint (avoids a 1-frame flash
-  // when entering edit). Runs on enter and on every keystroke.
-  useLayoutEffect(() => {
-    if (editing) autosizeEdit();
-  }, [editing, draft, autosizeEdit]);
+  useAutosizeTextarea(editRef, draft, 3, editing);
 
   const { attributes, listeners, setNodeRef: dragRef, isDragging } =
     useDraggable({ id: topic.id });
@@ -342,22 +319,7 @@ export function TopicSectionContent({
   // Grow the add-topic input with its content up to MAX_ADD_ROWS, then scroll.
   const MAX_ADD_ROWS = 3;
   const addInputRef = useRef<HTMLTextAreaElement>(null);
-  const autosizeAddInput = useCallback(() => {
-    const el = addInputRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const cs = window.getComputedStyle(el);
-    const lineHeight = parseFloat(cs.lineHeight) || 18;
-    const paddingY =
-      parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const borderY =
-      parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-    const maxHeight = lineHeight * MAX_ADD_ROWS + paddingY + borderY;
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
-  }, []);
-  // Re-measure on every value change — covers both typing and the reset after add.
-  useEffect(() => autosizeAddInput(), [newBody, autosizeAddInput]);
+  useAutosizeTextarea(addInputRef, newBody, MAX_ADD_ROWS);
 
   const rows = topics.map((topic) => (
     <TopicRow
@@ -404,7 +366,7 @@ export function TopicSectionContent({
                 <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40" />
                 <Avatar className="mt-0.5 h-6 w-6 shrink-0">
                   <AvatarFallback className="bg-muted text-[10px] font-medium text-muted-foreground">
-                    {initials(activeTopic.user_id)}
+                    {nameInitials(resolveAuthorName(activeTopic.user_id))}
                   </AvatarFallback>
                 </Avatar>
                 <span className="px-1.5 py-1 text-[13px] leading-snug line-clamp-3">

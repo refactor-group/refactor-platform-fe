@@ -143,7 +143,11 @@ export type CoachingSessionWire = Omit<CoachingSession, "title"> & {
 
 /** Parse boundary transform: wraps the wire title into Option<string>.
  * Tolerates an empty response body (the BE returns 204/`data: null` on PUT) —
- * callers revalidate via SWR, so a default placeholder is harmless. */
+ * callers revalidate via SWR, so a default placeholder is harmless.
+ *
+ * `title` is the only field needing normalization; the spread is deliberate so
+ * the EnrichedCoachingSession include-fields (coach/coachee/goals/…) pass
+ * through untouched when this is reused for the enriched list endpoint. */
 export function transformCoachingSession(raw: any): CoachingSession {
   if (raw == null) return defaultCoachingSession();
   return {

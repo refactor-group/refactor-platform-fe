@@ -1,6 +1,5 @@
 "use client";
 
-import { type JSX } from "react";
 import { DateTime } from "ts-luxon";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -28,7 +27,8 @@ export interface TopicAuthorBadgeProps {
   isMovedOver?: boolean;
 }
 
-const initials = (name: string): string =>
+/** Up-to-two-letter avatar initials from a display name ("?" when empty). */
+export const nameInitials = (name: string): string =>
   name
     .split(/\s+/)
     .filter(Boolean)
@@ -47,7 +47,7 @@ export function TopicAuthorBadge({
   updatedAt,
   viewedAnchor,
   isMovedOver = false,
-}: TopicAuthorBadgeProps): JSX.Element {
+}: TopicAuthorBadgeProps) {
   const isNew = isTopicNew(
     { user_id: authorId, created_at: createdAt },
     viewerId,
@@ -57,7 +57,7 @@ export function TopicAuthorBadge({
     created_at: createdAt,
     updated_at: updatedAt,
   });
-  const fallback = initials(authorName);
+  const fallback = nameInitials(authorName);
 
   return (
     <HoverCard openDelay={150} closeDelay={80}>

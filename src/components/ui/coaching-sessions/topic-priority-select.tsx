@@ -68,7 +68,7 @@ export function TopicPrioritySelect({
 
   return (
     <Select
-      value={priority.some ? priority.val : undefined}
+      value={priority.some ? priority.val : ""}
       onValueChange={(v) =>
         onChange(v === CLEAR ? None : Some(v as TopicPriority))
       }

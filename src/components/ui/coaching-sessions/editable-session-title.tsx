@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type JSX } from "react";
+import { useState } from "react";
 import { Check, Pencil } from "lucide-react";
 import { type Option } from "@/types/option";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ export function EditableSessionTitle({
   title,
   fallbackTitle,
   onSave,
-}: EditableSessionTitleProps): JSX.Element {
+}: EditableSessionTitleProps) {
   const currentValue = title.some ? title.val : "";
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(currentValue);
