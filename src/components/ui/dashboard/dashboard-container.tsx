@@ -11,6 +11,8 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { isUserCoachInRelationship } from "@/types/coaching-relationship";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {
@@ -25,7 +27,13 @@ export function DashboardContainer() {
   const {
     currentCoachingRelationshipId,
     setCurrentCoachingRelationshipId,
+    currentCoachingRelationship,
   } = useCurrentCoachingRelationship();
+  const userId = useAuthStore((s) => s.userSession?.id);
+  const canManageSeries =
+    !!userId &&
+    !!currentCoachingRelationship &&
+    isUserCoachInRelationship(userId, currentCoachingRelationship);
   useAutoSelectSingleRelationship(
     relationships,
     isLoadingRelationships,
@@ -69,6 +77,11 @@ export function DashboardContainer() {
     [],
   );
 
+  const handleSeriesMutated = useCallback(() => {
+    refreshUpcomingSession?.();
+    refreshSessionsCard?.();
+  }, [refreshUpcomingSession, refreshSessionsCard]);
+
   return (
     <>
       <DashboardHeader onCreateSession={() => handleOpenDialog()} />
@@ -92,7 +105,11 @@ export function DashboardContainer() {
       </div>
 
       <div className="w-full mt-8">
-        <CoachingSeriesCard relationshipId={currentCoachingRelationshipId || null} />
+        <CoachingSeriesCard
+          relationshipId={currentCoachingRelationshipId || null}
+          canManage={canManageSeries}
+          onSeriesMutated={handleSeriesMutated}
+        />
       </div>
       <CoachingSessionDialog
         open={dialogOpen}

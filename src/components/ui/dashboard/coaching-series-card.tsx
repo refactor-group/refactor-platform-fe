@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { MoreVertical, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -7,23 +11,71 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
-import { useCoachingSessionSeriesList } from "@/lib/api/coaching-session-series";
-import { formatSeriesRule } from "@/types/coaching-session-series";
+import { DeleteSeriesDialog } from "@/components/ui/dashboard/delete-series-dialog";
+import {
+  useCoachingSessionSeriesList,
+  useCoachingSessionSeriesMutation,
+} from "@/lib/api/coaching-session-series";
+import {
+  CoachingSessionSeries,
+  formatSeriesRule,
+} from "@/types/coaching-session-series";
 import { Id } from "@/types/general";
 
 interface CoachingSeriesCardProps {
-  /** Relationship whose series to list; null shows a "select a relationship" prompt. */
   relationshipId: Id | null;
+  canManage?: boolean;
+  onSeriesMutated?: () => void;
 }
 
+type DeleteState =
+  | { kind: "closed" }
+  | { kind: "pending"; series: CoachingSessionSeries }
+  | { kind: "deleting"; series: CoachingSessionSeries };
+
 /**
- * Lists the recurring-session series for the selected coaching relationship.
- * Metadata only — the per-series sessions live behind the detail endpoint.
+ * Lists the recurring-session series for the selected coaching relationship
+ * and lets coaches delete one. Metadata only — the per-series sessions live
+ * behind the detail endpoint.
  */
-export function CoachingSeriesCard({ relationshipId }: CoachingSeriesCardProps) {
-  const { series, isLoading, isError } =
+export function CoachingSeriesCard({
+  relationshipId,
+  canManage = false,
+  onSeriesMutated,
+}: CoachingSeriesCardProps) {
+  const { series, isLoading, isError, refresh } =
     useCoachingSessionSeriesList(relationshipId);
+  const { delete: deleteSeries } = useCoachingSessionSeriesMutation();
+  const [deleteState, setDeleteState] = useState<DeleteState>({
+    kind: "closed",
+  });
+
+  const handleConfirmDelete = async () => {
+    if (deleteState.kind !== "pending") return;
+    const target = deleteState.series;
+    setDeleteState({ kind: "deleting", series: target });
+    try {
+      await deleteSeries(target.id);
+      toast.success(
+        "Recurring series deleted. Future sessions were removed; past sessions were kept."
+      );
+      setDeleteState({ kind: "closed" });
+      // The series list uses a tuple SWR key the mutation hook can't
+      // auto-invalidate, and deleting drops future sessions — refresh both.
+      refresh();
+      onSeriesMutated?.();
+    } catch {
+      toast.error("Couldn't delete the recurring series. Please try again.");
+      setDeleteState({ kind: "pending", series: target });
+    }
+  };
 
   return (
     <Card>
@@ -53,16 +105,57 @@ export function CoachingSeriesCard({ relationshipId }: CoachingSeriesCardProps) 
         ) : (
           <ul className="divide-y divide-border">
             {series.map((s) => (
-              <li key={s.id} className="flex flex-col gap-0.5 py-3 first:pt-0">
-                <span className="font-medium">{formatSeriesRule(s.rule)}</span>
-                <span className="text-sm text-muted-foreground">
-                  {s.rule.duration_minutes}-minute sessions
-                </span>
+              <li
+                key={s.id}
+                className="flex items-center justify-between gap-2 py-3 first:pt-0"
+              >
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span className="font-medium truncate">
+                    {formatSeriesRule(s.rule)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {s.rule.duration_minutes}-minute sessions
+                  </span>
+                </div>
+                {canManage && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Series actions"
+                        className="rounded-full h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-foreground"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          setDeleteState({ kind: "pending", series: s })
+                        }
+                        className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete series
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </li>
             ))}
           </ul>
         )}
       </CardContent>
+
+      <DeleteSeriesDialog
+        series={
+          deleteState.kind === "closed" ? undefined : deleteState.series
+        }
+        isDeleting={deleteState.kind === "deleting"}
+        onCancel={() => setDeleteState({ kind: "closed" })}
+        onConfirm={handleConfirmDelete}
+      />
     </Card>
   );
 }
