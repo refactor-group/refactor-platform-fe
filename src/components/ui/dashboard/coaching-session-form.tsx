@@ -27,10 +27,10 @@ import {
 } from "@/components/ui/select";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import {
-  CoachingSessionApi,
   useCoachingSessionList,
   useCoachingSessionMutation,
 } from "@/lib/api/coaching-sessions";
+import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
@@ -262,9 +262,10 @@ export default function CoachingSessionForm({
       recurrence,
       duration_minutes: durationMinutes,
     };
-    const created = await CoachingSessionApi.createRecurring(payload);
+    const created = await CoachingSessionSeriesApi.create(payload);
+    const count = created.coaching_sessions.length;
     toast.success(
-      `Created ${created.length} recurring session${created.length === 1 ? "" : "s"}.`
+      `Created ${count} recurring session${count === 1 ? "" : "s"}.`
     );
   };
 

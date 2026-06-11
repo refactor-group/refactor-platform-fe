@@ -5,7 +5,7 @@ import { type Option, Some, None } from "@/types/option";
 import { CoachingSession } from "@/types/coaching-session";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 
-interface RawSeriesRecurrence {
+interface SeriesRecurrenceRaw {
   frequency: Frequency;
   interval: number;
   by_weekdays?: Weekday[];
@@ -13,23 +13,23 @@ interface RawSeriesRecurrence {
   until: string | null;
 }
 
-interface RawSeriesRule {
+interface SeriesRuleRaw {
   start_at: string;
-  recurrence: RawSeriesRecurrence;
+  recurrence: SeriesRecurrenceRaw;
   duration_minutes: number;
 }
 
-export interface RawCoachingSessionSeries {
+export interface CoachingSessionSeriesRaw {
   id: Id;
   coaching_relationship_id: Id;
-  rule: RawSeriesRule;
+  rule: SeriesRuleRaw;
   created_by_user_id: Id;
   created_at: string;
   updated_at: string;
 }
 
-export interface RawCoachingSessionSeriesWithSessions
-  extends RawCoachingSessionSeries {
+export interface CoachingSessionSeriesWithSessionsRaw
+  extends CoachingSessionSeriesRaw {
   coaching_sessions: CoachingSession[];
 }
 
@@ -64,7 +64,7 @@ export interface CoachingSessionSeriesWithSessions extends CoachingSessionSeries
   coaching_sessions: CoachingSession[];
 }
 
-function parseSeriesRule(raw: RawSeriesRule): SeriesRule {
+function parseSeriesRule(raw: SeriesRuleRaw): SeriesRule {
   return {
     start_at: raw.start_at,
     duration_minutes: raw.duration_minutes,
@@ -81,7 +81,7 @@ function parseSeriesRule(raw: RawSeriesRule): SeriesRule {
 }
 
 export function parseCoachingSessionSeries(
-  raw: RawCoachingSessionSeries
+  raw: CoachingSessionSeriesRaw
 ): CoachingSessionSeries {
   return {
     id: raw.id,
@@ -94,7 +94,7 @@ export function parseCoachingSessionSeries(
 }
 
 export function parseCoachingSessionSeriesWithSessions(
-  raw: RawCoachingSessionSeriesWithSessions
+  raw: CoachingSessionSeriesWithSessionsRaw
 ): CoachingSessionSeriesWithSessions {
   return {
     ...parseCoachingSessionSeries(raw),

@@ -6,8 +6,8 @@ import { CreateRecurringSessionRequest } from "@/types/recurrence";
 import {
   CoachingSessionSeries,
   CoachingSessionSeriesWithSessions,
-  RawCoachingSessionSeries,
-  RawCoachingSessionSeriesWithSessions,
+  CoachingSessionSeriesRaw,
+  CoachingSessionSeriesWithSessionsRaw,
   defaultCoachingSessionSeriesWithSessions,
   parseCoachingSessionSeries,
   parseCoachingSessionSeriesWithSessions,
@@ -31,7 +31,7 @@ export const CoachingSessionSeriesApi = {
    */
   list: (relationshipId: Id | null): Promise<CoachingSessionSeries[]> => {
     if (!relationshipId) return Promise.resolve([]);
-    return EntityApi.listFn<RawCoachingSessionSeries, CoachingSessionSeries>(
+    return EntityApi.listFn<CoachingSessionSeriesRaw, CoachingSessionSeries>(
       COACHING_SESSION_SERIES_BASEURL,
       { params: { coaching_relationship_id: relationshipId } },
       parseCoachingSessionSeries
@@ -42,7 +42,7 @@ export const CoachingSessionSeriesApi = {
    * Reads one series together with its materialized sessions, date-sorted.
    */
   get: (id: Id): Promise<CoachingSessionSeriesWithSessions> =>
-    EntityApi.getFn<RawCoachingSessionSeriesWithSessions>(
+    EntityApi.getFn<CoachingSessionSeriesWithSessionsRaw>(
       `${COACHING_SESSION_SERIES_BASEURL}/${id}`
     ).then(parseCoachingSessionSeriesWithSessions),
 
@@ -55,7 +55,7 @@ export const CoachingSessionSeriesApi = {
   ): Promise<CoachingSessionSeriesWithSessions> =>
     EntityApi.createFn<
       CreateRecurringSessionRequest,
-      RawCoachingSessionSeriesWithSessions
+      CoachingSessionSeriesWithSessionsRaw
     >(COACHING_SESSION_SERIES_BASEURL, payload).then(
       parseCoachingSessionSeriesWithSessions
     ),
@@ -70,7 +70,7 @@ export const CoachingSessionSeriesApi = {
   ): Promise<CoachingSessionSeriesWithSessions> =>
     EntityApi.updateFn<
       CreateRecurringSessionRequest,
-      RawCoachingSessionSeriesWithSessions
+      CoachingSessionSeriesWithSessionsRaw
     >(`${COACHING_SESSION_SERIES_BASEURL}/${id}`, payload).then(
       parseCoachingSessionSeriesWithSessions
     ),
@@ -79,7 +79,7 @@ export const CoachingSessionSeriesApi = {
    * Deletes a series and its future sessions; past sessions survive.
    */
   delete: (id: Id): Promise<CoachingSessionSeries> =>
-    EntityApi.deleteFn<null, RawCoachingSessionSeries>(
+    EntityApi.deleteFn<null, CoachingSessionSeriesRaw>(
       `${COACHING_SESSION_SERIES_BASEURL}/${id}`
     ).then(parseCoachingSessionSeries),
 };
