@@ -227,7 +227,9 @@ describe("CoachingSessionPanel — provenance wiring (CoachingSessionViews)", ()
     expect(screen.queryByText(/new since your last visit/i)).not.toBeInTheDocument();
   });
 
-  it("does NOT show the 'new' dot when the session was never viewed (null marker)", async () => {
+  it("shows the 'new' dot for the OTHER party's topic on a never-viewed session (null marker)", async () => {
+    // Never viewed → the viewer has seen nothing here, so the other party's
+    // topic is new even though it predates this first open.
     setLastViewed(null);
     setTopics([
       topic({
@@ -238,9 +240,9 @@ describe("CoachingSessionPanel — provenance wiring (CoachingSessionViews)", ()
       }),
     ]);
     renderPanel();
-    await screen.findAllByText("Discuss the promotion path");
-    await waitFor(() => expect(CoachingSessionViewApi.markViewed).toHaveBeenCalled());
-    expect(screen.queryByText(/new since your last visit/i)).not.toBeInTheDocument();
+    expect(
+      (await screen.findAllByText(/new since your last visit/i)).length
+    ).toBeGreaterThan(0);
   });
 
   it("resolves the author's name: a coach-authored topic renders the coach's initials", () => {

@@ -1,11 +1,17 @@
 // FROZEN ACCEPTANCE TEST (overseer-handoff-workflow).
-// Pins the Phase 5 contract for topic provenance + the "new since last session"
-// dot: the pure decision helpers `isTopicNew` / `topicWasUpdated`, and the dot's
-// accessibility (an `sr-only` "New since your last session" label that is
-// present/absent by MEANING, not hue — per the plan, accessibility comes from
-// presence + text, so the color is swappable). The previous-session anchor is
-// FE-derived and passed in as `previousSessionDate: Option<DateTime>`. The
-// Radix HoverCard *content* (name + Added/Updated relative times) is not
+// Pins the contract for topic provenance + the "new since your last visit" dot:
+// the pure decision helpers `isTopicNew` / `topicWasUpdated`, and the dot's
+// accessibility (an `sr-only` "New since your last visit" label that is
+// present/absent by MEANING, not hue — accessibility comes from presence +
+// text, so the color is swappable).
+//
+// The anchor is a three-state `LastViewedAnchor` derived FE-side from the
+// per-session last-viewed marker:
+//  - loading: marker not fetched yet → nothing is new (no flash).
+//  - never:   never viewed → every OTHER-authored topic is new (incl. ones
+//             added before this first open).
+//  - viewed:  viewed at an instant → new = other-authored, created after it.
+// The Radix HoverCard *content* (name + Added/Updated relative times) is not
 // asserted here (it only renders on hover); it's covered by review.
 //
 // Read-only (chmod 0444), on the freeze list: an IMPLEMENTER must NOT edit it.
@@ -14,11 +20,11 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DateTime } from "ts-luxon";
-import { Some, None } from "@/types/option";
 import {
   defaultCoachingSessionTopic,
   isTopicNew,
   topicWasUpdated,
+  type LastViewedAnchor,
 } from "@/types/coaching-session-topic";
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
 import { TopicAuthorBadge } from "@/components/ui/coaching-sessions/topic-provenance";
@@ -27,33 +33,49 @@ const PREV = DateTime.fromISO("2026-05-31T17:00:00Z");
 const AFTER = DateTime.fromISO("2026-06-05T09:00:00Z"); // after PREV
 const BEFORE = DateTime.fromISO("2026-05-20T09:00:00Z"); // before PREV
 
+const VIEWED: LastViewedAnchor = { kind: "viewed", at: PREV };
+const NEVER: LastViewedAnchor = { kind: "never" };
+const LOADING: LastViewedAnchor = { kind: "loading" };
+
 const topic = (over: Partial<CoachingSessionTopic>): CoachingSessionTopic => ({
   ...defaultCoachingSessionTopic(),
   ...over,
 });
 
-describe("isTopicNew — created after the previous session, by the OTHER party", () => {
-  it("is true when created after previous session and authored by someone else", () => {
+describe("isTopicNew — unseen by the viewer, authored by the OTHER party", () => {
+  it("is true when created after the last-viewed marker and authored by someone else", () => {
     expect(
-      isTopicNew(topic({ user_id: "them", created_at: AFTER }), "me", Some(PREV))
+      isTopicNew(topic({ user_id: "them", created_at: AFTER }), "me", VIEWED)
     ).toBe(true);
   });
 
-  it("is false for the viewer's own topic (even if created after the previous session)", () => {
+  it("is false for the viewer's own topic (even if created after the marker)", () => {
     expect(
-      isTopicNew(topic({ user_id: "me", created_at: AFTER }), "me", Some(PREV))
+      isTopicNew(topic({ user_id: "me", created_at: AFTER }), "me", VIEWED)
     ).toBe(false);
   });
 
-  it("is false when created before the previous session", () => {
+  it("is false when created before the last-viewed marker", () => {
     expect(
-      isTopicNew(topic({ user_id: "them", created_at: BEFORE }), "me", Some(PREV))
+      isTopicNew(topic({ user_id: "them", created_at: BEFORE }), "me", VIEWED)
     ).toBe(false);
   });
 
-  it("is false when there is no previous session (None)", () => {
+  it("is true for the other party's topic on a never-viewed session (any created_at)", () => {
     expect(
-      isTopicNew(topic({ user_id: "them", created_at: AFTER }), "me", None)
+      isTopicNew(topic({ user_id: "them", created_at: BEFORE }), "me", NEVER)
+    ).toBe(true);
+  });
+
+  it("is false for the viewer's own topic on a never-viewed session", () => {
+    expect(
+      isTopicNew(topic({ user_id: "me", created_at: AFTER }), "me", NEVER)
+    ).toBe(false);
+  });
+
+  it("is false while the anchor is still loading (no flash)", () => {
+    expect(
+      isTopicNew(topic({ user_id: "them", created_at: AFTER }), "me", LOADING)
     ).toBe(false);
   });
 });
@@ -72,7 +94,7 @@ describe("topicWasUpdated — updated strictly after created", () => {
   });
 });
 
-describe("TopicAuthorBadge — 'new since last visit' dot accessibility", () => {
+describe("TopicAuthorBadge — 'new since your last visit' dot accessibility", () => {
   it("renders an sr-only 'New since your last visit' label when the topic is new", () => {
     render(
       <TopicAuthorBadge
@@ -81,7 +103,7 @@ describe("TopicAuthorBadge — 'new since last visit' dot accessibility", () => 
         viewerId="me"
         createdAt={AFTER}
         updatedAt={AFTER}
-        lastViewedAt={Some(PREV)}
+        viewedAnchor={VIEWED}
       />
     );
     expect(
@@ -97,7 +119,7 @@ describe("TopicAuthorBadge — 'new since last visit' dot accessibility", () => 
         viewerId="me"
         createdAt={AFTER}
         updatedAt={AFTER}
-        lastViewedAt={Some(PREV)}
+        viewedAnchor={VIEWED}
       />
     );
     expect(
@@ -105,7 +127,7 @@ describe("TopicAuthorBadge — 'new since last visit' dot accessibility", () => 
     ).not.toBeInTheDocument();
   });
 
-  it("does NOT render the 'new' label when never viewed (None)", () => {
+  it("renders the 'new' label for the other party's topic on a never-viewed session", () => {
     render(
       <TopicAuthorBadge
         authorName="Alex Chen"
@@ -113,7 +135,23 @@ describe("TopicAuthorBadge — 'new since last visit' dot accessibility", () => 
         viewerId="me"
         createdAt={AFTER}
         updatedAt={AFTER}
-        lastViewedAt={None}
+        viewedAnchor={NEVER}
+      />
+    );
+    expect(
+      screen.getByText(/new since your last visit/i)
+    ).toBeInTheDocument();
+  });
+
+  it("does NOT render the 'new' label while the anchor is still loading", () => {
+    render(
+      <TopicAuthorBadge
+        authorName="Alex Chen"
+        authorId="them"
+        viewerId="me"
+        createdAt={AFTER}
+        updatedAt={AFTER}
+        viewedAnchor={LOADING}
       />
     );
     expect(

@@ -54,7 +54,7 @@ export function CoachingSessionPanelDesktop({
   onTopicStatus,
   onTopicInsertToNotes,
   resolveTopicAuthorName,
-  lastViewedAt,
+  viewedAnchor,
   agreements,
   onAgreementEdit,
   onAgreementDelete,
@@ -239,7 +239,7 @@ export function CoachingSessionPanelDesktop({
               onStatus={onTopicStatus}
               onInsertToNotes={onTopicInsertToNotes}
               resolveAuthorName={resolveTopicAuthorName}
-              lastViewedAt={lastViewedAt}
+              viewedAnchor={viewedAnchor}
             />
           ) : activeSection === PanelSection.Goals ? (
             <GoalFlowPages

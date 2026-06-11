@@ -32,10 +32,10 @@ import { TopicStatus } from "@/types/coaching-session-topic";
 import type {
   CoachingSessionTopic,
   TopicPriority,
+  LastViewedAnchor,
 } from "@/types/coaching-session-topic";
 import type { Id } from "@/types/general";
-import { type Option, None } from "@/types/option";
-import type { DateTime } from "ts-luxon";
+import type { Option } from "@/types/option";
 
 export interface TopicSectionContentProps {
   topics: CoachingSessionTopic[];
@@ -54,8 +54,8 @@ export interface TopicSectionContentProps {
   onInsertToNotes?: (body: string) => void;
   /** Resolves a topic author's user id to a display name for the badge. */
   resolveAuthorName?: (userId: Id) => string;
-  /** FE-derived previous-session anchor; drives the "new since" dot. */
-  lastViewedAt?: Option<DateTime>;
+  /** Viewer's read-state for this session; drives the "new since" dot. */
+  viewedAnchor?: LastViewedAnchor;
 }
 
 const initials = (userId: Id): string =>
@@ -90,7 +90,7 @@ function TopicRow({
   isAuthor,
   viewerId,
   authorName,
-  lastViewedAt,
+  viewedAnchor,
   readOnly,
   canRate,
   onEdit,
@@ -103,7 +103,7 @@ function TopicRow({
   isAuthor: boolean;
   viewerId: Id;
   authorName: string;
-  lastViewedAt: Option<DateTime>;
+  viewedAnchor: LastViewedAnchor;
   readOnly: boolean;
   canRate: boolean;
   onEdit: (id: Id, body: string) => void;
@@ -191,7 +191,7 @@ function TopicRow({
         viewerId={viewerId}
         createdAt={topic.created_at}
         updatedAt={topic.updated_at}
-        lastViewedAt={lastViewedAt}
+        viewedAnchor={viewedAnchor}
         isMovedOver={topic.moved_from_session_id.some}
       />
 
@@ -295,7 +295,7 @@ export function TopicSectionContent({
   onStatus = () => {},
   onInsertToNotes,
   resolveAuthorName = () => "",
-  lastViewedAt = None,
+  viewedAnchor = { kind: "loading" },
 }: TopicSectionContentProps) {
   const [newBody, setNewBody] = useState("");
   const [activeId, setActiveId] = useState<Id | null>(null);
@@ -358,7 +358,7 @@ export function TopicSectionContent({
       isAuthor={viewerId === topic.user_id}
       viewerId={viewerId}
       authorName={resolveAuthorName(topic.user_id)}
-      lastViewedAt={lastViewedAt}
+      viewedAnchor={viewedAnchor}
       readOnly={readOnly}
       canRate={canRate}
       onEdit={onEdit}

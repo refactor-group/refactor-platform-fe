@@ -10,8 +10,11 @@ import {
 } from "@/components/ui/hover-card";
 import { CalendarClock } from "lucide-react";
 import { cn } from "@/components/lib/utils";
-import { isTopicNew, topicWasUpdated } from "@/types/coaching-session-topic";
-import type { Option } from "@/types/option";
+import {
+  isTopicNew,
+  topicWasUpdated,
+  type LastViewedAnchor,
+} from "@/types/coaching-session-topic";
 import type { Id } from "@/types/general";
 
 export interface TopicAuthorBadgeProps {
@@ -20,7 +23,7 @@ export interface TopicAuthorBadgeProps {
   viewerId: Id;
   createdAt: DateTime;
   updatedAt: DateTime;
-  lastViewedAt: Option<DateTime>;
+  viewedAnchor: LastViewedAnchor;
   /** Topic the backend moved here from a prior session (deferral). */
   isMovedOver?: boolean;
 }
@@ -42,13 +45,13 @@ export function TopicAuthorBadge({
   viewerId,
   createdAt,
   updatedAt,
-  lastViewedAt,
+  viewedAnchor,
   isMovedOver = false,
 }: TopicAuthorBadgeProps): JSX.Element {
   const isNew = isTopicNew(
     { user_id: authorId, created_at: createdAt },
     viewerId,
-    lastViewedAt
+    viewedAnchor
   );
   const showUpdated = topicWasUpdated({
     created_at: createdAt,

@@ -72,20 +72,45 @@ export function transformCoachingSessionTopic(data: any): CoachingSessionTopic {
   };
 }
 
-// "New since last session" = created after the previous session, by the OTHER
-// party. No anchor (never viewed) → never new. `>` on ts-luxon DateTime
-// compares instants. `lastViewedAt` is the viewer's last-viewed marker for
-// this session — "new since I last viewed."
+// The viewer's read-state for a session. Three-valued on purpose: the marker
+// loads asynchronously, and conflating "still loading" with "never viewed"
+// would flash false "new" dots on every open of an already-seen session.
+//  - loading: marker not fetched yet → nothing is "new" (no flash).
+//  - never:   resolved, never viewed → every OTHER-authored topic is new,
+//             including ones added before this first open.
+//  - viewed:  resolved at `at` → new = other-authored, created after `at`.
+export type LastViewedAnchor =
+  | { kind: "loading" }
+  | { kind: "never" }
+  | { kind: "viewed"; at: DateTime };
+
+// Map the PRIOR marker returned by POST /view to a resolved anchor: absent
+// (None) → never viewed; present → viewed at that instant.
+export function resolveLastViewedAnchor(
+  previous: Option<DateTime>
+): LastViewedAnchor {
+  return previous.some ? { kind: "viewed", at: previous.val } : { kind: "never" };
+}
+
+// "New since I last viewed this session" = a topic by the OTHER party the viewer
+// hasn't seen: on a never-viewed session that's ALL other-authored topics; once
+// viewed, only those created after the last-viewed instant. The viewer's own
+// topics are never new to them, and nothing is flagged while the anchor is still
+// loading. `>` on ts-luxon DateTime compares instants.
 export function isTopicNew(
   topic: Pick<CoachingSessionTopic, "user_id" | "created_at">,
   viewerId: Id,
-  lastViewedAt: Option<DateTime>
+  anchor: LastViewedAnchor
 ): boolean {
-  return (
-    lastViewedAt.some &&
-    topic.user_id !== viewerId &&
-    topic.created_at > lastViewedAt.val
-  );
+  if (topic.user_id === viewerId) return false;
+  switch (anchor.kind) {
+    case "loading":
+      return false;
+    case "never":
+      return true;
+    case "viewed":
+      return topic.created_at > anchor.at;
+  }
 }
 
 // `updated_at` is coarse — any mutation bumps it, so this gates a "Updated"

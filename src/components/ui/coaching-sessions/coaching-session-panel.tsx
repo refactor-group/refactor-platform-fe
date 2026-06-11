@@ -40,7 +40,9 @@ import type { Agreement } from "@/types/agreement";
 import {
   type CoachingSessionTopic,
   type TopicPriority,
+  type LastViewedAnchor,
   TopicStatus,
+  resolveLastViewedAnchor,
 } from "@/types/coaching-session-topic";
 import { defaultAgreement } from "@/types/agreement";
 import {
@@ -97,8 +99,8 @@ export interface CoachingSessionPanelSharedProps {
   onTopicInsertToNotes: (body: string) => void;
   /** Resolves a topic author's user id to a display name for the badge. */
   resolveTopicAuthorName: (userId: Id) => string;
-  /** Viewer's last-viewed marker for this session; drives the "new since" dot. */
-  lastViewedAt: Option<DateTime>;
+  /** Viewer's read-state for this session; drives the "new since" dot. */
+  viewedAnchor: LastViewedAnchor;
   // Agreement data
   agreements: Agreement[];
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
@@ -381,9 +383,11 @@ export function CoachingSessionPanel({
   // The write is gated on the ref still owning this session at resolve time —
   // that survives strict-mode's setup/cleanup/setup (a cleanup must NOT cancel
   // the lone surviving call) while still rejecting a stale write after a fast
-  // session switch. Anchor stays None until the mark resolves (no dots flash
-  // early) and on failure (graceful: no dots rather than a crash).
-  const [lastViewedAt, setLastViewedAt] = useState<Option<DateTime>>(None);
+  // session switch. Anchor stays "loading" until the mark resolves (no dots
+  // flash early) and on failure (graceful: no dots rather than a crash).
+  const [viewedAnchor, setViewedAnchor] = useState<LastViewedAnchor>({
+    kind: "loading",
+  });
   const markedViewedRef = useRef<Id | null>(null);
   useEffect(() => {
     if (!coachingSessionId || markedViewedRef.current === coachingSessionId) return;
@@ -391,7 +395,7 @@ export function CoachingSessionPanel({
     CoachingSessionViewApi.markViewed(coachingSessionId)
       .then((result) => {
         if (markedViewedRef.current === coachingSessionId) {
-          setLastViewedAt(result.previousLastViewedAt);
+          setViewedAnchor(resolveLastViewedAnchor(result.previousLastViewedAt));
         }
       })
       .catch((err) => console.error("Failed to mark session viewed:", err));
@@ -1163,7 +1167,7 @@ export function CoachingSessionPanel({
     onTopicStatus: handleTopicStatus,
     onTopicInsertToNotes: handleTopicInsertToNotes,
     resolveTopicAuthorName,
-    lastViewedAt,
+    viewedAnchor,
     agreements,
     onAgreementEdit: handleAgreementEdit,
     onAgreementDelete: handleAgreementDelete,
