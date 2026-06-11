@@ -30,6 +30,7 @@ import {
   Recurrence,
   Weekday,
   recurrenceToPayload,
+  untilDateToUtcDateTime,
   validateRecurrence,
   weekdayFromLuxon,
 } from "@/types/recurrence";
@@ -180,6 +181,9 @@ function RescheduleSeriesForm({
       byWeekdays,
       end
     );
+    if (recurrence.until) {
+      recurrence.until = untilDateToUtcDateTime(recurrence.until, userTimezone);
+    }
     const payload: CreateRecurringSessionRequest = {
       coaching_relationship_id: series.coaching_relationship_id,
       start_at: utcDateTime,

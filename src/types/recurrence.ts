@@ -139,6 +139,22 @@ export function recurrenceToPayload(
   return recurrence;
 }
 
+/**
+ * Serializes the form's date-only `until` (yyyy-MM-dd, in the user's wall
+ * clock) as a UTC-naive datetime — the backend wants the same datetime shape
+ * as `start_at`, not a bare date. Anchored to end-of-day so occurrences on the
+ * final day are still included.
+ */
+export function untilDateToUtcDateTime(
+  untilDate: string,
+  timezone: string
+): string {
+  return DateTime.fromISO(untilDate, { zone: timezone })
+    .endOf("day")
+    .toUTC()
+    .toFormat("yyyy-MM-dd'T'HH:mm:ss");
+}
+
 // Backend caps the expanded series. Mirroring them here so callers can
 // surface inline guidance before submission instead of waiting for a 422.
 export const MAX_OCCURRENCES = 365;
