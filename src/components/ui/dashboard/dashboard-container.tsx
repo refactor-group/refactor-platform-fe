@@ -57,6 +57,7 @@ export function DashboardContainer() {
   >();
   const [refreshUpcomingSession, setRefreshUpcomingSession] = useState<(() => void) | null>(() => null);
   const [refreshSessionsCard, setRefreshSessionsCard] = useState<(() => void) | null>(() => null);
+  const [refreshSeriesCard, setRefreshSeriesCard] = useState<(() => void) | null>(() => null);
 
   const handleOpenDialog = (session?: CoachingSession | EnrichedCoachingSession) => {
     setSessionToEdit(session);
@@ -74,6 +75,7 @@ export function DashboardContainer() {
     // card until a hard reload.
     refreshUpcomingSession?.();
     refreshSessionsCard?.();
+    refreshSeriesCard?.();
   };
 
   // Stable references so the cards' onRefreshNeeded useEffects don't
@@ -84,6 +86,10 @@ export function DashboardContainer() {
   );
   const handleSessionsCardRefreshNeeded = useCallback(
     (refreshFn: () => void) => setRefreshSessionsCard(() => refreshFn),
+    [],
+  );
+  const handleSeriesCardRefreshNeeded = useCallback(
+    (refreshFn: () => void) => setRefreshSeriesCard(() => refreshFn),
     [],
   );
 
@@ -119,6 +125,7 @@ export function DashboardContainer() {
           relationshipId={seriesRelationshipId ?? null}
           canManage={canManageSeries}
           onSeriesMutated={handleSeriesMutated}
+          onRefreshNeeded={handleSeriesCardRefreshNeeded}
         />
       </div>
       <CoachingSessionDialog

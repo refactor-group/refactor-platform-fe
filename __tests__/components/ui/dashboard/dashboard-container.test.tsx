@@ -29,6 +29,7 @@ import { DashboardContainer } from "@/components/ui/dashboard/dashboard-containe
 
 const upcomingSessionRefreshSpy = vi.fn();
 const coachingSessionsCardRefreshSpy = vi.fn();
+const coachingSeriesCardRefreshSpy = vi.fn();
 
 vi.mock("@/components/ui/dashboard/upcoming-session-card", () => ({
   UpcomingSessionCard: ({
@@ -64,7 +65,16 @@ vi.mock("@/components/ui/dashboard/goals-overview-card", () => ({
 }));
 
 vi.mock("@/components/ui/dashboard/coaching-series-card", () => ({
-  CoachingSeriesCard: () => <div data-testid="coaching-series-card-stub" />,
+  CoachingSeriesCard: ({
+    onRefreshNeeded,
+  }: {
+    onRefreshNeeded?: (fn: () => void) => void;
+  }) => {
+    useEffect(() => {
+      onRefreshNeeded?.(coachingSeriesCardRefreshSpy);
+    }, [onRefreshNeeded]);
+    return <div data-testid="coaching-series-card-stub" />;
+  },
 }));
 
 vi.mock("@/components/ui/dashboard/dashboard-header", () => ({
@@ -146,18 +156,20 @@ describe("DashboardContainer auto-refresh wiring", () => {
     // either dropped a prop or stopped passing it.
     expect(upcomingSessionRefreshSpy).not.toHaveBeenCalled();
     expect(coachingSessionsCardRefreshSpy).not.toHaveBeenCalled();
+    expect(coachingSeriesCardRefreshSpy).not.toHaveBeenCalled();
     // The card *stubs* are responsible for invoking onRefreshNeeded
     // with these spies; the assertion above just establishes the
     // baseline. The next test exercises the call path.
   });
 
-  it("invokes BOTH card refreshes when the create/edit dialog closes", () => {
+  it("invokes ALL card refreshes when the create/edit dialog closes", () => {
     render(<DashboardContainer />);
 
     // Pre-state: refreshes haven't been called as a result of dialog
     // close yet (they're plumbed but the dialog is closed at mount).
     upcomingSessionRefreshSpy.mockClear();
     coachingSessionsCardRefreshSpy.mockClear();
+    coachingSeriesCardRefreshSpy.mockClear();
 
     // Open the dialog via the header stub.
     fireEvent.click(screen.getByTestId("open-dialog-stub"));
@@ -169,23 +181,27 @@ describe("DashboardContainer auto-refresh wiring", () => {
       fireEvent.click(screen.getByTestId("close-dialog-stub"));
     });
 
-    // The contract: dialog-close fires both refreshes. If a future
-    // refactor wires the dialog's onOpenChange to a path that only
-    // refreshes one card (or neither), this assertion will fail.
+    // The contract: dialog-close fires every card's refresh. A recurring
+    // create adds a series too, so the series card is part of this set. If a
+    // future refactor wires the dialog's onOpenChange to a path that only
+    // refreshes some cards, this assertion will fail.
     expect(upcomingSessionRefreshSpy).toHaveBeenCalledTimes(1);
     expect(coachingSessionsCardRefreshSpy).toHaveBeenCalledTimes(1);
+    expect(coachingSeriesCardRefreshSpy).toHaveBeenCalledTimes(1);
   });
 
   it("does not fire refreshes on initial mount (only on dialog close)", () => {
     upcomingSessionRefreshSpy.mockClear();
     coachingSessionsCardRefreshSpy.mockClear();
+    coachingSeriesCardRefreshSpy.mockClear();
 
     render(<DashboardContainer />);
 
-    // Mount alone — no dialog interaction yet — must not fire either
+    // Mount alone — no dialog interaction yet — must not fire any
     // refresh. If it did, every dashboard render would re-fetch, which
     // would also break SWR's cache-warmth semantics elsewhere.
     expect(upcomingSessionRefreshSpy).not.toHaveBeenCalled();
     expect(coachingSessionsCardRefreshSpy).not.toHaveBeenCalled();
+    expect(coachingSeriesCardRefreshSpy).not.toHaveBeenCalled();
   });
 });

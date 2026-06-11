@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CalendarClock, CalendarRange, MoreVertical, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,10 @@ interface CoachingSeriesCardProps {
   relationshipId: Id | null;
   canManage?: boolean;
   onSeriesMutated?: () => void;
+  /** Surfaces the card's SWR refresh to the parent so it can revalidate after
+   *  the create/edit dialog closes. The series list uses a tuple SWR key the
+   *  mutation hook can't auto-invalidate. Mirrors the other dashboard cards. */
+  onRefreshNeeded?: (refresh: () => void) => void;
 }
 
 type DeleteState =
@@ -53,9 +57,20 @@ export function CoachingSeriesCard({
   relationshipId,
   canManage = false,
   onSeriesMutated,
+  onRefreshNeeded,
 }: CoachingSeriesCardProps) {
   const { series, isLoading, isError, refresh } =
     useCoachingSessionSeriesList(relationshipId);
+
+  // Register a stable refresh wrapper once; the ref keeps it pointed at the
+  // latest SWR mutator as relationshipId (and thus the key) changes.
+  const refreshRef = useRef(refresh);
+  useEffect(() => {
+    refreshRef.current = refresh;
+  });
+  useEffect(() => {
+    onRefreshNeeded?.(() => refreshRef.current());
+  }, [onRefreshNeeded]);
   const { delete: deleteSeries } = useCoachingSessionSeriesMutation();
   const [deleteState, setDeleteState] = useState<DeleteState>({
     kind: "closed",
