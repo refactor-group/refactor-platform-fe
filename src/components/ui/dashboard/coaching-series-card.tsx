@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoreVertical, Trash2 } from "lucide-react";
+import { CalendarRange, MoreVertical, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,14 +15,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { DeleteSeriesDialog } from "@/components/ui/dashboard/delete-series-dialog";
+import { SeriesDetailDialog } from "@/components/ui/dashboard/series-detail-dialog";
 import {
   useCoachingSessionSeriesList,
   useCoachingSessionSeriesMutation,
 } from "@/lib/api/coaching-session-series";
+import { getBrowserTimezone } from "@/lib/timezone-utils";
 import {
   CoachingSessionSeries,
   formatSeriesRule,
@@ -56,6 +59,10 @@ export function CoachingSeriesCard({
   const [deleteState, setDeleteState] = useState<DeleteState>({
     kind: "closed",
   });
+  const [detailSeries, setDetailSeries] = useState<CoachingSessionSeries | null>(
+    null
+  );
+  const userTimezone = getBrowserTimezone();
 
   const handleConfirmDelete = async () => {
     if (deleteState.kind !== "pending") return;
@@ -117,19 +124,24 @@ export function CoachingSeriesCard({
                     {s.rule.duration_minutes}-minute sessions
                   </span>
                 </div>
-                {canManage && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Series actions"
-                        className="rounded-full h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-foreground"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Series actions"
+                      className="rounded-full h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-foreground"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setDetailSeries(s)}>
+                      <CalendarRange className="mr-2 h-4 w-4" />
+                      View sessions
+                    </DropdownMenuItem>
+                    {canManage && <DropdownMenuSeparator />}
+                    {canManage && (
                       <DropdownMenuItem
                         onClick={() =>
                           setDeleteState({ kind: "pending", series: s })
@@ -139,9 +151,9 @@ export function CoachingSeriesCard({
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete series
                       </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </li>
             ))}
           </ul>
@@ -155,6 +167,12 @@ export function CoachingSeriesCard({
         isDeleting={deleteState.kind === "deleting"}
         onCancel={() => setDeleteState({ kind: "closed" })}
         onConfirm={handleConfirmDelete}
+      />
+
+      <SeriesDetailDialog
+        series={detailSeries}
+        userTimezone={userTimezone}
+        onClose={() => setDetailSeries(null)}
       />
     </Card>
   );
