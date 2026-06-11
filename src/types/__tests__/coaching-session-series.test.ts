@@ -13,6 +13,7 @@ import {
   isCoachingSessionSeries,
   parseCoachingSessionSeries,
   parseCoachingSessionSeriesWithSessions,
+  seriesRecurrenceToEnd,
 } from "@/types/coaching-session-series";
 
 // A count-based weekly rule, matching the backend wire shape where the unused
@@ -201,5 +202,30 @@ describe("formatSeriesRule", () => {
     expect(
       formatSeriesRule(rule({ frequency: Frequency.Monthly, count: Some(6) }))
     ).toBe("Monthly · 6 sessions");
+  });
+});
+
+describe("seriesRecurrenceToEnd", () => {
+  const base = {
+    frequency: Frequency.Weekly,
+    interval: 1,
+  };
+
+  it("maps a count-based recurrence to a count end", () => {
+    expect(
+      seriesRecurrenceToEnd({ ...base, count: Some(12), until: None })
+    ).toEqual({ kind: "count", count: 12 });
+  });
+
+  it("maps an until-based recurrence to an until end", () => {
+    expect(
+      seriesRecurrenceToEnd({ ...base, count: None, until: Some("2026-08-15") })
+    ).toEqual({ kind: "until", until: "2026-08-15" });
+  });
+
+  it("falls back to a 4-occurrence count when neither bound is set", () => {
+    expect(
+      seriesRecurrenceToEnd({ ...base, count: None, until: None })
+    ).toEqual({ kind: "count", count: 4 });
   });
 });

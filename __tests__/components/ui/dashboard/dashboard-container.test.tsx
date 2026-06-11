@@ -63,6 +63,10 @@ vi.mock("@/components/ui/dashboard/goals-overview-card", () => ({
   GoalsOverviewCard: () => <div data-testid="goals-overview-card-stub" />,
 }));
 
+vi.mock("@/components/ui/dashboard/coaching-series-card", () => ({
+  CoachingSeriesCard: () => <div data-testid="coaching-series-card-stub" />,
+}));
+
 vi.mock("@/components/ui/dashboard/dashboard-header", () => ({
   DashboardHeader: ({ onCreateSession }: { onCreateSession: () => void }) => (
     <button data-testid="open-dialog-stub" onClick={onCreateSession}>
@@ -113,6 +117,11 @@ vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
 }));
 vi.mock("@/lib/hooks/use-auto-select-single-relationship", () => ({
   useAutoSelectSingleRelationship: () => undefined,
+}));
+
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: (selector: (s: { userSession?: { id: string } }) => unknown) =>
+    selector({ userSession: undefined }),
 }));
 
 describe("DashboardContainer auto-refresh wiring", () => {

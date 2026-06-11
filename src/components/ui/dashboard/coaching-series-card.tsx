@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarRange, MoreVertical, Trash2 } from "lucide-react";
+import { CalendarClock, CalendarRange, MoreVertical, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { DeleteSeriesDialog } from "@/components/ui/dashboard/delete-series-dialog";
+import { RescheduleSeriesDialog } from "@/components/ui/dashboard/reschedule-series-dialog";
 import { SeriesDetailDialog } from "@/components/ui/dashboard/series-detail-dialog";
 import {
   useCoachingSessionSeriesList,
@@ -62,6 +63,8 @@ export function CoachingSeriesCard({
   const [detailSeries, setDetailSeries] = useState<CoachingSessionSeries | null>(
     null
   );
+  const [rescheduleSeries, setRescheduleSeries] =
+    useState<CoachingSessionSeries | null>(null);
   const userTimezone = getBrowserTimezone();
 
   const handleConfirmDelete = async () => {
@@ -140,6 +143,12 @@ export function CoachingSeriesCard({
                       <CalendarRange className="mr-2 h-4 w-4" />
                       View sessions
                     </DropdownMenuItem>
+                    {canManage && (
+                      <DropdownMenuItem onClick={() => setRescheduleSeries(s)}>
+                        <CalendarClock className="mr-2 h-4 w-4" />
+                        Reschedule
+                      </DropdownMenuItem>
+                    )}
                     {canManage && <DropdownMenuSeparator />}
                     {canManage && (
                       <DropdownMenuItem
@@ -173,6 +182,15 @@ export function CoachingSeriesCard({
         series={detailSeries}
         userTimezone={userTimezone}
         onClose={() => setDetailSeries(null)}
+      />
+
+      <RescheduleSeriesDialog
+        series={rescheduleSeries}
+        onClose={() => setRescheduleSeries(null)}
+        onRescheduled={() => {
+          refresh();
+          onSeriesMutated?.();
+        }}
       />
     </Card>
   );

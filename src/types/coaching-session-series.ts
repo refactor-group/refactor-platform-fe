@@ -2,6 +2,7 @@ import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import {
   Frequency,
+  RecurrenceEnd,
   Weekday,
   frequencyLabel,
   weekdayLabel,
@@ -166,6 +167,18 @@ function frequencyPhrase(frequency: Frequency, interval: number): string {
       throw new Error(`Unhandled frequency: ${_exhaustive}`);
     }
   }
+}
+
+export function seriesRecurrenceToEnd(
+  recurrence: SeriesRecurrence
+): RecurrenceEnd {
+  if (recurrence.count.some) {
+    return { kind: "count", count: recurrence.count.val };
+  }
+  if (recurrence.until.some) {
+    return { kind: "until", until: recurrence.until.val };
+  }
+  return { kind: "count", count: 4 };
 }
 
 /**
