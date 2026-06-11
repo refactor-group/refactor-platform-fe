@@ -48,7 +48,11 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
         return matchesEndpoint(url, baseUrl, endpointPath);
       },
       undefined,
-      { revalidate: true }
+      // Revalidate WITHOUT blanking the cache. Writing `undefined` (the default)
+      // empties the list for a beat, which unmounts/remounts list subtrees (a
+      // visible flash); populateCache: false keeps the current data on screen
+      // while the refetch runs in the background.
+      { revalidate: true, populateCache: false }
     );
     console.log(`[SSE] Revalidated ${endpointPath} cache after ${eventName}`);
   }, [mutate, baseUrl]);
@@ -71,7 +75,8 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
         return false;
       },
       undefined,
-      { revalidate: true }
+      // See invalidateEndpoint: don't blank the cache, just revalidate.
+      { revalidate: true, populateCache: false }
     );
     console.log(`[SSE] Revalidated session-scoped goal caches after ${eventName}`);
   }, [mutate, baseUrl]);
