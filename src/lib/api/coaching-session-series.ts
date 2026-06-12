@@ -119,13 +119,15 @@ export const useCoachingSessionSeriesList = (
 };
 
 /**
- * Fetches a single series with its materialized sessions. Passing a falsy id
- * disables the fetch and yields the default empty series.
+ * Fetches a single series with its materialized sessions. Expects a real
+ * series id — render-guard the consumer so it only mounts once an id is
+ * available (see SeriesDetailDialog), rather than passing an empty-string
+ * sentinel to suppress the fetch.
  *
  * @returns { series, isLoading, isError, refresh }
  */
 export const useCoachingSessionSeries = (id: Id, timezone: string) => {
-  const url = id ? `${COACHING_SESSION_SERIES_BASEURL}/${id}` : null;
+  const url = `${COACHING_SESSION_SERIES_BASEURL}/${id}`;
 
   const { entity, isLoading, isError, refresh } =
     EntityApi.useEntity<CoachingSessionSeriesWithSessions>(
