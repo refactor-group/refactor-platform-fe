@@ -55,4 +55,14 @@ describe("matchesEndpoint", () => {
     expect(matchesEndpoint(`${BASE}/users/u-1/goals`, BASE, "/goals")).toBe(true);
     expect(matchesEndpoint(`${BASE}/goals_history`, BASE, "/goals")).toBe(false);
   });
+
+  it("matches the session-scoped topics list for topics_changed invalidation", () => {
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1/topics`, BASE, "/topics"),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1/topics?x=1`, BASE, "/topics"),
+    ).toBe(true);
+    expect(matchesEndpoint(`${BASE}/topics_archive`, BASE, "/topics")).toBe(false);
+  });
 });

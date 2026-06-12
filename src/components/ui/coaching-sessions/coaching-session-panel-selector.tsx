@@ -10,12 +10,14 @@ import {
 import { CountPill } from "@/components/ui/count-pill";
 
 export enum PanelSection {
+  Topics = "topics",
   Goals = "goals",
   Agreements = "agreements",
   Actions = "actions",
 }
 
 const SECTION_NAMES: Record<PanelSection, string> = {
+  [PanelSection.Topics]: "Topics",
   [PanelSection.Goals]: "Goals",
   [PanelSection.Agreements]: "Agreements",
   [PanelSection.Actions]: "Actions",

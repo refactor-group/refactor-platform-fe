@@ -15,6 +15,7 @@ import { GoalFlowPages, computePanelCounts, computeHeaderTitle } from "@/compone
 import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
+import { TopicSectionContent } from "@/components/ui/coaching-sessions/topic-section-content";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
@@ -37,11 +38,25 @@ export function CoachingSessionPanelDesktop({
   goalFlow,
   onUnlink,
   onUpdateGoal,
-  readOnly = false,
+  sectionsLocked = false,
+  newTopicLocked = false,
   collapsed = false,
   onToggleCollapsed,
   activeSection,
   onSectionChange,
+  topics,
+  viewerId,
+  onTopicCreate,
+  onTopicEdit,
+  onTopicDelete,
+  onTopicReorder,
+  canRateTopics,
+  canDeleteAnyTopic,
+  onTopicPriority,
+  onTopicStatus,
+  onTopicInsertToNotes,
+  resolveTopicAuthorName,
+  viewedAnchor,
   agreements,
   onAgreementEdit,
   onAgreementDelete,
@@ -93,10 +108,11 @@ export function CoachingSessionPanelDesktop({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [flow.step, goalFlow]);
 
-  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions);
+  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions, topics);
 
   if (collapsed) {
     const sectionLabels: Record<PanelSection, string> = {
+      [PanelSection.Topics]: "Topics",
       [PanelSection.Goals]: "Goals",
       [PanelSection.Agreements]: "Agreements",
       [PanelSection.Actions]: "Actions",
@@ -174,7 +190,7 @@ export function CoachingSessionPanelDesktop({
               )}
             </div>
             <div className="flex items-center gap-1">
-              {!isInGoalFlow && !readOnly && (
+              {!isInGoalFlow && !sectionsLocked && activeSection !== PanelSection.Topics && (
                 <Button
                   size="sm"
                   className="h-8 gap-1 text-xs"
@@ -211,11 +227,29 @@ export function CoachingSessionPanelDesktop({
           </div>
         </CardHeader>
         <CardContent className="p-4 space-y-3 flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin]">
-          {activeSection === PanelSection.Goals ? (
+          {activeSection === PanelSection.Topics ? (
+            <TopicSectionContent
+              topics={topics}
+              viewerId={viewerId}
+              onCreate={onTopicCreate}
+              onEdit={onTopicEdit}
+              onDelete={onTopicDelete}
+              onReorder={onTopicReorder}
+              readOnly={false}
+              addDisabled={newTopicLocked}
+              canRate={canRateTopics}
+              canDeleteAny={canDeleteAnyTopic}
+              onPriority={onTopicPriority}
+              onStatus={onTopicStatus}
+              onInsertToNotes={onTopicInsertToNotes}
+              resolveAuthorName={resolveTopicAuthorName}
+              viewedAnchor={viewedAnchor}
+            />
+          ) : activeSection === PanelSection.Goals ? (
             <GoalFlowPages
               linkedGoals={linkedGoals}
               goalFlow={goalFlow}
-              readOnly={readOnly}
+              readOnly={sectionsLocked}
               onUnlink={onUnlink}
               onUpdateGoal={onUpdateGoal}
               titlePrefill={goalTitlePrefill}
@@ -230,7 +264,7 @@ export function CoachingSessionPanelDesktop({
               onAgreementCreate={onAgreementCreate}
               onAgreementEdit={onAgreementEdit}
               onAgreementDelete={onAgreementDelete}
-              readOnly={readOnly}
+              readOnly={sectionsLocked}
             />
           ) : coachId && coachName && coacheeId && coacheeName ? (
             <ActionSectionContent
@@ -253,7 +287,7 @@ export function CoachingSessionPanelDesktop({
               goals={linkedGoals}
               onActionCreate={onActionCreate}
               onActionDelete={onActionDelete}
-              readOnly={readOnly}
+              readOnly={sectionsLocked}
               onActiveTabChange={onActiveActionTabChange}
             />
           ) : null}

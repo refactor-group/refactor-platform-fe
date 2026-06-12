@@ -18,10 +18,11 @@ import {
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
 import { useGoalByRelationship } from "@/lib/api/goals";
-import { goalTitle, goalsTitle } from "@/types/goal";
+import { goalTitle } from "@/types/goal";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { DateTime } from "ts-luxon";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { coachingSessionTitle } from "@/types/coaching-session";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
@@ -144,7 +145,7 @@ function SessionItem({
       <div className="flex min-w-0 ml-4">
         <div className="min-w-0 w-full">
           <p className="truncate text-sm font-medium">
-            {goalsTitle(session.goals)}
+            {coachingSessionTitle(session)}
           </p>
           <p className="truncate text-sm text-gray-400">
             {formatDateInUserTimezone(
@@ -199,6 +200,8 @@ export default function CoachingSessionSelector({
             <Spinner className="size-3" />
             <span>Loading goal...</span>
           </span>
+        ) : currentCoachingSession.title.some ? (
+          currentCoachingSession.title.val
         ) : (
           goalTitle(goal)
         )}

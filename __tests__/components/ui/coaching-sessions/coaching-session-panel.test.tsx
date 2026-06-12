@@ -8,6 +8,7 @@ import { createMockGoal, createMockAgreement } from "../../../test-utils"
 import { ItemStatus } from "@/types/general"
 import { GoalProgress } from "@/types/goal-progress"
 import { Some, None } from "@/types/option"
+import { LockExtent } from "@/types/after-session-lock"
 import { DateTime } from "ts-luxon"
 
 // Mock matchMedia to simulate desktop viewport (md+ breakpoint)
@@ -70,6 +71,14 @@ vi.mock("@/lib/api/agreements", () => ({
   })),
 }))
 
+vi.mock("@/lib/api/coaching-session-views", () => ({
+  CoachingSessionViewApi: {
+    markViewed: vi
+      .fn()
+      .mockResolvedValue({ previousLastViewedAt: { some: false }, lastViewedAt: null }),
+  },
+}));
+
 vi.mock("@/lib/api/goal-progress", () => ({
   useGoalProgress: vi.fn(() => ({
     progressMetrics: {
@@ -85,6 +94,14 @@ vi.mock("@/lib/api/goal-progress", () => ({
     refresh: vi.fn(),
   })),
 }))
+
+vi.mock("@/components/ui/coaching-sessions/editor-cache-context", () => ({
+  useEditorCache: () => ({
+    insertTextIntoNotes: vi.fn(() => true),
+    registerEditor: vi.fn(),
+    presenceState: { users: new Map(), currentUser: null, isLoading: false },
+  }),
+}));
 
 // Mock auth store
 vi.mock("@/lib/providers/auth-store-provider", () => ({
@@ -230,7 +247,22 @@ describe("CoachingSessionPanel", () => {
     vi.clearAllMocks()
   })
 
-  it("defaults to Goals section with goal content visible", () => {
+  it("shows goal content when the Goals section is active", () => {
+    setupMocks()
+    render(
+      <CoachingSessionPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Goals}
+      />
+    )
+
+    // Goal title should be visible
+    const titles = screen.getAllByText("Improve technical leadership")
+    expect(titles.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it("defaults to the Topics section", () => {
     setupMocks()
     render(
       <CoachingSessionPanel
@@ -239,9 +271,10 @@ describe("CoachingSessionPanel", () => {
       />
     )
 
-    // Goal title should be visible
-    const titles = screen.getAllByText("Improve technical leadership")
-    expect(titles.length).toBeGreaterThanOrEqual(1)
+    // Topics is the default section: its selector label is shown and the
+    // Goals-only goal content is not rendered.
+    expect(screen.getAllByText("Topics").length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryByText("Improve technical leadership")).not.toBeInTheDocument()
   })
 
   it("renders the section selector dropdown", () => {
@@ -264,6 +297,7 @@ describe("CoachingSessionPanel", () => {
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Goals}
       />
     )
 
@@ -290,6 +324,7 @@ describe("CoachingSessionPanel", () => {
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Goals}
       />
     )
 
@@ -297,13 +332,14 @@ describe("CoachingSessionPanel", () => {
     expect(addButtons.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("hides add buttons when readOnly", () => {
+  it("hides the Goals add button when sections are locked after session", () => {
     setupMocks()
     render(
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
-        readOnly
+        defaultSection={PanelSection.Goals}
+        afterSessionLock={{ sections: LockExtent.Both, newTopic: LockExtent.None }}
       />
     )
 
