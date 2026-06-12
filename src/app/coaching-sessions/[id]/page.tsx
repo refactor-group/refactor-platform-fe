@@ -35,6 +35,12 @@ import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { isPastSession } from "@/types/coaching-session";
 import type { CoachingSession } from "@/types/coaching-session";
+import { RelationshipRole } from "@/types/relationship-role";
+import {
+  LockExtent,
+  NO_AFTER_SESSION_LOCK,
+  type AfterSessionLock,
+} from "@/types/after-session-lock";
 import { FocusedPanel } from "@/types/coaching-session-layout";
 
 import { DateTime } from "ts-luxon";
@@ -53,21 +59,28 @@ const DOCKED_TRANSCRIPT_WIDTH = "minmax(280px,440px)";
 const FLEX_COL = "minmax(0,1fr)";
 
 /**
- * Goals and Agreements lock for coachees once the session has ended; coaches
- * retain full access so they can adjust retroactively. Topics are never locked
- * (either participant may edit them regardless of session timing).
+ * After-session lock scopes by concern, gated on whether the session has ended
+ * (end-of-day in the viewer's timezone). The panel resolves each scope against
+ * the viewer's role:
+ *  - Goals/Agreements lock for the coachee (the coach edits retroactively),
+ *  - the new-topic affordance locks for both (a concluded session takes no new
+ *    topics; existing topics stay editable),
+ *  - nothing is locked while the session is still current.
  */
-function isLockedAfterSession(
+function afterSessionLockFor(
   session: CoachingSession,
-  timezone: string,
-  isCoach: boolean
-): boolean {
-  const isPast = isPastSession(session, {
+  timezone: string
+): AfterSessionLock {
+  const ended = isPastSession(session, {
     cutoff: DateTime.fromISO(session.date, { zone: 'utc' })
       .setZone(timezone)
       .endOf('day'),
   });
-  return isPast && !isCoach;
+  if (!ended) return NO_AFTER_SESSION_LOCK;
+  return {
+    sections: RelationshipRole.Coachee,
+    newTopic: LockExtent.Both,
+  };
 }
 
 /**
@@ -336,13 +349,12 @@ export default function CoachingSessionsPage() {
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={layout.isGoalsCollapsed}
               onToggleCollapsed={layout.toggleGoalsCollapsed}
-              lockedAfterSession={currentCoachingSession
-                ? isLockedAfterSession(
+              afterSessionLock={currentCoachingSession
+                ? afterSessionLockFor(
                     currentCoachingSession,
-                    userSession?.timezone || getBrowserTimezone(),
-                    isCoachInCurrentRelationship
+                    userSession?.timezone || getBrowserTimezone()
                   )
-                : false}
+                : NO_AFTER_SESSION_LOCK}
               defaultSection={panelSection}
               onSectionChange={handlePanelSectionChange}
               noteSelection={noteSelection}

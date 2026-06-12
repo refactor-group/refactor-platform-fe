@@ -93,6 +93,26 @@ describe("TopicSectionContent — inline add", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onCreate).not.toHaveBeenCalled();
   });
+
+  it("disables the add input + button and ignores Enter when addDisabled", () => {
+    const onCreate = vi.fn();
+    render(
+      <TopicSectionContent
+        topics={[]}
+        viewerId="me"
+        onCreate={onCreate}
+        onEdit={noop}
+        onDelete={noop}
+        addDisabled
+      />
+    );
+    const input = screen.getByPlaceholderText(/add a topic/i);
+    expect(input).toBeDisabled();
+    expect(screen.getByRole("button", { name: /add topic/i })).toBeDisabled();
+    fireEvent.change(input, { target: { value: "Should not submit" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onCreate).not.toHaveBeenCalled();
+  });
 });
 
 describe("TopicSectionContent — click to edit", () => {

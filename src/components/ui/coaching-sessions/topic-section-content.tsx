@@ -42,6 +42,9 @@ export interface TopicSectionContentProps {
   onDelete: (id: Id) => void;
   onReorder: (orderedIds: Id[]) => void;
   readOnly?: boolean;
+  /** Disables only the add-new-topic affordance (e.g. after the session ends),
+   *  while existing topics stay editable. Independent of `readOnly`. */
+  addDisabled?: boolean;
   /** True only for the coachee; the priority control is read-only otherwise. */
   canRate?: boolean;
   /** True for the coach: may delete ANY topic, not just their own. */
@@ -279,6 +282,7 @@ export function TopicSectionContent({
   onDelete,
   onReorder,
   readOnly = false,
+  addDisabled = false,
   canRate = false,
   canDeleteAny = false,
   onPriority = () => {},
@@ -315,6 +319,7 @@ export function TopicSectionContent({
   };
 
   const add = () => {
+    if (addDisabled) return;
     const trimmed = newBody.trim();
     if (!trimmed) return;
     onCreate(trimmed);
@@ -389,6 +394,7 @@ export function TopicSectionContent({
             ref={addInputRef}
             rows={1}
             value={newBody}
+            disabled={addDisabled}
             onChange={(e) => setNewBody(e.target.value)}
             onKeyDown={(e) => {
               // Enter submits; Shift+Enter inserts a newline.
@@ -404,7 +410,7 @@ export function TopicSectionContent({
             size="sm"
             className="h-9 shrink-0"
             aria-label="Add topic"
-            disabled={!newBody.trim()}
+            disabled={addDisabled || !newBody.trim()}
             onClick={add}
           >
             <Plus className="h-4 w-4" />

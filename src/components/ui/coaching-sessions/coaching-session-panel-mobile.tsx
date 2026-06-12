@@ -24,7 +24,8 @@ export function CoachingSessionPanelMobile({
   goalFlow,
   onUnlink,
   onUpdateGoal,
-  lockedAfterSession = false,
+  sectionsLocked = false,
+  newTopicLocked = false,
   activeSection,
   onSectionChange,
   topics,
@@ -151,7 +152,7 @@ export function CoachingSessionPanelMobile({
                   />
                 )}
               </div>
-              {!isInGoalFlow && !lockedAfterSession && activeSection !== PanelSection.Topics && (
+              {!isInGoalFlow && !sectionsLocked && activeSection !== PanelSection.Topics && (
                 <Button
                   size="sm"
                   className="h-8 gap-1 text-xs"
@@ -185,6 +186,7 @@ export function CoachingSessionPanelMobile({
                 onDelete={onTopicDelete}
                 onReorder={onTopicReorder}
                 readOnly={false}
+                addDisabled={newTopicLocked}
                 canRate={canRateTopics}
                 canDeleteAny={canDeleteAnyTopic}
                 onPriority={onTopicPriority}
@@ -197,7 +199,7 @@ export function CoachingSessionPanelMobile({
               <GoalFlowPages
                 linkedGoals={linkedGoals}
                 goalFlow={goalFlow}
-                readOnly={lockedAfterSession}
+                readOnly={sectionsLocked}
                 onUnlink={handleUnlink}
                 onUpdateGoal={onUpdateGoal}
                 titlePrefill={goalTitlePrefill}
@@ -212,7 +214,7 @@ export function CoachingSessionPanelMobile({
                 onAgreementCreate={onAgreementCreate}
                 onAgreementEdit={onAgreementEdit}
                 onAgreementDelete={onAgreementDelete}
-                readOnly={lockedAfterSession}
+                readOnly={sectionsLocked}
               />
             ) : coachId && coachName && coacheeId && coacheeName ? (
               <ActionSectionContent
@@ -235,7 +237,7 @@ export function CoachingSessionPanelMobile({
                 goals={linkedGoals}
                 onActionCreate={onActionCreate}
                 onActionDelete={onActionDelete}
-                readOnly={lockedAfterSession}
+                readOnly={sectionsLocked}
                 onActiveTabChange={onActiveActionTabChange}
               />
             ) : null}

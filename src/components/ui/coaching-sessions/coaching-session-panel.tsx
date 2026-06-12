@@ -37,6 +37,12 @@ import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
+import { RelationshipRole } from "@/types/relationship-role";
+import {
+  isLockedFor,
+  NO_AFTER_SESSION_LOCK,
+  type AfterSessionLock,
+} from "@/types/after-session-lock";
 import {
   type CoachingSessionTopic,
   type TopicPriority,
@@ -77,8 +83,10 @@ export interface CoachingSessionPanelSharedProps {
   onCreateAndSwap: (title: string, swapGoalId: string, body?: string) => void;
   onSwapAndLink: (newGoalId: string, swapGoalId: string) => void;
   onUpdateGoal: (goalId: string, title: string, body: string) => Promise<void>;
-  /** Locks Goals/Agreements editing once the session has ended (coachee only). */
-  lockedAfterSession?: boolean;
+  /** Resolved for this viewer: Goals/Agreements/action-delete are locked. */
+  sectionsLocked?: boolean;
+  /** Resolved for this viewer: the add-new-topic affordance is locked. */
+  newTopicLocked?: boolean;
   // Panel section state
   activeSection: PanelSection;
   onSectionChange: (section: PanelSection) => void;
@@ -328,8 +336,8 @@ interface CoachingSessionPanelProps {
    * expanded header renders a matching collapse button.
    */
   onToggleCollapsed?: () => void;
-  /** Locks Goals/Agreements editing once the session has ended (coachee only). */
-  lockedAfterSession?: boolean;
+  /** Per-concern after-session lock scopes; resolved per viewer role inside. */
+  afterSessionLock?: AfterSessionLock;
   /** Initial panel section (persisted via URL param by the page) */
   defaultSection?: PanelSection;
   /** Called when the user switches sections, so the page can sync to URL */
@@ -346,7 +354,7 @@ export function CoachingSessionPanel({
   coachingRelationshipId,
   collapsed = false,
   onToggleCollapsed,
-  lockedAfterSession = false,
+  afterSessionLock = NO_AFTER_SESSION_LOCK,
   defaultSection = PanelSection.Topics,
   onSectionChange: onSectionChangeExternal,
   noteSelection = None,
@@ -365,6 +373,15 @@ export function CoachingSessionPanel({
   const coacheeName = currentCoachingRelationship
     ? getCoacheeName(currentCoachingRelationship)
     : undefined;
+
+  // Resolve the after-session lock scopes against this viewer's role. A viewer
+  // who isn't the coach is treated as the coachee (the more-restricted role).
+  const viewerRole =
+    userId && coachId && userId === coachId
+      ? RelationshipRole.Coach
+      : RelationshipRole.Coachee;
+  const sectionsLocked = isLockedFor(afterSessionLock.sections, viewerRole);
+  const newTopicLocked = isLockedFor(afterSessionLock.newTopic, viewerRole);
 
   // ── Topic provenance: author-name resolver + previous-session anchor ──
   // Names come from the resolved relationship; while it loads, ids resolve to
@@ -518,7 +535,7 @@ export function CoachingSessionPanel({
       );
       result.match(
         async () => {
-          if (!lockedAfterSession && goal && goal.status === ItemStatus.InProgress) {
+          if (!sectionsLocked && goal && goal.status === ItemStatus.InProgress) {
             try {
               await updateGoal(goalId, { ...goal, status: ItemStatus.OnHold });
             } catch (err) {
@@ -558,7 +575,7 @@ export function CoachingSessionPanel({
                   }
                   return;
                 }
-                if (!lockedAfterSession && goal && previousStatus === ItemStatus.InProgress) {
+                if (!sectionsLocked && goal && previousStatus === ItemStatus.InProgress) {
                   try {
                     await updateGoal(goalId, { ...goal, status: ItemStatus.InProgress });
                   } catch (err) {
@@ -581,7 +598,7 @@ export function CoachingSessionPanel({
         }
       );
     },
-    [coachingSessionId, lockedAfterSession, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
+    [coachingSessionId, sectionsLocked, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleCreateAndLink = useCallback(
@@ -1176,7 +1193,8 @@ export function CoachingSessionPanel({
     onCreateAndSwap: handleCreateAndSwap,
     onSwapAndLink: handleSwapAndLink,
     onUpdateGoal: handleUpdateGoal,
-    lockedAfterSession,
+    sectionsLocked,
+    newTopicLocked,
     activeSection,
     onSectionChange: handleSectionChange,
     topics,

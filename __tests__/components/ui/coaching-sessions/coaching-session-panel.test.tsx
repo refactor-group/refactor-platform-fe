@@ -8,6 +8,7 @@ import { createMockGoal, createMockAgreement } from "../../../test-utils"
 import { ItemStatus } from "@/types/general"
 import { GoalProgress } from "@/types/goal-progress"
 import { Some, None } from "@/types/option"
+import { LockExtent } from "@/types/after-session-lock"
 import { DateTime } from "ts-luxon"
 
 // Mock matchMedia to simulate desktop viewport (md+ breakpoint)
@@ -331,14 +332,14 @@ describe("CoachingSessionPanel", () => {
     expect(addButtons.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("hides the Goals add button when lockedAfterSession", () => {
+  it("hides the Goals add button when sections are locked after session", () => {
     setupMocks()
     render(
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
         defaultSection={PanelSection.Goals}
-        lockedAfterSession
+        afterSessionLock={{ sections: LockExtent.Both, newTopic: LockExtent.None }}
       />
     )
 
