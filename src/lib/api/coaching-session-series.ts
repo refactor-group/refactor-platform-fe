@@ -30,35 +30,42 @@ export const CoachingSessionSeriesApi = {
    *
    * @param relationshipId Relationship whose series to fetch; null returns [].
    */
-  list: (relationshipId: Id | null): Promise<CoachingSessionSeries[]> => {
+  list: (
+    relationshipId: Id | null,
+    timezone: string
+  ): Promise<CoachingSessionSeries[]> => {
     if (!relationshipId) return Promise.resolve([]);
     return EntityApi.listFn<CoachingSessionSeriesRaw, CoachingSessionSeries>(
       COACHING_SESSION_SERIES_BASEURL,
       { params: { coaching_relationship_id: relationshipId } },
-      parseCoachingSessionSeries
+      (raw) => parseCoachingSessionSeries(raw, timezone)
     );
   },
 
   /**
    * Reads one series together with its materialized sessions, date-sorted.
    */
-  get: (id: Id): Promise<CoachingSessionSeriesWithSessions> =>
+  get: (
+    id: Id,
+    timezone: string
+  ): Promise<CoachingSessionSeriesWithSessions> =>
     EntityApi.getFn<CoachingSessionSeriesWithSessionsRaw>(
       `${COACHING_SESSION_SERIES_BASEURL}/${id}`
-    ).then(parseCoachingSessionSeriesWithSessions),
+    ).then((raw) => parseCoachingSessionSeriesWithSessions(raw, timezone)),
 
   /**
    * Creates a series and materializes its sessions in one transaction.
    * Returns the series with every created session; the first equals `start_at`.
    */
   create: (
-    payload: CreateRecurringSessionRequest
+    payload: CreateRecurringSessionRequest,
+    timezone: string
   ): Promise<CoachingSessionSeriesWithSessions> =>
     EntityApi.createFn<
       CreateRecurringSessionRequest,
       CoachingSessionSeriesWithSessionsRaw
-    >(COACHING_SESSION_SERIES_BASEURL, payload).then(
-      parseCoachingSessionSeriesWithSessions
+    >(COACHING_SESSION_SERIES_BASEURL, payload).then((raw) =>
+      parseCoachingSessionSeriesWithSessions(raw, timezone)
     ),
 
   /**
@@ -67,13 +74,14 @@ export const CoachingSessionSeriesApi = {
    */
   update: (
     id: Id,
-    payload: CreateRecurringSessionRequest
+    payload: CreateRecurringSessionRequest,
+    timezone: string
   ): Promise<CoachingSessionSeriesWithSessions> =>
     EntityApi.updateFn<
       CreateRecurringSessionRequest,
       CoachingSessionSeriesWithSessionsRaw
-    >(`${COACHING_SESSION_SERIES_BASEURL}/${id}`, payload).then(
-      parseCoachingSessionSeriesWithSessions
+    >(`${COACHING_SESSION_SERIES_BASEURL}/${id}`, payload).then((raw) =>
+      parseCoachingSessionSeriesWithSessions(raw, timezone)
     ),
 
   /**
@@ -92,7 +100,10 @@ export const CoachingSessionSeriesApi = {
  *
  * @returns { series, isLoading, isError, refresh }
  */
-export const useCoachingSessionSeriesList = (relationshipId: Id | null) => {
+export const useCoachingSessionSeriesList = (
+  relationshipId: Id | null,
+  timezone: string
+) => {
   const params = relationshipId
     ? { coaching_relationship_id: relationshipId }
     : undefined;
@@ -100,7 +111,7 @@ export const useCoachingSessionSeriesList = (relationshipId: Id | null) => {
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<CoachingSessionSeries>(
       COACHING_SESSION_SERIES_BASEURL,
-      () => CoachingSessionSeriesApi.list(relationshipId),
+      () => CoachingSessionSeriesApi.list(relationshipId, timezone),
       params
     );
 
@@ -113,13 +124,13 @@ export const useCoachingSessionSeriesList = (relationshipId: Id | null) => {
  *
  * @returns { series, isLoading, isError, refresh }
  */
-export const useCoachingSessionSeries = (id: Id) => {
+export const useCoachingSessionSeries = (id: Id, timezone: string) => {
   const url = id ? `${COACHING_SESSION_SERIES_BASEURL}/${id}` : null;
 
   const { entity, isLoading, isError, refresh } =
     EntityApi.useEntity<CoachingSessionSeriesWithSessions>(
       url,
-      () => CoachingSessionSeriesApi.get(id),
+      () => CoachingSessionSeriesApi.get(id, timezone),
       defaultCoachingSessionSeriesWithSessions()
     );
 
@@ -134,13 +145,14 @@ export const useCoachingSessionSeries = (id: Id) => {
  * reschedule re-materializes and a delete drops future sessions, callers
  * displaying `coaching_sessions` lists must `refresh()` those separately.
  */
-export const useCoachingSessionSeriesMutation = () => {
+export const useCoachingSessionSeriesMutation = (timezone: string) => {
   return EntityApi.useEntityMutation<
     CreateRecurringSessionRequest,
     CoachingSessionSeries
   >(COACHING_SESSION_SERIES_BASEURL, {
-    create: CoachingSessionSeriesApi.create,
-    update: CoachingSessionSeriesApi.update,
+    create: (payload) => CoachingSessionSeriesApi.create(payload, timezone),
+    update: (id, payload) =>
+      CoachingSessionSeriesApi.update(id, payload, timezone),
     delete: CoachingSessionSeriesApi.delete,
   });
 };

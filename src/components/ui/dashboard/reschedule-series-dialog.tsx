@@ -85,8 +85,8 @@ function RescheduleSeriesForm({
   onRescheduled,
 }: RescheduleSeriesFormProps) {
   const { userSession } = useAuthStore((state) => state);
-  const { update } = useCoachingSessionSeriesMutation();
   const userTimezone = userSession?.timezone || getBrowserTimezone();
+  const { update } = useCoachingSessionSeriesMutation(userTimezone);
 
   // The stored start is a naive UTC ISO string; interpret as UTC, then show
   // it in the user's timezone for editing (mirrors the create/edit form).

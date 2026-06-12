@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
-import { Frequency, Weekday } from "@/types/recurrence";
+import {
+  Frequency,
+  Weekday,
+  untilDateToUtcDateTime,
+} from "@/types/recurrence";
 import { Some, None } from "@/types/option";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import {
@@ -42,9 +46,14 @@ function rawSeries(
   };
 }
 
+// Most fixtures carry a bare-date or null `until`, which the parser leaves
+// untouched regardless of zone; a concrete zone only matters for the datetime
+// round-trip test below.
+const TZ = "America/New_York";
+
 describe("parseCoachingSessionSeries", () => {
   it("passes scalar fields through unchanged", () => {
-    const result = parseCoachingSessionSeries(rawSeries());
+    const result = parseCoachingSessionSeries(rawSeries(), TZ);
 
     expect(result.id).toBe("series-1");
     expect(result.coaching_relationship_id).toBe("rel-1");
@@ -60,7 +69,7 @@ describe("parseCoachingSessionSeries", () => {
   });
 
   it("lifts a present count to Some and a null until to None", () => {
-    const result = parseCoachingSessionSeries(rawSeries());
+    const result = parseCoachingSessionSeries(rawSeries(), TZ);
 
     expect(result.rule.recurrence.count.some).toBe(true);
     expect(result.rule.recurrence.count.some && result.rule.recurrence.count.val).toBe(24);
@@ -81,7 +90,8 @@ describe("parseCoachingSessionSeries", () => {
             until: "2026-08-15",
           },
         },
-      })
+      }),
+      TZ
     );
 
     expect(result.rule.recurrence.count.none).toBe(true);
@@ -91,11 +101,41 @@ describe("parseCoachingSessionSeries", () => {
     ).toBe("2026-08-15");
   });
 
+  it("round-trips a datetime until back to the picked local date (no day drift)", () => {
+    // What the form sends for an end date of Jan 31 in a negative-offset zone:
+    // end-of-day local crosses midnight UTC, so the stored value is Feb 1 UTC.
+    const stored = untilDateToUtcDateTime("2027-01-31", TZ);
+    expect(stored).toBe("2027-02-01T04:59:59");
+
+    const result = parseCoachingSessionSeries(
+      rawSeries({
+        rule: {
+          start_at: "2027-01-10T10:00:00",
+          duration_minutes: 60,
+          recurrence: {
+            frequency: Frequency.Weekly,
+            interval: 1,
+            by_weekdays: [Weekday.Sun],
+            count: null,
+            until: stored,
+          },
+        },
+      }),
+      TZ
+    );
+
+    // Naively slicing `stored` would yield "2027-02-01" — a day late. The
+    // parser must shift back into the user's zone first.
+    expect(
+      result.rule.recurrence.until.some && result.rule.recurrence.until.val
+    ).toBe("2027-01-31");
+  });
+
   it("treats an omitted (not just null) count/until as None", () => {
     const raw = rawSeries();
     // Backend may omit the unused end-condition entirely rather than send null.
     delete raw.rule.recurrence.until;
-    const result = parseCoachingSessionSeries(raw);
+    const result = parseCoachingSessionSeries(raw, TZ);
 
     expect(result.rule.recurrence.until.none).toBe(true);
     expect(result.rule.recurrence.count.some).toBe(true);
@@ -105,13 +145,13 @@ describe("parseCoachingSessionSeries", () => {
     const raw = rawSeries();
     delete raw.rule.recurrence.by_weekdays;
 
-    const result = parseCoachingSessionSeries(raw);
+    const result = parseCoachingSessionSeries(raw, TZ);
 
     expect("by_weekdays" in result.rule.recurrence).toBe(false);
   });
 
   it("parses created_at/updated_at ISO strings into valid DateTimes", () => {
-    const result = parseCoachingSessionSeries(rawSeries());
+    const result = parseCoachingSessionSeries(rawSeries(), TZ);
 
     expect(DateTime.isDateTime(result.created_at)).toBe(true);
     expect(result.created_at.isValid).toBe(true);
@@ -133,7 +173,7 @@ describe("parseCoachingSessionSeriesWithSessions", () => {
       sessions,
     };
 
-    const result = parseCoachingSessionSeriesWithSessions(raw);
+    const result = parseCoachingSessionSeriesWithSessions(raw, TZ);
 
     expect(result.id).toBe("series-1");
     expect(result.rule.recurrence.count.some).toBe(true);
@@ -144,7 +184,7 @@ describe("parseCoachingSessionSeriesWithSessions", () => {
 
 describe("isCoachingSessionSeries", () => {
   it("accepts a parsed series", () => {
-    expect(isCoachingSessionSeries(parseCoachingSessionSeries(rawSeries()))).toBe(
+    expect(isCoachingSessionSeries(parseCoachingSessionSeries(rawSeries(), TZ))).toBe(
       true
     );
   });

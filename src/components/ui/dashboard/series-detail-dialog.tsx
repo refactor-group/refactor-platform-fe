@@ -29,7 +29,8 @@ export function SeriesDetailDialog({
   onClose,
 }: SeriesDetailDialogProps) {
   const { series: detail, isLoading, isError } = useCoachingSessionSeries(
-    series?.id ?? ""
+    series?.id ?? "",
+    userTimezone
   );
   const open = series !== null;
   const sessions = detail.coaching_sessions;

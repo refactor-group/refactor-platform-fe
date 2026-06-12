@@ -26,6 +26,7 @@ import {
   useCoachingSessionSeriesList,
   useCoachingSessionSeriesMutation,
 } from "@/lib/api/coaching-session-series";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import {
   CoachingSessionSeries,
@@ -59,8 +60,13 @@ export function CoachingSeriesCard({
   onSeriesMutated,
   onRefreshNeeded,
 }: CoachingSeriesCardProps) {
+  const userSession = useAuthStore((s) => s.userSession);
+  // Must match the timezone the create/reschedule forms write with, so the
+  // stored UTC `until` round-trips back to the same local date.
+  const userTimezone = userSession?.timezone || getBrowserTimezone();
+
   const { series, isLoading, isError, refresh } =
-    useCoachingSessionSeriesList(relationshipId);
+    useCoachingSessionSeriesList(relationshipId, userTimezone);
 
   // Register a stable refresh wrapper once; the ref keeps it pointed at the
   // latest SWR mutator as relationshipId (and thus the key) changes.
@@ -71,7 +77,7 @@ export function CoachingSeriesCard({
   useEffect(() => {
     onRefreshNeeded?.(() => refreshRef.current());
   }, [onRefreshNeeded]);
-  const { delete: deleteSeries } = useCoachingSessionSeriesMutation();
+  const { delete: deleteSeries } = useCoachingSessionSeriesMutation(userTimezone);
   const [deleteState, setDeleteState] = useState<DeleteState>({
     kind: "closed",
   });
@@ -80,7 +86,6 @@ export function CoachingSeriesCard({
   );
   const [rescheduleSeries, setRescheduleSeries] =
     useState<CoachingSessionSeries | null>(null);
-  const userTimezone = getBrowserTimezone();
 
   const handleConfirmDelete = async () => {
     if (deleteState.kind !== "pending") return;

@@ -5,6 +5,7 @@ import {
   RecurrenceEnd,
   Weekday,
   frequencyLabel,
+  utcDateTimeToUntilDate,
   weekdayLabel,
 } from "@/types/recurrence";
 import { type Option, Some, None } from "@/types/option";
@@ -70,7 +71,7 @@ export interface CoachingSessionSeriesWithSessions extends CoachingSessionSeries
   coaching_sessions: CoachingSession[];
 }
 
-function parseSeriesRule(raw: SeriesRuleRaw): SeriesRule {
+function parseSeriesRule(raw: SeriesRuleRaw, timezone: string): SeriesRule {
   const { recurrence } = raw;
   // count/until are one-of, and the absent one may be null or omitted — treat
   // both as None. `?? null` collapses undefined so the !== null guard covers
@@ -87,31 +88,34 @@ function parseSeriesRule(raw: SeriesRuleRaw): SeriesRule {
         ? { by_weekdays: recurrence.by_weekdays }
         : {}),
       count: count !== null ? Some(count) : None,
-      // `until` is a date in the domain (the form's end-picker); keep only the
-      // date part in case the backend serializes it as a datetime.
-      until: until !== null ? Some(until.slice(0, 10)) : None,
+      // `until` is a date in the domain (the form's end-picker). The backend
+      // stores it as a naive-UTC end-of-day datetime, so convert it back to the
+      // user's local date — inverting `untilDateToUtcDateTime`.
+      until: until !== null ? Some(utcDateTimeToUntilDate(until, timezone)) : None,
     },
   };
 }
 
 export function parseCoachingSessionSeries(
-  raw: CoachingSessionSeriesRaw
+  raw: CoachingSessionSeriesRaw,
+  timezone: string
 ): CoachingSessionSeries {
   return {
     id: raw.id,
     coaching_relationship_id: raw.coaching_relationship_id,
     created_by_user_id: raw.created_by_user_id,
-    rule: parseSeriesRule(raw.rule),
+    rule: parseSeriesRule(raw.rule, timezone),
     created_at: DateTime.fromISO(raw.created_at),
     updated_at: DateTime.fromISO(raw.updated_at),
   };
 }
 
 export function parseCoachingSessionSeriesWithSessions(
-  raw: CoachingSessionSeriesWithSessionsRaw
+  raw: CoachingSessionSeriesWithSessionsRaw,
+  timezone: string
 ): CoachingSessionSeriesWithSessions {
   return {
-    ...parseCoachingSessionSeries(raw.series),
+    ...parseCoachingSessionSeries(raw.series, timezone),
     coaching_sessions: raw.sessions,
   };
 }

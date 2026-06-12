@@ -227,7 +227,7 @@ export default function CoachingSessionForm({
       recurrence,
       duration_minutes: durationMinutes,
     };
-    const created = await CoachingSessionSeriesApi.create(payload);
+    const created = await CoachingSessionSeriesApi.create(payload, userTimezone);
     const count = created.coaching_sessions.length;
     toast.success(
       `Created ${count} recurring session${count === 1 ? "" : "s"}.`

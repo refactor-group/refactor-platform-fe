@@ -155,6 +155,27 @@ export function untilDateToUtcDateTime(
     .toFormat("yyyy-MM-dd'T'HH:mm:ss");
 }
 
+/**
+ * Inverse of `untilDateToUtcDateTime`: turns the stored `until` back into the
+ * form's date-only `until` (yyyy-MM-dd) in the user's wall clock. The backend
+ * stores it as a naive-UTC end-of-day datetime, so naively slicing the first
+ * 10 chars would read the UTC date — a day ahead of what the user picked in any
+ * negative-offset zone. Re-interpret as UTC, shift into the user's zone, then
+ * take the date. A value the backend already serialized as a bare date is
+ * returned unchanged.
+ */
+export function utcDateTimeToUntilDate(
+  until: string,
+  timezone: string
+): string {
+  if (!until.includes("T")) {
+    return until.slice(0, 10);
+  }
+  return DateTime.fromISO(until, { zone: "utc" })
+    .setZone(timezone)
+    .toFormat("yyyy-MM-dd");
+}
+
 // Backend caps the expanded series. Mirroring them here so callers can
 // surface inline guidance before submission instead of waiting for a 422.
 export const MAX_OCCURRENCES = 365;
