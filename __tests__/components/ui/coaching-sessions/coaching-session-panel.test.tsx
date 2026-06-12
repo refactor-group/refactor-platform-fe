@@ -331,13 +331,14 @@ describe("CoachingSessionPanel", () => {
     expect(addButtons.length).toBeGreaterThanOrEqual(1)
   })
 
-  it("hides add buttons when readOnly", () => {
+  it("hides the Goals add button when lockedAfterSession", () => {
     setupMocks()
     render(
       <CoachingSessionPanel
         coachingSessionId="session-1"
         coachingRelationshipId="rel-1"
-        readOnly
+        defaultSection={PanelSection.Goals}
+        lockedAfterSession
       />
     )
 

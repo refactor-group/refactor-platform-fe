@@ -80,10 +80,10 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
-  CoachingSessionPanel: ({ readOnly, noteSelection }: any) => (
+  CoachingSessionPanel: ({ lockedAfterSession, noteSelection }: any) => (
     <div
       data-testid="coaching-session-panel"
-      data-readonly={String(!!readOnly)}
+      data-readonly={String(!!lockedAfterSession)}
       data-draft-section={noteSelection?.some ? noteSelection.val.section : ''}
       data-draft-text={noteSelection?.some ? noteSelection.val.text : ''}
     >Goals</div>

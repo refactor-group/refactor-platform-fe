@@ -38,7 +38,7 @@ export function CoachingSessionPanelDesktop({
   goalFlow,
   onUnlink,
   onUpdateGoal,
-  readOnly = false,
+  lockedAfterSession = false,
   collapsed = false,
   onToggleCollapsed,
   activeSection,
@@ -189,7 +189,7 @@ export function CoachingSessionPanelDesktop({
               )}
             </div>
             <div className="flex items-center gap-1">
-              {!isInGoalFlow && !readOnly && activeSection !== PanelSection.Topics && (
+              {!isInGoalFlow && !lockedAfterSession && activeSection !== PanelSection.Topics && (
                 <Button
                   size="sm"
                   className="h-8 gap-1 text-xs"
@@ -234,7 +234,7 @@ export function CoachingSessionPanelDesktop({
               onEdit={onTopicEdit}
               onDelete={onTopicDelete}
               onReorder={onTopicReorder}
-              readOnly={readOnly}
+              readOnly={false}
               canRate={canRateTopics}
               canDeleteAny={canDeleteAnyTopic}
               onPriority={onTopicPriority}
@@ -247,7 +247,7 @@ export function CoachingSessionPanelDesktop({
             <GoalFlowPages
               linkedGoals={linkedGoals}
               goalFlow={goalFlow}
-              readOnly={readOnly}
+              readOnly={lockedAfterSession}
               onUnlink={onUnlink}
               onUpdateGoal={onUpdateGoal}
               titlePrefill={goalTitlePrefill}
@@ -262,7 +262,7 @@ export function CoachingSessionPanelDesktop({
               onAgreementCreate={onAgreementCreate}
               onAgreementEdit={onAgreementEdit}
               onAgreementDelete={onAgreementDelete}
-              readOnly={readOnly}
+              readOnly={lockedAfterSession}
             />
           ) : coachId && coachName && coacheeId && coacheeName ? (
             <ActionSectionContent
@@ -285,7 +285,7 @@ export function CoachingSessionPanelDesktop({
               goals={linkedGoals}
               onActionCreate={onActionCreate}
               onActionDelete={onActionDelete}
-              readOnly={readOnly}
+              readOnly={lockedAfterSession}
               onActiveTabChange={onActiveActionTabChange}
             />
           ) : null}

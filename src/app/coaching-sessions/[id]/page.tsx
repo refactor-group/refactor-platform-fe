@@ -53,10 +53,11 @@ const DOCKED_TRANSCRIPT_WIDTH = "minmax(280px,440px)";
 const FLEX_COL = "minmax(0,1fr)";
 
 /**
- * Goals are read-only on past sessions for coachees, but coaches retain
- * full add/remove/edit access so they can adjust goals retroactively.
+ * Goals and Agreements lock for coachees once the session has ended; coaches
+ * retain full access so they can adjust retroactively. Topics are never locked
+ * (either participant may edit them regardless of session timing).
  */
-function isGoalPanelReadOnly(
+function isLockedAfterSession(
   session: CoachingSession,
   timezone: string,
   isCoach: boolean
@@ -335,8 +336,8 @@ export default function CoachingSessionsPage() {
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={layout.isGoalsCollapsed}
               onToggleCollapsed={layout.toggleGoalsCollapsed}
-              readOnly={currentCoachingSession
-                ? isGoalPanelReadOnly(
+              lockedAfterSession={currentCoachingSession
+                ? isLockedAfterSession(
                     currentCoachingSession,
                     userSession?.timezone || getBrowserTimezone(),
                     isCoachInCurrentRelationship

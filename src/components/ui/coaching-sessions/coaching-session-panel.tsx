@@ -77,8 +77,8 @@ export interface CoachingSessionPanelSharedProps {
   onCreateAndSwap: (title: string, swapGoalId: string, body?: string) => void;
   onSwapAndLink: (newGoalId: string, swapGoalId: string) => void;
   onUpdateGoal: (goalId: string, title: string, body: string) => Promise<void>;
-  /** When true, goal linkage is immutable (past sessions) */
-  readOnly?: boolean;
+  /** Locks Goals/Agreements editing once the session has ended (coachee only). */
+  lockedAfterSession?: boolean;
   // Panel section state
   activeSection: PanelSection;
   onSectionChange: (section: PanelSection) => void;
@@ -328,8 +328,8 @@ interface CoachingSessionPanelProps {
    * expanded header renders a matching collapse button.
    */
   onToggleCollapsed?: () => void;
-  /** When true, goal linkage is immutable (past sessions) */
-  readOnly?: boolean;
+  /** Locks Goals/Agreements editing once the session has ended (coachee only). */
+  lockedAfterSession?: boolean;
   /** Initial panel section (persisted via URL param by the page) */
   defaultSection?: PanelSection;
   /** Called when the user switches sections, so the page can sync to URL */
@@ -346,7 +346,7 @@ export function CoachingSessionPanel({
   coachingRelationshipId,
   collapsed = false,
   onToggleCollapsed,
-  readOnly = false,
+  lockedAfterSession = false,
   defaultSection = PanelSection.Topics,
   onSectionChange: onSectionChangeExternal,
   noteSelection = None,
@@ -518,7 +518,7 @@ export function CoachingSessionPanel({
       );
       result.match(
         async () => {
-          if (!readOnly && goal && goal.status === ItemStatus.InProgress) {
+          if (!lockedAfterSession && goal && goal.status === ItemStatus.InProgress) {
             try {
               await updateGoal(goalId, { ...goal, status: ItemStatus.OnHold });
             } catch (err) {
@@ -558,7 +558,7 @@ export function CoachingSessionPanel({
                   }
                   return;
                 }
-                if (!readOnly && goal && previousStatus === ItemStatus.InProgress) {
+                if (!lockedAfterSession && goal && previousStatus === ItemStatus.InProgress) {
                   try {
                     await updateGoal(goalId, { ...goal, status: ItemStatus.InProgress });
                   } catch (err) {
@@ -581,7 +581,7 @@ export function CoachingSessionPanel({
         }
       );
     },
-    [coachingSessionId, readOnly, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
+    [coachingSessionId, lockedAfterSession, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleCreateAndLink = useCallback(
@@ -1176,7 +1176,7 @@ export function CoachingSessionPanel({
     onCreateAndSwap: handleCreateAndSwap,
     onSwapAndLink: handleSwapAndLink,
     onUpdateGoal: handleUpdateGoal,
-    readOnly,
+    lockedAfterSession,
     activeSection,
     onSectionChange: handleSectionChange,
     topics,
