@@ -19,6 +19,7 @@ import {
 } from "@/lib/timezone-utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
+import { toast as sonnerToast } from "sonner";
 import { useEditorCache } from "./editor-cache-context";
 import { EditableSessionTitle } from "./editable-session-title";
 import { PresenceIndicator } from "@/components/ui/presence-indicator";
@@ -61,6 +62,11 @@ const CoachingSessionTitle: FC = () => {
     try {
       await CoachingSessionApi.updateTitle(session.id, title);
       await refresh();
+    } catch (err) {
+      console.error("Failed to save session title:", err);
+      sonnerToast.error("Failed to save title", {
+        description: "An error occurred while saving the title.",
+      });
     } finally {
       setSave({ kind: "idle" });
     }

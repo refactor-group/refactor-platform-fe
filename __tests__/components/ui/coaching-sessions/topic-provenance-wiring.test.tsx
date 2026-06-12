@@ -245,6 +245,63 @@ describe("CoachingSessionPanel — provenance wiring (CoachingSessionViews)", ()
     ).toBeGreaterThan(0);
   });
 
+  it("clears the prior session's unread anchor when switching sessions (no stale 'new' dots)", async () => {
+    const prior = at("2026-05-31T17:00:00.000Z");
+    // session-1 resolves with the prior marker; session-2's mark stays in flight.
+    vi.mocked(CoachingSessionViewApi.markViewed).mockImplementation((id: string) =>
+      id === "session-1"
+        ? Promise.resolve({
+            previousLastViewedAt: Some(prior),
+            lastViewedAt: at("2026-06-07T12:00:00.000Z"),
+          })
+        : new Promise(() => {}) // session-2: never resolves (in-flight window)
+    );
+    // Each session has its own other-authored topic created after `prior`.
+    vi.mocked(useCoachingSessionTopicList).mockImplementation((id: string) => ({
+      topics: [
+        topic({
+          id: id === "session-1" ? "t1" : "t2",
+          user_id: "coach-1",
+          body: id === "session-1" ? "Session one topic" : "Session two topic",
+          created_at: at("2026-06-03T09:00:00.000Z"),
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+      refresh: vi.fn(),
+    }));
+
+    const { rerender } = render(
+      <CoachingSessionPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        noteSelection={None}
+      />
+    );
+    // session-1: the coach's topic is new since the prior marker.
+    expect(
+      (await screen.findAllByText(/new since your last visit/i)).length
+    ).toBeGreaterThan(0);
+
+    // Switch to session-2 while its markViewed is still pending.
+    rerender(
+      <CoachingSessionPanel
+        coachingSessionId="session-2"
+        coachingRelationshipId="rel-1"
+        noteSelection={None}
+      />
+    );
+    await screen.findByText("Session two topic");
+    await waitFor(() =>
+      expect(CoachingSessionViewApi.markViewed).toHaveBeenCalledWith("session-2")
+    );
+
+    // Anchor reset to "loading" → no dot is diffed against session-1's stale marker.
+    expect(
+      screen.queryByText(/new since your last visit/i)
+    ).not.toBeInTheDocument();
+  });
+
   it("resolves the author's name: a coach-authored topic renders the coach's initials", () => {
     setTopics([topic({ id: "t1", user_id: "coach-1", body: "Reorg" })]);
     renderPanel();

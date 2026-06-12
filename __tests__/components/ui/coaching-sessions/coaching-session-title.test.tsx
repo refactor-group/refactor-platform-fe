@@ -5,6 +5,11 @@ import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching
 
 const mockUpdateTitle = vi.fn();
 const mockRefresh = vi.fn();
+const mockToastError = vi.fn();
+
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), { error: (...args: unknown[]) => mockToastError(...args) }),
+}));
 
 let sessionTitle: Option<string> = None;
 let goalTitle = "";
@@ -161,5 +166,23 @@ describe("CoachingSessionTitle — save wiring", () => {
 
     await waitFor(() => expect(mockUpdateTitle).toHaveBeenCalledTimes(1));
     expect(mockUpdateTitle).toHaveBeenCalledWith("session-1", None);
+  });
+
+  it("shows an error toast when the save fails", async () => {
+    mockUpdateTitle.mockRejectedValue(new Error("network down"));
+    render(<CoachingSessionTitle locale="en-US" />);
+    fireEvent.click(screen.getByRole("button", { name: /add a title/i }));
+    const input = screen.getByRole("textbox", { name: /session title/i });
+    fireEvent.change(input, { target: { value: "New plan" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to save title",
+        expect.objectContaining({ description: expect.any(String) })
+      )
+    );
+    // The save attempt still resolves (rejection is caught, not propagated).
+    expect(mockUpdateTitle).toHaveBeenCalledTimes(1);
   });
 });

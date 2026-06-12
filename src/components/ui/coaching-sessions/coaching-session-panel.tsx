@@ -411,6 +411,9 @@ export function CoachingSessionPanel({
   useEffect(() => {
     if (!coachingSessionId || markedViewedRef.current === coachingSessionId) return;
     markedViewedRef.current = coachingSessionId;
+    // Clear the prior session's anchor on switch so the new session's topics
+    // aren't diffed against a stale marker while markViewed is in flight.
+    setViewedAnchor({ kind: "loading" });
     CoachingSessionViewApi.markViewed(coachingSessionId)
       .then((result) => {
         if (markedViewedRef.current === coachingSessionId) {
