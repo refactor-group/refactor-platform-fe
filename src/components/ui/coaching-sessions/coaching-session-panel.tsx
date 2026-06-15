@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { toast as sonnerToast } from "sonner";
+import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import { CompactGoalCard } from "@/components/ui/coaching-sessions/goal-card-compact";
 import { GoalBrowseView } from "@/components/ui/coaching-sessions/goal-browse-view";
 import { GoalCreateForm } from "@/components/ui/coaching-sessions/goal-create-form";
@@ -23,7 +24,12 @@ import {
   GoalApi,
 } from "@/lib/api/goals";
 import { useAgreementList, useAgreementMutation } from "@/lib/api/agreements";
+import {
+  useCoachingSessionTopicList,
+  useCoachingSessionTopicMutation,
+} from "@/lib/api/coaching-session-topics";
 import { usePanelActions } from "@/lib/hooks/use-panel-actions";
+import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -31,6 +37,19 @@ import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
+import { RelationshipRole } from "@/types/relationship-role";
+import {
+  isLockedFor,
+  NO_AFTER_SESSION_LOCK,
+  type AfterSessionLock,
+} from "@/types/after-session-lock";
+import {
+  type CoachingSessionTopic,
+  type TopicPriority,
+  type LastViewedAnchor,
+  TopicStatus,
+  resolveLastViewedAnchor,
+} from "@/types/coaching-session-topic";
 import { defaultAgreement } from "@/types/agreement";
 import {
   defaultGoal,
@@ -64,11 +83,34 @@ export interface CoachingSessionPanelSharedProps {
   onCreateAndSwap: (title: string, swapGoalId: string, body?: string) => void;
   onSwapAndLink: (newGoalId: string, swapGoalId: string) => void;
   onUpdateGoal: (goalId: string, title: string, body: string) => Promise<void>;
-  /** When true, goal linkage is immutable (past sessions) */
-  readOnly?: boolean;
+  /** Resolved for this viewer: Goals/Agreements/action-delete are locked. */
+  sectionsLocked?: boolean;
+  /** Resolved for this viewer: the add-new-topic affordance is locked. */
+  newTopicLocked?: boolean;
   // Panel section state
   activeSection: PanelSection;
   onSectionChange: (section: PanelSection) => void;
+  // Topic data
+  topics: CoachingSessionTopic[];
+  /** Current user; a topic's delete affordance shows only on their own topics. */
+  viewerId: Id;
+  onTopicCreate: (body: string) => void;
+  onTopicEdit: (id: Id, body: string) => void;
+  onTopicDelete: (id: Id) => void;
+  onTopicReorder: (orderedIds: Id[]) => void;
+  /** True only when the viewer is the coachee; priority is coachee-only. */
+  canRateTopics: boolean;
+  /** Coach-only: may delete ANY topic; the coachee may delete only their own. */
+  canDeleteAnyTopic: boolean;
+  onTopicPriority: (id: Id, priority: Option<TopicPriority>) => void;
+  /** Lifecycle (Open/Discussed/Deferred) — either participant may set it. */
+  onTopicStatus: (id: Id, status: TopicStatus) => void;
+  /** Inserts the topic's text into the notes as an H3 heading at the cursor. */
+  onTopicInsertToNotes: (body: string) => void;
+  /** Resolves a topic author's user id to a display name for the badge. */
+  resolveTopicAuthorName: (userId: Id) => string;
+  /** Viewer's read-state for this session; drives the "new since" dot. */
+  viewedAnchor: LastViewedAnchor;
   // Agreement data
   agreements: Agreement[];
   onAgreementEdit?: (id: string, body: string) => Promise<void>;
@@ -124,9 +166,13 @@ export function computePanelCounts(
   agreements: Agreement[],
   reviewActions: Action[],
   sessionActions: Action[],
+  topics: CoachingSessionTopic[],
 ): Record<PanelSection, string> {
   const totalActions = reviewActions.length + sessionActions.length;
   return {
+    [PanelSection.Topics]: topics.length > 0
+      ? `${topics.length}`
+      : "",
     [PanelSection.Goals]: linkedGoals.length > 0
       ? `${linkedGoals.length}/${maxActiveGoals()}`
       : "",
@@ -143,7 +189,7 @@ export function computeHeaderTitle(
   activeSection: PanelSection,
   goalFlowStep: GoalFlowStep,
 ): string | undefined {
-  if (activeSection === PanelSection.Agreements || activeSection === PanelSection.Actions) return undefined;
+  if (activeSection !== PanelSection.Goals) return undefined;
   if (goalFlowStep === GoalFlowStep.Idle || goalFlowStep === GoalFlowStep.SelectingSwap) return undefined;
   return goalFlowStep === GoalFlowStep.Browsing ? "Add goal" : "New goal";
 }
@@ -290,8 +336,8 @@ interface CoachingSessionPanelProps {
    * expanded header renders a matching collapse button.
    */
   onToggleCollapsed?: () => void;
-  /** When true, goal linkage is immutable (past sessions) */
-  readOnly?: boolean;
+  /** Per-concern after-session lock scopes; resolved per viewer role inside. */
+  afterSessionLock?: AfterSessionLock;
   /** Initial panel section (persisted via URL param by the page) */
   defaultSection?: PanelSection;
   /** Called when the user switches sections, so the page can sync to URL */
@@ -308,8 +354,8 @@ export function CoachingSessionPanel({
   coachingRelationshipId,
   collapsed = false,
   onToggleCollapsed,
-  readOnly = false,
-  defaultSection = PanelSection.Goals,
+  afterSessionLock = NO_AFTER_SESSION_LOCK,
+  defaultSection = PanelSection.Topics,
   onSectionChange: onSectionChangeExternal,
   noteSelection = None,
 }: CoachingSessionPanelProps) {
@@ -327,6 +373,55 @@ export function CoachingSessionPanel({
   const coacheeName = currentCoachingRelationship
     ? getCoacheeName(currentCoachingRelationship)
     : undefined;
+
+  // Resolve the after-session lock scopes against this viewer's role. A viewer
+  // who isn't the coach is treated as the coachee (the more-restricted role).
+  const viewerRole =
+    userId && coachId && userId === coachId
+      ? RelationshipRole.Coach
+      : RelationshipRole.Coachee;
+  const sectionsLocked = isLockedFor(afterSessionLock.sections, viewerRole);
+  const newTopicLocked = isLockedFor(afterSessionLock.newTopic, viewerRole);
+
+  // ── Topic provenance: author-name resolver + previous-session anchor ──
+  // Names come from the resolved relationship; while it loads, ids resolve to
+  // "" and the badge degrades to initials-of-empty.
+  const resolveTopicAuthorName = useCallback(
+    (id: Id): string => {
+      if (id === coachId && coachName) return coachName;
+      if (id === coacheeId && coacheeName) return coacheeName;
+      return "";
+    },
+    [coachId, coachName, coacheeId, coacheeName]
+  );
+
+  // "New since I last viewed this session" anchor: mark the session viewed on
+  // open (exactly once) and keep the PRIOR marker — unread renders against it.
+  // Marking advances the marker server-side, so a double-fire (incl. React
+  // strict-mode) would wipe the anchor; the ref guards one call per session.
+  // The write is gated on the ref still owning this session at resolve time —
+  // that survives strict-mode's setup/cleanup/setup (a cleanup must NOT cancel
+  // the lone surviving call) while still rejecting a stale write after a fast
+  // session switch. Anchor stays "loading" until the mark resolves (no dots
+  // flash early) and on failure (graceful: no dots rather than a crash).
+  const [viewedAnchor, setViewedAnchor] = useState<LastViewedAnchor>({
+    kind: "loading",
+  });
+  const markedViewedRef = useRef<Id | null>(null);
+  useEffect(() => {
+    if (!coachingSessionId || markedViewedRef.current === coachingSessionId) return;
+    markedViewedRef.current = coachingSessionId;
+    // Clear the prior session's anchor on switch so the new session's topics
+    // aren't diffed against a stale marker while markViewed is in flight.
+    setViewedAnchor({ kind: "loading" });
+    CoachingSessionViewApi.markViewed(coachingSessionId)
+      .then((result) => {
+        if (markedViewedRef.current === coachingSessionId) {
+          setViewedAnchor(resolveLastViewedAnchor(result.previousLastViewedAt));
+        }
+      })
+      .catch((err) => console.error("Failed to mark session viewed:", err));
+  }, [coachingSessionId]);
 
   // ── Section state ────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<PanelSection>(defaultSection);
@@ -352,6 +447,21 @@ export function CoachingSessionPanel({
     useAgreementList(coachingSessionId);
   const { create: createAgreement, update: updateAgreement, delete: deleteAgreement } =
     useAgreementMutation();
+
+  // ── Topic hooks ──────────────────────────────────────────────────
+  const { topics, refresh: refreshTopics } =
+    useCoachingSessionTopicList(coachingSessionId);
+  const {
+    create: createTopic,
+    update: updateTopic,
+    delete: deleteTopic,
+    reorder: reorderTopics,
+    rate: rateTopic,
+    setStatus: setTopicStatus,
+    undo: undoTopic,
+  } = useCoachingSessionTopicMutation(coachingSessionId);
+
+  const { insertTextIntoNotes } = useEditorCache();
 
   // ── Goal handlers ────────────────────────────────────────────────
 
@@ -428,7 +538,7 @@ export function CoachingSessionPanel({
       );
       result.match(
         async () => {
-          if (!readOnly && goal && goal.status === ItemStatus.InProgress) {
+          if (!sectionsLocked && goal && goal.status === ItemStatus.InProgress) {
             try {
               await updateGoal(goalId, { ...goal, status: ItemStatus.OnHold });
             } catch (err) {
@@ -468,7 +578,7 @@ export function CoachingSessionPanel({
                   }
                   return;
                 }
-                if (!readOnly && goal && previousStatus === ItemStatus.InProgress) {
+                if (!sectionsLocked && goal && previousStatus === ItemStatus.InProgress) {
                   try {
                     await updateGoal(goalId, { ...goal, status: ItemStatus.InProgress });
                   } catch (err) {
@@ -491,7 +601,7 @@ export function CoachingSessionPanel({
         }
       );
     },
-    [coachingSessionId, readOnly, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
+    [coachingSessionId, sectionsLocked, allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
   );
 
   const handleCreateAndLink = useCallback(
@@ -726,6 +836,9 @@ export function CoachingSessionPanel({
   // per-entity switch. Rebuilt each render because `open` reads the live
   // `atLimit`/`goalFlow`; clearing is hoisted to `clearPrefill` (below) instead.
   const noteTargets: Record<PanelSection, NoteSelectionTarget> = {
+    // Topics aren't a notes-routing target: the add input is a persistent
+    // inline field with no host-owned open/prefill state.
+    [PanelSection.Topics]: { open: () => {}, prefill: () => {} },
     [PanelSection.Goals]: {
       // At the goal cap, creation requires a swap first; both routes land on
       // the create form, where the prefilled title is applied on mount.
@@ -747,6 +860,7 @@ export function CoachingSessionPanel({
   // handlers below can stay memoized.
   const clearPrefill = useMemo<Record<PanelSection, () => void>>(
     () => ({
+      [PanelSection.Topics]: () => {},
       [PanelSection.Goals]: () => setGoalTitlePrefill(None),
       [PanelSection.Agreements]: () => setAgreementBodyAppend(None),
       [PanelSection.Actions]: () => setActionBodyAppend(None),
@@ -866,6 +980,208 @@ export function CoachingSessionPanel({
     [agreements, deleteAgreement, createAgreement, refreshAgreements]
   );
 
+  // ── Topic handlers ──────────────────────────────────────────────
+
+  const handleTopicCreate = useCallback(
+    async (body: string) => {
+      try {
+        await createTopic(body);
+        refreshTopics();
+      } catch (err) {
+        console.error("Failed to create topic:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to add topic",
+          description: "An error occurred while adding the topic.",
+        });
+      }
+    },
+    [createTopic, refreshTopics]
+  );
+
+  const handleTopicEdit = useCallback(
+    async (id: Id, body: string) => {
+      try {
+        await updateTopic(id, { body });
+        refreshTopics();
+      } catch (err) {
+        console.error("Failed to update topic:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to update topic",
+          description: "An error occurred while saving changes.",
+        });
+      }
+    },
+    [updateTopic, refreshTopics]
+  );
+
+  const handleTopicDelete = useCallback(
+    async (id: Id) => {
+      const topic = topics.find((t) => t.id === id);
+      try {
+        await deleteTopic(id);
+        refreshTopics();
+
+        const preview = topic?.body
+          ? topic.body.length > 40
+            ? `${topic.body.slice(0, 40)}...`
+            : topic.body
+          : "Topic";
+        // Delete is a soft-delete server-side; undo faithfully restores the
+        // exact row (id, status, priority, position, timestamps). Delete never
+        // moves the topic, so undo is addressed at this session.
+        sonnerToast(`"${preview}" deleted`, {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                await undoTopic(coachingSessionId, id);
+                refreshTopics();
+              } catch {
+                sonnerToast.error("Failed to undo", {
+                  description: "Could not restore the topic.",
+                });
+              }
+            },
+          },
+        });
+      } catch (err) {
+        console.error("Failed to delete topic:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to delete topic",
+          description: "An error occurred while deleting the topic.",
+        });
+      }
+    },
+    [topics, deleteTopic, undoTopic, refreshTopics, coachingSessionId]
+  );
+
+  const handleTopicReorder = useCallback(
+    async (orderedIds: Id[]) => {
+      // Show the new order instantly and persist without a refetch — the
+      // reorder response is the authoritative list, so no GET round-trip (which
+      // is what made the cards snap back, then jump).
+      const byId = new Map(topics.map((t) => [t.id, t]));
+      const optimistic = orderedIds
+        .map((id) => byId.get(id))
+        .filter((t): t is CoachingSessionTopic => Boolean(t));
+      try {
+        await refreshTopics(reorderTopics(orderedIds), {
+          optimisticData: optimistic,
+          revalidate: false,
+          rollbackOnError: true,
+        });
+      } catch (err) {
+        console.error("Failed to reorder topics:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to reorder topics",
+          description: "An error occurred while saving the new order.",
+        });
+      }
+    },
+    [topics, reorderTopics, refreshTopics]
+  );
+
+  const handleTopicPriority = useCallback(
+    async (id: Id, priority: Option<TopicPriority>) => {
+      const next = priority.some ? priority.val : null;
+      // Splice the new priority into the cached list in place; no refetch.
+      try {
+        await refreshTopics(
+          rateTopic(id, { priority: next }).then((updated) =>
+            topics.map((t) => (t.id === id ? updated : t))
+          ),
+          {
+            optimisticData: topics.map((t) =>
+              t.id === id ? { ...t, priority: next ? Some(next) : None } : t
+            ),
+            revalidate: false,
+            rollbackOnError: true,
+          }
+        );
+      } catch (err) {
+        console.error("Failed to set topic priority:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to save priority",
+          description: "An error occurred while saving the priority.",
+        });
+      }
+    },
+    [topics, rateTopic, refreshTopics]
+  );
+
+  const handleTopicStatus = useCallback(
+    async (id: Id, status: TopicStatus) => {
+      const topic = topics.find((t) => t.id === id);
+      // Un-deferring a held topic goes through the unified undo endpoint — the
+      // BE does not overload PATCH status {Open} for undo.
+      if (status === TopicStatus.Open && topic?.status === TopicStatus.Deferred) {
+        try {
+          await undoTopic(coachingSessionId, id);
+          refreshTopics();
+        } catch (err) {
+          console.error("Failed to undo topic defer:", err);
+          toast({
+            variant: "destructive",
+            title: "Failed to update topic",
+            description: "An error occurred while updating the topic.",
+          });
+        }
+        return;
+      }
+      try {
+        const updated = await setTopicStatus(id, status);
+        refreshTopics();
+        // Deferring re-parents the topic (it leaves this list), so offer an
+        // undo — addressed at wherever it landed.
+        if (status === TopicStatus.Deferred) {
+          const destination = updated.coaching_session_id;
+          sonnerToast("Topic deferred to the next session", {
+            action: {
+              label: "Undo",
+              onClick: async () => {
+                try {
+                  await undoTopic(destination, id);
+                  refreshTopics();
+                } catch {
+                  sonnerToast.error("Failed to undo", {
+                    description: "Could not bring the topic back.",
+                  });
+                }
+              },
+            },
+          });
+        }
+      } catch (err) {
+        console.error("Failed to set topic status:", err);
+        toast({
+          variant: "destructive",
+          title: "Failed to update topic",
+          description: "An error occurred while updating the topic.",
+        });
+      }
+    },
+    [topics, setTopicStatus, undoTopic, refreshTopics, coachingSessionId]
+  );
+
+  const handleTopicInsertToNotes = useCallback(
+    (body: string) => {
+      const inserted = insertTextIntoNotes(body);
+      if (!inserted) {
+        toast({
+          variant: "destructive",
+          title: "Notes aren't ready yet",
+          description: "Wait for the notes editor to finish loading, then try again.",
+        });
+      }
+    },
+    [insertTextIntoNotes]
+  );
+
   // ── Shared props ─────────────────────────────────────────────────
 
   const sharedProps: CoachingSessionPanelSharedProps = {
@@ -880,9 +1196,23 @@ export function CoachingSessionPanel({
     onCreateAndSwap: handleCreateAndSwap,
     onSwapAndLink: handleSwapAndLink,
     onUpdateGoal: handleUpdateGoal,
-    readOnly,
+    sectionsLocked,
+    newTopicLocked,
     activeSection,
     onSectionChange: handleSectionChange,
+    topics,
+    viewerId: userId,
+    onTopicCreate: handleTopicCreate,
+    onTopicEdit: handleTopicEdit,
+    onTopicDelete: handleTopicDelete,
+    onTopicReorder: handleTopicReorder,
+    canRateTopics: Boolean(userId && coacheeId && userId === coacheeId),
+    canDeleteAnyTopic: Boolean(userId && coachId && userId === coachId),
+    onTopicPriority: handleTopicPriority,
+    onTopicStatus: handleTopicStatus,
+    onTopicInsertToNotes: handleTopicInsertToNotes,
+    resolveTopicAuthorName,
+    viewedAnchor,
     agreements,
     onAgreementEdit: handleAgreementEdit,
     onAgreementDelete: handleAgreementDelete,

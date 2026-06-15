@@ -16,6 +16,7 @@ import { GoalFlowPages, computePanelCounts, computeHeaderTitle } from "@/compone
 import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
+import { TopicSectionContent } from "@/components/ui/coaching-sessions/topic-section-content";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
 
 export function CoachingSessionPanelMobile({
@@ -23,9 +24,23 @@ export function CoachingSessionPanelMobile({
   goalFlow,
   onUnlink,
   onUpdateGoal,
-  readOnly = false,
+  sectionsLocked = false,
+  newTopicLocked = false,
   activeSection,
   onSectionChange,
+  topics,
+  viewerId,
+  onTopicCreate,
+  onTopicEdit,
+  onTopicDelete,
+  onTopicInsertToNotes,
+  onTopicReorder,
+  canRateTopics,
+  canDeleteAnyTopic,
+  onTopicPriority,
+  onTopicStatus,
+  resolveTopicAuthorName,
+  viewedAnchor,
   agreements,
   onAgreementEdit,
   onAgreementDelete,
@@ -67,7 +82,7 @@ export function CoachingSessionPanelMobile({
   const { flow } = goalFlow;
   const isInGoalFlow = activeSection === PanelSection.Goals && flow.step !== GoalFlowStep.Idle;
   const headerTitle = computeHeaderTitle(activeSection, flow.step);
-  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions);
+  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions, topics);
 
   // Reset flow when sheet closes
   const handleOpenChange = (open: boolean) => {
@@ -79,6 +94,7 @@ export function CoachingSessionPanelMobile({
 
   // Trigger button label
   const sectionLabels: Record<PanelSection, string> = {
+    [PanelSection.Topics]: "Topics",
     [PanelSection.Goals]: "Goals",
     [PanelSection.Agreements]: "Agreements",
     [PanelSection.Actions]: "Actions",
@@ -136,7 +152,7 @@ export function CoachingSessionPanelMobile({
                   />
                 )}
               </div>
-              {!isInGoalFlow && !readOnly && (
+              {!isInGoalFlow && !sectionsLocked && activeSection !== PanelSection.Topics && (
                 <Button
                   size="sm"
                   className="h-8 gap-1 text-xs"
@@ -161,11 +177,29 @@ export function CoachingSessionPanelMobile({
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-            {activeSection === PanelSection.Goals ? (
+            {activeSection === PanelSection.Topics ? (
+              <TopicSectionContent
+                topics={topics}
+                viewerId={viewerId}
+                onCreate={onTopicCreate}
+                onEdit={onTopicEdit}
+                onDelete={onTopicDelete}
+                onReorder={onTopicReorder}
+                readOnly={false}
+                addDisabled={newTopicLocked}
+                canRate={canRateTopics}
+                canDeleteAny={canDeleteAnyTopic}
+                onPriority={onTopicPriority}
+                onStatus={onTopicStatus}
+                onInsertToNotes={onTopicInsertToNotes}
+                resolveAuthorName={resolveTopicAuthorName}
+                viewedAnchor={viewedAnchor}
+              />
+            ) : activeSection === PanelSection.Goals ? (
               <GoalFlowPages
                 linkedGoals={linkedGoals}
                 goalFlow={goalFlow}
-                readOnly={readOnly}
+                readOnly={sectionsLocked}
                 onUnlink={handleUnlink}
                 onUpdateGoal={onUpdateGoal}
                 titlePrefill={goalTitlePrefill}
@@ -180,7 +214,7 @@ export function CoachingSessionPanelMobile({
                 onAgreementCreate={onAgreementCreate}
                 onAgreementEdit={onAgreementEdit}
                 onAgreementDelete={onAgreementDelete}
-                readOnly={readOnly}
+                readOnly={sectionsLocked}
               />
             ) : coachId && coachName && coacheeId && coacheeName ? (
               <ActionSectionContent
@@ -203,7 +237,7 @@ export function CoachingSessionPanelMobile({
                 goals={linkedGoals}
                 onActionCreate={onActionCreate}
                 onActionDelete={onActionDelete}
-                readOnly={readOnly}
+                readOnly={sectionsLocked}
                 onActiveTabChange={onActiveActionTabChange}
               />
             ) : null}

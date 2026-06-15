@@ -137,6 +137,18 @@ export type TranscriptionUpdatedEvent = BaseSSEEvent<
   }
 >;
 
+// ==================== TOPIC EVENTS (session-scoped) ====================
+
+// Coarse, like meeting_recording/transcription: carries only the session id.
+// Fires on ANY topic mutation (add/edit/delete/reorder/priority/status) and on
+// the server-side carry-over copy. On receipt, refetch that session's topics.
+export type TopicsChangedEvent = BaseSSEEvent<
+  'topics_changed',
+  {
+    coaching_session_id: Id;
+  }
+>;
+
 /**
  * Discriminated union of all SSE events
  * TypeScript automatically narrows the type based on the 'type' property
@@ -155,4 +167,5 @@ export type SSEEvent =
   | CoachingSessionGoalDeletedEvent
   | ForceLogoutEvent
   | MeetingRecordingUpdatedEvent
-  | TranscriptionUpdatedEvent;
+  | TranscriptionUpdatedEvent
+  | TopicsChangedEvent;

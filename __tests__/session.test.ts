@@ -457,6 +457,24 @@ describe("enrichSessionForDisplay", () => {
     expect(enriched.goalTitle).toBe("Coaching Session");
   });
 
+  it("prefers the session title over the goal when title is set", () => {
+    const user = createMockUser({ id: "coach-1" });
+    const relationship = createMockRelationship({ coach_id: "coach-1" });
+    const session = createMockSession({ title: Some("Quarterly planning") });
+    const goal = { id: "goal-1", title: "Q4 Strategy Review" };
+    const organization = { id: "org-1", name: "Acme Corp" };
+
+    const enriched = enrichSessionForDisplay(
+      session,
+      relationship,
+      user,
+      goal,
+      organization
+    );
+
+    expect(enriched.goalTitle).toBe("Quarterly planning");
+  });
+
   it("formats dateTime in user's timezone", () => {
     const user = createMockUser({
       id: "coach-1",

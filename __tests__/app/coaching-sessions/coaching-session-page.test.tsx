@@ -80,10 +80,11 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
-  CoachingSessionPanel: ({ readOnly, noteSelection }: any) => (
+  CoachingSessionPanel: ({ afterSessionLock, noteSelection }: any) => (
     <div
       data-testid="coaching-session-panel"
-      data-readonly={String(!!readOnly)}
+      data-sections-scope={afterSessionLock?.sections ?? 'None'}
+      data-newtopic-scope={afterSessionLock?.newTopic ?? 'None'}
       data-draft-section={noteSelection?.some ? noteSelection.val.section : ''}
       data-draft-text={noteSelection?.some ? noteSelection.val.text : ''}
     >Goals</div>
@@ -463,12 +464,13 @@ describe('CoachingSessionsPage - Join meet link visibility', () => {
 })
 
 /**
- * Test Suite: Goal Panel readOnly behavior based on role and session timing
+ * Test Suite: After-session lock scopes emitted by the page
  *
- * Purpose: Validates that coaches can add/remove goals on past sessions
- * while coachees cannot. Both roles should have full access on current sessions.
+ * The page emits per-concern lock SCOPES by session timing; the panel resolves
+ * them against the viewer's role (covered by isLockedFor unit tests). So these
+ * page-level assertions are timing-based and role-independent.
  */
-describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
+describe('CoachingSessionsPage - after-session lock scopes', () => {
   // A date far in the past so isPastSession always returns true
   const pastDate = '2020-01-01T10:00:00.000Z'
   // A date far in the future so isPastSession always returns false
@@ -493,104 +495,38 @@ describe('CoachingSessionsPage - Goal panel readOnly by role', () => {
     })
   })
 
-  it('passes readOnly={false} to GoalPanel when coach views a past session', () => {
+  function renderForSessionDate(date: string) {
+    // Role is irrelevant to the scopes the page emits; the panel resolves them.
     mockRoleAsCoach()
-
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
       currentCoachingSessionId: 'session-123',
       currentCoachingSession: createMockCoachingSession({
         id: 'session-123',
         coaching_relationship_id: 'rel-123',
-        date: pastDate,
+        date,
       }),
       isError: false,
       isLoading: false,
       refresh: vi.fn(),
     })
-
     render(
       <TestProviders>
         <CoachingSessionsPage />
       </TestProviders>
     )
+    return screen.getByTestId('coaching-session-panel')
+  }
 
-    const goalPanel = screen.getByTestId('coaching-session-panel')
-    expect(goalPanel).toHaveAttribute('data-readonly', 'false')
+  it('locks sections (coachee) and new-topic (both) once the session has ended', () => {
+    const panel = renderForSessionDate(pastDate)
+    expect(panel).toHaveAttribute('data-sections-scope', 'Coachee')
+    expect(panel).toHaveAttribute('data-newtopic-scope', 'Both')
   })
 
-  it('passes readOnly={true} to GoalPanel when coachee views a past session', () => {
-    mockRoleAsCoachee()
-
-    vi.mocked(useCurrentCoachingSession).mockReturnValue({
-      currentCoachingSessionId: 'session-123',
-      currentCoachingSession: createMockCoachingSession({
-        id: 'session-123',
-        coaching_relationship_id: 'rel-123',
-        date: pastDate,
-      }),
-      isError: false,
-      isLoading: false,
-      refresh: vi.fn(),
-    })
-
-    render(
-      <TestProviders>
-        <CoachingSessionsPage />
-      </TestProviders>
-    )
-
-    const goalPanel = screen.getByTestId('coaching-session-panel')
-    expect(goalPanel).toHaveAttribute('data-readonly', 'true')
-  })
-
-  it('passes readOnly={false} to GoalPanel when coach views a current session', () => {
-    mockRoleAsCoach()
-
-    vi.mocked(useCurrentCoachingSession).mockReturnValue({
-      currentCoachingSessionId: 'session-123',
-      currentCoachingSession: createMockCoachingSession({
-        id: 'session-123',
-        coaching_relationship_id: 'rel-123',
-        date: futureDate,
-      }),
-      isError: false,
-      isLoading: false,
-      refresh: vi.fn(),
-    })
-
-    render(
-      <TestProviders>
-        <CoachingSessionsPage />
-      </TestProviders>
-    )
-
-    const goalPanel = screen.getByTestId('coaching-session-panel')
-    expect(goalPanel).toHaveAttribute('data-readonly', 'false')
-  })
-
-  it('passes readOnly={false} to GoalPanel when coachee views a current session', () => {
-    mockRoleAsCoachee()
-
-    vi.mocked(useCurrentCoachingSession).mockReturnValue({
-      currentCoachingSessionId: 'session-123',
-      currentCoachingSession: createMockCoachingSession({
-        id: 'session-123',
-        coaching_relationship_id: 'rel-123',
-        date: futureDate,
-      }),
-      isError: false,
-      isLoading: false,
-      refresh: vi.fn(),
-    })
-
-    render(
-      <TestProviders>
-        <CoachingSessionsPage />
-      </TestProviders>
-    )
-
-    const goalPanel = screen.getByTestId('coaching-session-panel')
-    expect(goalPanel).toHaveAttribute('data-readonly', 'false')
+  it('locks nothing while the session is still current', () => {
+    const panel = renderForSessionDate(futureDate)
+    expect(panel).toHaveAttribute('data-sections-scope', 'None')
+    expect(panel).toHaveAttribute('data-newtopic-scope', 'None')
   })
 })
 
@@ -762,14 +698,12 @@ describe('CoachingSessionsPage - Add from notes selection', () => {
       expect(panel.getAttribute('data-draft-section')).toBe(section)
       expect(panel.getAttribute('data-draft-text')).toBe(text)
 
-      // Panel is expanded by default, so the deferred URL sync fires. Goals is
-      // the default section, so its param is removed to keep the URL clean;
-      // the other two pin panel=<section>.
+      // Panel is expanded by default, so the deferred URL sync fires. Topics is
+      // the default section now, so every notes-routing target (actions,
+      // agreements, goals) pins panel=<section>.
       await waitFor(() => {
         expect(mockReplace).toHaveBeenCalledWith(
-          section === 'goals'
-            ? expect.not.stringContaining('panel=')
-            : expect.stringContaining(`panel=${section}`),
+          expect.stringContaining(`panel=${section}`),
           expect.objectContaining({ scroll: false })
         )
       })

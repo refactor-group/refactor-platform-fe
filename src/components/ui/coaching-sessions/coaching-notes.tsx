@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EditorProvider } from "@tiptap/react";
+import { EditorProvider, useCurrentEditor } from "@tiptap/react";
 import { FileText } from "lucide-react";
 import { SimpleToolbar } from "@/components/ui/coaching-sessions/coaching-notes/simple-toolbar";
 import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu/link-bubble-menu";
@@ -145,11 +145,26 @@ const renderReadyEditorContent = (
         </div>
       }
     >
+      <NotesEditorRegistrar />
       <LinkBubbleMenu />
       {onAddAs && <SelectionBubbleMenu onAddAs={onAddAs} />}
     </EditorProvider>
   </div>
 );
+
+// Bridges the live editor instance up to the shared EditorCacheContext so
+// non-editor descendants (the Topics panel) can insert content into the notes.
+const NotesEditorRegistrar = () => {
+  const { editor } = useCurrentEditor();
+  const { registerEditor } = useEditorCache();
+
+  useEffect(() => {
+    registerEditor(editor ?? null);
+    return () => registerEditor(null);
+  }, [editor, registerEditor]);
+
+  return null;
+};
 
 // Event handling utilities
 
