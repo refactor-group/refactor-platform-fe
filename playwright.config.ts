@@ -15,8 +15,11 @@ export default defineConfig({
   workers: isCI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
-  /* Prevent indefinite hangs in CI */
-  globalTimeout: isCI ? 5 * 60 * 1000 : undefined,
+  /* Prevent indefinite hangs in CI. The clean suite runs ~4.5m, so a 5m cap
+   * left no room for the `retries: 2` budget below — one flaky test's retries
+   * would tip the suite over and the global timeout would guillotine the whole
+   * remaining run, turning a recoverable flake into a hard failure. */
+  globalTimeout: isCI ? 15 * 60 * 1000 : undefined,
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
