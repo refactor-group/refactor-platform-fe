@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { CoachingSessionDurationInput } from "@/components/ui/coaching-sessions/coaching-session-duration-input";
@@ -225,12 +226,11 @@ function RescheduleSeriesForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="reschedule-time">First session time</Label>
-            <input
+            <Input
               type="time"
               id="reschedule-time"
               value={sessionTime}
               onChange={(e) => setSessionTime(e.target.value)}
-              className="w-full border rounded p-2"
               required
               disabled={isSubmitting}
             />

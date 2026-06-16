@@ -3,6 +3,7 @@ import {
   getRelationshipsAsCoach,
   sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -403,12 +404,11 @@ export default function CoachingSessionForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="session-time">Session Time</Label>
-            <input
+            <Input
               type="time"
               id="session-time"
               value={sessionTime}
               onChange={(e) => setSessionTime(e.target.value)}
-              className="w-full border rounded p-2"
               required
               disabled={isSubmitting}
             />
