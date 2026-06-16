@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from "react";
 import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
-import { CoachingSeriesCard } from "@/components/ui/dashboard/coaching-series-card";
 import { CoachingSessionsCard } from "@/components/ui/dashboard/coaching-sessions-card";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
@@ -11,9 +10,6 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
-import { canManageSeries } from "@/types/coaching-session-series";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {
@@ -29,18 +25,6 @@ export function DashboardContainer() {
     currentCoachingRelationshipId,
     setCurrentCoachingRelationshipId,
   } = useCurrentCoachingRelationship();
-  const userId = useAuthStore((s) => s.userSession?.id);
-
-  // Scope the series card to the relationship the user actually picks in the
-  // sessions-card filter (its own store). `currentCoachingRelationshipId` is
-  // not driven by that selector, so the card would otherwise never see one.
-  const seriesRelationshipId = useCoachingSessionsCardFilterStore(
-    (s) => s.relationshipFilter
-  );
-  const seriesRelationship = relationships?.find(
-    (r) => r.id === seriesRelationshipId
-  );
-  const canManage = canManageSeries(userId, seriesRelationship);
   useAutoSelectSingleRelationship(
     relationships,
     isLoadingRelationships,
@@ -54,7 +38,6 @@ export function DashboardContainer() {
   >();
   const [refreshUpcomingSession, setRefreshUpcomingSession] = useState<(() => void) | null>(() => null);
   const [refreshSessionsCard, setRefreshSessionsCard] = useState<(() => void) | null>(() => null);
-  const [refreshSeriesCard, setRefreshSeriesCard] = useState<(() => void) | null>(() => null);
 
   const handleOpenDialog = (session?: CoachingSession | EnrichedCoachingSession) => {
     setSessionToEdit(session);
@@ -72,7 +55,6 @@ export function DashboardContainer() {
     // card until a hard reload.
     refreshUpcomingSession?.();
     refreshSessionsCard?.();
-    refreshSeriesCard?.();
   };
 
   // Stable references so the cards' onRefreshNeeded useEffects don't
@@ -83,10 +65,6 @@ export function DashboardContainer() {
   );
   const handleSessionsCardRefreshNeeded = useCallback(
     (refreshFn: () => void) => setRefreshSessionsCard(() => refreshFn),
-    [],
-  );
-  const handleSeriesCardRefreshNeeded = useCallback(
-    (refreshFn: () => void) => setRefreshSeriesCard(() => refreshFn),
     [],
   );
 
@@ -114,15 +92,7 @@ export function DashboardContainer() {
         <CoachingSessionsCard
           onReschedule={handleOpenDialog}
           onRefreshNeeded={handleSessionsCardRefreshNeeded}
-        />
-      </div>
-
-      <div className="w-full mt-8">
-        <CoachingSeriesCard
-          relationshipId={seriesRelationshipId ?? null}
-          canManage={canManage}
           onSeriesMutated={handleSeriesMutated}
-          onRefreshNeeded={handleSeriesCardRefreshNeeded}
         />
       </div>
       <CoachingSessionDialog

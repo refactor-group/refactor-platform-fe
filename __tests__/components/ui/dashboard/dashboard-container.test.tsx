@@ -29,7 +29,6 @@ import { DashboardContainer } from "@/components/ui/dashboard/dashboard-containe
 
 const upcomingSessionRefreshSpy = vi.fn();
 const coachingSessionsCardRefreshSpy = vi.fn();
-const coachingSeriesCardRefreshSpy = vi.fn();
 
 vi.mock("@/components/ui/dashboard/upcoming-session-card", () => ({
   UpcomingSessionCard: ({
@@ -62,19 +61,6 @@ vi.mock("@/components/ui/dashboard/coaching-sessions-card", () => ({
 
 vi.mock("@/components/ui/dashboard/goals-overview-card", () => ({
   GoalsOverviewCard: () => <div data-testid="goals-overview-card-stub" />,
-}));
-
-vi.mock("@/components/ui/dashboard/coaching-series-card", () => ({
-  CoachingSeriesCard: ({
-    onRefreshNeeded,
-  }: {
-    onRefreshNeeded?: (fn: () => void) => void;
-  }) => {
-    useEffect(() => {
-      onRefreshNeeded?.(coachingSeriesCardRefreshSpy);
-    }, [onRefreshNeeded]);
-    return <div data-testid="coaching-series-card-stub" />;
-  },
 }));
 
 vi.mock("@/components/ui/dashboard/dashboard-header", () => ({
@@ -129,20 +115,6 @@ vi.mock("@/lib/hooks/use-auto-select-single-relationship", () => ({
   useAutoSelectSingleRelationship: () => undefined,
 }));
 
-vi.mock("@/lib/providers/auth-store-provider", () => ({
-  useAuthStore: (selector: (s: { userSession?: { id: string } }) => unknown) =>
-    selector({ userSession: undefined }),
-}));
-
-vi.mock(
-  "@/lib/providers/coaching-sessions-card-filter-store-provider",
-  () => ({
-    useCoachingSessionsCardFilterStore: (
-      selector: (s: { relationshipFilter: string | undefined }) => unknown
-    ) => selector({ relationshipFilter: undefined }),
-  })
-);
-
 describe("DashboardContainer auto-refresh wiring", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -156,7 +128,6 @@ describe("DashboardContainer auto-refresh wiring", () => {
     // either dropped a prop or stopped passing it.
     expect(upcomingSessionRefreshSpy).not.toHaveBeenCalled();
     expect(coachingSessionsCardRefreshSpy).not.toHaveBeenCalled();
-    expect(coachingSeriesCardRefreshSpy).not.toHaveBeenCalled();
     // The card *stubs* are responsible for invoking onRefreshNeeded
     // with these spies; the assertion above just establishes the
     // baseline. The next test exercises the call path.
@@ -169,7 +140,6 @@ describe("DashboardContainer auto-refresh wiring", () => {
     // close yet (they're plumbed but the dialog is closed at mount).
     upcomingSessionRefreshSpy.mockClear();
     coachingSessionsCardRefreshSpy.mockClear();
-    coachingSeriesCardRefreshSpy.mockClear();
 
     // Open the dialog via the header stub.
     fireEvent.click(screen.getByTestId("open-dialog-stub"));
@@ -181,19 +151,16 @@ describe("DashboardContainer auto-refresh wiring", () => {
       fireEvent.click(screen.getByTestId("close-dialog-stub"));
     });
 
-    // The contract: dialog-close fires every card's refresh. A recurring
-    // create adds a series too, so the series card is part of this set. If a
-    // future refactor wires the dialog's onOpenChange to a path that only
-    // refreshes some cards, this assertion will fail.
+    // The contract: dialog-close fires every card's refresh. If a future
+    // refactor wires the dialog's onOpenChange to a path that only refreshes
+    // some cards, this assertion will fail.
     expect(upcomingSessionRefreshSpy).toHaveBeenCalledTimes(1);
     expect(coachingSessionsCardRefreshSpy).toHaveBeenCalledTimes(1);
-    expect(coachingSeriesCardRefreshSpy).toHaveBeenCalledTimes(1);
   });
 
   it("does not fire refreshes on initial mount (only on dialog close)", () => {
     upcomingSessionRefreshSpy.mockClear();
     coachingSessionsCardRefreshSpy.mockClear();
-    coachingSeriesCardRefreshSpy.mockClear();
 
     render(<DashboardContainer />);
 
@@ -202,6 +169,5 @@ describe("DashboardContainer auto-refresh wiring", () => {
     // would also break SWR's cache-warmth semantics elsewhere.
     expect(upcomingSessionRefreshSpy).not.toHaveBeenCalled();
     expect(coachingSessionsCardRefreshSpy).not.toHaveBeenCalled();
-    expect(coachingSeriesCardRefreshSpy).not.toHaveBeenCalled();
   });
 });

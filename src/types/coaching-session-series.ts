@@ -1,10 +1,6 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import {
-  CoachingRelationshipWithUserNames,
-  isUserCoachInRelationship,
-} from "@/types/coaching-relationship";
-import {
   Frequency,
   RecurrenceEnd,
   Weekday,
@@ -147,24 +143,6 @@ export function defaultCoachingSessionSeries(): CoachingSessionSeries {
 
 export function defaultCoachingSessionSeriesWithSessions(): CoachingSessionSeriesWithSessions {
   return { ...defaultCoachingSessionSeries(), coaching_sessions: [] };
-}
-
-/**
- * Whether the current user may manage (reschedule/delete) a series for a given
- * relationship. Series management is coach-only.
- *
- * This is client-side UX gating only — it hides the Reschedule/Delete actions
- * from non-coaches.
- */
-export function canManageSeries(
-  userId: Id | undefined,
-  relationship: CoachingRelationshipWithUserNames | undefined
-): boolean {
-  return (
-    !!userId &&
-    !!relationship &&
-    isUserCoachInRelationship(userId, relationship)
-  );
 }
 
 export function isCoachingSessionSeries(

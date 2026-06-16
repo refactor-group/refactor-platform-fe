@@ -11,7 +11,6 @@ import {
   CoachingSessionSeriesRaw,
   CoachingSessionSeriesWithSessionsRaw,
   SeriesRule,
-  canManageSeries,
   defaultCoachingSessionSeries,
   defaultCoachingSessionSeriesWithSessions,
   formatSeriesRule,
@@ -20,7 +19,6 @@ import {
   parseCoachingSessionSeriesWithSessions,
   seriesRecurrenceToEnd,
 } from "@/types/coaching-session-series";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 
 // A count-based weekly rule, matching the backend wire shape where the unused
 // end-condition (`until` here) is serialized as explicit null, not omitted.
@@ -279,28 +277,5 @@ describe("seriesRecurrenceToEnd", () => {
     expect(
       seriesRecurrenceToEnd({ ...base, count: None, until: None })
     ).toEqual({ kind: "count", count: 4 });
-  });
-});
-
-describe("canManageSeries", () => {
-  const relationship = {
-    coach_id: "coach-1",
-    coachee_id: "coachee-1",
-  } as CoachingRelationshipWithUserNames;
-
-  it("allows the coach of the relationship to manage the series", () => {
-    expect(canManageSeries("coach-1", relationship)).toBe(true);
-  });
-
-  it("denies the coachee", () => {
-    expect(canManageSeries("coachee-1", relationship)).toBe(false);
-  });
-
-  it("denies when the user id is missing", () => {
-    expect(canManageSeries(undefined, relationship)).toBe(false);
-  });
-
-  it("denies when the relationship is missing", () => {
-    expect(canManageSeries("coach-1", undefined)).toBe(false);
   });
 });

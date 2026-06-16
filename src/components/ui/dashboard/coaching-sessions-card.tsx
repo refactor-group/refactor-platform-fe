@@ -12,12 +12,14 @@ import {
 } from "@/components/ui/dashboard/coaching-sessions-card-header";
 import { BucketsContainer } from "@/components/ui/dashboard/session-buckets/buckets-container";
 import { DeleteSessionDialog } from "@/components/ui/dashboard/delete-session-dialog";
+import { SeriesActionDialogs } from "@/components/ui/dashboard/series-action-dialogs";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { USERS_BASEURL } from "@/lib/api/users";
+import type { Id } from "@/types/general";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
@@ -63,6 +65,11 @@ export interface CoachingSessionsCardProps {
    *  created sessions wouldn't appear in the list until a hard reload.
    *  Mirrors `UpcomingSessionCard.onRefreshNeeded`. */
   onRefreshNeeded?: (refresh: () => void) => void;
+  /** Fires after a series is rescheduled or deleted from a session row's
+   *  kebab. Re-materialization changes future sessions across surfaces, so
+   *  the parent uses this to refresh sibling cards (e.g. UpcomingSession).
+   *  The card already revalidates its own buckets internally. */
+  onSeriesMutated?: () => void;
 }
 
 /**
@@ -76,6 +83,7 @@ export interface CoachingSessionsCardProps {
 export function CoachingSessionsCard({
   onReschedule,
   onRefreshNeeded,
+  onSeriesMutated,
 }: CoachingSessionsCardProps) {
   const userSession = useAuthStore((s) => s.userSession);
   const userId = userSession?.id;
@@ -179,6 +187,34 @@ export function CoachingSessionsCard({
     kind: "closed",
   });
 
+  // ── Series actions ───────────────────────────────────────────────────
+  // A session row's kebab surfaces view / edit / delete for the series it
+  // belongs to. The row only knows the `coaching_session_series_id`, so the
+  // owning dialog component fetches the full series by id. A single piece of
+  // state drives all three dialogs; `SeriesActionDialogs` mounts only while
+  // active so its fetch hook always receives a real id.
+  const [seriesAction, setSeriesAction] = useState<
+    { kind: "closed" } | { kind: "view" | "edit" | "delete"; seriesId: Id }
+  >({ kind: "closed" });
+
+  const handleSeriesAction = useCallback(
+    (action: "view" | "edit" | "delete", seriesId: Id) =>
+      setSeriesAction({ kind: action, seriesId }),
+    []
+  );
+
+  const handleCloseSeriesAction = useCallback(
+    () => setSeriesAction({ kind: "closed" }),
+    []
+  );
+
+  // After a reschedule/delete the future sessions change, so revalidate this
+  // card's buckets and let the parent refresh sibling cards.
+  const handleSeriesMutated = useCallback(() => {
+    refreshBucketData();
+    onSeriesMutated?.();
+  }, [refreshBucketData, onSeriesMutated]);
+
   const pendingParticipantName = useMemo(() => {
     if (deleteState.kind === "closed" || !userSession) return "";
     const info = getSessionParticipantInfo(deleteState.session, userSession.id);
@@ -244,6 +280,7 @@ export function CoachingSessionsCard({
               mountNow={mountNow}
               onReschedule={onReschedule}
               onRequestDelete={handleRequestDelete}
+              onSeriesAction={handleSeriesAction}
             />
           )}
         </CardContent>
@@ -260,6 +297,12 @@ export function CoachingSessionsCard({
         isDeleting={deleteState.kind === "deleting"}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+      />
+      <SeriesActionDialogs
+        action={seriesAction}
+        userTimezone={userSession?.timezone || getBrowserTimezone()}
+        onClose={handleCloseSeriesAction}
+        onMutated={handleSeriesMutated}
       />
     </TooltipProvider>
   );

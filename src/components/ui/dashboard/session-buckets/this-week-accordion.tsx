@@ -36,6 +36,7 @@ export interface ThisWeekAccordionProps {
   onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
+  onSeriesAction: (action: "view" | "edit" | "delete", seriesId: Id) => void;
 }
 
 const SESSION_INCLUDES: CoachingSessionInclude[] = [
@@ -55,6 +56,7 @@ export function ThisWeekAccordion({
   onSelect,
   onReschedule,
   onRequestDelete,
+  onSeriesAction,
 }: ThisWeekAccordionProps) {
   const isPastView = view === CoachingSessionBucketView.Previous;
   const [isExpanded, setIsExpanded] = useState(true);
@@ -140,6 +142,7 @@ export function ThisWeekAccordion({
                 onSelect={() => onSelect(session)}
                 onReschedule={onReschedule}
                 onRequestDelete={onRequestDelete}
+                onSeriesAction={onSeriesAction}
               />
             ))}
           </div>
