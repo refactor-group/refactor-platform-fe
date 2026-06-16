@@ -6,7 +6,10 @@ import {
   untilDateToUtcDateTime,
 } from "@/types/recurrence";
 import { Some, None } from "@/types/option";
-import { defaultCoachingSession } from "@/types/coaching-session";
+import {
+  defaultCoachingSession,
+  serializeCoachingSession,
+} from "@/types/coaching-session";
 import {
   CoachingSessionSeriesRaw,
   CoachingSessionSeriesWithSessionsRaw,
@@ -168,9 +171,10 @@ describe("parseCoachingSessionSeriesWithSessions", () => {
       { ...defaultCoachingSession(), id: "cs-1" },
       { ...defaultCoachingSession(), id: "cs-2" },
     ];
+    // Sessions arrive in wire shape — `title` is `string | null`, not Option.
     const raw: CoachingSessionSeriesWithSessionsRaw = {
       series: rawSeries(),
-      sessions,
+      sessions: sessions.map(serializeCoachingSession),
     };
 
     const result = parseCoachingSessionSeriesWithSessions(raw, TZ);
@@ -179,6 +183,24 @@ describe("parseCoachingSessionSeriesWithSessions", () => {
     expect(result.rule.recurrence.count.some).toBe(true);
     expect(result.coaching_sessions).toHaveLength(2);
     expect(result.coaching_sessions.map((s) => s.id)).toEqual(["cs-1", "cs-2"]);
+  });
+
+  it("normalizes each session's wire title into Option<string>", () => {
+    const raw: CoachingSessionSeriesWithSessionsRaw = {
+      series: rawSeries(),
+      sessions: [
+        { ...serializeCoachingSession(defaultCoachingSession()), id: "cs-named", title: "Kickoff" },
+        { ...serializeCoachingSession(defaultCoachingSession()), id: "cs-untitled", title: null },
+      ],
+    };
+
+    const [named, untitled] = parseCoachingSessionSeriesWithSessions(
+      raw,
+      TZ
+    ).coaching_sessions;
+
+    expect(named.title).toEqual({ some: true, none: false, val: "Kickoff" });
+    expect(untitled.title.some).toBe(false);
   });
 });
 

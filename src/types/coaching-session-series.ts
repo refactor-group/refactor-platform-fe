@@ -9,7 +9,11 @@ import {
   weekdayLabel,
 } from "@/types/recurrence";
 import { type Option, Some, None } from "@/types/option";
-import { CoachingSession } from "@/types/coaching-session";
+import {
+  CoachingSession,
+  CoachingSessionWire,
+  transformCoachingSession,
+} from "@/types/coaching-session";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 
 interface SeriesRecurrenceRaw {
@@ -37,7 +41,7 @@ export interface CoachingSessionSeriesRaw {
 
 export interface CoachingSessionSeriesWithSessionsRaw {
   series: CoachingSessionSeriesRaw;
-  sessions: CoachingSession[];
+  sessions: CoachingSessionWire[];
 }
 
 // ─── Domain shapes ───────────────────────────────────────────────────
@@ -116,7 +120,10 @@ export function parseCoachingSessionSeriesWithSessions(
 ): CoachingSessionSeriesWithSessions {
   return {
     ...parseCoachingSessionSeries(raw.series, timezone),
-    coaching_sessions: raw.sessions,
+    // Normalize each session's wire `title` (string | null) into Option<string>
+    // so series sessions honor the CoachingSession contract — otherwise
+    // `session.title.some` / `coachingSessionTitle(session)` throw at runtime.
+    coaching_sessions: raw.sessions.map(transformCoachingSession),
   };
 }
 
