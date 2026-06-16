@@ -464,8 +464,15 @@ export namespace EntityApi {
 
       try {
         const result = await operation();
-        // Refresh entity lists
-        mutate((key) => typeof key === "string" && key.includes(baseUrl));
+        // Invalidate both single-entity caches (string keys from `useEntity`)
+        // and list caches (tuple keys `[url, params]` from `useEntityList`).
+        mutate((key) => {
+          if (typeof key === "string") return key.includes(baseUrl);
+          if (Array.isArray(key) && typeof key[0] === "string") {
+            return key[0].includes(baseUrl);
+          }
+          return false;
+        });
         return result;
       } catch (err) {
         // Handle both EntityApiError and regular Error types
