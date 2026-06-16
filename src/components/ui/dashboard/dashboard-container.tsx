@@ -13,7 +13,7 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
-import { isUserCoachInRelationship } from "@/types/coaching-relationship";
+import { canManageSeries } from "@/types/coaching-session-series";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
 export function DashboardContainer() {
@@ -40,10 +40,7 @@ export function DashboardContainer() {
   const seriesRelationship = relationships?.find(
     (r) => r.id === seriesRelationshipId
   );
-  const canManageSeries =
-    !!userId &&
-    !!seriesRelationship &&
-    isUserCoachInRelationship(userId, seriesRelationship);
+  const canManage = canManageSeries(userId, seriesRelationship);
   useAutoSelectSingleRelationship(
     relationships,
     isLoadingRelationships,
@@ -123,7 +120,7 @@ export function DashboardContainer() {
       <div className="w-full mt-8">
         <CoachingSeriesCard
           relationshipId={seriesRelationshipId ?? null}
-          canManage={canManageSeries}
+          canManage={canManage}
           onSeriesMutated={handleSeriesMutated}
           onRefreshNeeded={handleSeriesCardRefreshNeeded}
         />
