@@ -5,7 +5,6 @@ import { CoachingRelationship } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import { Organization } from "@/types/organization";
 import { Goal } from "@/types/goal";
-import { CoachingSessionTopic } from "@/types/coaching-session-topic";
 import { Agreement } from "@/types/agreement";
 import { Provider } from "@/types/provider";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
@@ -164,26 +163,6 @@ export function serializeCoachingSession(
     ...session,
     title: session.title.some ? session.title.val : null,
   };
-}
-
-/**
- * Display title for a coaching session, in fallback order: the human-set title
- * when present, else the first topic (drag-and-drop display order), else the
- * first linked goal's title, else the literal "Coaching Session".
- */
-export function coachingSessionTitle(
-  session: {
-    title: Option<string>;
-    topics?: readonly Pick<CoachingSessionTopic, "body">[];
-    goals?: readonly Pick<Goal, "title">[];
-  }
-): string {
-  if (session.title.some) return session.title.val;
-  return (
-    session.topics?.[0]?.body ||
-    session.goals?.[0]?.title ||
-    "Coaching Session"
-  );
 }
 
 export function defaultCoachingSession(): CoachingSession {

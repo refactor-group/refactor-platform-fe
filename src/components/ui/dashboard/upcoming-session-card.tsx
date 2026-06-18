@@ -24,9 +24,8 @@ import {
 } from "@/lib/utils/session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
-import {
-  type EnrichedCoachingSession,
-} from "@/types/coaching-session";
+import { type EnrichedCoachingSession } from "@/types/coaching-session";
+import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
 import { SessionUrgency } from "@/types/session-display";
 import { UserActionsScope } from "@/types/assigned-actions";
 
@@ -221,6 +220,7 @@ function PopulatedBody({
     <>
       <HeaderRow
         participantName={participant.participantName}
+        session={session}
         timeStr={timeStr}
         durationMinutes={session.duration_minutes}
       />
@@ -244,10 +244,12 @@ function PopulatedBody({
 
 function HeaderRow({
   participantName,
+  session,
   timeStr,
   durationMinutes,
 }: {
   participantName: string;
+  session: EnrichedCoachingSession;
   timeStr: string;
   durationMinutes: number;
 }) {
@@ -260,6 +262,11 @@ function HeaderRow({
         <h3 className="text-base font-semibold text-foreground mt-1 truncate">
           Session with {participantName}
         </h3>
+        <CoachingSessionTitleText
+          session={session}
+          hideWhenRedundantWithGoals
+          className="text-sm text-muted-foreground mt-0.5 truncate"
+        />
       </div>
       <div className="flex flex-col items-end shrink-0">
         <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">

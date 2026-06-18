@@ -22,7 +22,7 @@ import { goalTitle } from "@/types/goal";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { DateTime } from "ts-luxon";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import { coachingSessionTitle } from "@/types/coaching-session";
+import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
@@ -144,9 +144,10 @@ function SessionItem({
     <SelectItem value={session.id} className="pl-8">
       <div className="flex min-w-0 ml-4">
         <div className="min-w-0 w-full">
-          <p className="truncate text-sm font-medium">
-            {coachingSessionTitle(session)}
-          </p>
+          <CoachingSessionTitleText
+            session={session}
+            className="truncate text-sm font-medium"
+          />
           <p className="truncate text-sm text-gray-400">
             {formatDateInUserTimezone(
               session.date,

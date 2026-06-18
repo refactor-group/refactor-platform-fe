@@ -14,6 +14,7 @@ import {
   isPastSession,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
+import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
 import { ItemStatus } from "@/types/general";
 
 export interface SessionHoverDetailProps {
@@ -60,6 +61,11 @@ export function SessionHoverDetail({
         <p className="text-base font-semibold text-foreground">
           Session with {participantName}
         </p>
+        <CoachingSessionTitleText
+          session={session}
+          hideWhenRedundantWithGoals
+          className="text-sm text-muted-foreground mt-0.5"
+        />
         <p className="text-xs text-muted-foreground tabular-nums mt-0.5">
           {scheduledLabel}
         </p>

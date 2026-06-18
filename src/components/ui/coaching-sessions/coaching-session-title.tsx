@@ -8,10 +8,10 @@ import { useGoalsBySession } from "@/lib/api/goals";
 import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics";
 import { CoachingSessionApi } from "@/lib/api/coaching-sessions";
 import {
-  coachingSessionTitle,
   isPastSession,
   isUnderwaySession,
 } from "@/types/coaching-session";
+import { coachingSessionTitle } from "@/types/coaching-session-title";
 import { Some, None, type Option } from "@/types/option";
 import {
   formatDateInUserTimezoneWithTZ,

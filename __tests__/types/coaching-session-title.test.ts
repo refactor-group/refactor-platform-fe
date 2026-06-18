@@ -15,8 +15,8 @@ import {
   transformCoachingSession,
   serializeCoachingSession,
   defaultCoachingSession,
-  coachingSessionTitle,
 } from "@/types/coaching-session";
+import { coachingSessionTitle } from "@/types/coaching-session-title";
 
 // Raw wire CoachingSession (backend shape: title is string | null, always present).
 const rawWire = {
