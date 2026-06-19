@@ -133,7 +133,7 @@ describe("DashboardContainer auto-refresh wiring", () => {
     // baseline. The next test exercises the call path.
   });
 
-  it("invokes BOTH card refreshes when the create/edit dialog closes", () => {
+  it("invokes ALL card refreshes when the create/edit dialog closes", () => {
     render(<DashboardContainer />);
 
     // Pre-state: refreshes haven't been called as a result of dialog
@@ -151,9 +151,9 @@ describe("DashboardContainer auto-refresh wiring", () => {
       fireEvent.click(screen.getByTestId("close-dialog-stub"));
     });
 
-    // The contract: dialog-close fires both refreshes. If a future
-    // refactor wires the dialog's onOpenChange to a path that only
-    // refreshes one card (or neither), this assertion will fail.
+    // The contract: dialog-close fires every card's refresh. If a future
+    // refactor wires the dialog's onOpenChange to a path that only refreshes
+    // some cards, this assertion will fail.
     expect(upcomingSessionRefreshSpy).toHaveBeenCalledTimes(1);
     expect(coachingSessionsCardRefreshSpy).toHaveBeenCalledTimes(1);
   });
@@ -164,7 +164,7 @@ describe("DashboardContainer auto-refresh wiring", () => {
 
     render(<DashboardContainer />);
 
-    // Mount alone — no dialog interaction yet — must not fire either
+    // Mount alone — no dialog interaction yet — must not fire any
     // refresh. If it did, every dashboard render would re-fetch, which
     // would also break SWR's cache-warmth semantics elsewhere.
     expect(upcomingSessionRefreshSpy).not.toHaveBeenCalled();

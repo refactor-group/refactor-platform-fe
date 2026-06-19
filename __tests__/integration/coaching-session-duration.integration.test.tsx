@@ -42,16 +42,12 @@ vi.mock("@/lib/api/users", () => ({
 
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
-const mockCreateRecurring = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", () => ({
   useCoachingSessionList: () => ({ refresh: vi.fn() }),
   useCoachingSessionMutation: () => ({
     create: mockCreate,
     update: mockUpdate,
   }),
-  CoachingSessionApi: {
-    createRecurring: (...args: unknown[]) => mockCreateRecurring(...args),
-  },
 }));
 
 vi.mock("@/lib/api/coaching-relationships", () => ({

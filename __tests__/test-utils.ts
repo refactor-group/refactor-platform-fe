@@ -77,6 +77,7 @@ export function createMockSession(
     date: now.plus({ hours: 2 }).toISO() ?? '', // Date is ISO string
     duration_minutes: 60,
     title: None,
+    coaching_session_series_id: None,
     created_at: now, // CoachingSession expects DateTime object
     updated_at: now,
     ...overrides,
@@ -108,6 +109,7 @@ export function createMockEnrichedSession(
     date: now.plus({ hours: 2 }).toISO() ?? "",
     duration_minutes: 60,
     title: None,
+    coaching_session_series_id: None,
     created_at: now,
     updated_at: now,
     relationship: {

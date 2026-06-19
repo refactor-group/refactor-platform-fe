@@ -68,6 +68,11 @@ export function DashboardContainer() {
     [],
   );
 
+  const handleSeriesMutated = useCallback(() => {
+    refreshUpcomingSession?.();
+    refreshSessionsCard?.();
+  }, [refreshUpcomingSession, refreshSessionsCard]);
+
   return (
     <>
       <DashboardHeader onCreateSession={() => handleOpenDialog()} />
@@ -87,6 +92,7 @@ export function DashboardContainer() {
         <CoachingSessionsCard
           onReschedule={handleOpenDialog}
           onRefreshNeeded={handleSessionsCardRefreshNeeded}
+          onSeriesMutated={handleSeriesMutated}
         />
       </div>
       <CoachingSessionDialog
