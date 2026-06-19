@@ -1,0 +1,159 @@
+// Interacts with the coaching_session_series endpoints.
+
+import { siteConfig } from "@/site.config";
+import { Id } from "@/types/general";
+import { CreateRecurringSessionRequest } from "@/types/recurrence";
+import {
+  CoachingSessionSeries,
+  CoachingSessionSeriesWithSessions,
+  CoachingSessionSeriesRaw,
+  CoachingSessionSeriesWithSessionsRaw,
+  defaultCoachingSessionSeriesWithSessions,
+  parseCoachingSessionSeries,
+  parseCoachingSessionSeriesWithSessions,
+} from "@/types/coaching-session-series";
+import { EntityApi } from "./entity-api";
+
+const COACHING_SESSION_SERIES_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_session_series`;
+
+/**
+ * API client for coaching session series operations.
+ *
+ * Mirrors the CoachingSessionApi pattern: thin wrappers over the generic
+ * EntityApi helpers, with the wire `rule` normalized to domain types at the
+ * fetch edge via the `parse*` functions.
+ */
+export const CoachingSessionSeriesApi = {
+  /**
+   * Lists series for a coaching relationship (metadata only — no sessions).
+   *
+   * @param relationshipId Relationship whose series to fetch; null returns [].
+   */
+  list: (
+    relationshipId: Id | null,
+    timezone: string
+  ): Promise<CoachingSessionSeries[]> => {
+    if (!relationshipId) return Promise.resolve([]);
+    return EntityApi.listFn<CoachingSessionSeriesRaw, CoachingSessionSeries>(
+      COACHING_SESSION_SERIES_BASEURL,
+      { params: { coaching_relationship_id: relationshipId } },
+      (raw) => parseCoachingSessionSeries(raw, timezone)
+    );
+  },
+
+  /**
+   * Reads one series together with its materialized sessions, date-sorted.
+   */
+  get: (
+    id: Id,
+    timezone: string
+  ): Promise<CoachingSessionSeriesWithSessions> =>
+    EntityApi.getFn<CoachingSessionSeriesWithSessionsRaw>(
+      `${COACHING_SESSION_SERIES_BASEURL}/${id}`
+    ).then((raw) => parseCoachingSessionSeriesWithSessions(raw, timezone)),
+
+  /**
+   * Creates a series and materializes its sessions in one transaction.
+   * Returns the series with every created session; the first equals `start_at`.
+   */
+  create: (
+    payload: CreateRecurringSessionRequest,
+    timezone: string
+  ): Promise<CoachingSessionSeriesWithSessions> =>
+    EntityApi.createFn<
+      CreateRecurringSessionRequest,
+      CoachingSessionSeriesWithSessionsRaw
+    >(COACHING_SESSION_SERIES_BASEURL, payload).then((raw) =>
+      parseCoachingSessionSeriesWithSessions(raw, timezone)
+    ),
+
+  /**
+   * Reschedules a series: replaces the rule and re-materializes future
+   * sessions. Past sessions are untouched. Returns the series with its sessions.
+   */
+  update: (
+    id: Id,
+    payload: CreateRecurringSessionRequest,
+    timezone: string
+  ): Promise<CoachingSessionSeriesWithSessions> =>
+    EntityApi.updateFn<
+      CreateRecurringSessionRequest,
+      CoachingSessionSeriesWithSessionsRaw
+    >(`${COACHING_SESSION_SERIES_BASEURL}/${id}`, payload).then((raw) =>
+      parseCoachingSessionSeriesWithSessions(raw, timezone)
+    ),
+
+  /**
+   * Deletes a series and its future sessions; past sessions survive.
+   */
+  delete: async (id: Id): Promise<CoachingSessionSeriesWithSessions> => {
+    await EntityApi.deleteFn<null, void>(
+      `${COACHING_SESSION_SERIES_BASEURL}/${id}`
+    );
+    return defaultCoachingSessionSeriesWithSessions();
+  },
+};
+
+/**
+ * Fetches the list of series for a relationship (metadata only).
+ *
+ * @returns { series, isLoading, isError, refresh }
+ */
+export const useCoachingSessionSeriesList = (
+  relationshipId: Id | null,
+  timezone: string
+) => {
+  const params = relationshipId
+    ? { coaching_relationship_id: relationshipId }
+    : undefined;
+
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<CoachingSessionSeries>(
+      COACHING_SESSION_SERIES_BASEURL,
+      () => CoachingSessionSeriesApi.list(relationshipId, timezone),
+      params
+    );
+
+  return { series: entities, isLoading, isError, refresh };
+};
+
+/**
+ * Fetches a single series with its materialized sessions. Expects a real
+ * series id — render-guard the consumer so it only mounts once an id is
+ * available (see SeriesDetailDialog), rather than passing an empty-string
+ * sentinel to suppress the fetch.
+ *
+ * @returns { series, isLoading, isError, refresh }
+ */
+export const useCoachingSessionSeries = (id: Id, timezone: string) => {
+  const url = `${COACHING_SESSION_SERIES_BASEURL}/${id}`;
+
+  const { entity, isLoading, isError, refresh } =
+    EntityApi.useEntity<CoachingSessionSeriesWithSessions>(
+      url,
+      () => CoachingSessionSeriesApi.get(id, timezone),
+      defaultCoachingSessionSeriesWithSessions()
+    );
+
+  return { series: entity, isLoading, isError, refresh };
+};
+
+/**
+ * Mutation hook for series create/reschedule/delete with loading + error state
+ * and automatic invalidation of series-list cache keys.
+ *
+ * Note: this only invalidates `coaching_session_series` keys. Because a
+ * reschedule re-materializes and a delete drops future sessions, callers
+ * displaying `coaching_sessions` lists must `refresh()` those separately.
+ */
+export const useCoachingSessionSeriesMutation = (timezone: string) => {
+  return EntityApi.useEntityMutation<
+    CreateRecurringSessionRequest,
+    CoachingSessionSeriesWithSessions
+  >(COACHING_SESSION_SERIES_BASEURL, {
+    create: (payload) => CoachingSessionSeriesApi.create(payload, timezone),
+    update: (id, payload) =>
+      CoachingSessionSeriesApi.update(id, payload, timezone),
+    delete: CoachingSessionSeriesApi.delete,
+  });
+};

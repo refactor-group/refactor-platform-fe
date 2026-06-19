@@ -1,0 +1,303 @@
+import { describe, it, expect } from "vitest";
+import { DateTime } from "ts-luxon";
+import {
+  Frequency,
+  Weekday,
+  untilDateToUtcDateTime,
+} from "@/types/recurrence";
+import { Some, None } from "@/types/option";
+import {
+  defaultCoachingSession,
+  serializeCoachingSession,
+} from "@/types/coaching-session";
+import {
+  CoachingSessionSeriesRaw,
+  CoachingSessionSeriesWithSessionsRaw,
+  SeriesRule,
+  defaultCoachingSessionSeries,
+  defaultCoachingSessionSeriesWithSessions,
+  formatSeriesRule,
+  isCoachingSessionSeries,
+  parseCoachingSessionSeries,
+  parseCoachingSessionSeriesWithSessions,
+  seriesRecurrenceToEnd,
+} from "@/types/coaching-session-series";
+
+// A count-based weekly rule, matching the backend wire shape where the unused
+// end-condition (`until` here) is serialized as explicit null, not omitted.
+function rawSeries(
+  overrides?: Partial<CoachingSessionSeriesRaw>
+): CoachingSessionSeriesRaw {
+  return {
+    id: "series-1",
+    coaching_relationship_id: "rel-1",
+    created_by_user_id: "user-1",
+    rule: {
+      start_at: "2026-05-15T10:00:00",
+      duration_minutes: 60,
+      recurrence: {
+        frequency: Frequency.Weekly,
+        interval: 1,
+        by_weekdays: [Weekday.Mon, Weekday.Wed],
+        count: 24,
+        until: null,
+      },
+    },
+    created_at: "2026-05-01T08:00:00+00:00",
+    updated_at: "2026-05-02T09:30:00+00:00",
+    ...overrides,
+  };
+}
+
+// Most fixtures carry a bare-date or null `until`, which the parser leaves
+// untouched regardless of zone; a concrete zone only matters for the datetime
+// round-trip test below.
+const TZ = "America/New_York";
+
+describe("parseCoachingSessionSeries", () => {
+  it("passes scalar fields through unchanged", () => {
+    const result = parseCoachingSessionSeries(rawSeries(), TZ);
+
+    expect(result.id).toBe("series-1");
+    expect(result.coaching_relationship_id).toBe("rel-1");
+    expect(result.created_by_user_id).toBe("user-1");
+    expect(result.rule.start_at).toBe("2026-05-15T10:00:00");
+    expect(result.rule.duration_minutes).toBe(60);
+    expect(result.rule.recurrence.frequency).toBe(Frequency.Weekly);
+    expect(result.rule.recurrence.interval).toBe(1);
+    expect(result.rule.recurrence.by_weekdays).toEqual([
+      Weekday.Mon,
+      Weekday.Wed,
+    ]);
+  });
+
+  it("lifts a present count to Some and a null until to None", () => {
+    const result = parseCoachingSessionSeries(rawSeries(), TZ);
+
+    expect(result.rule.recurrence.count.some).toBe(true);
+    expect(result.rule.recurrence.count.some && result.rule.recurrence.count.val).toBe(24);
+    expect(result.rule.recurrence.until.none).toBe(true);
+  });
+
+  it("lifts a present until to Some and a null count to None", () => {
+    const result = parseCoachingSessionSeries(
+      rawSeries({
+        rule: {
+          start_at: "2026-05-15T10:00:00",
+          duration_minutes: 45,
+          recurrence: {
+            frequency: Frequency.Weekly,
+            interval: 2,
+            by_weekdays: [Weekday.Mon],
+            count: null,
+            until: "2026-08-15",
+          },
+        },
+      }),
+      TZ
+    );
+
+    expect(result.rule.recurrence.count.none).toBe(true);
+    expect(result.rule.recurrence.until.some).toBe(true);
+    expect(
+      result.rule.recurrence.until.some && result.rule.recurrence.until.val
+    ).toBe("2026-08-15");
+  });
+
+  it("round-trips a datetime until back to the picked local date (no day drift)", () => {
+    // What the form sends for an end date of Jan 31 in a negative-offset zone:
+    // end-of-day local crosses midnight UTC, so the stored value is Feb 1 UTC.
+    const stored = untilDateToUtcDateTime("2027-01-31", TZ);
+    expect(stored).toBe("2027-02-01T04:59:59");
+
+    const result = parseCoachingSessionSeries(
+      rawSeries({
+        rule: {
+          start_at: "2027-01-10T10:00:00",
+          duration_minutes: 60,
+          recurrence: {
+            frequency: Frequency.Weekly,
+            interval: 1,
+            by_weekdays: [Weekday.Sun],
+            count: null,
+            until: stored,
+          },
+        },
+      }),
+      TZ
+    );
+
+    // Naively slicing `stored` would yield "2027-02-01" — a day late. The
+    // parser must shift back into the user's zone first.
+    expect(
+      result.rule.recurrence.until.some && result.rule.recurrence.until.val
+    ).toBe("2027-01-31");
+  });
+
+  it("treats an omitted (not just null) count/until as None", () => {
+    const raw = rawSeries();
+    // Backend may omit the unused end-condition entirely rather than send null.
+    delete raw.rule.recurrence.until;
+    const result = parseCoachingSessionSeries(raw, TZ);
+
+    expect(result.rule.recurrence.until.none).toBe(true);
+    expect(result.rule.recurrence.count.some).toBe(true);
+  });
+
+  it("omits by_weekdays when absent rather than emitting undefined", () => {
+    const raw = rawSeries();
+    delete raw.rule.recurrence.by_weekdays;
+
+    const result = parseCoachingSessionSeries(raw, TZ);
+
+    expect("by_weekdays" in result.rule.recurrence).toBe(false);
+  });
+
+  it("parses created_at/updated_at ISO strings into valid DateTimes", () => {
+    const result = parseCoachingSessionSeries(rawSeries(), TZ);
+
+    expect(DateTime.isDateTime(result.created_at)).toBe(true);
+    expect(result.created_at.isValid).toBe(true);
+    expect(result.created_at.toUTC().toISO()).toBe(
+      DateTime.fromISO("2026-05-01T08:00:00+00:00").toUTC().toISO()
+    );
+    expect(result.updated_at.isValid).toBe(true);
+  });
+});
+
+describe("parseCoachingSessionSeriesWithSessions", () => {
+  it("includes the materialized sessions alongside the parsed series", () => {
+    const sessions = [
+      { ...defaultCoachingSession(), id: "cs-1" },
+      { ...defaultCoachingSession(), id: "cs-2" },
+    ];
+    // Sessions arrive in wire shape — `title` is `string | null`, not Option.
+    const raw: CoachingSessionSeriesWithSessionsRaw = {
+      series: rawSeries(),
+      sessions: sessions.map(serializeCoachingSession),
+    };
+
+    const result = parseCoachingSessionSeriesWithSessions(raw, TZ);
+
+    expect(result.id).toBe("series-1");
+    expect(result.rule.recurrence.count.some).toBe(true);
+    expect(result.coaching_sessions).toHaveLength(2);
+    expect(result.coaching_sessions.map((s) => s.id)).toEqual(["cs-1", "cs-2"]);
+  });
+
+  it("normalizes each session's wire title into Option<string>", () => {
+    const raw: CoachingSessionSeriesWithSessionsRaw = {
+      series: rawSeries(),
+      sessions: [
+        { ...serializeCoachingSession(defaultCoachingSession()), id: "cs-named", title: "Kickoff" },
+        { ...serializeCoachingSession(defaultCoachingSession()), id: "cs-untitled", title: null },
+      ],
+    };
+
+    const [named, untitled] = parseCoachingSessionSeriesWithSessions(
+      raw,
+      TZ
+    ).coaching_sessions;
+
+    expect(named.title).toEqual({ some: true, none: false, val: "Kickoff" });
+    expect(untitled.title.some).toBe(false);
+  });
+});
+
+describe("isCoachingSessionSeries", () => {
+  it("accepts a parsed series", () => {
+    expect(isCoachingSessionSeries(parseCoachingSessionSeries(rawSeries(), TZ))).toBe(
+      true
+    );
+  });
+
+  it("rejects non-objects and shapes missing required keys", () => {
+    expect(isCoachingSessionSeries(null)).toBe(false);
+    expect(isCoachingSessionSeries("series")).toBe(false);
+    expect(isCoachingSessionSeries({ id: "x" })).toBe(false);
+  });
+});
+
+describe("defaults", () => {
+  it("produces a None/None recurrence with no sessions", () => {
+    const base = defaultCoachingSessionSeries();
+    expect(base.rule.recurrence.count.none).toBe(true);
+    expect(base.rule.recurrence.until.none).toBe(true);
+
+    expect(defaultCoachingSessionSeriesWithSessions().coaching_sessions).toEqual(
+      []
+    );
+  });
+});
+
+describe("formatSeriesRule", () => {
+  function rule(overrides: Partial<SeriesRule["recurrence"]>): SeriesRule {
+    return {
+      start_at: "2026-05-15T10:00:00",
+      duration_minutes: 60,
+      recurrence: {
+        frequency: Frequency.Weekly,
+        interval: 1,
+        count: Some(24),
+        until: None,
+        ...overrides,
+      },
+    };
+  }
+
+  it("summarizes a weekly count-based rule with weekdays", () => {
+    expect(
+      formatSeriesRule(rule({ by_weekdays: [Weekday.Mon, Weekday.Wed] }))
+    ).toBe("Weekly on Mon, Wed · 24 sessions");
+  });
+
+  it("summarizes an until-based rule with a formatted date", () => {
+    expect(
+      formatSeriesRule(
+        rule({
+          frequency: Frequency.Biweekly,
+          by_weekdays: [Weekday.Mon],
+          count: None,
+          until: Some("2026-08-15"),
+        })
+      )
+    ).toBe("Bi-weekly on Mon · until Aug 15, 2026");
+  });
+
+  it("uses 'Every N <unit>' phrasing when interval > 1 and singularizes one session", () => {
+    expect(
+      formatSeriesRule(rule({ frequency: Frequency.Daily, interval: 2, count: Some(1) }))
+    ).toBe("Every 2 days · 1 session");
+  });
+
+  it("omits the weekday clause when there are no weekdays", () => {
+    expect(
+      formatSeriesRule(rule({ frequency: Frequency.Monthly, count: Some(6) }))
+    ).toBe("Monthly · 6 sessions");
+  });
+});
+
+describe("seriesRecurrenceToEnd", () => {
+  const base = {
+    frequency: Frequency.Weekly,
+    interval: 1,
+  };
+
+  it("maps a count-based recurrence to a count end", () => {
+    expect(
+      seriesRecurrenceToEnd({ ...base, count: Some(12), until: None })
+    ).toEqual({ kind: "count", count: 12 });
+  });
+
+  it("maps an until-based recurrence to an until end", () => {
+    expect(
+      seriesRecurrenceToEnd({ ...base, count: None, until: Some("2026-08-15") })
+    ).toEqual({ kind: "until", until: "2026-08-15" });
+  });
+
+  it("falls back to a 4-occurrence count when neither bound is set", () => {
+    expect(
+      seriesRecurrenceToEnd({ ...base, count: None, until: None })
+    ).toEqual({ kind: "count", count: 4 });
+  });
+});

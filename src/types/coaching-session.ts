@@ -21,6 +21,7 @@ export interface CoachingSession {
   title: Option<string>; // None = no human-set title
   meeting_url?: string;
   provider?: Provider;
+  coaching_session_series_id: Option<Id>;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -137,8 +138,12 @@ export function getCoachingSessionById(
 }
 
 /** Wire shape where Option fields are unwrapped to string | null for JSON. */
-export type CoachingSessionWire = Omit<CoachingSession, "title"> & {
+export type CoachingSessionWire = Omit<
+  CoachingSession,
+  "title" | "coaching_session_series_id"
+> & {
   title: string | null;
+  coaching_session_series_id?: Id;
 };
 
 /** Parse boundary transform: wraps the wire title into Option<string>.
@@ -153,6 +158,10 @@ export function transformCoachingSession(raw: any): CoachingSession {
   return {
     ...raw,
     title: typeof raw.title === "string" ? Some(raw.title) : None,
+    coaching_session_series_id:
+      typeof raw.coaching_session_series_id === "string"
+        ? Some(raw.coaching_session_series_id)
+        : None,
   };
 }
 
@@ -163,6 +172,9 @@ export function serializeCoachingSession(
   return {
     ...session,
     title: session.title.some ? session.title.val : null,
+    coaching_session_series_id: session.coaching_session_series_id.some
+      ? session.coaching_session_series_id.val
+      : undefined,
   };
 }
 
@@ -194,6 +206,7 @@ export function defaultCoachingSession(): CoachingSession {
     date: "",
     duration_minutes: FALLBACK_DURATION_MINUTES,
     title: None,
+    coaching_session_series_id: None,
     created_at: now,
     updated_at: now,
   };

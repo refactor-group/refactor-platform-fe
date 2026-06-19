@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SessionRow } from "@/components/ui/dashboard/coaching-sessions-row";
+import { Some } from "@/types/option";
 import { createMockEnrichedSession } from "../../../test-utils";
 
 // `copyCoachingSessionLinkWithToast` writes to the clipboard and fires a
@@ -18,14 +19,22 @@ const COACHEE_ID = "coachee-1";
 function renderRow(opts: {
   viewerId: string;
   isPast?: boolean;
+  /** When set, the session belongs to a series with this id. */
+  seriesId?: string;
   onReschedule?: ReturnType<typeof vi.fn>;
   onRequestDelete?: ReturnType<typeof vi.fn>;
+  onSeriesAction?: ReturnType<typeof vi.fn>;
   onSelect?: ReturnType<typeof vi.fn>;
 }) {
   const onReschedule = opts.onReschedule ?? vi.fn();
   const onRequestDelete = opts.onRequestDelete ?? vi.fn();
+  const onSeriesAction = opts.onSeriesAction ?? vi.fn();
   const onSelect = opts.onSelect ?? vi.fn();
-  const session = createMockEnrichedSession();
+  const session = createMockEnrichedSession(
+    opts.seriesId
+      ? { coaching_session_series_id: Some(opts.seriesId) }
+      : undefined
+  );
   render(
     <SessionRow
       session={session}
@@ -36,9 +45,10 @@ function renderRow(opts: {
       onSelect={onSelect}
       onReschedule={onReschedule}
       onRequestDelete={onRequestDelete}
+      onSeriesAction={onSeriesAction}
     />
   );
-  return { session, onReschedule, onRequestDelete, onSelect };
+  return { session, onReschedule, onRequestDelete, onSeriesAction, onSelect };
 }
 
 async function openKebab() {
@@ -80,6 +90,78 @@ describe("SessionRow — kebab visibility by viewer role", () => {
     expect(screen.queryByTestId("session-row-delete")).not.toBeInTheDocument();
     expect(screen.getByTestId("session-row-share-link")).toBeInTheDocument();
   });
+});
+
+describe("SessionRow — series actions in the kebab", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows View series / Edit series / Delete series for a coach on a session in a series", async () => {
+    renderRow({ viewerId: COACH_ID, seriesId: "series-1" });
+    await openKebab();
+
+    expect(screen.getByTestId("session-row-view-series")).toBeInTheDocument();
+    expect(screen.getByTestId("session-row-edit-series")).toBeInTheDocument();
+    expect(screen.getByTestId("session-row-delete-series")).toBeInTheDocument();
+  });
+
+  it("shows only View series (not Edit/Delete series) for a coachee", async () => {
+    renderRow({ viewerId: COACHEE_ID, seriesId: "series-1" });
+    await openKebab();
+
+    expect(screen.getByTestId("session-row-view-series")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("session-row-edit-series")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("session-row-delete-series")
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides all series actions when the session is not part of a series", async () => {
+    renderRow({ viewerId: COACH_ID });
+    await openKebab();
+
+    expect(
+      screen.queryByTestId("session-row-view-series")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("session-row-edit-series")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("session-row-delete-series")
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps Edit/Delete series for a coach on a PAST session (not upcoming-gated)", async () => {
+    // Series operations target the whole series, so unlike the per-session
+    // Reschedule they remain available on past rows.
+    renderRow({ viewerId: COACH_ID, isPast: true, seriesId: "series-1" });
+    await openKebab();
+
+    expect(
+      screen.queryByTestId("session-row-reschedule")
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("session-row-edit-series")).toBeInTheDocument();
+    expect(screen.getByTestId("session-row-delete-series")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["view", "session-row-view-series"],
+    ["edit", "session-row-edit-series"],
+    ["delete", "session-row-delete-series"],
+  ] as const)(
+    "invokes onSeriesAction('%s', seriesId) when its item fires",
+    async (action, testId) => {
+      const onSeriesAction = vi.fn();
+      renderRow({ viewerId: COACH_ID, seriesId: "series-1", onSeriesAction });
+      const user = await openKebab();
+
+      await user.click(screen.getByTestId(testId));
+      expect(onSeriesAction).toHaveBeenCalledWith(action, "series-1");
+    }
+  );
 });
 
 describe("SessionRow — primary action button", () => {

@@ -18,6 +18,14 @@ import {
 const SESSION_ID = 'session-1'
 const RELATIONSHIP_ID = SINGLE_RELATIONSHIP[0].id
 
+// Dates must be relative to "now": the board's default Last30Days filter drops
+// actions whose due_by is older than 30 days, so hardcoded calendar dates rot
+// the test ~30 days after they're written.
+const isoDaysFromNow = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+const RECENT = isoDaysFromNow(-1)
+const DUE_SOON = isoDaysFromNow(1)
+
 function mockAction(id: string, body: string, assigneeIds: string[]) {
   return {
     id,
@@ -25,10 +33,10 @@ function mockAction(id: string, body: string, assigneeIds: string[]) {
     body,
     user_id: MOCK_USER_ID,
     status: 'NotStarted',
-    status_changed_at: '2026-05-01T10:00:00Z',
-    due_by: '2026-05-15T00:00:00Z',
-    created_at: '2026-05-01T10:00:00Z',
-    updated_at: '2026-05-01T10:00:00Z',
+    status_changed_at: RECENT,
+    due_by: DUE_SOON,
+    created_at: RECENT,
+    updated_at: RECENT,
     assignee_ids: assigneeIds,
   }
 }
@@ -38,9 +46,9 @@ function mockAction(id: string, body: string, assigneeIds: string[]) {
 const ENRICHED_SESSION = {
   id: SESSION_ID,
   coaching_relationship_id: RELATIONSHIP_ID,
-  date: '2026-05-01T10:00:00Z',
-  created_at: '2026-05-01T10:00:00Z',
-  updated_at: '2026-05-01T10:00:00Z',
+  date: RECENT,
+  created_at: RECENT,
+  updated_at: RECENT,
   relationship: SINGLE_RELATIONSHIP[0],
 }
 
