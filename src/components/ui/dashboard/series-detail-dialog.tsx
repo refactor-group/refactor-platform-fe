@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { DateTime } from "ts-luxon";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +56,8 @@ interface SeriesDetailSessionsProps {
   userTimezone: string;
 }
 
+const PAGE_SIZE = 10;
+
 /**
  * Loads and renders the materialized sessions for a series. Rendered only when
  * the dialog is open (guarded by the parent), so the fetch hook always receives
@@ -68,6 +72,7 @@ function SeriesDetailSessions({
     userTimezone
   );
   const sessions = detail.coaching_sessions;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (isLoading) {
     return (
@@ -93,27 +98,44 @@ function SeriesDetailSessions({
     );
   }
 
+  const visibleSessions = sessions.slice(0, visibleCount);
+  const remaining = sessions.length - visibleSessions.length;
+
   return (
-    <ul className="divide-y divide-border">
-      {sessions.map((session) => {
-        const dt = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
-          userTimezone
-        );
-        const past = isPastSession(session);
-        return (
-          <li
-            key={session.id}
-            className="flex items-center justify-between gap-2 py-2.5"
+    <>
+      <ul className="divide-y divide-border">
+        {visibleSessions.map((session) => {
+          const dt = DateTime.fromISO(session.date, { zone: "utc" }).setZone(
+            userTimezone
+          );
+          const past = isPastSession(session);
+          return (
+            <li
+              key={session.id}
+              className="flex items-center justify-between gap-2 py-2.5"
+            >
+              <span className="text-sm tabular-nums">
+                {formatDateWithTime(dt, "·")}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {past ? "Past" : "Upcoming"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {remaining > 0 && (
+        <div className="flex justify-center pt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-muted-foreground gap-1.5"
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
           >
-            <span className="text-sm tabular-nums">
-              {formatDateWithTime(dt, "·")}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {past ? "Past" : "Upcoming"}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
+            View {Math.min(remaining, PAGE_SIZE)} more
+          </Button>
+        </div>
+      )}
+    </>
   );
 }
