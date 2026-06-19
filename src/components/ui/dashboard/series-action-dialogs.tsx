@@ -9,6 +9,10 @@ import {
   useCoachingSessionSeries,
   useCoachingSessionSeriesMutation,
 } from "@/lib/api/coaching-session-series";
+import {
+  CoachingRelationshipWithUserNames,
+  getOtherPersonName,
+} from "@/types/coaching-relationship";
 import { Id } from "@/types/general";
 
 export type SeriesAction =
@@ -18,6 +22,8 @@ export type SeriesAction =
 export interface SeriesActionDialogsProps {
   action: SeriesAction;
   userTimezone: string;
+  relationships: CoachingRelationshipWithUserNames[];
+  viewerId: Id | undefined;
   onClose: () => void;
   /** Called after a reschedule or delete succeeds, so the host can revalidate
    *  affected session lists. */
@@ -37,6 +43,8 @@ export interface SeriesActionDialogsProps {
 export function SeriesActionDialogs({
   action,
   userTimezone,
+  relationships,
+  viewerId,
   onClose,
   onMutated,
 }: SeriesActionDialogsProps) {
@@ -47,6 +55,8 @@ export function SeriesActionDialogs({
       kind={action.kind}
       seriesId={action.seriesId}
       userTimezone={userTimezone}
+      relationships={relationships}
+      viewerId={viewerId}
       onClose={onClose}
       onMutated={onMutated}
     />
@@ -57,6 +67,8 @@ interface SeriesActionDialogsInnerProps {
   kind: "view" | "edit" | "delete";
   seriesId: Id;
   userTimezone: string;
+  relationships: CoachingRelationshipWithUserNames[];
+  viewerId: Id | undefined;
   onClose: () => void;
   onMutated: () => void;
 }
@@ -65,6 +77,8 @@ function SeriesActionDialogsInner({
   kind,
   seriesId,
   userTimezone,
+  relationships,
+  viewerId,
   onClose,
   onMutated,
 }: SeriesActionDialogsInnerProps) {
@@ -89,6 +103,12 @@ function SeriesActionDialogsInner({
   // Open the dialogs only once the real series has loaded; until then the hook
   // returns a default with an empty id.
   const loaded = !isLoading && series.id === seriesId ? series : null;
+
+  const relationship = loaded
+    ? relationships.find((r) => r.id === loaded.coaching_relationship_id)
+    : undefined;
+  const participantName =
+    relationship && viewerId ? getOtherPersonName(relationship, viewerId) : "";
 
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
@@ -128,6 +148,7 @@ function SeriesActionDialogsInner({
   return (
     <DeleteSeriesDialog
       series={loaded ?? undefined}
+      participantName={participantName}
       isDeleting={isDeleting}
       onCancel={onClose}
       onConfirm={handleConfirmDelete}

@@ -12,13 +12,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
-import {
-  CoachingSessionSeries,
-  formatSeriesRule,
-} from "@/types/coaching-session-series";
+import { CoachingSessionSeries } from "@/types/coaching-session-series";
+import { frequencyLabel } from "@/types/recurrence";
 
 export interface DeleteSeriesDialogProps {
   series: CoachingSessionSeries | undefined;
+  participantName: string;
   isDeleting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -26,11 +25,15 @@ export interface DeleteSeriesDialogProps {
 
 export function DeleteSeriesDialog({
   series,
+  participantName,
   isDeleting,
   onCancel,
   onConfirm,
 }: DeleteSeriesDialogProps) {
   const open = series !== undefined;
+  const frequency = series
+    ? frequencyLabel(series.rule.recurrence.frequency).toLowerCase()
+    : "";
 
   return (
     <AlertDialog
@@ -43,12 +46,20 @@ export function DeleteSeriesDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this recurring series?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the{" "}
-            <span className="font-medium text-foreground">
-              {series ? formatSeriesRule(series.rule) : ""}
-            </span>{" "}
-            series and all of its future sessions. Past sessions are kept. This
-            can&apos;t be undone.
+            This will permanently remove the{" "}
+            <span className="font-medium text-foreground">{frequency}</span>{" "}
+            series
+            {participantName && (
+              <>
+                {" "}
+                with{" "}
+                <span className="font-medium text-foreground">
+                  {participantName}
+                </span>
+              </>
+            )}{" "}
+            from today onward, along with all of its notes and completed
+            actions. This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

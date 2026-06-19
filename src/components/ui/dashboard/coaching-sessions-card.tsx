@@ -301,6 +301,8 @@ export function CoachingSessionsCard({
       <SeriesActionDialogs
         action={seriesAction}
         userTimezone={userSession?.timezone || getBrowserTimezone()}
+        relationships={relationships}
+        viewerId={userId}
         onClose={handleCloseSeriesAction}
         onMutated={handleSeriesMutated}
       />
