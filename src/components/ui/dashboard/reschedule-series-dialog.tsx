@@ -55,10 +55,9 @@ export function RescheduleSeriesDialog({
     >
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Reschedule recurring series</DialogTitle>
+          <DialogTitle>Reschedule Coaching Session Series</DialogTitle>
           <DialogDescription>
-            Replaces the rule and re-materializes future sessions. Past sessions
-            are kept.
+            Update future coaching sessions in this series.
           </DialogDescription>
         </DialogHeader>
         {series && (
@@ -214,7 +213,7 @@ function RescheduleSeriesForm({
       className="grid gap-6 sm:grid-cols-2 sm:items-start"
     >
       <div className="space-y-2">
-        <Label htmlFor="reschedule-date">First session date</Label>
+        <Label htmlFor="reschedule-date">First Session Date</Label>
         <Calendar
           mode="single"
           selected={sessionDate}
@@ -225,7 +224,7 @@ function RescheduleSeriesForm({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label htmlFor="reschedule-time">First session time</Label>
+            <Label htmlFor="reschedule-time">First Session Time</Label>
             <Input
               type="time"
               id="reschedule-time"
@@ -273,7 +272,7 @@ function RescheduleSeriesForm({
         className="justify-self-start sm:col-span-2"
       >
         {isSubmitting && <Spinner className="mr-2" />}
-        Reschedule sessions
+        Reschedule Sessions
       </Button>
     </form>
   );

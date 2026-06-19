@@ -110,7 +110,7 @@ export function RecurrenceFields({
 
       {frequencySupportsWeekdays(frequency) && (
         <div className="space-y-2">
-          <Label>On these days</Label>
+          <Label>On These Days</Label>
           <ToggleGroup
             type="multiple"
             value={byWeekdays}
