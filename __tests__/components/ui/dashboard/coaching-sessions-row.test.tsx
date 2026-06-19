@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SessionRow } from "@/components/ui/dashboard/coaching-sessions-row";
+import { Some } from "@/types/option";
 import { createMockEnrichedSession } from "../../../test-utils";
 
 // `copyCoachingSessionLinkWithToast` writes to the clipboard and fires a
@@ -30,7 +31,9 @@ function renderRow(opts: {
   const onSeriesAction = opts.onSeriesAction ?? vi.fn();
   const onSelect = opts.onSelect ?? vi.fn();
   const session = createMockEnrichedSession(
-    opts.seriesId ? { coaching_session_series_id: opts.seriesId } : undefined
+    opts.seriesId
+      ? { coaching_session_series_id: Some(opts.seriesId) }
+      : undefined
   );
   render(
     <SessionRow

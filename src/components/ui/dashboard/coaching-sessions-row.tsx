@@ -84,8 +84,8 @@ export function SessionRow({
   // mirroring the Reschedule/Delete gating above. The series operations
   // target the whole series, so they aren't upcoming-gated.
   const seriesId = session.coaching_session_series_id;
-  const canViewSeries = !!seriesId;
-  const canManageSeries = !!seriesId && participant?.isCoach === true;
+  const canViewSeries = seriesId.some;
+  const canManageSeries = seriesId.some && participant?.isCoach === true;
 
   const participantName = participant?.participantName ?? "Unknown";
   const participantInitials = participant
@@ -189,7 +189,9 @@ export function SessionRow({
             )}
             {canViewSeries && (
               <DropdownMenuItem
-                onClick={() => onSeriesAction("view", seriesId!)}
+                onClick={() =>
+                  seriesId.some && onSeriesAction("view", seriesId.val)
+                }
                 data-testid="session-row-view-series"
               >
                 <CalendarRange className="mr-2 h-4 w-4" />
@@ -198,7 +200,9 @@ export function SessionRow({
             )}
             {canManageSeries && (
               <DropdownMenuItem
-                onClick={() => onSeriesAction("edit", seriesId!)}
+                onClick={() =>
+                  seriesId.some && onSeriesAction("edit", seriesId.val)
+                }
                 data-testid="session-row-edit-series"
               >
                 <CalendarClock className="mr-2 h-4 w-4" />
@@ -230,7 +234,9 @@ export function SessionRow({
             )}
             {canManageSeries && (
               <DropdownMenuItem
-                onClick={() => onSeriesAction("delete", seriesId!)}
+                onClick={() =>
+                  seriesId.some && onSeriesAction("delete", seriesId.val)
+                }
                 className="text-destructive focus:text-destructive focus:bg-destructive/10"
                 data-testid="session-row-delete-series"
               >
