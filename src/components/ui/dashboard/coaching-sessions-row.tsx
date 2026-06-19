@@ -6,6 +6,7 @@ import { DateTime } from "ts-luxon";
 import {
   CalendarClock,
   CalendarRange,
+  CalendarSync,
   Link2,
   MoreVertical,
   Trash2,
@@ -184,6 +185,7 @@ export function SessionRow({
                 onClick={() => onReschedule(session)}
                 data-testid="session-row-reschedule"
               >
+                <CalendarClock className="mr-2 h-4 w-4" />
                 Reschedule
               </DropdownMenuItem>
             )}
@@ -205,10 +207,11 @@ export function SessionRow({
                 }
                 data-testid="session-row-edit-series"
               >
-                <CalendarClock className="mr-2 h-4 w-4" />
+                <CalendarSync className="mr-2 h-4 w-4" />
                 Edit series
               </DropdownMenuItem>
             )}
+            {(canReschedule || canViewSeries) && <DropdownMenuSeparator />}
             <DropdownMenuItem
               // Fire-and-forget: `copyCoachingSessionLinkWithToast`
               // surfaces both success ("link copied") and error toasts
