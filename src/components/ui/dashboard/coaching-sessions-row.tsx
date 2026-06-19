@@ -80,7 +80,7 @@ export function SessionRow({
 
   // Series actions surface only on rows whose session belongs to a series.
   // Viewing the series' sessions is open to any viewer (matches the old
-  // ungated "View sessions"); editing/deleting the series is coach-only,
+  // ungated "View series"); editing/deleting the series is coach-only,
   // mirroring the Reschedule/Delete gating above. The series operations
   // target the whole series, so they aren't upcoming-gated.
   const seriesId = session.coaching_session_series_id;
@@ -195,7 +195,7 @@ export function SessionRow({
                 data-testid="session-row-view-series"
               >
                 <CalendarRange className="mr-2 h-4 w-4" />
-                View other sessions
+                View series
               </DropdownMenuItem>
             )}
             {canManageSeries && (

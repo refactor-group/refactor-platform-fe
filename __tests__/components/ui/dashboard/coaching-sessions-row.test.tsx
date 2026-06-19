@@ -97,7 +97,7 @@ describe("SessionRow — series actions in the kebab", () => {
     vi.clearAllMocks();
   });
 
-  it("shows View sessions / Edit series / Delete series for a coach on a session in a series", async () => {
+  it("shows View series / Edit series / Delete series for a coach on a session in a series", async () => {
     renderRow({ viewerId: COACH_ID, seriesId: "series-1" });
     await openKebab();
 
@@ -106,7 +106,7 @@ describe("SessionRow — series actions in the kebab", () => {
     expect(screen.getByTestId("session-row-delete-series")).toBeInTheDocument();
   });
 
-  it("shows only View sessions (not Edit/Delete series) for a coachee", async () => {
+  it("shows only View series (not Edit/Delete series) for a coachee", async () => {
     renderRow({ viewerId: COACHEE_ID, seriesId: "series-1" });
     await openKebab();
 
