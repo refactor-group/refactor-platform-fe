@@ -104,6 +104,34 @@ describe("CoachingSessionTitleText", () => {
     expect(screen.getByText("Untitled session")).toBeInTheDocument();
   });
 
+  it("renders nothing when nothing derives and hideWhenFallback is set", () => {
+    const { container } = render(
+      <CoachingSessionTitleText
+        session={{ title: None, display_title: None }}
+        hideWhenFallback
+      />
+    );
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText("Coaching Session")).not.toBeInTheDocument();
+  });
+
+  it("still renders a derived title when hideWhenFallback is set", () => {
+    render(
+      <CoachingSessionTitleText
+        session={{ title: None, display_title: Some("Server title") }}
+        hideWhenFallback
+      />
+    );
+    expect(screen.getByText("Server title")).toBeInTheDocument();
+  });
+
+  it("hideWhenFallback also omits the client-derived fallback (no display_title)", () => {
+    const { container } = render(
+      <CoachingSessionTitleText session={{ title: None }} hideWhenFallback />
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("falls back to the client derivation when display_title is absent", () => {
     // display_title undefined (e.g. the single-session read) -> client rule.
     render(

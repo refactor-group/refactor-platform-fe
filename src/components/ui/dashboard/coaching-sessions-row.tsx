@@ -141,6 +141,7 @@ export function SessionRow({
           </p>
           <CoachingSessionTitleText
             session={session}
+            hideWhenFallback
             className="text-xs text-muted-foreground truncate mt-0.5"
           />
           <p className="text-xs text-muted-foreground tabular-nums truncate mt-0.5">

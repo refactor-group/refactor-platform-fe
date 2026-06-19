@@ -1,4 +1,3 @@
-import { unwrapOr } from "@/types/option";
 import {
   coachingSessionTitle,
   COACHING_SESSION_TITLE_PLACEHOLDER,
@@ -14,6 +13,13 @@ interface CoachingSessionTitleTextProps {
    * title (e.g. "Untitled session").
    */
   fallbackTitle?: string;
+  /**
+   * Render nothing when no title can be derived (title/topic/goal all absent),
+   * instead of showing the fallback. Useful in list rows already identified by
+   * other fields (participant name + date), where a generic placeholder line is
+   * pure noise.
+   */
+  hideWhenFallback?: boolean;
   /**
    * Render nothing when the derived title would merely echo one of the
    * session's goals already shown nearby — keeps surfaces that also render the
@@ -34,12 +40,22 @@ export function CoachingSessionTitleText({
   session,
   className,
   fallbackTitle = COACHING_SESSION_TITLE_PLACEHOLDER,
+  hideWhenFallback = false,
   hideWhenRedundantWithGoals = false,
 }: CoachingSessionTitleTextProps) {
-  const title =
+  // The derived title, or null when nothing (title/topic/goal) yields one.
+  // Prefer the backend's authoritative display_title; else the client rule
+  // (an empty-string fallback collapses "nothing derived" to null).
+  const derived: string | null =
     session.display_title !== undefined
-      ? unwrapOr(session.display_title, fallbackTitle)
-      : coachingSessionTitle(session, fallbackTitle);
+      ? session.display_title.some
+        ? session.display_title.val
+        : null
+      : coachingSessionTitle(session, "") || null;
+
+  if (hideWhenFallback && derived === null) return null;
+
+  const title = derived ?? fallbackTitle;
 
   if (
     hideWhenRedundantWithGoals &&

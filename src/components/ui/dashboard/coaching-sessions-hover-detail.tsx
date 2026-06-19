@@ -63,6 +63,7 @@ export function SessionHoverDetail({
         </p>
         <CoachingSessionTitleText
           session={session}
+          hideWhenFallback
           hideWhenRedundantWithGoals
           className="text-sm text-muted-foreground mt-0.5"
         />

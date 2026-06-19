@@ -48,7 +48,9 @@ const CoachingSessionTitle: FC = () => {
   const effectiveTitle =
     save.kind === "saving" ? save.title : session?.title ?? None;
 
-  const fallback = coachingSessionTitle({ title: None, topics, goals });
+  // On the session page the fallback is empty — an untitled session shows no
+  // placeholder text (the editable field surfaces its own affordance).
+  const fallback = coachingSessionTitle({ title: None, topics, goals }, "");
   const displayedTitle = effectiveTitle.some ? effectiveTitle.val : fallback;
 
   useEffect(() => {
