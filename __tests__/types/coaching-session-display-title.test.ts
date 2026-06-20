@@ -5,7 +5,7 @@
 // pins only the display_title wire handling.
 
 import { describe, it, expect } from "vitest";
-import { Some, None } from "@/types/option";
+import { Some } from "@/types/option";
 import {
   transformCoachingSession,
   serializeCoachingSession,

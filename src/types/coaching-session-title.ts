@@ -1,6 +1,6 @@
 import { type Option } from "@/types/option";
-import { CoachingSessionTopic } from "@/types/coaching-session-topic";
-import { Goal } from "@/types/goal";
+import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
+import type { Goal } from "@/types/goal";
 
 /**
  * Default placeholder shown when no title can be derived. It is the *default*
