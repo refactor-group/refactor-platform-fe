@@ -11,7 +11,10 @@ import {
   isPastSession,
   isUnderwaySession,
 } from "@/types/coaching-session";
-import { coachingSessionTitle } from "@/types/coaching-session-title";
+import {
+  coachingSessionTitle,
+  COACHING_SESSION_TITLE_PLACEHOLDER,
+} from "@/types/coaching-session-title";
 import { Some, None, type Option } from "@/types/option";
 import {
   formatDateInUserTimezoneWithTZ,
@@ -54,7 +57,11 @@ const CoachingSessionTitle: FC = () => {
   const displayedTitle = effectiveTitle.some ? effectiveTitle.val : fallback;
 
   useEffect(() => {
-    if (session) document.title = displayedTitle;
+    // The on-page heading is intentionally blank for an untitled session, but
+    // the browser tab still needs a non-empty title — fall back to the
+    // placeholder there only.
+    if (session)
+      document.title = displayedTitle || COACHING_SESSION_TITLE_PLACEHOLDER;
   }, [session, displayedTitle]);
 
   const handleSave = async (next: string) => {

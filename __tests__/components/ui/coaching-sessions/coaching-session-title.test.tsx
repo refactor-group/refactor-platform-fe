@@ -132,6 +132,21 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     ).toBeInTheDocument();
   });
 
+  it("sets a non-empty document.title even when the heading is blank", () => {
+    sessionTitle = None;
+    goalTitle = "";
+    topicBodies = [];
+    render(<CoachingSessionTitle locale="en-US" />);
+    // The on-page heading is blank, but the browser tab must not be.
+    expect(document.title).toBe("Coaching Session");
+  });
+
+  it("sets document.title to the human title when set", () => {
+    sessionTitle = Some("Quarterly planning");
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(document.title).toBe("Quarterly planning");
+  });
+
   it("renders both participant names", () => {
     render(<CoachingSessionTitle locale="en-US" />);
     expect(screen.getByText("Jordan Smith")).toBeInTheDocument();
