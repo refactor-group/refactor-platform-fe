@@ -124,8 +124,8 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     goalTitle = "";
     topicBodies = [];
     render(<CoachingSessionTitle locale="en-US" />);
-    // The session page uses an empty fallback — no "Coaching Session" filler.
-    expect(screen.queryByText("Coaching Session")).not.toBeInTheDocument();
+    // The session page uses an empty fallback — no placeholder filler.
+    expect(screen.queryByText("Untitled")).not.toBeInTheDocument();
     // The add-title affordance remains for an untitled session.
     expect(
       screen.getByRole("button", { name: "Add a title" })
@@ -138,7 +138,7 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     topicBodies = [];
     render(<CoachingSessionTitle locale="en-US" />);
     // The on-page heading is blank, but the browser tab must not be.
-    expect(document.title).toBe("Coaching Session");
+    expect(document.title).toBe("Untitled");
   });
 
   it("sets document.title to the human title when set", () => {

@@ -7,7 +7,7 @@ import type { Goal } from "@/types/goal";
  * for the fallback parameter below, never a baked-in return value — any surface
  * that wants a different static title (e.g. "Untitled session") passes its own.
  */
-export const COACHING_SESSION_TITLE_PLACEHOLDER = "Coaching Session";
+export const COACHING_SESSION_TITLE_PLACEHOLDER = "Untitled";
 
 /**
  * Minimal shape needed to derive a coaching session's display title. Both

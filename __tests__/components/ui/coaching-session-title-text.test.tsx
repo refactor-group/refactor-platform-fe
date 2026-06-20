@@ -91,7 +91,7 @@ describe("CoachingSessionTitleText", () => {
     render(
       <CoachingSessionTitleText session={{ title: None, display_title: None }} />
     );
-    expect(screen.getByText("Coaching Session")).toBeInTheDocument();
+    expect(screen.getByText("Untitled")).toBeInTheDocument();
   });
 
   it("uses a custom fallbackTitle when nothing can be derived", () => {
@@ -112,7 +112,7 @@ describe("CoachingSessionTitleText", () => {
       />
     );
     expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByText("Coaching Session")).not.toBeInTheDocument();
+    expect(screen.queryByText("Untitled")).not.toBeInTheDocument();
   });
 
   it("still renders a derived title when hideWhenFallback is set", () => {

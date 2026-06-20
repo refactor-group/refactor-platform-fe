@@ -8,7 +8,7 @@ interface CoachingSessionTitleTextProps {
   session: CoachingSessionTitleSource;
   className?: string;
   /**
-   * Shown when no title can be derived. Defaults to "Coaching Session" so
+   * Shown when no title can be derived. Defaults to "Untitled" so
    * existing surfaces are unchanged; pass a different value for a custom static
    * title (e.g. "Untitled session").
    */
