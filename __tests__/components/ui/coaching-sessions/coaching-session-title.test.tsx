@@ -119,12 +119,31 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     expect(screen.getByText("Improve leadership")).toBeInTheDocument();
   });
 
-  it("falls back to 'Coaching Session' when unset and no goal", () => {
+  it("shows the 'Untitled' placeholder when unset and no topic/goal", () => {
     sessionTitle = None;
     goalTitle = "";
     topicBodies = [];
     render(<CoachingSessionTitle locale="en-US" />);
-    expect(screen.getByText("Coaching Session")).toBeInTheDocument();
+    // Never an empty heading — the page shows the "Untitled" placeholder.
+    expect(screen.getByText("Untitled")).toBeInTheDocument();
+    // The add-title affordance remains for an untitled session.
+    expect(
+      screen.getByRole("button", { name: "Add a title" })
+    ).toBeInTheDocument();
+  });
+
+  it("sets a non-empty document.title for an untitled session", () => {
+    sessionTitle = None;
+    goalTitle = "";
+    topicBodies = [];
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(document.title).toBe("Untitled");
+  });
+
+  it("sets document.title to the human title when set", () => {
+    sessionTitle = Some("Quarterly planning");
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(document.title).toBe("Quarterly planning");
   });
 
   it("renders both participant names", () => {

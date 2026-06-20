@@ -3,7 +3,6 @@ import { DateTime, Settings } from "ts-luxon";
 import {
   calculateSessionUrgency,
   getUrgencyMessage,
-  enrichSessionForDisplay,
   selectNextUpcomingSession,
   getSessionParticipantInfo,
   getSessionParticipantName,
@@ -385,120 +384,6 @@ describe("getSessionParticipantName", () => {
       },
     });
     expect(getSessionParticipantName(session, "coach-1")).toBe("A. Chen");
-  });
-});
-
-describe("enrichSessionForDisplay", () => {
-  it("enriches session with all display properties", () => {
-    const user = createMockUser({ id: "coach-1", timezone: "America/Los_Angeles" });
-    const relationship = createMockRelationship({
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      coachee_first_name: "Alice",
-      coachee_last_name: "Smith",
-    });
-    const session = createSessionAt(90);
-    const goal = { id: "goal-1", title: "Q4 Strategy Review" };
-    const organization = { id: "org-1", name: "Acme Corp" };
-
-    const enriched = enrichSessionForDisplay(
-      session,
-      relationship,
-      user,
-      goal,
-      organization
-    );
-
-    expect(enriched.id).toBe(session.id);
-    expect(enriched.goalTitle).toBe("Q4 Strategy Review");
-    expect(enriched.participantName).toBe("Alice Smith");
-    expect(enriched.userRole).toBe("Coach");
-    expect(enriched.organizationName).toBe("Acme Corp");
-    expect(enriched.dateTime).toContain("at"); // e.g., "Today at 10:00 AM PST"
-    expect(enriched.isPast).toBe(false);
-    expect(enriched.urgency.type).toBe(SessionUrgency.Soon);
-    expect(enriched.urgency.message).toContain("Next session in");
-  });
-
-  it("handles past sessions correctly", () => {
-    const user = createMockUser({ id: "coach-1" });
-    const relationship = createMockRelationship({ coach_id: "coach-1" });
-    const session = createSessionAt(-120); // 2 hours ago, well past 60-min duration
-    const goal = { id: "goal-1", title: "Past Session" };
-    const organization = { id: "org-1", name: "Acme Corp" };
-
-    const enriched = enrichSessionForDisplay(
-      session,
-      relationship,
-      user,
-      goal,
-      organization
-    );
-
-    expect(enriched.isPast).toBe(true);
-    expect(enriched.urgency.type).toBe(SessionUrgency.Past);
-  });
-
-  it("handles missing goal title gracefully", () => {
-    const user = createMockUser({ id: "coach-1" });
-    const relationship = createMockRelationship({ coach_id: "coach-1" });
-    const session = createSessionAt(90);
-    const goal = null;
-    const organization = { id: "org-1", name: "Acme Corp" };
-
-    const enriched = enrichSessionForDisplay(
-      session,
-      relationship,
-      user,
-      goal,
-      organization
-    );
-
-    expect(enriched.goalTitle).toBe("Coaching Session");
-  });
-
-  it("prefers the session title over the goal when title is set", () => {
-    const user = createMockUser({ id: "coach-1" });
-    const relationship = createMockRelationship({ coach_id: "coach-1" });
-    const session = createMockSession({ title: Some("Quarterly planning") });
-    const goal = { id: "goal-1", title: "Q4 Strategy Review" };
-    const organization = { id: "org-1", name: "Acme Corp" };
-
-    const enriched = enrichSessionForDisplay(
-      session,
-      relationship,
-      user,
-      goal,
-      organization
-    );
-
-    expect(enriched.goalTitle).toBe("Quarterly planning");
-  });
-
-  it("formats dateTime in user's timezone", () => {
-    const user = createMockUser({
-      id: "coach-1",
-      timezone: "America/New_York",
-    });
-    const relationship = createMockRelationship({ coach_id: "coach-1" });
-    const session = createMockSession({
-      date: DateTime.fromISO("2025-10-23T14:00:00", {
-        zone: "America/Los_Angeles",
-      }).toISO(),
-    });
-    const goal = { id: "goal-1", title: "Test" };
-    const organization = { id: "org-1", name: "Acme Corp" };
-
-    const enriched = enrichSessionForDisplay(
-      session,
-      relationship,
-      user,
-      goal,
-      organization
-    );
-
-    // Should convert to user's timezone (EST is +3 hours from PST)
-    expect(enriched.dateTime).toContain("5:00 PM"); // 2PM PST = 5PM EST
   });
 });
 

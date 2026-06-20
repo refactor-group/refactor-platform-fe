@@ -25,6 +25,7 @@ import { cn } from "@/components/lib/utils";
 import { formatDateWithTime } from "@/lib/utils/date";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
 import type { Id } from "@/types/general";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
 
@@ -138,6 +139,11 @@ export function SessionRow({
           <p className="text-[13px] font-medium text-foreground truncate">
             {participantName}
           </p>
+          <CoachingSessionTitleText
+            session={session}
+            hideWhenFallback
+            className="text-xs text-muted-foreground truncate mt-0.5"
+          />
           <p className="text-xs text-muted-foreground tabular-nums truncate mt-0.5">
             {dateLabel}
           </p>

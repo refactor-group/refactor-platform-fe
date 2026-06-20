@@ -15,8 +15,8 @@ import {
   transformCoachingSession,
   serializeCoachingSession,
   defaultCoachingSession,
-  coachingSessionTitle,
 } from "@/types/coaching-session";
+import { coachingSessionTitle } from "@/types/coaching-session-title";
 
 // Raw wire CoachingSession (backend shape: title is string | null, always present).
 const rawWire = {
@@ -93,7 +93,7 @@ describe("defaultCoachingSession", () => {
   });
 });
 
-describe("coachingSessionTitle — fallback chain: title -> first topic -> first goal -> 'Coaching Session'", () => {
+describe("coachingSessionTitle — fallback chain: title -> first topic -> first goal -> 'Untitled'", () => {
   it("returns the session title when set, ignoring topics and goals", () => {
     expect(
       coachingSessionTitle({
@@ -134,16 +134,16 @@ describe("coachingSessionTitle — fallback chain: title -> first topic -> first
     ).toBe("First goal");
   });
 
-  it("falls back to 'Coaching Session' when no title, no topics, and no goals", () => {
+  it("falls back to 'Untitled' when no title, no topics, and no goals", () => {
     expect(coachingSessionTitle({ title: None, topics: [], goals: [] })).toBe(
-      "Coaching Session"
+      "Untitled"
     );
-    expect(coachingSessionTitle({ title: None })).toBe("Coaching Session");
+    expect(coachingSessionTitle({ title: None })).toBe("Untitled");
   });
 
-  it("falls back to 'Coaching Session' when first topic body and first goal title are both empty", () => {
+  it("falls back to 'Untitled' when first topic body and first goal title are both empty", () => {
     expect(
       coachingSessionTitle({ title: None, topics: [{ body: "" }], goals: [{ title: "" }] })
-    ).toBe("Coaching Session");
+    ).toBe("Untitled");
   });
 });

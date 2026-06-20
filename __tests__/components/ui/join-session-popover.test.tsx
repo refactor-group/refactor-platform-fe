@@ -5,6 +5,7 @@ import { JoinSessionPopover } from "@/components/ui/join-session-popover";
 import { TestProviders } from "@/test-utils/providers";
 import { SessionUrgency } from "@/types/session-display";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { None } from "@/types/option";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -73,6 +74,7 @@ function makeTodaySession(
   return {
     coaching_relationship_id: "rel-1",
     date: DateTime.now().toISO()!,
+    title: None,
     created_at: DateTime.now(),
     updated_at: DateTime.now(),
     relationship: {

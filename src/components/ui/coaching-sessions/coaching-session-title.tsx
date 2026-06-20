@@ -8,10 +8,13 @@ import { useGoalsBySession } from "@/lib/api/goals";
 import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics";
 import { CoachingSessionApi } from "@/lib/api/coaching-sessions";
 import {
-  coachingSessionTitle,
   isPastSession,
   isUnderwaySession,
 } from "@/types/coaching-session";
+import {
+  coachingSessionTitle,
+  COACHING_SESSION_TITLE_PLACEHOLDER,
+} from "@/types/coaching-session-title";
 import { Some, None, type Option } from "@/types/option";
 import {
   formatDateInUserTimezoneWithTZ,
@@ -48,11 +51,14 @@ const CoachingSessionTitle: FC = () => {
   const effectiveTitle =
     save.kind === "saving" ? save.title : session?.title ?? None;
 
+  // An untitled session shows the "Untitled" placeholder here (default
+  // fallback) — never an empty heading or browser tab.
   const fallback = coachingSessionTitle({ title: None, topics, goals });
   const displayedTitle = effectiveTitle.some ? effectiveTitle.val : fallback;
 
   useEffect(() => {
-    if (session) document.title = displayedTitle;
+    if (session)
+      document.title = displayedTitle || COACHING_SESSION_TITLE_PLACEHOLDER;
   }, [session, displayedTitle]);
 
   const handleSave = async (next: string) => {

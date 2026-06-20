@@ -5,7 +5,6 @@ import { CoachingRelationship } from "@/types/coaching-relationship";
 import { User } from "@/types/user";
 import { Organization } from "@/types/organization";
 import { Goal } from "@/types/goal";
-import { CoachingSessionTopic } from "@/types/coaching-session-topic";
 import { Agreement } from "@/types/agreement";
 import { Provider } from "@/types/provider";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
@@ -19,6 +18,10 @@ export interface CoachingSession {
   date: string;
   duration_minutes: number;
   title: Option<string>; // None = no human-set title
+  // Backend-composed display title (title -> first topic -> first goal). Present
+  // on the list/enriched reads, absent on the single-session read. None when the
+  // backend couldn't derive one — the FE supplies the placeholder.
+  display_title?: Option<string>;
   meeting_url?: string;
   provider?: Provider;
   coaching_session_series_id: Option<Id>;
@@ -140,7 +143,7 @@ export function getCoachingSessionById(
 /** Wire shape where Option fields are unwrapped to string | null for JSON. */
 export type CoachingSessionWire = Omit<
   CoachingSession,
-  "title" | "coaching_session_series_id"
+  "title" | "coaching_session_series_id" | "display_title"
 > & {
   title: string | null;
   coaching_session_series_id?: Id;
@@ -158,6 +161,13 @@ export function transformCoachingSession(raw: any): CoachingSession {
   return {
     ...raw,
     title: typeof raw.title === "string" ? Some(raw.title) : None,
+    // string -> Some, null -> None, absent (single read) -> undefined.
+    display_title:
+      typeof raw.display_title === "string"
+        ? Some(raw.display_title)
+        : raw.display_title === null
+          ? None
+          : undefined,
     coaching_session_series_id:
       typeof raw.coaching_session_series_id === "string"
         ? Some(raw.coaching_session_series_id)
@@ -169,33 +179,15 @@ export function transformCoachingSession(raw: any): CoachingSession {
 export function serializeCoachingSession(
   session: CoachingSession
 ): CoachingSessionWire {
+  // display_title is server-computed/read-only — never send it back.
+  const { display_title: _displayTitle, ...rest } = session;
   return {
-    ...session,
+    ...rest,
     title: session.title.some ? session.title.val : null,
     coaching_session_series_id: session.coaching_session_series_id.some
       ? session.coaching_session_series_id.val
       : undefined,
   };
-}
-
-/**
- * Display title for a coaching session, in fallback order: the human-set title
- * when present, else the first topic (drag-and-drop display order), else the
- * first linked goal's title, else the literal "Coaching Session".
- */
-export function coachingSessionTitle(
-  session: {
-    title: Option<string>;
-    topics?: readonly Pick<CoachingSessionTopic, "body">[];
-    goals?: readonly Pick<Goal, "title">[];
-  }
-): string {
-  if (session.title.some) return session.title.val;
-  return (
-    session.topics?.[0]?.body ||
-    session.goals?.[0]?.title ||
-    "Coaching Session"
-  );
 }
 
 export function defaultCoachingSession(): CoachingSession {
