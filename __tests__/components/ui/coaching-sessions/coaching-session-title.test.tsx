@@ -119,12 +119,17 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     expect(screen.getByText("Improve leadership")).toBeInTheDocument();
   });
 
-  it("falls back to 'Coaching Session' when unset and no goal", () => {
+  it("shows no placeholder title text when unset and no topic/goal (empty fallback)", () => {
     sessionTitle = None;
     goalTitle = "";
     topicBodies = [];
     render(<CoachingSessionTitle locale="en-US" />);
-    expect(screen.getByText("Coaching Session")).toBeInTheDocument();
+    // The session page uses an empty fallback — no "Coaching Session" filler.
+    expect(screen.queryByText("Coaching Session")).not.toBeInTheDocument();
+    // The add-title affordance remains for an untitled session.
+    expect(
+      screen.getByRole("button", { name: "Add a title" })
+    ).toBeInTheDocument();
   });
 
   it("renders both participant names", () => {
