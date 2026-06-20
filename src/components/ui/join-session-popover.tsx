@@ -131,6 +131,7 @@ function TodaysSessionsList({
             </div>
             <CoachingSessionTitleText
               session={session}
+              hideWhenFallback
               className="w-full truncate text-xs text-muted-foreground"
             />
             <span
@@ -368,6 +369,8 @@ function SessionGroup({
           onClick={() => onSessionClick(session.id)}
           className="flex flex-col items-start w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground"
         >
+          {/* Primary identifier in the browse list (no participant name shown),
+              so keep the fallback placeholder rather than omitting the line. */}
           <CoachingSessionTitleText
             session={session}
             className="w-full truncate font-medium"
