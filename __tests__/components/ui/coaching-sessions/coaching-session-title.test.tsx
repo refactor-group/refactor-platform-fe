@@ -119,25 +119,24 @@ describe("CoachingSessionTitle — fallback resolution", () => {
     expect(screen.getByText("Improve leadership")).toBeInTheDocument();
   });
 
-  it("shows no placeholder title text when unset and no topic/goal (empty fallback)", () => {
+  it("shows the 'Untitled' placeholder when unset and no topic/goal", () => {
     sessionTitle = None;
     goalTitle = "";
     topicBodies = [];
     render(<CoachingSessionTitle locale="en-US" />);
-    // The session page uses an empty fallback — no placeholder filler.
-    expect(screen.queryByText("Untitled")).not.toBeInTheDocument();
+    // Never an empty heading — the page shows the "Untitled" placeholder.
+    expect(screen.getByText("Untitled")).toBeInTheDocument();
     // The add-title affordance remains for an untitled session.
     expect(
       screen.getByRole("button", { name: "Add a title" })
     ).toBeInTheDocument();
   });
 
-  it("sets a non-empty document.title even when the heading is blank", () => {
+  it("sets a non-empty document.title for an untitled session", () => {
     sessionTitle = None;
     goalTitle = "";
     topicBodies = [];
     render(<CoachingSessionTitle locale="en-US" />);
-    // The on-page heading is blank, but the browser tab must not be.
     expect(document.title).toBe("Untitled");
   });
 

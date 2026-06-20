@@ -51,15 +51,12 @@ const CoachingSessionTitle: FC = () => {
   const effectiveTitle =
     save.kind === "saving" ? save.title : session?.title ?? None;
 
-  // On the session page the fallback is empty — an untitled session shows no
-  // placeholder text (the editable field surfaces its own affordance).
-  const fallback = coachingSessionTitle({ title: None, topics, goals }, "");
+  // An untitled session shows the "Untitled" placeholder here (default
+  // fallback) — never an empty heading or browser tab.
+  const fallback = coachingSessionTitle({ title: None, topics, goals });
   const displayedTitle = effectiveTitle.some ? effectiveTitle.val : fallback;
 
   useEffect(() => {
-    // The on-page heading is intentionally blank for an untitled session, but
-    // the browser tab still needs a non-empty title — fall back to the
-    // placeholder there only.
     if (session)
       document.title = displayedTitle || COACHING_SESSION_TITLE_PLACEHOLDER;
   }, [session, displayedTitle]);
