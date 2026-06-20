@@ -8,6 +8,12 @@ interface CoachingSessionTitleTextProps {
   session: CoachingSessionTitleSource;
   className?: string;
   /**
+   * Element to render. Defaults to "p" (flow content). Use "span" when the
+   * title is hosted inside an element that only permits phrasing content (e.g.
+   * a <button>), since <p> there is invalid HTML.
+   */
+  as?: "p" | "span";
+  /**
    * Shown when no title can be derived. Defaults to "Untitled" so
    * existing surfaces are unchanged; pass a different value for a custom static
    * title (e.g. "Untitled session").
@@ -39,6 +45,7 @@ interface CoachingSessionTitleTextProps {
 export function CoachingSessionTitleText({
   session,
   className,
+  as: Tag = "p",
   fallbackTitle = COACHING_SESSION_TITLE_PLACEHOLDER,
   hideWhenFallback = false,
   hideWhenRedundantWithGoals = false,
@@ -64,5 +71,5 @@ export function CoachingSessionTitleText({
     return null;
   }
 
-  return <p className={className}>{title}</p>;
+  return <Tag className={className}>{title}</Tag>;
 }

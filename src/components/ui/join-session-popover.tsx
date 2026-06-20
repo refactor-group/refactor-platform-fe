@@ -131,6 +131,7 @@ function TodaysSessionsList({
             </div>
             <CoachingSessionTitleText
               session={session}
+              as="span"
               hideWhenFallback
               className="w-full truncate text-xs text-muted-foreground"
             />
@@ -373,6 +374,7 @@ function SessionGroup({
               so keep the fallback placeholder rather than omitting the line. */}
           <CoachingSessionTitleText
             session={session}
+            as="span"
             className="w-full truncate font-medium"
           />
           <span className="text-xs text-muted-foreground truncate">

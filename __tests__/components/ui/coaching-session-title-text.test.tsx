@@ -14,6 +14,18 @@ describe("CoachingSessionTitleText", () => {
     expect(screen.getByText("Q3 planning")).toBeInTheDocument();
   });
 
+  it("renders a <p> by default and a <span> when as='span' (for button hosts)", () => {
+    const { rerender } = render(
+      <CoachingSessionTitleText session={{ title: Some("Q3 planning") }} />
+    );
+    expect(screen.getByText("Q3 planning").tagName).toBe("P");
+
+    rerender(
+      <CoachingSessionTitleText session={{ title: Some("Q3 planning") }} as="span" />
+    );
+    expect(screen.getByText("Q3 planning").tagName).toBe("SPAN");
+  });
+
   it("applies the passed className to the rendered element", () => {
     render(
       <CoachingSessionTitleText
