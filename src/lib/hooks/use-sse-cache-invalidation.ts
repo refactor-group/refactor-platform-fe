@@ -151,4 +151,14 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   useSSEEventHandler(eventSource, 'topics_changed', () => {
     invalidateEndpoint('/topics', 'topics_changed');
   });
+
+  // COACHING SESSION TITLE EVENTS - Invalidate the coaching session caches.
+  // Coarse-by-design (parity with topics_changed): the event carries no title,
+  // so we refetch. The /coaching_sessions segment covers both the single-session
+  // read (/coaching_sessions/{id}) and the enriched list reads
+  // (/users/{id}/coaching_sessions, /coaching_sessions?coaching_relationship_id=)
+  // that surface display_title.
+  useSSEEventHandler(eventSource, 'coaching_session_title_updated', () => {
+    invalidateEndpoint('/coaching_sessions', 'coaching_session_title_updated');
+  });
 }
