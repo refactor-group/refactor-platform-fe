@@ -3,6 +3,8 @@
 import { useCallback } from 'react';
 import { useSWRConfig } from 'swr';
 import { siteConfig } from '@/site.config';
+import type { Agreement } from '@/types/agreement';
+import type { Id } from '@/types/general';
 import { useSSEEventHandler } from './use-sse-event-handler';
 
 /**
@@ -27,6 +29,30 @@ export function matchesEndpoint(
   if (!url.startsWith(baseUrl)) return false;
   const pattern = new RegExp(`${endpointPath}(/|\\?|$)`);
   return pattern.test(url);
+}
+
+/**
+ * Upsert an agreement into a cached list: replace in place if its id is already
+ * present (an update), otherwise append (a create). Returns a new array; never
+ * mutates the input.
+ */
+export function upsertAgreementInList(
+  list: Agreement[],
+  agreement: Agreement,
+): Agreement[] {
+  const idx = list.findIndex((a) => a.id === agreement.id);
+  if (idx === -1) return [...list, agreement];
+  const next = [...list];
+  next[idx] = agreement;
+  return next;
+}
+
+/** Remove an agreement from a cached list by id. Returns a new array. */
+export function removeAgreementFromList(
+  list: Agreement[],
+  agreementId: Id,
+): Agreement[] {
+  return list.filter((a) => a.id !== agreementId);
 }
 
 export function useSSECacheInvalidation(eventSource: EventSource | null) {
@@ -81,6 +107,54 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     console.log(`[SSE] Revalidated session-scoped goal caches after ${eventName}`);
   }, [mutate, baseUrl]);
 
+  /**
+   * Agreement list caches are keyed by tuple `[`${baseUrl}/agreements`, params]`
+   * where `params.coaching_session_id` scopes the list. The SSE event is
+   * relationship-scoped (envelope carries `coaching_relationship_id`), but the
+   * payload `agreement` carries its own `coaching_session_id`, so we route the
+   * in-place patch by the entity, not the envelope.
+   */
+  const agreementsUrl = `${baseUrl}/agreements`;
+
+  const isAgreementListKey = useCallback(
+    (key: unknown): key is [string, { coaching_session_id?: Id }] =>
+      Array.isArray(key) && typeof key[0] === 'string' && key[0] === agreementsUrl,
+    [agreementsUrl],
+  );
+
+  // Upsert the agreement into its session's cached list without a refetch. The
+  // payload entity and the cached entities share the same raw (untransformed)
+  // shape, so it drops in directly. Replace-in-place on update, append on create.
+  const upsertAgreement = useCallback(
+    (agreement: Agreement, eventName: string) => {
+      mutate(
+        (key) =>
+          isAgreementListKey(key) &&
+          key[1]?.coaching_session_id === agreement.coaching_session_id,
+        (current: Agreement[] | undefined) =>
+          upsertAgreementInList(current ?? [], agreement),
+        { revalidate: false },
+      );
+      console.log(`[SSE] Patched agreement ${agreement.id} in cache after ${eventName}`);
+    },
+    [mutate, isAgreementListKey],
+  );
+
+  // Remove the agreement by id. The delete payload carries no session id, so we
+  // scan every agreement-list cache and drop the matching row (ids are unique).
+  const removeAgreement = useCallback(
+    (agreementId: Id, eventName: string) => {
+      mutate(
+        (key) => isAgreementListKey(key),
+        (current: Agreement[] | undefined) =>
+          current ? removeAgreementFromList(current, agreementId) : current,
+        { revalidate: false },
+      );
+      console.log(`[SSE] Removed agreement ${agreementId} from cache after ${eventName}`);
+    },
+    [mutate, isAgreementListKey],
+  );
+
   // ACTION EVENTS - Invalidate only /actions endpoint
   useSSEEventHandler(eventSource, 'action_created', () => {
     invalidateEndpoint('/actions', 'action_created');
@@ -94,17 +168,19 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     invalidateEndpoint('/actions', 'action_deleted');
   });
 
-  // AGREEMENT EVENTS - Invalidate only /agreements endpoint
-  useSSEEventHandler(eventSource, 'agreement_created', () => {
-    invalidateEndpoint('/agreements', 'agreement_created');
+  // AGREEMENT EVENTS - Fine-grained: patch the session's cached list in place
+  // from the entity in the payload (no refetch). Relationship-scoped on the wire,
+  // but routed to the right session cache via the entity's coaching_session_id.
+  useSSEEventHandler(eventSource, 'agreement_created', (event) => {
+    upsertAgreement(event.data.agreement, 'agreement_created');
   });
 
-  useSSEEventHandler(eventSource, 'agreement_updated', () => {
-    invalidateEndpoint('/agreements', 'agreement_updated');
+  useSSEEventHandler(eventSource, 'agreement_updated', (event) => {
+    upsertAgreement(event.data.agreement, 'agreement_updated');
   });
 
-  useSSEEventHandler(eventSource, 'agreement_deleted', () => {
-    invalidateEndpoint('/agreements', 'agreement_deleted');
+  useSSEEventHandler(eventSource, 'agreement_deleted', (event) => {
+    removeAgreement(event.data.agreement_id, 'agreement_deleted');
   });
 
   // GOAL EVENTS - Invalidate /goals and session-scoped goal caches (join table)
