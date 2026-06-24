@@ -25,6 +25,15 @@ export const OrganizationApi = {
       params: { user_id: userId },
     }),
 
+  /*
+   * Fetches every organization on the platform. SuperAdmin-gated on the backend
+   * (no user_id scoping); a 403 is expected for any non-SuperAdmin caller.
+   *
+   * @returns Promise resolving to an array of all Organization objects
+   */
+  listAll: async (): Promise<Organization[]> =>
+    EntityApi.listFn<Organization>(ORGANIZATIONS_BASEURL, {}),
+
   /**
    * Fetches a single organization by its ID.
    *
@@ -107,6 +116,35 @@ export const useOrganizationList = (userId: Id) => {
       ORGANIZATIONS_BASEURL,
       () => OrganizationApi.list(userId),
       userId
+    );
+
+  return {
+    organizations: entities,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * A custom React hook that fetches every organization on the platform.
+ *
+ * SuperAdmin-only: the backend returns 403 for non-SuperAdmin callers, surfaced
+ * here as `isError`. Uses a distinct SWR key ("all") so this cache never
+ * collides with the per-user {@link useOrganizationList} cache.
+ *
+ * @returns An object containing:
+ * * organizations: Array of all Organization objects (empty until loaded)
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch failed (e.g. 403 for non-SuperAdmins)
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useAllOrganizations = () => {
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<Organization>(
+      ORGANIZATIONS_BASEURL,
+      () => OrganizationApi.listAll(),
+      "all"
     );
 
   return {
