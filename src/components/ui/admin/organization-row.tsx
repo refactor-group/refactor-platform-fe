@@ -17,6 +17,7 @@ import { OrganizationApi } from "@/lib/api/organizations";
 import { Organization, isOrganizationArchived } from "@/types/organization";
 import { OrganizationFormDialog } from "./organization-form-dialog";
 import { DeleteOrganizationDialog } from "./delete-organization-dialog";
+import { OrganizationArchivedByline } from "./organization-archived-byline";
 
 interface OrganizationRowProps {
   organization: Organization;
@@ -76,6 +77,7 @@ export function OrganizationRow({
             Created {created.toLocaleString(DateTime.DATE_MED)}
           </p>
         )}
+        {archived && <OrganizationArchivedByline organization={organization} />}
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

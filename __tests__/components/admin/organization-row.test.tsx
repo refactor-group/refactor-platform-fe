@@ -30,13 +30,23 @@ vi.mock("@/lib/api/organizations", () => ({
   }),
 }));
 
+vi.mock("@/lib/api/users", () => ({
+  useUser: () => ({
+    user: {
+      display_name: "Ada Admin",
+      first_name: "Ada",
+      last_name: "Admin",
+    },
+    isLoading: false,
+  }),
+}));
+
 function makeOrg(overrides: Partial<Organization> = {}): Organization {
   return {
     id: "org-1",
     name: "Acme",
     slug: "acme",
     logo: "",
-    archived_at: null,
     created_at: DateTime.fromISO("2024-01-01T00:00:00.000Z"),
     updated_at: DateTime.fromISO("2024-01-01T00:00:00.000Z"),
     ...overrides,
@@ -88,5 +98,28 @@ describe("OrganizationRow archive lifecycle", () => {
     await waitFor(() => expect(mockUnarchive).toHaveBeenCalledWith("org-1"));
     expect(mockArchive).not.toHaveBeenCalled();
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
+  it("archived org: byline shows resolved archiver name + date", () => {
+    render(
+      <OrganizationRow
+        organization={makeOrg({
+          archived_at: "2026-01-01T00:00:00.000Z",
+          archived_by: "user-9",
+        })}
+        onChanged={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Archived .* by Ada Admin/)).toBeInTheDocument();
+  });
+
+  it("archived org with no archiver: byline reads 'a former admin'", () => {
+    render(
+      <OrganizationRow
+        organization={makeOrg({ archived_at: "2026-01-01T00:00:00.000Z" })}
+        onChanged={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/by a former admin/)).toBeInTheDocument();
   });
 });

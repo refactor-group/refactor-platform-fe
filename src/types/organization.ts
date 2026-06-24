@@ -8,8 +8,13 @@ export interface Organization {
   name: string;
   logo?: string;
   slug: string;
-  // null = active, non-null timestamp = archived (server-managed via archive/unarchive)
-  archived_at: string | null;
+  // absent/null = active, timestamp = archived (server-managed via archive/unarchive)
+  archived_at?: string;
+  // user id of the SuperAdmin who archived; absent while active, and may be
+  // absent even while archived if that user was later deleted (FK ON DELETE SET
+  // NULL). Resolve to a name via GET /users/{id}. Not authoritative for archive
+  // state — use archived_at.
+  archived_by?: string;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -64,7 +69,6 @@ export function defaultOrganization(): Organization {
     name: "",
     logo: "",
     slug: "",
-    archived_at: null,
     created_at: now,
     updated_at: now,
   };

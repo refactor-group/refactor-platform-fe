@@ -30,7 +30,6 @@ const existingOrg: Organization = {
   name: "Acme",
   slug: "acme",
   logo: "",
-  archived_at: null,
   created_at: DateTime.fromISO("2024-01-01T00:00:00.000Z"),
   updated_at: DateTime.fromISO("2024-01-01T00:00:00.000Z"),
 };
