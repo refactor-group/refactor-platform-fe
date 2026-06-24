@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
 import { OrganizationFormDialog } from "@/components/ui/admin/organization-form-dialog";
+import { EntityApiError } from "@/types/entity-api-error";
 import type { Organization } from "@/types/organization";
 
 const mockToastSuccess = vi.fn();
@@ -29,9 +30,18 @@ const existingOrg: Organization = {
   name: "Acme",
   slug: "acme",
   logo: "",
+  archived_at: null,
   created_at: DateTime.fromISO("2024-01-01T00:00:00.000Z"),
   updated_at: DateTime.fromISO("2024-01-01T00:00:00.000Z"),
 };
+
+function makeApiError(status: number, data: unknown): EntityApiError {
+  const axiosLikeError = Object.assign(new Error("Request failed"), {
+    isAxiosError: true,
+    response: { status, statusText: "Conflict", data },
+  });
+  return new EntityApiError("POST", "/organizations", axiosLikeError);
+}
 
 describe("OrganizationFormDialog", () => {
   beforeEach(() => {
@@ -107,5 +117,33 @@ describe("OrganizationFormDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create organization" }));
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+  });
+
+  it("shows an inline name error on organization_name_taken (no toast)", async () => {
+    mockCreate.mockRejectedValueOnce(
+      makeApiError(409, {
+        status_code: 409,
+        error: "organization_name_taken",
+        message: "An organization with that name already exists.",
+        details: { name: "Acme" },
+      })
+    );
+    const onOpenChange = vi.fn();
+    render(
+      <OrganizationFormDialog open onOpenChange={onOpenChange} onSaved={vi.fn()} />
+    );
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Acme" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create organization" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("An organization with that name already exists.")
+      ).toBeInTheDocument()
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 });

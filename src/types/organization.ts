@@ -8,8 +8,23 @@ export interface Organization {
   name: string;
   logo?: string;
   slug: string;
+  // null = active, non-null timestamp = archived (server-managed via archive/unarchive)
+  archived_at: string | null;
   created_at: DateTime;
   updated_at: DateTime;
+}
+
+/** Filter for the admin org list, mapped to the backend `?status=` query param. */
+export enum OrganizationStatusFilter {
+  Active = "active",
+  Archived = "archived",
+  All = "all",
+}
+
+export function isOrganizationArchived(organization: Organization): boolean {
+  // Loose != null treats both null and a not-yet-present field (before the
+  // backend ships archived_at) as active; only a real timestamp is archived.
+  return organization.archived_at != null;
 }
 
 export function isOrganization(value: unknown): value is Organization {
@@ -49,6 +64,7 @@ export function defaultOrganization(): Organization {
     name: "",
     logo: "",
     slug: "",
+    archived_at: null,
     created_at: now,
     updated_at: now,
   };

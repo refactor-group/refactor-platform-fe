@@ -16,6 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useOrganizationMutation } from "@/lib/api/organizations";
+import { EntityApiError } from "@/types/entity-api-error";
 import { Organization, defaultOrganization } from "@/types/organization";
 
 interface OrganizationFormDialogProps {
@@ -36,16 +37,19 @@ export function OrganizationFormDialog({
   const { create, update, isLoading } = useOrganizationMutation();
 
   const [formData, setFormData] = useState({ name: "", logo: "" });
+  const [nameError, setNameError] = useState<string | null>(null);
 
   useEffect(() => {
     setFormData({
       name: organization?.name ?? "",
       logo: organization?.logo ?? "",
     });
+    setNameError(null);
   }, [organization, open]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    if (name === "name") setNameError(null);
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -72,11 +76,20 @@ export function OrganizationFormDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving organization:", error);
-      toast.error(
-        isEdit
-          ? "There was an error updating the organization"
-          : "There was an error creating the organization"
-      );
+      if (
+        EntityApiError.isEntityApiError(error) &&
+        error.data?.error === "organization_name_taken"
+      ) {
+        setNameError(
+          error.data?.message ?? "An organization with that name already exists."
+        );
+      } else {
+        toast.error(
+          isEdit
+            ? "There was an error updating the organization"
+            : "There was an error creating the organization"
+        );
+      }
     }
   };
 
@@ -103,8 +116,12 @@ export function OrganizationFormDialog({
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="Enter organization name"
+                aria-invalid={nameError !== null}
                 required
               />
+              {nameError && (
+                <p className="text-sm text-destructive">{nameError}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="logo">Logo URL</Label>
