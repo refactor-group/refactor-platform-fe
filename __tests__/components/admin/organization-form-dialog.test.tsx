@@ -145,4 +145,34 @@ describe("OrganizationFormDialog", () => {
     expect(mockToastError).not.toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
+
+  it("shows an inline name error on a rename collision (update path)", async () => {
+    mockUpdate.mockRejectedValueOnce(
+      makeApiError(409, {
+        status_code: 409,
+        error: "organization_name_taken",
+        message: "An organization with that name already exists.",
+        details: { name: "Pybites" },
+      })
+    );
+    render(
+      <OrganizationFormDialog
+        open
+        onOpenChange={vi.fn()}
+        organization={existingOrg}
+        onSaved={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Pybites" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
+    expect(
+      screen.getByText("An organization with that name already exists.")
+    ).toBeInTheDocument();
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
 });

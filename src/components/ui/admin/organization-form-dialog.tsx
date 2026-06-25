@@ -16,7 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useOrganizationMutation } from "@/lib/api/organizations";
-import { EntityApiError } from "@/types/entity-api-error";
+import { organizationNameTakenMessage } from "@/lib/api/organization-errors";
 import { Organization, defaultOrganization } from "@/types/organization";
 
 interface OrganizationFormDialogProps {
@@ -76,13 +76,9 @@ export function OrganizationFormDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving organization:", error);
-      if (
-        EntityApiError.isEntityApiError(error) &&
-        error.data?.error === "organization_name_taken"
-      ) {
-        setNameError(
-          error.data?.message ?? "An organization with that name already exists."
-        );
+      const nameTaken = organizationNameTakenMessage(error);
+      if (nameTaken !== null) {
+        setNameError(nameTaken);
       } else {
         toast.error(
           isEdit

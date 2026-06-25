@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useOrganizationMutation } from "@/lib/api/organizations";
-import { EntityApiError } from "@/types/entity-api-error";
+import { organizationNotEmptyMessage } from "@/lib/api/organization-errors";
 import { Organization } from "@/types/organization";
 
 interface DeleteOrganizationDialogProps {
@@ -41,17 +41,8 @@ export function DeleteOrganizationDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Error deleting organization:", error);
-      if (
-        EntityApiError.isEntityApiError(error) &&
-        error.data?.error === "organization_not_empty"
-      ) {
-        toast.error(
-          error.data?.message ??
-            "This organization still has members or coaching data and can't be deleted. Archive it instead."
-        );
-      } else {
-        toast.error("There was an error deleting the organization");
-      }
+      const notEmpty = organizationNotEmptyMessage(error);
+      toast.error(notEmpty ?? "There was an error deleting the organization");
     } finally {
       setIsDeleting(false);
     }
