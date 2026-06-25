@@ -25,6 +25,7 @@ import {
 import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { organizationArchivedMessage } from "@/lib/api/organization-errors";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -289,6 +290,9 @@ export default function CoachingSessionForm({
       } else if (error.status === 409 && error.data?.error === "oauth_token_revoked") {
         toast.error("Your Google Meet integration has been disconnected. Please reconnect in Settings.");
         router.push("/settings/integrations");
+      } else if (organizationArchivedMessage(error) !== null) {
+        toast.error(organizationArchivedMessage(error)!);
+        console.error(`Failed to ${mode} coaching session:`, error);
       } else {
         let message: string;
         if (isDurationValidationError(error)) {
