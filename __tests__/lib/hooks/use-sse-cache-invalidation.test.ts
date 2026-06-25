@@ -99,4 +99,18 @@ describe("matchesEndpoint", () => {
       matchesEndpoint(`${BASE}/coaching_sessions/s-1/goals`, BASE, "/coaching_sessions"),
     ).toBe(true);
   });
+
+  // The raw matcher still matches the month count caches; the title listener
+  // (invalidateCoachingSessionTitle) excludes them separately, since a rename
+  // can't change a count. This documents that the exclusion lives in the
+  // listener, not in matchesEndpoint.
+  it("matchesEndpoint still matches the count caches (exclusion is in the title listener)", () => {
+    expect(
+      matchesEndpoint(
+        `${BASE}/users/u-1/coaching_sessions/counts`,
+        BASE,
+        "/coaching_sessions",
+      ),
+    ).toBe(true);
+  });
 });
