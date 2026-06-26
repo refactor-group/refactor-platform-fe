@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
-import { None } from "@/types/option";
+import { Some, None } from "@/types/option";
 import {
   AssignmentFilter,
   CoachViewMode,
@@ -104,7 +104,7 @@ function makeTestAction(overrides: Partial<Action> = {}): Action {
     user_id: "user-1",
     status: ItemStatus.NotStarted,
     status_changed_at: now,
-    due_by: now.plus({ days: 7 }),
+    due_by: Some(now.plus({ days: 7 })),
     created_at: now,
     updated_at: now,
     assignee_ids: ["user-1"],
@@ -278,7 +278,7 @@ describe("useAllActionsWithContext", () => {
 
   it("sets isOverdue when due_by is in the past", () => {
     mockActions = [
-      makeTestAction({ due_by: now.minus({ days: 5 }) }),
+      makeTestAction({ due_by: Some(now.minus({ days: 5 })) }),
     ];
     mockSessions = [makeTestSession()];
 

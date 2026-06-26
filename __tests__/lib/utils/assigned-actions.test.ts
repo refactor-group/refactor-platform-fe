@@ -42,7 +42,7 @@ function makeAction(overrides: Partial<Action> = {}): Action {
     user_id: "user-1",
     status: ItemStatus.NotStarted,
     status_changed_at: now,
-    due_by: now.plus({ days: 7 }),
+    due_by: Some(now.plus({ days: 7 })),
     created_at: now,
     updated_at: now,
     assignee_ids: [],

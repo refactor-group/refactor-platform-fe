@@ -3,6 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import { Some } from "@/types/option";
 import { useOptimisticStatus } from "@/components/ui/actions/use-optimistic-status";
 
 const now = DateTime.now();
@@ -19,7 +20,7 @@ function makeCtx(
       user_id: "user-1",
       status,
       status_changed_at: now,
-      due_by: now.plus({ days: 7 }),
+      due_by: Some(now.plus({ days: 7 })),
       created_at: now,
       updated_at: now,
       assignee_ids: [],

@@ -90,8 +90,9 @@ function isDueBeforeNextSession(
   );
   if (!nextSession) return true; // Include if no next session scheduled
 
+  if (action.due_by.none) return false;
   const nextSessionDate = DateTime.fromISO(nextSession.date);
-  return action.due_by <= nextSessionDate;
+  return action.due_by.val <= nextSessionDate;
 }
 
 /** Checks if action was completed since the last session for its relationship */
@@ -250,8 +251,9 @@ export function addContextToAction(
 
   // Compare dates only (not times) to avoid marking items due today as overdue
   const today = DateTime.now().startOf("day");
-  const dueDate = action.due_by.startOf("day");
-  const isOverdue = dueDate < today;
+  const isOverdue = action.due_by.some
+    ? action.due_by.val.startOf("day") < today
+    : false;
 
   return {
     action,
@@ -302,8 +304,14 @@ export function sortActionsByDueDate(
     // Overdue actions first
     if (a.isOverdue && !b.isOverdue) return -1;
     if (!a.isOverdue && b.isOverdue) return 1;
-    // Then by due date
-    return a.action.due_by.toMillis() - b.action.due_by.toMillis();
+    // Then by due date; undated actions sort last.
+    const aMillis = a.action.due_by.some ? a.action.due_by.val.toMillis() : null;
+    const bMillis = b.action.due_by.some ? b.action.due_by.val.toMillis() : null;
+    if (aMillis === null || bMillis === null) {
+      if (aMillis === bMillis) return 0;
+      return aMillis === null ? 1 : -1;
+    }
+    return aMillis - bMillis;
   });
 }
 
