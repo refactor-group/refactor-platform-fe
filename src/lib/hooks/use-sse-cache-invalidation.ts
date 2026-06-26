@@ -84,6 +84,30 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   }, [mutate, baseUrl]);
 
   /**
+   * Invalidates the coaching session caches that surface a title — the single
+   * read (/coaching_sessions/{id}) and the enriched list reads
+   * (/users/{id}/coaching_sessions, /coaching_sessions?coaching_relationship_id=).
+   *
+   * Like invalidateEndpoint('/coaching_sessions', ...) but excludes the month
+   * count caches (/users/{id}/coaching_sessions/counts): a title rename cannot
+   * change a month's session count, so refetching them would be pure waste.
+   */
+  const invalidateCoachingSessionTitle = useCallback((eventName: string) => {
+    mutate(
+      (key) => {
+        const url = typeof key === 'string' ? key : Array.isArray(key) ? key[0] : null;
+        if (typeof url !== 'string') return false;
+        if (url.includes('/coaching_sessions/counts')) return false;
+        return matchesEndpoint(url, baseUrl, '/coaching_sessions');
+      },
+      undefined,
+      // See invalidateEndpoint: don't blank the cache, just revalidate.
+      { revalidate: true, populateCache: false }
+    );
+    console.log(`[SSE] Revalidated /coaching_sessions cache after ${eventName}`);
+  }, [mutate, baseUrl]);
+
+  /**
    * Invalidates session-scoped goal caches: both per-session caches
    * (e.g. /coaching_sessions/{id}/goals) and the batch endpoint cache
    * (e.g. /coaching_sessions/goals?coaching_relationship_id=...).
@@ -219,5 +243,14 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   // server-side carry-over copy on a new session's first read.
   useSSEEventHandler(eventSource, 'topics_changed', () => {
     invalidateEndpoint('/topics', 'topics_changed');
+  });
+
+  // COACHING SESSION TITLE EVENTS - Invalidate the coaching session caches.
+  // Coarse-by-design (parity with topics_changed): the event carries no title,
+  // so we refetch the single read and the enriched list reads that surface
+  // display_title. The month count caches are excluded — a rename can't change
+  // a count — so we don't over-match them.
+  useSSEEventHandler(eventSource, 'coaching_session_title_updated', () => {
+    invalidateCoachingSessionTitle('coaching_session_title_updated');
   });
 }

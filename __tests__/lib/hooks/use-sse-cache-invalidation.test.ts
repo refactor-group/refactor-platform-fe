@@ -80,6 +80,54 @@ describe("matchesEndpoint", () => {
     ).toBe(true);
     expect(matchesEndpoint(`${BASE}/topics_archive`, BASE, "/topics")).toBe(false);
   });
+
+  // coaching_session_title_updated invalidates the /coaching_sessions segment so a
+  // title rename by either participant refreshes both the single read and the
+  // enriched list reads that surface display_title.
+  it("matches the coaching session reads for coaching_session_title_updated", () => {
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1`, BASE, "/coaching_sessions"),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(`${BASE}/users/u-1/coaching_sessions`, BASE, "/coaching_sessions"),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(
+        `${BASE}/coaching_sessions?coaching_relationship_id=r-1`,
+        BASE,
+        "/coaching_sessions",
+      ),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions_archive`, BASE, "/coaching_sessions"),
+    ).toBe(false);
+  });
+
+  // Intentional over-match: invalidating /coaching_sessions also revalidates
+  // session subresource caches (topics/goals/...). Harmless extra refetches on an
+  // infrequent title edit; documented so it is a tested property, not a surprise.
+  it("also matches session subresource caches (intentional, coarse)", () => {
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1/topics`, BASE, "/coaching_sessions"),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1/goals`, BASE, "/coaching_sessions"),
+    ).toBe(true);
+  });
+
+  // The raw matcher still matches the month count caches; the title listener
+  // (invalidateCoachingSessionTitle) excludes them separately, since a rename
+  // can't change a count. This documents that the exclusion lives in the
+  // listener, not in matchesEndpoint.
+  it("matchesEndpoint still matches the count caches (exclusion is in the title listener)", () => {
+    expect(
+      matchesEndpoint(
+        `${BASE}/users/u-1/coaching_sessions/counts`,
+        BASE,
+        "/coaching_sessions",
+      ),
+    ).toBe(true);
+  });
 });
 
 /**
