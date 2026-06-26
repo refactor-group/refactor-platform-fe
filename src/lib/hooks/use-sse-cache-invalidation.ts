@@ -107,13 +107,8 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     console.log(`[SSE] Revalidated session-scoped goal caches after ${eventName}`);
   }, [mutate, baseUrl]);
 
-  /**
-   * Agreement list caches are keyed by tuple `[`${baseUrl}/agreements`, params]`
-   * where `params.coaching_session_id` scopes the list. The SSE event is
-   * relationship-scoped (envelope carries `coaching_relationship_id`), but the
-   * payload `agreement` carries its own `coaching_session_id`, so we route the
-   * in-place patch by the entity, not the envelope.
-   */
+  // Route the patch by the payload entity's coaching_session_id, not the
+  // relationship-scoped envelope, since the list cache is session-keyed.
   const agreementsUrl = `${baseUrl}/agreements`;
 
   const isAgreementListKey = useCallback(
@@ -122,9 +117,8 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     [agreementsUrl],
   );
 
-  // Upsert the agreement into its session's cached list without a refetch. The
-  // payload entity and the cached entities share the same raw (untransformed)
-  // shape, so it drops in directly. Replace-in-place on update, append on create.
+  // Payload entity shares the cached entities' raw (untransformed) shape, so it
+  // drops in directly. Skip caches with no loaded list to avoid a partial write.
   const upsertAgreement = useCallback(
     (agreement: Agreement, eventName: string) => {
       mutate(
@@ -132,7 +126,7 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
           isAgreementListKey(key) &&
           key[1]?.coaching_session_id === agreement.coaching_session_id,
         (current: Agreement[] | undefined) =>
-          upsertAgreementInList(current ?? [], agreement),
+          current ? upsertAgreementInList(current, agreement) : current,
         { revalidate: false },
       );
       console.log(`[SSE] Patched agreement ${agreement.id} in cache after ${eventName}`);
@@ -140,8 +134,7 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     [mutate, isAgreementListKey],
   );
 
-  // Remove the agreement by id. The delete payload carries no session id, so we
-  // scan every agreement-list cache and drop the matching row (ids are unique).
+  // Delete payload carries no session id, so scan every list cache (ids are unique).
   const removeAgreement = useCallback(
     (agreementId: Id, eventName: string) => {
       mutate(
