@@ -38,12 +38,12 @@ export type ActionDeletedEvent = BaseSSEEvent<
   }
 >;
 
-// ==================== AGREEMENT EVENTS (relationship-scoped) ====================
+// ==================== AGREEMENT EVENTS (session-scoped) ====================
 
 export type AgreementCreatedEvent = BaseSSEEvent<
   'agreement_created',
   {
-    coaching_relationship_id: Id;
+    coaching_session_id: Id;
     agreement: Agreement;
   }
 >;
@@ -51,7 +51,7 @@ export type AgreementCreatedEvent = BaseSSEEvent<
 export type AgreementUpdatedEvent = BaseSSEEvent<
   'agreement_updated',
   {
-    coaching_relationship_id: Id;
+    coaching_session_id: Id;
     agreement: Agreement;
   }
 >;
@@ -59,7 +59,7 @@ export type AgreementUpdatedEvent = BaseSSEEvent<
 export type AgreementDeletedEvent = BaseSSEEvent<
   'agreement_deleted',
   {
-    coaching_relationship_id: Id;
+    coaching_session_id: Id;
     agreement_id: Id;
   }
 >;
