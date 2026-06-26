@@ -1001,4 +1001,71 @@ describe("Action Filtering", () => {
       expect(results).toHaveLength(0);
     });
   });
+
+  /**
+   * These tests verify the production filterActionsByStatus function with the
+   * DueSoon filter. This filter shows incomplete actions assigned to the user
+   * that are due on or before the next session for their relationship.
+   *
+   * An action with no due date (due_by is None) has no date to compare against
+   * the next session, so it is intentionally excluded from DueSoon.
+   */
+  describe("due soon filter (production)", () => {
+    const createSessionMap = (sessionId: string, relationshipId: string) => {
+      const map = new Map<string, EnrichedCoachingSession>();
+      map.set(sessionId, {
+        id: sessionId,
+        coaching_relationship_id: relationshipId,
+        date: REFERENCE_DATE.toISO() ?? "",
+      } as EnrichedCoachingSession);
+      return map;
+    };
+
+    const createNextSessionMap = (relationshipId: string, date: DateTime) => {
+      const map = new Map<string, EnrichedCoachingSession>();
+      map.set(relationshipId, {
+        id: generateTestUUID(),
+        coaching_relationship_id: relationshipId,
+        date: date.toISO() ?? "",
+      } as EnrichedCoachingSession);
+      return map;
+    };
+
+    it("includes actions due before the next session but excludes undated actions", () => {
+      const sessionMap = createSessionMap(
+        TEST_SESSION_IDS.SESSION_1,
+        TEST_RELATIONSHIP_IDS.PRIMARY
+      );
+      const nextSessionMap = createNextSessionMap(
+        TEST_RELATIONSHIP_IDS.PRIMARY,
+        REFERENCE_DATE.plus({ days: 7 })
+      );
+
+      const dated = createMockAction({
+        id: generateTestUUID(),
+        coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+        dueBy: REFERENCE_DATE.plus({ days: 2 }),
+        status: ItemStatus.NotStarted,
+        assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+      });
+      const undated = createMockAction({
+        id: generateTestUUID(),
+        coachingSessionId: TEST_SESSION_IDS.SESSION_1,
+        dueBy: null,
+        status: ItemStatus.NotStarted,
+        assigneeIds: [TEST_USER_IDS.CURRENT_USER],
+      });
+
+      const results = filterActionsByStatus(
+        [dated, undated],
+        AssignedActionsFilter.DueSoon,
+        TEST_USER_IDS.CURRENT_USER,
+        sessionMap,
+        nextSessionMap,
+        new Map() // lastSessionByRelationship not used for DueSoon
+      );
+
+      expect(results.map((a) => a.id)).toEqual([dated.id]);
+    });
+  });
 });
