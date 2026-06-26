@@ -239,7 +239,7 @@ function useActionCrud(
           body,
           goal_id: goalId ? Some(goalId) : None,
           status: ItemStatus.NotStarted,
-          due_by: dueBy ?? DateTime.now().plus({ days: 7 }),
+          due_by: Some(dueBy ?? DateTime.now().plus({ days: 7 })),
           assignee_ids: assigneeIds ?? [],
         };
         await create(newAction);
@@ -283,7 +283,7 @@ function useActionCrud(
 
   const handleDueDateChange = useCallback(
     (id: Id, newDueBy: DateTime) =>
-      updateField(id, { due_by: newDueBy }, "Failed to update due date"),
+      updateField(id, { due_by: Some(newDueBy) }, "Failed to update due date"),
     [updateField]
   );
 

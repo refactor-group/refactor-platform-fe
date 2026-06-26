@@ -227,7 +227,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
       if (!ctx) return;
 
       try {
-        await updateAction(id, { ...ctx.action, due_by: newDueBy });
+        await updateAction(id, { ...ctx.action, due_by: Some(newDueBy) });
         refresh();
       } catch (err) {
         if (err instanceof EntityApiError && err.isNetworkError()) {

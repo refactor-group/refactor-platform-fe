@@ -20,7 +20,7 @@ function makeAction(goalId: Action["goal_id"]): Action {
     user_id: "user-1",
     status: ItemStatus.NotStarted,
     status_changed_at: now,
-    due_by: now.plus({ days: 7 }),
+    due_by: Some(now.plus({ days: 7 })),
     created_at: now,
     updated_at: now,
     assignee_ids: ["user-1"],
@@ -56,8 +56,8 @@ describe("serializeAction", () => {
     expect(wire.user_id).toBe(action.user_id);
     expect(wire.status).toBe(action.status);
     expect(wire.assignee_ids).toEqual(action.assignee_ids);
-    // DateTime instances should be the same references
-    expect(wire.due_by).toBe(action.due_by);
+    // due_by is unwrapped from Option to a raw DateTime on the wire
+    expect(wire.due_by).toBe(action.due_by.some ? action.due_by.val : null);
     expect(wire.created_at).toBe(action.created_at);
   });
 });
@@ -130,6 +130,34 @@ describe("transformAction", () => {
     expect(action.goal_id.none).toBe(true);
   });
 
+  it("wraps a null due_by as None", () => {
+    const raw = {
+      id: "action-1",
+      coaching_session_id: "session-1",
+      goal_id: null,
+      body: "Test",
+      user_id: "user-1",
+      status: "NotStarted",
+      status_changed_at: "2026-03-30T12:00:00Z",
+      due_by: null,
+      created_at: "2026-03-30T12:00:00Z",
+      updated_at: "2026-03-30T12:00:00Z",
+      assignee_ids: [],
+    };
+
+    const action = transformAction(raw);
+
+    expect(action.due_by.some).toBe(false);
+    expect(action.due_by.none).toBe(true);
+  });
+
+  it("serializes a None due_by back to null", () => {
+    const action = makeAction(None);
+    action.due_by = None;
+
+    expect(serializeAction(action).due_by).toBeNull();
+  });
+
   it("transforms date strings into DateTime instances", () => {
     const raw = {
       id: "action-1",
@@ -147,7 +175,7 @@ describe("transformAction", () => {
 
     const action = transformAction(raw);
 
-    expect(DateTime.isDateTime(action.due_by)).toBe(true);
+    expect(action.due_by.some && DateTime.isDateTime(action.due_by.val)).toBe(true);
     expect(DateTime.isDateTime(action.created_at)).toBe(true);
     expect(DateTime.isDateTime(action.updated_at)).toBe(true);
   });

@@ -5,7 +5,7 @@ import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-sessi
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
-import { None } from "@/types/option";
+import { Some, None } from "@/types/option";
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
 import { OAuthConnection } from "@/types/oauth-connection";
@@ -198,7 +198,7 @@ export function createMockAction(overrides?: Partial<Action>): Action {
     user_id: "user-1",
     status: ItemStatus.NotStarted,
     status_changed_at: now,
-    due_by: now.plus({ days: 7 }),
+    due_by: Some(now.plus({ days: 7 })),
     created_at: now,
     updated_at: now,
     assignee_ids: ["user-1"],

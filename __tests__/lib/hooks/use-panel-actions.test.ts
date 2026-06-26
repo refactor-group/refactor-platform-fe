@@ -77,7 +77,7 @@ function makeAction(overrides: Partial<Action> = {}): Action {
     user_id: "user-1",
     status: ItemStatus.NotStarted,
     status_changed_at: now,
-    due_by: now.plus({ days: 7 }),
+    due_by: Some(now.plus({ days: 7 })),
     created_at: now,
     updated_at: now,
     assignee_ids: [],
@@ -248,7 +248,8 @@ describe("handleCreate — goal linking", () => {
 
     expect(mockCreate).toHaveBeenCalledOnce();
     const created = mockCreate.mock.calls[0][0] as Action;
-    expect(created.due_by.toISO()).toBe(picked.toISO());
+    expect(created.due_by.some).toBe(true);
+    expect(created.due_by.some && created.due_by.val.toISO()).toBe(picked.toISO());
   });
 
   it("falls back to now()+7 days when dueBy is omitted", async () => {
@@ -261,11 +262,13 @@ describe("handleCreate — goal linking", () => {
 
     const after = DateTime.now();
     const created = mockCreate.mock.calls[0][0] as Action;
+    expect(created.due_by.some).toBe(true);
+    if (!created.due_by.some) throw new Error("expected a due date");
     // due_by should fall in [before+7d, after+7d] (a few-ms window).
-    expect(created.due_by.toMillis()).toBeGreaterThanOrEqual(
+    expect(created.due_by.val.toMillis()).toBeGreaterThanOrEqual(
       before.plus({ days: 7 }).toMillis()
     );
-    expect(created.due_by.toMillis()).toBeLessThanOrEqual(
+    expect(created.due_by.val.toMillis()).toBeLessThanOrEqual(
       after.plus({ days: 7 }).toMillis()
     );
   });

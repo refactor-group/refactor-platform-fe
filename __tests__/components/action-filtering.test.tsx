@@ -571,15 +571,17 @@ describe("Action Filtering", () => {
       const overdueCount = actions.filter(
         (a) =>
           a.action.status !== ItemStatus.Completed &&
-          isActionOverdue(a.action.due_by, today)
+          a.action.due_by.some &&
+          isActionOverdue(a.action.due_by.val, today)
       ).length;
       expect(overdueCount).toBe(2);
 
       // Due today should NOT be overdue
       const dueTodayOverdue = actions.filter(
         (a) =>
-          a.action.due_by.hasSame(today, "day") &&
-          isActionOverdue(a.action.due_by, today)
+          a.action.due_by.some &&
+          a.action.due_by.val.hasSame(today, "day") &&
+          isActionOverdue(a.action.due_by.val, today)
       ).length;
       expect(dueTodayOverdue).toBe(0);
     });

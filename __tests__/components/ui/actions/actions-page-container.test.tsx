@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import { toast } from "sonner";
 import { ItemStatus } from "@/types/general";
-import { None } from "@/types/option";
+import { Some, None } from "@/types/option";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { siteConfig } from "@/site.config";
 import { EntityApiError } from "@/lib/api/entity-api";
@@ -141,7 +141,7 @@ function makeCtx(
       user_id: "user-1",
       status,
       status_changed_at: now,
-      due_by: now.plus({ days: 7 }),
+      due_by: Some(now.plus({ days: 7 })),
       created_at: now,
       updated_at: now,
       assignee_ids: ["user-1"],
