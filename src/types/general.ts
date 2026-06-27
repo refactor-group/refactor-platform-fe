@@ -1,7 +1,11 @@
 import { DateTime } from "ts-luxon";
 
 // Re-export EntityApiError for backward compatibility
-export { EntityApiError } from "./entity-api-error";
+export {
+  EntityApiError,
+  PERMISSION_DENIED_MESSAGE,
+  isForbiddenError,
+} from "./entity-api-error";
 
 // A type alias for each entity's Id field
 export type Id = string;

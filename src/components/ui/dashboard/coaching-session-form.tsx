@@ -32,7 +32,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, type FormEvent } fro
 import { useRouter } from "next/navigation";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { EntityApiError } from "@/types/entity-api-error";
+import { EntityApiError, PERMISSION_DENIED_MESSAGE } from "@/types/entity-api-error";
 import { toast } from "sonner";
 import { Provider } from "@/types/provider";
 import {
@@ -291,7 +291,9 @@ export default function CoachingSessionForm({
         router.push("/settings/integrations");
       } else {
         let message: string;
-        if (isDurationValidationError(error)) {
+        if (error.isForbidden()) {
+          message = PERMISSION_DENIED_MESSAGE;
+        } else if (isDurationValidationError(error)) {
           message = error.data.message;
         } else if (error.isNetworkError()) {
           message = "Could not connect to server. Please check your internet connection.";
