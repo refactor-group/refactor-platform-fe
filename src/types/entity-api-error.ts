@@ -147,6 +147,6 @@ export const PERMISSION_DENIED_MESSAGE =
  * Type-safe check for a 403 Forbidden error from an arbitrary thrown value.
  * Convenience for call sites that don't already narrow to EntityApiError.
  */
-export function isForbiddenError(error: unknown): boolean {
+export function isForbiddenError(error: unknown): error is EntityApiError {
   return error instanceof EntityApiError && error.isForbidden();
 }
