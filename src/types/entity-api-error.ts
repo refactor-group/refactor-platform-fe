@@ -125,4 +125,28 @@ export class EntityApiError extends Error {
   public isServiceUnavailable(): boolean {
     return this.status === 503;
   }
+
+  /**
+   * Returns true if this error represents a forbidden error (403): the user is
+   * authenticated but lacks permission for the resource. Distinct from 401,
+   * which the session guard handles by logging the user out.
+   */
+  public isForbidden(): boolean {
+    return this.status === 403;
+  }
+}
+
+/**
+ * Default user-facing message for a 403 Forbidden response. Use for permission
+ * failures where the user is authenticated but not allowed to perform the action.
+ */
+export const PERMISSION_DENIED_MESSAGE =
+  "You don't have permission to perform this action.";
+
+/**
+ * Type-safe check for a 403 Forbidden error from an arbitrary thrown value.
+ * Convenience for call sites that don't already narrow to EntityApiError.
+ */
+export function isForbiddenError(error: unknown): boolean {
+  return error instanceof EntityApiError && error.isForbidden();
 }

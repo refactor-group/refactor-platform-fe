@@ -86,7 +86,7 @@ vi.mock("@/lib/api/actions", () => ({
 const now = DateTime.now();
 let mockActionsData: AssignedActionWithContext[] = [];
 let mockIsLoading = false;
-let mockIsError = false;
+let mockIsError: unknown = false;
 const mockRefresh = vi.fn();
 
 vi.mock("@/lib/hooks/use-all-actions-with-context", () => ({
@@ -98,18 +98,29 @@ vi.mock("@/lib/hooks/use-all-actions-with-context", () => ({
   }),
 }));
 
-vi.mock("@/lib/api/entity-api", () => ({
-  EntityApiError: class EntityApiError extends Error {
+vi.mock("@/lib/api/entity-api", () => {
+  class EntityApiError extends Error {
     private _networkError: boolean;
-    constructor(message: string, networkError = false) {
+    private _forbidden: boolean;
+    constructor(message: string, networkError = false, forbidden = false) {
       super(message);
       this._networkError = networkError;
+      this._forbidden = forbidden;
     }
     isNetworkError() {
       return this._networkError;
     }
-  },
-}));
+    isForbidden() {
+      return this._forbidden;
+    }
+  }
+  return {
+    EntityApiError,
+    PERMISSION_DENIED_MESSAGE: "You don't have permission to perform this action.",
+    isForbiddenError: (e: unknown) =>
+      e instanceof EntityApiError && e.isForbidden(),
+  };
+});
 
 vi.mock("@/lib/api/goals", () => ({
   useGoal: () => ({ goal: { id: "" }, isLoading: false, isError: undefined, refresh: vi.fn() }),
@@ -251,6 +262,18 @@ describe("ActionsPageContainer", () => {
     expect(
       screen.getByText("Failed to load actions. Please try again later.")
     ).toBeInTheDocument();
+  });
+
+  it("shows ForbiddenError when the data fetch returns 403", () => {
+    mockIsError = new EntityApiError("Forbidden", false, true);
+
+    render(
+      <Wrapper>
+        <ActionsPageContainer locale={siteConfig.locale} />
+      </Wrapper>
+    );
+
+    expect(screen.getByText("Actions Access Denied")).toBeInTheDocument();
   });
 
   it("toggles status visibility to show all 4 columns", async () => {
@@ -554,6 +577,28 @@ describe("ActionsPageContainer", () => {
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
           "Failed to delete action."
+        );
+      });
+    });
+
+    it("shows permission toast when delete fails with a 403", async () => {
+      mockDelete.mockRejectedValueOnce(
+        new EntityApiError("Forbidden", false, true)
+      );
+      mockActionsData = [makeCtx("a1", ItemStatus.NotStarted)];
+      const user = userEvent.setup();
+
+      const { container } = render(
+        <Wrapper>
+          <ActionsPageContainer locale={siteConfig.locale} />
+        </Wrapper>
+      );
+
+      await triggerDelete(container, user);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "You don't have permission to perform this action."
         );
       });
     });
