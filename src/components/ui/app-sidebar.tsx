@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -53,8 +53,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const settingsLabel = isSuperAdmin ? "Platform settings" : "Organization settings";
   const router = useRouter();
   const pathname = usePathname();
-  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  // Derived (not just initial) so the group stays open across the sidebar
+  // remount when navigating between its routes in different layouts.
+  const isSettingsRoute =
+    (pathname?.startsWith("/admin") ?? false) ||
+    /^\/organizations\/[^/]+\/members(\/|$)/.test(pathname ?? "");
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(isSettingsRoute);
   const { state: sidebarState, expand, isMobile } = useSidebar();
+
+  useEffect(() => {
+    if (isSettingsRoute) setIsAdminMenuOpen(true);
+  }, [isSettingsRoute]);
 
   const handleOrgChange = (newOrgId: Id) => {
     // Check if current path is organization-scoped
