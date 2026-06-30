@@ -384,7 +384,8 @@ export function filterReviewActions(
     if (a.coaching_session_id === currentSessionId) return false;
     if (stickyIds?.has(a.id)) return true;
 
-    const dueBy = a.due_by;
+    if (a.due_by.none) return false;
+    const dueBy = a.due_by.val;
     if (dueBy > endOfCurrentDate) return false;
     if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
     return false;

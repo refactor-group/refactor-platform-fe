@@ -83,7 +83,11 @@ export function groupByStatus<T>(
   return result;
 }
 
-/** Apply a time range filter on due date */
+/**
+ * Apply a time range filter on due date. Undated actions have no date to
+ * compare against, so they pass every range rather than disappearing from the
+ * default view.
+ */
 export function applyTimeFilter(
   actions: AssignedActionWithContext[],
   range: TimeRange
@@ -94,7 +98,9 @@ export function applyTimeFilter(
   const daysBack = range === TimeRange.Last30Days ? 30 : 90;
   const cutoff = now.minus({ days: daysBack });
 
-  return actions.filter((ctx) => ctx.action.due_by >= cutoff);
+  return actions.filter(
+    (ctx) => ctx.action.due_by.none || ctx.action.due_by.val >= cutoff
+  );
 }
 
 /**

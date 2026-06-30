@@ -3,6 +3,8 @@
 import { useCallback } from 'react';
 import { useSWRConfig } from 'swr';
 import { siteConfig } from '@/site.config';
+import type { Agreement } from '@/types/agreement';
+import type { Id } from '@/types/general';
 import { useSSEEventHandler } from './use-sse-event-handler';
 
 /**
@@ -27,6 +29,30 @@ export function matchesEndpoint(
   if (!url.startsWith(baseUrl)) return false;
   const pattern = new RegExp(`${endpointPath}(/|\\?|$)`);
   return pattern.test(url);
+}
+
+/**
+ * Upsert an agreement into a cached list: replace in place if its id is already
+ * present (an update), otherwise append (a create). Returns a new array; never
+ * mutates the input.
+ */
+export function upsertAgreementInList(
+  list: Agreement[],
+  agreement: Agreement,
+): Agreement[] {
+  const idx = list.findIndex((a) => a.id === agreement.id);
+  if (idx === -1) return [...list, agreement];
+  const next = [...list];
+  next[idx] = agreement;
+  return next;
+}
+
+/** Remove an agreement from a cached list by id. Returns a new array. */
+export function removeAgreementFromList(
+  list: Agreement[],
+  agreementId: Id,
+): Agreement[] {
+  return list.filter((a) => a.id !== agreementId);
 }
 
 export function useSSECacheInvalidation(eventSource: EventSource | null) {
@@ -58,6 +84,30 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   }, [mutate, baseUrl]);
 
   /**
+   * Invalidates the coaching session caches that surface a title — the single
+   * read (/coaching_sessions/{id}) and the enriched list reads
+   * (/users/{id}/coaching_sessions, /coaching_sessions?coaching_relationship_id=).
+   *
+   * Like invalidateEndpoint('/coaching_sessions', ...) but excludes the month
+   * count caches (/users/{id}/coaching_sessions/counts): a title rename cannot
+   * change a month's session count, so refetching them would be pure waste.
+   */
+  const invalidateCoachingSessionTitle = useCallback((eventName: string) => {
+    mutate(
+      (key) => {
+        const url = typeof key === 'string' ? key : Array.isArray(key) ? key[0] : null;
+        if (typeof url !== 'string') return false;
+        if (url.includes('/coaching_sessions/counts')) return false;
+        return matchesEndpoint(url, baseUrl, '/coaching_sessions');
+      },
+      undefined,
+      // See invalidateEndpoint: don't blank the cache, just revalidate.
+      { revalidate: true, populateCache: false }
+    );
+    console.log(`[SSE] Revalidated /coaching_sessions cache after ${eventName}`);
+  }, [mutate, baseUrl]);
+
+  /**
    * Invalidates session-scoped goal caches: both per-session caches
    * (e.g. /coaching_sessions/{id}/goals) and the batch endpoint cache
    * (e.g. /coaching_sessions/goals?coaching_relationship_id=...).
@@ -81,6 +131,47 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     console.log(`[SSE] Revalidated session-scoped goal caches after ${eventName}`);
   }, [mutate, baseUrl]);
 
+  // Route the patch by the payload entity's coaching_session_id, not the
+  // relationship-scoped envelope, since the list cache is session-keyed.
+  const agreementsUrl = `${baseUrl}/agreements`;
+
+  const isAgreementListKey = useCallback(
+    (key: unknown): key is [string, { coaching_session_id?: Id }] =>
+      Array.isArray(key) && typeof key[0] === 'string' && key[0] === agreementsUrl,
+    [agreementsUrl],
+  );
+
+  // Payload entity shares the cached entities' raw (untransformed) shape, so it
+  // drops in directly. Skip caches with no loaded list to avoid a partial write.
+  const upsertAgreement = useCallback(
+    (agreement: Agreement, eventName: string) => {
+      mutate(
+        (key) =>
+          isAgreementListKey(key) &&
+          key[1]?.coaching_session_id === agreement.coaching_session_id,
+        (current: Agreement[] | undefined) =>
+          current ? upsertAgreementInList(current, agreement) : current,
+        { revalidate: false },
+      );
+      console.log(`[SSE] Patched agreement ${agreement.id} in cache after ${eventName}`);
+    },
+    [mutate, isAgreementListKey],
+  );
+
+  // Delete payload carries no session id, so scan every list cache (ids are unique).
+  const removeAgreement = useCallback(
+    (agreementId: Id, eventName: string) => {
+      mutate(
+        (key) => isAgreementListKey(key),
+        (current: Agreement[] | undefined) =>
+          current ? removeAgreementFromList(current, agreementId) : current,
+        { revalidate: false },
+      );
+      console.log(`[SSE] Removed agreement ${agreementId} from cache after ${eventName}`);
+    },
+    [mutate, isAgreementListKey],
+  );
+
   // ACTION EVENTS - Invalidate only /actions endpoint
   useSSEEventHandler(eventSource, 'action_created', () => {
     invalidateEndpoint('/actions', 'action_created');
@@ -94,17 +185,19 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     invalidateEndpoint('/actions', 'action_deleted');
   });
 
-  // AGREEMENT EVENTS - Invalidate only /agreements endpoint
-  useSSEEventHandler(eventSource, 'agreement_created', () => {
-    invalidateEndpoint('/agreements', 'agreement_created');
+  // AGREEMENT EVENTS - Fine-grained: patch the session's cached list in place
+  // from the entity in the payload (no refetch). Relationship-scoped on the wire,
+  // but routed to the right session cache via the entity's coaching_session_id.
+  useSSEEventHandler(eventSource, 'agreement_created', (event) => {
+    upsertAgreement(event.data.agreement, 'agreement_created');
   });
 
-  useSSEEventHandler(eventSource, 'agreement_updated', () => {
-    invalidateEndpoint('/agreements', 'agreement_updated');
+  useSSEEventHandler(eventSource, 'agreement_updated', (event) => {
+    upsertAgreement(event.data.agreement, 'agreement_updated');
   });
 
-  useSSEEventHandler(eventSource, 'agreement_deleted', () => {
-    invalidateEndpoint('/agreements', 'agreement_deleted');
+  useSSEEventHandler(eventSource, 'agreement_deleted', (event) => {
+    removeAgreement(event.data.agreement_id, 'agreement_deleted');
   });
 
   // GOAL EVENTS - Invalidate /goals and session-scoped goal caches (join table)
@@ -150,5 +243,14 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   // server-side carry-over copy on a new session's first read.
   useSSEEventHandler(eventSource, 'topics_changed', () => {
     invalidateEndpoint('/topics', 'topics_changed');
+  });
+
+  // COACHING SESSION TITLE EVENTS - Invalidate the coaching session caches.
+  // Coarse-by-design (parity with topics_changed): the event carries no title,
+  // so we refetch the single read and the enriched list reads that surface
+  // display_title. The month count caches are excluded — a rename can't change
+  // a count — so we don't over-match them.
+  useSSEEventHandler(eventSource, 'coaching_session_title_updated', () => {
+    invalidateCoachingSessionTitle('coaching_session_title_updated');
   });
 }

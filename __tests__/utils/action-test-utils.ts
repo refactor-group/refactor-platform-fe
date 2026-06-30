@@ -19,6 +19,7 @@ import type {
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { ItemStatus } from "@/types/general";
+import { Some, None } from "@/types/option";
 
 // ============================================================================
 // UUID Generator
@@ -99,7 +100,8 @@ export interface MockActionOptions {
   userId?: string;
   body?: string;
   status?: ItemStatus;
-  dueBy: DateTime;
+  /** Pass null for an action with no due date. */
+  dueBy: DateTime | null;
   createdAt?: DateTime;
   statusChangedAt?: DateTime;
   assigneeIds?: string[];
@@ -120,7 +122,7 @@ export function createMockAction(options: MockActionOptions): Action {
     body: options.body ?? "Test action",
     status: options.status ?? ItemStatus.NotStarted,
     status_changed_at: options.statusChangedAt ?? now,
-    due_by: options.dueBy,
+    due_by: options.dueBy ? Some(options.dueBy) : None,
     created_at: options.createdAt ?? now.minus({ days: 7 }),
     updated_at: now,
     assignee_ids: options.assigneeIds ?? [TEST_USER_IDS.CURRENT_USER],

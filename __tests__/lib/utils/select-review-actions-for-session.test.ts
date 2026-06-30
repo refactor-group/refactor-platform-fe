@@ -4,9 +4,16 @@ import { selectReviewActionsForSession } from "@/lib/utils/select-review-actions
 import type { Action } from "@/types/action";
 import type { CoachingSession } from "@/types/coaching-session";
 import { ItemStatus } from "@/types/general";
-import { Some } from "@/types/option";
+import { Some, None } from "@/types/option";
 
-function makeAction(overrides: Partial<Action> & { id: string; coaching_session_id: string; due_by: DateTime }): Action {
+function makeAction({
+  due_by,
+  ...overrides
+}: Partial<Omit<Action, "due_by">> & {
+  id: string;
+  coaching_session_id: string;
+  due_by: DateTime | null;
+}): Action {
   return {
     id: overrides.id,
     coaching_session_id: overrides.coaching_session_id,
@@ -14,7 +21,7 @@ function makeAction(overrides: Partial<Action> & { id: string; coaching_session_
     body: "An action",
     goal_id: Some("goal-1"),
     status: ItemStatus.NotStarted,
-    due_by: overrides.due_by,
+    due_by: due_by ? Some(due_by) : None,
     assignee_ids: [],
     created_at: DateTime.now(),
     updated_at: DateTime.now(),

@@ -176,7 +176,7 @@ describe("CompactActionCard", () => {
         <Wrapper>
           <CompactActionCard
             {...baseProps({
-              action: createMockAction({ due_by: dueDate }),
+              action: createMockAction({ due_by: Some(dueDate) }),
             })}
           />
         </Wrapper>
@@ -193,7 +193,7 @@ describe("CompactActionCard", () => {
         <Wrapper>
           <CompactActionCard
             {...baseProps({
-              action: createMockAction({ due_by: pastDate }),
+              action: createMockAction({ due_by: Some(pastDate) }),
             })}
           />
         </Wrapper>
@@ -413,7 +413,7 @@ describe("CompactActionCard", () => {
         <Wrapper>
           <CompactActionCard
             {...baseProps({
-              action: createMockAction({ id: "", body: "", due_by: initialDueBy }),
+              action: createMockAction({ id: "", body: "", due_by: Some(initialDueBy) }),
               initialEditing: true,
               onBodyChange,
               onDueDateChange,

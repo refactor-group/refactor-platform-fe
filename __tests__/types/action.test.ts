@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { isAction, sortActionArray, sortByPositionMap, sortByDateField } from '@/types/action'
 import { SortOrder } from '@/types/sorting'
 import { ItemStatus } from '@/types/general'
-import { None } from '@/types/option'
+import { Some, None } from '@/types/option'
 import { DateTime } from 'ts-luxon'
 import type { Action } from '@/types/action'
 
@@ -14,7 +14,7 @@ const makeAction = (id: string, createdAt: string, updatedAt: string): Action =>
   body: `Action ${id}`,
   status: ItemStatus.NotStarted,
   status_changed_at: DateTime.now(),
-  due_by: DateTime.now(),
+  due_by: Some(DateTime.now()),
   created_at: DateTime.fromISO(createdAt),
   updated_at: DateTime.fromISO(updatedAt),
   assignee_ids: [],
@@ -93,9 +93,9 @@ describe('sortActionArray', () => {
     it('should produce stable order when primary sort field values are equal', () => {
       const sameDueBy = DateTime.fromISO('2026-02-10')
       const tiedActions = [
-        { ...makeAction('zzz', '2026-02-01', '2026-02-10'), due_by: sameDueBy },
-        { ...makeAction('aaa', '2026-02-01', '2026-02-10'), due_by: sameDueBy },
-        { ...makeAction('mmm', '2026-02-01', '2026-02-10'), due_by: sameDueBy },
+        { ...makeAction('zzz', '2026-02-01', '2026-02-10'), due_by: Some(sameDueBy) },
+        { ...makeAction('aaa', '2026-02-01', '2026-02-10'), due_by: Some(sameDueBy) },
+        { ...makeAction('mmm', '2026-02-01', '2026-02-10'), due_by: Some(sameDueBy) },
       ]
 
       const sorted = sortActionArray(tiedActions, SortOrder.Desc, 'due_by')
@@ -105,21 +105,40 @@ describe('sortActionArray', () => {
 
     it('should maintain primary sort order when values differ', () => {
       const distinctActions = [
-        { ...makeAction('b', '2026-02-02', '2026-02-10'), due_by: DateTime.fromISO('2026-02-05') },
-        { ...makeAction('a', '2026-02-01', '2026-02-12'), due_by: DateTime.fromISO('2026-02-10') },
-        { ...makeAction('c', '2026-02-03', '2026-02-08'), due_by: DateTime.fromISO('2026-02-01') },
+        { ...makeAction('b', '2026-02-02', '2026-02-10'), due_by: Some(DateTime.fromISO('2026-02-05')) },
+        { ...makeAction('a', '2026-02-01', '2026-02-12'), due_by: Some(DateTime.fromISO('2026-02-10')) },
+        { ...makeAction('c', '2026-02-03', '2026-02-08'), due_by: Some(DateTime.fromISO('2026-02-01')) },
       ]
 
       const sorted = sortActionArray(distinctActions, SortOrder.Desc, 'due_by')
       expect(sorted.map((a) => a.id)).toEqual(['a', 'b', 'c'])
     })
 
+    it('sorts undated (None due_by) actions last without throwing, in both directions', () => {
+      const dated = { ...makeAction('dated', '2026-02-01', '2026-02-10'), due_by: Some(DateTime.fromISO('2026-02-05')) }
+      const undated = { ...makeAction('undated', '2026-02-01', '2026-02-10'), due_by: None }
+
+      const asc = sortActionArray([undated, dated], SortOrder.Asc, 'due_by')
+      expect(asc.map((a) => a.id)).toEqual(['dated', 'undated'])
+
+      const desc = sortActionArray([undated, dated], SortOrder.Desc, 'due_by')
+      expect(desc.map((a) => a.id)).toEqual(['dated', 'undated'])
+    })
+
+    it('breaks ties between two undated actions by id', () => {
+      const a = { ...makeAction('zzz', '2026-02-01', '2026-02-10'), due_by: None }
+      const b = { ...makeAction('aaa', '2026-02-01', '2026-02-10'), due_by: None }
+
+      const sorted = sortActionArray([a, b], SortOrder.Desc, 'due_by')
+      expect(sorted.map((x) => x.id)).toEqual(['aaa', 'zzz'])
+    })
+
     it('should be idempotent — sorting twice yields the same order', () => {
       const sameDueBy = DateTime.fromISO('2026-02-10')
       const tiedActions = [
-        { ...makeAction('c', '2026-02-01', '2026-02-10'), due_by: sameDueBy },
-        { ...makeAction('a', '2026-02-01', '2026-02-10'), due_by: sameDueBy },
-        { ...makeAction('b', '2026-02-01', '2026-02-10'), due_by: sameDueBy },
+        { ...makeAction('c', '2026-02-01', '2026-02-10'), due_by: Some(sameDueBy) },
+        { ...makeAction('a', '2026-02-01', '2026-02-10'), due_by: Some(sameDueBy) },
+        { ...makeAction('b', '2026-02-01', '2026-02-10'), due_by: Some(sameDueBy) },
       ]
 
       const first = sortActionArray(tiedActions, SortOrder.Asc, 'due_by')
