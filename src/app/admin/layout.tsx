@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { PageContainer } from "@/components/ui/page-container";
 
 export const metadata: Metadata = {
-  title: `Platform - ${siteConfig.name}`,
+  title: `Platform Settings - ${siteConfig.name}`,
   description: "Manage platform-wide settings and organizations",
 };
 
