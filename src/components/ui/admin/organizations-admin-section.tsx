@@ -78,6 +78,7 @@ export function OrganizationsAdminSection() {
                   key={organization.id}
                   organization={organization}
                   onChanged={refresh}
+                  showArchivedBadge={status === OrganizationStatusFilter.All}
                 />
               ))}
             </div>

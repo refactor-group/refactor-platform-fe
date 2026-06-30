@@ -78,7 +78,7 @@ describe("OrganizationRow archive lifecycle", () => {
     expect(mockToastSuccess).toHaveBeenCalled();
   });
 
-  it("archived org: shows badge + Unarchive action, calls unarchive", async () => {
+  it("archived org: Unarchive action calls unarchive", async () => {
     const user = userEvent.setup();
     const onChanged = vi.fn();
     render(
@@ -88,8 +88,6 @@ describe("OrganizationRow archive lifecycle", () => {
       />
     );
 
-    expect(screen.getByText("Archived")).toBeInTheDocument();
-
     await user.click(
       screen.getByRole("button", { name: "Organization actions" })
     );
@@ -98,6 +96,22 @@ describe("OrganizationRow archive lifecycle", () => {
     await waitFor(() => expect(mockUnarchive).toHaveBeenCalledWith("org-1"));
     expect(mockArchive).not.toHaveBeenCalled();
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
+  it("shows the Archived badge only when showArchivedBadge is set (All tab)", () => {
+    const org = makeOrg({ archived_at: "2026-01-01T00:00:00.000Z" });
+    const { rerender } = render(
+      <OrganizationRow organization={org} onChanged={vi.fn()} />
+    );
+    // Archived tab (default): no redundant badge, but the byline still renders
+    expect(screen.queryByText("Archived")).not.toBeInTheDocument();
+    expect(screen.getByText(/by a former admin/)).toBeInTheDocument();
+
+    // All tab: badge present to distinguish archived from active rows
+    rerender(
+      <OrganizationRow organization={org} onChanged={vi.fn()} showArchivedBadge />
+    );
+    expect(screen.getByText("Archived")).toBeInTheDocument();
   });
 
   it("archived org: byline shows resolved archiver name + date", () => {

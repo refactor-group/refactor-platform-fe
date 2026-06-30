@@ -22,11 +22,14 @@ import { OrganizationArchivedByline } from "./organization-archived-byline";
 interface OrganizationRowProps {
   organization: Organization;
   onChanged: () => void;
+  // Only meaningful in a mixed list (All tab); redundant on the Archived tab.
+  showArchivedBadge?: boolean;
 }
 
 export function OrganizationRow({
   organization,
   onChanged,
+  showArchivedBadge = false,
 }: OrganizationRowProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -67,7 +70,9 @@ export function OrganizationRow({
       <div className="flex-1 min-w-0">
         <h3 className="font-medium truncate flex items-center gap-2">
           <span className="truncate">{organization.name}</span>
-          {archived && <Badge variant="secondary">Archived</Badge>}
+          {archived && showArchivedBadge && (
+            <Badge variant="secondary">Archived</Badge>
+          )}
         </h3>
         <p className="text-sm text-muted-foreground truncate">
           {organization.slug}
