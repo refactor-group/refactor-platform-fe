@@ -285,13 +285,14 @@ export default function CoachingSessionForm({
       await handler(utcDateTime);
       refresh();
     } catch (error) {
+      const archivedMessage = organizationArchivedMessage(error);
       if (!(error instanceof EntityApiError)) {
         console.error(`Failed to ${mode} coaching session:`, error);
       } else if (error.status === 409 && error.data?.error === "oauth_token_revoked") {
         toast.error("Your Google Meet integration has been disconnected. Please reconnect in Settings.");
         router.push("/settings/integrations");
-      } else if (organizationArchivedMessage(error) !== null) {
-        toast.error(organizationArchivedMessage(error)!);
+      } else if (archivedMessage !== null) {
+        toast.error(archivedMessage);
         console.error(`Failed to ${mode} coaching session:`, error);
       } else {
         let message: string;

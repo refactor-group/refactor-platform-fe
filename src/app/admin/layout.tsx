@@ -1,4 +1,4 @@
-import type React from "react";
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { siteConfig } from "@/site.config";
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function AdminLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <SidebarProvider>

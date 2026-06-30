@@ -1,8 +1,7 @@
 "use client";
 
-import type React from "react";
-
 import { useEffect, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,13 +46,13 @@ export function OrganizationFormDialog({
     setNameError(null);
   }, [organization, open]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === "name") setNameError(null);
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
