@@ -1,5 +1,7 @@
 // Interacts with the Organizations endpoints
 
+import { useState } from "react";
+import { useSWRConfig } from "swr";
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import {
@@ -247,4 +249,38 @@ export const useOrganizationMutation = () => {
     delete: OrganizationApi.delete,
     deleteNested: OrganizationApi.deleteNested,
   });
+};
+
+/**
+ * Hook for the archive/unarchive lifecycle actions, which are sub-action POSTs
+ * rather than standard CRUD and so don't flow through {@link useOrganizationMutation}.
+ * Each call invalidates every organization cache — including the sibling
+ * active/archived/all {@link useAllOrganizations} keys — so switching status
+ * tabs after a toggle reflects the change without waiting for a stale-revalidate.
+ *
+ * @returns An object containing:
+ * * archive: Archives an organization by id
+ * * unarchive: Restores an archived organization by id
+ * * isLoading: Boolean indicating if a toggle is in progress
+ */
+export const useOrganizationArchiveMutation = () => {
+  const { mutate } = useSWRConfig();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const run = async (operation: () => Promise<Organization>) => {
+    setIsLoading(true);
+    try {
+      const result = await operation();
+      EntityApi.invalidateEntityCache(mutate, ORGANIZATIONS_BASEURL);
+      return result;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    archive: (id: Id) => run(() => OrganizationApi.archive(id)),
+    unarchive: (id: Id) => run(() => OrganizationApi.unarchive(id)),
+    isLoading,
+  };
 };
