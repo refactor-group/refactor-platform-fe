@@ -250,9 +250,11 @@
       
       > label {
         flex-shrink: 0;
-        margin-top: 0.1rem;
+        display: flex;
+        align-items: center;
+        height: 1.6em;
         user-select: none;
-        
+
         input[type="checkbox"] {
           margin: 0;
           accent-color: var(--editor-focus-border);
@@ -261,6 +263,10 @@
       
       > div {
         flex: 1;
+
+        p {
+          margin: 0;
+        }
       }
     }
   }
