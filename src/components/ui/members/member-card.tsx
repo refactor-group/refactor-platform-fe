@@ -39,6 +39,7 @@ import {
 } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
+import { organizationArchivedMessage } from "@/lib/api/organization-errors";
 import { toast } from "sonner";
 
 interface MemberCardProps {
@@ -182,7 +183,10 @@ export function MemberCard({
       setAssignedMember(null);
     } catch (error) {
       toast.error(
-        isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : `Error assigning ${assignMode}`
+        organizationArchivedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : `Error assigning ${assignMode}`)
       );
       console.error("Error creating coaching relationship:", error);
     }

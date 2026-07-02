@@ -2,7 +2,11 @@
 
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
-import { Organization, defaultOrganization } from "@/types/organization";
+import {
+  Organization,
+  OrganizationStatusFilter,
+  defaultOrganization,
+} from "@/types/organization";
 import { EntityApi } from "./entity-api";
 
 export const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
@@ -24,6 +28,47 @@ export const OrganizationApi = {
     EntityApi.listFn<Organization>(ORGANIZATIONS_BASEURL, {
       params: { user_id: userId },
     }),
+
+  /*
+   * Fetches every organization on the platform. SuperAdmin-gated on the backend
+   * (no user_id scoping); a 403 is expected for any non-SuperAdmin caller.
+   *
+   * @param status Which lifecycle subset to return (active | archived | all);
+   *   the backend defaults to active when the param is omitted.
+   * @returns Promise resolving to an array of all Organization objects
+   */
+  listAll: async (
+    status: OrganizationStatusFilter = OrganizationStatusFilter.Active
+  ): Promise<Organization[]> =>
+    EntityApi.listFn<Organization>(ORGANIZATIONS_BASEURL, {
+      params: { status },
+    }),
+
+  /**
+   * Archives an organization (reversible). Sets archived_at server-side; the org
+   * drops out of active reads but keeps all data. SuperAdmin-gated, idempotent.
+   *
+   * @param id The ID of the organization to archive
+   * @returns Promise resolving to the updated Organization object
+   */
+  archive: async (id: Id): Promise<Organization> =>
+    EntityApi.createFn<Record<string, never>, Organization>(
+      `${ORGANIZATIONS_BASEURL}/${id}/archive`,
+      {}
+    ),
+
+  /**
+   * Reverses an archive, restoring the organization to active. SuperAdmin-gated,
+   * idempotent.
+   *
+   * @param id The ID of the organization to unarchive
+   * @returns Promise resolving to the updated Organization object
+   */
+  unarchive: async (id: Id): Promise<Organization> =>
+    EntityApi.createFn<Record<string, never>, Organization>(
+      `${ORGANIZATIONS_BASEURL}/${id}/unarchive`,
+      {}
+    ),
 
   /**
    * Fetches a single organization by its ID.
@@ -107,6 +152,39 @@ export const useOrganizationList = (userId: Id) => {
       ORGANIZATIONS_BASEURL,
       () => OrganizationApi.list(userId),
       userId
+    );
+
+  return {
+    organizations: entities,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * A custom React hook that fetches every organization on the platform.
+ *
+ * SuperAdmin-only: the backend returns 403 for non-SuperAdmin callers, surfaced
+ * here as `isError`. The `status` is part of the SWR key, so the active /
+ * archived / all subsets cache independently and never collide with the
+ * per-user {@link useOrganizationList} cache.
+ *
+ * @param status Which lifecycle subset to fetch (defaults to active)
+ * @returns An object containing:
+ * * organizations: Array of all Organization objects (empty until loaded)
+ * * isLoading: Boolean indicating if the data is currently being fetched
+ * * isError: Error object if the fetch failed (e.g. 403 for non-SuperAdmins)
+ * * refresh: Function to manually trigger a refresh of the data
+ */
+export const useAllOrganizations = (
+  status: OrganizationStatusFilter = OrganizationStatusFilter.Active
+) => {
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<Organization>(
+      ORGANIZATIONS_BASEURL,
+      () => OrganizationApi.listAll(status),
+      ["all", status]
     );
 
   return {
