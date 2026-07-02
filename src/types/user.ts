@@ -173,11 +173,13 @@ export function isAdminOrSuperAdmin(roleState: UserRoleState): boolean {
  * context. Use this to gate platform-wide features (e.g. the /admin section).
  *
  * @param roles - Array of UserRole assignments for the user
- * @returns true if the user has a SuperAdmin role with organization_id === null
+ * @returns true if the user has a SuperAdmin role with no organization scope
  */
 export function isSuperAdmin(roles: UserRole[]): boolean {
+  // Loose `== null` tolerates a role serialized with organization_id omitted
+  // (undefined) as well as explicit null, matching isOrganizationArchived.
   return roles.some(
-    (r) => r.role === Role.SuperAdmin && r.organization_id === null
+    (r) => r.role === Role.SuperAdmin && r.organization_id == null
   );
 }
 

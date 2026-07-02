@@ -183,7 +183,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {isAdminOrSuperAdmin(currentUserRoleState) && (
+            {(isSuperAdmin || isAdminOrSuperAdmin(currentUserRoleState)) && (
               <Collapsible
                 open={isAdminMenuOpen}
                 onOpenChange={setIsAdminMenuOpen}
@@ -226,14 +226,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       )}
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton asChild>
-                          <Link href={`/organizations/${currentOrganizationId}/members`}>
-                            <Users className="h-4 w-4" />
-                            <span>Members</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
+                      {currentOrganizationId && (
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link href={`/organizations/${currentOrganizationId}/members`}>
+                              <Users className="h-4 w-4" />
+                              <span>Members</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )}
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>
