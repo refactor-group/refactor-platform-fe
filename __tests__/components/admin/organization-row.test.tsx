@@ -17,10 +17,11 @@ vi.mock("sonner", () => ({
 const mockArchive = vi.fn();
 const mockUnarchive = vi.fn();
 vi.mock("@/lib/api/organizations", () => ({
-  OrganizationApi: {
+  useOrganizationArchiveMutation: () => ({
     archive: (...args: unknown[]) => mockArchive(...args),
     unarchive: (...args: unknown[]) => mockUnarchive(...args),
-  },
+    isLoading: false,
+  }),
   // child dialogs call this hook even while closed
   useOrganizationMutation: () => ({
     create: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock("@/lib/api/users", () => ({
       last_name: "Admin",
     },
     isLoading: false,
+    isError: undefined,
   }),
 }));
 
