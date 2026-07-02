@@ -59,7 +59,11 @@ export function OrganizationFormDialog({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    const invalidName = validateOrganizationName(formData.name);
+    // Send exactly what we validate (and what the backend stores): the trimmed
+    // name — so a whitespace-padded value can't pass the pre-check yet differ
+    // from what hits the wire.
+    const name = formData.name.trim();
+    const invalidName = validateOrganizationName(name);
     if (invalidName !== null) {
       setNameError(invalidName);
       return;
@@ -69,17 +73,17 @@ export function OrganizationFormDialog({
       if (isEdit) {
         await update(organization.id, {
           ...organization,
-          name: formData.name,
+          name,
           logo: formData.logo,
         });
-        toast.success(`Organization "${formData.name}" updated`);
+        toast.success(`Organization "${name}" updated`);
       } else {
         await create({
           ...defaultOrganization(),
-          name: formData.name,
+          name,
           logo: formData.logo,
         });
-        toast.success(`Organization "${formData.name}" created`);
+        toast.success(`Organization "${name}" created`);
       }
       onSaved();
       onOpenChange(false);

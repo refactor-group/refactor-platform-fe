@@ -77,6 +77,22 @@ describe("OrganizationFormDialog", () => {
     expect(mockToastSuccess).toHaveBeenCalled();
   });
 
+  it("sends the trimmed name (what is validated is what is sent)", async () => {
+    render(
+      <OrganizationFormDialog open onOpenChange={vi.fn()} onSaved={vi.fn()} />
+    );
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "  Padded Org  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create organization" }));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Padded Org" })
+    );
+  });
+
   it("updates an existing organization when given one", async () => {
     const onSaved = vi.fn();
     render(

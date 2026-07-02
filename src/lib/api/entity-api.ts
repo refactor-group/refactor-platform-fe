@@ -435,16 +435,6 @@ export namespace EntityApi {
   };
 
   /**
-   * A generic hook for entity mutations that manages loading and error states
-   * and handles cache invalidation.
-   *
-   * @template T The entity type
-   * @template U The entity type returned by the API
-   * @param baseUrl The base URL for the entity API endpoint
-   * @param api Object containing CRUD operations for the entity
-   * @returns Object with CRUD methods, loading state, and error state
-   */
-  /**
    * Invalidates every SWR cache entry whose key targets the given base URL —
    * both single-entity string keys (from {@link useEntity}) and list tuple keys
    * `[url, params]` (from {@link useEntityList}). Use for out-of-band mutations
@@ -465,6 +455,16 @@ export namespace EntityApi {
       return false;
     });
 
+  /**
+   * A generic hook for entity mutations that manages loading and error states
+   * and handles cache invalidation.
+   *
+   * @template T The entity type
+   * @template U The entity type returned by the API
+   * @param baseUrl The base URL for the entity API endpoint
+   * @param api Object containing CRUD operations for the entity
+   * @returns Object with CRUD methods, loading state, and error state
+   */
   export const useEntityMutation = <T, U = T>(
     baseUrl: string,
     api: ApiOperations<T, U>
