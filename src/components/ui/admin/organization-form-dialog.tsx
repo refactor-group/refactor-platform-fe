@@ -15,7 +15,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useOrganizationMutation } from "@/lib/api/organizations";
-import { organizationNameTakenMessage } from "@/lib/api/organization-errors";
+import {
+  organizationNameTakenMessage,
+  organizationNameInvalidMessage,
+  validateOrganizationName,
+} from "@/lib/api/organization-errors";
 import { Organization, defaultOrganization } from "@/types/organization";
 
 interface OrganizationFormDialogProps {
@@ -55,6 +59,12 @@ export function OrganizationFormDialog({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    const invalidName = validateOrganizationName(formData.name);
+    if (invalidName !== null) {
+      setNameError(invalidName);
+      return;
+    }
+
     try {
       if (isEdit) {
         await update(organization.id, {
@@ -75,9 +85,11 @@ export function OrganizationFormDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving organization:", error);
-      const nameTaken = organizationNameTakenMessage(error);
-      if (nameTaken !== null) {
-        setNameError(nameTaken);
+      const nameError =
+        organizationNameTakenMessage(error) ??
+        organizationNameInvalidMessage(error);
+      if (nameError !== null) {
+        setNameError(nameError);
       } else {
         toast.error(
           isEdit
