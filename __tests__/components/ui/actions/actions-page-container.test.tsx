@@ -117,6 +117,8 @@ vi.mock("@/lib/api/entity-api", () => {
   return {
     EntityApiError,
     PERMISSION_DENIED_MESSAGE: "You don't have permission to perform this action.",
+    viewPermissionDeniedMessage: (resource: string) =>
+      `You don't have permission to view ${resource}.`,
     isForbiddenError: (e: unknown) =>
       e instanceof EntityApiError && e.isForbidden(),
   };

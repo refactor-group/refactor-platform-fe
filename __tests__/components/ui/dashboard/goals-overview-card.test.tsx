@@ -6,7 +6,18 @@ import { AssigneeScope } from "@/types/assigned-actions";
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
 import { ItemStatus } from "@/types/general";
+import { EntityApiError } from "@/types/entity-api-error";
 import { Some, None } from "@/types/option";
+
+// A real EntityApiError carrying the given status, so the card's real
+// isForbiddenError (instanceof + status) narrows correctly.
+function apiError(status: number): EntityApiError {
+  const axiosLike = Object.assign(new Error("Request failed"), {
+    isAxiosError: true,
+    response: { status, statusText: "Error", data: {} },
+  });
+  return new EntityApiError("GET", "/api/goal_progress", axiosLike);
+}
 
 // ── Hook mocks ─────────────────────────────────────────────────────────
 const mockUseGoalProgressList = vi.fn();
@@ -165,6 +176,25 @@ describe("GoalsOverviewCard", () => {
     expect(
       screen.getByText(/couldn[’']t load active goals\. please refresh/i)
     ).toBeInTheDocument();
+  });
+
+  it("renders the permission-denied message when goal_progress returns 403", () => {
+    setupDefault();
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: [],
+      isLoading: false,
+      isError: apiError(403),
+      refresh: vi.fn(),
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(
+      screen.getByText("You don't have permission to perform this action.")
+    ).toBeInTheDocument();
+    // The generic fetch-failure copy must not also appear.
+    expect(
+      screen.queryByText(/couldn[’']t load active goals/i)
+    ).not.toBeInTheDocument();
   });
 
   it("renders the coachee name and the goal count when the user is the coach", () => {
