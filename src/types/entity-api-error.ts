@@ -144,6 +144,14 @@ export const PERMISSION_DENIED_MESSAGE =
   "You don't have permission to perform this action.";
 
 /**
+ * User-facing message for a 403 on a read/view. Keeps the shared prefix and
+ * punctuation in one place while letting each call site name the resource, e.g.
+ * `viewPermissionDeniedMessage("these actions")`.
+ */
+export const viewPermissionDeniedMessage = (resource: string): string =>
+  `You don't have permission to view ${resource}.`;
+
+/**
  * Type-safe check for a 403 Forbidden error from an arbitrary thrown value.
  * Convenience for call sites that don't already narrow to EntityApiError.
  */

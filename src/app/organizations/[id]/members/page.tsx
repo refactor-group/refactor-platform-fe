@@ -8,7 +8,7 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useUserList } from "@/lib/api/organizations/users";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
-import { Id, isForbiddenError } from "@/types/general";
+import { Id, isForbiddenError, viewPermissionDeniedMessage } from "@/types/general";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { MemberContainer } from "@/components/ui/members/member-container";
 import { PageContainer } from "@/components/ui/page-container";
@@ -64,7 +64,7 @@ export default function MembersPage({
     return (
       <ForbiddenError
         title="Members Access Denied"
-        message="You don't have permission to view this organization's members."
+        message={viewPermissionDeniedMessage("this organization's members")}
       />
     );
   }

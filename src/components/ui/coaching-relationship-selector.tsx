@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Id, isForbiddenError } from "@/types/general";
+import { Id, isForbiddenError, viewPermissionDeniedMessage } from "@/types/general";
 import { sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
@@ -38,7 +38,7 @@ function CoachingRelationshipsSelectItems({
 
   if (isLoading) return <div>Loading...</div>;
   if (isForbiddenError(isError))
-    return <div>You don&apos;t have permission to view these relationships</div>;
+    return <div>{viewPermissionDeniedMessage("these relationships")}</div>;
   if (isError) return <div>Error loading coaching relationships</div>;
   if (!relationships?.length) return <div>No coaching relationships found</div>;
 

@@ -4,6 +4,7 @@ import { DateTime } from "ts-luxon";
 export {
   EntityApiError,
   PERMISSION_DENIED_MESSAGE,
+  viewPermissionDeniedMessage,
   isForbiddenError,
 } from "./entity-api-error";
 

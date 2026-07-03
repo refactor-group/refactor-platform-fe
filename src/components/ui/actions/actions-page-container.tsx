@@ -21,7 +21,12 @@ import type { Id, ItemStatus } from "@/types/general";
 import { applyTimeFilter } from "@/components/ui/actions/utils";
 import { ActionsPageHeader } from "@/components/ui/actions/actions-page-header";
 import { KanbanBoard } from "@/components/ui/actions/kanban-board";
-import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/lib/api/entity-api";
+import {
+  EntityApiError,
+  PERMISSION_DENIED_MESSAGE,
+  viewPermissionDeniedMessage,
+  isForbiddenError,
+} from "@/lib/api/entity-api";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -316,7 +321,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
     return (
       <ForbiddenError
         title="Actions Access Denied"
-        message="You don't have permission to view these actions."
+        message={viewPermissionDeniedMessage("these actions")}
       />
     );
   }

@@ -13,6 +13,7 @@ import axios, { type AxiosRequestConfig } from "axios";
 export {
   EntityApiError,
   PERMISSION_DENIED_MESSAGE,
+  viewPermissionDeniedMessage,
   isForbiddenError,
 } from "@/types/general";
 
