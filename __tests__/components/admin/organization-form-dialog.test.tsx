@@ -77,6 +77,22 @@ describe("OrganizationFormDialog", () => {
     expect(mockToastSuccess).toHaveBeenCalled();
   });
 
+  it("sends the trimmed name (what is validated is what is sent)", async () => {
+    render(
+      <OrganizationFormDialog open onOpenChange={vi.fn()} onSaved={vi.fn()} />
+    );
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "  Padded Org  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create organization" }));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Padded Org" })
+    );
+  });
+
   it("updates an existing organization when given one", async () => {
     const onSaved = vi.fn();
     render(
@@ -140,6 +156,77 @@ describe("OrganizationFormDialog", () => {
     await waitFor(() =>
       expect(
         screen.getByText("An organization with that name already exists.")
+      ).toBeInTheDocument()
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
+  it("blocks submit with an inline error on an empty name (no request)", async () => {
+    render(
+      <OrganizationFormDialog open onOpenChange={vi.fn()} onSaved={vi.fn()} />
+    );
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create organization" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Organization name must not be empty.")
+      ).toBeInTheDocument()
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it("blocks submit with an inline error on a name over 255 chars (no request)", async () => {
+    render(
+      <OrganizationFormDialog open onOpenChange={vi.fn()} onSaved={vi.fn()} />
+    );
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "a".repeat(256) },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create organization" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Organization name must be at most 255 characters (got 256)."
+        )
+      ).toBeInTheDocument()
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it("shows an inline name error on a server 422 validation_error (no toast)", async () => {
+    // A name that passes the client check but the server rejects (e.g. a
+    // grapheme the BE counts differently); proves the 422 fallback wires in.
+    mockCreate.mockRejectedValueOnce(
+      makeApiError(422, {
+        status_code: 422,
+        error: "validation_error",
+        message: "Organization name must be at most 255 characters (got 812).",
+      })
+    );
+    const onOpenChange = vi.fn();
+    render(
+      <OrganizationFormDialog open onOpenChange={onOpenChange} onSaved={vi.fn()} />
+    );
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Valid Enough" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create organization" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Organization name must be at most 255 characters (got 812)."
+        )
       ).toBeInTheDocument()
     );
     expect(mockToastError).not.toHaveBeenCalled();

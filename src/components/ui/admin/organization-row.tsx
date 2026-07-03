@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { OrganizationApi } from "@/lib/api/organizations";
+import { useOrganizationArchiveMutation } from "@/lib/api/organizations";
 import { Organization, isOrganizationArchived } from "@/types/organization";
 import { OrganizationFormDialog } from "./organization-form-dialog";
 import { DeleteOrganizationDialog } from "./delete-organization-dialog";
@@ -33,7 +33,8 @@ export function OrganizationRow({
 }: OrganizationRowProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
+  const { archive, unarchive, isLoading: isArchiving } =
+    useOrganizationArchiveMutation();
 
   const archived = isOrganizationArchived(organization);
 
@@ -43,13 +44,12 @@ export function OrganizationRow({
       : organization.created_at;
 
   const handleArchiveToggle = async () => {
-    setIsArchiving(true);
     try {
       if (archived) {
-        await OrganizationApi.unarchive(organization.id);
+        await unarchive(organization.id);
         toast.success(`Organization "${organization.name}" unarchived`);
       } else {
-        await OrganizationApi.archive(organization.id);
+        await archive(organization.id);
         toast.success(`Organization "${organization.name}" archived`);
       }
       onChanged();
@@ -60,8 +60,6 @@ export function OrganizationRow({
           ? "There was an error unarchiving the organization"
           : "There was an error archiving the organization"
       );
-    } finally {
-      setIsArchiving(false);
     }
   };
 

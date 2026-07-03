@@ -4,6 +4,9 @@ import {
   organizationArchivedMessage,
   organizationNameTakenMessage,
   organizationNotEmptyMessage,
+  organizationNameInvalidMessage,
+  validateOrganizationName,
+  ORGANIZATION_NAME_MAX_LENGTH,
 } from "@/lib/api/organization-errors";
 
 function apiError(status: number, data: unknown): EntityApiError {
@@ -55,5 +58,77 @@ describe("organization error discriminators", () => {
     expect(organizationNotEmptyMessage(notEmpty)).toBe("not empty");
     expect(organizationNameTakenMessage(notEmpty)).toBeNull();
     expect(organizationNotEmptyMessage(nameTaken)).toBeNull();
+  });
+});
+
+describe("organizationNameInvalidMessage (422 validation_error)", () => {
+  it("returns the backend message on a 422 validation_error", () => {
+    const err = apiError(422, {
+      error: "validation_error",
+      message: "Organization name must not be empty.",
+    });
+    expect(organizationNameInvalidMessage(err)).toBe(
+      "Organization name must not be empty."
+    );
+  });
+
+  it("falls back to a default when the 422 has no message", () => {
+    const err = apiError(422, { error: "validation_error" });
+    expect(organizationNameInvalidMessage(err)).toBe(
+      "Please enter a valid organization name."
+    );
+  });
+
+  it("ignores a validation_error that isn't a 422", () => {
+    const err = apiError(409, { error: "validation_error", message: "x" });
+    expect(organizationNameInvalidMessage(err)).toBeNull();
+  });
+
+  it("ignores a 422 that isn't validation_error, and non-errors", () => {
+    const other = apiError(422, { error: "cannot_link_completed_goal", message: "x" });
+    expect(organizationNameInvalidMessage(other)).toBeNull();
+    expect(organizationNameInvalidMessage(new Error("boom"))).toBeNull();
+    expect(organizationNameInvalidMessage(undefined)).toBeNull();
+  });
+
+  it("does not collide with the 409 name-taken discriminator", () => {
+    const nameTaken = apiError(409, {
+      error: "organization_name_taken",
+      message: "taken",
+    });
+    expect(organizationNameInvalidMessage(nameTaken)).toBeNull();
+  });
+});
+
+describe("validateOrganizationName", () => {
+  it("accepts a normal name", () => {
+    expect(validateOrganizationName("Acme")).toBeNull();
+  });
+
+  it("rejects empty / whitespace-only names", () => {
+    expect(validateOrganizationName("")).toBe(
+      "Organization name must not be empty."
+    );
+    expect(validateOrganizationName("   ")).toBe(
+      "Organization name must not be empty."
+    );
+  });
+
+  it(`accepts exactly ${ORGANIZATION_NAME_MAX_LENGTH} chars and rejects one more`, () => {
+    expect(
+      validateOrganizationName("a".repeat(ORGANIZATION_NAME_MAX_LENGTH))
+    ).toBeNull();
+    expect(
+      validateOrganizationName("a".repeat(ORGANIZATION_NAME_MAX_LENGTH + 1))
+    ).toBe(
+      `Organization name must be at most ${ORGANIZATION_NAME_MAX_LENGTH} characters (got ${
+        ORGANIZATION_NAME_MAX_LENGTH + 1
+      }).`
+    );
+  });
+
+  it("trims before measuring length", () => {
+    const padded = `  ${"a".repeat(ORGANIZATION_NAME_MAX_LENGTH)}  `;
+    expect(validateOrganizationName(padded)).toBeNull();
   });
 });

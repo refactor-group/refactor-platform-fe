@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,8 +24,9 @@ export function OrganizationsAdminSection() {
     useAllOrganizations(status);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const sorted = [...organizations].sort((a, b) =>
-    a.name.localeCompare(b.name)
+  const sorted = useMemo(
+    () => [...organizations].sort((a, b) => a.name.localeCompare(b.name)),
+    [organizations]
   );
 
   return (
