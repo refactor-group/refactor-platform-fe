@@ -21,7 +21,11 @@ import { useRecurrenceState } from "@/lib/hooks/use-recurrence-state";
 import { useCoachingSessionSeriesMutation } from "@/lib/api/coaching-session-series";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { EntityApiError, PERMISSION_DENIED_MESSAGE } from "@/types/entity-api-error";
+import {
+  EntityApiError,
+  PERMISSION_DENIED_MESSAGE,
+  isForbiddenError,
+} from "@/types/entity-api-error";
 import {
   CoachingSessionSeries,
   seriesRecurrenceToEnd,
@@ -198,7 +202,7 @@ function RescheduleSeriesForm({
       onClose();
     } catch (error) {
       let message: string;
-      if (error instanceof EntityApiError && error.isForbidden()) {
+      if (isForbiddenError(error)) {
         message = PERMISSION_DENIED_MESSAGE;
       } else if (error instanceof EntityApiError && error.status === 422) {
         message = "Couldn't reschedule the series. Please review the form and try again.";
