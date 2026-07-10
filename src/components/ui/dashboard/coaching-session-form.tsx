@@ -33,7 +33,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, type FormEvent } fro
 import { useRouter } from "next/navigation";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { EntityApiError } from "@/types/entity-api-error";
+import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/types/entity-api-error";
 import { toast } from "sonner";
 import { Provider } from "@/types/provider";
 import {
@@ -304,6 +304,8 @@ export default function CoachingSessionForm({
           message = "Could not create Google Meet link due to a connection error. Please try again.";
         } else if (error.status === 422) {
           message = `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"}. Please review the form and try again.`;
+        } else if (isForbiddenError(error)) {
+          message = PERMISSION_DENIED_MESSAGE;
         } else {
           message = `Failed to ${mode} coaching session. Please try again.`;
         }

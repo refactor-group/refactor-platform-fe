@@ -10,7 +10,12 @@ import { sessionGuard } from "@/lib/auth/session-guard";
 import axios, { type AxiosRequestConfig } from "axios";
 
 // Re-export EntityApiError for easy access
-export { EntityApiError } from "@/types/general";
+export {
+  EntityApiError,
+  PERMISSION_DENIED_MESSAGE,
+  viewPermissionDeniedMessage,
+  isForbiddenError,
+} from "@/types/general";
 
 /** Standard wrapper for all backend API responses. */
 export interface ApiResponse<T> {

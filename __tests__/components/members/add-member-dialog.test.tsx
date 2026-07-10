@@ -72,6 +72,22 @@ describe("AddMemberDialog write-freeze handling", () => {
     );
   });
 
+  it("shows the permission-denied message on a 403", async () => {
+    mockCreateNested.mockRejectedValueOnce(apiError(403, { error: "forbidden" }));
+    render(
+      <AddMemberDialog open onOpenChange={vi.fn()} onMemberAdded={vi.fn()} />
+    );
+
+    fillForm();
+    fireEvent.click(screen.getByRole("button", { name: "Create Member" }));
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        "You don't have permission to perform this action."
+      )
+    );
+  });
+
   it("falls back to the generic message for other errors", async () => {
     mockCreateNested.mockRejectedValueOnce(new Error("network"));
     render(

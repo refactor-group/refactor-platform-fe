@@ -224,6 +224,22 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
     });
   });
 
+  it("shows the permission-denied toast on a 403", async () => {
+    mockUpdate.mockRejectedValue(makeEntityApiError(403));
+
+    const user = userEvent.setup();
+    renderUpdateForm();
+
+    await user.click(screen.getByRole("button", { name: /update session/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "You don't have permission to perform this action."
+      );
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+  });
+
   it("shows a generic toast for other API errors", async () => {
     mockUpdate.mockRejectedValue(makeEntityApiError(500));
 

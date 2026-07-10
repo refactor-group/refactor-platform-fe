@@ -20,6 +20,7 @@ import { NewUser } from "@/types/user";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { toast } from "sonner";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
+import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 
 interface AddMemberDialogProps {
   open: boolean;
@@ -78,7 +79,9 @@ export function AddMemberDialog({
       console.error("Error creating user:", error);
       toast.error(
         organizationArchivedMessage(error) ??
-          "There was an error adding the member"
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "There was an error adding the member")
       );
     }
   };

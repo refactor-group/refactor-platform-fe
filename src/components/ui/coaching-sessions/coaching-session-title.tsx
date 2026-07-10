@@ -28,6 +28,7 @@ import { EditableSessionTitle } from "./editable-session-title";
 import { PresenceIndicator } from "@/components/ui/presence-indicator";
 import { UserPresence } from "@/types/presence";
 import { RelationshipRole } from "@/types/relationship-role";
+import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 
 const CoachingSessionTitle: FC = () => {
   const { userSession } = useAuthStore((state) => state);
@@ -71,7 +72,9 @@ const CoachingSessionTitle: FC = () => {
     } catch (err) {
       console.error("Failed to save session title:", err);
       sonnerToast.error("Failed to save title", {
-        description: "An error occurred while saving the title.",
+        description: isForbiddenError(err)
+          ? PERMISSION_DENIED_MESSAGE
+          : "An error occurred while saving the title.",
       });
     } finally {
       setSave({ kind: "idle" });

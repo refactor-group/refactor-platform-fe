@@ -12,6 +12,7 @@ import { Id } from "@/types/general"
 import { User, NewUserPassword } from "@/types/user"
 import { useUserPasswordMutation } from "@/lib/api/users"
 import { useLogoutUser } from "@/lib/hooks/use-logout-user"
+import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general"
 
 export function MemberProfileContainer({ userId }: { userId: Id }) {
     const { userId: currentUserId, setTimezone } = useAuthStore((state) => state)
@@ -35,7 +36,7 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
             
             refresh()
         } catch (error) {
-            toast("Error updating profile.")
+            toast(isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Error updating profile.")
             console.error("Error updating profile:", error)
         }
     }
@@ -47,7 +48,7 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
             // Logout the user when the password is updated
             logoutUser()
         } catch (error) {
-            toast("Error updating password.")
+            toast(isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Error updating password.")
             console.error("Error updating password:", error)
         }
     }

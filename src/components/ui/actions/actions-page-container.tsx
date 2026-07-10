@@ -21,7 +21,13 @@ import type { Id, ItemStatus } from "@/types/general";
 import { applyTimeFilter } from "@/components/ui/actions/utils";
 import { ActionsPageHeader } from "@/components/ui/actions/actions-page-header";
 import { KanbanBoard } from "@/components/ui/actions/kanban-board";
-import { EntityApiError } from "@/lib/api/entity-api";
+import {
+  EntityApiError,
+  PERMISSION_DENIED_MESSAGE,
+  viewPermissionDeniedMessage,
+  isForbiddenError,
+} from "@/lib/api/entity-api";
+import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Default filter values — used for initialization and URL cleanup
@@ -39,6 +45,17 @@ function parseEnum<T extends string>(
   if (!value) return fallback;
   const valid = new Set(Object.values(enumObj));
   return valid.has(value as T) ? (value as T) : fallback;
+}
+
+/** Maps a failed action mutation to a user-facing message. `action` reads as
+ * the verb phrase in "Failed to <action>." (e.g. "update status"). */
+function mutationErrorMessage(err: unknown, action: string): string {
+  if (err instanceof EntityApiError) {
+    if (err.isForbidden()) return PERMISSION_DENIED_MESSAGE;
+    if (err.isNetworkError())
+      return `Failed to ${action}. Connection to service was lost.`;
+  }
+  return `Failed to ${action}.`;
 }
 
 interface ActionsPageContainerProps {
@@ -210,11 +227,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         // No explicit refresh() — the optimistic update already moved the card
         // visually, and SWR will revalidate on its own schedule.
       } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          toast.error("Failed to update status. Connection to service was lost.");
-        } else {
-          toast.error("Failed to update status.");
-        }
+        toast.error(mutationErrorMessage(err, "update status"));
         throw err; // Re-throw so the board can roll back optimistic updates
       }
     },
@@ -230,11 +243,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, { ...ctx.action, due_by: Some(newDueBy) });
         refresh();
       } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          toast.error("Failed to update due date. Connection to service was lost.");
-        } else {
-          toast.error("Failed to update due date.");
-        }
+        toast.error(mutationErrorMessage(err, "update due date"));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -249,11 +258,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, { ...ctx.action, assignee_ids: assigneeIds });
         refresh();
       } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          toast.error("Failed to update assignees. Connection to service was lost.");
-        } else {
-          toast.error("Failed to update assignees.");
-        }
+        toast.error(mutationErrorMessage(err, "update assignees"));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -274,11 +279,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, updated);
         refresh();
       } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          toast.error("Failed to update action. Connection to service was lost.");
-        } else {
-          toast.error("Failed to update action.");
-        }
+        toast.error(mutationErrorMessage(err, "update action"));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -294,11 +295,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, updated);
         refresh();
       } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          toast.error("Failed to update goal link. Connection to service was lost.");
-        } else {
-          toast.error("Failed to update goal link.");
-        }
+        toast.error(mutationErrorMessage(err, "update goal link"));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -310,11 +307,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await deleteAction(id);
         refresh();
       } catch (err) {
-        if (err instanceof EntityApiError && err.isNetworkError()) {
-          toast.error("Failed to delete action. Connection to service was lost.");
-        } else {
-          toast.error("Failed to delete action.");
-        }
+        toast.error(mutationErrorMessage(err, "delete action"));
       }
     },
     [deleteAction, refresh]
@@ -323,6 +316,15 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
+
+  if (isForbiddenError(isError)) {
+    return (
+      <ForbiddenError
+        title="Actions Access Denied"
+        message={viewPermissionDeniedMessage("these actions")}
+      />
+    );
+  }
 
   if (isError) {
     return (

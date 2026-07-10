@@ -20,6 +20,10 @@ import {
   isDurationValidationError,
   validateDurationMinutes,
 } from "@/types/coaching-session-duration";
+import {
+  isForbiddenError,
+  PERMISSION_DENIED_MESSAGE,
+} from "@/types/entity-api-error";
 
 const AUTOSAVE_DEBOUNCE_MS = 400;
 
@@ -56,7 +60,9 @@ export const CoachingPreferencesSection: FC = () => {
           });
           refresh();
         } catch (error) {
-          if (isDurationValidationError(error)) {
+          if (isForbiddenError(error)) {
+            toast.error(PERMISSION_DENIED_MESSAGE);
+          } else if (isDurationValidationError(error)) {
             toast.error(error.data.message);
           } else {
             toast.error("Couldn't save preferences. Please try again.");

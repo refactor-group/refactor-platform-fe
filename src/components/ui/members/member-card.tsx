@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { AuthStore } from "@/lib/stores/auth-store";
-import { Id } from "@/types/general";
+import { Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 import {
   InviteStatus,
   User,
@@ -114,7 +114,9 @@ export function MemberCard({
       onRefresh();
     } catch (err) {
       console.error("Error resending invitation:", err);
-      toast.error("Failed to resend invitation");
+      toast.error(
+        isForbiddenError(err) ? PERMISSION_DENIED_MESSAGE : "Failed to resend invitation"
+      );
     }
   };
 
@@ -181,7 +183,10 @@ export function MemberCard({
       setAssignedMember(null);
     } catch (error) {
       toast.error(
-        organizationArchivedMessage(error) ?? `Error assigning ${assignMode}`
+        organizationArchivedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : `Error assigning ${assignMode}`)
       );
       console.error("Error creating coaching relationship:", error);
     }

@@ -150,6 +150,27 @@ describe("RescheduleSeriesDialog - submit path", () => {
     consoleError.mockRestore();
   });
 
+  it("shows the permission-denied toast on a 403 from the backend", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    mockUpdate.mockRejectedValue(makeEntityApiError(403));
+
+    const { onClose, onRescheduled } = renderDialog();
+
+    submit();
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "You don't have permission to perform this action."
+      );
+    });
+    expect(onRescheduled).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+
+    consoleError.mockRestore();
+  });
+
   it("shows a generic failure toast for non-422 errors", async () => {
     const consoleError = vi
       .spyOn(console, "error")

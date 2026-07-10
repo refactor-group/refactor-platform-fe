@@ -27,7 +27,7 @@ import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
 import { AssigneeScope } from "@/types/assigned-actions";
 import { type Option, Some, None } from "@/types/option";
-import type { Id } from "@/types/general";
+import { type Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 import { ProgressRing } from "@/components/ui/dashboard/progress-ring";
 import { GoalRow } from "@/components/ui/dashboard/goal-row";
 import { GoalsOverviewCardEmpty } from "@/components/ui/dashboard/goals-overview-card-empty";
@@ -112,14 +112,16 @@ function GoalsOverviewCardSkeleton() {
   );
 }
 
-function GoalsOverviewCardError() {
+function GoalsOverviewCardError({
+  message = "Couldn't load active goals. Please refresh.",
+}: {
+  message?: string;
+}) {
   return (
     <Card className="border shadow-none h-full flex flex-col">
       <CardContent className="p-4 sm:p-6 flex flex-col flex-1">
         <div className="flex flex-col items-center justify-center flex-1 text-center py-4">
-          <p className="text-sm text-destructive">
-            Couldn&apos;t load active goals. Please refresh.
-          </p>
+          <p className="text-sm text-destructive">{message}</p>
         </div>
       </CardContent>
     </Card>
@@ -171,7 +173,12 @@ export function GoalsOverviewCard() {
   // Inline error state — matches the UpcomingSessionCard pattern so the
   // dashboard layout stays intact when the backend request fails (network,
   // 404 from a relationship the caller isn't in, 5xx, etc.).
-  if (isError) return <GoalsOverviewCardError />;
+  if (isError)
+    return (
+      <GoalsOverviewCardError
+        message={isForbiddenError(isError) ? PERMISSION_DENIED_MESSAGE : undefined}
+      />
+    );
 
   // Resolve the user's role in this specific session — org-wide isACoach
   // can't disambiguate users who are coach in one relationship and coachee in
