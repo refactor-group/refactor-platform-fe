@@ -3,20 +3,12 @@ import {
   getRelationshipsAsCoach,
   sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import {
   Select,
@@ -27,12 +19,13 @@ import {
 } from "@/components/ui/select";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import {
-  CoachingSessionApi,
   useCoachingSessionList,
   useCoachingSessionMutation,
 } from "@/lib/api/coaching-sessions";
+import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
+import { organizationArchivedMessage } from "@/lib/api/organization-errors";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -40,26 +33,21 @@ import { useState, useMemo, useEffect, useRef, useCallback, type FormEvent } fro
 import { useRouter } from "next/navigation";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { EntityApiError } from "@/types/entity-api-error";
+import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/types/entity-api-error";
 import { toast } from "sonner";
 import { Provider } from "@/types/provider";
 import {
   CreateRecurringSessionRequest,
-  Frequency,
-  MAX_INTERVAL,
-  MAX_OCCURRENCES,
   Recurrence,
-  RecurrenceEnd,
-  WEEKDAYS_ORDERED,
   Weekday,
-  frequencyLabel,
-  frequencySupportsWeekdays,
   recurrenceToPayload,
+  untilDateToUtcDateTime,
   validateRecurrence,
   weekdayFromLuxon,
-  weekdayLabel,
 } from "@/types/recurrence";
 import { CoachingSessionDurationInput } from "@/components/ui/coaching-sessions/coaching-session-duration-input";
+import { RecurrenceFields } from "@/components/ui/dashboard/recurrence-fields";
+import { useRecurrenceState } from "@/lib/hooks/use-recurrence-state";
 import {
   isDurationValidationError,
   validateDurationMinutes,
@@ -163,56 +151,35 @@ export default function CoachingSessionForm({
 
   // ── Recurrence state (create mode only) ─────────────────────────────
   const [isRecurring, setIsRecurring] = useState(false);
-  const [frequency, setFrequency] = useState<Frequency>(Frequency.Weekly);
-  const [interval, setInterval] = useState<number>(1);
-  const [byWeekdays, setByWeekdays] = useState<Weekday[]>([]);
-  const [end, setEnd] = useState<RecurrenceEnd>({ kind: "count", count: 4 });
 
-  const showTwoCol = mode === "create";
-
-  // Computes a default end date for the "On" option so the user never sees
-  // an empty-state "Pick an end date" error before they've had a chance to
-  // act. Anchored to sessionDate when set, otherwise today; both fall back
-  // to + 4 weeks (matches the count default of 4 occurrences for weekly).
-  const defaultUntilDate = (): string => {
-    const userTimezone = userSession?.timezone || getBrowserTimezone();
-    const anchor = sessionDate
-      ? DateTime.fromJSDate(sessionDate).setZone(userTimezone)
-      : DateTime.now().setZone(userTimezone);
-    return anchor.plus({ weeks: 4 }).toFormat("yyyy-MM-dd");
-  };
+  const userTimezone = userSession?.timezone || getBrowserTimezone();
 
   // The weekday of the start date (in the user's timezone). When recurring
   // is on with weekly/biweekly + by_weekdays, the backend requires this
-  // weekday to be included — otherwise 422. We auto-seed the selection so
-  // the obvious case Just Works.
+  // weekday to be included — otherwise 422. The hook auto-seeds it.
   const startWeekday = useMemo<Weekday | null>(() => {
     if (!sessionDate) return null;
-    const userTimezone = userSession?.timezone || getBrowserTimezone();
     const local = DateTime.fromJSDate(sessionDate).setZone(userTimezone);
     return weekdayFromLuxon(local.weekday);
-  }, [sessionDate, userSession?.timezone]);
+  }, [sessionDate, userTimezone]);
 
-  // Auto-seed by_weekdays so the user never sees an empty selection. Prefer
-  // the start_at weekday; fall back to today's weekday in the user's
-  // timezone when no session date is set yet. We never overwrite an
-  // explicit user choice — only fill an empty selection.
-  useEffect(() => {
-    if (!isRecurring) return;
-    if (!frequencySupportsWeekdays(frequency)) return;
-    if (byWeekdays.length !== 0) return;
-    const userTimezone = userSession?.timezone || getBrowserTimezone();
-    const seed =
-      startWeekday ??
-      weekdayFromLuxon(DateTime.now().setZone(userTimezone).weekday);
-    setByWeekdays([seed]);
-  }, [
-    isRecurring,
+  const {
     frequency,
+    setFrequency,
+    interval,
+    setInterval,
+    byWeekdays,
+    setByWeekdays,
+    end,
+    setEnd,
+    reset: resetRecurrence,
+  } = useRecurrenceState({
+    enabled: isRecurring,
     startWeekday,
-    byWeekdays.length,
-    userSession?.timezone,
-  ]);
+    timezone: userTimezone,
+  });
+
+  const showTwoCol = mode === "create";
 
   const resetForm = () => {
     setSessionDate(undefined);
@@ -223,10 +190,7 @@ export default function CoachingSessionForm({
     hasUserEditedDurationRef.current = false;
     setSelectedRelationshipId(currentCoachingRelationshipId ?? "");
     setIsRecurring(false);
-    setFrequency(Frequency.Weekly);
-    setInterval(1);
-    setByWeekdays([]);
-    setEnd({ kind: "count", count: 4 });
+    resetRecurrence();
     setIsSubmitting(false);
     onOpenChange(false);
   };
@@ -256,15 +220,19 @@ export default function CoachingSessionForm({
       byWeekdays,
       end
     );
+    if (recurrence.until) {
+      recurrence.until = untilDateToUtcDateTime(recurrence.until, userTimezone);
+    }
     const payload: CreateRecurringSessionRequest = {
       coaching_relationship_id: relationshipId,
       start_at: dateTime,
       recurrence,
       duration_minutes: durationMinutes,
     };
-    const created = await CoachingSessionApi.createRecurring(payload);
+    const created = await CoachingSessionSeriesApi.create(payload, userTimezone);
+    const count = created.coaching_sessions.length;
     toast.success(
-      `Created ${created.length} recurring session${created.length === 1 ? "" : "s"}.`
+      `Created ${count} recurring session${count === 1 ? "" : "s"}.`
     );
   };
 
@@ -317,11 +285,15 @@ export default function CoachingSessionForm({
       await handler(utcDateTime);
       refresh();
     } catch (error) {
+      const archivedMessage = organizationArchivedMessage(error);
       if (!(error instanceof EntityApiError)) {
         console.error(`Failed to ${mode} coaching session:`, error);
       } else if (error.status === 409 && error.data?.error === "oauth_token_revoked") {
         toast.error("Your Google Meet integration has been disconnected. Please reconnect in Settings.");
         router.push("/settings/integrations");
+      } else if (archivedMessage !== null) {
+        toast.error(archivedMessage);
+        console.error(`Failed to ${mode} coaching session:`, error);
       } else {
         let message: string;
         if (isDurationValidationError(error)) {
@@ -332,6 +304,8 @@ export default function CoachingSessionForm({
           message = "Could not create Google Meet link due to a connection error. Please try again.";
         } else if (error.status === 422) {
           message = `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"}. Please review the form and try again.`;
+        } else if (isForbiddenError(error)) {
+          message = PERMISSION_DENIED_MESSAGE;
         } else {
           message = `Failed to ${mode} coaching session. Please try again.`;
         }
@@ -371,19 +345,19 @@ export default function CoachingSessionForm({
     userSession?.timezone,
   ]);
 
-  const durationValidation = validateDurationMinutes(durationMinutes);
+  // Determine if form can be submitted. A coachee is only required in create
+  // mode; update mode inherits it from the existing session.
+  const hasCoachee =
+    mode !== "create" ||
+    !!(selectedRelationshipId || currentCoachingRelationshipId);
 
-  // Determine if form can be submitted
-  const canSubmit = (() => {
-    if (!sessionDate || !sessionTime || isSubmitting) return false;
-    if (mode === "create") {
-      const relationshipId = selectedRelationshipId || currentCoachingRelationshipId;
-      if (!relationshipId) return false;
-    }
-    if (recurrenceError) return false;
-    if (durationValidation.isErr()) return false;
-    return true;
-  })();
+  const canSubmit =
+    !!sessionDate &&
+    !!sessionTime &&
+    !isSubmitting &&
+    !recurrenceError &&
+    hasCoachee &&
+    validateDurationMinutes(durationMinutes).isOk();
 
   const buttonText =
     mode === "update"
@@ -437,12 +411,11 @@ export default function CoachingSessionForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="session-time">Session Time</Label>
-            <input
+            <Input
               type="time"
               id="session-time"
               value={sessionTime}
               onChange={(e) => setSessionTime(e.target.value)}
-              className="w-full border rounded p-2"
               required
               disabled={isSubmitting}
             />
@@ -454,7 +427,6 @@ export default function CoachingSessionForm({
               value={durationMinutes}
               onChange={handleDurationChange}
               disabled={isSubmitting}
-              error={durationValidation.match(() => undefined, (msg) => msg)}
             />
           </div>
         </div>
@@ -477,175 +449,25 @@ export default function CoachingSessionForm({
           </div>
 
           {isRecurring && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="recurrence-frequency">Frequency</Label>
-                  <Select
-                    value={frequency}
-                    onValueChange={(v) => setFrequency(v as Frequency)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger id="recurrence-frequency">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.values(Frequency).map((f) => (
-                        <SelectItem key={f} value={f}>
-                          {frequencyLabel(f)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="recurrence-interval">Every</Label>
-                  <Input
-                    id="recurrence-interval"
-                    type="number"
-                    min={1}
-                    max={MAX_INTERVAL}
-                    value={interval}
-                    onChange={(e) => {
-                      const next = parseInt(e.target.value, 10);
-                      setInterval(Number.isFinite(next) && next >= 1 ? next : 1);
-                    }}
-                    disabled={isSubmitting}
-                  />
-                </div>
-              </div>
-
-              {frequencySupportsWeekdays(frequency) && (
-                <div className="space-y-2">
-                  <Label>On these days</Label>
-                  <ToggleGroup
-                    type="multiple"
-                    value={byWeekdays}
-                    onValueChange={(v) => setByWeekdays(v as Weekday[])}
-                    disabled={isSubmitting}
-                    className="justify-start flex-wrap"
-                  >
-                    {WEEKDAYS_ORDERED.map((d) => (
-                      <ToggleGroupItem
-                        key={d}
-                        value={d}
-                        aria-label={weekdayLabel(d)}
-                        className="w-10"
-                      >
-                        {weekdayLabel(d).slice(0, 1)}
-                      </ToggleGroupItem>
-                    ))}
-                  </ToggleGroup>
-                  {startWeekday && (
-                    <p className="text-xs text-muted-foreground">
-                      Your first session is on a {weekdayLabel(startWeekday)}, which must stay selected.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Ends</Label>
-                <RadioGroup
-                  value={end.kind}
-                  onValueChange={(v) =>
-                    setEnd(
-                      v === "count"
-                        ? { kind: "count", count: end.kind === "count" ? end.count : 4 }
-                        : {
-                            kind: "until",
-                            until:
-                              end.kind === "until" && end.until
-                                ? end.until
-                                : defaultUntilDate(),
-                          }
-                    )
-                  }
-                  disabled={isSubmitting}
-                >
-                  <div className="flex items-center gap-3">
-                    <RadioGroupItem id="end-count" value="count" />
-                    <Label htmlFor="end-count" className="cursor-pointer">
-                      After
-                    </Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={MAX_OCCURRENCES}
-                      value={end.kind === "count" ? end.count : ""}
-                      onChange={(e) => {
-                        const next = parseInt(e.target.value, 10);
-                        setEnd({
-                          kind: "count",
-                          count: Number.isFinite(next) && next >= 1 ? next : 1,
-                        });
-                      }}
-                      disabled={isSubmitting || end.kind !== "count"}
-                      className="w-20"
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      occurrences
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <RadioGroupItem id="end-until" value="until" />
-                    <Label htmlFor="end-until" className="cursor-pointer">
-                      On
-                    </Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={isSubmitting || end.kind !== "until"}
-                          className={cn(
-                            "h-9 gap-2 font-normal",
-                            end.kind === "until" && end.until
-                              ? ""
-                              : "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="h-4 w-4" />
-                          {end.kind === "until" && end.until
-                            ? DateTime.fromISO(end.until).toLocaleString(
-                                DateTime.DATE_MED
-                              )
-                            : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-auto p-0"
-                        align="start"
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={
-                            end.kind === "until" && end.until
-                              ? new Date(`${end.until}T00:00:00`)
-                              : undefined
-                          }
-                          onSelect={(date) =>
-                            setEnd({
-                              kind: "until",
-                              until: date
-                                ? DateTime.fromJSDate(date).toFormat(
-                                    "yyyy-MM-dd"
-                                  )
-                                : "",
-                            })
-                          }
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {recurrenceError && (
-                <p className="text-sm text-destructive">{recurrenceError}</p>
-              )}
-            </div>
+            <RecurrenceFields
+              frequency={frequency}
+              onFrequencyChange={setFrequency}
+              interval={interval}
+              onIntervalChange={setInterval}
+              byWeekdays={byWeekdays}
+              onByWeekdaysChange={setByWeekdays}
+              end={end}
+              onEndChange={setEnd}
+              startWeekday={startWeekday}
+              startDate={
+                sessionDate
+                  ? DateTime.fromJSDate(sessionDate).setZone(userTimezone)
+                  : null
+              }
+              timezone={userTimezone}
+              disabled={isSubmitting}
+              error={recurrenceError}
+            />
           )}
         </div>
       )}

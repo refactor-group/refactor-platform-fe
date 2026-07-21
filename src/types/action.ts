@@ -14,7 +14,8 @@ export interface Action {
   user_id: Id;
   status: ItemStatus;
   status_changed_at: DateTime;
-  due_by: DateTime;
+  /** None when no due date is set. */
+  due_by: Option<DateTime>;
   created_at: DateTime;
   updated_at: DateTime;
   /** User IDs assigned to this action. Frontend resolves names from coach/coachee data. */
@@ -42,7 +43,9 @@ export function isAction(value: unknown): value is Action {
     typeof object.status === "string" &&
     ITEM_STATUS_VALUES.has(object.status as string) &&
     isDateTimeOrString(object.status_changed_at) &&
-    isDateTimeOrString(object.due_by) &&
+    (object.due_by === null ||
+      isOption(object.due_by) ||
+      isDateTimeOrString(object.due_by)) &&
     isDateTimeOrString(object.created_at) &&
     isDateTimeOrString(object.updated_at) &&
     (object.goal_id === undefined ||
@@ -60,6 +63,14 @@ export function isActionArray(value: unknown): value is Action[] {
   return Array.isArray(value) && value.every(isAction);
 }
 
+/** Millis for a sort field, or null when the field is an absent due date. */
+function sortFieldMillis(action: Action, field: ActionSortField): number | null {
+  if (field === "due_by") {
+    return action.due_by.some ? action.due_by.val.toMillis() : null;
+  }
+  return action[field].toMillis();
+}
+
 export function sortActionArray(
   actions: Action[],
   order: SortOrder,
@@ -67,8 +78,13 @@ export function sortActionArray(
 ): Action[] {
   const sorted = [...actions];
   sorted.sort((a, b) => {
-    const aTime = a[field].toMillis();
-    const bTime = b[field].toMillis();
+    const aTime = sortFieldMillis(a, field);
+    const bTime = sortFieldMillis(b, field);
+    // Undated actions sort last regardless of direction.
+    if (aTime === null || bTime === null) {
+      if (aTime === bTime) return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+      return aTime === null ? 1 : -1;
+    }
     const primary = order === SortOrder.Asc ? aTime - bTime : bTime - aTime;
     if (primary !== 0) return primary;
     // Deterministic tiebreaker: ascending by id to ensure stable order
@@ -112,8 +128,11 @@ export function sortByDateField<T>(
   return [...items].sort((a, b) => getDate(a).toMillis() - getDate(b).toMillis());
 }
 
-/** Wire shape where Option fields are unwrapped to string | null for JSON. */
-export type ActionWire = Omit<Action, "goal_id"> & { goal_id: Id | null };
+/** Wire shape where Option fields are unwrapped to value | null for JSON. */
+export type ActionWire = Omit<Action, "goal_id" | "due_by"> & {
+  goal_id: Id | null;
+  due_by: DateTime | null;
+};
 
 /**
  * Wire shape of a single item in the batch coachee-actions response.
@@ -143,6 +162,7 @@ export function serializeAction(action: Action): ActionWire {
   return {
     ...action,
     goal_id: action.goal_id.some ? action.goal_id.val : null,
+    due_by: action.due_by.some ? action.due_by.val : null,
   };
 }
 
@@ -155,6 +175,7 @@ export function transformAction(raw: any): Action {
   const dated = transformEntityDates(raw);
   const rawGoalId = dated.goal_id;
   dated.goal_id = typeof rawGoalId === "string" ? Some(rawGoalId) : None;
+  dated.due_by = DateTime.isDateTime(dated.due_by) ? Some(dated.due_by) : None;
   return dated;
 }
 
@@ -168,7 +189,7 @@ export function defaultAction(): Action {
     user_id: "",
     status: ItemStatus.NotStarted,
     status_changed_at: now,
-    due_by: now,
+    due_by: None,
     created_at: now,
     updated_at: now,
     assignee_ids: [],

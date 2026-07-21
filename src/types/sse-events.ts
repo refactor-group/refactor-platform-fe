@@ -38,12 +38,12 @@ export type ActionDeletedEvent = BaseSSEEvent<
   }
 >;
 
-// ==================== AGREEMENT EVENTS (relationship-scoped) ====================
+// ==================== AGREEMENT EVENTS (session-scoped) ====================
 
 export type AgreementCreatedEvent = BaseSSEEvent<
   'agreement_created',
   {
-    coaching_relationship_id: Id;
+    coaching_session_id: Id;
     agreement: Agreement;
   }
 >;
@@ -51,7 +51,7 @@ export type AgreementCreatedEvent = BaseSSEEvent<
 export type AgreementUpdatedEvent = BaseSSEEvent<
   'agreement_updated',
   {
-    coaching_relationship_id: Id;
+    coaching_session_id: Id;
     agreement: Agreement;
   }
 >;
@@ -59,7 +59,7 @@ export type AgreementUpdatedEvent = BaseSSEEvent<
 export type AgreementDeletedEvent = BaseSSEEvent<
   'agreement_deleted',
   {
-    coaching_relationship_id: Id;
+    coaching_session_id: Id;
     agreement_id: Id;
   }
 >;
@@ -137,6 +137,30 @@ export type TranscriptionUpdatedEvent = BaseSSEEvent<
   }
 >;
 
+// ==================== COACHING SESSION TITLE EVENTS (session-scoped) ====================
+
+// Coarse, like topics_changed: carries only the session id. Fires on a title
+// PATCH by either participant. On receipt, refetch the session (single read and
+// the enriched list reads that surface display_title).
+export type CoachingSessionTitleUpdatedEvent = BaseSSEEvent<
+  'coaching_session_title_updated',
+  {
+    coaching_session_id: Id;
+  }
+>;
+
+// ==================== TOPIC EVENTS (session-scoped) ====================
+
+// Coarse, like meeting_recording/transcription: carries only the session id.
+// Fires on ANY topic mutation (add/edit/delete/reorder/priority/status) and on
+// the server-side carry-over copy. On receipt, refetch that session's topics.
+export type TopicsChangedEvent = BaseSSEEvent<
+  'topics_changed',
+  {
+    coaching_session_id: Id;
+  }
+>;
+
 /**
  * Discriminated union of all SSE events
  * TypeScript automatically narrows the type based on the 'type' property
@@ -155,4 +179,6 @@ export type SSEEvent =
   | CoachingSessionGoalDeletedEvent
   | ForceLogoutEvent
   | MeetingRecordingUpdatedEvent
-  | TranscriptionUpdatedEvent;
+  | TranscriptionUpdatedEvent
+  | TopicsChangedEvent
+  | CoachingSessionTitleUpdatedEvent;

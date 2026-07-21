@@ -5,7 +5,7 @@ import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-sessi
 import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
 import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
-import { None } from "@/types/option";
+import { Some, None } from "@/types/option";
 import { Organization } from "@/types/organization";
 import { User } from "@/types/user";
 import { OAuthConnection } from "@/types/oauth-connection";
@@ -76,6 +76,8 @@ export function createMockSession(
     coaching_relationship_id: "rel-1",
     date: now.plus({ hours: 2 }).toISO() ?? '', // Date is ISO string
     duration_minutes: 60,
+    title: None,
+    coaching_session_series_id: None,
     created_at: now, // CoachingSession expects DateTime object
     updated_at: now,
     ...overrides,
@@ -106,6 +108,8 @@ export function createMockEnrichedSession(
     coaching_relationship_id: "rel-1",
     date: now.plus({ hours: 2 }).toISO() ?? "",
     duration_minutes: 60,
+    title: None,
+    coaching_session_series_id: None,
     created_at: now,
     updated_at: now,
     relationship: {
@@ -194,7 +198,7 @@ export function createMockAction(overrides?: Partial<Action>): Action {
     user_id: "user-1",
     status: ItemStatus.NotStarted,
     status_changed_at: now,
-    due_by: now.plus({ days: 7 }),
+    due_by: Some(now.plus({ days: 7 })),
     created_at: now,
     updated_at: now,
     assignee_ids: ["user-1"],

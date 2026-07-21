@@ -7,12 +7,15 @@ import {
   defaultCoachingSession,
   EnrichedCoachingSession,
   CoachingSessionInclude,
+  transformCoachingSession,
+  serializeCoachingSession,
 } from "@/types/coaching-session";
 import { CoachingSessionCountByMonth } from "@/types/coaching-session-bucket";
 import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
-import { CreateRecurringSessionRequest } from "@/types/recurrence";
-import { EntityApi } from "./entity-api";
+import { EntityApi, ApiResponse } from "./entity-api";
 import { USERS_BASEURL } from "./users";
+import { sessionGuard } from "@/lib/auth/session-guard";
+import { Option } from "@/types/option";
 import { DateTime } from "ts-luxon";
 
 // Re-export for convenience
@@ -61,9 +64,9 @@ export const CoachingSessionApi = {
       params.sort_order = sortOrder;
     }
 
-    return EntityApi.listFn<CoachingSession>(COACHING_SESSIONS_BASEURL, {
-      params,
-    });
+    return (
+      await EntityApi.listFn<any>(COACHING_SESSIONS_BASEURL, { params })
+    ).map(transformCoachingSession);
   },
 
   /**
@@ -73,7 +76,9 @@ export const CoachingSessionApi = {
    * @returns Promise resolving to the CoachingSession object
    */
   get: async (id: Id): Promise<CoachingSession> =>
-    EntityApi.getFn<CoachingSession>(`${COACHING_SESSIONS_BASEURL}/${id}`),
+    transformCoachingSession(
+      await EntityApi.getFn<any>(`${COACHING_SESSIONS_BASEURL}/${id}`)
+    ),
 
   /**
    * Creates a new coaching session.
@@ -82,28 +87,11 @@ export const CoachingSessionApi = {
    * @returns Promise resolving to the created CoachingSession object
    */
   create: async (coachingSession: CoachingSession): Promise<CoachingSession> =>
-    EntityApi.createFn<CoachingSession, CoachingSession>(
-      COACHING_SESSIONS_BASEURL,
-      coachingSession
-    ),
-
-  /**
-   * Creates a recurring series of coaching sessions in a single request.
-   *
-   * Hits POST /coaching_sessions/recurring. The backend expands the
-   * recurrence rule and persists every occurrence; the first one always
-   * equals `start_at`. Caller is responsible for satisfying the field
-   * rules — see `@/types/recurrence` and the form-side guards.
-   *
-   * @param payload The CreateRecurringSessionRequest payload
-   * @returns Promise resolving to the array of created CoachingSession objects
-   */
-  createRecurring: async (
-    payload: CreateRecurringSessionRequest
-  ): Promise<CoachingSession[]> =>
-    EntityApi.createFn<CreateRecurringSessionRequest, CoachingSession[]>(
-      `${COACHING_SESSIONS_BASEURL}/recurring`,
-      payload
+    transformCoachingSession(
+      await EntityApi.createFn<any, any>(
+        COACHING_SESSIONS_BASEURL,
+        serializeCoachingSession(coachingSession)
+      )
     ),
 
   createNested: async (): Promise<CoachingSession> => {
@@ -121,10 +109,36 @@ export const CoachingSessionApi = {
     id: Id,
     coachingSession: CoachingSession
   ): Promise<CoachingSession> =>
-    EntityApi.updateFn<CoachingSession, CoachingSession>(
-      `${COACHING_SESSIONS_BASEURL}/${id}`,
-      coachingSession
+    transformCoachingSession(
+      await EntityApi.updateFn<any, any>(
+        `${COACHING_SESSIONS_BASEURL}/${id}`,
+        serializeCoachingSession(coachingSession)
+      )
     ),
+
+  /**
+   * Updates only a coaching session's title via the dedicated participant-gated
+   * endpoint. Unlike `update` (PUT, coach-only scheduling), this PATCH is
+   * authorized for either participant, so a coachee can rename a session.
+   *
+   * Three-state title: `Some(s)` sets it (trimmed BE-side), `None` clears it to
+   * null. Omitting it would be a no-op, but the title editor always sends an
+   * explicit value.
+   *
+   * @param id The ID of the coaching session to retitle
+   * @param title The new title, or None to clear
+   * @returns Promise resolving to the updated CoachingSession object
+   */
+  updateTitle: async (
+    id: Id,
+    title: Option<string>
+  ): Promise<CoachingSession> => {
+    const res = await sessionGuard.patch<ApiResponse<any>>(
+      `${COACHING_SESSIONS_BASEURL}/${id}/title`,
+      { title: title.some ? title.val : null }
+    );
+    return transformCoachingSession(res.data.data);
+  },
 
   /**
    * Deletes an coaching session.
@@ -165,12 +179,14 @@ export const CoachingSessionApi = {
     userId: Id,
     params?: any
   ): Promise<EnrichedCoachingSession[]> => {
-    return EntityApi.listNestedFn<EnrichedCoachingSession>(
-      USERS_BASEURL,
-      userId,
-      'coaching_sessions',
-      params
-    );
+    return (
+      await EntityApi.listNestedFn<any>(
+        USERS_BASEURL,
+        userId,
+        'coaching_sessions',
+        params
+      )
+    ).map(transformCoachingSession) as EnrichedCoachingSession[];
   },
 
   /**

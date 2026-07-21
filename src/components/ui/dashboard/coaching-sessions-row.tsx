@@ -3,7 +3,14 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { DateTime } from "ts-luxon";
-import { Link2, MoreVertical, Trash2 } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarRange,
+  CalendarSync,
+  Link2,
+  MoreVertical,
+  Trash2,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +25,7 @@ import { cn } from "@/components/lib/utils";
 import { formatDateWithTime } from "@/lib/utils/date";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
 import type { Id } from "@/types/general";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
 
@@ -36,6 +44,13 @@ export interface SessionRowProps {
    *  `<DeleteSessionDialog>` and the delete mutation. Not invoked on
    *  rows where the viewer isn't a coach — the kebab item is hidden. */
   onRequestDelete: (session: EnrichedCoachingSession) => void;
+  /** Hands a series action up to the card so it can fetch the series and
+   *  drive the view/edit/delete dialogs. Only invoked for sessions that
+   *  belong to a series; edit/delete items are coach-only. */
+  onSeriesAction: (
+    action: "view" | "edit" | "delete",
+    seriesId: Id
+  ) => void;
 }
 
 export function SessionRow({
@@ -47,6 +62,7 @@ export function SessionRow({
   onSelect,
   onReschedule,
   onRequestDelete,
+  onSeriesAction,
 }: SessionRowProps) {
   const participant = useMemo(
     () => getSessionParticipantInfo(session, viewerId),
@@ -63,6 +79,15 @@ export function SessionRow({
   // never empty — the dropdown is rendered unconditionally below.
   const canReschedule = !isPast && participant?.isCoach === true;
   const canDelete = participant?.isCoach === true;
+
+  // Series actions surface only on rows whose session belongs to a series.
+  // Viewing the series' sessions is open to any viewer (matches the old
+  // ungated "View series"); editing/deleting the series is coach-only,
+  // mirroring the Reschedule/Delete gating above. The series operations
+  // target the whole series, so they aren't upcoming-gated.
+  const seriesId = session.coaching_session_series_id;
+  const canViewSeries = seriesId.some;
+  const canManageSeries = seriesId.some && participant?.isCoach === true;
 
   const participantName = participant?.participantName ?? "Unknown";
   const participantInitials = participant
@@ -114,6 +139,11 @@ export function SessionRow({
           <p className="text-[13px] font-medium text-foreground truncate">
             {participantName}
           </p>
+          <CoachingSessionTitleText
+            session={session}
+            hideWhenFallback
+            className="text-xs text-muted-foreground truncate mt-0.5"
+          />
           <p className="text-xs text-muted-foreground tabular-nums truncate mt-0.5">
             {dateLabel}
           </p>
@@ -161,9 +191,33 @@ export function SessionRow({
                 onClick={() => onReschedule(session)}
                 data-testid="session-row-reschedule"
               >
+                <CalendarClock className="mr-2 h-4 w-4" />
                 Reschedule
               </DropdownMenuItem>
             )}
+            {canViewSeries && (
+              <DropdownMenuItem
+                onClick={() =>
+                  seriesId.some && onSeriesAction("view", seriesId.val)
+                }
+                data-testid="session-row-view-series"
+              >
+                <CalendarRange className="mr-2 h-4 w-4" />
+                View series
+              </DropdownMenuItem>
+            )}
+            {canManageSeries && (
+              <DropdownMenuItem
+                onClick={() =>
+                  seriesId.some && onSeriesAction("edit", seriesId.val)
+                }
+                data-testid="session-row-edit-series"
+              >
+                <CalendarSync className="mr-2 h-4 w-4" />
+                Edit series
+              </DropdownMenuItem>
+            )}
+            {(canReschedule || canViewSeries) && <DropdownMenuSeparator />}
             <DropdownMenuItem
               // Fire-and-forget: `copyCoachingSessionLinkWithToast`
               // surfaces both success ("link copied") and error toasts
@@ -176,7 +230,7 @@ export function SessionRow({
               <Link2 className="mr-2 h-4 w-4" />
               Share link
             </DropdownMenuItem>
-            {canDelete && <DropdownMenuSeparator />}
+            {(canDelete || canManageSeries) && <DropdownMenuSeparator />}
             {canDelete && (
               <DropdownMenuItem
                 onClick={() => onRequestDelete(session)}
@@ -185,6 +239,18 @@ export function SessionRow({
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete session
+              </DropdownMenuItem>
+            )}
+            {canManageSeries && (
+              <DropdownMenuItem
+                onClick={() =>
+                  seriesId.some && onSeriesAction("delete", seriesId.val)
+                }
+                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                data-testid="session-row-delete-series"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete series
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

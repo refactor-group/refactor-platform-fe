@@ -1,11 +1,21 @@
 import { Id, EntityApiError, EMPTY_ARRAY } from "@/types/general";
 import { useState } from "react";
-import useSWR, { KeyedMutator, SWRConfiguration, useSWRConfig } from "swr";
+import useSWR, {
+  KeyedMutator,
+  ScopedMutator,
+  SWRConfiguration,
+  useSWRConfig,
+} from "swr";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import axios, { type AxiosRequestConfig } from "axios";
 
 // Re-export EntityApiError for easy access
-export { EntityApiError } from "@/types/general";
+export {
+  EntityApiError,
+  PERMISSION_DENIED_MESSAGE,
+  viewPermissionDeniedMessage,
+  isForbiddenError,
+} from "@/types/general";
 
 /** Standard wrapper for all backend API responses. */
 export interface ApiResponse<T> {
@@ -430,6 +440,27 @@ export namespace EntityApi {
   };
 
   /**
+   * Invalidates every SWR cache entry whose key targets the given base URL —
+   * both single-entity string keys (from {@link useEntity}) and list tuple keys
+   * `[url, params]` (from {@link useEntityList}). Use for out-of-band mutations
+   * (e.g. sub-action POSTs) that don't flow through {@link useEntityMutation}.
+   *
+   * @param mutate The global mutator from `useSWRConfig`
+   * @param baseUrl The entity base URL to match cache keys against
+   */
+  export const invalidateEntityCache = (
+    mutate: ScopedMutator,
+    baseUrl: string
+  ) =>
+    mutate((key) => {
+      if (typeof key === "string") return key.includes(baseUrl);
+      if (Array.isArray(key) && typeof key[0] === "string") {
+        return key[0].includes(baseUrl);
+      }
+      return false;
+    });
+
+  /**
    * A generic hook for entity mutations that manages loading and error states
    * and handles cache invalidation.
    *
@@ -464,8 +495,7 @@ export namespace EntityApi {
 
       try {
         const result = await operation();
-        // Refresh entity lists
-        mutate((key) => typeof key === "string" && key.includes(baseUrl));
+        invalidateEntityCache(mutate, baseUrl);
         return result;
       } catch (err) {
         // Handle both EntityApiError and regular Error types

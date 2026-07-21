@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
-import { None } from "@/types/option";
+import { Some, None } from "@/types/option";
 import {
   StatusVisibility,
   TimeRange,
@@ -28,7 +28,7 @@ function makeAction(
   overrides: Partial<{
     id: string;
     status: ItemStatus;
-    due_by: DateTime;
+    due_by: DateTime | null;
     created_at: DateTime;
     relationshipId: string;
   }> = {}
@@ -43,7 +43,10 @@ function makeAction(
       user_id: "user-1",
       status: overrides.status ?? ItemStatus.NotStarted,
       status_changed_at: now,
-      due_by: overrides.due_by ?? now.plus({ days: 7 }),
+      due_by:
+        overrides.due_by === null
+          ? None
+          : Some(overrides.due_by ?? now.plus({ days: 7 })),
       created_at: overrides.created_at ?? now,
       updated_at: now,
       assignee_ids: ["user-1"],
@@ -132,7 +135,7 @@ function makePlainAction(
     user_id: "user-1",
     status: overrides.status ?? ItemStatus.NotStarted,
     status_changed_at: now,
-    due_by: now.plus({ days: 7 }),
+    due_by: Some(now.plus({ days: 7 })),
     created_at: now,
     updated_at: now,
     assignee_ids: ["user-1"],
@@ -302,6 +305,20 @@ describe("applyTimeFilter", () => {
     const result = applyTimeFilter(actions, TimeRange.Last30Days);
 
     expect(result).toHaveLength(1);
+  });
+
+  it("keeps undated actions in every range (no due date to filter against)", () => {
+    const actions = [
+      makeAction({ id: "undated", due_by: null }),
+      makeAction({ id: "recent", due_by: DateTime.now() }),
+      makeAction({ id: "old", due_by: DateTime.now().minus({ days: 200 }) }),
+    ];
+
+    const bounded = applyTimeFilter(actions, TimeRange.Last30Days);
+    expect(bounded.map((a) => a.action.id)).toEqual(["undated", "recent"]);
+
+    const all = applyTimeFilter(actions, TimeRange.AllTime);
+    expect(all.map((a) => a.action.id)).toEqual(["undated", "recent", "old"]);
   });
 
   it("returns empty array for empty input", () => {

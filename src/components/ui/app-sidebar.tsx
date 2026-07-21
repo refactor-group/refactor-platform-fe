@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { BarChart3, CheckSquare, ChevronRight, Gift, Home, Settings, Users } from "lucide-react";
+import { BarChart3, Building2, CheckSquare, ChevronRight, Gift, Home, Settings, Users } from "lucide-react";
 
 import { OrganizationSwitcher } from "./organization-switcher";
 import { Icons } from "@/components/ui/icons";
@@ -34,6 +34,7 @@ import { SidebarCollapsible, SidebarState, StateChangeSource } from "@/types/sid
 import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
+import { useIsSuperAdmin } from "@/lib/hooks/use-is-super-admin";
 import { isAdminOrSuperAdmin } from "@/types/user";
 import type { Id } from "@/types/general";
 
@@ -48,10 +49,21 @@ const menuButtonStyles = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentOrganizationId } = useCurrentOrganization();
   const currentUserRoleState = useCurrentUserRole();
+  const isSuperAdmin = useIsSuperAdmin();
+  const settingsLabel = isSuperAdmin ? "Platform settings" : "Organization settings";
   const router = useRouter();
   const pathname = usePathname();
-  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  // Derived (not just initial) so the group stays open across the sidebar
+  // remount when navigating between its routes in different layouts.
+  const isSettingsRoute =
+    (pathname?.startsWith("/admin") ?? false) ||
+    /^\/organizations\/[^/]+\/members(\/|$)/.test(pathname ?? "");
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(isSettingsRoute);
   const { state: sidebarState, expand, isMobile } = useSidebar();
+
+  useEffect(() => {
+    if (isSettingsRoute) setIsAdminMenuOpen(true);
+  }, [isSettingsRoute]);
 
   const handleOrgChange = (newOrgId: Id) => {
     // Check if current path is organization-scoped
@@ -171,7 +183,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {isAdminOrSuperAdmin(currentUserRoleState) && (
+            {(isSuperAdmin || isAdminOrSuperAdmin(currentUserRoleState)) && (
               <Collapsible
                 open={isAdminMenuOpen}
                 onOpenChange={setIsAdminMenuOpen}
@@ -180,7 +192,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton
-                      tooltip="Organization settings"
+                      tooltip={settingsLabel}
                       className={cn(
                         menuButtonStyles.button,
                         menuButtonStyles.buttonCollapsed
@@ -197,21 +209,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <Settings className="h-4 w-4" />
                       </span>
                       <span className="group-data-[collapsible=icon]:hidden">
-                        Organization settings
+                        {settingsLabel}
                       </span>
                       <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 group-data-[collapsible=icon]:hidden" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton asChild>
-                          <Link href={`/organizations/${currentOrganizationId}/members`}>
-                            <Users className="h-4 w-4" />
-                            <span>Members</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
+                      {isSuperAdmin && (
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link href="/admin/organizations">
+                              <Building2 className="h-4 w-4" />
+                              <span>Organizations</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )}
+                      {currentOrganizationId && (
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link href={`/organizations/${currentOrganizationId}/members`}>
+                              <Users className="h-4 w-4" />
+                              <span>Members</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )}
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </SidebarMenuItem>

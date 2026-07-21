@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { matchesEndpoint } from "@/lib/hooks/use-sse-cache-invalidation";
+import {
+  matchesEndpoint,
+  upsertAgreementInList,
+  removeAgreementFromList,
+} from "@/lib/hooks/use-sse-cache-invalidation";
+import type { Agreement } from "@/types/agreement";
+import { DateTime } from "ts-luxon";
+
+const makeAgreement = (id: string, body: string): Agreement => ({
+  id,
+  coaching_session_id: "s-1",
+  body,
+  user_id: "u-1",
+  created_at: DateTime.now(),
+  updated_at: DateTime.now(),
+});
 
 /**
  * Test Suite: matchesEndpoint
@@ -54,5 +69,116 @@ describe("matchesEndpoint", () => {
     expect(matchesEndpoint(`${BASE}/goals/g-1`, BASE, "/goals")).toBe(true);
     expect(matchesEndpoint(`${BASE}/users/u-1/goals`, BASE, "/goals")).toBe(true);
     expect(matchesEndpoint(`${BASE}/goals_history`, BASE, "/goals")).toBe(false);
+  });
+
+  it("matches the session-scoped topics list for topics_changed invalidation", () => {
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1/topics`, BASE, "/topics"),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1/topics?x=1`, BASE, "/topics"),
+    ).toBe(true);
+    expect(matchesEndpoint(`${BASE}/topics_archive`, BASE, "/topics")).toBe(false);
+  });
+
+  // coaching_session_title_updated invalidates the /coaching_sessions segment so a
+  // title rename by either participant refreshes both the single read and the
+  // enriched list reads that surface display_title.
+  it("matches the coaching session reads for coaching_session_title_updated", () => {
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1`, BASE, "/coaching_sessions"),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(`${BASE}/users/u-1/coaching_sessions`, BASE, "/coaching_sessions"),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(
+        `${BASE}/coaching_sessions?coaching_relationship_id=r-1`,
+        BASE,
+        "/coaching_sessions",
+      ),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions_archive`, BASE, "/coaching_sessions"),
+    ).toBe(false);
+  });
+
+  // Intentional over-match: invalidating /coaching_sessions also revalidates
+  // session subresource caches (topics/goals/...). Harmless extra refetches on an
+  // infrequent title edit; documented so it is a tested property, not a surprise.
+  it("also matches session subresource caches (intentional, coarse)", () => {
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1/topics`, BASE, "/coaching_sessions"),
+    ).toBe(true);
+    expect(
+      matchesEndpoint(`${BASE}/coaching_sessions/s-1/goals`, BASE, "/coaching_sessions"),
+    ).toBe(true);
+  });
+
+  // The raw matcher still matches the month count caches; the title listener
+  // (invalidateCoachingSessionTitle) excludes them separately, since a rename
+  // can't change a count. This documents that the exclusion lives in the
+  // listener, not in matchesEndpoint.
+  it("matchesEndpoint still matches the count caches (exclusion is in the title listener)", () => {
+    expect(
+      matchesEndpoint(
+        `${BASE}/users/u-1/coaching_sessions/counts`,
+        BASE,
+        "/coaching_sessions",
+      ),
+    ).toBe(true);
+  });
+});
+
+/**
+ * Test Suite: agreement in-place cache patching
+ * Story: "Apply a fine-grained agreement_* SSE entity to a cached list without a
+ * refetch — append on create, replace on update, remove on delete."
+ */
+describe("upsertAgreementInList", () => {
+  it("appends a new agreement (create)", () => {
+    const list = [makeAgreement("a-1", "first")];
+    const next = upsertAgreementInList(list, makeAgreement("a-2", "second"));
+    expect(next.map((a) => a.id)).toEqual(["a-1", "a-2"]);
+  });
+
+  it("replaces an existing agreement in place (update), preserving position", () => {
+    const list = [makeAgreement("a-1", "first"), makeAgreement("a-2", "second")];
+    const next = upsertAgreementInList(list, makeAgreement("a-1", "edited"));
+    expect(next.map((a) => a.id)).toEqual(["a-1", "a-2"]);
+    expect(next[0].body).toBe("edited");
+  });
+
+  it("does not mutate the input array", () => {
+    const list = [makeAgreement("a-1", "first")];
+    const snapshot = [...list];
+    upsertAgreementInList(list, makeAgreement("a-2", "second"));
+    expect(list).toEqual(snapshot);
+  });
+
+  it("handles an empty starting list", () => {
+    const next = upsertAgreementInList([], makeAgreement("a-1", "first"));
+    expect(next.map((a) => a.id)).toEqual(["a-1"]);
+  });
+});
+
+describe("removeAgreementFromList", () => {
+  it("removes the agreement with the matching id", () => {
+    const list = [makeAgreement("a-1", "first"), makeAgreement("a-2", "second")];
+    const next = removeAgreementFromList(list, "a-1");
+    expect(next.map((a) => a.id)).toEqual(["a-2"]);
+  });
+
+  it("is a no-op when the id is absent", () => {
+    const list = [makeAgreement("a-1", "first")];
+    const next = removeAgreementFromList(list, "a-999");
+    expect(next.map((a) => a.id)).toEqual(["a-1"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const list = [makeAgreement("a-1", "first"), makeAgreement("a-2", "second")];
+    const snapshot = [...list];
+    removeAgreementFromList(list, "a-1");
+    expect(list).toEqual(snapshot);
   });
 });

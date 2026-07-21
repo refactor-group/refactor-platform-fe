@@ -15,10 +15,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useUserMutation } from "@/lib/api/organizations/users";
+import { organizationArchivedMessage } from "@/lib/api/organization-errors";
 import { NewUser } from "@/types/user";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { toast } from "sonner";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
+import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 
 interface AddMemberDialogProps {
   open: boolean;
@@ -75,7 +77,12 @@ export function AddMemberDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating user:", error);
-      toast.error("There was an error adding the member");
+      toast.error(
+        organizationArchivedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "There was an error adding the member")
+      );
     }
   };
 

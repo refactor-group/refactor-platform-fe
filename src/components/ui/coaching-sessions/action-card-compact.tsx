@@ -26,7 +26,7 @@ import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import { useLinkedGoalDisplay } from "@/lib/hooks/use-linked-goal-display";
 import { ItemStatus, Id } from "@/types/general";
-import { type Option, None } from "@/types/option";
+import { type Option, Some, None } from "@/types/option";
 import type { NoteField } from "@/types/note-selection";
 import { useFieldPrefill } from "@/lib/hooks/use-field-prefill";
 import { cn } from "@/components/lib/utils";
@@ -118,9 +118,11 @@ export function CompactActionCard({
   const [localAssigneeIds, setLocalAssigneeIds] = useState<Id[]>(
     action.assignee_ids ?? []
   );
-  const [localDueBy, setLocalDueBy] = useState<DateTime>(action.due_by);
+  const [localDueBy, setLocalDueBy] = useState<DateTime>(
+    action.due_by.some ? action.due_by.val : DateTime.now().plus({ days: 7 })
+  );
   const displayedAction = useMemo(
-    () => (initialEditing ? { ...action, due_by: localDueBy } : action),
+    () => (initialEditing ? { ...action, due_by: Some(localDueBy) } : action),
     [initialEditing, action, localDueBy]
   );
   const assigneeIds = useMemo(
@@ -321,12 +323,12 @@ function ActionFooter({
   locale,
 }: {
   resolvedAssignees: { initials: string; name: string }[];
-  dueBy: DateTime;
+  dueBy: Option<DateTime>;
   locale: string;
 }) {
-  const formattedDate = dueBy
-    .setLocale(locale)
-    .toLocaleString(DateTime.DATE_MED);
+  const formattedDate = dueBy.some
+    ? dueBy.val.setLocale(locale).toLocaleString(DateTime.DATE_MED)
+    : "No due date";
 
   return (
     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
@@ -355,7 +357,7 @@ function ActionFooter({
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs">
-            Due {formattedDate}
+            {dueBy.some ? `Due ${formattedDate}` : formattedDate}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -390,9 +392,9 @@ function ActionBackView({
   onEdit: () => void;
   onDelete?: () => void;
 }) {
-  const formattedDate = action.due_by
-    .setLocale(locale)
-    .toLocaleString(DateTime.DATE_MED);
+  const formattedDate = action.due_by.some
+    ? action.due_by.val.setLocale(locale).toLocaleString(DateTime.DATE_MED)
+    : null;
 
   const formattedSessionDate = sourceSessionDate
     ?.setLocale(locale)
@@ -402,7 +404,7 @@ function ActionBackView({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold">
-          Due: {formattedDate}
+          {formattedDate ? `Due: ${formattedDate}` : "No due date"}
         </span>
         <button
           type="button"
@@ -597,7 +599,11 @@ function ActionEditForm({
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-muted-foreground">Due date</span>
           <DueDatePicker
-            value={action.due_by}
+            value={
+              action.due_by.some
+                ? action.due_by.val
+                : DateTime.now().plus({ days: 7 })
+            }
             onChange={onDueDateChange}
             locale={locale}
             variant="button"

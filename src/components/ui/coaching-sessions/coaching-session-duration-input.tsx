@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -28,17 +28,33 @@ export function CoachingSessionDurationInput({
   error,
 }: CoachingSessionDurationInputProps) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(() => String(value));
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastEmitted = useRef(value);
+
+  // Mirror externally-driven value changes (default load, reset, preset) into
+  // the draft, without clobbering an in-progress edit such as a cleared field.
+  useEffect(() => {
+    if (value !== lastEmitted.current) {
+      setDraft(String(value));
+      lastEmitted.current = value;
+    }
+  }, [value]);
+
+  const emit = (next: number) => {
+    lastEmitted.current = next;
+    onChange(next);
+  };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setDraft(e.target.value);
     const next = parseInt(e.target.value, 10);
-    if (Number.isFinite(next)) {
-      onChange(next);
-    }
+    emit(Number.isNaN(next) ? 0 : next);
   };
 
   const handlePresetSelect = (minutes: number) => {
-    onChange(minutes);
+    setDraft(String(minutes));
+    emit(minutes);
     setOpen(false);
     inputRef.current?.focus();
   };
@@ -55,7 +71,7 @@ export function CoachingSessionDurationInput({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label="Duration in minutes"
-          value={value}
+          value={draft}
           onChange={handleInputChange}
           disabled={disabled}
           className="pr-9"
@@ -82,7 +98,7 @@ export function CoachingSessionDurationInput({
                     onClick={() => handlePresetSelect(m)}
                     className={cn(
                       "w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent",
-                      value === m && "bg-accent/50 font-medium"
+                      value === m && "bg-accent/50 font-medium",
                     )}
                   >
                     {m} minutes

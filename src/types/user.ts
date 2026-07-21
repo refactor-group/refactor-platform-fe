@@ -167,6 +167,23 @@ export function isAdminOrSuperAdmin(roleState: UserRoleState): boolean {
 }
 
 /**
+ * Checks whether the user is a system-level SuperAdmin (a role assignment with
+ * no organization scope). Reads the roles array directly so it is independent of
+ * any selected organization — unlike useCurrentUserRole(), which requires an org
+ * context. Use this to gate platform-wide features (e.g. the /admin section).
+ *
+ * @param roles - Array of UserRole assignments for the user
+ * @returns true if the user has a SuperAdmin role with no organization scope
+ */
+export function isSuperAdmin(roles: UserRole[]): boolean {
+  // Loose `== null` tolerates a role serialized with organization_id omitted
+  // (undefined) as well as explicit null, matching isOrganizationArchived.
+  return roles.some(
+    (r) => r.role === Role.SuperAdmin && r.organization_id == null
+  );
+}
+
+/**
  * Sorts users alphabetically by name, with the option to place a specific user first.
  *
  * @param users - Array of users to sort

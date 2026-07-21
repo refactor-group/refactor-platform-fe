@@ -8,7 +8,7 @@ import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
-import { type Option, None } from "@/types/option";
+import { type Option, Some, None } from "@/types/option";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTime } from "ts-luxon";
 
@@ -156,7 +156,7 @@ export function ActionSectionContent({
   // Seed due_by to +7 days so the picker initially shows the same default
   // that the backend create handler falls back to when none is selected.
   const newActionPlaceholder = useMemo(
-    () => ({ ...defaultAction(), due_by: DateTime.now().plus({ days: 7 }) }),
+    () => ({ ...defaultAction(), due_by: Some(DateTime.now().plus({ days: 7 })) }),
     []
   );
 

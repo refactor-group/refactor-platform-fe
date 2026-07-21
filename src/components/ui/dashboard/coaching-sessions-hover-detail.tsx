@@ -14,6 +14,7 @@ import {
   isPastSession,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
+import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
 import { ItemStatus } from "@/types/general";
 
 export interface SessionHoverDetailProps {
@@ -60,6 +61,12 @@ export function SessionHoverDetail({
         <p className="text-base font-semibold text-foreground">
           Session with {participantName}
         </p>
+        <CoachingSessionTitleText
+          session={session}
+          hideWhenFallback
+          hideWhenRedundantWithGoals
+          className="text-sm text-muted-foreground mt-0.5"
+        />
         <p className="text-xs text-muted-foreground tabular-nums mt-0.5">
           {scheduledLabel}
         </p>
@@ -98,7 +105,8 @@ export function SessionHoverDetail({
 function ActionDueRow({ action }: { action: Action }) {
   const isCompleted = action.status === ItemStatus.Completed;
   const dueLabel = useMemo(
-    () => action.due_by.toFormat("MMM d"),
+    () =>
+      action.due_by.some ? `Due ${action.due_by.val.toFormat("MMM d")}` : "No due date",
     [action.due_by]
   );
 
@@ -117,7 +125,7 @@ function ActionDueRow({ action }: { action: Action }) {
         >
           {action.body}
         </p>
-        <p className="text-xs text-muted-foreground mt-0.5">Due {dueLabel}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{dueLabel}</p>
       </div>
       <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/25 shrink-0" />
     </Link>

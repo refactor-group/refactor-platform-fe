@@ -5,19 +5,9 @@ import {
   CoachingSessionBucketKind,
 } from "@/types/coaching-session-bucket";
 import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
-import { User } from "@/types/user";
 import { Id } from "@/types/general";
-import {
-  SessionUrgency,
-  EnrichedSessionDisplay,
-} from "@/types/session-display";
-import {
-  getOtherParticipantName,
-  getUserRoleInRelationship,
-} from "@/lib/utils/relationship";
+import { SessionUrgency } from "@/types/session-display";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { goalTitle } from "@/types/goal";
 import { RelationshipRole } from "@/types/relationship-role";
 import type { Action } from "@/types/action";
 import { sortActionArray } from "@/types/action";
@@ -189,64 +179,6 @@ function getPeriodOfDay(time: DateTime): string {
     const dayName = time.toFormat('EEEE'); // e.g., "Monday"
     return `${dayName} ${period}`;
   }
-}
-
-/**
- * Format session date/time for display
- * Story: "Show when the session is in a clear, readable format"
- */
-export function formatSessionDateTime(
-  sessionDateString: string,
-  userTimezone: string
-): string {
-  // Parse the date as UTC first (backend stores dates in UTC), then convert to user's timezone
-  const sessionTime = DateTime.fromISO(sessionDateString, { zone: 'utc' }).setZone(
-    userTimezone
-  );
-  const now = DateTime.now().setZone(userTimezone);
-  const isToday = sessionTime.hasSame(now, "day");
-
-  const timeStr = sessionTime.toFormat("h:mm a");
-  const timezoneStr = sessionTime.toFormat("ZZZZ");
-
-  if (isToday) {
-    return `Today at ${timeStr} ${timezoneStr}`;
-  }
-
-  const dayStr = sessionTime.toFormat("EEEE"); // e.g., "Monday"
-  return `${dayStr} at ${timeStr} ${timezoneStr}`;
-}
-
-/**
- * Enrich session with all display properties
- * Story: "Transform raw data into everything the UI needs"
- */
-export function enrichSessionForDisplay(
-  session: CoachingSession,
-  relationship: CoachingRelationshipWithUserNames,
-  user: User,
-  goal: { id: string; title: string } | null,
-  organization: { id: string; name: string }
-): EnrichedSessionDisplay {
-  const urgency = calculateSessionUrgency(session);
-  const isPast = urgency === SessionUrgency.Past;
-
-  // Use browser timezone as fallback, matching what other coaching session components do
-  const timezone = user.timezone || getBrowserTimezone();
-
-  return {
-    id: session.id,
-    goalTitle: goal ? goalTitle(goal, "Coaching Session") : "Coaching Session",
-    participantName: getOtherParticipantName(relationship, user),
-    userRole: getUserRoleInRelationship(relationship, user),
-    dateTime: formatSessionDateTime(session.date, timezone),
-    organizationName: organization.name,
-    isPast,
-    urgency: {
-      type: urgency,
-      message: getUrgencyMessage(session, urgency),
-    },
-  };
 }
 
 /**
@@ -452,7 +384,8 @@ export function filterReviewActions(
     if (a.coaching_session_id === currentSessionId) return false;
     if (stickyIds?.has(a.id)) return true;
 
-    const dueBy = a.due_by;
+    if (a.due_by.none) return false;
+    const dueBy = a.due_by.val;
     if (dueBy > endOfCurrentDate) return false;
     if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
     return false;

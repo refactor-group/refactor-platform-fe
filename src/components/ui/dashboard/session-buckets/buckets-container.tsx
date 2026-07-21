@@ -48,6 +48,7 @@ export interface BucketsContainerProps {
   mountNow: DateTime;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
+  onSeriesAction: (action: "view" | "edit" | "delete", seriesId: Id) => void;
 }
 
 const SHOW_MORE_INCREMENT_MONTHS = 6;
@@ -78,6 +79,7 @@ export function BucketsContainer({
   mountNow,
   onReschedule,
   onRequestDelete,
+  onSeriesAction,
 }: BucketsContainerProps) {
   const [monthsForward, setMonthsForward] = useState(
     CoachingSessionBuckets.DEFAULT_MONTHS_FORWARD
@@ -378,6 +380,7 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
+            onSeriesAction={onSeriesAction}
           />
           <ThisWeekAccordion
             view={CoachingSessionBucketView.Upcoming}
@@ -391,6 +394,7 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
+            onSeriesAction={onSeriesAction}
           />
           <BucketList
             buckets={futureBuckets}
@@ -407,6 +411,7 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
+            onSeriesAction={onSeriesAction}
             recentlyAddedKeys={recentlyAddedKeys}
             showMoreLabel="Show additional future sessions"
             onShowMore={onShowLater}
@@ -431,6 +436,7 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
+            onSeriesAction={onSeriesAction}
           />
           <ThisWeekAccordion
             view={CoachingSessionBucketView.Previous}
@@ -444,6 +450,7 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
+            onSeriesAction={onSeriesAction}
           />
           <BucketList
             buckets={pastBuckets}
@@ -463,6 +470,7 @@ export function BucketsContainer({
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
             onRequestDelete={onRequestDelete}
+            onSeriesAction={onSeriesAction}
             showMoreLabel="Show additional past sessions"
             onShowMore={onShowEarlier}
           />

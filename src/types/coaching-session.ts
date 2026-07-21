@@ -8,6 +8,7 @@ import { Goal } from "@/types/goal";
 import { Agreement } from "@/types/agreement";
 import { Provider } from "@/types/provider";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
+import { type Option, Some, None } from "@/types/option";
 
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
@@ -16,8 +17,14 @@ export interface CoachingSession {
   coaching_relationship_id: Id;
   date: string;
   duration_minutes: number;
+  title: Option<string>; // None = no human-set title
+  // Backend-composed display title (title -> first topic -> first goal). Present
+  // on the list/enriched reads, absent on the single-session read. None when the
+  // backend couldn't derive one — the FE supplies the placeholder.
+  display_title?: Option<string>;
   meeting_url?: string;
   provider?: Provider;
+  coaching_session_series_id: Option<Id>;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -133,6 +140,56 @@ export function getCoachingSessionById(
   return session ? session : defaultCoachingSession();
 }
 
+/** Wire shape where Option fields are unwrapped to string | null for JSON. */
+export type CoachingSessionWire = Omit<
+  CoachingSession,
+  "title" | "coaching_session_series_id" | "display_title"
+> & {
+  title: string | null;
+  coaching_session_series_id?: Id;
+};
+
+/** Parse boundary transform: wraps the wire title into Option<string>.
+ * Tolerates an empty response body (the BE returns 204/`data: null` on PUT) —
+ * callers revalidate via SWR, so a default placeholder is harmless.
+ *
+ * `title` is the only field needing normalization; the spread is deliberate so
+ * the EnrichedCoachingSession include-fields (coach/coachee/goals/…) pass
+ * through untouched when this is reused for the enriched list endpoint. */
+export function transformCoachingSession(raw: any): CoachingSession {
+  if (raw == null) return defaultCoachingSession();
+  return {
+    ...raw,
+    title: typeof raw.title === "string" ? Some(raw.title) : None,
+    // string -> Some, null -> None, absent (single read) -> undefined.
+    display_title:
+      typeof raw.display_title === "string"
+        ? Some(raw.display_title)
+        : raw.display_title === null
+          ? None
+          : undefined,
+    coaching_session_series_id:
+      typeof raw.coaching_session_series_id === "string"
+        ? Some(raw.coaching_session_series_id)
+        : None,
+  };
+}
+
+/** Converts a CoachingSession to wire format, unwrapping the Option title. */
+export function serializeCoachingSession(
+  session: CoachingSession
+): CoachingSessionWire {
+  // display_title is server-computed/read-only — never send it back.
+  const { display_title: _displayTitle, ...rest } = session;
+  return {
+    ...rest,
+    title: session.title.some ? session.title.val : null,
+    coaching_session_series_id: session.coaching_session_series_id.some
+      ? session.coaching_session_series_id.val
+      : undefined,
+  };
+}
+
 export function defaultCoachingSession(): CoachingSession {
   var now = DateTime.now();
   return {
@@ -140,6 +197,8 @@ export function defaultCoachingSession(): CoachingSession {
     coaching_relationship_id: "",
     date: "",
     duration_minutes: FALLBACK_DURATION_MINUTES,
+    title: None,
+    coaching_session_series_id: None,
     created_at: now,
     updated_at: now,
   };

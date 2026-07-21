@@ -157,6 +157,25 @@ describe("CoachingPreferencesSection", () => {
       );
     });
 
+    it("shows the permission-denied toast on a 403", async () => {
+      mockUpdate.mockRejectedValue(
+        makeApiError(403, { status_code: 403, error: "forbidden" })
+      );
+      render(<CoachingPreferencesSection />);
+
+      const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
+      fireEvent.change(numericInput, { target: { value: "45" } });
+
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+        await Promise.resolve();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith(
+        "You don't have permission to perform this action."
+      );
+    });
+
     it("shows a generic fallback toast on non-422 errors", async () => {
       mockUpdate.mockRejectedValue(
         makeApiError(503, { status_code: 503, error: "service_unavailable" })

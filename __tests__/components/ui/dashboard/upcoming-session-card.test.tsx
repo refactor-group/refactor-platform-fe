@@ -8,7 +8,7 @@ import {
 import type { EnrichedCoachingSession, CoachingSession } from "@/types/coaching-session";
 import type { Action } from "@/types/action";
 import { ItemStatus } from "@/types/general";
-import { None } from "@/types/option";
+import { Some, None } from "@/types/option";
 
 /**
  * Test Suite: UpcomingSessionCard
@@ -94,7 +94,13 @@ function setRelationshipSessionList(sessions: CoachingSession[] = []) {
   });
 }
 
-function makeAction(overrides: Partial<Action> & { coaching_session_id: string; due_by: DateTime }): Action {
+function makeAction({
+  due_by,
+  ...overrides
+}: Partial<Omit<Action, "due_by">> & {
+  coaching_session_id: string;
+  due_by: DateTime | null;
+}): Action {
   return {
     id: overrides.id ?? `action-${Math.random()}`,
     coaching_session_id: overrides.coaching_session_id,
@@ -103,7 +109,7 @@ function makeAction(overrides: Partial<Action> & { coaching_session_id: string; 
     user_id: "coach-1",
     status: ItemStatus.NotStarted,
     status_changed_at: DateTime.now(),
-    due_by: overrides.due_by,
+    due_by: due_by ? Some(due_by) : None,
     created_at: DateTime.now(),
     updated_at: DateTime.now(),
     assignee_ids: ["coach-1"],

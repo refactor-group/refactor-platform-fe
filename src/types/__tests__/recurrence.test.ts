@@ -9,6 +9,7 @@ import {
   frequencyLabel,
   frequencySupportsWeekdays,
   recurrenceToPayload,
+  untilDateToUtcDateTime,
   validateRecurrence,
   weekdayFromLuxon,
   weekdayLabel,
@@ -186,6 +187,28 @@ describe("recurrenceToPayload", () => {
         until: "2026-12-31",
       }).frequency
     ).toBe(Frequency.Monthly);
+  });
+});
+
+describe("untilDateToUtcDateTime", () => {
+  it("anchors to end-of-day UTC when the zone is UTC", () => {
+    expect(untilDateToUtcDateTime("2027-01-31", "UTC")).toBe(
+      "2027-01-31T23:59:59"
+    );
+  });
+
+  it("converts end-of-day in a positive-offset zone to UTC (same day)", () => {
+    // 2027-01-31T23:59:59.999+05:30 → 18:29:59 UTC.
+    expect(untilDateToUtcDateTime("2027-01-31", "Asia/Kolkata")).toBe(
+      "2027-01-31T18:29:59"
+    );
+  });
+
+  it("rolls into the next UTC day for a negative-offset zone", () => {
+    // 2027-01-31T23:59:59.999-05:00 (EST) → 2027-02-01T04:59:59 UTC.
+    expect(untilDateToUtcDateTime("2027-01-31", "America/New_York")).toBe(
+      "2027-02-01T04:59:59"
+    );
   });
 });
 

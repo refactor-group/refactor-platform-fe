@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useAddFromNotes } from "@/lib/hooks/use-add-from-notes";
 
-import { siteConfig } from "@/site.config";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
@@ -36,6 +35,12 @@ import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError } from "@/types/general";
 import { isPastSession } from "@/types/coaching-session";
 import type { CoachingSession } from "@/types/coaching-session";
+import { RelationshipRole } from "@/types/relationship-role";
+import {
+  LockExtent,
+  NO_AFTER_SESSION_LOCK,
+  type AfterSessionLock,
+} from "@/types/after-session-lock";
 import { FocusedPanel } from "@/types/coaching-session-layout";
 
 import { DateTime } from "ts-luxon";
@@ -43,8 +48,10 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useSidebar } from "@/lib/hooks/use-sidebar";
 import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
-const COLLAPSED_GOALS_WIDTH = "40px";
-const EXPANDED_GOALS_WIDTH = "300px";
+// Width of the shared left side panel (Topics / Goals / Actions / Agreements).
+// One value drives all four sections so spacing stays consistent.
+const COLLAPSED_PANEL_WIDTH = "40px";
+const EXPANDED_PANEL_WIDTH = "400px";
 // `minmax(280px, 440px)` lets the transcript shrink from 440 down to a
 // 280-px readability floor when the viewport gets tight between md: and
 // wider desktop widths — keeps Notes from being crushed.
@@ -52,20 +59,28 @@ const DOCKED_TRANSCRIPT_WIDTH = "minmax(280px,440px)";
 const FLEX_COL = "minmax(0,1fr)";
 
 /**
- * Goals are read-only on past sessions for coachees, but coaches retain
- * full add/remove/edit access so they can adjust goals retroactively.
+ * After-session lock scopes by concern, gated on whether the session has ended
+ * (end-of-day in the viewer's timezone). The panel resolves each scope against
+ * the viewer's role:
+ *  - Goals/Agreements lock for the coachee (the coach edits retroactively),
+ *  - the new-topic affordance locks for both (a concluded session takes no new
+ *    topics; existing topics stay editable),
+ *  - nothing is locked while the session is still current.
  */
-function isGoalPanelReadOnly(
+function afterSessionLockFor(
   session: CoachingSession,
-  timezone: string,
-  isCoach: boolean
-): boolean {
-  const isPast = isPastSession(session, {
+  timezone: string
+): AfterSessionLock {
+  const ended = isPastSession(session, {
     cutoff: DateTime.fromISO(session.date, { zone: 'utc' })
       .setZone(timezone)
       .endOf('day'),
   });
-  return isPast && !isCoach;
+  if (!ended) return NO_AFTER_SESSION_LOCK;
+  return {
+    sections: RelationshipRole.Coachee,
+    newTopic: LockExtent.Both,
+  };
 }
 
 /**
@@ -98,13 +113,13 @@ function computeGridColumns(
   isTranscriptOpen: boolean,
   isGoalsCollapsed: boolean
 ): string {
-  const goalsColumn = isGoalsCollapsed ? COLLAPSED_GOALS_WIDTH : EXPANDED_GOALS_WIDTH;
+  const panelColumn = isGoalsCollapsed ? COLLAPSED_PANEL_WIDTH : EXPANDED_PANEL_WIDTH;
   const isDockedThreeColumn =
     focusedPanel === FocusedPanel.None && isTranscriptOpen;
   if (isDockedThreeColumn) {
-    return `${goalsColumn} ${DOCKED_TRANSCRIPT_WIDTH} ${FLEX_COL}`;
+    return `${panelColumn} ${DOCKED_TRANSCRIPT_WIDTH} ${FLEX_COL}`;
   }
-  return `${goalsColumn} ${FLEX_COL}`;
+  return `${panelColumn} ${FLEX_COL}`;
 }
 
 export default function CoachingSessionsPage() {
@@ -115,11 +130,13 @@ export default function CoachingSessionsPage() {
   // Panel section persisted via URL param "panel".
   // Also recognize the legacy "tab" param so old bookmarks still work.
   const panelParam = searchParams.get("panel") ?? searchParams.get("tab");
-  const panelSection = panelParam === PanelSection.Agreements
-    ? PanelSection.Agreements
-    : panelParam === PanelSection.Actions
-      ? PanelSection.Actions
-      : PanelSection.Goals;
+  const panelSection = panelParam === PanelSection.Goals
+    ? PanelSection.Goals
+    : panelParam === PanelSection.Agreements
+      ? PanelSection.Agreements
+      : panelParam === PanelSection.Actions
+        ? PanelSection.Actions
+        : PanelSection.Topics;
 
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -141,8 +158,8 @@ export default function CoachingSessionsPage() {
   const handlePanelSectionChange = useCallback(
     (section: PanelSection) => {
       const newSearchParams = new URLSearchParams(searchParams);
-      if (section === PanelSection.Goals) {
-        // Remove panel parameter for default section to keep URL clean
+      if (section === PanelSection.Topics) {
+        // Remove panel parameter for the default section to keep URL clean
         newSearchParams.delete("panel");
       } else {
         newSearchParams.set("panel", section);
@@ -295,11 +312,8 @@ export default function CoachingSessionsPage() {
     <div className="max-w-screen-2xl flex-1 flex flex-col min-h-0 md:overflow-hidden">
       <EditorCacheProvider sessionId={currentCoachingSessionId || ""}>
         <div className="flex-col pl-4 md:flex">
-          <div className="flex flex-col items-start justify-between space-y-2 py-4 px-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16">
-            <CoachingSessionTitle
-              locale={siteConfig.locale}
-              style={siteConfig.titleStyle}
-            />
+          <div className="flex flex-col items-start justify-between space-y-2 py-5 px-4 sm:flex-row sm:items-center sm:space-y-0 md:min-h-16">
+            <CoachingSessionTitle />
             <div className="ml-auto flex items-center gap-3 sm:justify-end md:justify-start">
               <JoinMeetingButton
                 sessionId={currentCoachingSessionId ?? null}
@@ -335,13 +349,12 @@ export default function CoachingSessionsPage() {
               coachingRelationshipId={currentCoachingRelationshipId}
               collapsed={layout.isGoalsCollapsed}
               onToggleCollapsed={layout.toggleGoalsCollapsed}
-              readOnly={currentCoachingSession
-                ? isGoalPanelReadOnly(
+              afterSessionLock={currentCoachingSession
+                ? afterSessionLockFor(
                     currentCoachingSession,
-                    userSession?.timezone || getBrowserTimezone(),
-                    isCoachInCurrentRelationship
+                    userSession?.timezone || getBrowserTimezone()
                   )
-                : false}
+                : NO_AFTER_SESSION_LOCK}
               defaultSection={panelSection}
               onSectionChange={handlePanelSectionChange}
               noteSelection={noteSelection}
