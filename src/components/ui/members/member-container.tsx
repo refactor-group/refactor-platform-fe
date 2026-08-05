@@ -59,6 +59,7 @@ export function MemberContainer({
           <AddMemberButton
             onMemberAdded={onRefresh}
             openAddMemberDialog={openAddMemberDialog}
+            currentUserRoleState={currentUserRoleState}
           />
         )}
       </div>

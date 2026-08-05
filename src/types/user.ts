@@ -43,6 +43,18 @@ export interface User {
   invite_status: InviteStatus | null;
 }
 
+/**
+ * Narrow projection returned by the email lookup. Deliberately not `User`: the
+ * server sends only these fields, so reaching for roles or timezone on a lookup
+ * result fails at compile time instead of rendering undefined.
+ */
+export interface UserLookupResult {
+  id: Id;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
 export interface NewUser {
   first_name: string;
   last_name: string;

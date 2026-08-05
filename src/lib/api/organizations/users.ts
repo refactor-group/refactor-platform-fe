@@ -1,8 +1,9 @@
 // Interacts with the organizations/{organizationId}/users endpoints
 
+import { useSWRConfig } from "swr";
 import { Id } from "@/types/general";
 import { EntityApi } from "../entity-api";
-import { User, NewUser } from "@/types/user";
+import { User, NewUser, Role } from "@/types/user";
 import { ORGANIZATIONS_BASEURL } from "../organizations";
 
 const ORGANIZATIONS_USERS_BASEURL = (organizationId: Id) =>
@@ -78,6 +79,33 @@ export const UserApi = {
       {}
     );
   },
+
+  /**
+   * Grants an existing user membership of this organization with the given role.
+   * The account itself is shared, not copied.
+   */
+  attachExisting: async (
+    organizationId: Id,
+    userId: Id,
+    role: Role
+  ): Promise<User> =>
+    EntityApi.createFn<{ role: Role }, User>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`,
+      { role }
+    ),
+
+  /**
+   * Removes a user's membership of this organization only. Their account and
+   * any other organizations are left untouched.
+   */
+  removeFromOrganization: async (
+    organizationId: Id,
+    userId: Id
+  ): Promise<void> => {
+    await EntityApi.deleteFn<null, void>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`
+    );
+  },
 };
 
 /**
@@ -101,10 +129,12 @@ export const useUserList = (organizationId: Id) => {
 
 /**
  * Hook for user mutations.
- * Provides methods to create, update, and delete users.
+ * Provides methods to create, update, and delete users, plus the membership
+ * actions (attach an existing user, remove one) that sit outside standard CRUD.
  */
 export const useUserMutation = (organizationId: Id) => {
-  return EntityApi.useEntityMutation<NewUser, User>(
+  const { mutate } = useSWRConfig();
+  const mutation = EntityApi.useEntityMutation<NewUser, User>(
     ORGANIZATIONS_USERS_BASEURL(organizationId),
     {
       create: UserApi.create,
@@ -114,4 +144,20 @@ export const useUserMutation = (organizationId: Id) => {
       deleteNested: UserApi.deleteNested,
     }
   );
+
+  const invalidate = (id: Id) =>
+    EntityApi.invalidateEntityCache(mutate, ORGANIZATIONS_USERS_BASEURL(id));
+
+  return {
+    ...mutation,
+    attachExisting: async (orgId: Id, userId: Id, role: Role) => {
+      const user = await UserApi.attachExisting(orgId, userId, role);
+      invalidate(orgId);
+      return user;
+    },
+    removeFromOrganization: async (orgId: Id, userId: Id) => {
+      await UserApi.removeFromOrganization(orgId, userId);
+      invalidate(orgId);
+    },
+  };
 };
