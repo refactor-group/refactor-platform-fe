@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserMutation } from "@/lib/api/organizations/users";
-import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { UserApi } from "@/lib/api/users";
 import {
   organizationArchivedMessage,
@@ -40,7 +39,7 @@ import {
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { toast } from "sonner";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
+import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 
 /// Sentinel for the "no coach" option, since Select cannot hold an empty value.
 const NO_COACH = "none";
@@ -67,9 +66,6 @@ export function AddMemberDialog({
   const { createNested: createUserNested, attachExisting } = useUserMutation(
     currentOrganizationId
   );
-  const { createNested: createRelationship } = useCoachingRelationshipMutation(
-    currentOrganizationId
-  );
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -88,25 +84,8 @@ export function AddMemberDialog({
   const canAddExisting =
     !!currentUserRoleState && isAdminOrSuperAdmin(currentUserRoleState);
 
-  // Runs only after the member exists, so a failure here leaves a coachless
-  // member rather than blocking the add. Returns whether the coach was assigned.
-  const assignSelectedCoach = async (coacheeId: Id): Promise<boolean> => {
-    if (coachId === NO_COACH) return true;
-
-    try {
-      await createRelationship(currentOrganizationId, {
-        coach_id: coachId,
-        coachee_id: coacheeId,
-      });
-      return true;
-    } catch (error) {
-      console.error("Error assigning coach:", error);
-      return false;
-    }
-  };
-
-  const coachAssignmentFailedMessage =
-    "They were added, but assigning the coach failed. Assign one from the member list.";
+  /// The chosen coach, or undefined to leave the key off the request entirely.
+  const selectedCoachId = coachId === NO_COACH ? undefined : coachId;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -125,11 +104,11 @@ export function AddMemberDialog({
       display_name: formData.displayName,
       email: formData.email,
       timezone: getBrowserTimezone(), // Default to browser timezone for new users
+      ...(selectedCoachId ? { coach_id: selectedCoachId } : {}),
     };
 
     try {
-      const created = await createUserNested(currentOrganizationId, newUser);
-      const coachAssigned = await assignSelectedCoach(created.id);
+      await createUserNested(currentOrganizationId, newUser);
       setFormData({
         firstName: "",
         lastName: "",
@@ -139,11 +118,7 @@ export function AddMemberDialog({
       setCoachId(NO_COACH);
       onMemberAdded();
       const name = `${formData.firstName} ${formData.lastName}`;
-      if (coachAssigned) {
-        toast.success(`New Member ${name} added successfully`);
-      } else {
-        toast.warning(`${name} added. ${coachAssignmentFailedMessage}`);
-      }
+      toast.success(`New Member ${name} added successfully`);
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating user:", error);
@@ -204,15 +179,15 @@ export function AddMemberDialog({
     setIsAdding(true);
 
     try {
-      await attachExisting(currentOrganizationId, foundUser.id, existingRole);
-      const coachAssigned = await assignSelectedCoach(foundUser.id);
+      await attachExisting(
+        currentOrganizationId,
+        foundUser.id,
+        existingRole,
+        selectedCoachId
+      );
       onMemberAdded();
       const name = `${foundUser.first_name} ${foundUser.last_name}`;
-      if (coachAssigned) {
-        toast.success(`${name} added to this organization`);
-      } else {
-        toast.warning(`${name} added to this organization. ${coachAssignmentFailedMessage}`);
-      }
+      toast.success(`${name} added to this organization`);
       resetLookup();
       onOpenChange(false);
     } catch (error) {

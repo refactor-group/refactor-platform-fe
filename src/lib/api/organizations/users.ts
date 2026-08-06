@@ -9,6 +9,9 @@ import { ORGANIZATIONS_BASEURL } from "../organizations";
 const ORGANIZATIONS_USERS_BASEURL = (organizationId: Id) =>
   `${ORGANIZATIONS_BASEURL}/${organizationId}/users`;
 
+/// `coach_id` is omitted rather than null when no coach is chosen.
+type AttachRoleBody = { role: Role; coach_id?: Id };
+
 /**
  * API client for user-related operations in the scope of organizations.
  */
@@ -87,11 +90,12 @@ export const UserApi = {
   attachExisting: async (
     organizationId: Id,
     userId: Id,
-    role: Role
+    role: Role,
+    coachId?: Id
   ): Promise<User> =>
-    EntityApi.createFn<{ role: Role }, User>(
+    EntityApi.createFn<AttachRoleBody, User>(
       `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`,
-      { role }
+      { role, ...(coachId ? { coach_id: coachId } : {}) }
     ),
 
   /**
@@ -150,8 +154,13 @@ export const useUserMutation = (organizationId: Id) => {
 
   return {
     ...mutation,
-    attachExisting: async (orgId: Id, userId: Id, role: Role) => {
-      const user = await UserApi.attachExisting(orgId, userId, role);
+    attachExisting: async (
+      orgId: Id,
+      userId: Id,
+      role: Role,
+      coachId?: Id
+    ) => {
+      const user = await UserApi.attachExisting(orgId, userId, role, coachId);
       invalidate(orgId);
       return user;
     },

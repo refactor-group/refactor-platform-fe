@@ -153,28 +153,41 @@ describe("AddMemberDialog – existing member lookup", () => {
 });
 
 describe("AddMemberDialog – pre-assigning a coach", () => {
-  /** Captures relationship POSTs. `relationshipFails` makes them 500. */
-  function captureRelationships(relationshipFails = false) {
-    const calls: unknown[] = [];
+  /**
+   * Captures the create and attach bodies, plus any relationship POST. The
+   * coach now rides along with the member request, so a relationship POST would
+   * mean the old two-call contract had come back.
+   */
+  function captureAdds(addFails = false) {
+    const created: unknown[] = [];
+    const attached: unknown[] = [];
+    const relationships: unknown[] = [];
     server.use(
       lookupHandler(ADA),
-      http.post("*/organizations/:organizationId/users/:userId/role", () =>
-        HttpResponse.json({ status_code: 200, data: { id: ADA.id } })
+      http.post(
+        "*/organizations/:organizationId/users/:userId/role",
+        async ({ request }) => {
+          attached.push(await request.json());
+          return addFails
+            ? HttpResponse.json({ error: "boom" }, { status: 500 })
+            : HttpResponse.json({ status_code: 200, data: { id: ADA.id } });
+        }
       ),
-      http.post("*/organizations/:organizationId/users", () =>
-        HttpResponse.json({ status_code: 201, data: { id: "user-new" } })
-      ),
+      http.post("*/organizations/:organizationId/users", async ({ request }) => {
+        created.push(await request.json());
+        return addFails
+          ? HttpResponse.json({ error: "boom" }, { status: 500 })
+          : HttpResponse.json({ status_code: 201, data: { id: "user-new" } });
+      }),
       http.post(
         "*/organizations/:organizationId/coaching_relationships",
         async ({ request }) => {
-          calls.push(await request.json());
-          return relationshipFails
-            ? HttpResponse.json({ error: "boom" }, { status: 500 })
-            : HttpResponse.json({ status_code: 201, data: { id: "rel-1" } });
+          relationships.push(await request.json());
+          return HttpResponse.json({ status_code: 201, data: { id: "rel-1" } });
         }
       )
     );
-    return calls;
+    return { created, attached, relationships };
   }
 
   async function pickCoach(user: ReturnType<typeof userEvent.setup>) {
@@ -182,8 +195,8 @@ describe("AddMemberDialog – pre-assigning a coach", () => {
     await user.click(await screen.findByRole("option", { name: "Grace Hopper" }));
   }
 
-  it("assigns the chosen coach to a newly created member", async () => {
-    const calls = captureRelationships();
+  it("sends the chosen coach in the create request, not a second one", async () => {
+    const { created, relationships } = captureAdds();
     const user = userEvent.setup();
     renderDialog(adminRole, [GRACE]);
 
@@ -194,12 +207,16 @@ describe("AddMemberDialog – pre-assigning a coach", () => {
     await pickCoach(user);
     await user.click(screen.getByRole("button", { name: "Create Member" }));
 
-    await waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ coach_id: GRACE.id, coachee_id: "user-new" });
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect(created[0]).toMatchObject({
+      email: "new@example.com",
+      coach_id: GRACE.id,
+    });
+    expect(relationships).toHaveLength(0);
   });
 
-  it("assigns the chosen coach to an attached existing member", async () => {
-    const calls = captureRelationships();
+  it("sends the chosen coach in the attach request, not a second one", async () => {
+    const { attached, relationships } = captureAdds();
     const user = userEvent.setup();
     renderDialog(adminRole, [GRACE]);
 
@@ -207,25 +224,36 @@ describe("AddMemberDialog – pre-assigning a coach", () => {
     await pickCoach(user);
     await user.click(screen.getByRole("button", { name: "Add to organization" }));
 
-    await waitFor(() => expect(calls).toHaveLength(1));
-    expect(calls[0]).toEqual({ coach_id: GRACE.id, coachee_id: ADA.id });
+    await waitFor(() => expect(attached).toHaveLength(1));
+    expect(attached[0]).toEqual({ role: "User", coach_id: GRACE.id });
+    expect(relationships).toHaveLength(0);
   });
 
-  it("does not create a relationship when no coach is chosen", async () => {
-    const calls = captureRelationships();
+  it("omits coach_id entirely when no coach is chosen", async () => {
+    const { created, attached, relationships } = captureAdds();
     const user = userEvent.setup();
     renderDialog(adminRole, [GRACE]);
 
+    await user.type(screen.getByLabelText("First Name"), "Ada");
+    await user.type(screen.getByLabelText("Last Name"), "Lovelace");
+    await user.type(screen.getByLabelText("Display Name"), "Ada");
+    await user.type(screen.getByLabelText("Email"), "new@example.com");
+    await user.click(screen.getByRole("button", { name: "Create Member" }));
+    await waitFor(() => expect(created).toHaveLength(1));
+
     await findAda(user);
     await user.click(screen.getByRole("button", { name: "Add to organization" }));
+    await waitFor(() => expect(attached).toHaveLength(1));
 
-    await waitFor(() => expect(toast.success).toHaveBeenCalled());
-    expect(calls).toHaveLength(0);
+    expect(created[0]).not.toHaveProperty("coach_id");
+    expect(attached[0]).not.toHaveProperty("coach_id");
+    expect(relationships).toHaveLength(0);
   });
 
-  /// The member is already added at this point, so the add must not read as failed.
-  it("still reports the member as added when the coach assignment fails", async () => {
-    captureRelationships(true);
+  /// The coach now shares the member request's transaction, so its failure is
+  /// the add's failure. There is no partial state left to soften the message.
+  it("reports the whole add as failed when the request is rejected", async () => {
+    captureAdds(true);
     const user = userEvent.setup();
     renderDialog(adminRole, [GRACE]);
 
@@ -233,11 +261,9 @@ describe("AddMemberDialog – pre-assigning a coach", () => {
     await pickCoach(user);
     await user.click(screen.getByRole("button", { name: "Add to organization" }));
 
-    await waitFor(() => expect(toast.warning).toHaveBeenCalled());
-    expect(toast.warning).toHaveBeenCalledWith(
-      expect.stringContaining("Assign one from the member list")
-    );
-    expect(toast.error).not.toHaveBeenCalled();
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.warning).not.toHaveBeenCalled();
   });
 
   it("keeps the found user off their own coach list", async () => {

@@ -62,6 +62,8 @@ export interface NewUser {
   email: string;
   password?: string;
   timezone: string;
+  /// Coach to assign in the same request. Omitted when no coach is chosen.
+  coach_id?: Id;
 }
 
 export interface NewUserPassword {
