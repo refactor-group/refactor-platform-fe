@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test-utils/msw-server";
 import { AddMemberDialog } from "@/components/ui/members/add-member-dialog";
-import { Role, type UserRoleState } from "@/types/user";
+import { Role, type User, type UserRoleState } from "@/types/user";
 import { toast } from "sonner";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@ vi.mock("@/site.config", () => ({
 }));
 
 vi.mock("sonner", () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
+  toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
 vi.mock("@/lib/hooks/use-current-organization", () => ({
@@ -61,13 +61,24 @@ function lookupHandler(matches: typeof ADA | null) {
   });
 }
 
-function renderDialog(currentUserRoleState?: UserRoleState) {
+/** Existing members offered as coach candidates. */
+const GRACE = {
+  id: "user-2",
+  first_name: "Grace",
+  last_name: "Hopper",
+} as unknown as User;
+
+function renderDialog(
+  currentUserRoleState?: UserRoleState,
+  organizationMembers?: User[]
+) {
   render(
     <AddMemberDialog
       open
       onOpenChange={vi.fn()}
       onMemberAdded={vi.fn()}
       currentUserRoleState={currentUserRoleState}
+      organizationMembers={organizationMembers}
     />
   );
 }
@@ -138,6 +149,111 @@ describe("AddMemberDialog – existing member lookup", () => {
     expect(
       screen.getByRole("button", { name: "Add to organization" })
     ).toBeEnabled();
+  });
+});
+
+describe("AddMemberDialog – pre-assigning a coach", () => {
+  /** Captures relationship POSTs. `relationshipFails` makes them 500. */
+  function captureRelationships(relationshipFails = false) {
+    const calls: unknown[] = [];
+    server.use(
+      lookupHandler(ADA),
+      http.post("*/organizations/:organizationId/users/:userId/role", () =>
+        HttpResponse.json({ status_code: 200, data: { id: ADA.id } })
+      ),
+      http.post("*/organizations/:organizationId/users", () =>
+        HttpResponse.json({ status_code: 201, data: { id: "user-new" } })
+      ),
+      http.post(
+        "*/organizations/:organizationId/coaching_relationships",
+        async ({ request }) => {
+          calls.push(await request.json());
+          return relationshipFails
+            ? HttpResponse.json({ error: "boom" }, { status: 500 })
+            : HttpResponse.json({ status_code: 201, data: { id: "rel-1" } });
+        }
+      )
+    );
+    return calls;
+  }
+
+  async function pickCoach(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByLabelText("Coach (optional)"));
+    await user.click(await screen.findByRole("option", { name: "Grace Hopper" }));
+  }
+
+  it("assigns the chosen coach to a newly created member", async () => {
+    const calls = captureRelationships();
+    const user = userEvent.setup();
+    renderDialog(adminRole, [GRACE]);
+
+    await user.type(screen.getByLabelText("First Name"), "Ada");
+    await user.type(screen.getByLabelText("Last Name"), "Lovelace");
+    await user.type(screen.getByLabelText("Display Name"), "Ada");
+    await user.type(screen.getByLabelText("Email"), "new@example.com");
+    await pickCoach(user);
+    await user.click(screen.getByRole("button", { name: "Create Member" }));
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ coach_id: GRACE.id, coachee_id: "user-new" });
+  });
+
+  it("assigns the chosen coach to an attached existing member", async () => {
+    const calls = captureRelationships();
+    const user = userEvent.setup();
+    renderDialog(adminRole, [GRACE]);
+
+    await findAda(user);
+    await pickCoach(user);
+    await user.click(screen.getByRole("button", { name: "Add to organization" }));
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toEqual({ coach_id: GRACE.id, coachee_id: ADA.id });
+  });
+
+  it("does not create a relationship when no coach is chosen", async () => {
+    const calls = captureRelationships();
+    const user = userEvent.setup();
+    renderDialog(adminRole, [GRACE]);
+
+    await findAda(user);
+    await user.click(screen.getByRole("button", { name: "Add to organization" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(calls).toHaveLength(0);
+  });
+
+  /// The member is already added at this point, so the add must not read as failed.
+  it("still reports the member as added when the coach assignment fails", async () => {
+    captureRelationships(true);
+    const user = userEvent.setup();
+    renderDialog(adminRole, [GRACE]);
+
+    await findAda(user);
+    await pickCoach(user);
+    await user.click(screen.getByRole("button", { name: "Add to organization" }));
+
+    await waitFor(() => expect(toast.warning).toHaveBeenCalled());
+    expect(toast.warning).toHaveBeenCalledWith(
+      expect.stringContaining("Assign one from the member list")
+    );
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("keeps the found user off their own coach list", async () => {
+    server.use(lookupHandler(ADA));
+    const user = userEvent.setup();
+    renderDialog(adminRole, [GRACE, ADA as unknown as User]);
+
+    await findAda(user);
+    await user.click(screen.getByLabelText("Coach (optional)"));
+
+    expect(
+      await screen.findByRole("option", { name: "Grace Hopper" })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Ada Lovelace" })
+    ).not.toBeInTheDocument();
   });
 });
 

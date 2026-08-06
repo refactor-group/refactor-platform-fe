@@ -4,19 +4,22 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AddMemberDialog } from "./add-member-dialog";
-import { UserRoleState } from "@/types/user";
+import { User, UserRoleState } from "@/types/user";
 
 interface AddMemberButtonProps {
   onMemberAdded: () => void;
   /// Force the AddMemberDialog to open
   openAddMemberDialog: boolean;
   currentUserRoleState: UserRoleState;
+  /// Candidates offered when pre-assigning a coach
+  organizationMembers?: User[];
 }
 
 export function AddMemberButton({
   onMemberAdded,
   openAddMemberDialog,
   currentUserRoleState,
+  organizationMembers,
 }: AddMemberButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -35,6 +38,7 @@ export function AddMemberButton({
         onOpenChange={setOpen}
         onMemberAdded={onMemberAdded}
         currentUserRoleState={currentUserRoleState}
+        organizationMembers={organizationMembers}
       />
     </>
   );

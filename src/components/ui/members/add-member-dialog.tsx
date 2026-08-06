@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserMutation } from "@/lib/api/organizations/users";
+import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { UserApi } from "@/lib/api/users";
 import {
   organizationArchivedMessage,
@@ -31,6 +32,7 @@ import {
 import {
   NewUser,
   Role,
+  User,
   UserLookupResult,
   UserRoleState,
   isAdminOrSuperAdmin,
@@ -38,7 +40,10 @@ import {
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { toast } from "sonner";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
+import { Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
+
+/// Sentinel for the "no coach" option, since Select cannot hold an empty value.
+const NO_COACH = "none";
 
 interface AddMemberDialogProps {
   open: boolean;
@@ -46,6 +51,8 @@ interface AddMemberDialogProps {
   onMemberAdded: () => void;
   /// Omitted for callers that only offer creating a brand new member
   currentUserRoleState?: UserRoleState;
+  /// Candidates offered when pre-assigning a coach. Omitted hides the field.
+  organizationMembers?: User[];
 }
 
 export function AddMemberDialog({
@@ -53,10 +60,14 @@ export function AddMemberDialog({
   onOpenChange,
   onMemberAdded,
   currentUserRoleState,
+  organizationMembers,
 }: AddMemberDialogProps) {
   const { currentOrganizationId } = useCurrentOrganization();
 
   const { createNested: createUserNested, attachExisting } = useUserMutation(
+    currentOrganizationId
+  );
+  const { createNested: createRelationship } = useCoachingRelationshipMutation(
     currentOrganizationId
   );
   const [formData, setFormData] = useState({
@@ -71,10 +82,31 @@ export function AddMemberDialog({
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [existingRole, setExistingRole] = useState<Role>(Role.User);
   const [isAdding, setIsAdding] = useState(false);
+  const [coachId, setCoachId] = useState<string>(NO_COACH);
 
   // Org admins get this too, not just super admins
   const canAddExisting =
     !!currentUserRoleState && isAdminOrSuperAdmin(currentUserRoleState);
+
+  // Runs only after the member exists, so a failure here leaves a coachless
+  // member rather than blocking the add. Returns whether the coach was assigned.
+  const assignSelectedCoach = async (coacheeId: Id): Promise<boolean> => {
+    if (coachId === NO_COACH) return true;
+
+    try {
+      await createRelationship(currentOrganizationId, {
+        coach_id: coachId,
+        coachee_id: coacheeId,
+      });
+      return true;
+    } catch (error) {
+      console.error("Error assigning coach:", error);
+      return false;
+    }
+  };
+
+  const coachAssignmentFailedMessage =
+    "They were added, but assigning the coach failed. Assign one from the member list.";
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -96,15 +128,22 @@ export function AddMemberDialog({
     };
 
     try {
-      await createUserNested(currentOrganizationId, newUser);
+      const created = await createUserNested(currentOrganizationId, newUser);
+      const coachAssigned = await assignSelectedCoach(created.id);
       setFormData({
         firstName: "",
         lastName: "",
         displayName: "",
         email: "",
       });
+      setCoachId(NO_COACH);
       onMemberAdded();
-      toast.success(`New Member ${formData.firstName} ${formData.lastName} added successfully`);
+      const name = `${formData.firstName} ${formData.lastName}`;
+      if (coachAssigned) {
+        toast.success(`New Member ${name} added successfully`);
+      } else {
+        toast.warning(`${name} added. ${coachAssignmentFailedMessage}`);
+      }
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating user:", error);
@@ -148,6 +187,7 @@ export function AddMemberDialog({
     setFoundUser(null);
     setLookupMessage(null);
     setExistingRole(Role.User);
+    setCoachId(NO_COACH);
   };
 
   // A found user belongs to the email that produced it, so editing the field
@@ -165,10 +205,14 @@ export function AddMemberDialog({
 
     try {
       await attachExisting(currentOrganizationId, foundUser.id, existingRole);
+      const coachAssigned = await assignSelectedCoach(foundUser.id);
       onMemberAdded();
-      toast.success(
-        `${foundUser.first_name} ${foundUser.last_name} added to this organization`
-      );
+      const name = `${foundUser.first_name} ${foundUser.last_name}`;
+      if (coachAssigned) {
+        toast.success(`${name} added to this organization`);
+      } else {
+        toast.warning(`${name} added to this organization. ${coachAssignmentFailedMessage}`);
+      }
       resetLookup();
       onOpenChange(false);
     } catch (error) {
@@ -184,6 +228,30 @@ export function AddMemberDialog({
       setIsAdding(false);
     }
   };
+
+  /// Optional coach picker. `excludeId` keeps a member off their own coach list.
+  const coachField = (excludeId?: string) =>
+    organizationMembers &&
+    organizationMembers.length > 0 && (
+      <div className="space-y-2">
+        <Label htmlFor="coach">Coach (optional)</Label>
+        <Select value={coachId} onValueChange={setCoachId}>
+          <SelectTrigger id="coach" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_COACH}>No coach</SelectItem>
+            {organizationMembers
+              .filter((member) => member.id !== excludeId)
+              .map((member) => (
+                <SelectItem key={member.id} value={member.id}>
+                  {member.first_name} {member.last_name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
 
   const createMemberForm = (
     <form onSubmit={handleSubmit}>
@@ -233,6 +301,7 @@ export function AddMemberDialog({
             required
           />
         </div>
+        {coachField()}
       </div>
       <div className="pt-4">
         <DialogFooter>
@@ -307,6 +376,7 @@ export function AddMemberDialog({
           </SelectContent>
         </Select>
       </div>
+      {coachField(foundUser?.id)}
       <DialogFooter>
         <Button
           type="button"

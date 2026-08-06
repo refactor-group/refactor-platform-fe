@@ -60,6 +60,7 @@ export function MemberContainer({
             onMemberAdded={onRefresh}
             openAddMemberDialog={openAddMemberDialog}
             currentUserRoleState={currentUserRoleState}
+            organizationMembers={displayUsers}
           />
         )}
       </div>
