@@ -7,6 +7,7 @@ import {
 } from "@/lib/api/coaching-sessions";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useInterval } from "@/lib/hooks/use-interval";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 
 /**
  * Hook to fetch today's coaching sessions.
@@ -31,6 +32,7 @@ export function useTodaysSessions(
 
   const userId = userSession?.id;
   const timezone = userSession?.timezone || getBrowserTimezone();
+  const { currentOrganizationId } = useCurrentOrganization();
 
   // Force re-render every 30 seconds to update urgency messages in real-time
   const [tick, setTick] = useState(0);
@@ -60,7 +62,10 @@ export function useTodaysSessions(
       endOfDayUTC,
       include,
       "date",
-      "asc"
+      "asc",
+      undefined,
+      undefined,
+      currentOrganizationId ?? undefined
     );
 
   return {

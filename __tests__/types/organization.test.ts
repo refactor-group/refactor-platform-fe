@@ -35,8 +35,18 @@ describe("organizationInitials", () => {
     expect(organizationInitials("Big Table Industries")).toBe("BT");
   });
 
-  it("takes the first two letters of a single-word name", () => {
-    expect(organizationInitials("BigTable")).toBe("BI");
+  it("treats the capitals of a camel or Pascal case word as word boundaries", () => {
+    expect(organizationInitials("BigTable")).toBe("BT");
+    expect(organizationInitials("bigTable")).toBe("BT");
+    expect(organizationInitials("GitHub")).toBe("GH");
+  });
+
+  it("takes only the first two capitals when a word has more", () => {
+    expect(organizationInitials("BigTableCorp")).toBe("BT");
+    expect(organizationInitials("IBM")).toBe("IB");
+  });
+
+  it("falls back to the first two letters when a single word has one capital", () => {
     expect(organizationInitials("Acme")).toBe("AC");
   });
 
@@ -47,8 +57,13 @@ describe("organizationInitials", () => {
     expect(new Set(initials).size).toBe(3);
   });
 
-  it("uppercases lowercase names", () => {
+  it("uppercases names with no capitals at all", () => {
     expect(organizationInitials("acme corp")).toBe("AC");
+    expect(organizationInitials("acme")).toBe("AC");
+  });
+
+  it("prefers word boundaries over capitals for multi-word names", () => {
+    expect(organizationInitials("BigTable Inc")).toBe("BI");
   });
 
   it("does not pad a one-letter name", () => {
