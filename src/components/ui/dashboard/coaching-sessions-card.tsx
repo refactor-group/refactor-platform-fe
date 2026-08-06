@@ -275,6 +275,7 @@ export function CoachingSessionsCard({
             <BucketsContainer
               userId={userId}
               relationshipFilter={relationshipFilter}
+              organizationId={currentOrganizationId || undefined}
               viewerId={userSession.id}
               userTimezone={userSession.timezone || getBrowserTimezone()}
               mountNow={mountNow}

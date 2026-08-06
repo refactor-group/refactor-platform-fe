@@ -42,6 +42,7 @@ export interface BucketAccordionProps {
   onToggle: () => void;
   userId: Id;
   relationshipId: Id | undefined;
+  organizationId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
   selectedId: Id | undefined;
@@ -79,6 +80,7 @@ export function BucketAccordion({
   onToggle,
   userId,
   relationshipId,
+  organizationId,
   viewerId,
   userTimezone,
   selectedId,
@@ -104,7 +106,8 @@ export function BucketAccordion({
     "date",
     isPastView ? "desc" : "asc",
     relationshipId,
-    userTimezone
+    userTimezone,
+    organizationId
   );
 
   const filteredSessions = (enrichedSessions ?? []).filter((s) =>

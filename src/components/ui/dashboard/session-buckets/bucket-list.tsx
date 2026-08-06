@@ -24,6 +24,7 @@ export interface BucketListProps {
   mountNow: DateTime;
   userId: Id;
   relationshipId: Id | undefined;
+  organizationId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
   selectedId: Id | undefined;
@@ -56,6 +57,7 @@ export function BucketList({
   mountNow,
   userId,
   relationshipId,
+  organizationId,
   viewerId,
   userTimezone,
   selectedId,
@@ -162,6 +164,7 @@ export function BucketList({
               onToggle={() => toggleKey(bucket.key)}
               userId={userId}
               relationshipId={relationshipId}
+              organizationId={organizationId}
               viewerId={viewerId}
               userTimezone={userTimezone}
               selectedId={selectedId}
