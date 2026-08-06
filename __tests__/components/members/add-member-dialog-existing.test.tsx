@@ -141,6 +141,39 @@ describe("AddMemberDialog – existing member lookup", () => {
   });
 });
 
+describe("AddMemberDialog – discarding a found user", () => {
+  it("clears the found user when Clear is pressed", async () => {
+    server.use(lookupHandler(ADA));
+    const user = userEvent.setup();
+    renderDialog(adminRole);
+
+    await findAda(user);
+    await user.click(screen.getByRole("button", { name: /^Clear / }));
+
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add to organization" })
+    ).toBeDisabled();
+    expect(screen.getByLabelText("Email")).toHaveValue("");
+  });
+
+  /// Editing the email must invalidate the match it produced, or the add button
+  /// acts on a stale selection while the field shows a different address.
+  it("discards the found user when the email is edited after finding", async () => {
+    server.use(lookupHandler(ADA));
+    const user = userEvent.setup();
+    renderDialog(adminRole);
+
+    await findAda(user);
+    await user.type(screen.getByLabelText("Email"), "x");
+
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add to organization" })
+    ).toBeDisabled();
+  });
+});
+
 describe("AddMemberDialog – attaching an existing member", () => {
   /** Captures every POST to the membership sub-route. */
   function captureAttach() {

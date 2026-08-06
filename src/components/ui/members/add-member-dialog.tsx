@@ -150,6 +150,15 @@ export function AddMemberDialog({
     setExistingRole(Role.User);
   };
 
+  // A found user belongs to the email that produced it, so editing the field
+  // invalidates it. Without this the Add button can act on a stale selection
+  // while the field shows a different address.
+  const handleLookupEmailChange = (value: string) => {
+    setLookupEmail(value);
+    setFoundUser(null);
+    setLookupMessage(null);
+  };
+
   const handleAddExisting = async () => {
     if (!foundUser) return;
     setIsAdding(true);
@@ -247,7 +256,7 @@ export function AddMemberDialog({
             name="lookupEmail"
             type="email"
             value={lookupEmail}
-            onChange={(e) => setLookupEmail(e.target.value)}
+            onChange={(e) => handleLookupEmailChange(e.target.value)}
             placeholder="Enter email address"
           />
           <Button
@@ -264,11 +273,22 @@ export function AddMemberDialog({
         <p className="text-sm text-destructive">{lookupMessage}</p>
       )}
       {foundUser && (
-        <div className="rounded-md border p-3">
-          <p className="font-medium">
-            {foundUser.first_name} {foundUser.last_name}
-          </p>
-          <p className="text-sm text-muted-foreground">{foundUser.email}</p>
+        <div className="flex items-start justify-between gap-2 rounded-md border p-3">
+          <div>
+            <p className="font-medium">
+              {foundUser.first_name} {foundUser.last_name}
+            </p>
+            <p className="text-sm text-muted-foreground">{foundUser.email}</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={resetLookup}
+            aria-label={`Clear ${foundUser.first_name} ${foundUser.last_name}`}
+          >
+            Clear
+          </Button>
         </div>
       )}
       <div className="space-y-2">
