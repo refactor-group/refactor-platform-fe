@@ -10,6 +10,7 @@ import {
   defaultUser,
 } from "@/types/user";
 import { buildQueryString } from "./query-params";
+import { type Option, Some, None } from "@/types/option";
 
 export const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
@@ -25,11 +26,11 @@ export const UserApi = {
    *   may not see them. The backend makes those two cases indistinguishable so
    *   the endpoint can't be used to enumerate accounts.
    */
-  lookupByEmail: async (email: string): Promise<UserLookupResult | null> => {
+  lookupByEmail: async (email: string): Promise<Option<UserLookupResult>> => {
     const results = await EntityApi.getFn<UserLookupResult[]>(
       `${USERS_BASEURL}${buildQueryString({ email })}`
     );
-    return results[0] ?? null;
+    return results.length > 0 ? Some(results[0]) : None;
   },
 
   /**

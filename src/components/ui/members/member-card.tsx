@@ -80,7 +80,7 @@ export function MemberCard({
   currentUserRoleState,
 }: MemberCardProps) {
   const { currentOrganizationId } = useCurrentOrganization();
-  const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
+  const { userSession } = useAuthStore((state: AuthStore) => state);
 
   // Extract user properties
   const { id: userId, first_name: firstName, last_name: lastName, email } = user;
@@ -96,8 +96,6 @@ export function MemberCard({
   const { createNested: createRelationship } =
     useCoachingRelationshipMutation(currentOrganizationId);
 
-  console.log("is a coach", isACoach);
-
   // Only admins and super admins can delete users (but not themselves)
   const canDeleteUser =
     currentUserRoleState.hasAccess &&
@@ -112,6 +110,7 @@ export function MemberCard({
     try {
       await deleteUser(currentOrganizationId, userId);
       toast.success("Member deleted successfully");
+      onRefresh();
     } catch (error) {
       console.error("Error deleting member:", error);
       toast.error(
@@ -122,7 +121,6 @@ export function MemberCard({
             : "Error deleting member")
       );
     }
-    onRefresh();
   };
 
   const handleRemoveFromOrganization = async () => {

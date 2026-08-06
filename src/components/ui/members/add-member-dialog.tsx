@@ -37,6 +37,7 @@ import {
   isAdminOrSuperAdmin,
 } from "@/types/user";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { type Option, None } from "@/types/option";
 import { toast } from "sonner";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
@@ -73,7 +74,7 @@ export function AddMemberDialog({
     email: "",
   });
   const [lookupEmail, setLookupEmail] = useState("");
-  const [foundUser, setFoundUser] = useState<UserLookupResult | null>(null);
+  const [foundUser, setFoundUser] = useState<Option<UserLookupResult>>(None);
   const [lookupMessage, setLookupMessage] = useState<string | null>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [existingRole, setExistingRole] = useState<Role>(Role.User);
@@ -132,15 +133,15 @@ export function AddMemberDialog({
   };
 
   const handleFind = async () => {
-    setFoundUser(null);
+    setFoundUser(None);
     setLookupMessage(null);
     setIsLookingUp(true);
 
     try {
       const result = await UserApi.lookupByEmail(lookupEmail);
-      // A null result also covers a real user outside this admin's scope. The
-      // backend makes those cases indistinguishable, so the copy must too.
-      if (result) {
+      // None also covers a real user outside this admin's scope. The backend
+      // makes those cases indistinguishable, so the copy must too.
+      if (result.some) {
         setFoundUser(result);
       } else {
         setLookupMessage("No user found with that email.");
@@ -159,7 +160,7 @@ export function AddMemberDialog({
 
   const resetLookup = () => {
     setLookupEmail("");
-    setFoundUser(null);
+    setFoundUser(None);
     setLookupMessage(null);
     setExistingRole(Role.User);
     setCoachId(NO_COACH);
@@ -170,23 +171,24 @@ export function AddMemberDialog({
   // while the field shows a different address.
   const handleLookupEmailChange = (value: string) => {
     setLookupEmail(value);
-    setFoundUser(null);
+    setFoundUser(None);
     setLookupMessage(null);
   };
 
   const handleAddExisting = async () => {
-    if (!foundUser) return;
+    if (foundUser.none) return;
+    const target = foundUser.val;
     setIsAdding(true);
 
     try {
       await attachExisting(
         currentOrganizationId,
-        foundUser.id,
+        target.id,
         existingRole,
         selectedCoachId
       );
       onMemberAdded();
-      const name = `${foundUser.first_name} ${foundUser.last_name}`;
+      const name = `${target.first_name} ${target.last_name}`;
       toast.success(`${name} added to this organization`);
       resetLookup();
       onOpenChange(false);
@@ -309,27 +311,29 @@ export function AddMemberDialog({
             onClick={handleFind}
             disabled={isLookingUp || lookupEmail.trim().length === 0}
           >
-            Find
+            {isLookingUp ? "Finding..." : "Find"}
           </Button>
         </div>
       </div>
       {lookupMessage && (
         <p className="text-sm text-destructive">{lookupMessage}</p>
       )}
-      {foundUser && (
+      {foundUser.some && (
         <div className="flex items-start justify-between gap-2 rounded-md border p-3">
           <div>
             <p className="font-medium">
-              {foundUser.first_name} {foundUser.last_name}
+              {foundUser.val.first_name} {foundUser.val.last_name}
             </p>
-            <p className="text-sm text-muted-foreground">{foundUser.email}</p>
+            <p className="text-sm text-muted-foreground">
+              {foundUser.val.email}
+            </p>
           </div>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={resetLookup}
-            aria-label={`Clear ${foundUser.first_name} ${foundUser.last_name}`}
+            aria-label={`Clear ${foundUser.val.first_name} ${foundUser.val.last_name}`}
           >
             Clear
           </Button>
@@ -351,12 +355,12 @@ export function AddMemberDialog({
           </SelectContent>
         </Select>
       </div>
-      {coachField(foundUser?.id)}
+      {coachField(foundUser.some ? foundUser.val.id : undefined)}
       <DialogFooter>
         <Button
           type="button"
           onClick={handleAddExisting}
-          disabled={!foundUser || isAdding}
+          disabled={foundUser.none || isAdding}
         >
           Add to organization
         </Button>

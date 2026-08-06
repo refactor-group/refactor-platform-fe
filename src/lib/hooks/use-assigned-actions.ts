@@ -59,6 +59,9 @@ export function useAssignedActions(
     enrichedSessions: sessions,
     isLoading: sessionsLoading,
     isError: sessionsError,
+  // TODO(rs#374): pass the current organization once GET /users/{id}/actions
+  // accepts one. Scoping these sessions alone would strip context off
+  // out-of-organization actions rather than hide them.
   } = useEnrichedCoachingSessionsForUser(
     userId,
     oneYearAgo,

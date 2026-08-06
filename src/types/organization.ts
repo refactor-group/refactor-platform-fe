@@ -96,7 +96,9 @@ export function organizationInitials(name: string | undefined): string {
   // back to the word's first two letters ("Acme" -> "AC").
   const parts = words[0].match(/\p{Lu}+\p{Ll}*|\p{Ll}+/gu) ?? [];
   const letters =
-    parts.length > 1 ? parts.map((part) => part[0]) : Array.from(words[0]);
+    parts.length > 1
+      ? parts.map((part) => Array.from(part)[0])
+      : Array.from(words[0]);
 
   return letters.slice(0, 2).join("").toUpperCase();
 }

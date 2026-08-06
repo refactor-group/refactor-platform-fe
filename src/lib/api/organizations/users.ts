@@ -92,8 +92,8 @@ export const UserApi = {
     userId: Id,
     role: Role,
     coachId?: Id
-  ): Promise<User> =>
-    EntityApi.createFn<AttachRoleBody, User>(
+  ): Promise<void> =>
+    EntityApi.createFn<AttachRoleBody, void>(
       `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`,
       { role, ...(coachId ? { coach_id: coachId } : {}) }
     ),
@@ -160,9 +160,8 @@ export const useUserMutation = (organizationId: Id) => {
       role: Role,
       coachId?: Id
     ) => {
-      const user = await UserApi.attachExisting(orgId, userId, role, coachId);
+      await UserApi.attachExisting(orgId, userId, role, coachId);
       invalidate(orgId);
-      return user;
     },
     removeFromOrganization: async (orgId: Id, userId: Id) => {
       await UserApi.removeFromOrganization(orgId, userId);
