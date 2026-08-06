@@ -24,12 +24,12 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import type { PopoverProps } from "@radix-ui/react-popover";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { organizationToString } from "@/types/organization";
+import {
+  organizationInitials,
+  organizationToString,
+} from "@/types/organization";
 import { isUserCoach } from "@/types/coaching-relationship";
 import { useEffect } from "react";
-
-const LOGO = "/placeholder.svg?height=40&width=40";
-const SHORT_NAME = "RG";
 
 interface OrganizationSelectorProps extends PopoverProps {
   /// Called when an Organization is selected
@@ -175,10 +175,12 @@ export function OrganizationSwitcher({
               <div className="flex items-center justify-center">
                 <Avatar className="h-7 w-7">
                   <AvatarImage
-                    src={currentOrganization?.logo || LOGO}
+                    src={currentOrganization?.logo}
                     alt={currentOrganization?.name || "Organization"}
                   />
-                  <AvatarFallback>{SHORT_NAME}</AvatarFallback>
+                  <AvatarFallback>
+                    {organizationInitials(currentOrganization?.name)}
+                  </AvatarFallback>
                 </Avatar>
               </div>
             </TooltipTrigger>
@@ -230,10 +232,12 @@ export function OrganizationSwitcher({
           <div className="flex items-center gap-2 text-left">
             <Avatar className="h-6 w-6">
               <AvatarImage
-                src={currentOrganization?.logo || LOGO}
+                src={currentOrganization?.logo}
                 alt={currentOrganization?.name || "Organization"}
               />
-              <AvatarFallback>{SHORT_NAME}</AvatarFallback>
+              <AvatarFallback>
+                {organizationInitials(currentOrganization?.name)}
+              </AvatarFallback>
             </Avatar>
             <span className="truncate">
               {currentOrganization?.name || "Select Organization"}
@@ -297,7 +301,9 @@ export function OrganizationSwitcher({
                     <div className="flex items-center gap-2 w-full">
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={org.logo} alt={org.name} />
-                        <AvatarFallback>{SHORT_NAME}</AvatarFallback>
+                        <AvatarFallback>
+                          {organizationInitials(org.name)}
+                        </AvatarFallback>
                       </Avatar>
                       <span>{org.name}</span>
                       {currentOrganizationId === org.id && (

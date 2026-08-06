@@ -78,6 +78,19 @@ export function defaultOrganizations(): Organization[] {
   return [defaultOrganization()];
 }
 
+/** Up-to-two-letter avatar initials: "Refactor Group" -> "RG", "BigTable" -> "BI", "" -> "?". */
+export function organizationInitials(name: string | undefined): string {
+  const words = (name ?? "").split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+
+  const letters =
+    words.length === 1
+      ? Array.from(words[0]).slice(0, 2)
+      : words.slice(0, 2).map((word) => Array.from(word)[0]);
+
+  return letters.join("").toUpperCase();
+}
+
 export function organizationToString(organization: Organization): string {
   return JSON.stringify(organization);
 }

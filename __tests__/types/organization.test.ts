@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   defaultOrganization,
   isOrganizationArchived,
+  organizationInitials,
   OrganizationStatusFilter,
 } from "@/types/organization";
 
@@ -25,6 +26,43 @@ describe("isOrganizationArchived", () => {
 describe("defaultOrganization", () => {
   it("is active (no archived_at)", () => {
     expect(defaultOrganization().archived_at).toBeUndefined();
+  });
+});
+
+describe("organizationInitials", () => {
+  it("takes the first letter of the first two words", () => {
+    expect(organizationInitials("Refactor Group")).toBe("RG");
+    expect(organizationInitials("Big Table Industries")).toBe("BT");
+  });
+
+  it("takes the first two letters of a single-word name", () => {
+    expect(organizationInitials("BigTable")).toBe("BI");
+    expect(organizationInitials("Acme")).toBe("AC");
+  });
+
+  it("varies with the name rather than returning a fixed value", () => {
+    const initials = ["Refactor Group", "BigTable", "Zeta Labs"].map(
+      organizationInitials
+    );
+    expect(new Set(initials).size).toBe(3);
+  });
+
+  it("uppercases lowercase names", () => {
+    expect(organizationInitials("acme corp")).toBe("AC");
+  });
+
+  it("does not pad a one-letter name", () => {
+    expect(organizationInitials("X")).toBe("X");
+  });
+
+  it("ignores surrounding and repeated whitespace", () => {
+    expect(organizationInitials("  Refactor   Group  ")).toBe("RG");
+  });
+
+  it("falls back to ? for an empty or missing name", () => {
+    expect(organizationInitials("")).toBe("?");
+    expect(organizationInitials("   ")).toBe("?");
+    expect(organizationInitials(undefined)).toBe("?");
   });
 });
 
