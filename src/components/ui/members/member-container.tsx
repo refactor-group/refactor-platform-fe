@@ -1,6 +1,11 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
-import { User, isAdminOrSuperAdmin, sortUsersAlphabetically } from "@/types/user";
+import {
+  User,
+  canAddExistingMembers,
+  isAdminOrSuperAdmin,
+  sortUsersAlphabetically,
+} from "@/types/user";
 import { CoachingRelationshipWithUserNames, isUserCoach } from "@/types/coaching-relationship";
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -64,6 +69,7 @@ export function MemberContainer({
             currentUserRoleState={currentUserRoleState}
             organizationMembers={displayUsers}
             productName={productName}
+            canAddExistingMembers={canAddExistingMembers(userSession.roles)}
           />
         )}
       </div>

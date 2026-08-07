@@ -14,6 +14,9 @@ interface AddMemberButtonProps {
   /// Candidates offered when pre-assigning a coach
   organizationMembers?: User[];
   productName: string;
+  /// False hides the add-existing-member tab, which has nothing to offer an
+  /// admin of a single organization.
+  canAddExistingMembers: boolean;
 }
 
 export function AddMemberButton({
@@ -22,6 +25,7 @@ export function AddMemberButton({
   currentUserRoleState,
   organizationMembers,
   productName,
+  canAddExistingMembers,
 }: AddMemberButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -42,6 +46,7 @@ export function AddMemberButton({
         currentUserRoleState={currentUserRoleState}
         organizationMembers={organizationMembers}
         productName={productName}
+        canAddExistingMembers={canAddExistingMembers}
       />
     </>
   );

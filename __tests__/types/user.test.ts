@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { getUserRoleForOrganization, parseUser, Role } from '@/types/user';
+import {
+  canAddExistingMembers,
+  getUserRoleForOrganization,
+  parseUser,
+  Role,
+} from '@/types/user';
 import type { UserRole } from '@/types/user';
 
 describe('parseUser', () => {
@@ -146,5 +151,50 @@ describe('getUserRoleForOrganization', () => {
     expect(getUserRoleForOrganization(roles, 'org-1')).toBe(Role.User);
     expect(getUserRoleForOrganization(roles, 'org-2')).toBe(Role.Admin);
     expect(getUserRoleForOrganization(roles, 'org-3')).toBe(Role.User);
+  });
+});
+
+describe('canAddExistingMembers', () => {
+  const role = (r: Role, organization_id: string | null): UserRole => ({
+    id: `role-${r}-${organization_id}`,
+    user_id: 'user-1',
+    role: r,
+    organization_id,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  });
+
+  it('is false for an admin of a single organization', () => {
+    // Everyone they can look up is already a member there, so the flow can only
+    // ever return "already a member".
+    expect(canAddExistingMembers([role(Role.Admin, 'org-1')])).toBe(false);
+  });
+
+  it('is true for an admin of two organizations', () => {
+    expect(
+      canAddExistingMembers([role(Role.Admin, 'org-1'), role(Role.Admin, 'org-2')])
+    ).toBe(true);
+  });
+
+  it('does not count organizations where the user is only a member', () => {
+    // Visibility requires Admin in the shared organization, not membership.
+    expect(
+      canAddExistingMembers([role(Role.Admin, 'org-1'), role(Role.User, 'org-2')])
+    ).toBe(false);
+  });
+
+  it('counts distinct organizations, not role rows', () => {
+    expect(
+      canAddExistingMembers([role(Role.Admin, 'org-1'), role(Role.Admin, 'org-1')])
+    ).toBe(false);
+  });
+
+  it('is true for a super admin holding no organization roles', () => {
+    expect(canAddExistingMembers([role(Role.SuperAdmin, null)])).toBe(true);
+  });
+
+  it('is false for a plain member and for no roles at all', () => {
+    expect(canAddExistingMembers([role(Role.User, 'org-1')])).toBe(false);
+    expect(canAddExistingMembers([])).toBe(false);
   });
 });

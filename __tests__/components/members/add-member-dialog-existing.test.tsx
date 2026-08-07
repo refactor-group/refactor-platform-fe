@@ -70,7 +70,8 @@ const GRACE = {
 
 function renderDialog(
   currentUserRoleState?: UserRoleState,
-  organizationMembers?: User[]
+  organizationMembers?: User[],
+  canAddExistingMembers = true
 ) {
   render(
     <AddMemberDialog
@@ -80,6 +81,7 @@ function renderDialog(
       productName="Refactor Coach"
       currentUserRoleState={currentUserRoleState}
       organizationMembers={organizationMembers}
+      canAddExistingMembers={canAddExistingMembers}
     />
   );
 }
@@ -445,5 +447,34 @@ describe("AddMemberDialog – attaching an existing member", () => {
     expect(
       screen.getByRole("button", { name: "Add to organization" })
     ).toBeDisabled();
+  });
+});
+
+describe("AddMemberDialog – gating the existing-member tab", () => {
+  it("hides the tab from an admin who administers only one organization", () => {
+    // They would be able to open it and look people up, but every result is
+    // already a member, so the tab can only lead to a conflict.
+    renderDialog(adminRole, [GRACE], false);
+
+    expect(
+      screen.queryByRole("tab", { name: "Add existing member" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("First Name")).toBeInTheDocument();
+  });
+
+  it("shows the tab when the lookup has candidates to offer", () => {
+    renderDialog(adminRole, [GRACE], true);
+
+    expect(
+      screen.getByRole("tab", { name: "Add existing member" })
+    ).toBeInTheDocument();
+  });
+
+  it("stays hidden for a plain member even when the lookup could offer candidates", () => {
+    renderDialog(memberRole, [GRACE], true);
+
+    expect(
+      screen.queryByRole("tab", { name: "Add existing member" })
+    ).not.toBeInTheDocument();
   });
 });

@@ -56,6 +56,9 @@ interface AddMemberDialogProps {
   organizationMembers?: User[];
   /// Product name, threaded from the page rather than read from global config.
   productName: string;
+  /// False hides the add-existing-member tab, which has nothing to offer an
+  /// admin of a single organization.
+  canAddExistingMembers: boolean;
 }
 
 export function AddMemberDialog({
@@ -65,6 +68,7 @@ export function AddMemberDialog({
   currentUserRoleState,
   organizationMembers,
   productName,
+  canAddExistingMembers,
 }: AddMemberDialogProps) {
   const { currentOrganizationId, currentOrganization } =
     useCurrentOrganization();
@@ -88,9 +92,12 @@ export function AddMemberDialog({
   /// Identifies the newest lookup, so a slower earlier one cannot land on top of it.
   const lookupRequest = useRef(0);
 
-  // Org admins get this too, not just super admins
+  // Org admins get this too, not just super admins, but only when the lookup
+  // can actually find them someone who is not already a member.
   const canAddExisting =
-    !!currentUserRoleState && isAdminOrSuperAdmin(currentUserRoleState);
+    !!currentUserRoleState &&
+    isAdminOrSuperAdmin(currentUserRoleState) &&
+    canAddExistingMembers;
 
   /// The chosen coach, or undefined to leave the key off the request entirely.
   const selectedCoachId = coachId === NO_COACH ? undefined : coachId;

@@ -198,6 +198,32 @@ export function isSuperAdmin(roles: UserRole[]): boolean {
 }
 
 /**
+ * Whether adding an *existing* account to an organization can do anything for
+ * this user.
+ *
+ * The lookup behind that flow only returns users who belong to an organization
+ * the requester administers, and adding someone to an organization they are
+ * already in is rejected. An admin of a single organization therefore has a
+ * visible set that is exactly their existing members, so the flow can only ever
+ * conflict. Two or more administered organizations gives them somewhere to move
+ * people from; a SuperAdmin sees every account.
+ *
+ * @param roles - Every role assignment the user holds, across all organizations
+ * @returns true when the add-existing-member flow has candidates to offer
+ */
+export function canAddExistingMembers(roles: UserRole[]): boolean {
+  if (isSuperAdmin(roles)) return true;
+
+  const administered = new Set(
+    roles
+      .filter((r) => r.role === Role.Admin && r.organization_id != null)
+      .map((r) => r.organization_id)
+  );
+
+  return administered.size > 1;
+}
+
+/**
  * Sorts users alphabetically by name, with the option to place a specific user first.
  *
  * @param users - Array of users to sort
