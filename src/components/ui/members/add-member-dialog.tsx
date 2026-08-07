@@ -27,6 +27,7 @@ import { UserApi } from "@/lib/api/users";
 import {
   organizationArchivedMessage,
   userAlreadyInOrganizationMessage,
+  USER_ALREADY_IN_ORGANIZATION_MESSAGE,
 } from "@/lib/api/organization-errors";
 import {
   NewUser,
@@ -152,11 +153,19 @@ export function AddMemberDialog({
       if (lookupRequest.current !== request) return;
       // None also covers a real user outside this admin's scope. The backend
       // makes those cases indistinguishable, so the copy must too.
-      if (result.some) {
-        setFoundUser(result);
-      } else {
+      if (result.none) {
         setLookupMessage("No user found with that email.");
+        return;
       }
+      // Say so now rather than letting them pick a role and a coach first only
+      // for the request to come back 409. The server still enforces this, since
+      // the member list can be stale and may be absent entirely.
+      const found = result.val;
+      if (organizationMembers?.some((member) => member.id === found.id)) {
+        setLookupMessage(USER_ALREADY_IN_ORGANIZATION_MESSAGE);
+        return;
+      }
+      setFoundUser(result);
     } catch (error) {
       if (lookupRequest.current !== request) return;
       console.error("Error looking up user:", error);
@@ -220,8 +229,11 @@ export function AddMemberDialog({
     }
   };
 
-  /// Optional coach picker. `excludeId` keeps a member off their own coach list.
-  const coachField = (excludeId?: string) =>
+  /// Optional coach picker, listing the organization's existing members.
+  ///
+  /// No self-exclusion is needed: a brand new member is not in the list yet, and
+  /// an existing one is rejected at lookup before the card ever renders.
+  const coachField = () =>
     organizationMembers &&
     organizationMembers.length > 0 && (
       <div className="space-y-2">
@@ -232,13 +244,11 @@ export function AddMemberDialog({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NO_COACH}>No coach</SelectItem>
-            {organizationMembers
-              .filter((member) => member.id !== excludeId)
-              .map((member) => (
-                <SelectItem key={member.id} value={member.id}>
-                  {member.first_name} {member.last_name}
-                </SelectItem>
-              ))}
+            {organizationMembers.map((member) => (
+              <SelectItem key={member.id} value={member.id}>
+                {member.first_name} {member.last_name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -371,7 +381,7 @@ export function AddMemberDialog({
           </SelectContent>
         </Select>
       </div>
-      {coachField(foundUser.some ? foundUser.val.id : undefined)}
+      {coachField()}
       <DialogFooter>
         <Button
           type="button"

@@ -38,13 +38,18 @@ export const organizationArchivedMessage = (error: unknown): string | null =>
     "This organization is archived and can't accept new changes."
   );
 
+/// Shown both by the lookup pre-check and by the server's 409, so the two
+/// paths cannot drift apart.
+export const USER_ALREADY_IN_ORGANIZATION_MESSAGE =
+  "This user is already a member of this organization.";
+
 export const userAlreadyInOrganizationMessage = (
   error: unknown
 ): string | null =>
   orgErrorMessage(
     error,
     "user_already_in_organization",
-    "This user is already a member of this organization."
+    USER_ALREADY_IN_ORGANIZATION_MESSAGE
   );
 
 export const lastOrganizationAdminMessage = (error: unknown): string | null =>

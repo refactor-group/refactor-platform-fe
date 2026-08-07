@@ -267,10 +267,10 @@ describe("AddMemberDialog – pre-assigning a coach", () => {
     expect(toast.warning).not.toHaveBeenCalled();
   });
 
-  it("keeps the found user off their own coach list", async () => {
+  it("offers the organization's existing members as coaches", async () => {
     server.use(lookupHandler(ADA));
     const user = userEvent.setup();
-    renderDialog(adminRole, [GRACE, ADA as unknown as User]);
+    renderDialog(adminRole, [GRACE]);
 
     await findAda(user);
     await user.click(screen.getByLabelText("Coach (optional)"));
@@ -278,9 +278,6 @@ describe("AddMemberDialog – pre-assigning a coach", () => {
     expect(
       await screen.findByRole("option", { name: "Grace Hopper" })
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: "Ada Lovelace" })
-    ).not.toBeInTheDocument();
   });
 });
 
@@ -426,5 +423,27 @@ describe("AddMemberDialog – attaching an existing member", () => {
       expect(screen.getByRole("button", { name: "Add to organization" })).toBeDisabled()
     );
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+  });
+  it("reports an existing member at lookup time instead of on submit", async () => {
+    server.use(lookupHandler(ADA));
+    const alreadyAMember = {
+      id: ADA.id,
+      first_name: ADA.first_name,
+      last_name: ADA.last_name,
+    } as unknown as User;
+    const user = userEvent.setup();
+    renderDialog(adminRole, [GRACE, alreadyAMember]);
+
+    await user.click(screen.getByRole("tab", { name: "Add existing member" }));
+    await user.type(screen.getByLabelText("Email"), ADA.email);
+    await user.click(screen.getByRole("button", { name: "Find" }));
+
+    await screen.findByText("This user is already a member of this organization.");
+    // No confirmation card, so there is no role or coach to fill in and no
+    // request to send.
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add to organization" })
+    ).toBeDisabled();
   });
 });
