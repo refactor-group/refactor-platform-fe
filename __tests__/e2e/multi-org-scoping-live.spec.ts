@@ -13,12 +13,22 @@ import { test, expect, type Page } from "@playwright/test";
 const PASSWORD = "password";
 const EHAB = "ehab.bandar@gmail.com";
 
+/**
+ * Browser time is pinned for every test in this file. The seeded BigTable
+ * sessions sit at fixed instants (2026-08-07 and 2026-09-15), so which bucket
+ * they land in, and whether either is still "upcoming", otherwise depends on the
+ * day the suite happens to run. Both assertions below broke exactly that way
+ * once the date rolled over.
+ */
+const PINNED_NOW = new Date("2026-08-06T15:00:00.000Z");
+
 test.skip(
   !process.env.LIVE_E2E,
   "live end-to-end, set LIVE_E2E=1 with a seeded multi-org database"
 );
 
 async function login(page: Page, email: string) {
+  await page.clock.setFixedTime(PINNED_NOW);
   await page.goto("/");
   await page.fill("#email", email);
   await page.fill("#password", PASSWORD);
@@ -129,4 +139,29 @@ test("the Upcoming Session card is empty in the organization that has no session
   await expect(page.getByText("Session with Jim Hodapp").first()).toBeVisible({
     timeout: 15000,
   });
+});
+
+test("a cold dashboard load never requests sessions without an organization", async ({
+  page,
+}) => {
+  const unscoped: string[] = [];
+  page.on("request", (request) => {
+    const url = request.url();
+    if (!url.includes("/coaching_sessions")) return;
+    if (!new URL(url).searchParams.get("organization_id")) unscoped.push(url);
+  });
+
+  // Fresh context, so the organization is not known until /organizations returns.
+  await login(page, EHAB);
+  await expect(switcher(page)).toContainText(/Refactor Group|BigTable/);
+  await expect(page.getByText(/Coaching Sessions/).first()).toBeVisible({
+    timeout: 15000,
+  });
+
+  // Firing before the organization resolves returns every organization's
+  // sessions, and they render before the scoped result replaces them.
+  expect(
+    unscoped.map((url) => new URL(url).pathname + new URL(url).search),
+    "session requests must wait for the organization"
+  ).toEqual([]);
 });

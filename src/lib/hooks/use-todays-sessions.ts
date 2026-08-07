@@ -55,9 +55,12 @@ export function useTodaysSessions(
   // Use UTC dates for backend filtering since backend stores timestamps in UTC
   // TypeScript non-null assertion: middleware guarantees userId exists on protected routes
   // If userId is briefly undefined during hydration, SWR will show loading state
+  // A null user id skips the fetch. Waiting for the organization matters as much
+  // as sending it: fetching first returns every organization's sessions and the
+  // cards render them before the scoped result replaces them.
   const { enrichedSessions, isLoading, isError, refresh } =
     useEnrichedCoachingSessionsForUser(
-      userId!,
+      currentOrganizationId ? userId! : null,
       startOfDayUTC,
       endOfDayUTC,
       include,

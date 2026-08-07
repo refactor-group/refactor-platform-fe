@@ -271,11 +271,13 @@ export function CoachingSessionsCard({
             relationshipOptions={relationshipOptions}
           />
 
-          {userSession && userId && (
+          {/* Waits for the organization: mounting before it resolves fetches and
+              briefly renders every organization's sessions. */}
+          {userSession && userId && currentOrganizationId && (
             <BucketsContainer
               userId={userId}
               relationshipFilter={relationshipFilter}
-              organizationId={currentOrganizationId || undefined}
+              organizationId={currentOrganizationId}
               viewerId={userSession.id}
               userTimezone={userSession.timezone || getBrowserTimezone()}
               mountNow={mountNow}
