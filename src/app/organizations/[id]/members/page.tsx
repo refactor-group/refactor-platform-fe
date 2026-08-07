@@ -13,6 +13,7 @@ import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { MemberContainer } from "@/components/ui/members/member-container";
 import { PageContainer } from "@/components/ui/page-container";
 import { shouldDenyMembersPageAccess } from "./access-control";
+import { siteConfig } from "@/site.config";
 
 export default function MembersPage({
   params,
@@ -92,6 +93,7 @@ export default function MembersPage({
         onRefresh={handleRefresh}
         isLoading={isRelationshipsLoading || isUsersLoading}
         openAddMemberDialog={openAddMemberDialog}
+        productName={siteConfig.name}
       />
     </PageContainer>
   );

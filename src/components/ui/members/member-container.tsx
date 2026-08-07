@@ -15,6 +15,7 @@ interface MemberContainerProps {
   onRefresh: () => void;
   isLoading: boolean;
   openAddMemberDialog: boolean;
+  productName: string;
 }
 
 export function MemberContainer({
@@ -25,6 +26,7 @@ export function MemberContainer({
   isLoading,
   /// Force the AddMemberDialog to open
   openAddMemberDialog,
+  productName,
 }: MemberContainerProps) {
   const { setIsACoach, isACoach } = useAuthStore((state) => state);
   const currentUserRoleState = useCurrentUserRole();
@@ -61,6 +63,7 @@ export function MemberContainer({
             openAddMemberDialog={openAddMemberDialog}
             currentUserRoleState={currentUserRoleState}
             organizationMembers={displayUsers}
+            productName={productName}
           />
         )}
       </div>

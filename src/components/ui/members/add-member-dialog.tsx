@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,7 +40,6 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { type Option, None } from "@/types/option";
 import { toast } from "sonner";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { siteConfig } from "@/site.config";
 import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 
 /// Sentinel for the "no coach" option, since Select cannot hold an empty value.
@@ -54,6 +53,8 @@ interface AddMemberDialogProps {
   currentUserRoleState?: UserRoleState;
   /// Candidates offered when pre-assigning a coach. Omitted hides the field.
   organizationMembers?: User[];
+  /// Product name, threaded from the page rather than read from global config.
+  productName: string;
 }
 
 export function AddMemberDialog({
@@ -62,6 +63,7 @@ export function AddMemberDialog({
   onMemberAdded,
   currentUserRoleState,
   organizationMembers,
+  productName,
 }: AddMemberDialogProps) {
   const { currentOrganizationId, currentOrganization } =
     useCurrentOrganization();
@@ -82,6 +84,8 @@ export function AddMemberDialog({
   const [existingRole, setExistingRole] = useState<Role>(Role.User);
   const [isAdding, setIsAdding] = useState(false);
   const [coachId, setCoachId] = useState<string>(NO_COACH);
+  /// Identifies the newest lookup, so a slower earlier one cannot land on top of it.
+  const lookupRequest = useRef(0);
 
   // Org admins get this too, not just super admins
   const canAddExisting =
@@ -135,12 +139,17 @@ export function AddMemberDialog({
   };
 
   const handleFind = async () => {
+    const request = ++lookupRequest.current;
     setFoundUser(None);
     setLookupMessage(null);
     setIsLookingUp(true);
 
     try {
       const result = await UserApi.lookupByEmail(lookupEmail);
+      // Editing the email, or starting another lookup, supersedes this one.
+      // Without the check a slow reply repopulates the card for an address the
+      // field no longer shows, and Add attaches that user instead.
+      if (lookupRequest.current !== request) return;
       // None also covers a real user outside this admin's scope. The backend
       // makes those cases indistinguishable, so the copy must too.
       if (result.some) {
@@ -149,6 +158,7 @@ export function AddMemberDialog({
         setLookupMessage("No user found with that email.");
       }
     } catch (error) {
+      if (lookupRequest.current !== request) return;
       console.error("Error looking up user:", error);
       setLookupMessage(
         isForbiddenError(error)
@@ -156,7 +166,7 @@ export function AddMemberDialog({
           : "There was an error looking up that email.",
       );
     } finally {
-      setIsLookingUp(false);
+      if (lookupRequest.current === request) setIsLookingUp(false);
     }
   };
 
@@ -172,9 +182,11 @@ export function AddMemberDialog({
   // invalidates it. Without this the Add button can act on a stale selection
   // while the field shows a different address.
   const handleLookupEmailChange = (value: string) => {
+    lookupRequest.current += 1;
     setLookupEmail(value);
     setFoundUser(None);
     setLookupMessage(null);
+    setIsLookingUp(false);
   };
 
   const handleAddExisting = async () => {
@@ -379,7 +391,7 @@ export function AddMemberDialog({
           <DialogTitle>Add New Member</DialogTitle>
           <DialogDescription>
             {canAddExisting
-              ? `Create a new member account, or add someone who already has a ${siteConfig.name} account.`
+              ? `Create a new member account, or add someone who already has a ${productName} account.`
               : "Create a new member account. They'll receive an email with a link to set up their password."}
           </DialogDescription>
         </DialogHeader>

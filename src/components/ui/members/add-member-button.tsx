@@ -13,6 +13,7 @@ interface AddMemberButtonProps {
   currentUserRoleState: UserRoleState;
   /// Candidates offered when pre-assigning a coach
   organizationMembers?: User[];
+  productName: string;
 }
 
 export function AddMemberButton({
@@ -20,6 +21,7 @@ export function AddMemberButton({
   openAddMemberDialog,
   currentUserRoleState,
   organizationMembers,
+  productName,
 }: AddMemberButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -39,6 +41,7 @@ export function AddMemberButton({
         onMemberAdded={onMemberAdded}
         currentUserRoleState={currentUserRoleState}
         organizationMembers={organizationMembers}
+        productName={productName}
       />
     </>
   );

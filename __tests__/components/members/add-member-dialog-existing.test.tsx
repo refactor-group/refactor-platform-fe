@@ -77,6 +77,7 @@ function renderDialog(
       open
       onOpenChange={vi.fn()}
       onMemberAdded={vi.fn()}
+      productName="Refactor Coach"
       currentUserRoleState={currentUserRoleState}
       organizationMembers={organizationMembers}
     />
@@ -390,5 +391,40 @@ describe("AddMemberDialog – attaching an existing member", () => {
         "This user is already a member of this organization."
       )
     );
+  });
+  it("discards a lookup that lands after the email was edited", async () => {
+    // The reply is held open so the email can be edited while it is in flight.
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get("*/users", async ({ request }) => {
+        const email = new URL(request.url).searchParams.get("email");
+        if (email === ADA.email) await held;
+        return HttpResponse.json({
+          status_code: 200,
+          data: email === ADA.email ? [ADA] : [],
+        });
+      })
+    );
+    const user = userEvent.setup();
+    renderDialog(adminRole);
+
+    await user.click(screen.getByRole("tab", { name: "Add existing member" }));
+    await user.type(screen.getByLabelText("Email"), ADA.email);
+    await user.click(screen.getByRole("button", { name: "Find" }));
+
+    // Retype before the reply arrives, then let it land.
+    await user.clear(screen.getByLabelText("Email"));
+    await user.type(screen.getByLabelText("Email"), "someone.else@example.com");
+    release();
+
+    // Ada must not reappear: the card belongs to an address the field no longer
+    // shows, and Add would attach her instead of the address on screen.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Add to organization" })).toBeDisabled()
+    );
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
   });
 });
