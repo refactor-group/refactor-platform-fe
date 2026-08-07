@@ -59,6 +59,13 @@ export const lastOrganizationAdminMessage = (error: unknown): string | null =>
     "This user is the only admin of this organization. Assign another admin before removing them."
   );
 
+export const userHasCoachingHistoryMessage = (error: unknown): string | null =>
+  orgErrorMessage(
+    error,
+    "user_has_coaching_history",
+    "This member still has coaching sessions in this organization. Remove or reassign those sessions before removing them."
+  );
+
 export const userBelongsToMultipleOrganizationsMessage = (
   error: unknown
 ): string | null =>

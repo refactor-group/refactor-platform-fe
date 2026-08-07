@@ -53,6 +53,7 @@ import {
   lastOrganizationAdminMessage,
   organizationArchivedMessage,
   userBelongsToMultipleOrganizationsMessage,
+  userHasCoachingHistoryMessage,
 } from "@/lib/api/organization-errors";
 import { toast } from "sonner";
 
@@ -134,7 +135,8 @@ export function MemberCard({
     } catch (error) {
       console.error("Error removing member from organization:", error);
       toast.error(
-        lastOrganizationAdminMessage(error) ??
+        userHasCoachingHistoryMessage(error) ??
+          lastOrganizationAdminMessage(error) ??
           organizationArchivedMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
