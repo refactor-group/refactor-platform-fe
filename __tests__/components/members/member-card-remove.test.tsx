@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -30,7 +31,7 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
 
 const mockAuthStore = vi.fn();
 vi.mock("@/lib/providers/auth-store-provider", () => ({
-  AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
+  AuthStoreProvider: ({ children }: { children: ReactNode }) => children,
   useAuthStore: (selector: (state: unknown) => unknown) =>
     selector(mockAuthStore()),
 }));
