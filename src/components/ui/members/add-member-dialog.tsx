@@ -40,6 +40,7 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { type Option, None } from "@/types/option";
 import { toast } from "sonner";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
+import { siteConfig } from "@/site.config";
 import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 
 /// Sentinel for the "no coach" option, since Select cannot hold an empty value.
@@ -62,10 +63,11 @@ export function AddMemberDialog({
   currentUserRoleState,
   organizationMembers,
 }: AddMemberDialogProps) {
-  const { currentOrganizationId } = useCurrentOrganization();
+  const { currentOrganizationId, currentOrganization } =
+    useCurrentOrganization();
 
   const { createNested: createUserNested, attachExisting } = useUserMutation(
-    currentOrganizationId
+    currentOrganizationId,
   );
   const [formData, setFormData] = useState({
     firstName: "",
@@ -127,7 +129,7 @@ export function AddMemberDialog({
         organizationArchivedMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
-            : "There was an error adding the member")
+            : "There was an error adding the member"),
       );
     }
   };
@@ -151,7 +153,7 @@ export function AddMemberDialog({
       setLookupMessage(
         isForbiddenError(error)
           ? PERMISSION_DENIED_MESSAGE
-          : "There was an error looking up that email."
+          : "There was an error looking up that email.",
       );
     } finally {
       setIsLookingUp(false);
@@ -185,7 +187,7 @@ export function AddMemberDialog({
         currentOrganizationId,
         target.id,
         existingRole,
-        selectedCoachId
+        selectedCoachId,
       );
       onMemberAdded();
       const name = `${target.first_name} ${target.last_name}`;
@@ -199,7 +201,7 @@ export function AddMemberDialog({
           organizationArchivedMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
-            : "There was an error adding the member")
+            : "There was an error adding the member"),
       );
     } finally {
       setIsAdding(false);
@@ -291,8 +293,10 @@ export function AddMemberDialog({
   const addExistingForm = (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        This person already has a Refactor account. Adding them here gives them
-        access to this organization using their existing profile.
+        Add a user that already has an account. Adding them here gives them
+        access to the organization{" "}
+        {currentOrganization?.name ?? "you are viewing"} using their existing
+        profile.
       </p>
       <div className="space-y-2">
         <Label htmlFor="lookupEmail">Email</Label>
@@ -375,7 +379,7 @@ export function AddMemberDialog({
           <DialogTitle>Add New Member</DialogTitle>
           <DialogDescription>
             {canAddExisting
-              ? "Create a new member account, or add someone who already has a Refactor account."
+              ? `Create a new member account, or add someone who already has a ${siteConfig.name} account.`
               : "Create a new member account. They'll receive an email with a link to set up their password."}
           </DialogDescription>
         </DialogHeader>
