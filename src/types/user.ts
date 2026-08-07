@@ -43,6 +43,18 @@ export interface User {
   invite_status: InviteStatus | null;
 }
 
+/**
+ * Narrow projection returned by the email lookup. Deliberately not `User`: the
+ * server sends only these fields, so reaching for roles or timezone on a lookup
+ * result fails at compile time instead of rendering undefined.
+ */
+export interface UserLookupResult {
+  id: Id;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
 export interface NewUser {
   first_name: string;
   last_name: string;
@@ -50,6 +62,8 @@ export interface NewUser {
   email: string;
   password?: string;
   timezone: string;
+  /// Coach to assign in the same request. Omitted when no coach is chosen.
+  coach_id?: Id;
 }
 
 export interface NewUserPassword {
@@ -181,6 +195,32 @@ export function isSuperAdmin(roles: UserRole[]): boolean {
   return roles.some(
     (r) => r.role === Role.SuperAdmin && r.organization_id == null
   );
+}
+
+/**
+ * Whether adding an *existing* account to an organization can do anything for
+ * this user.
+ *
+ * The lookup behind that flow only returns users who belong to an organization
+ * the requester administers, and adding someone to an organization they are
+ * already in is rejected. An admin of a single organization therefore has a
+ * visible set that is exactly their existing members, so the flow can only ever
+ * conflict. Two or more administered organizations gives them somewhere to move
+ * people from; a SuperAdmin sees every account.
+ *
+ * @param roles - Every role assignment the user holds, across all organizations
+ * @returns true when the add-existing-member flow has candidates to offer
+ */
+export function canAddExistingMembers(roles: UserRole[]): boolean {
+  if (isSuperAdmin(roles)) return true;
+
+  const administered = new Set(
+    roles
+      .filter((r) => r.role === Role.Admin && r.organization_id != null)
+      .map((r) => r.organization_id)
+  );
+
+  return administered.size > 1;
 }
 
 /**

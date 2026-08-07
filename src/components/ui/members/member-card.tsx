@@ -12,7 +12,17 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Send, Trash2 } from "lucide-react";
+import { MoreHorizontal, Send, Trash2, UserMinus } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +49,12 @@ import {
 } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
-import { organizationArchivedMessage } from "@/lib/api/organization-errors";
+import {
+  lastOrganizationAdminMessage,
+  organizationArchivedMessage,
+  userBelongsToMultipleOrganizationsMessage,
+  userHasCoachingHistoryMessage,
+} from "@/lib/api/organization-errors";
 import { toast } from "sonner";
 
 interface MemberCardProps {
@@ -66,7 +81,7 @@ export function MemberCard({
   currentUserRoleState,
 }: MemberCardProps) {
   const { currentOrganizationId } = useCurrentOrganization();
-  const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
+  const { userSession } = useAuthStore((state: AuthStore) => state);
 
   // Extract user properties
   const { id: userId, first_name: firstName, last_name: lastName, email } = user;
@@ -76,13 +91,11 @@ export function MemberCard({
 
   // Get coaches for this user
   const coaches = getUserCoaches(userId, userRelationships);
-  const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
+  const { deleteNested: deleteUser, removeFromOrganization } = useUserMutation(
     currentOrganizationId
   );
   const { createNested: createRelationship } =
     useCoachingRelationshipMutation(currentOrganizationId);
-
-  console.log("is a coach", isACoach);
 
   // Only admins and super admins can delete users (but not themselves)
   const canDeleteUser =
@@ -94,17 +107,44 @@ export function MemberCard({
     if (!confirm("Are you sure you want to delete this member?")) {
       return;
     }
-    await deleteUser(currentOrganizationId, userId);
-    onRefresh();
 
-    if (deleteError) {
-      console.error("Error deleting member:", deleteError);
-      toast.error("Error deleting member");
+    try {
+      await deleteUser(currentOrganizationId, userId);
+      toast.success("Member deleted successfully");
       onRefresh();
-      return;
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      toast.error(
+        userBelongsToMultipleOrganizationsMessage(error) ??
+          organizationArchivedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "Error deleting member")
+      );
     }
-    toast.success("Member deleted successfully");
-    onRefresh();
+  };
+
+  const handleRemoveFromOrganization = async () => {
+    setIsRemoving(true);
+
+    try {
+      await removeFromOrganization(currentOrganizationId, userId);
+      toast.success(`${firstName} ${lastName} removed from this organization`);
+      setRemoveDialogOpen(false);
+      onRefresh();
+    } catch (error) {
+      console.error("Error removing member from organization:", error);
+      toast.error(
+        userHasCoachingHistoryMessage(error) ??
+          lastOrganizationAdminMessage(error) ??
+          organizationArchivedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "Error removing member from this organization")
+      );
+    } finally {
+      setIsRemoving(false);
+    }
   };
 
   const handleResendInvite = async () => {
@@ -155,6 +195,8 @@ export function MemberCard({
   const [assignMode, setAssignMode] = useState<RelationshipRole>(RelationshipRole.Coach);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [assignedMember, setAssignedMember] = useState<Member | null>(null);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const handleCreateCoachingRelationship = async () => {
     if (!selectedMember || !assignedMember) return;
@@ -267,6 +309,9 @@ export function MemberCard({
             {canDeleteUser && (
               <>
                 {userId !== currentUserId && <DropdownMenuSeparator />}
+                <DropdownMenuItem onClick={() => setRemoveDialogOpen(true)}>
+                  <UserMinus className="mr-2 h-4 w-4" /> Remove from organization
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleDelete}
                   className="text-destructive focus:text-destructive"
@@ -278,6 +323,33 @@ export function MemberCard({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+
+      {/* Remove from organization confirmation */}
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remove {firstName} {lastName} from this organization
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove them from this organization only. Their account and any
+              other organizations are unaffected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleRemoveFromOrganization();
+              }}
+              disabled={isRemoving}
+            >
+              {isRemoving ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Assign Coach/Coachee Modal */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>

@@ -60,4 +60,24 @@ export const handlers = [
     return new HttpResponse(null, { status: 200 });
   }),
 
+  // User lookup by exact email: 0 or 1 results, never a 404. Tests that care
+  // about a match override this with server.use().
+  http.get("*/users", ({ request }) => {
+    const email = new URL(request.url).searchParams.get("email");
+    if (!email) {
+      return new HttpResponse(null, { status: 400 });
+    }
+    return HttpResponse.json({ status_code: 200, data: [] });
+  }),
+
+  // Grant an existing user membership of an organization
+  http.post("*/organizations/:organizationId/users/:userId/role", () => {
+    return HttpResponse.json({ status_code: 200, data: { id: "user-1" } });
+  }),
+
+  // Remove a user's membership of an organization (account untouched)
+  http.delete("*/organizations/:organizationId/users/:userId/role", () => {
+    return HttpResponse.json({ status_code: 200, data: null });
+  }),
+
 ];

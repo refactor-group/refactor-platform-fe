@@ -23,6 +23,9 @@ export function useSessionContextFetch(userId: string | null) {
     enrichedSessions: sessions,
     isLoading,
     isError,
+  // TODO(rs#374): pass the current organization once GET /users/{id}/actions
+  // accepts one. Scoping these sessions alone would strip context off
+  // out-of-organization actions rather than hide them.
   } = useEnrichedCoachingSessionsForUser(userId, oneYearAgo, oneYearFromNow, [
     CoachingSessionInclude.Relationship,
     CoachingSessionInclude.Goal,

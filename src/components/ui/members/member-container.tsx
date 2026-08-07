@@ -1,6 +1,11 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
-import { User, isAdminOrSuperAdmin, sortUsersAlphabetically } from "@/types/user";
+import {
+  User,
+  canAddExistingMembers,
+  isAdminOrSuperAdmin,
+  sortUsersAlphabetically,
+} from "@/types/user";
 import { CoachingRelationshipWithUserNames, isUserCoach } from "@/types/coaching-relationship";
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -15,6 +20,7 @@ interface MemberContainerProps {
   onRefresh: () => void;
   isLoading: boolean;
   openAddMemberDialog: boolean;
+  productName: string;
 }
 
 export function MemberContainer({
@@ -25,6 +31,7 @@ export function MemberContainer({
   isLoading,
   /// Force the AddMemberDialog to open
   openAddMemberDialog,
+  productName,
 }: MemberContainerProps) {
   const { setIsACoach, isACoach } = useAuthStore((state) => state);
   const currentUserRoleState = useCurrentUserRole();
@@ -59,6 +66,10 @@ export function MemberContainer({
           <AddMemberButton
             onMemberAdded={onRefresh}
             openAddMemberDialog={openAddMemberDialog}
+            currentUserRoleState={currentUserRoleState}
+            organizationMembers={displayUsers}
+            productName={productName}
+            canAddExistingMembers={canAddExistingMembers(userSession.roles)}
           />
         )}
       </div>

@@ -4,16 +4,28 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AddMemberDialog } from "./add-member-dialog";
+import { User, UserRoleState } from "@/types/user";
 
 interface AddMemberButtonProps {
   onMemberAdded: () => void;
   /// Force the AddMemberDialog to open
   openAddMemberDialog: boolean;
+  currentUserRoleState: UserRoleState;
+  /// Candidates offered when pre-assigning a coach
+  organizationMembers?: User[];
+  productName: string;
+  /// False hides the add-existing-member tab, which has nothing to offer an
+  /// admin of a single organization.
+  canAddExistingMembers: boolean;
 }
 
 export function AddMemberButton({
   onMemberAdded,
   openAddMemberDialog,
+  currentUserRoleState,
+  organizationMembers,
+  productName,
+  canAddExistingMembers,
 }: AddMemberButtonProps) {
   const [open, setOpen] = useState(false);
 
@@ -31,6 +43,10 @@ export function AddMemberButton({
         open={open}
         onOpenChange={setOpen}
         onMemberAdded={onMemberAdded}
+        currentUserRoleState={currentUserRoleState}
+        organizationMembers={organizationMembers}
+        productName={productName}
+        canAddExistingMembers={canAddExistingMembers}
       />
     </>
   );
