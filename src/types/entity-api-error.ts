@@ -1,5 +1,6 @@
 import { AxiosError, AxiosResponse } from "axios";
 import axios from "axios";
+import { None, Some, type Option } from "@/types/option";
 
 /**
  * Enhanced error type for Entity API operations that preserves axios error information
@@ -157,4 +158,19 @@ export const viewPermissionDeniedMessage = (resource: string): string =>
  */
 export function isForbiddenError(error: unknown): error is EntityApiError {
   return error instanceof EntityApiError && error.isForbidden();
+}
+
+/**
+ * Extracts the HTTP status from an arbitrary thrown value. Reads
+ * {@link EntityApiError.status} first, then falls back to the raw axios
+ * `response.status` for call sites whose fetcher doesn't wrap its errors.
+ * `None` for network errors, aborts, and anything non-HTTP.
+ */
+export function httpStatusOf(error: unknown): Option<number> {
+  if (error instanceof EntityApiError) {
+    return error.status === undefined ? None : Some(error.status);
+  }
+  const status = (error as { response?: { status?: unknown } })?.response
+    ?.status;
+  return typeof status === "number" ? Some(status) : None;
 }

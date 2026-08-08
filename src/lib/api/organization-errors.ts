@@ -59,6 +59,9 @@ export const lastOrganizationAdminMessage = (error: unknown): string | null =>
     "This user is the only admin of this organization. Assign another admin before removing them."
   );
 
+// TODO(rs#377): dead once the backend merges — that 409 variant is deleted and
+// removal returns 204 instead. Remove this, its call site in member-card.tsx,
+// and its test. Branch: chore/remove-dead-user-has-coaching-history-409.
 export const userHasCoachingHistoryMessage = (error: unknown): string | null =>
   orgErrorMessage(
     error,

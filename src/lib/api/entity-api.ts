@@ -1,12 +1,13 @@
 import { Id, EntityApiError, EMPTY_ARRAY } from "@/types/general";
 import { useState } from "react";
-import useSWR, {
+import {
   KeyedMutator,
   ScopedMutator,
   SWRConfiguration,
   useSWRConfig,
 } from "swr";
 import { sessionGuard } from "@/lib/auth/session-guard";
+import { useApiSWR } from "@/lib/hooks/use-api-swr";
 import axios, { type AxiosRequestConfig } from "axios";
 
 // Re-export EntityApiError for easy access
@@ -370,7 +371,7 @@ export namespace EntityApi {
     // Use SWR's conditional fetching via key nullification
     const key = actualParams ? [url, actualParams] : null;
 
-    const { data, error, isLoading, mutate } = useSWR<T[]>(key, fetcher, {
+    const { data, error, isLoading, mutate } = useApiSWR<T[]>(key, fetcher, {
       revalidateOnMount: true,
       ...swrOptions,
     });
@@ -424,7 +425,7 @@ export namespace EntityApi {
     defaultValue: T,
     options?: SWRConfiguration
   ) => {
-    const { data, error, isLoading, mutate } = useSWR<T>(url, fetcher, {
+    const { data, error, isLoading, mutate } = useApiSWR<T>(url, fetcher, {
       revalidateIfStale: false,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,

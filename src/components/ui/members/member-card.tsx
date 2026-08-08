@@ -135,6 +135,8 @@ export function MemberCard({
     } catch (error) {
       console.error("Error removing member from organization:", error);
       toast.error(
+        // TODO(rs#377): drop this first entry once the backend merges — the
+        // 409 it handles is deleted there and removal returns 204.
         userHasCoachingHistoryMessage(error) ??
           lastOrganizationAdminMessage(error) ??
           organizationArchivedMessage(error) ??
@@ -332,8 +334,10 @@ export function MemberCard({
               Remove {firstName} {lastName} from this organization
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Remove them from this organization only. Their account and any
-              other organizations are unaffected.
+              They immediately lose access to this organization&apos;s coaching
+              sessions, notes and actions. Nothing is deleted — their coaching
+              history stays, and the people they work with here keep access to
+              it. Their account and any other organizations are unaffected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

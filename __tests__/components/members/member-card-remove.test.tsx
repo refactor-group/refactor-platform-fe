@@ -133,7 +133,7 @@ describe("MemberCard – remove from organization", () => {
     await openRemoveDialog(user);
     expect(
       await screen.findByText(
-        /Remove them from this organization only\. Their account and any other organizations are unaffected\./
+        /They immediately lose access to this organization's coaching sessions, notes and actions\./
       )
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Remove" }));
