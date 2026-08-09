@@ -9,10 +9,15 @@ const mocks = vi.hoisted(() => ({
   resetOrganizationState: vi.fn(),
   clearCache: vi.fn(),
   replace: vi.fn(),
+  executeAll: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mocks.replace }),
+}));
+
+vi.mock("@/lib/hooks/logout-cleanup-registry", () => ({
+  logoutCleanupRegistry: { executeAll: mocks.executeAll },
 }));
 
 vi.mock("@/lib/api/user-sessions", () => ({
@@ -51,8 +56,15 @@ import { useLogoutUser } from "@/lib/hooks/use-logout-user";
 
 describe("useLogoutUser", () => {
   beforeEach(() => {
+    // clearAllMocks only clears recorded calls, so implementations set by a
+    // throwing test would otherwise leak into the next one.
     vi.clearAllMocks();
     mocks.deleteUserSession.mockResolvedValue(undefined);
+    mocks.executeAll.mockResolvedValue(undefined);
+    mocks.clearCache.mockImplementation(() => {});
+    mocks.resetCoachingRelationshipState.mockImplementation(() => {});
+    mocks.resetCoachingSessionsCardFilters.mockImplementation(() => {});
+    mocks.resetOrganizationState.mockImplementation(() => {});
   });
 
   // The organization selection is persisted to localStorage, so leaving it
@@ -86,5 +98,47 @@ describe("useLogoutUser", () => {
     expect(mocks.clearCache).toHaveBeenCalledTimes(1);
     expect(mocks.resetCoachingRelationshipState).toHaveBeenCalledTimes(1);
     expect(mocks.resetCoachingSessionsCardFilters).toHaveBeenCalledTimes(1);
+  });
+
+  // A teardown step that throws must not strand the ones after it — otherwise
+  // the organization selection survives in localStorage and the next user on
+  // this browser inherits it.
+  it("clears the organization selection even when another teardown step throws", async () => {
+    mocks.resetCoachingRelationshipState.mockImplementation(() => {
+      throw new Error("subscriber blew up");
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { result } = renderHook(() => useLogoutUser());
+
+    await result.current();
+
+    expect(mocks.resetOrganizationState).toHaveBeenCalledTimes(1);
+    expect(mocks.resetCoachingSessionsCardFilters).toHaveBeenCalledTimes(1);
+    expect(mocks.clearCache).toHaveBeenCalledTimes(1);
+    expect(mocks.replace).toHaveBeenCalledWith("/");
+  });
+
+  it("still navigates away when the cache clear throws", async () => {
+    mocks.clearCache.mockImplementation(() => {
+      throw new Error("cache walk blew up");
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { result } = renderHook(() => useLogoutUser());
+
+    await result.current();
+
+    expect(mocks.resetOrganizationState).toHaveBeenCalledTimes(1);
+    expect(mocks.replace).toHaveBeenCalledWith("/");
+  });
+
+  it("tears down local state even when component cleanup rejects", async () => {
+    mocks.executeAll.mockRejectedValue(new Error("cleanup blew up"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { result } = renderHook(() => useLogoutUser());
+
+    await result.current();
+
+    expect(mocks.resetOrganizationState).toHaveBeenCalledTimes(1);
+    expect(mocks.replace).toHaveBeenCalledWith("/");
   });
 });

@@ -33,14 +33,6 @@ export function useLogoutUser() {
       // Execute component cleanup (TipTap providers, etc.)
       await logoutCleanupRegistry.executeAll();
 
-      // Clear cached data
-      clearCache();
-      resetCoachingRelationshipState();
-      resetCoachingSessionsCardFilters();
-      // Persisted to localStorage, so without this the next user to sign in on
-      // this browser inherits the previous user's organization.
-      resetOrganizationState();
-
       // Clean up backend session
       await deleteUserSession(userSession.id);
     } catch (err) {
@@ -48,6 +40,25 @@ export function useLogoutUser() {
       // Ensure frontend state is cleared even if backend cleanup fails
       logout();
     } finally {
+      // Local teardown is not conditional on anything above it, and no step
+      // may strand the ones after it. The organization selection is the one
+      // that matters most: it is persisted to localStorage, so failing to
+      // clear it hands the next user on this browser the previous user's
+      // organization. Ordered cheapest-and-most-important first, with the
+      // cache walk — the step most able to throw — last.
+      for (const teardown of [
+        resetOrganizationState,
+        resetCoachingRelationshipState,
+        resetCoachingSessionsCardFilters,
+        clearCache,
+      ]) {
+        try {
+          teardown();
+        } catch (err) {
+          console.error('Logout teardown step failed:', err);
+        }
+      }
+
       router.replace("/");
     }
   };
