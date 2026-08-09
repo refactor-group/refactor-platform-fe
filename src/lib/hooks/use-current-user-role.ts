@@ -100,15 +100,25 @@ export const useCurrentUserRole = (): UserRoleState => {
   // Show toast notifications for error states (only once per state change).
   // Skip toasts when logged out — userSession going null during logout
   // triggers 'no_roles' which is not a real error.
+  //
+  // The stable ids matter: this hook runs once per consuming component, so
+  // without them every mounted consumer stacks its own copy of the same toast.
+  //
+  // 'no_org_selected' deliberately stays silent. It is the momentary gap
+  // between signing in and the switcher settling on an organization, not
+  // something the user can act on; a user with no organizations at all
+  // surfaces as 'no_roles' instead.
   useEffect(() => {
     if (!isLoggedIn) return;
 
     if (roleState.status === 'no_roles') {
-      toast.error('No roles assigned. Please contact support.');
-    } else if (roleState.status === 'no_org_selected') {
-      toast.info('Please select an organization to continue.');
+      toast.error('No roles assigned. Please contact support.', {
+        id: 'user-role-no-roles',
+      });
     } else if (roleState.status === 'no_access') {
-      toast.warning(`You don't have access to this organization.`);
+      toast.warning(`You don't have access to this organization.`, {
+        id: 'user-role-no-access',
+      });
     }
   }, [roleState.status, isLoggedIn]);
 

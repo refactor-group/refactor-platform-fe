@@ -2,6 +2,7 @@ import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
 import { logoutCleanupRegistry } from "./logout-cleanup-registry";
@@ -19,6 +20,9 @@ export function useLogoutUser() {
   const resetCoachingSessionsCardFilters = useCoachingSessionsCardFilterStore(
     (s) => s.resetCoachingSessionsCardFilters
   );
+  const resetOrganizationState = useOrganizationStateStore(
+    (s) => s.resetOrganizationState
+  );
   const clearCache = EntityApi.useClearCache();
 
   return async () => {
@@ -33,6 +37,9 @@ export function useLogoutUser() {
       clearCache();
       resetCoachingRelationshipState();
       resetCoachingSessionsCardFilters();
+      // Persisted to localStorage, so without this the next user to sign in on
+      // this browser inherits the previous user's organization.
+      resetOrganizationState();
 
       // Clean up backend session
       await deleteUserSession(userSession.id);
