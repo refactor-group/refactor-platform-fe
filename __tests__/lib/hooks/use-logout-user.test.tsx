@@ -131,6 +131,37 @@ describe("useLogoutUser", () => {
     expect(mocks.replace).toHaveBeenCalledWith("/");
   });
 
+  // Teardown must not be sequenced behind the backend round trip. If it is, a
+  // slow request leaves the organization in localStorage for its whole
+  // duration, and a tab closed mid-logout leaves it there permanently.
+  it("clears local state before awaiting the backend session delete", async () => {
+    const order: string[] = [];
+    mocks.resetOrganizationState.mockImplementation(() => {
+      order.push("resetOrganizationState");
+    });
+    mocks.deleteUserSession.mockImplementation(async () => {
+      order.push("deleteUserSession");
+    });
+    const { result } = renderHook(() => useLogoutUser());
+
+    await result.current();
+
+    expect(order).toEqual(["resetOrganizationState", "deleteUserSession"]);
+  });
+
+  it("clears local state even when the backend session delete never settles", async () => {
+    mocks.deleteUserSession.mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useLogoutUser());
+
+    void result.current();
+    // Let the microtask queue drain; the teardown must already have run even
+    // though the request is still outstanding.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mocks.resetOrganizationState).toHaveBeenCalledTimes(1);
+  });
+
   it("tears down local state even when component cleanup rejects", async () => {
     mocks.executeAll.mockRejectedValue(new Error("cleanup blew up"));
     vi.spyOn(console, "error").mockImplementation(() => {});
