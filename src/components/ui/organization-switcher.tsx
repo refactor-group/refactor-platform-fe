@@ -33,7 +33,7 @@ import {
   organizationToString,
 } from "@/types/organization";
 import { isUserCoach } from "@/types/coaching-relationship";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 interface OrganizationSelectorProps extends PopoverProps {
   /// Called when an Organization is selected
@@ -84,7 +84,7 @@ export function OrganizationSwitcher({
   // Note: the default-selection half can go away once a user has the notion of
   //       a default Organization and currentOrganizationId can start out equal
   //       to it.
-  const membership = React.useMemo<OrganizationMembership>(
+  const membership = useMemo<OrganizationMembership>(
     () =>
       isLoggedIn && userId && !isLoading && !isError
         ? { kind: "loaded", organizations }
