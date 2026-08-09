@@ -335,9 +335,9 @@ export function MemberCard({
             </AlertDialogTitle>
             <AlertDialogDescription>
               They immediately lose access to this organization&apos;s coaching
-              sessions, notes and actions. Nothing is deleted — their coaching
-              history stays, and the people they work with here keep access to
-              it. Their account and any other organizations are unaffected.
+              sessions, notes and actions. Nothing is deleted: their coaching
+              history stays with the people they work with here. Their account
+              and other organizations are unaffected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
