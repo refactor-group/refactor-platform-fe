@@ -47,6 +47,33 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // Reads go through useApiSWR so they inherit the fail-fast retry policy (see
+  // use-fail-fast-retry.ts). A bare `useSWR` silently opts out of it, which is
+  // invisible in review, so route new call sites through the wrapper. The two
+  // files that legitimately own SWR plumbing are exempted below.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      "src/lib/hooks/use-api-swr.ts",
+      "src/lib/hooks/use-swr-with-backoff.ts",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "swr",
+              importNames: ["default"],
+              message:
+                "Use useApiSWR from @/lib/hooks/use-api-swr so the read inherits the fail-fast retry policy. Named exports (useSWRConfig, types) are fine.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // React Compiler rules added in eslint-config-next@16 (new in v16, not present in v15).
   // Enabled as warnings for visibility; address incrementally.
   {

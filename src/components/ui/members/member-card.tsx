@@ -80,7 +80,8 @@ export function MemberCard({
   users,
   currentUserRoleState,
 }: MemberCardProps) {
-  const { currentOrganizationId } = useCurrentOrganization();
+  const { currentOrganizationId, currentOrganization } =
+    useCurrentOrganization();
   const { userSession } = useAuthStore((state: AuthStore) => state);
 
   // Extract user properties
@@ -135,6 +136,8 @@ export function MemberCard({
     } catch (error) {
       console.error("Error removing member from organization:", error);
       toast.error(
+        // TODO(rs#377): drop this first entry once the backend merges — the
+        // 409 it handles is deleted there and removal returns 204.
         userHasCoachingHistoryMessage(error) ??
           lastOrganizationAdminMessage(error) ??
           organizationArchivedMessage(error) ??
@@ -329,11 +332,25 @@ export function MemberCard({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Remove {firstName} {lastName} from this organization
+              Remove {firstName} {lastName} from{" "}
+              {currentOrganization?.name ?? "this organization"}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Remove them from this organization only. Their account and any
-              other organizations are unaffected.
+            {/* asChild because the description holds two paragraphs, and
+                AlertDialogDescription renders a <p> that cannot nest them. */}
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  They immediately lose access to this organization&apos;s
+                  coaching sessions, notes and actions.
+                </p>
+                <p>
+                  <span className="italic text-foreground">
+                    Nothing is deleted.
+                  </span>{" "}
+                  Their coaching history stays with the people they work with
+                  here. Their account and other organizations are unaffected.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

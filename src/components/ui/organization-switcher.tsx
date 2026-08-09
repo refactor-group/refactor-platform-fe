@@ -21,6 +21,10 @@ import {
 import { useOrganizationList } from "@/lib/api/organizations";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import {
+  useReconcileCurrentOrganization,
+  type OrganizationMembership,
+} from "@/lib/hooks/use-reconcile-current-organization";
 import type { PopoverProps } from "@radix-ui/react-popover";
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -29,7 +33,7 @@ import {
   organizationToString,
 } from "@/types/organization";
 import { isUserCoach } from "@/types/coaching-relationship";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 interface OrganizationSelectorProps extends PopoverProps {
   /// Called when an Organization is selected
@@ -74,27 +78,25 @@ export function OrganizationSwitcher({
     setIsACoach(isUserCoach(userId, relationships));
   }, [userId, relationships, setIsACoach]);
 
-  // Initialize with first organization if none is selected (only when logged in)
+  // Selects a default organization when none is set, and drops a persisted
+  // selection the user is no longer a member of.
   //
-  // Note: This logic can and should change once we add the notion of a user having a default Organization.
-  //       When this happens, the useEffect here should be able to go away and the currentOrganizationId should
-  //       just start off being equal to their default organization's id.
-  useEffect(() => {
-    if (
-      isLoggedIn &&
-      !currentOrganizationId &&
-      organizations &&
-      organizations.length > 0
-    ) {
-      console.trace(
-        "Initializing current organization to: ",
-        organizationToString(organizations[0])
-      );
-      setCurrentOrganizationId(organizations[0].id);
-    }
-    // setCurrentOrganizationId is stable and doesn't need to be in deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn, organizations, currentOrganizationId]);
+  // Note: the default-selection half can go away once a user has the notion of
+  //       a default Organization and currentOrganizationId can start out equal
+  //       to it.
+  const membership = useMemo<OrganizationMembership>(
+    () =>
+      isLoggedIn && userId && !isLoading && !isError
+        ? { kind: "loaded", organizations }
+        : { kind: "unknown" },
+    [isLoggedIn, userId, isLoading, isError, organizations]
+  );
+
+  useReconcileCurrentOrganization(
+    membership,
+    currentOrganizationId,
+    setCurrentOrganizationId
+  );
 
   // Filter organizations based on search query
   const filteredOrganizations = React.useMemo(() => {

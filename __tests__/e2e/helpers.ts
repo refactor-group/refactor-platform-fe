@@ -231,11 +231,20 @@ export async function mockCommonApiRoutes(
     })
   })
 
-  await page.route('**/organizations', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: MOCK_ORGANIZATIONS }),
-    })
-  })
+  // Matched on pathname rather than a glob: the real request carries a
+  // `?user_id=` query that `**/organizations` does not match, which silently
+  // handed this endpoint to the catch-all above and told the app the user
+  // belonged to no organizations. A `**/organizations**` glob would fix that
+  // but would also swallow the `/organizations/{id}/coaching_relationships`
+  // sub-routes that individual specs mock.
+  await page.route(
+    (url) => url.pathname.endsWith('/organizations'),
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: MOCK_ORGANIZATIONS }),
+      })
+    }
+  )
 }
