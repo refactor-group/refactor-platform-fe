@@ -86,15 +86,33 @@ describe("useReconcileCurrentOrganization", () => {
   });
 
   it("does not fight code that re-selects a revoked organization", () => {
+    const membership = loaded([BETA]);
+    const { rerender, setCurrentOrganizationId } = renderReconciler(
+      membership,
+      ACME.id
+    );
+    expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
+
+    // Same snapshot object throughout — no new evidence has arrived.
+    rerender({ membership, currentOrganizationId: BETA.id });
+    rerender({ membership, currentOrganizationId: ACME.id });
+
+    expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
+  });
+
+  // Without this, a route that writes a revoked id back into global state
+  // (the members page syncs it from the URL) pins that id until the component
+  // unmounts, and every organization-scoped read keeps aiming at it.
+  it("reconsiders a written-back id once a fresh membership snapshot arrives", () => {
     const { rerender, setCurrentOrganizationId } = renderReconciler(
       loaded([BETA]),
       ACME.id
     );
     expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
 
-    rerender({ membership: loaded([BETA]), currentOrganizationId: BETA.id });
     rerender({ membership: loaded([BETA]), currentOrganizationId: ACME.id });
 
-    expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
+    expect(setCurrentOrganizationId).toHaveBeenCalledTimes(2);
+    expect(setCurrentOrganizationId).toHaveBeenLastCalledWith(BETA.id);
   });
 });
