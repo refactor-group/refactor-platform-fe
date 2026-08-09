@@ -26,7 +26,10 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("@/lib/hooks/use-current-organization", () => ({
-  useCurrentOrganization: () => ({ currentOrganizationId: "org-1" }),
+  useCurrentOrganization: () => ({
+    currentOrganizationId: "org-1",
+    currentOrganization: { id: "org-1", name: "Acme Corp" },
+  }),
 }));
 
 const mockAuthStore = vi.fn();
@@ -131,11 +134,17 @@ describe("MemberCard – remove from organization", () => {
     renderCard();
 
     await openRemoveDialog(user);
+    // Naming the organization matters here: an admin who administers several
+    // should not have to infer which one they are removing someone from.
+    expect(
+      await screen.findByText(/Remove Ada Lovelace from Acme Corp/)
+    ).toBeInTheDocument();
     expect(
       await screen.findByText(
         /They immediately lose access to this organization's coaching sessions, notes and actions\./
       )
     ).toBeInTheDocument();
+    expect(await screen.findByText("Nothing is deleted.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Remove" }));
 
     await waitFor(() => expect(roleCalls).toHaveLength(1));
