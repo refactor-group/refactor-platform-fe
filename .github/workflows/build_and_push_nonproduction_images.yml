@@ -63,7 +63,7 @@ jobs:
     # 5+ minute `npx playwright install --with-deps` step. Keep the image
     # tag in sync with the @playwright/test version in package.json.
     container:
-      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
       options: --user 1001
 
     steps:
