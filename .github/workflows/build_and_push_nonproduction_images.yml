@@ -15,11 +15,15 @@ concurrency:
 permissions:
   contents: read
 
+# NODE_ENV is deliberately not set here. `next build` is a production build and
+# must run as one; forcing NODE_ENV=test made Turbopack fail to evaluate
+# postcss.config.js ("__turbopack_context__.a is not a function") on a cold
+# cache. Vitest sets NODE_ENV=test for itself, and E2E runs the production
+# standalone server, so nothing needs it at the workflow level.
 env:
   REGISTRY: ghcr.io
   ORG_NAME: refactor-group
   REPO_NAME: refactor-platform-fe
-  NODE_ENV: test
 
 jobs:
   # === LINT JOB ===
