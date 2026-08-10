@@ -82,8 +82,13 @@ jobs:
       # 🎯 Next.js build cache (job-specific to prevent race conditions).
       # The previous key hashed every .js/.jsx/.ts/.tsx file, which evicted
       # the cache on any non-semantic edit (e.g. comment-only changes).
-      # Now we key on lockfile + Next/TS config; restore-keys still let us
-      # fall back to a same-lockfile-different-config build cache.
+      # Now we key on lockfile + Next/TS config; the one restore-key falls
+      # back to a same-lockfile-different-config build cache.
+      #
+      # Every restore-key must pin the lockfile hash. Turbopack artifacts are
+      # only valid for the Next.js version that wrote them, so a bare prefix
+      # will happily restore a cache from a different Next.js and fail the
+      # build with "__turbopack_context__.a is not a function".
       - name: Cache Next.js build
         uses: actions/cache@v4
         with:
@@ -91,8 +96,6 @@ jobs:
           key: ${{ runner.os }}-nextjs-test-${{ hashFiles('package-lock.json', 'next.config.mjs', 'tsconfig.json') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-test-${{ hashFiles('package-lock.json') }}-
-            ${{ runner.os }}-nextjs-test-
-            ${{ runner.os }}-nextjs-
 
       - name: Install dependencies
         run: npm ci --prefer-offline
