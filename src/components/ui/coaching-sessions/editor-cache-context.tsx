@@ -378,18 +378,20 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
           states: Array<{ clientId: number; [key: string]: any }>;
         }) => {
           const updatedUsers = new Map<string, UserPresence>();
-          let currentUserPresence: UserPresence | null = null;
 
+          // A stale disconnected client must not override live presence.
           states.forEach((state) => {
-            if (state.presence) {
-              const presence = toUserPresence(state.presence);
-              updatedUsers.set(presence.userId, presence);
+            if (!state.presence) return;
 
-              if (presence.userId === userSession.id) {
-                currentUserPresence = presence;
-              }
-            }
+            const presence = toUserPresence(state.presence);
+            const existing = updatedUsers.get(presence.userId);
+            if (existing?.isConnected && !presence.isConnected) return;
+
+            updatedUsers.set(presence.userId, presence);
           });
+
+          const currentUserPresence =
+            updatedUsers.get(userSession.id) ?? null;
 
           // IMPORTANT: Preserve previous users who are no longer in states array
           // as disconnected instead of removing them entirely.
