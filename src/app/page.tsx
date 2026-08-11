@@ -8,7 +8,7 @@ import { siteConfig } from "@/site.config";
 import { Icons } from "@/components/ui/icons";
 
 export const metadata: Metadata = {
-  title: "Welcome to Refactor Coaching",
+  title: `Welcome to ${siteConfig.name}`,
   description: siteConfig.description,
 };
 
@@ -44,7 +44,7 @@ export default function LoginPage() {
                 )}
               >
                 <Icons.refactor_logo className="h-7 w-7" />
-                <span className="sr-only">Refactor</span>
+                <span className="sr-only">{siteConfig.name}</span>
               </div>
             </Link>
             {siteConfig.name}
@@ -73,11 +73,11 @@ export default function LoginPage() {
                   )}
                 >
                   <Icons.refactor_logo className="h-7 w-7" />
-                  <span className="sr-only">Refactor</span>
+                  <span className="sr-only">{siteConfig.name}</span>
                 </div>
               </Link>
               <h1 className="text-2xl font-semibold tracking-tight">
-                Sign in to Refactor
+                Sign in to {siteConfig.name}
               </h1>
             </div>
             <p className="text-sm text-muted-foreground">

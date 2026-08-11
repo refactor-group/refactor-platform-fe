@@ -167,7 +167,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -184,7 +184,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -201,7 +201,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -220,7 +220,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -238,7 +238,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -257,7 +257,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -274,7 +274,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -299,7 +299,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -316,7 +316,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -335,7 +335,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -376,7 +376,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
