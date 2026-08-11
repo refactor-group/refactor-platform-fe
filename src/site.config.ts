@@ -10,6 +10,11 @@ export const siteConfig = {
     twitter: "https://www.linkedin.com/company/refactor-group/",
     github: "https://github.com/refactor-group/",
   },
+  legal: {
+    entity: "Refactor Group, Inc.",
+    contactEmail: "hello@mail.myrefactor.com",
+    governingState: "Illinois",
+  },
   // Configuration items set via a mix of build-time and run-time environment variables
   env: {
     backendServicePort: process.env.NEXT_PUBLIC_BACKEND_SERVICE_PORT,
