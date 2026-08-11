@@ -19,7 +19,7 @@ export default function MembersLayout({
     return (
         <SidebarProvider>
             <div className="flex min-h-screen min-w-full">
-                <AppSidebar />
+                <AppSidebar productName={siteConfig.name} />
                 <SidebarInset>
                     <SiteHeader />
                     <main className="flex-1 p-6">{children}</main>

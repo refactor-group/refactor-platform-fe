@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
                                 )}
                             >
                                 <Icons.refactor_logo className="h-7 w-7" />
-                                <span className="sr-only">Refactor</span>
+                                <span className="sr-only">{siteConfig.name}</span>
                             </div>
                         </Link>
                         {siteConfig.name}
@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
                                     )}
                                 >
                                     <Icons.refactor_logo className="h-7 w-7" />
-                                    <span className="sr-only">Refactor</span>
+                                    <span className="sr-only">{siteConfig.name}</span>
                                 </div>
                             </Link>
                             <h1 className="text-2xl font-semibold tracking-tight">

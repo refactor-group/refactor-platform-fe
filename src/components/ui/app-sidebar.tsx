@@ -46,7 +46,11 @@ const menuButtonStyles = {
   iconWrapper: "flex items-center justify-center w-9",
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  productName: string;
+}
+
+export function AppSidebar({ productName, ...props }: AppSidebarProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const currentUserRoleState = useCurrentUserRole();
   const isSuperAdmin = useIsSuperAdmin();
@@ -82,7 +86,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible={SidebarCollapsible.Icon} {...props}>
       <SidebarHeader className="h-16 flex flex-col justify-between pb-0">
-        {/* Logo and Refactor text */}
         <div className="flex items-center px-3 h-full transition-all duration-200 group-data-[collapsible=icon]:justify-center">
           <Link href="/dashboard" className="flex items-center">
             <div
@@ -94,11 +97,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               )}
             >
               <Icons.refactor_logo className="h-5 w-5" />
-              <span className="sr-only">Refactor</span>
+              <span className="sr-only">{productName}</span>
             </div>
           </Link>
           <h2 className="text-lg font-semibold ml-2 transition-all duration-200 group-data-[collapsible=icon]:hidden">
-            Refactor
+            {productName}
           </h2>
         </div>
 

@@ -18,7 +18,7 @@ export default function CoachingSessionLayout({
   return (
     <SidebarProvider>
       <div className="flex min-h-screen md:h-screen w-full md:overflow-hidden">
-        <AppSidebar />
+        <AppSidebar productName={siteConfig.name} />
         <SidebarInset className="min-w-0">
           <SiteHeader />
           <main className="min-w-0 flex-1 flex flex-col md:overflow-hidden">{children}</main>

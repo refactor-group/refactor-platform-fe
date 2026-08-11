@@ -167,7 +167,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -184,7 +184,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -201,7 +201,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -220,7 +220,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -238,7 +238,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -257,7 +257,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -274,7 +274,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -299,7 +299,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -316,7 +316,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -335,7 +335,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
@@ -360,6 +360,44 @@ describe('AppSidebar Permission Logic', () => {
     });
   });
 
+  describe('Product name branding', () => {
+    // Deliberately not siteConfig.name, so a hard-coded string would fail here.
+    const productName = 'Acme Coach';
+
+    beforeEach(() => {
+      mockUseCurrentUserRole.mockReturnValue({
+        status: 'success',
+        role: Role.User,
+        hasAccess: true,
+      });
+    });
+
+    it('should render productName as the sidebar heading', () => {
+      render(
+        <TestWrapper>
+          <AppSidebar productName={productName} />
+        </TestWrapper>
+      );
+
+      expect(
+        screen.getByRole('heading', { level: 2, name: productName })
+      ).toBeInTheDocument();
+    });
+
+    it('should label the logo link with productName for screen readers', () => {
+      render(
+        <TestWrapper>
+          <AppSidebar productName={productName} />
+        </TestWrapper>
+      );
+
+      expect(screen.getByRole('link', { name: productName })).toHaveAttribute(
+        'href',
+        '/dashboard'
+      );
+    });
+  });
+
   describe('Members link URL', () => {
     it('should have correct href with current organization ID', async () => {
       const adminRoleState: UserRoleState = {
@@ -376,7 +414,7 @@ describe('AppSidebar Permission Logic', () => {
 
       render(
         <TestWrapper>
-          <AppSidebar />
+          <AppSidebar productName="Refactor Coach" />
         </TestWrapper>
       );
 
