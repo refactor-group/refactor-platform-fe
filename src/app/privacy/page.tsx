@@ -172,30 +172,37 @@ export default function PrivacyPolicyPage() {
 
       <h2>Service providers</h2>
       <p>
-        We use the following providers to operate the Platform. Each receives
-        only the information necessary for its function.
+        We rely on the following categories of service provider to operate the
+        Platform. Each receives only the information necessary for its function,
+        and none is permitted to use it for its own purposes.
       </p>
       <ul>
         <li>
-          <strong>DigitalOcean</strong> hosts the application servers and
-          database.
+          <strong>Cloud hosting and database providers</strong>, which run the
+          application servers and store the Platform&rsquo;s data.
         </li>
         <li>
-          <strong>Cloudflare</strong> proxies traffic, terminates TLS, and
-          provides denial-of-service and bot protection.
+          <strong>A content delivery and security provider</strong>, which
+          proxies traffic, terminates TLS, and provides denial-of-service and
+          bot protection.
         </li>
         <li>
-          <strong>Resend</strong> delivers transactional email.
+          <strong>A transactional email provider</strong>, which delivers
+          invitations, password resets, and notifications.
         </li>
         <li>
-          <strong>Google</strong> provides the optional Google Meet integration
-          described above, when you connect a Google account.
+          <strong>A collaborative editing provider</strong>, which powers shared
+          session notes.
         </li>
         <li>
-          <strong>Tiptap</strong> provides the collaborative editing service
-          behind shared session notes.
+          <strong>Google</strong>, which provides the optional Google Meet
+          integration described above, when you connect a Google account.
         </li>
       </ul>
+      <p>
+        A current list of the specific providers we use is available on request
+        at <a href={`mailto:${contactEmail}`}>{contactEmail}</a>.
+      </p>
       <p>
         We may also disclose information when required by law, in response to
         valid legal process, or to protect the rights, safety, or property of
