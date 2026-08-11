@@ -185,7 +185,7 @@ export default function PrivacyPolicyPage() {
           provides denial-of-service and bot protection.
         </li>
         <li>
-          <strong>MailerSend</strong> delivers transactional email.
+          <strong>Resend</strong> delivers transactional email.
         </li>
         <li>
           <strong>Google</strong> provides the optional Google Meet integration
