@@ -25,7 +25,6 @@ export function createMockUser(overrides?: Partial<User>): User {
     display_name: "Jim Hodapp",
     timezone: "America/Los_Angeles",
     default_coaching_session_duration_minutes: 60,
-    role: "coach",
     roles: [],
     invite_status: null,
     created_at: now.toISO() ?? '', // User expects string, handle null case
@@ -128,7 +127,6 @@ export function createMockEnrichedSession(
       display_name: "Jim Hodapp",
       timezone: "America/Los_Angeles",
       default_coaching_session_duration_minutes: 60,
-      role: "coach",
       roles: [],
       created_at: now.toISO() ?? "",
       updated_at: now.toISO() ?? "",
@@ -141,7 +139,6 @@ export function createMockEnrichedSession(
       display_name: "Alex Chen",
       timezone: "America/Los_Angeles",
       default_coaching_session_duration_minutes: 60,
-      role: "user",
       roles: [],
       created_at: now.toISO() ?? "",
       updated_at: now.toISO() ?? "",

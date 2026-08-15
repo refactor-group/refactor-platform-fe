@@ -50,7 +50,7 @@ export const MOCK_USER_ID = 'user-123'
 /**
  * auth-store lives in localStorage with version 2.
  * `userSession` must be a full User object matching the User interface
- * (src/types/user.ts). The `role` field must match a Role enum value
+ * (src/types/user.ts). Each `roles[].role` must match a Role enum value
  * (Role.User = "User").
  */
 export const AUTH_STORE_STATE = {
@@ -63,7 +63,6 @@ export const AUTH_STORE_STATE = {
       last_name: 'User',
       display_name: 'Test User',
       timezone: 'America/Chicago',
-      role: 'User', // Must match Role.User enum value
       roles: [
         {
           id: 'role-1',

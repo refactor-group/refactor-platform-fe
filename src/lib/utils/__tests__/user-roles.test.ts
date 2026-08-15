@@ -15,7 +15,6 @@ describe('getUserDisplayRoles', () => {
     last_name: 'User',
     display_name: 'Test User',
     timezone: 'UTC',
-    role: Role.User, // deprecated field
     roles: roles.map((r, idx) => ({
       id: `role-${idx}`,
       user_id: 'user-1',
