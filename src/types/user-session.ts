@@ -1,4 +1,4 @@
-import { User, Role } from "@/types/user";
+import { User } from "@/types/user";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 
 /**
@@ -30,7 +30,6 @@ export function defaultUserSession(): UserSession {
     display_name: "",
     timezone: "UTC",
     default_coaching_session_duration_minutes: FALLBACK_DURATION_MINUTES,
-    role: Role.User,
     roles: [],
     invite_status: null,
   };

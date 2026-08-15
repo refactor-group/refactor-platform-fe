@@ -35,10 +35,6 @@ export interface User {
   display_name: string;
   timezone: string;
   default_coaching_session_duration_minutes: number;
-  /**
-   * @deprecated Use roles array with getUserRoleForOrganization() instead
-   */
-  role: Role;
   roles: UserRole[];
   invite_status: InviteStatus | null;
 }
@@ -92,7 +88,6 @@ export function parseUser(data: unknown): User {
     timezone: data.timezone || "UTC",
     default_coaching_session_duration_minutes:
       data.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,
-    role: data.role,
     roles: data.roles,
     invite_status: data.invite_status,
   };
@@ -124,7 +119,6 @@ export function defaultUser(): User {
     display_name: "",
     timezone: "UTC",
     default_coaching_session_duration_minutes: FALLBACK_DURATION_MINUTES,
-    role: Role.User,
     roles: [],
     invite_status: null,
   };

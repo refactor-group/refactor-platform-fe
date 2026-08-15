@@ -19,7 +19,6 @@ describe('parseUser', () => {
       last_name: 'Hodapp',
       display_name: 'Jim Hodapp',
       timezone: 'America/Los_Angeles',
-      role: Role.User,
       roles: [],
       invite_status: null,
     };
