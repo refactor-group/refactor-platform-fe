@@ -9,9 +9,15 @@ import { UiPreferencesStoreProvider } from '@/lib/providers/ui-preferences-state
 import { SessionCleanupProvider } from '@/lib/providers/session-cleanup-provider';
 import { SSEProvider } from '@/lib/providers/sse-provider';
 import { SWRConfig } from 'swr';
+import { useSyncUserSession } from '@/lib/hooks/use-sync-user-session';
 
 interface ProvidersProps {
   children: ReactNode;
+}
+
+function UserSessionSync({ children }: { children: ReactNode }) {
+  useSyncUserSession();
+  return <>{children}</>;
 }
 
 export function Providers({ children }: ProvidersProps) {
@@ -29,9 +35,11 @@ export function Providers({ children }: ProvidersProps) {
                     provider: () => new Map(),
                   }}
                 >
-                  <SSEProvider>
-                    {children}
-                  </SSEProvider>
+                  <UserSessionSync>
+                    <SSEProvider>
+                      {children}
+                    </SSEProvider>
+                  </UserSessionSync>
                 </SWRConfig>
               </SessionCleanupProvider>
             </UiPreferencesStoreProvider>

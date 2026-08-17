@@ -10,6 +10,7 @@ import {
   defaultUser,
 } from "@/types/user";
 import { buildQueryString } from "./query-params";
+import type { SWRConfiguration } from "swr";
 import { type Option, Some, None } from "@/types/option";
 
 export const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
@@ -79,14 +80,15 @@ export const UserApi = {
 /**
  * Hook for fetching a single user.
  */
-export const useUser = (id: Id) => {
+export const useUser = (id: Id, options?: SWRConfiguration) => {
   const url = id ? `${USERS_BASEURL}/${id}` : null;
   const fetcher = () => UserApi.get(id);
 
   const { entity, isLoading, isError, refresh } = EntityApi.useEntity<User>(
     url,
     fetcher,
-    defaultUser()
+    defaultUser(),
+    options
   );
 
   return {

@@ -65,6 +65,13 @@ vi.mock('@/lib/providers/sse-provider', () => ({
   SSEProvider: ({ children }: { children: React.ReactNode }) => children
 }))
 
+// Providers mounts this hook, which reads the user via EntityApi; stub it so
+// tests that render Providers over a partially mocked EntityApi still work.
+// Its own suite re-imports the real implementation.
+vi.mock('@/lib/hooks/use-sync-user-session', () => ({
+  useSyncUserSession: () => {}
+}))
+
 // Setup MSW
 beforeAll(() => server.listen())
 afterEach(() => server.resetHandlers())
