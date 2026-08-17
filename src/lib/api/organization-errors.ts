@@ -92,6 +92,25 @@ export const organizationNameInvalidMessage = (error: unknown): string | null =>
 };
 
 /**
+ * A `422 validation_error` from a membership role change — the backend rejects
+ * granting SuperAdmin within an organization. Returns the backend's message,
+ * else null. `validation_error` is a SHARED discriminator, so only call this
+ * from the role-change flow (never treat it as a global org error).
+ */
+export const roleChangeInvalidMessage = (error: unknown): string | null => {
+  if (
+    EntityApiError.isEntityApiError(error) &&
+    error.status === 422 &&
+    error.data?.error === "validation_error"
+  ) {
+    return typeof error.data?.message === "string"
+      ? error.data.message
+      : "That role can't be assigned in this organization.";
+  }
+  return null;
+};
+
+/**
  * Client-side mirror of the backend name rule, so the dialog can flag a bad name
  * before the round-trip. Returns an inline message, or null when the name is ok.
  */

@@ -58,6 +58,7 @@ import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationship
 import {
   lastOrganizationAdminMessage,
   organizationArchivedMessage,
+  roleChangeInvalidMessage,
   userBelongsToMultipleOrganizationsMessage,
 } from "@/lib/api/organization-errors";
 import { toast } from "sonner";
@@ -108,16 +109,25 @@ export function MemberCard({
   // Local state, not SWR optimisticData: the members-list cache key is owned by
   // an ancestor, and the role response is org-filtered so it must not be merged.
   const [pendingRole, setPendingRole] = useState<Role | null>(null);
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   const handleRoleChange = async (role: Role) => {
     setPendingRole(role);
+    setRoleError(null);
     try {
       await updateRole(currentOrganizationId, userId, role);
     } catch (error) {
       console.error("Error changing member role:", error);
+      // An actionable state ("grant someone else Admin first"), not a failure:
+      // it belongs on the row it concerns, where a toast wouldn't persist.
+      const lastAdmin = lastOrganizationAdminMessage(error);
+      if (lastAdmin) {
+        setRoleError(lastAdmin);
+        return;
+      }
       toast.error(
-        lastOrganizationAdminMessage(error) ??
-          organizationArchivedMessage(error) ??
+        organizationArchivedMessage(error) ??
+          roleChangeInvalidMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
             : "Error changing member role")
@@ -292,17 +302,24 @@ export function MemberCard({
           </p>
         )}
         {isAdminOrSuperAdmin(currentUserRoleState) && membershipRole.some && (
-          <span
-            className="mt-2 inline-block"
-            title={isSelf ? "You can't change your own role" : undefined}
-          >
-            <MemberRoleSelect
-              role={pendingRole ?? membershipRole.val}
-              disabled={isSelf || pendingRole !== null}
-              memberName={`${firstName} ${lastName}`}
-              onChange={handleRoleChange}
-            />
-          </span>
+          <>
+            <span
+              className="mt-2 inline-block"
+              title={isSelf ? "You can't change your own role" : undefined}
+            >
+              <MemberRoleSelect
+                role={pendingRole ?? membershipRole.val}
+                disabled={isSelf || pendingRole !== null}
+                memberName={`${firstName} ${lastName}`}
+                onChange={handleRoleChange}
+              />
+            </span>
+            {roleError && (
+              <p role="alert" className="text-sm text-destructive">
+                {roleError}
+              </p>
+            )}
+          </>
         )}
         <p className="text-sm text-muted-foreground">
           <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}

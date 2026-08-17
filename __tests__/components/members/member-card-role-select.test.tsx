@@ -108,6 +108,22 @@ function captureRolePuts(response: () => Response) {
   return { bodies, urls };
 }
 
+async function selectRole(
+  user: ReturnType<typeof userEvent.setup>,
+  option: "Member" | "Admin"
+) {
+  await user.click(screen.getByRole("combobox", { name: SELECT_NAME }));
+  await user.click(await screen.findByRole("option", { name: option }));
+}
+
+const LAST_ADMIN_BODY = {
+  details: { organization_id: "org-1" },
+  error: "last_organization_admin",
+  message:
+    "This user is the only admin of this organization. Grant another member the Admin role first.",
+  status_code: 409,
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -179,6 +195,111 @@ describe("MemberCard – role select", () => {
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({ role: "Admin" });
     expect(urls[0]).toBe("/organizations/org-1/users/user-1/role");
+  });
+
+  it("reports the last-admin 409 inline on the row, not as a toast", async () => {
+    captureRolePuts(() => HttpResponse.json(LAST_ADMIN_BODY, { status: 409 }));
+    const user = userEvent.setup();
+    renderCard({
+      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
+    });
+
+    await selectRole(user, "Member");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(LAST_ADMIN_BODY.message);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("rolls the select back to the pre-change role after the last-admin 409", async () => {
+    captureRolePuts(() => HttpResponse.json(LAST_ADMIN_BODY, { status: 409 }));
+    const user = userEvent.setup();
+    renderCard({
+      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
+    });
+
+    await selectRole(user, "Member");
+
+    await screen.findByRole("alert");
+    expect(
+      screen.getByRole("combobox", { name: SELECT_NAME })
+    ).toHaveTextContent("Admin");
+  });
+
+  it("keys the inline branch off the slug, not the message prose", async () => {
+    const lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
+    captureRolePuts(() =>
+      HttpResponse.json({ ...LAST_ADMIN_BODY, message: lorem }, { status: 409 })
+    );
+    const user = userEvent.setup();
+    renderCard({
+      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
+    });
+
+    await selectRole(user, "Member");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(lorem);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("clears the inline message once a later role change succeeds", async () => {
+    let body: unknown = LAST_ADMIN_BODY;
+    let status = 409;
+    captureRolePuts(() => HttpResponse.json(body, { status }));
+    const user = userEvent.setup();
+    renderCard({
+      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
+    });
+
+    await selectRole(user, "Member");
+    await screen.findByRole("alert");
+
+    body = { status_code: 200, data: null };
+    status = 200;
+    await selectRole(user, "Member");
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    );
+  });
+
+  it("toasts the archived-organization 409 without an inline message", async () => {
+    captureRolePuts(() =>
+      HttpResponse.json(
+        {
+          error: "organization_archived",
+          message: "This organization is archived.",
+          status_code: 409,
+        },
+        { status: 409 }
+      )
+    );
+    const user = userEvent.setup();
+    renderCard();
+
+    await selectRole(user, "Admin");
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("This organization is archived.")
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("toasts the SuperAdmin 422 without an inline message", async () => {
+    const message = "SuperAdmin cannot be granted within an organization.";
+    captureRolePuts(() =>
+      HttpResponse.json(
+        { status_code: 422, error: "validation_error", message },
+        { status: 422 }
+      )
+    );
+    const user = userEvent.setup();
+    renderCard();
+
+    await selectRole(user, "Admin");
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(message));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("reports a bare-string 403 as a permission error", async () => {
