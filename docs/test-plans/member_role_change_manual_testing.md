@@ -7,168 +7,200 @@ Companion to the backend plan at
 backend properties — authorization refusals, visibility masking, the audit trail, Postgres
 concurrency — and several are not observable as UI differences at all. This document covers only
 what a browser can see and the backend plan cannot: control visibility, the self-row lockout, the
-org-scoped response hazard, rollback, and whether a role change reaches an already-open session.
+org-scoped response hazard, and whether a role change reaches an already-open session.
 
-Last executed **2026-08-17** against backend branch `feat/organization-member-role-endpoints`
-(draft PR rs#393) on a real Postgres dev database. Result: **7 of 8 scenarios pass. S6 fails** —
-see the finding at the end.
+Record results wherever the run is being reported (PR, commit body, coordination board). Do not
+write them into this file.
 
 ---
 
 ## 1. Prerequisites
 
 - Frontend on `http://localhost:3000`, backend on `http://localhost:4000`.
-- Backend built from `feat/organization-member-role-endpoints`. Verify with an authenticated
-  `GET .../role`: a **405** means the running binary predates the branch, even if the source has it.
+- Backend built from a branch containing the member-role endpoints. Verify with an authenticated
+  `GET /organizations/{orgId}/users/{userId}/role`: a **405** means the running binary predates the
+  branch, even when the source has the route. Rebuild and restart before going further.
 - Seeded dev database.
 
 ### Actors
 
-Credentials live in `.env.local`. **Never paste them into this document.**
+Credentials live in `.env.local`. **Never paste them into this document or into a shell that echoes.**
 
-| Variable prefix | Seeded account | Role |
-|---|---|---|
-| `PW_ORG_ADMIN_LOGIN_*` | jim@refactorgroup.com | Admin of Refactor Group, and its **only** admin |
-| `PW_SUPER_ADMIN_LOGIN_*` | admin@refactorcoach.com | global SuperAdmin (`organization_id: null`) |
-| `PW_USER_LOGIN_*` | james.hodapp@gmail.com | plain member of **all three** orgs |
+| Variable prefix | Required properties |
+|---|---|
+| `PW_ORG_ADMIN_LOGIN_*` | Admin of a target org, and its **only** admin |
+| `PW_SUPER_ADMIN_LOGIN_*` | global SuperAdmin (`organization_id: null`) |
+| `PW_USER_LOGIN_*` | plain member of **at least two** organizations |
 
-Organizations: Refactor Group `617e8b03-…`, Acme Corp `f67343c9-…`, BigTable `9c5cd245-…`.
+### S0 — Fixture discovery (run first, do not assume)
 
-### S0 — Fixture discovery (run this first, do not assume)
-
-Log in as each actor and record the roles actually returned. Every scenario below depends on there
-being a sole-admin org and a multi-org member. Verified 2026-08-17: all three properties hold.
+Log in as each actor and record the roles actually returned. Every scenario depends on there being a
+sole-admin org and a multi-org member. If the seeded data does not provide both shapes, stop and fix
+the fixture — do not work around it.
 
 ### Helpers
 
 Reuse the backend plan's `login` / `getrole` / `putrole` shell functions verbatim.
 
-> **Harness note for browser automation.** Injecting a session by writing `localStorage` on an
-> already-loaded page **does not work** — zustand's persist middleware rehydrates the previous actor
-> and writes it back over you. Use Playwright's `addInitScript`, which runs before app JS. This cost
-> a false result during the first pass of S4.
+### Harness warnings for browser automation
+
+Three traps, each of which has produced a false result:
+
+1. **Seeding a session by writing `localStorage` on a loaded page does not work.** Zustand's persist
+   middleware rehydrates the previous actor and writes it back over you. Use `addInitScript`, which
+   runs before app JS.
+2. **`addInitScript` re-runs on every navigation.** Guard it with
+   `if (!localStorage.getItem('auth-store'))`, or each `goto` will re-seed a stale session and mask
+   whatever you are testing.
+3. **Do not drive the admin's out-of-band change through Playwright's `page.request`.** It shares the
+   browser context's cookie jar and will overwrite the session under test with the admin's, after
+   which the self-read 403s and everything looks stale. Use curl for anything the admin does.
 
 ---
 
-## 2. Scenarios
+## 2. The control under test
 
-### S1 — Control visibility ✅
+Each member row carries a `⋯` actions menu labelled `Actions for {first} {last}`. A member's role is
+changed by a single verb-phrased item — **"Promote to Admin"** on a Member's row, **"Demote to
+Member"** on an Admin's. Never both, and never the role already held. A success toast confirms the
+change ("{name} is now an Admin" / "…is now a Member").
 
-The role Select is absent for a plain member, present for an org Admin, and present for a
+The row's `Roles:` line separately carries Coach/Coachee and SuperAdmin, and is unaffected by this
+feature.
+
+---
+
+## 3. Scenarios
+
+### S1 — Control visibility
+
+Open the members page as each actor in turn.
+
+Expected: the role item is absent for a plain member, present for an org Admin, and present for a
 SuperAdmin viewing an org they do not administer.
 
-Observed: as org admin, a `Role for {name}` combobox on every row; values read Admin/Member
-correctly; the existing `Roles:` line (which carries Coach/Coachee and SuperAdmin) is preserved
-alongside it, not replaced.
+The `⋯` menu is gated on the viewer being an org Admin or global SuperAdmin, and the role item
+repeats that check locally. The local check is defence in depth and is **not independently
+observable** — with the ancestor gate in place, removing it changes nothing a test can see.
 
-### S2 — Self-row lockout ✅
+### S2 — Self-row lockout
 
-The viewer's own row renders the Select **disabled**, with the title "You can't change your own
-role". Disabled rather than hidden, so the viewer still sees their own role.
+As the org admin, open your own row's menu.
 
-Observed live. Confirm separately via curl that the endpoint 403s in **both** directions — promote
-and demote, even to the role already held. Mirrors backend E4/E9.
+Expected: **neither** role item appears — hidden, not disabled, matching Remove/Delete on your own
+row. Nothing is lost, since the `Roles:` line still shows your own role.
 
-### S3 — Promote / demote round trip ✅
+Then confirm via curl that the endpoint returns 403 in **both** directions — promote and demote,
+even to the role already held. Mirrors backend E4/E9.
 
-Member → Admin returns 200, and the change **survives a full page reload**. Demote restores it.
+### S3 — Promote / demote round trip
 
-> **Coverage gap, by design of the control.** Re-selecting the value a member already holds sends
-> **no request** — Radix `Select` does not fire `onValueChange` for an unchanged value. The
-> backend's idempotent-no-op path (its section C) is therefore unreachable through the UI. Verified:
-> three selections produced only two PUTs. Not a defect; test it with curl, not the browser.
+As the org admin, promote another member, then demote them back.
 
-### S4 — Last-admin 409, inline ✅
+Expected: 200 each time, a success toast naming the new role, and the change survives a full page
+reload.
+
+> **Inherent coverage gap.** Only the opposite role is ever offered, so the UI cannot request the
+> role a member already holds. The backend's idempotent-no-op path (its section C) is unreachable
+> through the browser — exercise it with curl.
+
+### S4 — Last-admin refusal, inline
 
 As the **super admin** (the org admin cannot target themselves), demote the org's only admin.
 
-Observed: real 409 from the backend, its message rendered verbatim in a `role="alert"` node on that
-row, the Select reverted to "Admin", and — the assertion that matters — **zero toasts**. Mirrors
-backend D1.
+Expected: the backend's 409 message renders in a `role="alert"` node **on that row**, and **no toast
+appears**. The message is the backend's own; the FE keys off the `error` slug, never the prose, which
+has already changed once. Mirrors backend D1.
 
-Key off the `error` slug, never the prose: the wording already changed once.
+### S5 — Org-scoped response must not destroy other memberships
 
-### S5 — Org-scoped response must not destroy other memberships ✅
+**The most important scenario here. Do not skip it.**
 
-**The most important scenario in this document. Do not skip it.**
+Change the role of the multi-org member, then log in **as that member**.
 
-Change the role of the multi-org member, then log in **as that member** and confirm nothing was
-lost.
+Expected: they still hold every organization they held before, both in
+`localStorage["auth-store"]` and in the org switcher. Verify by reading `localStorage` directly —
+eyeballing the switcher is weaker evidence.
 
-Observed: the PUT response carried `roles` of length **1** for a user holding **3**. After the
-change, a fresh login for that user still returned all three roles, `localStorage["auth-store"]`
-held all three, and the org switcher listed Refactor Group, BigTable and Acme Corp. Mirrors
-backend B1.
-
-This is the manual counterpart to the SWR cache regression test in
+The PUT response carries `roles` filtered to the path organization only, so a naive merge of that
+payload into a cached user destroys the rest. Mirrors backend B1, and is the manual counterpart to
 `__tests__/lib/api/organizations/users-update-role.test.ts`.
 
-### S6 — Change takes effect on the demoted user's open session ❌ **FAILS**
+### S6 — Change reaches an already-open session
 
-Demote a member, then — **without re-login** — check their own already-open session.
+Demote a member, then — **without re-login, reload or navigation** — return to their open tab.
 
-Expected: they lose admin affordances on the next navigation.
-Observed: they keep the Organization-settings nav, the Add Member button, and all five role
-Selects. See the finding below.
+Expected: immediately after the change the tab is still stale; once the tab regains focus the
+persisted role updates, admin affordances disappear, and every other organization membership
+survives. Mirrors backend I3/I6.
 
-### S7 — No remove-then-add, no undo ✅
+Two limits are by design, not defects:
 
-`updateRole` (PUT) is the only role-change path. `attachExisting` (POST) appears solely in the
-add-member dialog as a grant, and `removeFromOrganization` (DELETE) solely in the remove flow.
-Nothing sequences them. No undo affordance is offered after a removal — correct, since the backend
-recovery path (workstream C) does not exist yet and the POST can 404 for the very admin who removed
-the member.
+1. **Focus-bound.** Revalidation happens on tab focus with no polling interval, to avoid background
+   request load. A user who never leaves the tab keeps stale affordances until they do. SWR's
+   `focusThrottleInterval` is 10s, so repeated focus events inside that window collapse into one —
+   wait it out before concluding nothing happened.
+2. **Promotion does not heal a page that already denied access.** The members page calls
+   `notFound()` during render, which is terminal for that render tree. A user promoted while sitting
+   on a denied page sees the session heal underneath them, but the 404 remains until they navigate.
+   The demotion direction — the one that matters for not offering actions the backend will refuse —
+   updates in place.
 
-### S8 — 404 → 403 regression ✅
+### S7 — No remove-then-add, no undo
 
-Nothing branches on a 404 from an org-scoped route. The only 404 branches are
-`src/app/setup/[token]/page.tsx` (magic-link) and `src/lib/api/oauth-connection.ts` (user-scoped).
-Unaffected by the backend's contract §8 change.
+Expected by inspection: the role PUT is the only role-change path; nothing sequences DELETE then
+POST, and no undo affordance is offered after a removal. The backend recovery path does not exist
+yet, and a follow-up POST can 404 for the very admin who performed the removal.
 
----
+### S8 — 404 → 403 regression
 
-## 3. Restoring the fixture
-
-Every role touched must be returned to its starting value: Refactor Group has exactly one Admin
-(jim@refactorgroup.com); everyone else is User. Verify through
-`GET /organizations/{id}/users` before signing off. Confirmed restored on 2026-08-17.
-
----
-
-## 4. Finding: a role change does not reach an already-open session
-
-**Severity: real, pre-existing, and newly reachable.** Not introduced by the role-change feature,
-but that feature creates the first path that triggers it deliberately.
-
-`userSession` — including its `roles` array — is written to the persisted auth store **only by the
-`login` action**, which has exactly one call site (`src/components/ui/login/user-auth-form.tsx`).
-Nothing else refreshes it; the only other mutator is the field-scoped `setTimezone`. So a user's
-roles are frozen at login and survive in `localStorage` across reloads and new browser sessions.
-
-Consequence: after an admin demotes someone, that person's UI keeps offering admin affordances until
-they log out and back in. The backend is correct throughout — their next mutation 403s — so this is
-a UI-truthfulness problem, not a security hole. But it means the app offers actions it knows will be
-refused.
-
-The backend test plan predicted exactly this as FE-side risk case 3 (its I3/I6).
-
-Fixing it is an architectural change beyond the scope of the build that surfaced it: it needs the
-session's roles re-read from the server periodically, on navigation, or via SSE. Tracked separately.
-
-Until then, **S6 is a known failure**, and the sign-off checklist below records it as such rather
-than quietly passing.
+Expected: nothing branches on a 404 from an org-scoped route to mean "org not found". Re-check after
+any backend change to `OrganizationAdminAccess`.
 
 ---
 
-## 5. Sign-off checklist
+## 4. How the session stays current
 
-- [x] S0 fixture discovery — sole-admin org and multi-org member both confirmed present
-- [x] S1 control visibility
-- [x] S2 self-row disabled
-- [x] S3 promote/demote round trip, persists across reload
-- [x] S4 last-admin 409 inline, no toast, Select reverts
-- [x] S5 multi-org memberships intact after a change
-- [ ] S6 demoted user's open session — **FAILS, see section 4**
-- [x] S7 no remove-then-add, no undo affordance
-- [x] S8 no 404-from-org-route branching
-- [x] Fixture restored to its starting state
+`login` delegates to a generalized `syncUserSession` action, and `useSyncUserSession`
+(`src/lib/hooks/use-sync-user-session.ts`, mounted in `Providers`) re-reads the signed-in user on tab
+focus and re-seeds the session when the roles differ.
+
+**The safety rule any change here must preserve.** The session's `roles` may only be replaced from a
+source returning the user's **complete, cross-organization** role set:
+
+| source | roles returned for a multi-org user | safe to seed from |
+|---|---|---|
+| `POST /login` | all | ✅ |
+| `GET /users/{id}` (self) | all | ✅ |
+| `GET /organizations/{orgId}/users` | one | ❌ |
+| `PUT /organizations/{orgId}/users/{userId}/role` | one | ❌ |
+
+Seeding from either ❌ source silently deletes the user's other memberships **from their own client,
+persisted to localStorage**. Two tests guard this:
+`__tests__/lib/api/organizations/users-update-role.test.ts` and
+`__tests__/hooks/use-sync-user-session.test.tsx`.
+
+`GET /users/{id}` is self-only in practice — an org admin reading another member gets 403 — so it
+serves exactly the case it is needed for and no other.
+
+---
+
+## 5. Restoring the fixture
+
+Every role touched must be returned to its starting value: the target org has exactly one Admin, and
+everyone else is a User. Verify through `GET /organizations/{id}/users` before signing off.
+
+---
+
+## 6. Sign-off checklist
+
+- [ ] S0 fixture discovery — sole-admin org and multi-org member both present
+- [ ] S1 control visibility
+- [ ] S2 self-row shows neither item; endpoint 403s both directions
+- [ ] S3 promote/demote round trip, toast, persists across reload
+- [ ] S4 last-admin refusal inline, no toast
+- [ ] S5 multi-org memberships intact after a change
+- [ ] S6 demoted user's open session updates on refocus
+- [ ] S7 no remove-then-add, no undo affordance
+- [ ] S8 no 404-from-org-route branching
+- [ ] Fixture restored to its starting state
