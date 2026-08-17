@@ -99,6 +99,22 @@ export const UserApi = {
     ),
 
   /**
+   * Changes a user's role within this organization.
+   *
+   * The returned user's `roles` array is filtered by the backend to this
+   * organization only, so it must never be merged into a cached user.
+   */
+  updateRole: async (
+    organizationId: Id,
+    userId: Id,
+    role: Role
+  ): Promise<User> =>
+    EntityApi.updateFn<{ role: Role }, User>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`,
+      { role }
+    ),
+
+  /**
    * Removes a user's membership of this organization only. Their account and
    * any other organizations are left untouched.
    */
@@ -161,6 +177,12 @@ export const useUserMutation = (organizationId: Id) => {
       coachId?: Id
     ) => {
       await UserApi.attachExisting(orgId, userId, role, coachId);
+      invalidate(orgId);
+    },
+    // Returns void deliberately: the response's org-filtered `roles` must not
+    // reach any cache, so refresh comes from invalidation alone.
+    updateRole: async (orgId: Id, userId: Id, role: Role): Promise<void> => {
+      await UserApi.updateRole(orgId, userId, role);
       invalidate(orgId);
     },
     removeFromOrganization: async (orgId: Id, userId: Id) => {

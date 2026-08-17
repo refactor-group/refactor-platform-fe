@@ -7,7 +7,7 @@ import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
 import { Organization } from "@/types/organization";
-import { User } from "@/types/user";
+import { Role, User, UserRole } from "@/types/user";
 import { OAuthConnection } from "@/types/oauth-connection";
 
 /**
@@ -28,6 +28,19 @@ export function createMockUser(overrides?: Partial<User>): User {
     roles: [],
     invite_status: null,
     created_at: now.toISO() ?? '', // User expects string, handle null case
+    updated_at: now.toISO() ?? '',
+    ...overrides,
+  };
+}
+
+export function createMockUserRole(overrides?: Partial<UserRole>): UserRole {
+  const now = DateTime.now();
+  return {
+    id: "user-role-1",
+    user_id: "user-1",
+    role: Role.User,
+    organization_id: "org-1",
+    created_at: now.toISO() ?? '',
     updated_at: now.toISO() ?? '',
     ...overrides,
   };
