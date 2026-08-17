@@ -7,7 +7,6 @@ import {
   getUserCoaches,
   getOrganizationMembershipRole,
 } from "@/lib/utils/user-roles";
-import { MemberRoleSelect } from "@/components/ui/members/member-role-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Send, Trash2, UserMinus } from "lucide-react";
+import {
+  MoreHorizontal,
+  Send,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+  UserMinus,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,8 +112,7 @@ export function MemberCard({
     currentOrganizationId
   );
   const isSelf = userSession.id === userId;
-  // Local state, not SWR optimisticData: the members-list cache key is owned by
-  // an ancestor, and the role response is org-filtered so it must not be merged.
+  // Guards a double-click from firing two PUTs.
   const [pendingRole, setPendingRole] = useState<Role | null>(null);
   const [roleError, setRoleError] = useState<string | null>(null);
 
@@ -116,6 +121,11 @@ export function MemberCard({
     setRoleError(null);
     try {
       await updateRole(currentOrganizationId, userId, role);
+      toast.success(
+        `${firstName} ${lastName} is now ${
+          role === Role.Admin ? "an Admin" : "a Member"
+        }`
+      );
     } catch (error) {
       console.error("Error changing member role:", error);
       // An actionable state ("grant someone else Admin first"), not a failure:
@@ -301,25 +311,10 @@ export function MemberCard({
             <span className="font-medium">Roles:</span> {displayRoles.join(', ')}
           </p>
         )}
-        {isAdminOrSuperAdmin(currentUserRoleState) && membershipRole.some && (
-          <>
-            <span
-              className="mt-2 inline-block"
-              title={isSelf ? "You can't change your own role" : undefined}
-            >
-              <MemberRoleSelect
-                role={pendingRole ?? membershipRole.val}
-                disabled={isSelf || pendingRole !== null}
-                memberName={`${firstName} ${lastName}`}
-                onChange={handleRoleChange}
-              />
-            </span>
-            {roleError && (
-              <p role="alert" className="text-sm text-destructive">
-                {roleError}
-              </p>
-            )}
-          </>
+        {roleError && (
+          <p role="alert" className="text-sm text-destructive">
+            {roleError}
+          </p>
         )}
         <p className="text-sm text-muted-foreground">
           <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}
@@ -334,6 +329,9 @@ export function MemberCard({
               className="text-muted-foreground"
             >
               <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">
+                Actions for {firstName} {lastName}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -367,6 +365,26 @@ export function MemberCard({
                 </DropdownMenuItem>
               </>
             )}
+            {/* Gated locally as well as by the menu's own admin check, so the
+                guarantee survives a restructure of this menu. */}
+            {isAdminOrSuperAdmin(currentUserRoleState) &&
+              membershipRole.some &&
+              !isSelf &&
+              (membershipRole.val === Role.User ? (
+                <DropdownMenuItem
+                  onClick={() => handleRoleChange(Role.Admin)}
+                  disabled={pendingRole !== null}
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Promote to Admin
+                </DropdownMenuItem>
+              ) : membershipRole.val === Role.Admin ? (
+                <DropdownMenuItem
+                  onClick={() => handleRoleChange(Role.User)}
+                  disabled={pendingRole !== null}
+                >
+                  <ShieldOff className="mr-2 h-4 w-4" /> Demote to Member
+                </DropdownMenuItem>
+              ) : null)}
             {canDeleteUser && (
               <>
                 {userId !== currentUserId && <DropdownMenuSeparator />}

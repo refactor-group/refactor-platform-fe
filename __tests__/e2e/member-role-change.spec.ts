@@ -5,14 +5,17 @@ import {
   MOCK_USER_ID,
 } from './helpers'
 
-// e2e coverage for the inline member role Select: the real Radix Select
-// interaction, the exact PUT payload it sends, the self-row lockout, and the
-// last-admin 409 landing inline on the row instead of in a toast.
+// e2e coverage for the member role change in the row's ⋯ menu: the real Radix
+// menu interaction, the exact PUT payload it sends, the self-row omission, and
+// the last-admin 409 landing inline on the row instead of in a toast.
 
 const ORG_ID = 'org-1'
 const OTHER_MEMBER_ID = 'member-2'
 const SELF_NAME = 'Test User'
 const OTHER_NAME = 'Casey Coachee'
+
+const PROMOTE = 'Promote to Admin'
+const DEMOTE = 'Demote to Member'
 
 const LAST_ADMIN_MESSAGE =
   'This user is the only admin of this organization. Grant another member the Admin role first.'
@@ -26,8 +29,8 @@ const makeRole = (userId: string, role: 'Admin' | 'User') => ({
   updated_at: '2024-01-01T00:00:00Z',
 })
 
-// The viewer is an org Admin so the Select renders at all; the second member is
-// a plain Member so its trigger starts on "Member".
+// The viewer is an org Admin so the role action renders at all; the second
+// member is a plain Member so their row offers "Promote to Admin".
 const SELF_MEMBER = {
   id: MOCK_USER_ID,
   email: 'test@example.com',
@@ -103,20 +106,24 @@ async function mockMemberRoutes(
 
 /**
  * The member row that owns `name`. Member rows repeat and share their inner
- * markup, so every assertion below is scoped through this rather than the page.
+ * markup, so every row assertion below is scoped through this rather than the
+ * page. The menu content itself is portalled outside the row.
  */
 function memberRow(page: Page, name: string): Locator {
   return page.locator('div.flex.items-center.p-4').filter({ hasText: name })
 }
 
-function roleSelect(page: Page, name: string): Locator {
-  return memberRow(page, name).getByRole('combobox', { name: `Role for ${name}` })
+async function openRowMenu(page: Page, name: string): Promise<void> {
+  await memberRow(page, name)
+    .getByRole('button', { name: `Actions for ${name}` })
+    .click()
+  await expect(page.getByRole('menu')).toBeVisible()
 }
 
-test.describe('Organization members — inline role change (e2e)', () => {
+test.describe('Organization members — role change from the row menu (e2e)', () => {
   test.beforeEach(async ({ page, context }) => {
     await setupAuthentication(page, context)
-    // setupAuthentication signs in a plain Member; the role Select only renders
+    // setupAuthentication signs in a plain Member; the role action only renders
     // for an org Admin, so overwrite the persisted store with an Admin session.
     await page.addInitScript((auth) => {
       localStorage.setItem('auth-store', auth)
@@ -124,7 +131,7 @@ test.describe('Organization members — inline role change (e2e)', () => {
     await mockCommonApiRoutes(page, { relationships: [] })
   })
 
-  test('changing another member to Admin PUTs {role: "Admin"} to that member', async ({
+  test('promoting another member PUTs {role: "Admin"} to that member', async ({
     page,
   }) => {
     const roleRequests = await mockMemberRoutes(page, {
@@ -133,30 +140,30 @@ test.describe('Organization members — inline role change (e2e)', () => {
     })
 
     await page.goto(`/organizations/${ORG_ID}/members`)
-    await expect(roleSelect(page, OTHER_NAME)).toHaveText('Member')
-
-    await roleSelect(page, OTHER_NAME).click()
-    await page.getByRole('option', { name: 'Admin' }).click()
+    await openRowMenu(page, OTHER_NAME)
+    await page.getByRole('menuitem', { name: PROMOTE }).click()
 
     await expect.poll(() => roleRequests.length).toBe(1)
     expect(roleRequests[0].body).toEqual({ role: 'Admin' })
     expect(roleRequests[0].url).toContain(
       `/organizations/${ORG_ID}/users/${OTHER_MEMBER_ID}/role`
     )
+    await expect(page.getByText(`${OTHER_NAME} is now an Admin`)).toBeVisible()
   })
 
-  test('the signed-in admin cannot change their own role', async ({ page }) => {
+  test('the signed-in admin is offered no role action on their own row', async ({
+    page,
+  }) => {
     await mockMemberRoutes(page, { status: 200, body: { data: SELF_MEMBER } })
 
     await page.goto(`/organizations/${ORG_ID}/members`)
+    await openRowMenu(page, SELF_NAME)
 
-    await expect(roleSelect(page, SELF_NAME)).toBeDisabled()
-    await expect(roleSelect(page, OTHER_NAME)).toBeEnabled()
+    await expect(page.getByRole('menuitem', { name: PROMOTE })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: DEMOTE })).toHaveCount(0)
   })
 
-  test('a last_organization_admin 409 lands on the row and reverts the Select', async ({
-    page,
-  }) => {
+  test('a last_organization_admin 409 lands on the row', async ({ page }) => {
     await mockMemberRoutes(page, {
       status: 409,
       body: {
@@ -168,13 +175,11 @@ test.describe('Organization members — inline role change (e2e)', () => {
     })
 
     await page.goto(`/organizations/${ORG_ID}/members`)
-    await expect(roleSelect(page, OTHER_NAME)).toHaveText('Member')
+    await openRowMenu(page, OTHER_NAME)
+    await page.getByRole('menuitem', { name: PROMOTE }).click()
 
-    await roleSelect(page, OTHER_NAME).click()
-    await page.getByRole('option', { name: 'Admin' }).click()
-
-    const row = memberRow(page, OTHER_NAME)
-    await expect(row.getByRole('alert')).toHaveText(LAST_ADMIN_MESSAGE)
-    await expect(roleSelect(page, OTHER_NAME)).toHaveText('Member')
+    await expect(memberRow(page, OTHER_NAME).getByRole('alert')).toHaveText(
+      LAST_ADMIN_MESSAGE
+    )
   })
 })

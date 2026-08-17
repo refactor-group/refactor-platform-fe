@@ -43,7 +43,7 @@ vi.mock("@/lib/api/coaching-relationships", () => ({
   useCoachingRelationshipMutation: () => ({ createNested: vi.fn() }),
 }));
 
-// Partial: the Select derives from the real getOrganizationMembershipRole, so
+// Partial: the menu item derives from the real getOrganizationMembershipRole, so
 // only the relationship-driven helpers are stubbed.
 vi.mock("@/lib/utils/user-roles", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/utils/user-roles")>()),
@@ -65,7 +65,9 @@ const memberRole: UserRoleState = {
   hasAccess: true,
 };
 
-const SELECT_NAME = "Role for Ada Lovelace";
+const MENU_NAME = "Actions for Ada Lovelace";
+const PROMOTE = "Promote to Admin";
+const DEMOTE = "Demote to Member";
 
 function renderCard(options?: {
   roles?: UserRole[];
@@ -108,12 +110,17 @@ function captureRolePuts(response: () => Response) {
   return { bodies, urls };
 }
 
-async function selectRole(
+async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: MENU_NAME }));
+  return screen.findAllByRole("menuitem");
+}
+
+async function chooseRoleAction(
   user: ReturnType<typeof userEvent.setup>,
-  option: "Member" | "Admin"
+  label: typeof PROMOTE | typeof DEMOTE
 ) {
-  await user.click(screen.getByRole("combobox", { name: SELECT_NAME }));
-  await user.click(await screen.findByRole("option", { name: option }));
+  await openMenu(user);
+  await user.click(await screen.findByRole("menuitem", { name: label }));
 }
 
 const LAST_ADMIN_BODY = {
@@ -124,6 +131,10 @@ const LAST_ADMIN_BODY = {
   status_code: 409,
 };
 
+const adminMembership = () => [
+  createMockUserRole({ role: Role.Admin, organization_id: "org-1" }),
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -133,97 +144,140 @@ beforeEach(() => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("MemberCard – role select", () => {
-  it("shows an admin the member's current role", async () => {
+describe("MemberCard – role change action", () => {
+  it("offers only Promote on a Member's row", async () => {
+    const user = userEvent.setup();
     renderCard();
 
+    await openMenu(user);
+
+    expect(screen.getByRole("menuitem", { name: PROMOTE })).toBeInTheDocument();
     expect(
-      screen.getByRole("combobox", { name: SELECT_NAME })
-    ).toHaveTextContent("Member");
-  });
-
-  it("shows an admin role as Admin", async () => {
-    renderCard({
-      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
-    });
-
-    expect(
-      screen.getByRole("combobox", { name: SELECT_NAME })
-    ).toHaveTextContent("Admin");
-  });
-
-  it("hides the control from a non-admin viewer", () => {
-    renderCard({ viewerRoleState: memberRole });
-
-    expect(
-      screen.queryByRole("combobox", { name: SELECT_NAME })
+      screen.queryByRole("menuitem", { name: DEMOTE })
     ).not.toBeInTheDocument();
   });
 
-  it("disables the control on the viewer's own row", () => {
+  it("offers only Demote on an Admin's row", async () => {
+    const user = userEvent.setup();
+    renderCard({ roles: adminMembership() });
+
+    await openMenu(user);
+
+    expect(screen.getByRole("menuitem", { name: DEMOTE })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: PROMOTE })
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers neither action on the viewer's own row", async () => {
     mockAuthStore.mockReturnValue({
       isACoach: true,
       userSession: { id: "user-1" },
     });
+    const user = userEvent.setup();
     renderCard();
 
-    expect(screen.getByRole("combobox", { name: SELECT_NAME })).toBeDisabled();
+    const items = await openMenu(user);
+
+    expect(items.length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("menuitem", { name: PROMOTE })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: DEMOTE })
+    ).not.toBeInTheDocument();
   });
 
-  it("renders no control for a global SuperAdmin with no membership in this org", () => {
+  it("hides the menu and both role actions from a plain member", () => {
+    renderCard({ viewerRoleState: memberRole });
+
+    expect(
+      screen.queryByRole("button", { name: MENU_NAME })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(PROMOTE)).not.toBeInTheDocument();
+    expect(screen.queryByText(DEMOTE)).not.toBeInTheDocument();
+  });
+
+  it("renders neither action for a global SuperAdmin with no membership here", async () => {
+    const user = userEvent.setup();
     renderCard({
       roles: [
         createMockUserRole({ role: Role.SuperAdmin, organization_id: null }),
       ],
     });
 
+    await openMenu(user);
+
     expect(
-      screen.queryByRole("combobox", { name: SELECT_NAME })
+      screen.queryByRole("menuitem", { name: PROMOTE })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: DEMOTE })
     ).not.toBeInTheDocument();
   });
 
-  it("issues one PUT of the chosen role to the membership sub-route", async () => {
+  it("promoting issues one PUT of Admin to the membership sub-route", async () => {
     const { bodies, urls } = captureRolePuts(() =>
       HttpResponse.json({ status_code: 200, data: null })
     );
     const user = userEvent.setup();
     renderCard();
 
-    await user.click(screen.getByRole("combobox", { name: SELECT_NAME }));
-    await user.click(await screen.findByRole("option", { name: "Admin" }));
+    await chooseRoleAction(user, PROMOTE);
 
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({ role: "Admin" });
     expect(urls[0]).toBe("/organizations/org-1/users/user-1/role");
   });
 
+  it("demoting issues one PUT of User", async () => {
+    const { bodies } = captureRolePuts(() =>
+      HttpResponse.json({ status_code: 200, data: null })
+    );
+    const user = userEvent.setup();
+    renderCard({ roles: adminMembership() });
+
+    await chooseRoleAction(user, DEMOTE);
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({ role: "User" });
+  });
+
+  it("toasts the new role by name after a promotion", async () => {
+    captureRolePuts(() => HttpResponse.json({ status_code: 200, data: null }));
+    const user = userEvent.setup();
+    renderCard();
+
+    await chooseRoleAction(user, PROMOTE);
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Ada Lovelace is now an Admin")
+    );
+  });
+
+  it("toasts the new role by name after a demotion", async () => {
+    captureRolePuts(() => HttpResponse.json({ status_code: 200, data: null }));
+    const user = userEvent.setup();
+    renderCard({ roles: adminMembership() });
+
+    await chooseRoleAction(user, DEMOTE);
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Ada Lovelace is now a Member")
+    );
+  });
+
   it("reports the last-admin 409 inline on the row, not as a toast", async () => {
     captureRolePuts(() => HttpResponse.json(LAST_ADMIN_BODY, { status: 409 }));
     const user = userEvent.setup();
-    renderCard({
-      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
-    });
+    renderCard({ roles: adminMembership() });
 
-    await selectRole(user, "Member");
+    await chooseRoleAction(user, DEMOTE);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(LAST_ADMIN_BODY.message);
     expect(toast.error).not.toHaveBeenCalled();
-  });
-
-  it("rolls the select back to the pre-change role after the last-admin 409", async () => {
-    captureRolePuts(() => HttpResponse.json(LAST_ADMIN_BODY, { status: 409 }));
-    const user = userEvent.setup();
-    renderCard({
-      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
-    });
-
-    await selectRole(user, "Member");
-
-    await screen.findByRole("alert");
-    expect(
-      screen.getByRole("combobox", { name: SELECT_NAME })
-    ).toHaveTextContent("Admin");
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it("keys the inline branch off the slug, not the message prose", async () => {
@@ -232,35 +286,12 @@ describe("MemberCard – role select", () => {
       HttpResponse.json({ ...LAST_ADMIN_BODY, message: lorem }, { status: 409 })
     );
     const user = userEvent.setup();
-    renderCard({
-      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
-    });
+    renderCard({ roles: adminMembership() });
 
-    await selectRole(user, "Member");
+    await chooseRoleAction(user, DEMOTE);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(lorem);
     expect(toast.error).not.toHaveBeenCalled();
-  });
-
-  it("clears the inline message once a later role change succeeds", async () => {
-    let body: unknown = LAST_ADMIN_BODY;
-    let status = 409;
-    captureRolePuts(() => HttpResponse.json(body, { status }));
-    const user = userEvent.setup();
-    renderCard({
-      roles: [createMockUserRole({ role: Role.Admin, organization_id: "org-1" })],
-    });
-
-    await selectRole(user, "Member");
-    await screen.findByRole("alert");
-
-    body = { status_code: 200, data: null };
-    status = 200;
-    await selectRole(user, "Member");
-
-    await waitFor(() =>
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
-    );
   });
 
   it("toasts the archived-organization 409 without an inline message", async () => {
@@ -277,28 +308,11 @@ describe("MemberCard – role select", () => {
     const user = userEvent.setup();
     renderCard();
 
-    await selectRole(user, "Admin");
+    await chooseRoleAction(user, PROMOTE);
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("This organization is archived.")
     );
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
-
-  it("toasts the SuperAdmin 422 without an inline message", async () => {
-    const message = "SuperAdmin cannot be granted within an organization.";
-    captureRolePuts(() =>
-      HttpResponse.json(
-        { status_code: 422, error: "validation_error", message },
-        { status: 422 }
-      )
-    );
-    const user = userEvent.setup();
-    renderCard();
-
-    await selectRole(user, "Admin");
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(message));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -309,11 +323,29 @@ describe("MemberCard – role select", () => {
     const user = userEvent.setup();
     renderCard();
 
-    await user.click(screen.getByRole("combobox", { name: SELECT_NAME }));
-    await user.click(await screen.findByRole("option", { name: "Admin" }));
+    await chooseRoleAction(user, PROMOTE);
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(PERMISSION_DENIED_MESSAGE)
+    );
+  });
+
+  it("clears the inline message once a later role change succeeds", async () => {
+    let body: unknown = LAST_ADMIN_BODY;
+    let status = 409;
+    captureRolePuts(() => HttpResponse.json(body, { status }));
+    const user = userEvent.setup();
+    renderCard({ roles: adminMembership() });
+
+    await chooseRoleAction(user, DEMOTE);
+    await screen.findByRole("alert");
+
+    body = { status_code: 200, data: null };
+    status = 200;
+    await chooseRoleAction(user, DEMOTE);
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     );
   });
 });
