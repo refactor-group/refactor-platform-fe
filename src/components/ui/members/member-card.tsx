@@ -2,7 +2,12 @@ import { useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { UserApi, useUserMutation } from "@/lib/api/organizations/users";
-import { getUserDisplayRoles, getUserCoaches } from "@/lib/utils/user-roles";
+import {
+  getUserDisplayRoles,
+  getUserCoaches,
+  getOrganizationMembershipRole,
+} from "@/lib/utils/user-roles";
+import { MemberRoleSelect } from "@/components/ui/members/member-role-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +48,7 @@ import { AuthStore } from "@/lib/stores/auth-store";
 import { Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 import {
   InviteStatus,
+  Role,
   User,
   isAdminOrSuperAdmin,
   UserRoleState,
@@ -91,9 +97,35 @@ export function MemberCard({
 
   // Get coaches for this user
   const coaches = getUserCoaches(userId, userRelationships);
-  const { deleteNested: deleteUser, removeFromOrganization } = useUserMutation(
+  const { deleteNested: deleteUser, removeFromOrganization, updateRole } =
+    useUserMutation(currentOrganizationId);
+
+  const membershipRole = getOrganizationMembershipRole(
+    user,
     currentOrganizationId
   );
+  const isSelf = userSession.id === userId;
+  // Local state, not SWR optimisticData: the members-list cache key is owned by
+  // an ancestor, and the role response is org-filtered so it must not be merged.
+  const [pendingRole, setPendingRole] = useState<Role | null>(null);
+
+  const handleRoleChange = async (role: Role) => {
+    setPendingRole(role);
+    try {
+      await updateRole(currentOrganizationId, userId, role);
+    } catch (error) {
+      console.error("Error changing member role:", error);
+      toast.error(
+        lastOrganizationAdminMessage(error) ??
+          organizationArchivedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "Error changing member role")
+      );
+    } finally {
+      setPendingRole(null);
+    }
+  };
   const { createNested: createRelationship } =
     useCoachingRelationshipMutation(currentOrganizationId);
 
@@ -258,6 +290,19 @@ export function MemberCard({
           <p className="text-sm text-muted-foreground">
             <span className="font-medium">Roles:</span> {displayRoles.join(', ')}
           </p>
+        )}
+        {isAdminOrSuperAdmin(currentUserRoleState) && membershipRole.some && (
+          <span
+            className="mt-2 inline-block"
+            title={isSelf ? "You can't change your own role" : undefined}
+          >
+            <MemberRoleSelect
+              role={pendingRole ?? membershipRole.val}
+              disabled={isSelf || pendingRole !== null}
+              memberName={`${firstName} ${lastName}`}
+              onChange={handleRoleChange}
+            />
+          </span>
         )}
         <p className="text-sm text-muted-foreground">
           <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}
