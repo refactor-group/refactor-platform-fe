@@ -11,6 +11,12 @@ import { type Option, Some, None } from "@/types/option";
 
 export type DisplayRole = Role | RelationshipRole
 
+/** Roles whose enum value differs from the word shown to a user; anything absent falls through. */
+const ROLE_DISPLAY_NAMES: Partial<Record<DisplayRole, string>> = {
+  [Role.User]: "Member",
+  [Role.SuperAdmin]: "Super Admin",
+};
+
 /**
  * Gets display roles for a user combining organization roles and coaching relationship roles
  * @param user - The user to get roles for
@@ -47,11 +53,8 @@ export function getUserDisplayRoles(
     roles.add(RelationshipRole.Coachee);
   }
 
-  // "Member" is the recipient-facing word for Role.User, matching the add-member
-  // dialog and the row's actions menu. Showing the raw "User" here taught a
-  // different name for the same role.
   return Array.from(roles)
-    .map(role => (role === Role.User ? "Member" : (role as string)))
+    .map(role => ROLE_DISPLAY_NAMES[role] ?? role)
     .sort();
 }
 

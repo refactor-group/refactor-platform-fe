@@ -53,11 +53,12 @@ describe('getUserDisplayRoles', () => {
     expect(roles).toEqual(['Admin']);
   });
 
-  it('should return SuperAdmin role when organization_id is null', () => {
+  it('should return SuperAdmin role when organization_id is null, labelled not raw', () => {
     const user = createUser([{ role: Role.SuperAdmin, organization_id: null }]);
     const roles = getUserDisplayRoles(user, organizationId, []);
 
-    expect(roles).toEqual(['SuperAdmin']);
+    expect(roles).toEqual(['Super Admin']);
+    expect(roles).not.toContain('SuperAdmin');
   });
 
   it('should combine organization role and coaching roles', () => {
@@ -98,7 +99,7 @@ describe('getUserDisplayRoles', () => {
     ];
     const roles = getUserDisplayRoles(user, organizationId, relationships);
 
-    expect(roles).toEqual(['Admin', 'Coach', 'Coachee', 'SuperAdmin']);
+    expect(roles).toEqual(['Admin', 'Coach', 'Coachee', 'Super Admin']);
   });
 
   it('should not duplicate roles', () => {
