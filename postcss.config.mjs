@@ -1,8 +1,5 @@
-// ESM, matching every other config in this repo (next.config.mjs,
-// eslint.config.mjs, vitest.config.mts, tailwind.config.ts). As CommonJS this
-// was the one config Turbopack had to wrap for interop, and that wrapper
-// intermittently failed a cold `next build` with
-// `TypeError: __turbopack_context__.a is not a function`.
+// ESM, matching the other configs here; the CommonJS form tripped a Turbopack
+// interop bug on cold builds, fixed upstream in Next 16.3.1.
 const config = {
   plugins: {
     'postcss-import': {},

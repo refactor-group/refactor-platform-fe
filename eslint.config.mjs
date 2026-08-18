@@ -10,7 +10,7 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "prototype/**",
     "next-env.d.ts",
-    "postcss.config.js",
+    "postcss.config.mjs",
   ]),
 
   ...nextVitals,
