@@ -129,8 +129,8 @@ describe('Members Page Access Control Logic', () => {
         };
 
         // Different org IDs means we haven't synced yet, so don't deny
-        expect(shouldDenyMembersPageAccess('different-org', orgId, adminRoleState)).toBe(false);
-        expect(shouldDenyMembersPageAccess(null, orgId, adminRoleState)).toBe(false);
+        expect(shouldDenyMembersPageAccess('different-org', orgId, adminRoleState, true)).toBe(false);
+        expect(shouldDenyMembersPageAccess(null, orgId, adminRoleState, true)).toBe(false);
       });
 
       it('should return false for Admin users', () => {
@@ -140,7 +140,7 @@ describe('Members Page Access Control Logic', () => {
           hasAccess: true,
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, adminRoleState)).toBe(false);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, adminRoleState, true)).toBe(false);
       });
 
       it('should return false for SuperAdmin users', () => {
@@ -150,7 +150,7 @@ describe('Members Page Access Control Logic', () => {
           hasAccess: true,
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, superAdminRoleState)).toBe(false);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, superAdminRoleState, true)).toBe(false);
       });
     });
 
@@ -164,7 +164,7 @@ describe('Members Page Access Control Logic', () => {
           organizationId: orgId,
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, noAccessRoleState)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noAccessRoleState, true)).toBe(true);
       });
 
       it('should return true for regular User role', () => {
@@ -174,7 +174,7 @@ describe('Members Page Access Control Logic', () => {
           hasAccess: true,
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, userRoleState)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, userRoleState, true)).toBe(true);
       });
 
       it('should return true when no organization is selected', () => {
@@ -185,7 +185,29 @@ describe('Members Page Access Control Logic', () => {
           reason: 'NO_ORG_SELECTED',
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, noOrgRoleState)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noOrgRoleState, true)).toBe(true);
+      });
+
+      it('does not deny while signed out, so logging out cannot flash a 404', () => {
+        // Signing out clears the session before the redirect lands, so the page
+        // re-renders unauthenticated while still mounted. Every role state that
+        // would otherwise 404 must stay allowed in that window.
+        const noRolesState: UserRoleState = {
+          status: 'no_roles',
+          role: null,
+          hasAccess: false,
+          reason: 'USER_HAS_NO_ROLES',
+        };
+        const noAccessRoleState: UserRoleState = {
+          status: 'no_access',
+          role: null,
+          hasAccess: false,
+          reason: 'NO_ORG_ACCESS',
+          organizationId: orgId,
+        };
+
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noRolesState, false)).toBe(false);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noAccessRoleState, false)).toBe(false);
       });
 
       it('should return true when user has no roles', () => {
@@ -196,7 +218,7 @@ describe('Members Page Access Control Logic', () => {
           reason: 'USER_HAS_NO_ROLES',
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, noRolesState)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noRolesState, true)).toBe(true);
       });
     });
   });

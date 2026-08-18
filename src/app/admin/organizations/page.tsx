@@ -7,8 +7,9 @@ import { OrganizationsAdminSection } from "@/components/ui/admin/organizations-a
 
 export default function AdminOrganizationsPage() {
   const roles = useAuthStore((state) => state.userSession?.roles);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
-  if (shouldDenyAdminAccess(roles ?? [])) {
+  if (shouldDenyAdminAccess(roles ?? [], isLoggedIn)) {
     notFound();
   }
 

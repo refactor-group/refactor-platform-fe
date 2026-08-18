@@ -49,12 +49,20 @@ describe("isSuperAdmin", () => {
 
 describe("shouldDenyAdminAccess", () => {
   it("allows access (returns false) only for SuperAdmins", () => {
-    expect(shouldDenyAdminAccess([superAdminRole])).toBe(false);
+    expect(shouldDenyAdminAccess([superAdminRole], true)).toBe(false);
+  });
+
+  it("does not deny while signed out, so logging out cannot flash a 404", () => {
+    // Signing out clears the session before the redirect lands, so the page
+    // re-renders unauthenticated while still mounted. Authentication is the
+    // auth layer's to handle; 404ing here flashes on the way to login.
+    expect(shouldDenyAdminAccess([superAdminRole], false)).toBe(false);
+    expect(shouldDenyAdminAccess([], false)).toBe(false);
   });
 
   it("denies org Admins, plain Users, and empty roles", () => {
-    expect(shouldDenyAdminAccess([orgAdminRole])).toBe(true);
-    expect(shouldDenyAdminAccess([userRole])).toBe(true);
-    expect(shouldDenyAdminAccess([])).toBe(true);
+    expect(shouldDenyAdminAccess([orgAdminRole], true)).toBe(true);
+    expect(shouldDenyAdminAccess([userRole], true)).toBe(true);
+    expect(shouldDenyAdminAccess([], true)).toBe(true);
   });
 });

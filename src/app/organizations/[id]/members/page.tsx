@@ -28,6 +28,7 @@ export default function MembersPage({
   const organizationId = use(params).id;
   const { currentOrganizationId, setCurrentOrganizationId } = useCurrentOrganization();
   const currentUserRoleState = useCurrentUserRole();
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
   useEffect(() => {
     // Only sync if different to prevent conflicts with OrganizationSwitcher
@@ -36,7 +37,12 @@ export default function MembersPage({
     }
   }, [organizationId, currentOrganizationId, setCurrentOrganizationId]);
 
-  if (shouldDenyMembersPageAccess(currentOrganizationId, organizationId, currentUserRoleState)) {
+  if (shouldDenyMembersPageAccess(
+      currentOrganizationId,
+      organizationId,
+      currentUserRoleState,
+      isLoggedIn
+    )) {
     notFound();
   }
 
