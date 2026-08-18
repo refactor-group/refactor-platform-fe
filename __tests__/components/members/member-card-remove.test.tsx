@@ -45,7 +45,8 @@ vi.mock("@/lib/api/coaching-relationships", () => ({
 
 // Role derivation is pure and covered elsewhere; stub it so the card renders
 // without needing full relationship fixtures.
-vi.mock("@/lib/utils/user-roles", () => ({
+vi.mock("@/lib/utils/user-roles", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/utils/user-roles")>()),
   getUserDisplayRoles: () => [],
   getUserCoaches: () => [],
 }));
@@ -175,33 +176,6 @@ describe("MemberCard – remove from organization", () => {
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
         "This user is the only admin of this organization. Assign another admin before removing them."
-      )
-    );
-  });
-  it("surfaces the coaching-history conflict rather than a generic error", async () => {
-    captureDeletes(() =>
-      HttpResponse.json(
-        {
-          error: "user_has_coaching_history",
-          message:
-            "This member still has coaching sessions in this organization. Remove or reassign those sessions before removing them.",
-          details: {
-            coaching_relationship_count: 1,
-            coaching_session_count: 10,
-          },
-        },
-        { status: 409 }
-      )
-    );
-    const user = userEvent.setup();
-    renderCard();
-
-    await openRemoveDialog(user);
-    await user.click(screen.getByRole("button", { name: "Remove" }));
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        "This member still has coaching sessions in this organization. Remove or reassign those sessions before removing them."
       )
     );
   });

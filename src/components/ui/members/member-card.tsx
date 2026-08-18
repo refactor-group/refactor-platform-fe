@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { UserApi, useUserMutation } from "@/lib/api/organizations/users";
-import { getUserDisplayRoles, getUserCoaches } from "@/lib/utils/user-roles";
+import {
+  getUserDisplayRoles,
+  getUserCoaches,
+  getOrganizationMembershipRole,
+} from "@/lib/utils/user-roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Send, Trash2, UserMinus } from "lucide-react";
+import {
+  MoreHorizontal,
+  Send,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+  UserMinus,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +54,7 @@ import { AuthStore } from "@/lib/stores/auth-store";
 import { Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 import {
   InviteStatus,
+  Role,
   User,
   isAdminOrSuperAdmin,
   UserRoleState,
@@ -52,8 +64,8 @@ import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationship
 import {
   lastOrganizationAdminMessage,
   organizationArchivedMessage,
+  roleChangeInvalidMessage,
   userBelongsToMultipleOrganizationsMessage,
-  userHasCoachingHistoryMessage,
 } from "@/lib/api/organization-errors";
 import { toast } from "sonner";
 
@@ -92,9 +104,48 @@ export function MemberCard({
 
   // Get coaches for this user
   const coaches = getUserCoaches(userId, userRelationships);
-  const { deleteNested: deleteUser, removeFromOrganization } = useUserMutation(
+  const { deleteNested: deleteUser, removeFromOrganization, updateRole } =
+    useUserMutation(currentOrganizationId);
+
+  const membershipRole = getOrganizationMembershipRole(
+    user,
     currentOrganizationId
   );
+  const isSelf = userSession.id === userId;
+  // Guards a double-click from firing two PUTs.
+  const [pendingRole, setPendingRole] = useState<Role | null>(null);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  const handleRoleChange = async (role: Role) => {
+    setPendingRole(role);
+    setRoleError(null);
+    try {
+      await updateRole(currentOrganizationId, userId, role);
+      toast.success(
+        `${firstName} ${lastName} is ${
+          role === Role.Admin ? "now" : "no longer"
+        } an organization Admin`
+      );
+    } catch (error) {
+      console.error("Error changing member role:", error);
+      // An actionable state ("grant someone else Admin first"), not a failure:
+      // it belongs on the row it concerns, where a toast wouldn't persist.
+      const lastAdmin = lastOrganizationAdminMessage(error);
+      if (lastAdmin) {
+        setRoleError(lastAdmin);
+        return;
+      }
+      toast.error(
+        organizationArchivedMessage(error) ??
+          roleChangeInvalidMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "Error changing member role")
+      );
+    } finally {
+      setPendingRole(null);
+    }
+  };
   const { createNested: createRelationship } =
     useCoachingRelationshipMutation(currentOrganizationId);
 
@@ -136,10 +187,7 @@ export function MemberCard({
     } catch (error) {
       console.error("Error removing member from organization:", error);
       toast.error(
-        // TODO(rs#377): drop this first entry once the backend merges — the
-        // 409 it handles is deleted there and removal returns 204.
-        userHasCoachingHistoryMessage(error) ??
-          lastOrganizationAdminMessage(error) ??
+        lastOrganizationAdminMessage(error) ??
           organizationArchivedMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
@@ -263,12 +311,23 @@ export function MemberCard({
             <span className="font-medium">Roles:</span> {displayRoles.join(', ')}
           </p>
         )}
+        {roleError && (
+          <p role="alert" className="text-sm text-destructive">
+            {roleError}
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">
           <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}
         </p>
       </div>
       {isAdminOrSuperAdmin(currentUserRoleState) && (
-        <DropdownMenu>
+        <DropdownMenu
+          onOpenChange={(open) => {
+            // A refusal from a previous attempt can be stale by the time the
+            // menu is reopened (e.g. another member was made an admin since).
+            if (open) setRoleError(null);
+          }}
+        >
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
@@ -276,6 +335,9 @@ export function MemberCard({
               className="text-muted-foreground"
             >
               <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">
+                Actions for {firstName} {lastName}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -309,6 +371,26 @@ export function MemberCard({
                 </DropdownMenuItem>
               </>
             )}
+            {/* Gated locally as well as by the menu's own admin check, so the
+                guarantee survives a restructure of this menu. */}
+            {isAdminOrSuperAdmin(currentUserRoleState) &&
+              membershipRole.some &&
+              !isSelf &&
+              (membershipRole.val === Role.User ? (
+                <DropdownMenuItem
+                  onClick={() => handleRoleChange(Role.Admin)}
+                  disabled={pendingRole !== null}
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Grant organization admin access
+                </DropdownMenuItem>
+              ) : membershipRole.val === Role.Admin ? (
+                <DropdownMenuItem
+                  onClick={() => handleRoleChange(Role.User)}
+                  disabled={pendingRole !== null}
+                >
+                  <ShieldOff className="mr-2 h-4 w-4" /> Revoke organization admin access
+                </DropdownMenuItem>
+              ) : null)}
             {canDeleteUser && (
               <>
                 {userId !== currentUserId && <DropdownMenuSeparator />}

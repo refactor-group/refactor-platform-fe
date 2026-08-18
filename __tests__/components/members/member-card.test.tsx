@@ -40,7 +40,8 @@ vi.mock("@/lib/api/coaching-relationships", () => ({
 
 // Role derivation is pure and covered elsewhere; stub it so the card renders
 // without needing full relationship fixtures.
-vi.mock("@/lib/utils/user-roles", () => ({
+vi.mock("@/lib/utils/user-roles", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/utils/user-roles")>()),
   getUserDisplayRoles: () => [],
   getUserCoaches: () => [],
 }));

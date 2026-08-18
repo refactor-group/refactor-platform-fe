@@ -59,16 +59,6 @@ export const lastOrganizationAdminMessage = (error: unknown): string | null =>
     "This user is the only admin of this organization. Assign another admin before removing them."
   );
 
-// TODO(rs#377): dead once the backend merges — that 409 variant is deleted and
-// removal returns 204 instead. Remove this, its call site in member-card.tsx,
-// and its test. Branch: chore/remove-dead-user-has-coaching-history-409.
-export const userHasCoachingHistoryMessage = (error: unknown): string | null =>
-  orgErrorMessage(
-    error,
-    "user_has_coaching_history",
-    "This member still has coaching sessions in this organization. Remove or reassign those sessions before removing them."
-  );
-
 export const userBelongsToMultipleOrganizationsMessage = (
   error: unknown
 ): string | null =>
@@ -97,6 +87,25 @@ export const organizationNameInvalidMessage = (error: unknown): string | null =>
     return typeof error.data?.message === "string"
       ? error.data.message
       : "Please enter a valid organization name.";
+  }
+  return null;
+};
+
+/**
+ * A `422 validation_error` from a membership role change — the backend rejects
+ * granting SuperAdmin within an organization. Returns the backend's message,
+ * else null. `validation_error` is a SHARED discriminator, so only call this
+ * from the role-change flow (never treat it as a global org error).
+ */
+export const roleChangeInvalidMessage = (error: unknown): string | null => {
+  if (
+    EntityApiError.isEntityApiError(error) &&
+    error.status === 422 &&
+    error.data?.error === "validation_error"
+  ) {
+    return typeof error.data?.message === "string"
+      ? error.data.message
+      : "That role can't be assigned in this organization.";
   }
   return null;
 };

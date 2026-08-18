@@ -7,6 +7,7 @@ import {
 } from "@/types/coaching-relationship";
 import { RelationshipRole } from "@/types/relationship-role";
 import { Id } from "@/types/general";
+import { type Option, Some, None } from "@/types/option";
 
 export type DisplayRole = Role | RelationshipRole
 
@@ -46,8 +47,28 @@ export function getUserDisplayRoles(
     roles.add(RelationshipRole.Coachee);
   }
 
-  // Convert enum values to strings for display
-  return Array.from(roles).map(role => role as string).sort();
+  // "Member" is the recipient-facing word for Role.User, matching the add-member
+  // dialog and the row's actions menu. Showing the raw "User" here taught a
+  // different name for the same role.
+  return Array.from(roles)
+    .map(role => (role === Role.User ? "Member" : (role as string)))
+    .sort();
+}
+
+/**
+ * Gets the user's membership role in one organization.
+ *
+ * Unlike {@link getUserRoleForOrganization}, a global SuperAdmin assignment
+ * (`organization_id === null`) is not a membership here and yields None.
+ */
+export function getOrganizationMembershipRole(
+  user: User,
+  organizationId: Id
+): Option<Role> {
+  const membership = user.roles.find(
+    (r) => r.organization_id === organizationId
+  );
+  return membership ? Some(membership.role) : None;
 }
 
 /**
