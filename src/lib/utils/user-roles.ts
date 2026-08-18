@@ -11,15 +11,8 @@ import { type Option, Some, None } from "@/types/option";
 
 export type DisplayRole = Role | RelationshipRole
 
-/**
- * Recipient-facing names for roles whose enum value is not what we want to show
- * a user. `Role.Admin` and the relationship roles already read correctly, so
- * they are absent and fall through unchanged.
- *
- * "Member" matches the add-member dialog and the row's actions menu; rendering
- * the raw "User" here taught a second name for the same role.
- */
-const ROLE_DISPLAY_NAMES: Record<string, string> = {
+/** Roles whose enum value differs from the word shown to a user; anything absent falls through. */
+const ROLE_DISPLAY_NAMES: Partial<Record<DisplayRole, string>> = {
   [Role.User]: "Member",
   [Role.SuperAdmin]: "Super Admin",
 };
@@ -61,7 +54,7 @@ export function getUserDisplayRoles(
   }
 
   return Array.from(roles)
-    .map(role => ROLE_DISPLAY_NAMES[role] ?? (role as string))
+    .map(role => ROLE_DISPLAY_NAMES[role] ?? role)
     .sort();
 }
 

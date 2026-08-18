@@ -53,11 +53,12 @@ describe('getUserDisplayRoles', () => {
     expect(roles).toEqual(['Admin']);
   });
 
-  it('should return SuperAdmin role when organization_id is null', () => {
+  it('should return SuperAdmin role when organization_id is null, labelled not raw', () => {
     const user = createUser([{ role: Role.SuperAdmin, organization_id: null }]);
     const roles = getUserDisplayRoles(user, organizationId, []);
 
     expect(roles).toEqual(['Super Admin']);
+    expect(roles).not.toContain('SuperAdmin');
   });
 
   it('should combine organization role and coaching roles', () => {
@@ -77,14 +78,6 @@ describe('getUserDisplayRoles', () => {
     const roles = getUserDisplayRoles(user, organizationId, relationships);
 
     expect(roles).toEqual(['Coach', 'Coachee', 'Member']);
-  });
-
-  it('renders Role.SuperAdmin as "Super Admin", not the raw enum value', () => {
-    const user = createUser([{ role: Role.SuperAdmin, organization_id: null }]);
-    const roles = getUserDisplayRoles(user, organizationId, []);
-
-    expect(roles).toEqual(['Super Admin']);
-    expect(roles).not.toContain('SuperAdmin');
   });
 
   it('renders Role.User as "Member", the word the rest of the UI uses', () => {
