@@ -5,6 +5,7 @@ import { http, HttpResponse } from "msw";
 import { SWRConfig } from "swr";
 import { server } from "@/test-utils/msw-server";
 import { useSyncUserSession } from "@/lib/hooks/use-sync-user-session";
+import { useUser } from "@/lib/api/users";
 import { Role, type User, type UserRole } from "@/types/user";
 import { createMockUser, createMockUserRole } from "../test-utils";
 
@@ -93,6 +94,30 @@ describe("useSyncUserSession", () => {
 
     await waitFor(() => expect(syncUserSession).toHaveBeenCalledTimes(1));
     expect(syncUserSession).toHaveBeenCalledWith("user-1", fetched);
+  });
+
+  it("keeps its own cache entry so a focus revalidation cannot reset a form reading the same user", async () => {
+    // Regression guard: the sync must not share useUser's SWR key. Components
+    // like CoachingPreferencesSection reset local state whenever that cached
+    // user changes, so a background revalidation there would discard edits.
+    setStore({
+      isLoggedIn: true,
+      userId: "user-1",
+      roles: [roleIn("org-1", Role.Admin)],
+    });
+    const calls = serveUser(
+      createMockUser({ id: "user-1", roles: [roleIn("org-1", Role.User)] })
+    );
+
+    const { result } = renderHook(
+      () => ({ sync: useSyncUserSession(), read: useUser("user-1") }),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(syncUserSession).toHaveBeenCalledTimes(1));
+    // Two distinct keys means two fetches; one fetch would mean a shared entry.
+    await waitFor(() => expect(calls.length).toBeGreaterThan(1));
+    expect(result.current.read.user.id).toBe("user-1");
   });
 
   it("does not sync when the roles are unchanged, even in a different order", async () => {

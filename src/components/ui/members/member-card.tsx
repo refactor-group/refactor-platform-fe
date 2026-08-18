@@ -321,7 +321,13 @@ export function MemberCard({
         </p>
       </div>
       {isAdminOrSuperAdmin(currentUserRoleState) && (
-        <DropdownMenu>
+        <DropdownMenu
+          onOpenChange={(open) => {
+            // A refusal from a previous attempt can be stale by the time the
+            // menu is reopened (e.g. another member was made an admin since).
+            if (open) setRoleError(null);
+          }}
+        >
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"

@@ -165,8 +165,15 @@ export const useUserMutation = (organizationId: Id) => {
     }
   );
 
+  // Fire-and-forget by design: the mutation has already succeeded, so a failed
+  // background refresh must not surface as a rejected promise to the caller.
   const invalidate = (id: Id) =>
-    EntityApi.invalidateEntityCache(mutate, ORGANIZATIONS_USERS_BASEURL(id));
+    EntityApi.invalidateEntityCache(
+      mutate,
+      ORGANIZATIONS_USERS_BASEURL(id)
+    ).catch((error) => {
+      console.error("Failed to refresh members after a membership change:", error);
+    });
 
   return {
     ...mutation,

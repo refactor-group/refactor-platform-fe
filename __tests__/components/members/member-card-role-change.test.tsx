@@ -280,6 +280,28 @@ describe("MemberCard – role change action", () => {
     expect(toast.success).not.toHaveBeenCalled();
   });
 
+  it("clears a stale refusal when the row's menu is reopened", async () => {
+    // The last-admin refusal depends on OTHER members' roles, so it can stop
+    // being true without anything on this row changing. Reopening the menu is
+    // the point of retry, so the message must not still be sitting there.
+    captureRolePuts(() => HttpResponse.json(LAST_ADMIN_BODY, { status: 409 }));
+    const user = userEvent.setup();
+    renderCard({ roles: adminMembership() });
+
+    await chooseRoleAction(user, DEMOTE);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      LAST_ADMIN_BODY.message
+    );
+
+    await openMenu(user);
+    // Close it again before asserting: while the menu is open Radix marks the
+    // rest of the page aria-hidden, so an alert still in the DOM would drop out
+    // of the a11y tree and the assertion would pass vacuously.
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
+
   it("keys the inline branch off the slug, not the message prose", async () => {
     const lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
     captureRolePuts(() =>
