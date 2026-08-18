@@ -56,3 +56,18 @@ export const useAuthStore = <T,>(selector: (store: AuthStore) => T): T => {
 
   return useStore(authStoreContext, useShallow(selector));
 };
+
+/**
+ * The raw store instance, for the rare caller that needs a live
+ * `getState()` read rather than a subscribed, render-triggering selector --
+ * e.g. a reentrancy check that must not be a render behind.
+ */
+export const useAuthStoreApi = (): StoreApi<AuthStore> => {
+  const authStoreContext = useContext(AuthStoreContext);
+
+  if (!authStoreContext) {
+    throw new Error(`useAuthStoreApi must be used within AuthStoreProvider`);
+  }
+
+  return authStoreContext;
+};

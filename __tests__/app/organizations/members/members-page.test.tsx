@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { isAdminOrSuperAdmin, Role } from '@/types/user';
 import type { UserRoleState } from '@/types/user';
@@ -9,6 +10,27 @@ import { useCurrentOrganization } from '@/lib/hooks/use-current-organization';
 import { useCurrentUserRole } from '@/lib/hooks/use-current-user-role';
 import { useCoachingRelationshipList } from '@/lib/api/coaching-relationships';
 import { useUserList } from '@/lib/api/organizations/users';
+import { useAuthStore } from '@/lib/providers/auth-store-provider';
+import { notFound } from 'next/navigation';
+
+vi.mock('next/navigation', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next/navigation')>();
+  return {
+    ...actual,
+    useRouter: vi.fn(() => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+      prefetch: vi.fn(),
+    })),
+    useSearchParams: vi.fn(() => new URLSearchParams()),
+    usePathname: vi.fn(() => '/'),
+    useParams: vi.fn(() => ({})),
+    notFound: vi.fn(),
+  };
+});
 
 // Data hooks the members page reads — mocked so the render tests below can drive
 // the page into its 403 (ForbiddenError) and generic-error branches. next/navigation
@@ -26,8 +48,8 @@ vi.mock('@/lib/api/organizations/users', () => ({
   useUserList: vi.fn(),
 }));
 vi.mock('@/lib/providers/auth-store-provider', () => ({
-  useAuthStore: vi.fn(() => ({ userSession: { id: 'user-1' } })),
-  AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
+  useAuthStore: vi.fn(),
+  AuthStoreProvider: ({ children }: { children: ReactNode }) => children,
 }));
 // The success path renders MemberContainer; stub it so these tests stay focused
 // on the page-level error branches (it is never reached in the 403/error cases).
@@ -46,6 +68,18 @@ vi.mock('@/components/ui/members/member-container', () => ({
  * in the members page component. These tests verify that function behaves correctly
  * for all possible role states.
  */
+// A real, selector-aware mock: `state.isLoggedIn` is what the sign-out
+// tests below flip between renders, and prior tests relied on the old
+// (non-selector) mock coincidentally matching every selector's shape.
+let mockAuthState: { userSession: { id: string }; isLoggedIn: boolean };
+
+beforeEach(() => {
+  mockAuthState = { userSession: { id: 'user-1' }, isLoggedIn: true };
+  vi.mocked(useAuthStore).mockImplementation((selector) =>
+    selector(mockAuthState as never)
+  );
+});
+
 describe('Members Page Access Control Logic', () => {
   describe('isAdminOrSuperAdmin permission check', () => {
     describe('should allow access (returns true)', () => {
@@ -129,8 +163,8 @@ describe('Members Page Access Control Logic', () => {
         };
 
         // Different org IDs means we haven't synced yet, so don't deny
-        expect(shouldDenyMembersPageAccess('different-org', orgId, adminRoleState)).toBe(false);
-        expect(shouldDenyMembersPageAccess(null, orgId, adminRoleState)).toBe(false);
+        expect(shouldDenyMembersPageAccess('different-org', orgId, adminRoleState, true, true)).toBe(false);
+        expect(shouldDenyMembersPageAccess(null, orgId, adminRoleState, true, true)).toBe(false);
       });
 
       it('should return false for Admin users', () => {
@@ -140,7 +174,7 @@ describe('Members Page Access Control Logic', () => {
           hasAccess: true,
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, adminRoleState)).toBe(false);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, adminRoleState, true, true)).toBe(false);
       });
 
       it('should return false for SuperAdmin users', () => {
@@ -150,7 +184,7 @@ describe('Members Page Access Control Logic', () => {
           hasAccess: true,
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, superAdminRoleState)).toBe(false);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, superAdminRoleState, true, true)).toBe(false);
       });
     });
 
@@ -164,7 +198,7 @@ describe('Members Page Access Control Logic', () => {
           organizationId: orgId,
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, noAccessRoleState)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noAccessRoleState, true, true)).toBe(true);
       });
 
       it('should return true for regular User role', () => {
@@ -174,7 +208,7 @@ describe('Members Page Access Control Logic', () => {
           hasAccess: true,
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, userRoleState)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, userRoleState, true, true)).toBe(true);
       });
 
       it('should return true when no organization is selected', () => {
@@ -185,7 +219,7 @@ describe('Members Page Access Control Logic', () => {
           reason: 'NO_ORG_SELECTED',
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, noOrgRoleState)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noOrgRoleState, true, true)).toBe(true);
       });
 
       it('should return true when user has no roles', () => {
@@ -196,7 +230,39 @@ describe('Members Page Access Control Logic', () => {
           reason: 'USER_HAS_NO_ROLES',
         };
 
-        expect(shouldDenyMembersPageAccess(orgId, orgId, noRolesState)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noRolesState, true, true)).toBe(true);
+      });
+    });
+
+    describe('authentication transitions', () => {
+      const noRolesState: UserRoleState = {
+        status: 'no_roles',
+        role: null,
+        hasAccess: false,
+        reason: 'USER_HAS_NO_ROLES',
+      };
+      const noAccessRoleState: UserRoleState = {
+        status: 'no_access',
+        role: null,
+        hasAccess: false,
+        reason: 'NO_ORG_ACCESS',
+        organizationId: orgId,
+      };
+
+      it('does not deny mid-logout: was authenticated this mount, isn\'t now', () => {
+        // Signing out clears the session before the redirect lands, so the page
+        // re-renders unauthenticated while still mounted. Every role state that
+        // would otherwise 404 must stay allowed in that window.
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noRolesState, false, true)).toBe(false);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noAccessRoleState, false, true)).toBe(false);
+      });
+
+      it('still denies a visitor who was never authenticated this mount', () => {
+        // wasLoggedIn=false is what tells a real logout transition apart from
+        // a plain unauthenticated visit -- without it the bypass above would
+        // let anyone through, not just someone on the way out.
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noRolesState, false, false)).toBe(true);
+        expect(shouldDenyMembersPageAccess(orgId, orgId, noAccessRoleState, false, false)).toBe(true);
       });
     });
   });
@@ -290,5 +356,127 @@ describe('MembersPage - page-level error rendering', () => {
 
     expect(screen.getByText('Error loading members')).toBeInTheDocument();
     expect(screen.queryByText('Members Access Denied')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Test Suite: MembersPage — organization sync during sign-out
+ *
+ * Regression guard: resetOrganizationState() (run during logout teardown)
+ * clears the persisted org id to "". The page's own org-sync effect used to
+ * see that as "out of sync with the route" and immediately write the
+ * outgoing user's org id right back — defeating the reset. It must stay
+ * inert once signed out.
+ */
+describe('MembersPage - organization sync while signing out', () => {
+  const adminRoleState: UserRoleState = {
+    status: 'success',
+    role: Role.Admin,
+    hasAccess: true,
+  };
+
+  function resolvedParams(id: string) {
+    const params = Promise.resolve({ id }) as Promise<{ id: string }> & {
+      status?: string;
+      value?: { id: string };
+    };
+    params.status = 'fulfilled';
+    params.value = { id };
+    return params;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useCurrentUserRole).mockReturnValue(adminRoleState);
+    vi.mocked(useCoachingRelationshipList).mockReturnValue({
+      relationships: [],
+      isLoading: false,
+      isError: false,
+      refresh: vi.fn(),
+    } as never);
+    vi.mocked(useUserList).mockReturnValue({
+      users: [],
+      isLoading: false,
+      isError: false,
+      refresh: vi.fn(),
+    } as never);
+  });
+
+  it('renders nothing rather than the outgoing user\'s roster once signed out', () => {
+    // EntityApi.useClearCache() deletes cache entries directly on the SWR
+    // Map without notifying subscribers, so `users` here can still be the
+    // outgoing user's data for the rest of this render window.
+    vi.mocked(useCurrentOrganization).mockReturnValue({
+      currentOrganizationId: 'org-1',
+      setCurrentOrganizationId: vi.fn(),
+    } as never);
+    vi.mocked(useCoachingRelationshipList).mockReturnValue({
+      relationships: [],
+      isLoading: false,
+      isError: false,
+      refresh: vi.fn(),
+    } as never);
+    vi.mocked(useUserList).mockReturnValue({
+      users: [{ id: 'user-2', first_name: 'Stale', last_name: 'User' }],
+      isLoading: false,
+      isError: false,
+      refresh: vi.fn(),
+    } as never);
+
+    // First render while still authenticated, matching the real sequence
+    // (the page was already mounted and rendering data before logout began).
+    const { container, rerender } = render(
+      <MembersPage params={resolvedParams('org-1')} />
+    );
+
+    mockAuthState.isLoggedIn = false;
+    rerender(<MembersPage params={resolvedParams('org-1')} />);
+
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText('Stale')).not.toBeInTheDocument();
+  });
+
+  it('does not flash a 404 across several re-renders while signing out', () => {
+    // Caught live: a single-rerender test isn't enough here. Signing out
+    // fires several re-renders in a row while isLoggedIn stays false (org
+    // state, coaching relationship state, etc. each reset separately), and
+    // an earlier version of this fix (usePrevious, one render of memory)
+    // called notFound() starting on the SECOND of those re-renders.
+    vi.mocked(useCurrentOrganization).mockReturnValue({
+      currentOrganizationId: 'org-1',
+      setCurrentOrganizationId: vi.fn(),
+    } as never);
+
+    const { rerender } = render(<MembersPage params={resolvedParams('org-1')} />);
+    expect(notFound).not.toHaveBeenCalled();
+
+    mockAuthState.isLoggedIn = false;
+    for (let i = 0; i < 4; i++) {
+      rerender(<MembersPage params={resolvedParams('org-1')} />);
+    }
+
+    expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it('does not write the cleared organization id back once signed out', () => {
+    const setCurrentOrganizationId = vi.fn();
+    vi.mocked(useCurrentOrganization).mockReturnValue({
+      currentOrganizationId: 'org-1',
+      setCurrentOrganizationId,
+    } as never);
+
+    const { rerender } = render(<MembersPage params={resolvedParams('org-1')} />);
+    expect(setCurrentOrganizationId).not.toHaveBeenCalled();
+
+    // The exact logout sequence: the org id clears to "" and isLoggedIn flips
+    // to false in the same window, before the redirect lands.
+    mockAuthState.isLoggedIn = false;
+    vi.mocked(useCurrentOrganization).mockReturnValue({
+      currentOrganizationId: '',
+      setCurrentOrganizationId,
+    } as never);
+    rerender(<MembersPage params={resolvedParams('org-1')} />);
+
+    expect(setCurrentOrganizationId).not.toHaveBeenCalled();
   });
 });

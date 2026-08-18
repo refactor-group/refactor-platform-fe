@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
   clearCache: vi.fn(),
   replace: vi.fn(),
   executeAll: vi.fn().mockResolvedValue(undefined),
+  // Backs useAuthStoreApi().getState().isLoggedIn -- the reentrancy guard's
+  // live (not-a-render-behind) read. `logout()` flips this to false, exactly
+  // as the real store does, so a second invocation sees it immediately.
+  isLoggedIn: true,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -26,7 +30,16 @@ vi.mock("@/lib/api/user-sessions", () => ({
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ logout: mocks.logout, userSession: { id: "user-1" } }),
+    selector({
+      logout: () => {
+        mocks.isLoggedIn = false;
+        mocks.logout();
+      },
+      userSession: { id: "user-1" },
+    }),
+  useAuthStoreApi: () => ({
+    getState: () => ({ isLoggedIn: mocks.isLoggedIn }),
+  }),
 }));
 
 vi.mock("@/lib/providers/coaching-relationship-state-store-provider", () => ({
@@ -59,6 +72,7 @@ describe("useLogoutUser", () => {
     // clearAllMocks only clears recorded calls, so implementations set by a
     // throwing test would otherwise leak into the next one.
     vi.clearAllMocks();
+    mocks.isLoggedIn = true;
     mocks.deleteUserSession.mockResolvedValue(undefined);
     mocks.executeAll.mockResolvedValue(undefined);
     mocks.clearCache.mockImplementation(() => {});
@@ -170,6 +184,40 @@ describe("useLogoutUser", () => {
     await result.current();
 
     expect(mocks.resetOrganizationState).toHaveBeenCalledTimes(1);
+    expect(mocks.replace).toHaveBeenCalledWith("/");
+  });
+
+  // The 401 auto-cleanup handler (session-guard.ts) and a manual "Log out"
+  // click share this same function. A request already in flight when the
+  // first call invalidates the session can still land afterwards, 401, and
+  // trigger a second call -- which must not repeat the backend DELETE (that
+  // second DELETE 401s too, since the session is already gone).
+  it("does not repeat the backend delete on a second invocation", async () => {
+    const { result } = renderHook(() => useLogoutUser());
+
+    await result.current();
+    expect(mocks.deleteUserSession).toHaveBeenCalledTimes(1);
+
+    await result.current();
+
+    // The second call is the one that used to produce a 401 in the console:
+    // the session is already gone, so repeating the DELETE fails.
+    expect(mocks.deleteUserSession).toHaveBeenCalledTimes(1);
+    expect(mocks.resetOrganizationState).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips teardown for a caller that was never signed in, but still navigates", async () => {
+    // The account-setup page calls this purely to leave for the sign-in
+    // screen, and disables its only button until it resolves -- so skipping
+    // the navigation as well as the teardown would strand that page with a
+    // permanently disabled button.
+    mocks.isLoggedIn = false;
+    const { result } = renderHook(() => useLogoutUser());
+
+    await result.current();
+
+    expect(mocks.deleteUserSession).not.toHaveBeenCalled();
+    expect(mocks.resetOrganizationState).not.toHaveBeenCalled();
     expect(mocks.replace).toHaveBeenCalledWith("/");
   });
 });

@@ -1,5 +1,5 @@
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useAuthStore, useAuthStoreApi } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
@@ -9,6 +9,7 @@ import { logoutCleanupRegistry } from "./logout-cleanup-registry";
 
 export function useLogoutUser() {
   const router = useRouter();
+  const authStoreApi = useAuthStoreApi();
   const { logout } = useAuthStore((action) => action);
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -26,6 +27,22 @@ export function useLogoutUser() {
   const clearCache = EntityApi.useClearCache();
 
   return async () => {
+    // Nothing to tear down when there is no session: either a second call
+    // racing the first (the 401 auto-cleanup handler in session-guard.ts and
+    // a manual "Log out" click resolve to this same function, and a request
+    // already in flight can land after the first DELETE, 401, and re-trigger
+    // it), or a caller that was never signed in at all. Read the store
+    // directly rather than through the hook so the check is not a render
+    // behind; logout() below updates it synchronously.
+    //
+    // Navigate anyway. The account-setup page calls this purely to leave for
+    // the sign-in screen and disables its only button until it does, so
+    // returning without navigating strands that page permanently.
+    if (!authStoreApi.getState().isLoggedIn) {
+      router.replace("/");
+      return;
+    }
+
     // Clear authentication state to prevent re-initialization
     logout();
 
