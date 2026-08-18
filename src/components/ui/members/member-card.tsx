@@ -122,9 +122,9 @@ export function MemberCard({
     try {
       await updateRole(currentOrganizationId, userId, role);
       toast.success(
-        `${firstName} ${lastName} is now ${
-          role === Role.Admin ? "an Admin" : "a Member"
-        }`
+        `${firstName} ${lastName} is ${
+          role === Role.Admin ? "now" : "no longer"
+        } an organization Admin`
       );
     } catch (error) {
       console.error("Error changing member role:", error);

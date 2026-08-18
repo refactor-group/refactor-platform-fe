@@ -64,7 +64,7 @@ Each member row carries a `⋯` actions menu labelled `Actions for {first} {last
 changed by a single item — **"Grant organization admin access"** on a member's row, **"Revoke
 organization admin access"** on an admin's. Never both, and never the role already held. Both are
 scoped to the organization in wording, so neither is mistaken for global SuperAdmin. A success toast confirms the
-change ("{name} is now an Admin" / "…is now a Member").
+change ("{name} is now an organization Admin" / "…is no longer an organization Admin").
 
 The row's `Roles:` line separately carries Coach/Coachee and SuperAdmin. It renders the plain
 organization role as **"Member"** — the same word the menu and the add-member dialog use — rather

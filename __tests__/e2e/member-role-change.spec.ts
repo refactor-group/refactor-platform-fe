@@ -148,7 +148,7 @@ test.describe('Organization members — role change from the row menu (e2e)', ()
     expect(roleRequests[0].url).toContain(
       `/organizations/${ORG_ID}/users/${OTHER_MEMBER_ID}/role`
     )
-    await expect(page.getByText(`${OTHER_NAME} is now an Admin`)).toBeVisible()
+    await expect(page.getByText(`${OTHER_NAME} is now an organization Admin`)).toBeVisible()
   })
 
   test('the signed-in admin is offered no role action on their own row', async ({

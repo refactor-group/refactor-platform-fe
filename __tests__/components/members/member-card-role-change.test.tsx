@@ -251,7 +251,7 @@ describe("MemberCard – role change action", () => {
     await chooseRoleAction(user, PROMOTE);
 
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith("Ada Lovelace is now an Admin")
+      expect(toast.success).toHaveBeenCalledWith("Ada Lovelace is now an organization Admin")
     );
   });
 
@@ -263,7 +263,7 @@ describe("MemberCard – role change action", () => {
     await chooseRoleAction(user, DEMOTE);
 
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith("Ada Lovelace is now a Member")
+      expect(toast.success).toHaveBeenCalledWith("Ada Lovelace is no longer an organization Admin")
     );
   });
 
