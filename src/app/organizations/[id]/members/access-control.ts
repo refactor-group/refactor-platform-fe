@@ -5,13 +5,17 @@ export function shouldDenyMembersPageAccess(
   currentOrganizationId: Id | null,
   organizationId: Id,
   currentUserRoleState: UserRoleState,
-  isLoggedIn: boolean
+  isLoggedIn: boolean,
+  wasLoggedIn: boolean
 ): boolean {
-  // Signing out clears the session before the redirect completes, so the page
-  // re-renders unauthenticated while still mounted. That is not "no such page"
-  // -- 404ing here flashes a 404 on the way to the login screen. Authentication
-  // is the auth layer's to handle; this guard only decides authorization.
-  if (!isLoggedIn) return false;
+  // Actively signing out: the session clears before the redirect completes,
+  // so the page re-renders unauthenticated while still mounted. Let it
+  // render rather than 404 on the way to the login screen -- but only for a
+  // visitor who WAS authenticated this mount. A visitor who never was stays
+  // on the normal deny path below, so this can't be used to skip the gate
+  // entirely on a fresh, unauthenticated visit.
+  if (wasLoggedIn && !isLoggedIn) return false;
+  if (!isLoggedIn) return true;
   if (currentOrganizationId !== organizationId) return false;
   // User is not a member of this organization
   if (currentUserRoleState.status === 'no_access') return true;

@@ -1,5 +1,5 @@
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useAuthStore, useAuthStoreApi } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
@@ -9,6 +9,7 @@ import { logoutCleanupRegistry } from "./logout-cleanup-registry";
 
 export function useLogoutUser() {
   const router = useRouter();
+  const authStoreApi = useAuthStoreApi();
   const { logout } = useAuthStore((action) => action);
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -26,6 +27,15 @@ export function useLogoutUser() {
   const clearCache = EntityApi.useClearCache();
 
   return async () => {
+    // Reentrancy guard: the 401 auto-cleanup handler (session-guard.ts) and a
+    // manual "Log out" click can race -- a request already in flight can
+    // still land after the first DELETE invalidates the session, 401, and
+    // trigger this same handler again. Read the store directly rather than
+    // through the hook so this check is not a render behind; logout() below
+    // updates the same store synchronously, so a second call sees it
+    // immediately and returns before repeating the backend round trip.
+    if (!authStoreApi.getState().isLoggedIn) return;
+
     // Clear authentication state to prevent re-initialization
     logout();
 

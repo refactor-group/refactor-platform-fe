@@ -7,10 +7,14 @@ import { isSuperAdmin, UserRole } from "@/types/user";
  */
 export function shouldDenyAdminAccess(
   roles: UserRole[],
-  isLoggedIn: boolean
+  isLoggedIn: boolean,
+  wasLoggedIn: boolean
 ): boolean {
-  // See the members page guard: a signed-out render is not a missing page, and
-  // 404ing it flashes a 404 between logout and the login screen.
-  if (!isLoggedIn) return false;
+  // See the members page guard: bypass only a real logout transition (was
+  // authenticated this mount, isn't now). This route has no middleware
+  // protection, so without the wasLoggedIn condition a never-signed-in
+  // visitor would reach this page and see the SuperAdmin shell render.
+  if (wasLoggedIn && !isLoggedIn) return false;
+  if (!isLoggedIn) return true;
   return !isSuperAdmin(roles);
 }
