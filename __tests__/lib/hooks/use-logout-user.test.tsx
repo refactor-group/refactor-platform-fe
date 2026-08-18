@@ -192,7 +192,7 @@ describe("useLogoutUser", () => {
   // first call invalidates the session can still land afterwards, 401, and
   // trigger a second call -- which must not repeat the backend DELETE (that
   // second DELETE 401s too, since the session is already gone).
-  it("ignores a second invocation once already signed out", async () => {
+  it("does not repeat the backend delete on a second invocation", async () => {
     const { result } = renderHook(() => useLogoutUser());
 
     await result.current();
@@ -200,14 +200,17 @@ describe("useLogoutUser", () => {
 
     await result.current();
 
+    // The second call is the one that used to produce a 401 in the console:
+    // the session is already gone, so repeating the DELETE fails.
     expect(mocks.deleteUserSession).toHaveBeenCalledTimes(1);
     expect(mocks.resetOrganizationState).toHaveBeenCalledTimes(1);
   });
 
-  it("ignores a concurrent second call made before the first one clears the session", async () => {
-    // The guard reads the store directly (not through the hook), so it must
-    // still catch a second call fired before logout() has run at all --
-    // e.g. a double-click on the button, both handled by this same closure.
+  it("skips teardown for a caller that was never signed in, but still navigates", async () => {
+    // The account-setup page calls this purely to leave for the sign-in
+    // screen, and disables its only button until it resolves -- so skipping
+    // the navigation as well as the teardown would strand that page with a
+    // permanently disabled button.
     mocks.isLoggedIn = false;
     const { result } = renderHook(() => useLogoutUser());
 
@@ -215,6 +218,6 @@ describe("useLogoutUser", () => {
 
     expect(mocks.deleteUserSession).not.toHaveBeenCalled();
     expect(mocks.resetOrganizationState).not.toHaveBeenCalled();
-    expect(mocks.replace).not.toHaveBeenCalled();
+    expect(mocks.replace).toHaveBeenCalledWith("/");
   });
 });

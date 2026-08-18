@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { isAdminOrSuperAdmin, Role } from '@/types/user';
 import type { UserRoleState } from '@/types/user';
@@ -48,7 +49,7 @@ vi.mock('@/lib/api/organizations/users', () => ({
 }));
 vi.mock('@/lib/providers/auth-store-provider', () => ({
   useAuthStore: vi.fn(),
-  AuthStoreProvider: ({ children }: { children: React.ReactNode }) => children,
+  AuthStoreProvider: ({ children }: { children: ReactNode }) => children,
 }));
 // The success path renders MemberContainer; stub it so these tests stay focused
 // on the page-level error branches (it is never reached in the 403/error cases).

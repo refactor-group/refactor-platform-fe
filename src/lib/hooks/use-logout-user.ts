@@ -27,14 +27,21 @@ export function useLogoutUser() {
   const clearCache = EntityApi.useClearCache();
 
   return async () => {
-    // Reentrancy guard: the 401 auto-cleanup handler (session-guard.ts) and a
-    // manual "Log out" click can race -- a request already in flight can
-    // still land after the first DELETE invalidates the session, 401, and
-    // trigger this same handler again. Read the store directly rather than
-    // through the hook so this check is not a render behind; logout() below
-    // updates the same store synchronously, so a second call sees it
-    // immediately and returns before repeating the backend round trip.
-    if (!authStoreApi.getState().isLoggedIn) return;
+    // Nothing to tear down when there is no session: either a second call
+    // racing the first (the 401 auto-cleanup handler in session-guard.ts and
+    // a manual "Log out" click resolve to this same function, and a request
+    // already in flight can land after the first DELETE, 401, and re-trigger
+    // it), or a caller that was never signed in at all. Read the store
+    // directly rather than through the hook so the check is not a render
+    // behind; logout() below updates it synchronously.
+    //
+    // Navigate anyway. The account-setup page calls this purely to leave for
+    // the sign-in screen and disables its only button until it does, so
+    // returning without navigating strands that page permanently.
+    if (!authStoreApi.getState().isLoggedIn) {
+      router.replace("/");
+      return;
+    }
 
     // Clear authentication state to prevent re-initialization
     logout();
