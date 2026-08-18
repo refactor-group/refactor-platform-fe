@@ -61,8 +61,9 @@ Three traps, each of which has produced a false result:
 ## 2. The control under test
 
 Each member row carries a `⋯` actions menu labelled `Actions for {first} {last}`. A member's role is
-changed by a single item — **"Promote to Admin"** on a member's row, **"Revoke admin access"** on an
-admin's. Never both, and never the role already held. A success toast confirms the
+changed by a single item — **"Grant organization admin access"** on a member's row, **"Revoke
+organization admin access"** on an admin's. Never both, and never the role already held. Both are
+scoped to the organization in wording, so neither is mistaken for global SuperAdmin. A success toast confirms the
 change ("{name} is now an Admin" / "…is now a Member").
 
 The row's `Roles:` line separately carries Coach/Coachee and SuperAdmin. It renders the plain

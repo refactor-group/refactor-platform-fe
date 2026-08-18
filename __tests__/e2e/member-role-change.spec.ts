@@ -14,8 +14,8 @@ const OTHER_MEMBER_ID = 'member-2'
 const SELF_NAME = 'Test User'
 const OTHER_NAME = 'Casey Coachee'
 
-const PROMOTE = 'Promote to Admin'
-const DEMOTE = 'Revoke admin access'
+const PROMOTE = 'Grant organization admin access'
+const DEMOTE = 'Revoke organization admin access'
 
 const LAST_ADMIN_MESSAGE =
   'This user is the only admin of this organization. Grant another member the Admin role first.'
@@ -30,7 +30,7 @@ const makeRole = (userId: string, role: 'Admin' | 'User') => ({
 })
 
 // The viewer is an org Admin so the role action renders at all; the second
-// member is a plain Member so their row offers "Promote to Admin".
+// member is a plain Member so their row offers the grant action.
 const SELF_MEMBER = {
   id: MOCK_USER_ID,
   email: 'test@example.com',

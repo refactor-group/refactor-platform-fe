@@ -381,14 +381,14 @@ export function MemberCard({
                   onClick={() => handleRoleChange(Role.Admin)}
                   disabled={pendingRole !== null}
                 >
-                  <ShieldCheck className="mr-2 h-4 w-4" /> Promote to Admin
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Grant organization admin access
                 </DropdownMenuItem>
               ) : membershipRole.val === Role.Admin ? (
                 <DropdownMenuItem
                   onClick={() => handleRoleChange(Role.User)}
                   disabled={pendingRole !== null}
                 >
-                  <ShieldOff className="mr-2 h-4 w-4" /> Revoke admin access
+                  <ShieldOff className="mr-2 h-4 w-4" /> Revoke organization admin access
                 </DropdownMenuItem>
               ) : null)}
             {canDeleteUser && (

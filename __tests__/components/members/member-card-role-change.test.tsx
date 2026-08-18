@@ -66,8 +66,8 @@ const memberRole: UserRoleState = {
 };
 
 const MENU_NAME = "Actions for Ada Lovelace";
-const PROMOTE = "Promote to Admin";
-const DEMOTE = "Revoke admin access";
+const PROMOTE = "Grant organization admin access";
+const DEMOTE = "Revoke organization admin access";
 
 function renderCard(options?: {
   roles?: UserRole[];
