@@ -388,7 +388,7 @@ export function MemberCard({
                   onClick={() => handleRoleChange(Role.User)}
                   disabled={pendingRole !== null}
                 >
-                  <ShieldOff className="mr-2 h-4 w-4" /> Demote to Member
+                  <ShieldOff className="mr-2 h-4 w-4" /> Revoke admin access
                 </DropdownMenuItem>
               ) : null)}
             {canDeleteUser && (

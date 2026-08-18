@@ -15,7 +15,7 @@ const SELF_NAME = 'Test User'
 const OTHER_NAME = 'Casey Coachee'
 
 const PROMOTE = 'Promote to Admin'
-const DEMOTE = 'Demote to Member'
+const DEMOTE = 'Revoke admin access'
 
 const LAST_ADMIN_MESSAGE =
   'This user is the only admin of this organization. Grant another member the Admin role first.'

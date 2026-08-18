@@ -47,8 +47,12 @@ export function getUserDisplayRoles(
     roles.add(RelationshipRole.Coachee);
   }
 
-  // Convert enum values to strings for display
-  return Array.from(roles).map(role => role as string).sort();
+  // "Member" is the recipient-facing word for Role.User, matching the add-member
+  // dialog and the row's actions menu. Showing the raw "User" here taught a
+  // different name for the same role.
+  return Array.from(roles)
+    .map(role => (role === Role.User ? "Member" : (role as string)))
+    .sort();
 }
 
 /**

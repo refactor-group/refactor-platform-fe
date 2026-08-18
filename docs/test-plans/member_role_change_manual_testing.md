@@ -61,12 +61,13 @@ Three traps, each of which has produced a false result:
 ## 2. The control under test
 
 Each member row carries a `⋯` actions menu labelled `Actions for {first} {last}`. A member's role is
-changed by a single verb-phrased item — **"Promote to Admin"** on a Member's row, **"Demote to
-Member"** on an Admin's. Never both, and never the role already held. A success toast confirms the
+changed by a single item — **"Promote to Admin"** on a member's row, **"Revoke admin access"** on an
+admin's. Never both, and never the role already held. A success toast confirms the
 change ("{name} is now an Admin" / "…is now a Member").
 
-The row's `Roles:` line separately carries Coach/Coachee and SuperAdmin, and is unaffected by this
-feature.
+The row's `Roles:` line separately carries Coach/Coachee and SuperAdmin. It renders the plain
+organization role as **"Member"** — the same word the menu and the add-member dialog use — rather
+than the raw `User` enum value.
 
 ---
 

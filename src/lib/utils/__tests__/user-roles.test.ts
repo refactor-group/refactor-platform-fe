@@ -76,7 +76,15 @@ describe('getUserDisplayRoles', () => {
     ];
     const roles = getUserDisplayRoles(user, organizationId, relationships);
 
-    expect(roles).toEqual(['Coach', 'Coachee', 'User']);
+    expect(roles).toEqual(['Coach', 'Coachee', 'Member']);
+  });
+
+  it('renders Role.User as "Member", the word the rest of the UI uses', () => {
+    const user = createUser([{ role: Role.User, organization_id: organizationId }]);
+    const roles = getUserDisplayRoles(user, organizationId, []);
+
+    expect(roles).toEqual(['Member']);
+    expect(roles).not.toContain('User');
   });
 
   it('should return roles in alphabetical order', () => {
