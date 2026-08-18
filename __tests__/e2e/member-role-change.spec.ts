@@ -11,8 +11,10 @@ import {
 
 const ORG_ID = 'org-1'
 const OTHER_MEMBER_ID = 'member-2'
+const ADMIN_MEMBER_ID = 'member-3'
 const SELF_NAME = 'Test User'
 const OTHER_NAME = 'Casey Coachee'
+const ADMIN_NAME = 'Robin Organizer'
 
 const PROMOTE = 'Grant organization admin access'
 const DEMOTE = 'Revoke organization admin access'
@@ -29,8 +31,10 @@ const makeRole = (userId: string, role: 'Admin' | 'User') => ({
   updated_at: '2024-01-01T00:00:00Z',
 })
 
-// The viewer is an org Admin so the role action renders at all; the second
-// member is a plain Member so their row offers the grant action.
+// The viewer is an org Admin so the role action renders at all. The second
+// member is a plain Member, so their row offers the grant action; the third is
+// another Admin, so their row offers the revoke action — which is the only
+// direction that can raise last_organization_admin.
 const SELF_MEMBER = {
   id: MOCK_USER_ID,
   email: 'test@example.com',
@@ -50,6 +54,17 @@ const OTHER_MEMBER = {
   display_name: OTHER_NAME,
   timezone: 'America/Chicago',
   roles: [makeRole(OTHER_MEMBER_ID, 'User')],
+  invite_status: null,
+}
+
+const ADMIN_MEMBER = {
+  id: ADMIN_MEMBER_ID,
+  email: 'robin@example.com',
+  first_name: 'Robin',
+  last_name: 'Organizer',
+  display_name: ADMIN_NAME,
+  timezone: 'America/Chicago',
+  roles: [makeRole(ADMIN_MEMBER_ID, 'Admin')],
   invite_status: null,
 }
 
@@ -83,7 +98,7 @@ async function mockMemberRoutes(
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: [SELF_MEMBER, OTHER_MEMBER] }),
+      body: JSON.stringify({ data: [SELF_MEMBER, OTHER_MEMBER, ADMIN_MEMBER] }),
     })
   })
 
@@ -164,7 +179,10 @@ test.describe('Organization members — role change from the row menu (e2e)', ()
   })
 
   test('a last_organization_admin 409 lands on the row', async ({ page }) => {
-    await mockMemberRoutes(page, {
+    // Raised only when demoting the final administrator, so this must act on an
+    // Admin's row via the revoke action. Driving it from a promotion would let
+    // the test pass without ever exercising the path it claims to protect.
+    const roleRequests = await mockMemberRoutes(page, {
       status: 409,
       body: {
         status_code: 409,
@@ -175,11 +193,16 @@ test.describe('Organization members — role change from the row menu (e2e)', ()
     })
 
     await page.goto(`/organizations/${ORG_ID}/members`)
-    await openRowMenu(page, OTHER_NAME)
-    await page.getByRole('menuitem', { name: PROMOTE }).click()
+    await openRowMenu(page, ADMIN_NAME)
+    await page.getByRole('menuitem', { name: DEMOTE }).click()
 
-    await expect(memberRow(page, OTHER_NAME).getByRole('alert')).toHaveText(
+    await expect(memberRow(page, ADMIN_NAME).getByRole('alert')).toHaveText(
       LAST_ADMIN_MESSAGE
+    )
+    // Proves the refusal came from a real demotion, not an arbitrary request.
+    expect(roleRequests[0].body).toEqual({ role: 'User' })
+    expect(roleRequests[0].url).toContain(
+      `/organizations/${ORG_ID}/users/${ADMIN_MEMBER_ID}/role`
     )
   })
 })
