@@ -66,9 +66,9 @@ organization admin access"** on an admin's. Never both, and never the role alrea
 scoped to the organization in wording, so neither is mistaken for global SuperAdmin. A success toast confirms the
 change ("{name} is now an organization Admin" / "…is no longer an organization Admin").
 
-The row's `Roles:` line separately carries Coach/Coachee and SuperAdmin. It renders the plain
-organization role as **"Member"** — the same word the menu and the add-member dialog use — rather
-than the raw `User` enum value.
+The row's `Roles:` line separately carries Coach/Coachee and Super Admin. It renders roles by their
+recipient-facing names rather than raw enum values: `User` shows as **"Member"** (the same word the
+menu and the add-member dialog use) and `SuperAdmin` as **"Super Admin"**.
 
 ---
 
