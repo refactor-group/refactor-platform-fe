@@ -1,5 +1,13 @@
 # Stage 0: Base image
-FROM node:24-alpine AS base
+# Pinned by digest, not by the floating `node:24-alpine` tag. A Docker Hub push
+# to that tag can otherwise change the build environment with no commit on our
+# side, which turned a green branch red on PR #449: 13 Turbopack errors
+# (`__turbopack_context__.a is not a function`) evaluating postcss.config.js,
+# where the same `npm run build` had passed on the runner in the same workflow
+# run and a plain re-run went green. This is the multi-arch index digest, so
+# both the amd64 and the ARM64 self-hosted runner still resolve correctly.
+# To bump: docker manifest inspect node:24-alpine  (take the index digest)
+FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43 AS base
 
 # BuildKit Platform Context (used for metadata, not to alter FROM)
 ARG BUILDPLATFORM
