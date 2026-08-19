@@ -3,6 +3,7 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { EntityApi } from "./entity-api";
+import { EntityApiError } from "@/types/entity-api-error";
 import {
   User,
   NewUserPassword,
@@ -121,3 +122,18 @@ export const useUserPasswordMutation = () => {
       EntityApi.updateFn<NewUserPassword, User>(`${USERS_BASEURL}/${id}/password`, data),
   });
 };
+
+/** Ours, not the backend's: its 429 prose names neither the cause nor what to do. */
+export const USER_LOOKUP_RATE_LIMITED_MESSAGE =
+  "You've made too many searches. Wait a few minutes and try again.";
+
+/**
+ * The lookup throttle (board contract `UserLookupEndpoint` v2), matched on
+ * status alone. The `user_lookup_rate_limited` slug adds nothing, since the
+ * throttle is this endpoint's only 429, and the platform's other 429 answers in
+ * plain text with no slug at all.
+ */
+export const userLookupRateLimitedMessage = (error: unknown): string | null =>
+  EntityApiError.isEntityApiError(error) && error.status === 429
+    ? USER_LOOKUP_RATE_LIMITED_MESSAGE
+    : null;
