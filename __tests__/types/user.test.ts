@@ -163,10 +163,10 @@ describe('canAddExistingMembers', () => {
     updated_at: '2026-01-01T00:00:00Z',
   });
 
-  it('is false for an admin of a single organization', () => {
-    // Everyone they can look up is already a member there, so the flow can only
-    // ever return "already a member".
-    expect(canAddExistingMembers([role(Role.Admin, 'org-1')])).toBe(false);
+  it('is true for an admin of a single organization', () => {
+    // The lookup surfaces former members of an administered organization, so one
+    // is enough: this admin can recover someone they removed.
+    expect(canAddExistingMembers([role(Role.Admin, 'org-1')])).toBe(true);
   });
 
   it('is true for an admin of two organizations', () => {
@@ -175,17 +175,19 @@ describe('canAddExistingMembers', () => {
     ).toBe(true);
   });
 
-  it('does not count organizations where the user is only a member', () => {
-    // Visibility requires Admin in the shared organization, not membership.
+  it('requires Admin, not mere membership, in the administered organization', () => {
     expect(
       canAddExistingMembers([role(Role.Admin, 'org-1'), role(Role.User, 'org-2')])
+    ).toBe(true);
+    expect(
+      canAddExistingMembers([role(Role.User, 'org-1'), role(Role.User, 'org-2')])
     ).toBe(false);
   });
 
-  it('counts distinct organizations, not role rows', () => {
-    expect(
-      canAddExistingMembers([role(Role.Admin, 'org-1'), role(Role.Admin, 'org-1')])
-    ).toBe(false);
+  it('ignores an Admin row with no organization scope', () => {
+    // Org-scoped admin is what grants lookup reach; an unscoped Admin row is not
+    // a SuperAdmin and administers nothing.
+    expect(canAddExistingMembers([role(Role.Admin, null)])).toBe(false);
   });
 
   it('is true for a super admin holding no organization roles', () => {
