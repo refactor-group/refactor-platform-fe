@@ -123,41 +123,15 @@ export const useUserPasswordMutation = () => {
   });
 };
 
-/**
- * Errors from the email lookup above (board contract `UserLookupEndpoint` v2).
- *
- * Only the 429 carries an `error` slug on that endpoint; its 400/401/403 are
- * bare strings. So these branch on status, not on the body.
- */
-
-/**
- * Deliberately ours rather than the backend's prose. Theirs, "Too many user
- * lookups. Please wait before trying again.", names neither the cause nor what
- * to do, unlike `last_organization_admin`, which we do render verbatim.
- *
- * States neither the cap (30 per hour, backend-side policy the reader cannot
- * act on) nor a retry time. The window is a rolling count rather than a bucket
- * that empties on the hour, and the backend sends no `Retry-After`, so any
- * duration would be a guess that reads as a promise.
- *
- * "searches" is exact: every authorized lookup counts, including ones that find
- * nobody, which is the common case when recovering several removed members.
- */
+/** Ours, not the backend's: its 429 prose names neither the cause nor what to do. */
 export const USER_LOOKUP_RATE_LIMITED_MESSAGE =
   "You've made too many searches. Wait a few minutes and try again.";
 
 /**
- * The lookup throttle, keyed on status alone. Returns the message when the
- * error is one, otherwise null — so callers can write
- * `userLookupRateLimitedMessage(error) ?? fallback`.
- *
- * Matching the status and ignoring the `user_lookup_rate_limited` slug is
- * intentional: the slug adds nothing (the throttle is this endpoint's only 429),
- * and the platform's other 429 — password reset — answers in plain text with no
- * slug at all. Should this one ever follow suit, the message still lands.
- *
- * The limit is per authenticated requester, not per IP, so the copy can blame
- * the reader without being wrong about a colleague's searches.
+ * The lookup throttle (board contract `UserLookupEndpoint` v2), matched on
+ * status alone. The `user_lookup_rate_limited` slug adds nothing, since the
+ * throttle is this endpoint's only 429, and the platform's other 429 answers in
+ * plain text with no slug at all.
  */
 export const userLookupRateLimitedMessage = (error: unknown): string | null =>
   EntityApiError.isEntityApiError(error) && error.status === 429
