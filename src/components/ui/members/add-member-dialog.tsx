@@ -23,12 +23,12 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserMutation } from "@/lib/api/organizations/users";
-import { UserApi } from "@/lib/api/users";
 import {
   organizationArchivedMessage,
   userAlreadyInOrganizationMessage,
   USER_ALREADY_IN_ORGANIZATION_MESSAGE,
 } from "@/lib/api/organization-errors";
+import { UserApi, userLookupRateLimitedMessage } from "@/lib/api/users";
 import {
   NewUser,
   Role,
@@ -176,10 +176,13 @@ export function AddMemberDialog({
     } catch (error) {
       if (lookupRequest.current !== request) return;
       console.error("Error looking up user:", error);
+      // The throttle first: its generic fallback blames the address, when the
+      // limit is on the admin doing the searching.
       setLookupMessage(
-        isForbiddenError(error)
-          ? PERMISSION_DENIED_MESSAGE
-          : "There was an error looking up that email.",
+        userLookupRateLimitedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "There was an error looking up that email."),
       );
     } finally {
       if (lookupRequest.current === request) setIsLookingUp(false);

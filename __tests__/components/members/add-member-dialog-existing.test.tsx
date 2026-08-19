@@ -5,6 +5,7 @@ import { http, HttpResponse } from "msw";
 import { server } from "@/test-utils/msw-server";
 import { AddMemberDialog } from "@/components/ui/members/add-member-dialog";
 import { Role, type User, type UserRoleState } from "@/types/user";
+import { USER_LOOKUP_RATE_LIMITED_MESSAGE } from "@/lib/api/users";
 import { toast } from "sonner";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
@@ -135,6 +136,43 @@ describe("AddMemberDialog – existing member lookup", () => {
     expect(
       await screen.findByText("No user found with that email.")
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add to organization" })
+    ).toBeDisabled();
+  });
+
+  it("blames the searcher, not the address, when the lookup is throttled", async () => {
+    // UserLookupEndpoint v2: the throttle is the only 429 this endpoint sends,
+    // and the generic fallback would wrongly imply the email is at fault.
+    server.use(
+      http.get("*/users", () =>
+        HttpResponse.json(
+          {
+            error: "user_lookup_rate_limited",
+            message: "Too many user lookups. Please wait before trying again.",
+            status_code: 429,
+          },
+          { status: 429 }
+        )
+      )
+    );
+    const user = userEvent.setup();
+    renderDialog(adminRole);
+
+    await user.click(screen.getByRole("tab", { name: "Add existing member" }));
+    await user.type(screen.getByLabelText("Email"), "ada@example.com");
+    await user.click(screen.getByRole("button", { name: "Find" }));
+
+    expect(
+      await screen.findByText(USER_LOOKUP_RATE_LIMITED_MESSAGE)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("There was an error looking up that email.")
+    ).not.toBeInTheDocument();
+    // The backend's own prose names neither the limit nor a retry time.
+    expect(
+      screen.queryByText(/Too many user lookups/)
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Add to organization" })
     ).toBeDisabled();
@@ -451,9 +489,9 @@ describe("AddMemberDialog – attaching an existing member", () => {
 });
 
 describe("AddMemberDialog – gating the existing-member tab", () => {
-  it("hides the tab from an admin who administers only one organization", () => {
-    // They would be able to open it and look people up, but every result is
-    // already a member, so the tab can only lead to a conflict.
+  it("hides the tab when the caller has no candidates to look up", () => {
+    // The predicate deciding this lives in canAddExistingMembers; here we only
+    // assert the dialog honours its answer.
     renderDialog(adminRole, [GRACE], false);
 
     expect(
