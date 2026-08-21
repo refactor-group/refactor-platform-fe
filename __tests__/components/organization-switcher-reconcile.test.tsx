@@ -14,6 +14,12 @@ const h = vi.hoisted(() => ({
   },
   currentOrganizationId: "",
   setCurrentOrganizationId: vi.fn(),
+  sidebar: {
+    state: "expanded" as string,
+    isMobile: false,
+    setOpenMobile: vi.fn(),
+    expand: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/api/organizations", () => ({
@@ -44,7 +50,7 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 }));
 
 vi.mock("@/components/ui/sidebar", () => ({
-  useSidebar: () => ({ state: SidebarState.Expanded }),
+  useSidebar: () => h.sidebar,
 }));
 
 import { OrganizationSwitcher } from "@/components/ui/organization-switcher";
@@ -62,6 +68,12 @@ describe("OrganizationSwitcher — membership gating", () => {
       isError: false,
     };
     h.currentOrganizationId = "";
+    h.sidebar = {
+      state: SidebarState.Expanded,
+      isMobile: false,
+      setOpenMobile: vi.fn(),
+      expand: vi.fn(),
+    };
   });
 
   it("leaves the selection alone while the organization list is loading", () => {
