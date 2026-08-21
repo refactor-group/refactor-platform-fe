@@ -14,9 +14,9 @@ import { None, Some, type Option } from "@/types/option";
 
 export const PLACEHOLDER_LABEL = "Select Organization";
 
-export function switcherLabel(organization: Organization | null): string {
-  return organization
-    ? `Switch organization: ${organization.name}`
+export function switcherLabel(organization: Option<Organization>): string {
+  return organization.some
+    ? `Switch organization: ${organization.val.name}`
     : PLACEHOLDER_LABEL;
 }
 
@@ -76,7 +76,9 @@ export function OrganizationOption({
 
 export const OrganizationSwitcherTrigger = forwardRef<
   HTMLButtonElement,
-  ComponentPropsWithoutRef<typeof Button> & { organization: Organization | null }
+  ComponentPropsWithoutRef<typeof Button> & {
+    organization: Option<Organization>;
+  }
 >(({ organization, ...props }, ref) => (
   <Button
     ref={ref}
@@ -87,11 +89,13 @@ export const OrganizationSwitcherTrigger = forwardRef<
   >
     <div className="flex items-center gap-2 text-left">
       <OrganizationAvatar
-        name={organization?.name}
-        logo={organization?.logo}
+        name={organization.some ? organization.val.name : undefined}
+        logo={organization.some ? organization.val.logo : undefined}
         className="h-6 w-6"
       />
-      <span className="truncate">{organization?.name || PLACEHOLDER_LABEL}</span>
+      <span className="truncate">
+        {organization.some ? organization.val.name : PLACEHOLDER_LABEL}
+      </span>
     </div>
     <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
   </Button>

@@ -17,10 +17,11 @@ import {
 } from "@/components/ui/organization-switcher-parts";
 import type { Id } from "@/types/general";
 import type { Organization } from "@/types/organization";
+import type { Option } from "@/types/option";
 
 interface OrganizationSwitcherSheetProps {
   organizations: Organization[];
-  currentOrganization: Organization | null;
+  currentOrganization: Option<Organization>;
   currentOrganizationId: Id;
   isLoading: boolean;
   isError: boolean;

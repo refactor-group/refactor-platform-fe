@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SidebarState } from "@/types/sidebar";
@@ -70,12 +70,16 @@ describe("OrganizationSwitcher — mobile", () => {
     };
   });
 
-  it("renders a real trigger on mobile even though the sidebar state is collapsed", () => {
+  it("renders the full trigger on mobile even though the sidebar state is collapsed", () => {
     render(<OrganizationSwitcher />);
 
-    expect(
-      screen.getByRole("button", { name: "Switch organization: Acme Corp" })
-    ).toBeInTheDocument();
+    // The collapsed rail renders a button under the same accessible name, so
+    // the name alone would not catch a regression here. The spelled-out
+    // organization beside the avatar is what distinguishes the two.
+    const trigger = screen.getByRole("button", {
+      name: "Switch organization: Acme Corp",
+    });
+    expect(within(trigger).getByText("Acme Corp")).toBeInTheDocument();
   });
 
   it("opens the organization list in a bottom sheet when tapped", async () => {
@@ -116,19 +120,54 @@ describe("OrganizationSwitcher — mobile", () => {
     expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
   });
 
-  it("expands the rail when the collapsed avatar is clicked", async () => {
+  it("expands the rail and hands over the menu when the collapsed avatar is clicked", async () => {
     const user = userEvent.setup();
+    // expand() flips the state the way the real provider would, so the
+    // re-render lands on the expanded rail with the menu already open.
+    const expand = vi.fn(() => {
+      h.sidebar = { ...h.sidebar, state: SidebarState.Expanded };
+    });
     h.sidebar = {
       state: SidebarState.Collapsed,
       isMobile: false,
       setOpenMobile: h.setOpenMobile,
-      expand: h.expand,
+      expand,
     };
 
-    render(<OrganizationSwitcher />);
+    const { rerender } = render(<OrganizationSwitcher />);
     await user.click(screen.getByRole("button", { name: /Switch organization/ }));
 
-    expect(h.expand).toHaveBeenCalled();
+    expect(expand).toHaveBeenCalled();
+
+    rerender(<OrganizationSwitcher />);
+    expect(
+      await screen.findByRole("menuitem", { name: /Beta Inc/ })
+    ).toBeInTheDocument();
+  });
+
+  it("drops a pending menu when the rail collapses again", async () => {
+    const user = userEvent.setup();
+    const expand = vi.fn(() => {
+      h.sidebar = { ...h.sidebar, state: SidebarState.Expanded };
+    });
+    h.sidebar = {
+      state: SidebarState.Collapsed,
+      isMobile: false,
+      setOpenMobile: h.setOpenMobile,
+      expand,
+    };
+
+    const { rerender } = render(<OrganizationSwitcher />);
+    await user.click(screen.getByRole("button", { name: /Switch organization/ }));
+
+    // Collapse before the expanded rail ever renders, then expand again: the
+    // menu must not open on its own.
+    h.sidebar = { ...h.sidebar, state: SidebarState.Collapsed };
+    rerender(<OrganizationSwitcher />);
+    h.sidebar = { ...h.sidebar, state: SidebarState.Expanded };
+    rerender(<OrganizationSwitcher />);
+
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
   });
 });
 

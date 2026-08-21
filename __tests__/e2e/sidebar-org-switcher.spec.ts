@@ -39,12 +39,13 @@ async function mockOrganizations(page: Page) {
     (url) => /\/organizations\/org-\d+$/.test(url.pathname),
     async (route) => {
       const id = route.request().url().split('/').pop()
+      const organization = ORGANIZATIONS.find((org) => org.id === id)
+      // No fallback: serving Acme for an unexpected id would hide a
+      // wrong-organization bug behind a passing test.
       await route.fulfill({
-        status: 200,
+        status: organization ? 200 : 404,
         contentType: 'application/json',
-        body: JSON.stringify({
-          data: ORGANIZATIONS.find((org) => org.id === id) ?? ORGANIZATIONS[0],
-        }),
+        body: JSON.stringify(organization ? { data: organization } : {}),
       })
     }
   )

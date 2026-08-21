@@ -164,8 +164,33 @@ describe('OrganizationSwitcher', () => {
     await user.keyboard('{Enter}')
 
     const menu = await screen.findByRole('menu')
+    const acme = within(menu).getByRole('menuitem', { name: /Acme Corp/ })
+    const beta = within(menu).getByRole('menuitem', { name: /Beta Inc/ })
     await waitFor(() => {
-      expect(within(menu).getByRole('menuitem', { name: /Acme Corp/ })).toHaveFocus()
+      expect(acme).toHaveFocus()
     })
+
+    await user.keyboard('{ArrowDown}')
+    expect(beta).toHaveFocus()
+
+    await user.keyboard('{ArrowUp}')
+    expect(acme).toHaveFocus()
+  })
+
+  it('selects the focused organization on Enter', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    render(
+      <TestProviders>
+        <OrganizationSwitcher onSelect={onSelect} />
+      </TestProviders>
+    )
+
+    getTrigger().focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('menu')
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    expect(onSelect).toHaveBeenCalledWith('org-2')
   })
 })

@@ -34,6 +34,7 @@ import {
 import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { organizationToString } from "@/types/organization";
+import { None, Some } from "@/types/option";
 import { isUserCoach } from "@/types/coaching-relationship";
 import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
@@ -57,12 +58,19 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     setCurrentOrganizationId,
   } = useCurrentOrganization();
   const { state, isMobile, setOpenMobile, expand } = useSidebar();
+  // The hook hands back a nullable organization; narrow it once, here.
+  const selected = currentOrganization ? Some(currentOrganization) : None;
   // Controlled so the collapsed rail can expand the sidebar and hand the menu
   // straight to the user, across the re-render into the expanded layout.
   const [menuOpen, setMenuOpen] = useState(false);
   // On mobile the sidebar is a sheet whose contents are always full width, so
   // the icon-only treatment applies to the desktop rail alone.
   const isIconOnly = !isMobile && state === SidebarState.Collapsed;
+
+  // The menu only exists on the expanded desktop rail. Collapsing or crossing
+  // to mobile unmounts it with `menuOpen` still true, which would snap it back
+  // open on return, so drop the flag on the way out.
+  if (menuOpen && (isMobile || isIconOnly)) setMenuOpen(false);
 
   // Fetch coaching relationships for the current organization to determine if user is a coach
   const { relationships } = useCoachingRelationshipList(currentOrganizationId ?? "");
@@ -124,7 +132,7 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label={switcherLabel(currentOrganization)}
+                aria-label={switcherLabel(selected)}
                 onClick={() => {
                   expand(StateChangeSource.UserAction);
                   setMenuOpen(true);
@@ -132,14 +140,14 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
                 className="flex items-center justify-center rounded-full ring-offset-sidebar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <OrganizationAvatar
-                  name={currentOrganization?.name}
-                  logo={currentOrganization?.logo}
+                  name={selected.some ? selected.val.name : undefined}
+                  logo={selected.some ? selected.val.logo : undefined}
                   className="h-7 w-7"
                 />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              {currentOrganization?.name || PLACEHOLDER_LABEL}
+              {selected.some ? selected.val.name : PLACEHOLDER_LABEL}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -153,7 +161,7 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     return (
       <OrganizationSwitcherSheet
         organizations={options}
-        currentOrganization={currentOrganization}
+        currentOrganization={selected}
         currentOrganizationId={currentOrganizationId}
         isLoading={isLoading}
         isError={isError}
@@ -168,7 +176,7 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
   return (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
-        <OrganizationSwitcherTrigger organization={currentOrganization} />
+        <OrganizationSwitcherTrigger organization={selected} />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
