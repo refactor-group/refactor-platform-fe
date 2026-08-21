@@ -204,7 +204,14 @@ function RelationshipSessionBrowser({
 
   // Only use the parent-provided value — no automatic fallback so the user
   // must explicitly pick a relationship to avoid confusion with Today's Sessions.
-  const selectedRelationshipId = browsingRelationshipIdProp;
+  // It survives an organization switch, so honor it only while it belongs to the
+  // organization in view; otherwise we would list sessions that cannot be opened
+  // from here.
+  const selectedRelationshipId =
+    browsingRelationshipIdProp &&
+    sortedRelationships.some((rel) => rel.id === browsingRelationshipIdProp)
+      ? browsingRelationshipIdProp
+      : undefined;
 
   const { from, to } = getDateRange(dateFilter);
 
@@ -251,6 +258,7 @@ function RelationshipSessionBrowser({
         <RelationshipSessionList
           userId={userId}
           relationshipId={selectedRelationshipId}
+          organizationId={currentOrganizationId ?? ""}
           fromDate={from}
           toDate={to}
           timezone={timezone}
@@ -264,6 +272,7 @@ function RelationshipSessionBrowser({
 function RelationshipSessionList({
   userId,
   relationshipId,
+  organizationId,
   fromDate,
   toDate,
   timezone,
@@ -271,6 +280,7 @@ function RelationshipSessionList({
 }: {
   userId: string;
   relationshipId: string;
+  organizationId: string;
   fromDate: DateTime;
   toDate: DateTime;
   timezone: string;
@@ -284,7 +294,9 @@ function RelationshipSessionList({
       [CoachingSessionInclude.Goal],
       "date",
       "desc",
-      relationshipId
+      relationshipId,
+      undefined,
+      organizationId
     );
 
   if (isLoading) {
