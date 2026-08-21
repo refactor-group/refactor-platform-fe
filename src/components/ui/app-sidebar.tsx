@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { BarChart3, Building2, CheckSquare, ChevronRight, Gift, Home, Settings, Users } from "lucide-react";
+import { Building2, CheckSquare, ChevronRight, Gift, Home, Settings, Users } from "lucide-react";
 
 import { OrganizationSwitcher } from "./organization-switcher";
 import { Icons } from "@/components/ui/icons";
@@ -109,20 +109,7 @@ export function AppSidebar({ productName, ...props }: AppSidebarProps) {
         <div className="border-b border-sidebar-border w-full" />
       </SidebarHeader>
 
-      {/* Organization Switcher */}
       <SidebarContent className="pt-2">
-        <SidebarGroup className="pb-2">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <OrganizationSwitcher onSelect={handleOrgChange} />
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
         {/* Main navigation */}
         <SidebarGroup>
           <SidebarGroupContent>
@@ -248,26 +235,14 @@ export function AppSidebar({ productName, ...props }: AppSidebarProps) {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {/* System status */}
+      <SidebarSeparator />
+
+      {/* Organization switcher */}
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="System status"
-                className={cn(
-                  menuButtonStyles.button,
-                  menuButtonStyles.buttonCollapsed
-                )}
-              >
-                <Link href="/status">
-                  <span className={menuButtonStyles.iconWrapper}>
-                    <BarChart3 className="h-4 w-4" />
-                  </span>
-                  <span className="group-data-[collapsible=icon]:hidden">System status</span>
-                </Link>
-              </SidebarMenuButton>
+              <OrganizationSwitcher onSelect={handleOrgChange} />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
