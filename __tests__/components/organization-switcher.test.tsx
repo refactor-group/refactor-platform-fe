@@ -37,6 +37,7 @@ vi.mock('@/components/ui/sidebar', () => ({
     isResponsiveOverride: false,
     isMobile: false,
     setOpenMobile: vi.fn(),
+    expand: vi.fn(),
   })
 }))
 

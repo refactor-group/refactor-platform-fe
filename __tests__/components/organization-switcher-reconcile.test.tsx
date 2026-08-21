@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
     state: "expanded" as string,
     isMobile: false,
     setOpenMobile: vi.fn(),
+    expand: vi.fn(),
   },
 }));
 
@@ -71,6 +72,7 @@ describe("OrganizationSwitcher — membership gating", () => {
       state: SidebarState.Expanded,
       isMobile: false,
       setOpenMobile: vi.fn(),
+      expand: vi.fn(),
     };
   });
 

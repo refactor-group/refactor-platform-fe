@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import {
   OrganizationSwitcherTrigger,
   PLACEHOLDER_LABEL,
   optionsMessage,
+  switcherLabel,
 } from "@/components/ui/organization-switcher-parts";
 import { OrganizationSwitcherSheet } from "@/components/ui/organization-switcher-sheet";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -34,7 +35,7 @@ import type { Id } from "@/types/general";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { organizationToString } from "@/types/organization";
 import { isUserCoach } from "@/types/coaching-relationship";
-import { SidebarState } from "@/types/sidebar";
+import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
 interface OrganizationSelectorProps {
   /// Called when an Organization is selected
@@ -55,7 +56,10 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     currentOrganization,
     setCurrentOrganizationId,
   } = useCurrentOrganization();
-  const { state, isMobile, setOpenMobile } = useSidebar();
+  const { state, isMobile, setOpenMobile, expand } = useSidebar();
+  // Controlled so the collapsed rail can expand the sidebar and hand the menu
+  // straight to the user, across the re-render into the expanded layout.
+  const [menuOpen, setMenuOpen] = useState(false);
   // On mobile the sidebar is a sheet whose contents are always full width, so
   // the icon-only treatment applies to the desktop rail alone.
   const isIconOnly = !isMobile && state === SidebarState.Collapsed;
@@ -110,20 +114,29 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     }
   };
 
-  // When collapsed, just show the avatar with a tooltip
+  // When collapsed, the avatar alone stands in for the switcher: clicking it
+  // expands the rail and opens the menu the user was reaching for.
   if (isIconOnly) {
     return (
       <div className="flex justify-center py-1">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="flex items-center justify-center">
+              <button
+                type="button"
+                aria-label={switcherLabel(currentOrganization)}
+                onClick={() => {
+                  expand(StateChangeSource.UserAction);
+                  setMenuOpen(true);
+                }}
+                className="flex items-center justify-center rounded-full ring-offset-sidebar focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
                 <OrganizationAvatar
                   name={currentOrganization?.name}
                   logo={currentOrganization?.logo}
                   className="h-7 w-7"
                 />
-              </div>
+              </button>
             </TooltipTrigger>
             <TooltipContent side="right">
               {currentOrganization?.name || PLACEHOLDER_LABEL}
@@ -153,7 +166,7 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
 
   // When expanded, show the full dropdown
   return (
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <OrganizationSwitcherTrigger organization={currentOrganization} />
       </DropdownMenuTrigger>

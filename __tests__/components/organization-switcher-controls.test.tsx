@@ -10,10 +10,12 @@ const h = vi.hoisted(() => ({
   ],
   setCurrentOrganizationId: vi.fn(),
   setOpenMobile: vi.fn(),
+  expand: vi.fn(),
   sidebar: {
     state: "collapsed" as string,
     isMobile: true,
     setOpenMobile: vi.fn(),
+    expand: vi.fn(),
   },
 }));
 
@@ -64,6 +66,7 @@ describe("OrganizationSwitcher — mobile", () => {
       state: SidebarState.Collapsed,
       isMobile: true,
       setOpenMobile: h.setOpenMobile,
+      expand: h.expand,
     };
   });
 
@@ -103,13 +106,29 @@ describe("OrganizationSwitcher — mobile", () => {
       state: SidebarState.Collapsed,
       isMobile: false,
       setOpenMobile: h.setOpenMobile,
+      expand: h.expand,
     };
 
     render(<OrganizationSwitcher />);
 
-    expect(
-      screen.queryByRole("button", { name: /Switch organization/ })
-    ).not.toBeInTheDocument();
+    // The avatar stands in for the trigger, so the name is there but the
+    // organization is not spelled out beside it.
+    expect(screen.queryByText("Acme Corp")).not.toBeInTheDocument();
+  });
+
+  it("expands the rail when the collapsed avatar is clicked", async () => {
+    const user = userEvent.setup();
+    h.sidebar = {
+      state: SidebarState.Collapsed,
+      isMobile: false,
+      setOpenMobile: h.setOpenMobile,
+      expand: h.expand,
+    };
+
+    render(<OrganizationSwitcher />);
+    await user.click(screen.getByRole("button", { name: /Switch organization/ }));
+
+    expect(h.expand).toHaveBeenCalled();
   });
 });
 
@@ -120,6 +139,7 @@ describe("OrganizationSwitcher — desktop", () => {
       state: SidebarState.Expanded,
       isMobile: false,
       setOpenMobile: h.setOpenMobile,
+      expand: h.expand,
     };
   });
 
