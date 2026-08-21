@@ -572,4 +572,62 @@ describe("JoinSessionPopover", () => {
       expect(screen.getByText("Select a coachee...")).toBeInTheDocument();
     });
   });
+
+  describe("organization scoping", () => {
+    const inOrgRelationship = {
+      id: "rel-1",
+      coach_id: "user-1",
+      coachee_id: "other-1",
+      organization_id: "org-1",
+      coach_first_name: "Coach",
+      coach_last_name: "Smith",
+      coachee_first_name: "Alice",
+      coachee_last_name: "Doe",
+      created_at: DateTime.now(),
+      updated_at: DateTime.now(),
+    };
+
+    function openBrowseWith(defaultRelationshipId: string) {
+      vi.mocked(useCoachingRelationshipList).mockReturnValue({
+        relationships: [inOrgRelationship],
+        isLoading: false,
+        isError: false,
+        refresh: vi.fn(),
+      });
+
+      render(
+        <TestProviders>
+          <JoinSessionPopover defaultRelationshipId={defaultRelationshipId} />
+        </TestProviders>
+      );
+
+      fireEvent.click(screen.getByText("Switch Session"));
+    }
+
+    it("ignores a relationship preselected from another organization", () => {
+      openBrowseWith("rel-from-another-org");
+
+      expect(screen.getByText("Select a coachee...")).toBeInTheDocument();
+      expect(
+        vi.mocked(useEnrichedCoachingSessionsForUser)
+      ).not.toHaveBeenCalled();
+    });
+
+    it("keeps a relationship preselected from this organization", () => {
+      openBrowseWith("rel-1");
+
+      expect(screen.getByText("Alice Doe")).toBeInTheDocument();
+    });
+
+    it("scopes the session query to the current organization", () => {
+      openBrowseWith("rel-1");
+
+      const calls = vi.mocked(useEnrichedCoachingSessionsForUser).mock.calls;
+      const lastCall = calls[calls.length - 1];
+
+      expect(lastCall[6]).toBe("rel-1");
+      expect(lastCall[8]).toBe("org-1");
+    });
+  });
+
 });
