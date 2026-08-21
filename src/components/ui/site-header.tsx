@@ -6,11 +6,13 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 import { JoinSessionPopover } from "@/components/ui/join-session-popover";
 import { UserNav } from "@/components/ui/user-nav";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { useShowSessionSwitcher } from "@/lib/hooks/use-show-session-switcher";
 
 export function SiteHeader() {
   const currentCoachingRelationshipId = useCoachingRelationshipStateStore(
     (state) => state.currentCoachingRelationshipId
   );
+  const showSessionSwitcher = useShowSessionSwitcher();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -21,8 +23,12 @@ export function SiteHeader() {
             <CommandMenu />
           </div> */}
           <nav className="flex items-center gap-1">
-            <JoinSessionPopover defaultRelationshipId={currentCoachingRelationshipId || undefined} />
-            <div className="w-2" />
+            {showSessionSwitcher && (
+              <>
+                <JoinSessionPopover defaultRelationshipId={currentCoachingRelationshipId || undefined} />
+                <div className="w-2" />
+              </>
+            )}
             <ModeToggle />
             <UserNav />
           </nav>
