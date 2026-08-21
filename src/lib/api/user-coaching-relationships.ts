@@ -10,6 +10,7 @@ import {
   CoachingRelationshipWithUserNames,
   getRelationshipsAsCoach,
   getRelationshipsAsCoachee,
+  getRelationshipsForUser,
 } from "@/types/coaching-relationship";
 import { useCoachingRelationshipList } from "./coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
@@ -40,17 +41,12 @@ export function deriveRolesSummary(
   const coachRelationships = getRelationshipsAsCoach(userId, relationships);
   const coacheeRelationships = getRelationshipsAsCoachee(userId, relationships);
 
-  // Deduplicate by id: a user can hold both roles in the same relationship.
-  const participantIds = new Set(
-    [...coachRelationships, ...coacheeRelationships].map((r) => r.id)
-  );
-
   return {
     isCoach: coachRelationships.length > 0,
     isCoachee: coacheeRelationships.length > 0,
     coachRelationshipCount: coachRelationships.length,
     coacheeRelationshipCount: coacheeRelationships.length,
-    participantRelationshipCount: participantIds.size,
+    participantRelationshipCount: getRelationshipsForUser(userId, relationships).length,
   };
 }
 
