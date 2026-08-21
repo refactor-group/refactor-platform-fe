@@ -139,6 +139,27 @@ export const MULTIPLE_RELATIONSHIPS = [
 // ---------------------------------------------------------------------------
 
 /**
+ * Hide the Next.js dev overlay.
+ *
+ * Locally the suite runs against `next dev`, whose overlay portal is fixed to a
+ * corner of the viewport and swallows pointer events aimed at anything beneath
+ * it — toast action buttons especially. It only takes an error to appear (the
+ * mocked SSE endpoint is enough), so tests that pass in CI against the
+ * standalone server fail locally on a click that never lands.
+ */
+async function hideDevOverlay(page: Page) {
+  await page.addInitScript(() => {
+    const hide = () => {
+      const style = document.createElement('style')
+      style.textContent = 'nextjs-portal { display: none !important; }'
+      document.head.appendChild(style)
+    }
+    if (document.head) hide()
+    else document.addEventListener('DOMContentLoaded', hide)
+  })
+}
+
+/**
  * Inject auth + org state into localStorage and add a session cookie so the
  * app treats the browser as authenticated.
  *
@@ -150,6 +171,8 @@ export async function setupAuthentication(
   page: Page,
   context: BrowserContext
 ) {
+  await hideDevOverlay(page)
+
   const authJson = JSON.stringify(AUTH_STORE_STATE)
   const orgJson = JSON.stringify(ORGANIZATION_STORE_STATE)
 
