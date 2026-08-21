@@ -2,6 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useShowSessionSwitcher } from "@/lib/hooks/use-show-session-switcher";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { defaultInitState, type AuthStore } from "@/lib/stores/auth-store";
 import { useUserCoachingRoles } from "@/lib/api/user-coaching-relationships";
 
 vi.mock("@/lib/providers/auth-store-provider");
@@ -10,6 +11,19 @@ vi.mock("@/lib/api/user-coaching-relationships");
 describe("useShowSessionSwitcher", () => {
   const mockUseAuthStore = vi.mocked(useAuthStore);
   const mockUseUserCoachingRoles = vi.mocked(useUserCoachingRoles);
+
+  const authStore = (overrides: Partial<AuthStore> = {}): AuthStore => ({
+    ...defaultInitState,
+    syncUserSession: vi.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
+    setTimezone: vi.fn(),
+    setIsCurrentCoach: vi.fn(),
+    getIsCurrentCoach: vi.fn(() => false),
+    setIsACoach: vi.fn(),
+    getIsACoach: vi.fn(() => false),
+    ...overrides,
+  });
 
   const mockRoles = (overrides: Partial<ReturnType<typeof useUserCoachingRoles>>) => {
     mockUseUserCoachingRoles.mockReturnValue({
@@ -23,13 +37,13 @@ describe("useShowSessionSwitcher", () => {
       isError: false,
       refresh: vi.fn(),
       ...overrides,
-    } as ReturnType<typeof useUserCoachingRoles>);
+    });
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseAuthStore.mockImplementation((selector: any) =>
-      selector({ userId: "user-1" })
+    mockUseAuthStore.mockImplementation((selector) =>
+      selector(authStore({ userId: "user-1" }))
     );
   });
 
