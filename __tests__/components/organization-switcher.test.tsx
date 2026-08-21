@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { OrganizationSwitcher } from '@/components/ui/organization-switcher'
 import { TestProviders } from '@/test-utils/providers'
@@ -33,7 +34,9 @@ vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({
     state: SidebarState.Expanded,
     userIntent: SidebarState.Expanded,
-    isResponsiveOverride: false
+    isResponsiveOverride: false,
+    isMobile: false,
+    setOpenMobile: vi.fn(),
   })
 }))
 
@@ -43,11 +46,15 @@ Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
   writable: true,
 })
 
+// The label carries the current organization once one is selected, and the
+// placeholder before that.
+const getTrigger = () => screen.getByRole('button', { name: /organization/i })
+
 // The trigger renders the selected organization's name as well, so assertions
-// about the dropdown have to be scoped to the list to stay unambiguous.
-async function openList() {
-  fireEvent.click(screen.getByRole('combobox'))
-  return screen.findByRole('listbox')
+// about the menu have to be scoped to it to stay unambiguous.
+async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(getTrigger())
+  return screen.findByRole('menu')
 }
 
 describe('OrganizationSwitcher', () => {
@@ -58,25 +65,25 @@ describe('OrganizationSwitcher', () => {
       </TestProviders>
     )
 
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(getTrigger()).toBeInTheDocument()
   })
 
   it('should show organizations when clicked', async () => {
+    const user = userEvent.setup()
     render(
       <TestProviders>
         <OrganizationSwitcher />
       </TestProviders>
     )
 
-    const list = await openList()
+    const menu = await openMenu(user)
 
-    await waitFor(() => {
-      expect(within(list).getByText('Acme Corp')).toBeInTheDocument()
-      expect(within(list).getByText('Beta Inc')).toBeInTheDocument()
-    })
+    expect(within(menu).getByRole('menuitem', { name: /Acme Corp/ })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: /Beta Inc/ })).toBeInTheDocument()
   })
 
   it('should call onSelect when organization is selected', async () => {
+    const user = userEvent.setup()
     const onSelect = vi.fn()
 
     render(
@@ -85,33 +92,10 @@ describe('OrganizationSwitcher', () => {
       </TestProviders>
     )
 
-    const list = await openList()
-
-    await waitFor(() => {
-      expect(within(list).getByText('Acme Corp')).toBeInTheDocument()
-    })
-
-    fireEvent.click(within(list).getByText('Acme Corp'))
+    const menu = await openMenu(user)
+    await user.click(within(menu).getByRole('menuitem', { name: /Acme Corp/ }))
 
     expect(onSelect).toHaveBeenCalledWith('org-1')
-  })
-
-  it('should filter organizations based on search', async () => {
-    render(
-      <TestProviders>
-        <OrganizationSwitcher />
-      </TestProviders>
-    )
-
-    const list = await openList()
-
-    const searchInput = screen.getByPlaceholderText('Search organization...')
-    fireEvent.change(searchInput, { target: { value: 'Acme' } })
-
-    await waitFor(() => {
-      expect(within(list).getByText('Acme Corp')).toBeInTheDocument()
-      expect(within(list).queryByText('Beta Inc')).not.toBeInTheDocument()
-    })
   })
 
   it('shows the selected organization\'s initials on the trigger avatar', async () => {
@@ -122,7 +106,7 @@ describe('OrganizationSwitcher', () => {
     )
 
     // Auto-initializes to the first organization, Acme Corp.
-    const trigger = screen.getByRole('combobox')
+    const trigger = getTrigger()
     await waitFor(() => {
       expect(within(trigger).getByText('AC')).toBeInTheDocument()
     })
@@ -130,22 +114,20 @@ describe('OrganizationSwitcher', () => {
   })
 
   it('updates the trigger avatar initials when a different organization is selected', async () => {
+    const user = userEvent.setup()
     render(
       <TestProviders>
         <OrganizationSwitcher />
       </TestProviders>
     )
 
-    const trigger = screen.getByRole('combobox')
+    const trigger = getTrigger()
     await waitFor(() => {
       expect(within(trigger).getByText('AC')).toBeInTheDocument()
     })
 
-    const list = await openList()
-    await waitFor(() => {
-      expect(within(list).getByText('Beta Inc')).toBeInTheDocument()
-    })
-    fireEvent.click(within(list).getByText('Beta Inc'))
+    const menu = await openMenu(user)
+    await user.click(within(menu).getByRole('menuitem', { name: /Beta Inc/ }))
 
     await waitFor(() => {
       expect(within(trigger).getByText('BI')).toBeInTheDocument()
@@ -154,36 +136,35 @@ describe('OrganizationSwitcher', () => {
   })
 
   it('gives each organization in the list its own initials', async () => {
+    const user = userEvent.setup()
     render(
       <TestProviders>
         <OrganizationSwitcher />
       </TestProviders>
     )
 
-    const list = await openList()
-    await waitFor(() => {
-      expect(within(list).getByText('AC')).toBeInTheDocument()
-      expect(within(list).getByText('BI')).toBeInTheDocument()
-    })
+    const menu = await openMenu(user)
+
+    expect(within(menu).getByText('AC')).toBeInTheDocument()
+    expect(within(menu).getByText('BI')).toBeInTheDocument()
   })
 
-  it('should handle keyboard navigation', async () => {
+  // Keyboard support comes from the menu primitive rather than a hand-rolled
+  // key handler, so this guards the wiring, not the behaviour of Radix.
+  it('opens from the keyboard and lands on the first organization', async () => {
+    const user = userEvent.setup()
     render(
       <TestProviders>
         <OrganizationSwitcher />
       </TestProviders>
     )
 
-    const list = await openList()
+    getTrigger().focus()
+    await user.keyboard('{Enter}')
 
-    const searchInput = screen.getByPlaceholderText('Search organization...')
-
-    // Test arrow down navigation
-    fireEvent.keyDown(searchInput, { key: 'ArrowDown' })
-
-    // The first organization should be focused (implementation depends on actual focus behavior)
+    const menu = await screen.findByRole('menu')
     await waitFor(() => {
-      expect(within(list).getByText('Acme Corp')).toBeInTheDocument()
+      expect(within(menu).getByRole('menuitem', { name: /Acme Corp/ })).toHaveFocus()
     })
   })
 })
