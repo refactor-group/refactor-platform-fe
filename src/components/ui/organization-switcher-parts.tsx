@@ -9,9 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { organizationInitials, type Organization } from "@/types/organization";
 import { None, Some, type Option } from "@/types/option";
 
-/// Presentation shared by the desktop menu and the mobile sheet, so the two
-/// switchers can't drift apart.
-
 export const PLACEHOLDER_LABEL = "Select Organization";
 
 export function switcherLabel(organization: Option<Organization>): string {
@@ -20,7 +17,6 @@ export function switcherLabel(organization: Option<Organization>): string {
     : PLACEHOLDER_LABEL;
 }
 
-/// The message to show in place of the options, when there are none to show.
 export function optionsMessage(
   isLoading: boolean,
   isError: boolean,
@@ -49,7 +45,6 @@ export function OrganizationAvatar({
   );
 }
 
-/// The row shared by the desktop menu items and the mobile sheet buttons.
 export function OrganizationOption({
   organization,
   isCurrent,

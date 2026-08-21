@@ -1,11 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { setupAuthentication, mockCommonApiRoutes } from './helpers'
 
-// The mobile sidebar renders inside a sheet while the underlying sidebar state
-// stays collapsed. The switcher used to key its icon-only (non-interactive)
-// rendering off that state alone, leaving mobile users with an avatar they
-// could not tap.
-
 const ORGANIZATIONS = [
   {
     id: 'org-1',
@@ -40,8 +35,7 @@ async function mockOrganizations(page: Page) {
     async (route) => {
       const id = route.request().url().split('/').pop()
       const organization = ORGANIZATIONS.find((org) => org.id === id)
-      // No fallback: serving Acme for an unexpected id would hide a
-      // wrong-organization bug behind a passing test.
+      // No fallback: an unexpected id must fail, not silently serve Acme.
       await route.fulfill({
         status: organization ? 200 : 404,
         contentType: 'application/json',
@@ -94,9 +88,6 @@ test.describe('Organization switcher on mobile', () => {
   })
 })
 
-// Collapsed, the rail has room for the avatar alone. Clicking it has to both
-// widen the sidebar and open the menu, across the re-render between the two
-// layouts.
 test.describe('Organization switcher on the collapsed desktop rail', () => {
   test.beforeEach(async ({ page, context }) => {
     await setupAuthentication(page, context)
@@ -112,7 +103,6 @@ test.describe('Organization switcher on the collapsed desktop rail', () => {
 
     await page.getByRole('button', { name: /Collapse sidebar/i }).click()
 
-    // Collapsed: the avatar carries the switcher's name, the label does not.
     const avatar = page.getByRole('button', { name: /Switch organization/ })
     await expect(avatar).toBeVisible()
     await expect(page.getByRole('menu')).toBeHidden()
@@ -120,8 +110,7 @@ test.describe('Organization switcher on the collapsed desktop rail', () => {
     await avatar.click()
 
     await expect(page.getByRole('menuitem', { name: /Beta Inc/ })).toBeVisible()
-    // The menu tracks the trigger as the rail widens, so it ends up as wide as
-    // the expanded sidebar rather than the icon rail.
+    // The menu tracks the trigger as the rail widens.
     await expect(async () => {
       const box = await page.getByRole('menu').boundingBox()
       expect(box).not.toBeNull()

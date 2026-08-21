@@ -56,8 +56,7 @@ vi.mock("@/components/ui/sidebar", () => ({
 
 import { OrganizationSwitcher } from "@/components/ui/organization-switcher";
 
-// The mobile sidebar is a sheet, but the underlying sidebar state stays
-// Collapsed on small screens. Keying the icon-only rendering off that state
+// Sidebar state stays Collapsed on small screens, so keying icon-only off it
 // alone left mobile users with a bare, unclickable avatar.
 describe("OrganizationSwitcher — mobile", () => {
   beforeEach(() => {
@@ -73,9 +72,8 @@ describe("OrganizationSwitcher — mobile", () => {
   it("renders the full trigger on mobile even though the sidebar state is collapsed", () => {
     render(<OrganizationSwitcher />);
 
-    // The collapsed rail renders a button under the same accessible name, so
-    // the name alone would not catch a regression here. The spelled-out
-    // organization beside the avatar is what distinguishes the two.
+    // The collapsed rail shares this accessible name; the spelled-out
+    // organization is what distinguishes the two.
     const trigger = screen.getByRole("button", {
       name: "Switch organization: Acme Corp",
     });
@@ -122,8 +120,6 @@ describe("OrganizationSwitcher — mobile", () => {
 
   it("expands the rail and hands over the menu when the collapsed avatar is clicked", async () => {
     const user = userEvent.setup();
-    // expand() flips the state the way the real provider would, so the
-    // re-render lands on the expanded rail with the menu already open.
     const expand = vi.fn(() => {
       h.sidebar = { ...h.sidebar, state: SidebarState.Expanded };
     });
@@ -160,8 +156,6 @@ describe("OrganizationSwitcher — mobile", () => {
     const { rerender } = render(<OrganizationSwitcher />);
     await user.click(screen.getByRole("button", { name: /Switch organization/ }));
 
-    // Collapse before the expanded rail ever renders, then expand again: the
-    // menu must not open on its own.
     h.sidebar = { ...h.sidebar, state: SidebarState.Collapsed };
     rerender(<OrganizationSwitcher />);
     h.sidebar = { ...h.sidebar, state: SidebarState.Expanded };

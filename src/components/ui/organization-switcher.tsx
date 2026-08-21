@@ -48,34 +48,27 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const setIsACoach = useAuthStore((state) => state.setIsACoach);
 
-  // Use the API hook to fetch organizations
   const { organizations, isLoading, isError } = useOrganizationList(userId);
 
-  // Use simplified organization state with SWR data
   const {
     currentOrganizationId,
     currentOrganization,
     setCurrentOrganizationId,
   } = useCurrentOrganization();
   const { state, isMobile, setOpenMobile, expand } = useSidebar();
-  // The hook hands back a nullable organization; narrow it once, here.
   const selected = currentOrganization ? Some(currentOrganization) : None;
-  // Controlled so the collapsed rail can expand the sidebar and hand the menu
-  // straight to the user, across the re-render into the expanded layout.
+  // Controlled so the collapsed rail can hand the menu across the re-render
+  // into the expanded layout.
   const [menuOpen, setMenuOpen] = useState(false);
-  // On mobile the sidebar is a sheet whose contents are always full width, so
-  // the icon-only treatment applies to the desktop rail alone.
+  // The sidebar is a sheet on mobile, so icon-only is a desktop-rail state.
   const isIconOnly = !isMobile && state === SidebarState.Collapsed;
 
-  // The menu only exists on the expanded desktop rail. Collapsing or crossing
-  // to mobile unmounts it with `menuOpen` still true, which would snap it back
-  // open on return, so drop the flag on the way out.
+  // Otherwise a menu left open by a collapse or resize snaps back open on
+  // return to the expanded rail.
   if (menuOpen && (isMobile || isIconOnly)) setMenuOpen(false);
 
-  // Fetch coaching relationships for the current organization to determine if user is a coach
   const { relationships } = useCoachingRelationshipList(currentOrganizationId ?? "");
 
-  // Update isACoach flag when organization or relationships change
   useEffect(() => {
     if (!userId || !relationships) {
       setIsACoach(false);
@@ -104,7 +97,6 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     setCurrentOrganizationId
   );
 
-  // Handle organization selection
   const handleSelectOrganization = (orgId: Id) => {
     if (!organizations) return;
 
@@ -116,14 +108,11 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
       );
       setCurrentOrganizationId(orgId);
       if (onSelect) onSelect(orgId);
-      // Selecting navigates, and the mobile sidebar sheet would otherwise stay
-      // parked over the page the user just switched to.
+      // The sidebar sheet would otherwise stay parked over the new page.
       if (isMobile) setOpenMobile(false);
     }
   };
 
-  // When collapsed, the avatar alone stands in for the switcher: clicking it
-  // expands the rail and opens the menu the user was reaching for.
   if (isIconOnly) {
     return (
       <div className="flex justify-center py-1">
@@ -172,7 +161,6 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
 
   const message = optionsMessage(isLoading, isError, options.length === 0);
 
-  // When expanded, show the full dropdown
   return (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>

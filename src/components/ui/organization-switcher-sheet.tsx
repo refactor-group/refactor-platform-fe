@@ -29,9 +29,6 @@ interface OrganizationSwitcherSheetProps {
   onSelect: (organizationId: Id) => void;
 }
 
-/// The mobile face of the organization switcher: the sidebar is already a
-/// sheet at that size, so the switcher opens into a second one from the bottom
-/// rather than a dropdown the user would have to hit precisely.
 export function OrganizationSwitcherSheet({
   organizations,
   currentOrganization,
@@ -56,10 +53,11 @@ export function OrganizationSwitcherSheet({
       </SheetTrigger>
       <SheetContent
         ref={contentRef}
+        tabIndex={-1}
         side="bottom"
         className="flex max-h-[85vh] flex-col gap-0 rounded-t-xl p-0"
-        // Radix focuses the first focusable child on open, which would put a
-        // highlight on the first organization before the user has picked.
+        // Radix would otherwise focus the first organization, pre-highlighting
+        // a choice the user has not made.
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           contentRef.current?.focus();

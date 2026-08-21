@@ -47,12 +47,9 @@ Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
   writable: true,
 })
 
-// The label carries the current organization once one is selected, and the
-// placeholder before that.
 const getTrigger = () => screen.getByRole('button', { name: /organization/i })
 
-// The trigger renders the selected organization's name as well, so assertions
-// about the menu have to be scoped to it to stay unambiguous.
+// The trigger shows the selected name too, so menu assertions must be scoped.
 async function openMenu(user: ReturnType<typeof userEvent.setup>) {
   await user.click(getTrigger())
   return screen.findByRole('menu')
@@ -150,8 +147,6 @@ describe('OrganizationSwitcher', () => {
     expect(within(menu).getByText('BI')).toBeInTheDocument()
   })
 
-  // Keyboard support comes from the menu primitive rather than a hand-rolled
-  // key handler, so this guards the wiring, not the behaviour of Radix.
   it('opens from the keyboard and lands on the first organization', async () => {
     const user = userEvent.setup()
     render(
