@@ -1,5 +1,5 @@
 import { Id, EntityApiError, EMPTY_ARRAY } from "@/types/general";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   KeyedMutator,
   ScopedMutator,
@@ -425,6 +425,11 @@ export namespace EntityApi {
     defaultValue: T,
     options?: SWRConfiguration
   ) => {
+    // Callers build this inline (`defaultUser()`), so holding the first one keeps
+    // `entity` referentially stable while a fetch is pending or failed. Without it
+    // a 404 hands every render a new object and loops any effect that depends on it.
+    const fallback = useRef(defaultValue);
+
     const { data, error, isLoading, mutate } = useApiSWR<T>(url, fetcher, {
       revalidateIfStale: false,
       revalidateOnFocus: false,
@@ -433,7 +438,7 @@ export namespace EntityApi {
     });
 
     return {
-      entity: data || defaultValue,
+      entity: data || fallback.current,
       isLoading,
       isError: error,
       refresh: mutate,
