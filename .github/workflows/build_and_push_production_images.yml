@@ -116,6 +116,7 @@ jobs:
             NEXT_PUBLIC_BACKEND_SERVICE_API_PATH=${{ vars.BACKEND_SERVICE_API_PATH }}
             NEXT_PUBLIC_BACKEND_API_VERSION=${{ vars.BACKEND_API_VERSION }}
             NEXT_PUBLIC_TIPTAP_APP_ID=${{ vars.TIPTAP_APP_ID }}
+            NEXT_PUBLIC_DOCS_COLLAB_URL=${{ vars.DOCS_COLLAB_URL }}
             FRONTEND_SERVICE_PORT=${{ vars.FRONTEND_SERVICE_PORT }}
             FRONTEND_SERVICE_INTERFACE=${{ vars.FRONTEND_SERVICE_INTERFACE }}
           tags: ${{ steps.tags.outputs.frontend_tags }}  # Use "stable" tag from previous step

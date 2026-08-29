@@ -32,7 +32,7 @@ vi.mock('@/lib/hooks/logout-cleanup-registry', () => {
 vi.mock('@/site.config', () => ({
   siteConfig: {
     env: {
-      tiptapAppId: 'test-app-id'
+      docsCollabUrl: 'http://test-collab'
     }
   }
 }))
