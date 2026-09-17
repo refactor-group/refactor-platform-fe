@@ -30,7 +30,7 @@ Tracks FE issue #461. Method: overseer + per-phase implementer handoffs.
 
 | # | Scope | Status |
 |---|-------|--------|
-| 1 | Lazy token fetch + `authenticationFailed` handling + working retry | pending |
+| 1 | Lazy token fetch + `authenticationFailed` handling + working retry | done (c48e0be3, reviewed: gates re-run, T3/T5 teeth proven, verified against Tiptap Cloud) |
 | 2 | Unified teardown that closes the socket on every shutdown path | pending |
 
 ## Acceptance (frozen; overseer verifies each has teeth)
@@ -53,5 +53,5 @@ Phase 2
 ## Follow-ups / known gaps
 
 - Consider a shorter server-side JWT lifetime once the FE always fetches fresh.
-- Overseer to re-verify against the running backend and Tiptap Cloud with an
-  expired token before merge.
+- Phase 1 verified against Tiptap Cloud (expired token -> error + retry; stale cached
+  token + fresh lazy fetch -> connected). Repeat the session-switch socket check after Phase 2.
