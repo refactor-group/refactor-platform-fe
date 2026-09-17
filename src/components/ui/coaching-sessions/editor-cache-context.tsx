@@ -15,7 +15,10 @@ import * as Y from "yjs";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import type { Editor, Extensions } from "@tiptap/core";
 import { Extensions as createExtensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
-import { useCollaborationToken } from "@/lib/api/collaboration-token";
+import {
+  fetchCollaborationToken,
+  useCollaborationToken,
+} from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { siteConfig } from "@/site.config";
 import type { Jwt } from "@/types/jwt";
@@ -246,6 +249,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     jwt,
     isLoading: tokenLoading,
     isError: tokenError,
+    refresh: refreshToken,
   } = useCollaborationToken(sessionId);
 
   const { relationship_role: userRole } = useCurrentRelationshipRole();
@@ -270,6 +274,8 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   const userColor = useMemo(() => generateCollaborativeUserColor(), []);
 
   const [cache, setCache] = useState<EditorCacheState>(createInitialCacheState);
+  // Bumped by resetCache so the lifecycle effect re-runs without a prop change.
+  const [initEpoch, setInitEpoch] = useState(0);
 
   // Y.Doc lifecycle: create new document when session changes
   const getOrCreateYDoc = useCallback(() => {
@@ -298,7 +304,8 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       const provider = new TiptapCollabProvider({
         name: jwt.sub,
         appId: siteConfig.env.tiptapAppId,
-        token: jwt.token,
+        // The SWR jwt can be hours stale; a lazy token is minted per connect.
+        token: async () => (await fetchCollaborationToken(sessionId)).token,
         document: doc,
         user: userSession.display_name,
       });
@@ -368,6 +375,24 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       }, SYNC_TIMEOUT_MS);
 
       providerRef.current = provider;
+
+      provider.on("authenticationFailed", ({ reason }: { reason: string }) => {
+        if (providerRef.current !== provider) return;
+        clearSyncTimeout();
+        console.warn(`TipTap collaboration authentication failed: ${reason}`);
+        provider.destroy();
+        providerRef.current = null;
+        setCache((prev) => ({
+          ...prev,
+          collaborationProvider: null,
+          extensions: [],
+          isReady: false,
+          isLoading: false,
+          error: new Error(
+            "Coaching notes could not be authorized. Please try again.",
+          ),
+        }));
+      });
 
       // Awareness synchronization: tracks all connected users for presence indicators
       provider.on(
@@ -515,6 +540,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     }
   }, [
     jwt,
+    sessionId,
     userSession,
     userRole,
     userColor,
@@ -598,6 +624,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     };
   }, [
     sessionId,
+    initEpoch,
     jwt,
     tokenLoading,
     tokenError,
@@ -721,7 +748,9 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     lastSessionIdRef.current = null;
 
     setCache(createInitialCacheState());
-  }, [clearSyncTimeout]);
+    void refreshToken();
+    setInitEpoch((n) => n + 1);
+  }, [clearSyncTimeout, refreshToken]);
 
   // Memoize context value to prevent unnecessary re-renders of consumers
   // Only create a new object when cache state or resetCache function actually changes

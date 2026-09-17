@@ -2,16 +2,27 @@ import { Jwt, parseJwt } from "@/types/jwt";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { siteConfig } from "@/site.config";
 import { useSwrWithBackoff } from "@/lib/hooks/use-swr-with-backoff";
+import { useCallback } from "react";
+import { useSWRConfig } from "swr";
 
-type FetcherArgs = [string, string];
-const fetcher = async ([url, coachingSessionId]: FetcherArgs): Promise<Jwt> => {
-  const response = await sessionGuard.get(url, {
+const COLLAB_TOKEN_URL = `${siteConfig.env.backendServiceURL}/jwt/generate_collab_token`;
+
+export const fetchCollaborationToken = async (
+  coachingSessionId: string
+): Promise<Jwt> => {
+  const response = await sessionGuard.get(COLLAB_TOKEN_URL, {
     params: { coaching_session_id: coachingSessionId },
   });
-
-  const data = response.data.data;
-  return parseJwt(data);
+  return parseJwt(response.data.data);
 };
+
+type FetcherArgs = [string, string];
+const toRequestKey = (coachingSessionId: string): FetcherArgs => [
+  COLLAB_TOKEN_URL,
+  coachingSessionId,
+];
+const fetcher = ([, coachingSessionId]: FetcherArgs): Promise<Jwt> =>
+  fetchCollaborationToken(coachingSessionId);
 
 /**
  * Custom hook to fetch a collaboration token for a given coaching session ID.
@@ -24,15 +35,23 @@ const fetcher = async ([url, coachingSessionId]: FetcherArgs): Promise<Jwt> => {
  * while the doc is still being provisioned.
  *
  * @param coachingSessionId - The ID of the coaching session.
- * @returns An object containing the token, loading state, and error state.
+ * @returns An object containing the token, loading state, error state, and a
+ * `refresh` that revalidates the token.
  */
 export const useCollaborationToken = (coachingSessionId: string) => {
   const requestKey: FetcherArgs | null = coachingSessionId
-    ? [
-        `${siteConfig.env.backendServiceURL}/jwt/generate_collab_token`,
-        coachingSessionId,
-      ]
+    ? toRequestKey(coachingSessionId)
     : null;
+
+  // Bound to the app's scoped SWR cache; the global `mutate` would miss it.
+  const { mutate } = useSWRConfig();
+  const refresh = useCallback(
+    (): Promise<Jwt | undefined> =>
+      coachingSessionId
+        ? mutate<Jwt>(toRequestKey(coachingSessionId))
+        : Promise.resolve(undefined),
+    [coachingSessionId, mutate]
+  );
 
   const { data, isLoading, isError } = useSwrWithBackoff<Jwt, FetcherArgs | null>(
     requestKey,
@@ -53,5 +72,6 @@ export const useCollaborationToken = (coachingSessionId: string) => {
     // hook reports the raw thrown value (`unknown`), but every caller of
     // useCollaborationToken treats this as a terminal-error flag.
     isError: !!isError,
+    refresh,
   };
 };

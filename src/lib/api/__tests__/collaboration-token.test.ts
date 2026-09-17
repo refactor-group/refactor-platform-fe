@@ -11,7 +11,10 @@ vi.mock("@/lib/auth/session-guard", () => ({
 }));
 
 import { sessionGuard } from "@/lib/auth/session-guard";
-import { useCollaborationToken } from "@/lib/api/collaboration-token";
+import {
+  fetchCollaborationToken,
+  useCollaborationToken,
+} from "@/lib/api/collaboration-token";
 
 const mockedGet = vi.mocked(sessionGuard.get);
 
@@ -182,5 +185,29 @@ describe("useCollaborationToken", () => {
       expect(result.current.jwt).toEqual({ token: "tok", sub: "sub-1" })
     );
     expect(result.current.isError).toBe(false);
+  });
+});
+
+describe("fetchCollaborationToken", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("requests the token for the given session and returns the parsed Jwt", async () => {
+    mockedGet.mockResolvedValueOnce(okResponse());
+
+    const jwt = await fetchCollaborationToken("session-9");
+
+    expect(mockedGet).toHaveBeenCalledTimes(1);
+    const [url, config] = mockedGet.mock.calls[0];
+    expect(url).toMatch(/\/jwt\/generate_collab_token$/);
+    expect(config).toEqual({ params: { coaching_session_id: "session-9" } });
+    expect(jwt).toEqual({ token: "tok", sub: "sub-1" });
+  });
+
+  it("rejects when the payload is not a Jwt", async () => {
+    mockedGet.mockResolvedValueOnce({ data: { data: { nope: 1 } } });
+
+    await expect(fetchCollaborationToken("session-9")).rejects.toThrow();
   });
 });
