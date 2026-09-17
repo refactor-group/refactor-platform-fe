@@ -62,6 +62,7 @@ vi.mock('@hocuspocus/provider', () => ({
       destroy: vi.fn(),
       disconnect: vi.fn(),
       connect: vi.fn(),
+      configuration: { websocketProvider: { destroy: vi.fn() } },
       // Test helper: trigger a registered event for all handlers
       _triggerEvent: (event: string, ...args: any[]) => {
         const handlers = eventHandlers.get(event) || []
@@ -268,8 +269,9 @@ describe('EditorCacheProvider', () => {
       })
 
       // After rerender and effects flushed - verify provider was not disturbed
-      // CRITICAL: Provider should NOT be disconnected
-      expect(mockProvider?.disconnect).not.toHaveBeenCalled()
+      // CRITICAL: Provider should NOT be torn down
+      expect(mockProvider?.destroy).not.toHaveBeenCalled()
+      expect(mockProvider?.configuration.websocketProvider.destroy).not.toHaveBeenCalled()
 
       // CRITICAL: Provider should NOT be recreated
       expect(TiptapCollabProvider).not.toHaveBeenCalled()
@@ -296,8 +298,9 @@ describe('EditorCacheProvider', () => {
       )
 
       await waitFor(() => {
-        // Old provider should be disconnected
-        expect(oldProvider?.disconnect).toHaveBeenCalled()
+        // Old provider and its socket should be destroyed
+        expect(oldProvider?.destroy).toHaveBeenCalled()
+        expect(oldProvider?.configuration.websocketProvider.destroy).toHaveBeenCalled()
       })
 
       // New provider should be created
@@ -1162,6 +1165,84 @@ describe('EditorCacheProvider', () => {
         expect(vi.mocked(TiptapCollabProvider).mock.calls.length).toBe(constructorCallsBefore + 1)
       })
       expect(cacheRef?.error).toBeNull()
+    })
+  })
+
+  describe('Unified provider teardown', () => {
+    const renderAndWaitForProvider = async (sessionId: string) => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      const utils = render(
+        <EditorCacheProvider sessionId={sessionId}>
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+      await waitFor(() => expect(TiptapCollabProvider).toHaveBeenCalled())
+      return { ...utils, provider: await getLatestMockProvider() }
+    }
+
+    it('T1: constructs the provider with preserveConnection false', async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      await renderAndWaitForProvider('s-1')
+      const config = vi.mocked(TiptapCollabProvider).mock.calls[0][0]
+      expect(config.preserveConnection).toBe(false)
+    })
+
+    it('T2: destroys the old provider and its socket when the session changes', async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      const { rerender, provider: first } = await renderAndWaitForProvider('s-1')
+
+      rerender(
+        <EditorCacheProvider sessionId="s-2">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+
+      await waitFor(() => {
+        expect(first.destroy).toHaveBeenCalled()
+        expect(first.configuration.websocketProvider.destroy).toHaveBeenCalled()
+      })
+      expect(TiptapCollabProvider).toHaveBeenCalledTimes(2)
+    })
+
+    it('T3: broadcasts disconnected presence then destroys provider and socket on unmount', async () => {
+      vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+        relationship_role: Some(RelationshipRole.Coach)
+      })
+      const { unmount, provider } = await renderAndWaitForProvider('s-1')
+
+      unmount()
+
+      expect(provider.setAwarenessField).toHaveBeenLastCalledWith(
+        'presence',
+        expect.objectContaining({ status: 'disconnected' })
+      )
+      expect(provider.destroy).toHaveBeenCalled()
+      expect(provider.configuration.websocketProvider.destroy).toHaveBeenCalled()
+    })
+
+    it('T4: destroys provider and socket on logout cleanup', async () => {
+      const { logoutCleanupRegistry } = await import('@/lib/hooks/logout-cleanup-registry')
+      const { provider } = await renderAndWaitForProvider('s-1')
+
+      const calls = vi.mocked(logoutCleanupRegistry.register).mock.calls
+      const cleanup = calls[calls.length - 1][0] as () => void
+      act(() => {
+        cleanup()
+      })
+
+      expect(provider.destroy).toHaveBeenCalled()
+      expect(provider.configuration.websocketProvider.destroy).toHaveBeenCalled()
+    })
+
+    it('T5: teardown never throws when socket destroy fails', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const { unmount, provider } = await renderAndWaitForProvider('s-1')
+      provider.configuration.websocketProvider.destroy.mockImplementationOnce(() => {
+        throw new Error('socket boom')
+      })
+
+      expect(() => unmount()).not.toThrow()
+      expect(warn).toHaveBeenCalledTimes(1)
     })
   })
 })
