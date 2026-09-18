@@ -320,8 +320,6 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     });
   }, []);
 
-  // One listener for the component, not one per provider: the per-provider
-  // cleanup was never invoked, so listeners accumulated across reconnects.
   useEffect(() => {
     const broadcastDisconnected = () => {
       const provider = providerRef.current;
@@ -344,9 +342,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
     const doc = getOrCreateYDoc();
 
-    // Minted per connect because the SWR jwt can be hours stale. If the backend
-    // is briefly unreachable on a reconnect, reuse the last token that worked
-    // rather than tearing down a healthy editor.
+    // Per-connect mint: the SWR jwt may be stale; fall back to the last good token so a backend blip on reconnect does not kill the editor.
     let lastGoodToken: Option<string> = None;
     const mintToken = async (): Promise<string> => {
       const fresh = await fetchCollaborationTokenWithRetry(sessionId);
@@ -368,12 +364,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
         preserveConnection: false,
       });
 
-      // Awareness initialization: establishes user presence in collaborative session
-      // IMPORTANT: Set awareness BEFORE synced event so CollaborationCaret has user data
-      // Only broadcast if the role is definitively known. If the coaching relationship
-      // hasn't loaded yet (userRole is None), skip here — the re-broadcast effect will
-      // send presence as soon as userRole becomes Some, eliminating the race condition
-      // where the wrong role (defaulted to Coachee) gets broadcast first.
+      // Skip until the role is known so a wrong default role is never broadcast.
       if (userRole.some) {
         const userPresence = createConnectedPresence({
           userId: userSession.id,
