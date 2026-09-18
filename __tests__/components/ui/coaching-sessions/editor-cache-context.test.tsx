@@ -89,6 +89,8 @@ import { useAuthStore } from '@/lib/providers/auth-store-provider'
 import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role'
 import { ConnectionStatus } from '@/components/ui/coaching-sessions/coaching-notes/connection-status'
 import { Some, None } from '@/types/option'
+import { okAsync, errAsync } from 'neverthrow'
+import { EntityApiError } from '@/types/entity-api-error'
 import { RelationshipRole } from '@/types/relationship-role'
 
 // Test component
@@ -1057,7 +1059,7 @@ describe('EditorCacheProvider', () => {
         isError: false,
         refresh: vi.fn()
       })
-      vi.mocked(fetchCollaborationTokenWithRetry).mockResolvedValue({ token: 'fresh-tok', sub: 'doc' })
+      vi.mocked(fetchCollaborationTokenWithRetry).mockReturnValue(okAsync({ token: 'fresh-tok', sub: 'doc' }))
 
       render(
         <EditorCacheProvider sessionId="session-42">
@@ -1076,7 +1078,7 @@ describe('EditorCacheProvider', () => {
     })
 
     it('tears down the provider and surfaces an error on authenticationFailed after sync', async () => {
-      let cacheRef: any = null
+      let cacheRef: ReturnType<typeof useEditorCache> | null = null
       render(
         <EditorCacheProvider sessionId="test-session">
           <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
@@ -1102,7 +1104,7 @@ describe('EditorCacheProvider', () => {
     it('does not fall back to offline editing after authenticationFailed before sync', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true })
       try {
-        let cacheRef: any = null
+        let cacheRef: ReturnType<typeof useEditorCache> | null = null
         render(
           <EditorCacheProvider sessionId="test-session">
             <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
@@ -1140,7 +1142,7 @@ describe('EditorCacheProvider', () => {
         refresh
       })
 
-      let cacheRef: any = null
+      let cacheRef: ReturnType<typeof useEditorCache> | null = null
       render(
         <EditorCacheProvider sessionId="test-session">
           <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
@@ -1158,7 +1160,7 @@ describe('EditorCacheProvider', () => {
       const constructorCallsBefore = vi.mocked(TiptapCollabProvider).mock.calls.length
 
       await act(async () => {
-        cacheRef.resetCache()
+        cacheRef?.resetCache()
       })
 
       expect(refresh).toHaveBeenCalledTimes(1)
@@ -1178,7 +1180,7 @@ describe('EditorCacheProvider', () => {
     }
 
     it('reuses the last good token when a reconnect fetch fails', async () => {
-      vi.mocked(fetchCollaborationTokenWithRetry).mockResolvedValueOnce({ token: 'good-tok', sub: 'doc' })
+      vi.mocked(fetchCollaborationTokenWithRetry).mockReturnValueOnce(okAsync({ token: 'good-tok', sub: 'doc' }))
       render(
         <EditorCacheProvider sessionId="session-7">
           <TestConsumer />
@@ -1187,12 +1189,12 @@ describe('EditorCacheProvider', () => {
       const token = await tokenFnOf()
       expect(await token()).toBe('good-tok')
 
-      vi.mocked(fetchCollaborationTokenWithRetry).mockRejectedValueOnce(new Error('backend down'))
+      vi.mocked(fetchCollaborationTokenWithRetry).mockReturnValueOnce(errAsync(new EntityApiError("GET", "/jwt", new Error('backend down'))))
       expect(await token()).toBe('good-tok')
     })
 
     it('rejects when no token was ever fetched successfully', async () => {
-      vi.mocked(fetchCollaborationTokenWithRetry).mockRejectedValueOnce(new Error('backend down'))
+      vi.mocked(fetchCollaborationTokenWithRetry).mockReturnValueOnce(errAsync(new EntityApiError("GET", "/jwt", new Error('backend down'))))
       render(
         <EditorCacheProvider sessionId="session-7">
           <TestConsumer />
@@ -1203,7 +1205,7 @@ describe('EditorCacheProvider', () => {
     })
 
     it('reports a server problem, not an authorization problem, when the token fetch failed', async () => {
-      let cacheRef: any = null
+      let cacheRef: ReturnType<typeof useEditorCache> | null = null
       render(
         <EditorCacheProvider sessionId="test-session">
           <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
@@ -1221,7 +1223,7 @@ describe('EditorCacheProvider', () => {
     it('registers one beforeunload listener regardless of how many providers are created', async () => {
       const addSpy = vi.spyOn(window, 'addEventListener')
       const { TiptapCollabProvider } = await import('@hocuspocus/provider')
-      let cacheRef: any = null
+      let cacheRef: ReturnType<typeof useEditorCache> | null = null
       render(
         <EditorCacheProvider sessionId="test-session">
           <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
@@ -1233,7 +1235,7 @@ describe('EditorCacheProvider', () => {
       })
       await waitFor(() => expect(cacheRef?.error).not.toBeNull())
       await act(async () => {
-        cacheRef.resetCache()
+        cacheRef?.resetCache()
       })
       await waitFor(() => expect(TiptapCollabProvider).toHaveBeenCalledTimes(2))
 

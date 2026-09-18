@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { SWRConfig } from "swr";
+import { httpStatusOf } from "@/types/entity-api-error";
+import { Some } from "@/types/option";
 
 // Mock the axios-backed http client so we control every request outcome.
 vi.mock("@/lib/auth/session-guard", () => ({
@@ -29,8 +31,10 @@ const okResponse = () => ({
 
 const httpError = (status: number) => {
   const err = new Error(`HTTP ${status}`) as Error & {
+    isAxiosError: boolean;
     response?: { status: number };
   };
+  err.isAxiosError = true;
   err.response = { status };
   return err;
 };
@@ -197,7 +201,7 @@ describe("fetchCollaborationToken", () => {
   it("requests the token for the given session and returns the parsed Jwt", async () => {
     mockedGet.mockResolvedValueOnce(okResponse());
 
-    const jwt = await fetchCollaborationToken("session-9");
+    const jwt = (await fetchCollaborationToken("session-9"))._unsafeUnwrap();
 
     expect(mockedGet).toHaveBeenCalledTimes(1);
     const [url, config] = mockedGet.mock.calls[0];
@@ -209,7 +213,7 @@ describe("fetchCollaborationToken", () => {
   it("rejects when the payload is not a Jwt", async () => {
     mockedGet.mockResolvedValueOnce({ data: { data: { nope: 1 } } });
 
-    await expect(fetchCollaborationToken("session-9")).rejects.toThrow();
+    expect((await fetchCollaborationToken("session-9")).isErr()).toBe(true);
   });
 });
 
@@ -226,7 +230,7 @@ describe("fetchCollaborationTokenWithRetry", () => {
       .mockRejectedValueOnce(httpError(503))
       .mockResolvedValueOnce(okResponse());
 
-    const jwt = await fetchCollaborationTokenWithRetry("session-9", noDelay);
+    const jwt = (await fetchCollaborationTokenWithRetry("session-9", noDelay))._unsafeUnwrap();
 
     expect(jwt).toEqual({ token: "tok", sub: "sub-1" });
     expect(mockedGet).toHaveBeenCalledTimes(3);
@@ -236,9 +240,8 @@ describe("fetchCollaborationTokenWithRetry", () => {
   it("fails fast on a 401 without retrying", async () => {
     mockedGet.mockRejectedValue(httpError(401));
 
-    await expect(
-      fetchCollaborationTokenWithRetry("session-9", noDelay)
-    ).rejects.toThrow("HTTP 401");
+    const result = await fetchCollaborationTokenWithRetry("session-9", noDelay);
+    expect(httpStatusOf(result._unsafeUnwrapErr())).toEqual(Some(401));
     expect(mockedGet).toHaveBeenCalledTimes(1);
     expect(noDelay).not.toHaveBeenCalled();
   });
@@ -246,9 +249,8 @@ describe("fetchCollaborationTokenWithRetry", () => {
   it("gives up after four retries and rejects with the last error", async () => {
     mockedGet.mockRejectedValue(httpError(502));
 
-    await expect(
-      fetchCollaborationTokenWithRetry("session-9", noDelay)
-    ).rejects.toThrow("HTTP 502");
+    const result = await fetchCollaborationTokenWithRetry("session-9", noDelay);
+    expect(httpStatusOf(result._unsafeUnwrapErr())).toEqual(Some(502));
     expect(mockedGet).toHaveBeenCalledTimes(5);
     expect(noDelay).toHaveBeenCalledTimes(4);
   });

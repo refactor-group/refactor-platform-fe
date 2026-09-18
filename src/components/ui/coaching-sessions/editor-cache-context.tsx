@@ -230,17 +230,23 @@ function teardownProvider(
   provider: TiptapCollabProvider,
   presence: Option<PresenceParams>,
 ): void {
-  if (presence.some) {
-    provider.setAwarenessField(
-      "presence",
-      createDisconnectedPresence(createConnectedPresence(presence.val)),
-    );
-  }
-  try {
-    provider.destroy();
-    provider.configuration.websocketProvider.destroy();
-  } catch (error) {
-    console.warn("Collaboration provider teardown failed:", error);
+  const steps: Array<[string, () => void]> = [
+    ["presence", () => {
+      if (!presence.some) return;
+      provider.setAwarenessField(
+        "presence",
+        createDisconnectedPresence(createConnectedPresence(presence.val)),
+      );
+    }],
+    ["provider", () => provider.destroy()],
+    ["websocket", () => provider.configuration.websocketProvider.destroy()],
+  ];
+  for (const [name, step] of steps) {
+    try {
+      step();
+    } catch (error) {
+      console.warn(`Collaboration ${name} teardown failed:`, error);
+    }
   }
 }
 
@@ -343,14 +349,13 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     // rather than tearing down a healthy editor.
     let lastGoodToken: Option<string> = None;
     const mintToken = async (): Promise<string> => {
-      try {
-        const fresh = await fetchCollaborationTokenWithRetry(sessionId);
-        lastGoodToken = Some(fresh.token);
-        return fresh.token;
-      } catch (error) {
-        if (lastGoodToken.some) return lastGoodToken.val;
-        throw error;
+      const fresh = await fetchCollaborationTokenWithRetry(sessionId);
+      if (fresh.isOk()) {
+        lastGoodToken = Some(fresh.value.token);
+        return fresh.value.token;
       }
+      if (lastGoodToken.some) return lastGoodToken.val;
+      throw fresh.error;
     };
 
     try {

@@ -4,44 +4,50 @@ import { siteConfig } from "@/site.config";
 import { useSwrWithBackoff } from "@/lib/hooks/use-swr-with-backoff";
 import { useCallback } from "react";
 import { useSWRConfig } from "swr";
-import { httpStatusOf } from "@/types/entity-api-error";
+import { ResultAsync, err, ok, type Result } from "neverthrow";
+import { EntityApiError, httpStatusOf } from "@/types/entity-api-error";
 import { TERMINAL_RETRY_STATUSES } from "@/lib/hooks/use-fail-fast-retry";
 
 const COLLAB_TOKEN_URL = `${siteConfig.env.backendServiceURL}/jwt/generate_collab_token`;
 
-export const fetchCollaborationToken = async (
+export const fetchCollaborationToken = (
   coachingSessionId: string
-): Promise<Jwt> => {
-  const response = await sessionGuard.get(COLLAB_TOKEN_URL, {
-    params: { coaching_session_id: coachingSessionId },
-  });
-  return parseJwt(response.data.data);
-};
+): ResultAsync<Jwt, EntityApiError> =>
+  ResultAsync.fromPromise(
+    sessionGuard
+      .get(COLLAB_TOKEN_URL, { params: { coaching_session_id: coachingSessionId } })
+      .then((response) => parseJwt(response.data.data)),
+    (e) => EntityApiError.from("GET", COLLAB_TOKEN_URL, e)
+  );
 
 const RETRY_BASE_MS = 300;
 const RETRY_MAX = 4;
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+const isTerminal = (error: EntityApiError): boolean => {
+  const status = httpStatusOf(error);
+  return status.some && TERMINAL_RETRY_STATUSES.includes(status.val);
+};
+
 /**
  * Same request with the backoff the provider needs on reconnect: the socket
  * often reopens before the backend is reachable again, and a single failed
  * fetch there would tear down a working editor. Terminal statuses (401/403)
- * fail fast. Rejects with the last error once retries are exhausted.
+ * fail fast. Yields the last error once retries are exhausted.
  */
-export const fetchCollaborationTokenWithRetry = async (
+export const fetchCollaborationTokenWithRetry = (
   coachingSessionId: string,
   delay: (ms: number) => Promise<void> = sleep
-): Promise<Jwt> => {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await fetchCollaborationToken(coachingSessionId);
-    } catch (error) {
-      const status = httpStatusOf(error);
-      const terminal = status.some && TERMINAL_RETRY_STATUSES.includes(status.val);
-      if (terminal || attempt >= RETRY_MAX) throw error;
+): ResultAsync<Jwt, EntityApiError> => {
+  const attemptLoop = async (): Promise<Result<Jwt, EntityApiError>> => {
+    for (let attempt = 0; ; attempt++) {
+      const result = await fetchCollaborationToken(coachingSessionId);
+      if (result.isOk()) return ok(result.value);
+      if (isTerminal(result.error) || attempt >= RETRY_MAX) return err(result.error);
       await delay(RETRY_BASE_MS * 2 ** attempt);
     }
-  }
+  };
+  return ResultAsync.fromSafePromise(attemptLoop()).andThen((r) => r);
 };
 
 type FetcherArgs = [string, string];
@@ -49,8 +55,14 @@ const toRequestKey = (coachingSessionId: string): FetcherArgs => [
   COLLAB_TOKEN_URL,
   coachingSessionId,
 ];
+// SWR needs a rejecting promise to drive its retry/error state.
 const fetcher = ([, coachingSessionId]: FetcherArgs): Promise<Jwt> =>
-  fetchCollaborationToken(coachingSessionId);
+  fetchCollaborationToken(coachingSessionId).match(
+    (jwt) => jwt,
+    (error) => {
+      throw error;
+    }
+  );
 
 /**
  * Custom hook to fetch a collaboration token for a given coaching session ID.
