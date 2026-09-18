@@ -13,6 +13,7 @@ vi.mock("@/lib/auth/session-guard", () => ({
 import { sessionGuard } from "@/lib/auth/session-guard";
 import {
   fetchCollaborationToken,
+  fetchCollaborationTokenWithRetry,
   useCollaborationToken,
 } from "@/lib/api/collaboration-token";
 
@@ -209,5 +210,46 @@ describe("fetchCollaborationToken", () => {
     mockedGet.mockResolvedValueOnce({ data: { data: { nope: 1 } } });
 
     await expect(fetchCollaborationToken("session-9")).rejects.toThrow();
+  });
+});
+
+describe("fetchCollaborationTokenWithRetry", () => {
+  const noDelay = vi.fn(async (_ms: number) => {});
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("retries with exponential backoff on a 500 and resolves once the request succeeds", async () => {
+    mockedGet
+      .mockRejectedValueOnce(httpError(500))
+      .mockRejectedValueOnce(httpError(503))
+      .mockResolvedValueOnce(okResponse());
+
+    const jwt = await fetchCollaborationTokenWithRetry("session-9", noDelay);
+
+    expect(jwt).toEqual({ token: "tok", sub: "sub-1" });
+    expect(mockedGet).toHaveBeenCalledTimes(3);
+    expect(noDelay.mock.calls.map(([ms]) => ms)).toEqual([300, 600]);
+  });
+
+  it("fails fast on a 401 without retrying", async () => {
+    mockedGet.mockRejectedValue(httpError(401));
+
+    await expect(
+      fetchCollaborationTokenWithRetry("session-9", noDelay)
+    ).rejects.toThrow("HTTP 401");
+    expect(mockedGet).toHaveBeenCalledTimes(1);
+    expect(noDelay).not.toHaveBeenCalled();
+  });
+
+  it("gives up after four retries and rejects with the last error", async () => {
+    mockedGet.mockRejectedValue(httpError(502));
+
+    await expect(
+      fetchCollaborationTokenWithRetry("session-9", noDelay)
+    ).rejects.toThrow("HTTP 502");
+    expect(mockedGet).toHaveBeenCalledTimes(5);
+    expect(noDelay).toHaveBeenCalledTimes(4);
   });
 });

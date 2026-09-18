@@ -16,7 +16,7 @@ import { TiptapCollabProvider } from "@hocuspocus/provider";
 import type { Editor, Extensions } from "@tiptap/core";
 import { Extensions as createExtensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
 import {
-  fetchCollaborationToken,
+  fetchCollaborationTokenWithRetry,
   useCollaborationToken,
 } from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -216,6 +216,14 @@ function updatePresenceOnProvider(
   provider.setAwarenessField("presence", updatedPresence);
 }
 
+const TOKEN_FETCH_FAILURE_PREFIX = "Failed to get token";
+
+function authFailureMessage(reason: string): string {
+  return reason.startsWith(TOKEN_FETCH_FAILURE_PREFIX)
+    ? "Coaching notes could not reach the server. Please try again."
+    : "Coaching notes could not be authorized. Please try again.";
+}
+
 // HocuspocusProvider.destroy() leaves its websocketProvider (and its
 // connection-checker interval) alive, so the socket must be destroyed too.
 function teardownProvider(
@@ -306,6 +314,22 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     });
   }, []);
 
+  // One listener for the component, not one per provider: the per-provider
+  // cleanup was never invoked, so listeners accumulated across reconnects.
+  useEffect(() => {
+    const broadcastDisconnected = () => {
+      const provider = providerRef.current;
+      const presence = currentPresence();
+      if (!provider || !presence.some) return;
+      provider.setAwarenessField(
+        "presence",
+        createDisconnectedPresence(createConnectedPresence(presence.val)),
+      );
+    };
+    window.addEventListener("beforeunload", broadcastDisconnected);
+    return () => window.removeEventListener("beforeunload", broadcastDisconnected);
+  }, [currentPresence]);
+
   // Provider initialization: sets up TipTap collaboration with awareness
   const initializeProvider = useCallback(async () => {
     if (!jwt || !siteConfig.env.tiptapAppId || !userSession) {
@@ -314,12 +338,26 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
     const doc = getOrCreateYDoc();
 
+    // Minted per connect because the SWR jwt can be hours stale. If the backend
+    // is briefly unreachable on a reconnect, reuse the last token that worked
+    // rather than tearing down a healthy editor.
+    let lastGoodToken: Option<string> = None;
+    const mintToken = async (): Promise<string> => {
+      try {
+        const fresh = await fetchCollaborationTokenWithRetry(sessionId);
+        lastGoodToken = Some(fresh.token);
+        return fresh.token;
+      } catch (error) {
+        if (lastGoodToken.some) return lastGoodToken.val;
+        throw error;
+      }
+    };
+
     try {
       const provider = new TiptapCollabProvider({
         name: jwt.sub,
         appId: siteConfig.env.tiptapAppId,
-        // The SWR jwt can be hours stale; a lazy token is minted per connect.
-        token: async () => (await fetchCollaborationToken(sessionId)).token,
+        token: mintToken,
         document: doc,
         user: userSession.display_name,
         preserveConnection: false,
@@ -403,9 +441,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
           extensions: [],
           isReady: false,
           isLoading: false,
-          error: new Error(
-            "Coaching notes could not be authorized. Please try again.",
-          ),
+          error: new Error(authFailureMessage(reason)),
         }));
       });
 
@@ -507,31 +543,6 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
         // This event is just for local cleanup/logging if needed.
       });
 
-      // Graceful disconnect on page unload.
-      // Reads from cleanupDataRef.current so the broadcast reflects the role that
-      // was actually resolved at the time the user closes the tab.
-      const handleBeforeUnload = () => {
-        const {
-          userSession: us,
-          userRole: ur,
-          userColor: uc,
-        } = cleanupDataRef.current;
-        if (!us || !ur.some) return;
-        const presence = createConnectedPresence({
-          userId: us.id,
-          name: us.display_name,
-          relationshipRole: ur.val,
-          color: uc,
-        });
-        const disconnectedPresence = createDisconnectedPresence(presence);
-        provider.setAwarenessField("presence", disconnectedPresence);
-      };
-
-      window.addEventListener("beforeunload", handleBeforeUnload);
-
-      return () => {
-        window.removeEventListener("beforeunload", handleBeforeUnload);
-      };
     } catch (error) {
       console.error("Collaboration provider initialization failed:", error);
 

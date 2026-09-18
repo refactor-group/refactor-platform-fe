@@ -6,7 +6,8 @@ import { EditorCacheProvider, useEditorCache } from '@/components/ui/coaching-se
 // Mock external dependencies
 vi.mock('@/lib/api/collaboration-token', () => ({
   useCollaborationToken: vi.fn(),
-  fetchCollaborationToken: vi.fn()
+  fetchCollaborationToken: vi.fn(),
+  fetchCollaborationTokenWithRetry: vi.fn()
 }))
 
 vi.mock('@/lib/providers/auth-store-provider', () => ({
@@ -83,7 +84,7 @@ vi.mock('yjs', () => ({
   Doc: vi.fn(function() { return {} })
 }))
 
-import { useCollaborationToken, fetchCollaborationToken } from '@/lib/api/collaboration-token'
+import { useCollaborationToken, fetchCollaborationTokenWithRetry } from '@/lib/api/collaboration-token'
 import { useAuthStore } from '@/lib/providers/auth-store-provider'
 import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role'
 import { ConnectionStatus } from '@/components/ui/coaching-sessions/coaching-notes/connection-status'
@@ -1056,7 +1057,7 @@ describe('EditorCacheProvider', () => {
         isError: false,
         refresh: vi.fn()
       })
-      vi.mocked(fetchCollaborationToken).mockResolvedValue({ token: 'fresh-tok', sub: 'doc' })
+      vi.mocked(fetchCollaborationTokenWithRetry).mockResolvedValue({ token: 'fresh-tok', sub: 'doc' })
 
       render(
         <EditorCacheProvider sessionId="session-42">
@@ -1069,7 +1070,7 @@ describe('EditorCacheProvider', () => {
       expect(typeof config.token).toBe('function')
 
       const token = await (config.token as () => Promise<string>)()
-      expect(fetchCollaborationToken).toHaveBeenCalledWith('session-42')
+      expect(fetchCollaborationTokenWithRetry).toHaveBeenCalledWith('session-42')
       expect(token).toBe('fresh-tok')
       expect(token).not.toBe('stale-tok')
     })
@@ -1165,6 +1166,79 @@ describe('EditorCacheProvider', () => {
         expect(vi.mocked(TiptapCollabProvider).mock.calls.length).toBe(constructorCallsBefore + 1)
       })
       expect(cacheRef?.error).toBeNull()
+    })
+  })
+
+  describe('Reconnect resilience', () => {
+    const tokenFnOf = async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      await waitFor(() => expect(TiptapCollabProvider).toHaveBeenCalled())
+      const calls = vi.mocked(TiptapCollabProvider).mock.calls
+      return calls[calls.length - 1][0].token as () => Promise<string>
+    }
+
+    it('reuses the last good token when a reconnect fetch fails', async () => {
+      vi.mocked(fetchCollaborationTokenWithRetry).mockResolvedValueOnce({ token: 'good-tok', sub: 'doc' })
+      render(
+        <EditorCacheProvider sessionId="session-7">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+      const token = await tokenFnOf()
+      expect(await token()).toBe('good-tok')
+
+      vi.mocked(fetchCollaborationTokenWithRetry).mockRejectedValueOnce(new Error('backend down'))
+      expect(await token()).toBe('good-tok')
+    })
+
+    it('rejects when no token was ever fetched successfully', async () => {
+      vi.mocked(fetchCollaborationTokenWithRetry).mockRejectedValueOnce(new Error('backend down'))
+      render(
+        <EditorCacheProvider sessionId="session-7">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+      const token = await tokenFnOf()
+      await expect(token()).rejects.toThrow('backend down')
+    })
+
+    it('reports a server problem, not an authorization problem, when the token fetch failed', async () => {
+      let cacheRef: any = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+      const mockProvider = await getLatestMockProvider()
+      act(() => {
+        mockProvider._triggerEvent('authenticationFailed', { reason: 'Failed to get token: Error: boom' })
+      })
+      await waitFor(() => {
+        expect(cacheRef?.error?.message).toBe('Coaching notes could not reach the server. Please try again.')
+      })
+    })
+
+    it('registers one beforeunload listener regardless of how many providers are created', async () => {
+      const addSpy = vi.spyOn(window, 'addEventListener')
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      let cacheRef: any = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+      const mockProvider = await getLatestMockProvider()
+      act(() => {
+        mockProvider._triggerEvent('authenticationFailed', { reason: 'expired' })
+      })
+      await waitFor(() => expect(cacheRef?.error).not.toBeNull())
+      await act(async () => {
+        cacheRef.resetCache()
+      })
+      await waitFor(() => expect(TiptapCollabProvider).toHaveBeenCalledTimes(2))
+
+      const unloadRegistrations = addSpy.mock.calls.filter(([type]) => type === 'beforeunload')
+      expect(unloadRegistrations).toHaveLength(1)
     })
   })
 
