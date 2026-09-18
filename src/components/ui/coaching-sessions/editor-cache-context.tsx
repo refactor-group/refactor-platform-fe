@@ -15,10 +15,14 @@ import * as Y from "yjs";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import type { Editor, Extensions } from "@tiptap/core";
 import { Extensions as createExtensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
-import { useCollaborationToken } from "@/lib/api/collaboration-token";
+import {
+  fetchCollaborationTokenWithRetry,
+  useCollaborationToken,
+} from "@/lib/api/collaboration-token";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { siteConfig } from "@/site.config";
 import type { Jwt } from "@/types/jwt";
+import { type Option, Some, None } from "@/types/option";
 import type { UserSession } from "@/types/user-session";
 import {
   PresenceState,
@@ -198,36 +202,52 @@ function determineProviderAction(
   return { kind: ActionKind.Skip, reason: "Waiting for required state" };
 }
 
+type PresenceParams = Parameters<typeof createConnectedPresence>[0];
+
 /**
  * Updates the user's presence on the collaboration provider.
  * Used to re-broadcast presence when user data (like role) changes.
  */
 function updatePresenceOnProvider(
   provider: TiptapCollabProvider,
-  presence: Parameters<typeof createConnectedPresence>[0],
+  presence: PresenceParams,
 ): void {
   const updatedPresence = createConnectedPresence(presence);
   provider.setAwarenessField("presence", updatedPresence);
 }
 
-/**
- * Gracefully disconnects the provider after broadcasting disconnected presence.
- * Used when leaving a coaching session to notify other users.
- */
-function disconnectProviderWithPresence(
+const TOKEN_FETCH_FAILURE_PREFIX = "Failed to get token";
+
+function authFailureMessage(reason: string): string {
+  return reason.startsWith(TOKEN_FETCH_FAILURE_PREFIX)
+    ? "Coaching notes could not reach the server. Please try again."
+    : "Coaching notes could not be authorized. Please try again.";
+}
+
+// HocuspocusProvider.destroy() leaves its websocketProvider (and its
+// connection-checker interval) alive, so the socket must be destroyed too.
+function teardownProvider(
   provider: TiptapCollabProvider,
-  presence: Parameters<typeof createConnectedPresence>[0],
+  presence: Option<PresenceParams>,
 ): void {
-  // Create connected presence first, then convert to disconnected
-  const connectedPresence = createConnectedPresence(presence);
-  const disconnectedPresence = createDisconnectedPresence(connectedPresence);
-
-  // Broadcast disconnected status so other users see us go offline
-  provider.setAwarenessField("presence", disconnectedPresence);
-
-  // Disconnect and cleanup
-  provider.disconnect();
-  provider.destroy();
+  const steps: Array<[string, () => void]> = [
+    ["presence", () => {
+      if (!presence.some) return;
+      provider.setAwarenessField(
+        "presence",
+        createDisconnectedPresence(createConnectedPresence(presence.val)),
+      );
+    }],
+    ["provider", () => provider.destroy()],
+    ["websocket", () => provider.configuration.websocketProvider.destroy()],
+  ];
+  for (const [name, step] of steps) {
+    try {
+      step();
+    } catch (error) {
+      console.warn(`Collaboration ${name} teardown failed:`, error);
+    }
+  }
 }
 
 // ============================================
@@ -246,6 +266,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     jwt,
     isLoading: tokenLoading,
     isError: tokenError,
+    refresh: refreshToken,
   } = useCollaborationToken(sessionId);
 
   const { relationship_role: userRole } = useCurrentRelationshipRole();
@@ -270,6 +291,8 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   const userColor = useMemo(() => generateCollaborativeUserColor(), []);
 
   const [cache, setCache] = useState<EditorCacheState>(createInitialCacheState);
+  // Bumped by resetCache so the lifecycle effect re-runs without a prop change.
+  const [initEpoch, setInitEpoch] = useState(0);
 
   // Y.Doc lifecycle: create new document when session changes
   const getOrCreateYDoc = useCallback(() => {
@@ -286,6 +309,31 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   const cleanupDataRef = useRef({ userSession, userRole, userColor });
   cleanupDataRef.current = { userSession, userRole, userColor };
 
+  const currentPresence = useCallback((): Option<PresenceParams> => {
+    const { userSession, userRole, userColor } = cleanupDataRef.current;
+    if (!userSession || !userRole.some) return None;
+    return Some({
+      userId: userSession.id,
+      name: userSession.display_name,
+      relationshipRole: userRole.val,
+      color: userColor,
+    });
+  }, []);
+
+  useEffect(() => {
+    const broadcastDisconnected = () => {
+      const provider = providerRef.current;
+      const presence = currentPresence();
+      if (!provider || !presence.some) return;
+      provider.setAwarenessField(
+        "presence",
+        createDisconnectedPresence(createConnectedPresence(presence.val)),
+      );
+    };
+    window.addEventListener("beforeunload", broadcastDisconnected);
+    return () => window.removeEventListener("beforeunload", broadcastDisconnected);
+  }, [currentPresence]);
+
   // Provider initialization: sets up TipTap collaboration with awareness
   const initializeProvider = useCallback(async () => {
     if (!jwt || !siteConfig.env.tiptapAppId || !userSession) {
@@ -294,21 +342,29 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
     const doc = getOrCreateYDoc();
 
+    // Per-connect mint: the SWR jwt may be stale; fall back to the last good token so a backend blip on reconnect does not kill the editor.
+    let lastGoodToken: Option<string> = None;
+    const mintToken = async (): Promise<string> => {
+      const fresh = await fetchCollaborationTokenWithRetry(sessionId);
+      if (fresh.isOk()) {
+        lastGoodToken = Some(fresh.value.token);
+        return fresh.value.token;
+      }
+      if (lastGoodToken.some) return lastGoodToken.val;
+      throw fresh.error;
+    };
+
     try {
       const provider = new TiptapCollabProvider({
         name: jwt.sub,
         appId: siteConfig.env.tiptapAppId,
-        token: jwt.token,
+        token: mintToken,
         document: doc,
         user: userSession.display_name,
+        preserveConnection: false,
       });
 
-      // Awareness initialization: establishes user presence in collaborative session
-      // IMPORTANT: Set awareness BEFORE synced event so CollaborationCaret has user data
-      // Only broadcast if the role is definitively known. If the coaching relationship
-      // hasn't loaded yet (userRole is None), skip here — the re-broadcast effect will
-      // send presence as soon as userRole becomes Some, eliminating the race condition
-      // where the wrong role (defaulted to Coachee) gets broadcast first.
+      // Skip until the role is known so a wrong default role is never broadcast.
       if (userRole.some) {
         const userPresence = createConnectedPresence({
           userId: userSession.id,
@@ -368,6 +424,22 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       }, SYNC_TIMEOUT_MS);
 
       providerRef.current = provider;
+
+      provider.on("authenticationFailed", ({ reason }: { reason: string }) => {
+        if (providerRef.current !== provider) return;
+        clearSyncTimeout();
+        console.warn(`TipTap collaboration authentication failed: ${reason}`);
+        teardownProvider(provider, None);
+        providerRef.current = null;
+        setCache((prev) => ({
+          ...prev,
+          collaborationProvider: null,
+          extensions: [],
+          isReady: false,
+          isLoading: false,
+          error: new Error(authFailureMessage(reason)),
+        }));
+      });
 
       // Awareness synchronization: tracks all connected users for presence indicators
       provider.on(
@@ -467,31 +539,6 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
         // This event is just for local cleanup/logging if needed.
       });
 
-      // Graceful disconnect on page unload.
-      // Reads from cleanupDataRef.current so the broadcast reflects the role that
-      // was actually resolved at the time the user closes the tab.
-      const handleBeforeUnload = () => {
-        const {
-          userSession: us,
-          userRole: ur,
-          userColor: uc,
-        } = cleanupDataRef.current;
-        if (!us || !ur.some) return;
-        const presence = createConnectedPresence({
-          userId: us.id,
-          name: us.display_name,
-          relationshipRole: ur.val,
-          color: uc,
-        });
-        const disconnectedPresence = createDisconnectedPresence(presence);
-        provider.setAwarenessField("presence", disconnectedPresence);
-      };
-
-      window.addEventListener("beforeunload", handleBeforeUnload);
-
-      return () => {
-        window.removeEventListener("beforeunload", handleBeforeUnload);
-      };
     } catch (error) {
       console.error("Collaboration provider initialization failed:", error);
 
@@ -515,6 +562,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     }
   }, [
     jwt,
+    sessionId,
     userSession,
     userRole,
     userColor,
@@ -549,7 +597,9 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
 
       case ActionKind.Cleanup:
         clearSyncTimeout();
-        providerRef.current?.disconnect();
+        if (providerRef.current) {
+          teardownProvider(providerRef.current, currentPresence());
+        }
         providerRef.current = null;
         // After cleanup, immediately initialize for new session if ready.
         // We inline this check rather than re-calling determineProviderAction()
@@ -592,12 +642,13 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       // Don't disconnect if dependencies change but provider should stay
       if (providerRef.current && lastSessionIdRef.current !== sessionId) {
         clearSyncTimeout();
-        providerRef.current.disconnect();
+        teardownProvider(providerRef.current, currentPresence());
         providerRef.current = null;
       }
     };
   }, [
     sessionId,
+    initEpoch,
     jwt,
     tokenLoading,
     tokenError,
@@ -606,6 +657,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     getOrCreateYDoc,
     initializeProvider,
     clearSyncTimeout,
+    currentPresence,
   ]);
 
   // Broadcast presence once both the role is definitively known and the editor is ready.
@@ -630,25 +682,12 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     return () => {
       clearSyncTimeout();
       const provider = providerRef.current;
-      const { userSession, userRole, userColor } = cleanupDataRef.current;
       if (provider) {
-        if (userSession && userRole.some) {
-          // Role is known: broadcast disconnected presence so peers update immediately
-          disconnectProviderWithPresence(provider, {
-            userId: userSession.id,
-            name: userSession.display_name,
-            relationshipRole: userRole.val,
-            color: userColor,
-          });
-        } else {
-          // Role never resolved: just tear down the connection quietly
-          provider.disconnect();
-          provider.destroy();
-        }
+        teardownProvider(provider, currentPresence());
         providerRef.current = null;
       }
     };
-  }, [clearSyncTimeout]);
+  }, [clearSyncTimeout, currentPresence]);
 
   // Logout cleanup registration: ensures proper provider teardown on session end
   useLogoutCleanup(
@@ -658,23 +697,8 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       const provider = providerRef.current;
 
       if (provider) {
-        try {
-          // Clear our custom presence field on logout
-          // CollaborationCaret will clean up the "user" field
-          provider.setAwarenessField("presence", null);
-
-          // Graceful provider shutdown
-          provider.disconnect();
-          providerRef.current = null;
-
-          // Async destroy to ensure disconnect completes
-          queueMicrotask(() => {
-            provider.destroy();
-          });
-        } catch (error) {
-          console.error("Provider cleanup failed during logout:", error);
-          providerRef.current = null;
-        }
+        teardownProvider(provider, currentPresence());
+        providerRef.current = null;
       }
 
       // Reset cache state for clean logout
@@ -687,7 +711,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
           isLoading: false,
         },
       }));
-    }, [clearSyncTimeout]),
+    }, [clearSyncTimeout, currentPresence]),
   );
 
   const registerEditor = useCallback((editor: Editor | null) => {
@@ -709,11 +733,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     clearSyncTimeout();
 
     if (providerRef.current) {
-      try {
-        providerRef.current.destroy();
-      } catch (error) {
-        console.warn("Provider cleanup failed during reset:", error);
-      }
+      teardownProvider(providerRef.current, None);
       providerRef.current = null;
     }
 
@@ -721,7 +741,9 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     lastSessionIdRef.current = null;
 
     setCache(createInitialCacheState());
-  }, [clearSyncTimeout]);
+    void refreshToken();
+    setInitEpoch((n) => n + 1);
+  }, [clearSyncTimeout, refreshToken]);
 
   // Memoize context value to prevent unnecessary re-renders of consumers
   // Only create a new object when cache state or resetCache function actually changes

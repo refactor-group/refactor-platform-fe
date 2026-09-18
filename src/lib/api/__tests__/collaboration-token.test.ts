@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { SWRConfig } from "swr";
+import { httpStatusOf } from "@/types/entity-api-error";
+import { Some } from "@/types/option";
 
 // Mock the axios-backed http client so we control every request outcome.
 vi.mock("@/lib/auth/session-guard", () => ({
@@ -11,7 +13,11 @@ vi.mock("@/lib/auth/session-guard", () => ({
 }));
 
 import { sessionGuard } from "@/lib/auth/session-guard";
-import { useCollaborationToken } from "@/lib/api/collaboration-token";
+import {
+  fetchCollaborationToken,
+  fetchCollaborationTokenWithRetry,
+  useCollaborationToken,
+} from "@/lib/api/collaboration-token";
 
 const mockedGet = vi.mocked(sessionGuard.get);
 
@@ -25,8 +31,10 @@ const okResponse = () => ({
 
 const httpError = (status: number) => {
   const err = new Error(`HTTP ${status}`) as Error & {
+    isAxiosError: boolean;
     response?: { status: number };
   };
+  err.isAxiosError = true;
   err.response = { status };
   return err;
 };
@@ -182,5 +190,68 @@ describe("useCollaborationToken", () => {
       expect(result.current.jwt).toEqual({ token: "tok", sub: "sub-1" })
     );
     expect(result.current.isError).toBe(false);
+  });
+});
+
+describe("fetchCollaborationToken", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("requests the token for the given session and returns the parsed Jwt", async () => {
+    mockedGet.mockResolvedValueOnce(okResponse());
+
+    const jwt = (await fetchCollaborationToken("session-9"))._unsafeUnwrap();
+
+    expect(mockedGet).toHaveBeenCalledTimes(1);
+    const [url, config] = mockedGet.mock.calls[0];
+    expect(url).toMatch(/\/jwt\/generate_collab_token$/);
+    expect(config).toEqual({ params: { coaching_session_id: "session-9" } });
+    expect(jwt).toEqual({ token: "tok", sub: "sub-1" });
+  });
+
+  it("rejects when the payload is not a Jwt", async () => {
+    mockedGet.mockResolvedValueOnce({ data: { data: { nope: 1 } } });
+
+    expect((await fetchCollaborationToken("session-9")).isErr()).toBe(true);
+  });
+});
+
+describe("fetchCollaborationTokenWithRetry", () => {
+  const noDelay = vi.fn(async (_ms: number) => {});
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("retries with exponential backoff on a 500 and resolves once the request succeeds", async () => {
+    mockedGet
+      .mockRejectedValueOnce(httpError(500))
+      .mockRejectedValueOnce(httpError(503))
+      .mockResolvedValueOnce(okResponse());
+
+    const jwt = (await fetchCollaborationTokenWithRetry("session-9", noDelay))._unsafeUnwrap();
+
+    expect(jwt).toEqual({ token: "tok", sub: "sub-1" });
+    expect(mockedGet).toHaveBeenCalledTimes(3);
+    expect(noDelay.mock.calls.map(([ms]) => ms)).toEqual([300, 600]);
+  });
+
+  it("fails fast on a 401 without retrying", async () => {
+    mockedGet.mockRejectedValue(httpError(401));
+
+    const result = await fetchCollaborationTokenWithRetry("session-9", noDelay);
+    expect(httpStatusOf(result._unsafeUnwrapErr())).toEqual(Some(401));
+    expect(mockedGet).toHaveBeenCalledTimes(1);
+    expect(noDelay).not.toHaveBeenCalled();
+  });
+
+  it("gives up after four retries and rejects with the last error", async () => {
+    mockedGet.mockRejectedValue(httpError(502));
+
+    const result = await fetchCollaborationTokenWithRetry("session-9", noDelay);
+    expect(httpStatusOf(result._unsafeUnwrapErr())).toEqual(Some(502));
+    expect(mockedGet).toHaveBeenCalledTimes(5);
+    expect(noDelay).toHaveBeenCalledTimes(4);
   });
 });
