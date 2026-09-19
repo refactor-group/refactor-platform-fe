@@ -31,7 +31,6 @@ export const siteConfig = {
     backendApiVersion: process.env.NEXT_PUBLIC_BACKEND_API_VERSION,
     frontendServicePort: process.env.FRONTEND_SERVICE_PORT,
     frontendServiceInterface: process.env.FRONTEND_SERVICE_INTERFACE,
-    tiptapAppId: process.env.NEXT_PUBLIC_TIPTAP_APP_ID,
     docsCollabUrl: process.env.NEXT_PUBLIC_DOCS_COLLAB_URL,
   },
 };
