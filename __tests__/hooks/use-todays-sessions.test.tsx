@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
+import { useEnrichedCoachingSessionsForUser } from "@/lib/api/coaching-sessions";
 import { TestProviders } from "@/test-utils/providers";
 import { DateTime } from "ts-luxon";
 import {
@@ -12,8 +13,10 @@ import {
 
 /**
  * Test Suite: useTodaysSessions Hook
- * Story: "Fetch and enrich all of today's coaching sessions across organizations"
+ * Story: "Fetch and enrich today's coaching sessions for the current organization"
  */
+
+const CURRENT_ORGANIZATION_ID = "org-1";
 
 // Mock the auth store
 const mockUser = createMockUser({
@@ -62,6 +65,25 @@ vi.mock("@/lib/api/organizations", () => ({
     organizations: mockOrganizations,
     isLoading: false,
     isError: undefined,
+  })),
+  useOrganization: vi.fn(() => ({
+    organization: null,
+    isLoading: false,
+    isError: false,
+    refresh: vi.fn(),
+  })),
+}));
+
+// The sidebar's selected organization, which scopes the request.
+vi.mock("@/lib/hooks/use-current-organization", () => ({
+  useCurrentOrganization: vi.fn(() => ({
+    currentOrganizationId: "org-1",
+    currentOrganization: null,
+    isLoading: false,
+    isError: false,
+    setCurrentOrganizationId: vi.fn(),
+    resetOrganizationState: vi.fn(),
+    refresh: vi.fn(),
   })),
 }));
 
@@ -138,7 +160,25 @@ describe("useTodaysSessions", () => {
     expect(result.current.isLoading).toBeDefined();
   });
 
-  it("should fetch sessions from all organizations", async () => {
+  it("scopes the request to the currently selected organization", () => {
+    renderHook(() => useTodaysSessions(), { wrapper: TestProviders });
+
+    // Ninth argument is organizationId. Omitting it returns every organization's
+    // sessions, which is what made the Upcoming Session card bleed across orgs.
+    expect(vi.mocked(useEnrichedCoachingSessionsForUser)).toHaveBeenCalledWith(
+      mockUser.id,
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      "date",
+      "asc",
+      undefined,
+      undefined,
+      CURRENT_ORGANIZATION_ID
+    );
+  });
+
+  it("should return every session the scoped request yields", async () => {
     const { result } = renderHook(() => useTodaysSessions(), {
       wrapper: TestProviders,
     });

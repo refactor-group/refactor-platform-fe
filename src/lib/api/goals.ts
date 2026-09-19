@@ -1,5 +1,6 @@
 // Interacts with the goal endpoints
 
+import { useApiSWR } from "@/lib/hooks/use-api-swr";
 import { ResultAsync } from "neverthrow";
 import { siteConfig } from "@/site.config";
 import { Id, EntityApiError } from "@/types/general";
@@ -9,7 +10,6 @@ import {
 } from "@/types/goal";
 import { ApiSortOrder, GoalSortField } from "@/types/sorting";
 import { EntityApi, ApiResponse } from "./entity-api";
-import useSWR from "swr";
 import { sessionGuard } from "@/lib/auth/session-guard";
 
 const GOALS_BASEURL: string = `${siteConfig.env.backendServiceURL}/goals`;
@@ -214,7 +214,7 @@ export const useBatchSessionGoals = (coachingRelationshipId: Id | null) => {
     ? `${COACHING_SESSIONS_BASEURL}/goals?coaching_relationship_id=${coachingRelationshipId}`
     : null;
 
-  const { data, error, isLoading, mutate } = useSWR<Record<Id, Goal[]>>(
+  const { data, error, isLoading, mutate } = useApiSWR<Record<Id, Goal[]>>(
     key,
     () => fetchBatchSessionGoals(coachingRelationshipId!),
     { revalidateOnMount: true }

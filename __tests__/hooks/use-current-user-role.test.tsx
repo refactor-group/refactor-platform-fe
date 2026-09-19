@@ -192,10 +192,15 @@ describe('useCurrentUserRole', () => {
 
     renderHook(() => useCurrentUserRole());
 
-    expect(mockToast.error).toHaveBeenCalledWith('No roles assigned. Please contact support.');
+    expect(mockToast.error).toHaveBeenCalledWith(
+      'No roles assigned. Please contact support.',
+      { id: 'user-role-no-roles' }
+    );
   });
 
-  it('should show toast notification for no_org_selected state', () => {
+  // Transient by construction — the switcher settles on an organization a tick
+  // later, so toasting it just flashes noise on every sign-in.
+  it('should stay silent for the no_org_selected state', () => {
     const userRole: UserRole = {
       id: 'role-4',
       user_id: 'user-4',
@@ -221,7 +226,7 @@ describe('useCurrentUserRole', () => {
 
     renderHook(() => useCurrentUserRole());
 
-    expect(mockToast.info).toHaveBeenCalledWith('Please select an organization to continue.');
+    expect(mockToast.info).not.toHaveBeenCalled();
   });
 
   it('should show toast notification for no_access state', () => {
@@ -250,6 +255,43 @@ describe('useCurrentUserRole', () => {
 
     renderHook(() => useCurrentUserRole());
 
-    expect(mockToast.warning).toHaveBeenCalledWith("You don't have access to this organization.");
+    expect(mockToast.warning).toHaveBeenCalledWith(
+      "You don't have access to this organization.",
+      { id: 'user-role-no-access' }
+    );
+  });
+
+  // Every consumer of this hook runs the toast effect, so a shared id is what
+  // keeps one bad state from stacking a toast per mounted component.
+  it('collapses the no_access toast across concurrent consumers', () => {
+    const userRole: UserRole = {
+      id: 'role-6',
+      user_id: 'user-6',
+      role: Role.User,
+      organization_id: 'org-1',
+      created_at: '2024-01-01',
+      updated_at: '2024-01-01'
+    };
+
+    mockUseAuthStore.mockReturnValue({
+      userSession: {
+        id: 'user-6',
+        roles: [userRole]
+      } as User,
+      isLoggedIn: true
+    });
+
+    mockUseCurrentOrganization.mockReturnValue({
+      currentOrganizationId: 'org-2',
+      setCurrentOrganizationId: vi.fn(),
+      resetOrganizationState: vi.fn()
+    });
+
+    renderHook(() => useCurrentUserRole());
+    renderHook(() => useCurrentUserRole());
+    renderHook(() => useCurrentUserRole());
+
+    const ids = mockToast.warning.mock.calls.map(([, options]) => options?.id);
+    expect(new Set(ids)).toEqual(new Set(['user-role-no-access']));
   });
 });

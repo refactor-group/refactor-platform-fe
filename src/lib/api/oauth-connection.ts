@@ -1,9 +1,9 @@
 // Interacts with the OAuth connection endpoints
 
+import { useApiSWR } from "@/lib/hooks/use-api-swr";
 import { siteConfig } from "@/site.config";
 import { OAuthConnection, OAuthProvider } from "@/types/oauth-connection";
 import { EntityApi, EntityApiError } from "./entity-api";
-import useSWR from "swr";
 
 const OAUTH_CONNECTIONS_URL = `${siteConfig.env.backendServiceURL}/oauth/connections`;
 
@@ -55,7 +55,7 @@ export const OAuthConnectionApi = {
  * when connected. Does not surface 404 as an error.
  */
 export const useOAuthConnection = (provider: OAuthProvider) => {
-  const { data, error, isLoading, mutate } = useSWR<OAuthConnection | null>(
+  const { data, error, isLoading, mutate } = useApiSWR<OAuthConnection | null>(
     `${OAUTH_CONNECTIONS_URL}/${provider}`,
     () => OAuthConnectionApi.getByProvider(provider),
     {
@@ -78,7 +78,7 @@ export const useOAuthConnection = (provider: OAuthProvider) => {
  *
  */
 export const useOAuthConnections = () => {
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useApiSWR(
     `${OAUTH_CONNECTIONS_URL}`,
     () => OAuthConnectionApi.list(),
     {

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { getUserRoleForOrganization, parseUser, Role } from '@/types/user';
+import {
+  canAddExistingMembers,
+  getUserRoleForOrganization,
+  parseUser,
+  Role,
+} from '@/types/user';
 import type { UserRole } from '@/types/user';
 
 describe('parseUser', () => {
@@ -14,7 +19,6 @@ describe('parseUser', () => {
       last_name: 'Hodapp',
       display_name: 'Jim Hodapp',
       timezone: 'America/Los_Angeles',
-      role: Role.User,
       roles: [],
       invite_status: null,
     };
@@ -146,5 +150,52 @@ describe('getUserRoleForOrganization', () => {
     expect(getUserRoleForOrganization(roles, 'org-1')).toBe(Role.User);
     expect(getUserRoleForOrganization(roles, 'org-2')).toBe(Role.Admin);
     expect(getUserRoleForOrganization(roles, 'org-3')).toBe(Role.User);
+  });
+});
+
+describe('canAddExistingMembers', () => {
+  const role = (r: Role, organization_id: string | null): UserRole => ({
+    id: `role-${r}-${organization_id}`,
+    user_id: 'user-1',
+    role: r,
+    organization_id,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  });
+
+  it('is true for an admin of a single organization', () => {
+    // The lookup surfaces former members of an administered organization, so one
+    // is enough: this admin can recover someone they removed.
+    expect(canAddExistingMembers([role(Role.Admin, 'org-1')])).toBe(true);
+  });
+
+  it('is true for an admin of two organizations', () => {
+    expect(
+      canAddExistingMembers([role(Role.Admin, 'org-1'), role(Role.Admin, 'org-2')])
+    ).toBe(true);
+  });
+
+  it('requires Admin, not mere membership, in the administered organization', () => {
+    expect(
+      canAddExistingMembers([role(Role.Admin, 'org-1'), role(Role.User, 'org-2')])
+    ).toBe(true);
+    expect(
+      canAddExistingMembers([role(Role.User, 'org-1'), role(Role.User, 'org-2')])
+    ).toBe(false);
+  });
+
+  it('ignores an Admin row with no organization scope', () => {
+    // Org-scoped admin is what grants lookup reach; an unscoped Admin row is not
+    // a SuperAdmin and administers nothing.
+    expect(canAddExistingMembers([role(Role.Admin, null)])).toBe(false);
+  });
+
+  it('is true for a super admin holding no organization roles', () => {
+    expect(canAddExistingMembers([role(Role.SuperAdmin, null)])).toBe(true);
+  });
+
+  it('is false for a plain member and for no roles at all', () => {
+    expect(canAddExistingMembers([role(Role.User, 'org-1')])).toBe(false);
+    expect(canAddExistingMembers([])).toBe(false);
   });
 });

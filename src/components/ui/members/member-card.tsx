@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { UserApi, useUserMutation } from "@/lib/api/organizations/users";
-import { getUserDisplayRoles, getUserCoaches } from "@/lib/utils/user-roles";
+import {
+  getUserDisplayRoles,
+  getUserCoaches,
+  getOrganizationMembershipRole,
+} from "@/lib/utils/user-roles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +16,24 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Send, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Send,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+  UserMinus,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -33,13 +54,19 @@ import { AuthStore } from "@/lib/stores/auth-store";
 import { Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 import {
   InviteStatus,
+  Role,
   User,
   isAdminOrSuperAdmin,
   UserRoleState,
 } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
-import { organizationArchivedMessage } from "@/lib/api/organization-errors";
+import {
+  lastOrganizationAdminMessage,
+  organizationArchivedMessage,
+  roleChangeInvalidMessage,
+  userBelongsToMultipleOrganizationsMessage,
+} from "@/lib/api/organization-errors";
 import { toast } from "sonner";
 
 interface MemberCardProps {
@@ -65,8 +92,9 @@ export function MemberCard({
   users,
   currentUserRoleState,
 }: MemberCardProps) {
-  const { currentOrganizationId } = useCurrentOrganization();
-  const { isACoach, userSession } = useAuthStore((state: AuthStore) => state);
+  const { currentOrganizationId, currentOrganization } =
+    useCurrentOrganization();
+  const { userSession } = useAuthStore((state: AuthStore) => state);
 
   // Extract user properties
   const { id: userId, first_name: firstName, last_name: lastName, email } = user;
@@ -76,13 +104,50 @@ export function MemberCard({
 
   // Get coaches for this user
   const coaches = getUserCoaches(userId, userRelationships);
-  const { error: deleteError, deleteNested: deleteUser } = useUserMutation(
+  const { deleteNested: deleteUser, removeFromOrganization, updateRole } =
+    useUserMutation(currentOrganizationId);
+
+  const membershipRole = getOrganizationMembershipRole(
+    user,
     currentOrganizationId
   );
+  const isSelf = userSession.id === userId;
+  // Guards a double-click from firing two PUTs.
+  const [pendingRole, setPendingRole] = useState<Role | null>(null);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  const handleRoleChange = async (role: Role) => {
+    setPendingRole(role);
+    setRoleError(null);
+    try {
+      await updateRole(currentOrganizationId, userId, role);
+      toast.success(
+        `${firstName} ${lastName} is ${
+          role === Role.Admin ? "now" : "no longer"
+        } an organization Admin`
+      );
+    } catch (error) {
+      console.error("Error changing member role:", error);
+      // An actionable state ("grant someone else Admin first"), not a failure:
+      // it belongs on the row it concerns, where a toast wouldn't persist.
+      const lastAdmin = lastOrganizationAdminMessage(error);
+      if (lastAdmin) {
+        setRoleError(lastAdmin);
+        return;
+      }
+      toast.error(
+        organizationArchivedMessage(error) ??
+          roleChangeInvalidMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "Error changing member role")
+      );
+    } finally {
+      setPendingRole(null);
+    }
+  };
   const { createNested: createRelationship } =
     useCoachingRelationshipMutation(currentOrganizationId);
-
-  console.log("is a coach", isACoach);
 
   // Only admins and super admins can delete users (but not themselves)
   const canDeleteUser =
@@ -94,17 +159,43 @@ export function MemberCard({
     if (!confirm("Are you sure you want to delete this member?")) {
       return;
     }
-    await deleteUser(currentOrganizationId, userId);
-    onRefresh();
 
-    if (deleteError) {
-      console.error("Error deleting member:", deleteError);
-      toast.error("Error deleting member");
+    try {
+      await deleteUser(currentOrganizationId, userId);
+      toast.success("Member deleted successfully");
       onRefresh();
-      return;
+    } catch (error) {
+      console.error("Error deleting member:", error);
+      toast.error(
+        userBelongsToMultipleOrganizationsMessage(error) ??
+          organizationArchivedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "Error deleting member")
+      );
     }
-    toast.success("Member deleted successfully");
-    onRefresh();
+  };
+
+  const handleRemoveFromOrganization = async () => {
+    setIsRemoving(true);
+
+    try {
+      await removeFromOrganization(currentOrganizationId, userId);
+      toast.success(`${firstName} ${lastName} removed from this organization`);
+      setRemoveDialogOpen(false);
+      onRefresh();
+    } catch (error) {
+      console.error("Error removing member from organization:", error);
+      toast.error(
+        lastOrganizationAdminMessage(error) ??
+          organizationArchivedMessage(error) ??
+          (isForbiddenError(error)
+            ? PERMISSION_DENIED_MESSAGE
+            : "Error removing member from this organization")
+      );
+    } finally {
+      setIsRemoving(false);
+    }
   };
 
   const handleResendInvite = async () => {
@@ -155,6 +246,8 @@ export function MemberCard({
   const [assignMode, setAssignMode] = useState<RelationshipRole>(RelationshipRole.Coach);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [assignedMember, setAssignedMember] = useState<Member | null>(null);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const handleCreateCoachingRelationship = async () => {
     if (!selectedMember || !assignedMember) return;
@@ -218,12 +311,23 @@ export function MemberCard({
             <span className="font-medium">Roles:</span> {displayRoles.join(', ')}
           </p>
         )}
+        {roleError && (
+          <p role="alert" className="text-sm text-destructive">
+            {roleError}
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">
           <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}
         </p>
       </div>
       {isAdminOrSuperAdmin(currentUserRoleState) && (
-        <DropdownMenu>
+        <DropdownMenu
+          onOpenChange={(open) => {
+            // A refusal from a previous attempt can be stale by the time the
+            // menu is reopened (e.g. another member was made an admin since).
+            if (open) setRoleError(null);
+          }}
+        >
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
@@ -231,6 +335,9 @@ export function MemberCard({
               className="text-muted-foreground"
             >
               <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">
+                Actions for {firstName} {lastName}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -264,9 +371,32 @@ export function MemberCard({
                 </DropdownMenuItem>
               </>
             )}
+            {/* Gated locally as well as by the menu's own admin check, so the
+                guarantee survives a restructure of this menu. */}
+            {isAdminOrSuperAdmin(currentUserRoleState) &&
+              membershipRole.some &&
+              !isSelf &&
+              (membershipRole.val === Role.User ? (
+                <DropdownMenuItem
+                  onClick={() => handleRoleChange(Role.Admin)}
+                  disabled={pendingRole !== null}
+                >
+                  <ShieldCheck className="mr-2 h-4 w-4" /> Grant organization admin access
+                </DropdownMenuItem>
+              ) : membershipRole.val === Role.Admin ? (
+                <DropdownMenuItem
+                  onClick={() => handleRoleChange(Role.User)}
+                  disabled={pendingRole !== null}
+                >
+                  <ShieldOff className="mr-2 h-4 w-4" /> Revoke organization admin access
+                </DropdownMenuItem>
+              ) : null)}
             {canDeleteUser && (
               <>
                 {userId !== currentUserId && <DropdownMenuSeparator />}
+                <DropdownMenuItem onClick={() => setRemoveDialogOpen(true)}>
+                  <UserMinus className="mr-2 h-4 w-4" /> Remove from organization
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleDelete}
                   className="text-destructive focus:text-destructive"
@@ -278,6 +408,47 @@ export function MemberCard({
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+
+      {/* Remove from organization confirmation */}
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Remove {firstName} {lastName} from{" "}
+              {currentOrganization?.name ?? "this organization"}
+            </AlertDialogTitle>
+            {/* asChild because the description holds two paragraphs, and
+                AlertDialogDescription renders a <p> that cannot nest them. */}
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  They immediately lose access to this organization&apos;s
+                  coaching sessions, notes and actions.
+                </p>
+                <p>
+                  <span className="italic text-foreground">
+                    Nothing is deleted.
+                  </span>{" "}
+                  Their coaching history stays with the people they work with
+                  here. Their account and other organizations are unaffected.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleRemoveFromOrganization();
+              }}
+              disabled={isRemoving}
+            >
+              {isRemoving ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Assign Coach/Coachee Modal */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>

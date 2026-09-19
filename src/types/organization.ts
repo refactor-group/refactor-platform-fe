@@ -78,6 +78,31 @@ export function defaultOrganizations(): Organization[] {
   return [defaultOrganization()];
 }
 
+/** Up-to-two-letter avatar initials: "Refactor Group" -> "RG", "BigTable" -> "BT", "" -> "?". */
+export function organizationInitials(name: string | undefined): string {
+  const words = (name ?? "").split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+
+  if (words.length > 1) {
+    return words
+      .slice(0, 2)
+      .map((word) => Array.from(word)[0])
+      .join("")
+      .toUpperCase();
+  }
+
+  // A single word may be camel or Pascal case, where a capital starts a new
+  // part ("BigTable" -> "BT"). One part means no internal boundary, so fall
+  // back to the word's first two letters ("Acme" -> "AC").
+  const parts = words[0].match(/\p{Lu}+\p{Ll}*|\p{Ll}+/gu) ?? [];
+  const letters =
+    parts.length > 1
+      ? parts.map((part) => Array.from(part)[0])
+      : Array.from(words[0]);
+
+  return letters.slice(0, 2).join("").toUpperCase();
+}
+
 export function organizationToString(organization: Organization): string {
   return JSON.stringify(organization);
 }

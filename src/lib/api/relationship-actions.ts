@@ -2,6 +2,7 @@
 //   - Single relationship: GET /organizations/{org}/coaching_relationships/{rel}/actions
 //   - Batch (all relationships): GET /organizations/{org}/coaching_relationships/actions?assignee=...
 
+import { useApiSWR } from "@/lib/hooks/use-api-swr";
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import {
@@ -17,7 +18,6 @@ import {
 import { ApiResponse } from "./entity-api";
 import { buildQueryString } from "./query-params";
 import { sessionGuard } from "@/lib/auth/session-guard";
-import useSWR from "swr";
 
 const ORGANIZATIONS_BASEURL = `${siteConfig.env.backendServiceURL}/organizations`;
 const COACHING_RELATIONSHIPS_PATH = "coaching_relationships";
@@ -85,7 +85,7 @@ export function useBatchRelationshipActions(
   const url = orgId ? relationshipActionsUrl(orgId, params) : null;
   const isSingleRelationship = !!params.coaching_relationship_id;
 
-  const { data, error, isLoading, mutate } = useSWR<Action[]>(
+  const { data, error, isLoading, mutate } = useApiSWR<Action[]>(
     url,
     // SWR only invokes the fetcher when key (url) is non-null
     () =>

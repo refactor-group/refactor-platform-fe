@@ -1,5 +1,7 @@
 import { useState } from "react";
 import useSWR, { type Fetcher, type SWRConfiguration } from "swr";
+import { httpStatusOf } from "@/types/entity-api-error";
+import { TERMINAL_RETRY_STATUSES } from "@/lib/hooks/use-fail-fast-retry";
 
 // Narrower than SWR's `Key` (which also accepts functions, BigInts, and
 // arbitrary records). The render-time reset hashes the key with
@@ -16,7 +18,6 @@ type SupportedKey = string | readonly unknown[] | null;
 // sync timeout. Other callers can override per call site.
 const DEFAULT_MAX_RETRIES = 5;
 const DEFAULT_BASE_MS = 300;
-const DEFAULT_SKIP_STATUSES: readonly number[] = [401, 403];
 
 // `onErrorRetry` is owned by this hook — it implements the skip/backoff/
 // exhaustion policy. Allowing callers to override it would silently
@@ -55,7 +56,7 @@ export function useSwrWithBackoff<Data, K extends SupportedKey = SupportedKey>(
   const {
     maxRetries = DEFAULT_MAX_RETRIES,
     baseMs = DEFAULT_BASE_MS,
-    skipStatuses = DEFAULT_SKIP_STATUSES,
+    skipStatuses = TERMINAL_RETRY_STATUSES,
     ...swrConfig
   } = options;
 
@@ -77,9 +78,8 @@ export function useSwrWithBackoff<Data, K extends SupportedKey = SupportedKey>(
       swrConfig.onSuccess?.(d, k, cfg);
     },
     onErrorRetry: (err, _k, _cfg, revalidate, { retryCount }) => {
-      const status = (err as { response?: { status?: number } })?.response
-        ?.status;
-      if (status !== undefined && skipStatuses.includes(status)) {
+      const status = httpStatusOf(err);
+      if (status.some && skipStatuses.includes(status.val)) {
         setRetriesExhausted(true);
         return;
       }

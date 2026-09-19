@@ -174,6 +174,21 @@ export function getRelationshipsAsCoachee(
 }
 
 /**
+ * Returns every relationship the user participates in, in either role.
+ * Deduplicated by id: a user can hold both roles in the same relationship.
+ */
+export function getRelationshipsForUser(
+  userId: Id,
+  relationships: CoachingRelationshipWithUserNames[]
+): CoachingRelationshipWithUserNames[] {
+  const participants = [
+    ...getRelationshipsAsCoach(userId, relationships),
+    ...getRelationshipsAsCoachee(userId, relationships),
+  ];
+  return Array.from(new Map(participants.map((r) => [r.id, r])).values());
+}
+
+/**
  * Returns the display name of the other participant in a relationship
  * relative to the given user.
  */

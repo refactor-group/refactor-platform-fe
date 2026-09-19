@@ -1,4 +1,5 @@
-import useSWR, { type KeyedMutator } from "swr";
+import { useApiSWR } from "@/lib/hooks/use-api-swr";
+import { type KeyedMutator } from "swr";
 import { siteConfig } from "@/site.config";
 import { EntityApi } from "@/lib/api/entity-api";
 import type { Id } from "@/types/general";
@@ -50,7 +51,7 @@ export function useTranscription(sessionId: Id | null): UseTranscription {
     ? `${COACHING_SESSIONS_BASEURL}/${sessionId}/${TRANSCRIPTIONS_PATH}`
     : null;
 
-  const { data, error, isLoading, mutate } = useSWR<Transcription | null>(
+  const { data, error, isLoading, mutate } = useApiSWR<Transcription | null>(
     url,
     () => TranscriptionApi.get(sessionId!),
   );
@@ -78,7 +79,7 @@ export function useTranscriptionSegments(
       ? `${COACHING_SESSIONS_BASEURL}/${sessionId}/${TRANSCRIPTIONS_PATH}/${transcriptionId}/${SEGMENTS_PATH}`
       : null;
 
-  const { data, error, isLoading } = useSWR<TranscriptSegment[]>(
+  const { data, error, isLoading } = useApiSWR<TranscriptSegment[]>(
     url,
     () => TranscriptionApi.listNested(sessionId!, transcriptionId!),
     {

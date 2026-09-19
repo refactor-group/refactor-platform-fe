@@ -202,6 +202,7 @@ export const CoachingSessionApi = {
    * @param sortBy Optional field to sort by
    * @param sortOrder Optional sort order
    * @param relationshipId Optional coaching relationship ID to filter sessions
+   * @param organizationId Optional organization to scope sessions to
    * @returns Promise resolving to array of EnrichedCoachingSession objects
    */
   listForUser: async (
@@ -212,7 +213,8 @@ export const CoachingSessionApi = {
     sortBy?: CoachingSessionSortField,
     sortOrder?: ApiSortOrder,
     relationshipId?: Id,
-    tz?: string
+    tz?: string,
+    organizationId?: Id
   ): Promise<EnrichedCoachingSession[]> => {
     const params: Record<string, string> = {
       from_date: fromDate.toISODate() || '',
@@ -221,6 +223,10 @@ export const CoachingSessionApi = {
 
     if (relationshipId) {
       params.coaching_relationship_id = relationshipId;
+    }
+
+    if (organizationId) {
+      params.organization_id = organizationId;
     }
 
     if (include && include.length > 0) {
@@ -245,7 +251,8 @@ export const CoachingSessionApi = {
     fromDate: DateTime,
     toDate: DateTime,
     tz: string,
-    relationshipId?: Id
+    relationshipId?: Id,
+    organizationId?: Id
   ): Promise<CoachingSessionCountByMonth[]> => {
     const fromIso = fromDate.toISODate();
     const toIso = toDate.toISODate();
@@ -262,6 +269,9 @@ export const CoachingSessionApi = {
     };
     if (relationshipId) {
       params.coaching_relationship_id = relationshipId;
+    }
+    if (organizationId) {
+      params.organization_id = organizationId;
     }
 
     const url = `${USERS_BASEURL}/${userId}/coaching_sessions/counts`;
@@ -395,6 +405,9 @@ export const useCoachingSessionMutation = () => {
  * @param sortBy Optional field to sort by
  * @param sortOrder Optional sort order
  * @param relationshipId Optional coaching relationship ID to filter sessions
+ * @param organizationId Optional organization to scope sessions to. Part of the
+ *   SWR key, so switching organizations refetches instead of serving the
+ *   previous organization's cached list.
  * @returns Object containing enriched sessions, loading state, error, and refresh function
  */
 export const useEnrichedCoachingSessionsForUser = (
@@ -405,7 +418,8 @@ export const useEnrichedCoachingSessionsForUser = (
   sortBy?: CoachingSessionSortField,
   sortOrder?: ApiSortOrder,
   relationshipId?: Id,
-  tz?: string
+  tz?: string,
+  organizationId?: Id
 ) => {
   // Only create params when userId is valid - null params skips the SWR fetch
   const params = userId
@@ -415,6 +429,7 @@ export const useEnrichedCoachingSessionsForUser = (
         to_date: toDate.toISODate(),
         ...(include && include.length > 0 && { include: include.join(',') }),
         ...(relationshipId && { coaching_relationship_id: relationshipId }),
+        ...(organizationId && { organization_id: organizationId }),
         ...(sortBy && { sort_by: sortBy }),
         ...(sortOrder && { sort_order: sortOrder }),
         ...(tz && { tz }),
@@ -433,7 +448,8 @@ export const useEnrichedCoachingSessionsForUser = (
           sortBy,
           sortOrder,
           relationshipId,
-          tz
+          tz,
+          organizationId
         )
       : Promise.resolve([]);
 
@@ -462,6 +478,8 @@ export const useEnrichedCoachingSessionsForUser = (
  * @param toDate End date for the count window
  * @param tz IANA timezone for local-calendar month aggregation on the BE
  * @param relationshipId Optional relationship to narrow counts to one coachee
+ * @param organizationId Optional organization to scope counts to. Part of the
+ *   SWR key so an organization switch refetches rather than reusing the cache.
  * @returns counts, loading/error state, and a refresh fn. On error or 404,
  *   counts is an empty array — caller falls back to "no badge" rendering.
  */
@@ -470,7 +488,8 @@ export const useEnrichedCoachingSessionsForUserCounts = (
   fromDate: DateTime,
   toDate: DateTime,
   tz: string,
-  relationshipId?: Id
+  relationshipId?: Id,
+  organizationId?: Id
 ) => {
   const params = userId
     ? {
@@ -480,6 +499,7 @@ export const useEnrichedCoachingSessionsForUserCounts = (
         group_by: "month",
         tz,
         ...(relationshipId && { coaching_relationship_id: relationshipId }),
+        ...(organizationId && { organization_id: organizationId }),
       }
     : null;
 
@@ -494,7 +514,8 @@ export const useEnrichedCoachingSessionsForUserCounts = (
           fromDate,
           toDate,
           tz,
-          relationshipId
+          relationshipId,
+          organizationId
         )
       : Promise.resolve([]);
 

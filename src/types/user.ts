@@ -35,12 +35,20 @@ export interface User {
   display_name: string;
   timezone: string;
   default_coaching_session_duration_minutes: number;
-  /**
-   * @deprecated Use roles array with getUserRoleForOrganization() instead
-   */
-  role: Role;
   roles: UserRole[];
   invite_status: InviteStatus | null;
+}
+
+/**
+ * Narrow projection returned by the email lookup. Deliberately not `User`: the
+ * server sends only these fields, so reaching for roles or timezone on a lookup
+ * result fails at compile time instead of rendering undefined.
+ */
+export interface UserLookupResult {
+  id: Id;
+  first_name: string;
+  last_name: string;
+  email: string;
 }
 
 export interface NewUser {
@@ -50,6 +58,8 @@ export interface NewUser {
   email: string;
   password?: string;
   timezone: string;
+  /// Coach to assign in the same request. Omitted when no coach is chosen.
+  coach_id?: Id;
 }
 
 export interface NewUserPassword {
@@ -78,7 +88,6 @@ export function parseUser(data: unknown): User {
     timezone: data.timezone || "UTC",
     default_coaching_session_duration_minutes:
       data.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,
-    role: data.role,
     roles: data.roles,
     invite_status: data.invite_status,
   };
@@ -110,7 +119,6 @@ export function defaultUser(): User {
     display_name: "",
     timezone: "UTC",
     default_coaching_session_duration_minutes: FALLBACK_DURATION_MINUTES,
-    role: Role.User,
     roles: [],
     invite_status: null,
   };
@@ -181,6 +189,29 @@ export function isSuperAdmin(roles: UserRole[]): boolean {
   return roles.some(
     (r) => r.role === Role.SuperAdmin && r.organization_id == null
   );
+}
+
+/**
+ * Whether adding an *existing* account to an organization can do anything for
+ * this user.
+ *
+ * The lookup behind that flow returns users who belong to an organization the
+ * requester administers, and — since backend `feat/readd-former-organization-member`
+ * — also users with a prior recorded role change in one. That second half is why
+ * a single administered organization is enough: it makes former members findable,
+ * so an admin can recover someone they removed. Adding a *current* member is
+ * still rejected as a conflict. A SuperAdmin sees every account.
+ *
+ * Removals predating the backend's `user_role_changes` history are not
+ * recoverable this way and still need a SuperAdmin.
+ *
+ * @param roles - Every role assignment the user holds, across all organizations
+ * @returns true when the add-existing-member flow has candidates to offer
+ */
+export function canAddExistingMembers(roles: UserRole[]): boolean {
+  if (isSuperAdmin(roles)) return true;
+
+  return roles.some((r) => r.role === Role.Admin && r.organization_id != null);
 }
 
 /**

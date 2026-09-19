@@ -19,7 +19,7 @@ export default function ActionsLayout({
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <AppSidebar />
+        <AppSidebar productName={siteConfig.name} />
         <SidebarInset className="min-w-0">
           <SiteHeader />
           <main className="flex-1 p-6 min-w-0">{children}</main>

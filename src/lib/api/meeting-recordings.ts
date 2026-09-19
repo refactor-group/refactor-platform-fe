@@ -1,4 +1,5 @@
-import useSWR, { type KeyedMutator } from "swr";
+import { useApiSWR } from "@/lib/hooks/use-api-swr";
+import { type KeyedMutator } from "swr";
 import { siteConfig } from "@/site.config";
 import { EntityApi } from "@/lib/api/entity-api";
 import type { Id } from "@/types/general";
@@ -54,7 +55,7 @@ export function useMeetingRecording(sessionId: Id | null): UseMeetingRecording {
     ? `${COACHING_SESSIONS_BASEURL}/${sessionId}/meeting_recording`
     : null;
 
-  const { data, error, isLoading, mutate } = useSWR<MeetingRecording | null>(
+  const { data, error, isLoading, mutate } = useApiSWR<MeetingRecording | null>(
     url,
     () => MeetingRecordingApi.get(sessionId!),
     { revalidateOnFocus: true }

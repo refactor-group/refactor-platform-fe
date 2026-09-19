@@ -50,7 +50,7 @@ export const MOCK_USER_ID = 'user-123'
 /**
  * auth-store lives in localStorage with version 2.
  * `userSession` must be a full User object matching the User interface
- * (src/types/user.ts). The `role` field must match a Role enum value
+ * (src/types/user.ts). Each `roles[].role` must match a Role enum value
  * (Role.User = "User").
  */
 export const AUTH_STORE_STATE = {
@@ -63,7 +63,6 @@ export const AUTH_STORE_STATE = {
       last_name: 'User',
       display_name: 'Test User',
       timezone: 'America/Chicago',
-      role: 'User', // Must match Role.User enum value
       roles: [
         {
           id: 'role-1',
@@ -140,6 +139,27 @@ export const MULTIPLE_RELATIONSHIPS = [
 // ---------------------------------------------------------------------------
 
 /**
+ * Hide the Next.js dev overlay.
+ *
+ * Locally the suite runs against `next dev`, whose overlay portal is fixed to a
+ * corner of the viewport and swallows pointer events aimed at anything beneath
+ * it — toast action buttons especially. It only takes an error to appear (the
+ * mocked SSE endpoint is enough), so tests that pass in CI against the
+ * standalone server fail locally on a click that never lands.
+ */
+async function hideDevOverlay(page: Page) {
+  await page.addInitScript(() => {
+    const hide = () => {
+      const style = document.createElement('style')
+      style.textContent = 'nextjs-portal { display: none !important; }'
+      document.head.appendChild(style)
+    }
+    if (document.head) hide()
+    else document.addEventListener('DOMContentLoaded', hide)
+  })
+}
+
+/**
  * Inject auth + org state into localStorage and add a session cookie so the
  * app treats the browser as authenticated.
  *
@@ -151,6 +171,8 @@ export async function setupAuthentication(
   page: Page,
   context: BrowserContext
 ) {
+  await hideDevOverlay(page)
+
   const authJson = JSON.stringify(AUTH_STORE_STATE)
   const orgJson = JSON.stringify(ORGANIZATION_STORE_STATE)
 
@@ -231,11 +253,20 @@ export async function mockCommonApiRoutes(
     })
   })
 
-  await page.route('**/organizations', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: MOCK_ORGANIZATIONS }),
-    })
-  })
+  // Matched on pathname rather than a glob: the real request carries a
+  // `?user_id=` query that `**/organizations` does not match, which silently
+  // handed this endpoint to the catch-all above and told the app the user
+  // belonged to no organizations. A `**/organizations**` glob would fix that
+  // but would also swallow the `/organizations/{id}/coaching_relationships`
+  // sub-routes that individual specs mock.
+  await page.route(
+    (url) => url.pathname.endsWith('/organizations'),
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: MOCK_ORGANIZATIONS }),
+      })
+    }
+  )
 }

@@ -1,20 +1,26 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import { OrganizationSwitcher } from '@/components/ui/organization-switcher'
 import { TestProviders } from '@/test-utils/providers'
 
-// Mock the organization list hook
+const { ORGANIZATIONS } = vi.hoisted(() => ({
+  ORGANIZATIONS: [
+    { id: 'org-1', name: 'Acme Corp', logo: '/logo1.png' },
+    { id: 'org-2', name: 'Beta Inc', logo: '/logo2.png' },
+  ],
+}))
+
+// Mock the organization list hook. useOrganization resolves by id, as the real
+// hook does, so the trigger reflects whichever organization is selected.
 vi.mock('@/lib/api/organizations', () => ({
   useOrganizationList: () => ({
-    organizations: [
-      { id: 'org-1', name: 'Acme Corp', logo: '/logo1.png' },
-      { id: 'org-2', name: 'Beta Inc', logo: '/logo2.png' },
-    ],
+    organizations: ORGANIZATIONS,
     isLoading: false,
     isError: false,
   }),
-  useOrganization: () => ({
-    organization: null,
+  useOrganization: (id: string) => ({
+    organization: ORGANIZATIONS.find((org) => org.id === id) ?? null,
     isLoading: false,
     isError: false,
     refresh: vi.fn(),
@@ -28,7 +34,10 @@ vi.mock('@/components/ui/sidebar', () => ({
   useSidebar: () => ({
     state: SidebarState.Expanded,
     userIntent: SidebarState.Expanded,
-    isResponsiveOverride: false
+    isResponsiveOverride: false,
+    isMobile: false,
+    setOpenMobile: vi.fn(),
+    expand: vi.fn(),
   })
 }))
 
@@ -38,6 +47,14 @@ Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
   writable: true,
 })
 
+const getTrigger = () => screen.getByRole('button', { name: /organization/i })
+
+// The trigger shows the selected name too, so menu assertions must be scoped.
+async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(getTrigger())
+  return screen.findByRole('menu')
+}
+
 describe('OrganizationSwitcher', () => {
   it('should render with default state', () => {
     render(
@@ -46,79 +63,129 @@ describe('OrganizationSwitcher', () => {
       </TestProviders>
     )
 
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(getTrigger()).toBeInTheDocument()
   })
 
   it('should show organizations when clicked', async () => {
+    const user = userEvent.setup()
     render(
       <TestProviders>
         <OrganizationSwitcher />
       </TestProviders>
     )
 
-    fireEvent.click(screen.getByRole('combobox'))
+    const menu = await openMenu(user)
 
-    await waitFor(() => {
-      expect(screen.getByText('Acme Corp')).toBeInTheDocument()
-      expect(screen.getByText('Beta Inc')).toBeInTheDocument()
-    })
+    expect(within(menu).getByRole('menuitem', { name: /Acme Corp/ })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: /Beta Inc/ })).toBeInTheDocument()
   })
 
   it('should call onSelect when organization is selected', async () => {
+    const user = userEvent.setup()
     const onSelect = vi.fn()
-    
+
     render(
       <TestProviders>
         <OrganizationSwitcher onSelect={onSelect} />
       </TestProviders>
     )
 
-    fireEvent.click(screen.getByRole('combobox'))
-    
-    await waitFor(() => {
-      expect(screen.getByText('Acme Corp')).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByText('Acme Corp'))
+    const menu = await openMenu(user)
+    await user.click(within(menu).getByRole('menuitem', { name: /Acme Corp/ }))
 
     expect(onSelect).toHaveBeenCalledWith('org-1')
   })
 
-  it('should filter organizations based on search', async () => {
+  it('shows the selected organization\'s initials on the trigger avatar', async () => {
     render(
       <TestProviders>
         <OrganizationSwitcher />
       </TestProviders>
     )
 
-    fireEvent.click(screen.getByRole('combobox'))
-
-    const searchInput = screen.getByPlaceholderText('Search organization...')
-    fireEvent.change(searchInput, { target: { value: 'Acme' } })
-
+    // Auto-initializes to the first organization, Acme Corp.
+    const trigger = getTrigger()
     await waitFor(() => {
-      expect(screen.getByText('Acme Corp')).toBeInTheDocument()
-      expect(screen.queryByText('Beta Inc')).not.toBeInTheDocument()
+      expect(within(trigger).getByText('AC')).toBeInTheDocument()
     })
+    expect(within(trigger).queryByText('RG')).not.toBeInTheDocument()
   })
 
-  it('should handle keyboard navigation', async () => {
+  it('updates the trigger avatar initials when a different organization is selected', async () => {
+    const user = userEvent.setup()
     render(
       <TestProviders>
         <OrganizationSwitcher />
       </TestProviders>
     )
 
-    fireEvent.click(screen.getByRole('combobox'))
-
-    const searchInput = screen.getByPlaceholderText('Search organization...')
-    
-    // Test arrow down navigation
-    fireEvent.keyDown(searchInput, { key: 'ArrowDown' })
-    
-    // The first organization should be focused (implementation depends on actual focus behavior)
+    const trigger = getTrigger()
     await waitFor(() => {
-      expect(screen.getByText('Acme Corp')).toBeInTheDocument()
+      expect(within(trigger).getByText('AC')).toBeInTheDocument()
     })
+
+    const menu = await openMenu(user)
+    await user.click(within(menu).getByRole('menuitem', { name: /Beta Inc/ }))
+
+    await waitFor(() => {
+      expect(within(trigger).getByText('BI')).toBeInTheDocument()
+    })
+    expect(within(trigger).queryByText('AC')).not.toBeInTheDocument()
+  })
+
+  it('gives each organization in the list its own initials', async () => {
+    const user = userEvent.setup()
+    render(
+      <TestProviders>
+        <OrganizationSwitcher />
+      </TestProviders>
+    )
+
+    const menu = await openMenu(user)
+
+    expect(within(menu).getByText('AC')).toBeInTheDocument()
+    expect(within(menu).getByText('BI')).toBeInTheDocument()
+  })
+
+  it('opens from the keyboard and lands on the first organization', async () => {
+    const user = userEvent.setup()
+    render(
+      <TestProviders>
+        <OrganizationSwitcher />
+      </TestProviders>
+    )
+
+    getTrigger().focus()
+    await user.keyboard('{Enter}')
+
+    const menu = await screen.findByRole('menu')
+    const acme = within(menu).getByRole('menuitem', { name: /Acme Corp/ })
+    const beta = within(menu).getByRole('menuitem', { name: /Beta Inc/ })
+    await waitFor(() => {
+      expect(acme).toHaveFocus()
+    })
+
+    await user.keyboard('{ArrowDown}')
+    expect(beta).toHaveFocus()
+
+    await user.keyboard('{ArrowUp}')
+    expect(acme).toHaveFocus()
+  })
+
+  it('selects the focused organization on Enter', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    render(
+      <TestProviders>
+        <OrganizationSwitcher onSelect={onSelect} />
+      </TestProviders>
+    )
+
+    getTrigger().focus()
+    await user.keyboard('{Enter}')
+    await screen.findByRole('menu')
+    await user.keyboard('{ArrowDown}{Enter}')
+
+    expect(onSelect).toHaveBeenCalledWith('org-2')
   })
 })

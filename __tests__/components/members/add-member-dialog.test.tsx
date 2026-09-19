@@ -59,7 +59,12 @@ describe("AddMemberDialog write-freeze handling", () => {
       })
     );
     render(
-      <AddMemberDialog open onOpenChange={vi.fn()} onMemberAdded={vi.fn()} />
+      <AddMemberDialog
+        open
+        onOpenChange={vi.fn()}
+        onMemberAdded={vi.fn()}
+        productName="Refactor Coach"
+      />
     );
 
     fillForm();
@@ -75,7 +80,12 @@ describe("AddMemberDialog write-freeze handling", () => {
   it("shows the permission-denied message on a 403", async () => {
     mockCreateNested.mockRejectedValueOnce(apiError(403, { error: "forbidden" }));
     render(
-      <AddMemberDialog open onOpenChange={vi.fn()} onMemberAdded={vi.fn()} />
+      <AddMemberDialog
+        open
+        onOpenChange={vi.fn()}
+        onMemberAdded={vi.fn()}
+        productName="Refactor Coach"
+      />
     );
 
     fillForm();
@@ -91,7 +101,12 @@ describe("AddMemberDialog write-freeze handling", () => {
   it("falls back to the generic message for other errors", async () => {
     mockCreateNested.mockRejectedValueOnce(new Error("network"));
     render(
-      <AddMemberDialog open onOpenChange={vi.fn()} onMemberAdded={vi.fn()} />
+      <AddMemberDialog
+        open
+        onOpenChange={vi.fn()}
+        onMemberAdded={vi.fn()}
+        productName="Refactor Coach"
+      />
     );
 
     fillForm();

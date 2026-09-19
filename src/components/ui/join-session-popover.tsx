@@ -49,8 +49,7 @@ import {
 import { getDateTimeFromString } from "@/types/general";
 
 import {
-  getRelationshipsAsCoach,
-  getRelationshipsAsCoachee,
+  getRelationshipsForUser,
   getOtherPersonName,
   sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
@@ -198,20 +197,10 @@ function RelationshipSessionBrowser({
   const { relationships, isLoading: isLoadingRels } =
     useCoachingRelationshipList(currentOrganizationId ?? "");
 
-  // Filter to relationships where current user is a participant
-  const userRelationships = userId
-    ? [
-        ...getRelationshipsAsCoach(userId, relationships),
-        ...getRelationshipsAsCoachee(userId, relationships),
-      ]
-    : [];
-
-  // Deduplicate (a user could theoretically appear in both arrays if data is odd)
-  const uniqueRelationships = Array.from(
-    new Map(userRelationships.map((r) => [r.id, r])).values()
+  const sortedRelationships = sortRelationshipsByParticipantName(
+    userId ? getRelationshipsForUser(userId, relationships) : [],
+    userId
   );
-
-  const sortedRelationships = sortRelationshipsByParticipantName(uniqueRelationships, userId);
 
   // Only use the parent-provided value — no automatic fallback so the user
   // must explicitly pick a relationship to avoid confusion with Today's Sessions.

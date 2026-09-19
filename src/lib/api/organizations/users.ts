@@ -1,12 +1,16 @@
 // Interacts with the organizations/{organizationId}/users endpoints
 
+import { useSWRConfig } from "swr";
 import { Id } from "@/types/general";
 import { EntityApi } from "../entity-api";
-import { User, NewUser } from "@/types/user";
+import { User, NewUser, Role } from "@/types/user";
 import { ORGANIZATIONS_BASEURL } from "../organizations";
 
 const ORGANIZATIONS_USERS_BASEURL = (organizationId: Id) =>
   `${ORGANIZATIONS_BASEURL}/${organizationId}/users`;
+
+/// `coach_id` is omitted rather than null when no coach is chosen.
+type AttachRoleBody = { role: Role; coach_id?: Id };
 
 /**
  * API client for user-related operations in the scope of organizations.
@@ -78,6 +82,50 @@ export const UserApi = {
       {}
     );
   },
+
+  /**
+   * Grants an existing user membership of this organization with the given role.
+   * The account itself is shared, not copied.
+   */
+  attachExisting: async (
+    organizationId: Id,
+    userId: Id,
+    role: Role,
+    coachId?: Id
+  ): Promise<void> =>
+    EntityApi.createFn<AttachRoleBody, void>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`,
+      { role, ...(coachId ? { coach_id: coachId } : {}) }
+    ),
+
+  /**
+   * Changes a user's role within this organization.
+   *
+   * The returned user's `roles` array is filtered by the backend to this
+   * organization only, so it must never be merged into a cached user.
+   */
+  updateRole: async (
+    organizationId: Id,
+    userId: Id,
+    role: Role
+  ): Promise<User> =>
+    EntityApi.updateFn<{ role: Role }, User>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`,
+      { role }
+    ),
+
+  /**
+   * Removes a user's membership of this organization only. Their account and
+   * any other organizations are left untouched.
+   */
+  removeFromOrganization: async (
+    organizationId: Id,
+    userId: Id
+  ): Promise<void> => {
+    await EntityApi.deleteFn<null, void>(
+      `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`
+    );
+  },
 };
 
 /**
@@ -101,10 +149,12 @@ export const useUserList = (organizationId: Id) => {
 
 /**
  * Hook for user mutations.
- * Provides methods to create, update, and delete users.
+ * Provides methods to create, update, and delete users, plus the membership
+ * actions (attach an existing user, remove one) that sit outside standard CRUD.
  */
 export const useUserMutation = (organizationId: Id) => {
-  return EntityApi.useEntityMutation<NewUser, User>(
+  const { mutate } = useSWRConfig();
+  const mutation = EntityApi.useEntityMutation<NewUser, User>(
     ORGANIZATIONS_USERS_BASEURL(organizationId),
     {
       create: UserApi.create,
@@ -114,4 +164,37 @@ export const useUserMutation = (organizationId: Id) => {
       deleteNested: UserApi.deleteNested,
     }
   );
+
+  // Fire-and-forget by design: the mutation has already succeeded, so a failed
+  // background refresh must not surface as a rejected promise to the caller.
+  const invalidate = (id: Id) =>
+    EntityApi.invalidateEntityCache(
+      mutate,
+      ORGANIZATIONS_USERS_BASEURL(id)
+    ).catch((error) => {
+      console.error("Failed to refresh members after a membership change:", error);
+    });
+
+  return {
+    ...mutation,
+    attachExisting: async (
+      orgId: Id,
+      userId: Id,
+      role: Role,
+      coachId?: Id
+    ) => {
+      await UserApi.attachExisting(orgId, userId, role, coachId);
+      invalidate(orgId);
+    },
+    // Returns void deliberately: the response's org-filtered `roles` must not
+    // reach any cache, so refresh comes from invalidation alone.
+    updateRole: async (orgId: Id, userId: Id, role: Role): Promise<void> => {
+      await UserApi.updateRole(orgId, userId, role);
+      invalidate(orgId);
+    },
+    removeFromOrganization: async (orgId: Id, userId: Id) => {
+      await UserApi.removeFromOrganization(orgId, userId);
+      invalidate(orgId);
+    },
+  };
 };

@@ -43,6 +43,7 @@ import { UserActionsScope } from "@/types/assigned-actions";
 export interface BucketsContainerProps {
   userId: Id;
   relationshipFilter: Id | undefined;
+  organizationId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
   mountNow: DateTime;
@@ -74,6 +75,7 @@ const WEEK_INCLUDES: CoachingSessionInclude[] = [];
 export function BucketsContainer({
   userId,
   relationshipFilter,
+  organizationId,
   viewerId,
   userTimezone,
   mountNow,
@@ -151,7 +153,8 @@ export function BucketsContainer({
     fetchRangeStart,
     fetchRangeEnd,
     userTimezone,
-    relationshipFilter
+    relationshipFilter,
+    organizationId
   );
 
   type ShowMoreDirection = "later" | "earlier";
@@ -259,7 +262,8 @@ export function BucketsContainer({
     undefined,
     undefined,
     relationshipFilter,
-    userTimezone
+    userTimezone,
+    organizationId
   );
   const { thisWeekUpcomingCount, thisWeekPreviousCount } = useMemo(() => {
     const all = weekSessions ?? [];
@@ -374,6 +378,7 @@ export function BucketsContainer({
             now={now}
             userId={userId}
             relationshipId={relationshipFilter}
+            organizationId={organizationId}
             viewerId={viewerId}
             userTimezone={userTimezone}
             selectedId={selectedId}
@@ -388,6 +393,7 @@ export function BucketsContainer({
             now={now}
             userId={userId}
             relationshipId={relationshipFilter}
+            organizationId={organizationId}
             viewerId={viewerId}
             userTimezone={userTimezone}
             selectedId={selectedId}
@@ -405,6 +411,7 @@ export function BucketsContainer({
             mountNow={mountNow}
             userId={userId}
             relationshipId={relationshipFilter}
+            organizationId={organizationId}
             viewerId={viewerId}
             userTimezone={userTimezone}
             selectedId={selectedId}
@@ -430,6 +437,7 @@ export function BucketsContainer({
             now={now}
             userId={userId}
             relationshipId={relationshipFilter}
+            organizationId={organizationId}
             viewerId={viewerId}
             userTimezone={userTimezone}
             selectedId={selectedId}
@@ -444,6 +452,7 @@ export function BucketsContainer({
             now={now}
             userId={userId}
             relationshipId={relationshipFilter}
+            organizationId={organizationId}
             viewerId={viewerId}
             userTimezone={userTimezone}
             selectedId={selectedId}
@@ -461,6 +470,7 @@ export function BucketsContainer({
             mountNow={mountNow}
             userId={userId}
             relationshipId={relationshipFilter}
+            organizationId={organizationId}
             viewerId={viewerId}
             userTimezone={userTimezone}
             recentlyAddedKeys={recentlyAddedKeys}

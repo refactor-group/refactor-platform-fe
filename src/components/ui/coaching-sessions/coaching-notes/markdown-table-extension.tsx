@@ -238,7 +238,7 @@ const renderTableMarkdown = (
 export const TableWithMarkdown = Table.extend({
   addOptions() {
     return {
-      ...this.parent?.(),
+      ...(this.parent?.() ?? Table.options),
       parseMarkdown: parseTableMarkdown,
       renderMarkdown: renderTableMarkdown,
       markdownTokenName: "table",

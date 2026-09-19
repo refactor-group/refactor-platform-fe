@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { BarChart3, Building2, CheckSquare, ChevronRight, Gift, Home, Settings, Users } from "lucide-react";
+import { Building2, CheckSquare, ChevronRight, Gift, Home, Settings, Users } from "lucide-react";
 
 import { OrganizationSwitcher } from "./organization-switcher";
 import { Icons } from "@/components/ui/icons";
@@ -46,7 +46,11 @@ const menuButtonStyles = {
   iconWrapper: "flex items-center justify-center w-9",
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  productName: string;
+}
+
+export function AppSidebar({ productName, ...props }: AppSidebarProps) {
   const { currentOrganizationId } = useCurrentOrganization();
   const currentUserRoleState = useCurrentUserRole();
   const isSuperAdmin = useIsSuperAdmin();
@@ -82,7 +86,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible={SidebarCollapsible.Icon} {...props}>
       <SidebarHeader className="h-16 flex flex-col justify-between pb-0">
-        {/* Logo and Refactor text */}
         <div className="flex items-center px-3 h-full transition-all duration-200 group-data-[collapsible=icon]:justify-center">
           <Link href="/dashboard" className="flex items-center">
             <div
@@ -94,11 +97,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               )}
             >
               <Icons.refactor_logo className="h-5 w-5" />
-              <span className="sr-only">Refactor</span>
+              <span className="sr-only">{productName}</span>
             </div>
           </Link>
           <h2 className="text-lg font-semibold ml-2 transition-all duration-200 group-data-[collapsible=icon]:hidden">
-            Refactor
+            {productName}
           </h2>
         </div>
 
@@ -106,20 +109,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <div className="border-b border-sidebar-border w-full" />
       </SidebarHeader>
 
-      {/* Organization Switcher */}
       <SidebarContent className="pt-2">
-        <SidebarGroup className="pb-2">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <OrganizationSwitcher onSelect={handleOrgChange} />
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
         {/* Main navigation */}
         <SidebarGroup>
           <SidebarGroupContent>
@@ -245,26 +235,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {/* System status */}
+      <SidebarSeparator />
+
+      {/* Organization switcher */}
       <SidebarGroup>
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="System status"
-                className={cn(
-                  menuButtonStyles.button,
-                  menuButtonStyles.buttonCollapsed
-                )}
-              >
-                <Link href="/status">
-                  <span className={menuButtonStyles.iconWrapper}>
-                    <BarChart3 className="h-4 w-4" />
-                  </span>
-                  <span className="group-data-[collapsible=icon]:hidden">System status</span>
-                </Link>
-              </SidebarMenuButton>
+              <OrganizationSwitcher onSelect={handleOrgChange} />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>

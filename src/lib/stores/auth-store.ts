@@ -13,6 +13,7 @@ interface AuthState {
 }
 
 interface AuthActions {
+  syncUserSession: (userId: Id, userSession: UserSession) => void;
   login: (userId: Id, userSession: UserSession) => void;
   logout: () => void;
   setTimezone: (timezone: string) => void;
@@ -39,8 +40,15 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
         (set, get) => ({
           ...initState,
 
-          login: (userId, userSession) => {
+          // Only `POST /login` and `GET /users/{id}` for the signed-in user are
+          // valid sources: they alone return every role the user holds. An
+          // org-scoped payload filters `roles` to one organization, so seeding
+          // from one would erase the user's other memberships — persisted.
+          syncUserSession: (userId, userSession) => {
             set({ isLoggedIn: true, userId, userSession });
+          },
+          login: (userId, userSession) => {
+            get().syncUserSession(userId, userSession);
           },
           logout: () => {
             set(defaultInitState);

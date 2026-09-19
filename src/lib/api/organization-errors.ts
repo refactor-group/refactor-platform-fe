@@ -38,6 +38,36 @@ export const organizationArchivedMessage = (error: unknown): string | null =>
     "This organization is archived and can't accept new changes."
   );
 
+/// Shown both by the lookup pre-check and by the server's 409, so the two
+/// paths cannot drift apart.
+export const USER_ALREADY_IN_ORGANIZATION_MESSAGE =
+  "This user is already a member of this organization.";
+
+export const userAlreadyInOrganizationMessage = (
+  error: unknown
+): string | null =>
+  orgErrorMessage(
+    error,
+    "user_already_in_organization",
+    USER_ALREADY_IN_ORGANIZATION_MESSAGE
+  );
+
+export const lastOrganizationAdminMessage = (error: unknown): string | null =>
+  orgErrorMessage(
+    error,
+    "last_organization_admin",
+    "This user is the only admin of this organization. Assign another admin before removing them."
+  );
+
+export const userBelongsToMultipleOrganizationsMessage = (
+  error: unknown
+): string | null =>
+  orgErrorMessage(
+    error,
+    "user_belongs_to_multiple_organizations",
+    "This user belongs to other organizations. Remove them from this organization instead of deleting their account."
+  );
+
 /** Longest organization name the backend accepts (characters, trimmed). */
 export const ORGANIZATION_NAME_MAX_LENGTH = 255;
 
@@ -57,6 +87,25 @@ export const organizationNameInvalidMessage = (error: unknown): string | null =>
     return typeof error.data?.message === "string"
       ? error.data.message
       : "Please enter a valid organization name.";
+  }
+  return null;
+};
+
+/**
+ * A `422 validation_error` from a membership role change — the backend rejects
+ * granting SuperAdmin within an organization. Returns the backend's message,
+ * else null. `validation_error` is a SHARED discriminator, so only call this
+ * from the role-change flow (never treat it as a global org error).
+ */
+export const roleChangeInvalidMessage = (error: unknown): string | null => {
+  if (
+    EntityApiError.isEntityApiError(error) &&
+    error.status === 422 &&
+    error.data?.error === "validation_error"
+  ) {
+    return typeof error.data?.message === "string"
+      ? error.data.message
+      : "That role can't be assigned in this organization.";
   }
   return null;
 };

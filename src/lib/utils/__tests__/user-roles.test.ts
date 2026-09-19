@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { getUserDisplayRoles, getUserCoaches } from '../user-roles';
+import {
+  getUserDisplayRoles,
+  getUserCoaches,
+  getOrganizationMembershipRole,
+} from '../user-roles';
+import { Some, None } from '@/types/option';
 import { User, Role } from '@/types/user';
 import { CoachingRelationshipWithUserNames } from '@/types/coaching_relationship';
 import { DateTime } from 'ts-luxon';
@@ -15,7 +20,6 @@ describe('getUserDisplayRoles', () => {
     last_name: 'User',
     display_name: 'Test User',
     timezone: 'UTC',
-    role: Role.User, // deprecated field
     roles: roles.map((r, idx) => ({
       id: `role-${idx}`,
       user_id: 'user-1',
@@ -49,11 +53,12 @@ describe('getUserDisplayRoles', () => {
     expect(roles).toEqual(['Admin']);
   });
 
-  it('should return SuperAdmin role when organization_id is null', () => {
+  it('should return SuperAdmin role when organization_id is null, labelled not raw', () => {
     const user = createUser([{ role: Role.SuperAdmin, organization_id: null }]);
     const roles = getUserDisplayRoles(user, organizationId, []);
 
-    expect(roles).toEqual(['SuperAdmin']);
+    expect(roles).toEqual(['Super Admin']);
+    expect(roles).not.toContain('SuperAdmin');
   });
 
   it('should combine organization role and coaching roles', () => {
@@ -72,7 +77,15 @@ describe('getUserDisplayRoles', () => {
     ];
     const roles = getUserDisplayRoles(user, organizationId, relationships);
 
-    expect(roles).toEqual(['Coach', 'Coachee', 'User']);
+    expect(roles).toEqual(['Coach', 'Coachee', 'Member']);
+  });
+
+  it('renders Role.User as "Member", the word the rest of the UI uses', () => {
+    const user = createUser([{ role: Role.User, organization_id: organizationId }]);
+    const roles = getUserDisplayRoles(user, organizationId, []);
+
+    expect(roles).toEqual(['Member']);
+    expect(roles).not.toContain('User');
   });
 
   it('should return roles in alphabetical order', () => {
@@ -86,7 +99,7 @@ describe('getUserDisplayRoles', () => {
     ];
     const roles = getUserDisplayRoles(user, organizationId, relationships);
 
-    expect(roles).toEqual(['Admin', 'Coach', 'Coachee', 'SuperAdmin']);
+    expect(roles).toEqual(['Admin', 'Coach', 'Coachee', 'Super Admin']);
   });
 
   it('should not duplicate roles', () => {
@@ -112,6 +125,64 @@ describe('getUserDisplayRoles', () => {
     const roles = getUserDisplayRoles(user, organizationId, []);
 
     expect(roles).toEqual([]);
+  });
+});
+
+describe('getOrganizationMembershipRole', () => {
+  const now = DateTime.now();
+  const organizationId = 'org-123';
+
+  const createUser = (
+    roles: Array<{ role: Role; organization_id: string | null }>
+  ): User => ({
+    id: 'user-1',
+    email: 'test@example.com',
+    first_name: 'Test',
+    last_name: 'User',
+    display_name: 'Test User',
+    timezone: 'UTC',
+    roles: roles.map((r, idx) => ({
+      id: `role-${idx}`,
+      user_id: 'user-1',
+      role: r.role,
+      organization_id: r.organization_id,
+      created_at: now.toISO(),
+      updated_at: now.toISO(),
+    })),
+  });
+
+  it('returns the membership role of a plain organization member', () => {
+    const user = createUser([{ role: Role.User, organization_id: organizationId }]);
+
+    expect(getOrganizationMembershipRole(user, organizationId)).toEqual(
+      Some(Role.User)
+    );
+  });
+
+  it('returns the role for the requested organization, not another one', () => {
+    const user = createUser([
+      { role: Role.Admin, organization_id: 'other-org' },
+      { role: Role.User, organization_id: organizationId },
+    ]);
+
+    expect(getOrganizationMembershipRole(user, organizationId)).toEqual(
+      Some(Role.User)
+    );
+    expect(getOrganizationMembershipRole(user, 'other-org')).toEqual(
+      Some(Role.Admin)
+    );
+  });
+
+  it('returns None for a global SuperAdmin with no membership row', () => {
+    const user = createUser([{ role: Role.SuperAdmin, organization_id: null }]);
+
+    expect(getOrganizationMembershipRole(user, organizationId)).toEqual(None);
+  });
+
+  it('returns None for a non-member', () => {
+    const user = createUser([{ role: Role.User, organization_id: 'other-org' }]);
+
+    expect(getOrganizationMembershipRole(user, organizationId)).toEqual(None);
   });
 });
 

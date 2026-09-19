@@ -3,7 +3,15 @@
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import { EntityApi } from "./entity-api";
-import { User, NewUserPassword, defaultUser } from "@/types/user";
+import { EntityApiError } from "@/types/entity-api-error";
+import {
+  User,
+  NewUserPassword,
+  UserLookupResult,
+  defaultUser,
+} from "@/types/user";
+import { buildQueryString } from "./query-params";
+import { type Option, Some, None } from "@/types/option";
 
 export const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`;
 
@@ -12,10 +20,19 @@ export const USERS_BASEURL: string = `${siteConfig.env.backendServiceURL}/users`
  */
 export const UserApi = {
   /**
-   * Fetches a list of users.
+   * Looks up a single user by exact (case-insensitive) email address.
+   *
+   * @param email The email address to look for
+   * @returns The matching user, or null when there is no match or the caller
+   *   may not see them. The backend makes those two cases indistinguishable so
+   *   the endpoint can't be used to enumerate accounts.
    */
-  list: async (): Promise<User[]> =>
-    EntityApi.listFn<User, User>(USERS_BASEURL, {}),
+  lookupByEmail: async (email: string): Promise<Option<UserLookupResult>> => {
+    const results = await EntityApi.getFn<UserLookupResult[]>(
+      `${USERS_BASEURL}${buildQueryString({ email })}`
+    );
+    return results.length > 0 ? Some(results[0]) : None;
+  },
 
   /**
    * Fetches a single user by ID.
@@ -58,21 +75,6 @@ export const UserApi = {
   deleteNested: async (_entityId: Id, _userId: Id): Promise<User> => {
     throw new Error("Delete nested operation not implemented");
   },
-};
-
-/**
- * Hook for fetching a list of users.
- */
-export const useUserList = () => {
-  const { entities, isLoading, isError, refresh } =
-    EntityApi.useEntityList<User>(USERS_BASEURL, () => UserApi.list());
-
-  return {
-    users: entities,
-    isLoading,
-    isError,
-    refresh,
-  };
 };
 
 /**
@@ -120,3 +122,18 @@ export const useUserPasswordMutation = () => {
       EntityApi.updateFn<NewUserPassword, User>(`${USERS_BASEURL}/${id}/password`, data),
   });
 };
+
+/** Ours, not the backend's: its 429 prose names neither the cause nor what to do. */
+export const USER_LOOKUP_RATE_LIMITED_MESSAGE =
+  "You've made too many searches. Wait a few minutes and try again.";
+
+/**
+ * The lookup throttle (board contract `UserLookupEndpoint` v2), matched on
+ * status alone. The `user_lookup_rate_limited` slug adds nothing, since the
+ * throttle is this endpoint's only 429, and the platform's other 429 answers in
+ * plain text with no slug at all.
+ */
+export const userLookupRateLimitedMessage = (error: unknown): string | null =>
+  EntityApiError.isEntityApiError(error) && error.status === 429
+    ? USER_LOOKUP_RATE_LIMITED_MESSAGE
+    : null;

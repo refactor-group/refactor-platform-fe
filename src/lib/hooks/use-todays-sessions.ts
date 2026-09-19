@@ -7,6 +7,7 @@ import {
 } from "@/lib/api/coaching-sessions";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useInterval } from "@/lib/hooks/use-interval";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 
 /**
  * Hook to fetch today's coaching sessions.
@@ -31,6 +32,7 @@ export function useTodaysSessions(
 
   const userId = userSession?.id;
   const timezone = userSession?.timezone || getBrowserTimezone();
+  const { currentOrganizationId } = useCurrentOrganization();
 
   // Force re-render every 30 seconds to update urgency messages in real-time
   const [tick, setTick] = useState(0);
@@ -53,14 +55,20 @@ export function useTodaysSessions(
   // Use UTC dates for backend filtering since backend stores timestamps in UTC
   // TypeScript non-null assertion: middleware guarantees userId exists on protected routes
   // If userId is briefly undefined during hydration, SWR will show loading state
+  // A null user id skips the fetch. Waiting for the organization matters as much
+  // as sending it: fetching first returns every organization's sessions and the
+  // cards render them before the scoped result replaces them.
   const { enrichedSessions, isLoading, isError, refresh } =
     useEnrichedCoachingSessionsForUser(
-      userId!,
+      currentOrganizationId ? userId! : null,
       startOfDayUTC,
       endOfDayUTC,
       include,
       "date",
-      "asc"
+      "asc",
+      undefined,
+      undefined,
+      currentOrganizationId ?? undefined
     );
 
   return {

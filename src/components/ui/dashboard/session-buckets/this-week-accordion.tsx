@@ -30,6 +30,7 @@ export interface ThisWeekAccordionProps {
   now: DateTime;
   userId: Id;
   relationshipId: Id | undefined;
+  organizationId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
   selectedId: Id | undefined;
@@ -50,6 +51,7 @@ export function ThisWeekAccordion({
   now,
   userId,
   relationshipId,
+  organizationId,
   viewerId,
   userTimezone,
   selectedId,
@@ -76,7 +78,8 @@ export function ThisWeekAccordion({
     "date",
     isPastView ? "desc" : "asc",
     relationshipId,
-    userTimezone
+    userTimezone,
+    organizationId
   );
 
   const filteredSessions = useMemo(() => {

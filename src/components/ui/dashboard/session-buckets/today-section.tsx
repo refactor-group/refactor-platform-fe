@@ -26,6 +26,7 @@ export interface TodaySectionProps {
   now: DateTime;
   userId: Id;
   relationshipId: Id | undefined;
+  organizationId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
   selectedId: Id | undefined;
@@ -46,6 +47,7 @@ export function TodaySection({
   now,
   userId,
   relationshipId,
+  organizationId,
   viewerId,
   userTimezone,
   selectedId,
@@ -72,7 +74,8 @@ export function TodaySection({
     "date",
     isPastView ? "desc" : "asc",
     relationshipId,
-    userTimezone
+    userTimezone,
+    organizationId
   );
 
   const visibleSessions = useMemo(() => {
