@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   blockedReasonFor,
+  downloadLabelFor,
   downloadScopeFor,
 } from "@/lib/transcript/speaker-roles";
 import { None, Some } from "@/types/option";
@@ -22,10 +23,12 @@ describe("downloadScopeFor", () => {
     expect(downloadScopeFor("Jim H", SPEAKERS, true)).toEqual({
       kind: "role",
       role: SpeakerRole.Coach,
+      label: "Jim H",
     });
     expect(downloadScopeFor("Caleb Bourg", SPEAKERS, true)).toEqual({
       kind: "role",
       role: SpeakerRole.Coachee,
+      label: "Caleb Bourg",
     });
   });
 
@@ -58,7 +61,7 @@ describe("blockedReasonFor", () => {
   it("allows the downloadable scopes", () => {
     expect(blockedReasonFor({ kind: "all" })).toEqual(None);
     expect(
-      blockedReasonFor({ kind: "role", role: SpeakerRole.Coach })
+      blockedReasonFor({ kind: "role", role: SpeakerRole.Coach, label: "Jim H" })
     ).toEqual(None);
   });
 
@@ -76,5 +79,36 @@ describe("blockedReasonFor", () => {
   it("never names the speaker or the backend in user-facing copy", () => {
     const reason = blockedReasonFor({ kind: "unmapped", label: "Speaker A" });
     expect(reason.some && reason.val).not.toContain("Speaker A");
+  });
+});
+
+describe("downloadLabelFor", () => {
+  it("stays generic for the unfiltered scope", () => {
+    expect(downloadLabelFor({ kind: "all" })).toBe("Download transcript");
+  });
+
+  it("names the speaker the panel is filtered to", () => {
+    expect(
+      downloadLabelFor({ kind: "role", role: SpeakerRole.Coach, label: "Jim H" })
+    ).toBe("Download Jim H's transcript");
+  });
+
+  it("uses the label verbatim, including punctuation in a display name", () => {
+    expect(
+      downloadLabelFor({
+        kind: "role",
+        role: SpeakerRole.Coach,
+        label: "Jim (Refactor Group)",
+      })
+    ).toBe("Download Jim (Refactor Group)'s transcript");
+  });
+
+  it("stays generic for scopes that cannot be downloaded", () => {
+    expect(downloadLabelFor({ kind: "unmapped", label: "J. Hodapp" })).toBe(
+      "Download transcript"
+    );
+    expect(downloadLabelFor({ kind: "speakers-unavailable" })).toBe(
+      "Download transcript"
+    );
   });
 });

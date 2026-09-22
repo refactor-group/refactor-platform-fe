@@ -28,7 +28,11 @@ function renderButton(scope: DownloadScope) {
 }
 
 const ALL: DownloadScope = { kind: "all" };
-const COACH: DownloadScope = { kind: "role", role: SpeakerRole.Coach };
+const COACH: DownloadScope = {
+  kind: "role",
+  role: SpeakerRole.Coach,
+  label: "Jim H",
+};
 const UNMAPPED: DownloadScope = { kind: "unmapped", label: "Speaker A" };
 
 describe("TranscriptDownloadButton — enabled states", () => {
@@ -40,10 +44,10 @@ describe("TranscriptDownloadButton — enabled states", () => {
     expect(button).toHaveAttribute("aria-disabled", "false");
   });
 
-  it("is enabled for a mapped role", () => {
+  it("names the filtered speaker in the label, so the control says what it produces", () => {
     renderButton(COACH);
     expect(
-      screen.getByRole("button", { name: "Download transcript" })
+      screen.getByRole("button", { name: "Download Jim H's transcript" })
     ).toHaveAttribute("aria-disabled", "false");
   });
 });

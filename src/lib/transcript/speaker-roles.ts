@@ -11,7 +11,7 @@ import type { Speaker, SpeakerRole } from "@/types/transcription";
  */
 export type DownloadScope =
   | { kind: "all" }
-  | { kind: "role"; role: SpeakerRole }
+  | { kind: "role"; role: SpeakerRole; label: string }
   | { kind: "unmapped"; label: string }
   | { kind: "speakers-unavailable" };
 
@@ -32,7 +32,9 @@ export function downloadScopeFor(
   // Statement rather than a ternary on `match?.role.some` so the Option
   // discriminant narrows `role` for the `.val` read.
   const match = speakers.find((speaker) => speaker.label === selectedValue);
-  if (match && match.role.some) return { kind: "role", role: match.role.val };
+  if (match && match.role.some) {
+    return { kind: "role", role: match.role.val, label: match.label };
+  }
   return { kind: "unmapped", label: selectedValue };
 }
 
@@ -51,4 +53,15 @@ export function blockedReasonFor(scope: DownloadScope): Option<string> {
     case "role":
       return None;
   }
+}
+
+/**
+ * The download action's label, used for both the tooltip and the accessible
+ * name. Names the speaker when the panel is filtered to one, so the control
+ * says what it will actually produce.
+ */
+export function downloadLabelFor(scope: DownloadScope): string {
+  return scope.kind === "role"
+    ? `Download ${scope.label}'s transcript`
+    : "Download transcript";
 }

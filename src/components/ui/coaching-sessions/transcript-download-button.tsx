@@ -17,6 +17,7 @@ import {
 import { saveBlobAs } from "@/lib/download-file";
 import {
   blockedReasonFor,
+  downloadLabelFor,
   type DownloadScope,
 } from "@/lib/transcript/speaker-roles";
 import type { Id } from "@/types/general";
@@ -45,7 +46,9 @@ export function TranscriptDownloadButton({
   const blockedReason = blockedReasonFor(scope);
   const isDownloading = state.kind === "downloading";
   const isBlocked = blockedReason.some || isDownloading;
-  const label = blockedReason.some ? blockedReason.val : "Download transcript";
+  const label = blockedReason.some
+    ? blockedReason.val
+    : downloadLabelFor(scope);
 
   async function handleClick() {
     setState({ kind: "downloading" });
