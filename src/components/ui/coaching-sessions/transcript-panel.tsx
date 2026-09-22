@@ -16,10 +16,12 @@ import {
   TranscriptEmptyState,
   type TranscriptEmptyStateVariant,
 } from "@/components/ui/coaching-sessions/transcript-empty-state";
+import { TranscriptDownloadButton } from "@/components/ui/coaching-sessions/transcript-download-button";
 import { TranscriptSearch } from "@/components/ui/coaching-sessions/transcript-search";
 import { TranscriptSpeakerFilter } from "@/components/ui/coaching-sessions/transcript-speaker-filter";
 import { groupBubbles } from "@/lib/transcript/group-bubbles";
 import { buildSpeakerStyles, speakerStyleFor } from "@/lib/transcript/speakers";
+import { downloadScopeFor } from "@/lib/transcript/speaker-roles";
 import { useSpeakerFilter } from "@/lib/hooks/use-speaker-filter";
 import { useTranscriptSearch } from "@/lib/hooks/use-transcript-search";
 import type { Transcription, TranscriptSegment } from "@/types/transcription";
@@ -27,7 +29,11 @@ import { TranscriptionStatus } from "@/types/transcription";
 import type { MeetingRecording } from "@/types/meeting-recording";
 import { MeetingRecordingStatus } from "@/types/meeting-recording";
 import { useMeetingRecording } from "@/lib/api/meeting-recordings";
-import { useTranscription, useTranscriptionSegments } from "@/lib/api/transcriptions";
+import {
+  useTranscription,
+  useTranscriptionSegments,
+  useTranscriptionSpeakers,
+} from "@/lib/api/transcriptions";
 import type { Id } from "@/types/general";
 
 interface TranscriptPanelProps {
@@ -99,8 +105,10 @@ export function TranscriptPanel({
 
   return (
     <Card className="flex flex-col h-full overflow-clip shadow-sm min-h-0">
-      {hasSegments ? (
+      {hasSegments && transcriptionId ? (
         <TranscriptPanelWithData
+          sessionId={sessionId}
+          transcriptionId={transcriptionId}
           segments={segments}
           isMaximized={isMaximized}
           onToggleMaximize={onToggleMaximize}
@@ -125,6 +133,8 @@ export function TranscriptPanel({
 // ── Main orchestrator (data-driven) ───────────────────────────────────
 
 interface TranscriptPanelWithDataProps {
+  sessionId: Id;
+  transcriptionId: Id;
   segments: readonly TranscriptSegment[];
   isMaximized: boolean;
   onToggleMaximize: () => void;
@@ -132,6 +142,8 @@ interface TranscriptPanelWithDataProps {
 }
 
 function TranscriptPanelWithData({
+  sessionId,
+  transcriptionId,
   segments,
   isMaximized,
   onToggleMaximize,
@@ -153,12 +165,27 @@ function TranscriptPanelWithData({
     [filter.visibleSegments, segments]
   );
 
+  // The panel filters on raw labels; the download endpoint takes a
+  // coach/coachee enum. This is the only bridge between the two.
+  const { speakers, isLoaded } = useTranscriptionSpeakers(
+    sessionId,
+    transcriptionId
+  );
+  const downloadScope = downloadScopeFor(filter.value, speakers, isLoaded);
+
   return (
     <>
       <TranscriptHeader
         isMaximized={isMaximized}
         onToggleMaximize={onToggleMaximize}
         onClose={onClose}
+        download={
+          <TranscriptDownloadButton
+            sessionId={sessionId}
+            transcriptionId={transcriptionId}
+            scope={downloadScope}
+          />
+        }
       />
       <div className="shrink-0 px-4 pt-3 pb-2 space-y-2 border-b border-border/60">
         <TranscriptSearch
@@ -213,12 +240,15 @@ interface TranscriptHeaderProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
+  /** Optional download action. Absent on the empty-state path. */
+  download?: React.ReactNode;
 }
 
 function TranscriptHeader({
   isMaximized,
   onToggleMaximize,
   onClose,
+  download,
 }: TranscriptHeaderProps) {
   return (
     <CardHeader className="p-4 pb-3 shrink-0 border-b border-border/60">
@@ -228,6 +258,7 @@ function TranscriptHeader({
           isMaximized={isMaximized}
           onToggleMaximize={onToggleMaximize}
           onClose={onClose}
+          download={download}
         />
       </div>
     </CardHeader>
@@ -240,17 +271,22 @@ interface TranscriptPanelActionsProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
+  download?: React.ReactNode;
 }
 
 function TranscriptPanelActions({
   isMaximized,
   onToggleMaximize,
   onClose,
+  download,
 }: TranscriptPanelActionsProps) {
   const maximizeLabel = isMaximized ? "Restore panels" : "Maximize transcript";
   return (
     <TooltipProvider>
       <div className="flex items-center gap-1 shrink-0">
+        {/* Inside this provider, not a sibling of it: Radix Tooltip throws
+            without a TooltipProvider ancestor. */}
+        {download}
         <IconButton
           label={maximizeLabel}
           onClick={onToggleMaximize}
