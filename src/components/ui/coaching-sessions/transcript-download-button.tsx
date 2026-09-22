@@ -16,12 +16,12 @@ import {
   TranscriptionApi,
   type DownloadFailure,
 } from "@/lib/api/transcriptions";
-import { saveBlobAs } from "@/lib/transcript/download-file";
+import { saveBlobAs } from "@/lib/utils/transcript-download-file";
 import {
   blockedReasonFor,
   downloadLabelFor,
   type DownloadScope,
-} from "@/lib/transcript/speaker-roles";
+} from "@/lib/utils/transcript-speaker-roles";
 import type { Id } from "@/types/general";
 
 interface TranscriptDownloadButtonProps {

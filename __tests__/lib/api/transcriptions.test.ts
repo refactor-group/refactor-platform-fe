@@ -3,7 +3,7 @@ import axios from "axios";
 
 import { TranscriptionApi, readErrorSlug } from "@/lib/api/transcriptions";
 import { sessionGuard } from "@/lib/auth/session-guard";
-import type { DownloadScope } from "@/lib/transcript/speaker-roles";
+import type { DownloadScope } from "@/lib/utils/transcript-speaker-roles";
 import { None, Some } from "@/types/option";
 import { SpeakerRole } from "@/types/transcription";
 

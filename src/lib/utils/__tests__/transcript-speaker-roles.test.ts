@@ -4,7 +4,7 @@ import {
   blockedReasonFor,
   downloadLabelFor,
   downloadScopeFor,
-} from "@/lib/transcript/speaker-roles";
+} from "@/lib/utils/transcript-speaker-roles";
 import { None, Some } from "@/types/option";
 import { SpeakerRole, type Speaker } from "@/types/transcription";
 

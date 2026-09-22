@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 
 import { ALL_SPEAKERS, useSpeakerFilter } from "../use-speaker-filter";
-import { buildSpeakerStyles } from "@/lib/transcript/speakers";
+import { buildSpeakerStyles } from "@/lib/utils/transcript-speakers";
 import type { TranscriptSegment } from "@/types/transcription";
 
 function makeSegment(id: string, speaker: string, text = ""): TranscriptSegment {

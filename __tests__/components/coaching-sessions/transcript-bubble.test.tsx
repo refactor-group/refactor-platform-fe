@@ -4,7 +4,7 @@ import { DateTime } from "ts-luxon";
 
 import { TranscriptBubble } from "@/components/ui/coaching-sessions/transcript-bubble";
 import type { TranscriptSegment } from "@/types/transcription";
-import type { BubbleGrouping } from "@/lib/transcript/group-bubbles";
+import type { BubbleGrouping } from "@/lib/utils/transcript-group-bubbles";
 
 function makeSegment(overrides: Partial<TranscriptSegment> = {}): TranscriptSegment {
   return {

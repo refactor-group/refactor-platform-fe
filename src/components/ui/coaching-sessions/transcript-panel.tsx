@@ -25,9 +25,9 @@ import {
 } from "@/components/ui/coaching-sessions/transcript-header-action";
 import { TranscriptSearch } from "@/components/ui/coaching-sessions/transcript-search";
 import { TranscriptSpeakerFilter } from "@/components/ui/coaching-sessions/transcript-speaker-filter";
-import { groupBubbles } from "@/lib/transcript/group-bubbles";
-import { buildSpeakerStyles, speakerStyleFor } from "@/lib/transcript/speakers";
-import { downloadScopeFor } from "@/lib/transcript/speaker-roles";
+import { groupBubbles } from "@/lib/utils/transcript-group-bubbles";
+import { buildSpeakerStyles, speakerStyleFor } from "@/lib/utils/transcript-speakers";
+import { downloadScopeFor } from "@/lib/utils/transcript-speaker-roles";
 import { useSpeakerFilter } from "@/lib/hooks/use-speaker-filter";
 import { useTranscriptSearch } from "@/lib/hooks/use-transcript-search";
 import type { Transcription, TranscriptSegment } from "@/types/transcription";

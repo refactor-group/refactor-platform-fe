@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { filenameFromDisposition, saveBlobAs } from "@/lib/transcript/download-file";
+import { filenameFromDisposition, saveBlobAs } from "@/lib/utils/transcript-download-file";
 import { None, Some } from "@/types/option";
 
 describe("filenameFromDisposition", () => {
