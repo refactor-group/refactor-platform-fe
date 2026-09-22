@@ -132,6 +132,44 @@ describe("TranscriptionApi.downloadText — failures", () => {
   });
 });
 
+describe("TranscriptionApi.getWithSpeakers", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns None when the session has no transcription yet", async () => {
+    vi.mocked(sessionGuard.get).mockResolvedValue({ data: { data: null } } as never);
+    await expect(TranscriptionApi.getWithSpeakers("s1", "t1")).resolves.toEqual(None);
+  });
+
+  it("returns Some with the parsed speakers", async () => {
+    vi.mocked(sessionGuard.get).mockResolvedValue({
+      data: {
+        data: {
+          id: "t1",
+          coaching_session_id: "s1",
+          meeting_recording_id: "r1",
+          external_id: "x1",
+          status: "completed",
+          created_at: "2026-09-21T10:00:00Z",
+          updated_at: "2026-09-21T10:00:00Z",
+          speakers: [{ label: "Jim H", role: "coach" }],
+        },
+      },
+    } as never);
+
+    const result = await TranscriptionApi.getWithSpeakers("s1", "t1");
+    expect(result.some && result.val.speakers).toEqual([
+      { label: "Jim H", role: Some(SpeakerRole.Coach) },
+    ]);
+  });
+
+  // Rejecting rather than returning an Err is deliberate: SWR only applies the
+  // repo's fail-fast retry policy to a fetcher that throws.
+  it("rejects on a transport failure rather than resolving", async () => {
+    vi.mocked(sessionGuard.get).mockRejectedValue(new Error("boom"));
+    await expect(TranscriptionApi.getWithSpeakers("s1", "t1")).rejects.toThrow();
+  });
+});
+
 describe("readErrorSlug", () => {
   it("returns None for a non-blob body", async () => {
     await expect(readErrorSlug({ error: "nope" })).resolves.toEqual(None);

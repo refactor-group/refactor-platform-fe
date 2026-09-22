@@ -47,15 +47,19 @@ export const TranscriptionApi = {
     return raw.map(parseTranscriptSegment);
   },
 
-  /** Names an exact transcription; the session read returns only the latest. */
+  /**
+   * Names an exact transcription; the session read returns only the latest.
+   * None is "no transcription yet", distinct from a failed request, which
+   * rejects so SWR can apply the repo's retry policy.
+   */
   getWithSpeakers: async (
     sessionId: Id,
     transcriptionId: Id
-  ): Promise<TranscriptionWithSpeakers | null> => {
+  ): Promise<Option<TranscriptionWithSpeakers>> => {
     const raw = await EntityApi.getFn<unknown>(
       transcriptionUrl(sessionId, transcriptionId)
     );
-    return raw === null ? null : parseTranscriptionWithSpeakers(raw);
+    return raw === null ? None : Some(parseTranscriptionWithSpeakers(raw));
   },
 
   downloadText,
@@ -220,14 +224,14 @@ export function useTranscriptionSpeakers(
       ? transcriptionUrl(sessionId, transcriptionId)
       : null;
 
-  const { data, error } = useApiSWR<TranscriptionWithSpeakers | null>(
+  const { data, error } = useApiSWR<Option<TranscriptionWithSpeakers>>(
     url,
     () => TranscriptionApi.getWithSpeakers(sessionId!, transcriptionId!),
     { revalidateOnFocus: false, dedupingInterval: 60_000 }
   );
 
   return {
-    speakers: data?.speakers ?? [],
+    speakers: data !== undefined && data.some ? data.val.speakers : [],
     isLoaded: data !== undefined && error === undefined,
   };
 }
