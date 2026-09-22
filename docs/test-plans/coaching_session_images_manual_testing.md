@@ -4,7 +4,7 @@ Verify a coach can add images to a coaching note by toolbar, paste and drag-and-
 they render, delete, undo, open full size and take alt text; that failures never corrupt the
 shared document; and that a second participant sees the same thing.
 
-Backend counterpart: `refactor-platform-rs/docs/test-plans/coaching_note_images_manual_testing.md`.
+Backend counterpart: `refactor-platform-rs/docs/test-plans/coaching_session_images_manual_testing.md`.
 Implementation plan: `docs/plans/images-in-coaching-notes-fe.md`.
 
 > [!IMPORTANT]
@@ -24,8 +24,8 @@ Implementation plan: `docs/plans/images-in-coaching-notes-fe.md`.
 - Backend on `144-coaching-note-images` running on `:4000` with object storage configured
   (`OBJECT_STORE_BACKEND=local` is fine and needs no credentials), migrations applied.
 - Frontend on `144-images-in-coaching-notes`, `npm run dev` on `:3000`.
-- `docs-collab-server` running on `:1234`, or the editor drops into offline mode after ten
-  seconds and Case 12 becomes the only reachable path.
+- `docs-collab-server` running on `:1234`. Without it the editor drops into offline mode after ten
+  seconds: Section 4 becomes untestable entirely, and Case 21 is the only case still worth running.
 - A coaching session you are a participant in, opened at
   `/coaching-sessions/<id>` on the **Notes** tab.
 - **Two browsers** (or one plus an incognito window) signed in as the coach and the coachee
