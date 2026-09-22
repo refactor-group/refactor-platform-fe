@@ -19,12 +19,21 @@ import {
   CodeBlockButton,
   HorizontalRuleButton,
   LinkButton,
+  ImageUploadButton,
 } from "@/components/ui/tiptap-ui";
 
 // --- Coaching Notes Components ---
 import { ConnectionStatus } from "./connection-status";
+import type { NoteImageUploadContext } from "./note-image-extension";
+import type { Option } from "@/types/option";
 
-export const SimpleToolbar: React.FC = () => {
+interface SimpleToolbarProps {
+  imageContext?: Option<NoteImageUploadContext>;
+}
+
+export const SimpleToolbar: React.FC<SimpleToolbarProps> = ({
+  imageContext,
+}) => {
   const { editor } = useCurrentEditor();
 
   // Use TipTap's official pattern for undo/redo state tracking
@@ -79,6 +88,9 @@ export const SimpleToolbar: React.FC = () => {
         <MarkButton type="code" />
         <MarkButton type="highlight" />
         <LinkButton editor={editor} />
+        {imageContext?.some && (
+          <ImageUploadButton editor={editor} context={imageContext.val} />
+        )}
       </ToolbarGroup>
 
       <Spacer />

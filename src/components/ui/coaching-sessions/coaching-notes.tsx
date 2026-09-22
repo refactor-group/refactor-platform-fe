@@ -8,6 +8,9 @@ import { LinkBubbleMenu } from "@/components/ui/tiptap-ui/link-bubble-menu/link-
 import { SelectionBubbleMenu } from "@/components/ui/tiptap-ui/selection-bubble-menu/selection-bubble-menu";
 import type { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
+import { MAX_NOTE_IMAGE_BYTES } from "@/components/ui/coaching-sessions/coaching-notes/constants";
+import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
+import { Some, None } from "@/types/option";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -141,7 +144,7 @@ const renderReadyEditorContent = (
       }}
       slotBefore={
         <div className="toolbar-container">
-          <SimpleToolbar />
+          <NotesToolbar />
         </div>
       }
     >
@@ -151,6 +154,25 @@ const renderReadyEditorContent = (
     </EditorProvider>
   </div>
 );
+
+// Supplies the toolbar's upload target. The session id comes from the route,
+// the same source EditorCacheProvider is handed.
+const NotesToolbar = () => {
+  const { currentCoachingSessionId } = useCurrentCoachingSession();
+
+  return (
+    <SimpleToolbar
+      imageContext={
+        currentCoachingSessionId
+          ? Some({
+              coachingSessionId: currentCoachingSessionId,
+              maxBytes: MAX_NOTE_IMAGE_BYTES,
+            })
+          : None
+      }
+    />
+  );
+};
 
 // Bridges the live editor instance up to the shared EditorCacheContext so
 // non-editor descendants (the Topics panel) can insert content into the notes.
