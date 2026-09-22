@@ -7,6 +7,23 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
   } as unknown as typeof globalThis.ResizeObserver;
 }
 
+// Polyfill ProgressEvent (absent in this environment). MSW's XHR interceptor
+// constructs one when it rejects a request, so without this the rejection
+// below surfaces as an unhandled ReferenceError instead of a useful message.
+if (typeof globalThis.ProgressEvent === 'undefined') {
+  globalThis.ProgressEvent = class ProgressEvent extends Event {
+    readonly lengthComputable: boolean
+    readonly loaded: number
+    readonly total: number
+    constructor(type: string, init: ProgressEventInit = {}) {
+      super(type, init)
+      this.lengthComputable = init.lengthComputable ?? false
+      this.loaded = init.loaded ?? 0
+      this.total = init.total ?? 0
+    }
+  } as unknown as typeof globalThis.ProgressEvent
+}
+
 // Polyfill Element.scrollIntoView for tests (jsdom doesn't have it, required by cmdk)
 if (typeof Element.prototype.scrollIntoView === 'undefined') {
   Element.prototype.scrollIntoView = function () {};
@@ -73,6 +90,9 @@ vi.mock('@/lib/hooks/use-sync-user-session', () => ({
 }))
 
 // Setup MSW
-beforeAll(() => server.listen())
+// `error`, not the default `warn`: an unmatched request under `warn` is passed
+// through to the real network, so unit tests silently hit whatever is running
+// on localhost. Failing loudly keeps the suite hermetic.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
