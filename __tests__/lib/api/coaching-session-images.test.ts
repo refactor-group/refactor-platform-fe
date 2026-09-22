@@ -8,7 +8,7 @@ import {
 import { sessionGuard } from "@/lib/auth/session-guard";
 
 vi.mock("@/lib/auth/session-guard", () => ({
-  sessionGuard: { post: vi.fn() },
+  sessionGuard: { post: vi.fn(), delete: vi.fn() },
 }));
 
 vi.mock("@/site.config", () => ({
@@ -214,6 +214,51 @@ describe("CoachingSessionImageApi.upload — outcomes", () => {
     );
 
     const result = await CoachingSessionImageApi.upload("cs-1", pngFile());
+
+    expect(result._unsafeUnwrapErr().kind).toBe(UploadFailureKind.Network);
+    expect(result._unsafeUnwrapErr().status.none).toBe(true);
+  });
+});
+
+describe("CoachingSessionImageApi removal signals", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("marks an image deleted at the image-scoped URL", async () => {
+    vi.mocked(sessionGuard.delete).mockResolvedValue({ status: 200 } as never);
+
+    const result = await CoachingSessionImageApi.markDeleted("img-1");
+
+    expect(vi.mocked(sessionGuard.delete).mock.calls[0][0]).toBe(
+      "http://localhost:4000/coaching_session_images/img-1"
+    );
+    expect(result.isOk()).toBe(true);
+  });
+
+  it("restores an image at the restore URL", async () => {
+    vi.mocked(sessionGuard.post).mockResolvedValue({ status: 200 } as never);
+
+    const result = await CoachingSessionImageApi.restore("img-1");
+
+    expect(vi.mocked(sessionGuard.post).mock.calls[0][0]).toBe(
+      "http://localhost:4000/coaching_session_images/img-1/restore"
+    );
+    expect(result.isOk()).toBe(true);
+  });
+
+  it("resolves to err rather than rejecting when marking deleted fails", async () => {
+    vi.mocked(sessionGuard.delete).mockRejectedValue(responseError(403));
+
+    const result = await CoachingSessionImageApi.markDeleted("img-1");
+
+    expect(result._unsafeUnwrapErr().kind).toBe(UploadFailureKind.Forbidden);
+  });
+
+  it("resolves to err rather than rejecting when restoring fails", async () => {
+    vi.mocked(sessionGuard.post).mockRejectedValue(
+      new AxiosError("Network Error")
+    );
+
+    const result = await CoachingSessionImageApi.restore("img-1");
 
     expect(result._unsafeUnwrapErr().kind).toBe(UploadFailureKind.Network);
     expect(result._unsafeUnwrapErr().status.none).toBe(true);

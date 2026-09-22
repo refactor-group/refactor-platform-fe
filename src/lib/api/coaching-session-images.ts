@@ -46,6 +46,16 @@ function failureKindFor(status: number): UploadFailureKind {
   }
 }
 
+function toUploadFailure(error: unknown): UploadFailure {
+  if (!axios.isAxiosError(error) || !error.response) {
+    return { kind: UploadFailureKind.Network, status: None };
+  }
+  return {
+    kind: failureKindFor(error.response.status),
+    status: Some(error.response.status),
+  };
+}
+
 async function upload(
   sessionId: Id,
   file: File,
@@ -72,13 +82,7 @@ async function upload(
     payload = response.data?.data;
     status = response.status;
   } catch (error) {
-    if (!axios.isAxiosError(error) || !error.response) {
-      return err({ kind: UploadFailureKind.Network, status: None });
-    }
-    return err({
-      kind: failureKindFor(error.response.status),
-      status: Some(error.response.status),
-    });
+    return err(toUploadFailure(error));
   }
   // A success the client cannot read is still a failure the caller must see,
   // so it stays inside the Result rather than throwing past the signature.
@@ -89,8 +93,35 @@ async function upload(
   }
 }
 
+async function markDeleted(imageId: Id): Promise<Result<void, UploadFailure>> {
+  try {
+    await sessionGuard.delete(`${IMAGES_BASEURL}/${imageId}`);
+    return ok(undefined);
+  } catch (error) {
+    return err(toUploadFailure(error));
+  }
+}
+
+async function restore(imageId: Id): Promise<Result<void, UploadFailure>> {
+  try {
+    await sessionGuard.post(`${IMAGES_BASEURL}/${imageId}/restore`);
+    return ok(undefined);
+  } catch (error) {
+    return err(toUploadFailure(error));
+  }
+}
+
 export const CoachingSessionImageApi = {
   upload,
+
+  /**
+   * Best-effort signal that an image left a note. The backend defers
+   * destruction, so a lost signal leaks one row rather than breaking undo.
+   */
+  markDeleted,
+
+  /** Undo counterpart of {@link markDeleted}; also best-effort. */
+  restore,
 
   /** Stable URL for an image node's `src`, resolved at render time. */
   imageUrl: (imageId: Id): string => `${IMAGES_BASEURL}/${imageId}`,

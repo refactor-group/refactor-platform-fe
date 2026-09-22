@@ -7,7 +7,10 @@ import type {
 } from "@tiptap/core";
 import { Image } from "@tiptap/extension-image";
 import FileHandler from "@tiptap/extension-file-handler";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
 import { ReactNodeViewRenderer } from "@tiptap/react";
+import { ySyncPluginKey } from "@tiptap/y-tiptap";
 import { toast } from "sonner";
 import {
   CoachingSessionImageApi,
@@ -230,5 +233,77 @@ export const NoteImagePasteSanitizer = Extension.create({
     const result = sanitizePastedHtml(html);
     if (result.stripped) toast.info(FOREIGN_IMAGE_STRIPPED_MESSAGE);
     return result.html;
+  },
+});
+
+function imageIdsIn(doc: ProseMirrorNode): Set<string> {
+  const ids = new Set<string>();
+  doc.descendants((node) => {
+    if (node.type.name !== COACHING_NOTE_IMAGE_NAME) return true;
+    const imageId = String(node.attrs.imageId ?? "");
+    if (imageId) ids.add(imageId);
+    return false;
+  });
+  return ids;
+}
+
+interface YSyncMeta {
+  isChangeOrigin?: boolean;
+  isUndoRedoOperation?: boolean;
+}
+
+// The key must come from @tiptap/y-tiptap, the fork the collaboration extension
+// actually installs: y-prosemirror's own key is a different plugin key entirely.
+function isRemote(transaction: Transaction): boolean {
+  const meta = transaction.getMeta(ySyncPluginKey) as YSyncMeta | undefined;
+  // A local undo is replayed through the same y-sync path, so the undo flag is
+  // what separates our own Cmd-Z from the other participant's edit.
+  return meta?.isChangeOrigin === true && meta.isUndoRedoOperation !== true;
+}
+
+/**
+ * Report images that leave the note, and undo, to the backend.
+ *
+ * Diffing the transaction rather than watching the node view is deliberate: the
+ * hover control is only one of several ways a node disappears. Signals are
+ * best-effort, so a failure is swallowed rather than interrupting the author.
+ */
+export const NoteImageRemovalSignal = Extension.create({
+  name: "noteImageRemovalSignal",
+
+  addProseMirrorPlugins() {
+    // Only ids this editor already reported as removed may be restored.
+    // Otherwise a fresh upload, or the images present at initial load, would
+    // read as appearances and fire a restore against a live row.
+    const signalledRemoved = new Set<string>();
+
+    const signal = (transaction: Transaction) => {
+      if (!transaction.docChanged || isRemote(transaction)) return;
+
+      const before = imageIdsIn(transaction.before);
+      const after = imageIdsIn(transaction.doc);
+
+      before.forEach((imageId) => {
+        if (after.has(imageId)) return;
+        signalledRemoved.add(imageId);
+        void CoachingSessionImageApi.markDeleted(imageId);
+      });
+
+      after.forEach((imageId) => {
+        if (before.has(imageId) || !signalledRemoved.has(imageId)) return;
+        signalledRemoved.delete(imageId);
+        void CoachingSessionImageApi.restore(imageId);
+      });
+    };
+
+    return [
+      new Plugin({
+        key: new PluginKey("noteImageRemovalSignal"),
+        appendTransaction: (transactions) => {
+          transactions.forEach(signal);
+          return undefined;
+        },
+      }),
+    ];
   },
 });

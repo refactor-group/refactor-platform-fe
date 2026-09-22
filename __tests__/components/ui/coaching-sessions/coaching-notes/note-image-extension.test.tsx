@@ -3,12 +3,16 @@ import { act, render, waitFor } from "@testing-library/react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import * as Y from "yjs";
+import { Awareness } from "y-protocols/awareness";
+import type { TiptapCollabProvider } from "@hocuspocus/provider";
 import { Some } from "@/types/option";
 import { err, ok } from "neverthrow";
 import { DateTime } from "ts-luxon";
 import { None } from "@/types/option";
 
 const mockUpload = vi.fn();
+const mockMarkDeleted = vi.fn();
+const mockRestore = vi.fn();
 
 vi.mock("@/lib/api/coaching-session-images", async (importOriginal) => {
   const actual = await importOriginal<
@@ -19,6 +23,8 @@ vi.mock("@/lib/api/coaching-session-images", async (importOriginal) => {
     CoachingSessionImageApi: {
       ...actual.CoachingSessionImageApi,
       upload: (...args: unknown[]) => mockUpload(...args),
+      markDeleted: (...args: unknown[]) => mockMarkDeleted(...args),
+      restore: (...args: unknown[]) => mockRestore(...args),
     },
   };
 });
@@ -40,6 +46,8 @@ import {
 } from "@/components/ui/coaching-sessions/coaching-notes/note-image-extension";
 import { CoachingSessionImageApi, UploadFailureKind } from "@/lib/api/coaching-session-images";
 import { shouldShowSelectionMenu } from "@/components/ui/tiptap-ui/selection-bubble-menu/selection-bubble-menu";
+import { ySyncPluginKey, yUndoPluginKey } from "@tiptap/y-tiptap";
+import { toast } from "sonner";
 
 const SESSION_ID = "session-1";
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -57,6 +65,36 @@ async function mountEditor(): Promise<Harness> {
     const editor = useEditor({
       extensions: Extensions(new Y.Doc(), null, undefined, Some(uploadContext)),
       content: "<p>notes</p>",
+      immediatelyRender: false,
+    });
+    ref.current = editor;
+    return editor ? <EditorContent editor={editor} /> : null;
+  };
+
+  const { container } = render(<TestEditor />);
+  await waitFor(() => {
+    if (!ref.current) throw new Error("editor not ready");
+  });
+  return { container, editor: ref.current as Editor };
+}
+
+// Undo only exists under collaboration: the editor ships no history extension,
+// and y-undo replays through the same y-sync path a remote edit arrives on.
+async function mountCollaborativeEditor(): Promise<Harness> {
+  const ref: { current: Editor | null } = { current: null };
+  const doc = new Y.Doc();
+  const provider = {
+    awareness: new Awareness(doc),
+  } as unknown as TiptapCollabProvider;
+
+  const TestEditor = () => {
+    const editor = useEditor({
+      extensions: Extensions(
+        doc,
+        provider,
+        { name: "Coach", color: "#000000" },
+        Some(uploadContext)
+      ),
       immediatelyRender: false,
     });
     ref.current = editor;
@@ -100,6 +138,24 @@ function imageNodePosition(editor: Editor): number {
   return found;
 }
 
+function selectImage(editor: Editor) {
+  act(() => {
+    editor.commands.setNodeSelection(imageNodePosition(editor));
+  });
+}
+
+function pressBackspace(editor: Editor) {
+  act(() => {
+    const event = new KeyboardEvent("keydown", {
+      key: "Backspace",
+      keyCode: 8,
+    });
+    editor.view.someProp("handleKeyDown", (handler) =>
+      handler(editor.view, event)
+    );
+  });
+}
+
 function makeFile(type: string): File {
   return new File([new Uint8Array([1, 2, 3])], "shot.png", { type });
 }
@@ -107,6 +163,11 @@ function makeFile(type: string): File {
 describe("Coaching note image extension", () => {
   beforeEach(() => {
     mockUpload.mockReset();
+    mockMarkDeleted.mockReset();
+    mockMarkDeleted.mockResolvedValue(ok(undefined));
+    mockRestore.mockReset();
+    mockRestore.mockResolvedValue(ok(undefined));
+    vi.mocked(toast.error).mockClear();
   });
 
   it("renders the image-scoped backend URL while storing only the image id", async () => {
@@ -248,5 +309,123 @@ describe("Coaching note image extension", () => {
     expect(sanitizePastedHtml('<img src="https://example.com/a.png" />').stripped).toBe(
       true
     );
+  });
+
+  it("signals removal once when the delete control removes the node", async () => {
+    const { editor } = await mountEditor();
+    insertImage(editor, "image-42");
+
+    selectImage(editor);
+    act(() => {
+      editor.commands.deleteSelection();
+    });
+
+    expect(mockMarkDeleted).toHaveBeenCalledTimes(1);
+    expect(mockMarkDeleted).toHaveBeenCalledWith("image-42");
+  });
+
+  it("signals removal when the node is deleted with backspace", async () => {
+    const { editor } = await mountEditor();
+    insertImage(editor, "image-42");
+    // Cursor at the start of the paragraph after the image: the first press
+    // selects the image, the second deletes it.
+    act(() => {
+      editor.commands.setTextSelection(imageNodePosition(editor) + 2);
+    });
+
+    pressBackspace(editor);
+    pressBackspace(editor);
+
+    expect(mockMarkDeleted).toHaveBeenCalledWith("image-42");
+  });
+
+  it("restores the same image id when the removal is undone", async () => {
+    const { editor } = await mountCollaborativeEditor();
+    insertImage(editor, "image-42");
+    // Without a capture boundary the insert and the removal share one undo step.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    yUndoPluginKey.getState(editor.state)?.undoManager.stopCapturing();
+
+    selectImage(editor);
+    act(() => {
+      editor.commands.deleteSelection();
+    });
+    act(() => {
+      editor.commands.undo();
+    });
+
+    expect(mockRestore).toHaveBeenCalledTimes(1);
+    expect(mockRestore).toHaveBeenCalledWith("image-42");
+  });
+
+  it("signals nothing for a transaction that removes no image", async () => {
+    const { editor } = await mountEditor();
+    insertImage(editor, "image-42");
+
+    act(() => {
+      editor.commands.insertContent("more notes");
+    });
+
+    expect(mockMarkDeleted).not.toHaveBeenCalled();
+    expect(mockRestore).not.toHaveBeenCalled();
+  });
+
+  it("signals both images removed by a single transaction", async () => {
+    const { editor } = await mountEditor();
+    insertImage(editor, "image-1");
+    insertImage(editor, "image-2");
+
+    act(() => {
+      editor.chain().selectAll().deleteSelection().run();
+    });
+
+    expect(mockMarkDeleted).toHaveBeenCalledTimes(2);
+    expect(mockMarkDeleted).toHaveBeenCalledWith("image-1");
+    expect(mockMarkDeleted).toHaveBeenCalledWith("image-2");
+  });
+
+  it("signals nothing when the removal arrives from the other participant", async () => {
+    const { editor } = await mountEditor();
+    insertImage(editor, "image-42");
+
+    const pos = imageNodePosition(editor);
+    act(() => {
+      editor.view.dispatch(
+        editor.state.tr
+          .delete(pos, pos + 1)
+          .setMeta(ySyncPluginKey, { isChangeOrigin: true })
+      );
+    });
+
+    expect(mockMarkDeleted).not.toHaveBeenCalled();
+    expect(mockRestore).not.toHaveBeenCalled();
+  });
+
+  it("leaves the document byte-identical and silent when the signal fails", async () => {
+    const { editor } = await mountEditor();
+    const before = editor.getJSON();
+    mockMarkDeleted.mockResolvedValue(
+      err({ kind: UploadFailureKind.Network, status: None })
+    );
+
+    insertImage(editor, "image-42");
+    selectImage(editor);
+    await act(async () => {
+      editor.commands.deleteSelection();
+    });
+
+    expect(mockMarkDeleted).toHaveBeenCalledTimes(1);
+    expect(editor.getJSON()).toEqual(before);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("never restores an image this editor did not remove", async () => {
+    const { editor } = await mountEditor();
+
+    insertImage(editor, "image-42");
+
+    expect(mockRestore).not.toHaveBeenCalled();
   });
 });

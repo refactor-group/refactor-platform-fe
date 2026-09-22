@@ -139,6 +139,35 @@ browser's own image drag, which moves nothing on release. Reload the page and co
 image is still in its new position, so the move reached the shared document and not just the
 local view.
 
+### Case 23: deleting marks the row, undo clears it
+
+Add an image and note its id from the rendered `src`. Delete it with the hover control, then
+check the backend database:
+
+```sql
+SELECT id, deleted_at FROM refactor_platform.coaching_session_images WHERE id = '<image id>';
+```
+
+**Pass:** `deleted_at` holds a timestamp and the row still exists. Press Cmd-Z: the image
+renders again, and the same query shows `deleted_at` back to `NULL`. Undo needs no re-upload,
+because the bytes were never destroyed.
+
+### Case 24: backspace signals the same way
+
+Repeat Case 23, but remove the image by putting the cursor just after it and pressing
+Backspace twice (the first press selects it).
+
+**Pass:** identical to Case 23. This is the path most likely to regress, because removal is
+detected from the document transaction rather than from the hover control.
+
+### Case 25: reload after a delete
+
+Delete an image, then reload the page.
+
+**Pass:** the image is gone from the note, and the row is still present in SQL with
+`deleted_at` set, so it remains recoverable until the grace period elapses. **No automated
+test covers this** — it is the whole point of deferring destruction.
+
 ## 4. Two participants (no automated equivalent)
 
 Both browsers on the same session, Notes tab.
@@ -166,6 +195,15 @@ Start a large upload as the coach, then **close the coach's tab mid-upload**.
 
 **Pass:** the coachee's note is unchanged and contains no leftover node. Reopen the session as
 the coach: still clean.
+
+### Case 26: a removal is signalled once, not twice
+
+With both browsers on the session, the coach deletes an image. Watch the coachee's DevTools
+Network tab, and check the row afterwards.
+
+**Pass:** exactly one `DELETE /coaching_session_images/<id>` is sent, from the coach's browser.
+The coachee's client, which sees the same node disappear over the websocket, sends nothing.
+The row has a single `deleted_at` timestamp.
 
 ## 5. Failures and edge cases
 
@@ -225,6 +263,14 @@ an image.
 **Pass:** the upload **succeeds** and the image appears locally. Uploads go over REST, not the
 websocket, so they are no more at risk than the characters you type in the same state. The
 connection indicator shows the disconnected state throughout.
+
+### Case 27: the removal signal fails
+
+Delete an image with the backend stopped.
+
+**Pass:** the image disappears from the note as normal, **no error toast appears**, and the
+rest of the editor keeps working. The signal is best-effort: a lost one leaves a row behind,
+which is invisible to the user and far better than interrupting them.
 
 ### Case 22: another session's image id
 

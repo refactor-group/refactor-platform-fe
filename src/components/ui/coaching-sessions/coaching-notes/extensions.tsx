@@ -46,6 +46,7 @@ import {
 import {
   CoachingNoteImage,
   NoteImagePasteSanitizer,
+  NoteImageRemovalSignal,
   createNoteImageFileHandler,
   type NoteImageUploadContext,
 } from "./note-image-extension";
@@ -258,6 +259,7 @@ const addImageExtensions = (
     CoachingNoteImage,
     createNoteImageFileHandler(imageContext.val),
     NoteImagePasteSanitizer,
+    NoteImageRemovalSignal,
   ];
 };
 
