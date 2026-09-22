@@ -17,6 +17,7 @@ import {
   type TranscriptEmptyStateVariant,
 } from "@/components/ui/coaching-sessions/transcript-empty-state";
 import { TranscriptDownloadButton } from "@/components/ui/coaching-sessions/transcript-download-button";
+import { TRANSCRIPT_HEADER_ACTION_CLASS } from "@/components/ui/coaching-sessions/transcript-header-action";
 import { TranscriptSearch } from "@/components/ui/coaching-sessions/transcript-search";
 import { TranscriptSpeakerFilter } from "@/components/ui/coaching-sessions/transcript-speaker-filter";
 import { groupBubbles } from "@/lib/transcript/group-bubbles";
@@ -315,7 +316,7 @@ function IconButton({ label, onClick, icon }: IconButtonProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
+          className={TRANSCRIPT_HEADER_ACTION_CLASS}
           onClick={onClick}
           aria-label={label}
         >

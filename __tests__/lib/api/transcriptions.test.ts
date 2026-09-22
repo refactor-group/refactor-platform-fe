@@ -49,7 +49,11 @@ describe("TranscriptionApi.downloadText — request shape", () => {
 
   it("sends exactly one speaker param for a role scope", async () => {
     vi.mocked(sessionGuard.get).mockResolvedValue(okResponse() as never);
-    const scope: DownloadScope = { kind: "role", role: SpeakerRole.Coach };
+    const scope: DownloadScope = {
+      kind: "role",
+      role: SpeakerRole.Coach,
+      label: "Jim H",
+    };
     await TranscriptionApi.downloadText("s1", "t1", scope);
 
     expect(vi.mocked(sessionGuard.get).mock.calls[0][0]).toBe(

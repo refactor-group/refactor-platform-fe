@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { err, ok } from "neverthrow";
 
@@ -57,11 +58,9 @@ describe("TranscriptDownloadButton — blocked states", () => {
 
   // aria-disabled rather than the disabled attribute, so the tooltip that
   // explains why can still open on hover.
-  it("blocks an unmapped label and explains what to do instead", () => {
+  it("blocks an unmapped label", () => {
     renderButton(UNMAPPED);
-    const button = screen.getByRole("button", {
-      name: "Switch to All to download",
-    });
+    const button = screen.getByRole("button", { name: "Download transcript" });
     expect(button).toHaveAttribute("aria-disabled", "true");
     expect(button).not.toBeDisabled();
   });
@@ -69,13 +68,28 @@ describe("TranscriptDownloadButton — blocked states", () => {
   it("blocks while the speakers list is unavailable", () => {
     renderButton({ kind: "speakers-unavailable" });
     expect(
-      screen.getByRole("button", { name: "Switch to All to download" })
+      screen.getByRole("button", { name: "Download transcript" })
     ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  // The reason belongs in the tooltip, not the accessible name: a screen
+  // reader hearing only "Switch to All to download" has no idea which control
+  // it is on, while a sighted user still sees the download icon.
+  it("keeps naming the action when blocked, and explains in the tooltip", async () => {
+    const user = userEvent.setup();
+    renderButton(UNMAPPED);
+
+    const button = screen.getByRole("button", { name: "Download transcript" });
+    await user.hover(button);
+
+    expect(
+      await screen.findByText("Switch to All to download")
+    ).toBeInTheDocument();
   });
 
   it("does not fetch when clicked while blocked", () => {
     renderButton(UNMAPPED);
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: "Download transcript" }));
     expect(TranscriptionApi.downloadText).not.toHaveBeenCalled();
   });
 });
@@ -90,7 +104,9 @@ describe("TranscriptDownloadButton — downloading", () => {
     );
 
     renderButton(COACH);
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Download Jim H's transcript" })
+    );
 
     await waitFor(() => {
       expect(TranscriptionApi.downloadText).toHaveBeenCalledWith("s1", "t1", COACH);
@@ -112,7 +128,7 @@ describe("TranscriptDownloadButton — failure messages", () => {
   }) {
     vi.mocked(TranscriptionApi.downloadText).mockResolvedValue(err(failure));
     renderButton(ALL);
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: "Download transcript" }));
     await waitFor(() => expect(toastError).toHaveBeenCalled());
     return toastError.mock.calls[0][1] as { description: string };
   }

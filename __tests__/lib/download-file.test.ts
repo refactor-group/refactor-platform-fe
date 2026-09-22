@@ -34,6 +34,35 @@ describe("filenameFromDisposition", () => {
   it("returns None when the header carries no filename", () => {
     expect(filenameFromDisposition("attachment")).toEqual(None);
   });
+
+  // A plain `filename` is literal. Decoding it would throw URIError on a bare
+  // `%`, which bubbles out of the download and shows a failure toast for a
+  // response that actually succeeded.
+  it("does not decode the plain form, so a bare percent cannot throw", () => {
+    expect(
+      filenameFromDisposition('attachment; filename="100% transcript.txt"')
+    ).toEqual(Some("100% transcript.txt"));
+  });
+
+  it("decodes the RFC 5987 form, which is percent-encoded", () => {
+    expect(
+      filenameFromDisposition("attachment; filename*=UTF-8''transcript%20a%2Bb.txt")
+    ).toEqual(Some("transcript a+b.txt"));
+  });
+
+  it("falls back to the raw value when the encoded form is malformed", () => {
+    expect(
+      filenameFromDisposition("attachment; filename*=UTF-8''bad%ZZ.txt")
+    ).toEqual(Some("bad%ZZ.txt"));
+  });
+
+  it("prefers the encoded form when the header carries both", () => {
+    expect(
+      filenameFromDisposition(
+        'attachment; filename="fallback.txt"; filename*=UTF-8\'\'real%20name.txt'
+      )
+    ).toEqual(Some("real name.txt"));
+  });
 });
 
 describe("saveBlobAs", () => {
@@ -49,7 +78,7 @@ describe("saveBlobAs", () => {
     vi.clearAllMocks();
   });
 
-  it("clicks an anchor carrying the filename, then cleans up", () => {
+  it("clicks an anchor carrying the filename, then cleans up", async () => {
     const click = vi.fn();
     const anchor = document.createElement("a");
     anchor.click = click;
@@ -60,7 +89,13 @@ describe("saveBlobAs", () => {
     expect(anchor.getAttribute("download")).toBe("transcript.txt");
     expect(anchor.href).toContain("blob:fake");
     expect(click).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:fake");
     expect(document.body.contains(anchor)).toBe(false);
+
+    // Deferred by a tick: revoking synchronously races the browser's read of
+    // the object URL, which some browsers lose.
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:fake")
+    );
   });
 });

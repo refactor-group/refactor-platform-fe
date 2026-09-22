@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
+import { TRANSCRIPT_HEADER_ACTION_CLASS } from "@/components/ui/coaching-sessions/transcript-header-action";
 import {
   Tooltip,
   TooltipContent,
@@ -46,9 +48,11 @@ export function TranscriptDownloadButton({
   const blockedReason = blockedReasonFor(scope);
   const isDownloading = state.kind === "downloading";
   const isBlocked = blockedReason.some || isDownloading;
-  const label = blockedReason.some
-    ? blockedReason.val
-    : downloadLabelFor(scope);
+  // The accessible name always names the action. The reason goes in the
+  // tooltip, which Radix wires up as the description, so a screen reader hears
+  // both rather than losing "download" entirely when the control is blocked.
+  const actionLabel = downloadLabelFor(scope);
+  const tooltipText = blockedReason.some ? blockedReason.val : actionLabel;
 
   async function handleClick() {
     setState({ kind: "downloading" });
@@ -76,10 +80,13 @@ export function TranscriptDownloadButton({
         <Button
           variant="ghost"
           size="sm"
-          className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground aria-disabled:opacity-40 aria-disabled:cursor-not-allowed"
+          className={cn(
+            TRANSCRIPT_HEADER_ACTION_CLASS,
+            "aria-disabled:opacity-40 aria-disabled:cursor-not-allowed"
+          )}
           onClick={isBlocked ? undefined : handleClick}
           aria-disabled={isBlocked}
-          aria-label={label}
+          aria-label={actionLabel}
         >
           {isDownloading ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -89,7 +96,7 @@ export function TranscriptDownloadButton({
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">
-        <p>{label}</p>
+        <p>{tooltipText}</p>
       </TooltipContent>
     </Tooltip>
   );
