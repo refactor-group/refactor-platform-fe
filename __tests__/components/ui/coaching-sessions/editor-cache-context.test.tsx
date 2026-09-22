@@ -88,6 +88,7 @@ import { useCollaborationToken, fetchCollaborationTokenWithRetry } from '@/lib/a
 import { useAuthStore } from '@/lib/providers/auth-store-provider'
 import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role'
 import { ConnectionStatus } from '@/components/ui/coaching-sessions/coaching-notes/connection-status'
+import { MAX_NOTE_IMAGE_BYTES } from '@/components/ui/coaching-sessions/coaching-notes/constants'
 import { Some, None } from '@/types/option'
 import { okAsync, errAsync } from 'neverthrow'
 import { EntityApiError } from '@/types/entity-api-error'
@@ -356,6 +357,26 @@ describe('EditorCacheProvider', () => {
 
       // Extensions should only be created once
       expect(Extensions).toHaveBeenCalledTimes(1)
+    })
+
+    it('exposes the same image upload context it hands to the extensions', async () => {
+      const { Extensions } = await import('@/components/ui/coaching-sessions/coaching-notes/extensions')
+      vi.mocked(Extensions).mockClear()
+
+      let cacheRef: any = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      const mockProvider = await getLatestMockProvider()
+      await triggerSyncedAndWaitForReady(mockProvider)
+
+      expect(cacheRef.imageUploadContext).toEqual(
+        Some({ coachingSessionId: 'test-session', maxBytes: MAX_NOTE_IMAGE_BYTES })
+      )
+      expect(vi.mocked(Extensions).mock.calls[0][3]).toBe(cacheRef.imageUploadContext)
     })
   })
 

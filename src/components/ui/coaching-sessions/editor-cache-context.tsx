@@ -16,6 +16,7 @@ import { TiptapCollabProvider } from "@hocuspocus/provider";
 import type { Editor, Extensions } from "@tiptap/core";
 import { Extensions as createExtensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
 import { MAX_NOTE_IMAGE_BYTES } from "@/components/ui/coaching-sessions/coaching-notes/constants";
+import type { NoteImageUploadContext } from "@/components/ui/coaching-sessions/coaching-notes/note-image-extension";
 import {
   fetchCollaborationTokenWithRetry,
   useCollaborationToken,
@@ -73,6 +74,8 @@ interface EditorCacheContextType extends EditorCacheState {
    * of the block the cursor is in. Returns false when the editor isn't ready
    * or the text is blank. */
   insertTextIntoNotes: (text: string) => boolean;
+  /** Single source of truth for where note images upload to. */
+  imageUploadContext: Option<NoteImageUploadContext>;
 }
 
 // Provider lifecycle action types (discriminated union)
@@ -291,6 +294,14 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
   // Generate a consistent color for this user session
   const userColor = useMemo(() => generateCollaborativeUserColor(), []);
 
+  const imageUploadContext: Option<NoteImageUploadContext> = useMemo(
+    () =>
+      sessionId
+        ? Some({ coachingSessionId: sessionId, maxBytes: MAX_NOTE_IMAGE_BYTES })
+        : None,
+    [sessionId],
+  );
+
   const [cache, setCache] = useState<EditorCacheState>(createInitialCacheState);
   // Bumped by resetCache so the lifecycle effect re-runs without a prop change.
   const [initEpoch, setInitEpoch] = useState(0);
@@ -397,7 +408,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
             name: userSession.display_name,
             color: userColor,
           },
-          Some({ coachingSessionId: sessionId, maxBytes: MAX_NOTE_IMAGE_BYTES })
+          imageUploadContext
         );
 
         setCache((prev) => ({
@@ -555,7 +566,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
         null,
         null,
         undefined,
-        Some({ coachingSessionId: sessionId, maxBytes: MAX_NOTE_IMAGE_BYTES })
+        imageUploadContext
       );
 
       setCache((prev) => ({
@@ -577,6 +588,7 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
     userSession,
     userRole,
     userColor,
+    imageUploadContext,
     getOrCreateYDoc,
     clearSyncTimeout,
   ]);
@@ -766,8 +778,15 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       resetCache,
       registerEditor,
       insertTextIntoNotes,
+      imageUploadContext,
     }),
-    [cache, resetCache, registerEditor, insertTextIntoNotes],
+    [
+      cache,
+      resetCache,
+      registerEditor,
+      insertTextIntoNotes,
+      imageUploadContext,
+    ],
   );
 
   return (
