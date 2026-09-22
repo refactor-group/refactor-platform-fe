@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import type { ReactNode } from "react";
 import { Maximize2, Minimize2, X } from "lucide-react";
 
+import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -17,7 +19,10 @@ import {
   type TranscriptEmptyStateVariant,
 } from "@/components/ui/coaching-sessions/transcript-empty-state";
 import { TranscriptDownloadButton } from "@/components/ui/coaching-sessions/transcript-download-button";
-import { TRANSCRIPT_HEADER_ACTION_CLASS } from "@/components/ui/coaching-sessions/transcript-header-action";
+import {
+  TRANSCRIPT_HEADER_ACTION_CLASS,
+  TRANSCRIPT_HEADER_ACTION_DESKTOP_ONLY,
+} from "@/components/ui/coaching-sessions/transcript-header-action";
 import { TranscriptSearch } from "@/components/ui/coaching-sessions/transcript-search";
 import { TranscriptSpeakerFilter } from "@/components/ui/coaching-sessions/transcript-speaker-filter";
 import { groupBubbles } from "@/lib/transcript/group-bubbles";
@@ -241,8 +246,8 @@ interface TranscriptHeaderProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
-  /** Optional download action. Absent on the empty-state path. */
-  download?: React.ReactNode;
+  /** Absent on the empty-state path, which has nothing to export. */
+  download?: ReactNode;
 }
 
 function TranscriptHeader({
@@ -272,7 +277,7 @@ interface TranscriptPanelActionsProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
-  download?: React.ReactNode;
+  download?: ReactNode;
 }
 
 function TranscriptPanelActions({
@@ -316,7 +321,10 @@ function IconButton({ label, onClick, icon }: IconButtonProps) {
         <Button
           variant="ghost"
           size="sm"
-          className={TRANSCRIPT_HEADER_ACTION_CLASS}
+          className={cn(
+            TRANSCRIPT_HEADER_ACTION_CLASS,
+            TRANSCRIPT_HEADER_ACTION_DESKTOP_ONLY
+          )}
           onClick={onClick}
           aria-label={label}
         >

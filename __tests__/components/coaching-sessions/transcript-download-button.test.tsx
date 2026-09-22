@@ -53,6 +53,16 @@ describe("TranscriptDownloadButton — enabled states", () => {
   });
 });
 
+describe("TranscriptDownloadButton — availability", () => {
+  // Maximize and close are desktop-only and both have mobile equivalents
+  // elsewhere. Download has none, so hiding it would make the feature
+  // unreachable on a phone.
+  it("stays visible below the md breakpoint", () => {
+    renderButton(ALL);
+    expect(screen.getByRole("button")).not.toHaveClass("hidden");
+  });
+});
+
 describe("TranscriptDownloadButton — blocked states", () => {
   beforeEach(() => vi.clearAllMocks());
 

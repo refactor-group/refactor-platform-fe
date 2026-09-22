@@ -32,12 +32,7 @@ interface TranscriptDownloadButtonProps {
 
 type DownloadState = { kind: "idle" } | { kind: "downloading" };
 
-/**
- * Header action that saves the transcript as a text file.
- *
- * Must render inside `TranscriptPanelActions`' TooltipProvider — Radix throws
- * without a provider ancestor.
- */
+/** Must render inside a TooltipProvider; Radix throws without one. */
 export function TranscriptDownloadButton({
   sessionId,
   transcriptionId,
@@ -48,9 +43,8 @@ export function TranscriptDownloadButton({
   const blockedReason = blockedReasonFor(scope);
   const isDownloading = state.kind === "downloading";
   const isBlocked = blockedReason.some || isDownloading;
-  // The accessible name always names the action. The reason goes in the
-  // tooltip, which Radix wires up as the description, so a screen reader hears
-  // both rather than losing "download" entirely when the control is blocked.
+  // Name states the action, tooltip states the reason: a screen reader needs
+  // to know which control this is even when it is blocked.
   const actionLabel = downloadLabelFor(scope);
   const tooltipText = blockedReason.some ? blockedReason.val : actionLabel;
 
@@ -73,10 +67,7 @@ export function TranscriptDownloadButton({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {/*
-          aria-disabled, not disabled: a disabled button emits no pointer
-          events, so the tooltip explaining why never opens.
-        */}
+        {/* aria-disabled, not disabled: a disabled button opens no tooltip. */}
         <Button
           variant="ghost"
           size="sm"
@@ -102,8 +93,7 @@ export function TranscriptDownloadButton({
   );
 }
 
-// 401 is absent on purpose: sessionGuard's interceptor already signs the user
-// out, and a toast here would race that.
+// 401 is absent: sessionGuard's interceptor already signs the user out.
 function describe(failure: DownloadFailure): string {
   if (failure.slug.some) {
     switch (failure.slug.val) {

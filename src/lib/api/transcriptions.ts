@@ -47,10 +47,7 @@ export const TranscriptionApi = {
     return raw.map(parseTranscriptSegment);
   },
 
-  /**
-   * Id-keyed read. Names the exact transcription rather than the session's most
-   * recent one, and carries the speakers the download filter maps onto.
-   */
+  /** Names an exact transcription; the session read returns only the latest. */
   getWithSpeakers: async (
     sessionId: Id,
     transcriptionId: Id
@@ -82,8 +79,7 @@ export interface DownloadFailure {
 
 const FALLBACK_FILENAME = "transcript.txt";
 
-// The param name and enum spelling are this endpoint's wire format, so they
-// live here rather than beside DownloadScope.
+// Param name and enum spelling are wire format, so not beside DownloadScope.
 function speakerParamsFor(scope: DownloadScope): URLSearchParams {
   const params = new URLSearchParams();
   if (scope.kind === "role") params.append("speaker", scope.role);
@@ -91,11 +87,8 @@ function speakerParamsFor(scope: DownloadScope): URLSearchParams {
 }
 
 /**
- * Fetches the rendered transcript as a file.
- *
- * Goes through `sessionGuard` so the request inherits credentials, the API
- * version header, and the 401 cleanup interceptor. `Accept` is what selects
- * the text representation over the JSON one.
+ * Fetches the rendered transcript as a file. `Accept` selects the text
+ * representation; the same URL returns JSON without it.
  */
 async function downloadText(
   sessionId: Id,
@@ -129,11 +122,8 @@ async function downloadText(
 }
 
 /**
- * Pulls the error slug out of a failed blob request.
- *
- * `responseType: "blob"` applies to error responses too, so the JSON envelope
- * arrives as a Blob and `data.error` is undefined. Without this every slug
- * match silently fails and all errors read as generic.
+ * Pulls the error slug out of a failed blob request. `responseType: "blob"`
+ * applies to errors too, so the JSON envelope arrives as a Blob.
  */
 export async function readErrorSlug(data: unknown): Promise<Option<string>> {
   if (!(data instanceof Blob)) return None;
@@ -145,8 +135,7 @@ export async function readErrorSlug(data: unknown): Promise<Option<string>> {
   }
 }
 
-// FileReader rather than Blob.text(): jsdom implements neither that nor
-// Response bodies for blobs, and this path has to stay testable.
+// FileReader, not Blob.text(): jsdom implements neither for blobs.
 function blobToText(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -219,11 +208,8 @@ export interface UseTranscriptionSpeakers {
 }
 
 /**
- * Speakers for the download filter's label-to-role mapping.
- *
- * This hook is the seam: if the backend folds `speakers` into the session-level
- * read (board question `transcript_speakers_on_session_level_read`), only the
- * body changes and no call site moves.
+ * Speakers for the download filter's label-to-role mapping. The single place
+ * this data is sourced, so the read can move without touching call sites.
  */
 export function useTranscriptionSpeakers(
   sessionId: Id | null,
