@@ -40,6 +40,9 @@ export function NoteImageView({
   return (
     <NodeViewWrapper
       as="div"
+      // TipTap needs this alongside `draggable: true`; without it the browser's own
+      // image drag takes over and the drop silently does nothing.
+      data-drag-handle
       className={cn("note-image group relative my-4 w-fit", selected && "is-selected")}
     >
       {/* next/image cannot serve a cookie-authorized backend redirect. */}
@@ -47,6 +50,8 @@ export function NoteImageView({
       <img
         src={src}
         alt={alt}
+        // An <img> is natively draggable, which competes with ProseMirror's drag.
+        draggable={false}
         className={cn(
           "note-image__img cursor-zoom-in",
           loadState.kind === "error" && "hidden"

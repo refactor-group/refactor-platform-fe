@@ -126,6 +126,28 @@ describe("Coaching note image extension", () => {
     expect(attrs).not.toHaveProperty("src");
   });
 
+  it("renders the node view as a drag handle so the node can be moved", async () => {
+    const { container, editor } = await mountEditor();
+    insertImage(editor, "image-42", "a diagram");
+
+    await waitFor(() => {
+      const image = container.querySelector("img");
+      expect(image).toBeTruthy();
+      expect(image?.closest("[data-drag-handle]")).toBeTruthy();
+    });
+  });
+
+  it("leaves the image itself not natively draggable", async () => {
+    const { container, editor } = await mountEditor();
+    insertImage(editor, "image-42", "a diagram");
+
+    await waitFor(() => {
+      const image = container.querySelector("img");
+      expect(image).toBeTruthy();
+      expect(image?.getAttribute("draggable")).toBe("false");
+    });
+  });
+
   it("serializes a document containing an image to markdown without throwing", async () => {
     const { editor } = await mountEditor();
     insertImage(editor, "image-42", "a diagram");

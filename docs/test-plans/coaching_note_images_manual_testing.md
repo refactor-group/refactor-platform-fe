@@ -25,7 +25,7 @@ Implementation plan: `docs/plans/images-in-coaching-notes-fe.md`.
   (`OBJECT_STORE_BACKEND=local` is fine and needs no credentials), migrations applied.
 - Frontend on `144-images-in-coaching-notes`, `npm run dev` on `:3000`.
 - `docs-collab-server` running on `:1234`, or the editor drops into offline mode after ten
-  seconds and Case 11 becomes the only reachable path.
+  seconds and Case 12 becomes the only reachable path.
 - A coaching session you are a participant in, opened at
   `/coaching-sessions/<id>` on the **Notes** tab.
 - **Two browsers** (or one plus an incognito window) signed in as the coach and the coachee
@@ -128,18 +128,29 @@ Select a region containing only the image.
 **Pass:** the selection bubble menu (Add as Action / Topic) does **not** appear. Select text
 *and* the image together: the menu appears and the prefilled body contains only the prose.
 
+### Case 11: move an image already in the note
+
+Put an image in a note with a paragraph above it and a paragraph below it. Drag the image
+itself to a different position between paragraphs, watching the drop indicator as in Case 3.
+
+**Pass:** the indicator appears **and** the image actually lands at that position. The
+indicator alone proves nothing: it is drawn for any drag over the editor, including the
+browser's own image drag, which moves nothing on release. Reload the page and confirm the
+image is still in its new position, so the move reached the shared document and not just the
+local view.
+
 ## 4. Two participants (no automated equivalent)
 
 Both browsers on the same session, Notes tab.
 
-### Case 11: an image replicates
+### Case 12: an image replicates
 
 Coach adds an image.
 
 **Pass:** it appears in the coachee's note within a second or two, rendering correctly — the
 coachee fetches it with their own cookie, proving authorization is per-viewer.
 
-### Case 12: no placeholder ever replicates
+### Case 13: no placeholder ever replicates
 
 Throttle the coach's network to "Slow 3G" in DevTools and add a large image. Watch the
 **coachee's** screen for the entire upload.
@@ -149,7 +160,7 @@ finished image appears. They must never see a spinner, a grey box, or any placeh
 file they did not choose. This is the single most important case in this document: it is the
 reason uploads complete before anything is written to the shared document.
 
-### Case 13: a dead tab strands nothing
+### Case 14: a dead tab strands nothing
 
 Start a large upload as the coach, then **close the coach's tab mid-upload**.
 
@@ -158,7 +169,7 @@ the coach: still clean.
 
 ## 5. Failures and edge cases
 
-### Case 14: file too large
+### Case 15: file too large
 
 Drop `/tmp/too-big.png` (11 MB).
 
@@ -166,35 +177,35 @@ Drop `/tmp/too-big.png` (11 MB).
 client rejects it before the network). The message must not quote a size limit or any
 backend policy number.
 
-### Case 15: SVG is refused
+### Case 16: SVG is refused
 
 Drop `/tmp/evil.svg`.
 
 **Pass:** an error toast, document unchanged, no upload. No alert dialog appears — if you see
 `alert(1)`, stop and treat it as a security incident.
 
-### Case 16: the upload fails server-side
+### Case 17: the upload fails server-side
 
 Stop the backend, then paste an image.
 
 **Pass:** an error toast, and **the note is byte-identical afterwards**. Reload and confirm
 nothing was persisted. Restart the backend and retry the same paste: it succeeds.
 
-### Case 17: storage unconfigured
+### Case 18: storage unconfigured
 
 Restart the backend with `OBJECT_STORE_BACKEND=spaces` and no credentials, then paste.
 
 **Pass:** an error toast telling the user images are unavailable right now, in plain language.
 The rest of the note stays fully editable — typing, formatting and topics all still work.
 
-### Case 18: a broken image
+### Case 19: a broken image
 
 Delete the stored object on the backend (see the backend plan, Case 14) and reload the note.
 
 **Pass:** a quiet muted "this image isn't available" block in the same footprint. **No broken
 image icon, and no layout jump.** The surrounding text does not move.
 
-### Case 19: pasting from Google Docs
+### Case 20: pasting from Google Docs
 
 Copy a passage containing images out of a Google Doc and paste it into the note.
 
@@ -206,7 +217,7 @@ toast, not one per image. Inspect the note: no `<img>` pointing at
 > Why stripping is correct: those URLs are short-lived and account-scoped. Keeping them makes
 > a note that looks fine to the author today and is already broken for the coachee.
 
-### Case 20: uploading while the collaboration socket is down
+### Case 21: uploading while the collaboration socket is down
 
 Stop `docs-collab-server`, reload the session, wait ten seconds for offline mode, then paste
 an image.
@@ -215,7 +226,7 @@ an image.
 websocket, so they are no more at risk than the characters you type in the same state. The
 connection indicator shows the disconnected state throughout.
 
-### Case 21: another session's image id
+### Case 22: another session's image id
 
 As a participant of session A, edit the URL to fetch an image id belonging to session B that
 you are not a participant of.
