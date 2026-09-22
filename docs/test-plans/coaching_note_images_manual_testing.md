@@ -1,0 +1,234 @@
+# Test Plan: Manually Testing Images in Coaching Notes (Frontend)
+
+Verify a coach can add images to a coaching note by toolbar, paste and drag-and-drop; that
+they render, delete, undo, open full size and take alt text; that failures never corrupt the
+shared document; and that a second participant sees the same thing.
+
+Backend counterpart: `refactor-platform-rs/docs/test-plans/coaching_note_images_manual_testing.md`.
+Implementation plan: `docs/plans/images-in-coaching-notes-fe.md`.
+
+> [!IMPORTANT]
+> Playwright **cannot** reach this editor: it needs a live collaboration JWT and a real
+> websocket, which the mocked-route harness does not provide (see
+> `__tests__/e2e/add-from-notes-selection.spec.ts`). The Vitest suite builds a real TipTap
+> editor but has no browser clipboard, no file drag, no second participant and no real
+> network. **Sections 3, 4 and 5 are the only proof this feature works at all.** Section 4
+> in particular has no automated equivalent anywhere.
+
+> [!NOTE]
+> Requires frontend phase F3 (toolbar button) and backend phases B3/B4. Before F3, every case
+> below is reachable via paste and drag-and-drop; only Case 1 needs the button.
+
+## 1. Prerequisites
+
+- Backend on `144-coaching-note-images` running on `:4000` with object storage configured
+  (`OBJECT_STORE_BACKEND=local` is fine and needs no credentials), migrations applied.
+- Frontend on `144-images-in-coaching-notes`, `npm run dev` on `:3000`.
+- `docs-collab-server` running on `:1234`, or the editor drops into offline mode after ten
+  seconds and Case 11 becomes the only reachable path.
+- A coaching session you are a participant in, opened at
+  `/coaching-sessions/<id>` on the **Notes** tab.
+- **Two browsers** (or one plus an incognito window) signed in as the coach and the coachee
+  respectively, both on the same session. Section 4 needs this.
+
+### 1.1 Fixture files
+
+```sh
+cd /tmp
+# Any real photo or screenshot works. A large one is useful: it exercises downscaling.
+# Take a screenshot to the clipboard with Cmd-Ctrl-Shift-4 when a case calls for a paste.
+cp <some large photo> /tmp/big-photo.jpg     # ideally > 3 MB, > 2000px on the long edge
+cat > /tmp/evil.svg <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><script>alert(1)</script></svg>
+SVG
+head -c 11534336 /dev/zero > /tmp/too-big.png
+```
+
+## 2. Adding an image
+
+### Case 1: toolbar button
+
+Click the image button in the Notes toolbar, pick a PNG.
+
+**Pass:** a toast reads "Adding image", briefly shows a percentage, then "Image added." The
+image appears at the cursor. The toolbar button sits in the same group as the link button and
+looks like its neighbours (ghost, same icon size).
+
+### Case 2: paste a screenshot
+
+Take a screenshot to the clipboard, click into the note, press Cmd-V.
+
+**Pass:** same as Case 1. **This is the case the feature exists for** — it is how a coach
+actually uses it mid-session.
+
+### Case 3: drag and drop, with the drop indicator
+
+Drag an image file from Finder over the note. **Before releasing**, watch the caret area.
+
+**Pass:** a visible horizontal line marks where the image will land, and it tracks the
+pointer between blocks. On release the image is inserted **at the line's position, not at the
+caret**. Drop it between two existing paragraphs to make this unambiguous.
+
+> If no line appears, the `Dropcursor` is not firing for external file drags. That is a known
+> open question in the plan, not a mystery — record it and fall back to checking the image
+> lands at the drop position.
+
+### Case 4: a large photo is downscaled before upload
+
+With DevTools Network open, drop `/tmp/big-photo.jpg` (> 3 MB, > 2000 px).
+
+**Pass:** the POST request body is materially smaller than the source file, and the response
+`width`/`height` show the long edge capped near 2000 px. The image still looks right.
+
+### Case 5: an animated GIF is not flattened
+
+Drop an animated GIF.
+
+**Pass:** it still animates in the note. Downscaling deliberately passes GIFs through
+untouched, because canvas re-encoding would reduce it to frame one.
+
+## 3. Rendering, editing, removing
+
+### Case 6: the document stores an id, not a URL
+
+With the image in the note, open DevTools and inspect the rendered `<img>`.
+
+**Pass:** `src` points at `/coaching_session_images/<id>` on the backend, and the element
+carries `data-image-id`. The URL is computed at render time; nothing environment-specific is
+written into the document. Reload the page and confirm the image still renders.
+
+### Case 7: delete, then undo
+
+Hover the image, click the remove control in its corner, then press Cmd-Z.
+
+**Pass:** the control only appears on hover (on a touch device it stays visible). The image
+disappears, and **undo brings back a working image, not a broken one** — deleting the node
+never deletes the stored bytes. This is load-bearing: any future storage cleanup must not
+break it.
+
+### Case 8: full size
+
+Click the image.
+
+**Pass:** a dialog opens showing it at natural size. Escape closes it. Clicking the remove
+control does **not** open the dialog.
+
+### Case 9: alt text
+
+Select the image, type a description into the alt field, then inspect the rendered `<img>`.
+
+**Pass:** `alt` reflects what you typed. Watch the collaboration traffic while typing: writes
+are debounced, so a burst of keystrokes does not produce one update per character. Leaving it
+empty renders `alt=""`, which is correct for a decorative image.
+
+### Case 10: text extraction ignores images
+
+Select a region containing only the image.
+
+**Pass:** the selection bubble menu (Add as Action / Topic) does **not** appear. Select text
+*and* the image together: the menu appears and the prefilled body contains only the prose.
+
+## 4. Two participants (no automated equivalent)
+
+Both browsers on the same session, Notes tab.
+
+### Case 11: an image replicates
+
+Coach adds an image.
+
+**Pass:** it appears in the coachee's note within a second or two, rendering correctly — the
+coachee fetches it with their own cookie, proving authorization is per-viewer.
+
+### Case 12: no placeholder ever replicates
+
+Throttle the coach's network to "Slow 3G" in DevTools and add a large image. Watch the
+**coachee's** screen for the entire upload.
+
+**Pass:** the coachee sees **nothing at all** until the image is fully uploaded, then the
+finished image appears. They must never see a spinner, a grey box, or any placeholder for a
+file they did not choose. This is the single most important case in this document: it is the
+reason uploads complete before anything is written to the shared document.
+
+### Case 13: a dead tab strands nothing
+
+Start a large upload as the coach, then **close the coach's tab mid-upload**.
+
+**Pass:** the coachee's note is unchanged and contains no leftover node. Reopen the session as
+the coach: still clean.
+
+## 5. Failures and edge cases
+
+### Case 14: file too large
+
+Drop `/tmp/too-big.png` (11 MB).
+
+**Pass:** an error toast appears, **the document is unchanged**, and no POST is sent (the
+client rejects it before the network). The message must not quote a size limit or any
+backend policy number.
+
+### Case 15: SVG is refused
+
+Drop `/tmp/evil.svg`.
+
+**Pass:** an error toast, document unchanged, no upload. No alert dialog appears — if you see
+`alert(1)`, stop and treat it as a security incident.
+
+### Case 16: the upload fails server-side
+
+Stop the backend, then paste an image.
+
+**Pass:** an error toast, and **the note is byte-identical afterwards**. Reload and confirm
+nothing was persisted. Restart the backend and retry the same paste: it succeeds.
+
+### Case 17: storage unconfigured
+
+Restart the backend with `OBJECT_STORE_BACKEND=spaces` and no credentials, then paste.
+
+**Pass:** an error toast telling the user images are unavailable right now, in plain language.
+The rest of the note stays fully editable — typing, formatting and topics all still work.
+
+### Case 18: a broken image
+
+Delete the stored object on the backend (see the backend plan, Case 14) and reload the note.
+
+**Pass:** a quiet muted "this image isn't available" block in the same footprint. **No broken
+image icon, and no layout jump.** The surrounding text does not move.
+
+### Case 19: pasting from Google Docs
+
+Copy a passage containing images out of a Google Doc and paste it into the note.
+
+**Pass:** the text arrives. The remote images are **stripped**, and one toast explains that
+images pasted from another app were not included and to paste the image itself. Exactly one
+toast, not one per image. Inspect the note: no `<img>` pointing at
+`lh3.googleusercontent.com` survived.
+
+> Why stripping is correct: those URLs are short-lived and account-scoped. Keeping them makes
+> a note that looks fine to the author today and is already broken for the coachee.
+
+### Case 20: uploading while the collaboration socket is down
+
+Stop `docs-collab-server`, reload the session, wait ten seconds for offline mode, then paste
+an image.
+
+**Pass:** the upload **succeeds** and the image appears locally. Uploads go over REST, not the
+websocket, so they are no more at risk than the characters you type in the same state. The
+connection indicator shows the disconnected state throughout.
+
+### Case 21: another session's image id
+
+As a participant of session A, edit the URL to fetch an image id belonging to session B that
+you are not a participant of.
+
+**Pass:** the image does not render. Covered more precisely by the backend plan's Case 11;
+repeated here because it is the one thing a user could stumble into by sharing a link.
+
+## 6. Cleanup
+
+```sh
+rm -f /tmp/big-photo.jpg /tmp/evil.svg /tmp/too-big.png
+```
+
+Delete the test images from the note, and remove any objects left in the local store
+(`./.local-object-store` in the backend repo) or the Spaces bucket. Restore
+`OBJECT_STORE_BACKEND` if you changed it for Case 17.
