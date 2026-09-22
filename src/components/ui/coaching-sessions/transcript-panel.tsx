@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import type { ReactNode } from "react";
 import { Maximize2, Minimize2, X } from "lucide-react";
 
+import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -16,10 +18,16 @@ import {
   TranscriptEmptyState,
   type TranscriptEmptyStateVariant,
 } from "@/components/ui/coaching-sessions/transcript-empty-state";
+import { TranscriptDownloadButton } from "@/components/ui/coaching-sessions/transcript-download-button";
+import {
+  TRANSCRIPT_HEADER_ACTION_CLASS,
+  TRANSCRIPT_HEADER_ACTION_DESKTOP_ONLY,
+} from "@/components/ui/coaching-sessions/transcript-header-action";
 import { TranscriptSearch } from "@/components/ui/coaching-sessions/transcript-search";
 import { TranscriptSpeakerFilter } from "@/components/ui/coaching-sessions/transcript-speaker-filter";
-import { groupBubbles } from "@/lib/transcript/group-bubbles";
-import { buildSpeakerStyles, speakerStyleFor } from "@/lib/transcript/speakers";
+import { groupBubbles } from "@/lib/utils/transcript-group-bubbles";
+import { buildSpeakerStyles, speakerStyleFor } from "@/lib/utils/transcript-speakers";
+import { downloadScopeFor } from "@/lib/utils/transcript-speaker-roles";
 import { useSpeakerFilter } from "@/lib/hooks/use-speaker-filter";
 import { useTranscriptSearch } from "@/lib/hooks/use-transcript-search";
 import type { Transcription, TranscriptSegment } from "@/types/transcription";
@@ -27,7 +35,11 @@ import { TranscriptionStatus } from "@/types/transcription";
 import type { MeetingRecording } from "@/types/meeting-recording";
 import { MeetingRecordingStatus } from "@/types/meeting-recording";
 import { useMeetingRecording } from "@/lib/api/meeting-recordings";
-import { useTranscription, useTranscriptionSegments } from "@/lib/api/transcriptions";
+import {
+  useTranscription,
+  useTranscriptionSegments,
+  useTranscriptionSpeakers,
+} from "@/lib/api/transcriptions";
 import type { Id } from "@/types/general";
 
 interface TranscriptPanelProps {
@@ -99,8 +111,10 @@ export function TranscriptPanel({
 
   return (
     <Card className="flex flex-col h-full overflow-clip shadow-sm min-h-0">
-      {hasSegments ? (
+      {hasSegments && transcriptionId ? (
         <TranscriptPanelWithData
+          sessionId={sessionId}
+          transcriptionId={transcriptionId}
           segments={segments}
           isMaximized={isMaximized}
           onToggleMaximize={onToggleMaximize}
@@ -125,6 +139,8 @@ export function TranscriptPanel({
 // ── Main orchestrator (data-driven) ───────────────────────────────────
 
 interface TranscriptPanelWithDataProps {
+  sessionId: Id;
+  transcriptionId: Id;
   segments: readonly TranscriptSegment[];
   isMaximized: boolean;
   onToggleMaximize: () => void;
@@ -132,6 +148,8 @@ interface TranscriptPanelWithDataProps {
 }
 
 function TranscriptPanelWithData({
+  sessionId,
+  transcriptionId,
   segments,
   isMaximized,
   onToggleMaximize,
@@ -153,12 +171,27 @@ function TranscriptPanelWithData({
     [filter.visibleSegments, segments]
   );
 
+  // The panel filters on raw labels; the download endpoint takes a
+  // coach/coachee enum. This is the only bridge between the two.
+  const { speakers, isLoaded } = useTranscriptionSpeakers(
+    sessionId,
+    transcriptionId
+  );
+  const downloadScope = downloadScopeFor(filter.value, speakers, isLoaded);
+
   return (
     <>
       <TranscriptHeader
         isMaximized={isMaximized}
         onToggleMaximize={onToggleMaximize}
         onClose={onClose}
+        download={
+          <TranscriptDownloadButton
+            sessionId={sessionId}
+            transcriptionId={transcriptionId}
+            scope={downloadScope}
+          />
+        }
       />
       <div className="shrink-0 px-4 pt-3 pb-2 space-y-2 border-b border-border/60">
         <TranscriptSearch
@@ -213,12 +246,15 @@ interface TranscriptHeaderProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
+  /** Absent on the empty-state path, which has nothing to export. */
+  download?: ReactNode;
 }
 
 function TranscriptHeader({
   isMaximized,
   onToggleMaximize,
   onClose,
+  download,
 }: TranscriptHeaderProps) {
   return (
     <CardHeader className="p-4 pb-3 shrink-0 border-b border-border/60">
@@ -228,6 +264,7 @@ function TranscriptHeader({
           isMaximized={isMaximized}
           onToggleMaximize={onToggleMaximize}
           onClose={onClose}
+          download={download}
         />
       </div>
     </CardHeader>
@@ -240,17 +277,22 @@ interface TranscriptPanelActionsProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
+  download?: ReactNode;
 }
 
 function TranscriptPanelActions({
   isMaximized,
   onToggleMaximize,
   onClose,
+  download,
 }: TranscriptPanelActionsProps) {
   const maximizeLabel = isMaximized ? "Restore panels" : "Maximize transcript";
   return (
     <TooltipProvider>
       <div className="flex items-center gap-1 shrink-0">
+        {/* Inside this provider, not a sibling of it: Radix Tooltip throws
+            without a TooltipProvider ancestor. */}
+        {download}
         <IconButton
           label={maximizeLabel}
           onClick={onToggleMaximize}
@@ -279,7 +321,10 @@ function IconButton({ label, onClick, icon }: IconButtonProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="hidden md:inline-flex h-7 w-7 p-0 text-muted-foreground/50 hover:text-foreground"
+          className={cn(
+            TRANSCRIPT_HEADER_ACTION_CLASS,
+            TRANSCRIPT_HEADER_ACTION_DESKTOP_ONLY
+          )}
           onClick={onClick}
           aria-label={label}
         >

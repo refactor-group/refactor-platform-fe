@@ -2,7 +2,7 @@ import { render } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 
 import { TranscriptStatusIndicator } from "@/components/ui/coaching-sessions/transcript-status-indicator";
-import { IndicatorStatus } from "@/lib/transcript/indicator-status";
+import { IndicatorStatus } from "@/lib/utils/transcript-indicator-status";
 
 describe("TranscriptStatusIndicator", () => {
   it("renders nothing when status is None", () => {

@@ -3,7 +3,7 @@
 import { AlertCircle } from "lucide-react";
 
 import { cn } from "@/components/lib/utils";
-import { IndicatorStatus } from "@/lib/transcript/indicator-status";
+import { IndicatorStatus } from "@/lib/utils/transcript-indicator-status";
 
 interface TranscriptStatusIndicatorProps {
   status: IndicatorStatus;

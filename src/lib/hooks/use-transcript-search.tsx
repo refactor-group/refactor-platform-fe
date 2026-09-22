@@ -10,7 +10,7 @@ import {
   type RefObject,
 } from "react";
 
-import { buildSearchMatches, type SegmentMatch } from "@/lib/transcript/search-matches";
+import { buildSearchMatches, type SegmentMatch } from "@/lib/utils/transcript-search-matches";
 import type { TranscriptSegment } from "@/types/transcription";
 
 interface UseTranscriptSearchOptions {

@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   IndicatorStatus,
   deriveIndicatorStatus,
-} from "../indicator-status";
+} from "../transcript-indicator-status";
 import { MeetingRecordingStatus } from "@/types/meeting-recording";
 import { TranscriptionStatus } from "@/types/transcription";
 

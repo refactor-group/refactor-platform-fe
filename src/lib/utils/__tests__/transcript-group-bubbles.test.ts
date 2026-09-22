@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 
-import { groupBubbles } from "../group-bubbles";
+import { groupBubbles } from "../transcript-group-bubbles";
 import type { TranscriptSegment } from "@/types/transcription";
 
 function makeSegment(id: string, speaker: string, text = ""): TranscriptSegment {

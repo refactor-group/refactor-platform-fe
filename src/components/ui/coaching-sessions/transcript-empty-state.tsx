@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertCircle, Loader2, Mic, MicOff, Video } from "lucide-react";
 
-import { formatTimestamp } from "@/lib/transcript/format-timestamp";
+import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
 
 /**
  * Variants that describe why the transcript body can't show segments yet.

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TranscriptStatusIndicator } from "@/components/ui/coaching-sessions/transcript-status-indicator";
 import { cn } from "@/components/lib/utils";
-import { IndicatorStatus } from "@/lib/transcript/indicator-status";
+import { IndicatorStatus } from "@/lib/utils/transcript-indicator-status";
 
 /**
  * Sits in the coaching session header next to Join Meeting and Share.
