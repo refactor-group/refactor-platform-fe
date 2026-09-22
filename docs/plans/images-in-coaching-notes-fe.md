@@ -121,7 +121,9 @@ This repo is already a partial adoption of TipTap's **simple-editor template** (
 `upload(file, onProgress, abortSignal) => Promise` signature verbatim so updates stay mergeable, and
 diverge only on progress rendering (local decoration, not a document node).
 
-- `npm i @tiptap/extension-image @tiptap/extension-file-handler` (both MIT, 3.31.3).
+- `npm i @tiptap/extension-image @tiptap/extension-file-handler` (both MIT). Pin to the
+  **installed** `@tiptap/core` version, not latest: TipTap pins peers exactly, so the newest
+  publish demands bumping the whole TipTap set. Currently 3.29.2.
 - `src/types/coaching-session-image.ts` — wire type + parser. Absent dimensions use `Option<T>` from
   `src/types/option.ts`, never `| null`.
 - `src/lib/api/coaching-session-images.ts` — `upload()` returning `Result<…, UploadFailure>`, and
