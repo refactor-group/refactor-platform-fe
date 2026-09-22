@@ -16,7 +16,7 @@ import {
   TranscriptionApi,
   type DownloadFailure,
 } from "@/lib/api/transcriptions";
-import { saveBlobAs } from "@/lib/download-file";
+import { saveBlobAs } from "@/lib/transcript/download-file";
 import {
   blockedReasonFor,
   downloadLabelFor,

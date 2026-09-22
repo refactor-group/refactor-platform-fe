@@ -6,7 +6,7 @@ import { err, ok } from "neverthrow";
 import { TranscriptDownloadButton } from "@/components/ui/coaching-sessions/transcript-download-button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TranscriptionApi } from "@/lib/api/transcriptions";
-import { saveBlobAs } from "@/lib/download-file";
+import { saveBlobAs } from "@/lib/transcript/download-file";
 import type { DownloadScope } from "@/lib/transcript/speaker-roles";
 import { None, Some } from "@/types/option";
 import { SpeakerRole } from "@/types/transcription";
@@ -15,7 +15,7 @@ vi.mock("@/lib/api/transcriptions", () => ({
   TranscriptionApi: { downloadText: vi.fn() },
 }));
 
-vi.mock("@/lib/download-file", () => ({ saveBlobAs: vi.fn() }));
+vi.mock("@/lib/transcript/download-file", () => ({ saveBlobAs: vi.fn() }));
 
 const toastError = vi.fn();
 vi.mock("sonner", () => ({ toast: { error: (...args: unknown[]) => toastError(...args) } }));

@@ -5,7 +5,7 @@ import { type KeyedMutator } from "swr";
 import { siteConfig } from "@/site.config";
 import { EntityApi } from "@/lib/api/entity-api";
 import { sessionGuard } from "@/lib/auth/session-guard";
-import { filenameFromDisposition } from "@/lib/download-file";
+import { filenameFromDisposition } from "@/lib/transcript/download-file";
 import type { DownloadScope } from "@/lib/transcript/speaker-roles";
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
