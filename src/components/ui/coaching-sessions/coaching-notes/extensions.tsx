@@ -43,6 +43,13 @@ import {
   TableCell,
   TableHeader,
 } from "./markdown-table-extension";
+import {
+  CoachingNoteImage,
+  NoteImagePasteSanitizer,
+  createNoteImageFileHandler,
+  type NoteImageUploadContext,
+} from "./note-image-extension";
+import type { Option } from "@/types/option";
 
 const lowlight = createLowlight(all);
 const INDENT_SIZE = 4; // Number of spaces for indentation
@@ -77,10 +84,11 @@ function hasValidCollaboration(
 export const Extensions = (
   doc: Y.Doc | null,
   provider?: TiptapCollabProvider | null,
-  user?: { name: string; color: string }
+  user?: { name: string; color: string },
+  imageContext?: Option<NoteImageUploadContext>
 ): TiptapExtensions => {
   try {
-    const baseExtensions = createFoundationExtensions();
+    const baseExtensions = createFoundationExtensions(imageContext);
     const collaborativeExtensions = buildCollaborationIfValid(
       doc,
       provider,
@@ -104,7 +112,9 @@ const createMinimalExtensions = (): TiptapExtensions => {
   return [Document, Paragraph, Text];
 };
 
-const createFoundationExtensions = (): TiptapExtensions => {
+const createFoundationExtensions = (
+  imageContext?: Option<NoteImageUploadContext>
+): TiptapExtensions => {
   return [
     configureBaseExtensions(),
     configureTableRelatedExtensions(),
@@ -113,6 +123,7 @@ const createFoundationExtensions = (): TiptapExtensions => {
     addCodeBlockWithSyntaxHighlighting(),
     addPlaceholderConfiguration(),
     addLinksConfiguration(),
+    addImageExtensions(imageContext),
     addCustomTabHandler(),
   ].flat();
 };
@@ -178,7 +189,11 @@ const configureBaseExtensions = () => {
     Blockquote,
     HorizontalRule,
     HardBreak,
-    Dropcursor,
+    Dropcursor.configure({
+      width: 3,
+      class: "coaching-notes-dropcursor",
+      color: false,
+    }),
     Gapcursor,
   ];
 };
@@ -231,6 +246,19 @@ const addPlaceholderConfiguration = () => {
 
 const addLinksConfiguration = () => {
   return [ConfiguredLink, LinkKeyboardShortcut, LinkZombieCleanup];
+};
+
+// Omitted entirely when no coaching session context is supplied, since there is
+// then nowhere to upload to.
+const addImageExtensions = (
+  imageContext?: Option<NoteImageUploadContext>
+): TiptapExtensions => {
+  if (!imageContext?.some) return [];
+  return [
+    CoachingNoteImage,
+    createNoteImageFileHandler(imageContext.val),
+    NoteImagePasteSanitizer,
+  ];
 };
 
 const addCustomTabHandler = () => {

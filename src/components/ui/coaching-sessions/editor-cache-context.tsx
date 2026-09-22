@@ -15,6 +15,7 @@ import * as Y from "yjs";
 import { TiptapCollabProvider } from "@hocuspocus/provider";
 import type { Editor, Extensions } from "@tiptap/core";
 import { Extensions as createExtensions } from "@/components/ui/coaching-sessions/coaching-notes/extensions";
+import { MAX_NOTE_IMAGE_BYTES } from "@/components/ui/coaching-sessions/coaching-notes/constants";
 import {
   fetchCollaborationTokenWithRetry,
   useCollaborationToken,
@@ -389,10 +390,15 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
         }
         extensionsCreated = true;
 
-        const collaborativeExtensions = createExtensions(doc, provider, {
-          name: userSession.display_name,
-          color: userColor,
-        });
+        const collaborativeExtensions = createExtensions(
+          doc,
+          provider,
+          {
+            name: userSession.display_name,
+            color: userColor,
+          },
+          Some({ coachingSessionId: sessionId, maxBytes: MAX_NOTE_IMAGE_BYTES })
+        );
 
         setCache((prev) => ({
           ...prev,
@@ -545,7 +551,12 @@ export const EditorCacheProvider: FC<EditorCacheProviderProps> = ({
       clearSyncTimeout();
 
       // Fallback to offline editing mode
-      const fallbackExtensions = createExtensions(null, null);
+      const fallbackExtensions = createExtensions(
+        null,
+        null,
+        undefined,
+        Some({ coachingSessionId: sessionId, maxBytes: MAX_NOTE_IMAGE_BYTES })
+      );
 
       setCache((prev) => ({
         ...prev,
