@@ -216,11 +216,26 @@ The row has a single `deleted_at` timestamp.
 
 ### Case 15: file too large
 
-Drop `/tmp/too-big.png` (11 MB).
+The cap applies to what would actually be sent, not to what you picked, so this needs two
+files. Both are refused before the network; they differ in where the refusal happens.
 
-**Pass:** an error toast appears, **the document is unchanged**, and no POST is sent (the
-client rejects it before the network). The message must not quote a size limit or any
-backend policy number.
+**15a, past the decode ceiling.** Drop a PNG over 40 MB (four times the cap). Generate one
+with `magick -size 4000x4000 xc: +noise Random /tmp/way-too-big.png`.
+
+**Pass:** an error toast, **the document is unchanged**, and no POST is sent. The file is
+refused without being decoded.
+
+**15b, over the cap but downscalable.** Drop a 2400x2400 PNG of around 12 MB
+(`magick -size 2400x2400 xc: +noise Random /tmp/big-photo.png`).
+
+**Pass:** it **uploads successfully**, because downscaling brings it under the cap. This is
+the phone-photo case, and refusing it would be the bug. Check the row: `byte_size` is well
+under 10 MB and `mime_type` is `image/webp`.
+
+**15c, incompressible and over the cap.** A file that downscaling cannot rescue still has to
+be refused. Hard to hit by hand with real photos; the unit tests cover it directly.
+
+In every rejection the message must not quote a size limit or any backend policy number.
 
 ### Case 16: SVG is refused
 
@@ -247,8 +262,13 @@ The rest of the note stays fully editable — typing, formatting and topics all 
 
 Delete the stored object on the backend (see the backend plan, Case 14) and reload the note.
 
-**Pass:** a quiet muted "this image isn't available" block in the same footprint. **No broken
-image icon, and no layout jump.** The surrounding text does not move.
+**Pass:** a quiet muted "this image isn't available" block **occupying the same box the image
+did**. **No broken image icon, and no layout jump** — put a line of text directly below the
+image first, note where it sits, and confirm it has not moved after the reload.
+
+Images uploaded before this behaviour existed carry no recorded dimensions, so their
+placeholder falls back to a text-sized block and the text below it does move. Only a
+freshly uploaded image tests the reserved box.
 
 ### Case 20: pasting from Google Docs
 
@@ -257,7 +277,8 @@ Copy a passage containing images out of a Google Doc and paste it into the note.
 **Pass:** the text arrives. The remote images are **stripped**, and one toast explains that
 images pasted from another app were not included and to paste the image itself. Exactly one
 toast, not one per image. Inspect the note: no `<img>` pointing at
-`lh3.googleusercontent.com` survived.
+`lh3.googleusercontent.com` survived, and **no blank paragraphs are left where the images
+were** — the paragraphs of text should be adjacent, exactly as in the source document.
 
 > Why stripping is correct: those URLs are short-lived and account-scoped. Keeping them makes
 > a note that looks fine to the author today and is already broken for the coachee.

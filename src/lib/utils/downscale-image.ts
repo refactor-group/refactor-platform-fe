@@ -17,26 +17,51 @@ export enum ImageRejectionKind {
   TooLarge = "too_large",
 }
 
-/** Validate a picked/pasted/dropped file before it reaches the network. */
-export function validateImageFile(
+/**
+ * How far past the upload cap we will still try to decode. A phone photo routinely
+ * exceeds the cap and downscales well under it, so the cap belongs after downscaling.
+ * Decoding costs memory in proportion to pixel count, though, so something this far
+ * out is refused unread rather than decoded on the chance it shrinks enough.
+ */
+export const DECODE_CEILING_MULTIPLIER = 4;
+
+/**
+ * Accept a picked/pasted/dropped file for processing: a kind we can handle, and small
+ * enough to be worth decoding. The upload cap itself is applied by `enforceUploadSize`
+ * once downscaling has had its chance.
+ */
+export function acceptImageFile(
   file: File,
   maxBytes: number
 ): Result<File, ImageRejectionKind> {
   if (!ACCEPTED_IMAGE_MIME_TYPES.includes(file.type as AcceptedImageMimeType)) {
     return err(ImageRejectionKind.UnsupportedType);
   }
-  if (file.size > maxBytes) {
+  if (file.size > maxBytes * DECODE_CEILING_MULTIPLIER) {
     return err(ImageRejectionKind.TooLarge);
   }
   return ok(file);
 }
 
+/** The upload cap, applied to whatever downscaling actually produced. */
+export function enforceUploadSize(
+  file: File,
+  maxBytes: number
+): Result<File, ImageRejectionKind> {
+  return file.size > maxBytes ? err(ImageRejectionKind.TooLarge) : ok(file);
+}
+
 /**
- * Re-encode to at most MAX_IMAGE_EDGE_PX on the long edge. Returns the original
- * file unchanged when it is already small enough, when it is a GIF, or when
- * canvas encoding is unavailable or fails.
+ * Re-encode to at most MAX_IMAGE_EDGE_PX on the long edge. Given `maxBytes`, also
+ * re-encodes a file that is within those dimensions but over the byte cap, since a
+ * modestly sized photo can still be far too heavy as PNG. Returns the original file
+ * unchanged when there is nothing to gain, when it is a GIF, or when canvas encoding
+ * is unavailable or fails.
  */
-export async function downscaleImage(file: File): Promise<File> {
+export async function downscaleImage(
+  file: File,
+  maxBytes?: number
+): Promise<File> {
   // Canvas re-encoding flattens an animated GIF to its first frame.
   if (file.type === ANIMATED_MIME_TYPE) return file;
   if (!canEncodeInThisEnvironment()) return file;
@@ -44,12 +69,16 @@ export async function downscaleImage(file: File): Promise<File> {
   try {
     const source = await createImageBitmap(file);
     const size = scaledSize(source.width, source.height);
-    if (!size.some) {
+    const overCap = maxBytes !== undefined && file.size > maxBytes;
+    if (!size.some && !overCap) {
       source.close();
       return file;
     }
 
-    const blob = await encodeToWebP(source, size.val);
+    const target = size.some
+      ? size.val
+      : { width: source.width, height: source.height };
+    const blob = await encodeToWebP(source, target);
     source.close();
     if (!blob.some || blob.val.size >= file.size) return file;
 

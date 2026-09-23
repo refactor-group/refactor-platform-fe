@@ -366,6 +366,37 @@ describe("Coaching note image extension", () => {
     expect(transformed).toContain(ownUrl);
   });
 
+  // Google Docs wraps each image in its own paragraph, so leaving the wrapper behind
+  // turns a doc full of images into a run of blank lines.
+  it("removes the paragraph a stripped image leaves empty", () => {
+    const { html } = sanitizePastedHtml(
+      `<p>AAA</p>` +
+        `<p><img src="https://lh3.googleusercontent.com/x1" /></p>` +
+        `<p><img src="https://lh3.googleusercontent.com/x2" /></p>` +
+        `<p>BBB</p>`
+    );
+
+    expect(html).toBe("<p>AAA</p><p>BBB</p>");
+  });
+
+  it("keeps a wrapper that still holds text after the image goes", () => {
+    const { html } = sanitizePastedHtml(
+      `<p>caption <img src="https://lh3.googleusercontent.com/x1" /></p>`
+    );
+
+    expect(html).toBe("<p>caption </p>");
+  });
+
+  // An empty cell still carries meaning: pruning it would shift every later cell left.
+  it("keeps an emptied table cell", () => {
+    const { html } = sanitizePastedHtml(
+      `<table><tbody><tr><td><img src="https://lh3.googleusercontent.com/x1" /></td><td>next</td></tr></tbody></table>`
+    );
+
+    expect(html).toContain("<td></td>");
+    expect(html).toContain("<td>next</td>");
+  });
+
   it("reports when something was stripped and when nothing was", () => {
     expect(sanitizePastedHtml("<p>plain</p>").stripped).toBe(false);
     expect(sanitizePastedHtml('<img src="https://example.com/a.png" />').stripped).toBe(

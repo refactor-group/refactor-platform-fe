@@ -17,9 +17,10 @@ import {
   UploadFailureKind,
 } from "@/lib/api/coaching-session-images";
 import {
+  acceptImageFile,
   downscaleImage,
+  enforceUploadSize,
   ImageRejectionKind,
-  validateImageFile,
 } from "@/lib/utils/downscale-image";
 import { ACCEPTED_IMAGE_MIME_TYPES } from "@/types/coaching-session-image";
 import type { Id } from "@/types/general";
@@ -44,6 +45,12 @@ export const CoachingNoteImage = Image.extend({
       alt: { default: "" },
       // Reserved now so adding resize handles later needs no document migration.
       width: { default: null },
+      // Intrinsic pixel size, recorded at upload. Lets the node reserve the right box
+      // before the bytes arrive, and keep it when they never do. Kept separate from
+      // `width` above, which is reserved for a display size the user picks. Null on
+      // nodes written before this existed, and whenever the backend could not measure.
+      naturalWidth: { default: null },
+      naturalHeight: { default: null },
     };
   },
 
@@ -171,9 +178,9 @@ export async function uploadAndInsertImage(
   context: NoteImageUploadContext,
   insertAt?: number
 ): Promise<void> {
-  const validated = validateImageFile(file, context.maxBytes);
-  if (validated.isErr()) {
-    toast.error(rejectionMessage(validated.error));
+  const accepted = acceptImageFile(file, context.maxBytes);
+  if (accepted.isErr()) {
+    toast.error(rejectionMessage(accepted.error));
     return;
   }
 
@@ -181,10 +188,23 @@ export async function uploadAndInsertImage(
   // Yjs insert that replicates to the other participant and is stranded in shared
   // state forever if this tab dies mid-upload.
   const progress = startDelayedProgressToast();
-  const prepared = await downscaleImage(validated.value);
+  const prepared = await downscaleImage(accepted.value, context.maxBytes);
+
+  // The cap applies to what we would actually send, so it is checked here rather than
+  // on the picked file: a photo far over the cap routinely downscales well under it.
+  const sized = enforceUploadSize(prepared, context.maxBytes);
+  if (sized.isErr()) {
+    const pending = progress.settle();
+    toast.error(
+      rejectionMessage(sized.error),
+      pending.some ? { id: pending.val } : undefined
+    );
+    return;
+  }
+
   const result = await CoachingSessionImageApi.upload(
     context.coachingSessionId,
-    prepared,
+    sized.value,
     progress.report
   );
   const progressToast = progress.settle();
@@ -203,7 +223,12 @@ export async function uploadAndInsertImage(
     .focus()
     .insertContentAt(insertAt ?? editor.state.selection.to, {
       type: COACHING_NOTE_IMAGE_NAME,
-      attrs: { imageId: result.value.id, alt: "" },
+      attrs: {
+        imageId: result.value.id,
+        alt: "",
+        naturalWidth: result.value.width.some ? result.value.width.val : null,
+        naturalHeight: result.value.height.some ? result.value.height.val : null,
+      },
     })
     .run();
 }
@@ -244,19 +269,46 @@ export function sanitizePastedHtml(html: string): SanitizedPaste {
   const parsed = new DOMParser().parseFromString(html, "text/html");
   let stripped = false;
 
+  const strip = (element: Element) => {
+    const parent = element.parentElement;
+    element.remove();
+    stripped = true;
+    if (parent) pruneEmptyWrappers(parent);
+  };
+
   parsed.body.querySelectorAll("img").forEach((image) => {
     const src = image.getAttribute("src");
     if (src !== null && src.startsWith(OWN_IMAGE_URL_PREFIX)) return;
-    image.remove();
-    stripped = true;
+    strip(image);
   });
 
-  parsed.body.querySelectorAll("svg").forEach((svg) => {
-    svg.remove();
-    stripped = true;
-  });
+  parsed.body.querySelectorAll("svg").forEach(strip);
 
   return { html: parsed.body.innerHTML, stripped };
+}
+
+// Wrappers a stripped image may leave behind. A table cell or list item is excluded on
+// purpose: an empty one still carries meaning, and removing it would deform the table.
+const PRUNABLE_WRAPPER_TAGS = new Set(["P", "DIV", "SPAN", "FIGURE", "A"]);
+
+/**
+ * Walk up from a stripped image removing wrappers it emptied. Google Docs puts every
+ * image in its own paragraph, so without this a doc full of images pastes as a run of
+ * blank lines.
+ */
+function pruneEmptyWrappers(element: Element): void {
+  let current: Element | null = element;
+  while (
+    current !== null &&
+    current.parentElement !== null &&
+    PRUNABLE_WRAPPER_TAGS.has(current.tagName) &&
+    current.children.length === 0 &&
+    current.textContent?.trim() === ""
+  ) {
+    const parent: Element = current.parentElement;
+    current.remove();
+    current = parent;
+  }
 }
 
 export const NoteImagePasteSanitizer = Extension.create({

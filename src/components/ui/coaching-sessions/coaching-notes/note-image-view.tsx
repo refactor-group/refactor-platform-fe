@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { Trash2 } from "lucide-react";
 import { cn } from "@/components/lib/utils";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { CoachingSessionImageApi } from "@/lib/api/coaching-session-images";
+import { type Option, Some, None } from "@/types/option";
 
 const ALT_TEXT_DEBOUNCE_MS = 400;
 
@@ -22,6 +23,34 @@ type LoadState = { kind: "loading" } | { kind: "loaded" } | { kind: "error" };
 
 function attributeString(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function attributeDimension(value: unknown): Option<number> {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Some(value)
+    : None;
+}
+
+/**
+ * The box the image occupies, when the upload recorded one. Reserving it keeps the note
+ * from reflowing as images load, and keeps the unavailable placeholder the same size as
+ * the image it stands in for.
+ *
+ * Shaped to match how the image itself is laid out: fill the available width, but never
+ * exceed the image's own pixel width, and take the height from the aspect ratio. A fixed
+ * `width` here instead would stop the placeholder shrinking in a narrow editor, and would
+ * push a large image's box straight out of the column.
+ */
+function reservedBox(
+  width: Option<number>,
+  height: Option<number>
+): CSSProperties | undefined {
+  if (!width.some || !height.some) return undefined;
+  return {
+    width: "100%",
+    maxWidth: width.val,
+    aspectRatio: `${width.val} / ${height.val}`,
+  };
 }
 
 const TRANSPARENT_PIXEL =
@@ -61,6 +90,9 @@ export function NoteImageView({
   const imageId = attributeString(node.attrs.imageId);
   const alt = attributeString(node.attrs.alt);
   const src = CoachingSessionImageApi.imageUrl(imageId);
+  const naturalWidth = attributeDimension(node.attrs.naturalWidth);
+  const naturalHeight = attributeDimension(node.attrs.naturalHeight);
+  const box = reservedBox(naturalWidth, naturalHeight);
 
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -90,13 +122,22 @@ export function NoteImageView({
       // image drag takes over and the drop silently does nothing.
       data-drag-handle
       ref={wrapperRef}
-      className={cn("note-image group relative my-4 w-fit", selected && "is-selected")}
+      className={cn(
+        "note-image group relative my-4",
+        // Shrink-wrapped around the image normally. The placeholder has no intrinsic
+        // width to wrap, so in that state the wrapper spans the column and the
+        // placeholder's own max-width does the constraining.
+        loadState.kind === "error" ? "w-full" : "w-fit",
+        selected && "is-selected"
+      )}
     >
       {/* next/image cannot serve a cookie-authorized backend redirect. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt={alt}
+        width={naturalWidth.some ? naturalWidth.val : undefined}
+        height={naturalHeight.some ? naturalHeight.val : undefined}
         // An <img> is natively draggable, which competes with ProseMirror's drag.
         draggable={false}
         className={cn(
@@ -107,7 +148,7 @@ export function NoteImageView({
         onError={() => setLoadState({ kind: "error" })}
         onClick={() => setLightboxOpen(true)}
       />
-      {loadState.kind === "error" && <NoteImageUnavailable />}
+      {loadState.kind === "error" && <NoteImageUnavailable style={box} />}
       <DeleteImageButton onDelete={deleteNode} />
       {selected && (
         <AltTextField
@@ -125,9 +166,12 @@ export function NoteImageView({
   );
 }
 
-function NoteImageUnavailable() {
+function NoteImageUnavailable({ style }: { style?: CSSProperties }) {
   return (
-    <div className="note-image__unavailable flex items-center justify-center rounded-lg border border-border bg-muted/20 px-6 py-8">
+    <div
+      style={style}
+      className="note-image__unavailable flex max-w-full items-center justify-center rounded-lg border border-border bg-muted/20 px-6 py-8"
+    >
       <span className="text-sm text-muted-foreground">
         This image isn&apos;t available right now.
       </span>
