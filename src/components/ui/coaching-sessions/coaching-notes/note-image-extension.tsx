@@ -9,6 +9,7 @@ import { Image } from "@tiptap/extension-image";
 import FileHandler from "@tiptap/extension-file-handler";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
+import { ReplaceStep, type Step } from "@tiptap/pm/transform";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { ySyncPluginKey } from "@tiptap/y-tiptap";
 import { toast } from "sonner";
@@ -22,7 +23,7 @@ import {
   enforceUploadSize,
   ImageRejectionKind,
 } from "@/lib/utils/downscale-image";
-import { ACCEPTED_IMAGE_MIME_TYPES } from "@/types/coaching-session-image";
+import { ACCEPTED_IMAGE_MIME_TYPES, isImageId } from "@/types/coaching-session-image";
 import type { Id } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 import { NoteImageView } from "./note-image-view";
@@ -39,12 +40,30 @@ export const CoachingNoteImage = Image.extend({
     return {
       imageId: {
         default: "",
-        parseHTML: (element) => element.getAttribute("data-image-id") ?? "",
+        // Pasted HTML can carry any data-image-id it likes, and the id ends up in
+        // credentialed request paths. Anything that is not a UUID becomes "", which
+        // the node already treats as absent.
+        parseHTML: (element) => {
+          const raw = element.getAttribute("data-image-id");
+          return isImageId(raw) ? raw : "";
+        },
         renderHTML: (attributes) => ({ "data-image-id": attributes.imageId }),
       },
       alt: { default: "" },
       // Reserved now so adding resize handles later needs no document migration.
       width: { default: null },
+      // The session this image belongs to, recorded at upload so a paste can tell an
+      // image of this note from one carried over from another. Empty on nodes written
+      // before this existed, which are treated as belonging here: they predate any way
+      // of copying between notes, and a stricter default would strip existing images.
+      coachingSessionId: {
+        default: "",
+        parseHTML: (element) =>
+          element.getAttribute("data-coaching-session-id") ?? "",
+        renderHTML: (attributes) => ({
+          "data-coaching-session-id": attributes.coachingSessionId,
+        }),
+      },
       // Intrinsic pixel size, recorded at upload. Lets the node reserve the right box
       // before the bytes arrive, and keep it when they never do. Kept separate from
       // `width` above, which is reserved for a display size the user picks. Null on
@@ -125,6 +144,8 @@ function uploadFailureMessage(kind: UploadFailureKind): string {
       return "Images can't be added right now. Please try again later.";
     case UploadFailureKind.Forbidden:
       return "You don't have permission to add images to this session.";
+    case UploadFailureKind.NotFound:
+      return "That image couldn't be added. Please try again.";
     case UploadFailureKind.Network:
       return "That image couldn't be uploaded. Check your connection and try again.";
     case UploadFailureKind.Unknown:
@@ -171,6 +192,39 @@ function startDelayedProgressToast(): DelayedProgressToast {
   };
 }
 
+/**
+ * A drop position that survives the upload.
+ *
+ * The upload resolves seconds to minutes after the drop, and the document moves under it
+ * the whole time: the author keeps typing, and the other participant's edits arrive over
+ * the wire. A raw number captured at drop time is stale by the time it is used, and
+ * `insertContentAt` resolves it against the current document with no clamping, so a
+ * document that has since shrunk throws RangeError out of a floating promise: an upload
+ * the user has already paid for, lost with no error shown.
+ */
+interface TrackedPosition {
+  /** The drop position, mapped through every step since. */
+  current(): number;
+  stop(): void;
+}
+
+function trackPosition(editor: Editor, pos: number): TrackedPosition {
+  let mapped = pos;
+  const onTransaction = ({ transaction }: { transaction: Transaction }) => {
+    mapped = transaction.mapping.map(mapped);
+  };
+  editor.on("transaction", onTransaction);
+  return {
+    // Clamped as well as mapped. Mapping alone is right for every edit ProseMirror
+    // reports, but the editor can be torn down and rebuilt around a cached document,
+    // and a position from the previous instance has no meaning in the new one.
+    current: () => Math.min(Math.max(mapped, 0), editor.state.doc.content.size),
+    stop: () => {
+      editor.off("transaction", onTransaction);
+    },
+  };
+}
+
 /** Validate, downscale, upload, and insert on success. Never touches the document on failure. */
 export async function uploadAndInsertImage(
   editor: Editor,
@@ -184,6 +238,10 @@ export async function uploadAndInsertImage(
     return;
   }
 
+  // Tracked from here, before the first await, so no edit can slip past unmapped.
+  const tracked =
+    insertAt === undefined ? undefined : trackPosition(editor, insertAt);
+
   // Progress lives in a toast, never in the document: a placeholder node is a real
   // Yjs insert that replicates to the other participant and is stranded in shared
   // state forever if this tab dies mid-upload.
@@ -194,6 +252,7 @@ export async function uploadAndInsertImage(
   // on the picked file: a photo far over the cap routinely downscales well under it.
   const sized = enforceUploadSize(prepared, context.maxBytes);
   if (sized.isErr()) {
+    tracked?.stop();
     const pending = progress.settle();
     toast.error(
       rejectionMessage(sized.error),
@@ -210,6 +269,7 @@ export async function uploadAndInsertImage(
   const progressToast = progress.settle();
 
   if (result.isErr()) {
+    tracked?.stop();
     toast.error(
       uploadFailureMessage(result.error.kind),
       progressToast.some ? { id: progressToast.val } : undefined
@@ -218,14 +278,19 @@ export async function uploadAndInsertImage(
   }
 
   if (progressToast.some) toast.dismiss(progressToast.val);
+  const at = tracked
+    ? tracked.current()
+    : Math.min(editor.state.selection.to, editor.state.doc.content.size);
+  tracked?.stop();
   editor
     .chain()
     .focus()
-    .insertContentAt(insertAt ?? editor.state.selection.to, {
+    .insertContentAt(at, {
       type: COACHING_NOTE_IMAGE_NAME,
       attrs: {
         imageId: result.value.id,
         alt: "",
+        coachingSessionId: context.coachingSessionId,
         naturalWidth: result.value.width.some ? result.value.width.val : null,
         naturalHeight: result.value.height.some ? result.value.height.val : null,
       },
@@ -233,27 +298,57 @@ export async function uploadAndInsertImage(
     .run();
 }
 
+/**
+ * Upload several files so they land in the order they were given.
+ *
+ * Sequential rather than concurrent: every file shares one drop position, so racing them
+ * means they arrive in completion order, and the small one the user dropped last lands
+ * first. Awaiting each in turn is slower and correct.
+ *
+ * Nothing here is allowed to reject. Callers are event handlers that cannot await, so an
+ * escaping rejection is an unhandled one; `uploadAndInsertImage` reports its own failures
+ * as toasts, and anything past that is a bug worth seeing in the console rather than
+ * losing silently.
+ */
+async function uploadFilesInOrder(
+  editor: Editor,
+  files: File[],
+  context: NoteImageUploadContext,
+  pos?: number
+): Promise<void> {
+  for (const file of files) {
+    try {
+      await uploadAndInsertImage(editor, file, context, pos);
+    } catch (error) {
+      console.error("Adding an image to the note failed unexpectedly:", error);
+      toast.error("That image couldn't be added. Please try again.");
+    }
+  }
+}
+
 export const createNoteImageFileHandler = (context: NoteImageUploadContext) =>
   FileHandler.configure({
     allowedMimeTypes: [...ACCEPTED_IMAGE_MIME_TYPES],
     onDrop: (editor, files, pos) => {
-      files.forEach((file) => {
-        void uploadAndInsertImage(editor, file, context, pos);
-      });
+      void uploadFilesInOrder(editor, files, context, pos);
     },
     onPaste: (editor, files) => {
-      files.forEach((file) => {
-        void uploadAndInsertImage(editor, file, context);
-      });
+      void uploadFilesInOrder(editor, files, context);
     },
   });
 
 export const FOREIGN_IMAGE_STRIPPED_MESSAGE =
   "Images pasted from another app weren't included. Paste or drag the image itself to add it.";
 
+export const OTHER_SESSION_IMAGE_STRIPPED_MESSAGE =
+  "Images from another session weren't included. Add the image to this session instead.";
+
 export interface SanitizedPaste {
   html: string;
+  /** A remote image or inline SVG was removed. */
   stripped: boolean;
+  /** An image belonging to a different coaching session was removed. */
+  strippedOtherSession: boolean;
 }
 
 /**
@@ -263,28 +358,54 @@ export interface SanitizedPaste {
  * yields a note that looks fine to the author and is already broken for the coachee.
  * SVG goes because it is executable markup.
  */
-export function sanitizePastedHtml(html: string): SanitizedPaste {
-  if (typeof DOMParser === "undefined") return { html, stripped: false };
+export function sanitizePastedHtml(
+  html: string,
+  ownCoachingSessionId?: Id
+): SanitizedPaste {
+  if (typeof DOMParser === "undefined")
+    return { html, stripped: false, strippedOtherSession: false };
 
   const parsed = new DOMParser().parseFromString(html, "text/html");
   let stripped = false;
+  let strippedOtherSession = false;
 
-  const strip = (element: Element) => {
+  const remove = (element: Element) => {
     const parent = element.parentElement;
     element.remove();
-    stripped = true;
     if (parent) pruneEmptyWrappers(parent);
+  };
+
+  const strip = (element: Element) => {
+    remove(element);
+    stripped = true;
   };
 
   parsed.body.querySelectorAll("img").forEach((image) => {
     const src = image.getAttribute("src");
-    if (src !== null && src.startsWith(OWN_IMAGE_URL_PREFIX)) return;
-    strip(image);
+    if (src === null || !src.startsWith(OWN_IMAGE_URL_PREFIX)) {
+      strip(image);
+      return;
+    }
+
+    // Our own image, but possibly another note's. The row it names is governed by that
+    // session's lifecycle: removing the image there marks the row deleted, and the purge
+    // would then destroy bytes this note is still showing. An id we cannot attribute is
+    // left alone, since nodes written before the attribute existed carry none.
+    const owner = image.getAttribute("data-coaching-session-id");
+    if (
+      ownCoachingSessionId !== undefined &&
+      owner !== null &&
+      owner !== "" &&
+      owner !== ownCoachingSessionId
+    ) {
+      remove(image);
+      strippedOtherSession = true;
+    }
   });
 
   parsed.body.querySelectorAll("svg").forEach(strip);
 
-  return { html: parsed.body.innerHTML, stripped };
+  return { html: parsed.body.innerHTML, stripped, strippedOtherSession };
 }
 
 // Wrappers a stripped image may leave behind. A table cell or list item is excluded on
@@ -311,17 +432,23 @@ function pruneEmptyWrappers(element: Element): void {
   }
 }
 
-export const NoteImagePasteSanitizer = Extension.create({
-  name: "noteImagePasteSanitizer",
+export const createNoteImagePasteSanitizer = (
+  context: NoteImageUploadContext
+) =>
+  Extension.create({
+    name: "noteImagePasteSanitizer",
 
-  // Extension-level rather than a plugin prop: ProseMirror only runs the first
-  // plugin that supplies transformPastedHTML, while Tiptap composes this one.
-  transformPastedHTML(html: string) {
-    const result = sanitizePastedHtml(html);
-    if (result.stripped) toast.info(FOREIGN_IMAGE_STRIPPED_MESSAGE);
-    return result.html;
-  },
-});
+    // Extension-level rather than a plugin prop: ProseMirror only runs the first
+    // plugin that supplies transformPastedHTML, while Tiptap composes this one.
+    transformPastedHTML(html: string) {
+      const result = sanitizePastedHtml(html, context.coachingSessionId);
+      if (result.stripped) toast.info(FOREIGN_IMAGE_STRIPPED_MESSAGE);
+      if (result.strippedOtherSession) {
+        toast.info(OTHER_SESSION_IMAGE_STRIPPED_MESSAGE);
+      }
+      return result.html;
+    },
+  });
 
 function imageIdsIn(doc: ProseMirrorNode): Set<string> {
   const ids = new Set<string>();
@@ -332,6 +459,18 @@ function imageIdsIn(doc: ProseMirrorNode): Set<string> {
     return false;
   });
   return ids;
+}
+
+/**
+ * Whether a step could add or remove a node, as opposed to only changing text or marks.
+ *
+ * A plain insertion carries no removal, so `from === to` with content added cannot drop
+ * an image; anything that replaces a non-empty range might.
+ */
+function stepCanChangeImages(step: Step): boolean {
+  const range = step as unknown as { from?: number; to?: number };
+  if (typeof range.from !== "number" || typeof range.to !== "number") return true;
+  return range.to > range.from || step instanceof ReplaceStep;
 }
 
 interface YSyncMeta {
@@ -366,6 +505,10 @@ export const NoteImageRemovalSignal = Extension.create({
 
     const signal = (transaction: Transaction) => {
       if (!transaction.docChanged || isRemote(transaction)) return;
+      // Typing is the overwhelming majority of transactions and can neither remove nor
+      // reinstate an image node, so skip the two full-document walks unless a step
+      // actually replaced a range. Keeps the cost off the keystroke path as notes grow.
+      if (!transaction.steps.some(stepCanChangeImages)) return;
 
       const before = imageIdsIn(transaction.before);
       const after = imageIdsIn(transaction.doc);

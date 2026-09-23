@@ -397,6 +397,145 @@ describe("Coaching note image extension", () => {
     expect(html).toContain("<td>next</td>");
   });
 
+  // The upload resolves long after the drop, and the document moves underneath it.
+  // insertContentAt resolves the position against the current document with no clamping,
+  // so a stale position past the end throws RangeError out of a floating promise: an
+  // upload already paid for, lost with no error shown.
+  it("still inserts when the document shrank during the upload", async () => {
+    const { editor } = await mountEditor();
+    act(() => {
+      editor.commands.setContent("<p>aaaa</p><p>bbbb</p><p>cccc</p>");
+    });
+    const dropPos = editor.state.doc.content.size - 1;
+
+    let release!: (value: unknown) => void;
+    mockUpload.mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      })
+    );
+
+    const pending = uploadAndInsertImage(
+      editor,
+      makeFile("image/png"),
+      uploadContext,
+      dropPos
+    );
+
+    // Everything after the drop point goes away while the upload is in flight.
+    act(() => {
+      editor.commands.setContent("<p>a</p>");
+    });
+
+    release(
+      ok({
+        id: "55555555-5555-4555-8555-555555555555",
+        coaching_session_id: SESSION_ID,
+        mime_type: "image/png",
+        byte_size: 3,
+        width: None,
+        height: None,
+        created_at: DateTime.now(),
+      })
+    );
+
+    await act(async () => {
+      await expect(pending).resolves.toBeUndefined();
+    });
+
+    expect(imageAttrsFromDoc(editor).imageId).toBe(
+      "55555555-5555-4555-8555-555555555555"
+    );
+  });
+
+  // A pasted data-image-id is interpolated into credentialed request paths, so an id
+  // like "../../users/<id>" would escape the images collection and issue an
+  // authenticated request against an unrelated endpoint.
+  it("refuses a pasted image id that is not a uuid", async () => {
+    const { editor } = await mountEditor();
+    const ownUrl = CoachingSessionImageApi.imageUrl(
+      "11111111-1111-4111-8111-111111111111"
+    );
+    const hostile = `<img src="${ownUrl}" data-image-id="../../users/99" />`;
+
+    const transformed = editor.view.someProp("transformPastedHTML", (fn) =>
+      fn(hostile, editor.view)
+    ) as string;
+    act(() => {
+      editor.commands.setContent(transformed);
+    });
+
+    const ids: unknown[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === COACHING_NOTE_IMAGE_NAME) ids.push(node.attrs.imageId);
+    });
+    expect(ids).not.toContain("../../users/99");
+    ids.forEach((id) => expect(id).toBe(""));
+  });
+
+  it("accepts a pasted image id that is a uuid", async () => {
+    const { editor } = await mountEditor();
+    const id = "11111111-1111-4111-8111-111111111111";
+    const ownUrl = CoachingSessionImageApi.imageUrl(id);
+
+    const transformed = editor.view.someProp("transformPastedHTML", (fn) =>
+      fn(`<img src="${ownUrl}" data-image-id="${id}" />`, editor.view)
+    ) as string;
+    act(() => {
+      editor.commands.setContent(transformed);
+    });
+
+    const ids: unknown[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === COACHING_NOTE_IMAGE_NAME) ids.push(node.attrs.imageId);
+    });
+    expect(ids).toEqual([id]);
+  });
+
+  // The row an image names is governed by its own session's lifecycle: removing it there
+  // marks the row deleted, and the purge would destroy bytes this note still shows.
+  it("strips a pasted image belonging to another coaching session", () => {
+    const id = "22222222-2222-4222-8222-222222222222";
+    const ownUrl = CoachingSessionImageApi.imageUrl(id);
+
+    const result = sanitizePastedHtml(
+      `<p>keep</p><img src="${ownUrl}" data-image-id="${id}" data-coaching-session-id="some-other-session" />`,
+      SESSION_ID
+    );
+
+    expect(result.strippedOtherSession).toBe(true);
+    expect(result.html).not.toContain(id);
+    expect(result.html).toContain("keep");
+  });
+
+  it("keeps a pasted image belonging to this coaching session", () => {
+    const id = "33333333-3333-4333-8333-333333333333";
+    const ownUrl = CoachingSessionImageApi.imageUrl(id);
+
+    const result = sanitizePastedHtml(
+      `<img src="${ownUrl}" data-image-id="${id}" data-coaching-session-id="${SESSION_ID}" />`,
+      SESSION_ID
+    );
+
+    expect(result.strippedOtherSession).toBe(false);
+    expect(result.html).toContain(id);
+  });
+
+  // Nodes written before the attribute existed carry no owner; stripping those would
+  // silently empty existing notes on any copy/paste.
+  it("keeps a pasted image with no recorded session", () => {
+    const id = "44444444-4444-4444-8444-444444444444";
+    const ownUrl = CoachingSessionImageApi.imageUrl(id);
+
+    const result = sanitizePastedHtml(
+      `<img src="${ownUrl}" data-image-id="${id}" />`,
+      SESSION_ID
+    );
+
+    expect(result.strippedOtherSession).toBe(false);
+    expect(result.html).toContain(id);
+  });
+
   it("reports when something was stripped and when nothing was", () => {
     expect(sanitizePastedHtml("<p>plain</p>").stripped).toBe(false);
     expect(sanitizePastedHtml('<img src="https://example.com/a.png" />').stripped).toBe(

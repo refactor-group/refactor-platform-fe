@@ -1,0 +1,78 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, render, fireEvent } from "@testing-library/react";
+
+vi.mock("@/lib/api/coaching-session-images", () => ({
+  CoachingSessionImageApi: {
+    imageUrl: (id: string) => `http://localhost:4000/coaching_session_images/${id}`,
+  },
+  UploadFailureKind: {},
+}));
+
+import { NoteImageView } from "@/components/ui/coaching-sessions/coaching-notes/note-image-view";
+import type { NodeViewProps } from "@tiptap/react";
+
+const IMAGE_ID = "11111111-1111-4111-8111-111111111111";
+
+function renderView(selected: boolean, onUpdate: (attrs: unknown) => void) {
+  const props = {
+    node: { attrs: { imageId: IMAGE_ID, alt: "", naturalWidth: null, naturalHeight: null } },
+    selected,
+    deleteNode: vi.fn(),
+    updateAttributes: onUpdate,
+  } as unknown as NodeViewProps;
+  return render(<NoteImageView {...props} />);
+}
+
+describe("alt text commit", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /**
+   * The field only exists while the node is selected, so clicking away unmounts it. The
+   * debounce cleanup cancels the pending commit, and the description the user just typed
+   * and watched appear in the field is gone with no sign anything was lost.
+   */
+  it("commits a pending description when the field unmounts", () => {
+    const onUpdate = vi.fn();
+    const { container, unmount } = renderView(true, onUpdate);
+    const input = container.querySelector(
+      'input[aria-label="Image description"]'
+    ) as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "a whiteboard sketch" } });
+    // Deselected well inside the debounce window.
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    unmount();
+
+    expect(onUpdate).toHaveBeenCalledWith({ alt: "a whiteboard sketch" });
+  });
+
+  it("commits on blur without waiting out the debounce", () => {
+    const onUpdate = vi.fn();
+    const { container } = renderView(true, onUpdate);
+    const input = container.querySelector(
+      'input[aria-label="Image description"]'
+    ) as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "sketch" } });
+    fireEvent.blur(input);
+
+    expect(onUpdate).toHaveBeenCalledWith({ alt: "sketch" });
+  });
+
+  it("does not commit when nothing was typed", () => {
+    const onUpdate = vi.fn();
+    const { unmount } = renderView(true, onUpdate);
+
+    unmount();
+
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+});

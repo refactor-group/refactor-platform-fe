@@ -11,6 +11,21 @@ export const ACCEPTED_IMAGE_MIME_TYPES = [
 
 export type AcceptedImageMimeType = (typeof ACCEPTED_IMAGE_MIME_TYPES)[number];
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Whether a value is shaped like an image id.
+ *
+ * Image ids arrive from the note document, which is not trustworthy: pasted HTML can
+ * carry any `data-image-id` it likes, and that id is interpolated into credentialed
+ * request paths. A `../..` id would escape the images collection entirely, so anything
+ * that is not a plain UUID is refused before it can become a URL.
+ */
+export function isImageId(value: unknown): value is Id {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
 // This must always reflect the Rust struct on the backend.
 export interface CoachingSessionImage {
   id: Id;

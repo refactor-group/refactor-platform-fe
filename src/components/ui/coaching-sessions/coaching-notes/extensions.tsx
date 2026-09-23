@@ -45,7 +45,7 @@ import {
 } from "./markdown-table-extension";
 import {
   CoachingNoteImage,
-  NoteImagePasteSanitizer,
+  createNoteImagePasteSanitizer,
   NoteImageRemovalSignal,
   createNoteImageFileHandler,
   type NoteImageUploadContext,
@@ -258,7 +258,7 @@ const addImageExtensions = (
   return [
     CoachingNoteImage,
     createNoteImageFileHandler(imageContext.val),
-    NoteImagePasteSanitizer,
+    createNoteImagePasteSanitizer(imageContext.val),
     NoteImageRemovalSignal,
   ];
 };

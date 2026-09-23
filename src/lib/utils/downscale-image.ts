@@ -80,6 +80,11 @@ export async function downscaleImage(
       : { width: source.width, height: source.height };
     const blob = await encodeToWebP(source, target);
     source.close();
+    // Keeping the original when re-encoding does not shrink it means an oversized image
+    // can come back still oversized, so the long-edge ceiling is a target rather than a
+    // guarantee. Deliberate: a file that grows when re-encoded is already atypical, and
+    // sending more bytes to enforce a pixel bound helps nobody. `enforceUploadSize` is
+    // what actually holds, and it holds on bytes.
     if (!blob.some || blob.val.size >= file.size) return file;
 
     return new File([blob.val], webPFilename(file.name), {

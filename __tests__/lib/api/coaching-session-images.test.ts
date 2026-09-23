@@ -272,3 +272,69 @@ describe("CoachingSessionImageApi.imageUrl", () => {
     );
   });
 });
+
+describe("image id escaping", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // Image ids come from the note document. A pasted data-image-id of "../../users/x"
+  // is normalised by the browser into a credentialed request against an unrelated
+  // endpoint, so the id must never survive as raw path syntax.
+  const TRAVERSAL = "../../users/89c7a48d";
+
+  it("escapes a traversal id in the delete path", async () => {
+    vi.mocked(sessionGuard.delete).mockResolvedValue({ data: {} } as never);
+
+    await CoachingSessionImageApi.markDeleted(TRAVERSAL);
+
+    const [url] = vi.mocked(sessionGuard.delete).mock.calls[0];
+    expect(url).not.toContain("../");
+    expect(new URL(url as string).pathname).toBe(
+      "/coaching_session_images/..%2F..%2Fusers%2F89c7a48d"
+    );
+  });
+
+  it("escapes a traversal id in the restore path", async () => {
+    vi.mocked(sessionGuard.post).mockResolvedValue({ data: {} } as never);
+
+    await CoachingSessionImageApi.restore(TRAVERSAL);
+
+    const [url] = vi.mocked(sessionGuard.post).mock.calls[0];
+    expect(url).not.toContain("../");
+    expect(new URL(url as string).pathname.startsWith("/coaching_session_images/")).toBe(
+      true
+    );
+  });
+
+  it("escapes a traversal id in the image url", () => {
+    const url = CoachingSessionImageApi.imageUrl(TRAVERSAL);
+
+    expect(url).not.toContain("../");
+    expect(new URL(url).pathname.startsWith("/coaching_session_images/")).toBe(true);
+  });
+
+  it("leaves a normal uuid readable", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+
+    expect(CoachingSessionImageApi.imageUrl(id)).toBe(
+      `http://localhost:4000/coaching_session_images/${id}`
+    );
+  });
+});
+
+describe("failure mapping", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // A missing session is not a permissions problem; telling the coach they lack
+  // permission sends them looking for the wrong thing entirely.
+  it("maps 404 to NotFound, not Forbidden", async () => {
+    vi.mocked(sessionGuard.post).mockRejectedValue(responseError(404));
+
+    const result = await CoachingSessionImageApi.upload("cs-1", pngFile());
+
+    expect(result._unsafeUnwrapErr().kind).toBe(UploadFailureKind.NotFound);
+  });
+});

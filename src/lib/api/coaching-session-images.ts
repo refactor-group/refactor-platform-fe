@@ -15,11 +15,23 @@ const IMAGES_BASEURL = `${siteConfig.env.backendServiceURL}/coaching_session_ima
 // An upload can take far longer than the shared client's 15 s default.
 const UPLOAD_TIMEOUT_MS = 120000;
 
+/**
+ * One path segment, escaped.
+ *
+ * Image ids come from the note document, and a pasted `data-image-id` of `../../users/x`
+ * would otherwise be normalised by the browser into a credentialed request against a
+ * completely different endpoint. Callers should reject a non-UUID id long before here;
+ * this is the backstop that makes an id incapable of leaving the images collection
+ * whatever slipped through.
+ */
+const imageSegment = (imageId: Id): string => encodeURIComponent(imageId);
+
 export enum UploadFailureKind {
   TooLarge = "too_large",
   UnsupportedType = "unsupported_type",
   StorageUnavailable = "storage_unavailable",
   Forbidden = "forbidden",
+  NotFound = "not_found",
   Network = "network",
   Unknown = "unknown",
 }
@@ -39,8 +51,11 @@ function failureKindFor(status: number): UploadFailureKind {
       return UploadFailureKind.StorageUnavailable;
     case 401:
     case 403:
-    case 404:
       return UploadFailureKind.Forbidden;
+    // Kept apart from Forbidden: a missing session is not a permissions problem, and
+    // telling the coach they lack permission would be the wrong story entirely.
+    case 404:
+      return UploadFailureKind.NotFound;
     default:
       return UploadFailureKind.Unknown;
   }
@@ -95,7 +110,7 @@ async function upload(
 
 async function markDeleted(imageId: Id): Promise<Result<void, UploadFailure>> {
   try {
-    await sessionGuard.delete(`${IMAGES_BASEURL}/${imageId}`);
+    await sessionGuard.delete(`${IMAGES_BASEURL}/${imageSegment(imageId)}`);
     return ok(undefined);
   } catch (error) {
     return err(toUploadFailure(error));
@@ -104,7 +119,7 @@ async function markDeleted(imageId: Id): Promise<Result<void, UploadFailure>> {
 
 async function restore(imageId: Id): Promise<Result<void, UploadFailure>> {
   try {
-    await sessionGuard.post(`${IMAGES_BASEURL}/${imageId}/restore`);
+    await sessionGuard.post(`${IMAGES_BASEURL}/${imageSegment(imageId)}/restore`);
     return ok(undefined);
   } catch (error) {
     return err(toUploadFailure(error));
@@ -124,5 +139,5 @@ export const CoachingSessionImageApi = {
   restore,
 
   /** Stable URL for an image node's `src`, resolved at render time. */
-  imageUrl: (imageId: Id): string => `${IMAGES_BASEURL}/${imageId}`,
+  imageUrl: (imageId: Id): string => `${IMAGES_BASEURL}/${imageSegment(imageId)}`,
 };

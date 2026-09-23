@@ -208,9 +208,11 @@ interface AltTextFieldProps {
 function AltTextField({ value, onCommit }: AltTextFieldProps) {
   const [draft, setDraft] = useState(value);
   const commitRef = useRef(onCommit);
+  const pending = useRef({ draft, value });
 
   useEffect(() => {
     commitRef.current = onCommit;
+    pending.current = { draft, value };
   });
 
   // Every write is a replicated Yjs update, so keystrokes are coalesced.
@@ -220,10 +222,25 @@ function AltTextField({ value, onCommit }: AltTextFieldProps) {
     return () => clearTimeout(timer);
   }, [draft, value]);
 
+  // This field only exists while the node is selected, so clicking away unmounts it and
+  // the cleanup above cancels a commit that has not fired yet. Without this, typing a
+  // description and immediately clicking elsewhere loses it silently, having shown the
+  // user their own text in the field the whole time.
+  useEffect(
+    () => () => {
+      const { draft: last, value: committed } = pending.current;
+      if (last !== committed) commitRef.current(last);
+    },
+    []
+  );
+
   return (
     <Input
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        if (draft !== value) commitRef.current(draft);
+      }}
       aria-label="Image description"
       placeholder="Describe this image"
       className="mt-2 h-8 text-xs"
