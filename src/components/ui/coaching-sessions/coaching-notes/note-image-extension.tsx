@@ -40,6 +40,11 @@ const OWN_IMAGE_URL_PREFIX = CoachingSessionImageApi.imageUrl("");
 export const CoachingNoteImage = Image.extend({
   name: COACHING_NOTE_IMAGE_NAME,
 
+  // No native HTML5 drag. The browser composites a drag preview from the dragged
+  // element and there is no reliable way to suppress it across engines, so the node
+  // view moves the node with pointer events instead and nothing is ever composited.
+  draggable: false,
+
   addAttributes() {
     return {
       imageId: {

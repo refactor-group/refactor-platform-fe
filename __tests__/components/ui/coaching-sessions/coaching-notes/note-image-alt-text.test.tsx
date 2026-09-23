@@ -19,6 +19,8 @@ function renderView(selected: boolean, onUpdate: (attrs: unknown) => void) {
     selected,
     deleteNode: vi.fn(),
     updateAttributes: onUpdate,
+    editor: { view: { state: { doc: { forEach: () => undefined } } } },
+    getPos: () => 0,
   } as unknown as NodeViewProps;
   return render(<NoteImageView {...props} />);
 }
@@ -74,5 +76,45 @@ describe("alt text commit", () => {
     unmount();
 
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("reaching the description field", () => {
+  /**
+   * The field only renders while the node is selected, and selecting is what a click
+   * does. Binding the lightbox to that same click meant the dialog opened over the
+   * field every time, so full size is its own control.
+   */
+  it("does not open the lightbox when the image is clicked", () => {
+    const { container } = renderView(false, vi.fn());
+    const img = container.querySelector("img") as HTMLImageElement;
+
+    fireEvent.click(img);
+
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("offers full size as its own control", () => {
+    const { container } = renderView(false, vi.fn());
+
+    expect(
+      container.querySelector('button[aria-label="View image full size"]')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('button[aria-label="Remove image from note"]')
+    ).toBeTruthy();
+  });
+
+  it("shows the description field exactly when the node is selected", () => {
+    const unselected = renderView(false, vi.fn());
+    expect(
+      unselected.container.querySelector('input[aria-label="Image description"]')
+    ).toBeNull();
+    unselected.unmount();
+
+    const selected = renderView(true, vi.fn());
+    expect(
+      selected.container.querySelector('input[aria-label="Image description"]')
+    ).toBeTruthy();
   });
 });

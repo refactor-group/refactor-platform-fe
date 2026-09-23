@@ -160,18 +160,6 @@ function pressBackspace(editor: Editor) {
   });
 }
 
-function dragStartEvent(): {
-  event: Event;
-  setDragImage: ReturnType<typeof vi.fn>;
-} {
-  const event = new Event("dragstart", { bubbles: true, cancelable: true });
-  const setDragImage = vi.fn();
-  Object.defineProperty(event, "dataTransfer", {
-    value: { setDragImage, setData: vi.fn(), effectAllowed: "all" },
-  });
-  return { event, setDragImage };
-}
-
 function makeFile(type: string): File {
   return new File([new Uint8Array([1, 2, 3])], "shot.png", { type });
 }
@@ -206,18 +194,10 @@ describe("Coaching note image extension", () => {
     expect(attrs).not.toHaveProperty("src");
   });
 
-  it("renders the node view as a drag handle so the node can be moved", async () => {
-    const { container, editor } = await mountEditor();
-    insertImage(editor, "image-42", "a diagram");
-
-    await waitFor(() => {
-      const image = container.querySelector("img");
-      expect(image).toBeTruthy();
-      expect(image?.closest("[data-drag-handle]")).toBeTruthy();
-    });
-  });
-
-  it("leaves the image itself not natively draggable", async () => {
+  // The browser composites a drag preview from whatever is being dragged, and there is
+  // no portable way to suppress it. Nothing is natively draggable, so nothing is ever
+  // composited: the node view moves the node with pointer events instead.
+  it("makes nothing in the image natively draggable", async () => {
     const { container, editor } = await mountEditor();
     insertImage(editor, "image-42", "a diagram");
 
@@ -225,53 +205,43 @@ describe("Coaching note image extension", () => {
       const image = container.querySelector("img");
       expect(image).toBeTruthy();
       expect(image?.getAttribute("draggable")).toBe("false");
+      expect(image?.closest("[data-drag-handle]")).toBeNull();
+      expect(container.querySelector('[draggable="true"]')).toBeNull();
     });
   });
 
-  it("replaces the browser's drag preview with a blank element", async () => {
-    const { container, editor } = await mountEditor();
-    insertImage(editor, "image-42", "a diagram");
+  it("declares the node undraggable so ProseMirror installs no drag handling", async () => {
+    const { editor } = await mountEditor();
 
-    const wrapper = await waitFor(() => {
-      const element = container.querySelector("img")?.closest("[data-drag-handle]");
-      expect(element).toBeTruthy();
-      return element as HTMLElement;
-    });
-
-    const { event, setDragImage } = dragStartEvent();
-    act(() => {
-      wrapper.dispatchEvent(event);
-    });
-
-    // TipTap's own node view also sets a preview; the last call is the one the browser uses.
-    expect(setDragImage).toHaveBeenCalled();
-    const [preview] = setDragImage.mock.calls.at(-1) as [HTMLElement];
-    expect(preview.isConnected).toBe(true);
-    expect(preview.childNodes).toHaveLength(0);
-    expect(preview.contains(wrapper)).toBe(false);
-    expect(preview.style.display).not.toBe("none");
-    // Chrome ignores a drag image it has not painted, so an off-screen element silently
-    // falls back to the default ghost. These two pin the properties that actually matter.
-    expect(Number.parseInt(preview.style.top, 10)).toBeGreaterThanOrEqual(0);
-    expect(Number.parseInt(preview.style.left, 10)).toBeGreaterThanOrEqual(0);
+    expect(editor.schema.nodes[COACHING_NOTE_IMAGE_NAME].spec.draggable).toBe(false);
   });
 
-  it("leaves dragstart undefaulted so ProseMirror still starts the node drag", async () => {
+  it("starts no native drag when the image is pressed and moved", async () => {
     const { container, editor } = await mountEditor();
     insertImage(editor, "image-42", "a diagram");
 
-    const wrapper = await waitFor(() => {
-      const element = container.querySelector("img")?.closest("[data-drag-handle]");
+    const image = await waitFor(() => {
+      const element = container.querySelector("img");
       expect(element).toBeTruthy();
-      return element as HTMLElement;
+      return element as HTMLImageElement;
     });
 
-    const { event } = dragStartEvent();
+    const dragStarts: Event[] = [];
+    document.addEventListener("dragstart", (e) => dragStarts.push(e));
+
     act(() => {
-      wrapper.dispatchEvent(event);
+      image.dispatchEvent(
+        new MouseEvent("pointerdown", { bubbles: true, clientX: 10, clientY: 10, button: 0 })
+      );
+      image.dispatchEvent(
+        new MouseEvent("pointermove", { bubbles: true, clientX: 90, clientY: 200, button: 0 })
+      );
+      image.dispatchEvent(
+        new MouseEvent("pointerup", { bubbles: true, clientX: 90, clientY: 200, button: 0 })
+      );
     });
 
-    expect(event.defaultPrevented).toBe(false);
+    expect(dragStarts).toHaveLength(0);
   });
 
   it("serializes a document containing an image to markdown without throwing", async () => {

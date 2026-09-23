@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
-import { Trash2 } from "lucide-react";
+import type { Editor } from "@tiptap/core";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Maximize2, Trash2 } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,32 +55,84 @@ function reservedBox(
   };
 }
 
-const TRANSPARENT_PIXEL =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-
-let blankDragPreview: HTMLElement | undefined;
+/** Past this, a press becomes a drag rather than a click. */
+const DRAG_THRESHOLD_PX = 5;
 
 /**
- * The element used as the drag preview, replacing the ghost TipTap sets from a clone of
- * the node. Shared across node views and created once.
+ * Where a dragged image would land, and where to draw the line saying so.
+ *
+ * Top-level blocks only. An image is a block node, and the drop is always between
+ * blocks, so resolving against the document's own children avoids the ambiguity of
+ * `posAtCoords` inside nested content.
  */
-function blankDragPreviewElement(): HTMLElement {
-  if (blankDragPreview?.isConnected) return blankDragPreview;
-  // A transparent 1x1 GIF rather than an empty div, and inside the viewport rather than
-  // parked off-screen: Chrome ignores a drag image it has not painted and silently falls
-  // back to the default preview, which is the very ghost this exists to hide.
-  const element = document.createElement("img");
-  element.src = TRANSPARENT_PIXEL;
-  element.alt = "";
-  element.style.position = "fixed";
-  element.style.top = "0";
-  element.style.left = "0";
-  element.style.width = "1px";
-  element.style.height = "1px";
-  element.style.pointerEvents = "none";
-  document.body.appendChild(element);
-  blankDragPreview = element;
-  return element;
+interface DropTarget {
+  pos: number;
+  left: number;
+  top: number;
+  width: number;
+}
+
+type BestTarget = DropTarget & { distance: number };
+
+function dropTargetAt(editor: Editor, clientY: number): Option<DropTarget> {
+  const view = editor.view;
+  const candidates: BestTarget[] = [];
+
+  view.state.doc.forEach((node: ProseMirrorNode, offset: number) => {
+    const dom = view.nodeDOM(offset);
+    if (!(dom instanceof HTMLElement)) return;
+    const rect = dom.getBoundingClientRect();
+    const above = clientY < rect.top + rect.height / 2;
+    const edge = above ? rect.top : rect.bottom;
+    candidates.push({
+      pos: above ? offset : offset + node.nodeSize,
+      left: rect.left,
+      top: edge,
+      width: rect.width,
+      distance: Math.abs(clientY - edge),
+    });
+  });
+
+  if (candidates.length === 0) return None;
+  const best = candidates.reduce((a, b) => (b.distance < a.distance ? b : a));
+  return Some({ pos: best.pos, left: best.left, top: best.top, width: best.width });
+}
+
+let dropLine: HTMLElement | undefined;
+
+/** The only thing visible during a drag: no preview of the image follows the cursor. */
+function showDropLine(target: DropTarget): void {
+  if (!dropLine?.isConnected) {
+    dropLine = document.createElement("div");
+    // Same class the Dropcursor extension uses for file drags, so both look alike.
+    dropLine.className = "coaching-notes-dropcursor";
+    dropLine.style.position = "fixed";
+    dropLine.style.height = "3px";
+    dropLine.style.pointerEvents = "none";
+    dropLine.style.zIndex = "50";
+    document.body.appendChild(dropLine);
+  }
+  dropLine.style.left = `${target.left}px`;
+  dropLine.style.top = `${target.top - 1}px`;
+  dropLine.style.width = `${target.width}px`;
+  dropLine.style.display = "block";
+}
+
+function hideDropLine(): void {
+  if (dropLine) dropLine.style.display = "none";
+}
+
+/** Move `node` from `from` to `target`, as one transaction so it reads as a move. */
+function moveNode(editor: Editor, from: number, target: number): void {
+  const node = editor.state.doc.nodeAt(from);
+  if (!node) return;
+  const to = from + node.nodeSize;
+  // Dropped back onto itself: nothing to do, and the arithmetic below would not hold.
+  if (target >= from && target <= to) return;
+
+  const tr = editor.state.tr.delete(from, to);
+  tr.insert(tr.mapping.map(target), node);
+  editor.view.dispatch(tr.scrollIntoView());
 }
 
 export function NoteImageView({
@@ -86,6 +140,8 @@ export function NoteImageView({
   selected,
   deleteNode,
   updateAttributes,
+  editor,
+  getPos,
 }: NodeViewProps) {
   const imageId = attributeString(node.attrs.imageId);
   const alt = attributeString(node.attrs.alt);
@@ -96,39 +152,78 @@ export function NoteImageView({
 
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const press = useRef<Option<{ x: number; y: number; pointerId: number; moved: boolean }>>(None);
+  const target = useRef<Option<number>>(None);
 
-  // TipTap's node view sets a clone of this node as the drag preview, which is the translucent
-  // copy of the image. Its handler is React-delegated at the editor root, so we listen on the
-  // document to bubble last and win. Never preventDefault: TipTap must still start the drag.
-  useEffect(() => {
-    const blankThePreview = (event: DragEvent) => {
-      const wrapper = wrapperRef.current;
-      if (!wrapper || !(event.target instanceof Node)) return;
-      if (!wrapper.contains(event.target)) return;
-      event.dataTransfer?.setDragImage(blankDragPreviewElement(), 0, 0);
-    };
-    // Create it now rather than mid-drag: an image still decoding when setDragImage runs
-    // is ignored, and the ghost comes back.
-    blankDragPreviewElement();
-    document.addEventListener("dragstart", blankThePreview);
-    return () => document.removeEventListener("dragstart", blankThePreview);
-  }, []);
+  // Moving an image is driven by pointer events rather than HTML5 drag, so the browser
+  // never composites a drag preview. There is no translucent copy to suppress, because
+  // none is ever created: the drop line below is the only thing the drag draws.
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    // The hover controls are buttons, not drag surfaces.
+    if ((event.target as HTMLElement).closest("button")) return;
+    press.current = Some({ x: event.clientX, y: event.clientY, pointerId: event.pointerId, moved: false });
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!press.current.some) return;
+    const state = press.current.val;
+
+    if (!state.moved) {
+      const travelled = Math.hypot(event.clientX - state.x, event.clientY - state.y);
+      if (travelled < DRAG_THRESHOLD_PX) return;
+      state.moved = true;
+      wrapperRef.current?.setPointerCapture(state.pointerId);
+      setDragging(true);
+    }
+
+    const found = dropTargetAt(editor, event.clientY);
+    target.current = found.some ? Some(found.val.pos) : None;
+    if (found.some) showDropLine(found.val);
+  };
+
+  const endPress = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!press.current.some) return;
+    const state = press.current.val;
+    press.current = None;
+    hideDropLine();
+    if (!state.moved) return;
+
+    wrapperRef.current?.releasePointerCapture(state.pointerId);
+    setDragging(false);
+    // Stop the click this pointer sequence would otherwise produce, which would
+    // reselect the node at its old position.
+    event.preventDefault();
+
+    const from = getPos();
+    if (typeof from === "number" && target.current.some) {
+      moveNode(editor, from, target.current.val);
+    }
+    target.current = None;
+  };
+
+  useEffect(() => hideDropLine, []);
 
   return (
     <NodeViewWrapper
       as="div"
-      // TipTap needs this alongside `draggable: true`; without it the browser's own
-      // image drag takes over and the drop silently does nothing.
-      data-drag-handle
       ref={wrapperRef}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endPress}
+      onPointerCancel={endPress}
       className={cn(
         "note-image group relative my-4",
         // Shrink-wrapped around the image normally. The placeholder has no intrinsic
         // width to wrap, so in that state the wrapper spans the column and the
         // placeholder's own max-width does the constraining.
         loadState.kind === "error" ? "w-full" : "w-fit",
-        selected && "is-selected"
+        selected && "is-selected",
+        // The source dims so it is clear what is moving. This is not a preview: it
+        // stays exactly where it is until the drop.
+        dragging && "opacity-50"
       )}
     >
       {/* next/image cannot serve a cookie-authorized backend redirect. */}
@@ -138,18 +233,21 @@ export function NoteImageView({
         alt={alt}
         width={naturalWidth.some ? naturalWidth.val : undefined}
         height={naturalHeight.some ? naturalHeight.val : undefined}
-        // An <img> is natively draggable, which competes with ProseMirror's drag.
+        // Native image dragging would reintroduce the browser's own preview.
         draggable={false}
         className={cn(
-          "note-image__img cursor-zoom-in",
+          "note-image__img",
+          dragging ? "cursor-grabbing" : "cursor-grab",
           loadState.kind === "error" && "hidden"
         )}
         onLoad={() => setLoadState({ kind: "loaded" })}
         onError={() => setLoadState({ kind: "error" })}
-        onClick={() => setLightboxOpen(true)}
       />
       {loadState.kind === "error" && <NoteImageUnavailable style={box} />}
-      <DeleteImageButton onDelete={deleteNode} />
+      <ImageControls
+        onOpenFullSize={() => setLightboxOpen(true)}
+        onDelete={deleteNode}
+      />
       {selected && (
         <AltTextField
           value={alt}
@@ -179,23 +277,58 @@ function NoteImageUnavailable({ style }: { style?: CSSProperties }) {
   );
 }
 
-/** Removes the node only. The stored bytes stay so undo restores a working image. */
-function DeleteImageButton({ onDelete }: { onDelete: () => void }) {
+interface ImageControlsProps {
+  onOpenFullSize: () => void;
+  onDelete: () => void;
+}
+
+/**
+ * The hover controls. Opening full size is a button rather than a plain click on the
+ * image, because a click has to be free to select the node: selecting is what reveals
+ * the description field, and with the lightbox bound to click it opened over the field
+ * every time.
+ */
+function ImageControls({ onOpenFullSize, onDelete }: ImageControlsProps) {
+  return (
+    <div className={cn("absolute right-2 top-2 flex gap-1", HOVER_REVEAL_CLASS)}>
+      <ImageControlButton
+        label="View image full size"
+        onClick={onOpenFullSize}
+        icon={<Maximize2 />}
+      />
+      {/* Removes the node only. The stored bytes stay so undo restores a working image. */}
+      <ImageControlButton
+        label="Remove image from note"
+        onClick={onDelete}
+        icon={<Trash2 />}
+      />
+    </div>
+  );
+}
+
+function ImageControlButton({
+  label,
+  onClick,
+  icon,
+}: {
+  label: string;
+  onClick: () => void;
+  icon: React.ReactNode;
+}) {
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon"
-      aria-label="Remove image from note"
-      onClick={onDelete}
+      aria-label={label}
+      onClick={onClick}
       className={cn(
         // rounded-md is the app's standard control radius; circular icon buttons are
         // reserved for the avatar.
-        "absolute right-2 top-2 rounded-md h-7 w-7 border border-border bg-background/90 text-muted-foreground/70 hover:text-foreground",
-        HOVER_REVEAL_CLASS
+        "rounded-md h-7 w-7 border border-border bg-background/90 text-muted-foreground/70 hover:text-foreground"
       )}
     >
-      <Trash2 />
+      {icon}
     </Button>
   );
 }
