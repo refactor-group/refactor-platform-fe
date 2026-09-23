@@ -247,6 +247,10 @@ describe("Coaching note image extension", () => {
     expect(preview.childNodes).toHaveLength(0);
     expect(preview.contains(wrapper)).toBe(false);
     expect(preview.style.display).not.toBe("none");
+    // Chrome ignores a drag image it has not painted, so an off-screen element silently
+    // falls back to the default ghost. These two pin the properties that actually matter.
+    expect(Number.parseInt(preview.style.top, 10)).toBeGreaterThanOrEqual(0);
+    expect(Number.parseInt(preview.style.left, 10)).toBeGreaterThanOrEqual(0);
   });
 
   it("leaves dragstart undefaulted so ProseMirror still starts the node drag", async () => {

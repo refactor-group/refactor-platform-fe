@@ -80,8 +80,8 @@ columns and changing values don't jitter.
 ### Spacing & radius
 
 - `--radius: 0.5rem` (8px). `rounded-lg` = 8px (**cards**), `rounded-md` = 6px (**buttons /
-  default control**), `rounded-sm` = 4px (inner toggle items), `rounded-full` (circular icon
-  buttons, avatars, dots).
+  default control**, **including icon buttons**), `rounded-sm` = 4px (inner toggle items),
+  `rounded-full` (avatars and status dots only — see §3).
 - Card padding: **`p-6`** (24px). Card header: `px-6 pt-6 pb-4`. Compact rows: `py-4`.
 - Inter-element gaps: `gap-1.5`/`gap-2` (tight control clusters), `gap-3`/`gap-4` (content).
 - Vertical rhythm between major sections: `mt-8` / `mb-8`.
@@ -130,9 +130,15 @@ Primitive: `src/components/ui/button.tsx`.
 - **Sizes:** `default` h-10 · `sm` h-9 · `lg` h-11 · `icon` h-10 w-10.
 - **Dashboard compact sizing:** `size="sm"` plus `className="text-xs h-8"` for the tighter
   dashboard density.
-- **Circular icon button** (the borrowed hover-affordance idiom): `variant="ghost" size="icon"`
-  + `rounded-full h-8 w-8 text-muted-foreground/60 hover:text-foreground`. The `rounded-full` is
-  what makes the hover background a circle instead of a rounded square.
+- **Icon buttons keep the default `rounded-md`.** `variant="ghost" size="icon"` plus a size and
+  `text-muted-foreground/60 hover:text-foreground` is the pattern; do **not** add `rounded-full`.
+  Counted across the app: **13 of 17** `size="icon"` buttons take the `buttonVariants` default
+  radius and set no radius class at all.
+- **Circular is the exception, not the idiom.** Only three icon buttons are explicitly
+  `rounded-full` — both inline controls in `editable-session-title.tsx` and the row menu trigger in
+  `dashboard/coaching-sessions-row.tsx` — plus the avatar in `user-nav.tsx`, where round is
+  conventional. Treat the first three as legacy rather than precedent. New round buttons need a
+  deliberate reason.
 - **Icon-sizing gotcha:** `buttonVariants` forces `[&_svg]:size-4` (16px) on all child SVGs. To
   use another size, override with the important prefix (e.g. `!h-6 !w-6`). In compact controls,
   icons are usually `h-4 w-4` or `h-3.5 w-3.5`.
@@ -218,7 +224,7 @@ decided to adopt.
 | Idiom | Status |
 |---|---|
 | Flat cards, hairline borders, airy whitespace | **Adopted** |
-| Circular icon-button hover affordance | **Adopted** |
+| Circular icon-button hover affordance | **Not adopted** — tried in three places (see §3) and never spread. Icon buttons use the default `rounded-md`; `rounded-full` is reserved for the avatar. |
 | Muted secondary text, quiet rest state | **Adopted** |
 | Hairline internal dividers + section headers | **Adopted** |
 | Large value with smaller raised cents (`$200` + `.00`) | **Observed, not used** — no monetary display in-app yet. If we ever render large numeric values, this is the idiom to reach for. |
