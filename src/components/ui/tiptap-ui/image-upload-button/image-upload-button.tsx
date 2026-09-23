@@ -5,7 +5,7 @@ import type { Editor } from "@tiptap/react"
 import { useTiptapEditor } from "@/lib/hooks/use-tiptap-editor"
 
 // --- Icons ---
-import { ImagePlusIcon } from "@/components/ui/tiptap-icons/image-plus-icon"
+import { ImageIcon } from "@/components/ui/tiptap-icons/image-icon"
 
 // --- Lib ---
 import { isNodeInSchema } from "@/lib/tiptap-utils"
@@ -185,7 +185,7 @@ export const ImageUploadButton = React.forwardRef<
         >
           {children || (
             <>
-              <ImagePlusIcon className="tiptap-button-icon" />
+              <ImageIcon className="tiptap-button-icon" />
               {text && <span className="tiptap-button-text">{text}</span>}
             </>
           )}
