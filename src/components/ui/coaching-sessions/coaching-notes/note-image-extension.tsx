@@ -43,6 +43,12 @@ export const CoachingNoteImage = Image.extend({
   // No native HTML5 drag. The browser composites a drag preview from the dragged
   // element and there is no reliable way to suppress it across engines, so the node
   // view moves the node with pointer events instead and nothing is ever composited.
+  //
+  // ProseMirror still marks a *selected* node draggable for the length of a press
+  // (MouseDown.mightDrag), so a dragstart does fire when a selected image is dragged.
+  // TipTap's NodeView.stopEvent cancels drag events aimed at a non-draggable,
+  // selectable node's DOM, and ProseMirror never sees them. That is load-bearing and
+  // lives in TipTap rather than here, so the extension tests pin it.
   draggable: false,
 
   addAttributes() {
@@ -121,7 +127,13 @@ export const CoachingNoteImage = Image.extend({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(NoteImageView);
+    return ReactNodeViewRenderer(NoteImageView, {
+      // Moving an image up lets ProseMirror reuse its node view without calling
+      // update(), and TipTap checks later selections against the position it cached
+      // before the move. The view then deselects itself as soon as it is selected at
+      // its new place, hiding the description field. This keeps the cache current.
+      trackNodeViewPosition: true,
+    });
   },
 });
 

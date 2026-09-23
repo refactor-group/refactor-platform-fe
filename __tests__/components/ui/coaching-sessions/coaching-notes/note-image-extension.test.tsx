@@ -160,6 +160,23 @@ function pressBackspace(editor: Editor) {
   });
 }
 
+function dispatchDragStart(target: HTMLElement): Event {
+  const event = new Event("dragstart", { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", {
+    value: {
+      setData: vi.fn(),
+      getData: vi.fn(() => ""),
+      clearData: vi.fn(),
+      setDragImage: vi.fn(),
+      effectAllowed: "all",
+    },
+  });
+  act(() => {
+    target.dispatchEvent(event);
+  });
+  return event;
+}
+
 function makeFile(type: string): File {
   return new File([new Uint8Array([1, 2, 3])], "shot.png", { type });
 }
@@ -216,32 +233,27 @@ describe("Coaching note image extension", () => {
     expect(editor.schema.nodes[COACHING_NOTE_IMAGE_NAME].spec.draggable).toBe(false);
   });
 
-  it("starts no native drag when the image is pressed and moved", async () => {
-    const { container, editor } = await mountEditor();
+  // ProseMirror marks a *selected* node draggable for the length of a press, so a
+  // dragstart really does fire when a selected image is dragged. What keeps the browser
+  // from compositing a preview is that the dragstart is cancelled. This pins the
+  // cancellation itself, since the protection lives in TipTap's NodeView.stopEvent
+  // rather than in our code.
+  it("cancels a native drag of the image node, whether or not it is selected", async () => {
+    const { editor } = await mountEditor();
     insertImage(editor, "image-42", "a diagram");
-
-    const image = await waitFor(() => {
-      const element = container.querySelector("img");
-      expect(element).toBeTruthy();
-      return element as HTMLImageElement;
+    const pos = imageNodePosition(editor);
+    const nodeDom = await waitFor(() => {
+      const dom = editor.view.nodeDOM(pos);
+      expect(dom).toBeInstanceOf(HTMLElement);
+      return dom as HTMLElement;
     });
 
-    const dragStarts: Event[] = [];
-    document.addEventListener("dragstart", (e) => dragStarts.push(e));
+    expect(dispatchDragStart(nodeDom).defaultPrevented).toBe(true);
 
     act(() => {
-      image.dispatchEvent(
-        new MouseEvent("pointerdown", { bubbles: true, clientX: 10, clientY: 10, button: 0 })
-      );
-      image.dispatchEvent(
-        new MouseEvent("pointermove", { bubbles: true, clientX: 90, clientY: 200, button: 0 })
-      );
-      image.dispatchEvent(
-        new MouseEvent("pointerup", { bubbles: true, clientX: 90, clientY: 200, button: 0 })
-      );
+      editor.commands.setNodeSelection(pos);
     });
-
-    expect(dragStarts).toHaveLength(0);
+    expect(dispatchDragStart(nodeDom).defaultPrevented).toBe(true);
   });
 
   it("serializes a document containing an image to markdown without throwing", async () => {
@@ -861,5 +873,256 @@ describe("Coaching note image extension", () => {
       expect(toast.loading).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("moving an image", () => {
+  const BLOCK_HEIGHT = 80;
+  const BLOCK_PITCH = 100;
+  const captured = new Set<number>();
+  let layoutShift = 0;
+  let blockReads = 0;
+  let root: HTMLElement;
+  const errors: unknown[] = [];
+  const onError = (event: ErrorEvent) => errors.push(event.error);
+
+  // Stack the editor's top-level blocks 100px apart. jsdom lays nothing out, and the
+  // move resolves its target from these rects. Reads are counted per block so the
+  // tests can see how often layout is forced.
+  function stackBlocks(editorRoot: HTMLElement) {
+    root = editorRoot;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const index = Array.from(root.children).indexOf(this);
+        if (index >= 0) blockReads += 1;
+        const top = (index >= 0 ? index * BLOCK_PITCH : 0) + layoutShift;
+        return {
+          top,
+          bottom: top + BLOCK_HEIGHT,
+          left: 0,
+          right: 600,
+          width: 600,
+          height: BLOCK_HEIGHT,
+          x: 0,
+          y: top,
+          toJSON: () => ({}),
+        } as DOMRect;
+      }
+    );
+  }
+
+  function pointer(
+    type: string,
+    target: Element,
+    clientY: number,
+    pointerType = "mouse"
+  ) {
+    const event = new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      clientX: 50,
+      clientY,
+      button: 0,
+    });
+    Object.defineProperty(event, "pointerId", { value: 1 });
+    Object.defineProperty(event, "pointerType", { value: pointerType });
+    act(() => {
+      target.dispatchEvent(event);
+    });
+  }
+
+  // A, image, B, C: the image is the second block, at y 100-180.
+  async function mountStacked() {
+    const harness = await mountEditor();
+    act(() => {
+      harness.editor.commands.setContent({
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "A" }] },
+          { type: COACHING_NOTE_IMAGE_NAME, attrs: { imageId: "image-42" } },
+          { type: "paragraph", content: [{ type: "text", text: "B" }] },
+          { type: "paragraph", content: [{ type: "text", text: "C" }] },
+        ],
+      });
+    });
+    const image = await waitFor(() => {
+      const element = harness.container.querySelector("img");
+      expect(element).toBeTruthy();
+      return element as HTMLImageElement;
+    });
+    stackBlocks(harness.editor.view.dom as HTMLElement);
+    return { ...harness, image };
+  }
+
+  function order(editor: Editor): string[] {
+    return (editor.getJSON().content ?? []).map((node) =>
+      node.type === COACHING_NOTE_IMAGE_NAME
+        ? "IMAGE"
+        : (node.content?.[0]?.text ?? "")
+    );
+  }
+
+  function dropLine(): HTMLElement | null {
+    return document.body.querySelector(":scope > .coaching-notes-dropcursor");
+  }
+
+  // Past the 5px threshold, so the press becomes a drag.
+  function startDrag(image: Element) {
+    pointer("pointerdown", image, 140);
+    pointer("pointermove", image, 160);
+  }
+
+  beforeEach(() => {
+    captured.clear();
+    layoutShift = 0;
+    blockReads = 0;
+    errors.length = 0;
+    mockMarkDeleted.mockReset();
+    mockMarkDeleted.mockResolvedValue(ok(undefined));
+    window.addEventListener("error", onError);
+    // jsdom has no pointer capture. Model the real contract, including that releasing
+    // a pointer the element does not hold throws.
+    Object.assign(HTMLElement.prototype, {
+      setPointerCapture(id: number) {
+        captured.add(id);
+      },
+      releasePointerCapture(id: number) {
+        if (!captured.has(id)) throw new DOMException("not captured", "NotFoundError");
+        captured.delete(id);
+      },
+      hasPointerCapture(id: number) {
+        return captured.has(id);
+      },
+    });
+  });
+
+  afterEach(() => {
+    window.removeEventListener("error", onError);
+    vi.restoreAllMocks();
+    dropLine()?.remove();
+  });
+
+  it("moves the image to the drop line on release", async () => {
+    const { editor, image } = await mountStacked();
+
+    startDrag(image);
+    pointer("pointermove", image, 370); // nearest edge: the bottom of C
+    pointer("pointerup", image, 370);
+
+    expect(order(editor)).toEqual(["A", "B", "C", "IMAGE"]);
+    // One transaction, so the removal signal sees the same id before and after.
+    expect(mockMarkDeleted).not.toHaveBeenCalled();
+    expect(dropLine()?.style.display).toBe("none");
+  });
+
+  // Cancel means the interaction was taken away (a scroll began, a system gesture),
+  // not that anything was dropped.
+  it("abandons the move when the pointer is cancelled", async () => {
+    const { editor, image } = await mountStacked();
+
+    startDrag(image);
+    pointer("pointermove", image, 370);
+    pointer("pointercancel", image, 370);
+
+    expect(order(editor)).toEqual(["A", "IMAGE", "B", "C"]);
+    expect(dropLine()?.style.display).toBe("none");
+  });
+
+  it("does not throw when capture is already gone as the press ends", async () => {
+    const { image } = await mountStacked();
+
+    startDrag(image);
+    captured.clear(); // the browser released capture implicitly
+    pointer("pointercancel", image, 370);
+
+    expect(errors).toEqual([]);
+  });
+
+  // Reading every block's rect on every pointermove forces a synchronous layout per
+  // block at pointer-event frequency.
+  it("measures the blocks once per drag, not once per pointer move", async () => {
+    const { image } = await mountStacked();
+
+    startDrag(image);
+    const afterStart = blockReads;
+    for (let y = 170; y < 370; y += 20) pointer("pointermove", image, y);
+
+    expect(afterStart).toBe(4);
+    expect(blockReads).toBe(afterStart);
+  });
+
+  // The line is positioned against the viewport, so a scroll mid-drag must move it.
+  it("re-measures when the page scrolls mid-drag", async () => {
+    const { image } = await mountStacked();
+
+    startDrag(image);
+    pointer("pointermove", image, 370);
+    const lineBefore = dropLine()?.style.top;
+
+    layoutShift = -50;
+    act(() => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+
+    expect(dropLine()?.style.top).not.toBe(lineBefore);
+  });
+
+  it("does not start a move from inside the description field", async () => {
+    const { editor, container } = await mountStacked();
+    act(() => {
+      editor.commands.setNodeSelection(imageNodePosition(editor));
+    });
+    const field = await waitFor(() => {
+      const input = container.querySelector('input[aria-label="Image description"]');
+      expect(input).toBeTruthy();
+      return input as HTMLInputElement;
+    });
+
+    // Drag-selecting text in the field.
+    pointer("pointerdown", field, 140);
+    pointer("pointermove", field, 370);
+    pointer("pointerup", field, 370);
+
+    expect(order(editor)).toEqual(["A", "IMAGE", "B", "C"]);
+    expect(dropLine()?.style.display ?? "none").toBe("none");
+  });
+
+  // Moving an image up lets ProseMirror reuse its node view rather than recreate it,
+  // without calling update(). TipTap's node view caches its position and checks later
+  // selections against that cache, so it would deselect itself the moment it was
+  // selected at its new place, and the description field could never be reached.
+  it("can still be selected after it has been moved up", async () => {
+    const { editor, image, container } = await mountStacked();
+
+    startDrag(image);
+    pointer("pointermove", image, 5); // nearest edge: the top of A
+    pointer("pointerup", image, 5);
+    expect(order(editor)).toEqual(["IMAGE", "A", "B", "C"]);
+
+    act(() => {
+      editor.commands.setNodeSelection(imageNodePosition(editor));
+    });
+    // TipTap reconciles node-view selection on the next animation frame.
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    });
+
+    expect(container.querySelector(".note-image.is-selected")).toBeTruthy();
+    expect(
+      container.querySelector('input[aria-label="Image description"]')
+    ).toBeTruthy();
+  });
+
+  // A finger over an image is scrolling the note; taking the gesture over would leave
+  // a note full of images unscrollable on a phone.
+  it("leaves touch to scrolling", async () => {
+    const { editor, image } = await mountStacked();
+
+    pointer("pointerdown", image, 140, "touch");
+    pointer("pointermove", image, 370, "touch");
+    pointer("pointerup", image, 370, "touch");
+
+    expect(order(editor)).toEqual(["A", "IMAGE", "B", "C"]);
   });
 });

@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
-import type { Editor } from "@tiptap/core";
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Maximize2, Trash2 } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { CoachingSessionImageApi } from "@/lib/api/coaching-session-images";
+import { useNoteImageMove } from "./use-note-image-move";
 import { type Option, Some, None } from "@/types/option";
 
 const ALT_TEXT_DEBOUNCE_MS = 400;
@@ -55,86 +54,6 @@ function reservedBox(
   };
 }
 
-/** Past this, a press becomes a drag rather than a click. */
-const DRAG_THRESHOLD_PX = 5;
-
-/**
- * Where a dragged image would land, and where to draw the line saying so.
- *
- * Top-level blocks only. An image is a block node, and the drop is always between
- * blocks, so resolving against the document's own children avoids the ambiguity of
- * `posAtCoords` inside nested content.
- */
-interface DropTarget {
-  pos: number;
-  left: number;
-  top: number;
-  width: number;
-}
-
-type BestTarget = DropTarget & { distance: number };
-
-function dropTargetAt(editor: Editor, clientY: number): Option<DropTarget> {
-  const view = editor.view;
-  const candidates: BestTarget[] = [];
-
-  view.state.doc.forEach((node: ProseMirrorNode, offset: number) => {
-    const dom = view.nodeDOM(offset);
-    if (!(dom instanceof HTMLElement)) return;
-    const rect = dom.getBoundingClientRect();
-    const above = clientY < rect.top + rect.height / 2;
-    const edge = above ? rect.top : rect.bottom;
-    candidates.push({
-      pos: above ? offset : offset + node.nodeSize,
-      left: rect.left,
-      top: edge,
-      width: rect.width,
-      distance: Math.abs(clientY - edge),
-    });
-  });
-
-  if (candidates.length === 0) return None;
-  const best = candidates.reduce((a, b) => (b.distance < a.distance ? b : a));
-  return Some({ pos: best.pos, left: best.left, top: best.top, width: best.width });
-}
-
-let dropLine: HTMLElement | undefined;
-
-/** The only thing visible during a drag: no preview of the image follows the cursor. */
-function showDropLine(target: DropTarget): void {
-  if (!dropLine?.isConnected) {
-    dropLine = document.createElement("div");
-    // Same class the Dropcursor extension uses for file drags, so both look alike.
-    dropLine.className = "coaching-notes-dropcursor";
-    dropLine.style.position = "fixed";
-    dropLine.style.height = "3px";
-    dropLine.style.pointerEvents = "none";
-    dropLine.style.zIndex = "50";
-    document.body.appendChild(dropLine);
-  }
-  dropLine.style.left = `${target.left}px`;
-  dropLine.style.top = `${target.top - 1}px`;
-  dropLine.style.width = `${target.width}px`;
-  dropLine.style.display = "block";
-}
-
-function hideDropLine(): void {
-  if (dropLine) dropLine.style.display = "none";
-}
-
-/** Move `node` from `from` to `target`, as one transaction so it reads as a move. */
-function moveNode(editor: Editor, from: number, target: number): void {
-  const node = editor.state.doc.nodeAt(from);
-  if (!node) return;
-  const to = from + node.nodeSize;
-  // Dropped back onto itself: nothing to do, and the arithmetic below would not hold.
-  if (target >= from && target <= to) return;
-
-  const tr = editor.state.tr.delete(from, to);
-  tr.insert(tr.mapping.map(target), node);
-  editor.view.dispatch(tr.scrollIntoView());
-}
-
 export function NoteImageView({
   node,
   selected,
@@ -152,68 +71,14 @@ export function NoteImageView({
 
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [dragging, setDragging] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const press = useRef<Option<{ x: number; y: number; pointerId: number; moved: boolean }>>(None);
-  const target = useRef<Option<number>>(None);
-
-  // Moving an image is driven by pointer events rather than HTML5 drag, so the browser
-  // never composites a drag preview. There is no translucent copy to suppress, because
-  // none is ever created: the drop line below is the only thing the drag draws.
-  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    // The hover controls are buttons, not drag surfaces.
-    if ((event.target as HTMLElement).closest("button")) return;
-    press.current = Some({ x: event.clientX, y: event.clientY, pointerId: event.pointerId, moved: false });
-  };
-
-  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!press.current.some) return;
-    const state = press.current.val;
-
-    if (!state.moved) {
-      const travelled = Math.hypot(event.clientX - state.x, event.clientY - state.y);
-      if (travelled < DRAG_THRESHOLD_PX) return;
-      state.moved = true;
-      wrapperRef.current?.setPointerCapture(state.pointerId);
-      setDragging(true);
-    }
-
-    const found = dropTargetAt(editor, event.clientY);
-    target.current = found.some ? Some(found.val.pos) : None;
-    if (found.some) showDropLine(found.val);
-  };
-
-  const endPress = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!press.current.some) return;
-    const state = press.current.val;
-    press.current = None;
-    hideDropLine();
-    if (!state.moved) return;
-
-    wrapperRef.current?.releasePointerCapture(state.pointerId);
-    setDragging(false);
-    // Stop the click this pointer sequence would otherwise produce, which would
-    // reselect the node at its old position.
-    event.preventDefault();
-
-    const from = getPos();
-    if (typeof from === "number" && target.current.some) {
-      moveNode(editor, from, target.current.val);
-    }
-    target.current = None;
-  };
-
-  useEffect(() => hideDropLine, []);
+  const { dragging, handlers } = useNoteImageMove(editor, getPos, wrapperRef);
 
   return (
     <NodeViewWrapper
       as="div"
       ref={wrapperRef}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endPress}
-      onPointerCancel={endPress}
+      {...handlers}
       className={cn(
         "note-image group relative my-4",
         // Shrink-wrapped around the image normally. The placeholder has no intrinsic

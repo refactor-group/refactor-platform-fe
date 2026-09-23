@@ -129,7 +129,8 @@ inspect the rendered `<img>`.
 **Pass:** the field appears on the click with no dialog in the way, and `alt` reflects what you
 typed. Watch the collaboration traffic while typing: writes are debounced, so a burst of
 keystrokes does not produce one update per character. Click elsewhere in the note immediately
-after the last keystroke: the description is kept, not lost to the debounce. Reload and it is
+after the last keystroke: the description is kept, not lost to the debounce. Drag across the
+text in the field to select it: the text selects and the image does not move. Reload and it is
 still there. Leaving it empty renders `alt=""`, which is correct for a decorative image.
 
 ### Case 10: text extraction ignores images
@@ -154,10 +155,16 @@ different position between paragraphs.
 - The row for that image still has `deleted_at` `NULL`. A move is one transaction, so it must
   not be mistaken for a removal.
 - A press and release without moving is a click: it selects the image and moves nothing.
+- Click the image to select it, **then** drag it upward. It moves the same way with no ghost,
+  and clicking it at its new position still selects it and shows the description field.
 
 > Images are moved with pointer events, not HTML5 drag-and-drop, so the browser never builds a
 > drag preview in the first place. A ghost image appearing at all is a regression. Check in
-> **Chrome and Safari**, and on a touch device if one is to hand.
+> **Chrome and Safari**.
+>
+> Moving is for a mouse or pen. On a touch device, dragging a finger over an image scrolls the
+> note and leaves the image where it is; that is intended, since taking the gesture over would
+> make a note full of images impossible to scroll on a phone.
 >
 > Drops resolve between top-level blocks. Dragging over a list or a table places the image
 > before or after that whole block, not inside it; that is intended.
