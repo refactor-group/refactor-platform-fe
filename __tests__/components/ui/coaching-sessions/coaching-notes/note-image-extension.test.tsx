@@ -157,6 +157,18 @@ function pressBackspace(editor: Editor) {
   });
 }
 
+function dragStartEvent(): {
+  event: Event;
+  setDragImage: ReturnType<typeof vi.fn>;
+} {
+  const event = new Event("dragstart", { bubbles: true, cancelable: true });
+  const setDragImage = vi.fn();
+  Object.defineProperty(event, "dataTransfer", {
+    value: { setDragImage, setData: vi.fn(), effectAllowed: "all" },
+  });
+  return { event, setDragImage };
+}
+
 function makeFile(type: string): File {
   return new File([new Uint8Array([1, 2, 3])], "shot.png", { type });
 }
@@ -211,6 +223,48 @@ describe("Coaching note image extension", () => {
       expect(image).toBeTruthy();
       expect(image?.getAttribute("draggable")).toBe("false");
     });
+  });
+
+  it("replaces the browser's drag preview with a blank element", async () => {
+    const { container, editor } = await mountEditor();
+    insertImage(editor, "image-42", "a diagram");
+
+    const wrapper = await waitFor(() => {
+      const element = container.querySelector("img")?.closest("[data-drag-handle]");
+      expect(element).toBeTruthy();
+      return element as HTMLElement;
+    });
+
+    const { event, setDragImage } = dragStartEvent();
+    act(() => {
+      wrapper.dispatchEvent(event);
+    });
+
+    // TipTap's own node view also sets a preview; the last call is the one the browser uses.
+    expect(setDragImage).toHaveBeenCalled();
+    const [preview] = setDragImage.mock.calls.at(-1) as [HTMLElement];
+    expect(preview.isConnected).toBe(true);
+    expect(preview.childNodes).toHaveLength(0);
+    expect(preview.contains(wrapper)).toBe(false);
+    expect(preview.style.display).not.toBe("none");
+  });
+
+  it("leaves dragstart undefaulted so ProseMirror still starts the node drag", async () => {
+    const { container, editor } = await mountEditor();
+    insertImage(editor, "image-42", "a diagram");
+
+    const wrapper = await waitFor(() => {
+      const element = container.querySelector("img")?.closest("[data-drag-handle]");
+      expect(element).toBeTruthy();
+      return element as HTMLElement;
+    });
+
+    const { event } = dragStartEvent();
+    act(() => {
+      wrapper.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("serializes a document containing an image to markdown without throwing", async () => {

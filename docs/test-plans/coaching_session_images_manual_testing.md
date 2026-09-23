@@ -142,6 +142,10 @@ browser's own image drag, which moves nothing on release. Reload the page and co
 image is still in its new position, so the move reached the shared document and not just the
 local view.
 
+Also: while dragging, **only the drop indicator line is visible — no translucent copy of the
+image follows the cursor** — and the image still lands at the indicator on release. Drag-image
+support differs between engines, so check this in **Chrome and Safari** at minimum.
+
 ### Case 23: deleting marks the row, undo clears it
 
 Add an image and note its id from the rendered `src`. Delete it with the hover control, then

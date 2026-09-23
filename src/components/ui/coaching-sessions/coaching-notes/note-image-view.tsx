@@ -24,6 +24,26 @@ function attributeString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+let blankDragPreview: HTMLElement | undefined;
+
+/**
+ * An empty element used as the drag preview. It is parked off-screen rather than
+ * `display: none` because a hidden or detached element is ignored as a drag image
+ * by some browsers, which then fall back to their default preview.
+ */
+function blankDragPreviewElement(): HTMLElement {
+  if (blankDragPreview?.isConnected) return blankDragPreview;
+  const element = document.createElement("div");
+  element.style.position = "absolute";
+  element.style.top = "-9999px";
+  element.style.left = "-9999px";
+  element.style.width = "1px";
+  element.style.height = "1px";
+  document.body.appendChild(element);
+  blankDragPreview = element;
+  return element;
+}
+
 export function NoteImageView({
   node,
   selected,
@@ -36,6 +56,21 @@ export function NoteImageView({
 
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // TipTap's node view sets a clone of this node as the drag preview, which is the translucent
+  // copy of the image. Its handler is React-delegated at the editor root, so we listen on the
+  // document to bubble last and win. Never preventDefault: TipTap must still start the drag.
+  useEffect(() => {
+    const blankThePreview = (event: DragEvent) => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper || !(event.target instanceof Node)) return;
+      if (!wrapper.contains(event.target)) return;
+      event.dataTransfer?.setDragImage(blankDragPreviewElement(), 0, 0);
+    };
+    document.addEventListener("dragstart", blankThePreview);
+    return () => document.removeEventListener("dragstart", blankThePreview);
+  }, []);
 
   return (
     <NodeViewWrapper
@@ -43,6 +78,7 @@ export function NoteImageView({
       // TipTap needs this alongside `draggable: true`; without it the browser's own
       // image drag takes over and the drop silently does nothing.
       data-drag-handle
+      ref={wrapperRef}
       className={cn("note-image group relative my-4 w-fit", selected && "is-selected")}
     >
       {/* next/image cannot serve a cookie-authorized backend redirect. */}
