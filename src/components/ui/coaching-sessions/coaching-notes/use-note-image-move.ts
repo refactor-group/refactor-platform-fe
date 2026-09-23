@@ -3,7 +3,6 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
-  type RefObject,
 } from "react";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
@@ -189,18 +188,8 @@ function moveNode(editor: Editor, from: number, target: number): void {
   editor.view.dispatch(tr.scrollIntoView());
 }
 
-interface Press {
-  x: number;
-  y: number;
-  pointerId: number;
-  moved: boolean;
-}
-
 export interface NoteImageMoveHandlers {
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
-  onPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
-  onPointerUp: () => void;
-  onPointerCancel: () => void;
 }
 
 /**
@@ -209,14 +198,19 @@ export interface NoteImageMoveHandlers {
  * Not HTML5 drag-and-drop: the browser composites a drag preview from whatever is
  * dragged and there is no portable way to suppress it, so nothing here is natively
  * draggable and the drop line is the only thing a drag draws.
+ *
+ * Once pressed, the rest of the gesture is followed on the window rather than through
+ * pointer capture on the image. A Mac trackpad can report the button released on a
+ * move before its pointerup; the browser drops capture on that move, and the pointerup
+ * then lands on whatever is under the pointer. Listening on the image missed that
+ * release and left the drag stuck with its line showing.
  */
 export function useNoteImageMove(
   editor: Editor,
-  getPos: () => number | undefined,
-  surfaceRef: RefObject<HTMLElement | null>
+  getPos: () => number | undefined
 ): { dragging: boolean; handlers: NoteImageMoveHandlers } {
   const [dragging, setDragging] = useState(false);
-  const press = useRef<Option<Press>>(None);
+  const abandon = useRef<Option<() => void>>(None);
   const lastY = useRef(0);
 
   // Everything visible about a drag happens once per animation frame: scroll if the
@@ -246,21 +240,14 @@ export function useNoteImageMove(
     return () => cancelAnimationFrame(frame);
   }, [dragging, editor, getPos]);
 
-  useEffect(() => hideDropLine, []);
-
-  const release = (pointerId: number) => {
-    const surface = surfaceRef.current;
-    // Capture can already be gone by the time the press ends, and releasing a pointer
-    // the element no longer holds throws.
-    if (surface?.hasPointerCapture(pointerId)) surface.releasePointerCapture(pointerId);
-  };
-
-  const finish = () => {
-    if (press.current.some) release(press.current.val.pointerId);
-    press.current = None;
-    hideDropLine();
-    setDragging(false);
-  };
+  // A node view can be torn down mid-press, by a collaborator's edit for one.
+  useEffect(
+    () => () => {
+      if (abandon.current.some) abandon.current.val();
+      hideDropLine();
+    },
+    []
+  );
 
   const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0) return;
@@ -272,48 +259,57 @@ export function useNoteImageMove(
     const target = event.target;
     if (!(target instanceof Element)) return;
     if (!target.closest(".note-image__img, .note-image__unavailable")) return;
-    press.current = Some({
-      x: event.clientX,
-      y: event.clientY,
-      pointerId: event.pointerId,
-      moved: false,
-    });
-  };
+    if (abandon.current.some) abandon.current.val();
 
-  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
-    if (!press.current.some) return;
-    const state = press.current.val;
-    lastY.current = event.clientY;
+    const { pointerId, clientX: startX, clientY: startY } = event;
+    let moved = false;
+    lastY.current = startY;
 
-    if (!state.moved) {
-      const travelled = Math.hypot(event.clientX - state.x, event.clientY - state.y);
-      if (travelled < DRAG_THRESHOLD_PX) return;
-      state.moved = true;
-      surfaceRef.current?.setPointerCapture(state.pointerId);
+    const end = (drop: boolean) => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      abandon.current = None;
+      hideDropLine();
+      setDragging(false);
+      if (!drop || !moved) return;
+
+      // Fresh, against the document and layout as they are at the moment of release.
+      const target = currentDropTarget(editor, getPos, lastY.current);
+      const from = getPos();
+      if (target.some && typeof from === "number") moveNode(editor, from, target.val.pos);
+    };
+
+    function onMove(move: PointerEvent) {
+      if (move.pointerId !== pointerId) return;
+      lastY.current = move.clientY;
+      // The button is already up: this move is the release, and the pointerup may
+      // never be seen.
+      if (move.buttons === 0) return end(true);
+      if (moved) return;
+      if (Math.hypot(move.clientX - startX, move.clientY - startY) < DRAG_THRESHOLD_PX) return;
+      moved = true;
       setDragging(true);
     }
+
+    function onUp(up: PointerEvent) {
+      if (up.pointerId !== pointerId) return;
+      lastY.current = up.clientY;
+      end(true);
+    }
+
+    // Cancel means the interaction was taken away (a scroll began, an OS gesture
+    // intervened, the pointer went invalid), not that anything was dropped.
+    function onCancel(cancel: PointerEvent) {
+      if (cancel.pointerId !== pointerId) return;
+      end(false);
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    abandon.current = Some(() => end(false));
   };
 
-  const onPointerUp = () => {
-    if (!press.current.some) return;
-    const moved = press.current.val.moved;
-    // Fresh, against the document and layout as they are at the moment of release.
-    const target = moved ? currentDropTarget(editor, getPos, lastY.current) : None;
-    finish();
-
-    const from = getPos();
-    if (target.some && typeof from === "number") moveNode(editor, from, target.val.pos);
-  };
-
-  // Cancel means the interaction was taken away (a scroll began, an OS gesture
-  // intervened, the pointer went invalid), not that anything was dropped. Abandon it.
-  const onPointerCancel = () => {
-    if (!press.current.some) return;
-    finish();
-  };
-
-  return {
-    dragging,
-    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
-  };
+  return { dragging, handlers: { onPointerDown } };
 }

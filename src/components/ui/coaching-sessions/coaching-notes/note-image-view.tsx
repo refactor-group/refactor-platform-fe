@@ -78,13 +78,11 @@ export function NoteImageView({
 
   const [loadState, setLoadState] = useState<LoadState>({ kind: "loading" });
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const { dragging, handlers } = useNoteImageMove(editor, getPos, wrapperRef);
+  const { dragging, handlers } = useNoteImageMove(editor, getPos);
 
   return (
     <NodeViewWrapper
       as="div"
-      ref={wrapperRef}
       {...handlers}
       className={cn(
         "note-image group relative my-4",

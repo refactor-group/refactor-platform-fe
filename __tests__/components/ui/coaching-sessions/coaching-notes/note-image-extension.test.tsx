@@ -916,7 +916,6 @@ describe("moving an image", () => {
   const BLOCK_HEIGHT = 80;
   const BLOCK_PITCH = 100;
   const VIEW_HEIGHT = 400;
-  const captured = new Set<number>();
   let layoutShift = 0;
   let blockReads = 0;
   let root: HTMLElement;
@@ -965,7 +964,9 @@ describe("moving an image", () => {
     type: string,
     target: Element,
     clientY: number,
-    pointerType = "mouse"
+    pointerType = "mouse",
+    // Held through the gesture, released at its end.
+    buttons = type === "pointerdown" || type === "pointermove" ? 1 : 0
   ) {
     const event = new MouseEvent(type, {
       bubbles: true,
@@ -973,6 +974,7 @@ describe("moving an image", () => {
       clientX: 50,
       clientY,
       button: 0,
+      buttons,
     });
     Object.defineProperty(event, "pointerId", { value: 1 });
     Object.defineProperty(event, "pointerType", { value: pointerType });
@@ -1023,27 +1025,12 @@ describe("moving an image", () => {
   }
 
   beforeEach(() => {
-    captured.clear();
     layoutShift = 0;
     blockReads = 0;
     errors.length = 0;
     mockMarkDeleted.mockReset();
     mockMarkDeleted.mockResolvedValue(ok(undefined));
     window.addEventListener("error", onError);
-    // jsdom has no pointer capture. Model the real contract, including that releasing
-    // a pointer the element does not hold throws.
-    Object.assign(HTMLElement.prototype, {
-      setPointerCapture(id: number) {
-        captured.add(id);
-      },
-      releasePointerCapture(id: number) {
-        if (!captured.has(id)) throw new DOMException("not captured", "NotFoundError");
-        captured.delete(id);
-      },
-      hasPointerCapture(id: number) {
-        return captured.has(id);
-      },
-    });
   });
 
   afterEach(() => {
@@ -1145,14 +1132,55 @@ describe("moving an image", () => {
     expect(dropLine()?.style.display).toBe("none");
   });
 
-  it("does not throw when capture is already gone as the press ends", async () => {
-    const { image } = await mountStacked();
+  // A Mac trackpad can report the button released on a move before its pointerup. The
+  // browser drops capture on that move, so the pointerup lands on whatever is under the
+  // pointer, not the image. Recorded in Dia: line showing, image not moved, drag stuck.
+  it("moves the image when the release lands on another block", async () => {
+    const { editor, image, container } = await mountStacked();
+    const blockC = container.querySelector(".tiptap > p:last-child") as HTMLElement;
 
     startDrag(image);
-    captured.clear(); // the browser released capture implicitly
-    pointer("pointercancel", image, 370);
+    pointer("pointermove", image, 370);
+    await frames(1);
+    pointer("pointerup", blockC, 370);
 
-    expect(errors).toEqual([]);
+    expect(order(editor)).toEqual(["A", "B", "C", "IMAGE"]);
+    expect(dropLine()?.style.display).toBe("none");
+  });
+
+  it("takes a move with the button already up as the release", async () => {
+    const { editor, image } = await mountStacked();
+
+    startDrag(image);
+    pointer("pointermove", image, 370);
+    await frames(1);
+    pointer("pointermove", document.body, 370, "mouse", 0);
+
+    expect(order(editor)).toEqual(["A", "B", "C", "IMAGE"]);
+    expect(dropLine()?.style.display).toBe("none");
+    // The pointerup that follows is not a second drop.
+    pointer("pointerup", document.body, 5);
+    expect(order(editor)).toEqual(["A", "B", "C", "IMAGE"]);
+  });
+
+  it("leaves the next press free to drag after a release elsewhere", async () => {
+    const { editor, image, container } = await mountStacked();
+    const blockC = container.querySelector(".tiptap > p:last-child") as HTMLElement;
+
+    startDrag(image);
+    pointer("pointermove", image, 370);
+    pointer("pointerup", blockC, 370);
+    const moved = await waitFor(() => {
+      const element = container.querySelector("img");
+      expect(element).toBeTruthy();
+      return element as HTMLImageElement;
+    });
+    pointer("pointerdown", moved, 340);
+    pointer("pointermove", moved, 320);
+    pointer("pointermove", moved, 5);
+    pointer("pointerup", blockC, 5);
+
+    expect(order(editor)).toEqual(["IMAGE", "A", "B", "C"]);
   });
 
   // Reading every block's rect on every pointermove forces a synchronous layout per
