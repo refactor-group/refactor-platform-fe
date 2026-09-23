@@ -915,6 +915,7 @@ describe("Coaching note image extension", () => {
 describe("moving an image", () => {
   const BLOCK_HEIGHT = 80;
   const BLOCK_PITCH = 100;
+  const VIEW_HEIGHT = 400;
   const captured = new Set<number>();
   let layoutShift = 0;
   let blockReads = 0;
@@ -929,6 +930,19 @@ describe("moving an image", () => {
     root = editorRoot;
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
       function (this: HTMLElement) {
+        if (this === root) {
+          return {
+            top: 0,
+            bottom: VIEW_HEIGHT,
+            left: 0,
+            right: 600,
+            width: 600,
+            height: VIEW_HEIGHT,
+            x: 0,
+            y: 0,
+            toJSON: () => ({}),
+          } as DOMRect;
+        }
         const index = Array.from(root.children).indexOf(this);
         if (index >= 0) blockReads += 1;
         const top = (index >= 0 ? index * BLOCK_PITCH : 0) + layoutShift;
@@ -1148,6 +1162,89 @@ describe("moving an image", () => {
     expect(
       container.querySelector('input[aria-label="Image description"]')
     ).toBeTruthy();
+  });
+
+  // The note scrolls inside its own container, often with only a few hundred pixels
+  // showing. Without scrolling at the edges, anything out of view is unreachable by drag.
+  function makeScrollable(editorRoot: HTMLElement) {
+    let top = 0;
+    editorRoot.style.overflowY = "auto";
+    Object.defineProperty(editorRoot, "clientHeight", { configurable: true, value: VIEW_HEIGHT });
+    Object.defineProperty(editorRoot, "scrollHeight", { configurable: true, value: 1200 });
+    Object.defineProperty(editorRoot, "scrollTop", {
+      configurable: true,
+      get: () => top,
+      set: (value: number) => {
+        top = Math.max(0, Math.min(value, 1200 - VIEW_HEIGHT));
+      },
+    });
+    return () => top;
+  }
+
+  const frames = (count: number) =>
+    act(async () => {
+      for (let i = 0; i < count; i++) {
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+      }
+    });
+
+  it("scrolls the note while the pointer is held at its bottom edge", async () => {
+    const { editor, image } = await mountStacked();
+    const scrollTop = makeScrollable(editor.view.dom as HTMLElement);
+
+    startDrag(image);
+    pointer("pointermove", image, VIEW_HEIGHT - 4);
+    await frames(10);
+    const whileHeld = scrollTop();
+
+    expect(whileHeld).toBeGreaterThan(0);
+  });
+
+  it("scrolls up at the top edge, and not at all away from the edges", async () => {
+    const { editor, image } = await mountStacked();
+    const scrollTop = makeScrollable(editor.view.dom as HTMLElement);
+    const root = editor.view.dom as HTMLElement;
+    root.scrollTop = 300;
+
+    startDrag(image);
+    pointer("pointermove", image, VIEW_HEIGHT / 2);
+    await frames(10);
+    expect(scrollTop()).toBe(300);
+
+    pointer("pointermove", image, 4);
+    await frames(10);
+    expect(scrollTop()).toBeLessThan(300);
+  });
+
+  // The note's own container can run out while the page still has room; the drag
+  // should carry on scrolling whatever can still move.
+  it("hands off to an outer container once the note's own runs out", async () => {
+    const { editor, image } = await mountStacked();
+    const root = editor.view.dom as HTMLElement;
+    makeScrollable(root);
+    root.scrollTop = 1200 - VIEW_HEIGHT; // the note is already at its bottom
+    const outer = root.parentElement as HTMLElement;
+    const outerTop = makeScrollable(outer);
+
+    startDrag(image);
+    pointer("pointermove", image, VIEW_HEIGHT - 4);
+    await frames(10);
+
+    expect(outerTop()).toBeGreaterThan(0);
+  });
+
+  it("stops scrolling once the drag ends", async () => {
+    const { editor, image } = await mountStacked();
+    const scrollTop = makeScrollable(editor.view.dom as HTMLElement);
+
+    startDrag(image);
+    pointer("pointermove", image, VIEW_HEIGHT - 4);
+    await frames(5);
+    pointer("pointercancel", image, VIEW_HEIGHT - 4);
+    const atEnd = scrollTop();
+    await frames(10);
+
+    expect(scrollTop()).toBe(atEnd);
   });
 
   // A finger over an image is scrolling the note; taking the gesture over would leave

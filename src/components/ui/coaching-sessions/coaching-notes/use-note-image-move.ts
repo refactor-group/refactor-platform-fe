@@ -12,6 +12,12 @@ import { type Option, Some, None } from "@/types/option";
 /** Past this, a press becomes a drag rather than a click. */
 const DRAG_THRESHOLD_PX = 5;
 
+/** How close to a scroll edge a drag has to get before the note starts scrolling. */
+const EDGE_ZONE_PX = 48;
+
+/** Scroll speed at the very edge, in pixels per frame. It ramps up from zero across the zone. */
+const MAX_EDGE_SCROLL_PX = 18;
+
 /**
  * A top-level block: where it sits in the document, and where it sits on screen.
  *
@@ -65,6 +71,49 @@ export function dropTargetAmong(
 
   const best = candidates.reduce((a, b) => (b.distance < a.distance ? b : a));
   return Some({ pos: best.pos, left: best.left, top: best.top, width: best.width });
+}
+
+/**
+ * Pixels to scroll this frame: negative near the top edge, positive near the bottom,
+ * zero in between. Faster the deeper into the zone the pointer is, and flat out once it
+ * is past the edge, where a held pointer is a clear request to keep going.
+ */
+export function edgeScrollDelta(clientY: number, top: number, bottom: number): number {
+  const intoTop = top + EDGE_ZONE_PX - clientY;
+  if (intoTop > 0) return -Math.ceil(Math.min(1, intoTop / EDGE_ZONE_PX) * MAX_EDGE_SCROLL_PX);
+  const intoBottom = clientY - (bottom - EDGE_ZONE_PX);
+  if (intoBottom > 0) return Math.ceil(Math.min(1, intoBottom / EDGE_ZONE_PX) * MAX_EDGE_SCROLL_PX);
+  return 0;
+}
+
+/**
+ * Everything that could scroll the note, innermost first, ending with the page. The
+ * note scrolls inside its own container, but once that runs out the page may still
+ * have room.
+ */
+function scrollContainers(from: HTMLElement): HTMLElement[] {
+  const found: HTMLElement[] = [];
+  for (let node: HTMLElement | null = from; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node);
+    if (/(auto|scroll|overlay)/.test(overflowY) && node.scrollHeight > node.clientHeight) {
+      found.push(node);
+    }
+  }
+  const page = document.scrollingElement;
+  if (page instanceof HTMLElement && !found.includes(page)) found.push(page);
+  return found;
+}
+
+function canScroll(container: HTMLElement, delta: number): boolean {
+  return delta < 0
+    ? container.scrollTop > 0
+    : container.scrollTop + container.clientHeight < container.scrollHeight - 1;
+}
+
+/** The part of the innermost container that is actually on screen. */
+function visibleEdges(container: HTMLElement): { top: number; bottom: number } {
+  const rect = container.getBoundingClientRect();
+  return { top: Math.max(rect.top, 0), bottom: Math.min(rect.bottom, window.innerHeight) };
 }
 
 let dropLine: HTMLElement | undefined;
@@ -173,6 +222,26 @@ export function useNoteImageMove(
     // redraw only reads refs and the editor, both stable for the drag.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragging]);
+
+  // Native drag-and-drop scrolls at the edges on its own; pointer events do not, so a
+  // drag in a long note could not reach anything out of view. While the pointer sits
+  // near an edge, scroll every frame, including when it is held still. The scroll
+  // listener above then re-measures and moves the drop line.
+  useEffect(() => {
+    if (!dragging) return;
+    const containers = scrollContainers(editor.view.dom as HTMLElement);
+    if (containers.length === 0) return;
+    let frame = requestAnimationFrame(function tick() {
+      const { top, bottom } = visibleEdges(containers[0]);
+      const delta = edgeScrollDelta(lastY.current, top, bottom);
+      if (delta !== 0) {
+        const target = containers.find((container) => canScroll(container, delta));
+        if (target) target.scrollTop += delta;
+      }
+      frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [dragging, editor]);
 
   useEffect(() => hideDropLine, []);
 
