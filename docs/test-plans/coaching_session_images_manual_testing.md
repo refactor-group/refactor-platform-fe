@@ -72,9 +72,8 @@ pointer between blocks. On release the image is inserted **at the line's positio
 caret**, with no success toast. Drop it between two existing paragraphs to make this
 unambiguous.
 
-> If no line appears, the `Dropcursor` is not firing for external file drags. That is a known
-> open question in the plan, not a mystery — record it and fall back to checking the image
-> lands at the drop position.
+> The line comes from the `Dropcursor` extension, which does fire for external file drags. If
+> no line appears, treat it as a regression rather than a known limitation.
 
 ### Case 4: a large photo is downscaled before upload
 
@@ -96,55 +95,72 @@ untouched, because canvas re-encoding would reduce it to frame one.
 
 With the image in the note, open DevTools and inspect the rendered `<img>`.
 
-**Pass:** `src` points at `/coaching_session_images/<id>` on the backend, and the element
-carries `data-image-id`. The URL is computed at render time; nothing environment-specific is
-written into the document. Reload the page and confirm the image still renders.
+**Pass:** `src` points at `/coaching_session_images/<id>` on the backend. The URL is computed at
+render time; nothing environment-specific is written into the document. Reload the page and
+confirm the image still renders.
+
+> The rendered `<img>` does **not** carry `data-image-id`. It is drawn by a React node view,
+> which reads the id straight from the node; the attribute appears only in serialized HTML,
+> such as a copy to the clipboard. Its absence here is expected.
 
 ### Case 7: delete, then undo
 
 Hover the image, click the remove control in its corner, then press Cmd-Z.
 
-**Pass:** the control only appears on hover (on a touch device it stays visible). The image
+**Pass:** the controls (full size and remove) only appear on hover; on a touch device they stay
+visible. The image
 disappears, and **undo brings back a working image, not a broken one** — deleting the node
 never deletes the stored bytes. This is load-bearing: any future storage cleanup must not
 break it.
 
 ### Case 8: full size
 
-Click the image.
+Hover the image and click the full-size control in its corner, beside remove.
 
-**Pass:** a dialog opens showing it at natural size. Escape closes it. Clicking the remove
-control does **not** open the dialog.
+**Pass:** a dialog opens showing it at natural size, with a close button that stays legible over
+a dark image. Escape closes it. Clicking the image itself does **not** open the dialog (it
+selects the image; see Case 9), and neither does clicking the remove control.
 
 ### Case 9: alt text
 
-Select the image, type a description into the alt field, then inspect the rendered `<img>`.
+Click the image to select it. A description field appears beneath it; type into it, then
+inspect the rendered `<img>`.
 
-**Pass:** `alt` reflects what you typed. Watch the collaboration traffic while typing: writes
-are debounced, so a burst of keystrokes does not produce one update per character. Leaving it
-empty renders `alt=""`, which is correct for a decorative image.
+**Pass:** the field appears on the click with no dialog in the way, and `alt` reflects what you
+typed. Watch the collaboration traffic while typing: writes are debounced, so a burst of
+keystrokes does not produce one update per character. Click elsewhere in the note immediately
+after the last keystroke: the description is kept, not lost to the debounce. Reload and it is
+still there. Leaving it empty renders `alt=""`, which is correct for a decorative image.
 
 ### Case 10: text extraction ignores images
 
-Select a region containing only the image.
+Click the image so it is selected on its own.
 
-**Pass:** the selection bubble menu (Add as Action / Topic) does **not** appear. Select text
+**Pass:** the selection bubble menu (Add as Action / Agreement / Goal) does **not** appear. Select text
 *and* the image together: the menu appears and the prefilled body contains only the prose.
 
 ### Case 11: move an image already in the note
 
-Put an image in a note with a paragraph above it and a paragraph below it. Drag the image
-itself to a different position between paragraphs, watching the drop indicator as in Case 3.
+Put an image in a note with paragraphs above and below it. Press on the image and drag it to a
+different position between paragraphs.
 
-**Pass:** the indicator appears **and** the image actually lands at that position. The
-indicator alone proves nothing: it is drawn for any drag over the editor, including the
-browser's own image drag, which moves nothing on release. Reload the page and confirm the
-image is still in its new position, so the move reached the shared document and not just the
-local view.
+**Pass:**
 
-Also: while dragging, **only the drop indicator line is visible — no translucent copy of the
-image follows the cursor** — and the image still lands at the indicator on release. Drag-image
-support differs between engines, so check this in **Chrome and Safari** at minimum.
+- A drop line appears and tracks the pointer between blocks, and the image being moved dims in
+  place. **Nothing follows the cursor** — no translucent copy of the image, in any browser.
+- On release the image lands **at the line**, and the line disappears.
+- Reload the page: the image is still in its new position, so the move reached the shared
+  document and not just the local view.
+- The row for that image still has `deleted_at` `NULL`. A move is one transaction, so it must
+  not be mistaken for a removal.
+- A press and release without moving is a click: it selects the image and moves nothing.
+
+> Images are moved with pointer events, not HTML5 drag-and-drop, so the browser never builds a
+> drag preview in the first place. A ghost image appearing at all is a regression. Check in
+> **Chrome and Safari**, and on a touch device if one is to hand.
+>
+> Drops resolve between top-level blocks. Dragging over a list or a table places the image
+> before or after that whole block, not inside it; that is intended.
 
 ### Case 23: deleting marks the row, undo clears it
 
@@ -161,8 +177,8 @@ because the bytes were never destroyed.
 
 ### Case 24: backspace signals the same way
 
-Repeat Case 23, but remove the image by putting the cursor just after it and pressing
-Backspace twice (the first press selects it).
+Repeat Case 23, but remove the image by putting the cursor at the start of the paragraph
+directly after it and pressing Backspace once. The image is removed on that first press.
 
 **Pass:** identical to Case 23. This is the path most likely to regress, because removal is
 detected from the document transaction rather than from the hover control.
