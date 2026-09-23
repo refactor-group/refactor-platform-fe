@@ -50,15 +50,17 @@ head -c 11534336 /dev/zero > /tmp/too-big.png
 
 Click the image button in the Notes toolbar, pick a PNG.
 
-**Pass:** a toast reads "Adding image", briefly shows a percentage, then "Image added." The
-image appears at the cursor. The toolbar button sits in the same group as the link button and
-looks like its neighbours (ghost, same icon size).
+**Pass:** the image appears at the cursor with **no toast at all** on a fast upload. A toast
+reading "Adding image" only appears if the upload is slow enough to need it, and it disappears
+on its own when the image lands. Nothing ever announces success. The toolbar button sits in the
+same group as the link button and looks like its neighbours (ghost, same icon size).
 
 ### Case 2: paste a screenshot
 
 Take a screenshot to the clipboard, click into the note, press Cmd-V.
 
-**Pass:** same as Case 1. **This is the case the feature exists for** — it is how a coach
+**Pass:** same as Case 1 — on localhost this should be completely silent, the image simply
+appearing. **This is the case the feature exists for** — it is how a coach
 actually uses it mid-session.
 
 ### Case 3: drag and drop, with the drop indicator
@@ -67,7 +69,8 @@ Drag an image file from Finder over the note. **Before releasing**, watch the ca
 
 **Pass:** a visible horizontal line marks where the image will land, and it tracks the
 pointer between blocks. On release the image is inserted **at the line's position, not at the
-caret**. Drop it between two existing paragraphs to make this unambiguous.
+caret**, with no success toast. Drop it between two existing paragraphs to make this
+unambiguous.
 
 > If no line appears, the `Dropcursor` is not firing for external file drags. That is a known
 > open question in the plan, not a mystery — record it and fall back to checking the image

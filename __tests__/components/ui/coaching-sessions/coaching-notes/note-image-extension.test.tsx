@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { act, render, waitFor } from "@testing-library/react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
@@ -35,6 +35,7 @@ vi.mock("sonner", () => ({
     success: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
+    dismiss: vi.fn(),
   }),
 }));
 
@@ -168,6 +169,9 @@ describe("Coaching note image extension", () => {
     mockRestore.mockReset();
     mockRestore.mockResolvedValue(ok(undefined));
     vi.mocked(toast.error).mockClear();
+    vi.mocked(toast.loading).mockClear();
+    vi.mocked(toast.success).mockClear();
+    vi.mocked(toast.dismiss).mockClear();
   });
 
   it("renders the image-scoped backend URL while storing only the image id", async () => {
@@ -427,5 +431,188 @@ describe("Coaching note image extension", () => {
     insertImage(editor, "image-42");
 
     expect(mockRestore).not.toHaveBeenCalled();
+  });
+
+  describe("upload notifications", () => {
+    // Comfortably past the in-progress delay, so the test never encodes its exact value.
+    const PAST_THE_DELAY_MS = 2000;
+
+    function uploaded(id: string) {
+      return ok({
+        id,
+        coaching_session_id: SESSION_ID,
+        mime_type: "image/png",
+        byte_size: 3,
+        width: None,
+        height: None,
+        created_at: DateTime.now(),
+      });
+    }
+
+    function deferredUpload() {
+      let settle!: (value: unknown) => void;
+      const promise = new Promise((resolve) => {
+        settle = resolve;
+      });
+      mockUpload.mockReturnValue(promise);
+      return settle;
+    }
+
+    async function letTheDelayElapse() {
+      await act(async () => {
+        vi.advanceTimersByTime(PAST_THE_DELAY_MS);
+      });
+    }
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("shows no toast at all when the upload finishes before the delay", async () => {
+      const { editor } = await mountEditor();
+      vi.useFakeTimers();
+      mockUpload.mockResolvedValue(uploaded("image-99"));
+
+      await act(async () => {
+        await uploadAndInsertImage(editor, makeFile("image/png"), uploadContext);
+      });
+
+      expect(toast.loading).not.toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(imageAttrsFromDoc(editor).imageId).toBe("image-99");
+    });
+
+    it("never announces success, on any path", async () => {
+      // A fresh editor per path: jsdom cannot scroll a second image node into view.
+      const fast = await mountEditor();
+      vi.useFakeTimers();
+      mockUpload.mockResolvedValue(uploaded("image-fast"));
+      await act(async () => {
+        await uploadAndInsertImage(
+          fast.editor,
+          makeFile("image/png"),
+          uploadContext
+        );
+      });
+
+      vi.useRealTimers();
+      const slowHarness = await mountEditor();
+      vi.useFakeTimers();
+      const finishUpload = deferredUpload();
+      const slow = uploadAndInsertImage(
+        slowHarness.editor,
+        makeFile("image/png"),
+        uploadContext
+      );
+      await letTheDelayElapse();
+      finishUpload(uploaded("image-slow"));
+      await act(async () => {
+        await slow;
+      });
+
+      mockUpload.mockResolvedValue(
+        err({ kind: UploadFailureKind.Network, status: None })
+      );
+      await act(async () => {
+        await uploadAndInsertImage(
+          fast.editor,
+          makeFile("image/png"),
+          uploadContext
+        );
+      });
+
+      await act(async () => {
+        await uploadAndInsertImage(
+          fast.editor,
+          makeFile("application/pdf"),
+          uploadContext
+        );
+      });
+
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it("shows then dismisses the in-progress toast when the upload is slow", async () => {
+      const { editor } = await mountEditor();
+      vi.useFakeTimers();
+      const finishUpload = deferredUpload();
+
+      const pending = uploadAndInsertImage(
+        editor,
+        makeFile("image/png"),
+        uploadContext
+      );
+      await letTheDelayElapse();
+
+      expect(toast.loading).toHaveBeenCalledWith("Adding image");
+
+      finishUpload(uploaded("image-99"));
+      await act(async () => {
+        await pending;
+      });
+
+      expect(toast.dismiss).toHaveBeenCalledWith("toast-id");
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(imageAttrsFromDoc(editor).imageId).toBe("image-99");
+    });
+
+    it("shows only the error toast when a fast upload fails", async () => {
+      const { editor } = await mountEditor();
+      vi.useFakeTimers();
+      mockUpload.mockResolvedValue(
+        err({ kind: UploadFailureKind.Network, status: None })
+      );
+
+      await act(async () => {
+        await uploadAndInsertImage(editor, makeFile("image/png"), uploadContext);
+      });
+
+      expect(toast.loading).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      expect(toast.error).toHaveBeenCalledWith(expect.any(String), undefined);
+    });
+
+    it("replaces the in-progress toast with the error when a slow upload fails", async () => {
+      const { editor } = await mountEditor();
+      vi.useFakeTimers();
+      const finishUpload = deferredUpload();
+
+      const pending = uploadAndInsertImage(
+        editor,
+        makeFile("image/png"),
+        uploadContext
+      );
+      await letTheDelayElapse();
+
+      expect(toast.loading).toHaveBeenCalledWith("Adding image");
+
+      finishUpload(err({ kind: UploadFailureKind.Network, status: None }));
+      await act(async () => {
+        await pending;
+      });
+
+      expect(toast.error).toHaveBeenCalledWith(expect.any(String), {
+        id: "toast-id",
+      });
+    });
+
+    it("rejects an unsupported file without ever starting an in-progress toast", async () => {
+      const { editor } = await mountEditor();
+      vi.useFakeTimers();
+
+      await act(async () => {
+        await uploadAndInsertImage(
+          editor,
+          makeFile("application/pdf"),
+          uploadContext
+        );
+      });
+      await letTheDelayElapse();
+
+      expect(mockUpload).not.toHaveBeenCalled();
+      expect(toast.loading).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledTimes(1);
+    });
   });
 });

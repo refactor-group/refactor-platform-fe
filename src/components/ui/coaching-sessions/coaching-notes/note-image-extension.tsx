@@ -23,6 +23,7 @@ import {
 } from "@/lib/utils/downscale-image";
 import { ACCEPTED_IMAGE_MIME_TYPES } from "@/types/coaching-session-image";
 import type { Id } from "@/types/general";
+import { type Option, Some, None } from "@/types/option";
 import { NoteImageView } from "./note-image-view";
 
 export const COACHING_NOTE_IMAGE_NAME = "coachingNoteImage";
@@ -133,6 +134,36 @@ function progressLabel(fraction: number): string {
   return `Adding image, ${percent}%`;
 }
 
+type ToastId = string | number;
+
+// Long enough that a quick upload finishes without ever saying anything, short
+// enough that a slow one is not silent for long enough to look broken.
+const IN_PROGRESS_TOAST_DELAY_MS = 400;
+
+interface DelayedProgressToast {
+  report: (fraction: number) => void;
+  /** Stop the toast from appearing, and report whether it already did. */
+  settle: () => Option<ToastId>;
+}
+
+function startDelayedProgressToast(): DelayedProgressToast {
+  let shown: Option<ToastId> = None;
+  const timer = setTimeout(() => {
+    shown = Some(toast.loading("Adding image"));
+  }, IN_PROGRESS_TOAST_DELAY_MS);
+
+  return {
+    // Addressing an id sonner has never seen would create the toast, defeating the delay.
+    report: (fraction) => {
+      if (shown.some) toast.loading(progressLabel(fraction), { id: shown.val });
+    },
+    settle: () => {
+      clearTimeout(timer);
+      return shown;
+    },
+  };
+}
+
 /** Validate, downscale, upload, and insert on success. Never touches the document on failure. */
 export async function uploadAndInsertImage(
   editor: Editor,
@@ -149,20 +180,24 @@ export async function uploadAndInsertImage(
   // Progress lives in a toast, never in the document: a placeholder node is a real
   // Yjs insert that replicates to the other participant and is stranded in shared
   // state forever if this tab dies mid-upload.
-  const toastId = toast.loading("Adding image");
+  const progress = startDelayedProgressToast();
   const prepared = await downscaleImage(validated.value);
   const result = await CoachingSessionImageApi.upload(
     context.coachingSessionId,
     prepared,
-    (fraction) => toast.loading(progressLabel(fraction), { id: toastId })
+    progress.report
   );
+  const progressToast = progress.settle();
 
   if (result.isErr()) {
-    toast.error(uploadFailureMessage(result.error.kind), { id: toastId });
+    toast.error(
+      uploadFailureMessage(result.error.kind),
+      progressToast.some ? { id: progressToast.val } : undefined
+    );
     return;
   }
 
-  toast.success("Image added.", { id: toastId });
+  if (progressToast.some) toast.dismiss(progressToast.val);
   editor
     .chain()
     .focus()
