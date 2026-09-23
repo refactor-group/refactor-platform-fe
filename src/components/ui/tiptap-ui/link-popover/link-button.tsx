@@ -1,4 +1,4 @@
-import * as React from "react";
+import { forwardRef } from "react";
 import { useEditorState, type Editor } from "@tiptap/react";
 
 // --- Hooks ---
@@ -24,8 +24,8 @@ export interface LinkButtonProps extends ButtonProps {
   editor?: Editor | null;
 }
 
-export const LinkButton = React.forwardRef<HTMLButtonElement, LinkButtonProps>(
-  ({ className, children, editor: providedEditor, ...props }, ref) => {
+export const LinkButton = forwardRef<HTMLButtonElement, LinkButtonProps>(
+  ({ className, children, editor: providedEditor, disabled, ...props }, ref) => {
     const editor = useTiptapEditor(providedEditor);
     // Tracked reactively: the notes editor does not re-render its toolbar on every
     // transaction, and the answer changes with each new selection.
@@ -40,6 +40,9 @@ export const LinkButton = React.forwardRef<HTMLButtonElement, LinkButtonProps>(
     if (!editor || !editor.isEditable) {
       return null;
     }
+
+    // A caller (LinkPopover) can disable the button too; either reason wins.
+    const isDisabled = Boolean(disabled) || refusesLink;
 
     const handleClick = () => {
       triggerLinkCreation(editor);
@@ -56,11 +59,11 @@ export const LinkButton = React.forwardRef<HTMLButtonElement, LinkButtonProps>(
         tooltip="Link"
         shortcutKeys="Ctrl-k"
         data-active-state={isActive ? "on" : "off"}
-        disabled={refusesLink}
-        data-disabled={refusesLink}
         ref={ref}
         onClick={handleClick}
         {...props}
+        disabled={isDisabled}
+        data-disabled={isDisabled}
       >
         {children || <LinkIcon className="tiptap-button-icon" />}
       </Button>

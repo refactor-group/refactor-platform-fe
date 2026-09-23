@@ -1183,6 +1183,22 @@ describe("moving an image", () => {
     expect(order(editor)).toEqual(["IMAGE", "A", "B", "C"]);
   });
 
+  // Switching away mid-drag can swallow the release entirely.
+  it("abandons the move when the window loses focus", async () => {
+    const { editor, image } = await mountStacked();
+
+    startDrag(image);
+    pointer("pointermove", image, 370);
+    await frames(1);
+    act(() => {
+      window.dispatchEvent(new Event("blur"));
+    });
+    pointer("pointerup", document.body, 370);
+
+    expect(order(editor)).toEqual(["A", "IMAGE", "B", "C"]);
+    expect(dropLine()?.style.display).toBe("none");
+  });
+
   // Reading every block's rect on every pointermove forces a synchronous layout per
   // block at pointer-event frequency. Layout is read once per animation frame instead,
   // however many pointer events arrive in between.

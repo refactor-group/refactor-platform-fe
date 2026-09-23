@@ -1,4 +1,4 @@
-import React from "react";
+import type { FC } from "react";
 import { useCurrentEditor, useEditorState } from "@tiptap/react";
 
 // --- TipTap UI Primitives ---
@@ -31,7 +31,7 @@ interface SimpleToolbarProps {
   imageContext?: Option<NoteImageUploadContext>;
 }
 
-export const SimpleToolbar: React.FC<SimpleToolbarProps> = ({
+export const SimpleToolbar: FC<SimpleToolbarProps> = ({
   imageContext,
 }) => {
   const { editor } = useCurrentEditor();

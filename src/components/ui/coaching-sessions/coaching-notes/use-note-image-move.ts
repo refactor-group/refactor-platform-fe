@@ -269,6 +269,7 @@ export function useNoteImageMove(
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener("blur", onBlur);
       abandon.current = None;
       hideDropLine();
       setDragging(false);
@@ -305,9 +306,16 @@ export function useNoteImageMove(
       end(false);
     }
 
+    // Switching away mid-drag (Cmd-Tab, a system dialog) can swallow the release
+    // entirely, and the drag would be left open with its line showing.
+    function onBlur() {
+      end(false);
+    }
+
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onCancel);
+    window.addEventListener("blur", onBlur);
     abandon.current = Some(() => end(false));
   };
 

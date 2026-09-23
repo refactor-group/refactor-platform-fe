@@ -30,7 +30,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 const IMAGE_ID = "11111111-1111-4111-8111-111111111111";
 
-async function mount(): Promise<{ container: HTMLElement; editor: Editor }> {
+async function mount(
+  buttonProps: { disabled?: boolean } = {}
+): Promise<{ container: HTMLElement; editor: Editor }> {
   const ref: { current: Editor | null } = { current: null };
 
   const TestEditor = () => {
@@ -51,7 +53,7 @@ async function mount(): Promise<{ container: HTMLElement; editor: Editor }> {
     ref.current = editor;
     return editor ? (
       <>
-        <LinkButton editor={editor} />
+        <LinkButton editor={editor} {...buttonProps} />
         <EditorContent editor={editor} />
       </>
     ) : null;
@@ -105,6 +107,27 @@ describe("Link with an image selected", () => {
     });
 
     await waitFor(() => expect(linkButton(container).disabled).toBe(false));
+  });
+
+  // LinkPopover passes its own disabled state; it must not re-enable the button.
+  it("stays disabled for an image when the caller passes disabled={false}", async () => {
+    const { container, editor } = await mount({ disabled: false });
+
+    act(() => {
+      editor.commands.setNodeSelection(imagePos(editor));
+    });
+
+    await waitFor(() => expect(linkButton(container).disabled).toBe(true));
+  });
+
+  it("honours a caller's disabled for selected text", async () => {
+    const { container, editor } = await mount({ disabled: true });
+
+    act(() => {
+      editor.commands.setTextSelection({ from: 1, to: 5 });
+    });
+
+    await waitFor(() => expect(linkButton(container).disabled).toBe(true));
   });
 
   // Out of scope for this change: an empty cursor behaves exactly as before.
