@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { type Option, Some, None } from "@/types/option";
@@ -111,8 +117,8 @@ interface Measurement {
 }
 
 export interface NoteImageMoveHandlers {
-  onPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
-  onPointerMove: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+  onPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
   onPointerUp: () => void;
   onPointerCancel: () => void;
 }
@@ -185,7 +191,7 @@ export function useNoteImageMove(
     setDragging(false);
   };
 
-  const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+  const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0) return;
     // A finger dragging over an image is scrolling the note, and has to stay that way:
     // taking the gesture over would make a note full of images unscrollable on a phone.
@@ -203,7 +209,7 @@ export function useNoteImageMove(
     });
   };
 
-  const onPointerMove = (event: React.PointerEvent<HTMLElement>) => {
+  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     if (!press.current.some) return;
     const state = press.current.val;
     lastY.current = event.clientY;

@@ -66,34 +66,48 @@ export async function downscaleImage(
   if (file.type === ANIMATED_MIME_TYPE) return file;
   if (!canEncodeInThisEnvironment()) return file;
 
+  let source: ImageBitmap;
   try {
-    const source = await createImageBitmap(file);
-    const size = scaledSize(source.width, source.height);
-    const overCap = maxBytes !== undefined && file.size > maxBytes;
-    if (!size.some && !overCap) {
-      source.close();
-      return file;
-    }
-
-    const target = size.some
-      ? size.val
-      : { width: source.width, height: source.height };
-    const blob = await encodeToWebP(source, target);
-    source.close();
-    // Keeping the original when re-encoding does not shrink it means an oversized image
-    // can come back still oversized, so the long-edge ceiling is a target rather than a
-    // guarantee. Deliberate: a file that grows when re-encoded is already atypical, and
-    // sending more bytes to enforce a pixel bound helps nobody. `enforceUploadSize` is
-    // what actually holds, and it holds on bytes.
-    if (!blob.some || blob.val.size >= file.size) return file;
-
-    return new File([blob.val], webPFilename(file.name), {
-      type: OUTPUT_MIME_TYPE,
-      lastModified: file.lastModified,
-    });
+    source = await createImageBitmap(file);
   } catch {
     return file;
   }
+
+  // Closed on every path, including an encode that throws. A decoded bitmap holds the
+  // full-size pixels natively, and one leaked per failed attempt adds up fast.
+  try {
+    return await reencode(file, source, maxBytes);
+  } catch {
+    return file;
+  } finally {
+    source.close();
+  }
+}
+
+async function reencode(
+  file: File,
+  source: ImageBitmap,
+  maxBytes: number | undefined
+): Promise<File> {
+  const size = scaledSize(source.width, source.height);
+  const overCap = maxBytes !== undefined && file.size > maxBytes;
+  if (!size.some && !overCap) return file;
+
+  const target = size.some
+    ? size.val
+    : { width: source.width, height: source.height };
+  const blob = await encodeToWebP(source, target);
+  // Keeping the original when re-encoding does not shrink it means an oversized image
+  // can come back still oversized, so the long-edge ceiling is a target rather than a
+  // guarantee. Deliberate: a file that grows when re-encoded is already atypical, and
+  // sending more bytes to enforce a pixel bound helps nobody. `enforceUploadSize` is
+  // what actually holds, and it holds on bytes.
+  if (!blob.some || blob.val.size >= file.size) return file;
+
+  return new File([blob.val], webPFilename(file.name), {
+    type: OUTPUT_MIME_TYPE,
+    lastModified: file.lastModified,
+  });
 }
 
 function canEncodeInThisEnvironment(): boolean {

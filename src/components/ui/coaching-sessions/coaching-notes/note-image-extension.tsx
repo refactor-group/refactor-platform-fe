@@ -337,13 +337,21 @@ export async function uploadFilesInOrder(
   context: NoteImageUploadContext,
   pos?: number
 ): Promise<void> {
-  for (const file of files) {
-    try {
-      await uploadAndInsertImage(editor, file, context, pos);
-    } catch (error) {
-      console.error("Adding an image to the note failed unexpectedly:", error);
-      toast.error("That image couldn't be added. Please try again.");
+  // One anchor for the whole batch, mapped through every insertion including our own. A
+  // mapped position moves past content inserted at it, so each image lands after the one
+  // before. Handing each file the raw drop position instead put every later image in front.
+  const anchor = pos === undefined ? undefined : trackPosition(editor, pos);
+  try {
+    for (const file of files) {
+      try {
+        await uploadAndInsertImage(editor, file, context, anchor?.current());
+      } catch (error) {
+        console.error("Adding an image to the note failed unexpectedly:", error);
+        toast.error("That image couldn't be added. Please try again.");
+      }
     }
+  } finally {
+    anchor?.stop();
   }
 }
 

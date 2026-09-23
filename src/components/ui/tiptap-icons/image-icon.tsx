@@ -1,8 +1,8 @@
-import * as React from "react"
+import { memo, type SVGProps } from "react"
 
 // Geometry is lucide's `Image` glyph, verbatim.
-export const ImageIcon = React.memo(
-  ({ className, ...props }: React.SVGProps<SVGSVGElement>) => {
+export const ImageIcon = memo(
+  ({ className, ...props }: SVGProps<SVGSVGElement>) => {
     return (
       <svg
         width="24"

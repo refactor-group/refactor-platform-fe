@@ -149,6 +149,50 @@ describe("downscaleImage", () => {
   });
 });
 
+describe("downscaleImage releases the decoded bitmap", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // A decoded bitmap holds the full-size pixels natively; leaking one per failed
+  // attempt adds up fast on a photo-heavy note.
+  it("closes it when encoding throws, and keeps the original", async () => {
+    const close = vi.fn();
+    vi.stubGlobal("createImageBitmap", async () => ({ width: 4000, height: 1000, close }));
+    vi.spyOn(document, "createElement").mockReturnValue({
+      width: 0,
+      height: 0,
+      getContext: () => ({
+        drawImage: () => {
+          throw new Error("canvas too large");
+        },
+      }),
+      toBlob: () => undefined,
+    } as unknown as HTMLElement);
+    const png = fileOfSize("image/png", 4096, "shot.png");
+
+    expect(await downscaleImage(png)).toBe(png);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes it exactly once on success", async () => {
+    const close = vi.fn();
+    vi.stubGlobal("createImageBitmap", async () => ({ width: 4000, height: 1000, close }));
+    vi.spyOn(document, "createElement").mockReturnValue({
+      width: 0,
+      height: 0,
+      getContext: () => ({ drawImage: () => undefined }),
+      toBlob: (callback: (blob: Blob) => void) =>
+        callback(new Blob([new Uint8Array(16)], { type: "image/webp" })),
+    } as unknown as HTMLElement);
+
+    await downscaleImage(fileOfSize("image/png", 4096, "shot.png"));
+
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("MAX_IMAGE_EDGE_PX", () => {
   it("caps the long edge", () => {
     expect(MAX_IMAGE_EDGE_PX).toBe(2000);

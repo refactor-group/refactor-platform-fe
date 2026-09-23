@@ -1,4 +1,11 @@
-import * as React from "react"
+import {
+  forwardRef,
+  useCallback,
+  useMemo,
+  useRef,
+  type ChangeEvent,
+  type MouseEvent as ReactMouseEvent,
+} from "react"
 import type { Editor } from "@tiptap/react"
 
 // --- Hooks ---
@@ -82,7 +89,7 @@ export function useImageUploadState(
   const canInsert = canInsertImage(editor)
   const isDisabled = isImageUploadButtonDisabled(editor, canInsert, disabled)
 
-  const shouldShow = React.useMemo(
+  const shouldShow = useMemo(
     () =>
       shouldShowImageUploadButton({
         editor,
@@ -103,7 +110,7 @@ export function useImageUploadState(
   }
 }
 
-export const ImageUploadButton = React.forwardRef<
+export const ImageUploadButton = forwardRef<
   HTMLButtonElement,
   ImageUploadButtonProps
 >(
@@ -122,7 +129,7 @@ export const ImageUploadButton = React.forwardRef<
     ref
   ) => {
     const editor = useTiptapEditor(providedEditor)
-    const inputRef = React.useRef<HTMLInputElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
 
     const { isDisabled, shouldShow, label } = useImageUploadState(
       editor,
@@ -130,8 +137,8 @@ export const ImageUploadButton = React.forwardRef<
       hideWhenUnavailable
     )
 
-    const handleClick = React.useCallback(
-      (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleClick = useCallback(
+      (e: ReactMouseEvent<HTMLButtonElement>) => {
         onClick?.(e)
 
         if (!e.defaultPrevented && !isDisabled) {
@@ -141,8 +148,8 @@ export const ImageUploadButton = React.forwardRef<
       [onClick, isDisabled]
     )
 
-    const handleChange = React.useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = useCallback(
+      (e: ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files ?? [])
         // Picking the same file twice in a row fires no change event otherwise.
         e.target.value = ""

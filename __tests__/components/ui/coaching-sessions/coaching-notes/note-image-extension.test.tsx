@@ -45,6 +45,7 @@ import {
   sanitizePastedHtml,
   stepCanChangeImages,
   uploadAndInsertImage,
+  uploadFilesInOrder,
 } from "@/components/ui/coaching-sessions/coaching-notes/note-image-extension";
 import { ReplaceStep } from "@tiptap/pm/transform";
 import { Slice, Fragment } from "@tiptap/pm/model";
@@ -399,8 +400,7 @@ describe("Coaching note image extension", () => {
       expect(stepCanChangeImages(typing)).toBe(false);
     });
 
-    it("does not skip a deletion", async () => {
-      const { editor } = await mountEditor();
+    it("does not skip a deletion", () => {
       const deletion = new ReplaceStep(1, 3, Slice.empty);
 
       expect(stepCanChangeImages(deletion)).toBe(true);
@@ -426,6 +426,42 @@ describe("Coaching note image extension", () => {
     it("does not skip a step it cannot introspect", () => {
       expect(stepCanChangeImages({} as never)).toBe(true);
     });
+  });
+
+  // Every file in a drop shares one anchor. Unless the anchor advances past each image
+  // as it lands, every later image is inserted in front of the one before, and a drop of
+  // A then B reads B, A.
+  it("keeps a multi-file drop in the order the files were given", async () => {
+    const { editor } = await mountEditor();
+    const uploaded = (id: string) =>
+      ok({
+        id,
+        coaching_session_id: SESSION_ID,
+        mime_type: "image/png",
+        byte_size: 3,
+        width: None,
+        height: None,
+        created_at: DateTime.now(),
+      });
+    mockUpload
+      .mockResolvedValueOnce(uploaded("image-a"))
+      .mockResolvedValueOnce(uploaded("image-b"))
+      .mockResolvedValueOnce(uploaded("image-c"));
+
+    await act(async () => {
+      await uploadFilesInOrder(
+        editor,
+        [makeFile("image/png"), makeFile("image/png"), makeFile("image/png")],
+        uploadContext,
+        editor.state.doc.content.size
+      );
+    });
+
+    const ids: unknown[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === COACHING_NOTE_IMAGE_NAME) ids.push(node.attrs.imageId);
+    });
+    expect(ids).toEqual(["image-a", "image-b", "image-c"]);
   });
 
   // The upload resolves long after the drop, and the document moves underneath it.

@@ -13,16 +13,33 @@ import type { NodeViewProps } from "@tiptap/react";
 
 const IMAGE_ID = "11111111-1111-4111-8111-111111111111";
 
-function renderView(selected: boolean, onUpdate: (attrs: unknown) => void) {
-  const props = {
-    node: { attrs: { imageId: IMAGE_ID, alt: "", naturalWidth: null, naturalHeight: null } },
+function viewProps(
+  selected: boolean,
+  onUpdate: (attrs: unknown) => void,
+  alt = ""
+): NodeViewProps {
+  return {
+    node: { attrs: { imageId: IMAGE_ID, alt, naturalWidth: null, naturalHeight: null } },
     selected,
     deleteNode: vi.fn(),
     updateAttributes: onUpdate,
     editor: { view: { state: { doc: { forEach: () => undefined } } } },
     getPos: () => 0,
   } as unknown as NodeViewProps;
-  return render(<NoteImageView {...props} />);
+}
+
+function renderView(selected: boolean, onUpdate: (attrs: unknown) => void, alt = "") {
+  const view = render(<NoteImageView {...viewProps(selected, onUpdate, alt)} />);
+  return {
+    ...view,
+    // Simulates the document changing under the field, as a collaborator's edit does.
+    setAlt: (next: string) =>
+      view.rerender(<NoteImageView {...viewProps(selected, onUpdate, next)} />),
+  };
+}
+
+function field(container: HTMLElement): HTMLInputElement {
+  return container.querySelector('input[aria-label="Image description"]') as HTMLInputElement;
 }
 
 describe("alt text commit", () => {
@@ -116,5 +133,67 @@ describe("reaching the description field", () => {
     expect(
       selected.container.querySelector('input[aria-label="Image description"]')
     ).toBeTruthy();
+  });
+});
+
+describe("a collaborator editing the same description", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Nothing was typed here, so nothing here may be written: the field holds no edit of
+  // its own, only the last thing it displayed.
+  it("shows their edit and writes nothing back", () => {
+    const onUpdate = vi.fn();
+    const { container, setAlt, unmount } = renderView(true, onUpdate, "");
+
+    setAlt("their sketch");
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(field(container).value).toBe("their sketch");
+    unmount();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite an edit that lands after ours", () => {
+    const onUpdate = vi.fn();
+    const { container, setAlt } = renderView(true, onUpdate, "");
+
+    fireEvent.change(field(container), { target: { value: "my sketch" } });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+
+    setAlt("my sketch"); // ours lands
+    setAlt("their sketch"); // then theirs
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(field(container).value).toBe("their sketch");
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  // The document catches up with a write a render later. Showing the old value in
+  // between would flash it and throw the caret.
+  it("keeps showing the typed text while the write lands", () => {
+    const onUpdate = vi.fn();
+    const { container, setAlt } = renderView(true, onUpdate, "");
+
+    fireEvent.change(field(container), { target: { value: "my sketch" } });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(field(container).value).toBe("my sketch");
+    setAlt("my sketch");
+    expect(field(container).value).toBe("my sketch");
   });
 });

@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { Maximize2, Trash2 } from "lucide-react";
 import { cn } from "@/components/lib/utils";
@@ -178,7 +185,7 @@ function ImageControlButton({
 }: {
   label: string;
   onClick: () => void;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <Button
@@ -203,41 +210,69 @@ interface AltTextFieldProps {
   onCommit: (value: string) => void;
 }
 
+/**
+ * Where the description field stands relative to the document.
+ *
+ * - idle: showing the document's value, which a collaborator can change underneath it.
+ *   Nothing is ever written from here: the field holds no edit of its own.
+ * - typing: showing local text that has not been written yet.
+ * - committed: written, and still showing that text until the document moves off `over`,
+ *   the value it held at the time. TipTap delivers the new value a render later, and
+ *   waiting avoids a frame of the old text in between.
+ */
+type AltTextEdit =
+  | { kind: "idle" }
+  | { kind: "typing"; text: string }
+  | { kind: "committed"; text: string; over: string };
+
 function AltTextField({ value, onCommit }: AltTextFieldProps) {
-  const [draft, setDraft] = useState(value);
+  const [edit, setEdit] = useState<AltTextEdit>({ kind: "idle" });
   const commitRef = useRef(onCommit);
-  const pending = useRef({ draft, value });
+  const latest = useRef({ edit, value });
 
   useEffect(() => {
     commitRef.current = onCommit;
-    pending.current = { draft, value };
+    latest.current = { edit, value };
   });
+
+  // Our write has landed, or a collaborator's has replaced it. Either way the document
+  // is the truth again.
+  if (edit.kind === "committed" && value !== edit.over) setEdit({ kind: "idle" });
+
+  const write = useCallback((text: string, over: string) => {
+    if (text === over) {
+      setEdit({ kind: "idle" });
+      return;
+    }
+    commitRef.current(text);
+    setEdit({ kind: "committed", text, over });
+  }, []);
 
   // Every write is a replicated Yjs update, so keystrokes are coalesced.
   useEffect(() => {
-    if (draft === value) return;
-    const timer = setTimeout(() => commitRef.current(draft), ALT_TEXT_DEBOUNCE_MS);
+    if (edit.kind !== "typing") return;
+    const timer = setTimeout(() => write(edit.text, value), ALT_TEXT_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [draft, value]);
+  }, [edit, value, write]);
 
   // This field only exists while the node is selected, so clicking away unmounts it and
-  // the cleanup above cancels a commit that has not fired yet. Without this, typing a
+  // the cleanup above cancels a write that has not fired yet. Without this, typing a
   // description and immediately clicking elsewhere loses it silently, having shown the
   // user their own text in the field the whole time.
   useEffect(
     () => () => {
-      const { draft: last, value: committed } = pending.current;
-      if (last !== committed) commitRef.current(last);
+      const { edit: last, value: current } = latest.current;
+      if (last.kind === "typing" && last.text !== current) commitRef.current(last.text);
     },
     []
   );
 
   return (
     <Input
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
+      value={edit.kind === "idle" ? value : edit.text}
+      onChange={(event) => setEdit({ kind: "typing", text: event.target.value })}
       onBlur={() => {
-        if (draft !== value) commitRef.current(draft);
+        if (edit.kind === "typing") write(edit.text, value);
       }}
       aria-label="Image description"
       placeholder="Describe this image"
