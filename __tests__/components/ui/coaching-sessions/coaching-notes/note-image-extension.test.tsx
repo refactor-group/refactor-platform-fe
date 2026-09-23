@@ -1057,12 +1057,78 @@ describe("moving an image", () => {
 
     startDrag(image);
     pointer("pointermove", image, 370); // nearest edge: the bottom of C
+    await frames(1);
+    expect(dropLine()?.style.display).toBe("block");
     pointer("pointerup", image, 370);
 
     expect(order(editor)).toEqual(["A", "B", "C", "IMAGE"]);
     // One transaction, so the removal signal sees the same id before and after.
     expect(mockMarkDeleted).not.toHaveBeenCalled();
     expect(dropLine()?.style.display).toBe("none");
+  });
+
+  // The layout, for reference: A 0-80, IMAGE 100-180, B 200-280, C 300-380. The image's
+  // own position is both "after A" (A's bottom, the image's top) and "before B" (the
+  // image's bottom, B's top). A line at any of those four edges promises a move that
+  // cannot happen: the image is already there.
+  function lineEdge(): number | null {
+    const line = dropLine();
+    if (!line || line.style.display === "none") return null;
+    return Math.round(parseFloat(line.style.top) + 1);
+  }
+
+  it("never draws the line at the image's own position", async () => {
+    const { image } = await mountStacked();
+    startDrag(image);
+
+    const ownEdges = [80, 100, 180, 200];
+    const seen: number[] = [];
+    for (let y = 0; y <= 400; y += 10) {
+      pointer("pointermove", image, y);
+      await frames(1);
+      const edge = lineEdge();
+      if (edge !== null) seen.push(edge);
+    }
+
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.filter((edge) => ownEdges.includes(edge))).toEqual([]);
+  });
+
+  // The gap under an image, and the top half of the block after it, are where a person
+  // lets go to move an image down one place. Both used to resolve to where it already was.
+  it.each([
+    ["in the gap under the image", 190],
+    ["on the upper half of the next block", 220],
+  ])("moves the image down past the next block when released %s", async (_where, y) => {
+    const { editor, image } = await mountStacked();
+    startDrag(image);
+    pointer("pointermove", image, y);
+    await frames(1);
+    pointer("pointerup", image, y);
+
+    expect(order(editor)).toEqual(["A", "B", "IMAGE", "C"]);
+  });
+
+  it("moves the image up past the previous block when released just above it", async () => {
+    const { editor, image } = await mountStacked();
+    startDrag(image);
+    pointer("pointermove", image, 90);
+    await frames(1);
+    pointer("pointerup", image, 90);
+
+    expect(order(editor)).toEqual(["IMAGE", "A", "B", "C"]);
+  });
+
+  // Over the image itself there is nowhere to go: no line, and letting go does nothing.
+  it("shows no line and moves nothing over the image itself", async () => {
+    const { editor, image } = await mountStacked();
+    startDrag(image);
+    pointer("pointermove", image, 150);
+    await frames(2);
+
+    expect(lineEdge()).toBeNull();
+    pointer("pointerup", image, 150);
+    expect(order(editor)).toEqual(["A", "IMAGE", "B", "C"]);
   });
 
   // Cancel means the interaction was taken away (a scroll began, a system gesture),
@@ -1072,6 +1138,7 @@ describe("moving an image", () => {
 
     startDrag(image);
     pointer("pointermove", image, 370);
+    await frames(1);
     pointer("pointercancel", image, 370);
 
     expect(order(editor)).toEqual(["A", "IMAGE", "B", "C"]);
@@ -1089,30 +1156,34 @@ describe("moving an image", () => {
   });
 
   // Reading every block's rect on every pointermove forces a synchronous layout per
-  // block at pointer-event frequency.
-  it("measures the blocks once per drag, not once per pointer move", async () => {
+  // block at pointer-event frequency. Layout is read once per animation frame instead,
+  // however many pointer events arrive in between.
+  it("reads layout once per frame, not once per pointer event", async () => {
     const { image } = await mountStacked();
-
     startDrag(image);
-    const afterStart = blockReads;
-    for (let y = 170; y < 370; y += 20) pointer("pointermove", image, y);
+    await frames(1);
 
-    expect(afterStart).toBe(4);
-    expect(blockReads).toBe(afterStart);
+    const beforeBurst = blockReads;
+    for (let y = 170; y < 370; y += 5) pointer("pointermove", image, y);
+    expect(blockReads).toBe(beforeBurst);
+
+    await frames(1);
+    expect(blockReads).toBeGreaterThan(beforeBurst);
+    expect(blockReads - beforeBurst).toBeLessThanOrEqual(4 * 2);
   });
 
-  // The line is positioned against the viewport, so a scroll mid-drag must move it.
-  it("re-measures when the page scrolls mid-drag", async () => {
+  // The line is positioned against the viewport, so anything that moves the blocks
+  // mid-drag (a scroll, an image finishing loading) has to move the line with them.
+  it("follows the blocks when they move mid-drag", async () => {
     const { image } = await mountStacked();
 
     startDrag(image);
     pointer("pointermove", image, 370);
+    await frames(1);
     const lineBefore = dropLine()?.style.top;
 
     layoutShift = -50;
-    act(() => {
-      window.dispatchEvent(new Event("scroll"));
-    });
+    await frames(1);
 
     expect(dropLine()?.style.top).not.toBe(lineBefore);
   });

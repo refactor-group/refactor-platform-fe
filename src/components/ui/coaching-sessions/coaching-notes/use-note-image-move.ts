@@ -50,27 +50,63 @@ function measureBlocks(editor: Editor): MeasuredBlock[] {
   return blocks;
 }
 
-/** The block edge nearest the pointer. Pure: layout was read once, up front. */
+/** Where the dragged image already sits. Dropping there would move nothing. */
+export interface DragSource {
+  from: number;
+  to: number;
+}
+
+/**
+ * The block edge nearest the pointer that would actually move the image.
+ *
+ * The image's own position is excluded. It is both "after the block above" and "before
+ * the block below", so four edges resolve to it: the edges either side of the image and
+ * the facing edges of its neighbours. Offering any of them drew a line that promised a
+ * move and then did nothing, which is exactly what releasing in the gap under an image,
+ * or on the top half of the block after it, used to do. Over the image itself there is
+ * nowhere to go, so there is no target at all.
+ */
 export function dropTargetAmong(
   blocks: MeasuredBlock[],
+  clientY: number,
+  source: DragSource
+): Option<DropTarget> {
+  const own = blocks.find((block) => block.offset === source.from);
+  if (own && clientY >= own.rect.top && clientY <= own.rect.bottom) return None;
+
+  const candidates = blocks
+    .flatMap(({ offset, nodeSize, rect }) => [
+      { pos: offset, top: rect.top, left: rect.left, width: rect.width },
+      { pos: offset + nodeSize, top: rect.bottom, left: rect.left, width: rect.width },
+    ])
+    .filter((edge) => edge.pos !== source.from && edge.pos !== source.to);
+  if (candidates.length === 0) return None;
+
+  const best = candidates.reduce((a, b) =>
+    Math.abs(clientY - b.top) < Math.abs(clientY - a.top) ? b : a
+  );
+  return Some({ pos: best.pos, left: best.left, top: best.top, width: best.width });
+}
+
+/**
+ * Where a drop right now would land, from the layout as it is right now. Measured fresh
+ * each time, so the line and the drop can never disagree with what is on screen: a
+ * cached layout went stale whenever anything moved without the document changing, such
+ * as a scroll that had not yet delivered its event, or an image finishing loading.
+ */
+function currentDropTarget(
+  editor: Editor,
+  getPos: () => number | undefined,
   clientY: number
 ): Option<DropTarget> {
-  if (blocks.length === 0) return None;
-
-  const candidates = blocks.map(({ offset, nodeSize, rect }) => {
-    const above = clientY < rect.top + rect.height / 2;
-    const edge = above ? rect.top : rect.bottom;
-    return {
-      pos: above ? offset : offset + nodeSize,
-      left: rect.left,
-      top: edge,
-      width: rect.width,
-      distance: Math.abs(clientY - edge),
-    };
+  const from = getPos();
+  if (typeof from !== "number") return None;
+  const node = editor.state.doc.nodeAt(from);
+  if (!node) return None;
+  return dropTargetAmong(measureBlocks(editor), clientY, {
+    from,
+    to: from + node.nodeSize,
   });
-
-  const best = candidates.reduce((a, b) => (b.distance < a.distance ? b : a));
-  return Some({ pos: best.pos, left: best.left, top: best.top, width: best.width });
 }
 
 /**
@@ -160,11 +196,6 @@ interface Press {
   moved: boolean;
 }
 
-interface Measurement {
-  doc: ProseMirrorNode;
-  blocks: MeasuredBlock[];
-}
-
 export interface NoteImageMoveHandlers {
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLElement>) => void;
@@ -186,62 +217,34 @@ export function useNoteImageMove(
 ): { dragging: boolean; handlers: NoteImageMoveHandlers } {
   const [dragging, setDragging] = useState(false);
   const press = useRef<Option<Press>>(None);
-  const measurement = useRef<Option<Measurement>>(None);
   const lastY = useRef(0);
 
-  // Layout is read once per drag rather than per pointermove, which would force a
-  // synchronous layout of every block at pointer-event frequency. It is re-read only
-  // when something could have moved the blocks: the document changing underneath (a
-  // remote edit), or a scroll.
-  const blocks = (): MeasuredBlock[] => {
-    const doc = editor.state.doc;
-    const current = measurement.current;
-    if (current.some && current.val.doc === doc) return current.val.blocks;
-    const fresh = measureBlocks(editor);
-    measurement.current = Some({ doc, blocks: fresh });
-    return fresh;
-  };
-
-  const redraw = () => {
-    const target = dropTargetAmong(blocks(), lastY.current);
-    if (target.some) showDropLine(target.val);
-    else hideDropLine();
-  };
-
-  // The line is positioned against the viewport, so a scroll mid-drag moves the blocks
-  // out from under it. Capture catches the editor's own scroll container as well as
-  // the page's.
-  useEffect(() => {
-    if (!dragging) return;
-    const onScroll = () => {
-      measurement.current = None;
-      redraw();
-    };
-    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    return () => window.removeEventListener("scroll", onScroll, { capture: true });
-    // redraw only reads refs and the editor, both stable for the drag.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dragging]);
-
-  // Native drag-and-drop scrolls at the edges on its own; pointer events do not, so a
-  // drag in a long note could not reach anything out of view. While the pointer sits
-  // near an edge, scroll every frame, including when it is held still. The scroll
-  // listener above then re-measures and moves the drop line.
+  // Everything visible about a drag happens once per animation frame: scroll if the
+  // pointer is at an edge, then measure, then draw the line from that same layout.
+  // Pointer events only record where the pointer is. That keeps layout reads to one pass
+  // per frame rather than one per pointer event, and means what is drawn always matches
+  // the layout it is drawn on.
   useEffect(() => {
     if (!dragging) return;
     const containers = scrollContainers(editor.view.dom as HTMLElement);
-    if (containers.length === 0) return;
     let frame = requestAnimationFrame(function tick() {
-      const { top, bottom } = visibleEdges(containers[0]);
-      const delta = edgeScrollDelta(lastY.current, top, bottom);
-      if (delta !== 0) {
-        const target = containers.find((container) => canScroll(container, delta));
-        if (target) target.scrollTop += delta;
+      if (containers.length > 0) {
+        // Native drag-and-drop scrolls at the edges on its own; pointer events do not,
+        // so a drag in a long note could not reach anything out of view.
+        const { top, bottom } = visibleEdges(containers[0]);
+        const delta = edgeScrollDelta(lastY.current, top, bottom);
+        if (delta !== 0) {
+          const scroller = containers.find((container) => canScroll(container, delta));
+          if (scroller) scroller.scrollTop += delta;
+        }
       }
+      const target = currentDropTarget(editor, getPos, lastY.current);
+      if (target.some) showDropLine(target.val);
+      else hideDropLine();
       frame = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(frame);
-  }, [dragging, editor]);
+  }, [dragging, editor, getPos]);
 
   useEffect(() => hideDropLine, []);
 
@@ -255,7 +258,6 @@ export function useNoteImageMove(
   const finish = () => {
     if (press.current.some) release(press.current.val.pointerId);
     press.current = None;
-    measurement.current = None;
     hideDropLine();
     setDragging(false);
   };
@@ -290,16 +292,13 @@ export function useNoteImageMove(
       surfaceRef.current?.setPointerCapture(state.pointerId);
       setDragging(true);
     }
-
-    redraw();
   };
 
   const onPointerUp = () => {
     if (!press.current.some) return;
     const moved = press.current.val.moved;
-    // Resolved against the current document, so a remote edit during the drag cannot
-    // leave the target pointing past its end.
-    const target = moved ? dropTargetAmong(blocks(), lastY.current) : None;
+    // Fresh, against the document and layout as they are at the moment of release.
+    const target = moved ? currentDropTarget(editor, getPos, lastY.current) : None;
     finish();
 
     const from = getPos();
