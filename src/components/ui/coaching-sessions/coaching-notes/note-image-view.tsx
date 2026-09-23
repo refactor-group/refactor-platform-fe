@@ -96,27 +96,33 @@ export function NoteImageView({
         dragging && "opacity-50"
       )}
     >
-      {/* next/image cannot serve a cookie-authorized backend redirect. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        width={naturalWidth.some ? naturalWidth.val : undefined}
-        height={naturalHeight.some ? naturalHeight.val : undefined}
-        // Native image dragging would reintroduce the browser's own preview.
-        draggable={false}
-        className={cn(
-          "note-image__img",
-          dragging ? "cursor-grabbing" : "cursor-grab",
-          loadState.kind === "error" && "hidden"
-        )}
-        onLoad={() => setLoadState({ kind: "loaded" })}
-        onError={() => setLoadState({ kind: "error" })}
-      />
-      {loadState.kind === "error" && <NoteImageUnavailable style={box} />}
+      {/* A failed image is removed, not hidden: the editor's own img rule would keep it
+          on screen, holding its reserved box above the placeholder. */}
+      {loadState.kind === "error" ? (
+        <NoteImageUnavailable style={box} />
+      ) : (
+        // next/image cannot serve a cookie-authorized backend redirect.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={alt}
+          width={naturalWidth.some ? naturalWidth.val : undefined}
+          height={naturalHeight.some ? naturalHeight.val : undefined}
+          // Native image dragging would reintroduce the browser's own preview.
+          draggable={false}
+          className={cn("note-image__img", dragging ? "cursor-grabbing" : "cursor-grab")}
+          onLoad={() => setLoadState({ kind: "loaded" })}
+          onError={() => setLoadState({ kind: "error" })}
+        />
+      )}
       <ImageControls
         onOpenFullSize={() => setLightboxOpen(true)}
-        onDelete={deleteNode}
+        onDelete={() => {
+          deleteNode();
+          // The control leaves with the image, and focus would fall to the page, where
+          // Cmd-Z undoes nothing. Keep it in the note.
+          editor.commands.focus(undefined, { scrollIntoView: false });
+        }}
       />
       {selected && (
         <AltTextField

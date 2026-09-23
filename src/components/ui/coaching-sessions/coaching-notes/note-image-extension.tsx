@@ -355,9 +355,22 @@ export async function uploadFilesInOrder(
   }
 }
 
+/**
+ * Image types we refuse. FileHandler only hands on files whose type it is told about,
+ * so these are listed too: dropping one should say it can't be added, not do nothing.
+ */
+const REFUSED_IMAGE_MIME_TYPES = [
+  "image/svg+xml",
+  "image/heic",
+  "image/heif",
+  "image/avif",
+  "image/bmp",
+  "image/tiff",
+];
+
 export const createNoteImageFileHandler = (context: NoteImageUploadContext) =>
   FileHandler.configure({
-    allowedMimeTypes: [...ACCEPTED_IMAGE_MIME_TYPES],
+    allowedMimeTypes: [...ACCEPTED_IMAGE_MIME_TYPES, ...REFUSED_IMAGE_MIME_TYPES],
     onDrop: (editor, files, pos) => {
       void uploadFilesInOrder(editor, files, context, pos);
     },

@@ -312,6 +312,33 @@ describe("Coaching note image extension", () => {
     expect(editor.getJSON()).toEqual(before);
   });
 
+  // The file handler used to filter refused image types out before they reached the
+  // check that reports them, so an SVG or a HEIC photo was dropped with no word at all.
+  it.each(["image/svg+xml", "image/heic"])(
+    "reports a pasted %s file rather than ignoring it",
+    async (type) => {
+      const { editor } = await mountEditor();
+      const before = editor.getJSON();
+      const paste = new Event("paste", { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, "clipboardData", {
+        value: {
+          files: [makeFile(type)],
+          types: ["Files"],
+          getData: () => "",
+        },
+      });
+
+      await act(async () => {
+        editor.view.dom.dispatchEvent(paste);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(toast.error).toHaveBeenCalledWith("That kind of file can't be added to a note.");
+      expect(mockUpload).not.toHaveBeenCalled();
+      expect(editor.getJSON()).toEqual(before);
+    }
+  );
+
   it("inserts the node once the upload succeeds", async () => {
     const { editor } = await mountEditor();
     mockUpload.mockResolvedValue(
@@ -657,6 +684,40 @@ describe("Coaching note image extension", () => {
 
     expect(mockRestore).toHaveBeenCalledTimes(1);
     expect(mockRestore).toHaveBeenCalledWith("image-42");
+  });
+
+  // Removing with the hover control, then pressing undo, is the whole undo story for a
+  // mouse user. Focus fell to the page with the control, so the keystroke went nowhere.
+  it("undoes a removal made with the remove control from the keyboard", async () => {
+    const { editor, container } = await mountCollaborativeEditor();
+    insertImage(editor, "image-42");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    yUndoPluginKey.getState(editor.state)?.undoManager.stopCapturing();
+    const remove = await waitFor(() => {
+      const button = container.querySelector('button[aria-label="Remove image from note"]');
+      expect(button).toBeTruthy();
+      return button as HTMLButtonElement;
+    });
+
+    act(() => {
+      remove.focus();
+      remove.click();
+    });
+    expect(editor.getJSON().content?.some((n) => n.type === COACHING_NOTE_IMAGE_NAME)).toBe(false);
+    // TipTap focuses on the next frame.
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    });
+
+    act(() => {
+      (document.activeElement ?? document.body).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true })
+      );
+    });
+
+    expect(editor.getJSON().content?.some((n) => n.type === COACHING_NOTE_IMAGE_NAME)).toBe(true);
   });
 
   it("signals nothing for a transaction that removes no image", async () => {

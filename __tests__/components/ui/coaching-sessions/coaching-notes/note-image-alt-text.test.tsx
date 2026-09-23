@@ -197,3 +197,23 @@ describe("a collaborator editing the same description", () => {
     expect(field(container).value).toBe("my sketch");
   });
 });
+
+describe("an image that fails to load", () => {
+  // The editor's stylesheet sets the image to display: block, which beat the hidden
+  // class, so a failed image kept its reserved box above the placeholder and the text
+  // below jumped down by a whole image.
+  it("gives its box to the placeholder rather than keeping both", () => {
+    const props = {
+      ...viewProps(false, vi.fn()),
+      node: { attrs: { imageId: IMAGE_ID, alt: "", naturalWidth: 800, naturalHeight: 600 } },
+    } as unknown as NodeViewProps;
+    const { container } = render(<NoteImageView {...props} />);
+
+    fireEvent.error(container.querySelector("img") as HTMLImageElement);
+
+    expect(container.querySelector("img")).toBeNull();
+    const placeholder = container.querySelector(".note-image__unavailable") as HTMLElement;
+    expect(placeholder).toBeTruthy();
+    expect(placeholder.style.aspectRatio).toBe("800 / 600");
+  });
+});

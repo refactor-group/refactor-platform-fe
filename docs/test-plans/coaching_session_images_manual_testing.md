@@ -283,7 +283,9 @@ The rest of the note stays fully editable — typing, formatting and topics all 
 
 ### Case 19: a broken image
 
-Delete the stored object on the backend (see the backend plan, Case 14) and reload the note.
+Delete the stored object on the backend (see the backend plan, Case 14), tick **Disable cache**
+in DevTools' Network tab, and reload the note. Without that the browser serves the image from
+its cache and the placeholder never appears.
 
 **Pass:** a quiet muted "this image isn't available" block **occupying the same box the image
 did**. **No broken image icon, and no layout jump** — put a line of text directly below the
