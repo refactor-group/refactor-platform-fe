@@ -14,7 +14,7 @@ import { ACCEPTED_IMAGE_MIME_TYPES } from "@/types/coaching-session-image"
 // --- Coaching Notes ---
 import {
   COACHING_NOTE_IMAGE_NAME,
-  uploadAndInsertImage,
+  uploadFilesInOrder,
   type NoteImageUploadContext,
 } from "@/components/ui/coaching-sessions/coaching-notes/note-image-extension"
 
@@ -148,9 +148,9 @@ export const ImageUploadButton = React.forwardRef<
         e.target.value = ""
 
         if (!editor) return
-        files.forEach((file) => {
-          void uploadAndInsertImage(editor, file, context)
-        })
+        // Same path as drop and paste: uploads run in the order picked, and a
+        // rejection is reported rather than escaping as an unhandled one.
+        void uploadFilesInOrder(editor, files, context)
       },
       [editor, context]
     )

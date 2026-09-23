@@ -43,8 +43,11 @@ import { Extensions } from "@/components/ui/coaching-sessions/coaching-notes/ext
 import {
   COACHING_NOTE_IMAGE_NAME,
   sanitizePastedHtml,
+  stepCanChangeImages,
   uploadAndInsertImage,
 } from "@/components/ui/coaching-sessions/coaching-notes/note-image-extension";
+import { ReplaceStep } from "@tiptap/pm/transform";
+import { Slice, Fragment } from "@tiptap/pm/model";
 import { CoachingSessionImageApi, UploadFailureKind } from "@/lib/api/coaching-session-images";
 import { shouldShowSelectionMenu } from "@/components/ui/tiptap-ui/selection-bubble-menu/selection-bubble-menu";
 import { ySyncPluginKey, yUndoPluginKey } from "@tiptap/y-tiptap";
@@ -395,6 +398,52 @@ describe("Coaching note image extension", () => {
 
     expect(html).toContain("<td></td>");
     expect(html).toContain("<td>next</td>");
+  });
+
+  // The removal signal walks the document twice per transaction. Typing must not pay
+  // that: a keystroke is a ReplaceStep with from === to, so testing the step type alone
+  // is true for every keystroke and skips nothing at all.
+  describe("removal signal step guard", () => {
+    it("skips a keystroke", async () => {
+      const { editor } = await mountEditor();
+      const at = editor.state.doc.content.size - 1;
+      const typing = new ReplaceStep(
+        at,
+        at,
+        new Slice(Fragment.from(editor.schema.text("x")), 0, 0)
+      );
+
+      expect(typing.from).toBe(typing.to);
+      expect(stepCanChangeImages(typing)).toBe(false);
+    });
+
+    it("does not skip a deletion", async () => {
+      const { editor } = await mountEditor();
+      const deletion = new ReplaceStep(1, 3, Slice.empty);
+
+      expect(stepCanChangeImages(deletion)).toBe(true);
+    });
+
+    // The restore branch needs an insertion detected, or undo of a removal is missed.
+    it("does not skip inserting an image", async () => {
+      const { editor } = await mountEditor();
+      const image = editor.schema.nodes[COACHING_NOTE_IMAGE_NAME].create({
+        imageId: "66666666-6666-4666-8666-666666666666",
+      });
+      const at = editor.state.doc.content.size - 1;
+      const insertion = new ReplaceStep(
+        at,
+        at,
+        new Slice(Fragment.from(image), 0, 0)
+      );
+
+      expect(insertion.from).toBe(insertion.to);
+      expect(stepCanChangeImages(insertion)).toBe(true);
+    });
+
+    it("does not skip a step it cannot introspect", () => {
+      expect(stepCanChangeImages({} as never)).toBe(true);
+    });
   });
 
   // The upload resolves long after the drop, and the document moves underneath it.

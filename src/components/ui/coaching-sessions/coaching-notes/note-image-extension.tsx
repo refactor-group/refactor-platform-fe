@@ -7,9 +7,13 @@ import type {
 } from "@tiptap/core";
 import { Image } from "@tiptap/extension-image";
 import FileHandler from "@tiptap/extension-file-handler";
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import type {
+  Fragment,
+  Node as ProseMirrorNode,
+  Slice,
+} from "@tiptap/pm/model";
 import { Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
-import { ReplaceStep, type Step } from "@tiptap/pm/transform";
+import type { Step } from "@tiptap/pm/transform";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { ySyncPluginKey } from "@tiptap/y-tiptap";
 import { toast } from "sonner";
@@ -310,7 +314,7 @@ export async function uploadAndInsertImage(
  * as toasts, and anything past that is a bug worth seeing in the console rather than
  * losing silently.
  */
-async function uploadFilesInOrder(
+export async function uploadFilesInOrder(
   editor: Editor,
   files: File[],
   context: NoteImageUploadContext,
@@ -461,16 +465,40 @@ function imageIdsIn(doc: ProseMirrorNode): Set<string> {
   return ids;
 }
 
+/** Whether a fragment holds an image node at any depth. */
+function fragmentHasImage(fragment: Fragment): boolean {
+  let found = false;
+  fragment.forEach((node) => {
+    if (found) return;
+    if (node.type.name === COACHING_NOTE_IMAGE_NAME) {
+      found = true;
+      return;
+    }
+    if (node.content.size > 0 && fragmentHasImage(node.content)) found = true;
+  });
+  return found;
+}
+
 /**
- * Whether a step could add or remove a node, as opposed to only changing text or marks.
+ * Whether a step could add or remove an image, as opposed to only changing text or marks.
  *
- * A plain insertion carries no removal, so `from === to` with content added cannot drop
- * an image; anything that replaces a non-empty range might.
+ * Typing is the overwhelming majority of steps and is a `ReplaceStep` with `from === to`
+ * whose slice is a character, so the slice is what separates it from an image insertion.
+ * Testing `instanceof ReplaceStep` instead would be true for a keystroke and skip nothing.
+ *
+ * Errs towards walking: a step this cannot introspect, or a replacement over a non-empty
+ * range, is treated as though it might have changed an image.
  */
-function stepCanChangeImages(step: Step): boolean {
+export function stepCanChangeImages(step: Step): boolean {
   const range = step as unknown as { from?: number; to?: number };
   if (typeof range.from !== "number" || typeof range.to !== "number") return true;
-  return range.to > range.from || step instanceof ReplaceStep;
+
+  // Replacing a non-empty range can drop an image that was inside it.
+  if (range.to > range.from) return true;
+
+  // A pure insertion only matters when an image is what it inserts.
+  const slice = (step as unknown as { slice?: Slice }).slice;
+  return slice ? fragmentHasImage(slice.content) : true;
 }
 
 interface YSyncMeta {

@@ -5,7 +5,7 @@ import type { Editor } from "@tiptap/core";
 import * as Y from "yjs";
 import { Some, None, type Option } from "@/types/option";
 
-const mockUploadAndInsertImage = vi.fn();
+const mockUploadFilesInOrder = vi.fn();
 
 vi.mock(
   "@/components/ui/coaching-sessions/coaching-notes/note-image-extension",
@@ -15,8 +15,8 @@ vi.mock(
     >();
     return {
       ...actual,
-      uploadAndInsertImage: (...args: unknown[]) =>
-        mockUploadAndInsertImage(...args),
+      uploadFilesInOrder: (...args: unknown[]) =>
+        mockUploadFilesInOrder(...args),
     };
   }
 );
@@ -94,7 +94,7 @@ function selectFile(input: HTMLInputElement, files: File[]) {
 
 describe("ImageUploadButton", () => {
   beforeEach(() => {
-    mockUploadAndInsertImage.mockReset();
+    mockUploadFilesInOrder.mockReset();
   });
 
   describe("pure predicates", () => {
@@ -155,10 +155,10 @@ describe("ImageUploadButton", () => {
 
       selectFile(fileInputFrom(container), [file]);
 
-      expect(mockUploadAndInsertImage).toHaveBeenCalledTimes(1);
-      expect(mockUploadAndInsertImage).toHaveBeenCalledWith(
+      expect(mockUploadFilesInOrder).toHaveBeenCalledTimes(1);
+      expect(mockUploadFilesInOrder).toHaveBeenCalledWith(
         editor,
-        file,
+        [file],
         uploadContext
       );
     });
