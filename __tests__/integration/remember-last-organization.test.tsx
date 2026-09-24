@@ -68,32 +68,27 @@ describe('Remembering the last organization across logins', () => {
   });
 
   it('returns each user to the organization they last picked', () => {
-    // 1. First login lands on the first organization.
     let store = createOrganizationStateStore();
     let session = logIn(store, 'user-1', loaded([ACME, BETA]));
     expect(store.getState().currentOrganizationId).toBe('org-1');
 
-    // 2. user-1 picks Beta.
     act(() => {
       store.getState().setCurrentOrganizationId('org-2');
       store.getState().rememberOrganizationForUser('user-1', 'org-2');
     });
 
-    // 3. Logout clears the selection.
     logOut(store, session);
     expect(store.getState().currentOrganizationId).toBe('');
 
-    // 4. After a reload, user-1 lands back on Beta.
+    // A fresh store rehydrates from localStorage, as a page reload does.
     store = createOrganizationStateStore();
     session = logIn(store, 'user-1', loaded([ACME, BETA]));
     expect(store.getState().currentOrganizationId).toBe('org-2');
 
-    // 5. A different user on the same browser doesn't inherit it.
     logOut(store, session);
     session = logIn(store, 'user-2', loaded([ACME, BETA]));
     expect(store.getState().currentOrganizationId).toBe('org-1');
 
-    // 6. user-1 returns after losing Beta.
     logOut(store, session);
     session = logIn(store, 'user-1', loaded([ACME]));
     expect(store.getState().currentOrganizationId).toBe('org-1');
