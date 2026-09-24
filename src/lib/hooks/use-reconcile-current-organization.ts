@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Id } from "@/types/general";
+import { None, Some, type Option } from "@/types/option";
 import type { Organization } from "@/types/organization";
 
 /**
@@ -16,6 +17,15 @@ export type OrganizationMembership =
 // Sentinel for "no snapshot reconciled yet". A module constant rather than a
 // fresh array so the first real snapshot always compares as different.
 const EMPTY_ORGANIZATIONS: readonly Organization[] = [];
+
+export interface ReconcileCurrentOrganizationOptions {
+  membership: OrganizationMembership;
+  currentOrganizationId: Id;
+  setCurrentOrganizationId: (organizationId: Id) => void;
+  userId: Id;
+  lastOrganizationIdByUser: Record<Id, Id>;
+  forgetOrganizationForUser: (userId: Id) => void;
+}
 
 /**
  * Keeps the persisted `currentOrganizationId` consistent with the
@@ -32,12 +42,18 @@ const EMPTY_ORGANIZATIONS: readonly Organization[] = [];
  * The snapshot is what re-arms it: a fresh organization list is new evidence,
  * so an id that was written back after being reconciled gets reconsidered
  * rather than staying pinned until the component happens to unmount.
+ *
+ * Logout clears the selection, so the remembered organization is what returns
+ * a user to their last pick; one they have since left is forgotten.
  */
-export function useReconcileCurrentOrganization(
-  membership: OrganizationMembership,
-  currentOrganizationId: Id,
-  setCurrentOrganizationId: (organizationId: Id) => void
-): void {
+export function useReconcileCurrentOrganization({
+  membership,
+  currentOrganizationId,
+  setCurrentOrganizationId,
+  userId,
+  lastOrganizationIdByUser,
+  forgetOrganizationForUser,
+}: ReconcileCurrentOrganizationOptions): void {
   const reconciledIds = useRef<Set<Id>>(new Set());
   const reconciledAgainst = useRef<readonly Organization[]>(EMPTY_ORGANIZATIONS);
 
@@ -51,7 +67,17 @@ export function useReconcileCurrentOrganization(
       reconciledIds.current.clear();
     }
 
-    const fallbackId = organizations[0]?.id ?? "";
+    const rememberedId = lastOrganizationIdByUser[userId];
+    const remembered: Option<Id> = rememberedId ? Some(rememberedId) : None;
+    const rememberedMember =
+      remembered.some && organizations.some(({ id }) => id === remembered.val)
+        ? remembered
+        : None;
+    if (remembered.some && rememberedMember.none) forgetOrganizationForUser(userId);
+
+    const fallbackId = rememberedMember.some
+      ? rememberedMember.val
+      : organizations[0]?.id ?? "";
 
     if (!currentOrganizationId) {
       if (fallbackId) setCurrentOrganizationId(fallbackId);
@@ -67,5 +93,12 @@ export function useReconcileCurrentOrganization(
 
     reconciledIds.current.add(currentOrganizationId);
     setCurrentOrganizationId(fallbackId);
-  }, [membership, currentOrganizationId, setCurrentOrganizationId]);
+  }, [
+    membership,
+    currentOrganizationId,
+    setCurrentOrganizationId,
+    userId,
+    lastOrganizationIdByUser,
+    forgetOrganizationForUser,
+  ]);
 }

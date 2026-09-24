@@ -5,7 +5,9 @@ import {
   useReconcileCurrentOrganization,
   type OrganizationMembership,
 } from "@/lib/hooks/use-reconcile-current-organization";
+import type { Id } from "@/types/general";
 import type { Organization } from "@/types/organization";
+import { None, Some, type Option } from "@/types/option";
 
 function organization(id: string, name: string): Organization {
   return {
@@ -20,21 +22,31 @@ function organization(id: string, name: string): Organization {
 const ACME = organization("org-1", "Acme Corp");
 const BETA = organization("org-2", "Beta Inc");
 
+const USER_ID = "user-1";
+
 function renderReconciler(
   membership: OrganizationMembership,
-  currentOrganizationId: string
+  currentOrganizationId: string,
+  remembered: Option<Id> = None
 ) {
   const setCurrentOrganizationId = vi.fn();
+  const forgetOrganizationForUser = vi.fn();
+  const lastOrganizationIdByUser: Record<Id, Id> = remembered.some
+    ? { [USER_ID]: remembered.val }
+    : {};
   const rendered = renderHook(
     ({ membership, currentOrganizationId }) =>
-      useReconcileCurrentOrganization(
+      useReconcileCurrentOrganization({
         membership,
         currentOrganizationId,
-        setCurrentOrganizationId
-      ),
+        setCurrentOrganizationId,
+        userId: USER_ID,
+        lastOrganizationIdByUser,
+        forgetOrganizationForUser,
+      }),
     { initialProps: { membership, currentOrganizationId } }
   );
-  return { ...rendered, setCurrentOrganizationId };
+  return { ...rendered, setCurrentOrganizationId, forgetOrganizationForUser };
 }
 
 const loaded = (organizations: Organization[]): OrganizationMembership => ({
@@ -114,5 +126,99 @@ describe("useReconcileCurrentOrganization", () => {
 
     expect(setCurrentOrganizationId).toHaveBeenCalledTimes(2);
     expect(setCurrentOrganizationId).toHaveBeenLastCalledWith(BETA.id);
+  });
+
+  describe("with a remembered organization", () => {
+    it("selects the remembered organization when none is set", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        loaded([ACME, BETA]),
+        "",
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).toHaveBeenCalledWith(BETA.id);
+      expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to the first organization when the remembered one is gone", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        loaded([ACME]),
+        "",
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).toHaveBeenCalledWith(ACME.id);
+    });
+
+    it("replaces a revoked selection with the remembered organization", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        loaded([ACME, BETA]),
+        "org-gone",
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).toHaveBeenCalledWith(BETA.id);
+    });
+
+    it("leaves a still-valid selection alone", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        loaded([ACME, BETA]),
+        ACME.id,
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).not.toHaveBeenCalled();
+    });
+
+    it("stays inert while membership is unknown", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        { kind: "unknown" },
+        "",
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).not.toHaveBeenCalled();
+    });
+
+    it("forgets a remembered organization the user no longer belongs to", () => {
+      const { forgetOrganizationForUser } = renderReconciler(
+        loaded([ACME]),
+        "",
+        Some(BETA.id)
+      );
+
+      expect(forgetOrganizationForUser).toHaveBeenCalledTimes(1);
+      expect(forgetOrganizationForUser).toHaveBeenCalledWith(USER_ID);
+    });
+
+    it("keeps a remembered organization the user still belongs to", () => {
+      const { forgetOrganizationForUser } = renderReconciler(
+        loaded([ACME, BETA]),
+        ACME.id,
+        Some(BETA.id)
+      );
+
+      expect(forgetOrganizationForUser).not.toHaveBeenCalled();
+    });
+
+    // An unloaded list can't tell a revoked organization from an unfetched one.
+    it("forgets nothing while membership is unknown", () => {
+      const { forgetOrganizationForUser } = renderReconciler(
+        { kind: "unknown" },
+        "",
+        Some(BETA.id)
+      );
+
+      expect(forgetOrganizationForUser).not.toHaveBeenCalled();
+    });
+
+    it("has nothing to forget without a remembered organization", () => {
+      const { forgetOrganizationForUser } = renderReconciler(
+        loaded([ACME]),
+        ""
+      );
+
+      expect(forgetOrganizationForUser).not.toHaveBeenCalled();
+    });
   });
 });
