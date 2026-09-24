@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from "react";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { SWRConfig } from "swr";
 import { EntityApi } from "@/lib/api/entity-api";
@@ -49,12 +49,22 @@ describe("EntityApi.useEntity fallback", () => {
     expect(result.current.entity).toBe(first);
   });
 
-  it("returns fetched data once it arrives", async () => {
-    const { result } = renderHook(
-      () => EntityApi.useEntity<Widget>("/widgets/1", async () => ({ id: "1" }), defaultWidget()),
+  it("keeps the fallback stable while pending, then returns fetched data", async () => {
+    let resolve: (widget: Widget) => void = () => {};
+    const pending = new Promise<Widget>((r) => (resolve = r));
+    const { result, rerender } = renderHook(
+      () => EntityApi.useEntity<Widget>("/widgets/1", () => pending, defaultWidget()),
       { wrapper }
     );
+    const first = result.current.entity;
 
-    await waitFor(() => expect(result.current.entity.id).toBe("1"));
+    rerender();
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.entity).toBe(first);
+
+    await act(async () => resolve({ id: "1" }));
+
+    expect(result.current.entity.id).toBe("1");
   });
 });

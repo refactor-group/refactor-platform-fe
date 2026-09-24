@@ -425,9 +425,7 @@ export namespace EntityApi {
     defaultValue: T,
     options?: SWRConfiguration
   ) => {
-    // Callers build this inline (`defaultUser()`), so holding the first one keeps
-    // `entity` referentially stable while a fetch is pending or failed. Without it
-    // a 404 hands every render a new object and loops any effect that depends on it.
+    // A stable fallback prevents dependent effects from looping before data arrives.
     const fallback = useRef(defaultValue);
 
     const { data, error, isLoading, mutate } = useApiSWR<T>(url, fetcher, {
