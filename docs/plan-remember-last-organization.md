@@ -35,7 +35,7 @@ fresh membership list still contains it.
 ## Phases
 1. **Tests first** (done, 3baa844e). The overseer writes the assertions and the implementer adds
    them. They must fail against `main` for the right reason.
-2. **Implementation.** Make Phase 1's tests pass without editing them.
+2. **Implementation** (done, aeb4ff70). Make Phase 1's tests pass without editing them.
    `tsc`, lint and the full vitest suite must be green.
 
 ## Follow-ups / known gaps
