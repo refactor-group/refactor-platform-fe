@@ -23,10 +23,10 @@ When running locally on a development machine you can manually set the applicati
 NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL="http"
 NEXT_PUBLIC_BACKEND_SERVICE_PORT=4000
 NEXT_PUBLIC_BACKEND_SERVICE_HOST="localhost"
-NEXT_PUBLIC_BACKEND_API_VERSION="1.0.0-beta1"
+NEXT_PUBLIC_BACKEND_API_VERSION="1.0.0"
 
-# TIPTAP_APP_ID originates from your TipTap Cloud Dashboard
-NEXT_PUBLIC_TIPTAP_APP_ID="<TIPTAP_APP_ID>"
+# WebSocket base URL of the self-hosted docs-collab-server
+NEXT_PUBLIC_DOCS_COLLAB_URL="<DOCS_COLLAB_URL>"
 
 FRONTEND_SERVICE_INTERFACE=0.0.0.0
 FRONTEND_SERVICE_PORT=3000

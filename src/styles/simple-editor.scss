@@ -680,3 +680,25 @@
   }
 }
 
+
+/* Image nodes in coaching notes */
+.tiptap.ProseMirror {
+  .note-image__img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+  }
+
+  .ProseMirror-selectednode {
+    outline: 2px solid var(--editor-focus-border);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+}
+
+/* Drop indicator showing where a dragged file or node will land */
+.coaching-notes-dropcursor {
+  background-color: var(--editor-focus-border);
+  border-radius: 2px;
+}

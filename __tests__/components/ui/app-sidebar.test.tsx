@@ -101,7 +101,10 @@ describe('AppSidebar Permission Logic', () => {
     vi.clearAllMocks();
     mockUseCurrentOrganization.mockReturnValue({
       currentOrganizationId: 'org-1',
+      lastOrganizationIdByUser: {},
       setCurrentOrganizationId: vi.fn(),
+      rememberOrganizationForUser: vi.fn(),
+      forgetOrganizationForUser: vi.fn(),
       resetOrganizationState: vi.fn(),
     });
   });
@@ -408,7 +411,10 @@ describe('AppSidebar Permission Logic', () => {
       mockUseCurrentUserRole.mockReturnValue(adminRoleState);
       mockUseCurrentOrganization.mockReturnValue({
         currentOrganizationId: 'test-org-123',
+        lastOrganizationIdByUser: {},
         setCurrentOrganizationId: vi.fn(),
+        rememberOrganizationForUser: vi.fn(),
+        forgetOrganizationForUser: vi.fn(),
         resetOrganizationState: vi.fn(),
       });
 

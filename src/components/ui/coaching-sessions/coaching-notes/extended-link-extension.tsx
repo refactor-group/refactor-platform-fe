@@ -7,13 +7,29 @@ import debounce from "just-debounce-it";
 const ZOMBIE_LINK_SEARCH_RANGE = 100;
 
 /**
+ * A non-empty selection that no link can attach to, such as a selected image.
+ *
+ * A link is a mark, and marks only attach to inline content, so a selected block node
+ * takes none. Without this, the Link button and Cmd-K did nothing at all for such a
+ * selection, with no sign that they had not worked.
+ */
+export function selectionRefusesLink(editor: Editor): boolean {
+  if (editor.state.selection.empty) return false;
+  try {
+    return !editor.can().setLink({ href: "" });
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Triggers the link creation flow by setting an empty href,
  * which causes the LinkBubbleMenu to appear for the user to fill in the URL.
- * Only works if there is a text selection.
+ * Only works if there is a text selection a link can attach to.
  */
 export function triggerLinkCreation(editor: Editor): boolean {
   const { from, to } = editor.state.selection;
-  if (from !== to) {
+  if (from !== to && !selectionRefusesLink(editor)) {
     editor.chain().focus().setLink({ href: "" }).run();
     return true;
   }

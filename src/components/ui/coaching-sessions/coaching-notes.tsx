@@ -141,7 +141,7 @@ const renderReadyEditorContent = (
       }}
       slotBefore={
         <div className="toolbar-container">
-          <SimpleToolbar />
+          <NotesToolbar />
         </div>
       }
     >
@@ -151,6 +151,12 @@ const renderReadyEditorContent = (
     </EditorProvider>
   </div>
 );
+
+const NotesToolbar = () => {
+  const { imageUploadContext } = useEditorCache();
+
+  return <SimpleToolbar imageContext={imageUploadContext} />;
+};
 
 // Bridges the live editor instance up to the shared EditorCacheContext so
 // non-editor descendants (the Topics panel) can insert content into the notes.

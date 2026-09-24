@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
 import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
-import { IndicatorStatus } from "@/lib/transcript/indicator-status";
+import { IndicatorStatus } from "@/lib/utils/transcript-indicator-status";
 
 describe("TranscriptToggleButton — basic behavior", () => {
   it('renders "Show transcript" when closed', () => {

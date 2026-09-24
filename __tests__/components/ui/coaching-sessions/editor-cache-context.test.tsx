@@ -5,7 +5,9 @@ import { EditorCacheProvider, useEditorCache } from '@/components/ui/coaching-se
 
 // Mock external dependencies
 vi.mock('@/lib/api/collaboration-token', () => ({
-  useCollaborationToken: vi.fn()
+  useCollaborationToken: vi.fn(),
+  fetchCollaborationToken: vi.fn(),
+  fetchCollaborationTokenWithRetry: vi.fn()
 }))
 
 vi.mock('@/lib/providers/auth-store-provider', () => ({
@@ -32,7 +34,7 @@ vi.mock('@/lib/hooks/logout-cleanup-registry', () => {
 vi.mock('@/site.config', () => ({
   siteConfig: {
     env: {
-      tiptapAppId: 'test-app-id'
+      docsCollabUrl: 'http://test-collab'
     }
   }
 }))
@@ -61,6 +63,7 @@ vi.mock('@hocuspocus/provider', () => ({
       destroy: vi.fn(),
       disconnect: vi.fn(),
       connect: vi.fn(),
+      configuration: { websocketProvider: { destroy: vi.fn() } },
       // Test helper: trigger a registered event for all handlers
       _triggerEvent: (event: string, ...args: any[]) => {
         const handlers = eventHandlers.get(event) || []
@@ -81,11 +84,14 @@ vi.mock('yjs', () => ({
   Doc: vi.fn(function() { return {} })
 }))
 
-import { useCollaborationToken } from '@/lib/api/collaboration-token'
+import { useCollaborationToken, fetchCollaborationTokenWithRetry } from '@/lib/api/collaboration-token'
 import { useAuthStore } from '@/lib/providers/auth-store-provider'
 import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role'
 import { ConnectionStatus } from '@/components/ui/coaching-sessions/coaching-notes/connection-status'
+import { MAX_NOTE_IMAGE_BYTES } from '@/components/ui/coaching-sessions/coaching-notes/constants'
 import { Some, None } from '@/types/option'
+import { okAsync, errAsync } from 'neverthrow'
+import { EntityApiError } from '@/types/entity-api-error'
 import { RelationshipRole } from '@/types/relationship-role'
 
 // Test component
@@ -131,7 +137,8 @@ describe('EditorCacheProvider', () => {
     vi.mocked(useCollaborationToken).mockReturnValue({
       jwt: { sub: 'test-doc', token: 'test-token' },
       isLoading: false,
-      isError: false
+      isError: false,
+      refresh: vi.fn()
     })
 
     // Default: role is immediately known as Coach (happy path).
@@ -266,8 +273,9 @@ describe('EditorCacheProvider', () => {
       })
 
       // After rerender and effects flushed - verify provider was not disturbed
-      // CRITICAL: Provider should NOT be disconnected
-      expect(mockProvider?.disconnect).not.toHaveBeenCalled()
+      // CRITICAL: Provider should NOT be torn down
+      expect(mockProvider?.destroy).not.toHaveBeenCalled()
+      expect(mockProvider?.configuration.websocketProvider.destroy).not.toHaveBeenCalled()
 
       // CRITICAL: Provider should NOT be recreated
       expect(TiptapCollabProvider).not.toHaveBeenCalled()
@@ -294,8 +302,9 @@ describe('EditorCacheProvider', () => {
       )
 
       await waitFor(() => {
-        // Old provider should be disconnected
-        expect(oldProvider?.disconnect).toHaveBeenCalled()
+        // Old provider and its socket should be destroyed
+        expect(oldProvider?.destroy).toHaveBeenCalled()
+        expect(oldProvider?.configuration.websocketProvider.destroy).toHaveBeenCalled()
       })
 
       // New provider should be created
@@ -348,6 +357,26 @@ describe('EditorCacheProvider', () => {
 
       // Extensions should only be created once
       expect(Extensions).toHaveBeenCalledTimes(1)
+    })
+
+    it('exposes the same image upload context it hands to the extensions', async () => {
+      const { Extensions } = await import('@/components/ui/coaching-sessions/coaching-notes/extensions')
+      vi.mocked(Extensions).mockClear()
+
+      let cacheRef: any = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      const mockProvider = await getLatestMockProvider()
+      await triggerSyncedAndWaitForReady(mockProvider)
+
+      expect(cacheRef.imageUploadContext).toEqual(
+        Some({ coachingSessionId: 'test-session', maxBytes: MAX_NOTE_IMAGE_BYTES })
+      )
+      expect(vi.mocked(Extensions).mock.calls[0][3]).toBe(cacheRef.imageUploadContext)
     })
   })
 
@@ -1037,6 +1066,280 @@ describe('EditorCacheProvider', () => {
           status: 'connected',
         })
       )
+    })
+  })
+
+  describe('Lazy token and authentication failure', () => {
+    const AUTH_ERROR = 'Coaching notes could not be authorized. Please try again.'
+
+    it('constructs the provider with a token function that fetches a fresh token', async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: { sub: 'doc', token: 'stale-tok' },
+        isLoading: false,
+        isError: false,
+        refresh: vi.fn()
+      })
+      vi.mocked(fetchCollaborationTokenWithRetry).mockReturnValue(okAsync({ token: 'fresh-tok', sub: 'doc' }))
+
+      render(
+        <EditorCacheProvider sessionId="session-42">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+
+      await waitFor(() => expect(TiptapCollabProvider).toHaveBeenCalledTimes(1))
+      const config = vi.mocked(TiptapCollabProvider).mock.calls[0][0]
+      expect(typeof config.token).toBe('function')
+
+      const token = await (config.token as () => Promise<string>)()
+      expect(fetchCollaborationTokenWithRetry).toHaveBeenCalledWith('session-42')
+      expect(token).toBe('fresh-tok')
+      expect(token).not.toBe('stale-tok')
+    })
+
+    it('tears down the provider and surfaces an error on authenticationFailed after sync', async () => {
+      let cacheRef: ReturnType<typeof useEditorCache> | null = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      const mockProvider = await getLatestMockProvider()
+      await triggerSyncedAndWaitForReady(mockProvider)
+
+      act(() => {
+        mockProvider._triggerEvent('authenticationFailed', { reason: 'expired' })
+      })
+
+      await waitFor(() => {
+        expect(cacheRef?.error?.message).toBe(AUTH_ERROR)
+      })
+      expect(cacheRef?.isReady).toBe(false)
+      expect(cacheRef?.extensions.length).toBe(0)
+      expect(cacheRef?.collaborationProvider).toBeNull()
+      expect(mockProvider.destroy).toHaveBeenCalled()
+    })
+
+    it('does not fall back to offline editing after authenticationFailed before sync', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      try {
+        let cacheRef: ReturnType<typeof useEditorCache> | null = null
+        render(
+          <EditorCacheProvider sessionId="test-session">
+            <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+          </EditorCacheProvider>
+        )
+
+        const mockProvider = await getLatestMockProvider()
+        act(() => {
+          mockProvider._triggerEvent('authenticationFailed', { reason: 'expired' })
+        })
+        await waitFor(() => {
+          expect(cacheRef?.error?.message).toBe(AUTH_ERROR)
+        })
+
+        await act(async () => {
+          vi.advanceTimersByTime(10_000)
+        })
+
+        expect(cacheRef?.isReady).toBe(false)
+        expect(cacheRef?.extensions.length).toBe(0)
+        expect(screen.getByTestId('is-ready')).toHaveTextContent('no')
+        expect(screen.getByTestId('has-extensions')).toHaveTextContent('no')
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('re-initializes the provider when resetCache is called after an auth failure', async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      const refresh = vi.fn()
+      vi.mocked(useCollaborationToken).mockReturnValue({
+        jwt: { sub: 'test-doc', token: 'test-token' },
+        isLoading: false,
+        isError: false,
+        refresh
+      })
+
+      let cacheRef: ReturnType<typeof useEditorCache> | null = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+
+      const mockProvider = await getLatestMockProvider()
+      await triggerSyncedAndWaitForReady(mockProvider)
+      act(() => {
+        mockProvider._triggerEvent('authenticationFailed', { reason: 'expired' })
+      })
+      await waitFor(() => {
+        expect(cacheRef?.error?.message).toBe(AUTH_ERROR)
+      })
+      const constructorCallsBefore = vi.mocked(TiptapCollabProvider).mock.calls.length
+
+      await act(async () => {
+        cacheRef?.resetCache()
+      })
+
+      expect(refresh).toHaveBeenCalledTimes(1)
+      await waitFor(() => {
+        expect(vi.mocked(TiptapCollabProvider).mock.calls.length).toBe(constructorCallsBefore + 1)
+      })
+      expect(cacheRef?.error).toBeNull()
+    })
+  })
+
+  describe('Reconnect resilience', () => {
+    const tokenFnOf = async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      await waitFor(() => expect(TiptapCollabProvider).toHaveBeenCalled())
+      const calls = vi.mocked(TiptapCollabProvider).mock.calls
+      return calls[calls.length - 1][0].token as () => Promise<string>
+    }
+
+    it('reuses the last good token when a reconnect fetch fails', async () => {
+      vi.mocked(fetchCollaborationTokenWithRetry).mockReturnValueOnce(okAsync({ token: 'good-tok', sub: 'doc' }))
+      render(
+        <EditorCacheProvider sessionId="session-7">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+      const token = await tokenFnOf()
+      expect(await token()).toBe('good-tok')
+
+      vi.mocked(fetchCollaborationTokenWithRetry).mockReturnValueOnce(errAsync(new EntityApiError("GET", "/jwt", new Error('backend down'))))
+      expect(await token()).toBe('good-tok')
+    })
+
+    it('rejects when no token was ever fetched successfully', async () => {
+      vi.mocked(fetchCollaborationTokenWithRetry).mockReturnValueOnce(errAsync(new EntityApiError("GET", "/jwt", new Error('backend down'))))
+      render(
+        <EditorCacheProvider sessionId="session-7">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+      const token = await tokenFnOf()
+      await expect(token()).rejects.toThrow('backend down')
+    })
+
+    it('reports a server problem, not an authorization problem, when the token fetch failed', async () => {
+      let cacheRef: ReturnType<typeof useEditorCache> | null = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+      const mockProvider = await getLatestMockProvider()
+      act(() => {
+        mockProvider._triggerEvent('authenticationFailed', { reason: 'Failed to get token: Error: boom' })
+      })
+      await waitFor(() => {
+        expect(cacheRef?.error?.message).toBe('Coaching notes could not reach the server. Please try again.')
+      })
+    })
+
+    it('registers one beforeunload listener regardless of how many providers are created', async () => {
+      const addSpy = vi.spyOn(window, 'addEventListener')
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      let cacheRef: ReturnType<typeof useEditorCache> | null = null
+      render(
+        <EditorCacheProvider sessionId="test-session">
+          <TestConsumer onCacheReady={(cache) => { cacheRef = cache }} />
+        </EditorCacheProvider>
+      )
+      const mockProvider = await getLatestMockProvider()
+      act(() => {
+        mockProvider._triggerEvent('authenticationFailed', { reason: 'expired' })
+      })
+      await waitFor(() => expect(cacheRef?.error).not.toBeNull())
+      await act(async () => {
+        cacheRef?.resetCache()
+      })
+      await waitFor(() => expect(TiptapCollabProvider).toHaveBeenCalledTimes(2))
+
+      const unloadRegistrations = addSpy.mock.calls.filter(([type]) => type === 'beforeunload')
+      expect(unloadRegistrations).toHaveLength(1)
+    })
+  })
+
+  describe('Unified provider teardown', () => {
+    const renderAndWaitForProvider = async (sessionId: string) => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      const utils = render(
+        <EditorCacheProvider sessionId={sessionId}>
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+      await waitFor(() => expect(TiptapCollabProvider).toHaveBeenCalled())
+      return { ...utils, provider: await getLatestMockProvider() }
+    }
+
+    it('T1: constructs the provider with preserveConnection false', async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      await renderAndWaitForProvider('s-1')
+      const config = vi.mocked(TiptapCollabProvider).mock.calls[0][0]
+      expect(config.preserveConnection).toBe(false)
+    })
+
+    it('T2: destroys the old provider and its socket when the session changes', async () => {
+      const { TiptapCollabProvider } = await import('@hocuspocus/provider')
+      const { rerender, provider: first } = await renderAndWaitForProvider('s-1')
+
+      rerender(
+        <EditorCacheProvider sessionId="s-2">
+          <TestConsumer />
+        </EditorCacheProvider>
+      )
+
+      await waitFor(() => {
+        expect(first.destroy).toHaveBeenCalled()
+        expect(first.configuration.websocketProvider.destroy).toHaveBeenCalled()
+      })
+      expect(TiptapCollabProvider).toHaveBeenCalledTimes(2)
+    })
+
+    it('T3: broadcasts disconnected presence then destroys provider and socket on unmount', async () => {
+      vi.mocked(useCurrentRelationshipRole).mockReturnValue({
+        relationship_role: Some(RelationshipRole.Coach)
+      })
+      const { unmount, provider } = await renderAndWaitForProvider('s-1')
+
+      unmount()
+
+      expect(provider.setAwarenessField).toHaveBeenLastCalledWith(
+        'presence',
+        expect.objectContaining({ status: 'disconnected' })
+      )
+      expect(provider.destroy).toHaveBeenCalled()
+      expect(provider.configuration.websocketProvider.destroy).toHaveBeenCalled()
+    })
+
+    it('T4: destroys provider and socket on logout cleanup', async () => {
+      const { logoutCleanupRegistry } = await import('@/lib/hooks/logout-cleanup-registry')
+      const { provider } = await renderAndWaitForProvider('s-1')
+
+      const calls = vi.mocked(logoutCleanupRegistry.register).mock.calls
+      const cleanup = calls[calls.length - 1][0] as () => void
+      act(() => {
+        cleanup()
+      })
+
+      expect(provider.destroy).toHaveBeenCalled()
+      expect(provider.configuration.websocketProvider.destroy).toHaveBeenCalled()
+    })
+
+    it('T5: teardown never throws when socket destroy fails', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const { unmount, provider } = await renderAndWaitForProvider('s-1')
+      provider.configuration.websocketProvider.destroy.mockImplementationOnce(() => {
+        throw new Error('socket boom')
+      })
+
+      expect(() => unmount()).not.toThrow()
+      expect(warn).toHaveBeenCalledTimes(1)
     })
   })
 })

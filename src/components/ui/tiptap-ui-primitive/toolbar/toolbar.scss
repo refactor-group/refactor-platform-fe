@@ -61,11 +61,18 @@
       gap: 0.125rem; /* Smaller gap for tighter layout */
 
       .tiptap-toolbar-group {
-        flex: 0 0 auto;
+        /* Shrink and wrap. The toolbar wraps between groups, but a single group
+           wider than the toolbar has nowhere to go: with `0 0 auto` and no
+           wrapping it overflowed, and the toolbar's own `overflow-x: auto` hides
+           the spill behind a scrollbar that `scrollbar-width: none` makes
+           invisible. The last button in the widest group, Insert image, was
+           unreachable on a phone. */
+        flex: 0 1 auto;
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 0.125rem;
-        
+
         /* Ensure groups don't center themselves */
         justify-content: flex-start;
       }

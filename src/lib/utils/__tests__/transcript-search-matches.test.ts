@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 
-import { buildSearchMatches, escapeRegex } from "../search-matches";
+import { buildSearchMatches, escapeRegex } from "../transcript-search-matches";
 import type { TranscriptSegment } from "@/types/transcription";
 
 function makeSegment(id: string, text: string): TranscriptSegment {

@@ -8,7 +8,7 @@ vi.mock('@/site.config', () => ({
   siteConfig: {
     env: {
       backendServiceURL: 'http://localhost:4000',
-      backendApiVersion: '1.0.0-beta1',
+      backendApiVersion: '1.0.0',
     },
   },
 }))
@@ -36,7 +36,7 @@ describe('PasswordResetApi.request', () => {
       'http://localhost:4000/password-reset/request',
       { email: 'jane@example.com' },
       expect.objectContaining({
-        headers: { 'X-Version': '1.0.0-beta1' },
+        headers: { 'X-Version': '1.0.0' },
         timeout: 15000,
       })
     )
@@ -66,7 +66,7 @@ describe('PasswordResetApi.validate (v1.1 — POST with token in body)', () => {
       'http://localhost:4000/password-reset/validate',
       { token: 'raw-token-abc123' },
       expect.objectContaining({
-        headers: { 'X-Version': '1.0.0-beta1' },
+        headers: { 'X-Version': '1.0.0' },
         timeout: 15000,
       })
     )
@@ -131,7 +131,7 @@ describe('PasswordResetApi.complete', () => {
       'http://localhost:4000/password-reset/complete',
       { token: 'tok', password: 'verylongpassword', confirm_password: 'verylongpassword' },
       expect.objectContaining({
-        headers: { 'X-Version': '1.0.0-beta1' },
+        headers: { 'X-Version': '1.0.0' },
         timeout: 15000,
       })
     )

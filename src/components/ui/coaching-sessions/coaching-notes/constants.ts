@@ -17,3 +17,6 @@ export const TOOLBAR_SHOW_THRESHOLD = 0.95;
  * The difference between show/hide thresholds creates hysteresis to prevent rapid toggling
  */
 export const TOOLBAR_HIDE_THRESHOLD = 0.25;
+
+/** Largest note image accepted before upload; matches the backend's cap. */
+export const MAX_NOTE_IMAGE_BYTES = 10 * 1024 * 1024;

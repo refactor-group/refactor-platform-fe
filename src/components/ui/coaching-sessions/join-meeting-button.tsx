@@ -32,7 +32,7 @@ import {
 import { useMeetingRecording } from "@/lib/api/meeting-recordings";
 import { useTranscription } from "@/lib/api/transcriptions";
 import { useInterval } from "@/lib/hooks/use-interval";
-import { formatTimestamp } from "@/lib/transcript/format-timestamp";
+import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
 import {
   MeetingRecordingStatus,
   isRecordingTerminal,

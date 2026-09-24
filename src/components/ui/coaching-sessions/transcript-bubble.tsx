@@ -5,8 +5,8 @@ import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
-import { formatTimestamp } from "@/lib/transcript/format-timestamp";
-import type { BubbleGrouping } from "@/lib/transcript/group-bubbles";
+import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
+import type { BubbleGrouping } from "@/lib/utils/transcript-group-bubbles";
 import type { TranscriptSegment } from "@/types/transcription";
 
 /**

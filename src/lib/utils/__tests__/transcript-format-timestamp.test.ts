@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { formatTimestamp } from "../format-timestamp";
+import { formatTimestamp } from "../transcript-format-timestamp";
 
 describe("formatTimestamp", () => {
   it("formats zero as 0:00", () => {

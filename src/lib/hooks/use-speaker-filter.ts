@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 
 import type { SpeakerFilterOption } from "@/components/ui/coaching-sessions/transcript-speaker-filter";
-import type { SpeakerStyle } from "@/lib/transcript/speakers";
+import type { SpeakerStyle } from "@/lib/utils/transcript-speakers";
 import type { TranscriptSegment } from "@/types/transcription";
 
 /** Sentinel value that means "show all speakers". */

@@ -11,8 +11,14 @@ import { useOrganizationStateStore } from "@/lib/providers/organization-state-st
  * @returns Object containing current organization ID, full organization data, loading state, and error state
  */
 export const useCurrentOrganization = () => {
-  const { currentOrganizationId, setCurrentOrganizationId, resetOrganizationState } = 
-    useOrganizationStateStore((state) => state);
+  const {
+    currentOrganizationId,
+    lastOrganizationIdByUser,
+    setCurrentOrganizationId,
+    rememberOrganizationForUser,
+    forgetOrganizationForUser,
+    resetOrganizationState,
+  } = useOrganizationStateStore((state) => state);
 
   // Fetch organization data using SWR (only if currentOrganizationId exists)
   const { organization, isLoading, isError, refresh } = useOrganization(currentOrganizationId || "");
@@ -20,6 +26,9 @@ export const useCurrentOrganization = () => {
   return {
     // Current organization ID
     currentOrganizationId,
+
+    // Each user's last explicitly selected organization
+    lastOrganizationIdByUser,
     
     // Full organization data from SWR (null if no ID set)
     currentOrganization: currentOrganizationId ? organization : null,
@@ -30,6 +39,8 @@ export const useCurrentOrganization = () => {
     
     // Actions
     setCurrentOrganizationId,
+    rememberOrganizationForUser,
+    forgetOrganizationForUser,
     resetOrganizationState,
     refresh,
   };

@@ -16,7 +16,7 @@ import { JoinMeetingButton } from "@/components/ui/coaching-sessions/join-meetin
 import {
   IndicatorStatus,
   deriveIndicatorStatus,
-} from "@/lib/transcript/indicator-status";
+} from "@/lib/utils/transcript-indicator-status";
 import { useMeetingRecording } from "@/lib/api/meeting-recordings";
 import { useTranscription } from "@/lib/api/transcriptions";
 import { useTranscriptionToasts } from "@/lib/hooks/use-transcription-toasts";
