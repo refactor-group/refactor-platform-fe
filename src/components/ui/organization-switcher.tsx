@@ -53,7 +53,9 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
   const {
     currentOrganizationId,
     currentOrganization,
+    lastOrganizationIdByUser,
     setCurrentOrganizationId,
+    rememberOrganizationForUser,
   } = useCurrentOrganization();
   const { state, isMobile, setOpenMobile, expand } = useSidebar();
   const selected = currentOrganization ? Some(currentOrganization) : None;
@@ -77,8 +79,8 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     setIsACoach(isUserCoach(userId, relationships));
   }, [userId, relationships, setIsACoach]);
 
-  // Selects a default organization when none is set, and drops a persisted
-  // selection the user is no longer a member of.
+  // Selects the user's remembered organization (or the first) when none is set,
+  // and drops a persisted selection the user is no longer a member of.
   //
   // Note: the default-selection half can go away once a user has the notion of
   //       a default Organization and currentOrganizationId can start out equal
@@ -91,10 +93,13 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     [isLoggedIn, userId, isLoading, isError, organizations]
   );
 
+  const rememberedId = lastOrganizationIdByUser[userId];
+
   useReconcileCurrentOrganization(
     membership,
     currentOrganizationId,
-    setCurrentOrganizationId
+    setCurrentOrganizationId,
+    rememberedId ? Some(rememberedId) : None
   );
 
   const handleSelectOrganization = (orgId: Id) => {
@@ -107,6 +112,7 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
         organizationToString(selectedOrg)
       );
       setCurrentOrganizationId(orgId);
+      rememberOrganizationForUser(userId, orgId);
       if (onSelect) onSelect(orgId);
       // The sidebar sheet would otherwise stay parked over the new page.
       if (isMobile) setOpenMobile(false);

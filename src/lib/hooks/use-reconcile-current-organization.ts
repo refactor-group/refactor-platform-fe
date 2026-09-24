@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Id } from "@/types/general";
+import type { Option } from "@/types/option";
 import type { Organization } from "@/types/organization";
 
 /**
@@ -29,6 +30,9 @@ const EMPTY_ORGANIZATIONS: readonly Organization[] = [];
  * deliberately re-selects an organization (the members route syncs it from the
  * URL), and re-clearing that on every render would spin.
  *
+ * Both an empty and a revoked selection fall back to the remembered
+ * organization while the caller is still a member of it, otherwise the first.
+ *
  * The snapshot is what re-arms it: a fresh organization list is new evidence,
  * so an id that was written back after being reconciled gets reconsidered
  * rather than staying pinned until the component happens to unmount.
@@ -36,10 +40,15 @@ const EMPTY_ORGANIZATIONS: readonly Organization[] = [];
 export function useReconcileCurrentOrganization(
   membership: OrganizationMembership,
   currentOrganizationId: Id,
-  setCurrentOrganizationId: (organizationId: Id) => void
+  setCurrentOrganizationId: (organizationId: Id) => void,
+  rememberedOrganizationId: Option<Id>
 ): void {
   const reconciledIds = useRef<Set<Id>>(new Set());
   const reconciledAgainst = useRef<readonly Organization[]>(EMPTY_ORGANIZATIONS);
+  // A fresh Option every render; depend on the id so the effect doesn't re-run.
+  const rememberedId = rememberedOrganizationId.some
+    ? rememberedOrganizationId.val
+    : "";
 
   useEffect(() => {
     if (membership.kind !== "loaded") return;
@@ -51,7 +60,12 @@ export function useReconcileCurrentOrganization(
       reconciledIds.current.clear();
     }
 
-    const fallbackId = organizations[0]?.id ?? "";
+    const isRememberedAMember =
+      !!rememberedId &&
+      organizations.some((organization) => organization.id === rememberedId);
+    const fallbackId = isRememberedAMember
+      ? rememberedId
+      : organizations[0]?.id ?? "";
 
     if (!currentOrganizationId) {
       if (fallbackId) setCurrentOrganizationId(fallbackId);
@@ -67,5 +81,5 @@ export function useReconcileCurrentOrganization(
 
     reconciledIds.current.add(currentOrganizationId);
     setCurrentOrganizationId(fallbackId);
-  }, [membership, currentOrganizationId, setCurrentOrganizationId]);
+  }, [membership, currentOrganizationId, setCurrentOrganizationId, rememberedId]);
 }

@@ -4,10 +4,12 @@ import { createJSONStorage, devtools, persist } from "zustand/middleware";
 
 interface OrganizationState {
   currentOrganizationId: Id;
+  lastOrganizationIdByUser: Record<Id, Id>;
 }
 
 interface OrganizationStateActions {
   setCurrentOrganizationId: (organizationId: Id) => void;
+  rememberOrganizationForUser: (userId: Id, organizationId: Id) => void;
   resetOrganizationState(): void;
 }
 
@@ -16,6 +18,7 @@ export type OrganizationStateStore = OrganizationState &
 
 export const defaultInitState: OrganizationState = {
   currentOrganizationId: "",
+  lastOrganizationIdByUser: {},
 };
 
 export const createOrganizationStateStore = (
@@ -24,15 +27,24 @@ export const createOrganizationStateStore = (
   const orgStateStore = create<OrganizationStateStore>()(
     devtools(
       persist(
-        (set, _get) => ({
+        (set, get) => ({
           ...initState,
 
           setCurrentOrganizationId: (organizationId: Id) => {
             set({ currentOrganizationId: organizationId });
           },
+          rememberOrganizationForUser: (userId: Id, organizationId: Id) => {
+            if (!userId || !organizationId) return;
+            set({
+              lastOrganizationIdByUser: {
+                ...get().lastOrganizationIdByUser,
+                [userId]: organizationId,
+              },
+            });
+          },
           resetOrganizationState(): void {
-            // Then reset the in-memory state
-            set(defaultInitState);
+            // Logout clears the selection, but per-user choices survive.
+            set({ currentOrganizationId: defaultInitState.currentOrganizationId });
           },
         }),
         {
