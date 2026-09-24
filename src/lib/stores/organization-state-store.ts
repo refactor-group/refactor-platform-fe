@@ -43,8 +43,11 @@ export const createOrganizationStateStore = (
             });
           },
           resetOrganizationState(): void {
-            // Logout clears the selection, but per-user choices survive.
-            set({ currentOrganizationId: defaultInitState.currentOrganizationId });
+            // Logout clears everything except the per-user choices.
+            set({
+              ...defaultInitState,
+              lastOrganizationIdByUser: get().lastOrganizationIdByUser,
+            });
           },
         }),
         {

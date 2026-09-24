@@ -45,6 +45,14 @@ describe('OrganizationStateStore', () => {
   })
 
   describe('remembering the last organization per user', () => {
+    // Automatic selections (reconciler fallback, members-page URL sync) go
+    // through this setter and must not be remembered.
+    it('does not remember a plain selection', () => {
+      store.getState().setCurrentOrganizationId('org-2')
+
+      expect(store.getState().lastOrganizationIdByUser).toEqual({})
+    })
+
     it('remembers a separate organization for each user', () => {
       store.getState().rememberOrganizationForUser('user-1', 'org-2')
       store.getState().rememberOrganizationForUser('user-2', 'org-1')
