@@ -53,7 +53,10 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
   const {
     currentOrganizationId,
     currentOrganization,
+    lastOrganizationIdByUser,
     setCurrentOrganizationId,
+    rememberOrganizationForUser,
+    forgetOrganizationForUser,
   } = useCurrentOrganization();
   const { state, isMobile, setOpenMobile, expand } = useSidebar();
   const selected = currentOrganization ? Some(currentOrganization) : None;
@@ -77,12 +80,9 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     setIsACoach(isUserCoach(userId, relationships));
   }, [userId, relationships, setIsACoach]);
 
-  // Selects a default organization when none is set, and drops a persisted
-  // selection the user is no longer a member of.
-  //
-  // Note: the default-selection half can go away once a user has the notion of
-  //       a default Organization and currentOrganizationId can start out equal
-  //       to it.
+  // Note: the default-selection fallback can go away once a user has the notion
+  //       of a default Organization and currentOrganizationId can start out
+  //       equal to it.
   const membership = useMemo<OrganizationMembership>(
     () =>
       isLoggedIn && userId && !isLoading && !isError
@@ -91,11 +91,14 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     [isLoggedIn, userId, isLoading, isError, organizations]
   );
 
-  useReconcileCurrentOrganization(
+  useReconcileCurrentOrganization({
     membership,
     currentOrganizationId,
-    setCurrentOrganizationId
-  );
+    setCurrentOrganizationId,
+    userId,
+    lastOrganizationIdByUser,
+    forgetOrganizationForUser,
+  });
 
   const handleSelectOrganization = (orgId: Id) => {
     if (!organizations) return;
@@ -107,6 +110,7 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
         organizationToString(selectedOrg)
       );
       setCurrentOrganizationId(orgId);
+      rememberOrganizationForUser(userId, orgId);
       if (onSelect) onSelect(orgId);
       // The sidebar sheet would otherwise stay parked over the new page.
       if (isMobile) setOpenMobile(false);
