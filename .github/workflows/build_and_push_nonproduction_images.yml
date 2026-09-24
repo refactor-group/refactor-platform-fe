@@ -115,7 +115,7 @@ jobs:
           NEXT_PUBLIC_BACKEND_SERVICE_HOST: localhost
           NEXT_PUBLIC_BACKEND_SERVICE_PORT: 4000
           NEXT_PUBLIC_BACKEND_SERVICE_API_PATH: ""
-          NEXT_PUBLIC_BACKEND_API_VERSION: 1.0.0-beta1
+          NEXT_PUBLIC_BACKEND_API_VERSION: 1.0.0
 
       - name: Run unit tests
         run: npm run test:run

@@ -29,7 +29,7 @@ The job provides `NEXT_PUBLIC_*` env vars at build time (using `secrets.PR_PREVI
 
 ### Key Environment Variables
 - **`NEXT_PUBLIC_BASE_PATH`**: Set to `/pr-<NUM>` for sub-path routing in preview environments. Configured in `next.config.mjs` via `basePath`.
-- **`NEXT_PUBLIC_BACKEND_API_VERSION`**: Must be `1.0.0-beta1` (not `v1`). The backend's `CompareApiVersion` extractor validates this header exactly.
+- **`NEXT_PUBLIC_BACKEND_API_VERSION`**: Must be `1.0.0` (not `v1`). The backend's `CompareApiVersion` extractor validates this header exactly.
 - **`NEXT_PUBLIC_BACKEND_SERVICE_*`**: Protocol, host, port, and API path for backend URL construction. Baked at build time. The test job uses `PR_PREVIEW_*` secrets with fallback defaults; the Docker image build has its own build args.
 
 ### Docker ARG Scoping (Critical)

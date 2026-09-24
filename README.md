@@ -23,7 +23,7 @@ When running locally on a development machine you can manually set the applicati
 NEXT_PUBLIC_BACKEND_SERVICE_PROTOCOL="http"
 NEXT_PUBLIC_BACKEND_SERVICE_PORT=4000
 NEXT_PUBLIC_BACKEND_SERVICE_HOST="localhost"
-NEXT_PUBLIC_BACKEND_API_VERSION="1.0.0-beta1"
+NEXT_PUBLIC_BACKEND_API_VERSION="1.0.0"
 
 # WebSocket base URL of the self-hosted docs-collab-server
 NEXT_PUBLIC_DOCS_COLLAB_URL="<DOCS_COLLAB_URL>"

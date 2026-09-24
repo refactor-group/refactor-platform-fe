@@ -71,7 +71,7 @@ test("c: super admin adds Ehab to BigTable as an existing member, role Admin", a
   // Resolve BigTable's id from the API rather than guessing it.
   const orgs = await page.evaluate(async () => {
     const res = await fetch("http://localhost:4000/organizations", {
-      headers: { "x-version": "1.0.0-beta1" },
+      headers: { "x-version": "1.0.0" },
       credentials: "include",
     });
     return (await res.json()).data as { id: string; name: string }[];
@@ -100,7 +100,7 @@ test("d: Ehab, as BigTable admin, adds Jim to BigTable with himself as coach", a
 
   const orgs = await page.evaluate(async () => {
     const res = await fetch("http://localhost:4000/organizations", {
-      headers: { "x-version": "1.0.0-beta1" },
+      headers: { "x-version": "1.0.0" },
       credentials: "include",
     });
     return (await res.json()).data as { id: string; name: string }[];
@@ -133,7 +133,7 @@ test("d2: workaround, the super admin adds Jim to BigTable with Ehab as coach", 
 
   const orgs = await page.evaluate(async () => {
     const res = await fetch("http://localhost:4000/organizations", {
-      headers: { "x-version": "1.0.0-beta1" },
+      headers: { "x-version": "1.0.0" },
       credentials: "include",
     });
     return (await res.json()).data as { id: string; name: string }[];
@@ -184,19 +184,19 @@ test("e: Ehab schedules a BigTable coaching session with Jim", async ({ page }) 
 
   const sessions = await page.evaluate(async () => {
     const orgRes = await fetch("http://localhost:4000/organizations", {
-      headers: { "x-version": "1.0.0-beta1" },
+      headers: { "x-version": "1.0.0" },
       credentials: "include",
     });
     const orgs = (await orgRes.json()).data as { id: string; name: string }[];
     const bigTable = orgs.find((o) => o.name === "BigTable")!;
     const relRes = await fetch(
       `http://localhost:4000/organizations/${bigTable.id}/coaching_relationships`,
-      { headers: { "x-version": "1.0.0-beta1" }, credentials: "include" }
+      { headers: { "x-version": "1.0.0" }, credentials: "include" }
     );
     const rels = (await relRes.json()).data as { id: string }[];
     const sesRes = await fetch(
       `http://localhost:4000/coaching_sessions?coaching_relationship_id=${rels[0].id}&from_date=2000-01-01&to_date=2100-01-01`,
-      { headers: { "x-version": "1.0.0-beta1" }, credentials: "include" }
+      { headers: { "x-version": "1.0.0" }, credentials: "include" }
     );
     return (await sesRes.json()).data as unknown[];
   });
