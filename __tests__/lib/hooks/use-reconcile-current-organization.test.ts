@@ -104,8 +104,16 @@ describe("useReconcileCurrentOrganization", () => {
     expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
 
     // Same snapshot object throughout — no new evidence has arrived.
-    rerender({ membership, currentOrganizationId: BETA.id });
-    rerender({ membership, currentOrganizationId: ACME.id });
+    rerender({
+      membership,
+      currentOrganizationId: BETA.id,
+      rememberedOrganizationId: None,
+    });
+    rerender({
+      membership,
+      currentOrganizationId: ACME.id,
+      rememberedOrganizationId: None,
+    });
 
     expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
   });
@@ -120,7 +128,11 @@ describe("useReconcileCurrentOrganization", () => {
     );
     expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
 
-    rerender({ membership: loaded([BETA]), currentOrganizationId: ACME.id });
+    rerender({
+      membership: loaded([BETA]),
+      currentOrganizationId: ACME.id,
+      rememberedOrganizationId: None,
+    });
 
     expect(setCurrentOrganizationId).toHaveBeenCalledTimes(2);
     expect(setCurrentOrganizationId).toHaveBeenLastCalledWith(BETA.id);
