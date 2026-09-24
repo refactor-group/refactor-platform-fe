@@ -5,7 +5,9 @@ import {
   useReconcileCurrentOrganization,
   type OrganizationMembership,
 } from "@/lib/hooks/use-reconcile-current-organization";
+import type { Id } from "@/types/general";
 import type { Organization } from "@/types/organization";
+import { None, Some, type Option } from "@/types/option";
 
 function organization(id: string, name: string): Organization {
   return {
@@ -22,17 +24,25 @@ const BETA = organization("org-2", "Beta Inc");
 
 function renderReconciler(
   membership: OrganizationMembership,
-  currentOrganizationId: string
+  currentOrganizationId: string,
+  rememberedOrganizationId: Option<Id> = None
 ) {
   const setCurrentOrganizationId = vi.fn();
   const rendered = renderHook(
-    ({ membership, currentOrganizationId }) =>
+    ({ membership, currentOrganizationId, rememberedOrganizationId }) =>
       useReconcileCurrentOrganization(
         membership,
         currentOrganizationId,
-        setCurrentOrganizationId
+        setCurrentOrganizationId,
+        rememberedOrganizationId
       ),
-    { initialProps: { membership, currentOrganizationId } }
+    {
+      initialProps: {
+        membership,
+        currentOrganizationId,
+        rememberedOrganizationId,
+      },
+    }
   );
   return { ...rendered, setCurrentOrganizationId };
 }
@@ -114,5 +124,58 @@ describe("useReconcileCurrentOrganization", () => {
 
     expect(setCurrentOrganizationId).toHaveBeenCalledTimes(2);
     expect(setCurrentOrganizationId).toHaveBeenLastCalledWith(BETA.id);
+  });
+
+  describe("with a remembered organization", () => {
+    it("selects the remembered organization when none is set", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        loaded([ACME, BETA]),
+        "",
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).toHaveBeenCalledWith(BETA.id);
+      expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to the first organization when the remembered one is gone", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        loaded([ACME]),
+        "",
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).toHaveBeenCalledWith(ACME.id);
+    });
+
+    it("replaces a revoked selection with the remembered organization", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        loaded([ACME, BETA]),
+        "org-gone",
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).toHaveBeenCalledWith(BETA.id);
+    });
+
+    it("leaves a still-valid selection alone", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        loaded([ACME, BETA]),
+        ACME.id,
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).not.toHaveBeenCalled();
+    });
+
+    it("stays inert while membership is unknown", () => {
+      const { setCurrentOrganizationId } = renderReconciler(
+        { kind: "unknown" },
+        "",
+        Some(BETA.id)
+      );
+
+      expect(setCurrentOrganizationId).not.toHaveBeenCalled();
+    });
   });
 });
