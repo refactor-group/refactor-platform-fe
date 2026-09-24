@@ -80,12 +80,9 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     setIsACoach(isUserCoach(userId, relationships));
   }, [userId, relationships, setIsACoach]);
 
-  // Selects the user's remembered organization (or the first) when none is set,
-  // and drops a persisted selection the user is no longer a member of.
-  //
-  // Note: the default-selection half can go away once a user has the notion of
-  //       a default Organization and currentOrganizationId can start out equal
-  //       to it.
+  // Note: the default-selection fallback can go away once a user has the notion
+  //       of a default Organization and currentOrganizationId can start out
+  //       equal to it.
   const membership = useMemo<OrganizationMembership>(
     () =>
       isLoggedIn && userId && !isLoading && !isError

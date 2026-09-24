@@ -18,6 +18,15 @@ export type OrganizationMembership =
 // fresh array so the first real snapshot always compares as different.
 const EMPTY_ORGANIZATIONS: readonly Organization[] = [];
 
+export interface ReconcileCurrentOrganizationOptions {
+  membership: OrganizationMembership;
+  currentOrganizationId: Id;
+  setCurrentOrganizationId: (organizationId: Id) => void;
+  rememberedOrganizationId: Option<Id>;
+  /** Must be stable across renders; it is an effect dependency. */
+  forgetRememberedOrganization: () => void;
+}
+
 /**
  * Keeps the persisted `currentOrganizationId` consistent with the
  * organizations the caller is actually a member of.
@@ -30,23 +39,14 @@ const EMPTY_ORGANIZATIONS: readonly Organization[] = [];
  * deliberately re-selects an organization (the members route syncs it from the
  * URL), and re-clearing that on every render would spin.
  *
- * Both an empty and a revoked selection fall back to the remembered
- * organization while the caller is still a member of it, otherwise the first.
- * A remembered organization the caller has left is forgotten.
- *
  * The snapshot is what re-arms it: a fresh organization list is new evidence,
  * so an id that was written back after being reconciled gets reconsidered
  * rather than staying pinned until the component happens to unmount.
+ *
+ * Logout clears the selection, so falling back to the remembered organization
+ * is what returns a user to their last pick. An entry for an organization they
+ * have left is forgotten rather than left in localStorage.
  */
-export interface ReconcileCurrentOrganizationOptions {
-  membership: OrganizationMembership;
-  currentOrganizationId: Id;
-  setCurrentOrganizationId: (organizationId: Id) => void;
-  rememberedOrganizationId: Option<Id>;
-  /** Must be stable across renders; it is an effect dependency. */
-  forgetRememberedOrganization: () => void;
-}
-
 export function useReconcileCurrentOrganization({
   membership,
   currentOrganizationId,
