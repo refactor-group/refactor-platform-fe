@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DateTime } from 'ts-luxon';
@@ -10,7 +9,6 @@ import {
 } from '@/lib/hooks/use-reconcile-current-organization';
 import type { Id } from '@/types/general';
 import type { Organization } from '@/types/organization';
-import { None, Some } from '@/types/option';
 
 type OrganizationStore = ReturnType<typeof createOrganizationStateStore>;
 
@@ -42,18 +40,14 @@ function useSignedInOrganization(
   const setCurrentOrganizationId = useStore(store, (s) => s.setCurrentOrganizationId);
   const lastOrganizationIdByUser = useStore(store, (s) => s.lastOrganizationIdByUser);
   const forgetOrganizationForUser = useStore(store, (s) => s.forgetOrganizationForUser);
-  const remembered = lastOrganizationIdByUser[userId];
-  const forgetRememberedOrganization = useCallback(
-    () => forgetOrganizationForUser(userId),
-    [forgetOrganizationForUser, userId]
-  );
 
   useReconcileCurrentOrganization({
     membership,
     currentOrganizationId,
     setCurrentOrganizationId,
-    rememberedOrganizationId: remembered ? Some(remembered) : None,
-    forgetRememberedOrganization,
+    userId,
+    lastOrganizationIdByUser,
+    forgetOrganizationForUser,
   });
 }
 

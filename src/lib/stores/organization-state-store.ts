@@ -57,9 +57,9 @@ export const createOrganizationStateStore = (
             });
           },
           forgetOrganizationForUser: (userId: Id) => {
-            const remembered = get().lastOrganizationIdByUser;
-            if (!(userId in remembered)) return;
-            set({ lastOrganizationIdByUser: withoutUser(remembered, userId) });
+            set({
+              lastOrganizationIdByUser: withoutUser(get().lastOrganizationIdByUser, userId),
+            });
           },
           resetOrganizationState(): void {
             // Logout clears everything except the per-user choices.

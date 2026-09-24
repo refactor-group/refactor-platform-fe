@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Id } from "@/types/general";
-import type { Option } from "@/types/option";
+import { None, Some, type Option } from "@/types/option";
 import type { Organization } from "@/types/organization";
 
 /**
@@ -22,9 +22,9 @@ export interface ReconcileCurrentOrganizationOptions {
   membership: OrganizationMembership;
   currentOrganizationId: Id;
   setCurrentOrganizationId: (organizationId: Id) => void;
-  rememberedOrganizationId: Option<Id>;
-  /** Must be stable across renders; it is an effect dependency. */
-  forgetRememberedOrganization: () => void;
+  userId: Id;
+  lastOrganizationIdByUser: Record<Id, Id>;
+  forgetOrganizationForUser: (userId: Id) => void;
 }
 
 /**
@@ -43,23 +43,19 @@ export interface ReconcileCurrentOrganizationOptions {
  * so an id that was written back after being reconciled gets reconsidered
  * rather than staying pinned until the component happens to unmount.
  *
- * Logout clears the selection, so falling back to the remembered organization
- * is what returns a user to their last pick. An entry for an organization they
- * have left is forgotten rather than left in localStorage.
+ * Logout clears the selection, so the remembered organization is what returns
+ * a user to their last pick; one they have since left is forgotten.
  */
 export function useReconcileCurrentOrganization({
   membership,
   currentOrganizationId,
   setCurrentOrganizationId,
-  rememberedOrganizationId,
-  forgetRememberedOrganization,
+  userId,
+  lastOrganizationIdByUser,
+  forgetOrganizationForUser,
 }: ReconcileCurrentOrganizationOptions): void {
   const reconciledIds = useRef<Set<Id>>(new Set());
   const reconciledAgainst = useRef<readonly Organization[]>(EMPTY_ORGANIZATIONS);
-  // A fresh Option every render; depend on the id so the effect doesn't re-run.
-  const rememberedId = rememberedOrganizationId.some
-    ? rememberedOrganizationId.val
-    : "";
 
   useEffect(() => {
     if (membership.kind !== "loaded") return;
@@ -71,14 +67,17 @@ export function useReconcileCurrentOrganization({
       reconciledIds.current.clear();
     }
 
-    const isRememberedAMember =
-      !!rememberedId &&
-      organizations.some((organization) => organization.id === rememberedId);
-    const fallbackId = isRememberedAMember
-      ? rememberedId
-      : organizations[0]?.id ?? "";
+    const rememberedId = lastOrganizationIdByUser[userId];
+    const remembered: Option<Id> = rememberedId ? Some(rememberedId) : None;
+    const rememberedMember =
+      remembered.some && organizations.some(({ id }) => id === remembered.val)
+        ? remembered
+        : None;
+    if (remembered.some && rememberedMember.none) forgetOrganizationForUser(userId);
 
-    if (rememberedId && !isRememberedAMember) forgetRememberedOrganization();
+    const fallbackId = rememberedMember.some
+      ? rememberedMember.val
+      : organizations[0]?.id ?? "";
 
     if (!currentOrganizationId) {
       if (fallbackId) setCurrentOrganizationId(fallbackId);
@@ -98,7 +97,8 @@ export function useReconcileCurrentOrganization({
     membership,
     currentOrganizationId,
     setCurrentOrganizationId,
-    rememberedId,
-    forgetRememberedOrganization,
+    userId,
+    lastOrganizationIdByUser,
+    forgetOrganizationForUser,
   ]);
 }

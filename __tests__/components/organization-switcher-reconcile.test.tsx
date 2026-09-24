@@ -62,27 +62,25 @@ vi.mock("@/components/ui/sidebar", () => ({
 
 import { OrganizationSwitcher } from "@/components/ui/organization-switcher";
 
+function resetMocks() {
+  vi.clearAllMocks();
+  h.listState = { organizations: h.ORGANIZATIONS, isLoading: false, isError: false };
+  h.currentOrganizationId = "";
+  h.lastOrganizationIdByUser = {};
+  h.sidebar = {
+    state: SidebarState.Expanded,
+    isMobile: false,
+    setOpenMobile: vi.fn(),
+    expand: vi.fn(),
+  };
+}
+
 // The switcher decides whether membership is knowable before handing it to the
 // reconciler. Getting that wrong in the "still loading" direction is the
 // dangerous case: an empty list would look like "you belong nowhere" and clear
 // a perfectly valid selection.
 describe("OrganizationSwitcher — membership gating", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.listState = {
-      organizations: h.ORGANIZATIONS,
-      isLoading: false,
-      isError: false,
-    };
-    h.currentOrganizationId = "";
-    h.lastOrganizationIdByUser = {};
-    h.sidebar = {
-      state: SidebarState.Expanded,
-      isMobile: false,
-      setOpenMobile: vi.fn(),
-      expand: vi.fn(),
-    };
-  });
+  beforeEach(resetMocks);
 
   it("leaves the selection alone while the organization list is loading", () => {
     h.listState = { organizations: [], isLoading: true, isError: false };
@@ -133,22 +131,7 @@ describe("OrganizationSwitcher — membership gating", () => {
 });
 
 describe("OrganizationSwitcher — remembering the last organization", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    h.listState = {
-      organizations: h.ORGANIZATIONS,
-      isLoading: false,
-      isError: false,
-    };
-    h.currentOrganizationId = "";
-    h.lastOrganizationIdByUser = {};
-    h.sidebar = {
-      state: SidebarState.Expanded,
-      isMobile: false,
-      setOpenMobile: vi.fn(),
-      expand: vi.fn(),
-    };
-  });
+  beforeEach(resetMocks);
 
   it("selects the current user's remembered organization on login", () => {
     h.lastOrganizationIdByUser = { "user-1": "org-2" };
@@ -157,6 +140,15 @@ describe("OrganizationSwitcher — remembering the last organization", () => {
 
     expect(h.setCurrentOrganizationId).toHaveBeenCalledWith("org-2");
     expect(h.setCurrentOrganizationId).not.toHaveBeenCalledWith("org-1");
+  });
+
+  it("does not reconcile again on an unrelated re-render", () => {
+    h.lastOrganizationIdByUser = { "user-1": "org-2" };
+
+    const { rerender } = render(<OrganizationSwitcher />);
+    rerender(<OrganizationSwitcher />);
+
+    expect(h.setCurrentOrganizationId).toHaveBeenCalledTimes(1);
   });
 
   it("ignores another user's remembered organization", () => {

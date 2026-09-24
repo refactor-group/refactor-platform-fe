@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   DropdownMenu,
@@ -91,18 +91,13 @@ export function OrganizationSwitcher({ onSelect }: OrganizationSelectorProps) {
     [isLoggedIn, userId, isLoading, isError, organizations]
   );
 
-  const rememberedId = lastOrganizationIdByUser[userId];
-  const forgetRememberedOrganization = useCallback(
-    () => forgetOrganizationForUser(userId),
-    [forgetOrganizationForUser, userId]
-  );
-
   useReconcileCurrentOrganization({
     membership,
     currentOrganizationId,
     setCurrentOrganizationId,
-    rememberedOrganizationId: rememberedId ? Some(rememberedId) : None,
-    forgetRememberedOrganization,
+    userId,
+    lastOrganizationIdByUser,
+    forgetOrganizationForUser,
   });
 
   const handleSelectOrganization = (orgId: Id) => {
