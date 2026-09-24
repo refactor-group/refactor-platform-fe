@@ -104,6 +104,7 @@ describe('AppSidebar Permission Logic', () => {
       lastOrganizationIdByUser: {},
       setCurrentOrganizationId: vi.fn(),
       rememberOrganizationForUser: vi.fn(),
+      forgetOrganizationForUser: vi.fn(),
       resetOrganizationState: vi.fn(),
     });
   });
@@ -413,6 +414,7 @@ describe('AppSidebar Permission Logic', () => {
         lastOrganizationIdByUser: {},
         setCurrentOrganizationId: vi.fn(),
         rememberOrganizationForUser: vi.fn(),
+        forgetOrganizationForUser: vi.fn(),
         resetOrganizationState: vi.fn(),
       });
 

@@ -32,17 +32,28 @@ const EMPTY_ORGANIZATIONS: readonly Organization[] = [];
  *
  * Both an empty and a revoked selection fall back to the remembered
  * organization while the caller is still a member of it, otherwise the first.
+ * A remembered organization the caller has left is forgotten.
  *
  * The snapshot is what re-arms it: a fresh organization list is new evidence,
  * so an id that was written back after being reconciled gets reconsidered
  * rather than staying pinned until the component happens to unmount.
  */
-export function useReconcileCurrentOrganization(
-  membership: OrganizationMembership,
-  currentOrganizationId: Id,
-  setCurrentOrganizationId: (organizationId: Id) => void,
-  rememberedOrganizationId: Option<Id>
-): void {
+export interface ReconcileCurrentOrganizationOptions {
+  membership: OrganizationMembership;
+  currentOrganizationId: Id;
+  setCurrentOrganizationId: (organizationId: Id) => void;
+  rememberedOrganizationId: Option<Id>;
+  /** Must be stable across renders; it is an effect dependency. */
+  forgetRememberedOrganization: () => void;
+}
+
+export function useReconcileCurrentOrganization({
+  membership,
+  currentOrganizationId,
+  setCurrentOrganizationId,
+  rememberedOrganizationId,
+  forgetRememberedOrganization,
+}: ReconcileCurrentOrganizationOptions): void {
   const reconciledIds = useRef<Set<Id>>(new Set());
   const reconciledAgainst = useRef<readonly Organization[]>(EMPTY_ORGANIZATIONS);
   // A fresh Option every render; depend on the id so the effect doesn't re-run.
@@ -67,6 +78,8 @@ export function useReconcileCurrentOrganization(
       ? rememberedId
       : organizations[0]?.id ?? "";
 
+    if (rememberedId && !isRememberedAMember) forgetRememberedOrganization();
+
     if (!currentOrganizationId) {
       if (fallbackId) setCurrentOrganizationId(fallbackId);
       return;
@@ -81,5 +94,11 @@ export function useReconcileCurrentOrganization(
 
     reconciledIds.current.add(currentOrganizationId);
     setCurrentOrganizationId(fallbackId);
-  }, [membership, currentOrganizationId, setCurrentOrganizationId, rememberedId]);
+  }, [
+    membership,
+    currentOrganizationId,
+    setCurrentOrganizationId,
+    rememberedId,
+    forgetRememberedOrganization,
+  ]);
 }

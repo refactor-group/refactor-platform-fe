@@ -16,6 +16,7 @@ export const useCurrentOrganization = () => {
     lastOrganizationIdByUser,
     setCurrentOrganizationId,
     rememberOrganizationForUser,
+    forgetOrganizationForUser,
     resetOrganizationState,
   } = useOrganizationStateStore((state) => state);
 
@@ -39,6 +40,7 @@ export const useCurrentOrganization = () => {
     // Actions
     setCurrentOrganizationId,
     rememberOrganizationForUser,
+    forgetOrganizationForUser,
     resetOrganizationState,
     refresh,
   };

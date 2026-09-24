@@ -17,6 +17,7 @@ const h = vi.hoisted(() => ({
   setCurrentOrganizationId: vi.fn(),
   lastOrganizationIdByUser: {} as Record<string, string>,
   rememberOrganizationForUser: vi.fn(),
+  forgetOrganizationForUser: vi.fn(),
   sidebar: {
     state: "expanded" as string,
     isMobile: false,
@@ -46,6 +47,7 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
     setCurrentOrganizationId: h.setCurrentOrganizationId,
     lastOrganizationIdByUser: h.lastOrganizationIdByUser,
     rememberOrganizationForUser: h.rememberOrganizationForUser,
+    forgetOrganizationForUser: h.forgetOrganizationForUser,
   }),
 }));
 
@@ -162,6 +164,15 @@ describe("OrganizationSwitcher — remembering the last organization", () => {
 
     render(<OrganizationSwitcher />);
 
+    expect(h.setCurrentOrganizationId).toHaveBeenCalledWith("org-1");
+  });
+
+  it("forgets the user's remembered organization once they leave it", () => {
+    h.lastOrganizationIdByUser = { "user-1": "org-gone" };
+
+    render(<OrganizationSwitcher />);
+
+    expect(h.forgetOrganizationForUser).toHaveBeenCalledWith("user-1");
     expect(h.setCurrentOrganizationId).toHaveBeenCalledWith("org-1");
   });
 

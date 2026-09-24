@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createOrganizationStateStore } from '@/lib/stores/organization-state-store'
+import {
+  createOrganizationStateStore,
+  MAX_REMEMBERED_USERS,
+} from '@/lib/stores/organization-state-store'
 
 describe('OrganizationStateStore', () => {
   let store: ReturnType<typeof createOrganizationStateStore>
@@ -108,6 +111,39 @@ describe('OrganizationStateStore', () => {
 
       expect(rehydrated.getState().currentOrganizationId).toBe('org-9')
       expect(rehydrated.getState().lastOrganizationIdByUser).toEqual({})
+    })
+
+    it('forgets only the given user', () => {
+      store.getState().rememberOrganizationForUser('user-1', 'org-2')
+      store.getState().rememberOrganizationForUser('user-2', 'org-1')
+
+      store.getState().forgetOrganizationForUser('user-1')
+
+      expect(store.getState().lastOrganizationIdByUser).toEqual({ 'user-2': 'org-1' })
+    })
+
+    it('evicts the least recently remembered user past the cap', () => {
+      for (let i = 0; i <= MAX_REMEMBERED_USERS; i++) {
+        store.getState().rememberOrganizationForUser(`user-${i}`, 'org-1')
+      }
+
+      const remembered = store.getState().lastOrganizationIdByUser
+      expect(Object.keys(remembered)).toHaveLength(MAX_REMEMBERED_USERS)
+      expect(remembered).not.toHaveProperty('user-0')
+      expect(remembered).toHaveProperty(`user-${MAX_REMEMBERED_USERS}`)
+    })
+
+    it('keeps a user who picks again from being evicted', () => {
+      for (let i = 0; i < MAX_REMEMBERED_USERS; i++) {
+        store.getState().rememberOrganizationForUser(`user-${i}`, 'org-1')
+      }
+      store.getState().rememberOrganizationForUser('user-0', 'org-2')
+      store.getState().rememberOrganizationForUser('user-new', 'org-1')
+
+      const remembered = store.getState().lastOrganizationIdByUser
+      expect(Object.keys(remembered)).toHaveLength(MAX_REMEMBERED_USERS)
+      expect(remembered).toHaveProperty('user-0', 'org-2')
+      expect(remembered).not.toHaveProperty('user-1')
     })
   })
 })

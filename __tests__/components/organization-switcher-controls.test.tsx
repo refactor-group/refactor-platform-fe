@@ -44,6 +44,7 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
     lastOrganizationIdByUser: {},
     setCurrentOrganizationId: h.setCurrentOrganizationId,
     rememberOrganizationForUser: vi.fn(),
+    forgetOrganizationForUser: vi.fn(),
   }),
 }));
 

@@ -10,11 +10,21 @@ interface OrganizationState {
 interface OrganizationStateActions {
   setCurrentOrganizationId: (organizationId: Id) => void;
   rememberOrganizationForUser: (userId: Id, organizationId: Id) => void;
+  forgetOrganizationForUser: (userId: Id) => void;
   resetOrganizationState(): void;
 }
 
 export type OrganizationStateStore = OrganizationState &
   OrganizationStateActions;
+
+// Bounds what a shared browser accumulates; the oldest choice is dropped first.
+export const MAX_REMEMBERED_USERS = 10;
+
+function withoutUser(remembered: Record<Id, Id>, userId: Id): Record<Id, Id> {
+  return Object.fromEntries(
+    Object.entries(remembered).filter(([id]) => id !== userId)
+  );
+}
 
 export const defaultInitState: OrganizationState = {
   currentOrganizationId: "",
@@ -35,12 +45,21 @@ export const createOrganizationStateStore = (
           },
           rememberOrganizationForUser: (userId: Id, organizationId: Id) => {
             if (!userId || !organizationId) return;
-            set({
-              lastOrganizationIdByUser: {
-                ...get().lastOrganizationIdByUser,
-                [userId]: organizationId,
-              },
+            // Re-inserting moves the user to the most recent end.
+            const entries = Object.entries({
+              ...withoutUser(get().lastOrganizationIdByUser, userId),
+              [userId]: organizationId,
             });
+            set({
+              lastOrganizationIdByUser: Object.fromEntries(
+                entries.slice(-MAX_REMEMBERED_USERS)
+              ),
+            });
+          },
+          forgetOrganizationForUser: (userId: Id) => {
+            const remembered = get().lastOrganizationIdByUser;
+            if (!(userId in remembered)) return;
+            set({ lastOrganizationIdByUser: withoutUser(remembered, userId) });
           },
           resetOrganizationState(): void {
             // Logout clears everything except the per-user choices.

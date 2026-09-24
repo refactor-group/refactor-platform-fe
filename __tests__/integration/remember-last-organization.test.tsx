@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DateTime } from 'ts-luxon';
@@ -40,14 +41,20 @@ function useSignedInOrganization(
   const currentOrganizationId = useStore(store, (s) => s.currentOrganizationId);
   const setCurrentOrganizationId = useStore(store, (s) => s.setCurrentOrganizationId);
   const lastOrganizationIdByUser = useStore(store, (s) => s.lastOrganizationIdByUser);
+  const forgetOrganizationForUser = useStore(store, (s) => s.forgetOrganizationForUser);
   const remembered = lastOrganizationIdByUser[userId];
+  const forgetRememberedOrganization = useCallback(
+    () => forgetOrganizationForUser(userId),
+    [forgetOrganizationForUser, userId]
+  );
 
-  useReconcileCurrentOrganization(
+  useReconcileCurrentOrganization({
     membership,
     currentOrganizationId,
     setCurrentOrganizationId,
-    remembered ? Some(remembered) : None
-  );
+    rememberedOrganizationId: remembered ? Some(remembered) : None,
+    forgetRememberedOrganization,
+  });
 }
 
 function logIn(store: OrganizationStore, userId: Id, membership: OrganizationMembership) {
@@ -92,6 +99,7 @@ describe('Remembering the last organization across logins', () => {
     logOut(store, session);
     session = logIn(store, 'user-1', loaded([ACME]));
     expect(store.getState().currentOrganizationId).toBe('org-1');
+    expect(store.getState().lastOrganizationIdByUser).toEqual({});
     session.unmount();
   });
 });
