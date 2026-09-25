@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 
 import { FocusedPanel, isFocusedPanel } from "@/types/coaching-session-layout";
+import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 
 // ── Coaching session layout state machine ──────────────────────────────
 //
@@ -169,9 +170,8 @@ const TRANSCRIPT_PARAM = "transcript";
 const FOCUS_PARAM = "focus";
 
 export function useCoachingSessionLayout(): CoachingSessionLayout {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const replaceSearchParams = useReplaceSearchParams();
 
   const slots = readSlotsFromParams(searchParams);
   const [goalsExpandedOverride, setGoalsExpandedOverride] = useState<boolean>(false);
@@ -196,7 +196,7 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
         nextSlots.focusedPanel !== currentSlots.focusedPanel ||
         nextSlots.isTranscriptOpen !== currentSlots.isTranscriptOpen
       ) {
-        writeSlotsToUrl(router, pathname, searchParams, nextSlots);
+        replaceSearchParams((p) => writeSlotsToParams(p, nextSlots));
       }
       if (next.shape === LayoutShape.Docked) {
         setGoalsExpandedOverride(next.goalsExpanded);
@@ -204,7 +204,7 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
         setGoalsExpandedOverride(false);
       }
     },
-    [router, pathname, searchParams]
+    [replaceSearchParams, searchParams]
   );
 
   const openTranscript = useCallback(
@@ -282,19 +282,11 @@ function readSlotsFromParams(
   return { focusedPanel, isTranscriptOpen };
 }
 
-function writeSlotsToUrl(
-  router: ReturnType<typeof useRouter>,
-  pathname: string,
-  existing: ReadonlyURLSearchParams | null,
-  slots: LayoutSlots
-): void {
-  const next = new URLSearchParams(existing ?? undefined);
-  if (slots.focusedPanel === FocusedPanel.None) next.delete(FOCUS_PARAM);
-  else next.set(FOCUS_PARAM, slots.focusedPanel);
-  if (slots.isTranscriptOpen) next.set(TRANSCRIPT_PARAM, "1");
-  else next.delete(TRANSCRIPT_PARAM);
-  const qs = next.toString();
-  router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+function writeSlotsToParams(params: URLSearchParams, slots: LayoutSlots): void {
+  if (slots.focusedPanel === FocusedPanel.None) params.delete(FOCUS_PARAM);
+  else params.set(FOCUS_PARAM, slots.focusedPanel);
+  if (slots.isTranscriptOpen) params.set(TRANSCRIPT_PARAM, "1");
+  else params.delete(TRANSCRIPT_PARAM);
 }
 
 // ── State <-> slots conversions ──────────────────────────────────────
