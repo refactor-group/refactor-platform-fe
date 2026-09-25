@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useRouter, useParams, useSearchParams, usePathname } from 'next/navigation'
 import CoachingSessionsPage from '@/app/coaching-sessions/[id]/page'
 import { TestProviders } from '@/test-utils/providers'
@@ -80,14 +80,20 @@ vi.mock('@/lib/hooks/use-sidebar', () => ({
 }))
 
 vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
-  CoachingSessionPanel: ({ afterSessionLock, noteSelection }: any) => (
+  CoachingSessionPanel: ({ afterSessionLock, noteSelection, onSectionChange }: any) => (
     <div
       data-testid="coaching-session-panel"
       data-sections-scope={afterSessionLock?.sections ?? 'None'}
       data-newtopic-scope={afterSessionLock?.newTopic ?? 'None'}
       data-draft-section={noteSelection?.some ? noteSelection.val.section : ''}
       data-draft-text={noteSelection?.some ? noteSelection.val.text : ''}
-    >Goals</div>
+    >
+      Goals
+      <button
+        data-testid="trigger-section-topics"
+        onClick={() => onSectionChange('topics')}
+      >Topics</button>
+    </div>
   )
 }))
 
@@ -652,6 +658,8 @@ describe('CoachingSessionsPage - Add from notes selection', () => {
     ;(useParams as any).mockReturnValue({ id: 'session-123' })
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
     ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
+    // PR preview: the browser path carries basePath, usePathname() doesn't
+    window.history.replaceState({}, '', '/pr-428/coaching-sessions/session-123')
     mockRoleAsCoach()
 
     vi.mocked(useCurrentCoachingSession).mockReturnValue({
@@ -675,6 +683,10 @@ describe('CoachingSessionsPage - Add from notes selection', () => {
       resetCoachingRelationshipState: vi.fn(),
       refresh: vi.fn(),
     })
+  })
+
+  afterEach(() => {
+    window.history.replaceState({}, '', '/')
   })
 
   it.each([
@@ -703,12 +715,26 @@ describe('CoachingSessionsPage - Add from notes selection', () => {
       // agreements, goals) pins panel=<section>.
       await waitFor(() => {
         expect(mockReplace).toHaveBeenCalledWith(
-          expect.stringContaining(`panel=${section}`),
+          `/coaching-sessions/session-123?panel=${section}`,
           expect.objectContaining({ scroll: false })
         )
       })
     }
   )
+
+  it('drops the panel param for the default Topics section', async () => {
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams('panel=goals'))
+    const user = userEvent.setup()
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+
+    await user.click(screen.getByTestId('trigger-section-topics'))
+
+    expect(mockReplace).toHaveBeenCalledWith('/coaching-sessions/session-123', { scroll: false })
+  })
 
   it('ignores a whitespace-only selection (no draft, no URL change)', async () => {
     const user = userEvent.setup()

@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import { toast } from "sonner";
 import { ItemStatus } from "@/types/general";
@@ -206,6 +206,13 @@ describe("ActionsPageContainer", () => {
       refresh: vi.fn(),
       prefetch: vi.fn(),
     } as any);
+    // PR preview: the browser path carries basePath, usePathname() doesn't
+    window.history.replaceState({}, "", "/pr-428/actions");
+    vi.mocked(usePathname).mockReturnValue("/actions");
+  });
+
+  afterEach(() => {
+    window.history.replaceState({}, "", "/");
   });
 
   // Helper: column headers are rendered as <h3> elements
@@ -376,7 +383,7 @@ describe("ActionsPageContainer", () => {
     const mockRouter = vi.mocked(useRouter).mock.results[0].value;
     await waitFor(() => {
       expect(mockRouter.replace).toHaveBeenCalledWith(
-        expect.stringContaining("status=all"),
+        "/actions?status=all",
         { scroll: false }
       );
     });
@@ -458,7 +465,7 @@ describe("ActionsPageContainer", () => {
     const mockRouter = vi.mocked(useRouter).mock.results[0].value;
     await waitFor(() => {
       expect(mockRouter.replace).toHaveBeenCalledWith(
-        expect.stringContaining("assignment=unassigned"),
+        "/actions?assignment=unassigned",
         { scroll: false }
       );
     });
@@ -487,7 +494,7 @@ describe("ActionsPageContainer", () => {
     const mockRouter = vi.mocked(useRouter).mock.results[0].value;
     await waitFor(() => {
       expect(mockRouter.replace).toHaveBeenCalledWith(
-        expect.not.stringContaining("assignment="),
+        "/actions",
         { scroll: false }
       );
     });
@@ -518,7 +525,7 @@ describe("ActionsPageContainer", () => {
     await waitFor(() => {
       // URL should have no query string since all filters are at defaults
       expect(mockRouter.replace).toHaveBeenCalledWith(
-        expect.not.stringContaining("status="),
+        "/actions",
         { scroll: false }
       );
     });

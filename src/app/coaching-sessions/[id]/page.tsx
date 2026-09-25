@@ -24,11 +24,12 @@ import { useUiPreferencesStore } from "@/lib/providers/ui-preferences-state-stor
 import { TranscriptionStatus } from "@/types/transcription";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
 import { useCoachingSessionLayout } from "@/lib/hooks/use-coaching-session-layout";
+import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
@@ -123,9 +124,9 @@ function computeGridColumns(
 }
 
 export default function CoachingSessionsPage() {
-  const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const replaceSearchParams = useReplaceSearchParams();
 
   // Panel section persisted via URL param "panel".
   // Also recognize the legacy "tab" param so old bookmarks still work.
@@ -157,21 +158,13 @@ export default function CoachingSessionsPage() {
 
   const handlePanelSectionChange = useCallback(
     (section: PanelSection) => {
-      const newSearchParams = new URLSearchParams(searchParams);
-      if (section === PanelSection.Topics) {
+      replaceSearchParams((p) => {
         // Remove panel parameter for the default section to keep URL clean
-        newSearchParams.delete("panel");
-      } else {
-        newSearchParams.set("panel", section);
-      }
-
-      const newUrl = newSearchParams.toString()
-        ? `${window.location.pathname}?${newSearchParams.toString()}`
-        : window.location.pathname;
-
-      router.replace(newUrl, { scroll: false });
+        if (section === PanelSection.Topics) p.delete("panel");
+        else p.set("panel", section);
+      });
     },
-    [searchParams, router]
+    [replaceSearchParams]
   );
 
   // Bridge the notes "Add as …" affordance to the panel: a selection becomes a

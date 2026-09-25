@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import { DateTime } from "ts-luxon";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -79,30 +80,25 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // ---------------------------------------------------------------------------
 
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const replaceSearchParams = useReplaceSearchParams();
   const updateQueryParams = useCallback(
     (updates: Record<string, string | undefined>) => {
-      const next = new URLSearchParams(searchParams);
-      for (const [key, value] of Object.entries(updates)) {
-        if (value === undefined) {
-          next.delete(key);
-        } else {
-          next.set(key, value);
+      replaceSearchParams((next) => {
+        for (const [key, value] of Object.entries(updates)) {
+          if (value === undefined) {
+            next.delete(key);
+          } else {
+            next.set(key, value);
+          }
         }
-      }
-      // Omit default values to keep the URL clean
-      if (next.get("status") === DEFAULT_STATUS) next.delete("status");
-      if (next.get("range") === DEFAULT_RANGE) next.delete("range");
-      if (next.get("view") === DEFAULT_VIEW) next.delete("view");
-      if (next.get("assignment") === DEFAULT_ASSIGNMENT) next.delete("assignment");
-
-      const qs = next.toString();
-      const url = qs
-        ? `${window.location.pathname}?${qs}`
-        : window.location.pathname;
-      router.replace(url, { scroll: false });
+        // Omit default values to keep the URL clean
+        if (next.get("status") === DEFAULT_STATUS) next.delete("status");
+        if (next.get("range") === DEFAULT_RANGE) next.delete("range");
+        if (next.get("view") === DEFAULT_VIEW) next.delete("view");
+        if (next.get("assignment") === DEFAULT_ASSIGNMENT) next.delete("assignment");
+      });
     },
-    [searchParams, router]
+    [replaceSearchParams]
   );
 
   // ---------------------------------------------------------------------------
