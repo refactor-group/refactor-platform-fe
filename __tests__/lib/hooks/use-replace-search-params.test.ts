@@ -45,7 +45,7 @@ describe("useReplaceSearchParams", () => {
     expect(mockReplace).toHaveBeenCalledWith("/actions", { scroll: false });
   });
 
-  it("keeps basePath out of the URL it passes to the router (#475)", () => {
+  it("keeps basePath out of the URL it passes to the router", () => {
     window.history.replaceState({}, "", "/pr-428/actions");
     const { result } = renderHook(() => useReplaceSearchParams());
 

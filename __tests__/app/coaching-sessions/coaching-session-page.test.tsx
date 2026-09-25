@@ -658,7 +658,7 @@ describe('CoachingSessionsPage - Add from notes selection', () => {
     ;(useParams as any).mockReturnValue({ id: 'session-123' })
     ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
     ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
-    // PR preview (#475): the browser path carries basePath, usePathname() doesn't
+    // PR preview: the browser path carries basePath, usePathname() doesn't
     window.history.replaceState({}, '', '/pr-428/coaching-sessions/session-123')
     mockRoleAsCoach()
 

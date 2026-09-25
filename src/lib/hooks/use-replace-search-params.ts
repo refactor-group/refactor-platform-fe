@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 /**
  * Returns a function that edits the current URL's query params in place.
  * The path comes from `usePathname()`, which excludes `basePath`; the raw
- * browser path would get it prepended twice by `router.replace` (#475).
+ * browser path would get it prepended twice by `router.replace`.
  */
 export function useReplaceSearchParams(): (
   update: (params: URLSearchParams) => void

@@ -206,7 +206,7 @@ describe("ActionsPageContainer", () => {
       refresh: vi.fn(),
       prefetch: vi.fn(),
     } as any);
-    // PR preview (#475): the browser path carries basePath, usePathname() doesn't
+    // PR preview: the browser path carries basePath, usePathname() doesn't
     window.history.replaceState({}, "", "/pr-428/actions");
     vi.mocked(usePathname).mockReturnValue("/actions");
   });
