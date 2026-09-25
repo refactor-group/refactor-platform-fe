@@ -24,7 +24,7 @@ import { useUiPreferencesStore } from "@/lib/providers/ui-preferences-state-stor
 import { TranscriptionStatus } from "@/types/transcription";
 import { EditorCacheProvider } from "@/components/ui/coaching-sessions/editor-cache-context";
 
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
@@ -126,6 +126,7 @@ export default function CoachingSessionsPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   // Panel section persisted via URL param "panel".
   // Also recognize the legacy "tab" param so old bookmarks still work.
@@ -166,12 +167,12 @@ export default function CoachingSessionsPage() {
       }
 
       const newUrl = newSearchParams.toString()
-        ? `${window.location.pathname}?${newSearchParams.toString()}`
-        : window.location.pathname;
+        ? `${pathname}?${newSearchParams.toString()}`
+        : pathname;
 
       router.replace(newUrl, { scroll: false });
     },
-    [searchParams, router]
+    [searchParams, router, pathname]
   );
 
   // Bridge the notes "Add as …" affordance to the panel: a selection becomes a

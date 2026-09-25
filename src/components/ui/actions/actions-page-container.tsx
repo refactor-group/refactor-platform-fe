@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -80,6 +80,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const updateQueryParams = useCallback(
     (updates: Record<string, string | undefined>) => {
       const next = new URLSearchParams(searchParams);
@@ -97,12 +98,10 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
       if (next.get("assignment") === DEFAULT_ASSIGNMENT) next.delete("assignment");
 
       const qs = next.toString();
-      const url = qs
-        ? `${window.location.pathname}?${qs}`
-        : window.location.pathname;
+      const url = qs ? `${pathname}?${qs}` : pathname;
       router.replace(url, { scroll: false });
     },
-    [searchParams, router]
+    [searchParams, router, pathname]
   );
 
   // ---------------------------------------------------------------------------
