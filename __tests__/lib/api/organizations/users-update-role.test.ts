@@ -159,16 +159,23 @@ describe("useUserMutation().updateRole", () => {
   });
 
   it("does not touch the signed-in user's session roles", async () => {
-    stubEndpoints();
+    const { getCalls } = stubEndpoints();
     const before = structuredClone(authState.userSession.roles);
     const { result } = renderHarness();
 
     await waitFor(() => expect(result.current.list.users).toHaveLength(1));
+    const getsBeforePut = getCalls.length;
 
     await act(async () => {
       await result.current.mutation.updateRole(ORG_ID, USER_ID, Role.Admin);
     });
 
     expect(authState.userSession.roles).toEqual(before);
+
+    // Let the delayed revalidation land before jsdom tears down.
+    await waitFor(() => expect(getCalls.length).toBeGreaterThan(getsBeforePut));
+    await waitFor(() =>
+      expect(result.current.list.users[0].roles[0].role).toBe(Role.Admin)
+    );
   });
 });
