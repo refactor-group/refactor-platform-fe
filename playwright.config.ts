@@ -5,6 +5,8 @@ const isCI = !!process.env.CI;
 export default defineConfig({
   testDir: './__tests__',
   testMatch: '**/*.spec.ts',
+  /* Live specs need a seeded backend; don't load them unless LIVE_E2E is set. */
+  testIgnore: process.env.LIVE_E2E ? [] : '**/*-live.spec.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
