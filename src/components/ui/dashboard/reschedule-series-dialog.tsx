@@ -225,6 +225,7 @@ function RescheduleSeriesForm({
         <Calendar
           mode="single"
           selected={sessionDate}
+          defaultMonth={sessionDate}
           onSelect={(date) => setSessionDate(date)}
         />
       </div>

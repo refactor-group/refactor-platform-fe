@@ -8,6 +8,7 @@ import { TestProviders } from "@/test-utils/providers";
 import { EntityApiError } from "@/types/general";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { DateTime } from "ts-luxon";
 import { createMockRelationship, createMockSession } from "../../../test-utils";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 
@@ -290,5 +291,23 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
         "Failed to update coaching session. Please try again."
       );
     });
+  });
+});
+
+describe("CoachingSessionForm – calendar initial month", () => {
+  it("opens on the month of the existing session, not the current month", () => {
+    const scheduled = DateTime.utc().plus({ months: 2 }).set({ day: 15, hour: 12 });
+    render(
+      <Wrapper>
+        <CoachingSessionForm
+          mode="update"
+          existingSession={createMockSession({ date: scheduled.toISO()! })}
+          onOpenChange={vi.fn()}
+          defaultDurationMinutes={60}
+        />
+      </Wrapper>
+    );
+
+    expect(screen.getByText(scheduled.toFormat("MMMM yyyy"))).toBeInTheDocument();
   });
 });
