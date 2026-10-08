@@ -1,4 +1,4 @@
-name: Build, Test & Push to GHCR
+name: CI
 
 on:
   push:
