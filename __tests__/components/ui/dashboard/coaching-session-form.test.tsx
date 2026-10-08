@@ -1,6 +1,6 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
 import type { ReactNode } from "react";
 import CoachingSessionForm from "@/components/ui/dashboard/coaching-session-form";
@@ -295,8 +295,17 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
 });
 
 describe("CoachingSessionForm – calendar initial month", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-08T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("opens on the month of the existing session, not the current month", () => {
-    const scheduled = DateTime.utc().plus({ months: 2 }).set({ day: 15, hour: 12 });
+    const scheduled = DateTime.fromISO("2026-11-05T12:00:00Z", { zone: "utc" });
     render(
       <Wrapper>
         <CoachingSessionForm
