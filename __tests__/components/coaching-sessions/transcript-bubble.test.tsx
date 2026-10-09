@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
 
 import { TranscriptBubble } from "@/components/ui/coaching-sessions/transcript-bubble";
+import { None } from "@/types/option";
 import type { TranscriptSegment } from "@/types/transcription";
 import type { BubbleGrouping } from "@/lib/utils/transcript-group-bubbles";
 
@@ -11,6 +12,8 @@ function makeSegment(overrides: Partial<TranscriptSegment> = {}): TranscriptSegm
     id: "seg-1",
     transcription_id: "t-1",
     speaker_label: "Speaker A",
+    speaker_user_id: None,
+    speaker_role: None,
     text: "Hello, how are you?",
     start_ms: 23_000,
     end_ms: 26_000,

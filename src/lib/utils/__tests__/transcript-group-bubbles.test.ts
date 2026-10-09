@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 
 import { groupBubbles } from "../transcript-group-bubbles";
+import { None } from "@/types/option";
 import type { TranscriptSegment } from "@/types/transcription";
 
 function makeSegment(id: string, speaker: string, text = ""): TranscriptSegment {
@@ -9,6 +10,8 @@ function makeSegment(id: string, speaker: string, text = ""): TranscriptSegment 
     id,
     transcription_id: "t1",
     speaker_label: speaker,
+    speaker_user_id: None,
+    speaker_role: None,
     text,
     start_ms: 0,
     end_ms: 1_000,

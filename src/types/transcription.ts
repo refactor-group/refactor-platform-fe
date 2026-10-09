@@ -74,15 +74,16 @@ export interface Transcription {
 /**
  * A single segment of spoken text from a transcription.
  *
- * Speaker labels are raw strings from AssemblyAI (e.g. `"Speaker A"`) with
- * no backend-side mapping to user identity; the UI must be prepared to
- * display them as-is. See the implementation plan's "Speaker labels in v1"
- * section for the rationale.
+ * `speaker_label` is the coach or coachee profile name, the name a guest
+ * typed in the meeting, or `Guest N`; unique per transcript. `speaker_role`
+ * is set only for the coach and coachee, which `speaker_user_id` identifies.
  */
 export interface TranscriptSegment {
   id: Id;
   transcription_id: Id;
   speaker_label: string;
+  speaker_user_id: Option<Id>;
+  speaker_role: Option<SpeakerRole>;
   text: string;
   /** Start offset within the recording, in milliseconds. */
   start_ms: number;
@@ -119,21 +120,29 @@ export function parseTranscriptSegment(value: unknown): TranscriptSegment {
   if (typeof value !== "object" || value === null) {
     throw new Error("TranscriptSegment payload is not an object");
   }
-  const record = value as { sentiment?: unknown };
-  if (
-    record.sentiment !== undefined &&
-    !isTranscriptSegmentSentiment(record.sentiment)
-  ) {
-    const { sentiment: _drop, ...rest } = value as TranscriptSegment & {
-      sentiment?: unknown;
-    };
-    return rest as TranscriptSegment;
-  }
-  return value as TranscriptSegment;
+  const {
+    sentiment,
+    speaker_user_id: userId,
+    speaker_role: role,
+    ...rest
+  } = value as Omit<
+    TranscriptSegment,
+    "sentiment" | "speaker_user_id" | "speaker_role"
+  > & {
+    sentiment?: unknown;
+    speaker_user_id?: unknown;
+    speaker_role?: unknown;
+  };
+  return {
+    ...rest,
+    ...(isTranscriptSegmentSentiment(sentiment) ? { sentiment } : {}),
+    speaker_user_id: typeof userId === "string" ? Some(userId) : None,
+    speaker_role: isSpeakerRole(role) ? Some(role) : None,
+  };
 }
 
 /**
- * Which participant in the coaching relationship a speaker label resolved to.
+ * Which participant in the coaching relationship a speaker was attributed to.
  * Values are the exact query-param strings the download endpoint accepts.
  */
 export enum SpeakerRole {
@@ -143,47 +152,4 @@ export enum SpeakerRole {
 
 export function isSpeakerRole(value: unknown): value is SpeakerRole {
   return value === SpeakerRole.Coach || value === SpeakerRole.Coachee;
-}
-
-/**
- * A distinct speaker label and the participant the backend matched it to.
- *
- * `role` is None when the match failed. A coaching session has only the two
- * people in its relationship, so None never means a third party.
- */
-export interface Speaker {
-  label: string;
-  role: Option<SpeakerRole>;
-}
-
-/** The id-keyed transcription read, which carries the resolved speakers. */
-export interface TranscriptionWithSpeakers extends Transcription {
-  speakers: Speaker[];
-}
-
-export function parseTranscriptionWithSpeakers(
-  value: unknown
-): TranscriptionWithSpeakers {
-  const transcription = parseTranscription(value);
-  const raw = (value as { speakers?: unknown }).speakers;
-  return {
-    ...transcription,
-    speakers: Array.isArray(raw) ? raw.map(parseSpeaker) : [],
-  };
-}
-
-// Wire `role` is "coach" | "coachee" | null. Narrowed to Option here so no
-// caller downstream has to think about null.
-function parseSpeaker(value: unknown): Speaker {
-  if (typeof value !== "object" || value === null) {
-    throw new Error("Speaker payload is not an object");
-  }
-  const record = value as { label?: unknown; role?: unknown };
-  if (typeof record.label !== "string") {
-    throw new Error("Speaker payload is missing a label");
-  }
-  return {
-    label: record.label,
-    role: isSpeakerRole(record.role) ? Some(record.role) : None,
-  };
 }

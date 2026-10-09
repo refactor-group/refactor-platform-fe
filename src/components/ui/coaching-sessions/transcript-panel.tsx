@@ -38,7 +38,6 @@ import { useMeetingRecording } from "@/lib/api/meeting-recordings";
 import {
   useTranscription,
   useTranscriptionSegments,
-  useTranscriptionSpeakers,
 } from "@/lib/api/transcriptions";
 import type { Id } from "@/types/general";
 
@@ -171,13 +170,7 @@ function TranscriptPanelWithData({
     [filter.visibleSegments, segments]
   );
 
-  // The panel filters on raw labels; the download endpoint takes a
-  // coach/coachee enum. This is the only bridge between the two.
-  const { speakers, isLoaded } = useTranscriptionSpeakers(
-    sessionId,
-    transcriptionId
-  );
-  const downloadScope = downloadScopeFor(filter.value, speakers, isLoaded);
+  const downloadScope = downloadScopeFor(filter.value, segments);
 
   return (
     <>

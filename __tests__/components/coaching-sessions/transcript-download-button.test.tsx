@@ -75,13 +75,6 @@ describe("TranscriptDownloadButton — blocked states", () => {
     expect(button).not.toBeDisabled();
   });
 
-  it("blocks while the speakers list is unavailable", () => {
-    renderButton({ kind: "speakers-unavailable" });
-    expect(
-      screen.getByRole("button", { name: "Download transcript" })
-    ).toHaveAttribute("aria-disabled", "true");
-  });
-
   // The reason belongs in the tooltip, not the accessible name: a screen
   // reader hearing only "Switch to All to download" has no idea which control
   // it is on, while a sighted user still sees the download icon.
