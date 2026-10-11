@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -172,7 +172,16 @@ function TranscriptPanelWithData({
   const search = useTranscriptSearch(filter.visibleSegments, {
     scrollContainerRef,
   });
-  const marked = useSegmentJump(jumpTo, segments, filter, scrollContainerRef);
+  const jumped = useSegmentJump(jumpTo, segments, filter, scrollContainerRef);
+
+  // Typing a search clears the current jump mark; the next jump marks again.
+  const [clearedNonce, setClearedNonce] = useState<Option<number>>(None);
+  const marked =
+    jumpTo.some && clearedNonce.some && clearedNonce.val === jumpTo.val.nonce ? None : jumped;
+  const handleQueryChange = (next: string) => {
+    search.setQuery(next);
+    if (next.trim() && jumpTo.some) setClearedNonce(Some(jumpTo.val.nonce));
+  };
 
   // Search highlighting wins over the jump mark so marks never nest.
   const renderText = (segment: TranscriptSegment) => {
@@ -214,7 +223,7 @@ function TranscriptPanelWithData({
       <div className="shrink-0 px-4 pt-3 pb-2 space-y-2 border-b border-border/60">
         <TranscriptSearch
           query={search.query}
-          onQueryChange={search.setQuery}
+          onQueryChange={handleQueryChange}
           totalMatches={search.totalMatches}
           activeIndex={search.activeIndex}
           onPrev={search.goPrev}

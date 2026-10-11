@@ -221,6 +221,14 @@ Filter the transcript to the other speaker, then jump.
 
 **Pass:** the filter is reset so the segment is visible and marked.
 
+### Case F5: searching clears the quote mark
+
+Jump to a quote, then type a search term that appears elsewhere in the transcript. Clear the
+search, then jump from a quote again.
+
+**Pass:** as soon as you type, the quote's mark disappears and only the search matches are
+highlighted. Clearing the search does not bring the old mark back; the next jump marks its quote.
+
 ## 8. Part G: live sync
 
 Both browsers on the same session, Actions panel open.
@@ -316,6 +324,7 @@ Escape closes the edit form and the confirm row.
 | F2 |  |  |
 | F3 |  |  |
 | F4 |  |  |
+| F5 |  |  |
 | G1 |  |  |
 | G2 |  |  |
 | H1 |  |  |
