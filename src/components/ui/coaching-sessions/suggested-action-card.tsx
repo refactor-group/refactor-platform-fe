@@ -478,6 +478,8 @@ function SuggestionDueLabel({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const openAtPress = useRef(false);
+  const toggledByTouch = useRef(false);
+  const lastPointer = useRef("mouse");
   const due = suggestionDue(suggestion, locale);
   const kind = due.spoken ? "spoken" : "default";
 
@@ -512,25 +514,46 @@ function SuggestionDueLabel({
   }
 
   // Radix closes on pointerdown before the click lands, so toggle from the state at press time.
+  // Safari sends no click after a prevented touch press, so touch toggles on pointerup instead.
   const keepOpen = (e: PointerEvent) => {
+    lastPointer.current = e.pointerType;
     openAtPress.current = open;
     e.preventDefault();
   };
+  const toggleOnTouch = (e: PointerEvent) => {
+    if (e.pointerType === "mouse") return;
+    toggledByTouch.current = true;
+    setOpen(!openAtPress.current);
+  };
   const toggle = (e: MouseEvent) => {
     e.preventDefault();
+    if (toggledByTouch.current) {
+      toggledByTouch.current = false;
+      return;
+    }
     // A keyboard click (detail 0) has no press, so it toggles from the current state.
     setOpen(e.detail === 0 ? !open : !openAtPress.current);
   };
 
   return (
-    <Tooltip open={open} onOpenChange={setOpen}>
+    <Tooltip
+      open={open}
+      // After a touch, Radix's hover and dismiss logic would undo the tap, so only a mouse drives it.
+      onOpenChange={(next) => {
+        if (lastPointer.current === "mouse") setOpen(next);
+      }}
+    >
       <TooltipTrigger asChild>
         <button
           ref={triggerRef}
           type="button"
           data-testid="suggested-action-due"
           data-due-kind={kind}
+          onPointerEnter={(e) => {
+            if (e.pointerType === "mouse") lastPointer.current = "mouse";
+          }}
           onPointerDown={keepOpen}
+          onPointerUp={toggleOnTouch}
           onClick={toggle}
           className={cn(
             "cursor-help tabular-nums underline decoration-dotted decoration-muted-foreground/50 underline-offset-[3px] max-md:min-h-10",

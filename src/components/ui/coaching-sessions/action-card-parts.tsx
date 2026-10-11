@@ -191,7 +191,7 @@ export function AssigneePickerPopover({
         </TooltipTrigger>
         <TooltipContent>Assignees</TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-48 p-2">
+      <PopoverContent className="w-48 p-2" collisionPadding={8}>
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-muted-foreground px-2 py-1">
             Assignees
