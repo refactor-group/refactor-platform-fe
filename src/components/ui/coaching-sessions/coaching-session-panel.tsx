@@ -32,8 +32,10 @@ import { usePanelActions } from "@/lib/hooks/use-panel-actions";
 import {
   useActionSuggestionList,
   useDismissedActionSuggestionList,
+  useScanStatus,
 } from "@/lib/api/transcript-suggestions";
 import { useSuggestionReview } from "@/lib/hooks/use-suggestion-review";
+import { useSuggestionScan } from "@/lib/hooks/use-suggestion-scan";
 import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
@@ -42,7 +44,7 @@ import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
-import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
+import type { ActionEdits, ActionSuggestion, ScanStatus } from "@/types/transcript-suggestion";
 import { RelationshipRole } from "@/types/relationship-role";
 import {
   isLockedFor,
@@ -138,6 +140,9 @@ export interface CoachingSessionPanelSharedProps {
   onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
   onSuggestionRestore?: (s: ActionSuggestion) => Promise<boolean>;
   onShowInTranscript?: (segmentId: Id) => void;
+  /** None while loading; suggestions never lock, so neither does the scan. */
+  scanStatus: Option<ScanStatus>;
+  onStartScan: () => void;
   /** Maps coaching_session_id → session date for "view source session" links */
   sessionDateMap: Map<Id, DateTime>;
   /** Undefined while the coaching relationship is still loading from SWR */
@@ -854,6 +859,8 @@ export function CoachingSessionPanel({
     refreshActions,
     refreshGoalProgress: revalidateGoalProgress,
   });
+  const { status: scanStatus, refresh: refreshScanStatus } = useScanStatus(coachingSessionId);
+  const suggestionScan = useSuggestionScan(coachingSessionId, refreshScanStatus);
 
   const [isAddingAction, setIsAddingAction] = useState(false);
   const [activeActionTab, setActiveActionTab] = useState<ActionTab>("new");
@@ -1266,6 +1273,8 @@ export function CoachingSessionPanel({
     onSuggestionDismiss: suggestionReview.dismiss,
     onSuggestionRestore: suggestionReview.restore,
     onShowInTranscript,
+    scanStatus,
+    onStartScan: suggestionScan.start,
     sessionDateMap,
     coachId,
     coachName,

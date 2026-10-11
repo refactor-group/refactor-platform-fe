@@ -318,6 +318,76 @@ Tab through a card, the edit form, the confirm row and the Dismissed section, wi
 a sensible name (for example "Accept", "Show in transcript: Jane Smith · 12:34").
 Escape closes the edit form and the confirm row.
 
+## 11. Part J: the rescan button
+
+The **Scan transcript for suggested actions** button sits just left of **Add** in the Actions
+header. The SQL that sets a scan to `failed`, `processing` or never-scanned lives in the backend
+plan's Part G (G2, G3, G4); run it there rather than copying it here. Keep both browsers on the
+session with the Actions panel open.
+
+### Case J1: hidden with nothing to scan
+
+Open a session with no transcript. Then, on a session with a transcript, stop the backend, unset
+the AssemblyAI key, start it again and reload.
+
+**Pass:** in both cases the Actions header shows **Add** but no scan button. Switching to Topics,
+Goals or Agreements never shows it either.
+
+### Case J2: a transcript that was never scanned
+
+Delete the session's analysis row (backend Part G3), reload, hover the button, then press it.
+
+**Pass:** the tooltip reads "Scan the transcript for suggested actions". Pressing it turns the icon
+into a spinner and the button greys out; suggested action cards arrive without a refresh, and the
+button then stays greyed out with the completed tooltip.
+
+### Case J3: retrying a failed scan
+
+Set the analysis row to `failed` (backend Part G2), reload, hover the button, then press it.
+
+**Pass:** the tooltip reads "The last scan failed. Scan the transcript again for suggested
+actions". Pressing it starts the spinner, and the suggested actions appear live once the scan
+finishes.
+
+### Case J4: disabled while a scan runs
+
+Set the row to `processing` (backend Part G4) and reload. Hover, press, and Tab to the button.
+
+**Pass:** the icon spins and the button is greyed out. The tooltip reads "Scanning the transcript
+for suggested actions…" on hover, on focus and after a press, and pressing it starts nothing (no
+POST in the Network tab).
+
+### Case J5: disabled after it completes
+
+On a session whose scan completed, hover the button; then, at 390px or on a phone, open the
+Actions sheet and tap it twice.
+
+**Pass:** the button is greyed out and not spinning. The tooltip reads "Suggested actions were
+already made for this transcript" on hover and focus; a tap opens it, a second tap closes it, and
+pressing never sends a POST. On the phone the button is at least 40px square and the sheet does
+not scroll sideways.
+
+### Case J6: both the coach and the coachee can press it
+
+Repeat J3 once as the coach and once as the coachee.
+
+**Pass:** the scan starts for each, with no permission error.
+
+### Case J7: the coachee after the session day
+
+As the coachee, open a session whose date has passed (the after-session lock applies).
+
+**Pass:** **Add** is gone from the Actions header but the scan button is still there and works as
+in J2 to J5.
+
+### Case J8: the other browser follows along
+
+With the row set to `failed`, press the button in the coach's browser while watching the
+coachee's.
+
+**Pass:** without a refresh, the coachee's button starts spinning, then greys out with the
+completed tooltip once the scan finishes, and the new cards appear there too.
+
 ## Results
 
 | Case | Result | Notes |
@@ -360,3 +430,11 @@ Escape closes the edit form and the confirm row.
 | H5 |  |  |
 | I1 |  |  |
 | I2 |  |  |
+| J1 |  |  |
+| J2 |  |  |
+| J3 |  |  |
+| J4 |  |  |
+| J5 |  |  |
+| J6 |  |  |
+| J7 |  |  |
+| J8 |  |  |

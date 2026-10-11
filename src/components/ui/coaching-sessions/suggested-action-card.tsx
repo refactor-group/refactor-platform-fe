@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type {
-  ComponentPropsWithoutRef,
-  KeyboardEvent,
-  MouseEvent,
-  PointerEvent,
-} from "react";
+import type { ComponentPropsWithoutRef, KeyboardEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import { Check, Copy, FileText, Lock, Quote, Sparkles } from "lucide-react";
 import type { DateTime } from "ts-luxon";
@@ -23,6 +18,7 @@ import { ActionEditForm } from "@/components/ui/coaching-sessions/action-card-co
 import { cn } from "@/components/lib/utils";
 import { mayActOnSuggestion, suggestionDue } from "@/lib/utils/transcript-suggestions";
 import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
+import { useTapTooltip } from "@/lib/hooks/use-tap-tooltip";
 import type { Id } from "@/types/general";
 import type { Goal } from "@/types/goal";
 import { None, Some, type Option } from "@/types/option";
@@ -475,30 +471,9 @@ function SuggestionDueLabel({
   suggestion: ActionSuggestion;
   locale: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const openAtPress = useRef(false);
-  const toggledByTouch = useRef(false);
-  const lastPointer = useRef("mouse");
+  const tap = useTapTooltip();
   const due = suggestionDue(suggestion, locale);
   const kind = due.spoken ? "spoken" : "default";
-
-  // A tapped tooltip stays open until Escape or a press anywhere else, including another date.
-  useEffect(() => {
-    if (!open) return;
-    const closeOutside = (e: globalThis.PointerEvent) => {
-      if (!triggerRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const closeOnEscape = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", closeOutside);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOutside);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [open]);
   const weight = due.spoken ? "font-bold" : "font-normal";
 
   if (due.tooltip.none) {
@@ -513,48 +488,14 @@ function SuggestionDueLabel({
     );
   }
 
-  // Radix closes on pointerdown before the click lands, so toggle from the state at press time.
-  // Safari sends no click after a prevented touch press, so touch toggles on pointerup instead.
-  const keepOpen = (e: PointerEvent) => {
-    lastPointer.current = e.pointerType;
-    openAtPress.current = open;
-    e.preventDefault();
-  };
-  const toggleOnTouch = (e: PointerEvent) => {
-    if (e.pointerType === "mouse") return;
-    toggledByTouch.current = true;
-    setOpen(!openAtPress.current);
-  };
-  const toggle = (e: MouseEvent) => {
-    e.preventDefault();
-    if (toggledByTouch.current) {
-      toggledByTouch.current = false;
-      return;
-    }
-    // A keyboard click (detail 0) has no press, so it toggles from the current state.
-    setOpen(e.detail === 0 ? !open : !openAtPress.current);
-  };
-
   return (
-    <Tooltip
-      open={open}
-      // After a touch, Radix's hover and dismiss logic would undo the tap, so only a mouse drives it.
-      onOpenChange={(next) => {
-        if (lastPointer.current === "mouse") setOpen(next);
-      }}
-    >
+    <Tooltip {...tap.root}>
       <TooltipTrigger asChild>
         <button
-          ref={triggerRef}
+          {...tap.trigger}
           type="button"
           data-testid="suggested-action-due"
           data-due-kind={kind}
-          onPointerEnter={(e) => {
-            if (e.pointerType === "mouse") lastPointer.current = "mouse";
-          }}
-          onPointerDown={keepOpen}
-          onPointerUp={toggleOnTouch}
-          onClick={toggle}
           className={cn(
             "cursor-help tabular-nums underline decoration-dotted decoration-muted-foreground/50 underline-offset-[3px] max-md:min-h-10",
             weight

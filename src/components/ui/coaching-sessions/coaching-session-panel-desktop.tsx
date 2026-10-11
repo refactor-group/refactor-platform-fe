@@ -16,6 +16,7 @@ import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coac
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { TopicSectionContent } from "@/components/ui/coaching-sessions/topic-section-content";
+import { SuggestionScanButton } from "@/components/ui/coaching-sessions/suggestion-scan-button";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
@@ -75,6 +76,8 @@ export function CoachingSessionPanelDesktop({
   onSuggestionDismiss,
   onSuggestionRestore,
   onShowInTranscript,
+  scanStatus,
+  onStartScan,
   sessionDateMap,
   coachId,
   coachName,
@@ -204,6 +207,9 @@ export function CoachingSessionPanelDesktop({
               )}
             </div>
             <div className="flex items-center gap-1">
+              {!isInGoalFlow && activeSection === PanelSection.Actions && scanStatus.some && (
+                <SuggestionScanButton status={scanStatus.val} onStart={onStartScan} />
+              )}
               {!isInGoalFlow && !sectionsLocked && activeSection !== PanelSection.Topics && (
                 <Button
                   size="sm"

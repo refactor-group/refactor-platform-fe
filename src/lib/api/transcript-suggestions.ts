@@ -1,10 +1,12 @@
 // Interacts with a coaching session's transcript suggestion endpoints
 
+import { useCallback } from "react";
 import axios from "axios";
 import { err, ok, type Result } from "neverthrow";
 import { siteConfig } from "@/site.config";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { EntityApi, type ApiResponse } from "@/lib/api/entity-api";
+import { useApiSWR } from "@/lib/hooks/use-api-swr";
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
 import {
@@ -13,9 +15,11 @@ import {
   type ActionWithAssigneesWire,
 } from "@/types/action";
 import {
+  isScanStatus,
   parseActionSuggestion,
   serializeActionEdits,
   type ActionEdits,
+  ScanStatus,
   SuggestionStatus,
   type ActionSuggestion,
 } from "@/types/transcript-suggestion";
@@ -33,6 +37,10 @@ export const actionSuggestionsUrl = (sessionId: Id): string =>
 /** The session's dismissed action suggestions. */
 export const dismissedActionSuggestionsUrl = (sessionId: Id): string =>
   `${suggestionsUrl(sessionId)}?target=action&status=dismissed`;
+
+/** Where the session's transcript scan for actions stands. */
+export const scanStatusUrl = (sessionId: Id): string =>
+  `${suggestionsUrl(sessionId)}/scan?target=action`;
 
 function listUrl(sessionId: Id, status: SuggestionStatus): string {
   switch (status) {
@@ -78,6 +86,31 @@ function toSuggestionFailure(error: unknown): SuggestionFailure {
     default:
       return { kind: "unexpected", status: Some(status) };
   }
+}
+
+/** A scan that did not start, reduced to what the scan button needs. */
+export type ScanFailure =
+  | { kind: "refused"; message: Option<string> }
+  | { kind: "network" }
+  | { kind: "unexpected"; status: Option<number> };
+
+function toScanFailure(error: unknown): ScanFailure {
+  if (!axios.isAxiosError(error)) return { kind: "unexpected", status: None };
+  if (!error.response) return { kind: "network" };
+  const { status, data } = error.response;
+  return status === 409 || status === 422
+    ? { kind: "refused", message: messageOf(data) }
+    : { kind: "unexpected", status: Some(status) };
+}
+
+function parseScanStatus(value: unknown): ScanStatus {
+  const { status } = (typeof value === "object" && value !== null ? value : {}) as {
+    status?: unknown;
+  };
+  if (!isScanStatus(status)) {
+    throw new Error(`Unknown scan status: ${String(status)}`);
+  }
+  return status;
 }
 
 async function attempt<T>(
@@ -143,6 +176,20 @@ export const TranscriptSuggestionApi = {
     attempt(async () => {
       await sessionGuard.post(`${suggestionUrl(sessionId, suggestionId)}/restore`);
     }),
+
+  scanStatus: async (sessionId: Id): Promise<ScanStatus> => {
+    const res = await sessionGuard.get<ApiResponse<unknown>>(scanStatusUrl(sessionId));
+    return parseScanStatus(res.data.data);
+  },
+
+  startScan: async (sessionId: Id): Promise<Result<ScanStatus, ScanFailure>> => {
+    try {
+      const res = await sessionGuard.post<ApiResponse<unknown>>(scanStatusUrl(sessionId));
+      return ok(parseScanStatus(res.data.data));
+    } catch (error) {
+      return err(toScanFailure(error));
+    }
+  },
 };
 
 /**
@@ -180,4 +227,18 @@ export const useDismissedActionSuggestionList = (sessionId: Id) => {
     isError,
     refresh,
   };
+};
+
+/** Where the session's transcript scan for actions stands; None while loading or on error. */
+export const useScanStatus = (
+  sessionId: Id
+): { status: Option<ScanStatus>; refresh: () => void } => {
+  const { data, error, mutate } = useApiSWR<ScanStatus>(scanStatusUrl(sessionId), () =>
+    TranscriptSuggestionApi.scanStatus(sessionId)
+  );
+  const refresh = useCallback(() => {
+    void mutate();
+  }, [mutate]);
+
+  return { status: error || data === undefined ? None : Some(data), refresh };
 };

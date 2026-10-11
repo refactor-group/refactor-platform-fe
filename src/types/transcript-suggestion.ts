@@ -30,6 +30,22 @@ export enum SuggestionStatus {
   Dismissed = "dismissed",
 }
 
+/** Where a transcript's scan for suggestions stands. */
+export enum ScanStatus {
+  Unavailable = "unavailable",
+  None = "none",
+  Pending = "pending",
+  Processing = "processing",
+  Completed = "completed",
+  Failed = "failed",
+}
+
+const SCAN_STATUSES: readonly string[] = Object.values(ScanStatus);
+
+export function isScanStatus(value: unknown): value is ScanStatus {
+  return typeof value === "string" && SCAN_STATUSES.includes(value);
+}
+
 /** The Action a suggestion would create, plus the spoken due phrase. */
 export interface ActionProposal extends Action {
   due_phrase: Option<string>;
