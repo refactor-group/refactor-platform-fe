@@ -108,7 +108,7 @@ function DismissedRow({
         {proposal.body ?? ""}
       </p>
       <div className="flex min-w-0 flex-col gap-1 text-muted-foreground max-md:hidden">
-        <p className="line-clamp-2 text-xs italic leading-snug [overflow-wrap:anywhere]">
+        <p className="line-clamp-2 pr-1 text-xs italic leading-snug [overflow-wrap:anywhere]">
           “{quote}”
         </p>
         <button

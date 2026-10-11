@@ -431,7 +431,7 @@ export function ActionSectionContent({
           onRestore={onSuggestionRestore}
           onShowInTranscript={onShowInTranscript}
         />
-        {sessionActions.length === 0 && !isAddingAction ? (
+        {sessionActions.length === 0 && !isAddingAction && visibleSuggestions.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
             <p className="text-sm text-muted-foreground/50 italic">
               No actions yet

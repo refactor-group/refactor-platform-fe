@@ -142,7 +142,7 @@ function SuggestionView({
       <div className="flex min-w-0 gap-2 text-muted-foreground">
         <Quote size={12} className="mt-0.5 shrink-0 opacity-70" aria-hidden />
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="line-clamp-2 text-xs italic leading-snug [overflow-wrap:anywhere]">
+          <p className="line-clamp-2 pr-1 text-xs italic leading-snug [overflow-wrap:anywhere]">
             “{quote}”
           </p>
           <button
