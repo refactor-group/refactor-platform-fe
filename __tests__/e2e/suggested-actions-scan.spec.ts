@@ -89,7 +89,7 @@ async function mockBackend(
     }
     const message =
       backend.status === 'completed'
-        ? 'Suggested actions were already made for this transcript.'
+        ? 'Transcript already scanned for actions.'
         : 'A scan is already running.'
     return route.fulfill({
       status: 409,

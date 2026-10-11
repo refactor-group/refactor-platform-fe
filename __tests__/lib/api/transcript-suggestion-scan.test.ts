@@ -81,7 +81,7 @@ describe("starting a scan", () => {
     vi.mocked(sessionGuard.post).mockRejectedValue(
       httpError(409, {
         error: "conflict",
-        message: "Suggested actions were already made for this transcript.",
+        message: "Transcript already scanned for actions.",
       })
     );
 
@@ -89,7 +89,7 @@ describe("starting a scan", () => {
 
     expect(result.isErr() && result.error).toEqual({
       kind: "refused",
-      message: Some("Suggested actions were already made for this transcript."),
+      message: Some("Transcript already scanned for actions."),
     });
   });
 
