@@ -2,13 +2,17 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
+import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested-action-card";
 import { defaultAction } from "@/types/action";
 import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
+import { RelationshipRole } from "@/types/relationship-role";
+import type { ActionSuggestion } from "@/types/transcript-suggestion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTime } from "ts-luxon";
 
@@ -23,6 +27,10 @@ export type ActionTab = "due" | "new";
 export interface ActionSectionContentProps {
   reviewActions: Action[];
   sessionActions: Action[];
+  /** Pending transcript suggestions, shown in the New tab; never locked. */
+  actionSuggestions?: ActionSuggestion[];
+  /** Decides who may act on a suggestion. */
+  viewerRole?: RelationshipRole;
   /** Maps coaching_session_id → session date for "view source session" links on review cards */
   sessionDateMap?: Map<Id, DateTime>;
   locale: string;
@@ -52,6 +60,8 @@ export interface ActionSectionContentProps {
 export function ActionSectionContent({
   reviewActions,
   sessionActions,
+  actionSuggestions = [],
+  viewerRole = RelationshipRole.Coachee,
   sessionDateMap,
   locale,
   coachId,
@@ -183,11 +193,16 @@ export function ActionSectionContent({
             ({reviewActions.length})
           </span>
         </TabsTrigger>
-        <TabsTrigger value="new" className="flex-1 gap-1.5 py-1 text-xs" data-testid="action-tab-new">
+        <TabsTrigger value="new" className="min-w-0 flex-1 gap-1.5 py-1 text-xs" data-testid="action-tab-new">
           New
           <span className="text-[10px] font-normal text-muted-foreground/60">
             ({sessionActions.length})
           </span>
+          {actionSuggestions.length > 0 && (
+            <span className="min-w-0 truncate text-[10px] font-normal text-muted-foreground/60">
+              · {actionSuggestions.length} suggested
+            </span>
+          )}
         </TabsTrigger>
       </TabsList>
 
@@ -235,6 +250,26 @@ export function ActionSectionContent({
                 onAddingActionChange(false);
               }}
             />
+          </div>
+        )}
+        {actionSuggestions.length > 0 && (
+          <div data-testid="suggested-actions-group" className="mb-4 flex flex-col gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              Suggested from transcript
+            </div>
+            {actionSuggestions.map((suggestion) => (
+              <SuggestedActionCard
+                key={suggestion.id}
+                suggestion={suggestion}
+                viewerRole={viewerRole}
+                locale={locale}
+                coachId={coachId}
+                coachName={coachName}
+                coacheeId={coacheeId}
+                coacheeName={coacheeName}
+              />
+            ))}
           </div>
         )}
         {sessionActions.length === 0 && !isAddingAction ? (
