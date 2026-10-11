@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import {
   setupAuthentication,
   mockCommonApiRoutes,
@@ -60,6 +60,18 @@ const SUGGESTIONS = [
   ),
 ]
 
+// Opens the panel sheet and switches it to Actions as a user would.
+async function openActionsSheet(page: Page): Promise<Locator> {
+  await page.goto(`/coaching-sessions/${SESSION_ID}`)
+  const mobilePanel = page.locator('div.md\\:hidden')
+  await mobilePanel.getByRole('button').first().click()
+  // The Radix popover is also a dialog; the sheet is the one with the panel.
+  const sheet = page.getByRole('dialog').filter({ has: page.getByRole('combobox') })
+  await sheet.getByRole('combobox').click()
+  await page.getByRole('option', { name: /Actions/ }).click()
+  return sheet
+}
+
 test.describe('Suggested actions on mobile', () => {
   test.beforeEach(async ({ page, context }) => {
     await page.setViewportSize(VIEWPORT)
@@ -88,14 +100,7 @@ test.describe('Suggested actions on mobile', () => {
   })
 
   test('cards fit the screen and keep 40px touch targets', async ({ page }) => {
-    await page.goto(`/coaching-sessions/${SESSION_ID}`)
-
-    // Open the panel sheet, then switch it to Actions as a user would.
-    const mobilePanel = page.locator('div.md\\:hidden')
-    await mobilePanel.getByRole('button').first().click()
-    const sheet = page.getByRole('dialog')
-    await sheet.getByRole('combobox').click()
-    await page.getByRole('option', { name: /Actions/ }).click()
+    const sheet = await openActionsSheet(page)
 
     // The hidden desktop panel renders cards too; scope to the open sheet.
     const cards = sheet.getByTestId('suggested-action-card')
@@ -124,6 +129,41 @@ test.describe('Suggested actions on mobile', () => {
       expect(box, `button ${name} has no box`).not.toBeNull()
       expect(box!.width, `button ${name} width`).toBeGreaterThanOrEqual(40)
       expect(box!.height, `button ${name} height`).toBeGreaterThanOrEqual(40)
+    }
+  })
+
+  test('the edit form and assignee picker fit the screen', async ({ page }) => {
+    const sheet = await openActionsSheet(page)
+
+    // The viewer is not the coach; this suggestion is assigned to the coachee only.
+    const card = sheet.getByTestId('suggested-action-card').first()
+    await card.getByRole('button', { name: 'Edit before accepting' }).click()
+    await expect(card.getByRole('textbox')).toBeVisible()
+    await card.getByRole('button', { name: 'Assignees' }).click()
+    const popover = page
+      .locator('[data-radix-popper-content-wrapper]')
+      .filter({ has: page.getByRole('option') })
+    await expect(popover).toBeVisible()
+
+    const docWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+    expect(docWidth).toBeLessThanOrEqual(VIEWPORT.width)
+
+    const group = sheet.getByTestId('suggested-actions-group')
+    const { scrollWidth, clientWidth } = await group.evaluate((el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    }))
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+
+    const popoverBox = await popover.boundingBox()
+    expect(popoverBox).not.toBeNull()
+    expect(popoverBox!.x).toBeGreaterThanOrEqual(0)
+    expect(popoverBox!.x + popoverBox!.width).toBeLessThanOrEqual(VIEWPORT.width)
+
+    for (const name of ['Save', 'Cancel']) {
+      const box = await card.getByRole('button', { name }).boundingBox()
+      expect(box, `${name} has no box`).not.toBeNull()
+      expect(box!.height, `${name} height`).toBeGreaterThanOrEqual(40)
     }
   })
 })

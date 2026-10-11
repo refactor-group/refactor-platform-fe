@@ -30,6 +30,7 @@ import {
 } from "@/lib/api/coaching-session-topics";
 import { usePanelActions } from "@/lib/hooks/use-panel-actions";
 import { useActionSuggestionList } from "@/lib/api/transcript-suggestions";
+import { useSuggestionReview } from "@/lib/hooks/use-suggestion-review";
 import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
@@ -38,7 +39,7 @@ import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
-import type { ActionSuggestion } from "@/types/transcript-suggestion";
+import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
 import { RelationshipRole } from "@/types/relationship-role";
 import {
   isLockedFor,
@@ -128,6 +129,10 @@ export interface CoachingSessionPanelSharedProps {
   actionSuggestions: ActionSuggestion[];
   /** Coachee unless the viewer is the coach. */
   viewerRole: RelationshipRole;
+  /** Suggestion review stays available when the session's sections are locked. */
+  onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
+  onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
+  onSuggestionSave?: (s: ActionSuggestion, edits: ActionEdits) => Promise<boolean>;
   /** Maps coaching_session_id → session date for "view source session" links */
   sessionDateMap: Map<Id, DateTime>;
   /** Undefined while the coaching relationship is still loading from SWR */
@@ -817,13 +822,20 @@ export function CoachingSessionPanel({
     handleBodyChange,
     handleDelete: handleActionDelete,
     sessionDateMap,
+    refresh: refreshActions,
   } = usePanelActions({
     userId,
     coachingSessionId,
     coachingRelationshipId,
     sessionDate,
   });
-  const { suggestions: actionSuggestions } = useActionSuggestionList(coachingSessionId);
+  const { suggestions: actionSuggestions, refresh: refreshSuggestions } =
+    useActionSuggestionList(coachingSessionId);
+  const suggestionReview = useSuggestionReview({
+    coachingSessionId,
+    refreshSuggestions,
+    refreshActions,
+  });
 
   const [isAddingAction, setIsAddingAction] = useState(false);
   const [activeActionTab, setActiveActionTab] = useState<ActionTab>("new");
@@ -1231,6 +1243,9 @@ export function CoachingSessionPanel({
     sessionActions,
     actionSuggestions,
     viewerRole,
+    onSuggestionAccept: suggestionReview.accept,
+    onSuggestionDismiss: suggestionReview.dismiss,
+    onSuggestionSave: suggestionReview.save,
     sessionDateMap,
     coachId,
     coachName,

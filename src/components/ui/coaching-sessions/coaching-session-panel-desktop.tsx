@@ -70,6 +70,9 @@ export function CoachingSessionPanelDesktop({
   sessionActions,
   actionSuggestions,
   viewerRole,
+  onSuggestionAccept,
+  onSuggestionDismiss,
+  onSuggestionSave,
   sessionDateMap,
   coachId,
   coachName,
@@ -274,6 +277,9 @@ export function CoachingSessionPanelDesktop({
               sessionActions={sessionActions}
               actionSuggestions={actionSuggestions}
               viewerRole={viewerRole}
+              onSuggestionAccept={onSuggestionAccept}
+              onSuggestionDismiss={onSuggestionDismiss}
+              onSuggestionSave={onSuggestionSave}
               sessionDateMap={sessionDateMap}
               locale={locale}
               coachId={coachId}

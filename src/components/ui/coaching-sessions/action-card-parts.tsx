@@ -142,6 +142,8 @@ interface AssigneePickerPopoverProps {
   assigneeIds: Id[];
   onToggle: (assigneeId: Id) => void;
   disabled?: boolean;
+  /** Assignees that cannot be toggled, with the reason shown to the user. */
+  disabledReasons?: Partial<Record<Id, string>>;
 }
 
 export function AssigneePickerPopover({
@@ -150,7 +152,11 @@ export function AssigneePickerPopover({
   assigneeIds,
   onToggle,
   disabled = false,
+  disabledReasons = {},
 }: AssigneePickerPopoverProps) {
+  const reasons = [...new Set(Object.values(disabledReasons))].filter(
+    (r): r is string => r !== undefined
+  );
   return (
     <Popover>
       <Tooltip>
@@ -158,6 +164,7 @@ export function AssigneePickerPopover({
           <PopoverTrigger asChild>
             <button
               type="button"
+              aria-label="Assignees"
               className="flex -space-x-2 cursor-pointer hover:opacity-80"
               disabled={disabled}
             >
@@ -191,13 +198,23 @@ export function AssigneePickerPopover({
           </span>
           {allAssignees.map((assignee) => {
             const isAssigned = assigneeIds.includes(assignee.id);
+            const reason = disabledReasons[assignee.id];
             return (
               <div
                 key={assignee.id}
                 role="option"
                 aria-selected={isAssigned}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors"
-                onClick={() => onToggle(assignee.id)}
+                aria-disabled={reason !== undefined ? "true" : undefined}
+                title={reason}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                  reason !== undefined
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer hover:bg-accent"
+                )}
+                onClick={() => {
+                  if (reason === undefined) onToggle(assignee.id);
+                }}
               >
                 <Checkbox checked={isAssigned} />
                 <Avatar className="h-6 w-6">
@@ -209,6 +226,14 @@ export function AssigneePickerPopover({
               </div>
             );
           })}
+          {reasons.map((r) => (
+            <p
+              key={r}
+              className="px-2 pt-1 text-[11px] leading-snug text-muted-foreground"
+            >
+              {r}
+            </p>
+          ))}
         </div>
       </PopoverContent>
     </Popover>

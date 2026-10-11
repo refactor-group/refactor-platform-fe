@@ -655,7 +655,7 @@ function ActionEditForm({
 
 // ── Markdown toolbar button ─────────────────────────────────────────
 
-function MarkdownToolbarButton({
+export function MarkdownToolbarButton({
   icon: Icon,
   label,
   onClick,

@@ -12,7 +12,8 @@ import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
-import type { ActionSuggestion } from "@/types/transcript-suggestion";
+import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
+import { cn } from "@/components/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTime } from "ts-luxon";
 
@@ -31,6 +32,12 @@ export interface ActionSectionContentProps {
   actionSuggestions?: ActionSuggestion[];
   /** Decides who may act on a suggestion. */
   viewerRole?: RelationshipRole;
+  /** Resolves to the created action when the accept succeeded. */
+  onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
+  /** Resolves true when the suggestion was dismissed. */
+  onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
+  /** Resolves true when the edits were saved. */
+  onSuggestionSave?: (s: ActionSuggestion, edits: ActionEdits) => Promise<boolean>;
   /** Maps coaching_session_id → session date for "view source session" links on review cards */
   sessionDateMap?: Map<Id, DateTime>;
   locale: string;
@@ -62,6 +69,9 @@ export function ActionSectionContent({
   sessionActions,
   actionSuggestions = [],
   viewerRole = RelationshipRole.Coachee,
+  onSuggestionAccept,
+  onSuggestionDismiss,
+  onSuggestionSave,
   sessionDateMap,
   locale,
   coachId,
@@ -93,9 +103,10 @@ export function ActionSectionContent({
     [onActiveTabChange]
   );
 
-  // ── Highlight & scroll-to for deep-linked actions ────────────────
+  // ── Highlight & scroll-to for deep-linked or just-accepted actions ─
   const searchParams = useSearchParams();
-  const highlightId = searchParams.get("highlight");
+  const [acceptedActionId, setAcceptedActionId] = useState<Id | null>(null);
+  const highlightId = acceptedActionId ?? searchParams.get("highlight");
   const [clearedHighlightId, setClearedHighlightId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -113,15 +124,21 @@ export function ActionSectionContent({
     return allActions.find((a) => a.id === highlightId) ?? null;
   }, [highlightId, reviewActions, sessionActions]);
 
+  // An accepted action pins the tab only while ringed, so tabs stay switchable after.
+  const highlightActive =
+    highlightTarget !== null && clearedHighlightId !== highlightTarget.id;
+  const tabTarget =
+    acceptedActionId === null || highlightActive ? highlightTarget : null;
+
   const requiredTab = useMemo((): ActionTab | null => {
-    if (highlightTarget) {
-      return reviewActions.some((a) => a.id === highlightTarget.id)
+    if (tabTarget) {
+      return reviewActions.some((a) => a.id === tabTarget.id)
         ? "due"
         : "new";
     }
     if (isAddingAction) return "new";
     return null;
-  }, [highlightTarget, reviewActions, isAddingAction]);
+  }, [tabTarget, reviewActions, isAddingAction]);
 
   // Switch tab when required (highlight deep-link or adding action).
   // setState during render is a React-supported pattern for derived state.
@@ -139,10 +156,7 @@ export function ActionSectionContent({
   // Derive activeHighlight from the highlight target, cleared after animation.
   // When clearedHighlightId matches the current target, the highlight is off.
   // A new target automatically shows the highlight since IDs won't match.
-  const activeHighlight =
-    highlightTarget && clearedHighlightId !== highlightTarget.id
-      ? highlightTarget.id
-      : null;
+  const activeHighlight = highlightActive ? highlightTarget.id : null;
 
   // Scroll to highlighted card and clear highlight after animation.
   // Depend on highlightTarget.id so a re-navigation to the same action still fires.
@@ -161,6 +175,64 @@ export function ActionSectionContent({
     const timer = setTimeout(() => setClearedHighlightId(id), 2000);
     return () => clearTimeout(timer);
   }, [highlightTargetId]);
+
+  // ── Suggestion exit: animate out, then hide until the refresh drops it ─
+  const [exitingIds, setExitingIds] = useState<ReadonlySet<Id>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<Id>>(new Set());
+  const exitTimers = useRef<Map<Id, ReturnType<typeof setTimeout>>>(new Map());
+
+  // A hidden id absent from the list is forgotten, so a restored one renders again.
+  const listedIds = new Set(actionSuggestions.map((s) => s.id));
+  const keepListed = (ids: ReadonlySet<Id>) => [...ids].every((id) => listedIds.has(id));
+  if (!keepListed(hiddenIds)) {
+    setHiddenIds(new Set([...hiddenIds].filter((id) => listedIds.has(id))));
+  }
+  if (!keepListed(exitingIds)) {
+    setExitingIds(new Set([...exitingIds].filter((id) => listedIds.has(id))));
+  }
+
+  const hideSuggestion = useCallback((id: Id) => {
+    const timer = exitTimers.current.get(id);
+    if (timer !== undefined) clearTimeout(timer);
+    exitTimers.current.delete(id);
+    setExitingIds((prev) => new Set([...prev].filter((x) => x !== id)));
+    setHiddenIds((prev) => new Set(prev).add(id));
+  }, []);
+
+  // jsdom never fires animationend, hence the timer fallback.
+  const exitSuggestion = useCallback(
+    (id: Id) => {
+      setExitingIds((prev) => new Set(prev).add(id));
+      exitTimers.current.set(id, setTimeout(() => hideSuggestion(id), 400));
+    },
+    [hideSuggestion]
+  );
+
+  useEffect(() => {
+    const timers = exitTimers.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const visibleSuggestions = actionSuggestions.filter((s) => !hiddenIds.has(s.id));
+
+  const reviewHandlers = (suggestion: ActionSuggestion) => ({
+    onAccept: onSuggestionAccept
+      ? async () => {
+          const created = await onSuggestionAccept(suggestion, None);
+          if (!created.some) return;
+          setAcceptedActionId(created.val.id);
+          exitSuggestion(suggestion.id);
+        }
+      : undefined,
+    onDismiss: onSuggestionDismiss
+      ? async () => {
+          if (await onSuggestionDismiss(suggestion)) exitSuggestion(suggestion.id);
+        }
+      : undefined,
+    onSave: onSuggestionSave
+      ? (edits: ActionEdits) => onSuggestionSave(suggestion, edits)
+      : undefined,
+  });
 
   // Lazy-init placeholder so defaultAction() isn't called at module scope.
   // Seed due_by to +7 days so the picker initially shows the same default
@@ -198,9 +270,9 @@ export function ActionSectionContent({
           <span className="text-[10px] font-normal text-muted-foreground/60">
             ({sessionActions.length})
           </span>
-          {actionSuggestions.length > 0 && (
+          {visibleSuggestions.length > 0 && (
             <span className="min-w-0 truncate text-[10px] font-normal text-muted-foreground/60">
-              · {actionSuggestions.length} suggested
+              · {visibleSuggestions.length} suggested
             </span>
           )}
         </TabsTrigger>
@@ -252,23 +324,33 @@ export function ActionSectionContent({
             />
           </div>
         )}
-        {actionSuggestions.length > 0 && (
+        {visibleSuggestions.length > 0 && (
           <div data-testid="suggested-actions-group" className="mb-4 flex flex-col gap-3">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
               Suggested from transcript
             </div>
-            {actionSuggestions.map((suggestion) => (
-              <SuggestedActionCard
+            {visibleSuggestions.map((suggestion) => (
+              <div
                 key={suggestion.id}
-                suggestion={suggestion}
-                viewerRole={viewerRole}
-                locale={locale}
-                coachId={coachId}
-                coachName={coachName}
-                coacheeId={coacheeId}
-                coacheeName={coacheeName}
-              />
+                className={cn(exitingIds.has(suggestion.id) && "animate-kanban-card-exit")}
+                onAnimationEnd={(e) => {
+                  if (e.target === e.currentTarget && exitingIds.has(suggestion.id)) {
+                    hideSuggestion(suggestion.id);
+                  }
+                }}
+              >
+                <SuggestedActionCard
+                  suggestion={suggestion}
+                  viewerRole={viewerRole}
+                  locale={locale}
+                  coachId={coachId}
+                  coachName={coachName}
+                  coacheeId={coacheeId}
+                  coacheeName={coacheeName}
+                  {...reviewHandlers(suggestion)}
+                />
+              </div>
             ))}
           </div>
         )}
