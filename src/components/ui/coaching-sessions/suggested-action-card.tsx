@@ -477,6 +477,7 @@ function SuggestionDueLabel({
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const openAtPress = useRef(false);
   const due = suggestionDue(suggestion, locale);
   const kind = due.spoken ? "spoken" : "default";
 
@@ -511,7 +512,6 @@ function SuggestionDueLabel({
   }
 
   // Radix closes on pointerdown before the click lands, so toggle from the state at press time.
-  const openAtPress = useRef(false);
   const keepOpen = (e: PointerEvent) => {
     openAtPress.current = open;
     e.preventDefault();
