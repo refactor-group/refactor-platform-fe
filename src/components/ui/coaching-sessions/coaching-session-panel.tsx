@@ -133,6 +133,7 @@ export interface CoachingSessionPanelSharedProps {
   onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
   onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
   onSuggestionSave?: (s: ActionSuggestion, edits: ActionEdits) => Promise<boolean>;
+  onSuggestionRestore?: (s: ActionSuggestion) => Promise<boolean>;
   /** Maps coaching_session_id → session date for "view source session" links */
   sessionDateMap: Map<Id, DateTime>;
   /** Undefined while the coaching relationship is still loading from SWR */
@@ -1246,6 +1247,7 @@ export function CoachingSessionPanel({
     onSuggestionAccept: suggestionReview.accept,
     onSuggestionDismiss: suggestionReview.dismiss,
     onSuggestionSave: suggestionReview.save,
+    onSuggestionRestore: suggestionReview.restore,
     sessionDateMap,
     coachId,
     coachName,

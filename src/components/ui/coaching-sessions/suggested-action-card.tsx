@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ComponentPropsWithoutRef,
   KeyboardEvent,
@@ -14,6 +14,7 @@ import type { TextareaMarkdownRef } from "textarea-markdown-editor";
 import {
   Bold,
   Check,
+  Copy,
   FileText,
   Info,
   Italic,
@@ -68,6 +69,8 @@ export interface SuggestedActionCardProps {
   onDismiss?: () => Promise<void>;
   /** Resolves true when the edits were saved. */
   onSave?: (edits: ActionEdits) => Promise<boolean>;
+  /** Brings an existing action into view. */
+  onShowAction?: (actionId: Id) => void;
 }
 
 export function SuggestedActionCard(props: SuggestedActionCardProps) {
@@ -100,10 +103,13 @@ function SuggestionView({
   onAccept,
   onDismiss,
   onSave,
+  onShowAction,
   onEdit,
 }: SuggestedActionCardProps & { onEdit: () => void }) {
   const [pending, setPending] = useState(false);
-  const { proposal, quote, segment } = suggestion;
+  const [confirming, setConfirming] = useState(false);
+  const confirmRef = useRef<HTMLDivElement>(null);
+  const { proposal, quote, segment, duplicate_of: duplicateOf } = suggestion;
   const assigneeIds = proposal.assignee_ids ?? [];
   const mayAct = mayActOnSuggestion(
     viewerRole,
@@ -130,17 +136,43 @@ function SuggestionView({
     }
   };
 
+  // The ✓ unmounts as the row opens, so focus moves into the row for Escape to reach it.
+  useEffect(() => {
+    if (confirming) confirmRef.current?.focus();
+  }, [confirming]);
+
+  const showAction = duplicateOf.some
+    ? () => onShowAction?.(duplicateOf.val.action_id)
+    : undefined;
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!confirming || e.key !== "Escape" || !e.currentTarget.contains(e.target as Node)) return;
+    e.preventDefault();
+    setConfirming(false);
+  };
+
   return (
     <TooltipProvider delayDuration={300}>
       <div
         data-testid="suggested-action-card"
         className="relative flex min-w-0 flex-col gap-2 rounded-lg border border-dashed border-foreground/30 bg-card p-3"
+        onKeyDown={handleKeyDown}
       >
         <div className="flex min-h-6 items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-            <Sparkles size={13} aria-hidden />
-            Suggested
-          </span>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[11px] font-medium text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <Sparkles size={13} aria-hidden />
+              Suggested
+            </span>
+            {duplicateOf.some && (
+              <>
+                <span aria-hidden className="text-muted-foreground/50">
+                  ·
+                </span>
+                <DuplicateMarker body={duplicateOf.val.body} onClick={showAction} />
+              </>
+            )}
+          </div>
           {mayAct && (
             <div className="flex items-center gap-0.5">
               <IconButton
@@ -151,20 +183,24 @@ function SuggestionView({
               >
                 <Info className="h-3.5 w-3.5" />
               </IconButton>
-              <IconButton
-                label="Accept: add as action"
-                disabled={pending}
-                onClick={run(onAccept)}
-              >
-                <Check className="h-3.5 w-3.5" />
-              </IconButton>
-              <IconButton
-                label="Dismiss suggestion"
-                disabled={pending}
-                onClick={run(onDismiss)}
-              >
-                <X className="h-3.5 w-3.5" />
-              </IconButton>
+              {!confirming && (
+                <>
+                  <IconButton
+                    label="Accept: add as action"
+                    disabled={pending}
+                    onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept)}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </IconButton>
+                  <IconButton
+                    label="Dismiss suggestion"
+                    disabled={pending}
+                    onClick={run(onDismiss)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </IconButton>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -209,6 +245,54 @@ function SuggestionView({
           <SuggestionDueLabel suggestion={suggestion} locale={locale} />
         </div>
 
+        {confirming && duplicateOf.some && (
+          <div
+            ref={confirmRef}
+            tabIndex={-1}
+            data-testid="suggested-action-duplicate-confirm"
+            className="flex flex-col gap-2 border-t border-dashed pt-2 outline-none"
+          >
+            <p className="text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
+              This looks like an action you already have:{" "}
+              <button
+                type="button"
+                onClick={showAction}
+                className="text-left italic text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
+              >
+                {duplicateOf.val.body.some ? duplicateOf.val.body.val : "the existing action"}
+              </button>
+            </p>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                size="sm"
+                className="h-6 gap-1 text-[11px] px-2 max-md:h-10"
+                disabled={pending}
+                onClick={run(onAccept)}
+              >
+                <Check className="!h-3 !w-3" aria-hidden />
+                Add anyway
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 gap-1 text-[11px] px-2 max-md:h-10"
+                disabled={pending}
+                onClick={run(onDismiss)}
+              >
+                Keep existing
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 text-[11px] px-2 text-muted-foreground max-md:h-10"
+                onClick={() => setConfirming(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
         {!mayAct && (
           <p
             data-testid="suggested-action-lock-note"
@@ -220,6 +304,30 @@ function SuggestionView({
         )}
       </div>
     </TooltipProvider>
+  );
+}
+
+function DuplicateMarker({
+  body,
+  onClick,
+}: {
+  body: Option<string>;
+  onClick?: () => void;
+}) {
+  const label = body.some
+    ? `Possible duplicate of: ${body.val}`
+    : "Possible duplicate of an existing action";
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground max-md:min-h-10"
+    >
+      <Copy size={11} aria-hidden />
+      Possible duplicate
+    </button>
   );
 }
 

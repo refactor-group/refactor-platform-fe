@@ -19,7 +19,13 @@ const MOCK_SESSION = {
   updated_at: '2026-10-01T00:00:00Z',
 }
 
-function wireSuggestion(id: string, body: string, quote: string, assigneeIds: string[]) {
+function wireSuggestion(
+  id: string,
+  body: string,
+  quote: string,
+  assigneeIds: string[],
+  duplicateOf: { action_id: string; body: string } | null = null
+) {
   return {
     id,
     coaching_session_id: SESSION_ID,
@@ -39,7 +45,7 @@ function wireSuggestion(id: string, body: string, quote: string, assigneeIds: st
     },
     quote,
     segment: { id: `seg-${id}`, start_ms: 754000, speaker_role: 'coachee', speaker_label: 'Jane Smith' },
-    duplicate_of: null,
+    duplicate_of: duplicateOf,
     default_due: { at: '2026-10-18T16:30:00Z', source: 'next_session' },
     created_at: '2026-10-11T17:05:00Z',
   }
@@ -50,7 +56,11 @@ const SUGGESTIONS = [
     'sug-long',
     'Draft the quarterly hiring plan with headcount, budget, interview loops and a timeline, then share it with Dana and the leadership team before the offsite so everyone can comment ahead of time',
     `I'll write it up in our ${'supercalifragilisticexpialidocious'.repeat(3)} planning doc and send it over.`,
-    [RELATIONSHIP.coachee_id]
+    [RELATIONSHIP.coachee_id],
+    {
+      action_id: 'act-existing',
+      body: 'Write up the quarterly hiring plan with headcount, budget and interview loops for the leadership offsite next month',
+    }
   ),
   wireSuggestion(
     'sug-short',
@@ -165,5 +175,43 @@ test.describe('Suggested actions on mobile', () => {
       expect(box, `${name} has no box`).not.toBeNull()
       expect(box!.height, `${name} height`).toBeGreaterThanOrEqual(40)
     }
+  })
+
+  test('the duplicate marker and confirm row fit the screen', async ({ page }) => {
+    const sheet = await openActionsSheet(page)
+
+    // The first suggestion is a possible duplicate the viewer may act on.
+    const card = sheet.getByTestId('suggested-action-card').first()
+    await card.getByRole('button', { name: 'Accept: add as action' }).click()
+    const row = card.getByTestId('suggested-action-duplicate-confirm')
+    await expect(row).toBeVisible()
+
+    const docWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+    expect(docWidth).toBeLessThanOrEqual(VIEWPORT.width)
+
+    const group = sheet.getByTestId('suggested-actions-group')
+    const { scrollWidth, clientWidth } = await group.evaluate((el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    }))
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+
+    const cardBox = await card.boundingBox()
+    expect(cardBox).not.toBeNull()
+    const within = (box: { x: number; width: number }) =>
+      box.x >= cardBox!.x && box.x + box.width <= cardBox!.x + cardBox!.width
+
+    for (const name of ['Add anyway', 'Keep existing', 'Cancel']) {
+      const box = await row.getByRole('button', { name }).boundingBox()
+      expect(box, `${name} has no box`).not.toBeNull()
+      expect(box!.height, `${name} height`).toBeGreaterThanOrEqual(40)
+      expect(within(box!), `${name} lies within the card`).toBe(true)
+    }
+
+    const markerBox = await card.getByRole('button', { name: /Possible duplicate/ }).boundingBox()
+    expect(markerBox).not.toBeNull()
+    expect(within(markerBox!), 'marker lies within the card').toBe(true)
+    expect(markerBox!.y).toBeGreaterThanOrEqual(cardBox!.y)
+    expect(markerBox!.y + markerBox!.height).toBeLessThanOrEqual(cardBox!.y + cardBox!.height)
   })
 })
