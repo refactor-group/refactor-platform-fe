@@ -216,15 +216,43 @@ describe("ActionSectionContent duplicates and undo", () => {
     expect(toast).toHaveBeenCalledTimes(1);
     const [message, options] = vi.mocked(toast).mock.calls[0] as unknown as [
       string,
-      { duration: number; action: { label: string; onClick: () => void } },
+      { description: string; duration: number; action: { label: string; onClick: () => void } },
     ];
-    expect(message).toBe("Suggestion dismissed");
+    expect(message).toBe("Dismissed suggested action");
+    expect(options.description).toBe('"Schedule a skip-level 1:1 with Dana"');
     expect(options.duration).toBe(6000);
     expect(options.action.label).toBe("Undo");
 
     options.action.onClick();
     await waitFor(() => expect(onSuggestionRestore).toHaveBeenCalledWith(suggestion));
     expect(await screen.findByTestId("suggested-action-card")).toBeInTheDocument();
+  });
+
+  it("cuts a long action text short in the toast", async () => {
+    const base = makeSuggestion(null);
+    const long = {
+      ...base,
+      proposal: {
+        ...base.proposal,
+        body: "Write up the full delegation plan for the Q4 migration and share it with the team",
+      },
+    };
+    render(
+      <Wrapper>
+        <ActionSectionContent
+          {...sectionProps({
+            actionSuggestions: [long],
+            onSuggestionDismiss: vi.fn().mockResolvedValue(true),
+            onSuggestionRestore: vi.fn().mockResolvedValue(true),
+          })}
+        />
+      </Wrapper>
+    );
+
+    await userEvent.click(screen.getByRole("button", DISMISS));
+    await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
+    const options = vi.mocked(toast).mock.calls[0][1] as unknown as { description: string };
+    expect(options.description).toBe('"Write up the full delegation plan for th..."');
   });
 
   it("leaves the card dismissed when the restore fails", async () => {

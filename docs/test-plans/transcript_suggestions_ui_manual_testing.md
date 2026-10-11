@@ -96,7 +96,7 @@ accept fails, the card stays and the form stays open with the edits.
 
 Click **Dismiss**, then **Undo** in the toast within six seconds.
 
-**Pass:** a "Suggestion dismissed" toast with an **Undo** button appears and the card leaves.
+**Pass:** a "Dismissed suggested action" toast appears, showing the action's text in quotes (cut short with "..." past 40 characters), with an **Undo** button, and the card leaves.
 Undo brings the card back in place. Dismiss another and let the toast lapse: the card stays gone.
 
 ### Case B5: Cancel, Escape and outside click in the form

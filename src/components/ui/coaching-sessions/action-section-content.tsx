@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { actionPreview } from "@/lib/utils/action-preview";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested-action-card";
 import { DismissedSuggestions } from "@/components/ui/coaching-sessions/dismissed-suggestions";
@@ -258,7 +259,8 @@ export function ActionSectionContent({
 
   const offerUndo = (suggestion: ActionSuggestion) => {
     if (!onSuggestionRestore) return;
-    toast("Suggestion dismissed", {
+    toast("Dismissed suggested action", {
+      description: `"${actionPreview(suggestion.proposal)}"`,
       duration: 6000,
       action: {
         label: "Undo",
