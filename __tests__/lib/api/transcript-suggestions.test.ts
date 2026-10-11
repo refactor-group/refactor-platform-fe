@@ -12,7 +12,7 @@ import { sessionGuard } from "@/lib/auth/session-guard";
 import { Some, None } from "@/types/option";
 
 vi.mock("@/lib/auth/session-guard", () => ({
-  sessionGuard: { get: vi.fn(), put: vi.fn(), post: vi.fn() },
+  sessionGuard: { get: vi.fn(), post: vi.fn() },
 }));
 
 vi.mock("@/site.config", () => ({
@@ -122,14 +122,6 @@ describe("TranscriptSuggestionApi.listActions", () => {
 describe("TranscriptSuggestionApi mutations", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("update PUTs the serialized edits to the suggestion and returns it parsed", async () => {
-    vi.mocked(sessionGuard.put).mockResolvedValue(ok(wireSuggestion));
-    const result = await TranscriptSuggestionApi.update("s-1", "sug-1", edits);
-    expect(sessionGuard.put).toHaveBeenCalledWith(`${BASE}/sug-1`, wireEdits);
-    expect(result.isOk()).toBe(true);
-    expect(result.isOk() && result.value.id).toBe("sug-1");
-  });
-
   it("accept with edits POSTs them and returns the created action", async () => {
     vi.mocked(sessionGuard.post).mockResolvedValue(ok(wireAction, 201));
     const result = await TranscriptSuggestionApi.accept("s-1", "sug-1", Some(edits));
@@ -186,19 +178,19 @@ describe("typed failures", () => {
     });
   });
 
-  it("422 on update is invalid and carries the backend message when present", async () => {
-    vi.mocked(sessionGuard.put).mockRejectedValue(
+  it("422 on accept with edits is invalid and carries the backend message when present", async () => {
+    vi.mocked(sessionGuard.post).mockRejectedValue(
       httpError(422, { error: "unprocessable_entity", message: "Body must not be empty" })
     );
-    expect(await failureOf(TranscriptSuggestionApi.update("s-1", "sug-1", edits))).toEqual({
+    expect(await failureOf(TranscriptSuggestionApi.accept("s-1", "sug-1", Some(edits)))).toEqual({
       kind: "invalid",
       message: Some("Body must not be empty"),
     });
   });
 
   it("422 without a message is invalid with None", async () => {
-    vi.mocked(sessionGuard.put).mockRejectedValue(httpError(422, "plain text"));
-    expect(await failureOf(TranscriptSuggestionApi.update("s-1", "sug-1", edits))).toEqual({
+    vi.mocked(sessionGuard.post).mockRejectedValue(httpError(422, "plain text"));
+    expect(await failureOf(TranscriptSuggestionApi.accept("s-1", "sug-1", Some(edits)))).toEqual({
       kind: "invalid",
       message: None,
     });

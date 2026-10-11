@@ -232,13 +232,6 @@ async function handleSuggestions(route: Route, backend: Backend): Promise<void> 
   const [id, verb] = url.pathname.split('/transcript_suggestions/')[1].split('/')
   const edits = body ? (JSON.parse(body) as EditsWire) : null
 
-  if (request.method() === 'PUT') {
-    const target = backend.pending.find((s) => s.id === id)
-    if (!target || !edits) return route.fulfill(json(null, 404))
-    target.proposal = { ...target.proposal, ...edits }
-    return route.fulfill(json(target))
-  }
-
   if (verb === 'restore') {
     const restored = take(backend.dismissed, id)
     if (!restored) return route.fulfill(json(null, 404))

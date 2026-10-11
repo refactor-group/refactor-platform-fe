@@ -22,7 +22,6 @@ vi.mock("@/lib/api/transcript-suggestions", () => ({
     accept: vi.fn(),
     dismiss: vi.fn(),
     restore: vi.fn(),
-    update: vi.fn(),
   },
 }));
 
@@ -123,7 +122,6 @@ describe("useSuggestionReview", () => {
 
     expect(accepted).toEqual(None);
     expect(toast.error).toHaveBeenCalledWith("Body must not be empty");
-    expect(TranscriptSuggestionApi.update).not.toHaveBeenCalled();
   });
 
   it("no longer offers a separate save", () => {

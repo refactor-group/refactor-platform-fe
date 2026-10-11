@@ -132,19 +132,6 @@ export const TranscriptSuggestionApi = {
     return res.data.data.map(parseActionSuggestion);
   },
 
-  update: (
-    sessionId: Id,
-    suggestionId: Id,
-    edits: ActionEdits
-  ): Promise<Result<ActionSuggestion, SuggestionFailure>> =>
-    attempt(async () => {
-      const res = await sessionGuard.put<ApiResponse<unknown>>(
-        suggestionUrl(sessionId, suggestionId),
-        serializeActionEdits(edits)
-      );
-      return parseActionSuggestion(res.data.data);
-    }),
-
   accept: (
     sessionId: Id,
     suggestionId: Id,
