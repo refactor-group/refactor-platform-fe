@@ -2,7 +2,7 @@ import { DateTime } from "ts-luxon";
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
-import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
+import { DueSource, UndatedReason, type ActionSuggestion } from "@/types/transcript-suggestion";
 
 /**
  * Mirrors the backend rule: the coachee may not act on a coach-only
@@ -33,11 +33,27 @@ function defaultTail(source: DueSource): string {
   switch (source) {
     case DueSource.NextSession:
       return "Defaults to your next session";
+    case DueSource.WeekAfterSession:
+      return "Defaults to a week after this session";
     case DueSource.SevenDays:
       return "Defaults to a week from today";
     default: {
       const _exhaustive: never = source;
       throw new Error(`Unhandled due source: ${_exhaustive}`);
+    }
+  }
+}
+
+function heardHead(phrase: string, reason: Option<UndatedReason>): string {
+  if (reason.none) return `Heard “${phrase}”. `;
+  switch (reason.val) {
+    case UndatedReason.NoNextSession:
+      return `Heard “${phrase}”, but no next session is scheduled. `;
+    case UndatedReason.NotADate:
+      return `Heard “${phrase}”, which isn't a specific date. `;
+    default: {
+      const _exhaustive: never = reason.val;
+      throw new Error(`Unhandled undated reason: ${_exhaustive}`);
     }
   }
 }
@@ -57,7 +73,7 @@ export function suggestionDue(s: ActionSuggestion, locale: string): SuggestionDu
   }
 
   const head = due_phrase.some
-    ? `Heard “${due_phrase.val}”, but no date was set. `
+    ? heardHead(due_phrase.val, s.undated_reason)
     : "No date mentioned. ";
   return { at, spoken: false, label, tooltip: Some(head + defaultTail(s.default_due.source)) };
 }

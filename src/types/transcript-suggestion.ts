@@ -17,11 +17,26 @@ import { isSpeakerRole, type SpeakerRole } from "@/types/transcription";
 /** Where a suggestion's default due date came from. */
 export enum DueSource {
   NextSession = "next_session",
+  /** A week after a session that has not started yet. */
+  WeekAfterSession = "week_after_session",
+  /** A week from now. */
   SevenDays = "seven_days",
 }
 
 export function isDueSource(value: unknown): value is DueSource {
-  return value === DueSource.NextSession || value === DueSource.SevenDays;
+  return Object.values(DueSource).includes(value as DueSource);
+}
+
+/** Why a spoken deadline gave no due date. */
+export enum UndatedReason {
+  /** It names the next session, and none is scheduled. */
+  NoNextSession = "no_next_session",
+  /** It is vague or ambiguous, such as "soon" or "next week". */
+  NotADate = "not_a_date",
+}
+
+function isUndatedReason(value: unknown): value is UndatedReason {
+  return Object.values(UndatedReason).includes(value as UndatedReason);
 }
 
 /** A suggestion's review status, as a list filter. */
@@ -79,13 +94,15 @@ export interface ActionSuggestion {
   segment: SourceSegment;
   duplicate_of: Option<DuplicateOf>;
   default_due: DefaultDue;
+  /** Why the spoken due_phrase gave no date; None when it did, or nothing was spoken. */
+  undated_reason: Option<UndatedReason>;
   created_at: DateTime;
   /** None while pending. */
   resolved_by: Option<Id>;
   resolved_at: Option<DateTime>;
 }
 
-/** Reviewer edits sent with an update or an accept. */
+/** Reviewer edits sent with an accept. */
 export interface ActionEdits {
   body: string;
   due_by: Option<DateTime>;
@@ -185,13 +202,15 @@ export function parseActionSuggestion(value: unknown): ActionSuggestion {
     segment: parseSegment(value.segment),
     duplicate_of: parseDuplicateOf(value.duplicate_of),
     default_due: parseDefaultDue(value.default_due),
+    // An unknown reason reads as None, so a new one never hides the list.
+    undated_reason: isUndatedReason(value.undated_reason) ? Some(value.undated_reason) : None,
     created_at: parseDateTime(value.created_at, "ActionSuggestion created_at"),
     resolved_by: typeof value.resolved_by === "string" ? Some(value.resolved_by) : None,
     resolved_at: parseOptionalDateTime(value.resolved_at, "ActionSuggestion resolved_at"),
   };
 }
 
-/** Wire body for an update or an accept. */
+/** Wire body for an accept. */
 export interface ActionEditsWire {
   body: string;
   due_by: string | null;

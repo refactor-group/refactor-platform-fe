@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import { mayActOnSuggestion, suggestionDue } from "@/lib/utils/transcript-suggestions";
 import { RelationshipRole } from "@/types/relationship-role";
-import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
+import { DueSource, UndatedReason, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None, type Option } from "@/types/option";
 import { createMockAction } from "../../test-utils";
 
@@ -51,7 +51,8 @@ const noon = (isoDate: string) => DateTime.fromISO(`${isoDate}T12:00:00Z`);
 function suggestion(
   dueBy: Option<DateTime>,
   phrase: Option<string>,
-  source: DueSource = DueSource.NextSession
+  source: DueSource = DueSource.NextSession,
+  reason: Option<UndatedReason> = None
 ): ActionSuggestion {
   return {
     id: "sug-1",
@@ -61,6 +62,7 @@ function suggestion(
     segment: { id: "seg-1", start_ms: 0, speaker_role: None, speaker_label: "Guest 1" },
     duplicate_of: None,
     default_due: { at: noon("2026-10-18"), source },
+    undated_reason: reason,
     created_at: noon("2026-10-11"),
   };
 }
@@ -93,11 +95,43 @@ describe("suggestionDue", () => {
     expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to a week from today"));
   });
 
-  it("quotes a phrase that did not resolve to a date", () => {
-    const due = suggestionDue(suggestion(None, Some("soon"), DueSource.SevenDays), "en-US");
+  it("falls back to a week after a session that has not started", () => {
+    const due = suggestionDue(suggestion(None, None, DueSource.WeekAfterSession), "en-US");
+    expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to a week after this session"));
+  });
+
+  it("says a vague phrase is not a specific date", () => {
+    const due = suggestionDue(
+      suggestion(None, Some("soon"), DueSource.SevenDays, Some(UndatedReason.NotADate)),
+      "en-US"
+    );
     expect(due.spoken).toBe(false);
     expect(due.tooltip).toEqual(
-      Some("Heard “soon”, but no date was set. Defaults to a week from today")
+      Some("Heard “soon”, which isn't a specific date. Defaults to a week from today")
+    );
+  });
+
+  it("says no next session is scheduled for a next-session phrase", () => {
+    const due = suggestionDue(
+      suggestion(
+        None,
+        Some("by our next session"),
+        DueSource.WeekAfterSession,
+        Some(UndatedReason.NoNextSession)
+      ),
+      "en-US"
+    );
+    expect(due.tooltip).toEqual(
+      Some(
+        "Heard “by our next session”, but no next session is scheduled. Defaults to a week after this session"
+      )
+    );
+  });
+
+  it("just quotes a phrase with no reason, once the next session is scheduled", () => {
+    const due = suggestionDue(suggestion(None, Some("by our next session")), "en-US");
+    expect(due.tooltip).toEqual(
+      Some("Heard “by our next session”. Defaults to your next session")
     );
   });
 });

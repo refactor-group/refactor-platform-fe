@@ -55,15 +55,16 @@ buttons: **Accept**, **Edit**, **Dismiss**.
 Record backend groups F6 (session on a Wednesday) and F7 (no next session).
 
 **Pass:** a suggestion with no spoken date shows its due date in regular weight. Its tooltip reads
-"No date mentioned. Defaults to your next session" (F6) or "No date mentioned. Defaults to a week
-from today" (F7).
+"No date mentioned. Defaults to your next session" (F6). With no next session (F7), it ends "Defaults to
+a week after this session" when the session is dated in the future, and that date is 7 days after the
+session; otherwise it ends "Defaults to a week from today".
 
 ### Case A5: a phrase that is not a date
 
 Find the backend group F6 suggestion from "I'll reach out to the new VP soon."
 
-**Pass:** the due date is in regular weight and the tooltip begins "Heard “soon”, but no date was set." followed
-by the default it fell back to.
+**Pass:** the due date is in regular weight and the tooltip begins "Heard “soon”, which isn't a specific
+date." followed by the default it fell back to.
 
 ### Case A6: a deadline said on the next line
 
@@ -84,9 +85,10 @@ the action is not shown as overdue while that day lasts.
 
 Record backend group F7, line 4, in a relationship with no later session scheduled.
 
-**Pass:** the date is in regular weight and the tooltip reads "Heard “…our next session”, but no date
-was set. Defaults to a week from today". It never says "No date mentioned". Schedule a next session and
-refresh: the tooltip now ends "Defaults to your next session" and the date is that session's.
+**Pass:** the date is in regular weight and the tooltip reads "Heard “…our next session”, but no next
+session is scheduled." followed by the default ("Defaults to a week after this session" for a session
+dated in the future). It never says "No date mentioned". Schedule a next session and refresh: the tooltip
+now reads "Heard “…our next session”. Defaults to your next session" and the date is that session's.
 
 ## 3. Part B: coach review
 

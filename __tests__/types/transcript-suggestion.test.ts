@@ -7,6 +7,7 @@ import {
   DueSource,
   parseActionSuggestion,
   serializeActionEdits,
+  UndatedReason,
 } from "@/types/transcript-suggestion";
 import { SpeakerRole } from "@/types/transcription";
 import { Some, None } from "@/types/option";
@@ -91,6 +92,30 @@ describe("parseActionSuggestion", () => {
     expect(s.default_due.source).toBe(DueSource.SevenDays);
   });
 
+  it("reads the new default source and the undated reasons", () => {
+    const wire = wireActionSuggestion() as Record<string, unknown> & {
+      default_due: { source: string };
+    };
+    wire.default_due.source = "week_after_session";
+    wire.undated_reason = "no_next_session";
+    const s = parseActionSuggestion(wire);
+    expect(s.default_due.source).toBe(DueSource.WeekAfterSession);
+    expect(s.undated_reason).toEqual(Some(UndatedReason.NoNextSession));
+
+    wire.undated_reason = "not_a_date";
+    expect(parseActionSuggestion(wire).undated_reason).toEqual(Some(UndatedReason.NotADate));
+  });
+
+  it("reads a missing, null or unknown undated_reason as None", () => {
+    const wire = wireActionSuggestion() as Record<string, unknown>;
+    delete wire.undated_reason;
+    expect(parseActionSuggestion(wire).undated_reason).toEqual(None);
+    for (const value of [null, "someday"]) {
+      wire.undated_reason = value;
+      expect(parseActionSuggestion(wire).undated_reason).toEqual(None);
+    }
+  });
+
   it("treats a missing duplicate_of as None", () => {
     const wire = wireActionSuggestion() as Record<string, unknown>;
     delete wire.duplicate_of;
@@ -128,7 +153,7 @@ describe("parseActionSuggestion", () => {
 });
 
 describe("serializeActionEdits", () => {
-  it("writes the PUT/accept body with an ISO due date", () => {
+  it("writes the accept body with an ISO due date", () => {
     const due = DateTime.fromISO("2026-10-17T00:00:00Z", { zone: "utc" });
     expect(
       serializeActionEdits({
