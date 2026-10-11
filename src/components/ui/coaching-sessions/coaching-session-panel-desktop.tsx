@@ -116,7 +116,14 @@ export function CoachingSessionPanelDesktop({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [flow.step, goalFlow]);
 
-  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions, topics);
+  const counts = computePanelCounts(
+    linkedGoals,
+    agreements,
+    reviewActions,
+    sessionActions,
+    topics,
+    actionSuggestions.length
+  );
 
   if (collapsed) {
     const sectionLabels: Record<PanelSection, string> = {

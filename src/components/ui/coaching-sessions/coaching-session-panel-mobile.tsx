@@ -91,7 +91,14 @@ export function CoachingSessionPanelMobile({
   const { flow } = goalFlow;
   const isInGoalFlow = activeSection === PanelSection.Goals && flow.step !== GoalFlowStep.Idle;
   const headerTitle = computeHeaderTitle(activeSection, flow.step);
-  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions, topics);
+  const counts = computePanelCounts(
+    linkedGoals,
+    agreements,
+    reviewActions,
+    sessionActions,
+    topics,
+    actionSuggestions.length
+  );
 
   // Close the sheet first so the transcript is visible.
   const handleShowInTranscript = onShowInTranscript

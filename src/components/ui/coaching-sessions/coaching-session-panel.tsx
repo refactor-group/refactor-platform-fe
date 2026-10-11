@@ -183,8 +183,10 @@ export function computePanelCounts(
   reviewActions: Action[],
   sessionActions: Action[],
   topics: CoachingSessionTopic[],
+  pendingSuggestions = 0,
 ): Record<PanelSection, string> {
-  const totalActions = reviewActions.length + sessionActions.length;
+  // Pending suggestions count toward the Actions total.
+  const totalActions = reviewActions.length + sessionActions.length + pendingSuggestions;
   return {
     [PanelSection.Topics]: topics.length > 0
       ? `${topics.length}`
