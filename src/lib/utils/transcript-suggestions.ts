@@ -56,6 +56,8 @@ export function suggestionDue(s: ActionSuggestion, locale: string): SuggestionDu
     };
   }
 
-  const head = due_phrase.some ? `“${due_phrase.val}” isn't a date. ` : "No date mentioned. ";
+  const head = due_phrase.some
+    ? `Heard “${due_phrase.val}”, but no date was set. `
+    : "No date mentioned. ";
   return { at, spoken: false, label, tooltip: Some(head + defaultTail(s.default_due.source)) };
 }

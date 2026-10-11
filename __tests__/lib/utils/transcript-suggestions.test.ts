@@ -96,6 +96,8 @@ describe("suggestionDue", () => {
   it("quotes a phrase that did not resolve to a date", () => {
     const due = suggestionDue(suggestion(None, Some("soon"), DueSource.SevenDays), "en-US");
     expect(due.spoken).toBe(false);
-    expect(due.tooltip).toEqual(Some("“soon” isn't a date. Defaults to a week from today"));
+    expect(due.tooltip).toEqual(
+      Some("Heard “soon”, but no date was set. Defaults to a week from today")
+    );
   });
 });

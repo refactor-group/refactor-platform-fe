@@ -62,8 +62,31 @@ from today" (F7).
 
 Find the backend group F6 suggestion from "I'll reach out to the new VP soon."
 
-**Pass:** the due date is in regular weight and the tooltip begins "“soon” isn't a date." followed
+**Pass:** the due date is in regular weight and the tooltip begins "Heard “soon”, but no date was set." followed
 by the default it fell back to.
+
+### Case A6: a deadline said on the next line
+
+Record backend group F12, line 1 (Jim: "I'll find you a template for the project chart", a pause, then
+"and I will commit to giving you that by our next session"), with a next session scheduled.
+
+**Pass:** one card, quoting the first line. Its due date is the next session's date in **bold**, and the
+tooltip reads "Due <date> · from “…our next session”" with the phrase as transcribed.
+
+### Case A7: a deadline later on the session day
+
+Record backend group F6, line 23 (Jim: "I'll send you that article feedback after our call.").
+
+**Pass:** the card's due date is the session's own date in bold, from "after our call". After accepting,
+the action is not shown as overdue while that day lasts.
+
+### Case A8: "by our next session" with no next session yet
+
+Record backend group F7, line 4, in a relationship with no later session scheduled.
+
+**Pass:** the date is in regular weight and the tooltip reads "Heard “…our next session”, but no date
+was set. Defaults to a week from today". It never says "No date mentioned". Schedule a next session and
+refresh: the tooltip now ends "Defaults to your next session" and the date is that session's.
 
 ## 3. Part B: coach review
 
@@ -304,6 +327,9 @@ Escape closes the edit form and the confirm row.
 | A3 |  |  |
 | A4 |  |  |
 | A5 |  |  |
+| A6 |  |  |
+| A7 |  |  |
+| A8 |  |  |
 | B1 |  |  |
 | B2 |  |  |
 | B3 |  |  |
