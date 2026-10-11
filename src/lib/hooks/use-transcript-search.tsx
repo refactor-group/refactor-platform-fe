@@ -155,7 +155,7 @@ function renderWithHighlights(
   return nodes;
 }
 
-function markClasses(isActive: boolean): string {
+export function markClasses(isActive: boolean): string {
   return isActive
     ? "rounded-[3px] px-0.5 bg-amber-300 text-black dark:bg-amber-400"
     : "rounded-[3px] px-0.5 bg-yellow-200 text-black dark:bg-yellow-500/40 dark:text-foreground";

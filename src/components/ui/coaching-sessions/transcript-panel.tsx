@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import type { ReactNode, RefObject } from "react";
 import { Maximize2, Minimize2, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,8 +29,9 @@ import { TranscriptSpeakerFilter } from "@/components/ui/coaching-sessions/trans
 import { groupBubbles } from "@/lib/utils/transcript-group-bubbles";
 import { buildSpeakerStyles, speakerStyleFor } from "@/lib/utils/transcript-speakers";
 import { downloadScopeFor } from "@/lib/utils/transcript-speaker-roles";
-import { useSpeakerFilter } from "@/lib/hooks/use-speaker-filter";
-import { useTranscriptSearch } from "@/lib/hooks/use-transcript-search";
+import { ALL_SPEAKERS, useSpeakerFilter } from "@/lib/hooks/use-speaker-filter";
+import { markClasses, useTranscriptSearch } from "@/lib/hooks/use-transcript-search";
+import { buildSearchMatches } from "@/lib/utils/transcript-search-matches";
 import type { Transcription, TranscriptSegment } from "@/types/transcription";
 import { TranscriptionStatus } from "@/types/transcription";
 import type { MeetingRecording } from "@/types/meeting-recording";
@@ -40,6 +42,10 @@ import {
   useTranscriptionSegments,
 } from "@/lib/api/transcriptions";
 import type { Id } from "@/types/general";
+import { None, Some, type Option } from "@/types/option";
+
+/** A request to center and mark one segment; a new nonce repeats it. */
+export type TranscriptJump = { segmentId: Id; nonce: number };
 
 interface TranscriptPanelProps {
   sessionId: Id;
@@ -47,6 +53,7 @@ interface TranscriptPanelProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
+  jumpTo?: Option<TranscriptJump>;
 }
 
 function deriveEmptyState(
@@ -98,6 +105,7 @@ export function TranscriptPanel({
   isMaximized,
   onToggleMaximize,
   onClose,
+  jumpTo = None,
 }: TranscriptPanelProps) {
   const { recording } = useMeetingRecording(sessionId);
   const { transcription } = useTranscription(sessionId);
@@ -118,6 +126,7 @@ export function TranscriptPanel({
           isMaximized={isMaximized}
           onToggleMaximize={onToggleMaximize}
           onClose={onClose}
+          jumpTo={jumpTo}
         />
       ) : (
         <>
@@ -144,6 +153,7 @@ interface TranscriptPanelWithDataProps {
   isMaximized: boolean;
   onToggleMaximize: () => void;
   onClose: () => void;
+  jumpTo: Option<TranscriptJump>;
 }
 
 function TranscriptPanelWithData({
@@ -153,6 +163,7 @@ function TranscriptPanelWithData({
   isMaximized,
   onToggleMaximize,
   onClose,
+  jumpTo,
 }: TranscriptPanelWithDataProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -161,6 +172,20 @@ function TranscriptPanelWithData({
   const search = useTranscriptSearch(filter.visibleSegments, {
     scrollContainerRef,
   });
+  const marked = useSegmentJump(jumpTo, segments, filter, scrollContainerRef);
+
+  // Search highlighting wins over the jump mark so marks never nest.
+  const renderText = (segment: TranscriptSegment) => {
+    const isMarked = marked.some && marked.val === segment.id;
+    if (!isMarked || buildSearchMatches(search.query, [segment]).matches.length > 0) {
+      return search.renderSegmentText(segment.id, segment.text);
+    }
+    return (
+      <mark data-testid="transcript-jump-mark" className={markClasses(true)}>
+        {segment.text}
+      </mark>
+    );
+  };
 
   // Adjacency is computed against the full transcript — two turns that are
   // visible-adjacent after a filter may not be actually adjacent in the
@@ -223,7 +248,7 @@ function TranscriptPanelWithData({
                 alignment={style.alignment}
                 variant={style.variant}
                 forceHeader={forceHeader}
-                renderText={(text) => search.renderSegmentText(segment.id, text)}
+                renderText={() => renderText(segment)}
               />
             );
           })
@@ -231,6 +256,55 @@ function TranscriptPanelWithData({
       </CardContent>
     </>
   );
+}
+
+// ── Jump to a segment ────────────────────────────────────────────────
+
+/**
+ * Handles each new jump: reveals the segment past the speaker filter, centers
+ * it, and returns it as the one marked segment until the next jump.
+ */
+function useSegmentJump(
+  jumpTo: Option<TranscriptJump>,
+  segments: readonly TranscriptSegment[],
+  filter: { value: string; setValue: (next: string) => void },
+  scrollContainerRef: RefObject<HTMLDivElement | null>
+): Option<Id> {
+  const handledNonce = useRef<Option<number>>(None);
+  const pendingScroll = useRef<Option<Id>>(None);
+  const { value: filterValue, setValue: setFilterValue } = filter;
+
+  useEffect(() => {
+    if (jumpTo.none) return;
+    const { segmentId, nonce } = jumpTo.val;
+    if (handledNonce.current.some && handledNonce.current.val === nonce) return;
+    handledNonce.current = Some(nonce);
+
+    const target = segments.find((s) => s.id === segmentId);
+    if (!target) {
+      toast.error("That part of the transcript isn't available.");
+      return;
+    }
+    if (filterValue !== ALL_SPEAKERS && target.speaker_label !== filterValue) {
+      setFilterValue(ALL_SPEAKERS);
+    }
+    pendingScroll.current = Some(segmentId);
+  }, [jumpTo, segments, filterValue, setFilterValue]);
+
+  // Runs after every render so the scroll waits for a filter reset to paint the segment.
+  useEffect(() => {
+    if (pendingScroll.current.none) return;
+    const el = scrollContainerRef.current?.querySelector(
+      `[data-segment-id="${pendingScroll.current.val}"]`
+    );
+    if (!el) return;
+    pendingScroll.current = None;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+  });
+
+  return jumpTo.some && segments.some((s) => s.id === jumpTo.val.segmentId)
+    ? Some(jumpTo.val.segmentId)
+    : None;
 }
 
 // ── Header (shared by empty and data paths) ──────────────────────────

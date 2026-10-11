@@ -47,6 +47,8 @@ export interface ActionSectionContentProps {
   onSuggestionSave?: (s: ActionSuggestion, edits: ActionEdits) => Promise<boolean>;
   /** Resolves true when the dismissed suggestion was restored. */
   onSuggestionRestore?: (s: ActionSuggestion) => Promise<boolean>;
+  /** Shows a suggestion's quoted segment in the transcript. */
+  onShowInTranscript?: (segmentId: Id) => void;
   /** Maps coaching_session_id → session date for "view source session" links on review cards */
   sessionDateMap?: Map<Id, DateTime>;
   locale: string;
@@ -83,6 +85,7 @@ export function ActionSectionContent({
   onSuggestionDismiss,
   onSuggestionSave,
   onSuggestionRestore,
+  onShowInTranscript,
   sessionDateMap,
   locale,
   coachId,
@@ -417,6 +420,7 @@ export function ActionSectionContent({
                   coacheeName={coacheeName}
                   {...reviewHandlers(suggestion)}
                   onShowAction={showAction}
+                  onShowInTranscript={onShowInTranscript}
                 />
               </div>
             ))}
@@ -431,6 +435,7 @@ export function ActionSectionContent({
           coacheeId={coacheeId}
           coacheeName={coacheeName}
           onRestore={onSuggestionRestore}
+          onShowInTranscript={onShowInTranscript}
         />
         {sessionActions.length === 0 && !isAddingAction ? (
           <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 
@@ -55,6 +55,23 @@ export function afterOpenTranscript(state: LayoutState): LayoutState {
       return state; // already visible
     case LayoutShape.Docked:
       return state; // already visible
+    default: {
+      const _exhaustive: never = state;
+      return _exhaustive;
+    }
+  }
+}
+
+export function afterOpenTranscriptKeepingPanel(state: LayoutState): LayoutState {
+  switch (state.shape) {
+    case LayoutShape.Default:
+      return { shape: LayoutShape.Docked, goalsExpanded: true };
+    case LayoutShape.NotesMaximized:
+      return { shape: LayoutShape.Docked, goalsExpanded: true };
+    case LayoutShape.TranscriptMaximized:
+      return state; // already visible
+    case LayoutShape.Docked:
+      return { shape: LayoutShape.Docked, goalsExpanded: true };
     default: {
       const _exhaustive: never = state;
       return _exhaustive;
@@ -157,6 +174,8 @@ export interface CoachingSessionLayout {
 
   // Actions
   openTranscript: () => void;
+  /** Opens the transcript docked beside an expanded panel. */
+  openTranscriptKeepingPanel: () => void;
   closeTranscript: () => void;
   toggleTranscript: () => void;
   toggleNotesMaximized: () => void;
@@ -175,18 +194,21 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
 
   const slots = readSlotsFromParams(searchParams);
   const [goalsExpandedOverride, setGoalsExpandedOverride] = useState<boolean>(false);
+  // Carries an expanded panel through the URL change a keeping-panel open causes.
+  const keepExpandedThroughUrlChange = useRef(false);
 
   // Reset the override whenever the URL-derived shape changes. This makes
   // deep links and transcript open/close return to the default collapse
   // behavior, while preserving overrides through unrelated re-renders.
   useEffect(() => {
-    setGoalsExpandedOverride(false);
+    setGoalsExpandedOverride(keepExpandedThroughUrlChange.current);
+    keepExpandedThroughUrlChange.current = false;
   }, [slots.focusedPanel, slots.isTranscriptOpen]);
 
   const state = stateFromSlots(slots, goalsExpandedOverride);
 
   const commit = useCallback(
-    (next: LayoutState) => {
+    (next: LayoutState, keepExpanded = false) => {
       const nextSlots = slotsFromState(next);
       const currentSlots = readSlotsFromParams(searchParams);
       // Only write the URL when the slot-backed state actually changed.
@@ -196,6 +218,8 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
         nextSlots.focusedPanel !== currentSlots.focusedPanel ||
         nextSlots.isTranscriptOpen !== currentSlots.isTranscriptOpen
       ) {
+        keepExpandedThroughUrlChange.current =
+          keepExpanded && next.shape === LayoutShape.Docked && next.goalsExpanded;
         replaceSearchParams((p) => writeSlotsToParams(p, nextSlots));
       }
       if (next.shape === LayoutShape.Docked) {
@@ -209,6 +233,10 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
 
   const openTranscript = useCallback(
     () => commit(afterOpenTranscript(state)),
+    [commit, state]
+  );
+  const openTranscriptKeepingPanel = useCallback(
+    () => commit(afterOpenTranscriptKeepingPanel(state), true),
     [commit, state]
   );
   const closeTranscript = useCallback(
@@ -241,6 +269,7 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
       isNotesMaximized: state.shape === LayoutShape.NotesMaximized,
       isTranscriptMaximized: state.shape === LayoutShape.TranscriptMaximized,
       openTranscript,
+      openTranscriptKeepingPanel,
       closeTranscript,
       toggleTranscript,
       toggleNotesMaximized,
@@ -250,6 +279,7 @@ export function useCoachingSessionLayout(): CoachingSessionLayout {
     [
       state,
       openTranscript,
+      openTranscriptKeepingPanel,
       closeTranscript,
       toggleTranscript,
       toggleNotesMaximized,

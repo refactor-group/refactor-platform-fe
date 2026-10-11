@@ -71,6 +71,8 @@ export interface SuggestedActionCardProps {
   onSave?: (edits: ActionEdits) => Promise<boolean>;
   /** Brings an existing action into view. */
   onShowAction?: (actionId: Id) => void;
+  /** Shows the quoted segment in the transcript. */
+  onShowInTranscript?: (segmentId: Id) => void;
 }
 
 export function SuggestedActionCard(props: SuggestedActionCardProps) {
@@ -104,6 +106,7 @@ function SuggestionView({
   onDismiss,
   onSave,
   onShowAction,
+  onShowInTranscript,
   onEdit,
 }: SuggestedActionCardProps & { onEdit: () => void }) {
   const [pending, setPending] = useState(false);
@@ -217,6 +220,7 @@ function SuggestionView({
               type="button"
               title="Show in transcript"
               aria-label={`Show in transcript: ${source}`}
+              onClick={() => onShowInTranscript?.(segment.id)}
               className="inline-flex items-center gap-1 self-start text-[11px] font-medium tabular-nums underline decoration-foreground/30 underline-offset-2 max-md:min-h-10"
             >
               <FileText size={11} aria-hidden />

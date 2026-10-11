@@ -18,6 +18,7 @@ import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agree
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { TopicSectionContent } from "@/components/ui/coaching-sessions/topic-section-content";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
+import type { Id } from "@/types/general";
 
 export function CoachingSessionPanelMobile({
   linkedGoals,
@@ -59,6 +60,7 @@ export function CoachingSessionPanelMobile({
   onSuggestionDismiss,
   onSuggestionSave,
   onSuggestionRestore,
+  onShowInTranscript,
   sessionDateMap,
   coachId,
   coachName,
@@ -90,6 +92,14 @@ export function CoachingSessionPanelMobile({
   const isInGoalFlow = activeSection === PanelSection.Goals && flow.step !== GoalFlowStep.Idle;
   const headerTitle = computeHeaderTitle(activeSection, flow.step);
   const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions, topics);
+
+  // Close the sheet first so the transcript is visible.
+  const handleShowInTranscript = onShowInTranscript
+    ? (segmentId: Id) => {
+        setIsOpen(false);
+        onShowInTranscript(segmentId);
+      }
+    : undefined;
 
   // Reset flow when sheet closes
   const handleOpenChange = (open: boolean) => {
@@ -234,6 +244,7 @@ export function CoachingSessionPanelMobile({
                 onSuggestionDismiss={onSuggestionDismiss}
                 onSuggestionSave={onSuggestionSave}
                 onSuggestionRestore={onSuggestionRestore}
+                onShowInTranscript={handleShowInTranscript}
                 sessionDateMap={sessionDateMap}
                 locale={locale}
                 coachId={coachId}

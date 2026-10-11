@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Lock, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Lock, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -25,6 +25,8 @@ export interface DismissedSuggestionsProps {
   coacheeName: string;
   /** Resolves true when the suggestion was restored. */
   onRestore?: (s: ActionSuggestion) => Promise<boolean>;
+  /** Shows the quoted segment in the transcript. */
+  onShowInTranscript?: (segmentId: Id) => void;
 }
 
 type RowProps = Omit<DismissedSuggestionsProps, "suggestions"> & {
@@ -62,6 +64,7 @@ function DismissedRow({
   coacheeId,
   coacheeName,
   onRestore,
+  onShowInTranscript,
 }: RowProps) {
   const [pending, setPending] = useState(false);
   const { proposal, quote, segment, resolved_by: resolvedBy, resolved_at: resolvedAt } = suggestion;
@@ -84,6 +87,7 @@ function DismissedRow({
   const who = resolvedBy.some ? nameOf(resolvedBy.val) : None;
   const date = resolvedAt.some ? ` · ${resolvedAt.val.setLocale(locale).toFormat("LLL d")}` : "";
   const dismissedLabel = `${who.some ? `Dismissed by ${who.val}` : "Dismissed"}${date}`;
+  const source = `${segment.speaker_label} · ${formatTimestamp(segment.start_ms)}`;
 
   const restore = async () => {
     if (!onRestore || pending) return;
@@ -107,9 +111,16 @@ function DismissedRow({
         <p className="line-clamp-2 text-xs italic leading-snug [overflow-wrap:anywhere]">
           “{quote}”
         </p>
-        <span className="text-[11px] tabular-nums">
-          {segment.speaker_label} · {formatTimestamp(segment.start_ms)}
-        </span>
+        <button
+          type="button"
+          title="Show in transcript"
+          aria-label={`Show in transcript: ${source}`}
+          onClick={() => onShowInTranscript?.(segment.id)}
+          className="inline-flex items-center gap-1 self-start text-[11px] font-medium tabular-nums underline decoration-foreground/30 underline-offset-2"
+        >
+          <FileText size={11} aria-hidden />
+          {source}
+        </button>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
         <span>{dismissedLabel}</span>

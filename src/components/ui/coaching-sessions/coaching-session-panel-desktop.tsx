@@ -75,6 +75,7 @@ export function CoachingSessionPanelDesktop({
   onSuggestionDismiss,
   onSuggestionSave,
   onSuggestionRestore,
+  onShowInTranscript,
   sessionDateMap,
   coachId,
   coachName,
@@ -284,6 +285,7 @@ export function CoachingSessionPanelDesktop({
               onSuggestionDismiss={onSuggestionDismiss}
               onSuggestionSave={onSuggestionSave}
               onSuggestionRestore={onSuggestionRestore}
+              onShowInTranscript={onShowInTranscript}
               sessionDateMap={sessionDateMap}
               locale={locale}
               coachId={coachId}

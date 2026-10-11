@@ -138,6 +138,7 @@ export interface CoachingSessionPanelSharedProps {
   onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
   onSuggestionSave?: (s: ActionSuggestion, edits: ActionEdits) => Promise<boolean>;
   onSuggestionRestore?: (s: ActionSuggestion) => Promise<boolean>;
+  onShowInTranscript?: (segmentId: Id) => void;
   /** Maps coaching_session_id → session date for "view source session" links */
   sessionDateMap: Map<Id, DateTime>;
   /** Undefined while the coaching relationship is still loading from SWR */
@@ -362,6 +363,8 @@ interface CoachingSessionPanelProps {
    * opens that section's add-form and prefills the appropriate field.
    */
   noteSelection?: Option<NoteSelection>;
+  /** Shows a suggestion's quoted segment in the transcript. */
+  onShowInTranscript?: (segmentId: Id) => void;
 }
 
 export function CoachingSessionPanel({
@@ -373,6 +376,7 @@ export function CoachingSessionPanel({
   defaultSection = PanelSection.Topics,
   onSectionChange: onSectionChangeExternal,
   noteSelection = None,
+  onShowInTranscript,
 }: CoachingSessionPanelProps) {
   // ── Resolve user/relationship context for actions ───────────────
   const userId = useAuthStore((state) => state.userId);
@@ -1259,6 +1263,7 @@ export function CoachingSessionPanel({
     onSuggestionDismiss: suggestionReview.dismiss,
     onSuggestionSave: suggestionReview.save,
     onSuggestionRestore: suggestionReview.restore,
+    onShowInTranscript,
     sessionDateMap,
     coachId,
     coachName,
