@@ -20,26 +20,26 @@ function lookOf(status: Shown): Look {
   switch (status) {
     case ScanStatus.None:
       return {
-        tooltip: "Scan the transcript for suggested actions",
+        tooltip: "Scan transcript for actions",
         blocked: false,
         spinning: false,
       };
     case ScanStatus.Failed:
       return {
-        tooltip: "The last scan failed. Scan the transcript again for suggested actions",
+        tooltip: "Scan failed. Scan transcript again",
         blocked: false,
         spinning: false,
       };
     case ScanStatus.Pending:
     case ScanStatus.Processing:
       return {
-        tooltip: "Scanning the transcript for suggested actions…",
+        tooltip: "Scanning transcript for actions…",
         blocked: true,
         spinning: true,
       };
     case ScanStatus.Completed:
       return {
-        tooltip: "Suggested actions were already made for this transcript",
+        tooltip: "Transcript already scanned for actions",
         blocked: true,
         spinning: false,
       };

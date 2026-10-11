@@ -32,10 +32,10 @@ function Wrapper({ children }: { children: ReactNode }) {
 
 const NAME = "Scan transcript for suggested actions";
 const TIPS = {
-  none: "Scan the transcript for suggested actions",
-  failed: "The last scan failed. Scan the transcript again for suggested actions",
-  scanning: "Scanning the transcript for suggested actions…",
-  completed: "Suggested actions were already made for this transcript",
+  none: "Scan transcript for actions",
+  failed: "Scan failed. Scan transcript again",
+  scanning: "Scanning transcript for actions…",
+  completed: "Transcript already scanned for actions",
 };
 
 function renderButton(status: ScanStatus) {

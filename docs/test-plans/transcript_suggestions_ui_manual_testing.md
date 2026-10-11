@@ -337,7 +337,7 @@ Goals or Agreements never shows it either.
 
 Delete the session's analysis row (backend Part G3), reload, hover the button, then press it.
 
-**Pass:** the tooltip reads "Scan the transcript for suggested actions". Pressing it turns the icon
+**Pass:** the tooltip reads "Scan transcript for actions". Pressing it turns the icon
 into a spinner and the button greys out; suggested action cards arrive without a refresh, and the
 button then stays greyed out with the completed tooltip.
 
@@ -345,16 +345,14 @@ button then stays greyed out with the completed tooltip.
 
 Set the analysis row to `failed` (backend Part G2), reload, hover the button, then press it.
 
-**Pass:** the tooltip reads "The last scan failed. Scan the transcript again for suggested
-actions". Pressing it starts the spinner, and the suggested actions appear live once the scan
+**Pass:** the tooltip reads "Scan failed. Scan transcript again". Pressing it starts the spinner, and the suggested actions appear live once the scan
 finishes.
 
 ### Case J4: disabled while a scan runs
 
 Set the row to `processing` (backend Part G4) and reload. Hover, press, and Tab to the button.
 
-**Pass:** the icon spins and the button is greyed out. The tooltip reads "Scanning the transcript
-for suggested actions…" on hover, on focus and after a press, and pressing it starts nothing (no
+**Pass:** the icon spins and the button is greyed out. The tooltip reads "Scanning transcript for actions…" on hover, on focus and after a press, and pressing it starts nothing (no
 POST in the Network tab).
 
 ### Case J5: disabled after it completes
@@ -362,8 +360,7 @@ POST in the Network tab).
 On a session whose scan completed, hover the button; then, at 390px or on a phone, open the
 Actions sheet and tap it twice.
 
-**Pass:** the button is greyed out and not spinning. The tooltip reads "Suggested actions were
-already made for this transcript" on hover and focus; a tap opens it, a second tap closes it, and
+**Pass:** the button is greyed out and not spinning. The tooltip reads "Transcript already scanned for actions" on hover and focus; a tap opens it, a second tap closes it, and
 pressing never sends a POST. On the phone the button is at least 40px square and the sheet does
 not scroll sideways.
 

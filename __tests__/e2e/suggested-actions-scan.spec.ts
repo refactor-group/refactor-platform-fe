@@ -17,8 +17,8 @@ const NAME = 'Scan transcript for suggested actions'
 const SCAN_PATH = `/coaching_sessions/${SESSION_ID}/transcript_suggestions/scan`
 
 const TIPS = {
-  failed: 'The last scan failed. Scan the transcript again for suggested actions',
-  completed: 'Suggested actions were already made for this transcript',
+  failed: 'Scan failed. Scan transcript again',
+  completed: 'Transcript already scanned for actions',
 }
 
 const BASE_RELATIONSHIP = SINGLE_RELATIONSHIP[0]
