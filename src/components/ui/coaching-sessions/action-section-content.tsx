@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested-action-card";
+import { DismissedSuggestions } from "@/components/ui/coaching-sessions/dismissed-suggestions";
 import { defaultAction } from "@/types/action";
 import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
@@ -34,6 +35,8 @@ export interface ActionSectionContentProps {
   sessionActions: Action[];
   /** Pending transcript suggestions, shown in the New tab; never locked. */
   actionSuggestions?: ActionSuggestion[];
+  /** Dismissed transcript suggestions, collapsed under the pending ones. */
+  dismissedSuggestions?: ActionSuggestion[];
   /** Decides who may act on a suggestion. */
   viewerRole?: RelationshipRole;
   /** Resolves to the created action when the accept succeeded. */
@@ -74,6 +77,7 @@ export function ActionSectionContent({
   reviewActions,
   sessionActions,
   actionSuggestions = [],
+  dismissedSuggestions = [],
   viewerRole = RelationshipRole.Coachee,
   onSuggestionAccept,
   onSuggestionDismiss,
@@ -418,6 +422,16 @@ export function ActionSectionContent({
             ))}
           </div>
         )}
+        <DismissedSuggestions
+          suggestions={dismissedSuggestions}
+          viewerRole={viewerRole}
+          locale={locale}
+          coachId={coachId}
+          coachName={coachName}
+          coacheeId={coacheeId}
+          coacheeName={coacheeName}
+          onRestore={onSuggestionRestore}
+        />
         {sessionActions.length === 0 && !isAddingAction ? (
           <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
             <p className="text-sm text-muted-foreground/50 italic">

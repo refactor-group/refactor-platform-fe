@@ -16,6 +16,7 @@ import {
   parseActionSuggestion,
   serializeActionEdits,
   type ActionEdits,
+  SuggestionStatus,
   type ActionSuggestion,
 } from "@/types/transcript-suggestion";
 
@@ -28,6 +29,23 @@ const suggestionUrl = (sessionId: Id, suggestionId: Id): string =>
 /** The session's suggestions filtered to actions. */
 export const actionSuggestionsUrl = (sessionId: Id): string =>
   `${suggestionsUrl(sessionId)}?target=action`;
+
+/** The session's dismissed action suggestions. */
+export const dismissedActionSuggestionsUrl = (sessionId: Id): string =>
+  `${suggestionsUrl(sessionId)}?target=action&status=dismissed`;
+
+function listUrl(sessionId: Id, status: SuggestionStatus): string {
+  switch (status) {
+    case SuggestionStatus.Pending:
+      return actionSuggestionsUrl(sessionId);
+    case SuggestionStatus.Dismissed:
+      return dismissedActionSuggestionsUrl(sessionId);
+    default: {
+      const _exhaustive: never = status;
+      throw new Error(`Unhandled suggestion status: ${_exhaustive}`);
+    }
+  }
+}
 
 /** A failed suggestion mutation, reduced to what the review UI needs. */
 export type SuggestionFailure =
@@ -73,10 +91,11 @@ async function attempt<T>(
 }
 
 export const TranscriptSuggestionApi = {
-  listActions: async (sessionId: Id): Promise<ActionSuggestion[]> => {
-    const res = await sessionGuard.get<ApiResponse<unknown[]>>(
-      actionSuggestionsUrl(sessionId)
-    );
+  listActions: async (
+    sessionId: Id,
+    status: SuggestionStatus = SuggestionStatus.Pending
+  ): Promise<ActionSuggestion[]> => {
+    const res = await sessionGuard.get<ApiResponse<unknown[]>>(listUrl(sessionId, status));
     return res.data.data.map(parseActionSuggestion);
   },
 
@@ -135,6 +154,23 @@ export const useActionSuggestionList = (sessionId: Id) => {
     EntityApi.useEntityList<ActionSuggestion>(
       actionSuggestionsUrl(sessionId),
       () => TranscriptSuggestionApi.listActions(sessionId),
+      sessionId
+    );
+
+  return {
+    suggestions: entities,
+    isLoading,
+    isError,
+    refresh,
+  };
+};
+
+/** Fetches a session's dismissed action suggestions, oldest first. */
+export const useDismissedActionSuggestionList = (sessionId: Id) => {
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<ActionSuggestion>(
+      dismissedActionSuggestionsUrl(sessionId),
+      () => TranscriptSuggestionApi.listActions(sessionId, SuggestionStatus.Dismissed),
       sessionId
     );
 

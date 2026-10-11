@@ -70,6 +70,29 @@ const SUGGESTIONS = [
   ),
 ]
 
+const resolved = (by: string) => ({ resolved_by: by, resolved_at: '2026-10-11T17:10:00Z' })
+
+const DISMISSED = [
+  {
+    ...wireSuggestion(
+      'dis-long',
+      `Send the ${'antidisestablishmentarianism'.repeat(4)} notes to Dana`,
+      'Dismissed quote one about the notes.',
+      [RELATIONSHIP.coachee_id]
+    ),
+    ...resolved(RELATIONSHIP.coachee_id),
+  },
+  {
+    ...wireSuggestion(
+      'dis-coach',
+      'Review the onboarding checklist',
+      'Dismissed quote two about the checklist.',
+      [RELATIONSHIP.coach_id]
+    ),
+    ...resolved(RELATIONSHIP.coach_id),
+  },
+]
+
 // Opens the panel sheet and switches it to Actions as a user would.
 async function openActionsSheet(page: Page): Promise<Locator> {
   await page.goto(`/coaching-sessions/${SESSION_ID}`)
@@ -105,6 +128,14 @@ test.describe('Suggested actions on mobile', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ status_code: 200, data: SUGGESTIONS }),
+      })
+    })
+    // Registered last so it wins over the pending route above.
+    await page.route('**/transcript_suggestions?*status=dismissed*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status_code: 200, data: DISMISSED }),
       })
     })
   })
@@ -213,5 +244,44 @@ test.describe('Suggested actions on mobile', () => {
     expect(within(markerBox!), 'marker lies within the card').toBe(true)
     expect(markerBox!.y).toBeGreaterThanOrEqual(cardBox!.y)
     expect(markerBox!.y + markerBox!.height).toBeLessThanOrEqual(cardBox!.y + cardBox!.height)
+  })
+
+  test('the dismissed section fits the screen and hides quotes', async ({ page }) => {
+    const sheet = await openActionsSheet(page)
+
+    const toggle = sheet.getByRole('button', { name: 'Dismissed (2)' })
+    await toggle.click()
+    const rows = sheet.getByTestId('dismissed-suggestion')
+    await expect(rows).toHaveCount(2)
+    await expect(rows.nth(0)).toBeVisible()
+
+    const docWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+    expect(docWidth).toBeLessThanOrEqual(VIEWPORT.width)
+
+    const panel = sheet.getByTestId('session-section-content')
+    const { scrollWidth, clientWidth } = await panel.evaluate((el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    }))
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+
+    const toggleBox = await toggle.boundingBox()
+    expect(toggleBox).not.toBeNull()
+    expect(toggleBox!.height, 'Dismissed trigger height').toBeGreaterThanOrEqual(40)
+
+    const restores = rows.getByRole('button', { name: /Restore/ })
+    const count = await restores.count()
+    expect(count).toBeGreaterThan(0)
+    for (let i = 0; i < count; i++) {
+      const button = restores.nth(i)
+      if (!(await button.isVisible())) continue
+      const box = await button.boundingBox()
+      expect(box, `Restore ${i} has no box`).not.toBeNull()
+      expect(box!.height, `Restore ${i} height`).toBeGreaterThanOrEqual(40)
+    }
+
+    for (const d of DISMISSED) {
+      await expect(rows.getByText(d.quote, { exact: false })).toBeHidden()
+    }
   })
 })

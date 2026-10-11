@@ -29,7 +29,10 @@ import {
   useCoachingSessionTopicMutation,
 } from "@/lib/api/coaching-session-topics";
 import { usePanelActions } from "@/lib/hooks/use-panel-actions";
-import { useActionSuggestionList } from "@/lib/api/transcript-suggestions";
+import {
+  useActionSuggestionList,
+  useDismissedActionSuggestionList,
+} from "@/lib/api/transcript-suggestions";
 import { useSuggestionReview } from "@/lib/hooks/use-suggestion-review";
 import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
@@ -127,6 +130,7 @@ export interface CoachingSessionPanelSharedProps {
   reviewActions: Action[];
   sessionActions: Action[];
   actionSuggestions: ActionSuggestion[];
+  dismissedSuggestions?: ActionSuggestion[];
   /** Coachee unless the viewer is the coach. */
   viewerRole: RelationshipRole;
   /** Suggestion review stays available when the session's sections are locked. */
@@ -830,8 +834,14 @@ export function CoachingSessionPanel({
     coachingRelationshipId,
     sessionDate,
   });
-  const { suggestions: actionSuggestions, refresh: refreshSuggestions } =
+  const { suggestions: actionSuggestions, refresh: refreshPending } =
     useActionSuggestionList(coachingSessionId);
+  const { suggestions: dismissedSuggestions, refresh: refreshDismissed } =
+    useDismissedActionSuggestionList(coachingSessionId);
+  const refreshSuggestions = useCallback(() => {
+    refreshPending();
+    refreshDismissed();
+  }, [refreshPending, refreshDismissed]);
   const suggestionReview = useSuggestionReview({
     coachingSessionId,
     refreshSuggestions,
@@ -1243,6 +1253,7 @@ export function CoachingSessionPanel({
     reviewActions: panelReviewActions,
     sessionActions,
     actionSuggestions,
+    dismissedSuggestions,
     viewerRole,
     onSuggestionAccept: suggestionReview.accept,
     onSuggestionDismiss: suggestionReview.dismiss,

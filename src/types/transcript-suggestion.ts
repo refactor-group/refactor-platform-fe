@@ -24,6 +24,12 @@ export function isDueSource(value: unknown): value is DueSource {
   return value === DueSource.NextSession || value === DueSource.SevenDays;
 }
 
+/** A suggestion's review status, as a list filter. */
+export enum SuggestionStatus {
+  Pending = "pending",
+  Dismissed = "dismissed",
+}
+
 /** The Action a suggestion would create, plus the spoken due phrase. */
 export interface ActionProposal extends Action {
   due_phrase: Option<string>;
@@ -58,6 +64,9 @@ export interface ActionSuggestion {
   duplicate_of: Option<DuplicateOf>;
   default_due: DefaultDue;
   created_at: DateTime;
+  /** None while pending. */
+  resolved_by: Option<Id>;
+  resolved_at: Option<DateTime>;
 }
 
 /** Reviewer edits sent with an update or an accept. */
@@ -87,6 +96,10 @@ function parseDateTime(value: unknown, what: string): DateTime {
     throw new Error(`${what} is not an ISO date: ${String(value)}`);
   }
   return dt;
+}
+
+function parseOptionalDateTime(value: unknown, what: string): Option<DateTime> {
+  return value === null || value === undefined ? None : Some(parseDateTime(value, what));
 }
 
 function parseProposal(value: unknown): ActionProposal {
@@ -156,6 +169,8 @@ export function parseActionSuggestion(value: unknown): ActionSuggestion {
     duplicate_of: parseDuplicateOf(value.duplicate_of),
     default_due: parseDefaultDue(value.default_due),
     created_at: parseDateTime(value.created_at, "ActionSuggestion created_at"),
+    resolved_by: typeof value.resolved_by === "string" ? Some(value.resolved_by) : None,
+    resolved_at: parseOptionalDateTime(value.resolved_at, "ActionSuggestion resolved_at"),
   };
 }
 
