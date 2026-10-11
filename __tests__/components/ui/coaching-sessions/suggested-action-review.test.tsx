@@ -90,9 +90,8 @@ describe("SuggestedActionCard actions", () => {
     suggestion: ActionSuggestion,
     viewerRole: RelationshipRole,
     handlers: {
-      onAccept?: () => Promise<void>;
+      onAccept?: (edits: Option<ActionEdits>) => Promise<void>;
       onDismiss?: () => Promise<void>;
-      onSave?: (edits: ActionEdits) => Promise<boolean>;
     }
   ) {
     return render(
@@ -129,9 +128,9 @@ describe("SuggestedActionCard actions", () => {
     expect(onAccept).toHaveBeenCalledTimes(1);
   });
 
-  it("edits in place and saves the edits", async () => {
-    const onSave = vi.fn().mockResolvedValue(true);
-    renderCard(makeSuggestion(), RelationshipRole.Coach, { onSave });
+  it("edits and accepts with the edits", async () => {
+    const onAccept = vi.fn().mockResolvedValue(undefined);
+    renderCard(makeSuggestion(), RelationshipRole.Coach, { onAccept });
 
     await userEvent.click(screen.getByRole("button", EDIT));
     const textbox = screen.getByRole("textbox");
@@ -144,41 +143,41 @@ describe("SuggestedActionCard actions", () => {
     await userEvent.click(screen.getByTestId("mock-due-date-pick"));
     await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
     await userEvent.click(await screen.findByRole("option", { name: /Jim Hodapp/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(screen.getByRole("button", ACCEPT));
 
-    expect(onSave).toHaveBeenCalledTimes(1);
-    const sent: ActionEdits = onSave.mock.calls[0][0];
+    expect(onAccept).toHaveBeenCalledTimes(1);
+    const sent: ActionEdits = onAccept.mock.calls[0][0].val;
     expect(sent.body).toBe("Send the revised plan");
     expect(sent.due_by).toEqual(Some(PICKED));
     expect([...sent.assignee_ids].sort()).toEqual([COACH_ID, COACHEE_ID].sort());
-    await waitFor(() => expect(screen.queryByRole("textbox")).not.toBeInTheDocument());
   });
 
   it("preselects the default due date but sends no date unless one is picked", async () => {
-    const onSave = vi.fn().mockResolvedValue(true);
-    renderCard(makeSuggestion({ dueBy: null }), RelationshipRole.Coach, { onSave });
+    const onAccept = vi.fn().mockResolvedValue(undefined);
+    renderCard(makeSuggestion({ dueBy: null }), RelationshipRole.Coach, { onAccept });
 
     await userEvent.click(screen.getByRole("button", EDIT));
     expect(screen.getByTestId("mock-due-date-value")).toHaveTextContent("2026-10-18");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(screen.getByRole("button", ACCEPT));
 
-    expect(onSave.mock.calls[0][0].due_by).toEqual(None);
+    expect(onAccept.mock.calls[0][0].val.due_by).toEqual(None);
   });
 
-  it("keeps the form open when a save fails, and Cancel closes it", async () => {
-    const onSave = vi.fn().mockResolvedValue(false);
-    renderCard(makeSuggestion(), RelationshipRole.Coach, { onSave });
+  it("keeps the form open after an accept the card survives, and Cancel closes it", async () => {
+    const onAccept = vi.fn().mockResolvedValue(undefined);
+    renderCard(makeSuggestion(), RelationshipRole.Coach, { onAccept });
 
     await userEvent.click(screen.getByRole("button", EDIT));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", ACCEPT));
     expect(screen.getByRole("textbox")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
   it("disables the coach in the coachee's assignee picker", async () => {
-    const onSave = vi.fn().mockResolvedValue(true);
-    renderCard(makeSuggestion({ assignees: [COACHEE_ID] }), RelationshipRole.Coachee, { onSave });
+    const onAccept = vi.fn().mockResolvedValue(undefined);
+    renderCard(makeSuggestion({ assignees: [COACHEE_ID] }), RelationshipRole.Coachee, { onAccept });
 
     await userEvent.click(screen.getByRole("button", EDIT));
     await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
@@ -201,7 +200,6 @@ describe("ActionSectionContent review flow", () => {
     handlers: {
       onSuggestionAccept?: (s: ActionSuggestion, e: Option<ActionEdits>) => Promise<Option<Action>>;
       onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
-      onSuggestionSave?: (s: ActionSuggestion, e: ActionEdits) => Promise<boolean>;
     }
   ) {
     return {
@@ -285,20 +283,20 @@ describe("ActionSectionContent review flow", () => {
     );
   });
 
-  it("routes a saved edit to the save handler", async () => {
-    const onSuggestionSave = vi.fn().mockResolvedValue(true);
+  it("routes an edited accept to the accept handler", async () => {
+    const onSuggestionAccept = vi.fn().mockResolvedValue(None);
     const suggestion = makeSuggestion();
     render(
       <Wrapper>
-        <ActionSectionContent {...sectionProps([suggestion], [], { onSuggestionSave })} />
+        <ActionSectionContent {...sectionProps([suggestion], [], { onSuggestionAccept })} />
       </Wrapper>
     );
 
     await userEvent.click(screen.getByRole("button", EDIT));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(onSuggestionSave).toHaveBeenCalledWith(
+    await userEvent.click(screen.getByRole("button", ACCEPT));
+    expect(onSuggestionAccept).toHaveBeenCalledWith(
       suggestion,
-      expect.objectContaining({ body: "Send the hiring plan to Dana" })
+      Some(expect.objectContaining({ body: "Send the hiring plan to Dana" }))
     );
   });
 });

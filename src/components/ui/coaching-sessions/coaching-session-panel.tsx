@@ -136,7 +136,6 @@ export interface CoachingSessionPanelSharedProps {
   /** Suggestion review stays available when the session's sections are locked. */
   onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
   onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
-  onSuggestionSave?: (s: ActionSuggestion, edits: ActionEdits) => Promise<boolean>;
   onSuggestionRestore?: (s: ActionSuggestion) => Promise<boolean>;
   onShowInTranscript?: (segmentId: Id) => void;
   /** Maps coaching_session_id → session date for "view source session" links */
@@ -1263,7 +1262,6 @@ export function CoachingSessionPanel({
     viewerRole,
     onSuggestionAccept: suggestionReview.accept,
     onSuggestionDismiss: suggestionReview.dismiss,
-    onSuggestionSave: suggestionReview.save,
     onSuggestionRestore: suggestionReview.restore,
     onShowInTranscript,
     sessionDateMap,

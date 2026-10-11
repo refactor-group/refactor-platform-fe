@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   ComponentPropsWithoutRef,
   KeyboardEvent,
@@ -8,22 +8,7 @@ import type {
   PointerEvent,
 } from "react";
 import ReactMarkdown from "react-markdown";
-import TextareaMarkdown from "textarea-markdown-editor";
-import type { TextareaMarkdownRef } from "textarea-markdown-editor";
-import {
-  Bold,
-  Check,
-  Copy,
-  FileText,
-  Italic,
-  Link2,
-  List,
-  ListOrdered,
-  Lock,
-  Quote,
-  Sparkles,
-  Strikethrough,
-} from "lucide-react";
+import { Check, Copy, FileText, Lock, Quote, Sparkles } from "lucide-react";
 import type { DateTime } from "ts-luxon";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,12 +17,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  AssigneePickerPopover,
-  DueDatePicker,
-  resolveAssignees,
-} from "@/components/ui/coaching-sessions/action-card-parts";
-import { MarkdownToolbarButton } from "@/components/ui/coaching-sessions/action-card-compact";
+import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
+import { resolveAssignees } from "@/components/ui/coaching-sessions/action-card-parts";
+import { ActionEditForm } from "@/components/ui/coaching-sessions/action-card-compact";
 import { cn } from "@/components/lib/utils";
 import { mayActOnSuggestion, suggestionDue } from "@/lib/utils/transcript-suggestions";
 import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
@@ -65,8 +47,6 @@ export interface SuggestedActionCardProps {
   /** Some(edits) accepts with the reviewer's edits; None accepts as suggested. */
   onAccept?: (edits: Option<ActionEdits>) => Promise<void>;
   onDismiss?: () => Promise<void>;
-  /** Resolves true when the edits were saved. */
-  onSave?: (edits: ActionEdits) => Promise<boolean>;
   /** Brings an existing action into view. */
   onShowAction?: (actionId: Id) => void;
   /** Shows the quoted segment in the transcript. */
@@ -74,22 +54,24 @@ export interface SuggestedActionCardProps {
 }
 
 export function SuggestedActionCard(props: SuggestedActionCardProps) {
-  const [editing, setEditing] = useState(false);
-  const { onSave } = props;
-
-  if (editing && onSave) {
-    return (
-      <TooltipProvider delayDuration={300}>
-        <div
-          data-testid="suggested-action-card"
-          className="relative flex min-w-0 flex-col gap-2 rounded-lg border border-dashed border-foreground/30 bg-card p-3 animate-in fade-in zoom-in-95"
-        >
-          <SuggestionEditForm {...props} onSave={onSave} onClose={() => setEditing(false)} />
-        </div>
-      </TooltipProvider>
-    );
-  }
-  return <SuggestionView {...props} onEdit={() => setEditing(true)} />;
+  const { onAccept } = props;
+  return (
+    <TooltipProvider delayDuration={300}>
+      <div data-testid="suggested-action-card" className="min-w-0">
+        <BaseCardCompactEditable
+          editOnFlip
+          faceClassName="border-dashed border-foreground/30 bg-card shadow-none hover:border-foreground/30"
+          renderFront={({ onFlip }) => <SuggestionView {...props} onEdit={onFlip} />}
+          renderBack={({ isEditing, onDone }) =>
+            // Mounted only while showing, so each edit starts fresh.
+            isEditing && onAccept ? (
+              <SuggestionEditBack {...props} onAccept={onAccept} onClose={onDone} />
+            ) : null
+          }
+        />
+      </div>
+    </TooltipProvider>
+  );
 }
 
 function SuggestionView({
@@ -102,7 +84,6 @@ function SuggestionView({
   coacheeName,
   onAccept,
   onDismiss,
-  onSave,
   onShowAction,
   onShowInTranscript,
   onEdit,
@@ -138,123 +119,218 @@ function SuggestionView({
   };
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <div
-        data-testid="suggested-action-card"
-        className="relative flex min-w-0 flex-col gap-2 rounded-lg border border-dashed border-foreground/30 bg-card p-3"
-        onKeyDown={handleKeyDown}
-      >
-        <div className="flex min-h-6 items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[11px] font-medium text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Sparkles size={13} aria-hidden />
-              Suggested
-            </span>
-            {duplicateOf.some && (
-              <>
-                <span aria-hidden className="text-muted-foreground/50">
-                  ·
-                </span>
-                <DuplicateMarker body={duplicateOf.val.body} onClick={showAction} />
-              </>
-            )}
-          </div>
+    <div className="flex min-w-0 flex-col gap-2" onKeyDown={handleKeyDown}>
+      <div className="flex min-h-6 items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[11px] font-medium text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Sparkles size={13} aria-hidden />
+            Suggested
+          </span>
+          {duplicateOf.some && (
+            <>
+              <span aria-hidden className="text-muted-foreground/50">
+                ·
+              </span>
+              <DuplicateMarker body={duplicateOf.val.body} onClick={showAction} />
+            </>
+          )}
         </div>
+      </div>
 
-        <SuggestionBody body={proposal.body ?? ""} />
+      <SuggestionBody body={proposal.body ?? ""} />
 
-        <div className="flex min-w-0 gap-2 text-muted-foreground">
-          <Quote size={12} className="mt-0.5 shrink-0 opacity-70" aria-hidden />
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="line-clamp-2 text-xs italic leading-snug [overflow-wrap:anywhere]">
-              “{quote}”
-            </p>
-            <button
-              type="button"
-              title="Show in transcript"
-              aria-label={`Show in transcript: ${source}`}
-              onClick={() => onShowInTranscript?.(segment.id)}
-              className="inline-flex items-center gap-1 self-start text-[11px] font-medium tabular-nums underline decoration-foreground/30 underline-offset-2 max-md:min-h-10"
+      <div className="flex min-w-0 gap-2 text-muted-foreground">
+        <Quote size={12} className="mt-0.5 shrink-0 opacity-70" aria-hidden />
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="line-clamp-2 text-xs italic leading-snug [overflow-wrap:anywhere]">
+            “{quote}”
+          </p>
+          <button
+            type="button"
+            title="Show in transcript"
+            aria-label={`Show in transcript: ${source}`}
+            onClick={() => onShowInTranscript?.(segment.id)}
+            className="inline-flex items-center gap-1 self-start text-[11px] font-medium tabular-nums underline decoration-foreground/30 underline-offset-2 max-md:min-h-10"
+          >
+            <FileText size={11} aria-hidden />
+            {source}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1 max-md:min-h-10">
+          {resolvedAssignees.length === 0 ? (
+            <span className="italic text-muted-foreground/70">Unassigned</span>
+          ) : (
+            resolvedAssignees.map((a) => (
+              <Tooltip key={a.id}>
+                <TooltipTrigger asChild>
+                  <span className="font-medium">{a.initials}</span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  {a.name}
+                </TooltipContent>
+              </Tooltip>
+            ))
+          )}
+        </div>
+        <SuggestionDueLabel suggestion={suggestion} locale={locale} />
+      </div>
+
+      {mayAct &&
+        (confirming && duplicateOf.some ? (
+          <DuplicateConfirm
+            body={duplicateOf.val.body}
+            pending={pending}
+            onShowAction={showAction}
+            onAddAnyway={run(onAccept && (() => onAccept(None)))}
+            onKeepExisting={run(onDismiss)}
+            onCancel={() => setConfirming(false)}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              className={ROW_BUTTON}
+              disabled={pending}
+              onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && (() => onAccept(None)))}
             >
-              <FileText size={11} aria-hidden />
-              {source}
-            </button>
+              <Check className="!h-3 !w-3" aria-hidden />
+              Accept
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className={ROW_BUTTON}
+              disabled={pending}
+              onClick={onAccept ? onEdit : undefined}
+            >
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(ROW_BUTTON, "text-muted-foreground")}
+              disabled={pending}
+              onClick={run(onDismiss)}
+            >
+              Dismiss
+            </Button>
           </div>
-        </div>
+        ))}
 
-        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-1 max-md:min-h-10">
-            {resolvedAssignees.length === 0 ? (
-              <span className="italic text-muted-foreground/70">Unassigned</span>
-            ) : (
-              resolvedAssignees.map((a) => (
-                <Tooltip key={a.id}>
-                  <TooltipTrigger asChild>
-                    <span className="font-medium">{a.initials}</span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    {a.name}
-                  </TooltipContent>
-                </Tooltip>
-              ))
-            )}
-          </div>
-          <SuggestionDueLabel suggestion={suggestion} locale={locale} />
-        </div>
+      {!mayAct && (
+        <p
+          data-testid="suggested-action-lock-note"
+          className="flex items-center gap-1.5 border-t border-dashed pt-2 text-[11px] text-muted-foreground"
+        >
+          <Lock size={11} aria-hidden />
+          Only {coachName.split(" ")[0]} can accept or edit it.
+        </p>
+      )}
+    </div>
+  );
+}
 
-        {mayAct &&
-          (confirming && duplicateOf.some ? (
+function SuggestionEditBack({
+  suggestion,
+  viewerRole,
+  locale,
+  coachId,
+  coachName,
+  coacheeId,
+  coacheeName,
+  onAccept,
+  onDismiss,
+  onShowAction,
+  onClose,
+}: SuggestedActionCardProps & {
+  onAccept: (edits: Option<ActionEdits>) => Promise<void>;
+  onClose: () => void;
+}) {
+  const { proposal, duplicate_of: duplicateOf } = suggestion;
+  const [picked, setPicked] = useState<Option<DateTime>>(None);
+  const [assigneeIds, setAssigneeIds] = useState<Id[]>(proposal.assignee_ids ?? []);
+  const [confirming, setConfirming] = useState<Option<ActionEdits>>(None);
+  const { pending, run } = useInFlight();
+
+  const { allAssignees, resolvedAssignees } = resolveAssignees(
+    assigneeIds,
+    coachId,
+    coachName,
+    coacheeId,
+    coacheeName
+  );
+  const disabledReasons =
+    viewerRole === RelationshipRole.Coachee
+      ? { [coachId]: "Only your coach can assign an action to themselves." }
+      : {};
+  const action = {
+    ...proposal,
+    due_by: Some(picked.some ? picked.val : suggestionDue(suggestion, locale).at),
+  };
+
+  const toggleAssignee = (id: Id) =>
+    setAssigneeIds((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
+    );
+
+  const accept = async (body: string, ids: Id[]) => {
+    const edits: ActionEdits = {
+      body,
+      // An unspoken date stays unspoken unless the reviewer picks one.
+      due_by: picked.some ? picked : proposal.due_by,
+      assignee_ids: ids,
+    };
+    if (duplicateOf.some) setConfirming(Some(edits));
+    else await onAccept(Some(edits));
+  };
+
+  // Ignore Escape from portaled popovers, which bubbles here through React.
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Escape" || !e.currentTarget.contains(e.target as Node)) return;
+    e.preventDefault();
+    if (confirming.some) setConfirming(None);
+    else onClose();
+  };
+
+  return (
+    <div className="flex flex-col gap-3" onKeyDown={handleKeyDown}>
+      <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+        <Sparkles size={13} aria-hidden />
+        Edit suggestion
+      </span>
+      <ActionEditForm
+        action={action}
+        locale={locale}
+        initialBody={proposal.body ?? ""}
+        allAssignees={allAssignees}
+        resolvedAssignees={resolvedAssignees}
+        assigneeIds={assigneeIds}
+        onDueDateChange={(date) => setPicked(Some(date))}
+        onAssigneeToggle={toggleAssignee}
+        assigneeDisabledReasons={disabledReasons}
+        onSave={accept}
+        onCancel={onClose}
+        saveLabel="Accept"
+        saveIcon={Check}
+        buttonClassName="max-md:h-10 max-md:min-w-10"
+        fieldsDisabled={confirming.some}
+        footerOverride={
+          confirming.some && duplicateOf.some ? (
             <DuplicateConfirm
               body={duplicateOf.val.body}
               pending={pending}
-              onShowAction={showAction}
-              onAddAnyway={run(onAccept && (() => onAccept(None)))}
+              onShowAction={() => onShowAction?.(duplicateOf.val.action_id)}
+              onAddAnyway={run(() => onAccept(confirming))}
               onKeepExisting={run(onDismiss)}
-              onCancel={() => setConfirming(false)}
+              onCancel={() => setConfirming(None)}
             />
-          ) : (
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-              <Button
-                size="sm"
-                className={ROW_BUTTON}
-                disabled={pending}
-                onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && (() => onAccept(None)))}
-              >
-                <Check className="!h-3 !w-3" aria-hidden />
-                Accept
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className={ROW_BUTTON}
-                disabled={pending}
-                onClick={onSave ? onEdit : undefined}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(ROW_BUTTON, "text-muted-foreground")}
-                disabled={pending}
-                onClick={run(onDismiss)}
-              >
-                Dismiss
-              </Button>
-            </div>
-          ))}
-
-        {!mayAct && (
-          <p
-            data-testid="suggested-action-lock-note"
-            className="flex items-center gap-1.5 border-t border-dashed pt-2 text-[11px] text-muted-foreground"
-          >
-            <Lock size={11} aria-hidden />
-            Only {coachName.split(" ")[0]} can accept or edit it.
-          </p>
-        )}
-      </div>
-    </TooltipProvider>
+          ) : undefined
+        }
+      />
+    </div>
   );
 }
 
@@ -435,170 +511,5 @@ function SuggestionDueLabel({
         {due.tooltip.val}
       </TooltipContent>
     </Tooltip>
-  );
-}
-
-function SuggestionEditForm({
-  suggestion,
-  viewerRole,
-  locale,
-  coachId,
-  coachName,
-  coacheeId,
-  coacheeName,
-  onAccept,
-  onDismiss,
-  onSave,
-  onShowAction,
-  onClose,
-}: SuggestedActionCardProps & {
-  onSave: (edits: ActionEdits) => Promise<boolean>;
-  onClose: () => void;
-}) {
-  const { proposal, duplicate_of: duplicateOf } = suggestion;
-  const [body, setBody] = useState(proposal.body ?? "");
-  const [picked, setPicked] = useState<Option<DateTime>>(None);
-  const [assigneeIds, setAssigneeIds] = useState<Id[]>(proposal.assignee_ids ?? []);
-  const [confirming, setConfirming] = useState(false);
-  const { pending, run } = useInFlight();
-  const markdownRef = useRef<TextareaMarkdownRef>(null);
-
-  const { allAssignees, resolvedAssignees } = resolveAssignees(
-    assigneeIds,
-    coachId,
-    coachName,
-    coacheeId,
-    coacheeName
-  );
-  const disabledReasons =
-    viewerRole === RelationshipRole.Coachee
-      ? { [coachId]: "Only your coach can assign an action to themselves." }
-      : {};
-  const dueValue = picked.some ? picked.val : suggestionDue(suggestion, locale).at;
-
-  const toggleAssignee = (id: Id) =>
-    setAssigneeIds((prev) =>
-      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id]
-    );
-
-  const trigger = useCallback(
-    (command: string) => markdownRef.current?.trigger(command),
-    []
-  );
-
-  const trimmed = body.trim();
-  const edits = (): ActionEdits => ({
-    body: trimmed,
-    // An unspoken date stays unspoken unless the reviewer picks one.
-    due_by: picked.some ? picked : proposal.due_by,
-    assignee_ids: assigneeIds,
-  });
-
-  const save = run(async () => {
-    if (await onSave(edits())) onClose();
-  });
-  const accept = run(onAccept && (() => onAccept(Some(edits()))));
-  const showAction = duplicateOf.some
-    ? () => onShowAction?.(duplicateOf.val.action_id)
-    : undefined;
-
-  // Ignore Escape from portaled popovers, which bubbles here through React.
-  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "Escape" || !e.currentTarget.contains(e.target as Node)) return;
-    e.preventDefault();
-    if (confirming) setConfirming(false);
-    else onClose();
-  };
-
-  return (
-    <div className="flex flex-col gap-3" onKeyDown={handleKeyDown}>
-      <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-        <Sparkles size={13} aria-hidden />
-        Edit suggestion
-      </span>
-
-      <div className="space-y-1">
-        <div className="flex items-center gap-0.5">
-          <MarkdownToolbarButton icon={Bold} label="Bold" onClick={() => trigger("bold")} />
-          <MarkdownToolbarButton icon={Italic} label="Italic" onClick={() => trigger("italic")} />
-          <MarkdownToolbarButton icon={Strikethrough} label="Strikethrough" onClick={() => trigger("strike-through")} />
-          <span className="w-px h-4 bg-border mx-1" />
-          <MarkdownToolbarButton icon={List} label="Bullet list" onClick={() => trigger("unordered-list")} />
-          <MarkdownToolbarButton icon={ListOrdered} label="Numbered list" onClick={() => trigger("ordered-list")} />
-          <span className="w-px h-4 bg-border mx-1" />
-          <MarkdownToolbarButton icon={Link2} label="Link" onClick={() => trigger("link")} />
-        </div>
-        <TextareaMarkdown
-          ref={markdownRef}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          className="w-full min-h-[80px] max-h-[200px] overflow-y-auto overscroll-contain rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-          autoFocus
-        />
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">Due date</span>
-          <DueDatePicker
-            value={dueValue}
-            onChange={(date) => setPicked(Some(date))}
-            locale={locale}
-            variant="button"
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">Assignee(s)</span>
-          <AssigneePickerPopover
-            allAssignees={allAssignees}
-            resolvedAssignees={resolvedAssignees}
-            assigneeIds={assigneeIds}
-            onToggle={toggleAssignee}
-            disabledReasons={disabledReasons}
-          />
-        </div>
-      </div>
-
-      {confirming && duplicateOf.some ? (
-        <DuplicateConfirm
-          body={duplicateOf.val.body}
-          pending={pending}
-          onShowAction={showAction}
-          onAddAnyway={accept}
-          onKeepExisting={run(onDismiss)}
-          onCancel={() => setConfirming(false)}
-        />
-      ) : (
-        <div className="flex flex-wrap items-center justify-end gap-2 pt-3">
-          <Button
-            size="sm"
-            className={ROW_BUTTON}
-            onClick={duplicateOf.some ? () => setConfirming(true) : accept}
-            disabled={pending || !trimmed}
-          >
-            <Check className="!h-3 !w-3" aria-hidden />
-            Accept
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className={ROW_BUTTON}
-            onClick={save}
-            disabled={pending || !trimmed}
-          >
-            Save
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(ROW_BUTTON, "text-muted-foreground")}
-            onClick={onClose}
-            disabled={pending}
-          >
-            Cancel
-          </Button>
-        </div>
-      )}
-    </div>
   );
 }

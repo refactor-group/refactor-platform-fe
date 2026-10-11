@@ -73,7 +73,6 @@ export function CoachingSessionPanelDesktop({
   viewerRole,
   onSuggestionAccept,
   onSuggestionDismiss,
-  onSuggestionSave,
   onSuggestionRestore,
   onShowInTranscript,
   sessionDateMap,
@@ -290,7 +289,6 @@ export function CoachingSessionPanelDesktop({
               viewerRole={viewerRole}
               onSuggestionAccept={onSuggestionAccept}
               onSuggestionDismiss={onSuggestionDismiss}
-              onSuggestionSave={onSuggestionSave}
               onSuggestionRestore={onSuggestionRestore}
               onShowInTranscript={onShowInTranscript}
               sessionDateMap={sessionDateMap}

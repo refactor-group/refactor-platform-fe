@@ -77,7 +77,6 @@ function renderCard(suggestion: ActionSuggestion) {
   const handlers = {
     onAccept: vi.fn().mockResolvedValue(undefined),
     onDismiss: vi.fn().mockResolvedValue(undefined),
-    onSave: vi.fn().mockResolvedValue(true),
     onShowAction: vi.fn(),
   };
   render(
@@ -112,15 +111,28 @@ describe("the card's button row", () => {
 describe("the edit form's button row", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("ends with Accept, Save and Cancel, in that order", async () => {
+  it("ends with Accept and Cancel, and has no Save", async () => {
     renderCard(makeSuggestion());
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     const card = screen.getByTestId("suggested-action-card");
-    expect(labels(card).slice(-3)).toEqual(["Accept", "Save", "Cancel"]);
+    expect(labels(card).slice(-2)).toEqual(["Accept", "Cancel"]);
+    expect(within(card).queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+  });
+
+  it("opens with the edit form only, then returns to the card on Cancel", async () => {
+    renderCard(makeSuggestion());
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByRole("textbox")).toHaveValue("Draft a delegation plan");
+    expect(screen.queryByText("Status")).not.toBeInTheDocument();
+    expect(screen.queryByText("Linked goal")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
   });
 
   it("accepts with the edits in one step", async () => {
-    const { onAccept, onSave } = renderCard(makeSuggestion());
+    const { onAccept } = renderCard(makeSuggestion());
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     const textbox = screen.getByRole("textbox");
     await userEvent.clear(textbox);
@@ -128,7 +140,6 @@ describe("the edit form's button row", () => {
     await userEvent.click(screen.getByTestId("mock-due-date-pick"));
     await userEvent.click(screen.getByRole("button", { name: "Accept" }));
 
-    expect(onSave).not.toHaveBeenCalled();
     expect(onAccept).toHaveBeenCalledTimes(1);
     const sent = onAccept.mock.calls[0][0];
     expect(sent.some).toBe(true);
@@ -138,12 +149,11 @@ describe("the edit form's button row", () => {
     expect(edits.assignee_ids).toEqual([COACHEE_ID]);
   });
 
-  it("disables Accept and Save while the body is empty", async () => {
+  it("disables Accept while the body is empty", async () => {
     renderCard(makeSuggestion());
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     await userEvent.clear(screen.getByRole("textbox"));
     expect(screen.getByRole("button", { name: "Accept" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
   it("asks about a possible duplicate and keeps the edits for Add anyway", async () => {
@@ -185,7 +195,6 @@ describe("ActionSectionContent accept with edits", () => {
           onActionCreate={vi.fn().mockResolvedValue(undefined)}
           onActionDelete={vi.fn()}
           onSuggestionAccept={onSuggestionAccept}
-          onSuggestionSave={vi.fn().mockResolvedValue(true)}
         />
       </Wrapper>
     );

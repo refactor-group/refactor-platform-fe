@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
 import type { TextareaMarkdownRef } from "textarea-markdown-editor";
@@ -488,7 +489,36 @@ function ActionBackView({
 
 // ── Back face: Edit form ────────────────────────────────────────────
 
-function ActionEditForm({
+export interface ActionEditFormProps {
+  action: Action;
+  locale: string;
+  initialBody: string;
+  bodyAppend?: Option<NoteField>;
+  allAssignees: { id: Id; name: string; initials: string }[];
+  resolvedAssignees: { id: Id; name: string; initials: string }[];
+  assigneeIds: Id[];
+  goals?: Goal[];
+  selectedGoalId?: Id;
+  /** Shows the Status row when provided. */
+  onStatusChange?: (newStatus: ItemStatus) => void;
+  onDueDateChange: (newDueBy: DateTime) => void;
+  onAssigneeToggle: (assigneeId: Id) => void;
+  onGoalSelect?: (goalId: Id | undefined) => void;
+  onSave: (body: string, assigneeIds: Id[], goalId?: Id) => Promise<void>;
+  onCancel: () => void;
+  /** Assignees that can't be picked, with the reason shown for each. */
+  assigneeDisabledReasons?: Partial<Record<Id, string>>;
+  saveLabel?: string;
+  saveIcon?: typeof Bold;
+  /** Extra classes for the Save and Cancel buttons. */
+  buttonClassName?: string;
+  /** Rendered in place of the Save and Cancel row when set. */
+  footerOverride?: ReactNode;
+  /** Makes the body, due date and assignees read-only. */
+  fieldsDisabled?: boolean;
+}
+
+export function ActionEditForm({
   action,
   locale,
   initialBody,
@@ -504,23 +534,13 @@ function ActionEditForm({
   onGoalSelect,
   onSave,
   onCancel,
-}: {
-  action: Action;
-  locale: string;
-  initialBody: string;
-  bodyAppend?: Option<NoteField>;
-  allAssignees: { id: Id; name: string; initials: string }[];
-  resolvedAssignees: { id: Id; name: string; initials: string }[];
-  assigneeIds: Id[];
-  goals?: Goal[];
-  selectedGoalId?: Id;
-  onStatusChange: (newStatus: ItemStatus) => void;
-  onDueDateChange: (newDueBy: DateTime) => void;
-  onAssigneeToggle: (assigneeId: Id) => void;
-  onGoalSelect?: (goalId: Id | undefined) => void;
-  onSave: (body: string, assigneeIds: Id[], goalId?: Id) => Promise<void>;
-  onCancel: () => void;
-}) {
+  assigneeDisabledReasons,
+  saveLabel = "Save",
+  saveIcon: SaveIcon,
+  buttonClassName,
+  footerOverride,
+  fieldsDisabled = false,
+}: ActionEditFormProps) {
   const [body, setBody] = useState(initialBody);
   const [isSaving, setIsSaving] = useState(false);
   const markdownRef = useRef<TextareaMarkdownRef>(null);
@@ -568,20 +588,21 @@ function ActionEditForm({
     <div className="space-y-3">
       <div className="space-y-1">
         <div className="flex items-center gap-0.5">
-          <MarkdownToolbarButton icon={Bold} label="Bold" onClick={() => trigger("bold")} />
-          <MarkdownToolbarButton icon={Italic} label="Italic" onClick={() => trigger("italic")} />
-          <MarkdownToolbarButton icon={Strikethrough} label="Strikethrough" onClick={() => trigger("strike-through")} />
+          <MarkdownToolbarButton icon={Bold} label="Bold" onClick={() => trigger("bold")} disabled={fieldsDisabled} />
+          <MarkdownToolbarButton icon={Italic} label="Italic" onClick={() => trigger("italic")} disabled={fieldsDisabled} />
+          <MarkdownToolbarButton icon={Strikethrough} label="Strikethrough" onClick={() => trigger("strike-through")} disabled={fieldsDisabled} />
           <span className="w-px h-4 bg-border mx-1" />
-          <MarkdownToolbarButton icon={List} label="Bullet list" onClick={() => trigger("unordered-list")} />
-          <MarkdownToolbarButton icon={ListOrdered} label="Numbered list" onClick={() => trigger("ordered-list")} />
+          <MarkdownToolbarButton icon={List} label="Bullet list" onClick={() => trigger("unordered-list")} disabled={fieldsDisabled} />
+          <MarkdownToolbarButton icon={ListOrdered} label="Numbered list" onClick={() => trigger("ordered-list")} disabled={fieldsDisabled} />
           <span className="w-px h-4 bg-border mx-1" />
-          <MarkdownToolbarButton icon={Link2} label="Link" onClick={() => trigger("link")} />
+          <MarkdownToolbarButton icon={Link2} label="Link" onClick={() => trigger("link")} disabled={fieldsDisabled} />
         </div>
         <div ref={textareaWrapRef}>
           <TextareaMarkdown
             ref={markdownRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
+            readOnly={fieldsDisabled}
             className="w-full min-h-[80px] max-h-[200px] overflow-y-auto overscroll-contain rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
             autoFocus
           />
@@ -589,13 +610,15 @@ function ActionEditForm({
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">Status</span>
-          <StatusSelect
-            status={action.status}
-            onStatusChange={onStatusChange}
-          />
-        </div>
+        {onStatusChange && (
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground">Status</span>
+            <StatusSelect
+              status={action.status}
+              onStatusChange={onStatusChange}
+            />
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-[11px] text-muted-foreground">Due date</span>
           <DueDatePicker
@@ -607,6 +630,7 @@ function ActionEditForm({
             onChange={onDueDateChange}
             locale={locale}
             variant="button"
+            disabled={fieldsDisabled}
           />
         </div>
         <div className="flex items-center justify-between">
@@ -616,6 +640,8 @@ function ActionEditForm({
             resolvedAssignees={resolvedAssignees}
             assigneeIds={assigneeIds}
             onToggle={onAssigneeToggle}
+            disabledReasons={assigneeDisabledReasons}
+            disabled={fieldsDisabled}
           />
         </div>
         {goals && onGoalSelect && (
@@ -630,25 +656,28 @@ function ActionEditForm({
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-2 pt-3">
+      {footerOverride ?? (
+        <div className="flex items-center justify-end gap-2 pt-3">
           <Button
             size="sm"
-            className="h-6 gap-1 text-[11px] px-2"
+            className={cn("h-6 gap-1 text-[11px] px-2", buttonClassName)}
             onClick={handleSave}
             disabled={isSaving || !body.trim()}
           >
-            Save
+            {SaveIcon && <SaveIcon className="!h-3 !w-3" aria-hidden />}
+            {saveLabel}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 gap-1 text-[11px] px-2 text-muted-foreground"
+            className={cn("h-6 gap-1 text-[11px] px-2 text-muted-foreground", buttonClassName)}
             onClick={onCancel}
             disabled={isSaving}
           >
             Cancel
           </Button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -659,10 +688,12 @@ export function MarkdownToolbarButton({
   icon: Icon,
   label,
   onClick,
+  disabled = false,
 }: {
   icon: typeof Bold;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <TooltipProvider delayDuration={300}>
@@ -670,11 +701,12 @@ export function MarkdownToolbarButton({
         <TooltipTrigger asChild>
           <button
             type="button"
+            disabled={disabled}
             onClick={(e) => {
               e.preventDefault();
               onClick();
             }}
-            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:pointer-events-none disabled:opacity-50"
           >
             <Icon className="h-3.5 w-3.5" />
           </button>

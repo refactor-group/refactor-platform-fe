@@ -324,20 +324,22 @@ test.describe('Coach reviews suggested actions', () => {
     expect(sent(backend, 'POST', '/accept')).toHaveLength(1)
   })
 
-  test('edit then save updates the suggestion without accepting it', async ({ page }) => {
+  test('edit then cancel sends nothing', async ({ page }) => {
     const panel = await openActionsPanel(page)
 
     await cardWith(panel, SHARED).getByRole('button', { name: 'Edit', exact: true }).click()
     const form = editingCard(panel, page)
     await form.getByRole('textbox').fill(EDITED)
-    await form.getByRole('button', { name: 'Save' }).click()
+    await expect(form.getByRole('button', { name: 'Save' })).toHaveCount(0)
+    await form.getByRole('button', { name: 'Cancel', exact: true }).click()
 
     await expect(editingCard(panel, page)).toHaveCount(0)
-    await expect(cardWith(panel, EDITED)).toBeVisible()
+    const card = cardWith(panel, SHARED)
+    await expect(card.getByTestId('suggested-action-body')).toBeVisible()
+    await expect(card.getByTestId('suggested-action-body')).toHaveText(SHARED)
+    await expect(cardWith(panel, EDITED)).toHaveCount(0)
 
-    const puts = sent(backend, 'PUT', '/sug-shared')
-    expect(puts).toHaveLength(1)
-    expect((JSON.parse(puts[0].body ?? '{}') as EditsWire).body).toBe(EDITED)
+    expect(sent(backend, 'PUT', '/sug-shared')).toHaveLength(0)
     expect(sent(backend, 'POST', '/accept')).toHaveLength(0)
   })
 
@@ -482,12 +484,12 @@ test.describe('Coachee reviews suggested actions', () => {
     await expect(coachOption).toHaveAttribute('aria-selected', 'false')
 
     await page.keyboard.press('Escape')
-    await form.getByRole('button', { name: 'Save' }).click()
-    await expect(editingCard(panel, page)).toHaveCount(0)
+    await form.getByRole('button', { name: 'Accept', exact: true }).click()
+    await expect(cardWith(panel, OWN)).toHaveCount(0)
 
-    const puts = sent(backend, 'PUT', '/sug-own')
-    expect(puts).toHaveLength(1)
-    expect((JSON.parse(puts[0].body ?? '{}') as EditsWire).assignee_ids).not.toContain(COACH)
+    const accepts = sent(backend, 'POST', '/sug-own/accept')
+    expect(accepts).toHaveLength(1)
+    expect((JSON.parse(accepts[0].body ?? '{}') as EditsWire).assignee_ids).not.toContain(COACH)
   })
 })
 
@@ -514,13 +516,15 @@ test.describe('Coach reviews suggested actions on a phone', () => {
     const form = editingCard(sheet, page)
     await form.getByRole('textbox').fill(EDITED)
     await expectNoHorizontalScroll(page)
-    await form.getByRole('button', { name: 'Save' }).click()
-    await expect(cardWith(sheet, EDITED)).toBeVisible()
+    await form.getByRole('button', { name: 'Accept', exact: true }).click()
+    await expect(cards).toHaveCount(0)
+    await expect(sheet.locator('div.flip-card-container', { hasText: EDITED })).toBeVisible()
     await expectNoHorizontalScroll(page)
 
     expect(sent(backend, 'POST', '/sug-plain/accept')).toHaveLength(1)
     expect(sent(backend, 'POST', '/sug-dup/dismiss')).toHaveLength(1)
-    expect(sent(backend, 'PUT', '/sug-shared')).toHaveLength(1)
+    expect(sent(backend, 'POST', '/sug-shared/accept')).toHaveLength(1)
+    expect(sent(backend, 'PUT', '/sug-shared')).toHaveLength(0)
   })
 })
 

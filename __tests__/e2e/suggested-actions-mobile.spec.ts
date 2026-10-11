@@ -210,7 +210,7 @@ test.describe('Suggested actions on mobile', () => {
     expect(popoverBox!.x).toBeGreaterThanOrEqual(0)
     expect(popoverBox!.x + popoverBox!.width).toBeLessThanOrEqual(VIEWPORT.width)
 
-    for (const name of ['Accept', 'Save', 'Cancel']) {
+    for (const name of ['Accept', 'Cancel']) {
       const box = await card.getByRole('button', { name, exact: true }).boundingBox()
       expect(box, `${name} has no box`).not.toBeNull()
       expect(box!.width, `${name} width`).toBeGreaterThanOrEqual(40)

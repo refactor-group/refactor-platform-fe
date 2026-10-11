@@ -11,7 +11,7 @@ import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
 import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
 
-export type SuggestionOp = "accept" | "dismiss" | "save" | "restore";
+export type SuggestionOp = "accept" | "dismiss" | "restore";
 
 export function suggestionFailureMessage(op: SuggestionOp, f: SuggestionFailure): string {
   switch (f.kind) {
@@ -87,19 +87,6 @@ export function useSuggestionReview({
     [coachingSessionId, refreshSuggestions, reportFailure]
   );
 
-  const save = useCallback(
-    async (s: ActionSuggestion, edits: ActionEdits): Promise<boolean> => {
-      const result = await TranscriptSuggestionApi.update(coachingSessionId, s.id, edits);
-      if (result.isErr()) {
-        reportFailure("save", result.error);
-        return false;
-      }
-      refreshSuggestions();
-      return true;
-    },
-    [coachingSessionId, refreshSuggestions, reportFailure]
-  );
-
   const restore = useCallback(
     async (s: ActionSuggestion): Promise<boolean> => {
       const result = await TranscriptSuggestionApi.restore(coachingSessionId, s.id);
@@ -113,5 +100,5 @@ export function useSuggestionReview({
     [coachingSessionId, refreshSuggestions, reportFailure]
   );
 
-  return { accept, dismiss, save, restore };
+  return { accept, dismiss, restore };
 }

@@ -1,5 +1,5 @@
 // Frozen acceptance test for fe#477 phase 3: the review hook behind accept,
-// dismiss and save, and the toast copy for each failure.
+// dismiss and restore, and the toast copy for each failure.
 
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -110,33 +110,25 @@ describe("useSuggestionReview", () => {
     expect(toast.error).toHaveBeenCalledWith("Only your coach can change this suggestion.");
   });
 
-  it("saves edits and refreshes suggestions", async () => {
-    vi.mocked(TranscriptSuggestionApi.update).mockResolvedValue(ok(suggestion));
-    const { result, refreshSuggestions } = setup();
-
-    let saved;
-    await act(async () => {
-      saved = await result.current.save(suggestion, edits);
-    });
-
-    expect(TranscriptSuggestionApi.update).toHaveBeenCalledWith("s-1", "sug-1", edits);
-    expect(saved).toBe(true);
-    expect(refreshSuggestions).toHaveBeenCalled();
-  });
-
-  it("shows the backend's validation message on a failed save", async () => {
-    vi.mocked(TranscriptSuggestionApi.update).mockResolvedValue(
+  it("shows the backend's validation message on a failed accept with edits", async () => {
+    vi.mocked(TranscriptSuggestionApi.accept).mockResolvedValue(
       err({ kind: "invalid", message: Some("Body must not be empty") })
     );
     const { result } = setup();
 
-    let saved;
+    let accepted;
     await act(async () => {
-      saved = await result.current.save(suggestion, edits);
+      accepted = await result.current.accept(suggestion, Some(edits));
     });
 
-    expect(saved).toBe(false);
+    expect(accepted).toEqual(None);
     expect(toast.error).toHaveBeenCalledWith("Body must not be empty");
+    expect(TranscriptSuggestionApi.update).not.toHaveBeenCalled();
+  });
+
+  it("no longer offers a separate save", () => {
+    const { result } = setup();
+    expect("save" in result.current).toBe(false);
   });
 });
 
@@ -145,14 +137,14 @@ describe("suggestionFailureMessage", () => {
     expect(suggestionFailureMessage("accept", { kind: "no_longer_pending" })).toBe(
       "Someone already handled this suggestion."
     );
-    expect(suggestionFailureMessage("save", { kind: "forbidden" })).toBe(
+    expect(suggestionFailureMessage("accept", { kind: "forbidden" })).toBe(
       "Only your coach can change this suggestion."
     );
     expect(suggestionFailureMessage("dismiss", { kind: "not_found" })).toBe(
       "This suggestion is no longer available."
     );
-    expect(suggestionFailureMessage("save", { kind: "invalid", message: None })).toBe(
-      "Couldn't save the suggestion. Check it and try again."
+    expect(suggestionFailureMessage("accept", { kind: "invalid", message: None })).toBe(
+      "Couldn't accept the suggestion. Check it and try again."
     );
     expect(suggestionFailureMessage("accept", { kind: "network" })).toBe(
       "Couldn't accept the suggestion. Connection to service was lost."

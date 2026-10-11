@@ -43,8 +43,6 @@ export interface ActionSectionContentProps {
   onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
   /** Resolves true when the suggestion was dismissed. */
   onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
-  /** Resolves true when the edits were saved. */
-  onSuggestionSave?: (s: ActionSuggestion, edits: ActionEdits) => Promise<boolean>;
   /** Resolves true when the dismissed suggestion was restored. */
   onSuggestionRestore?: (s: ActionSuggestion) => Promise<boolean>;
   /** Shows a suggestion's quoted segment in the transcript. */
@@ -83,7 +81,6 @@ export function ActionSectionContent({
   viewerRole = RelationshipRole.Coachee,
   onSuggestionAccept,
   onSuggestionDismiss,
-  onSuggestionSave,
   onSuggestionRestore,
   onShowInTranscript,
   sessionDateMap,
@@ -294,9 +291,6 @@ export function ActionSectionContent({
           exitSuggestion(suggestion.id);
           offerUndo(suggestion);
         }
-      : undefined,
-    onSave: onSuggestionSave
-      ? (edits: ActionEdits) => onSuggestionSave(suggestion, edits)
       : undefined,
   });
 

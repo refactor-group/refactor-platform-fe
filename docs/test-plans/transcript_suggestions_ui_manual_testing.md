@@ -76,20 +76,21 @@ Click **Accept** on a card.
 **Pass:** the card animates out, the new action appears in the New tab's list, is scrolled into
 view and carries a ring for about two seconds. The remaining cards keep their oldest-first order.
 
-### Case B2: edit then save
+### Case B2: Edit flips the card
 
-Click **Edit**, change the body, due date and assignees, click **Save**.
+Click **Edit**.
 
-**Pass:** the form closes and the card shows the new body, date (bold) and initials. No action is
-created. Reload: the edits are still there.
+**Pass:** the card flips like an action card to an "Edit suggestion" form with the body, due date
+and assignees, and no Status or Linked goal rows. The form's buttons are **Accept** and **Cancel**;
+there is no Save. Edits are never stored on the suggestion: they only travel with an accept.
 
 ### Case B3: edit then accept
 
 Click **Edit**, change the body, due date and assignees, then click **Accept** in the form.
 
 **Pass:** one press creates the action with the edited body, date and assignees; the card animates
-out and the new action is ringed as in B1. The form's row reads **Accept**, **Save**, **Cancel**,
-and Accept and Save are disabled while the body is empty.
+out and the new action is ringed as in B1. Accept is disabled while the body is empty. If the
+accept fails, the card stays and the form stays open with the edits.
 
 ### Case B4: dismiss and undo
 
@@ -98,12 +99,14 @@ Click **Dismiss**, then **Undo** in the toast within six seconds.
 **Pass:** a "Suggestion dismissed" toast with an **Undo** button appears and the card leaves.
 Undo brings the card back in place. Dismiss another and let the toast lapse: the card stays gone.
 
-### Case B5: Cancel and Escape in the form
+### Case B5: Cancel, Escape and outside click in the form
 
 Open the form, change the body, click **Cancel**. Open it again, change the body, press Escape.
+Open it again, change the body, click outside the card.
 
-**Pass:** both close the form without a request, and the card shows the original body. Escape
-pressed inside the open Assignees or due date popover closes only the popover.
+**Pass:** each flips the card back without a request, and the card shows the original body.
+Opening the form again starts from the suggestion, not the discarded edits. Escape pressed inside
+the open Assignees or due date popover closes only the popover.
 
 ## 4. Part C: coachee review
 
@@ -120,12 +123,12 @@ or edit it."
 On one of the coachee's own cards, click **Edit** and open **Assignees**.
 
 **Pass:** the coach's option is greyed out and cannot be ticked or unticked, and the note "Only
-your coach can assign an action to themselves." shows under the options. Saving keeps the coach
+your coach can assign an action to themselves." shows under the options. Accepting keeps the coach
 out of the assignees.
 
 ### Case C3: own suggestion
 
-Accept one, dismiss one, edit and save one.
+Accept one, dismiss one, edit and accept one.
 
 **Pass:** each behaves as in Part B.
 
@@ -215,11 +218,11 @@ Both browsers on the same session, Actions panel open.
 
 ### Case G1: changes appear in the other browser
 
-As the coach, accept one card, dismiss one, restore one and edit one.
+As the coach, accept one card, dismiss one, restore one and accept one with edits.
 
 **Pass:** each change shows in the coachee's browser within a few seconds without a refresh:
 accepted cards leave and the action appears, dismissed cards move to the Dismissed section,
-restored ones return, edits update the card. Repeat from the coachee side for their own cards.
+restored ones return, and the edited accept adds the action with the edits. Repeat from the coachee side for their own cards.
 
 ### Case G2: racing accepts
 
@@ -242,7 +245,7 @@ the expanded Dismissed section.
 ### Case H2: touch targets
 
 **Pass:** Accept/Edit/Dismiss, the source button, the due date, the duplicate marker, the form's
-Accept/Save/Cancel, Add anyway/Keep existing/Cancel and Restore are each at least 40px tall, and
+Accept/Cancel, Add anyway/Keep existing/Cancel and Restore are each at least 40px tall, and
 the labelled buttons at least 40px wide.
 
 ### Case H3: tooltips on tap
