@@ -79,9 +79,9 @@ function makeSuggestion(
   };
 }
 
-const ACCEPT = { name: "Accept: add as action" };
-const DISMISS = { name: "Dismiss suggestion" };
-const EDIT = { name: "Edit before accepting" };
+const ACCEPT = { name: "Accept" };
+const DISMISS = { name: "Dismiss" };
+const EDIT = { name: "Edit" };
 
 describe("SuggestedActionCard actions", () => {
   beforeEach(() => vi.clearAllMocks());

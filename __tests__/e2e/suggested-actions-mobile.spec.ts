@@ -171,6 +171,15 @@ test.describe('Suggested actions on mobile', () => {
       expect(box!.width, `button ${name} width`).toBeGreaterThanOrEqual(40)
       expect(box!.height, `button ${name} height`).toBeGreaterThanOrEqual(40)
     }
+
+    const actionable = cards.filter({ has: page.getByRole('button', { name: 'Accept', exact: true }) })
+    await expect(actionable.first()).toBeVisible()
+    for (const name of ['Accept', 'Edit', 'Dismiss']) {
+      const box = await actionable.first().getByRole('button', { name, exact: true }).boundingBox()
+      expect(box, `${name} has no box`).not.toBeNull()
+      expect(box!.width, `${name} width`).toBeGreaterThanOrEqual(40)
+      expect(box!.height, `${name} height`).toBeGreaterThanOrEqual(40)
+    }
   })
 
   test('the edit form and assignee picker fit the screen', async ({ page }) => {
@@ -178,7 +187,7 @@ test.describe('Suggested actions on mobile', () => {
 
     // The viewer is not the coach; this suggestion is assigned to the coachee only.
     const card = sheet.getByTestId('suggested-action-card').first()
-    await card.getByRole('button', { name: 'Edit before accepting' }).click()
+    await card.getByRole('button', { name: 'Edit', exact: true }).click()
     await expect(card.getByRole('textbox')).toBeVisible()
     await card.getByRole('button', { name: 'Assignees' }).click()
     const popover = page
@@ -201,9 +210,10 @@ test.describe('Suggested actions on mobile', () => {
     expect(popoverBox!.x).toBeGreaterThanOrEqual(0)
     expect(popoverBox!.x + popoverBox!.width).toBeLessThanOrEqual(VIEWPORT.width)
 
-    for (const name of ['Save', 'Cancel']) {
-      const box = await card.getByRole('button', { name }).boundingBox()
+    for (const name of ['Accept', 'Save', 'Cancel']) {
+      const box = await card.getByRole('button', { name, exact: true }).boundingBox()
       expect(box, `${name} has no box`).not.toBeNull()
+      expect(box!.width, `${name} width`).toBeGreaterThanOrEqual(40)
       expect(box!.height, `${name} height`).toBeGreaterThanOrEqual(40)
     }
   })
@@ -213,7 +223,7 @@ test.describe('Suggested actions on mobile', () => {
 
     // The first suggestion is a possible duplicate the viewer may act on.
     const card = sheet.getByTestId('suggested-action-card').first()
-    await card.getByRole('button', { name: 'Accept: add as action' }).click()
+    await card.getByRole('button', { name: 'Accept', exact: true }).click()
     const row = card.getByTestId('suggested-action-duplicate-confirm')
     await expect(row).toBeVisible()
 

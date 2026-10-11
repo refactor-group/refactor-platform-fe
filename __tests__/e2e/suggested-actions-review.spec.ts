@@ -309,7 +309,7 @@ test.describe('Coach reviews suggested actions', () => {
   test('accept adds the action and rings it', async ({ page }) => {
     const panel = await openActionsPanel(page)
 
-    await cardWith(panel, PLAIN).getByRole('button', { name: 'Accept: add as action' }).click()
+    await cardWith(panel, PLAIN).getByRole('button', { name: 'Accept', exact: true }).click()
 
     const created = panel
       .getByTestId('session-section-content')
@@ -327,7 +327,7 @@ test.describe('Coach reviews suggested actions', () => {
   test('edit then save updates the suggestion without accepting it', async ({ page }) => {
     const panel = await openActionsPanel(page)
 
-    await cardWith(panel, SHARED).getByRole('button', { name: 'Edit before accepting' }).click()
+    await cardWith(panel, SHARED).getByRole('button', { name: 'Edit', exact: true }).click()
     const form = editingCard(panel, page)
     await form.getByRole('textbox').fill(EDITED)
     await form.getByRole('button', { name: 'Save' }).click()
@@ -341,10 +341,33 @@ test.describe('Coach reviews suggested actions', () => {
     expect(sent(backend, 'POST', '/accept')).toHaveLength(0)
   })
 
+  test('edit then accept adds the edited action in one step', async ({ page }) => {
+    const panel = await openActionsPanel(page)
+
+    await cardWith(panel, SHARED).getByRole('button', { name: 'Edit', exact: true }).click()
+    const form = editingCard(panel, page)
+    await form.getByRole('textbox').fill(EDITED)
+    await form.getByRole('button', { name: 'Accept', exact: true }).click()
+
+    const created = panel
+      .getByTestId('session-section-content')
+      .locator('div.flip-card-container', { hasText: EDITED })
+    await expect(created).toBeVisible()
+    await expect(created).toHaveClass(/ring-2/)
+    await expect(cardWith(panel, SHARED)).toHaveCount(0)
+    await expect(editingCard(panel, page)).toHaveCount(0)
+
+    const accepts = sent(backend, 'POST', '/sug-shared/accept')
+    expect(accepts).toHaveLength(1)
+    expect((JSON.parse(accepts[0].body ?? '{}') as EditsWire).body).toBe(EDITED)
+    expect(sent(backend, 'POST', '/accept')).toHaveLength(1)
+    expect(sent(backend, 'PUT', '/sug-shared')).toHaveLength(0)
+  })
+
   test('dismiss offers an undo that restores the card', async ({ page }) => {
     const panel = await openActionsPanel(page)
 
-    await cardWith(panel, PLAIN).getByRole('button', { name: 'Dismiss suggestion' }).click()
+    await cardWith(panel, PLAIN).getByRole('button', { name: 'Dismiss', exact: true }).click()
     await expect(page.getByText('Suggestion dismissed')).toBeVisible()
     expect(sent(backend, 'POST', '/sug-plain/dismiss')).toHaveLength(1)
 
@@ -357,7 +380,7 @@ test.describe('Coach reviews suggested actions', () => {
   test('a possible duplicate asks before adding or keeping the existing action', async ({ page }) => {
     let panel = await openActionsPanel(page)
 
-    await cardWith(panel, DUPLICATE).getByRole('button', { name: 'Accept: add as action' }).click()
+    await cardWith(panel, DUPLICATE).getByRole('button', { name: 'Accept', exact: true }).click()
     const confirm = cardWith(panel, DUPLICATE).getByTestId('suggested-action-duplicate-confirm')
     await expect(confirm).toContainText('This looks like an action you already have:')
     expect(sent(backend, 'POST', '/accept')).toHaveLength(0)
@@ -370,7 +393,7 @@ test.describe('Coach reviews suggested actions', () => {
     backend.reset()
     panel = await openActionsPanel(page)
 
-    await cardWith(panel, DUPLICATE).getByRole('button', { name: 'Accept: add as action' }).click()
+    await cardWith(panel, DUPLICATE).getByRole('button', { name: 'Accept', exact: true }).click()
     await cardWith(panel, DUPLICATE)
       .getByTestId('suggested-action-duplicate-confirm')
       .getByRole('button', { name: 'Keep existing' })
@@ -383,7 +406,7 @@ test.describe('Coach reviews suggested actions', () => {
   test('a dismissed suggestion is listed and can be restored', async ({ page }) => {
     const panel = await openActionsPanel(page)
 
-    await cardWith(panel, PLAIN).getByRole('button', { name: 'Dismiss suggestion' }).click()
+    await cardWith(panel, PLAIN).getByRole('button', { name: 'Dismiss', exact: true }).click()
     const toggle = panel.getByRole('button', { name: 'Dismissed (1)' })
     await toggle.click()
 
@@ -433,13 +456,13 @@ test.describe('Coachee reviews suggested actions', () => {
     await expect(coachOnly.getByTestId('suggested-action-lock-note')).toHaveText(
       'Only John can accept or edit it.'
     )
-    for (const name of ['Accept: add as action', 'Dismiss suggestion', 'Edit before accepting']) {
+    for (const name of ['Accept', 'Dismiss', 'Edit']) {
       await expect(coachOnly.getByRole('button', { name })).toHaveCount(0)
     }
 
     const own = cardWith(panel, OWN)
-    for (const name of ['Accept: add as action', 'Dismiss suggestion', 'Edit before accepting']) {
-      await expect(own.getByRole('button', { name })).toBeVisible()
+    for (const name of ['Accept', 'Dismiss', 'Edit']) {
+      await expect(own.getByRole('button', { name, exact: true })).toBeVisible()
     }
     await expect(own.getByTestId('suggested-action-lock-note')).toHaveCount(0)
   })
@@ -447,7 +470,7 @@ test.describe('Coachee reviews suggested actions', () => {
   test('the coachee cannot assign the coach', async ({ page }) => {
     const panel = await openActionsPanel(page)
 
-    await cardWith(panel, OWN).getByRole('button', { name: 'Edit before accepting' }).click()
+    await cardWith(panel, OWN).getByRole('button', { name: 'Edit', exact: true }).click()
     const form = editingCard(panel, page)
     await form.getByRole('button', { name: 'Assignees' }).click()
 
@@ -479,15 +502,15 @@ test.describe('Coach reviews suggested actions on a phone', () => {
     await expect(cards).toHaveCount(3)
     await expectNoHorizontalScroll(page)
 
-    await cardWith(sheet, PLAIN).getByRole('button', { name: 'Accept: add as action' }).click()
+    await cardWith(sheet, PLAIN).getByRole('button', { name: 'Accept', exact: true }).click()
     await expect(cards).toHaveCount(2)
     await expectNoHorizontalScroll(page)
 
-    await cardWith(sheet, DUPLICATE).getByRole('button', { name: 'Dismiss suggestion' }).click()
+    await cardWith(sheet, DUPLICATE).getByRole('button', { name: 'Dismiss', exact: true }).click()
     await expect(cards).toHaveCount(1)
     await expectNoHorizontalScroll(page)
 
-    await cardWith(sheet, SHARED).getByRole('button', { name: 'Edit before accepting' }).click()
+    await cardWith(sheet, SHARED).getByRole('button', { name: 'Edit', exact: true }).click()
     const form = editingCard(sheet, page)
     await form.getByRole('textbox').fill(EDITED)
     await expectNoHorizontalScroll(page)

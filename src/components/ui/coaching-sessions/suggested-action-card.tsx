@@ -6,7 +6,6 @@ import type {
   KeyboardEvent,
   MouseEvent,
   PointerEvent,
-  ReactNode,
 } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
@@ -16,7 +15,6 @@ import {
   Check,
   Copy,
   FileText,
-  Info,
   Italic,
   Link2,
   List,
@@ -25,7 +23,6 @@ import {
   Quote,
   Sparkles,
   Strikethrough,
-  X,
 } from "lucide-react";
 import type { DateTime } from "ts-luxon";
 import { Button } from "@/components/ui/button";
@@ -65,7 +62,8 @@ export interface SuggestedActionCardProps {
   coachName: string;
   coacheeId: Id;
   coacheeName: string;
-  onAccept?: () => Promise<void>;
+  /** Some(edits) accepts with the reviewer's edits; None accepts as suggested. */
+  onAccept?: (edits: Option<ActionEdits>) => Promise<void>;
   onDismiss?: () => Promise<void>;
   /** Resolves true when the edits were saved. */
   onSave?: (edits: ActionEdits) => Promise<boolean>;
@@ -109,9 +107,7 @@ function SuggestionView({
   onShowInTranscript,
   onEdit,
 }: SuggestedActionCardProps & { onEdit: () => void }) {
-  const [pending, setPending] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const confirmRef = useRef<HTMLDivElement>(null);
   const { proposal, quote, segment, duplicate_of: duplicateOf } = suggestion;
   const assigneeIds = proposal.assignee_ids ?? [];
   const mayAct = mayActOnSuggestion(
@@ -129,20 +125,7 @@ function SuggestionView({
   );
   const source = `${segment.speaker_label} · ${formatTimestamp(segment.start_ms)}`;
 
-  const run = (handler?: () => Promise<void>) => async () => {
-    if (!handler || pending) return;
-    setPending(true);
-    try {
-      await handler();
-    } finally {
-      setPending(false);
-    }
-  };
-
-  // The ✓ unmounts as the row opens, so focus moves into the row for Escape to reach it.
-  useEffect(() => {
-    if (confirming) confirmRef.current?.focus();
-  }, [confirming]);
+  const { pending, run } = useInFlight();
 
   const showAction = duplicateOf.some
     ? () => onShowAction?.(duplicateOf.val.action_id)
@@ -176,36 +159,6 @@ function SuggestionView({
               </>
             )}
           </div>
-          {mayAct && (
-            <div className="flex items-center gap-0.5">
-              <IconButton
-                label="Edit before accepting"
-                className="text-muted-foreground/30 hover:text-muted-foreground"
-                disabled={pending}
-                onClick={onSave ? onEdit : undefined}
-              >
-                <Info className="h-3.5 w-3.5" />
-              </IconButton>
-              {!confirming && (
-                <>
-                  <IconButton
-                    label="Accept: add as action"
-                    disabled={pending}
-                    onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept)}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                  </IconButton>
-                  <IconButton
-                    label="Dismiss suggestion"
-                    disabled={pending}
-                    onClick={run(onDismiss)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </IconButton>
-                </>
-              )}
-            </div>
-          )}
         </div>
 
         <SuggestionBody body={proposal.body ?? ""} />
@@ -249,53 +202,47 @@ function SuggestionView({
           <SuggestionDueLabel suggestion={suggestion} locale={locale} />
         </div>
 
-        {confirming && duplicateOf.some && (
-          <div
-            ref={confirmRef}
-            tabIndex={-1}
-            data-testid="suggested-action-duplicate-confirm"
-            className="flex flex-col gap-2 border-t border-dashed pt-2 outline-none"
-          >
-            <p className="text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
-              This looks like an action you already have:{" "}
-              <button
-                type="button"
-                onClick={showAction}
-                className="text-left italic text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
-              >
-                {duplicateOf.val.body.some ? duplicateOf.val.body.val : "the existing action"}
-              </button>
-            </p>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+        {mayAct &&
+          (confirming && duplicateOf.some ? (
+            <DuplicateConfirm
+              body={duplicateOf.val.body}
+              pending={pending}
+              onShowAction={showAction}
+              onAddAnyway={run(onAccept && (() => onAccept(None)))}
+              onKeepExisting={run(onDismiss)}
+              onCancel={() => setConfirming(false)}
+            />
+          ) : (
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
               <Button
                 size="sm"
-                className="h-6 gap-1 text-[11px] px-2 max-md:h-10"
+                className={ROW_BUTTON}
                 disabled={pending}
-                onClick={run(onAccept)}
+                onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && (() => onAccept(None)))}
               >
                 <Check className="!h-3 !w-3" aria-hidden />
-                Add anyway
+                Accept
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-6 gap-1 text-[11px] px-2 max-md:h-10"
+                className={ROW_BUTTON}
                 disabled={pending}
-                onClick={run(onDismiss)}
+                onClick={onSave ? onEdit : undefined}
               >
-                Keep existing
+                Edit
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 gap-1 text-[11px] px-2 text-muted-foreground max-md:h-10"
-                onClick={() => setConfirming(false)}
+                className={cn(ROW_BUTTON, "text-muted-foreground")}
+                disabled={pending}
+                onClick={run(onDismiss)}
               >
-                Cancel
+                Dismiss
               </Button>
             </div>
-          </div>
-        )}
+          ))}
 
         {!mayAct && (
           <p
@@ -335,33 +282,87 @@ function DuplicateMarker({
   );
 }
 
-function IconButton({
-  label,
-  className,
-  disabled = false,
-  onClick,
-  children,
+const ROW_BUTTON = "h-6 gap-1 text-[11px] px-2 max-md:h-10 max-md:min-w-10";
+
+/** Runs one request at a time; `pending` stays true while it is in flight. */
+function useInFlight() {
+  const [pending, setPending] = useState(false);
+  const run =
+    (handler?: () => Promise<unknown>) => async () => {
+      if (!handler || pending) return;
+      setPending(true);
+      try {
+        await handler();
+      } finally {
+        setPending(false);
+      }
+    };
+  return { pending, run };
+}
+
+function DuplicateConfirm({
+  body,
+  pending,
+  onShowAction,
+  onAddAnyway,
+  onKeepExisting,
+  onCancel,
 }: {
-  label: string;
-  className?: string;
-  disabled?: boolean;
-  onClick?: () => void;
-  children: ReactNode;
+  body: Option<string>;
+  pending: boolean;
+  onShowAction?: () => void;
+  onAddAnyway: () => void;
+  onKeepExisting: () => void;
+  onCancel: () => void;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  // The pressed Accept unmounts as the row opens, so focus moves here for Escape to reach it.
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-50 max-md:size-10",
-        className
-      )}
+    <div
+      ref={ref}
+      tabIndex={-1}
+      data-testid="suggested-action-duplicate-confirm"
+      className="flex flex-col gap-2 border-t border-dashed pt-2 outline-none"
     >
-      {children}
-    </button>
+      <p className="text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
+        This looks like an action you already have:{" "}
+        <button
+          type="button"
+          onClick={onShowAction}
+          className="text-left italic text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
+        >
+          {body.some ? body.val : "the existing action"}
+        </button>
+      </p>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button size="sm" className={ROW_BUTTON} disabled={pending} onClick={onAddAnyway}>
+          <Check className="!h-3 !w-3" aria-hidden />
+          Add anyway
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className={ROW_BUTTON}
+          disabled={pending}
+          onClick={onKeepExisting}
+        >
+          Keep existing
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(ROW_BUTTON, "text-muted-foreground")}
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -445,17 +446,21 @@ function SuggestionEditForm({
   coachName,
   coacheeId,
   coacheeName,
+  onAccept,
+  onDismiss,
   onSave,
+  onShowAction,
   onClose,
 }: SuggestedActionCardProps & {
   onSave: (edits: ActionEdits) => Promise<boolean>;
   onClose: () => void;
 }) {
-  const { proposal } = suggestion;
+  const { proposal, duplicate_of: duplicateOf } = suggestion;
   const [body, setBody] = useState(proposal.body ?? "");
   const [picked, setPicked] = useState<Option<DateTime>>(None);
   const [assigneeIds, setAssigneeIds] = useState<Id[]>(proposal.assignee_ids ?? []);
-  const [isSaving, setIsSaving] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const { pending, run } = useInFlight();
   const markdownRef = useRef<TextareaMarkdownRef>(null);
 
   const { allAssignees, resolvedAssignees } = resolveAssignees(
@@ -481,28 +486,28 @@ function SuggestionEditForm({
     []
   );
 
-  const handleSave = async () => {
-    const trimmed = body.trim();
-    if (!trimmed || isSaving) return;
-    setIsSaving(true);
-    try {
-      const saved = await onSave({
-        body: trimmed,
-        // An unspoken date stays unspoken unless the reviewer picks one.
-        due_by: picked.some ? picked : proposal.due_by,
-        assignee_ids: assigneeIds,
-      });
-      if (saved) onClose();
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const trimmed = body.trim();
+  const edits = (): ActionEdits => ({
+    body: trimmed,
+    // An unspoken date stays unspoken unless the reviewer picks one.
+    due_by: picked.some ? picked : proposal.due_by,
+    assignee_ids: assigneeIds,
+  });
+
+  const save = run(async () => {
+    if (await onSave(edits())) onClose();
+  });
+  const accept = run(onAccept && (() => onAccept(Some(edits()))));
+  const showAction = duplicateOf.some
+    ? () => onShowAction?.(duplicateOf.val.action_id)
+    : undefined;
 
   // Ignore Escape from portaled popovers, which bubbles here through React.
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== "Escape" || !e.currentTarget.contains(e.target as Node)) return;
     e.preventDefault();
-    onClose();
+    if (confirming) setConfirming(false);
+    else onClose();
   };
 
   return (
@@ -554,25 +559,46 @@ function SuggestionEditForm({
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 pt-3">
-        <Button
-          size="sm"
-          className="h-6 gap-1 text-[11px] px-2 max-md:h-10"
-          onClick={handleSave}
-          disabled={isSaving || !body.trim()}
-        >
-          Save
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 gap-1 text-[11px] px-2 text-muted-foreground max-md:h-10"
-          onClick={onClose}
-          disabled={isSaving}
-        >
-          Cancel
-        </Button>
-      </div>
+      {confirming && duplicateOf.some ? (
+        <DuplicateConfirm
+          body={duplicateOf.val.body}
+          pending={pending}
+          onShowAction={showAction}
+          onAddAnyway={accept}
+          onKeepExisting={run(onDismiss)}
+          onCancel={() => setConfirming(false)}
+        />
+      ) : (
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-3">
+          <Button
+            size="sm"
+            className={ROW_BUTTON}
+            onClick={duplicateOf.some ? () => setConfirming(true) : accept}
+            disabled={pending || !trimmed}
+          >
+            <Check className="!h-3 !w-3" aria-hidden />
+            Accept
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className={ROW_BUTTON}
+            onClick={save}
+            disabled={pending || !trimmed}
+          >
+            Save
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(ROW_BUTTON, "text-muted-foreground")}
+            onClick={onClose}
+            disabled={pending}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -281,8 +281,8 @@ export function ActionSectionContent({
 
   const reviewHandlers = (suggestion: ActionSuggestion) => ({
     onAccept: onSuggestionAccept
-      ? async () => {
-          const created = await onSuggestionAccept(suggestion, None);
+      ? async (edits: Option<ActionEdits>) => {
+          const created = await onSuggestionAccept(suggestion, edits);
           if (!created.some) return;
           requestHighlight(created.val.id);
           exitSuggestion(suggestion.id);

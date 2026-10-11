@@ -69,7 +69,7 @@ function makeSuggestion(
   };
 }
 
-const ACTION_BUTTONS = ["Accept: add as action", "Dismiss suggestion", "Edit before accepting"];
+const ACTION_BUTTONS = ["Accept", "Dismiss", "Edit"];
 
 function renderCard(suggestion: ActionSuggestion, viewerRole: RelationshipRole) {
   return render(
@@ -234,7 +234,7 @@ describe("ActionSectionContent with suggestions", () => {
     );
     expect(screen.getByTestId("suggested-action-card")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Accept: add as action" })
+      screen.getByRole("button", { name: "Accept" })
     ).toBeInTheDocument();
   });
 });

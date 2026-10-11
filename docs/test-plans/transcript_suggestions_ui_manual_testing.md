@@ -47,7 +47,8 @@ Inspect one card.
 and expands and collapses on click. The quote is italic and clamped. The `<speaker> · m:ss`
 button shows the right speaker and start time. Assignees show as initials with the full name on
 hover, or "Unassigned" in italics. A spoken due date is **bold**, and hovering it (or tapping it)
-shows "Due <date> · from “<phrase>”".
+shows "Due <date> · from “<phrase>”". The card ends with one right-aligned row of labelled
+buttons: **Accept**, **Edit**, **Dismiss**.
 
 ### Case A4: the default due date
 
@@ -70,27 +71,29 @@ Sign in as the coach. Record backend group F1 unless pending suggestions remain.
 
 ### Case B1: accept
 
-Click ✓ on a card.
+Click **Accept** on a card.
 
 **Pass:** the card animates out, the new action appears in the New tab's list, is scrolled into
 view and carries a ring for about two seconds. The remaining cards keep their oldest-first order.
 
 ### Case B2: edit then save
 
-Click ⓘ, change the body, due date and assignees, click **Save**.
+Click **Edit**, change the body, due date and assignees, click **Save**.
 
 **Pass:** the form closes and the card shows the new body, date (bold) and initials. No action is
 created. Reload: the edits are still there.
 
 ### Case B3: edit then accept
 
-Edit a card, save it, then click ✓.
+Click **Edit**, change the body, due date and assignees, then click **Accept** in the form.
 
-**Pass:** the created action carries the edited body, date and assignees.
+**Pass:** one press creates the action with the edited body, date and assignees; the card animates
+out and the new action is ringed as in B1. The form's row reads **Accept**, **Save**, **Cancel**,
+and Accept and Save are disabled while the body is empty.
 
 ### Case B4: dismiss and undo
 
-Click ✕, then **Undo** in the toast within six seconds.
+Click **Dismiss**, then **Undo** in the toast within six seconds.
 
 **Pass:** a "Suggestion dismissed" toast with an **Undo** button appears and the card leaves.
 Undo brings the card back in place. Dismiss another and let the toast lapse: the card stays gone.
@@ -109,12 +112,12 @@ and 9) and coachee ones.
 
 ### Case C1: a coach-only card is read-only
 
-**Pass:** the card has no ✓, ✕ or ⓘ, and a lock line reads "Only <coach first name> can accept
+**Pass:** the card has no Accept, Edit or Dismiss buttons, and a lock line reads "Only <coach first name> can accept
 or edit it."
 
 ### Case C2: the coach is disabled in the picker
 
-On one of the coachee's own cards, click ⓘ and open **Assignees**.
+On one of the coachee's own cards, click **Edit** and open **Assignees**.
 
 **Pass:** the coach's option is greyed out and cannot be ticked or unticked, and the note "Only
 your coach can assign an action to themselves." shows under the options. Saving keeps the coach
@@ -150,12 +153,14 @@ rings it. Clicking again rings it again.
 
 ### Case D3: the confirm row
 
-Click ✓ on a duplicate card.
+Click **Accept** on a duplicate card, then on another duplicate click **Edit**, change the body
+and click **Accept** in the form.
 
-**Pass:** no request is sent; a row reads "This looks like an action you already have:" followed
+**Pass:** no request is sent; the button row is replaced by a row that reads "This looks like an action you already have:" followed
 by the existing body, with **Add anyway**, **Keep existing** and **Cancel**. Add anyway creates
 the action. On another duplicate, Keep existing dismisses the suggestion (with the Undo toast).
-Cancel and Escape each close the row and leave the card as it was.
+Cancel and Escape each close the row and leave the card as it was. From the form, the form stays
+open above the row, and Add anyway creates the action with the edited body.
 
 ## 6. Part E: dismissed section
 
@@ -218,7 +223,7 @@ restored ones return, edits update the card. Repeat from the coachee side for th
 
 ### Case G2: racing accepts
 
-Click ✓ on the same card in both browsers at nearly the same moment.
+Click **Accept** on the same card in both browsers at nearly the same moment.
 
 **Pass:** one wins; the other shows "Someone already handled this suggestion." and the card
 disappears from its list.
@@ -236,8 +241,9 @@ the expanded Dismissed section.
 
 ### Case H2: touch targets
 
-**Pass:** ✓, ✕, ⓘ, the source button, the due date, the duplicate marker, Save/Cancel, Add
-anyway/Keep existing/Cancel and Restore are each at least 40px tall.
+**Pass:** Accept/Edit/Dismiss, the source button, the due date, the duplicate marker, the form's
+Accept/Save/Cancel, Add anyway/Keep existing/Cancel and Restore are each at least 40px tall, and
+the labelled buttons at least 40px wide.
 
 ### Case H3: tooltips on tap
 
@@ -266,7 +272,7 @@ all legible; the lock line's meaning carries in its icon and text, not colour al
 Tab through a card, the edit form, the confirm row and the Dismissed section, with VoiceOver on.
 
 **Pass:** every control is reachable by Tab with a visible focus ring, and each is announced with
-a sensible name (for example "Accept: add as action", "Show in transcript: Jane Smith · 12:34").
+a sensible name (for example "Accept", "Show in transcript: Jane Smith · 12:34").
 Escape closes the edit form and the confirm row.
 
 ## Results

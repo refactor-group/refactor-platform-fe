@@ -56,9 +56,9 @@ function makeSuggestion(duplicateOf: { action_id: string; body: string } | null)
 }
 
 const DUP = { action_id: "act-3", body: "Set up skip-level meeting with Dana" };
-const ACCEPT = { name: "Accept: add as action" };
-const DISMISS = { name: "Dismiss suggestion" };
-const EDIT = { name: "Edit before accepting" };
+const ACCEPT = { name: "Accept" };
+const DISMISS = { name: "Dismiss" };
+const EDIT = { name: "Edit" };
 const CONFIRM_TEXT = "This looks like an action you already have:";
 
 describe("possible duplicate on the card", () => {
@@ -116,7 +116,7 @@ describe("possible duplicate on the card", () => {
     expect(row).toHaveTextContent("Set up skip-level meeting with Dana");
     expect(screen.queryByRole("button", ACCEPT)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", DISMISS)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", EDIT)).toBeInTheDocument();
+    expect(screen.queryByRole("button", EDIT)).not.toBeInTheDocument();
 
     const names = within(row)
       .getAllByRole("button")
