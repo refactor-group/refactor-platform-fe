@@ -80,8 +80,8 @@ view and carries a ring for about two seconds. The remaining cards keep their ol
 
 Click **Edit**.
 
-**Pass:** the card flips like an action card to an "Edit suggestion" form with the body, due date
-and assignees, and no Status or Linked goal rows. The form's buttons are **Accept** and **Cancel**;
+**Pass:** the card flips like an action card to an "Edit suggestion" form with the body, due date,
+assignees and Linked goal, and no Status row. The form's buttons are **Accept** and **Cancel**;
 there is no Save. Edits are never stored on the suggestion: they only travel with an accept.
 
 ### Case B3: edit then accept
@@ -107,6 +107,15 @@ Open it again, change the body, click outside the card.
 **Pass:** each flips the card back without a request, and the card shows the original body.
 Opening the form again starts from the suggestion, not the discarded edits. Escape pressed inside
 the open Assignees or due date popover closes only the popover.
+
+### Case B6: link a goal while accepting
+
+The session needs at least one linked goal. Click **Edit**, open the **Linked goal** picker, choose
+a goal, then click **Accept** in the form. Open the goal's card in the Goals section.
+
+**Pass:** the new action shows the goal (its pill when the body is expanded), and the goal's
+progress counts the new action without a page refresh. A card left at **None** creates an action
+with no goal.
 
 ## 4. Part C: coachee review
 
@@ -292,6 +301,7 @@ Escape closes the edit form and the confirm row.
 | B3 |  |  |
 | B4 |  |  |
 | B5 |  |  |
+| B6 |  |  |
 | C1 |  |  |
 | C2 |  |  |
 | C3 |  |  |

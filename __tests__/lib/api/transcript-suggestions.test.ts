@@ -63,12 +63,14 @@ const edits = {
   body: "Send the revised hiring plan",
   due_by: Some(DateTime.fromISO("2026-10-17T00:00:00Z", { zone: "utc" })),
   assignee_ids: ["coachee-1"],
+  goal_id: None,
 };
 
 const wireEdits = {
   body: "Send the revised hiring plan",
   due_by: DateTime.fromISO("2026-10-17T00:00:00Z", { zone: "utc" }).toISO(),
   assignee_ids: ["coachee-1"],
+  goal_id: null,
 };
 
 const httpError = (status: number, data: unknown = {}) =>

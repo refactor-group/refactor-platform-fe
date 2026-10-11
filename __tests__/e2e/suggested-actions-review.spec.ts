@@ -60,6 +60,7 @@ interface EditsWire {
   body: string
   due_by: string | null
   assignee_ids: string[]
+  goal_id: string | null
 }
 
 interface Mutation {
@@ -127,6 +128,37 @@ const SHARED = 'Update the onboarding checklist'
 const EDITED = 'Write an onboarding checklist for interns'
 const DISMISSED = 'Review the interview rubric'
 
+const GOAL = {
+  id: 'goal-leadership',
+  coaching_relationship_id: BASE_RELATIONSHIP.id,
+  created_in_session_id: SESSION_ID,
+  user_id: MOCK_USER_ID,
+  title: 'Grow as a leader',
+  body: 'Delegate more and coach the team',
+  status: 'InProgress',
+  status_changed_at: '2026-10-01T12:00:00Z',
+  completed_at: null,
+  target_date: null,
+  created_at: '2026-10-01T12:00:00Z',
+  updated_at: '2026-10-01T12:00:00Z',
+}
+
+async function mockSessionGoal(page: Page): Promise<void> {
+  await page.route(`**/coaching_sessions/${SESSION_ID}/goals`, (route) => route.fulfill(json([GOAL])))
+  await page.route('**/goals/*/progress', (route) =>
+    route.fulfill(
+      json({
+        actions_completed: 0,
+        actions_total: 1,
+        linked_coaching_session_count: 1,
+        progress: 'NeedsAttention',
+        last_coaching_session_date: null,
+        next_action_due: null,
+      })
+    )
+  )
+}
+
 const COACH_SEED: Seed = {
   pending: [
     suggestion('sug-plain', 1, PLAIN, [COACHEE]),
@@ -175,6 +207,7 @@ function actionFrom(s: SuggestionWire, edits: EditsWire | null): ActionWire {
     body: edits?.body ?? s.proposal.body,
     due_by: edits ? edits.due_by : s.proposal.due_by,
     assignee_ids: edits?.assignee_ids ?? s.proposal.assignee_ids,
+    goal_id: edits ? edits.goal_id : s.proposal.goal_id,
     user_id: MOCK_USER_ID,
     created_at: '2026-10-11T12:45:00Z',
     updated_at: '2026-10-11T12:45:00Z',
@@ -364,6 +397,23 @@ test.describe('Coach reviews suggested actions', () => {
     expect((JSON.parse(accepts[0].body ?? '{}') as EditsWire).body).toBe(EDITED)
     expect(sent(backend, 'POST', '/accept')).toHaveLength(1)
     expect(sent(backend, 'PUT', '/sug-shared')).toHaveLength(0)
+  })
+
+  test('edit, link a goal, accept', async ({ page }) => {
+    await mockSessionGoal(page)
+    const panel = await openActionsPanel(page)
+
+    await cardWith(panel, SHARED).getByRole('button', { name: 'Edit', exact: true }).click()
+    const form = editingCard(panel, page)
+    await form.getByText('Linked goal').locator('xpath=..').getByRole('button').click()
+    await page.getByRole('option', { name: GOAL.title }).click()
+    await form.getByRole('button', { name: 'Accept', exact: true }).click()
+
+    await expect(cardWith(panel, SHARED)).toHaveCount(0)
+    const accepts = sent(backend, 'POST', '/sug-shared/accept')
+    expect(accepts).toHaveLength(1)
+    expect((JSON.parse(accepts[0].body ?? '{}') as EditsWire).goal_id).toBe(GOAL.id)
+    expect(sent(backend, 'POST', '/accept')).toHaveLength(1)
   })
 
   test('dismiss offers an undo that restores the card', async ({ page }) => {

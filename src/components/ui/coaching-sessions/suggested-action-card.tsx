@@ -24,6 +24,7 @@ import { cn } from "@/components/lib/utils";
 import { mayActOnSuggestion, suggestionDue } from "@/lib/utils/transcript-suggestions";
 import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
 import type { Id } from "@/types/general";
+import type { Goal } from "@/types/goal";
 import { None, Some, type Option } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
 import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
@@ -44,6 +45,8 @@ export interface SuggestedActionCardProps {
   coachName: string;
   coacheeId: Id;
   coacheeName: string;
+  /** The session's goals; shows the Linked goal row when editing. */
+  goals?: Goal[];
   /** Some(edits) accepts with the reviewer's edits; None accepts as suggested. */
   onAccept?: (edits: Option<ActionEdits>) => Promise<void>;
   onDismiss?: () => Promise<void>;
@@ -241,6 +244,7 @@ function SuggestionEditBack({
   coachName,
   coacheeId,
   coacheeName,
+  goals,
   onAccept,
   onDismiss,
   onShowAction,
@@ -252,6 +256,7 @@ function SuggestionEditBack({
   const { proposal, duplicate_of: duplicateOf } = suggestion;
   const [picked, setPicked] = useState<Option<DateTime>>(None);
   const [assigneeIds, setAssigneeIds] = useState<Id[]>(proposal.assignee_ids ?? []);
+  const [goalId, setGoalId] = useState<Option<Id>>(proposal.goal_id);
   const [confirming, setConfirming] = useState<Option<ActionEdits>>(None);
   const { pending, run } = useInFlight();
 
@@ -282,6 +287,7 @@ function SuggestionEditBack({
       // An unspoken date stays unspoken unless the reviewer picks one.
       due_by: picked.some ? picked : proposal.due_by,
       assignee_ids: ids,
+      goal_id: goalId,
     };
     if (duplicateOf.some) setConfirming(Some(edits));
     else await onAccept(Some(edits));
@@ -308,6 +314,9 @@ function SuggestionEditBack({
         allAssignees={allAssignees}
         resolvedAssignees={resolvedAssignees}
         assigneeIds={assigneeIds}
+        goals={goals}
+        selectedGoalId={goalId.some ? goalId.val : undefined}
+        onGoalSelect={(id) => setGoalId(id === undefined ? None : Some(id))}
         onDueDateChange={(date) => setPicked(Some(date))}
         onAssigneeToggle={toggleAssignee}
         assigneeDisabledReasons={disabledReasons}

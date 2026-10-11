@@ -45,12 +45,15 @@ export interface UseSuggestionReviewArgs {
   coachingSessionId: Id;
   refreshSuggestions: () => void;
   refreshActions: () => void;
+  /** Called after an accept creates an action linked to a goal. */
+  refreshGoalProgress?: () => void;
 }
 
 export function useSuggestionReview({
   coachingSessionId,
   refreshSuggestions,
   refreshActions,
+  refreshGoalProgress,
 }: UseSuggestionReviewArgs) {
   const reportFailure = useCallback(
     (op: SuggestionOp, f: SuggestionFailure) => {
@@ -69,9 +72,10 @@ export function useSuggestionReview({
       }
       refreshSuggestions();
       refreshActions();
+      if (result.value.goal_id.some) refreshGoalProgress?.();
       return Some(result.value);
     },
-    [coachingSessionId, refreshSuggestions, refreshActions, reportFailure]
+    [coachingSessionId, refreshSuggestions, refreshActions, refreshGoalProgress, reportFailure]
   );
 
   const dismiss = useCallback(

@@ -412,6 +412,7 @@ export function ActionSectionContent({
                   coachName={coachName}
                   coacheeId={coacheeId}
                   coacheeName={coacheeName}
+                  goals={goals}
                   {...reviewHandlers(suggestion)}
                   onShowAction={showAction}
                   onShowInTranscript={onShowInTranscript}

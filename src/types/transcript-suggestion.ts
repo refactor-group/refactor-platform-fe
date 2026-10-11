@@ -74,6 +74,7 @@ export interface ActionEdits {
   body: string;
   due_by: Option<DateTime>;
   assignee_ids: Id[];
+  goal_id: Option<Id>;
 }
 
 type Wire = Record<string, unknown>;
@@ -179,6 +180,7 @@ export interface ActionEditsWire {
   body: string;
   due_by: string | null;
   assignee_ids: Id[];
+  goal_id: Id | null;
 }
 
 export function serializeActionEdits(edits: ActionEdits): ActionEditsWire {
@@ -186,5 +188,6 @@ export function serializeActionEdits(edits: ActionEdits): ActionEditsWire {
     body: edits.body,
     due_by: edits.due_by.some ? edits.due_by.val.toISO() : null,
     assignee_ids: edits.assignee_ids,
+    goal_id: edits.goal_id.some ? edits.goal_id.val : null,
   };
 }

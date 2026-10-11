@@ -339,6 +339,7 @@ function useActionCrud(
     handleAssigneesChange,
     handleBodyChange,
     handleDelete,
+    revalidateGoalProgress,
   };
 }
 

@@ -833,6 +833,7 @@ export function CoachingSessionPanel({
     handleDelete: handleActionDelete,
     sessionDateMap,
     refresh: refreshActions,
+    revalidateGoalProgress,
   } = usePanelActions({
     userId,
     coachingSessionId,
@@ -851,6 +852,7 @@ export function CoachingSessionPanel({
     coachingSessionId,
     refreshSuggestions,
     refreshActions,
+    refreshGoalProgress: revalidateGoalProgress,
   });
 
   const [isAddingAction, setIsAddingAction] = useState(false);

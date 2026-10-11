@@ -135,17 +135,19 @@ describe("serializeActionEdits", () => {
         body: "Send it",
         due_by: Some(due),
         assignee_ids: ["coach-1", "coachee-1"],
+        goal_id: Some("goal-1"),
       })
     ).toEqual({
       body: "Send it",
       due_by: due.toISO(),
       assignee_ids: ["coach-1", "coachee-1"],
+      goal_id: "goal-1",
     });
   });
 
   it("writes null when there is no due date", () => {
     expect(
-      serializeActionEdits({ body: "Send it", due_by: None, assignee_ids: [] })
-    ).toEqual({ body: "Send it", due_by: null, assignee_ids: [] });
+      serializeActionEdits({ body: "Send it", due_by: None, assignee_ids: [], goal_id: None })
+    ).toEqual({ body: "Send it", due_by: null, assignee_ids: [], goal_id: null });
   });
 });
