@@ -499,7 +499,7 @@ test.describe('Coachee reviews suggested actions', () => {
 
     const coachOnly = cardWith(panel, COACH_ONLY)
     await expect(coachOnly.getByTestId('suggested-action-lock-note')).toHaveText(
-      'Only John can accept or edit it.'
+      'Only John can accept or edit this action.'
     )
     for (const name of ['Accept', 'Dismiss', 'Edit']) {
       await expect(coachOnly.getByRole('button', { name })).toHaveCount(0)
@@ -584,6 +584,6 @@ test.describe('Suggested actions in dark mode', () => {
     await expect(coachOnly).toBeVisible()
     const note = coachOnly.getByTestId('suggested-action-lock-note')
     await expect(note.locator('svg')).toHaveCount(1)
-    await expect(note).toHaveText('Only John can accept or edit it.')
+    await expect(note).toHaveText('Only John can accept or edit this action.')
   })
 })

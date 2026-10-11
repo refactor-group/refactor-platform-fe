@@ -225,7 +225,7 @@ function SuggestionView({
           className="flex items-center gap-1.5 border-t border-dashed pt-2 text-[11px] text-muted-foreground"
         >
           <Lock size={11} aria-hidden />
-          Only {coachName.split(" ")[0]} can accept or edit it.
+          Only {coachName.split(" ")[0]} can accept or edit this action.
         </p>
       )}
     </div>

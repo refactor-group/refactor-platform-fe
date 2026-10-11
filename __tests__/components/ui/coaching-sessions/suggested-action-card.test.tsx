@@ -113,7 +113,7 @@ describe("SuggestedActionCard", () => {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
     expect(screen.getByTestId("suggested-action-lock-note")).toHaveTextContent(
-      "Only Jim can accept or edit it."
+      "Only Jim can accept or edit this action."
     );
   });
 
