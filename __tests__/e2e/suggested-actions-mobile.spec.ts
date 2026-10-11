@@ -294,4 +294,30 @@ test.describe('Suggested actions on mobile', () => {
       await expect(rows.getByText(d.quote, { exact: false })).toBeHidden()
     }
   })
+
+  test.describe('on a touch screen', () => {
+    test.use({ hasTouch: true })
+
+    test('a tapped due-date tooltip closes and only one is open at a time', async ({ page }) => {
+      const sheet = await openActionsSheet(page)
+      const dates = sheet.getByTestId('suggested-action-due')
+      const tooltips = page.getByRole('tooltip')
+
+      await dates.nth(0).tap()
+      await expect(tooltips).toHaveCount(1)
+      await dates.nth(0).tap()
+      await expect(tooltips).toHaveCount(0)
+
+      await dates.nth(0).tap()
+      await expect(tooltips).toHaveCount(1)
+      await page.keyboard.press('Escape')
+      await expect(tooltips).toHaveCount(0)
+
+      await dates.nth(0).tap()
+      await dates.nth(1).tap()
+      await expect(tooltips).toHaveCount(1)
+      await sheet.getByText('Suggested from transcript').tap()
+      await expect(tooltips).toHaveCount(0)
+    })
+  })
 })

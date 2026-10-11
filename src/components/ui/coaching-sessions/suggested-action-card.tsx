@@ -476,8 +476,26 @@ function SuggestionDueLabel({
   locale: string;
 }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const due = suggestionDue(suggestion, locale);
   const kind = due.spoken ? "spoken" : "default";
+
+  // A tapped tooltip stays open until Escape or a press anywhere else, including another date.
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (e: globalThis.PointerEvent) => {
+      if (!triggerRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
   const weight = due.spoken ? "font-bold" : "font-normal";
 
   if (due.tooltip.none) {
@@ -492,17 +510,23 @@ function SuggestionDueLabel({
     );
   }
 
-  // Radix closes on pointerdown and click; take both over so a tap toggles.
-  const keepOpen = (e: PointerEvent) => e.preventDefault();
+  // Radix closes on pointerdown before the click lands, so toggle from the state at press time.
+  const openAtPress = useRef(false);
+  const keepOpen = (e: PointerEvent) => {
+    openAtPress.current = open;
+    e.preventDefault();
+  };
   const toggle = (e: MouseEvent) => {
     e.preventDefault();
-    setOpen((prev) => !prev);
+    // A keyboard click (detail 0) has no press, so it toggles from the current state.
+    setOpen(e.detail === 0 ? !open : !openAtPress.current);
   };
 
   return (
     <Tooltip open={open} onOpenChange={setOpen}>
       <TooltipTrigger asChild>
         <button
+          ref={triggerRef}
           type="button"
           data-testid="suggested-action-due"
           data-due-kind={kind}
