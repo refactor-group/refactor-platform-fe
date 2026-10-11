@@ -41,7 +41,7 @@ export function DismissedSuggestions({ suggestions, ...rowProps }: DismissedSugg
 
   const Chevron = open ? ChevronDown : ChevronRight;
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="mb-4 flex flex-col gap-3">
+    <Collapsible open={open} onOpenChange={setOpen} className="mt-4 flex flex-col gap-3">
       <CollapsibleTrigger className="flex items-center gap-1.5 self-start text-xs font-medium text-muted-foreground transition-colors hover:text-foreground max-md:min-h-10">
         <Chevron className="h-3.5 w-3.5" aria-hidden />
         Dismissed ({suggestions.length})

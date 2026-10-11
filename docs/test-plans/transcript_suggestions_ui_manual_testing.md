@@ -179,7 +179,7 @@ open above the row, and Add anyway creates the action with the edited body.
 ### Case E1: hidden at zero, collapsed by default
 
 **Pass:** with no dismissed suggestions there is no "Dismissed" heading. After one dismissal,
-"Dismissed (1)" appears below the pending cards, collapsed.
+"Dismissed (1)" appears at the bottom of the New tab, below the session's actions, collapsed.
 
 ### Case E2: the row
 

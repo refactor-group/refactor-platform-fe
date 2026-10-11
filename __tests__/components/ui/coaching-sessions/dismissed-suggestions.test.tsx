@@ -163,13 +163,13 @@ describe("the Dismissed section", () => {
     expect(screen.queryByRole("button", { name: /Dismissed \(/ })).not.toBeInTheDocument();
   });
 
-  it("starts collapsed above the session's actions and expands on click", async () => {
+  it("starts collapsed below the session's actions and expands on click", async () => {
     renderSection([BY_COACHEE, BY_COACH], RelationshipRole.Coach);
     const toggle = screen.getByRole("button", { name: "Dismissed (2)" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("Try blocking two review-free mornings")).not.toBeInTheDocument();
     const existing = screen.getAllByText("Existing session action")[0];
-    expect(toggle.compareDocumentPosition(existing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(existing.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     await userEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");

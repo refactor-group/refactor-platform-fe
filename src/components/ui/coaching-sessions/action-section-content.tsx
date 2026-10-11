@@ -421,17 +421,6 @@ export function ActionSectionContent({
             ))}
           </div>
         )}
-        <DismissedSuggestions
-          suggestions={dismissedSuggestions}
-          viewerRole={viewerRole}
-          locale={locale}
-          coachId={coachId}
-          coachName={coachName}
-          coacheeId={coacheeId}
-          coacheeName={coacheeName}
-          onRestore={onSuggestionRestore}
-          onShowInTranscript={onShowInTranscript}
-        />
         {sessionActions.length === 0 && !isAddingAction && visibleSuggestions.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
             <p className="text-sm text-muted-foreground/50 italic">
@@ -453,6 +442,17 @@ export function ActionSectionContent({
             ))}
           </div>
         )}
+        <DismissedSuggestions
+          suggestions={dismissedSuggestions}
+          viewerRole={viewerRole}
+          locale={locale}
+          coachId={coachId}
+          coachName={coachName}
+          coacheeId={coacheeId}
+          coacheeName={coacheeName}
+          onRestore={onSuggestionRestore}
+          onShowInTranscript={onShowInTranscript}
+        />
       </TabsContent>
     </Tabs>
   );
