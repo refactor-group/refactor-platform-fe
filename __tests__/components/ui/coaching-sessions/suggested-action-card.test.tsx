@@ -88,7 +88,8 @@ describe("SuggestedActionCard", () => {
     expect(within(card).getByTestId("suggested-action-body")).toHaveTextContent(
       "Send the hiring plan to Dana"
     );
-    expect(card).toHaveTextContent("“I'll send Dana the hiring plan by Friday.”");
+    const quote = card.querySelector("blockquote");
+    expect(quote).toHaveTextContent(/^I'll send Dana the hiring plan by Friday\.$/);
     const link = within(card).getByRole("button", { name: /Show in transcript/ });
     expect(link).toHaveTextContent("Caleb Bourg · 12:34");
     expect(within(card).getByText("CB")).toBeInTheDocument();

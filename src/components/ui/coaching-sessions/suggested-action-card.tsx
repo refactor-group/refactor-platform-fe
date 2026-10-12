@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ComponentPropsWithoutRef, KeyboardEvent } from "react";
 import ReactMarkdown from "react-markdown";
-import { Check, Copy, FileText, Lock, Quote, Sparkles } from "lucide-react";
+import { Check, Copy, FileText, Lock, Sparkles } from "lucide-react";
 import type { DateTime } from "ts-luxon";
 import { Button } from "@/components/ui/button";
 import {
@@ -138,12 +138,11 @@ function SuggestionView({
 
       <SuggestionBody body={proposal.body ?? ""} />
 
-      <div className="flex min-w-0 gap-2 text-muted-foreground">
-        <Quote size={12} className="mt-0.5 shrink-0 opacity-70" aria-hidden />
-        <div className="flex min-w-0 flex-col gap-1">
-          <p className="line-clamp-2 pr-1 text-xs italic leading-snug [overflow-wrap:anywhere]">
-            “{quote}”
-          </p>
+      <figure className="flex min-w-0 flex-col gap-1 border-l-2 border-muted-foreground/30 pl-2.5 text-muted-foreground">
+        <blockquote className="line-clamp-2 pr-1 text-xs italic leading-snug [overflow-wrap:anywhere]">
+          {quote}
+        </blockquote>
+        <figcaption>
           <button
             type="button"
             title="Show in transcript"
@@ -154,8 +153,8 @@ function SuggestionView({
             <FileText size={11} aria-hidden />
             {source}
           </button>
-        </div>
-      </div>
+        </figcaption>
+      </figure>
 
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1 max-md:min-h-10">
