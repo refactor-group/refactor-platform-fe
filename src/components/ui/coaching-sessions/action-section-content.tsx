@@ -19,6 +19,7 @@ import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestio
 import { cn } from "@/components/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTime } from "ts-luxon";
+import { centerInScrollParent } from "@/lib/utils/center-in-container";
 
 // ── Action Section Content ───────────────────────────────────────────
 //
@@ -185,7 +186,7 @@ export function ActionSectionContent({
     // Scroll to the card after a frame (let tab switch render)
     requestAnimationFrame(() => {
       const el = cardRefs.current.get(highlightTargetId);
-      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el) centerInScrollParent(el);
     });
 
     // Clear highlight after animation

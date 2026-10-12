@@ -166,6 +166,66 @@ test.describe('Jump from a suggestion to the transcript', () => {
     await expect.poll(scrolledAncestors).toEqual([])
   })
 
+  test('desktop: accepting beside the open transcript scrolls only the Actions panel', async ({
+    page,
+  }) => {
+    const action = (id: string, body: string, created_at: string) => ({
+      ...SUGGESTION.proposal,
+      id,
+      body,
+      created_at,
+      updated_at: created_at,
+    })
+    // Enough existing actions that the new one is out of view and the panel must scroll.
+    const actions = Array.from({ length: 20 }, (_, i) =>
+      action(`act-${i}`, `Existing action ${i + 1}`, '2026-10-11T16:00:00Z')
+    )
+    let accepted = false
+    await page.route('**/users/*/actions**', (route) =>
+      route.fulfill(json(route.request().url().includes(SESSION_ID) ? actions : []))
+    )
+    await page.route('**/coaching_sessions/*/transcript_suggestions**', (route) => {
+      const url = route.request().url()
+      if (route.request().method() === 'POST' && url.endsWith('/accept')) {
+        accepted = true
+        const created = action('act-new', SUGGESTION.proposal.body, '2026-10-11T18:00:00Z')
+        actions.push(created)
+        return route.fulfill({ ...json(created), status: 201 })
+      }
+      const dismissed = url.includes('status=dismissed')
+      return route.fulfill(json(dismissed || accepted ? [] : [SUGGESTION]))
+    })
+
+    await page.setViewportSize(DESKTOP)
+    await page.goto(`/coaching-sessions/${SESSION_ID}`)
+    const panel = page.locator('div.hidden.md\\:block')
+    await panel.getByRole('combobox').click()
+    await page.getByRole('option', { name: /Actions/ }).click()
+    const card = panel.getByTestId('suggested-action-card')
+    // Opening the transcript beside the panel is what lets the clipped layout scroll.
+    await card.getByRole('button', { name: /Show in transcript/ }).click()
+    await expect(markedTarget(page)).toBeInViewport()
+
+    await card.getByRole('button', { name: 'Accept', exact: true }).click()
+    const created = panel.locator('div.flip-card-container', { hasText: SUGGESTION.proposal.body })
+    await expect(created).toHaveClass(/ring-2/)
+    await expect(created).toBeInViewport()
+
+    // Only boxes that scroll on their own may move; clipped layout boxes and the window may not.
+    const movedBoxes = () =>
+      page.evaluate(() => {
+        const moved: string[] = []
+        for (const n of Array.from(document.querySelectorAll<HTMLElement>('body, body *'))) {
+          if (n.scrollTop !== 0 && getComputedStyle(n).overflowY !== 'auto') {
+            moved.push(`${n.tagName}.${n.className}`.slice(0, 80))
+          }
+        }
+        if (window.scrollY !== 0) moved.push('window')
+        return moved
+      })
+    await expect.poll(movedBoxes).toEqual([])
+  })
+
   test('phone: closes the sheet and shows the marked segment', async ({ page }) => {
     await page.setViewportSize(PHONE)
     await page.goto(`/coaching-sessions/${SESSION_ID}`)

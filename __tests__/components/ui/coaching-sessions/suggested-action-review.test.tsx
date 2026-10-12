@@ -225,7 +225,9 @@ describe("ActionSectionContent review flow", () => {
   }
 
   it("removes an accepted card and rings the new action once it arrives", async () => {
-    const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView");
+    // jsdom has no layout, so nothing scrolls on its own and centering falls back to the window.
+    const scrollSpy = vi.spyOn(window, "scrollBy");
+    const intoView = vi.spyOn(Element.prototype, "scrollIntoView");
     const created = createMockAction({ id: "act-new", body: "Send the hiring plan to Dana" });
     const onSuggestionAccept = vi.fn().mockResolvedValue(Some(created));
     const suggestion = makeSuggestion();
@@ -249,7 +251,9 @@ describe("ActionSectionContent review flow", () => {
     );
     await waitFor(() => expect(document.querySelector(".ring-2")).not.toBeNull());
     await waitFor(() => expect(scrollSpy).toHaveBeenCalled());
+    expect(intoView).not.toHaveBeenCalled();
     scrollSpy.mockRestore();
+    intoView.mockRestore();
   });
 
   it("keeps the card when the accept fails", async () => {

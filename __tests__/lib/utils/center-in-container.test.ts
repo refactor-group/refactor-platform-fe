@@ -1,12 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
-import { centerInContainer } from "@/lib/utils/center-in-container";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { centerInContainer, centerInScrollParent } from "@/lib/utils/center-in-container";
 
-function box(top: number, scrollHeight: number, clientHeight: number, offsetHeight = 0) {
+function box(top: number, scrollHeight: number, clientHeight: number, overflowY = "visible") {
   const el = document.createElement("div");
+  el.style.overflowY = overflowY;
   Object.defineProperties(el, {
     scrollHeight: { value: scrollHeight },
     clientHeight: { value: clientHeight },
-    offsetHeight: { value: offsetHeight },
+    offsetHeight: { value: 20 },
   });
   el.getBoundingClientRect = () => ({ top }) as DOMRect;
   el.scrollBy = vi.fn();
@@ -14,10 +15,13 @@ function box(top: number, scrollHeight: number, clientHeight: number, offsetHeig
   return el;
 }
 
+afterEach(() => vi.restoreAllMocks());
+
 describe("centerInContainer", () => {
   it("scrolls only a container that scrolls, centering the element in it", () => {
-    const container = box(100, 2000, 400);
-    const el = box(900, 20, 20, 20);
+    const container = box(100, 2000, 400, "auto");
+    const el = box(900, 20, 20);
+    container.appendChild(el);
 
     centerInContainer(container, el);
 
@@ -26,13 +30,36 @@ describe("centerInContainer", () => {
     expect(el.scrollIntoView).not.toHaveBeenCalled();
   });
 
-  it("falls back to scrollIntoView when the container does not scroll on its own", () => {
-    const container = box(0, 400, 400);
-    const el = box(300, 20, 20, 20);
+  it("uses the nearest box that scrolls when the container does not", () => {
+    const outer = box(0, 3000, 600, "auto");
+    const container = box(50, 400, 400, "auto");
+    const el = box(700, 20, 20);
+    outer.appendChild(container);
+    container.appendChild(el);
 
     centerInContainer(container, el);
 
-    expect(el.scrollIntoView).toHaveBeenCalledWith({ block: "center", behavior: "smooth" });
     expect(container.scrollBy).not.toHaveBeenCalled();
+    expect(outer.scrollBy).toHaveBeenCalledWith({ top: 410, behavior: "smooth" });
+  });
+});
+
+describe("centerInScrollParent", () => {
+  it("skips clipped and non-scrolling boxes, falling back to the window", () => {
+    const clipped = box(0, 3000, 800, "hidden");
+    const el = box(1000, 20, 20);
+    clipped.appendChild(el);
+    document.body.appendChild(clipped);
+    const windowScroll = vi.fn();
+    window.scrollBy = windowScroll;
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(800);
+
+    centerInScrollParent(el);
+
+    expect(clipped.scrollBy).not.toHaveBeenCalled();
+    expect(el.scrollIntoView).not.toHaveBeenCalled();
+    // 1000 - 0 - 800 / 2 + 20 / 2
+    expect(windowScroll).toHaveBeenCalledWith({ top: 610, behavior: "smooth" });
+    clipped.remove();
   });
 });
