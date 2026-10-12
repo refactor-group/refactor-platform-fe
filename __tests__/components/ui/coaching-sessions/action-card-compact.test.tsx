@@ -487,8 +487,14 @@ describe("CompactActionCard", () => {
       );
 
       const flipCard = container.firstChild as HTMLElement;
-      expect(flipCard.className).toContain("ring-2");
-      expect(flipCard.className).toContain("ring-primary/40");
+      const face = flipCard.querySelector(".flip-card-front") as HTMLElement;
+      // The ring sits on the rounded face, in an amber that keeps 3:1 contrast in both themes.
+      expect(face.className).toContain("ring-2");
+      expect(face.className).toContain("ring-amber-600");
+      expect(face.className).toContain("dark:ring-amber-400");
+      expect(face.className).toContain("animate-highlight-tint");
+      expect(flipCard.className).not.toContain("ring-2");
+      expect(flipCard.className).toContain("motion-safe:animate-highlight-pulse");
     });
 
     it("does not apply highlight ring by default", () => {
@@ -499,7 +505,8 @@ describe("CompactActionCard", () => {
       );
 
       const flipCard = container.firstChild as HTMLElement;
-      expect(flipCard.className).not.toContain("ring-2");
+      expect(flipCard.querySelector(".ring-2")).toBeNull();
+      expect(flipCard.className).not.toContain("animate-highlight-pulse");
     });
   });
 

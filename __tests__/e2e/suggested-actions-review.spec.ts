@@ -341,7 +341,7 @@ test.describe('Coach reviews suggested actions', () => {
       .getByTestId('session-section-content')
       .locator('div.flip-card-container', { hasText: PLAIN })
     await expect(created).toBeVisible()
-    await expect(created).toHaveClass(/ring-2/)
+    await expect(created.locator('.flip-card-front')).toHaveClass(/ring-2/)
     await expect(cardWith(panel, PLAIN)).toHaveCount(0)
 
     const accepts = sent(backend, 'POST', '/sug-plain/accept')
@@ -381,7 +381,7 @@ test.describe('Coach reviews suggested actions', () => {
       .getByTestId('session-section-content')
       .locator('div.flip-card-container', { hasText: EDITED })
     await expect(created).toBeVisible()
-    await expect(created).toHaveClass(/ring-2/)
+    await expect(created.locator('.flip-card-front')).toHaveClass(/ring-2/)
     await expect(cardWith(panel, SHARED)).toHaveCount(0)
     await expect(editingCard(panel, page)).toHaveCount(0)
 

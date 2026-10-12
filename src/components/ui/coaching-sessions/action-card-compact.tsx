@@ -85,6 +85,12 @@ export interface CompactActionCardProps {
   className?: string;
 }
 
+// A highlighted card pulses once (unless the user prefers reduced motion).
+const HIGHLIGHT_CARD = "motion-safe:animate-highlight-pulse";
+// Amber-600 / amber-400 keep the ring above 3:1 contrast in both themes; the tint only supports it.
+const HIGHLIGHT_FACE =
+  "ring-2 ring-amber-600 dark:ring-amber-400 animate-highlight-tint [--highlight-tint:theme(colors.amber.100)] dark:[--highlight-tint:theme(colors.amber.950/50%)]";
+
 export function CompactActionCard({
   action,
   locale,
@@ -158,7 +164,8 @@ export function CompactActionCard({
       canFlip
       initialEditing={initialEditing}
       onDismiss={onDismiss}
-      className={cn(className, highlighted && "ring-2 ring-primary/40 animate-in fade-in duration-500")}
+      className={cn(className, highlighted && HIGHLIGHT_CARD)}
+      faceClassName={highlighted ? HIGHLIGHT_FACE : undefined}
       renderHeader={({ onFlip }) => (
         <ActionHeader
           status={action.status}

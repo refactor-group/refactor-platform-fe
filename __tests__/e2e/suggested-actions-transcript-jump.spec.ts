@@ -208,7 +208,7 @@ test.describe('Jump from a suggestion to the transcript', () => {
 
     await card.getByRole('button', { name: 'Accept', exact: true }).click()
     const created = panel.locator('div.flip-card-container', { hasText: SUGGESTION.proposal.body })
-    await expect(created).toHaveClass(/ring-2/)
+    await expect(created.locator('.flip-card-front')).toHaveClass(/ring-2/)
     await expect(created).toBeInViewport()
 
     // Only boxes that scroll on their own may move; clipped layout boxes and the window may not.
