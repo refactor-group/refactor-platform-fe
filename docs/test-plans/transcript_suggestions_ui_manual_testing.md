@@ -228,7 +228,8 @@ can restore it".
 With the transcript closed, click a card's `<speaker> · m:ss` button.
 
 **Pass:** the transcript opens beside the Actions panel, which stays expanded. The quoted segment
-is scrolled to the center and marked.
+is scrolled to the center and marked. Only the transcript scrolls: the page itself does not shift,
+and no blank space appears below the panels. Try a segment near the end of a long transcript.
 
 ### Case F2: transcript already open
 

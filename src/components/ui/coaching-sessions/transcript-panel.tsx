@@ -41,6 +41,7 @@ import {
   useTranscription,
   useTranscriptionSegments,
 } from "@/lib/api/transcriptions";
+import { centerInContainer } from "@/lib/utils/center-in-container";
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
 
@@ -301,14 +302,16 @@ function useSegmentJump(
   }, [jumpTo, segments, filterValue, setFilterValue]);
 
   // Runs after every render so the scroll waits for a filter reset to paint the segment.
+  // Scrolls only the transcript, never the page.
   useEffect(() => {
-    if (pendingScroll.current.none) return;
-    const el = scrollContainerRef.current?.querySelector(
+    const container = scrollContainerRef.current;
+    if (pendingScroll.current.none || !container) return;
+    const el = container.querySelector<HTMLElement>(
       `[data-segment-id="${pendingScroll.current.val}"]`
     );
     if (!el) return;
     pendingScroll.current = None;
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    centerInContainer(container, el);
   });
 
   return jumpTo.some && segments.some((s) => s.id === jumpTo.val.segmentId)

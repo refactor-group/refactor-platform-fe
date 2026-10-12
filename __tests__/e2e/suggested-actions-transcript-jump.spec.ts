@@ -133,6 +133,39 @@ test.describe('Jump from a suggestion to the transcript', () => {
     await expect(card).toBeVisible()
   })
 
+  test('desktop: the jump scrolls only the transcript, never the page', async ({ page }) => {
+    await page.setViewportSize(DESKTOP)
+    await page.goto(`/coaching-sessions/${SESSION_ID}`)
+
+    const panel = page.locator('div.hidden.md\\:block')
+    await panel.getByRole('combobox').click()
+    await page.getByRole('option', { name: /Actions/ }).click()
+    const card = panel.getByTestId('suggested-action-card')
+    await expect(card).toBeVisible()
+    await card.getByRole('button', { name: /Show in transcript/ }).click()
+    await expect(markedTarget(page)).toBeInViewport()
+
+    // The page's layout boxes clip their overflow but can still be scrolled from code,
+    // which shifts the whole page up; only the transcript's own box may move.
+    const scrolledAncestors = () =>
+      page.evaluate(() => {
+        const mark = document.querySelector('[data-testid="transcript-jump-mark"]')
+        const moved: string[] = []
+        let transcriptBoxSeen = false
+        for (let n = mark?.parentElement ?? null; n; n = n.parentElement) {
+          const scrolls = n.scrollHeight > n.clientHeight + 1
+          if (scrolls && !transcriptBoxSeen && getComputedStyle(n).overflowY === 'auto') {
+            transcriptBoxSeen = true
+            continue
+          }
+          if (n.scrollTop !== 0) moved.push(`${n.tagName}.${n.className}`.slice(0, 80))
+        }
+        if (window.scrollY !== 0) moved.push('window')
+        return moved
+      })
+    await expect.poll(scrolledAncestors).toEqual([])
+  })
+
   test('phone: closes the sheet and shows the marked segment', async ({ page }) => {
     await page.setViewportSize(PHONE)
     await page.goto(`/coaching-sessions/${SESSION_ID}`)

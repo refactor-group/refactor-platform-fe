@@ -93,7 +93,12 @@ describe("TranscriptPanel jump", () => {
     }
   });
 
-  it("centers and marks the requested segment", async () => {
+  it("centers and marks the requested segment, scrolling only the transcript", async () => {
+    // jsdom has no layout or scrollBy; make the transcript box scroll on its own.
+    const scrollBy = vi.fn();
+    Element.prototype.scrollBy = scrollBy;
+    const tall = vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(2000);
+    const short = vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(400);
     const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView");
     renderPanel(Some({ segmentId: "seg-2", nonce: 1 }));
 
@@ -103,8 +108,13 @@ describe("TranscriptPanel jump", () => {
     expect(mark.tagName).toBe("MARK");
     expect(mark).toHaveTextContent("I should get time with Dana by end of next week.");
     expect(mark.className).toContain("bg-amber-300");
-    expect(scrollSpy.mock.contexts).toContain(target);
-    expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ block: "center" }));
+    expect(scrollBy).toHaveBeenCalledWith(expect.objectContaining({ behavior: "smooth" }));
+    const scrolled = scrollBy.mock.contexts[0] as HTMLElement;
+    expect(scrolled.contains(target)).toBe(true);
+    expect(scrolled).not.toBe(document.documentElement);
+    expect(scrollSpy).not.toHaveBeenCalled();
+    tall.mockRestore();
+    short.mockRestore();
     expect(document.querySelectorAll('[data-testid="transcript-jump-mark"]')).toHaveLength(1);
     scrollSpy.mockRestore();
   });

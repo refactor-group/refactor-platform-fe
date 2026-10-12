@@ -10,6 +10,7 @@ import {
   type RefObject,
 } from "react";
 
+import { centerInContainer } from "@/lib/utils/center-in-container";
 import { buildSearchMatches, type SegmentMatch } from "@/lib/utils/transcript-search-matches";
 import type { TranscriptSegment } from "@/types/transcription";
 
@@ -79,12 +80,7 @@ export function useTranscriptSearch(
     const el = matchRefs.current.get(activeIndex);
     const container = scrollContainerRef.current;
     if (!el || !container) return;
-
-    const elRect = el.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    const offset =
-      elRect.top - containerRect.top - container.clientHeight / 2 + el.offsetHeight / 2;
-    container.scrollBy({ top: offset, behavior: "smooth" });
+    centerInContainer(container, el);
   }, [activeIndex, matches, scrollContainerRef]);
 
   const goNext = useCallback(() => {
