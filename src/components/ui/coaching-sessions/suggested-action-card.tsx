@@ -414,7 +414,7 @@ function DuplicateConfirm({
         <button
           type="button"
           onClick={onShowAction}
-          className="text-left italic text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground"
+          className="text-left italic text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground max-md:block max-md:min-h-10 max-md:w-full"
         >
           {body.some ? body.val : "the existing action"}
         </button>

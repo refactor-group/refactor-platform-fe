@@ -242,7 +242,7 @@ test.describe('Suggested actions on mobile', () => {
     const within = (box: { x: number; width: number }) =>
       box.x >= cardBox!.x && box.x + box.width <= cardBox!.x + cardBox!.width
 
-    for (const name of ['Add anyway', 'Keep existing', 'Cancel']) {
+    for (const name of ['Add anyway', 'Keep existing', 'Cancel', 'Write up the quarterly hiring plan']) {
       const box = await row.getByRole('button', { name }).boundingBox()
       expect(box, `${name} has no box`).not.toBeNull()
       expect(box!.height, `${name} height`).toBeGreaterThanOrEqual(40)
