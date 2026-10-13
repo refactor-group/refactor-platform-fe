@@ -76,7 +76,9 @@ export default function PrivacyPolicyPage() {
         progress. The recording is transcribed into text labelled by speaker,
         with the time each line was said. We store the transcript with the
         coaching session, where the coach and client in the relationship can
-        read and download it.
+        read and download it. Recall.ai deletes the audio and video recording,
+        and its own copy of the transcript, within 7 days; we do not keep a
+        copy of the audio or video.
       </p>
 
       <h3>Technical information</h3>
