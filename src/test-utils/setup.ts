@@ -29,6 +29,9 @@ if (typeof Element.prototype.scrollIntoView === 'undefined') {
   Element.prototype.scrollIntoView = function () {};
 }
 
+// jsdom logs "Not implemented" for window.scrollBy; centering falls back to it without layout.
+window.scrollBy = function () {};
+
 // Polyfill pointer-capture for tests (jsdom lacks it; Radix Select uses it).
 if (typeof Element.prototype.hasPointerCapture === 'undefined') {
   Element.prototype.hasPointerCapture = () => false;

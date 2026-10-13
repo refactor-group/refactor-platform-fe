@@ -5,14 +5,16 @@ const isCI = !!process.env.CI;
 export default defineConfig({
   testDir: './__tests__',
   testMatch: '**/*.spec.ts',
+  /* Live specs need a seeded backend; don't load them unless LIVE_E2E is set. */
+  testIgnore: process.env.LIVE_E2E ? [] : '**/*-live.spec.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: isCI,
   /* Retry on CI only */
   retries: isCI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: isCI ? 1 : undefined,
+  /* 2 workers per CI shard; drop to 1 if tests turn flaky. */
+  workers: isCI ? 2 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Prevent indefinite hangs in CI. The clean suite runs ~4.5m, so a 5m cap

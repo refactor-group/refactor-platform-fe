@@ -341,11 +341,15 @@ laptop in another timezone, or on DST transition days.
 
 **Rules:**
 
-1. **Relative offsets are fine** — `DateTime.now().plus({ minutes: 30 })` for a
-   "session 30 minutes from now" is stable, because the assertion only cares
-   about the offset, not where on the calendar "now" sits.
+1. **Never read the real clock by default.** Pin "now" and build fixtures
+   from fixed dates. Real time is allowed only when absolutely necessary and
+   intentional, with a comment saying why.
 
-2. **Pin the clock whenever the assertion depends on a calendar position** —
+2. **Relative offsets still need a pinned clock** — `DateTime.now().plus({ minutes: 30 })`
+   is only stable because the assertion cares about the offset; pin "now"
+   anyway so the code under test sees the same instant.
+
+3. **Pin the clock whenever the assertion depends on a calendar position** —
    "is this today / tomorrow / yesterday", "is this past end-of-day in
    timezone X", "what day of the week is this", "is this before noon",
    "does this cross a DST boundary". Use `Settings.now` from `ts-luxon`
@@ -377,18 +381,18 @@ laptop in another timezone, or on DST transition days.
    });
    ```
 
-3. **Pin the zone too when timezone-specific behaviour matters.** Either pin
+4. **Pin the zone too when timezone-specific behaviour matters.** Either pin
    `Settings.defaultZone`, or build inputs from an explicit ISO string with
    `{ zone: "..." }` rather than relying on the host's system timezone.
    `DateTime.now()` in Node respects `process.env.TZ`, which varies between
    CI and developer machines.
 
-4. **Anti-pattern — defensive fallbacks that hide flakiness.** If a test
+5. **Anti-pattern — defensive fallbacks that hide flakiness.** If a test
    needs a `try/catch`, an `if-else` around `urgency`, or "skip the
    assertion when timing is unlucky" logic, the test is wrong. Pin time
    instead and assert unconditionally.
 
-5. **`DateTime.now()` is OK for opaque metadata** — `created_at`/`updated_at`
+6. **`DateTime.now()` is OK for opaque metadata** — `created_at`/`updated_at`
    on mock objects that nothing in the assertion compares against can use
    real now without issue.
 
@@ -409,4 +413,4 @@ When reviewing or writing code, ensure:
 - [ ] TypeScript types are properly defined and used
 - [ ] Leaf components receive `locale` and config values via props, not `siteConfig` imports
 - [ ] No `|| ""` fallbacks for nullable IDs or dates -- use render guards instead
-- [ ] Tests with calendar-boundary assertions pin `Settings.now` instead of relying on real time
+- [ ] Tests pin the clock instead of relying on real time

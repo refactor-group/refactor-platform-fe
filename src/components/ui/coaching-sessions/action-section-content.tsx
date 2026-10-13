@@ -2,15 +2,24 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { actionPreview } from "@/lib/utils/action-preview";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
+import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested-action-card";
+import { DismissedSuggestions } from "@/components/ui/coaching-sessions/dismissed-suggestions";
 import { defaultAction } from "@/types/action";
 import type { Action } from "@/types/action";
 import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
+import { RelationshipRole } from "@/types/relationship-role";
+import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
+import { cn } from "@/components/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTime } from "ts-luxon";
+import { centerInScrollParent } from "@/lib/utils/center-in-container";
 
 // ── Action Section Content ───────────────────────────────────────────
 //
@@ -20,9 +29,26 @@ import { DateTime } from "ts-luxon";
 
 export type ActionTab = "due" | "new";
 
+const without = (id: Id) => (prev: ReadonlySet<Id>) =>
+  new Set([...prev].filter((x) => x !== id));
+
 export interface ActionSectionContentProps {
   reviewActions: Action[];
   sessionActions: Action[];
+  /** Pending transcript suggestions, shown in the New tab; never locked. */
+  actionSuggestions?: ActionSuggestion[];
+  /** Dismissed transcript suggestions, collapsed under the pending ones. */
+  dismissedSuggestions?: ActionSuggestion[];
+  /** Decides who may act on a suggestion. */
+  viewerRole?: RelationshipRole;
+  /** Resolves to the created action when the accept succeeded. */
+  onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
+  /** Resolves true when the suggestion was dismissed. */
+  onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
+  /** Resolves true when the dismissed suggestion was restored. */
+  onSuggestionRestore?: (s: ActionSuggestion) => Promise<boolean>;
+  /** Shows a suggestion's quoted segment in the transcript. */
+  onShowInTranscript?: (segmentId: Id) => void;
   /** Maps coaching_session_id → session date for "view source session" links on review cards */
   sessionDateMap?: Map<Id, DateTime>;
   locale: string;
@@ -52,6 +78,13 @@ export interface ActionSectionContentProps {
 export function ActionSectionContent({
   reviewActions,
   sessionActions,
+  actionSuggestions = [],
+  dismissedSuggestions = [],
+  viewerRole = RelationshipRole.Coachee,
+  onSuggestionAccept,
+  onSuggestionDismiss,
+  onSuggestionRestore,
+  onShowInTranscript,
   sessionDateMap,
   locale,
   coachId,
@@ -83,10 +116,17 @@ export function ActionSectionContent({
     [onActiveTabChange]
   );
 
-  // ── Highlight & scroll-to for deep-linked actions ────────────────
+  // ── Highlight & scroll-to for deep-linked or in-page requested actions ─
   const searchParams = useSearchParams();
-  const highlightId = searchParams.get("highlight");
-  const [clearedHighlightId, setClearedHighlightId] = useState<string | null>(null);
+  const [highlightRequest, setHighlightRequest] = useState<Option<{ id: Id; nonce: number }>>(None);
+  const highlightId = highlightRequest.some
+    ? highlightRequest.val.id
+    : searchParams.get("highlight");
+  // The nonce lets a repeat request for the same id ring it again.
+  const highlightKey = highlightRequest.some
+    ? `${highlightRequest.val.id}#${highlightRequest.val.nonce}`
+    : highlightId;
+  const [clearedHighlightKey, setClearedHighlightKey] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const setCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
@@ -103,15 +143,21 @@ export function ActionSectionContent({
     return allActions.find((a) => a.id === highlightId) ?? null;
   }, [highlightId, reviewActions, sessionActions]);
 
+  // An in-page request pins the tab only while ringed, so tabs stay switchable after.
+  const highlightActive =
+    highlightTarget !== null && clearedHighlightKey !== highlightKey;
+  const tabTarget =
+    !highlightRequest.some || highlightActive ? highlightTarget : null;
+
   const requiredTab = useMemo((): ActionTab | null => {
-    if (highlightTarget) {
-      return reviewActions.some((a) => a.id === highlightTarget.id)
+    if (tabTarget) {
+      return reviewActions.some((a) => a.id === tabTarget.id)
         ? "due"
         : "new";
     }
     if (isAddingAction) return "new";
     return null;
-  }, [highlightTarget, reviewActions, isAddingAction]);
+  }, [tabTarget, reviewActions, isAddingAction]);
 
   // Switch tab when required (highlight deep-link or adding action).
   // setState during render is a React-supported pattern for derived state.
@@ -127,30 +173,136 @@ export function ActionSectionContent({
   }, [requiredTab, onActiveTabChange]);
 
   // Derive activeHighlight from the highlight target, cleared after animation.
-  // When clearedHighlightId matches the current target, the highlight is off.
-  // A new target automatically shows the highlight since IDs won't match.
-  const activeHighlight =
-    highlightTarget && clearedHighlightId !== highlightTarget.id
-      ? highlightTarget.id
-      : null;
+  // When clearedHighlightKey matches the current key, the highlight is off.
+  // A new request automatically shows the highlight since keys won't match.
+  const activeHighlight = highlightActive ? highlightTarget.id : null;
 
   // Scroll to highlighted card and clear highlight after animation.
-  // Depend on highlightTarget.id so a re-navigation to the same action still fires.
+  // Depend on the key so a repeat request for the same action still fires.
   const highlightTargetId = highlightTarget?.id ?? null;
   useEffect(() => {
-    if (!highlightTargetId) return;
+    if (!highlightTargetId || !highlightKey) return;
 
     // Scroll to the card after a frame (let tab switch render)
     requestAnimationFrame(() => {
       const el = cardRefs.current.get(highlightTargetId);
-      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el) centerInScrollParent(el);
     });
 
     // Clear highlight after animation
-    const id = highlightTargetId;
-    const timer = setTimeout(() => setClearedHighlightId(id), 2000);
+    const key = highlightKey;
+    const timer = setTimeout(() => setClearedHighlightKey(key), 2000);
     return () => clearTimeout(timer);
-  }, [highlightTargetId]);
+  }, [highlightTargetId, highlightKey]);
+
+  const requestHighlight = useCallback((id: Id) => {
+    setHighlightRequest((prev) => Some({ id, nonce: (prev.some ? prev.val.nonce : 0) + 1 }));
+  }, []);
+
+  const showAction = (id: Id) => {
+    if ([...reviewActions, ...sessionActions].some((a) => a.id === id)) requestHighlight(id);
+  };
+
+  // ── Suggestion exit: animate out, then hide until the refresh drops it ─
+  const [exitingIds, setExitingIds] = useState<ReadonlySet<Id>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<Id>>(new Set());
+  const [returningIds, setReturningIds] = useState<ReadonlySet<Id>>(new Set());
+  const exitTimers = useRef<Map<Id, ReturnType<typeof setTimeout>>>(new Map());
+
+  // A hidden id absent from the list is forgotten, so a restored one renders again.
+  const listedIds = new Set(actionSuggestions.map((s) => s.id));
+  const keepListed = (ids: ReadonlySet<Id>) => [...ids].every((id) => listedIds.has(id));
+  if (!keepListed(hiddenIds)) {
+    setHiddenIds(new Set([...hiddenIds].filter((id) => listedIds.has(id))));
+  }
+  if (!keepListed(exitingIds)) {
+    setExitingIds(new Set([...exitingIds].filter((id) => listedIds.has(id))));
+  }
+  if (!keepListed(returningIds)) {
+    setReturningIds(new Set([...returningIds].filter((id) => listedIds.has(id))));
+  }
+
+  const clearExitTimer = useCallback((id: Id) => {
+    const timer = exitTimers.current.get(id);
+    if (timer !== undefined) clearTimeout(timer);
+    exitTimers.current.delete(id);
+  }, []);
+
+  const hideSuggestion = useCallback(
+    (id: Id) => {
+      clearExitTimer(id);
+      setExitingIds(without(id));
+      setHiddenIds((prev) => new Set(prev).add(id));
+    },
+    [clearExitTimer]
+  );
+
+  // jsdom never fires animationend, hence the timer fallback.
+  const exitSuggestion = useCallback(
+    (id: Id) => {
+      setReturningIds(without(id));
+      setExitingIds((prev) => new Set(prev).add(id));
+      exitTimers.current.set(id, setTimeout(() => hideSuggestion(id), 400));
+    },
+    [hideSuggestion]
+  );
+
+  // Shows the card again at once, before the list refetches.
+  const returnSuggestion = useCallback(
+    (id: Id) => {
+      clearExitTimer(id);
+      setExitingIds(without(id));
+      setHiddenIds(without(id));
+      setReturningIds((prev) => new Set(prev).add(id));
+    },
+    [clearExitTimer]
+  );
+
+  // Undo and the Dismissed section both restore through here, so a restore made while the
+  // dismiss animation runs also cancels its pending hide.
+  const restoreSuggestion = async (suggestion: ActionSuggestion): Promise<boolean> => {
+    if (!onSuggestionRestore) return false;
+    const restored = await onSuggestionRestore(suggestion);
+    if (restored) returnSuggestion(suggestion.id);
+    return restored;
+  };
+
+  const offerUndo = (suggestion: ActionSuggestion) => {
+    if (!onSuggestionRestore) return;
+    toast("Dismissed suggested action", {
+      description: `"${actionPreview(suggestion.proposal)}"`,
+      duration: 6000,
+      action: {
+        label: "Undo",
+        onClick: () => void restoreSuggestion(suggestion),
+      },
+    });
+  };
+
+  useEffect(() => {
+    const timers = exitTimers.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const visibleSuggestions = actionSuggestions.filter((s) => !hiddenIds.has(s.id));
+
+  const reviewHandlers = (suggestion: ActionSuggestion) => ({
+    onAccept: onSuggestionAccept
+      ? async (edits: Option<ActionEdits>) => {
+          const created = await onSuggestionAccept(suggestion, edits);
+          if (!created.some) return;
+          requestHighlight(created.val.id);
+          exitSuggestion(suggestion.id);
+        }
+      : undefined,
+    onDismiss: onSuggestionDismiss
+      ? async () => {
+          if (!(await onSuggestionDismiss(suggestion))) return;
+          exitSuggestion(suggestion.id);
+          offerUndo(suggestion);
+        }
+      : undefined,
+  });
 
   // Lazy-init placeholder so defaultAction() isn't called at module scope.
   // Seed due_by to +7 days so the picker initially shows the same default
@@ -183,11 +335,16 @@ export function ActionSectionContent({
             ({reviewActions.length})
           </span>
         </TabsTrigger>
-        <TabsTrigger value="new" className="flex-1 gap-1.5 py-1 text-xs" data-testid="action-tab-new">
+        <TabsTrigger value="new" className="min-w-0 flex-1 gap-1.5 py-1 text-xs" data-testid="action-tab-new">
           New
           <span className="text-[10px] font-normal text-muted-foreground/60">
             ({sessionActions.length})
           </span>
+          {visibleSuggestions.length > 0 && (
+            <span className="min-w-0 truncate text-[10px] font-normal text-muted-foreground/60">
+              · {visibleSuggestions.length} suggested
+            </span>
+          )}
         </TabsTrigger>
       </TabsList>
 
@@ -237,7 +394,44 @@ export function ActionSectionContent({
             />
           </div>
         )}
-        {sessionActions.length === 0 && !isAddingAction ? (
+        {visibleSuggestions.length > 0 && (
+          <div data-testid="suggested-actions-group" className="mb-4 flex flex-col gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              Suggested from transcript
+            </div>
+            {visibleSuggestions.map((suggestion) => (
+              <div
+                key={suggestion.id}
+                className={cn(
+                  exitingIds.has(suggestion.id)
+                    ? "animate-kanban-card-exit"
+                    : returningIds.has(suggestion.id) && "animate-in fade-in"
+                )}
+                onAnimationEnd={(e) => {
+                  if (e.target === e.currentTarget && exitingIds.has(suggestion.id)) {
+                    hideSuggestion(suggestion.id);
+                  }
+                }}
+              >
+                <SuggestedActionCard
+                  suggestion={suggestion}
+                  viewerRole={viewerRole}
+                  locale={locale}
+                  coachId={coachId}
+                  coachName={coachName}
+                  coacheeId={coacheeId}
+                  coacheeName={coacheeName}
+                  goals={goals}
+                  {...reviewHandlers(suggestion)}
+                  onShowAction={showAction}
+                  onShowInTranscript={onShowInTranscript}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        {sessionActions.length === 0 && !isAddingAction && visibleSuggestions.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
             <p className="text-sm text-muted-foreground/50 italic">
               No actions yet
@@ -258,6 +452,17 @@ export function ActionSectionContent({
             ))}
           </div>
         )}
+        <DismissedSuggestions
+          suggestions={dismissedSuggestions}
+          viewerRole={viewerRole}
+          locale={locale}
+          coachId={coachId}
+          coachName={coachName}
+          coacheeId={coacheeId}
+          coacheeName={coacheeName}
+          onRestore={onSuggestionRestore && restoreSuggestion}
+          onShowInTranscript={onShowInTranscript}
+        />
       </TabsContent>
     </Tabs>
   );

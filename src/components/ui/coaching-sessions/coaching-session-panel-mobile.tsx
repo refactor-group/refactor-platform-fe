@@ -17,7 +17,9 @@ import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coac
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { TopicSectionContent } from "@/components/ui/coaching-sessions/topic-section-content";
+import { SuggestionScanButton } from "@/components/ui/coaching-sessions/suggestion-scan-button";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
+import type { Id } from "@/types/general";
 
 export function CoachingSessionPanelMobile({
   linkedGoals,
@@ -52,6 +54,15 @@ export function CoachingSessionPanelMobile({
   // Action props
   reviewActions,
   sessionActions,
+  actionSuggestions,
+  dismissedSuggestions,
+  viewerRole,
+  onSuggestionAccept,
+  onSuggestionDismiss,
+  onSuggestionRestore,
+  onShowInTranscript,
+  scanStatus,
+  onStartScan,
   sessionDateMap,
   coachId,
   coachName,
@@ -82,7 +93,22 @@ export function CoachingSessionPanelMobile({
   const { flow } = goalFlow;
   const isInGoalFlow = activeSection === PanelSection.Goals && flow.step !== GoalFlowStep.Idle;
   const headerTitle = computeHeaderTitle(activeSection, flow.step);
-  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions, topics);
+  const counts = computePanelCounts(
+    linkedGoals,
+    agreements,
+    reviewActions,
+    sessionActions,
+    topics,
+    actionSuggestions.length
+  );
+
+  // Close the sheet first so the transcript is visible.
+  const handleShowInTranscript = onShowInTranscript
+    ? (segmentId: Id) => {
+        setIsOpen(false);
+        onShowInTranscript(segmentId);
+      }
+    : undefined;
 
   // Reset flow when sheet closes
   const handleOpenChange = (open: boolean) => {
@@ -152,27 +178,32 @@ export function CoachingSessionPanelMobile({
                   />
                 )}
               </div>
-              {!isInGoalFlow && !sectionsLocked && activeSection !== PanelSection.Topics && (
-                <Button
-                  size="sm"
-                  className="h-8 gap-1 text-xs"
-                  disabled={
-                    (isAddingAgreement && activeSection === PanelSection.Agreements) ||
-                    (isAddingAction && activeSection === PanelSection.Actions) ||
-                    (activeSection === PanelSection.Actions && activeActionTab === "due")
-                  }
-                  onClick={
-                    activeSection === PanelSection.Goals
-                      ? goalFlow.handleAddGoalClick
-                      : activeSection === PanelSection.Actions
-                        ? () => onAddingActionChange(true)
-                        : () => onAddingAgreementChange(true)
-                  }
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add
-                </Button>
-              )}
+              <div className="flex items-center gap-1">
+                {!isInGoalFlow && activeSection === PanelSection.Actions && scanStatus.some && (
+                  <SuggestionScanButton status={scanStatus.val} onStart={onStartScan} />
+                )}
+                {!isInGoalFlow && !sectionsLocked && activeSection !== PanelSection.Topics && (
+                  <Button
+                    size="sm"
+                    className="h-8 gap-1 text-xs"
+                    disabled={
+                      (isAddingAgreement && activeSection === PanelSection.Agreements) ||
+                      (isAddingAction && activeSection === PanelSection.Actions) ||
+                      (activeSection === PanelSection.Actions && activeActionTab === "due")
+                    }
+                    onClick={
+                      activeSection === PanelSection.Goals
+                        ? goalFlow.handleAddGoalClick
+                        : activeSection === PanelSection.Actions
+                          ? () => onAddingActionChange(true)
+                          : () => onAddingAgreementChange(true)
+                    }
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -220,6 +251,13 @@ export function CoachingSessionPanelMobile({
               <ActionSectionContent
                 reviewActions={reviewActions}
                 sessionActions={sessionActions}
+                actionSuggestions={actionSuggestions}
+                dismissedSuggestions={dismissedSuggestions}
+                viewerRole={viewerRole}
+                onSuggestionAccept={onSuggestionAccept}
+                onSuggestionDismiss={onSuggestionDismiss}
+                onSuggestionRestore={onSuggestionRestore}
+                onShowInTranscript={handleShowInTranscript}
                 sessionDateMap={sessionDateMap}
                 locale={locale}
                 coachId={coachId}

@@ -16,6 +16,7 @@ import { CoachingSessionPanelSelector, PanelSection } from "@/components/ui/coac
 import { AgreementSectionContent } from "@/components/ui/coaching-sessions/agreement-section-content";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { TopicSectionContent } from "@/components/ui/coaching-sessions/topic-section-content";
+import { SuggestionScanButton } from "@/components/ui/coaching-sessions/suggestion-scan-button";
 import type { CoachingSessionPanelSharedProps } from "@/components/ui/coaching-sessions/coaching-session-panel";
 
 interface CoachingSessionPanelDesktopProps extends CoachingSessionPanelSharedProps {
@@ -68,6 +69,15 @@ export function CoachingSessionPanelDesktop({
   // Action props
   reviewActions,
   sessionActions,
+  actionSuggestions,
+  dismissedSuggestions,
+  viewerRole,
+  onSuggestionAccept,
+  onSuggestionDismiss,
+  onSuggestionRestore,
+  onShowInTranscript,
+  scanStatus,
+  onStartScan,
   sessionDateMap,
   coachId,
   coachName,
@@ -108,7 +118,14 @@ export function CoachingSessionPanelDesktop({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [flow.step, goalFlow]);
 
-  const counts = computePanelCounts(linkedGoals, agreements, reviewActions, sessionActions, topics);
+  const counts = computePanelCounts(
+    linkedGoals,
+    agreements,
+    reviewActions,
+    sessionActions,
+    topics,
+    actionSuggestions.length
+  );
 
   if (collapsed) {
     const sectionLabels: Record<PanelSection, string> = {
@@ -190,6 +207,9 @@ export function CoachingSessionPanelDesktop({
               )}
             </div>
             <div className="flex items-center gap-1">
+              {!isInGoalFlow && activeSection === PanelSection.Actions && scanStatus.some && (
+                <SuggestionScanButton status={scanStatus.val} onStart={onStartScan} />
+              )}
               {!isInGoalFlow && !sectionsLocked && activeSection !== PanelSection.Topics && (
                 <Button
                   size="sm"
@@ -270,6 +290,13 @@ export function CoachingSessionPanelDesktop({
             <ActionSectionContent
               reviewActions={reviewActions}
               sessionActions={sessionActions}
+              actionSuggestions={actionSuggestions}
+              dismissedSuggestions={dismissedSuggestions}
+              viewerRole={viewerRole}
+              onSuggestionAccept={onSuggestionAccept}
+              onSuggestionDismiss={onSuggestionDismiss}
+              onSuggestionRestore={onSuggestionRestore}
+              onShowInTranscript={onShowInTranscript}
               sessionDateMap={sessionDateMap}
               locale={locale}
               coachId={coachId}

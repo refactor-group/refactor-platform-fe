@@ -12,10 +12,7 @@ import { None, Some, type Option } from "@/types/option";
 import {
   parseTranscription,
   parseTranscriptSegment,
-  parseTranscriptionWithSpeakers,
-  type Speaker,
   type Transcription,
-  type TranscriptionWithSpeakers,
   type TranscriptSegment,
 } from "@/types/transcription";
 
@@ -45,21 +42,6 @@ export const TranscriptionApi = {
       {}
     );
     return raw.map(parseTranscriptSegment);
-  },
-
-  /**
-   * Names an exact transcription; the session read returns only the latest.
-   * None is "no transcription yet", distinct from a failed request, which
-   * rejects so SWR can apply the repo's retry policy.
-   */
-  getWithSpeakers: async (
-    sessionId: Id,
-    transcriptionId: Id
-  ): Promise<Option<TranscriptionWithSpeakers>> => {
-    const raw = await EntityApi.getFn<unknown>(
-      transcriptionUrl(sessionId, transcriptionId)
-    );
-    return raw === null ? None : Some(parseTranscriptionWithSpeakers(raw));
   },
 
   downloadText,
@@ -202,36 +184,5 @@ export function useTranscriptionSegments(
     segments: data ?? [],
     isLoading,
     isError: error,
-  };
-}
-
-export interface UseTranscriptionSpeakers {
-  speakers: Speaker[];
-  /** False while in flight or after a failure, which blocks per-label download. */
-  isLoaded: boolean;
-}
-
-/**
- * Speakers for the download filter's label-to-role mapping. The single place
- * this data is sourced, so the read can move without touching call sites.
- */
-export function useTranscriptionSpeakers(
-  sessionId: Id | null,
-  transcriptionId: Id | null
-): UseTranscriptionSpeakers {
-  const url =
-    sessionId && transcriptionId
-      ? transcriptionUrl(sessionId, transcriptionId)
-      : null;
-
-  const { data, error } = useApiSWR<Option<TranscriptionWithSpeakers>>(
-    url,
-    () => TranscriptionApi.getWithSpeakers(sessionId!, transcriptionId!),
-    { revalidateOnFocus: false, dedupingInterval: 60_000 }
-  );
-
-  return {
-    speakers: data !== undefined && data.some ? data.val.speakers : [],
-    isLoaded: data !== undefined && error === undefined,
   };
 }

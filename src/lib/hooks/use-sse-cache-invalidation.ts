@@ -32,6 +32,21 @@ export function matchesEndpoint(
 }
 
 /**
+ * Returns true when the given SWR cache URL is one of `sessionId`'s transcript
+ * suggestion lists, with or without a query string or subpath.
+ */
+export function matchesSessionSuggestions(
+  url: string,
+  baseUrl: string,
+  sessionId: Id,
+): boolean {
+  const prefix = `${baseUrl}/coaching_sessions/${sessionId}/transcript_suggestions`;
+  if (!url.startsWith(prefix)) return false;
+  const next = url.charAt(prefix.length);
+  return next === '' || next === '/' || next === '?';
+}
+
+/**
  * Upsert an agreement into a cached list: replace in place if its id is already
  * present (an update), otherwise append (a create). Returns a new array; never
  * mutates the input.
@@ -129,6 +144,21 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
       { revalidate: true, populateCache: false }
     );
     console.log(`[SSE] Revalidated session-scoped goal caches after ${eventName}`);
+  }, [mutate, baseUrl]);
+
+  /** Revalidates only the named session's transcript suggestion caches. */
+  const invalidateSessionSuggestions = useCallback((sessionId: Id, eventName: string) => {
+    mutate(
+      (key) => {
+        const url = typeof key === 'string' ? key : Array.isArray(key) ? key[0] : null;
+        if (typeof url !== 'string') return false;
+        return matchesSessionSuggestions(url, baseUrl, sessionId);
+      },
+      undefined,
+      // See invalidateEndpoint: don't blank the cache, just revalidate.
+      { revalidate: true, populateCache: false }
+    );
+    console.log(`[SSE] Revalidated session ${sessionId} suggestion caches after ${eventName}`);
   }, [mutate, baseUrl]);
 
   // Route the patch by the payload entity's coaching_session_id, not the
@@ -252,5 +282,10 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   // a count — so we don't over-match them.
   useSSEEventHandler(eventSource, 'coaching_session_title_updated', () => {
     invalidateCoachingSessionTitle('coaching_session_title_updated');
+  });
+
+  // TRANSCRIPT SUGGESTION EVENTS - Coarse: refetch the session's suggestion lists.
+  useSSEEventHandler(eventSource, 'transcript_suggestions_changed', (event) => {
+    invalidateSessionSuggestions(event.data.coaching_session_id, 'transcript_suggestions_changed');
   });
 }

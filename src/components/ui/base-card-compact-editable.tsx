@@ -32,6 +32,10 @@ export interface BaseCardCompactEditableProps {
   initialEditing?: boolean;
   /** Called after the dismiss animation completes when removing the card. */
   onDismiss?: () => void;
+  /** Classes appended to both faces. */
+  faceClassName?: string;
+  /** When true, flipping opens the back face in edit mode. Defaults to false. */
+  editOnFlip?: boolean;
 }
 
 export function BaseCardCompactEditable({
@@ -43,6 +47,8 @@ export function BaseCardCompactEditable({
   canFlip = true,
   initialEditing = false,
   onDismiss,
+  faceClassName,
+  editOnFlip = false,
 }: BaseCardCompactEditableProps) {
   // When initialEditing, skip the flip and show back face directly
   if (initialEditing) {
@@ -64,6 +70,8 @@ export function BaseCardCompactEditable({
       className={className}
       canFlip={canFlip}
       onDismiss={onDismiss}
+      faceClassName={faceClassName}
+      editOnFlip={editOnFlip}
     />
   );
 }
@@ -113,6 +121,8 @@ function EditDetailsCard({
   className,
   canFlip = true,
   onDismiss,
+  faceClassName,
+  editOnFlip = false,
 }: Omit<BaseCardCompactEditableProps, "initialEditing">) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -172,8 +182,10 @@ function EditDetailsCard({
   }, [isFlipped]);
 
   const handleFlip = useCallback(() => {
-    if (canFlip) setIsFlipped(true);
-  }, [canFlip]);
+    if (!canFlip) return;
+    setIsFlipped(true);
+    if (editOnFlip) setIsEditing(true);
+  }, [canFlip, editOnFlip]);
 
   const handleDone = useCallback(() => {
     setIsFlipped(false);
@@ -224,7 +236,10 @@ function EditDetailsCard({
         <div
           ref={frontRef}
           aria-hidden={isFlipped}
-          className="flip-card-face flip-card-front rounded-lg border border-border bg-background p-3 space-y-2 group/card transition-colors shadow-sm hover:border-foreground/20"
+          className={cn(
+            "flip-card-face flip-card-front rounded-lg border border-border bg-background p-3 space-y-2 group/card transition-colors shadow-sm hover:border-foreground/20",
+            faceClassName
+          )}
         >
           {renderHeader && (
             <div data-slot="card-header">
@@ -243,7 +258,10 @@ function EditDetailsCard({
         <div
           ref={backRef}
           aria-hidden={!isFlipped}
-          className="flip-card-face flip-card-back rounded-lg border border-border bg-background p-3 shadow-sm"
+          className={cn(
+            "flip-card-face flip-card-back rounded-lg border border-border bg-background p-3 shadow-sm",
+            faceClassName
+          )}
         >
           {renderBack({
             onDone: handleDone,
