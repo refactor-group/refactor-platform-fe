@@ -1,10 +1,9 @@
 // A suggestion restored from the Dismissed section while its dismiss animation is still running
 // comes back and stays.
 
-import type { ReactNode } from "react";
-import { act, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import type { ComponentProps } from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { RelationshipRole } from "@/types/relationship-role";
@@ -25,7 +24,15 @@ const pending = createMockActionSuggestion({
 });
 const dismissed: ActionSuggestion = { ...pending, resolved_by: Some(COACH_ID) as Option<Id> };
 
-function section(pendingList: ActionSuggestion[], dismissedList: ActionSuggestion[], handlers: object) {
+type ReviewHandlers = Required<
+  Pick<ComponentProps<typeof ActionSectionContent>, "onSuggestionDismiss" | "onSuggestionRestore">
+>;
+
+function section(
+  pendingList: ActionSuggestion[],
+  dismissedList: ActionSuggestion[],
+  handlers: ReviewHandlers
+) {
   return (
     <TooltipProvider>
       <ActionSectionContent
@@ -53,23 +60,34 @@ function section(pendingList: ActionSuggestion[], dismissedList: ActionSuggestio
   );
 }
 
+// Clicks and lets the handler's promise settle, without moving the clock.
+const click = (name: string | RegExp) =>
+  act(async () => {
+    fireEvent.click(screen.getByRole("button", { name }));
+  });
+
 describe("restoring a suggestion while its dismissal is still animating", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("keeps the restored card on screen", async () => {
-    const handlers = {
+    // The clock only moves when advanced, so the restore always lands inside the 400 ms window.
+    vi.useFakeTimers();
+    const handlers: ReviewHandlers = {
       onSuggestionDismiss: vi.fn().mockResolvedValue(true),
       onSuggestionRestore: vi.fn().mockResolvedValue(true),
     };
     const { rerender } = render(section([pending], [], handlers));
 
-    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    await click("Dismiss");
     // The lists refetch: the card is now dismissed.
     rerender(section([], [dismissed], handlers));
-    await userEvent.click(screen.getByRole("button", { name: "Dismissed (1)" }));
-    await userEvent.click(screen.getByRole("button", { name: /Restore/ }));
-    // The lists refetch again before the dismiss animation's 400 ms are up.
+    await click("Dismissed (1)");
+    await click(/Restore/);
+    expect(handlers.onSuggestionRestore).toHaveBeenCalledTimes(1);
+    // The lists refetch again, still inside the dismiss animation's 400 ms.
     rerender(section([pending], [], handlers));
 
-    await act(() => new Promise((resolve) => setTimeout(resolve, 600)));
+    await act(() => vi.advanceTimersByTimeAsync(600));
     expect(screen.getByTestId("suggested-action-card")).toHaveTextContent(BODY);
   });
 });
