@@ -1,5 +1,5 @@
-// Frozen acceptance test for fe#477 phase 2: the read-only suggested action
-// card and its placement in the Actions panel's New tab.
+// The read-only suggested action card and its placement in the Actions
+// panel's New tab.
 
 import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
@@ -15,6 +15,7 @@ import { SpeakerRole } from "@/types/transcription";
 import { Some, None } from "@/types/option";
 import type { Id } from "@/types/general";
 import { createMockAction } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
@@ -44,7 +45,7 @@ function makeSuggestion(
 ): ActionSuggestion {
   const dueBy = overrides.dueBy === undefined ? noon("2026-10-17") : overrides.dueBy;
   const phrase = overrides.phrase === undefined ? "by Friday" : overrides.phrase;
-  return {
+  return createMockActionSuggestion({
     id: overrides.id ?? "sug-1",
     coaching_session_id: "s-1",
     proposal: {
@@ -63,10 +64,9 @@ function makeSuggestion(
       speaker_role: Some(SpeakerRole.Coachee),
       speaker_label: "Caleb Bourg",
     },
-    duplicate_of: None,
     default_due: { at: noon("2026-10-18"), source: Some(overrides.source ?? DueSource.NextSession) },
     created_at: noon("2026-10-11"),
-  };
+  });
 }
 
 const ACTION_BUTTONS = ["Accept", "Dismiss", "Edit"];

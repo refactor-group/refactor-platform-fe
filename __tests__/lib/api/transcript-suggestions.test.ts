@@ -1,4 +1,4 @@
-// Frozen acceptance test for fe#477 phase 1: the transcript suggestions API client.
+// The transcript suggestions API client.
 // Asserts exact paths, methods and bodies, and that HTTP failures come back typed.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";

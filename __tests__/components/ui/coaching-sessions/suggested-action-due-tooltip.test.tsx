@@ -12,6 +12,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None } from "@/types/option";
 import { createMockAction } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
@@ -20,7 +21,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 const noon = (isoDate: string) => DateTime.fromISO(`${isoDate}T12:00:00Z`);
 
 function suggestion(id: string, phrase: string): ActionSuggestion {
-  return {
+  return createMockActionSuggestion({
     id,
     coaching_session_id: "s-1",
     proposal: {
@@ -29,12 +30,9 @@ function suggestion(id: string, phrase: string): ActionSuggestion {
     },
     quote: "q",
     segment: { id: `seg-${id}`, start_ms: 0, speaker_role: None, speaker_label: "Guest 1" },
-    duplicate_of: None,
     default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
-    resolved_by: None,
-    resolved_at: None,
-  };
+  });
 }
 
 const FIRST = "Due Oct 16, 2026 · from “by Friday”";

@@ -1,5 +1,5 @@
-// Frozen acceptance test for fe#477 phase 4b: the session's dismissed
-// suggestions, the wire fields behind them, and restoring one.
+// The session's dismissed suggestions, the wire fields behind them, and
+// restoring one.
 
 import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
@@ -24,6 +24,7 @@ import { Some, None } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
 import { createMockAction } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 vi.mock("@/lib/auth/session-guard", () => ({
   sessionGuard: { get: vi.fn(), put: vi.fn(), post: vi.fn() },
@@ -102,7 +103,7 @@ describe("listing dismissed suggestions", () => {
 });
 
 function dismissed(id: Id, body: string, assignees: Id[], resolvedBy: Id): ActionSuggestion {
-  return {
+  return createMockActionSuggestion({
     id,
     coaching_session_id: "s-1",
     proposal: {
@@ -111,12 +112,11 @@ function dismissed(id: Id, body: string, assignees: Id[], resolvedBy: Id): Actio
     },
     quote: `Quote for ${body}`,
     segment: { id: "seg-1", start_ms: 122000, speaker_role: None, speaker_label: "Jim Hodapp" },
-    duplicate_of: None,
     default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
     resolved_by: Some(resolvedBy),
     resolved_at: Some(noon("2026-10-11")),
-  };
+  });
 }
 
 const BY_COACHEE = dismissed("d-1", "Try blocking two review-free mornings", [COACHEE_ID], COACHEE_ID);

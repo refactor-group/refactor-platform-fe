@@ -1,5 +1,5 @@
-// Frozen acceptance test for fe#477 phase 7: one row of labelled buttons at the
-// bottom of the card, and accepting with edits from the edit form.
+// One row of labelled buttons at the bottom of the card, and accepting with
+// edits from the edit form.
 
 import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
@@ -13,6 +13,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionEdits, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None } from "@/types/option";
 import { createMockAction } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 const PICKED = DateTime.fromISO("2026-11-02T12:00:00Z");
 vi.mock("@/components/ui/coaching-sessions/action-card-parts", async () => {
@@ -45,8 +46,7 @@ const people = {
 const noon = (isoDate: string) => DateTime.fromISO(`${isoDate}T12:00:00Z`);
 
 function makeSuggestion(duplicate = false): ActionSuggestion {
-  return {
-    id: "sug-1",
+  return createMockActionSuggestion({
     coaching_session_id: "s-1",
     proposal: {
       ...createMockAction({
@@ -63,9 +63,7 @@ function makeSuggestion(duplicate = false): ActionSuggestion {
       : None,
     default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
-    resolved_by: None,
-    resolved_at: None,
-  };
+  });
 }
 
 const labels = (container: HTMLElement) =>

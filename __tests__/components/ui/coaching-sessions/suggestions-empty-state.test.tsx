@@ -8,23 +8,19 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { None, Some } from "@/types/option";
 import { createMockAction } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
 }
 
-const suggestion: ActionSuggestion = {
-  id: "sug-1",
+const suggestion: ActionSuggestion = createMockActionSuggestion({
   coaching_session_id: "s-1",
   proposal: { ...createMockAction({ assignee_ids: ["coachee-1"] }), due_phrase: None },
   quote: "I'll book a one on one with my manager.",
   segment: { id: "seg-1", start_ms: 58000, speaker_role: None, speaker_label: "Jim H" },
-  duplicate_of: None,
   default_due: { at: DateTime.now(), source: Some(DueSource.NextSession) },
-  created_at: DateTime.now(),
-  resolved_by: None,
-  resolved_at: None,
-};
+});
 
 function renderSection(actionSuggestions: ActionSuggestion[]) {
   render(

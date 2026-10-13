@@ -1,5 +1,5 @@
-// Frozen acceptance test for fe#477 phase 9: linking a suggested action to a
-// goal when accepting it, and refreshing goal progress afterwards.
+// Linking a suggested action to a goal when accepting it, and refreshing goal
+// progress afterwards.
 
 import type { ReactNode } from "react";
 import { render, renderHook, act, screen, within } from "@testing-library/react";
@@ -17,6 +17,7 @@ import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion"
 import { Some, None, type Option } from "@/types/option";
 import type { Id } from "@/types/general";
 import { createMockAction, createMockGoal } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
@@ -45,8 +46,7 @@ const people = {
 };
 
 function makeSuggestion(goalId: Option<Id> = None): ActionSuggestion {
-  return {
-    id: "sug-1",
+  return createMockActionSuggestion({
     coaching_session_id: "s-1",
     proposal: {
       ...createMockAction({ body: "Draft a delegation plan", assignee_ids: ["coachee-1"], goal_id: goalId }),
@@ -54,12 +54,9 @@ function makeSuggestion(goalId: Option<Id> = None): ActionSuggestion {
     },
     quote: "I'll put together a plan.",
     segment: { id: "seg-1", start_ms: 55000, speaker_role: None, speaker_label: "Caleb Bourg" },
-    duplicate_of: None,
     default_due: { at: DateTime.now(), source: Some(DueSource.NextSession) },
     created_at: DateTime.now(),
-    resolved_by: None,
-    resolved_at: None,
-  };
+  });
 }
 
 function goalRow() {

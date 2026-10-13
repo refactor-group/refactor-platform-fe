@@ -1,5 +1,4 @@
-// Frozen acceptance test for fe#477 phase 5: opening the transcript from a
-// suggestion keeps the Actions panel expanded.
+// Opening the transcript from a suggestion keeps the Actions panel expanded.
 
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";

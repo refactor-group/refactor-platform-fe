@@ -1,5 +1,4 @@
-// Frozen acceptance test for fe#477 phase 5: jumping from a suggestion's quote
-// to its transcript segment.
+// Jumping from a suggestion's quote to its transcript segment.
 
 import type { ReactNode } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -15,6 +14,7 @@ import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion"
 import { SpeakerRole, type TranscriptSegment } from "@/types/transcription";
 import { Some, None } from "@/types/option";
 import { createMockAction } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
@@ -174,8 +174,7 @@ describe("TranscriptPanel jump", () => {
 describe("SuggestedActionCard quote link", () => {
   it("asks to show its segment in the transcript", async () => {
     const onShowInTranscript = vi.fn();
-    const suggestion: ActionSuggestion = {
-      id: "sug-1",
+    const suggestion: ActionSuggestion = createMockActionSuggestion({
       coaching_session_id: "s-1",
       proposal: { ...createMockAction({ assignee_ids: ["coachee-1"] }), due_phrase: None },
       quote: "I should get time with Dana by end of next week.",
@@ -185,12 +184,9 @@ describe("SuggestedActionCard quote link", () => {
         speaker_role: Some(SpeakerRole.Coachee),
         speaker_label: "Caleb Bourg",
       },
-      duplicate_of: None,
       default_due: { at: DateTime.now(), source: Some(DueSource.NextSession) },
       created_at: DateTime.now(),
-      resolved_by: None,
-      resolved_at: None,
-    };
+    });
     render(
       <Wrapper>
         <SuggestedActionCard

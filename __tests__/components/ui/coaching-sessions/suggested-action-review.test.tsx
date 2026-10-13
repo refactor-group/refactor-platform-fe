@@ -1,5 +1,5 @@
-// Frozen acceptance test for fe#477 phase 3: accepting, dismissing and editing
-// a suggestion from its card, and the highlight on the action an accept creates.
+// Accepting, dismissing and editing a suggestion from its card, and the
+// highlight on the action an accept creates.
 
 import type { ReactNode } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -15,6 +15,7 @@ import { Some, None, type Option } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
 import { createMockAction } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 // Stand-in date picker: shows the preselected date and picks a fixed one.
 const PICKED = DateTime.fromISO("2026-11-02T12:00:00Z");
@@ -60,7 +61,7 @@ function makeSuggestion(
   overrides: { id?: Id; assignees?: Id[]; dueBy?: DateTime | null } = {}
 ): ActionSuggestion {
   const dueBy = overrides.dueBy === undefined ? noon("2026-10-17") : overrides.dueBy;
-  return {
+  return createMockActionSuggestion({
     id: overrides.id ?? "sug-1",
     coaching_session_id: "s-1",
     proposal: {
@@ -73,10 +74,9 @@ function makeSuggestion(
     },
     quote: "I'll send Dana the hiring plan.",
     segment: { id: "seg-9", start_ms: 754000, speaker_role: None, speaker_label: "Caleb Bourg" },
-    duplicate_of: None,
     default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
-  };
+  });
 }
 
 const ACCEPT = { name: "Accept" };

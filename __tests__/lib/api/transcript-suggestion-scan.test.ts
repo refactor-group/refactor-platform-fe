@@ -1,4 +1,4 @@
-// Frozen acceptance test for fe#477 phase 10: reading and starting a transcript scan.
+// Reading and starting a transcript scan.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {

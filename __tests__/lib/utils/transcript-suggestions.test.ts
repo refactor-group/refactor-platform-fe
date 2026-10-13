@@ -1,5 +1,4 @@
-// Frozen acceptance test for fe#477 phase 2: who may act on a suggestion, and
-// which due date a suggestion card shows.
+// Who may act on a suggestion, and which due date a suggestion card shows.
 
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
@@ -8,6 +7,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, UndatedReason, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None, type Option } from "@/types/option";
 import { createMockAction } from "../../test-utils";
+import { createMockActionSuggestion } from "../../factories/action-suggestion.factory";
 
 const people = { coachId: "coach-1", coacheeId: "coachee-1" };
 const { Coach, Coachee } = RelationshipRole;
@@ -54,17 +54,15 @@ function suggestion(
   source: Option<DueSource> = Some(DueSource.NextSession),
   reason: Option<UndatedReason> = None
 ): ActionSuggestion {
-  return {
-    id: "sug-1",
+  return createMockActionSuggestion({
     coaching_session_id: "s-1",
     proposal: { ...createMockAction({ due_by: dueBy }), due_phrase: phrase },
     quote: "q",
     segment: { id: "seg-1", start_ms: 0, speaker_role: None, speaker_label: "Guest 1" },
-    duplicate_of: None,
     default_due: { at: noon("2026-10-18"), source },
     undated_reason: reason,
     created_at: noon("2026-10-11"),
-  };
+  });
 }
 
 describe("suggestionDue", () => {

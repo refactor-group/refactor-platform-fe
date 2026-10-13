@@ -1,4 +1,4 @@
-// Frozen acceptance test for fe#477 phase 1: the ActionSuggestion wire parser.
+// The ActionSuggestion wire parser.
 // The fixture is the exact shape GET .../transcript_suggestions?target=action returns.
 
 import { describe, it, expect } from "vitest";

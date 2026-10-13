@@ -1,5 +1,5 @@
-// Frozen acceptance test for fe#477 phase 4: the possible-duplicate marker and
-// confirm row, and undoing a dismiss from its toast.
+// The possible-duplicate marker and confirm row, and undoing a dismiss from
+// its toast.
 
 import type { ReactNode } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -15,6 +15,7 @@ import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion"
 import { Some, None } from "@/types/option";
 import type { Action } from "@/types/action";
 import { createMockAction } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
@@ -34,8 +35,7 @@ const people = {
 const noon = (isoDate: string) => DateTime.fromISO(`${isoDate}T12:00:00Z`);
 
 function makeSuggestion(duplicateOf: { action_id: string; body: string } | null): ActionSuggestion {
-  return {
-    id: "sug-1",
+  return createMockActionSuggestion({
     coaching_session_id: "s-1",
     proposal: {
       ...createMockAction({
@@ -52,7 +52,7 @@ function makeSuggestion(duplicateOf: { action_id: string; body: string } | null)
       : None,
     default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
-  };
+  });
 }
 
 const DUP = { action_id: "act-3", body: "Set up skip-level meeting with Dana" };

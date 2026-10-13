@@ -1,5 +1,5 @@
-// Frozen acceptance test for fe#477 phase 1: transcript_suggestions_changed
-// revalidates only the named session's suggestion caches.
+// transcript_suggestions_changed revalidates only the named session's
+// suggestion caches.
 
 import { describe, it, expect } from "vitest";
 import { matchesSessionSuggestions } from "@/lib/hooks/use-sse-cache-invalidation";

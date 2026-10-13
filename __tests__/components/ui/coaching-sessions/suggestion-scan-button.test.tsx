@@ -1,5 +1,4 @@
-// Frozen acceptance test for fe#477 phase 10: the rescan button in the Actions panel,
-// and the hook that starts a scan.
+// The rescan button in the Actions panel, and the hook that starts a scan.
 
 import type { ReactNode } from "react";
 import { render, renderHook, act, screen, waitFor } from "@testing-library/react";
