@@ -119,6 +119,49 @@ describe("TranscriptPanel jump", () => {
     scrollSpy.mockRestore();
   });
 
+  it("reports a jump once and keeps its mark after the request is dropped", async () => {
+    const onJumpHandled = vi.fn();
+    const panel = (jumpTo: Parameters<typeof TranscriptPanel>[0]["jumpTo"]) => (
+      <Wrapper>
+        <TranscriptPanel
+          sessionId="s-1"
+          meetingUrl={undefined}
+          isMaximized={false}
+          onToggleMaximize={vi.fn()}
+          onClose={vi.fn()}
+          jumpTo={jumpTo}
+          onJumpHandled={onJumpHandled}
+        />
+      </Wrapper>
+    );
+    const { rerender } = render(panel(Some({ segmentId: "seg-2", nonce: 7 })));
+    await waitFor(() => expect(onJumpHandled).toHaveBeenCalledWith(7));
+
+    rerender(panel(None));
+
+    const target = document.querySelector('[data-segment-id="seg-2"]') as HTMLElement;
+    expect(within(target).getByTestId("transcript-jump-mark")).toBeInTheDocument();
+    expect(onJumpHandled).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a jump to a missing segment too, so it is not retried on reopen", async () => {
+    const onJumpHandled = vi.fn();
+    render(
+      <Wrapper>
+        <TranscriptPanel
+          sessionId="s-1"
+          meetingUrl={undefined}
+          isMaximized={false}
+          onToggleMaximize={vi.fn()}
+          onClose={vi.fn()}
+          jumpTo={Some({ segmentId: "seg-404", nonce: 3 })}
+          onJumpHandled={onJumpHandled}
+        />
+      </Wrapper>
+    );
+    await waitFor(() => expect(onJumpHandled).toHaveBeenCalledWith(3));
+  });
+
   it("says so when the segment is not in this transcript", async () => {
     renderPanel(Some({ segmentId: "seg-404", nonce: 1 }));
     await waitFor(() =>

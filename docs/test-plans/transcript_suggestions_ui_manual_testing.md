@@ -229,7 +229,9 @@ With the transcript closed, click a card's `<speaker> · m:ss` button.
 
 **Pass:** the transcript opens beside the Actions panel, which stays expanded. The quoted segment
 is scrolled to the center and marked. Only the transcript scrolls: the page itself does not shift,
-and no blank space appears below the panels. Try a segment near the end of a long transcript.
+and no blank space appears below the panels. Try a segment near the end of a long transcript. Then
+close the transcript and reopen it with the toggle: it opens without scrolling back to the quote or
+marking it again, and no "isn't available" toast appears.
 
 ### Case F2: transcript already open
 
@@ -356,7 +358,9 @@ finishes.
 Set the row to `processing` (backend Part G4) and reload. Hover, press, and Tab to the button.
 
 **Pass:** the icon spins and the button is greyed out. The tooltip reads "Scanning transcript for actions…" on hover, on focus and after a press, and pressing it starts nothing (no
-POST in the Network tab).
+POST in the Network tab). While it spins, the page re-reads the scan state every 15 seconds (visible
+as GETs to `.../scan` in the Network tab), so setting the row to `completed` by hand stops the
+spinner within 15 seconds even though no live update is sent.
 
 ### Case J5: disabled after it completes
 

@@ -152,6 +152,21 @@ test.describe('Rescanning a transcript from the Actions panel', () => {
     expect(backend.posts).toEqual([`${SCAN_PATH}?target=action`])
   })
 
+  test('re-reads a running scan on its own when no live update arrives', async ({ page }) => {
+    await page.clock.install()
+    const backend = await mockBackend(page, AS_COACH, UPCOMING, 'processing')
+    const panel = await openActionsPanel(page)
+    const button = panel.getByRole('button', { name: NAME })
+    await expect(button.locator('svg')).toHaveClass(/animate-spin/)
+
+    // The scan finishes, but its live update is lost.
+    backend.status = 'completed'
+    await page.clock.runFor(16_000)
+
+    await expect(button.locator('svg')).not.toHaveClass(/animate-spin/)
+    await expect(button).toHaveAttribute('aria-disabled', 'true')
+  })
+
   test('does not rescan a completed transcript, and says why', async ({ page }) => {
     const backend = await mockBackend(page, AS_COACH, UPCOMING, 'completed')
     const panel = await openActionsPanel(page)

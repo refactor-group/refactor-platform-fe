@@ -166,6 +166,26 @@ test.describe('Jump from a suggestion to the transcript', () => {
     await expect.poll(scrolledAncestors).toEqual([])
   })
 
+  test('desktop: reopening the transcript does not replay an earlier jump', async ({ page }) => {
+    await page.setViewportSize(DESKTOP)
+    await page.goto(`/coaching-sessions/${SESSION_ID}`)
+    const panel = page.locator('div.hidden.md\\:block')
+    await panel.getByRole('combobox').click()
+    await page.getByRole('option', { name: /Actions/ }).click()
+    await panel
+      .getByTestId('suggested-action-card')
+      .getByRole('button', { name: /Show in transcript/ })
+      .click()
+    await expect(markedTarget(page)).toBeInViewport()
+
+    await page.getByRole('button', { name: 'Close transcript' }).click()
+    await expect(page.locator(`[data-segment-id="${TARGET}"]`)).toHaveCount(0)
+    await page.getByRole('button', { name: 'Show transcript' }).click()
+
+    await expect(page.locator(`[data-segment-id="${TARGET}"]`)).toHaveCount(1)
+    await expect(page.getByTestId('transcript-jump-mark')).toHaveCount(0)
+  })
+
   test('desktop: accepting beside the open transcript scrolls only the Actions panel', async ({
     page,
   }) => {

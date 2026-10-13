@@ -55,6 +55,8 @@ interface TranscriptPanelProps {
   onToggleMaximize: () => void;
   onClose: () => void;
   jumpTo?: Option<TranscriptJump>;
+  /** Called once a jump has been carried out, so the caller can drop the request. */
+  onJumpHandled?: (nonce: number) => void;
 }
 
 function deriveEmptyState(
@@ -107,6 +109,7 @@ export function TranscriptPanel({
   onToggleMaximize,
   onClose,
   jumpTo = None,
+  onJumpHandled,
 }: TranscriptPanelProps) {
   const { recording } = useMeetingRecording(sessionId);
   const { transcription } = useTranscription(sessionId);
@@ -128,6 +131,7 @@ export function TranscriptPanel({
           onToggleMaximize={onToggleMaximize}
           onClose={onClose}
           jumpTo={jumpTo}
+          onJumpHandled={onJumpHandled}
         />
       ) : (
         <>
@@ -155,6 +159,7 @@ interface TranscriptPanelWithDataProps {
   onToggleMaximize: () => void;
   onClose: () => void;
   jumpTo: Option<TranscriptJump>;
+  onJumpHandled?: (nonce: number) => void;
 }
 
 function TranscriptPanelWithData({
@@ -165,23 +170,30 @@ function TranscriptPanelWithData({
   onToggleMaximize,
   onClose,
   jumpTo,
+  onJumpHandled,
 }: TranscriptPanelWithDataProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // The latest jump this panel received; it outlives the caller dropping the request.
+  const [jump, setJump] = useState<Option<TranscriptJump>>(None);
+  if (jumpTo.some && (jump.none || jump.val.nonce !== jumpTo.val.nonce)) {
+    setJump(jumpTo);
+  }
 
   const speakerStyles = useMemo(() => buildSpeakerStyles(segments), [segments]);
   const filter = useSpeakerFilter(segments, speakerStyles);
   const search = useTranscriptSearch(filter.visibleSegments, {
     scrollContainerRef,
   });
-  const jumped = useSegmentJump(jumpTo, segments, filter, scrollContainerRef);
+  const jumped = useSegmentJump(jump, segments, filter, scrollContainerRef, onJumpHandled);
 
   // Typing a search clears the current jump mark; the next jump marks again.
   const [clearedNonce, setClearedNonce] = useState<Option<number>>(None);
   const marked =
-    jumpTo.some && clearedNonce.some && clearedNonce.val === jumpTo.val.nonce ? None : jumped;
+    jump.some && clearedNonce.some && clearedNonce.val === jump.val.nonce ? None : jumped;
   const handleQueryChange = (next: string) => {
     search.setQuery(next);
-    if (next.trim() && jumpTo.some) setClearedNonce(Some(jumpTo.val.nonce));
+    if (next.trim() && jump.some) setClearedNonce(Some(jump.val.nonce));
   };
 
   // Search highlighting wins over the jump mark so marks never nest.
@@ -278,7 +290,8 @@ function useSegmentJump(
   jumpTo: Option<TranscriptJump>,
   segments: readonly TranscriptSegment[],
   filter: { value: string; setValue: (next: string) => void },
-  scrollContainerRef: RefObject<HTMLDivElement | null>
+  scrollContainerRef: RefObject<HTMLDivElement | null>,
+  onHandled?: (nonce: number) => void
 ): Option<Id> {
   const handledNonce = useRef<Option<number>>(None);
   const pendingScroll = useRef<Option<Id>>(None);
@@ -289,6 +302,7 @@ function useSegmentJump(
     const { segmentId, nonce } = jumpTo.val;
     if (handledNonce.current.some && handledNonce.current.val === nonce) return;
     handledNonce.current = Some(nonce);
+    onHandled?.(nonce);
 
     const target = segments.find((s) => s.id === segmentId);
     if (!target) {
@@ -299,7 +313,7 @@ function useSegmentJump(
       setFilterValue(ALL_SPEAKERS);
     }
     pendingScroll.current = Some(segmentId);
-  }, [jumpTo, segments, filterValue, setFilterValue]);
+  }, [jumpTo, segments, filterValue, setFilterValue, onHandled]);
 
   // Runs after every render so the scroll waits for a filter reset to paint the segment.
   // Scrolls only the transcript, never the page.

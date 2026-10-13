@@ -1,6 +1,6 @@
 // Interacts with a coaching session's transcript suggestion endpoints
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import axios from "axios";
 import { err, ok, type Result } from "neverthrow";
 import { siteConfig } from "@/site.config";
@@ -216,12 +216,29 @@ export const useDismissedActionSuggestionList = (sessionId: Id) => {
   };
 };
 
-/** Where the session's transcript scan for actions stands; None while loading or on error. */
+/** How often a running scan is re-read, in case its finishing event never arrives. */
+export const SCAN_POLL_MS = 15_000;
+
+/** Polls only while a scan is queued or running; the server event usually ends it sooner. */
+export const scanPollInterval = (status: ScanStatus): number =>
+  status === ScanStatus.Pending || status === ScanStatus.Processing ? SCAN_POLL_MS : 0;
+
+/**
+ * Where the session's transcript scan for actions stands; None while loading or on error.
+ *
+ * A running scan is also re-read every `SCAN_POLL_MS`, so a lost live-update connection never
+ * leaves the button spinning.
+ */
 export const useScanStatus = (
   sessionId: Id
 ): { status: Option<ScanStatus>; refresh: () => void } => {
-  const { data, error, mutate } = useApiSWR<ScanStatus>(scanStatusUrl(sessionId), () =>
-    TranscriptSuggestionApi.scanStatus(sessionId)
+  // Kept as state, not passed as SWR's function form: SWR asks that once on mount, before any
+  // data, and never reschedules a poll it decided against.
+  const [pollMs, setPollMs] = useState(0);
+  const { data, error, mutate } = useApiSWR<ScanStatus>(
+    scanStatusUrl(sessionId),
+    () => TranscriptSuggestionApi.scanStatus(sessionId),
+    { refreshInterval: pollMs, onSuccess: (status) => setPollMs(scanPollInterval(status)) }
   );
   const refresh = useCallback(() => {
     void mutate();

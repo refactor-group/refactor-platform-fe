@@ -221,16 +221,21 @@ export default function CoachingSessionsPage() {
     layout.toggleTranscript();
   };
 
+  // A jump is a one-time request: dropped once the transcript carries it out, so reopening the
+  // transcript never replays it. The count keeps each request's nonce unique.
   const [transcriptJump, setTranscriptJump] = useState<Option<TranscriptJump>>(None);
+  const jumpCount = useRef(0);
   const handleShowInTranscript = (segmentId: Id) => {
     if (!layout.isTranscriptOpen) markCurrentTranscriptViewed();
     if (!layout.isTranscriptOpen || layout.isGoalsCollapsed) {
       layout.openTranscriptKeepingPanel();
     }
-    setTranscriptJump((prev) =>
-      Some({ segmentId, nonce: prev.some ? prev.val.nonce + 1 : 1 })
-    );
+    jumpCount.current += 1;
+    setTranscriptJump(Some({ segmentId, nonce: jumpCount.current }));
   };
+  const handleJumpHandled = useCallback((nonce: number) => {
+    setTranscriptJump((prev) => (prev.some && prev.val.nonce === nonce ? None : prev));
+  }, []);
 
   useTranscriptionToasts({
     sessionId: currentCoachingSessionId ?? null,
@@ -380,6 +385,7 @@ export default function CoachingSessionsPage() {
               onToggleMaximize={layout.toggleTranscriptMaximized}
               onClose={layout.closeTranscript}
               jumpTo={transcriptJump}
+              onJumpHandled={handleJumpHandled}
             />
           )}
 
