@@ -8,8 +8,7 @@ import { toast } from "sonner";
 import { useSuggestionReview, suggestionFailureMessage } from "@/lib/hooks/use-suggestion-review";
 import { TranscriptSuggestionApi } from "@/lib/api/transcript-suggestions";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
-import { None, Some } from "@/types/option";
-import { createMockAction } from "../../test-utils";
+import { Some } from "@/types/option";
 import { createMockActionSuggestion } from "../../factories/action-suggestion.factory";
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
