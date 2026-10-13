@@ -111,6 +111,22 @@ const config = {
   					transform: 'scale(0.85)',
   				}
   			},
+  			'highlight-pulse': {
+  				'0%, 100%': {
+  					transform: 'scale(1)',
+  				},
+  				'35%': {
+  					transform: 'scale(1.02)',
+  				}
+  			},
+  			'highlight-tint': {
+  				from: {
+  					backgroundColor: 'var(--highlight-tint)',
+  				},
+  				to: {
+  					backgroundColor: 'hsl(var(--background))',
+  				}
+  			},
   			'kanban-card-enter': {
   				'0%': {
   					opacity: '0',
@@ -131,7 +147,9 @@ const config = {
   			'accordion-up': 'accordion-up 0.2s ease-out',
   			'slide-in-from-left': 'slide-in-from-left 0.4s ease-out',
   			'kanban-card-exit': 'kanban-card-exit 350ms ease-in both',
-  			'kanban-card-enter': 'kanban-card-enter 350ms ease-out both'
+  			'kanban-card-enter': 'kanban-card-enter 350ms ease-out both',
+  			'highlight-pulse': 'highlight-pulse 600ms ease-out',
+  			'highlight-tint': 'highlight-tint 2s ease-out both'
   		},
   		fontFamily: {
   			sans: [

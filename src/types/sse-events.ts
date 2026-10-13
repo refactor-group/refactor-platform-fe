@@ -161,6 +161,18 @@ export type TopicsChangedEvent = BaseSSEEvent<
   }
 >;
 
+// ==================== TRANSCRIPT SUGGESTION EVENTS (session-scoped) ====================
+
+// Coarse, like topics_changed: carries the session id and the suggestion
+// target (`action` today). On receipt, refetch that session's suggestions.
+export type TranscriptSuggestionsChangedEvent = BaseSSEEvent<
+  'transcript_suggestions_changed',
+  {
+    coaching_session_id: Id;
+    target: string;
+  }
+>;
+
 /**
  * Discriminated union of all SSE events
  * TypeScript automatically narrows the type based on the 'type' property
@@ -181,4 +193,5 @@ export type SSEEvent =
   | MeetingRecordingUpdatedEvent
   | TranscriptionUpdatedEvent
   | TopicsChangedEvent
-  | CoachingSessionTitleUpdatedEvent;
+  | CoachingSessionTitleUpdatedEvent
+  | TranscriptSuggestionsChangedEvent;

@@ -29,6 +29,13 @@ import {
   useCoachingSessionTopicMutation,
 } from "@/lib/api/coaching-session-topics";
 import { usePanelActions } from "@/lib/hooks/use-panel-actions";
+import {
+  useActionSuggestionList,
+  useDismissedActionSuggestionList,
+  useScanStatus,
+} from "@/lib/api/transcript-suggestions";
+import { useSuggestionReview } from "@/lib/hooks/use-suggestion-review";
+import { useSuggestionScan } from "@/lib/hooks/use-suggestion-scan";
 import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
@@ -37,6 +44,7 @@ import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
+import type { ActionEdits, ActionSuggestion, ScanStatus } from "@/types/transcript-suggestion";
 import { RelationshipRole } from "@/types/relationship-role";
 import {
   isLockedFor,
@@ -123,6 +131,18 @@ export interface CoachingSessionPanelSharedProps {
   // Action data
   reviewActions: Action[];
   sessionActions: Action[];
+  actionSuggestions: ActionSuggestion[];
+  dismissedSuggestions?: ActionSuggestion[];
+  /** Coachee unless the viewer is the coach. */
+  viewerRole: RelationshipRole;
+  /** Suggestion review stays available when the session's sections are locked. */
+  onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
+  onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
+  onSuggestionRestore?: (s: ActionSuggestion) => Promise<boolean>;
+  onShowInTranscript?: (segmentId: Id) => void;
+  /** None while loading; suggestions never lock, so neither does the scan. */
+  scanStatus: Option<ScanStatus>;
+  onStartScan: () => void;
   /** Maps coaching_session_id → session date for "view source session" links */
   sessionDateMap: Map<Id, DateTime>;
   /** Undefined while the coaching relationship is still loading from SWR */
@@ -167,8 +187,10 @@ export function computePanelCounts(
   reviewActions: Action[],
   sessionActions: Action[],
   topics: CoachingSessionTopic[],
+  pendingSuggestions = 0,
 ): Record<PanelSection, string> {
-  const totalActions = reviewActions.length + sessionActions.length;
+  // Pending suggestions count toward the Actions total.
+  const totalActions = reviewActions.length + sessionActions.length + pendingSuggestions;
   return {
     [PanelSection.Topics]: topics.length > 0
       ? `${topics.length}`
@@ -347,6 +369,8 @@ interface CoachingSessionPanelProps {
    * opens that section's add-form and prefills the appropriate field.
    */
   noteSelection?: Option<NoteSelection>;
+  /** Shows a suggestion's quoted segment in the transcript. */
+  onShowInTranscript?: (segmentId: Id) => void;
 }
 
 export function CoachingSessionPanel({
@@ -358,6 +382,7 @@ export function CoachingSessionPanel({
   defaultSection = PanelSection.Topics,
   onSectionChange: onSectionChangeExternal,
   noteSelection = None,
+  onShowInTranscript,
 }: CoachingSessionPanelProps) {
   // ── Resolve user/relationship context for actions ───────────────
   const userId = useAuthStore((state) => state.userId);
@@ -812,12 +837,30 @@ export function CoachingSessionPanel({
     handleBodyChange,
     handleDelete: handleActionDelete,
     sessionDateMap,
+    refresh: refreshActions,
+    revalidateGoalProgress,
   } = usePanelActions({
     userId,
     coachingSessionId,
     coachingRelationshipId,
     sessionDate,
   });
+  const { suggestions: actionSuggestions, refresh: refreshPending } =
+    useActionSuggestionList(coachingSessionId);
+  const { suggestions: dismissedSuggestions, refresh: refreshDismissed } =
+    useDismissedActionSuggestionList(coachingSessionId);
+  const refreshSuggestions = useCallback(() => {
+    refreshPending();
+    refreshDismissed();
+  }, [refreshPending, refreshDismissed]);
+  const suggestionReview = useSuggestionReview({
+    coachingSessionId,
+    refreshSuggestions,
+    refreshActions,
+    refreshGoalProgress: revalidateGoalProgress,
+  });
+  const { status: scanStatus, refresh: refreshScanStatus } = useScanStatus(coachingSessionId);
+  const suggestionScan = useSuggestionScan(coachingSessionId, refreshScanStatus);
 
   const [isAddingAction, setIsAddingAction] = useState(false);
   const [activeActionTab, setActiveActionTab] = useState<ActionTab>("new");
@@ -1223,6 +1266,15 @@ export function CoachingSessionPanel({
     // Action data
     reviewActions: panelReviewActions,
     sessionActions,
+    actionSuggestions,
+    dismissedSuggestions,
+    viewerRole,
+    onSuggestionAccept: suggestionReview.accept,
+    onSuggestionDismiss: suggestionReview.dismiss,
+    onSuggestionRestore: suggestionReview.restore,
+    onShowInTranscript,
+    scanStatus,
+    onStartScan: suggestionScan.start,
     sessionDateMap,
     coachId,
     coachName,

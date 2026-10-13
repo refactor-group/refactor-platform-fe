@@ -6,10 +6,10 @@ import { siteConfig } from "@/site.config";
 export const metadata: Metadata = {
   title: "Privacy Policy | Refactor Coach",
   description:
-    "How the Refactor coaching platform collects, uses, stores, and shares information, including data received from Google APIs.",
+    "How the Refactor coaching platform collects, uses, stores, and shares information, including session recordings, AI-suggested action items, and data received from Google APIs.",
 };
 
-const LAST_UPDATED = "August 11, 2026";
+const LAST_UPDATED = "October 12, 2026";
 
 /** Verbatim disclosure Google requires of apps using sensitive OAuth scopes. */
 const LIMITED_USE_STATEMENT =
@@ -32,6 +32,12 @@ export default function PrivacyPolicyPage() {
         &ldquo;Platform&rdquo;). This policy explains what information the
         Platform collects, how we use it, who we share it with, how long we keep
         it, and the choices you have.
+      </p>
+      <p>
+        <strong>What changed on October 12, 2026:</strong> we added how the
+        Platform records and transcribes the coaching sessions a coach chooses
+        to record, and how it uses AI to suggest action items from those
+        transcripts.
       </p>
       <p>
         This policy governs the Platform only. Our marketing websites at
@@ -59,6 +65,20 @@ export default function PrivacyPolicyPage() {
         their progress. This content is visible to the coach and client in the
         relationship it belongs to, and to administrators of the organization
         that owns the relationship.
+      </p>
+
+      <h3>Session recordings and transcripts</h3>
+      <p>
+        A coach can choose to record a coaching session held on a video call.
+        When they do, a meeting assistant named &ldquo;Refactor Coach&rdquo;
+        joins the call and records it; everyone in the call can see that it has
+        joined, and the client sees on the Platform that a recording is in
+        progress. The recording is transcribed into text labelled by speaker,
+        with the time each line was said. We store the transcript with the
+        coaching session, where the coach and client in the relationship can
+        read and download it. Recall.ai deletes the audio and video recording,
+        and its own copy of the transcript, within 7 days; we do not keep a
+        copy of the audio or video.
       </p>
 
       <h3>Technical information</h3>
@@ -151,6 +171,36 @@ export default function PrivacyPolicyPage() {
         in full.
       </p>
 
+      <h2>AI-suggested action items</h2>
+      <p>
+        When a session&rsquo;s transcript is ready, the Platform uses AI to
+        suggest the action items the coach and client committed to during the
+        session. To do this, we send AssemblyAI the transcript, the
+        coach&rsquo;s and client&rsquo;s names, the session&rsquo;s date and the
+        date of the next session, and the session&rsquo;s existing action items.
+        AssemblyAI runs the request on a Claude model from Anthropic, hosted on
+        Amazon Web Services (Amazon Bedrock), or on Anthropic&rsquo;s own
+        service if Bedrock is unavailable.
+      </p>
+      <ul>
+        <li>
+          <strong>Review first.</strong> Suggestions are stored with the session
+          for the coach and client to review. Nothing becomes an action item
+          unless one of them accepts it, and either can dismiss a suggestion.
+        </li>
+        <li>
+          <strong>No training.</strong> Neither AssemblyAI nor Anthropic uses
+          this data to train AI models. We have opted out of AssemblyAI&rsquo;s
+          model improvement program, and AssemblyAI has opted out of model
+          training with its AI providers.
+        </li>
+        <li>
+          <strong>Short retention.</strong> AssemblyAI deletes the request and
+          its response within one day. Amazon Bedrock does not store them, and
+          Anthropic&rsquo;s service, when used, does not retain them.
+        </li>
+      </ul>
+
       <h2>How we use information</h2>
       <ul>
         <li>To provide the Platform and the coaching features you use.</li>
@@ -161,6 +211,10 @@ export default function PrivacyPolicyPage() {
         <li>
           To send transactional email &mdash; invitations, password resets, and
           notifications about actions assigned to you.
+        </li>
+        <li>
+          To transcribe the sessions a coach records and to suggest action items
+          from those transcripts, as described above.
         </li>
         <li>To operate, secure, debug, and improve the Platform.</li>
         <li>To comply with legal obligations and enforce our Terms.</li>
@@ -195,6 +249,16 @@ export default function PrivacyPolicyPage() {
           session notes.
         </li>
         <li>
+          <strong>A meeting recording provider (Recall.ai)</strong>, which
+          joins and records the sessions a coach chooses to record and has them
+          transcribed by AssemblyAI.
+        </li>
+        <li>
+          <strong>An AI provider (AssemblyAI)</strong>, which transcribes
+          recorded sessions and runs the Anthropic Claude model that suggests
+          action items, as described above.
+        </li>
+        <li>
           <strong>Google</strong>, which provides the optional Google Meet
           integration described above, when you connect a Google account.
         </li>
@@ -213,7 +277,9 @@ export default function PrivacyPolicyPage() {
       <p>
         We keep your account information and coaching content for as long as your
         account is active, and afterward for a reasonable period to satisfy
-        legal, accounting, or reporting obligations. Google tokens are deleted
+        legal, accounting, or reporting obligations. Transcripts and suggested
+        action items are coaching content and are kept the same way. Google
+        tokens are deleted
         when you disconnect the integration or delete your account. Server logs
         are kept for a short rolling window, typically up to 90 days, for
         security and operational purposes.

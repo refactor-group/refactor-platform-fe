@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useSWRConfig } from "swr";
 import { toast as sonnerToast } from "sonner";
+import { actionPreview } from "@/lib/utils/action-preview";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
@@ -42,14 +43,6 @@ function showActionError(message: string, err: unknown) {
   } else {
     sonnerToast.error(`${message}.`);
   }
-}
-
-/** Truncate action body for display in toast messages. */
-function actionPreview(action: Action | undefined): string {
-  if (!action?.body) return "Action";
-  return action.body.length > 40
-    ? `${action.body.slice(0, 40)}...`
-    : action.body;
 }
 
 // ── Sub-hooks ─────────────────────────────────────────────────────
@@ -339,6 +332,7 @@ function useActionCrud(
     handleAssigneesChange,
     handleBodyChange,
     handleDelete,
+    revalidateGoalProgress,
   };
 }
 

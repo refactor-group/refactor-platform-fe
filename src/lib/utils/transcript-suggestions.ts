@@ -1,0 +1,80 @@
+import { DateTime } from "ts-luxon";
+import type { Id } from "@/types/general";
+import { None, Some, type Option } from "@/types/option";
+import { RelationshipRole } from "@/types/relationship-role";
+import { DueSource, UndatedReason, type ActionSuggestion } from "@/types/transcript-suggestion";
+
+/**
+ * Mirrors the backend rule: the coachee may not act on a coach-only
+ * suggestion, nor add or remove the coach as an assignee.
+ */
+export function mayActOnSuggestion(
+  viewer: RelationshipRole,
+  people: { coachId: Id; coacheeId: Id },
+  stored: Id[],
+  requested: Option<Id[]>
+): boolean {
+  if (viewer === RelationshipRole.Coach) return true;
+  const coachStored = stored.includes(people.coachId);
+  const coachOnly = coachStored && !stored.includes(people.coacheeId);
+  const movesCoach = requested.some && requested.val.includes(people.coachId) !== coachStored;
+  return !coachOnly && !movesCoach;
+}
+
+export interface SuggestionDue {
+  at: DateTime;
+  /** True when the due date was spoken in the session. */
+  spoken: boolean;
+  label: string;
+  tooltip: Option<string>;
+}
+
+function defaultTail(source: Option<DueSource>, label: string): string {
+  if (source.none) return `Defaults to ${label}`;
+  switch (source.val) {
+    case DueSource.NextSession:
+      return "Defaults to your next session";
+    case DueSource.WeekAfterSession:
+      return "Defaults to a week after this session";
+    case DueSource.SevenDays:
+      return "Defaults to a week from today";
+    default: {
+      const _exhaustive: never = source.val;
+      throw new Error(`Unhandled due source: ${_exhaustive}`);
+    }
+  }
+}
+
+function heardHead(phrase: string, reason: Option<UndatedReason>): string {
+  if (reason.none) return `Heard “${phrase}”. `;
+  switch (reason.val) {
+    case UndatedReason.NoNextSession:
+      return `Heard “${phrase}”, but no next session is scheduled. `;
+    case UndatedReason.NotADate:
+      return `Heard “${phrase}”, which isn't a specific date. `;
+    default: {
+      const _exhaustive: never = reason.val;
+      throw new Error(`Unhandled undated reason: ${_exhaustive}`);
+    }
+  }
+}
+
+export function suggestionDue(s: ActionSuggestion, locale: string): SuggestionDue {
+  const { due_by, due_phrase } = s.proposal;
+  const at = due_by.some ? due_by.val : s.default_due.at;
+  const label = at.setLocale(locale).toLocaleString(DateTime.DATE_MED);
+
+  if (due_by.some) {
+    return {
+      at,
+      spoken: true,
+      label,
+      tooltip: due_phrase.some ? Some(`Due ${label} · from “${due_phrase.val}”`) : None,
+    };
+  }
+
+  const head = due_phrase.some
+    ? heardHead(due_phrase.val, s.undated_reason)
+    : "No date mentioned. ";
+  return { at, spoken: false, label, tooltip: Some(head + defaultTail(s.default_due.source, label)) };
+}

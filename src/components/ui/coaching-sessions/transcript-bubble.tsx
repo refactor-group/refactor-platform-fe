@@ -56,6 +56,7 @@ export function TranscriptBubble({
 
   return (
     <div
+      data-segment-id={segment.id}
       className={cn(
         "group flex flex-col",
         isRightAligned ? "items-end" : "items-start",

@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useAddFromNotes } from "@/lib/hooks/use-add-from-notes";
@@ -10,7 +10,10 @@ import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { CoachingTabsContainer } from "@/components/ui/coaching-sessions/coaching-tabs-container";
-import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-panel";
+import {
+  TranscriptPanel,
+  type TranscriptJump,
+} from "@/components/ui/coaching-sessions/transcript-panel";
 import { TranscriptToggleButton } from "@/components/ui/coaching-sessions/transcript-toggle-button";
 import { JoinMeetingButton } from "@/components/ui/coaching-sessions/join-meeting-button";
 import {
@@ -33,7 +36,8 @@ import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "sonner";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
-import { EntityApiError } from "@/types/general";
+import { EntityApiError, type Id } from "@/types/general";
+import { None, Some, type Option } from "@/types/option";
 import { isPastSession } from "@/types/coaching-session";
 import type { CoachingSession } from "@/types/coaching-session";
 import { RelationshipRole } from "@/types/relationship-role";
@@ -200,20 +204,38 @@ export default function CoachingSessionsPage() {
       ? IndicatorStatus.None
       : baseIndicatorStatus;
 
-  // Wrap toggle so that opening the panel marks the current transcript
-  // as viewed (clears the badge dot, suppresses repeat ready toasts).
-  const handleToggleTranscript = () => {
-    const willOpen = !layout.isTranscriptOpen;
+  const markCurrentTranscriptViewed = () => {
     if (
-      willOpen &&
       currentCoachingSessionId &&
       transcription?.id &&
       transcription.status === TranscriptionStatus.Completed
     ) {
       markTranscriptViewed(currentCoachingSessionId, transcription.id);
     }
+  };
+
+  // Wrap toggle so that opening the panel marks the current transcript
+  // as viewed (clears the badge dot, suppresses repeat ready toasts).
+  const handleToggleTranscript = () => {
+    if (!layout.isTranscriptOpen) markCurrentTranscriptViewed();
     layout.toggleTranscript();
   };
+
+  // A jump is a one-time request: dropped once the transcript carries it out, so reopening the
+  // transcript never replays it. The count keeps each request's nonce unique.
+  const [transcriptJump, setTranscriptJump] = useState<Option<TranscriptJump>>(None);
+  const jumpCount = useRef(0);
+  const handleShowInTranscript = (segmentId: Id) => {
+    if (!layout.isTranscriptOpen) markCurrentTranscriptViewed();
+    if (!layout.isTranscriptOpen || layout.isGoalsCollapsed) {
+      layout.openTranscriptKeepingPanel();
+    }
+    jumpCount.current += 1;
+    setTranscriptJump(Some({ segmentId, nonce: jumpCount.current }));
+  };
+  const handleJumpHandled = useCallback((nonce: number) => {
+    setTranscriptJump((prev) => (prev.some && prev.val.nonce === nonce ? None : prev));
+  }, []);
 
   useTranscriptionToasts({
     sessionId: currentCoachingSessionId ?? null,
@@ -351,6 +373,7 @@ export default function CoachingSessionsPage() {
               defaultSection={panelSection}
               onSectionChange={handlePanelSectionChange}
               noteSelection={noteSelection}
+              onShowInTranscript={handleShowInTranscript}
             />
           )}
 
@@ -361,6 +384,8 @@ export default function CoachingSessionsPage() {
               isMaximized={layout.isTranscriptMaximized}
               onToggleMaximize={layout.toggleTranscriptMaximized}
               onClose={layout.closeTranscript}
+              jumpTo={transcriptJump}
+              onJumpHandled={handleJumpHandled}
             />
           )}
 
