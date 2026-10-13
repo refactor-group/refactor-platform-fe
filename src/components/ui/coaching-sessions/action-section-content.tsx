@@ -258,6 +258,15 @@ export function ActionSectionContent({
     [clearExitTimer]
   );
 
+  // Undo and the Dismissed section both restore through here, so a restore made while the
+  // dismiss animation runs also cancels its pending hide.
+  const restoreSuggestion = async (suggestion: ActionSuggestion): Promise<boolean> => {
+    if (!onSuggestionRestore) return false;
+    const restored = await onSuggestionRestore(suggestion);
+    if (restored) returnSuggestion(suggestion.id);
+    return restored;
+  };
+
   const offerUndo = (suggestion: ActionSuggestion) => {
     if (!onSuggestionRestore) return;
     toast("Dismissed suggested action", {
@@ -265,9 +274,7 @@ export function ActionSectionContent({
       duration: 6000,
       action: {
         label: "Undo",
-        onClick: async () => {
-          if (await onSuggestionRestore(suggestion)) returnSuggestion(suggestion.id);
-        },
+        onClick: () => void restoreSuggestion(suggestion),
       },
     });
   };
@@ -453,7 +460,7 @@ export function ActionSectionContent({
           coachName={coachName}
           coacheeId={coacheeId}
           coacheeName={coacheeName}
-          onRestore={onSuggestionRestore}
+          onRestore={onSuggestionRestore && restoreSuggestion}
           onShowInTranscript={onShowInTranscript}
         />
       </TabsContent>
