@@ -11,14 +11,14 @@ import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested
 import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionEdits, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None } from "@/types/option";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, createMockGoal } from "../../../test-utils";
+import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 const COACH_ID = "coach-1";
 const COACHEE_ID = "coachee-1";
 const noon = (isoDate: string) => DateTime.fromISO(`${isoDate}T12:00:00Z`);
 
-const suggestion: ActionSuggestion = {
-  id: "sug-1",
+const suggestion: ActionSuggestion = createMockActionSuggestion({
   coaching_session_id: "s-1",
   proposal: {
     ...createMockAction({
@@ -33,16 +33,18 @@ const suggestion: ActionSuggestion = {
   duplicate_of: Some({ action_id: "act-3", body: Some("Plan the delegation") }),
   default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
   created_at: noon("2026-10-11"),
-  resolved_by: None,
-  resolved_at: None,
-};
+});
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
 }
 
+function goalPicker() {
+  return within(screen.getByText("Linked goal").parentElement as HTMLElement).getByRole("button");
+}
+
 describe("the edit form while the duplicate confirm row is open", () => {
-  it("locks the fields, sends the edits from Accept, and unlocks on Cancel", async () => {
+  it("locks the fields and goal picker, sends the edits from Accept, and unlocks on Cancel", async () => {
     const onAccept = vi.fn().mockResolvedValue(undefined);
     render(
       <Wrapper>
@@ -54,6 +56,7 @@ describe("the edit form while the duplicate confirm row is open", () => {
           coachName="Jim Hodapp"
           coacheeId={COACHEE_ID}
           coacheeName="Caleb Bourg"
+          goals={[createMockGoal({ id: "goal-1", title: "Grow as a leader" })]}
           onAccept={onAccept}
           onDismiss={vi.fn().mockResolvedValue(undefined)}
         />
@@ -68,6 +71,7 @@ describe("the edit form while the duplicate confirm row is open", () => {
 
     expect(textbox).toHaveAttribute("readonly");
     expect(screen.getByRole("button", { name: "Assignees" })).toBeDisabled();
+    expect(goalPicker()).toBeDisabled();
     await userEvent.type(textbox, " later");
     expect(textbox).toHaveValue("Draft it anyway");
 
@@ -75,6 +79,7 @@ describe("the edit form while the duplicate confirm row is open", () => {
     await userEvent.click(within(row).getByRole("button", { name: "Cancel" }));
     expect(textbox).not.toHaveAttribute("readonly");
     expect(screen.getByRole("button", { name: "Assignees" })).toBeEnabled();
+    expect(goalPicker()).toBeEnabled();
 
     await userEvent.click(screen.getByRole("button", { name: "Accept" }));
     await userEvent.click(

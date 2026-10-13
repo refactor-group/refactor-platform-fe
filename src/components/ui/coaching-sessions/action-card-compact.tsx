@@ -658,6 +658,7 @@ export function ActionEditForm({
               goals={goals}
               selectedGoalId={selectedGoalId}
               onChange={onGoalSelect}
+              disabled={fieldsDisabled}
             />
           </div>
         )}
