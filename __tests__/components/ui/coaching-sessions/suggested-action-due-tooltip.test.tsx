@@ -30,7 +30,7 @@ function suggestion(id: string, phrase: string): ActionSuggestion {
     quote: "q",
     segment: { id: `seg-${id}`, start_ms: 0, speaker_role: None, speaker_label: "Guest 1" },
     duplicate_of: None,
-    default_due: { at: noon("2026-10-18"), source: DueSource.NextSession },
+    default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
     resolved_by: None,
     resolved_at: None,

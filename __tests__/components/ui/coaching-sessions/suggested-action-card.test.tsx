@@ -64,7 +64,7 @@ function makeSuggestion(
       speaker_label: "Caleb Bourg",
     },
     duplicate_of: None,
-    default_due: { at: noon("2026-10-18"), source: overrides.source ?? DueSource.NextSession },
+    default_due: { at: noon("2026-10-18"), source: Some(overrides.source ?? DueSource.NextSession) },
     created_at: noon("2026-10-11"),
   };
 }

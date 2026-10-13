@@ -83,7 +83,8 @@ export interface DuplicateOf {
 
 export interface DefaultDue {
   at: DateTime;
-  source: DueSource;
+  /** None for a source this version does not know yet. */
+  source: Option<DueSource>;
 }
 
 export interface ActionSuggestion {
@@ -177,12 +178,10 @@ function parseDefaultDue(value: unknown): DefaultDue {
   if (!isRecord(value)) {
     throw new Error("ActionSuggestion default_due is not an object");
   }
-  if (!isDueSource(value.source)) {
-    throw new Error(`Unknown default_due source: ${String(value.source)}`);
-  }
   return {
     at: parseDateTime(value.at, "ActionSuggestion default_due.at"),
-    source: value.source,
+    // An unknown source reads as None, so a new one never hides the list.
+    source: isDueSource(value.source) ? Some(value.source) : None,
   };
 }
 

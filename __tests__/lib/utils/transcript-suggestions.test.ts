@@ -51,7 +51,7 @@ const noon = (isoDate: string) => DateTime.fromISO(`${isoDate}T12:00:00Z`);
 function suggestion(
   dueBy: Option<DateTime>,
   phrase: Option<string>,
-  source: DueSource = DueSource.NextSession,
+  source: Option<DueSource> = Some(DueSource.NextSession),
   reason: Option<UndatedReason> = None
 ): ActionSuggestion {
   return {
@@ -83,26 +83,31 @@ describe("suggestionDue", () => {
   });
 
   it("falls back to the next session", () => {
-    const due = suggestionDue(suggestion(None, None, DueSource.NextSession), "en-US");
+    const due = suggestionDue(suggestion(None, None, Some(DueSource.NextSession)), "en-US");
     expect(due.spoken).toBe(false);
     expect(due.label).toBe("Oct 18, 2026");
     expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to your next session"));
   });
 
   it("falls back to a week from today", () => {
-    const due = suggestionDue(suggestion(None, None, DueSource.SevenDays), "en-US");
+    const due = suggestionDue(suggestion(None, None, Some(DueSource.SevenDays)), "en-US");
     expect(due.spoken).toBe(false);
     expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to a week from today"));
   });
 
+  it("names the default date itself when its source is unknown", () => {
+    const due = suggestionDue(suggestion(None, None, None), "en-US");
+    expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to Oct 18, 2026"));
+  });
+
   it("falls back to a week after a session that has not started", () => {
-    const due = suggestionDue(suggestion(None, None, DueSource.WeekAfterSession), "en-US");
+    const due = suggestionDue(suggestion(None, None, Some(DueSource.WeekAfterSession)), "en-US");
     expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to a week after this session"));
   });
 
   it("says a vague phrase is not a specific date", () => {
     const due = suggestionDue(
-      suggestion(None, Some("soon"), DueSource.SevenDays, Some(UndatedReason.NotADate)),
+      suggestion(None, Some("soon"), Some(DueSource.SevenDays), Some(UndatedReason.NotADate)),
       "en-US"
     );
     expect(due.spoken).toBe(false);
@@ -116,7 +121,7 @@ describe("suggestionDue", () => {
       suggestion(
         None,
         Some("by our next session"),
-        DueSource.WeekAfterSession,
+        Some(DueSource.WeekAfterSession),
         Some(UndatedReason.NoNextSession)
       ),
       "en-US"

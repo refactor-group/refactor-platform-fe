@@ -61,7 +61,7 @@ function makeSuggestion(duplicate = false): ActionSuggestion {
     duplicate_of: duplicate
       ? Some({ action_id: "act-3", body: Some("Plan the delegation") })
       : None,
-    default_due: { at: noon("2026-10-18"), source: DueSource.NextSession },
+    default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
     resolved_by: None,
     resolved_at: None,

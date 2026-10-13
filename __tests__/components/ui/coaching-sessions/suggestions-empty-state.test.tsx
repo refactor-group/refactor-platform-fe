@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
-import { None } from "@/types/option";
+import { None, Some } from "@/types/option";
 import { createMockAction } from "../../../test-utils";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -20,7 +20,7 @@ const suggestion: ActionSuggestion = {
   quote: "I'll book a one on one with my manager.",
   segment: { id: "seg-1", start_ms: 58000, speaker_role: None, speaker_label: "Jim H" },
   duplicate_of: None,
-  default_due: { at: DateTime.now(), source: DueSource.NextSession },
+  default_due: { at: DateTime.now(), source: Some(DueSource.NextSession) },
   created_at: DateTime.now(),
   resolved_by: None,
   resolved_at: None,

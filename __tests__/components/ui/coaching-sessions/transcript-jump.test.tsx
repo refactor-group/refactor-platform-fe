@@ -186,7 +186,7 @@ describe("SuggestedActionCard quote link", () => {
         speaker_label: "Caleb Bourg",
       },
       duplicate_of: None,
-      default_due: { at: DateTime.now(), source: DueSource.NextSession },
+      default_due: { at: DateTime.now(), source: Some(DueSource.NextSession) },
       created_at: DateTime.now(),
       resolved_by: None,
       resolved_at: None,

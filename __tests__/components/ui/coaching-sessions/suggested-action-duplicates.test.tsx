@@ -50,7 +50,7 @@ function makeSuggestion(duplicateOf: { action_id: string; body: string } | null)
     duplicate_of: duplicateOf
       ? Some({ action_id: duplicateOf.action_id, body: Some(duplicateOf.body) })
       : None,
-    default_due: { at: noon("2026-10-18"), source: DueSource.NextSession },
+    default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
   };
 }

@@ -70,7 +70,7 @@ describe("parseActionSuggestion", () => {
       Some({ action_id: "act-3", body: Some("Share hiring plan") })
     );
 
-    expect(s.default_due.source).toBe(DueSource.NextSession);
+    expect(s.default_due.source).toEqual(Some(DueSource.NextSession));
     expect(DateTime.isDateTime(s.default_due.at)).toBe(true);
     expect(s.default_due.at.toUTC().toISO()).toBe("2026-10-18T15:00:00.000Z");
   });
@@ -89,7 +89,7 @@ describe("parseActionSuggestion", () => {
     expect(s.proposal.due_phrase).toEqual(None);
     expect(s.segment.speaker_role).toEqual(None);
     expect(s.duplicate_of).toEqual(None);
-    expect(s.default_due.source).toBe(DueSource.SevenDays);
+    expect(s.default_due.source).toEqual(Some(DueSource.SevenDays));
   });
 
   it("reads the new default source and the undated reasons", () => {
@@ -99,7 +99,7 @@ describe("parseActionSuggestion", () => {
     wire.default_due.source = "week_after_session";
     wire.undated_reason = "no_next_session";
     const s = parseActionSuggestion(wire);
-    expect(s.default_due.source).toBe(DueSource.WeekAfterSession);
+    expect(s.default_due.source).toEqual(Some(DueSource.WeekAfterSession));
     expect(s.undated_reason).toEqual(Some(UndatedReason.NoNextSession));
 
     wire.undated_reason = "not_a_date";
@@ -127,10 +127,10 @@ describe("parseActionSuggestion", () => {
     expect(() => parseActionSuggestion("sug-1")).toThrow();
   });
 
-  it("rejects an unknown default_due source", () => {
+  it("reads an unknown default_due source as None instead of failing the list", () => {
     const wire = wireActionSuggestion();
     wire.default_due.source = "someday";
-    expect(() => parseActionSuggestion(wire)).toThrow();
+    expect(parseActionSuggestion(wire).default_due.source).toEqual(None);
   });
 
   it("rejects a proposal that is not an action", () => {

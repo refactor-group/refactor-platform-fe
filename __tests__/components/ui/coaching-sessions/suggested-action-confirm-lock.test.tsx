@@ -31,7 +31,7 @@ const suggestion: ActionSuggestion = {
   quote: "I'll put together a plan.",
   segment: { id: "seg-1", start_ms: 55000, speaker_role: None, speaker_label: "Caleb Bourg" },
   duplicate_of: Some({ action_id: "act-3", body: Some("Plan the delegation") }),
-  default_due: { at: noon("2026-10-18"), source: DueSource.NextSession },
+  default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
   created_at: noon("2026-10-11"),
   resolved_by: None,
   resolved_at: None,

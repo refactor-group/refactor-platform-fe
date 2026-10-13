@@ -74,7 +74,7 @@ function makeSuggestion(
     quote: "I'll send Dana the hiring plan.",
     segment: { id: "seg-9", start_ms: 754000, speaker_role: None, speaker_label: "Caleb Bourg" },
     duplicate_of: None,
-    default_due: { at: noon("2026-10-18"), source: DueSource.NextSession },
+    default_due: { at: noon("2026-10-18"), source: Some(DueSource.NextSession) },
     created_at: noon("2026-10-11"),
   };
 }

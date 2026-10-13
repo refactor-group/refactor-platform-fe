@@ -29,8 +29,9 @@ export interface SuggestionDue {
   tooltip: Option<string>;
 }
 
-function defaultTail(source: DueSource): string {
-  switch (source) {
+function defaultTail(source: Option<DueSource>, label: string): string {
+  if (source.none) return `Defaults to ${label}`;
+  switch (source.val) {
     case DueSource.NextSession:
       return "Defaults to your next session";
     case DueSource.WeekAfterSession:
@@ -38,7 +39,7 @@ function defaultTail(source: DueSource): string {
     case DueSource.SevenDays:
       return "Defaults to a week from today";
     default: {
-      const _exhaustive: never = source;
+      const _exhaustive: never = source.val;
       throw new Error(`Unhandled due source: ${_exhaustive}`);
     }
   }
@@ -75,5 +76,5 @@ export function suggestionDue(s: ActionSuggestion, locale: string): SuggestionDu
   const head = due_phrase.some
     ? heardHead(due_phrase.val, s.undated_reason)
     : "No date mentioned. ";
-  return { at, spoken: false, label, tooltip: Some(head + defaultTail(s.default_due.source)) };
+  return { at, spoken: false, label, tooltip: Some(head + defaultTail(s.default_due.source, label)) };
 }

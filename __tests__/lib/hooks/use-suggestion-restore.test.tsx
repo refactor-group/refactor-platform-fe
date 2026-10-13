@@ -24,7 +24,7 @@ const suggestion: ActionSuggestion = {
   quote: "q",
   segment: { id: "seg-1", start_ms: 0, speaker_role: None, speaker_label: "Guest 1" },
   duplicate_of: None,
-  default_due: { at: DateTime.now(), source: DueSource.NextSession },
+  default_due: { at: DateTime.now(), source: Some(DueSource.NextSession) },
   created_at: DateTime.now(),
 };
 
