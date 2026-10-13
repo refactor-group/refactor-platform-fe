@@ -238,8 +238,11 @@ export const useScanStatus = (
   const { data, error, mutate } = useApiSWR<ScanStatus>(
     scanStatusUrl(sessionId),
     () => TranscriptSuggestionApi.scanStatus(sessionId),
-    { refreshInterval: pollMs, onSuccess: (status) => setPollMs(scanPollInterval(status)) }
+    { refreshInterval: pollMs }
   );
+  // Follows whatever status the hook holds, including one served from cache with no request.
+  const wantedPollMs = data === undefined ? 0 : scanPollInterval(data);
+  if (wantedPollMs !== pollMs) setPollMs(wantedPollMs);
   const refresh = useCallback(() => {
     void mutate();
   }, [mutate]);
