@@ -1,7 +1,8 @@
 // Interacts with a coaching session's transcript suggestion endpoints
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { useSWRConfig } from "swr";
 import { err, ok, type Result } from "neverthrow";
 import { siteConfig } from "@/site.config";
 import { sessionGuard } from "@/lib/auth/session-guard";
@@ -219,15 +220,18 @@ export const useDismissedActionSuggestionList = (sessionId: Id) => {
 /** How often a running scan is re-read, in case its finishing event never arrives. */
 export const SCAN_POLL_MS = 15_000;
 
+const isRunning = (status: ScanStatus): boolean =>
+  status === ScanStatus.Pending || status === ScanStatus.Processing;
+
 /** Polls only while a scan is queued or running; the server event usually ends it sooner. */
 export const scanPollInterval = (status: ScanStatus): number =>
-  status === ScanStatus.Pending || status === ScanStatus.Processing ? SCAN_POLL_MS : 0;
+  isRunning(status) ? SCAN_POLL_MS : 0;
 
 /**
  * Where the session's transcript scan for actions stands; None while loading or on error.
  *
  * A running scan is also re-read every `SCAN_POLL_MS`, so a lost live-update connection never
- * leaves the button spinning.
+ * leaves the button spinning, and the suggestion lists are re-read when it finishes.
  */
 export const useScanStatus = (
   sessionId: Id
@@ -243,6 +247,22 @@ export const useScanStatus = (
   // Follows whatever status the hook holds, including one served from cache with no request.
   const wantedPollMs = data === undefined ? 0 : scanPollInterval(data);
   if (wantedPollMs !== pollMs) setPollMs(wantedPollMs);
+
+  const { mutate: revalidate } = useSWRConfig();
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (data === undefined) return;
+    const running = isRunning(data);
+    if (wasRunning.current && !running) {
+      const lists = [actionSuggestionsUrl(sessionId), dismissedActionSuggestionsUrl(sessionId)];
+      // Revalidate without blanking: the cards stay up until the fresh lists arrive.
+      void revalidate((key) => Array.isArray(key) && lists.includes(key[0]), undefined, {
+        revalidate: true,
+        populateCache: false,
+      });
+    }
+    wasRunning.current = running;
+  }, [data, sessionId, revalidate]);
   const refresh = useCallback(() => {
     void mutate();
   }, [mutate]);

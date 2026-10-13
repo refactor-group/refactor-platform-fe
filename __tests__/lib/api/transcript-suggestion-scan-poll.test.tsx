@@ -7,10 +7,10 @@ import {
   SCAN_POLL_MS,
   TranscriptSuggestionApi,
   scanPollInterval,
+  useActionSuggestionList,
   useScanStatus,
 } from "@/lib/api/transcript-suggestions";
 import { ScanStatus } from "@/types/transcript-suggestion";
-import { Some } from "@/types/option";
 
 describe("scanPollInterval", () => {
   it("polls only while a scan is queued or running", () => {
@@ -64,5 +64,32 @@ describe("useScanStatus polling", () => {
 
     await waitFor(() => expect(screen.getByTestId("second")).toHaveTextContent("completed"));
     expect(read.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("re-reads the suggestion lists when a polled scan finishes, with no server event", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(TranscriptSuggestionApi, "scanStatus").mockResolvedValue(ScanStatus.Processing);
+    const list = vi.spyOn(TranscriptSuggestionApi, "listActions").mockResolvedValue([]);
+    const Probe = () => {
+      const { status } = useScanStatus("s-1");
+      useActionSuggestionList("s-1");
+      return <span data-testid="scan">{status.some ? status.val : "none"}</span>;
+    };
+
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <Probe />
+      </SWRConfig>
+    );
+    await waitFor(() => expect(screen.getByTestId("scan")).toHaveTextContent("processing"));
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(1));
+
+    vi.mocked(TranscriptSuggestionApi.scanStatus).mockResolvedValue(ScanStatus.Completed);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SCAN_POLL_MS + 1_000);
+    });
+
+    await waitFor(() => expect(screen.getByTestId("scan")).toHaveTextContent("completed"));
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
   });
 });
