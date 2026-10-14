@@ -75,10 +75,10 @@ function hitMeta(hit: SearchHit): Option<string> {
       break;
     case SearchHitType.Action:
       parts.push(actionStatusToString(hit.status));
-      if (hit.session_display_title.some) parts.push(hit.session_display_title.val);
+      if (hit.session_title.some) parts.push(hit.session_title.val);
       break;
     case SearchHitType.Agreement:
-      if (hit.session_display_title.some) parts.push(hit.session_display_title.val);
+      if (hit.session_title.some) parts.push(hit.session_title.val);
       if (hit.session_date.some) parts.push(formatDate(hit.session_date.val));
       break;
     case SearchHitType.Topic:

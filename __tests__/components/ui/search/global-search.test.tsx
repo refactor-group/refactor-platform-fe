@@ -43,7 +43,7 @@ const actionHit: SearchHit = {
   status: ItemStatus.NotStarted,
   due_by: None,
   session_date: Some("2026-09-01T09:00:00"),
-  session_display_title: Some("Weekly sync"),
+  session_title: Some("Weekly sync"),
 };
 
 const loaded = (hits: SearchHit[], nextCursor = None as ReturnType<typeof Some<string>> | typeof None): SearchState => ({

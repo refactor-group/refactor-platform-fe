@@ -60,7 +60,6 @@ interface SearchHitBase {
 export interface CoachingSessionHit extends SearchHitBase {
   type: SearchHitType.CoachingSession;
   date: string;
-  display_title: string;
 }
 
 export interface GoalHit extends SearchHitBase {
@@ -76,14 +75,14 @@ export interface ActionHit extends SearchHitBase {
   status: ItemStatus;
   due_by: Option<string>;
   session_date: Option<string>;
-  session_display_title: Option<string>;
+  session_title: Option<string>;
 }
 
 export interface AgreementHit extends SearchHitBase {
   type: SearchHitType.Agreement;
   coaching_session_id: Option<Id>;
   session_date: Option<string>;
-  session_display_title: Option<string>;
+  session_title: Option<string>;
 }
 
 export interface TopicHit extends SearchHitBase {
@@ -200,7 +199,6 @@ export function parseSearchHit(value: unknown): Option<SearchHit> {
         ...parseBase(value),
         type: SearchHitType.CoachingSession,
         date: requireString(value, "date"),
-        display_title: requireString(value, "display_title"),
       });
     case SearchHitType.Goal:
       return Some({
@@ -218,7 +216,7 @@ export function parseSearchHit(value: unknown): Option<SearchHit> {
         status: parseEnum(ITEM_STATUSES, value.status, ItemStatus.NotStarted),
         due_by: optionalString(value.due_by),
         session_date: optionalString(value.session_date),
-        session_display_title: optionalString(value.session_display_title),
+        session_title: optionalString(value.session_title),
       });
     case SearchHitType.Agreement:
       return Some({
@@ -226,7 +224,7 @@ export function parseSearchHit(value: unknown): Option<SearchHit> {
         type: SearchHitType.Agreement,
         coaching_session_id: optionalString(value.coaching_session_id),
         session_date: optionalString(value.session_date),
-        session_display_title: optionalString(value.session_display_title),
+        session_title: optionalString(value.session_title),
       });
     case SearchHitType.Topic:
       return Some({
@@ -267,26 +265,28 @@ export interface SnippetSegment {
 
 const MARK_PATTERN = /<mark>([\s\S]*?)<\/mark>/g;
 
+// `&amp;` last, so an escaped entity like `&amp;lt;` doesn't become `<`.
+const unescapeSnippetText = (text: string): string =>
+  text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+
 /**
  * Splits a backend snippet on its `<mark>` markers into plain and highlighted
- * text segments so it can be rendered as text nodes, never as HTML.
+ * text segments so it can be rendered as text nodes, never as HTML. The
+ * backend HTML-escapes stored text before adding markers, so each segment is
+ * unescaped here.
  */
 export function splitSnippet(snippet: string): SnippetSegment[] {
   const segments: SnippetSegment[] = [];
+  const push = (text: string, highlighted: boolean) =>
+    segments.push({ text: unescapeSnippetText(text), highlighted });
   let cursor = 0;
   for (const match of snippet.matchAll(MARK_PATTERN)) {
     const start = match.index;
-    if (start > cursor) {
-      segments.push({ text: snippet.slice(cursor, start), highlighted: false });
-    }
-    if (match[1].length > 0) {
-      segments.push({ text: match[1], highlighted: true });
-    }
+    if (start > cursor) push(snippet.slice(cursor, start), false);
+    if (match[1].length > 0) push(match[1], true);
     cursor = start + match[0].length;
   }
-  if (cursor < snippet.length) {
-    segments.push({ text: snippet.slice(cursor), highlighted: false });
-  }
+  if (cursor < snippet.length) push(snippet.slice(cursor), false);
   return segments;
 }
 

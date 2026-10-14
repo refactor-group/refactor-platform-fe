@@ -22,7 +22,6 @@ describe("searchHitHref", () => {
       ...base,
       type: SearchHitType.CoachingSession,
       date: "2026-01-01T00:00:00",
-      display_title: "x",
     };
     expect(searchHitHref(hit)).toEqual(Some("/coaching-sessions/hit-1"));
   });
@@ -49,7 +48,7 @@ describe("searchHitHref", () => {
       status: ItemStatus.NotStarted,
       due_by: None,
       session_date: None,
-      session_display_title: None,
+      session_title: None,
     };
     expect(searchHitHref(hit)).toEqual(
       Some("/coaching-sessions/sess-1?panel=actions&highlight=hit-1")
@@ -63,7 +62,7 @@ describe("searchHitHref", () => {
       type: SearchHitType.Agreement,
       coaching_session_id: None,
       session_date: None,
-      session_display_title: None,
+      session_title: None,
     };
     expect(searchHitHref(agreement).none).toBe(true);
     expect(searchHitHref({ ...agreement, coaching_session_id: Some("s") })).toEqual(

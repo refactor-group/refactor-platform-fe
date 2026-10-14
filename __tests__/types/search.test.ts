@@ -26,7 +26,6 @@ describe("parseSearchHit", () => {
       ...base,
       type: "coaching_session",
       date: "2026-09-01T09:00:00",
-      display_title: "Weekly sync",
     });
     expect(hit.some && hit.val.type === SearchHitType.CoachingSession).toBe(true);
     if (hit.some && hit.val.type === SearchHitType.CoachingSession) {
@@ -60,10 +59,11 @@ describe("parseSearchHit", () => {
       status: "NotStarted",
       due_by: null,
       session_date: "2026-09-01T09:00:00",
-      session_display_title: "Weekly sync",
+      session_title: "Weekly sync",
     });
     if (!hit.some || hit.val.type !== SearchHitType.Action) throw new Error("expected action");
     expect(hit.val.coaching_session_id).toEqual({ some: true, none: false, val: "sess-1" });
+    expect(hit.val.session_title).toEqual({ some: true, none: false, val: "Weekly sync" });
     expect(hit.val.goal_id).toEqual({ some: true, none: false, val: "goal-1" });
     expect(hit.val.due_by.none).toBe(true);
   });
@@ -136,11 +136,20 @@ describe("splitSnippet", () => {
     expect(splitSnippet("plain text")).toEqual([{ text: "plain text", highlighted: false }]);
   });
 
-  it("never treats other tags as markup", () => {
-    expect(splitSnippet("<b>bold</b> <mark>hit</mark>")).toEqual([
-      { text: "<b>bold</b> ", highlighted: false },
-      { text: "hit", highlighted: true },
+  it("unescapes HTML entities in both plain and highlighted segments", () => {
+    expect(splitSnippet("<mark>Plan</mark> Q3 &amp; Q4")).toEqual([
+      { text: "Plan", highlighted: true },
+      { text: " Q3 & Q4", highlighted: false },
     ]);
+    expect(splitSnippet("if a &lt; b then <mark>retry</mark>")).toEqual([
+      { text: "if a < b then ", highlighted: false },
+      { text: "retry", highlighted: true },
+    ]);
+    expect(splitSnippet("<mark>a &gt; b</mark>")).toEqual([{ text: "a > b", highlighted: true }]);
+  });
+
+  it("unescapes &amp; last so a doubly escaped entity stays literal", () => {
+    expect(splitSnippet("&amp;lt;")).toEqual([{ text: "&lt;", highlighted: false }]);
   });
 });
 
