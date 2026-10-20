@@ -38,6 +38,13 @@ export enum CoachingSessionInclude {
   Organization = "organization",
   Goal = "goal",
   Agreements = "agreements",
+  Series = "series",
+}
+
+/** The part of a session's series the list view needs. */
+export interface CoachingSessionSeriesSummary {
+  id: Id;
+  last_session_date: DateTime; // parsed as UTC, like session.date
 }
 
 /**
@@ -71,6 +78,9 @@ export interface EnrichedCoachingSession extends CoachingSession {
 
   /** Agreement (included when include=agreements) */
   agreement?: Agreement;
+
+  /** None when the session is not in a series; undefined when not requested. */
+  series?: Option<CoachingSessionSeriesSummary>;
 }
 
 export function isCoachingSession(value: unknown): value is CoachingSession {
@@ -156,7 +166,7 @@ export type CoachingSessionWire = Omit<
  * `title` is the only field needing normalization; the spread is deliberate so
  * the EnrichedCoachingSession include-fields (coach/coachee/goals/…) pass
  * through untouched when this is reused for the enriched list endpoint. */
-export function transformCoachingSession(raw: any): CoachingSession {
+export function transformCoachingSession(raw: any): EnrichedCoachingSession {
   if (raw == null) return defaultCoachingSession();
   return {
     ...raw,
@@ -172,15 +182,26 @@ export function transformCoachingSession(raw: any): CoachingSession {
       typeof raw.coaching_session_series_id === "string"
         ? Some(raw.coaching_session_series_id)
         : None,
+    series: transformSeriesSummary(raw.series),
   };
+}
+
+function transformSeriesSummary(raw: any): Option<CoachingSessionSeriesSummary> {
+  if (typeof raw?.id !== "string" || typeof raw?.last_session_date !== "string") {
+    return None;
+  }
+  return Some({
+    id: raw.id,
+    last_session_date: DateTime.fromISO(raw.last_session_date, { zone: "utc" }),
+  });
 }
 
 /** Converts a CoachingSession to wire format, unwrapping the Option title. */
 export function serializeCoachingSession(
-  session: CoachingSession
+  session: EnrichedCoachingSession
 ): CoachingSessionWire {
-  // display_title is server-computed/read-only — never send it back.
-  const { display_title: _displayTitle, ...rest } = session;
+  // display_title and series are server-computed/read-only — never send them back.
+  const { display_title: _displayTitle, series: _series, ...rest } = session;
   return {
     ...rest,
     title: session.title.some ? session.title.val : null,

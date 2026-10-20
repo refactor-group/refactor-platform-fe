@@ -55,6 +55,7 @@ export interface BucketAccordionProps {
 const SESSION_INCLUDES: CoachingSessionInclude[] = [
   CoachingSessionInclude.Relationship,
   CoachingSessionInclude.Goal,
+  CoachingSessionInclude.Series,
 ];
 
 // The overlap bucket fetches its full calendar window even when its

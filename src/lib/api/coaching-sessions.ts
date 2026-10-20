@@ -17,6 +17,8 @@ import { USERS_BASEURL } from "./users";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { Option } from "@/types/option";
 import { DateTime } from "ts-luxon";
+import type { Result } from "neverthrow";
+import { attemptResend, type ResendInviteFailure } from "@/types/resend-invite";
 
 // Re-export for convenience
 export { CoachingSessionInclude };
@@ -139,6 +141,12 @@ export const CoachingSessionApi = {
     );
     return transformCoachingSession(res.data.data);
   },
+
+  /** Re-sends a one-off session's calendar invite to the coachee. */
+  resendInvite: (sessionId: Id): Promise<Result<void, ResendInviteFailure>> =>
+    attemptResend(() =>
+      sessionGuard.post(`${COACHING_SESSIONS_BASEURL}/${sessionId}/resend_invite`)
+    ),
 
   /**
    * Deletes an coaching session.

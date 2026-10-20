@@ -39,6 +39,7 @@ export interface TodaySectionProps {
 const SESSION_INCLUDES: CoachingSessionInclude[] = [
   CoachingSessionInclude.Relationship,
   CoachingSessionInclude.Goal,
+  CoachingSessionInclude.Series,
 ];
 
 export function TodaySection({

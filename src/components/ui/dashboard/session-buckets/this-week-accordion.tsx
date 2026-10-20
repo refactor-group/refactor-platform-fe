@@ -43,6 +43,7 @@ export interface ThisWeekAccordionProps {
 const SESSION_INCLUDES: CoachingSessionInclude[] = [
   CoachingSessionInclude.Relationship,
   CoachingSessionInclude.Goal,
+  CoachingSessionInclude.Series,
 ];
 
 export function ThisWeekAccordion({
