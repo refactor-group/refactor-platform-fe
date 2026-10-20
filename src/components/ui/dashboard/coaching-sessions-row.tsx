@@ -8,6 +8,7 @@ import {
   CalendarRange,
   CalendarSync,
   Link2,
+  MailPlus,
   MoreVertical,
   Trash2,
 } from "lucide-react";
@@ -44,6 +45,8 @@ export interface SessionRowProps {
    *  `<DeleteSessionDialog>` and the delete mutation. Not invoked on
    *  rows where the viewer isn't a coach — the kebab item is hidden. */
   onRequestDelete: (session: EnrichedCoachingSession) => void;
+  /** Hands the session up to the card, which owns the resend dialog. Coach-only. */
+  onRequestResendInvite: (session: EnrichedCoachingSession) => void;
   /** Hands a series action up to the card so it can fetch the series and
    *  drive the view/edit/delete dialogs. Only invoked for sessions that
    *  belong to a series; edit/delete items are coach-only. */
@@ -62,6 +65,7 @@ export function SessionRow({
   onSelect,
   onReschedule,
   onRequestDelete,
+  onRequestResendInvite,
   onSeriesAction,
 }: SessionRowProps) {
   const participant = useMemo(
@@ -88,6 +92,7 @@ export function SessionRow({
   const seriesId = session.coaching_session_series_id;
   const canViewSeries = seriesId.some;
   const canManageSeries = seriesId.some && participant?.isCoach === true;
+  const canResendInvite = participant?.isCoach === true;
 
   const participantName = participant?.participantName ?? "Unknown";
   const participantInitials = participant
@@ -230,6 +235,13 @@ export function SessionRow({
               <Link2 className="mr-2 h-4 w-4" />
               Share link
             </DropdownMenuItem>
+            {canResendInvite && (
+              <ResendInviteMenuItem
+                session={session}
+                isPast={isPast}
+                onSelect={() => onRequestResendInvite(session)}
+              />
+            )}
             {(canDelete || canManageSeries) && <DropdownMenuSeparator />}
             {canDelete && (
               <DropdownMenuItem
@@ -266,5 +278,50 @@ export function SessionRow({
         </Link>
       </div>
     </div>
+  );
+}
+
+// An unknown series (not requested, or absent) stays enabled; the backend decides.
+function hasUpcomingSession(
+  session: EnrichedCoachingSession,
+  isPast: boolean
+): boolean {
+  if (!session.coaching_session_series_id.some) return !isPast;
+  const series = session.series;
+  if (series === undefined || series.none) return true;
+  return series.val.last_session_date > DateTime.now();
+}
+
+function ResendInviteMenuItem({
+  session,
+  isPast,
+  onSelect,
+}: {
+  session: EnrichedCoachingSession;
+  isPast: boolean;
+  onSelect: () => void;
+}) {
+  const label = session.coaching_session_series_id.some
+    ? "Resend series invite"
+    : "Resend invite";
+  const enabled = hasUpcomingSession(session, isPast);
+
+  return (
+    <DropdownMenuItem
+      disabled={!enabled}
+      onClick={onSelect}
+      data-testid="session-row-resend-invite"
+      className="items-start"
+    >
+      <MailPlus className="mr-2 mt-0.5 h-4 w-4" />
+      <div className="flex flex-col">
+        <span>{label}</span>
+        {!enabled && (
+          <span className="text-xs text-muted-foreground">
+            No upcoming sessions
+          </span>
+        )}
+      </div>
+    </DropdownMenuItem>
   );
 }

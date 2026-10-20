@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dashboard/coaching-sessions-card-header";
 import { BucketsContainer } from "@/components/ui/dashboard/session-buckets/buckets-container";
 import { DeleteSessionDialog } from "@/components/ui/dashboard/delete-session-dialog";
+import { ResendInviteDialog } from "@/components/ui/dashboard/resend-invite-dialog";
+import { useResendInvite } from "@/components/ui/dashboard/use-resend-invite";
 import { SeriesActionDialogs } from "@/components/ui/dashboard/series-action-dialogs";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
@@ -187,6 +189,8 @@ export function CoachingSessionsCard({
     kind: "closed",
   });
 
+  const resend = useResendInvite();
+
   // ── Series actions ───────────────────────────────────────────────────
   // A session row's kebab surfaces view / edit / delete for the series it
   // belongs to. The row only knows the `coaching_session_series_id`, so the
@@ -283,6 +287,7 @@ export function CoachingSessionsCard({
               mountNow={mountNow}
               onReschedule={onReschedule}
               onRequestDelete={handleRequestDelete}
+              onRequestResendInvite={resend.requestResend}
               onSeriesAction={handleSeriesAction}
             />
           )}
@@ -301,6 +306,7 @@ export function CoachingSessionsCard({
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
       />
+      <ResendInviteDialog {...resend.dialogProps} />
       <SeriesActionDialogs
         action={seriesAction}
         userTimezone={userSession?.timezone || getBrowserTimezone()}
