@@ -22,10 +22,10 @@ Branch: `resend-calendar-invite`. Built with the overseer/handoff workflow, one 
 ## Data
 
 - `EnrichedCoachingSession.series?: Option<CoachingSessionSeriesSummary>`, where the summary is `{ id, last_session_date: DateTime }`. The dashboard adds `series` to its `include`.
-- `CoachingSessionSeriesApi.resendInvite(id)` and `CoachingSessionApi.resendInvite(id)` return `Result<void, ResendInviteError>`. The error is a `ResendInviteFailure` enum: `LegacySeries`, `NoUpcomingSessions`, `SeriesMember`, `Failed`.
+- `CoachingSessionSeriesApi.resendInvite(id)` and `CoachingSessionApi.resendInvite(id)` return `Result<void, ResendInviteFailure>`. The failure is a union: `refused` (with a `ResendInviteRefusal` enum: `LegacySeries`, `NoUpcomingSessions`, `SeriesMember`), `not_delivered` (502), `network`, or `unexpected`.
 
 ## Phases
 
-- [ ] F1: types, transform, the two API calls, dashboard include (Vitest + MSW)
-- [ ] F2: row gating, dialog, card state, toasts, and an isolated Playwright spec using `page.route`
+- [x] F1 (`bdba09a5`): types, transform, the two API calls, dashboard include (Vitest + MSW)
+- [x] F2 (`296cfb08`): row gating, dialog, card state, toasts, and an isolated Playwright spec using `page.route`
 - [ ] V: live run of the manual test plan through Playwright MCP against the backend branch

@@ -5,17 +5,18 @@ Checks that a coach can resend the calendar invite for a series or a one-off ses
 Backend counterpart: `refactor-platform-rs/docs/implementation-plans/resend-calendar-invite.md`.
 
 > [!IMPORTANT]
-> This plan sends **real email**. The only recipients allowed are `jim@refactorgroup.com` (coach) and `james.hodapp@gmail.com` (coachee), in relationship `7adf81aa-23f4-4221-9f82-afb4a5f7512e`. Before any step marked ✉, confirm that the relationship's coach and coachee are still exactly those two addresses. Each ✉ shows how many emails the step sends. The whole plan sends about 16.
+> This plan sends **real email**. The only recipients allowed are `jim@refactorgroup.com` (coach) and `james.hodapp@gmail.com` (coachee), in relationship `7adf81aa-23f4-4221-9f82-afb4a5f7512e`. Before any step marked ✉, confirm that the relationship's coach and coachee are still exactly those two addresses. Each ✉ shows how many emails the step sends. The whole plan sends about 8.
 
 ## 1. Prerequisites
 
-1. Backend on `resend-calendar-invite` on `:4000`, migrations applied. `.env` must have the Resend API key and the session/recurring "scheduled", "rescheduled" and "cancelled" template ids.
+1. Backend on `resend-calendar-invite` on `:4000`, migrations applied, with the session/recurring "scheduled", "rescheduled" and "cancelled" template ids set. Keep `RESEND_API_KEY` **unset** while building the fixtures in step 4, so they send no email. Set it and restart the backend before Part B.
 2. Frontend on `resend-calendar-invite`, `npm run dev` on `:3000`.
 3. Logins: the coach is `PW_ORG_ADMIN_LOGIN_*` and the coachee is `PW_USER_LOGIN_*`, both from `.env.local`.
-4. Fixtures, created in the coach's browser:
-   1. ✉×2 A weekly series of 6 sessions in the relationship above, starting next week. Don't accept it in either calendar.
-   2. ✉×2 Reschedule occurrence 3 of that series by one day.
-   3. ✉×2 Delete occurrence 4 of that series.
+4. Fixtures, created in the coach's browser with email off:
+   1. A weekly series of 6 sessions in the relationship above, starting next week. Neither calendar has it, which is the "lost invite" case.
+   2. Reschedule occurrence 3 of that series by one day.
+   3. Delete occurrence 4 of that series.
+   4. A one-off session for tomorrow.
 5. Fixtures created through SQL (no email):
    1. A **finished series**: a series whose sessions are all in the past.
    2. A **legacy series**: a series with at least one upcoming session whose members have `ical_recurrence_id` set to NULL.
@@ -49,7 +50,7 @@ Open "Resend series invite" again and double-click Resend invite.
 **Pass:**
 - Exactly one `POST /coaching_session_series/:id/resend_invite`, answered 204.
 - While the request is in flight, the action shows "Sending…" and Cancel is disabled.
-- The toast reads "Invite sent to you and James".
+- The toast reads "Invite sent to you and <coachee's name>".
 - Both inboxes get the "recurring sessions scheduled" email with an `invite.ics` attachment titled "James / Jim".
 - After accepting in Google Calendar, there is one series. Occurrence 3 is at its moved time and occurrence 4 is gone.
 
@@ -59,9 +60,9 @@ Once B2 has been accepted, resend the series again.
 
 **Pass:** each calendar updates the existing series. No second copy appears in either calendar.
 
-### Case B4: ✉×4 one-off resend
+### Case B4: ✉×2 one-off resend
 
-Create a one-off session for tomorrow (✉×2), then use "Resend invite" on it (✉×2).
+Use "Resend invite" on the one-off fixture.
 
 **Pass:** one `POST /coaching_sessions/:id/resend_invite`, answered 204, and a success toast. Each calendar shows one event for it, not two.
 
@@ -79,11 +80,11 @@ In the coach's page, `fetch` `POST /coaching_session_series/<finished id>/resend
 
 **Pass:** 409, then 403. No email.
 
-### Case C3: provider failure
+### Case C3: email unavailable
 
-Unset the recurring "scheduled" template id in the backend `.env` and restart the backend. Then resend the active series.
+Run this before Part B, while `RESEND_API_KEY` is still unset. Resend the active series.
 
-**Pass:** the response is 502 and the toast reads "Couldn't resend the invite". No email arrives. Restore the template id afterwards.
+**Pass:** the response is a 5xx (500 for missing config; a provider refusal would be 502). The toast reads "Couldn't resend the invite". No email arrives, and the coach can try again.
 
 ## 5. Cleanup
 
