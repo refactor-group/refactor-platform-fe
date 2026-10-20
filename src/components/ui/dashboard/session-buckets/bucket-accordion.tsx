@@ -49,6 +49,7 @@ export interface BucketAccordionProps {
   onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
+  onRequestResendInvite: (session: EnrichedCoachingSession) => void;
   onSeriesAction: (action: "view" | "edit" | "delete", seriesId: Id) => void;
 }
 
@@ -88,6 +89,7 @@ export function BucketAccordion({
   onSelect,
   onReschedule,
   onRequestDelete,
+  onRequestResendInvite,
   onSeriesAction,
 }: BucketAccordionProps) {
   const [hasEverExpanded, setHasEverExpanded] = useState(isExpanded);
@@ -175,6 +177,7 @@ export function BucketAccordion({
           onSelect={onSelect}
           onReschedule={onReschedule}
           onRequestDelete={onRequestDelete}
+          onRequestResendInvite={onRequestResendInvite}
           onSeriesAction={onSeriesAction}
         />
       </CollapsibleContent>
@@ -192,6 +195,7 @@ interface BucketBodyProps {
   onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
+  onRequestResendInvite: (session: EnrichedCoachingSession) => void;
   onSeriesAction: (action: "view" | "edit" | "delete", seriesId: Id) => void;
 }
 
@@ -205,6 +209,7 @@ function BucketBody({
   onSelect,
   onReschedule,
   onRequestDelete,
+  onRequestResendInvite,
   onSeriesAction,
 }: BucketBodyProps) {
   if (isLoading && sessions.length === 0) {
@@ -238,6 +243,7 @@ function BucketBody({
           onSelect={() => onSelect(session)}
           onReschedule={onReschedule}
           onRequestDelete={onRequestDelete}
+          onRequestResendInvite={onRequestResendInvite}
           onSeriesAction={onSeriesAction}
         />
       ))}

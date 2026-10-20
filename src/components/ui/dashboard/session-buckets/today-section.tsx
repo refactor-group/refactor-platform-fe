@@ -33,6 +33,7 @@ export interface TodaySectionProps {
   onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
+  onRequestResendInvite: (session: EnrichedCoachingSession) => void;
   onSeriesAction: (action: "view" | "edit" | "delete", seriesId: Id) => void;
 }
 
@@ -55,6 +56,7 @@ export function TodaySection({
   onSelect,
   onReschedule,
   onRequestDelete,
+  onRequestResendInvite,
   onSeriesAction,
 }: TodaySectionProps) {
   const isPastView = view === CoachingSessionBucketView.Previous;
@@ -115,6 +117,7 @@ export function TodaySection({
               onSelect={() => onSelect(session)}
               onReschedule={onReschedule}
               onRequestDelete={onRequestDelete}
+              onRequestResendInvite={onRequestResendInvite}
               onSeriesAction={onSeriesAction}
             />
           ))}

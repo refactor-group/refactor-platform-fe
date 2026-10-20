@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { toast as sonnerToast } from "sonner";
+import type { Result } from "neverthrow";
 import { useSWRConfig } from "swr";
 import { Card, CardContent } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,12 +13,17 @@ import {
 } from "@/components/ui/dashboard/coaching-sessions-card-header";
 import { BucketsContainer } from "@/components/ui/dashboard/session-buckets/buckets-container";
 import { DeleteSessionDialog } from "@/components/ui/dashboard/delete-session-dialog";
+import { ResendInviteDialog } from "@/components/ui/dashboard/resend-invite-dialog";
 import { SeriesActionDialogs } from "@/components/ui/dashboard/series-action-dialogs";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
+import {
+  CoachingSessionApi,
+  useCoachingSessionMutation,
+} from "@/lib/api/coaching-sessions";
+import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { USERS_BASEURL } from "@/lib/api/users";
 import type { Id } from "@/types/general";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
@@ -26,6 +32,10 @@ import {
   type CoachingSession,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
+import {
+  ResendInviteRefusal,
+  type ResendInviteFailure,
+} from "@/types/resend-invite";
 import {
   isUserCoachInRelationship,
   isUserCoacheeInRelationship,
@@ -53,6 +63,67 @@ type DeleteDialogState =
   | { kind: "closed" }
   | { kind: "pending"; session: EnrichedCoachingSession }
   | { kind: "deleting"; session: EnrichedCoachingSession };
+
+type ResendDialogState =
+  | { kind: "closed" }
+  | { kind: "pending"; session: EnrichedCoachingSession }
+  | { kind: "sending"; session: EnrichedCoachingSession };
+
+const RESEND_FAILED = "Couldn't resend the invite";
+const RESEND_RETRY = { description: "Please try again in a moment." };
+
+function resendSessionInvite(
+  session: EnrichedCoachingSession,
+  participantName: string
+) {
+  void CoachingSessionApi.resendInvite(session.id).then((result) =>
+    announceResendResult(result, { session, participantName, isSeries: false })
+  );
+}
+
+function announceResendResult(
+  result: Result<void, ResendInviteFailure>,
+  ctx: {
+    session: EnrichedCoachingSession;
+    participantName: string;
+    isSeries: boolean;
+  }
+): void {
+  if (result.isOk()) {
+    sonnerToast.success(`Invite sent to you and ${ctx.participantName}`);
+    return;
+  }
+  const failure = result.error;
+  if (failure.kind !== "refused") {
+    sonnerToast.error(RESEND_FAILED, RESEND_RETRY);
+    return;
+  }
+  switch (failure.reason) {
+    case ResendInviteRefusal.LegacySeries:
+      sonnerToast.error("This series can't be resent.", {
+        description: "You can resend this session instead.",
+        action: {
+          label: "Resend this session",
+          onClick: () => resendSessionInvite(ctx.session, ctx.participantName),
+        },
+      });
+      return;
+    case ResendInviteRefusal.NoUpcomingSessions:
+      sonnerToast.error(
+        ctx.isSeries
+          ? "This series has no upcoming sessions."
+          : "This session has already happened."
+      );
+      return;
+    case ResendInviteRefusal.SeriesMember:
+      sonnerToast.error(RESEND_FAILED, RESEND_RETRY);
+      return;
+    default: {
+      const _exhaustive: never = failure.reason;
+      throw new Error(`Unhandled resend refusal: ${_exhaustive}`);
+    }
+  }
+}
 
 export interface CoachingSessionsCardProps {
   /** Opens the create/edit dialog with the given session pre-filled. */
@@ -187,6 +258,43 @@ export function CoachingSessionsCard({
     kind: "closed",
   });
 
+  // ── Resend invite flow ───────────────────────────────────────────────
+  const [resendState, setResendState] = useState<ResendDialogState>({
+    kind: "closed",
+  });
+
+  const resendParticipantName = useMemo(() => {
+    if (resendState.kind === "closed" || !userSession) return "";
+    const info = getSessionParticipantInfo(resendState.session, userSession.id);
+    return info?.participantName ?? "Unknown";
+  }, [resendState, userSession]);
+
+  const handleRequestResendInvite = useCallback(
+    (session: EnrichedCoachingSession) =>
+      setResendState({ kind: "pending", session }),
+    []
+  );
+
+  const handleCancelResend = useCallback(() => {
+    setResendState({ kind: "closed" });
+  }, []);
+
+  const handleConfirmResend = useCallback(async () => {
+    if (resendState.kind !== "pending") return;
+    const { session } = resendState;
+    setResendState({ kind: "sending", session });
+    const seriesId = session.coaching_session_series_id;
+    const result = seriesId.some
+      ? await CoachingSessionSeriesApi.resendInvite(seriesId.val)
+      : await CoachingSessionApi.resendInvite(session.id);
+    announceResendResult(result, {
+      session,
+      participantName: resendParticipantName,
+      isSeries: seriesId.some,
+    });
+    setResendState({ kind: "closed" });
+  }, [resendState, resendParticipantName]);
+
   // ── Series actions ───────────────────────────────────────────────────
   // A session row's kebab surfaces view / edit / delete for the series it
   // belongs to. The row only knows the `coaching_session_series_id`, so the
@@ -283,6 +391,7 @@ export function CoachingSessionsCard({
               mountNow={mountNow}
               onReschedule={onReschedule}
               onRequestDelete={handleRequestDelete}
+              onRequestResendInvite={handleRequestResendInvite}
               onSeriesAction={handleSeriesAction}
             />
           )}
@@ -300,6 +409,17 @@ export function CoachingSessionsCard({
         isDeleting={deleteState.kind === "deleting"}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
+      />
+      <ResendInviteDialog
+        open={resendState.kind !== "closed"}
+        isSeries={
+          resendState.kind !== "closed" &&
+          resendState.session.coaching_session_series_id.some
+        }
+        participantName={resendParticipantName}
+        isSending={resendState.kind === "sending"}
+        onCancel={handleCancelResend}
+        onConfirm={handleConfirmResend}
       />
       <SeriesActionDialogs
         action={seriesAction}
