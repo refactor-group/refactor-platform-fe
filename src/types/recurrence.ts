@@ -233,6 +233,9 @@ export function validateRecurrence({
       }
     }
   }
+  if (frequency === Frequency.Monthly && start && start.day > 28) {
+    return "Monthly sessions can't start on the 29th, 30th or 31st. Pick the 28th or earlier.";
+  }
   if (frequencySupportsWeekdays(frequency)) {
     if (byWeekdays.length === 0) {
       return "Pick at least one day of the week.";

@@ -421,4 +421,61 @@ describe("validateRecurrence", () => {
       })
     ).toBe("Interval must be at least 1.");
   });
+
+  describe("monthly start day", () => {
+    const MONTHLY_DAY_MESSAGE =
+      "Monthly sessions can't start on the 29th, 30th or 31st. Pick the 28th or earlier.";
+    const marchDay = (day: number) =>
+      DateTime.fromObject({ year: 2026, month: 3, day, hour: 10 }, { zone: TZ });
+    const monthly = (start: DateTime | null) =>
+      validateRecurrence({
+        ...baseInput,
+        frequency: Frequency.Monthly,
+        byWeekdays: [],
+        start,
+        startWeekday: start ? weekdayFromLuxon(start.weekday) : null,
+      });
+
+    it.each([29, 30, 31])("rejects a monthly start on day %i", (day) => {
+      expect(monthly(marchDay(day))).toBe(MONTHLY_DAY_MESSAGE);
+    });
+
+    it("accepts a monthly start on day 28", () => {
+      expect(monthly(marchDay(28))).toBeNull();
+    });
+
+    it.each([Frequency.Weekly, Frequency.Daily])(
+      "does not apply the rule to %s",
+      (frequency) => {
+        const day31 = marchDay(31);
+        const weekday = weekdayFromLuxon(day31.weekday);
+        expect(
+          validateRecurrence({
+            ...baseInput,
+            frequency,
+            byWeekdays: [weekday],
+            start: day31,
+            startWeekday: weekday,
+          })
+        ).toBeNull();
+      }
+    );
+
+    it("uses the local day, not the UTC day", () => {
+      // 29th in UTC, 28th locally.
+      expect(
+        monthly(
+          DateTime.fromISO("2026-03-28T19:00", { zone: "America/Chicago" })
+        )
+      ).toBeNull();
+      // 28th in UTC, 29th locally.
+      expect(
+        monthly(DateTime.fromISO("2026-03-29T08:00", { zone: "Asia/Tokyo" }))
+      ).toBe(MONTHLY_DAY_MESSAGE);
+    });
+
+    it("skips the check when no start is set", () => {
+      expect(monthly(null)).toBeNull();
+    });
+  });
 });
