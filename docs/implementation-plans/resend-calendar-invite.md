@@ -28,4 +28,4 @@ Branch: `resend-calendar-invite`. Built with the overseer/handoff workflow, one 
 
 - [x] F1 (`bdba09a5`): types, transform, the two API calls, dashboard include (Vitest + MSW)
 - [x] F2 (`296cfb08`): row gating, dialog, card state, toasts, and an isolated Playwright spec using `page.route`
-- [ ] V: live run of the manual test plan through Playwright MCP against the backend branch
+- [x] V: live run of the manual test plan through Playwright MCP against the backend branch, with Google Calendar checked by hand. This found the override SEQUENCE bug, fixed in backend B5.

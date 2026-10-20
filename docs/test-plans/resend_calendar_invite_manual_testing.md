@@ -5,6 +5,8 @@ Checks that a coach can resend the calendar invite for a series or a one-off ses
 Backend counterpart: `refactor-platform-rs/docs/implementation-plans/resend-calendar-invite.md`.
 
 > [!IMPORTANT]
+> Start the backend with `SESSION_REMINDER_EMAIL_TEMPLATE_ID=` (blank). Otherwise the reminder job mails every participant with a session in the next day, including real coachees in other relationships.
+>
 > This plan sends **real email**. The only recipients allowed are `jim@refactorgroup.com` (coach) and `james.hodapp@gmail.com` (coachee), in relationship `7adf81aa-23f4-4221-9f82-afb4a5f7512e`. Before any step marked ✉, confirm that the relationship's coach and coachee are still exactly those two addresses. Each ✉ shows how many emails the step sends. The whole plan sends about 8.
 
 ## 1. Prerequisites
@@ -17,7 +19,8 @@ Backend counterpart: `refactor-platform-rs/docs/implementation-plans/resend-cale
    2. Reschedule occurrence 3 of that series by one day.
    3. Delete occurrence 4 of that series.
    4. A one-off session for tomorrow.
-5. Fixtures created through SQL (no email):
+5. If creating a one-off session through the app fails locally (it needs the collab document server), insert the one-off fixtures through SQL as well.
+6. Fixtures created through SQL (no email):
    1. A **finished series**: a series whose sessions are all in the past.
    2. A **legacy series**: a series with at least one upcoming session whose members have `ical_recurrence_id` set to NULL.
 
