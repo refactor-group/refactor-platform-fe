@@ -5,7 +5,6 @@
 // pins the display_title and series wire handling.
 
 import { describe, it, expect } from "vitest";
-import { DateTime } from "ts-luxon";
 import { Some } from "@/types/option";
 import {
   transformCoachingSession,
@@ -76,33 +75,28 @@ describe("defaultCoachingSession — display_title", () => {
 });
 
 describe("transformCoachingSession — series", () => {
+  const withSeries = {
+    ...rawWire,
+    series: { id: "ser-1", last_session_date: "2026-08-28T15:00:00" },
+  };
+
   it("wraps a present series as Some with a UTC last_session_date", () => {
-    const s = transformCoachingSession({
-      ...rawWire,
-      series: { id: "ser-1", last_session_date: "2026-08-28T15:00:00" },
-    });
-    expect(s.series?.some).toBe(true);
-    if (!s.series?.some) return;
-    expect(s.series.val.id).toBe("ser-1");
-    expect(s.series.val.last_session_date.zoneName).toBe("UTC");
-    expect(s.series.val.last_session_date.toMillis()).toBe(
-      DateTime.fromISO("2026-08-28T15:00:00Z").toMillis()
-    );
+    const series = transformCoachingSession(withSeries).series;
+    if (!series?.some) throw new Error("expected Some");
+    expect(series.val.id).toBe("ser-1");
+    expect(series.val.last_session_date.zoneName).toBe("UTC");
+    expect(series.val.last_session_date.toISO()).toBe("2026-08-28T15:00:00.000Z");
   });
 
-  it("maps an absent series to None", () => {
-    expect(transformCoachingSession(rawWire).series?.none).toBe(true);
-  });
-
-  it("maps a null series to None", () => {
-    expect(transformCoachingSession({ ...rawWire, series: null }).series?.none).toBe(true);
+  it.each([
+    ["absent", rawWire],
+    ["null", { ...rawWire, series: null }],
+  ])("maps an %s series to None", (_, raw) => {
+    expect(transformCoachingSession(raw).series?.none).toBe(true);
   });
 
   it("never includes series on the wire", () => {
-    const fe = transformCoachingSession({
-      ...rawWire,
-      series: { id: "ser-1", last_session_date: "2026-08-28T15:00:00" },
-    });
-    expect("series" in serializeCoachingSession(fe)).toBe(false);
+    const wire = serializeCoachingSession(transformCoachingSession(withSeries));
+    expect("series" in wire).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { Toaster } from "sonner";
 import { server } from "@/test-utils/msw-server";
@@ -59,22 +59,18 @@ const SESSION = createMockEnrichedSession({
   coaching_session_series_id: Some("series-9"),
 });
 
-let posts: string[];
-
-function respondToSeries(response: () => Response) {
+// Confirms the resend dialog with the series route answering `seriesResponse`;
+// returns every resend path POSTed.
+async function confirmResend(seriesResponse: Response) {
+  const posts: string[] = [];
+  const record = (response: Response) => ({ request }: { request: Request }) => {
+    posts.push(new URL(request.url).pathname);
+    return response;
+  };
   server.use(
-    http.post(`${BASE}/coaching_session_series/:id/resend_invite`, ({ request }) => {
-      posts.push(new URL(request.url).pathname);
-      return response();
-    }),
-    http.post(`${BASE}/coaching_sessions/:id/resend_invite`, ({ request }) => {
-      posts.push(new URL(request.url).pathname);
-      return new HttpResponse(null, { status: 204 });
-    })
+    http.post(`${BASE}/coaching_session_series/:id/resend_invite`, record(seriesResponse)),
+    http.post(`${BASE}/coaching_sessions/:id/resend_invite`, record(new HttpResponse(null, { status: 204 })))
   );
-}
-
-async function confirmResend() {
   const user = userEvent.setup();
   render(
     <>
@@ -85,49 +81,27 @@ async function confirmResend() {
   await user.click(screen.getByRole("button", { name: "trigger resend" }));
   await screen.findByRole("alertdialog", { name: "Resend series invite?" });
   await user.click(screen.getByRole("button", { name: "Resend invite" }));
-  return user;
+  return { user, posts };
 }
-
-beforeEach(() => {
-  posts = [];
-});
 
 describe("CoachingSessionsCard — resend invite", () => {
   it("POSTs once to the series route and announces success", async () => {
-    respondToSeries(() => new HttpResponse(null, { status: 204 }));
-    await confirmResend();
-
-    expect(
-      await screen.findByText("Invite sent to you and Alex Chen")
-    ).toBeInTheDocument();
+    const { posts } = await confirmResend(new HttpResponse(null, { status: 204 }));
+    expect(await screen.findByText("Invite sent to you and Alex Chen")).toBeInTheDocument();
     expect(posts).toEqual(["/coaching_session_series/series-9/resend_invite"]);
-    await waitFor(() =>
-      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   });
 
   it("shows a retry message on a 502", async () => {
-    respondToSeries(() => HttpResponse.json({}, { status: 502 }));
-    await confirmResend();
-
-    expect(
-      await screen.findByText("Couldn't resend the invite")
-    ).toBeInTheDocument();
+    await confirmResend(HttpResponse.json({}, { status: 502 }));
+    expect(await screen.findByText("Couldn't resend the invite")).toBeInTheDocument();
   });
 
   it("offers to resend just this session for a legacy series", async () => {
-    respondToSeries(() =>
-      HttpResponse.json(
-        { status_code: 409, details: { reason: "legacy_series" } },
-        { status: 409 }
-      )
+    const { user, posts } = await confirmResend(
+      HttpResponse.json({ details: { reason: "legacy_series" } }, { status: 409 })
     );
-    const user = await confirmResend();
-
-    await user.click(
-      await screen.findByRole("button", { name: "Resend this session" })
-    );
-
+    await user.click(await screen.findByRole("button", { name: "Resend this session" }));
     await waitFor(() =>
       expect(posts).toEqual([
         "/coaching_session_series/series-9/resend_invite",

@@ -240,16 +240,12 @@ async function openKebabAfterRender() {
 
 describe("SessionRow — resend invite", () => {
   const originalNow = Settings.now;
-  const NOW = DateTime.fromISO("2026-10-20T12:00:00Z", { zone: "utc" });
   const seriesEnding = (iso: string) =>
-    Some({
-      id: "series-1",
-      last_session_date: DateTime.fromISO(iso, { zone: "utc" }),
-    });
+    Some({ id: "series-1", last_session_date: DateTime.fromISO(iso, { zone: "utc" }) });
 
   beforeEach(() => {
     vi.clearAllMocks();
-    Settings.now = () => NOW.toMillis();
+    Settings.now = () => Date.parse("2026-10-20T12:00:00Z");
   });
 
   afterEach(() => {
@@ -264,43 +260,22 @@ describe("SessionRow — resend invite", () => {
     expect(item()).not.toBeInTheDocument();
   });
 
-  it("is enabled as Resend invite for a coach on an upcoming one-off", async () => {
-    renderRow({ viewerId: COACH_ID, isPast: false });
+  it.each([
+    ["an upcoming one-off", { isPast: false }, "Resend invite", true],
+    ["a past one-off", { isPast: true }, "Resend invite", false],
+    ["a series with a session ahead", { isPast: true, seriesId: "series-1", series: seriesEnding("2026-12-01T15:00:00Z") }, "Resend series invite", true],
+    ["a finished series", { isPast: false, seriesId: "series-1", series: seriesEnding("2026-10-01T15:00:00Z") }, "Resend series invite", false],
+  ])("for a coach on %s", async (_, opts, label, enabled) => {
+    renderRow({ viewerId: COACH_ID, ...opts });
     await openKebab();
-    expect(item()).not.toHaveAttribute("aria-disabled");
-    expect(item()).toHaveTextContent(/^Resend invite$/);
-  });
-
-  it("is disabled with a hint for a coach on a past one-off", async () => {
-    renderRow({ viewerId: COACH_ID, isPast: true });
-    await openKebab();
-    expect(item()).toHaveAttribute("aria-disabled", "true");
-    expect(item()).toHaveAttribute("data-disabled");
-    expect(screen.getByText("No upcoming sessions")).toBeVisible();
-  });
-
-  it("is enabled as Resend series invite when the series has a session ahead", async () => {
-    renderRow({
-      viewerId: COACH_ID,
-      isPast: true,
-      seriesId: "series-1",
-      series: seriesEnding("2026-12-01T15:00:00Z"),
-    });
-    await openKebab();
-    expect(item()).not.toHaveAttribute("aria-disabled");
-    expect(item()).toHaveTextContent(/^Resend series invite$/);
-  });
-
-  it("is disabled with a hint when the series' last session has passed", async () => {
-    renderRow({
-      viewerId: COACH_ID,
-      seriesId: "series-1",
-      series: seriesEnding("2026-10-01T15:00:00Z"),
-    });
-    await openKebab();
-    expect(item()).toHaveAttribute("aria-disabled", "true");
-    expect(item()).toHaveTextContent("Resend series invite");
-    expect(screen.getByText("No upcoming sessions")).toBeVisible();
+    if (enabled) {
+      expect(item()).not.toHaveAttribute("aria-disabled");
+      expect(item()).toHaveTextContent(new RegExp(`^${label}$`));
+    } else {
+      expect(item()).toHaveAttribute("aria-disabled", "true");
+      expect(item()).toHaveTextContent(`${label}No upcoming sessions`);
+      expect(screen.getByText("No upcoming sessions")).toBeVisible();
+    }
   });
 
   it("hands the session to onRequestResendInvite when clicked", async () => {
