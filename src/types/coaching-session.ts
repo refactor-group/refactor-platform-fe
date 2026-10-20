@@ -79,7 +79,7 @@ export interface EnrichedCoachingSession extends CoachingSession {
   /** Agreement (included when include=agreements) */
   agreement?: Agreement;
 
-  /** None when the session is not in a series; undefined when not requested. */
+  /** None when absent from the read (not requested, or not in a series); callers can't tell which. */
   series?: Option<CoachingSessionSeriesSummary>;
 }
 
