@@ -2,7 +2,7 @@
 // read transform (string | null on the list/enriched reads, absent on the single
 // read) and its exclusion from the write serialize. The frozen
 // coaching-session-title.test.ts pins the client-side fallback rule; this file
-// pins only the display_title wire handling.
+// pins the display_title and series wire handling.
 
 import { describe, it, expect } from "vitest";
 import { Some } from "@/types/option";
@@ -71,5 +71,32 @@ describe("serializeCoachingSession — display_title is read-only", () => {
 describe("defaultCoachingSession — display_title", () => {
   it("omits display_title (None is only set from a wire read)", () => {
     expect(defaultCoachingSession().display_title).toBeUndefined();
+  });
+});
+
+describe("transformCoachingSession — series", () => {
+  const withSeries = {
+    ...rawWire,
+    series: { id: "ser-1", last_session_date: "2026-08-28T15:00:00" },
+  };
+
+  it("wraps a present series as Some with a UTC last_session_date", () => {
+    const series = transformCoachingSession(withSeries).series;
+    if (!series?.some) throw new Error("expected Some");
+    expect(series.val.id).toBe("ser-1");
+    expect(series.val.last_session_date.zoneName).toBe("UTC");
+    expect(series.val.last_session_date.toISO()).toBe("2026-08-28T15:00:00.000Z");
+  });
+
+  it.each([
+    ["absent", rawWire],
+    ["null", { ...rawWire, series: null }],
+  ])("maps an %s series to None", (_, raw) => {
+    expect(transformCoachingSession(raw).series?.none).toBe(true);
+  });
+
+  it("never includes series on the wire", () => {
+    const wire = serializeCoachingSession(transformCoachingSession(withSeries));
+    expect("series" in wire).toBe(false);
   });
 });

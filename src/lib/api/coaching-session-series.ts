@@ -13,6 +13,9 @@ import {
   parseCoachingSessionSeriesWithSessions,
 } from "@/types/coaching-session-series";
 import { EntityApi } from "./entity-api";
+import type { Result } from "neverthrow";
+import { sessionGuard } from "@/lib/auth/session-guard";
+import { attemptResend, type ResendInviteFailure } from "@/types/resend-invite";
 
 const COACHING_SESSION_SERIES_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_session_series`;
 
@@ -92,6 +95,12 @@ export const CoachingSessionSeriesApi = {
     );
     return defaultCoachingSessionSeriesWithSessions();
   },
+
+  /** Re-sends the series' calendar invite to the coachee. */
+  resendInvite: (seriesId: Id): Promise<Result<void, ResendInviteFailure>> =>
+    attemptResend(() =>
+      sessionGuard.post(`${COACHING_SESSION_SERIES_BASEURL}/${seriesId}/resend_invite`)
+    ),
 };
 
 /**

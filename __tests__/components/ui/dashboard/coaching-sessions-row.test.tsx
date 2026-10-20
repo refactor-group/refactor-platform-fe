@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DateTime, Settings } from "ts-luxon";
 import { SessionRow } from "@/components/ui/dashboard/coaching-sessions-row";
-import { Some } from "@/types/option";
+import { Some, type Option } from "@/types/option";
+import type { CoachingSessionSeriesSummary } from "@/types/coaching-session";
 import { createMockEnrichedSession } from "../../../test-utils";
 
 // `copyCoachingSessionLinkWithToast` writes to the clipboard and fires a
@@ -21,6 +23,8 @@ function renderRow(opts: {
   isPast?: boolean;
   /** When set, the session belongs to a series with this id. */
   seriesId?: string;
+  series?: Option<CoachingSessionSeriesSummary>;
+  onRequestResendInvite?: ReturnType<typeof vi.fn>;
   onReschedule?: ReturnType<typeof vi.fn>;
   onRequestDelete?: ReturnType<typeof vi.fn>;
   onSeriesAction?: ReturnType<typeof vi.fn>;
@@ -30,11 +34,11 @@ function renderRow(opts: {
   const onRequestDelete = opts.onRequestDelete ?? vi.fn();
   const onSeriesAction = opts.onSeriesAction ?? vi.fn();
   const onSelect = opts.onSelect ?? vi.fn();
-  const session = createMockEnrichedSession(
-    opts.seriesId
-      ? { coaching_session_series_id: Some(opts.seriesId) }
-      : undefined
-  );
+  const onRequestResendInvite = opts.onRequestResendInvite ?? vi.fn();
+  const session = createMockEnrichedSession({
+    ...(opts.seriesId && { coaching_session_series_id: Some(opts.seriesId) }),
+    ...(opts.series && { series: opts.series }),
+  });
   render(
     <SessionRow
       session={session}
@@ -45,10 +49,18 @@ function renderRow(opts: {
       onSelect={onSelect}
       onReschedule={onReschedule}
       onRequestDelete={onRequestDelete}
+      onRequestResendInvite={onRequestResendInvite}
       onSeriesAction={onSeriesAction}
     />
   );
-  return { session, onReschedule, onRequestDelete, onSeriesAction, onSelect };
+  return {
+    session,
+    onReschedule,
+    onRequestDelete,
+    onRequestResendInvite,
+    onSeriesAction,
+    onSelect,
+  };
 }
 
 async function openKebab() {
@@ -225,3 +237,53 @@ async function openKebabAfterRender() {
   });
   return openKebab();
 }
+
+describe("SessionRow — resend invite", () => {
+  const originalNow = Settings.now;
+  const seriesEnding = (iso: string) =>
+    Some({ id: "series-1", last_session_date: DateTime.fromISO(iso, { zone: "utc" }) });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Settings.now = () => Date.parse("2026-10-20T12:00:00Z");
+  });
+
+  afterEach(() => {
+    Settings.now = originalNow;
+  });
+
+  const item = () => screen.queryByTestId("session-row-resend-invite");
+
+  it("is hidden from a coachee", async () => {
+    renderRow({ viewerId: COACHEE_ID });
+    await openKebab();
+    expect(item()).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["an upcoming one-off", { isPast: false }, "Resend invite", true],
+    ["a past one-off", { isPast: true }, "Resend invite", false],
+    ["a series with a session ahead", { isPast: true, seriesId: "series-1", series: seriesEnding("2026-12-01T15:00:00Z") }, "Resend series invite", true],
+    ["a finished series", { isPast: false, seriesId: "series-1", series: seriesEnding("2026-10-01T15:00:00Z") }, "Resend series invite", false],
+  ])("for a coach on %s", async (_, opts, label, enabled) => {
+    renderRow({ viewerId: COACH_ID, ...opts });
+    await openKebab();
+    if (enabled) {
+      expect(item()).not.toHaveAttribute("aria-disabled");
+      expect(item()).toHaveTextContent(new RegExp(`^${label}$`));
+    } else {
+      expect(item()).toHaveAttribute("aria-disabled", "true");
+      expect(item()).toHaveTextContent(`${label}No upcoming sessions`);
+      expect(screen.getByText("No upcoming sessions")).toBeVisible();
+    }
+  });
+
+  it("hands the session to onRequestResendInvite when clicked", async () => {
+    const onRequestResendInvite = vi.fn();
+    const { session } = renderRow({ viewerId: COACH_ID, onRequestResendInvite });
+    const user = await openKebab();
+    await user.click(screen.getByTestId("session-row-resend-invite"));
+    expect(onRequestResendInvite).toHaveBeenCalledTimes(1);
+    expect(onRequestResendInvite).toHaveBeenCalledWith(session);
+  });
+});
