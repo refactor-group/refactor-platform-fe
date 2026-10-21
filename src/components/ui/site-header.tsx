@@ -5,6 +5,7 @@ import { MainNav } from "@/components/ui/main-nav";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { JoinSessionPopover } from "@/components/ui/join-session-popover";
 import { UserNav } from "@/components/ui/user-nav";
+import { GlobalSearch } from "@/components/ui/search/global-search";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useShowSessionSwitcher } from "@/lib/hooks/use-show-session-switcher";
 
@@ -18,10 +19,11 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 pl-4 w-full max-w-screen-2xl items-center">
         <MainNav />
-        <div className="flex flex-1 items-center justify-end space-x-2">
+        <div className="flex flex-1 items-center justify-end gap-2 pr-4">
           {/* <div className="w-full flex-1 md:w-auto md:flex-none">
             <CommandMenu />
           </div> */}
+          <GlobalSearch className="max-w-md" />
           <nav className="flex items-center gap-1">
             {showSessionSwitcher && (
               <>
