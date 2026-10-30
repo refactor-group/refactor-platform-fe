@@ -5,8 +5,8 @@ import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { organizationInitials, type Organization } from "@/types/organization";
+import { OrgAvatar } from "@/components/ui/avatar";
+import type { Organization } from "@/types/organization";
 import { None, Some, type Option } from "@/types/option";
 
 export const PLACEHOLDER_LABEL = "Select Organization";
@@ -37,12 +37,7 @@ export function OrganizationAvatar({
   logo: string | undefined;
   className?: string;
 }) {
-  return (
-    <Avatar className={className}>
-      <AvatarImage src={logo} alt={name || "Organization"} />
-      <AvatarFallback>{organizationInitials(name)}</AvatarFallback>
-    </Avatar>
-  );
+  return <OrgAvatar name={name} logo={logo} className={className} />;
 }
 
 export function OrganizationOption({
