@@ -208,7 +208,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
               setOpen(true);
             }}
             onFocus={() => setOpen(true)}
-            placeholder="Search sessions, notes, actions…"
+            placeholder="Search sessions, topics, agreements, actions…"
             className={cn(
               "h-8 w-full rounded-md border border-input bg-background pl-8 text-sm",
               "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
