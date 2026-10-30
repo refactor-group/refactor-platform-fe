@@ -197,7 +197,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
       >
         <div className="relative flex items-center">
           <Search
-            className="pointer-events-none absolute left-2.5 h-4 w-4 text-muted-foreground/60"
+            className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground/60"
             aria-hidden
           />
           <CommandPrimitive.Input
@@ -210,9 +210,9 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
             onFocus={() => setOpen(true)}
             placeholder="Search sessions, topics, agreements, actions…"
             className={cn(
-              "h-8 w-full rounded-md border border-input bg-background pl-8 text-sm",
+              "h-9 w-full rounded-full border-0 bg-fill pl-9 text-item transition-colors duration-150 hover:bg-fill-hover focus:bg-card",
               "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              query ? "pr-8" : "pr-14"
+              query ? "pr-9" : "pr-14"
             )}
           />
           {query ? (
@@ -222,12 +222,12 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
               size="icon"
               aria-label="Clear search"
               onClick={reset}
-              className="absolute right-0.5 h-7 w-7 rounded-full text-muted-foreground/60 hover:text-foreground"
+              className="absolute right-1 h-7 w-7 rounded-full text-muted-foreground/60 hover:bg-fill-hover hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </Button>
           ) : (
-            <kbd className="pointer-events-none absolute right-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
+            <kbd className="pointer-events-none absolute right-2 hidden h-5 select-none items-center gap-1 rounded-full bg-card px-2 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
               ⌘K
             </kbd>
           )}
@@ -235,7 +235,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
 
         {showResults && (
           <div
-            className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-md"
+            className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-popover border bg-popover text-popover-foreground shadow-popover"
             // Keep focus in the input: otherwise mousedown blurs it and the
             // dropdown unmounts before the click reaches the item.
             onMouseDown={(event) => event.preventDefault()}
