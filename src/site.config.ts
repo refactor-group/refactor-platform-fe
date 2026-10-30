@@ -1,5 +1,3 @@
-import { MainNavItem, SidebarNavItem } from "./types/nav";
-
 export const siteConfig = {
   name: "Refactor Coach",
   url: "https://myrefactor.com",
@@ -36,47 +34,3 @@ export const siteConfig = {
 };
 
 export type SiteConfig = typeof siteConfig;
-
-interface DocsConfig {
-  mainNav: MainNavItem[];
-  sidebarNav: SidebarNavItem[];
-}
-
-export const docsConfig: DocsConfig = {
-  mainNav: [
-    {
-      title: "Dashboard",
-      href: "/dashboard",
-    },
-  ],
-  sidebarNav: [
-    {
-      title: "User",
-      items: [
-        {
-          title: "Profile",
-          href: "/#",
-          items: [],
-        },
-        {
-          title: "Log out",
-          href: "/#",
-          items: [],
-        },
-        // {
-        //   title: "Actions",
-        //   items: [
-        //     {
-        //       title: "Log out",
-        //       href: "/logout",
-        //       items: [],
-        //     },
-        //   ],
-        // },
-      ],
-    },
-  ],
-};
-
-
-
