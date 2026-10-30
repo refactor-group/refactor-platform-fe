@@ -9,7 +9,7 @@ import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-pa
 import { SpeakerRole, type TranscriptSegment } from "@/types/transcription";
 import { Some } from "@/types/option";
 
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
+vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
 vi.mock("@/lib/api/meeting-recordings", () => ({
   useMeetingRecording: () => ({ recording: null, isLoading: false, isError: undefined }),

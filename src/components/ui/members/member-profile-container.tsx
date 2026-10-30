@@ -6,7 +6,7 @@ import { ProfileInfoUpdateForm } from "@/components/ui/members/profile-info-upda
 import { PasswordUpdateForm } from "@/components/ui/members/password-update-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import { Id } from "@/types/general"
 import { User, NewUserPassword } from "@/types/user"

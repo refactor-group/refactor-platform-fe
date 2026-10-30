@@ -4,12 +4,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemberCard } from "@/components/ui/members/member-card";
 import { EntityApiError } from "@/types/entity-api-error";
 import { Role, type UserRoleState } from "@/types/user";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { createMockUser } from "../../test-utils";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 

@@ -34,7 +34,7 @@ import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship
 import { useCoachingSessionLayout } from "@/lib/hooks/use-coaching-session-layout";
 import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import ShareSessionLink from "@/components/ui/share-session-link";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { EntityApiError, type Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";

@@ -137,7 +137,7 @@ vi.mock("@/site.config", () => ({
   siteConfig: { locale: "en-US", env: { backendServiceURL: "http://localhost:3000" } },
 }));
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: Object.assign(vi.fn(), { error: vi.fn() }),
 }));
 

@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import { DateTime } from "ts-luxon";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";

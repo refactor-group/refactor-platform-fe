@@ -13,7 +13,7 @@ import type { Id } from "@/types/general";
 import { createMockAction } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
+vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
 const COACH_ID = "coach-1";
 const BODY = "Send the hiring plan to Dana";

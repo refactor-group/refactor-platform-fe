@@ -5,7 +5,7 @@ import { EntityApiError } from "@/types/entity-api-error";
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: Object.assign(vi.fn(), {
     success: (...a: unknown[]) => mockToastSuccess(...a),
     error: (...a: unknown[]) => mockToastError(...a),
