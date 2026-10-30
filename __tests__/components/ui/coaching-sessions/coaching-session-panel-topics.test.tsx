@@ -213,6 +213,22 @@ describe("CoachingSessionPanel — Topics wiring", () => {
     })
   })
 
+  it("shows a Sonner error toast when adding a topic fails", async () => {
+    const user = userEvent.setup()
+    mockCreateTopic.mockRejectedValueOnce(new Error("boom"))
+    setTopics([])
+    renderPanel()
+
+    await user.type(screen.getAllByPlaceholderText(/add a topic/i)[0], "Prep for the review")
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(sonnerToast.error).toHaveBeenCalledWith("Failed to add topic", {
+        description: "An error occurred while adding the topic.",
+      })
+    })
+  })
+
   it("calls the topic update mutation when editing a topic body", async () => {
     const user = userEvent.setup()
     setTopics([topic({ id: "t1", user_id: "user-1", body: "Original body" })])
