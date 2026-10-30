@@ -10,7 +10,6 @@ import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import {
   STATUS_COLUMN_ORDER,
   statusColor,
-  statusTextColor,
   groupByStatus,
   applyTimeFilter,
   visibleStatuses,
@@ -101,20 +100,6 @@ describe("statusColor", () => {
     expect(statusColor(ItemStatus.OnHold)).toBe("bg-amber-400");
     expect(statusColor(ItemStatus.Completed)).toBe("bg-green-500");
     expect(statusColor(ItemStatus.WontDo)).toBe("bg-gray-400");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// statusTextColor
-// ---------------------------------------------------------------------------
-
-describe("statusTextColor", () => {
-  it("returns correct Tailwind text class for each status", () => {
-    expect(statusTextColor(ItemStatus.NotStarted)).toBe("text-slate-500");
-    expect(statusTextColor(ItemStatus.InProgress)).toBe("text-blue-500");
-    expect(statusTextColor(ItemStatus.OnHold)).toBe("text-amber-500");
-    expect(statusTextColor(ItemStatus.Completed)).toBe("text-green-600");
-    expect(statusTextColor(ItemStatus.WontDo)).toBe("text-gray-500");
   });
 });
 

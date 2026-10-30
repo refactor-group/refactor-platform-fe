@@ -28,7 +28,7 @@ import {
   generateTestUUID,
 } from "../utils/action-test-utils";
 import { ItemStatus } from "@/types/general";
-import { filterActionsByStatus } from "@/lib/hooks/use-assigned-actions";
+import { filterActionsByStatus } from "@/lib/utils/assigned-actions";
 import { AssignedActionsFilter } from "@/types/assigned-actions";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 

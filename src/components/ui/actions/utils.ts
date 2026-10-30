@@ -43,26 +43,6 @@ export function statusColor(status: ItemStatus): string {
   }
 }
 
-/** Tailwind text color class for each status */
-export function statusTextColor(status: ItemStatus): string {
-  switch (status) {
-    case ItemStatus.NotStarted:
-      return "text-slate-500";
-    case ItemStatus.InProgress:
-      return "text-blue-500";
-    case ItemStatus.OnHold:
-      return "text-amber-500";
-    case ItemStatus.Completed:
-      return "text-green-600";
-    case ItemStatus.WontDo:
-      return "text-gray-500";
-    default: {
-      const _exhaustive: never = status;
-      throw new Error(`Unhandled status: ${_exhaustive}`);
-    }
-  }
-}
-
 /** Group items into status buckets, preserving order within each bucket */
 export function groupByStatus<T>(
   items: T[],
