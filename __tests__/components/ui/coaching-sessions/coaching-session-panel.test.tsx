@@ -190,8 +190,10 @@ vi.mock("sonner", () => ({
 }))
 
 // Import after mocks
-import { useGoalsBySession, useGoalList } from "@/lib/api/goals"
+import { useGoalsBySession, useGoalList, GoalApi } from "@/lib/api/goals"
 import { useAgreementList } from "@/lib/api/agreements"
+import { toast as sonnerToast } from "sonner"
+import { err } from "neverthrow"
 
 const goal1 = createMockGoal({
   id: "goal-1",
@@ -482,5 +484,51 @@ describe("CoachingSessionPanel", () => {
 
     // Should re-create the agreement
     expect(mockCreateAgreement).toHaveBeenCalledWith(agreement1)
+  })
+
+  it("shows a Sonner error toast when deleting an agreement fails", async () => {
+    const user = userEvent.setup()
+    mockDeleteAgreement.mockRejectedValueOnce(new Error("boom"))
+    setupMocks()
+
+    render(
+      <CoachingSessionPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Agreements}
+      />
+    )
+
+    await user.click(screen.getAllByRole("button", { name: /agreement options/i })[0])
+    await user.click(screen.getAllByRole("button", { name: /delete/i })[0])
+
+    await waitFor(() => {
+      expect(sonnerToast.error).toHaveBeenCalledWith("Failed to delete agreement", {
+        description: "An error occurred while deleting the agreement.",
+      })
+    })
+  })
+
+  it("shows a Sonner error toast when removing a goal from the session fails", async () => {
+    const user = userEvent.setup()
+    vi.mocked(GoalApi.unlinkFromSession).mockResolvedValueOnce(err(new Error("unlink failed")) as never)
+    setupMocks()
+
+    render(
+      <CoachingSessionPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Goals}
+      />
+    )
+
+    await user.click(screen.getAllByRole("button", { name: /goal options for/i })[0])
+    await user.click(screen.getAllByRole("button", { name: /^remove$/i })[0])
+
+    await waitFor(() => {
+      expect(sonnerToast.error).toHaveBeenCalledWith("Failed to remove goal", {
+        description: "unlink failed",
+      })
+    })
   })
 })
