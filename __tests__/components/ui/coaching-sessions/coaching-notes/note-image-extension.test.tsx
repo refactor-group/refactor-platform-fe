@@ -29,7 +29,7 @@ vi.mock("@/lib/api/coaching-session-images", async (importOriginal) => {
   };
 });
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: Object.assign(vi.fn(), {
     loading: vi.fn(() => "toast-id"),
     success: vi.fn(),
@@ -52,7 +52,7 @@ import { Slice, Fragment } from "@tiptap/pm/model";
 import { CoachingSessionImageApi, UploadFailureKind } from "@/lib/api/coaching-session-images";
 import { shouldShowSelectionMenu } from "@/components/ui/tiptap-ui/selection-bubble-menu/selection-bubble-menu";
 import { ySyncPluginKey, yUndoPluginKey } from "@tiptap/y-tiptap";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 const SESSION_ID = "session-1";
 const MAX_BYTES = 10 * 1024 * 1024;

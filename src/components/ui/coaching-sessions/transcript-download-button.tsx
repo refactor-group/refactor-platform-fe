@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";

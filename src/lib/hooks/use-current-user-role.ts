@@ -4,7 +4,7 @@ import { useMemo, useEffect } from 'react';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { useCurrentOrganization } from './use-current-organization';
 import { getUserRoleForOrganization, UserRoleState } from '@/types/user';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 /**
  * Hook that provides the user's role for the current organization context.

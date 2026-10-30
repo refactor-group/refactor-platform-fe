@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DateTime } from "ts-luxon";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast } from "@/lib/toast";
 import {
   Tabs,
   TabsContent,

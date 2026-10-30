@@ -39,7 +39,7 @@ import {
 } from "@/types/user";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { type Option, None } from "@/types/option";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 

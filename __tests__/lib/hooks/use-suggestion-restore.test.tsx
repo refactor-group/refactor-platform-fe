@@ -4,14 +4,14 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ok, err } from "neverthrow";
 import { DateTime } from "ts-luxon";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useSuggestionReview, suggestionFailureMessage } from "@/lib/hooks/use-suggestion-review";
 import { TranscriptSuggestionApi } from "@/lib/api/transcript-suggestions";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some } from "@/types/option";
 import { createMockActionSuggestion } from "../../factories/action-suggestion.factory";
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("@/lib/toast", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 vi.mock("@/lib/api/transcript-suggestions", () => ({
   TranscriptSuggestionApi: { accept: vi.fn(), dismiss: vi.fn(), restore: vi.fn(), update: vi.fn() },

@@ -6,7 +6,7 @@ import { server } from "@/test-utils/msw-server";
 import { AddMemberDialog } from "@/components/ui/members/add-member-dialog";
 import { Role, type User, type UserRoleState } from "@/types/user";
 import { USER_LOOKUP_RATE_LIMITED_MESSAGE } from "@/lib/api/users";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ vi.mock("@/site.config", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import type { Editor } from "@tiptap/react";
 import { BubbleMenu, type BubbleMenuProps } from "@tiptap/react/menus";
 import { Copy, Handshake, ListPlus, Target, X } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { useTiptapEditor } from "@/lib/hooks/use-tiptap-editor";
 import { Button } from "@/components/ui/tiptap-ui-primitive/button";

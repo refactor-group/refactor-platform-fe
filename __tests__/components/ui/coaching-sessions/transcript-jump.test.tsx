@@ -5,7 +5,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-panel";
 import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested-action-card";
@@ -16,7 +16,7 @@ import { Some, None } from "@/types/option";
 import { createMockAction } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
+vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
 vi.mock("@/lib/api/meeting-recordings", () => ({
   useMeetingRecording: () => ({ recording: null, isLoading: false, isError: undefined }),

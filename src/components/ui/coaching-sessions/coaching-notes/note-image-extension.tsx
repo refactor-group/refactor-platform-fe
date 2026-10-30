@@ -16,7 +16,7 @@ import { Plugin, PluginKey, type Transaction } from "@tiptap/pm/state";
 import type { Step } from "@tiptap/pm/transform";
 import { ReactNodeViewRenderer } from "@tiptap/react";
 import { ySyncPluginKey } from "@tiptap/y-tiptap";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   CoachingSessionImageApi,
   UploadFailureKind,

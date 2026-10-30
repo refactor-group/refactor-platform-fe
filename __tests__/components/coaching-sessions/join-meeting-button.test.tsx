@@ -32,7 +32,7 @@ vi.mock("@/lib/api/transcriptions", () => ({
 }));
 
 const toastError = vi.fn();
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: {
     success: vi.fn(),
     error: (...args: unknown[]) => toastError(...args),

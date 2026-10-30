@@ -34,7 +34,7 @@ import { useRouter } from "next/navigation";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/types/entity-api-error";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Provider } from "@/types/provider";
 import {
   CreateRecurringSessionRequest,

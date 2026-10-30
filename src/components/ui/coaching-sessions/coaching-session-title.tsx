@@ -22,7 +22,7 @@ import {
 } from "@/lib/timezone-utils";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast } from "@/lib/toast";
 import { useEditorCache } from "./editor-cache-context";
 import { EditableSessionTitle } from "./editable-session-title";
 import { PresenceIndicator } from "@/components/ui/presence-indicator";

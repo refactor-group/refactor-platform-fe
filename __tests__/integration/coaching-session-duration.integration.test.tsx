@@ -8,7 +8,7 @@ import { createMockUser, createMockSession } from "../test-utils";
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: Object.assign(vi.fn(), {
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),

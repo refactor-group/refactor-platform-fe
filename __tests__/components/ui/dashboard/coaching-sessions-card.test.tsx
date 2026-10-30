@@ -51,7 +51,7 @@ vi.mock("swr", async () => {
 });
 
 const mockToastError = vi.fn();
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: {
     error: (...args: unknown[]) => mockToastError(...args),
   },
