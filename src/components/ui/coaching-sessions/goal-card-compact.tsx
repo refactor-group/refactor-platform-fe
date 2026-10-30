@@ -248,7 +248,7 @@ function BackFace({
         <button
           type="button"
           onClick={onDone}
-          className="text-[12px] font-medium text-primary hover:text-primary/80 transition-colors"
+          className="text-[12px] font-medium text-brand hover:text-brand/80 transition-colors"
         >
           Done
         </button>

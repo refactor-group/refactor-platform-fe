@@ -1,29 +1,29 @@
 # Frontend Visual Style Guide
 
-The project's visual language for building UI. Two inputs feed this doc:
+The project's visual language for building UI. It follows the **Refactor design system**
+(the Phase 1 design handoff: indigo accent, pill controls, soft card shadows, Inter at regular
+heading weight). Tokens live in `src/styles/globals.css` + `tailwind.config.ts`; this doc says
+which token to reach for and why.
 
-1. **The implemented system** — the shadcn/Tailwind tokens in `src/styles/globals.css` +
-   `tailwind.config.ts`, and the patterns already shipped on the **dashboard**
-   (`src/components/ui/dashboard/**`). This is the source of truth; everything here is
-   grounded in real files you can open.
-2. **A north-star reference dashboard** (a polished fintech dashboard) that the current
-   dashboard was visually modeled on. We borrowed its *structural* idioms — flat cards,
-   hairline borders, generous whitespace, quiet hover-revealed affordances. We did **not**
-   adopt its color story wholesale. Observed-but-not-adopted idioms are listed at the end so
-   the distinction stays explicit.
+> This is a **living document**: keep it accurate and grow it as the UI grows. When you add a
+> durable pattern, cite the file it lives in so it stays verifiable.
 
-> This is a **living document** — start here, keep it accurate, grow it as the UI grows.
-> When you add a durable pattern, cite the file it lives in so it stays verifiable.
+> **Migration in progress.** The tokens below are live in both themes. Primitives (`Button`,
+> `Card`, `Avatar`, toasts) and the header are being rebuilt to the new shapes during Phase 1.
+> Sections marked **Target** describe the shape those primitives are moving to; don't hand-patch
+> individual screens toward it, the primitive change does that.
 
 **Hard rules (the short version):**
-- Style with **semantic tokens** (`bg-card`, `text-muted-foreground`, `border-border`), never
-  raw hex. Both light and dark themes come for free that way.
-- **Flat surfaces, hairline borders** — dashboard cards are `border shadow-none`, not drop
-  shadows.
-- **Quiet by default** — secondary text is `muted-foreground`; row actions stay hidden until
+- Style with **semantic tokens** (`bg-fill`, `text-ink-2`, `border-brand-border`), never raw
+  hex. Every token has a light and a dark value; components never write `dark:` colors.
+- **Accent is scarce.** Only for the primary action (one per view), the live dot, today, and
+  selected state.
+- **Quiet by default.** Secondary text is `muted-foreground`; row actions stay hidden until
   hover; affordances rest at reduced opacity.
 - **`tabular-nums` on every number, date, time, and count.**
-- **Never encode meaning in hue alone** — pair color with an icon, text, or position.
+- **Never encode meaning in hue alone.** Pair color with an icon, text, or position.
+- **No strikethrough anywhere.** Done and closed items go muted instead.
+- **Labels are sentence case**, never tracked uppercase. Say "session", never "call".
 
 ---
 
@@ -31,214 +31,202 @@ The project's visual language for building UI. Two inputs feed this doc:
 
 ### Color tokens
 
-Defined as HSL CSS variables in `src/styles/globals.css` (`:root` = light, `.dark` = dark) and
-exposed as Tailwind colors in `tailwind.config.ts`. **Use the semantic Tailwind class, not the
-raw value.** The palette is intentionally **neutral** (grayscale) — there is no global brand
-accent hue.
+HSL triplets in `globals.css` (`:root` light, `.dark` dark; next-themes sets the class, and
+Auto follows the OS). Tailwind exposes each as a color.
 
-| Token / class | Light HSL | Meaning / use |
-|---|---|---|
-| `background` | `0 0% 100%` | Page background (white) |
-| `foreground` | `0 0% 3.9%` | Primary text (near-black) |
-| `card` / `card-foreground` | `0 0% 100%` / `0 0% 3.9%` | Card surface + its text |
-| `primary` / `primary-foreground` | `0 0% 9%` / `0 0% 98%` | Primary buttons, strong emphasis (near-black, **not** a color) |
-| `secondary` | `0 0% 96.1%` | Secondary button fill |
-| `muted` / `muted-foreground` | `0 0% 96.1%` / `0 0% 45.1%` | Muted surfaces, skeletons, hover tints / **secondary & meta text** |
-| `accent` | `0 0% 96.1%` | Hover background for `ghost`/`outline` controls |
-| `destructive` / `destructive-foreground` | `0 84.2% 60.2%` / `0 0% 98%` | Delete / danger (the only saturated semantic color) |
-| `border` / `input` | `0 0% 89.8%` | Hairline borders + input borders |
-| `ring` | `0 0% 3.9%` | Focus ring |
-| `chart-1…5` | various | Chart series (themeable; light + dark variants exist) |
+**Neutrals**
 
-Dark mode mirrors these (near-black surfaces, near-white text); because everything keys off the
-tokens, you rarely write `dark:` overrides — only to *bump intensity* where a `/20` tint
-disappears over a near-black surface (see hover tints below).
+| Class | Light | Dark | Use |
+|---|---|---|---|
+| `background` | `#fff` | `#121214` | Page |
+| `card` / `popover` | `#fff` | `#1b1b1f` | Cards, menus, popovers |
+| `foreground` | `#0a0a0a` | `#f4f4f5` | Ink: primary text |
+| `ink-2` | `#525252` | `#c4c4cb` | Secondary ink: tertiary buttons, body in rows |
+| `muted-foreground` | `#737373` | `#8e8e98` | Labels, meta, done-item titles |
+| `faint` | `#a3a3a3` | `#5f5f69` | Glyphs, chevrons, hairline-level text only (fails body contrast) |
+| `disabled-icon` | `#d4d4d8` | `#3f3f46` | Disabled icon buttons |
+| `fill` / `fill-hover` | `#f2f3f5` / `#e4e6ee` | `#26262c` / `#303037` | Secondary buttons, chips, icon buttons |
+| `well` | `#f7f7f8` | `#19191c` | Row hover inside menus, modal right pane |
+| `border` / `input` | `#e5e7eb` | `#2c2c33` | Borders |
+| `hairline` | `#f0f0f0` | `#232328` | Row separators inside a card |
+
+`secondary`, `muted` and shadcn's `accent` all alias `fill`. Note shadcn's `accent` is the
+**neutral hover fill**, not the brand accent.
+
+**Brand accent**
+
+| Class | Light | Dark | Use |
+|---|---|---|---|
+| `primary` / `primary-foreground` | `#5b5fe8` / `#fff` | same | Primary pill fill + its text |
+| `primary-disabled` | `#c7cbf3` | `#3a3c6b` | Disabled primary pill |
+| `brand` | `#5b5fe8` | `#7b7ff0` | Accent **text**, dots, rings, checks. Use this, not `text-primary` |
+| `brand-strong` | `#4b4fd0` | `#7b7ff0` | Text on `brand-tint` (In progress pill) |
+| `brand-tint` / `brand-tint-2` | `#eef0fc` / `#eceefc` | `#22233a` / `#262747` | Selected rows, open trigger, today halo |
+| `brand-border` | `#dcdff6` | `#34366a` | Hero card and "Current" chip border |
+| `brand-dot` / `brand-month` | `#c7c9f5` / `#8f92ee` | `#3d3f7a` / `#6a6ee6` | Past session dots / selected-month dots |
+| `bg-hero-wash` | radial accent wash | dark wash | The one hero card per screen |
+
+**Status**
+
+| Class | Light | Dark | Use |
+|---|---|---|---|
+| `positive` | `#2f6b45` | `#7fc79a` | Ready / done text |
+| `positive-solid` | `#2f6b45` | `#2f6b45` | Completed glyph fill (white check) |
+| `positive-tint` / `positive-wash` | `#e5f0e8` / `#eef6f0` | `#16281d` / `#142218` | Completed pill / row settling after completion |
+| `warning` / `warning-text` | `#b45309` / `#92400e` | `#f2b25a` | Overdue meta (a date condition, not a status) |
+| `on-hold-ring` / `-fill` / `-text` | `#d9a860` / `#fbf3e4` / `#8a5a12` | `#b98a3f` / `#2d2112` / `#f2b25a` | On hold glyph + pill |
+| `status-idle` | `#c4c4c4` | `#4a4a52` | Not started circle |
+| `destructive` | unchanged | unchanged | Delete / danger |
+
+**Inverse and avatars**
+
+| Class | Light | Dark | Use |
+|---|---|---|---|
+| `inverse` / `inverse-foreground` | `#171717` / `#fafafa` | `#f4f4f5` / `#121214` | Toast and dot tooltip: the only surface that flips |
+| `toast-check` | `#86efac` | same | Leading check on confirmation toasts |
+| `avatar` / `avatar-foreground` | `fill` / `#3f3f46` | `#26262c` / `#e4e4e7` | Org tile; all avatars in dark mode |
 
 ### Typography
 
-Font is **Inter** (`--font-sans`, set on `body` in `globals.css`; `fontFamily.sans` in the
-Tailwind theme). Roles below are taken from real dashboard components — prefer them over ad-hoc
-sizes.
+Inter. Headings are **regular weight** with `-0.01em` tracking (baked into the size tokens).
 
-| Role | Classes | Seen in |
-|---|---|---|
-| Page heading | `text-xl sm:text-2xl font-semibold tracking-tight` | `welcome-header.tsx` |
-| Page subtitle | `text-sm text-muted-foreground mt-1` | `welcome-header.tsx` |
-| Card title | `text-base font-semibold` | `coaching-sessions-card-header.tsx` |
-| Primary value / count | `text-lg font-semibold tabular-nums` | `goals-overview-card.tsx` |
-| Row primary text | `text-[13px] font-medium text-foreground truncate` | `coaching-sessions-row.tsx` |
-| Row secondary / meta | `text-xs text-muted-foreground tabular-nums truncate` | `coaching-sessions-row.tsx` |
-| Small label | `text-xs text-muted-foreground` | throughout |
-| Body | `text-sm` | throughout |
+| Role | Classes |
+|---|---|
+| Page title | `text-page-title` (32/400) |
+| Card headline | `text-headline` (28/400) |
+| Section | `text-section` (26/400) |
+| Card title | `text-card-title font-medium` (17/500); modal title adds `font-semibold` |
+| Body | `text-sm` (14) |
+| List item | `text-item font-medium` (13.5/500) |
+| Label | `text-label font-medium text-muted-foreground` (12.5/500) |
+| Meta | `text-xs text-muted-foreground` (12) |
+| Pill text | `text-pill font-medium` (11.5/500) |
+| Tiny | `text-tiny font-medium` (11/500) |
 
-> The base `CardTitle` primitive (`src/components/ui/card.tsx`) defaults to `text-2xl`; dashboard
-> cards deliberately override to `text-base font-semibold`. Match the dashboard, not the default.
+### Spacing, radius, shadow
 
-**Numerals:** add `tabular-nums` to anything numeric (values, dates, times, counts, durations) so
-columns and changing values don't jitter.
-
-### Spacing & radius
-
-- `--radius: 0.5rem` (8px). `rounded-lg` = 8px (**cards**), `rounded-md` = 6px (**buttons /
-  default control**, **including icon buttons**), `rounded-sm` = 4px (inner toggle items),
-  `rounded-full` (avatars and status dots only — see §3).
-- Card padding: **`p-6`** (24px). Card header: `px-6 pt-6 pb-4`. Compact rows: `py-4`.
-- Inter-element gaps: `gap-1.5`/`gap-2` (tight control clusters), `gap-3`/`gap-4` (content).
-- Vertical rhythm between major sections: `mt-8` / `mb-8`.
+- 8px grid. Card padding 22–28, grid gap `gap-4`, page padding 40.
+- Radii: `rounded-full` pills, chips, avatars, icon buttons · `rounded-card` 16 cards and
+  modals · `rounded-popover` 14 menus and popovers · `rounded-xl` 12 small cards · `rounded-input`
+  10 inputs and menu rows · `rounded-lg` 8 list rows and the org tile.
+- Shadows: `shadow-card` on cards, `shadow-popover` on menus, `shadow-toast` on toasts. Outer
+  panels and session cards stay flat. Dark menus also carry a 1px `border`.
 
 ---
 
 ## 2. Surfaces & layout
 
-### Cards (the core surface)
-
-Primitive: `src/components/ui/card.tsx` → `rounded-lg border bg-card text-card-foreground
-shadow-sm`.
-
-**Dashboard convention — go flat:** override to `border shadow-none` (add `h-full` for grid
-cells). Flat surfaces separated by **hairline borders**, not drop shadows, is the signature look.
-
-```tsx
-<Card className="border shadow-none h-full">
-  <CardContent className="p-6"> … </CardContent>
-</Card>
-```
-
-- **Internal dividers** are hairlines: `border-t` (optionally inset with `mx-6`) between a card's
-  header and body; row lists use `divide-y divide-border/50`.
-- **Section header inside a card:** `px-6 pt-6 pb-4 flex flex-wrap items-center justify-between
-  gap-3` with a `text-base font-semibold` title on the left and controls on the right
-  (`coaching-sessions-card-header.tsx`).
-
-### Page layout
-
+- **Card:** `bg-card border rounded-card shadow-card`, padding 22–28. Rows inside separate with
+  `border-hairline`; no boxes nested in boxes.
+- **Hero card** (one per screen, e.g. next session): `bg-hero-wash border-brand-border`.
+- **Toast:** `bg-inverse text-inverse-foreground rounded-full shadow-toast`, bottom center.
+  The only dark surface in light mode (and the only light one in dark mode).
 - Page width comes from `PageContainer` (`max-w-screen-2xl`); don't set your own max width.
-- Card grids are mobile-first single column, two columns at `md`:
-  `grid grid-cols-1 md:grid-cols-2 gap-4` (`dashboard-container.tsx`). Full-width sections sit in
-  their own `w-full` block below.
+- Loading, empty and error states render inside the **same** card chrome so the grid never
+  jumps (`GoalsOverviewCardSkeleton`, `GoalsOverviewCardError`).
 
 ---
 
 ## 3. Controls & idioms
 
-### Buttons
+### Buttons (Target)
 
-Primitive: `src/components/ui/button.tsx`.
+Pills, `text-item font-medium`, no border, icon + label `gap-2`, 16px lucide icons.
 
-- **Variants:** `default` (`bg-primary`, near-black), `outline`, `secondary`, `ghost`, `link`,
-  `destructive`.
-- **Sizes:** `default` h-10 · `sm` h-9 · `lg` h-11 · `icon` h-10 w-10.
-- **Dashboard compact sizing:** `size="sm"` plus `className="text-xs h-8"` for the tighter
-  dashboard density.
-- **Icon buttons keep the default `rounded-md`.** `variant="ghost" size="icon"` plus a size and
-  `text-muted-foreground/60 hover:text-foreground` is the pattern; do **not** add `rounded-full`.
-  Counted across the app: **13 of 17** `size="icon"` buttons take the `buttonVariants` default
-  radius and set no radius class at all.
-- **Circular is the exception, not the idiom.** Only three icon buttons are explicitly
-  `rounded-full` — both inline controls in `editable-session-title.tsx` and the row menu trigger in
-  `dashboard/coaching-sessions-row.tsx` — plus the avatar in `user-nav.tsx`, where round is
-  conventional. Treat the first three as legacy rather than precedent. New round buttons need a
-  deliberate reason.
-- **Icon-sizing gotcha:** `buttonVariants` forces `[&_svg]:size-4` (16px) on all child SVGs. To
-  use another size, override with the important prefix (e.g. `!h-6 !w-6`). In compact controls,
-  icons are usually `h-4 w-4` or `h-3.5 w-3.5`.
+- **Primary:** `bg-primary text-primary-foreground`, disabled `bg-primary-disabled`. One per view.
+- **Secondary:** `bg-fill hover:bg-fill-hover text-foreground`.
+- **Tertiary:** bare text + icon, `text-ink-2`.
+- Heights: 40 default · 36 dense (header) · 44 modal confirm · 48 mobile footer.
+- **Icon-sizing gotcha:** `buttonVariants` forces `[&_svg]:size-4`; override with the important
+  prefix (e.g. `!h-6 !w-6`).
 
-### Segmented toggle
+### Icon buttons (Target)
 
-`flex items-center rounded-md border p-0.5`; active item `rounded-sm bg-muted text-foreground`;
-inactive `text-muted-foreground/50 hover:text-muted-foreground` (`ViewToggle` in
-`coaching-sessions-card-header.tsx`). Set `aria-pressed` on each item.
+Circles, 36–40px, `bg-fill hover:bg-fill-hover text-ink-2`. Inside menus: 28px, transparent,
+hover `bg-fill`, disabled `text-disabled-icon`. Always set `aria-label`.
+
+### Chips (Target)
+
+`rounded-full text-xs font-medium`, height 22–26. Selected `bg-primary text-primary-foreground`;
+unselected `bg-fill`. Filter chip: `bg-card border` with a trailing `text-faint` × that clears it.
 
 ### Rows & quiet affordances
 
-Rows rest quiet and reveal actions on hover — gated on hover **capability**, not viewport width,
-so touch devices (no hover) keep actions visible (`coaching-sessions-row.tsx`):
+Rows rest quiet and reveal actions on hover, gated on hover **capability**, not viewport width,
+so touch devices keep actions visible (`coaching-sessions-row.tsx`):
 
 ```tsx
-// action cluster
 className={cn(
   "flex gap-1.5 shrink-0 items-center",
   "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:transition-opacity",
-  "[&:has([data-state=open])]:opacity-100", // stay visible while a menu/popover is open
+  "[&:has([data-state=open])]:opacity-100",
 )}
 ```
 
-- **Row hover/selection tint:** `hover:bg-muted/20` (bump `dark:hover:bg-muted/50`), selected
-  `bg-muted/40 dark:bg-muted/70`. Muted tints over a near-black dark surface need the bump to read.
-- **Resting affordance opacity:** icons rest at `/40`–`/60` of `muted-foreground` and go to
-  `foreground` on hover.
+- Row hover in menus `bg-well`; keyboard focus `bg-fill`; selected/current `bg-brand-tint`.
+- Trailing chevrons are `text-faint`.
+
+### Status (`ItemStatus`)
+
+20px glyph left of the row, 24px pill right; both open the 180px status menu (check on current).
+
+| Status | Glyph | Pill |
+|---|---|---|
+| Not started | hollow `status-idle` circle | `bg-fill text-ink-2` |
+| In progress | `brand` ring, half-filled disc | `bg-brand-tint text-brand-strong` |
+| On hold | `on-hold-ring` ring, `on-hold-fill`, pause | `bg-on-hold-fill text-on-hold-text` |
+| Completed | solid `positive-solid`, white check; title muted | `bg-positive-tint text-positive` |
+| Won't do | solid `faint`, white ×; title muted | — |
 
 ### Menus
 
-Destructive menu items: `text-destructive focus:text-destructive focus:bg-destructive/10`
-(`coaching-sessions-row.tsx`).
+`rounded-popover shadow-popover border`. Destructive items:
+`text-destructive focus:text-destructive focus:bg-destructive/10`.
 
 ### Collapsible cards
 
-Toggle via a full-width header button; rotate the chevron with state:
-`<ChevronDown className="h-4 w-4 text-muted-foreground/40 transition-transform duration-200" />`
-plus `expanded && "rotate-180"` (`goals-overview-card.tsx`).
+Full-width header button; chevron `transition-transform duration-200`, `rotate-180` when open
+(`goals-overview-card.tsx`).
 
 ---
 
-## 4. States
+## 4. Motion
 
-- **Loading:** skeleton inside the *same* card chrome (`border shadow-none`) — `animate-pulse`
-  blocks (`bg-muted rounded`) sized to the real content, so layout doesn't jump
-  (`GoalsOverviewCardSkeleton`).
-- **Empty:** centered muted text, `text-sm text-muted-foreground` (e.g. "No active goals").
-- **Error:** inline `text-sm text-destructive` within the same card chrome — never collapse the
-  card or shift the surrounding grid (`GoalsOverviewCardError`).
-
----
-
-## 5. Motion
-
-- Default `transition-colors` on interactive surfaces; chevrons/expanders use
-  `transition-transform duration-200`.
-- Named keyframes available in `tailwind.config.ts`: `accordion-down`/`up`,
-  `slide-in-from-left`, `kanban-card-enter`/`exit` (~200–400ms, ease-out). Reuse these rather
-  than inventing new durations.
+- Hover and background changes: `transition-colors duration-150`.
+- Expanders: `transition-transform duration-200`. Carousel slide: `duration-[250ms] ease-out`.
+- Single-dot grow: `transition-transform duration-[180ms] ease-spring`.
+- Live dot: `animate-live-pulse` (opacity 1 → .35 → 1, 2s).
+- Existing named keyframes (`accordion-*`, `kanban-card-*`, `highlight-*`) stay for their uses.
 
 ---
 
-## 6. Accessibility
+## 5. Accessibility
 
-- **Hue is never the only signal.** Pair color with icon + text + position (the dashboard health
-  signals are icon+label; the Topics "new" dot pairs with `sr-only` text and avatar position).
-  This also means a color can be swapped later without breaking meaning.
-- `aria-pressed` on toggles, `aria-label` on icon-only buttons, `sr-only` text for any icon-only
+- **Hue is never the only signal.** Pair color with icon + text + position.
+- Body text holds 4.5:1 in both themes; `faint` is for glyphs only.
+- `aria-pressed` on toggles, `aria-label` on icon-only buttons, `sr-only` text for icon-only
   meaning.
-- Keep the base focus ring (`focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`
-  from `buttonVariants`) — don't strip it.
-- Radix Tooltip content is **not** in the DOM until hover; don't assert/expect it before
-  interaction.
+- Keep the base focus ring from `buttonVariants`; don't strip it.
+- Radix Tooltip content is **not** in the DOM until hover; don't assert it before interaction.
 
 ---
 
-## 7. Reference idioms — observed vs. adopted
-
-From the north-star dashboard, kept explicit so we don't drift into copying things we never
-decided to adopt.
+## 6. Decisions log
 
 | Idiom | Status |
 |---|---|
-| Flat cards, hairline borders, airy whitespace | **Adopted** |
-| Circular icon-button hover affordance | **Not adopted** — tried in three places (see §3) and never spread. Icon buttons use the default `rounded-md`; `rounded-full` is reserved for the avatar. |
-| Muted secondary text, quiet rest state | **Adopted** |
-| Hairline internal dividers + section headers | **Adopted** |
-| Large value with smaller raised cents (`$200` + `.00`) | **Observed, not used** — no monetary display in-app yet. If we ever render large numeric values, this is the idiom to reach for. |
-| Pill-shaped action toolbar (filled accent + light-gray pills) | **Observed, not adopted** — our buttons are `rounded-md`. Adopting pills would be a deliberate divergence to decide, not a default. |
-| Indigo/violet brand accent | **Not adopted globally** — implemented palette is neutral near-black `primary`. Don't repaint global `--primary` to a color without a design decision. *Feature-scoped* accent hues (e.g. relevance = indigo, immediacy = amber, "new" = violet in the Title+Topics work) live inside that feature, not the global token set. |
-| Positive/success green for money-in | **Gap** — there is no global success token (only `destructive`). Define one deliberately if/when a success color is actually needed. |
-| Thin rounded utilization bar + legend dots; section header with `‹ month ›` pager | **Observed** — reusable patterns if a future surface needs them. |
+| Indigo brand accent (`primary` + `brand-*`) | **Adopted** globally (Phase 1 handoff). Replaces the neutral near-black primary. |
+| Pill buttons, circular icon buttons | **Adopted** (Target; migrating in Phase 1). Supersedes `rounded-md` buttons. |
+| Card shadow (`shadow-card`) | **Adopted** for cards. Outer panels and session cards stay flat. |
+| Positive / warning / on-hold tokens | **Adopted** (§1 Status). |
+| Cool-grey (zinc) dark scale | **Adopted**; never pure black. |
+| Gradients | Only `bg-hero-wash`, once per screen. No decorative shapes, tinted wells or dark cards. |
 
 ---
 
-## 8. To capture later (open)
+## 7. To capture later (open)
 
-- Form field / input density and validation styling (beyond the base `input` token).
-- Toast / notification conventions.
-- A defined success/positive color token, if adopted.
-- Data-viz (chart) usage guidance built on the `chart-1…5` tokens.
-- Mobile `Sheet` patterns (the Title+Topics work introduces bottom-sheet editing on mobile).
+- Per-person pastel avatar palette (light mode only; dark avatars are neutral).
+- Form field density and validation styling.
+- Mobile bottom sheet and full-screen step view.
+- Data-viz guidance on `chart-1…5`.
