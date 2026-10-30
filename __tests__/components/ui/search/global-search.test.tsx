@@ -52,6 +52,7 @@ const loaded = (hits: SearchHit[], nextCursor = None as ReturnType<typeof Some<s
   hits,
   nextCursor,
   isLoadingMore: false,
+  loadMoreError: None,
 });
 
 function mockSearch(state: SearchState, loadMore = vi.fn()) {
@@ -151,6 +152,30 @@ describe("GlobalSearch", () => {
     await typeQuery("weekly");
 
     await userEvent.click(screen.getByText("Show more results"));
+    expect(loadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers more results instead of an empty state when a page had no recognised hits", async () => {
+    const loadMore = mockSearch(loaded([], Some("CUR")));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    expect(screen.queryByText("No results for “weekly”")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("Show more results"));
+    expect(loadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps loaded hits beside a failed load-more and offers a retry", async () => {
+    const loadMore = mockSearch({
+      ...loaded([goalHit], Some("CUR")),
+      loadMoreError: Some({ kind: "network" }),
+    } as SearchState);
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    expect(screen.getByText("Weekly planning habit")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Can't reach the server");
+    await userEvent.click(screen.getByText("Try again"));
     expect(loadMore).toHaveBeenCalledTimes(1);
   });
 

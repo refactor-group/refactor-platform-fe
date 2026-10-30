@@ -267,7 +267,8 @@ function SearchResults({ state, onSelect, onLoadMore }: SearchResultsProps) {
         </p>
       );
     case "loaded":
-      if (state.hits.length === 0) {
+      // A page of only unrecognised hit types parses to no hits but can still have more pages.
+      if (state.hits.length === 0 && state.nextCursor.none) {
         return (
           <p className="px-3 py-6 text-center text-sm text-muted-foreground">
             No results for “{state.query.trim()}”
@@ -276,23 +277,32 @@ function SearchResults({ state, onSelect, onLoadMore }: SearchResultsProps) {
       }
       return (
         <CommandList className="max-h-[min(24rem,60vh)]">
-          <CommandPrimitive.Group className="p-1">
-            {state.hits.map((hit) => (
-              <SearchResultRow key={`${hit.type}:${hit.id}`} hit={hit} onSelect={onSelect} />
-            ))}
-          </CommandPrimitive.Group>
+          {state.hits.length > 0 && (
+            <CommandPrimitive.Group className="p-1">
+              {state.hits.map((hit) => (
+                <SearchResultRow key={`${hit.type}:${hit.id}`} hit={hit} onSelect={onSelect} />
+              ))}
+            </CommandPrimitive.Group>
+          )}
+          {state.loadMoreError.some && (
+            <p role="alert" className="px-3 py-2 text-center text-xs text-destructive">
+              {errorMessage(state.loadMoreError.val)}
+            </p>
+          )}
           {state.nextCursor.some && (
             <CommandItem
               value="__load_more__"
               onSelect={onLoadMore}
               disabled={state.isLoadingMore}
-              className="mx-1 mb-1 justify-center text-xs text-muted-foreground"
+              className="m-1 justify-center text-xs text-muted-foreground"
             >
               {state.isLoadingMore ? (
                 <>
                   <Spinner className="mr-2 h-3.5 w-3.5" />
                   Loading more…
                 </>
+              ) : state.loadMoreError.some ? (
+                "Try again"
               ) : (
                 "Show more results"
               )}

@@ -10,6 +10,7 @@ import {
   useSearch,
 } from "@/lib/api/search";
 import { SearchErrorCode, SearchableType } from "@/types/search";
+import { Some } from "@/types/option";
 
 vi.mock("@/lib/api/entity-api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/entity-api")>();
@@ -205,6 +206,38 @@ describe("useSearch", () => {
     if (result.current.state.kind === "loaded") {
       expect(result.current.state.hits.map((h) => h.id)).toEqual(["g1", "g2"]);
       expect(result.current.state.nextCursor.none).toBe(true);
+    }
+  });
+
+  it("a failed later page keeps loaded hits and the cursor, and loadMore retries it", async () => {
+    vi.mocked(EntityApi.getFn)
+      .mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g1")], next_cursor: "CUR" })
+      .mockRejectedValueOnce(httpError(503))
+      .mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g2")], next_cursor: null });
+    const { result } = renderHook(() => useSearch("plan", {}, 0));
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    act(() => result.current.loadMore());
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(result.current.state).toMatchObject({ kind: "loaded", isLoadingMore: false });
+    if (result.current.state.kind === "loaded") {
+      expect(result.current.state.hits.map((h) => h.id)).toEqual(["g1"]);
+      expect(result.current.state.nextCursor).toEqual(Some("CUR"));
+      expect(result.current.state.loadMoreError).toEqual(Some({ kind: "unavailable" }));
+    }
+
+    act(() => result.current.loadMore());
+    expect(vi.mocked(EntityApi.getFn).mock.calls[2][0]).toContain("cursor=CUR");
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    if (result.current.state.kind === "loaded") {
+      expect(result.current.state.hits.map((h) => h.id)).toEqual(["g1", "g2"]);
+      expect(result.current.state.loadMoreError.none).toBe(true);
     }
   });
 

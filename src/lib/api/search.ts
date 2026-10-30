@@ -120,12 +120,14 @@ export type SearchState =
       hits: SearchHit[];
       nextCursor: Option<string>;
       isLoadingMore: boolean;
+      /** Why the last "load more" failed; loaded hits and the cursor stay intact for a retry. */
+      loadMoreError: Option<SearchError>;
     }
   | { kind: "error"; query: string; error: SearchError };
 
 export interface UseSearchResult {
   state: SearchState;
-  /** Fetches the next page and appends it; no-op unless a `next_cursor` is pending. */
+  /** Fetches the next page and appends it, retrying a failed one; no-op unless a `next_cursor` is pending. */
   loadMore: () => void;
 }
 
@@ -179,13 +181,21 @@ export function useSearch(
                 hits: [...previousHits, ...response.hits],
                 nextCursor: response.next_cursor,
                 isLoadingMore: false,
+                loadMoreError: None,
               },
             });
           });
         },
         (error) => {
           if (controller.signal.aborted) return;
-          setResult(Some({ query: q, filtersKey: key, state: { kind: "error", query: q, error } }));
+          setResult((prev) =>
+            cursor.some && prev.some && prev.val.state.kind === "loaded"
+              ? Some({
+                  ...prev.val,
+                  state: { ...prev.val.state, isLoadingMore: false, loadMoreError: Some(error) },
+                })
+              : Some({ query: q, filtersKey: key, state: { kind: "error", query: q, error } })
+          );
         }
       );
     },
@@ -219,7 +229,9 @@ export function useSearch(
     if (current.kind !== "loaded" || current.isLoadingMore || current.nextCursor.none) {
       return;
     }
-    setResult(Some({ ...result.val, state: { ...current, isLoadingMore: true } }));
+    setResult(
+      Some({ ...result.val, state: { ...current, isLoadingMore: true, loadMoreError: None } })
+    );
     runPage(current.query, filtersKey, Some(current.nextCursor.val));
   }, [isCurrent, result, filtersKey, runPage]);
 
