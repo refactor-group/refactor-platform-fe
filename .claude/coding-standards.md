@@ -202,7 +202,7 @@ Instead, **guard the render** so the component only mounts when all required dat
 ## General Guidelines
 
 ### Naming Conventions
-- Use PascalCase for component names and files: `ConnectionStatus.tsx`
+- Use PascalCase for component names and kebab-case for their files: `ConnectionStatus` in `connection-status.tsx`
 - Use PascalCase for enum types: `ConnectionState`, `BadgeVariant`
 - Use PascalCase for enum values: `ConnectionState.Connecting`, `BadgeVariant.Secondary`
 - Use camelCase for functions, variables, and hooks: `useEditorCache`, `handleClick`
