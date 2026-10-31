@@ -318,3 +318,89 @@ At 375px, open search and type a query.
 Turn on Reduce Motion (macOS System Settings › Accessibility › Display), then open and close search at 1280px.
 
 **Pass:** the field appears and disappears at full width at once, with no widening animation.
+
+## 8. Part G: Join session menu (#PR-TBD)
+
+Requires a backend build that includes rs#459 (`/coaching_sessions/nearest`). This part also covers the menu's building blocks from #503 (dots, strip, carousel, rows, Today block), which had no part of its own.
+
+Set up as the coach with six or more coachees, at least one session today with one of them, a few past and upcoming sessions with another, and one coachee with only one or two sessions.
+
+### Case G1: trigger and open state
+
+At 1280px, open the dashboard and click Join session in the header.
+
+**Pass:** the pill shows a video icon, "Join session" and a chevron. While the menu is open the pill has a light accent tint. The menu opens under the pill, aligned to its right edge, 420px wide with rounded corners and a soft shadow.
+
+### Case G2: Today block
+
+With a session today, open the menu. Repeat once that session has started.
+
+**Pass:** a "Today" card with an accent wash sits at the top, one row per session today across all coachees: avatar, full name, "Today · {time}" and the session title. Once a session is under way its row turns white and a small accent dot pulses in front of it. Clicking a Today row opens that session.
+
+### Case G3: carousel paging and selection
+
+Open the menu with six or more coachees. Use the next and previous arrows, then click a coachee.
+
+**Pass:** five coachees per page. Previous is disabled on the first page and Next on the last. The page slides rather than jumps. The selected coachee has an accent ring and dark name; the others are grey. Clicking a coachee swaps the strip and list below without closing the menu or changing the page.
+
+### Case G4: dot strip
+
+Pick a coachee with past and upcoming sessions. Hover each dot.
+
+**Pass:** the strip shows the coachee's full name on the left and month labels with dots on the right, oldest on the left. Past dots are pale accent, upcoming dots are hollow accent rings, today's dot is larger with a halo, and on a session page that session's dot is the largest solid dot. The month you're anchored on is bold. Hovering a dot grows only that dot and shows one dark pill reading "{date} · {title}" above the strip's right side.
+
+### Case G5: list rows
+
+Look at the list under the strip.
+
+**Pass:** each row shows the date (e.g. "Tue Aug 25") in a fixed column, the title, and "Upcoming" or "Previous" below it. Upcoming rows are slightly dimmed. Rows end with a faint chevron. At most five rows.
+
+### Case G6: the three windows
+
+1. Pick the coachee who has a session today.
+2. Open one of another coachee's sessions, then open the menu on that page.
+3. Pick a coachee with no session today, away from any session page.
+
+**Pass:** (1) the list shows up to two sessions before today's and two after; today's session is in the Today card, not the list. (2) That coachee is preselected, and their session's row has an accent background and a "Current" chip instead of a chevron, with up to two sessions on each side. (3) The two most recent past sessions and the two nearest upcoming ones.
+
+### Case G7: sparse history
+
+Pick the coachee with only one or two sessions, then one with none.
+
+**Pass:** the list shows only the sessions that exist, with nothing filled in from other coachees. With none, it reads "No sessions with {first name} yet".
+
+### Case G8: opening a session
+
+Click a list row. Open the menu again and click a dot.
+
+**Pass:** the menu closes, the session page opens, and a toast reads "Opened {first name} · {date} · {title}".
+
+### Case G9: closing
+
+Open the menu and press Esc. Open it again and click outside it.
+
+**Pass:** both close the menu. Opening it again returns to the default coachee.
+
+### Case G10: loading and errors
+
+Block `coaching_sessions/nearest` and open the menu. Remove the block and click Try again.
+
+**Pass:** while loading, three grey placeholder rows show. With the request blocked, the menu shows "Couldn't load sessions" and a Try again link inside the menu. Try again loads the list.
+
+### Case G11: 375px
+
+At 375px, open the menu.
+
+**Pass:** the menu fits on screen with a small margin on each side, the page doesn't scroll sideways, and the list scrolls inside the menu when it's taller than the screen.
+
+### Case G12: dark mode
+
+Repeat G2 to G5 in Dark.
+
+**Pass:** the menu, Today card, avatars, dots, tooltip and "Current" chip all read clearly, with no white panels or black text.
+
+### Case G13: keyboard
+
+Tab to Join session and press Enter. Tab through the coachees and rows, press Enter on a coachee, then on a row.
+
+**Pass:** Enter opens the menu with focus inside it. Tab reaches the Today rows, the arrows, each visible coachee, the dots and each row, with a visible focus style. Enter on a coachee selects it and keeps the menu open. Enter on a row opens that session.

@@ -322,24 +322,6 @@ export function getSessionParticipantInfo(
 }
 
 /**
- * Get the name of the other participant in an enriched session.
- *
- * Thin wrapper over getSessionParticipantInfo that collapses the null/missing
- * cases to single-word strings (for terse list-style UI). When the participant
- * *is* loaded but has blank first/last names, the underlying display_name
- * fallback from getSessionParticipantInfo is returned as-is.
- */
-export function getSessionParticipantName(
-  session: EnrichedCoachingSession,
-  userId: string
-): string {
-  const info = getSessionParticipantInfo(session, userId);
-  if (!info) return "Unknown";
-  if (info.isMissing) return info.isCoach ? "Coachee" : "Coach";
-  return info.participantName;
-}
-
-/**
  * Select the next session a user should act on: the first session in the list
  * whose urgency is not Past. Assumes the list is sorted ascending by date.
  */
