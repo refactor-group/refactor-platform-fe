@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { DateTime } from "ts-luxon";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
@@ -18,7 +18,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 

@@ -6,7 +6,7 @@ import { http, HttpResponse } from "msw";
 import { server } from "@/test-utils/msw-server";
 import { MemberCard } from "@/components/ui/members/member-card";
 import { Role, type UserRoleState } from "@/types/user";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { createMockUser } from "../../test-utils";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ vi.mock("@/site.config", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 

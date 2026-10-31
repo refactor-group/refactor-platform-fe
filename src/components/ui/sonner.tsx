@@ -1,28 +1,35 @@
 "use client"
 
+import { useEffect } from "react"
+import type { ComponentProps, CSSProperties } from "react"
 import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner"
+import { handleToastEscape } from "@/lib/toast"
 
-type ToasterProps = React.ComponentProps<typeof Sonner>
+type ToasterProps = ComponentProps<typeof Sonner>
+
+// Full-width items let the content-sized pill centre itself.
+const TOASTER_STYLE = { "--width": "min(560px, calc(100vw - 32px))" } as CSSProperties
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleToastEscape)
+    return () => window.removeEventListener("keydown", handleToastEscape)
+  }, [])
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      toastOptions={{
-        classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
-          actionButton:
-            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-          cancelButton:
-            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-        },
-      }}
+      position="bottom-center"
+      offset={24}
+      mobileOffset={16}
+      visibleToasts={3}
+      swipeDirections={[]}
+      style={TOASTER_STYLE}
+      toastOptions={{ unstyled: true, className: "pointer-events-none w-full" }}
       {...props}
     />
   )

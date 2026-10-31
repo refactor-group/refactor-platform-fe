@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import type { Extensions } from "@tiptap/core";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import "@/styles/simple-editor.scss";
 import "@/styles/tiptap-table.scss";
 

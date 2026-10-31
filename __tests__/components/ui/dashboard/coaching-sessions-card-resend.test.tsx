@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { server } from "@/test-utils/msw-server";
 import { CoachingSessionsCard } from "@/components/ui/dashboard/coaching-sessions-card";
 import { Some } from "@/types/option";
@@ -75,7 +75,7 @@ async function confirmResend(seriesResponse: Response) {
   render(
     <>
       <CoachingSessionsCard onReschedule={vi.fn()} />
-      <Toaster />
+      <Toaster theme="light" />
     </>
   );
   await user.click(screen.getByRole("button", { name: "trigger resend" }));

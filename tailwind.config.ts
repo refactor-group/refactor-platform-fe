@@ -232,6 +232,15 @@ const config = {
   					opacity: '1',
   					transform: 'scale(1)',
   				}
+  			},
+  			'toast-ring': {
+  				from: {
+  					strokeDashoffset: '0'
+  				},
+  				to: {
+  					// Ring circumference, 2π × 7.
+  					strokeDashoffset: '-43.98'
+  				}
   			}
   		},
   		animation: {
@@ -242,7 +251,8 @@ const config = {
   			'kanban-card-enter': 'kanban-card-enter 350ms ease-out both',
   			'live-pulse': 'live-pulse 2s ease-in-out infinite',
   			'highlight-pulse': 'highlight-pulse 600ms ease-out',
-  			'highlight-tint': 'highlight-tint 2s ease-out both'
+  			'highlight-tint': 'highlight-tint 2s ease-out both',
+  			'toast-ring': 'toast-ring 6s linear forwards'
   		},
   		fontFamily: {
   			sans: [

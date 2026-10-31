@@ -67,7 +67,7 @@ import {
   roleChangeInvalidMessage,
   userBelongsToMultipleOrganizationsMessage,
 } from "@/lib/api/organization-errors";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface MemberCardProps {
   user: User;

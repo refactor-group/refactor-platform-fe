@@ -12,7 +12,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { visibleStatuses, buildInitialOrder, groupActionsByStatus } from "@/components/ui/actions/utils";
 import { useOptimisticStatus } from "@/components/ui/actions/use-optimistic-status";
 import { KanbanColumn } from "@/components/ui/actions/kanban-column";

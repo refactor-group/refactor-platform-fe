@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { DateTime } from "ts-luxon";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Archive, ArchiveRestore, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { FC } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
   OAuthConnectionApi,

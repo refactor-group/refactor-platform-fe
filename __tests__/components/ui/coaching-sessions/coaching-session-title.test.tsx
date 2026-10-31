@@ -7,7 +7,7 @@ const mockUpdateTitle = vi.fn();
 const mockRefresh = vi.fn();
 const mockToastError = vi.fn();
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: Object.assign(vi.fn(), { error: (...args: unknown[]) => mockToastError(...args) }),
 }));
 
