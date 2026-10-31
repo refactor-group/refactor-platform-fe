@@ -329,7 +329,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
               onFocus={() => setResultsOpen(true)}
               onClick={() => collapsing && setField(EXPANDED)}
               tabIndex={collapsing ? -1 : undefined}
-              placeholder="Search sessions, topics, agreements, actions…"
+              placeholder="Search"
               className={cn(
                 "h-9 w-full min-w-0 rounded-full border-0 bg-fill pl-9 text-item transition-colors duration-150 hover:bg-fill-hover focus:bg-card",
                 "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border",
