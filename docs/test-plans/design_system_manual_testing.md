@@ -88,3 +88,7 @@ Look at the organization initials at the bottom of the left sidebar, in both the
 Look at the search box in the header, then click into it and type a query.
 
 **Pass:** at rest it's a light grey pill with no border. While focused it turns the card colour with a focus ring. The results panel has 14px rounded corners and a soft shadow.
+
+## 4. Part C: status components (#500)
+
+The status glyph, pill and menu aren't used on any screen yet. Unit tests cover them, and the dashboard redesign (Phase 2) adds their manual cases.
