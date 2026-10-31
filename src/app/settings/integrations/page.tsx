@@ -9,13 +9,13 @@ import { MeetingIntegrationSection } from "@/components/ui/settings/meeting-inte
 
 function getErrorMessage(provider: string, errorCode: string): string {
   const messages: Record<string, string> = {
-    access_denied: `${provider} account connection was cancelled.`,
+    access_denied: `${provider} connection cancelled`,
     exchange_failed: `Couldn't connect your ${provider} account · Try again`,
-    invalid_state: "Authentication session expired. Please try again.",
+    invalid_state: `The connection took too long · Try again`,
   };
   return (
     messages[errorCode] ??
-    `An unexpected error occurred connecting your ${provider} account.`
+    `Couldn't connect your ${provider} account · Try again`
   );
 }
 
@@ -32,18 +32,20 @@ export default function IntegrationsPage() {
     const zoomError = searchParams.get("zoom_error");
 
     if (googleConnected === "true") {
-      toast.success("Google account connected successfully.");
+      toast.success("Google account connected", { id: "google-connected" });
       refreshGoogle();
       router.replace("/settings/integrations", { scroll: false });
     } else if (googleError) {
-      toast.error(getErrorMessage("Google", googleError));
+      toast.error(getErrorMessage("Google", googleError), {
+        id: "google-error",
+      });
       router.replace("/settings/integrations", { scroll: false });
     } else if (zoomConnected === "true") {
-      toast.success("Zoom account connected successfully.");
+      toast.success("Zoom account connected", { id: "zoom-connected" });
       refreshZoom();
       router.replace("/settings/integrations", { scroll: false });
     } else if (zoomError) {
-      toast.error(getErrorMessage("Zoom", zoomError));
+      toast.error(getErrorMessage("Zoom", zoomError), { id: "zoom-error" });
       router.replace("/settings/integrations", { scroll: false });
     }
   }, [searchParams, router, refreshGoogle, refreshZoom]);

@@ -269,7 +269,7 @@ describe("ActionsPageContainer", () => {
     );
 
     expect(
-      screen.getByText("Failed to load actions. Please try again later.")
+      screen.getByText("Couldn't load your actions. Refresh the page to try again.")
     ).toBeInTheDocument();
   });
 
