@@ -383,9 +383,11 @@ Open the menu and press Esc. Open it again and click outside it.
 
 ### Case G10: loading and errors
 
-Block `coaching_sessions/nearest` and open the menu. Remove the block and click Try again.
+1. In DevTools Network, set throttling to "Slow 3G" and open the menu. Set throttling back to "No throttling".
+2. Block `coaching_sessions/nearest`, close the menu and open it again. Pick another coachee.
+3. Remove the block and click Try again. Close and reopen the menu.
 
-**Pass:** while loading, three grey placeholder rows show. With the request blocked, the menu shows "Couldn't load sessions" and a Try again link inside the menu. Try again loads the list.
+**Pass:** (1) three grey placeholder rows show first, then the list replaces them. (2) The menu shows "Couldn't load sessions" and a Try again link inside the menu, with no rows. (3) Try again loads the list, and it keeps loading normally after reopening with the block off.
 
 ### Case G11: 375px
 
@@ -404,3 +406,15 @@ Repeat G2 to G5 in Dark.
 Tab to Join session and press Enter. Tab through the coachees and rows, press Enter on a coachee, then on a row.
 
 **Pass:** Enter opens the menu with focus inside it. Tab reaches the Today rows, the arrows, each visible coachee, the dots and each row, with a visible focus style. Enter on a coachee selects it and keeps the menu open. Enter on a row opens that session.
+
+### Case G14: session page fallback
+
+Open `/coaching-sessions/<an id that doesn't exist>`, then open the menu.
+
+**Pass:** the default coachee is selected and their recent and upcoming sessions show. No row has a "Current" chip and the list doesn't stay loading.
+
+### Case G15: switching quickly
+
+Open the menu and click through several coachees as fast as you can.
+
+**Pass:** the list always ends on the last coachee clicked, with their name above the dots, and never flips back to an earlier coachee's sessions.
