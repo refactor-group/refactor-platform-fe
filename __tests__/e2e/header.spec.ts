@@ -125,7 +125,7 @@ test.describe('Header items never overlap', () => {
       const items = {
         tile: orgTile(page),
         actions: page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Actions' }),
-        search: page.getByPlaceholder(/Search sessions/),
+        search: page.getByRole('button', { name: 'Open search' }),
         join,
         account: page.getByRole('button', { name: 'Account menu' }),
       }
@@ -136,6 +136,8 @@ test.describe('Header items never overlap', () => {
         boxes[name] = box!
       }
       console.log(`header boxes at ${width}px`, JSON.stringify(boxes))
+
+      expect(Math.abs(boxes.account.x + boxes.account.width - (width - 16))).toBeLessThanOrEqual(1)
 
       const names = Object.keys(boxes)
       for (const [i, a] of names.entries()) {
@@ -165,3 +167,118 @@ test('Appearance options fit inside the avatar menu', async ({ page, context }) 
   console.log('menu content right', contentRight, 'Auto right', autoBox.x + autoBox.width)
   expect(autoBox.x + autoBox.width).toBeLessThanOrEqual(contentRight)
 })
+
+const hitBase = {
+  score: 0.5,
+  snippet: null,
+  created_at: '2026-09-01T10:00:00Z',
+  updated_at: '2026-09-01T10:00:00Z',
+  organization_id: 'org-1',
+  coaching_relationship_id: 'rel-1',
+}
+
+// Server order deliberately differs from the grouped order.
+const SEARCH_HITS = [
+  { ...hitBase, type: 'topic', id: 'topic-1', title: 'Weekly energy', coaching_session_id: 'sess-1', status: 'open' },
+  { ...hitBase, type: 'action', id: 'action-1', title: 'Draft the weekly plan', coaching_session_id: 'sess-1', status: 'not_started' },
+  { ...hitBase, type: 'coaching_session', id: 'sess-1', title: 'Weekly review', date: '2026-09-03T10:00:00' },
+  { ...hitBase, type: 'goal', id: 'goal-1', title: 'Weekly planning habit', status: 'in_progress' },
+  { ...hitBase, type: 'agreement', id: 'agr-1', title: 'Plan every Monday', coaching_session_id: 'sess-1' },
+]
+
+type WidthSample = { t: number; width: number }
+type WidthWindow = { collapseWidths: Promise<WidthSample[]> }
+
+// Runs in the page: records the root's width each frame for 300ms after the next Escape.
+function recordWidthAfterEscape(root: Element) {
+  ;(window as unknown as WidthWindow).collapseWidths = new Promise((resolve) => {
+    document.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key !== 'Escape') return
+        const start = performance.now()
+        const widths: WidthSample[] = []
+        const tick = () => {
+          const t = performance.now() - start
+          widths.push({ t: Math.round(t), width: Math.round(root.getBoundingClientRect().width) })
+          if (t < 300) requestAnimationFrame(tick)
+          else resolve(widths)
+        }
+        requestAnimationFrame(tick)
+      },
+      { capture: true, once: true }
+    )
+  })
+}
+
+async function mockSearch(page: Page) {
+  await page.route(
+    (url) => url.pathname.endsWith('/search'),
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: { hits: SEARCH_HITS, next_cursor: null } }),
+      })
+    }
+  )
+}
+
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 375, height: 812 },
+]) {
+  test(`Global search groups results at ${viewport.width}px`, async ({ page, context }) => {
+    await setup(page, context)
+    await mockSearch(page)
+    await page.setViewportSize(viewport)
+    await page.goto('/dashboard')
+    const openSearch = page.getByRole('button', { name: 'Open search' })
+    await expect(openSearch).toBeVisible()
+
+    await page.keyboard.press('ControlOrMeta+k')
+    const input = page.getByRole('combobox', { name: 'Search' })
+    await expect(input).toBeFocused()
+    await input.fill('weekly')
+
+    const headings = page.locator('[cmdk-group-heading]')
+    await expect(headings).toHaveText(['Sessions', 'Goals', 'Actions', 'Agreements', 'Topics'])
+
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }))
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+
+    const panel = (await page.locator('[cmdk-list]').locator('xpath=ancestor::div[contains(@class,"rounded-popover")]').boundingBox())!
+    console.log(`search panel at ${viewport.width}px`, JSON.stringify(panel))
+    expect(panel.x).toBeGreaterThanOrEqual(0)
+    expect(panel.x + panel.width).toBeLessThanOrEqual(viewport.width)
+
+    if (viewport.width < 640) {
+      const account = page.getByRole('button', { name: 'Account menu' })
+      const box = (await account.boundingBox())!
+      const covered = await account.evaluate(
+        (el, [x, y]) => !el.contains(document.elementFromPoint(x, y)),
+        [box.x + box.width / 2, box.y + box.height / 2]
+      )
+      expect(covered, 'expanded search covers the account button').toBe(true)
+    }
+
+    await page.keyboard.press('Escape')
+    await expect(input).toHaveValue('')
+    await expect(input).toBeFocused()
+    await page.locator('[cmdk-root]').locator('..').evaluate(recordWidthAfterEscape)
+    await page.keyboard.press('Escape')
+    if (viewport.width >= 640) {
+      const widths = await page.evaluate(() => (window as unknown as WidthWindow).collapseWidths)
+      const at80 = widths.reduce((a, b) => (Math.abs(b.t - 80) < Math.abs(a.t - 80) ? b : a))
+      console.log('search root width during collapse', JSON.stringify(widths))
+      expect(at80.width).toBeGreaterThan(36)
+      expect(at80.width).toBeLessThan(340)
+    }
+    await expect(input).toBeHidden()
+    await expect(openSearch).toBeVisible()
+    await expect(openSearch).toBeFocused()
+  })
+}

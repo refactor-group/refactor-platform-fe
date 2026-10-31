@@ -22,8 +22,8 @@ export function SiteHeader() {
         <OrganizationHomeLink />
         <div className="mx-1 hidden h-6 w-px bg-hairline sm:block" />
         <DestinationNav />
-        <div className="hidden flex-1 sm:block" />
-        <GlobalSearch className="min-w-0 max-w-md" />
+        <div className="flex-1" />
+        <GlobalSearch />
         <JoinSessionSlot />
         <UserMenu />
       </div>
