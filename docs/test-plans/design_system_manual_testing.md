@@ -419,7 +419,7 @@ Open the menu and click through several coachees as fast as you can.
 
 **Pass:** the list always ends on the last coachee clicked, with their name above the dots, and never flips back to an earlier coachee's sessions.
 
-## 9. Part H: transcript bubbles (#PR-TBD)
+## 9. Part H: transcript bubbles (#507)
 
 ### Case H1: indigo bubbles
 
