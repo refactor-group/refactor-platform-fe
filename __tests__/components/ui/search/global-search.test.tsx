@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
-import { GlobalSearch } from "@/components/ui/search/global-search";
+import { GlobalSearch, groupSearchHits } from "@/components/ui/search/global-search";
 import { useSearch, type SearchState } from "@/lib/api/search";
 import { TestProviders } from "@/test-utils/providers";
 import { Some, None } from "@/types/option";
 import { ItemStatus } from "@/types/general";
 import { SearchHitType, type SearchHit } from "@/types/search";
+import { TopicStatus } from "@/types/coaching-session-topic";
 
 vi.mock("@/lib/api/search", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/search")>();
@@ -46,6 +47,51 @@ const actionHit: SearchHit = {
   session_title: Some("Weekly sync"),
 };
 
+const sessionHit: SearchHit = {
+  type: SearchHitType.CoachingSession,
+  id: "sess-9",
+  score: 0.9,
+  title: "Weekly review",
+  snippet: None,
+  created_at: "2026-09-03T10:00:00Z",
+  updated_at: "2026-09-03T10:00:00Z",
+  organization_id: "org-1",
+  coaching_relationship_id: Some("rel-1"),
+  date: "2026-09-03T10:00:00",
+};
+
+const agreementHit: SearchHit = {
+  type: SearchHitType.Agreement,
+  id: "agr-1",
+  score: 0.4,
+  title: "Plan every Monday",
+  snippet: None,
+  created_at: "2026-09-01T10:00:00Z",
+  updated_at: "2026-09-01T10:00:00Z",
+  organization_id: "org-1",
+  coaching_relationship_id: Some("rel-1"),
+  coaching_session_id: Some("sess-2"),
+  session_date: None,
+  session_title: None,
+};
+
+const topicHit: SearchHit = {
+  type: SearchHitType.Topic,
+  id: "topic-1",
+  score: 0.2,
+  title: "Weekly energy",
+  snippet: None,
+  created_at: "2026-09-01T10:00:00Z",
+  updated_at: "2026-09-01T10:00:00Z",
+  organization_id: "org-1",
+  coaching_relationship_id: Some("rel-1"),
+  coaching_session_id: Some("sess-2"),
+  status: TopicStatus.Open,
+  priority: None,
+};
+
+const secondActionHit: SearchHit = { ...actionHit, id: "action-2", title: "Book the weekly slot" };
+
 const loaded = (hits: SearchHit[], nextCursor = None as ReturnType<typeof Some<string>> | typeof None): SearchState => ({
   kind: "loaded",
   query: "weekly",
@@ -60,8 +106,13 @@ function mockSearch(state: SearchState, loadMore = vi.fn()) {
   return loadMore;
 }
 
+async function expand() {
+  await userEvent.click(screen.getByRole("button", { name: "Open search" }));
+  return screen.getByRole("combobox", { name: "Search" });
+}
+
 async function typeQuery(text: string) {
-  const input = screen.getByRole("combobox", { name: "Search" });
+  const input = await expand();
   await userEvent.type(input, text);
   return input;
 }
@@ -110,12 +161,12 @@ describe("GlobalSearch", () => {
   it("navigates to the hit's page on select and clears the field", async () => {
     mockSearch(loaded([actionHit]));
     render(<GlobalSearch />, { wrapper: TestProviders });
-    const input = await typeQuery("weekly");
+    await typeQuery("weekly");
 
     await userEvent.click(screen.getByText("Draft the weekly plan template"));
 
     expect(push).toHaveBeenCalledWith("/coaching-sessions/sess-2?panel=actions&highlight=action-1");
-    expect(input).toHaveValue("");
+    expect(await expand()).toHaveValue("");
   });
 
   it("keeps the dropdown open while the pointer is pressed on a result", async () => {
@@ -179,17 +230,101 @@ describe("GlobalSearch", () => {
     expect(loadMore).toHaveBeenCalledTimes(1);
   });
 
-  it("focuses the field on Cmd+K and clears on Escape", async () => {
+  it("is collapsed to a magnifier by default", () => {
+    mockSearch({ kind: "idle" });
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    expect(screen.getByRole("button", { name: "Open search" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("expands and focuses the field when the magnifier is clicked", async () => {
+    mockSearch({ kind: "idle" });
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    const input = await expand();
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole("button", { name: "Open search" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["Cmd+K", { key: "k", metaKey: true }],
+    ["Ctrl+K", { key: "k", ctrlKey: true }],
+    ["/", { key: "/" }],
+  ])("expands and focuses on %s from the page", (_, init) => {
+    mockSearch({ kind: "idle" });
+    render(<GlobalSearch />, { wrapper: TestProviders });
+
+    fireEvent.keyDown(document.body, init);
+    expect(screen.getByRole("combobox", { name: "Search" })).toHaveFocus();
+  });
+
+  it("ignores Cmd+K typed inside another text field", () => {
+    mockSearch({ kind: "idle" });
+    render(
+      <>
+        <input aria-label="Notes" />
+        <GlobalSearch />
+      </>,
+      { wrapper: TestProviders }
+    );
+    const notes = screen.getByRole("textbox", { name: "Notes" });
+    notes.focus();
+
+    fireEvent.keyDown(notes, { key: "k", metaKey: true });
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(notes).toHaveFocus();
+  });
+
+  it("collapses on Escape with an empty query and returns focus to the magnifier", async () => {
+    mockSearch({ kind: "idle" });
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await expand();
+
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open search" })).toHaveFocus();
+  });
+
+  it("clears the query on Escape and stays open with focus in the field", async () => {
     mockSearch(loaded([goalHit]));
     render(<GlobalSearch />, { wrapper: TestProviders });
-    const input = screen.getByRole("combobox", { name: "Search" });
+    const input = await typeQuery("weekly");
 
-    fireEvent.keyDown(document.body, { key: "k", metaKey: true });
-    expect(input).toHaveFocus();
-
-    await userEvent.type(input, "weekly");
     await userEvent.keyboard("{Escape}");
     expect(input).toHaveValue("");
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveFocus();
+  });
+
+  it("collapses on blur with an empty query", async () => {
+    mockSearch({ kind: "idle" });
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    const input = await expand();
+
+    fireEvent.blur(input, { relatedTarget: null });
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open search" })).toBeInTheDocument();
+  });
+
+  it("stays expanded on blur with a query", async () => {
+    mockSearch(loaded([goalHit]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    const input = await typeQuery("weekly");
+
+    fireEvent.blur(input, { relatedTarget: null });
+    expect(screen.getByRole("combobox", { name: "Search" })).toHaveValue("weekly");
+    expect(screen.queryByText("Weekly planning habit")).not.toBeInTheDocument();
+  });
+
+  it("collapses after a hit is selected", async () => {
+    mockSearch(loaded([actionHit]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    await userEvent.click(screen.getByText("Draft the weekly plan template"));
+
+    expect(push).toHaveBeenCalledWith("/coaching-sessions/sess-2?panel=actions&highlight=action-1");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open search" })).toBeInTheDocument();
   });
 
   it("uses the design-system pill input", async () => {
@@ -197,11 +332,59 @@ describe("GlobalSearch", () => {
     render(<GlobalSearch />, { wrapper: TestProviders });
     const input = await typeQuery("weekly");
 
-    expect(input).toHaveClass("rounded-full", "bg-fill", "text-item");
-    expect(input).not.toHaveClass("rounded-md", "border-input");
+    expect(input).toHaveClass("rounded-full", "bg-fill", "text-item", "focus-visible:ring-1");
+    expect(input).not.toHaveClass("rounded-md", "border-input", "focus-visible:ring-2");
+    expect(input.closest("[cmdk-root]")?.querySelector("kbd")).toBeNull();
 
     const panel = input.parentElement?.nextElementSibling;
-    expect(panel).toHaveClass("rounded-popover", "shadow-popover");
+    expect(panel).toHaveClass("rounded-popover", "shadow-popover", "sm:w-[420px]");
     expect(panel).toHaveTextContent("Weekly planning habit");
+  });
+
+  it("groups results by kind, Sessions first, and arrows across groups", async () => {
+    mockSearch(loaded([topicHit, actionHit, sessionHit, goalHit, agreementHit]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    const headings = Array.from(document.querySelectorAll("[cmdk-group-heading]")).map(
+      (el) => el.textContent
+    );
+    expect(headings).toEqual(["Sessions", "Goals", "Actions", "Agreements", "Topics"]);
+
+    const row = (title: string) => screen.getByText(title).closest("[cmdk-item]");
+    expect(row("Weekly review")).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard("{ArrowDown}");
+    expect(row("Weekly planning habit")).toHaveAttribute("aria-selected", "true");
+    expect(row("Weekly review")).toHaveAttribute("aria-selected", "false");
+
+    await userEvent.keyboard("{Enter}");
+    expect(push).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("groupSearchHits", () => {
+  it("orders groups by kind and keeps the server's order within each", () => {
+    const groups = groupSearchHits([
+      topicHit,
+      actionHit,
+      sessionHit,
+      goalHit,
+      agreementHit,
+      secondActionHit,
+    ]);
+
+    expect(groups.map((g) => g.heading)).toEqual([
+      "Sessions",
+      "Goals",
+      "Actions",
+      "Agreements",
+      "Topics",
+    ]);
+    expect(groups[2].hits.map((h) => h.id)).toEqual(["action-1", "action-2"]);
+  });
+
+  it("omits kinds with no hits", () => {
+    const groups = groupSearchHits([actionHit, goalHit]);
+    expect(groups.map((g) => g.type)).toEqual([SearchHitType.Goal, SearchHitType.Action]);
   });
 });
