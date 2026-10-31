@@ -71,14 +71,6 @@ vi.mock('@/components/ui/share-session-link', () => ({
   default: () => <div>Share Link</div>
 }))
 
-vi.mock('@/lib/hooks/use-sidebar', () => ({
-  useSidebar: () => ({
-    collapse: vi.fn(),
-    expand: vi.fn(),
-    state: 'expanded',
-  }),
-}))
-
 vi.mock('@/components/ui/coaching-sessions/coaching-session-panel', () => ({
   CoachingSessionPanel: ({ afterSessionLock, noteSelection, onSectionChange }: any) => (
     <div

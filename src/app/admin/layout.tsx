@@ -3,8 +3,6 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/site.config";
 
 import { SiteHeader } from "@/components/ui/site-header";
-import { AppSidebar } from "@/components/ui/app-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { PageContainer } from "@/components/ui/page-container";
 
 export const metadata: Metadata = {
@@ -18,16 +16,11 @@ export default function AdminLayout({
   children: ReactNode;
 }>) {
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar productName={siteConfig.name} />
-        <SidebarInset className="min-w-0">
-          <SiteHeader />
-          <main className="flex-1 p-6 min-w-0">
-            <PageContainer>{children}</PageContainer>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    <div className="flex min-h-screen w-full flex-col">
+      <SiteHeader />
+      <main className="flex-1 p-6 min-w-0">
+        <PageContainer>{children}</PageContainer>
+      </main>
+    </div>
   );
 }
