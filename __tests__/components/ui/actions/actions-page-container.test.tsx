@@ -565,7 +565,7 @@ describe("ActionsPageContainer", () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
-          "Failed to delete action. Connection to service was lost."
+          "Couldn't delete the action · Check your connection and try again"
         );
       });
     });
@@ -585,7 +585,7 @@ describe("ActionsPageContainer", () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
-          "Failed to delete action."
+          "Couldn't delete the action"
         );
       });
     });
@@ -630,7 +630,7 @@ describe("ActionsPageContainer", () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
-          "Failed to delete action."
+          "Couldn't delete the action"
         );
       });
     });

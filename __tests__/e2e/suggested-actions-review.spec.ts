@@ -413,7 +413,7 @@ test.describe('Coach reviews suggested actions', () => {
     const panel = await openActionsPanel(page)
 
     await cardWith(panel, PLAIN).getByRole('button', { name: 'Dismiss', exact: true }).click()
-    await expect(page.getByText('Dismissed suggested action')).toBeVisible()
+    await expect(page.getByText(`Dismissed "${PLAIN}"`)).toBeVisible()
     expect(sent(backend, 'POST', '/sug-plain/dismiss')).toHaveLength(1)
 
     await page.getByRole('button', { name: 'Undo' }).click()

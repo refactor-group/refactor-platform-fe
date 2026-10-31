@@ -223,9 +223,7 @@ describe("CoachingSessionPanel — Topics wiring", () => {
     await user.keyboard("{Enter}")
 
     await waitFor(() => {
-      expect(sonnerToast.error).toHaveBeenCalledWith("Failed to add topic", {
-        description: "An error occurred while adding the topic.",
-      })
+      expect(sonnerToast.error).toHaveBeenCalledWith("Couldn't add the topic")
     })
   })
 

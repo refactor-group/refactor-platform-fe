@@ -137,7 +137,7 @@ describe("MemberCard – resend invite error handling", () => {
     await user.click(screen.getByRole("button", { name: /resend/i }));
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("Failed to resend invitation")
+      expect(toast.error).toHaveBeenCalledWith("Couldn't resend the invitation")
     );
   });
 });

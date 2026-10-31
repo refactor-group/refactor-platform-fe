@@ -251,7 +251,7 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Failed to update coaching session. Please try again."
+        "Couldn't update the coaching session · Try again"
       );
     });
   });
@@ -288,7 +288,7 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
     await waitFor(() => {
       expect(mockPush).not.toHaveBeenCalled();
       expect(toast.error).toHaveBeenCalledWith(
-        "Failed to update coaching session. Please try again."
+        "Couldn't update the coaching session · Try again"
       );
     });
   });

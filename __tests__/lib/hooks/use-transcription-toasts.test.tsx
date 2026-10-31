@@ -125,9 +125,9 @@ describe("useTranscriptionToasts — failures", () => {
 
     expect(toastError).toHaveBeenCalledTimes(1);
     const [title, opts] = toastError.mock.calls[0];
-    expect(title).toBe("Recording failed");
+    expect(title).toBe("Recording failed · The recording bot couldn't finish this session");
     expect(opts.duration).toBe(Infinity);
-    expect(opts.description).toBe("Bot couldn't join");
+    expect(opts).not.toHaveProperty("description");
   });
 
   it("fires a persistent error toast on transcription.status → Failed", () => {
@@ -141,9 +141,9 @@ describe("useTranscriptionToasts — failures", () => {
 
     expect(toastError).toHaveBeenCalledTimes(1);
     const [title, opts] = toastError.mock.calls[0];
-    expect(title).toBe("Transcription failed");
+    expect(title).toBe("Transcription failed · Couldn't create a transcript for this session");
     expect(opts.duration).toBe(Infinity);
-    expect(opts.description).toBe("AssemblyAI rejected the audio");
+    expect(opts).not.toHaveProperty("description");
   });
 
   it("does NOT fire the error toast on initial mount with status === Failed", () => {
