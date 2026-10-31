@@ -74,7 +74,7 @@ vi.mock("@/lib/api/organizations", () => ({
   })),
 }));
 
-// The sidebar's selected organization, which scopes the request.
+// The selected organization, which scopes the request.
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: vi.fn(() => ({
     currentOrganizationId: "org-1",

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DateTime } from "ts-luxon";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Video } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -421,10 +421,10 @@ export function JoinSessionPopover({
       }
     }}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <span className="hidden md:inline">Switch Session</span>
-          <span className="md:hidden">Switch</span>
-          <ChevronDown className="h-4 w-4" />
+        <Button variant="secondary" size="sm" aria-label="Join session" className="px-2.5 sm:px-3.5">
+          <Video />
+          <span className="hidden sm:inline">Join session</span>
+          <ChevronDown />
         </Button>
       </PopoverTrigger>
       <PopoverContent

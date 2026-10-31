@@ -1,6 +1,6 @@
 # Test Plan: Manually Testing the Design System Redesign
 
-Checks the Phase 1 design-system redesign layer by layer, matching the stacked PRs: tokens and themes, restyled primitives, status components, the toast pill, single-line toast copy, and (in later parts) the header and the Join session menu. Each part names the PR it covers; run a part against that layer or anything above it in the stack.
+Checks the Phase 1 design-system redesign layer by layer, matching the stacked PRs: tokens and themes, restyled primitives, status components, the toast pill, single-line toast copy, and the header, and (in a later part) the Join session menu. Each part names the PR it covers; run a part against that layer or anything above it in the stack.
 
 Results go in the PR for the layer under test, not in this plan.
 
@@ -9,7 +9,7 @@ Results go in the PR for the layer under test, not in this plan.
 1. Backend on `:4000` from current `main`, started with email off: `RESEND_API_KEY=` and `SESSION_REMINDER_EMAIL_TEMPLATE_ID=` both blank. Global search needs a backend build that includes the search endpoint.
 2. Frontend on the branch under test, `npm run dev` on `:3000`.
 3. Logins from `.env.local`: coach `PW_ORG_ADMIN_LOGIN_*`, coachee `PW_USER_LOGIN_*`.
-4. Theme switching: the header's theme toggle (Light, Dark, System). Run every part in **both** Light and Dark unless the case says otherwise.
+4. Theme switching: avatar menu › Appearance (Light, Dark, Auto). Run every part in **both** Light and Dark unless the case says otherwise.
 5. Forcing an error without changing data: in Chrome DevTools open **Network**, then **Block request URL**, and block the request the case names. Remove the block afterwards.
 6. Narrow-width checks: DevTools device toolbar at 375px wide.
 
@@ -33,9 +33,9 @@ In Dark, on a coaching session page, open an action's due-date editor in the sid
 
 **Pass:** "Done" is a lighter indigo than the primary buttons and is easy to read on the dark card.
 
-### Case A4: System follows the OS
+### Case A4: Auto follows the OS
 
-Set the toggle to System, then switch the OS between light and dark appearance.
+In the avatar menu, set Appearance to Auto, then switch the OS between light and dark appearance.
 
 **Pass:** the app follows the OS each time without a reload.
 
@@ -79,9 +79,9 @@ Open the "Switch Session" popover and its "Select a coachee…" dropdown. Look a
 
 ### Case B7: organization avatar
 
-Look at the organization initials at the bottom of the left sidebar, in both themes.
+Look at the organization tile at the left of the header and the organization list in the avatar menu, in both themes.
 
-**Pass:** it's a 28px square with rounded corners, not a circle. In Dark it's a neutral grey tile with light initials.
+**Pass:** the header tile is a 28px square with rounded corners, not a circle, and the menu tiles are the same shape at 22px. In Dark they're neutral grey tiles with light initials.
 
 ### Case B8: global search
 
@@ -196,3 +196,77 @@ With DevTools network throttling set to **Offline**, change an action's status o
 Delete a topic on a session page.
 
 **Pass:** the toast names the deleted topic in quotes and offers Undo. Undo restores the topic.
+
+## 7. Part F: global header (#504)
+
+### Case F1: desktop layout
+
+At 1280px wide, log in as the coach and open the dashboard.
+
+**Pass:** a 56px header with no sidebar anywhere. Left to right: the organization tile and name, a short divider, Dashboard and Actions pills, search, Join session (when you have more than one coaching relationship), and your avatar. Dashboard has a grey fill. Open Actions and the fill moves to Actions.
+
+### Case F2: no sidebar on any page
+
+Visit the dashboard, Actions, Settings, `/admin/organizations` (super admin), a coaching session page, an organization's members page and your profile.
+
+**Pass:** each page shows the same header and no sidebar. The session page fills the space to the left edge.
+
+### Case F3: organization tile
+
+Click the organization name in the header from the Actions page.
+
+**Pass:** it goes to the dashboard. The tile shows the organization logo, or its initials on a square grey tile.
+
+### Case F4: mobile layout
+
+At 375px wide, open the dashboard.
+
+**Pass:** the header shows the organization tile without the name, an Actions pill, search, the Join session icon (when shown) and your avatar. There is no Dashboard pill, no menu button, and the page doesn't scroll sideways.
+
+### Case F5: avatar menu as a coachee
+
+Log in with `PW_USER_LOGIN_*` and click your avatar.
+
+**Pass:** the menu shows your name and email, the Organization list with the current one checked, Profile, Appearance and Log out. There is no Members or Organizations entry, and Settings appears only if this user also coaches someone.
+
+### Case F6: avatar menu as an org admin
+
+Log in with `PW_ORG_ADMIN_LOGIN_*` and click your avatar.
+
+**Pass:** Members appears under the organization list and opens that organization's members page. Settings appears and opens Settings. There is no Organizations entry.
+
+### Case F7: avatar menu as a super admin
+
+Log in with `PW_SUPER_ADMIN_LOGIN_*` and click your avatar.
+
+**Pass:** both Members and Organizations appear. Organizations opens the platform organizations page.
+
+### Case F8: switch organization from the dashboard
+
+As a user in two or more organizations, open the avatar menu on the dashboard and pick another organization.
+
+**Pass:** the menu closes, the header tile shows the new organization, and the dashboard reloads for it.
+
+### Case F9: switch organization from a members page
+
+As an org admin of two organizations, open the first one's members page, then pick the second organization in the avatar menu.
+
+**Pass:** you stay on the members page, now for the second organization.
+
+### Case F10: remembers the last organization
+
+Switch to another organization, log out, then log back in as the same user.
+
+**Pass:** the header shows the organization you switched to.
+
+### Case F11: Appearance
+
+Open the avatar menu and pick Dark, then Light, then Auto. With Auto selected, switch the OS between light and dark appearance.
+
+**Pass:** each pick applies at once and the menu stays open. The picked option is highlighted. With Auto, the app follows the OS without a reload.
+
+### Case F12: keyboard
+
+Tab to your avatar and press Enter. Use the arrow keys to reach Dark in Appearance and press Enter, then press Esc.
+
+**Pass:** the menu opens on Enter, arrow keys reach every row including the three Appearance options, Enter switches to Dark, and Esc closes the menu with focus back on the avatar.
