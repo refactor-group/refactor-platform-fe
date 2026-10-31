@@ -85,40 +85,6 @@ function formatTimezoneLabel(timezone: string, baseTime?: DateTime): string {
 }
 
 /**
- * Format a date string in the user's timezone
- * Assumes the input dateString is in UTC and converts it to the user's timezone
- */
-export function formatDateInUserTimezone(
-  dateString: string,
-  timezone: string,
-  format?: string
-): string {
-  try {
-    // Parse as UTC first, then convert to user timezone
-    const dt = DateTime.fromISO(dateString, { zone: 'utc' });
-    if (!dt.isValid) {
-      // Try parsing as a generic date and assume UTC
-      const fallbackDt = DateTime.fromJSDate(new Date(dateString)).toUTC();
-      if (!fallbackDt.isValid) {
-        return dateString;
-      }
-      return fallbackDt.setZone(timezone).toLocaleString(
-        format ? undefined : DateTime.DATETIME_FULL
-      );
-    }
-    
-    const zonedDt = dt.setZone(timezone);
-    if (format) {
-      return zonedDt.toFormat(format);
-    }
-    return zonedDt.toLocaleString(DateTime.DATETIME_FULL);
-  } catch (error) {
-    console.warn(`Failed to format date ${dateString} in timezone ${timezone}:`, error);
-    return dateString;
-  }
-}
-
-/**
  * Format a date string in the user's timezone with a shorter format
  */
 export function formatDateInUserTimezoneShort(

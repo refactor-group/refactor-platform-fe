@@ -5,10 +5,9 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/components/lib/utils";
 import { OrgAvatar } from "@/components/ui/avatar";
-import { JoinSessionPopover } from "@/components/ui/join-session-popover";
+import { JoinSessionMenu } from "@/components/ui/join-session/join-session-menu";
 import { UserMenu } from "@/components/ui/user-menu";
 import { GlobalSearch } from "@/components/ui/search/global-search";
-import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useOrganizationSync } from "@/lib/hooks/use-organization-sync";
 import { useShowSessionSwitcher } from "@/lib/hooks/use-show-session-switcher";
@@ -85,14 +84,7 @@ function DestinationNav() {
 }
 
 function JoinSessionSlot() {
-  const currentCoachingRelationshipId = useCoachingRelationshipStateStore(
-    (state) => state.currentCoachingRelationshipId
-  );
   const showSessionSwitcher = useShowSessionSwitcher();
-
   if (!showSessionSwitcher) return null;
-
-  return (
-    <JoinSessionPopover defaultRelationshipId={currentCoachingRelationshipId || undefined} />
-  );
+  return <JoinSessionMenu />;
 }
