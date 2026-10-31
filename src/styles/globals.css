@@ -83,6 +83,22 @@
     /* Neutral avatar / org tile */
     --avatar: var(--fill);
     --avatar-foreground: 240 5.3% 26.1%;
+    --avatar-1: 244.6 48.1% 94.7%;
+    --avatar-1-foreground: 244.1 34.6% 42%;
+    --avatar-2: 211.4 60% 93.1%;
+    --avatar-2-foreground: 210.3 52.9% 36.7%;
+    --avatar-3: 197.1 38.9% 92.9%;
+    --avatar-3-foreground: 194 47.8% 31.6%;
+    --avatar-4: 136.4 26.8% 92%;
+    --avatar-4-foreground: 142 39% 30.2%;
+    --avatar-5: 150 35.3% 93.3%;
+    --avatar-5-foreground: 153.9 55.1% 27.1%;
+    --avatar-6: 39.3 67.4% 91.6%;
+    --avatar-6-foreground: 36 76.9% 30.6%;
+    --avatar-7: 6 71.4% 94.5%;
+    --avatar-7-foreground: 7.2 54% 39.2%;
+    --avatar-8: 290.8 39.4% 93.5%;
+    --avatar-8-foreground: 288 44.4% 33.1%;
 
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.05);
     --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05);
@@ -150,6 +166,22 @@
     --inverse-foreground: 240 5.3% 7.5%;
 
     --avatar-foreground: 240 5.9% 90%;
+    --avatar-1: var(--avatar);
+    --avatar-1-foreground: var(--avatar-foreground);
+    --avatar-2: var(--avatar);
+    --avatar-2-foreground: var(--avatar-foreground);
+    --avatar-3: var(--avatar);
+    --avatar-3-foreground: var(--avatar-foreground);
+    --avatar-4: var(--avatar);
+    --avatar-4-foreground: var(--avatar-foreground);
+    --avatar-5: var(--avatar);
+    --avatar-5-foreground: var(--avatar-foreground);
+    --avatar-6: var(--avatar);
+    --avatar-6-foreground: var(--avatar-foreground);
+    --avatar-7: var(--avatar);
+    --avatar-7-foreground: var(--avatar-foreground);
+    --avatar-8: var(--avatar);
+    --avatar-8-foreground: var(--avatar-foreground);
 
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.45);
 
