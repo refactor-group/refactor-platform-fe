@@ -1,7 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SidebarState } from "@/types/sidebar";
 
 const h = vi.hoisted(() => ({
   ORGANIZATIONS: [
@@ -18,12 +16,6 @@ const h = vi.hoisted(() => ({
   lastOrganizationIdByUser: {} as Record<string, string>,
   rememberOrganizationForUser: vi.fn(),
   forgetOrganizationForUser: vi.fn(),
-  sidebar: {
-    state: "expanded" as string,
-    isMobile: false,
-    setOpenMobile: vi.fn(),
-    expand: vi.fn(),
-  },
 }));
 
 vi.mock("@/lib/api/organizations", () => ({
@@ -56,37 +48,27 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
     selector({ userId: "user-1", isLoggedIn: true, setIsACoach: vi.fn() }),
 }));
 
-vi.mock("@/components/ui/sidebar", () => ({
-  useSidebar: () => h.sidebar,
-}));
-
-import { OrganizationSwitcher } from "@/components/ui/organization-switcher";
+import { useOrganizationSync } from "@/lib/hooks/use-organization-sync";
 
 function resetMocks() {
   vi.clearAllMocks();
   h.listState = { organizations: h.ORGANIZATIONS, isLoading: false, isError: false };
   h.currentOrganizationId = "";
   h.lastOrganizationIdByUser = {};
-  h.sidebar = {
-    state: SidebarState.Expanded,
-    isMobile: false,
-    setOpenMobile: vi.fn(),
-    expand: vi.fn(),
-  };
 }
 
-// The switcher decides whether membership is knowable before handing it to the
+// The sync hook decides whether membership is knowable before handing it to the
 // reconciler. Getting that wrong in the "still loading" direction is the
 // dangerous case: an empty list would look like "you belong nowhere" and clear
 // a perfectly valid selection.
-describe("OrganizationSwitcher — membership gating", () => {
+describe("useOrganizationSync — membership gating", () => {
   beforeEach(resetMocks);
 
   it("leaves the selection alone while the organization list is loading", () => {
     h.listState = { organizations: [], isLoading: true, isError: false };
     h.currentOrganizationId = "org-1";
 
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.setCurrentOrganizationId).not.toHaveBeenCalled();
   });
@@ -99,7 +81,7 @@ describe("OrganizationSwitcher — membership gating", () => {
     };
     h.currentOrganizationId = "org-1";
 
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.setCurrentOrganizationId).not.toHaveBeenCalled();
   });
@@ -108,7 +90,7 @@ describe("OrganizationSwitcher — membership gating", () => {
     h.listState = { organizations: [], isLoading: true, isError: false };
     h.currentOrganizationId = "";
 
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.setCurrentOrganizationId).not.toHaveBeenCalled();
   });
@@ -116,7 +98,7 @@ describe("OrganizationSwitcher — membership gating", () => {
   it("reconciles once the list has genuinely loaded", () => {
     h.currentOrganizationId = "org-gone";
 
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.setCurrentOrganizationId).toHaveBeenCalledWith("org-1");
   });
@@ -124,19 +106,19 @@ describe("OrganizationSwitcher — membership gating", () => {
   it("keeps a selection that is still in the loaded list", () => {
     h.currentOrganizationId = "org-2";
 
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.setCurrentOrganizationId).not.toHaveBeenCalled();
   });
 });
 
-describe("OrganizationSwitcher — remembering the last organization", () => {
+describe("useOrganizationSync — remembering the last organization", () => {
   beforeEach(resetMocks);
 
   it("selects the current user's remembered organization on login", () => {
     h.lastOrganizationIdByUser = { "user-1": "org-2" };
 
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.setCurrentOrganizationId).toHaveBeenCalledWith("org-2");
     expect(h.setCurrentOrganizationId).not.toHaveBeenCalledWith("org-1");
@@ -145,8 +127,8 @@ describe("OrganizationSwitcher — remembering the last organization", () => {
   it("does not reconcile again on an unrelated re-render", () => {
     h.lastOrganizationIdByUser = { "user-1": "org-2" };
 
-    const { rerender } = render(<OrganizationSwitcher />);
-    rerender(<OrganizationSwitcher />);
+    const { rerender } = renderHook(() => useOrganizationSync());
+    rerender();
 
     expect(h.setCurrentOrganizationId).toHaveBeenCalledTimes(1);
   });
@@ -154,7 +136,7 @@ describe("OrganizationSwitcher — remembering the last organization", () => {
   it("ignores another user's remembered organization", () => {
     h.lastOrganizationIdByUser = { "user-2": "org-2" };
 
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.setCurrentOrganizationId).toHaveBeenCalledWith("org-1");
   });
@@ -162,49 +144,15 @@ describe("OrganizationSwitcher — remembering the last organization", () => {
   it("forgets the user's remembered organization once they leave it", () => {
     h.lastOrganizationIdByUser = { "user-1": "org-gone" };
 
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.forgetOrganizationForUser).toHaveBeenCalledWith("user-1");
     expect(h.setCurrentOrganizationId).toHaveBeenCalledWith("org-1");
   });
 
   it("does not remember an automatic fallback", () => {
-    render(<OrganizationSwitcher />);
+    renderHook(() => useOrganizationSync());
 
     expect(h.rememberOrganizationForUser).not.toHaveBeenCalled();
-  });
-
-  it("remembers an organization picked from the dropdown", async () => {
-    const user = userEvent.setup();
-    h.currentOrganizationId = "org-1";
-    render(<OrganizationSwitcher />);
-
-    await user.click(screen.getByRole("button", { name: /organization/i }));
-    await user.click(
-      await screen.findByRole("menuitem", { name: /Beta Inc/ })
-    );
-
-    expect(h.rememberOrganizationForUser).toHaveBeenCalledWith(
-      "user-1",
-      "org-2"
-    );
-    expect(h.setCurrentOrganizationId).toHaveBeenCalledWith("org-2");
-  });
-
-  it("remembers an organization picked from the mobile sheet", async () => {
-    const user = userEvent.setup();
-    h.sidebar.isMobile = true;
-    h.currentOrganizationId = "org-1";
-    render(<OrganizationSwitcher />);
-
-    await user.click(screen.getByRole("button", { name: /organization/i }));
-    await user.click(
-      await screen.findByRole("button", { name: /Beta Inc/ })
-    );
-
-    expect(h.rememberOrganizationForUser).toHaveBeenCalledWith(
-      "user-1",
-      "org-2"
-    );
   });
 });

@@ -149,7 +149,7 @@ describe("JoinSessionPopover", () => {
       </TestProviders>
     );
 
-    expect(screen.getByText("Switch Session")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /join session/i })).toBeInTheDocument();
   });
 
   it("opens popover on click and shows section headers", () => {
@@ -159,7 +159,7 @@ describe("JoinSessionPopover", () => {
       </TestProviders>
     );
 
-    fireEvent.click(screen.getByText("Switch Session"));
+    fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
     expect(screen.getByText("Upcoming Sessions")).toBeInTheDocument();
     expect(screen.getByText("Other Sessions")).toBeInTheDocument();
@@ -172,7 +172,7 @@ describe("JoinSessionPopover", () => {
       </TestProviders>
     );
 
-    fireEvent.click(screen.getByText("Switch Session"));
+    fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
     expect(
       screen.getByText("No upcoming sessions")
@@ -196,7 +196,7 @@ describe("JoinSessionPopover", () => {
       </TestProviders>
     );
 
-    fireEvent.click(screen.getByText("Switch Session"));
+    fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
     // Should show coachee name (the "other" person, since user-1 is the coach)
     expect(screen.getByText("Coachee Jones")).toBeInTheDocument();
@@ -234,7 +234,7 @@ describe("JoinSessionPopover", () => {
       </TestProviders>
     );
 
-    fireEvent.click(screen.getByText("Switch Session"));
+    fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
     // The second session button should have the highlight ring class
     const sessionButtons = screen.getAllByRole("button").filter(
@@ -262,7 +262,7 @@ describe("JoinSessionPopover", () => {
       </TestProviders>
     );
 
-    fireEvent.click(screen.getByText("Switch Session"));
+    fireEvent.click(screen.getByRole("button", { name: /join session/i }));
     fireEvent.click(screen.getByText("Coachee Jones"));
 
     expect(mockPush).toHaveBeenCalledWith("/coaching-sessions/session-nav");
@@ -295,7 +295,7 @@ describe("JoinSessionPopover", () => {
       </TestProviders>
     );
 
-    fireEvent.click(screen.getByText("Switch Session"));
+    fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
     // The relationship select should have a trigger
     expect(screen.getByText("Select a coachee...")).toBeInTheDocument();
@@ -308,7 +308,7 @@ describe("JoinSessionPopover", () => {
       </TestProviders>
     );
 
-    fireEvent.click(screen.getByText("Switch Session"));
+    fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
     expect(useTodaysSessions).toHaveBeenCalledWith([
       CoachingSessionInclude.Relationship,
@@ -344,7 +344,7 @@ describe("JoinSessionPopover", () => {
         </TestProviders>
       );
 
-      fireEvent.click(screen.getByText("Switch Session"));
+      fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
       // Open the relationship Select and pick Alice Doe
       fireEvent.click(screen.getByText("Select a coachee..."));
@@ -474,7 +474,7 @@ describe("JoinSessionPopover", () => {
         </TestProviders>
       );
 
-      fireEvent.click(screen.getByText("Switch Session"));
+      fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
       // Browse section content should be visible (expanded)
       expect(screen.getByText("Select a coachee...")).toBeInTheDocument();
@@ -517,7 +517,7 @@ describe("JoinSessionPopover", () => {
         </TestProviders>
       );
 
-      fireEvent.click(screen.getByText("Switch Session"));
+      fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
       // Browse section content should NOT be visible (collapsed)
       expect(screen.queryByText("Select a coachee...")).not.toBeInTheDocument();
@@ -560,7 +560,7 @@ describe("JoinSessionPopover", () => {
         </TestProviders>
       );
 
-      fireEvent.click(screen.getByText("Switch Session"));
+      fireEvent.click(screen.getByRole("button", { name: /join session/i }));
 
       // Initially collapsed
       expect(screen.queryByText("Select a coachee...")).not.toBeInTheDocument();

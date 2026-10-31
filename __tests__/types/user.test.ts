@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   canAddExistingMembers,
   getUserRoleForOrganization,
+  isAdminOrSuperAdmin,
   parseUser,
   Role,
 } from '@/types/user';
-import type { UserRole } from '@/types/user';
+import type { UserRole, UserRoleState } from '@/types/user';
 
 describe('parseUser', () => {
   it('falls back to 60 for default_coaching_session_duration_minutes when the upstream payload omits it', () => {
@@ -197,5 +198,55 @@ describe('canAddExistingMembers', () => {
   it('is false for a plain member and for no roles at all', () => {
     expect(canAddExistingMembers([role(Role.User, 'org-1')])).toBe(false);
     expect(canAddExistingMembers([])).toBe(false);
+  });
+});
+
+describe('isAdminOrSuperAdmin', () => {
+  it('should return true for Admin users', () => {
+    const adminRoleState: UserRoleState = {
+      status: 'success',
+      role: Role.Admin,
+      hasAccess: true,
+    };
+    expect(isAdminOrSuperAdmin(adminRoleState)).toBe(true);
+  });
+
+  it('should return true for SuperAdmin users', () => {
+    const superAdminRoleState: UserRoleState = {
+      status: 'success',
+      role: Role.SuperAdmin,
+      hasAccess: true,
+    };
+    expect(isAdminOrSuperAdmin(superAdminRoleState)).toBe(true);
+  });
+
+  it('should return false for regular User role', () => {
+    const userRoleState: UserRoleState = {
+      status: 'success',
+      role: Role.User,
+      hasAccess: true,
+    };
+    expect(isAdminOrSuperAdmin(userRoleState)).toBe(false);
+  });
+
+  it('should return false when user has no access', () => {
+    const noAccessRoleState: UserRoleState = {
+      status: 'no_access',
+      role: null,
+      hasAccess: false,
+      reason: 'NO_ORG_ACCESS',
+      organizationId: 'org-1',
+    };
+    expect(isAdminOrSuperAdmin(noAccessRoleState)).toBe(false);
+  });
+
+  it('should return false when no organization is selected', () => {
+    const noOrgRoleState: UserRoleState = {
+      status: 'no_org_selected',
+      role: null,
+      hasAccess: false,
+      reason: 'NO_ORG_SELECTED',
+    };
+    expect(isAdminOrSuperAdmin(noOrgRoleState)).toBe(false);
   });
 });

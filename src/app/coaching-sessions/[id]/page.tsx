@@ -50,8 +50,6 @@ import { FocusedPanel } from "@/types/coaching-session-layout";
 
 import { DateTime } from "ts-luxon";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { useSidebar } from "@/lib/hooks/use-sidebar";
-import { SidebarState, StateChangeSource } from "@/types/sidebar";
 
 // Width of the shared left side panel (Topics / Goals / Actions / Agreements).
 // One value drives all four sections so spacing stays consistent.
@@ -250,26 +248,6 @@ export default function CoachingSessionsPage() {
       layout.openTranscript();
     },
   });
-
-  // Auto-collapse main sidebar on coaching session page to maximize workspace,
-  // and restore the previous state when leaving.
-  const { collapse, state: sidebarState, expand } = useSidebar();
-  const previousSidebarState = useRef<SidebarState | null>(null);
-
-  useEffect(() => {
-    if (previousSidebarState.current === null) {
-      previousSidebarState.current = sidebarState;
-    }
-    if (sidebarState === SidebarState.Expanded) {
-      collapse(StateChangeSource.SystemInitialization);
-    }
-
-    return () => {
-      if (previousSidebarState.current === SidebarState.Expanded) {
-        expand(StateChangeSource.SystemInitialization);
-      }
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-sync relationship ID when session data loads
   // This ensures the relationship selector always matches the current session
