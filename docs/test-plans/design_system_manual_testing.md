@@ -38,3 +38,53 @@ In Dark, on a coaching session page, open an action's due-date editor in the sid
 Set the toggle to System, then switch the OS between light and dark appearance.
 
 **Pass:** the app follows the OS each time without a reload.
+
+## 3. Part B: primitives (#495)
+
+### Case B1: buttons are pills
+
+On the dashboard and a coaching session page, look at the primary, secondary and ghost buttons.
+
+**Pass:** every button has fully rounded ends. Primary is indigo, secondary is a light grey fill with no border, and ghost buttons have no fill until hovered.
+
+### Case B2: button text size
+
+In DevTools, inspect "Add New" on the dashboard and check its computed `font-size`.
+
+**Pass:** 13.5px, not 16px.
+
+### Case B3: disabled primary
+
+On a coaching session page, clear the "Add a topic…" input.
+
+**Pass:** the round "+" button next to it is pale indigo, not a faded dark button.
+
+### Case B4: icon buttons
+
+Look at the icon-only buttons (the header's theme toggle, the clear "×" in search).
+
+**Pass:** they're circular.
+
+### Case B5: cards
+
+Open a coaching session page.
+
+**Pass:** the Topics and Notes panels have 16px rounded corners and a soft shadow in Light. In Dark their borders match the rest of the dark UI.
+
+### Case B6: menus and inputs
+
+Open the "Switch Session" popover and its "Select a coachee…" dropdown. Look at any text input.
+
+**Pass:** the popover and dropdown have 14px rounded corners and a soft shadow. Inputs and select triggers have 10px corners.
+
+### Case B7: organization avatar
+
+Look at the organization initials at the bottom of the left sidebar, in both themes.
+
+**Pass:** it's a 28px square with rounded corners, not a circle. In Dark it's a neutral grey tile with light initials.
+
+### Case B8: global search
+
+Look at the search box in the header, then click into it and type a query.
+
+**Pass:** at rest it's a light grey pill with no border. While focused it turns the card colour with a focus ring. The results panel has 14px rounded corners and a soft shadow.
