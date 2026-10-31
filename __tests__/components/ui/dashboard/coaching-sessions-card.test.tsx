@@ -165,10 +165,7 @@ describe("CoachingSessionsCard — delete flow", () => {
     );
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith(
-        "Failed to delete session",
-        expect.objectContaining({ description: "network down" })
-      );
+      expect(mockToastError).toHaveBeenCalledWith("Couldn't delete the session · Try again");
     });
     expect(mockSWRMutate).not.toHaveBeenCalled();
     await waitFor(() => {

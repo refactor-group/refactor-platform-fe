@@ -97,7 +97,7 @@ export const MeetingIntegrationSection: FC = () => {
       setSelectedProvider(null);
       toast.success(`${PROVIDER_LABELS[connectedProvider]} account disconnected.`);
     } catch {
-      toast.error(`Failed to disconnect ${PROVIDER_LABELS[connectedProvider]} account.`);
+      toast.error(`Couldn't disconnect your ${PROVIDER_LABELS[connectedProvider]} account`);
     } finally {
       setIsDisconnecting(false);
     }

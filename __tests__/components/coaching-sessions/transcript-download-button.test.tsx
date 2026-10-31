@@ -133,49 +133,49 @@ describe("TranscriptDownloadButton — failure messages", () => {
     renderButton(ALL);
     fireEvent.click(screen.getByRole("button", { name: "Download transcript" }));
     await waitFor(() => expect(toastError).toHaveBeenCalled());
-    return toastError.mock.calls[0][1] as { description: string };
+    return toastError.mock.calls[0][0] as string;
   }
 
   it("never silently downloads everything when a role could not be identified", async () => {
-    const body = await clickWith({
+    const message = await clickWith({
       status: Some(422),
       slug: Some("speaker_not_identified"),
     });
     expect(saveBlobAs).not.toHaveBeenCalled();
-    expect(body.description).toMatch(/Switch to All/i);
+    expect(message).toBe("Couldn't tell the speakers apart · Switch to All and try again");
   });
 
   it("explains a transcript that is still processing", async () => {
-    const body = await clickWith({
+    const message = await clickWith({
       status: Some(409),
       slug: Some("transcription_not_completed"),
     });
-    expect(body.description).toMatch(/still being prepared/i);
+    expect(message).toBe("This transcript is still being prepared");
   });
 
   it("explains a missing transcript", async () => {
-    const body = await clickWith({
+    const message = await clickWith({
       status: Some(404),
       slug: Some("transcription_not_found"),
     });
-    expect(body.description).toMatch(/no longer available/i);
+    expect(message).toBe("This transcript is no longer available");
   });
 
   it("explains a forbidden transcript from the status alone", async () => {
-    const body = await clickWith({ status: Some(403), slug: None });
-    expect(body.description).toMatch(/do not have access/i);
+    const message = await clickWith({ status: Some(403), slug: None });
+    expect(message).toBe("You don't have access to this transcript");
   });
 
   it("falls back to generic copy for an unrecognized failure", async () => {
-    const body = await clickWith({ status: None, slug: None });
-    expect(body.description).toMatch(/something went wrong/i);
+    const message = await clickWith({ status: None, slug: None });
+    expect(message).toBe("Couldn't download the transcript · Something went wrong, try again");
   });
 
   it("keeps technical detail out of every message", async () => {
-    const body = await clickWith({
+    const message = await clickWith({
       status: Some(422),
       slug: Some("speaker_not_identified"),
     });
-    expect(body.description).not.toMatch(/422|speaker_not_identified|coach/);
+    expect(message).not.toMatch(/422|speaker_not_identified|coach/);
   });
 });

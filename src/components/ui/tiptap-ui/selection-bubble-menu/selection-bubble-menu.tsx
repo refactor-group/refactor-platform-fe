@@ -140,7 +140,7 @@ export function SelectionBubbleMenu({
       await navigator.clipboard.writeText(text);
       toast("Copied to clipboard");
     } catch {
-      toast.error("Failed to copy text");
+      toast.error("Couldn't copy the text");
     }
   }, [getSelectedText]);
 

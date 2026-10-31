@@ -59,8 +59,7 @@ export function TranscriptDownloadButton({
 
     result.match(
       (file) => saveBlobAs(file.blob, file.filename),
-      (failure) =>
-        toast.error("Download failed", { description: describe(failure) })
+      (failure) => toast.error(describe(failure))
     );
   }
 
@@ -98,15 +97,15 @@ function describe(failure: DownloadFailure): string {
   if (failure.slug.some) {
     switch (failure.slug.val) {
       case "speaker_not_identified":
-        return "We could not tell who said what in this transcript. Switch to All and try again.";
+        return "Couldn't tell the speakers apart · Switch to All and try again";
       case "transcription_not_completed":
-        return "This transcript is still being prepared.";
+        return "This transcript is still being prepared";
       case "transcription_not_found":
-        return "This transcript is no longer available.";
+        return "This transcript is no longer available";
     }
   }
   if (failure.status.some && failure.status.val === 403) {
-    return "You do not have access to this transcript.";
+    return "You don't have access to this transcript";
   }
-  return "Something went wrong. Please try again.";
+  return "Couldn't download the transcript · Something went wrong, try again";
 }

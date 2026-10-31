@@ -90,10 +90,8 @@ export function JoinMeetingButton({
       // Synchronous window.open avoids pop-up blockers; SWR optimistic
       // mutate transitions the button to the active view.
       openMeeting();
-      void startRecording(meetingUrl).catch((err) =>
-        toast.error("Couldn't start transcription.", {
-          description: err instanceof Error ? err.message : undefined,
-        })
+      void startRecording(meetingUrl).catch(() =>
+        toast.error("Couldn't start transcription")
       );
     };
     return (
@@ -113,11 +111,8 @@ export function JoinMeetingButton({
       onStop={
         isLive
           ? () =>
-              stopRecording().catch((err) =>
-                toast.error("Couldn't stop recording.", {
-                  description:
-                    err instanceof Error ? err.message : undefined,
-                })
+              stopRecording().catch(() =>
+                toast.error("Couldn't stop recording")
               )
           : undefined
       }

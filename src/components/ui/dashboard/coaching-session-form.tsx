@@ -307,7 +307,7 @@ export default function CoachingSessionForm({
         } else if (isForbiddenError(error)) {
           message = PERMISSION_DENIED_MESSAGE;
         } else {
-          message = `Failed to ${mode} coaching session. Please try again.`;
+          message = `Couldn't ${mode} the coaching session · Try again`;
         }
         toast.error(message);
         console.error(`Failed to ${mode} coaching session:`, error);

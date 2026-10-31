@@ -269,8 +269,7 @@ export function ActionSectionContent({
 
   const offerUndo = (suggestion: ActionSuggestion) => {
     if (!onSuggestionRestore) return;
-    toast("Dismissed suggested action", {
-      description: `"${actionPreview(suggestion.proposal)}"`,
+    toast(`Dismissed "${actionPreview(suggestion.proposal)}"`, {
       duration: 6000,
       action: {
         label: "Undo",

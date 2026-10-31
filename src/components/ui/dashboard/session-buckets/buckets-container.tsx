@@ -181,9 +181,7 @@ export function BucketsContainer({
 
   useEffect(() => {
     if (countsError && pendingDirection) {
-      sonnerToast.error("Couldn't load additional sessions", {
-        description: "Please try again.",
-      });
+      sonnerToast.error("Couldn't load more sessions · Try again");
       setPendingDirection(undefined);
     }
   }, [countsError, pendingDirection]);

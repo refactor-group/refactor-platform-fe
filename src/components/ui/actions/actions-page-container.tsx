@@ -49,14 +49,14 @@ function parseEnum<T extends string>(
 }
 
 /** Maps a failed action mutation to a user-facing message. `action` reads as
- * the verb phrase in "Failed to <action>." (e.g. "update status"). */
+ * the verb phrase in "Couldn't <action>" (e.g. "update the status"). */
 function mutationErrorMessage(err: unknown, action: string): string {
   if (err instanceof EntityApiError) {
     if (err.isForbidden()) return PERMISSION_DENIED_MESSAGE;
     if (err.isNetworkError())
-      return `Failed to ${action}. Connection to service was lost.`;
+      return `Couldn't ${action} · Check your connection and try again`;
   }
-  return `Failed to ${action}.`;
+  return `Couldn't ${action}`;
 }
 
 interface ActionsPageContainerProps {
@@ -223,7 +223,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         // No explicit refresh() — the optimistic update already moved the card
         // visually, and SWR will revalidate on its own schedule.
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update status"));
+        toast.error(mutationErrorMessage(err, "update the status"));
         throw err; // Re-throw so the board can roll back optimistic updates
       }
     },
@@ -239,7 +239,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, { ...ctx.action, due_by: Some(newDueBy) });
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update due date"));
+        toast.error(mutationErrorMessage(err, "update the due date"));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -254,7 +254,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, { ...ctx.action, assignee_ids: assigneeIds });
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update assignees"));
+        toast.error(mutationErrorMessage(err, "update the assignees"));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -275,7 +275,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, updated);
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update action"));
+        toast.error(mutationErrorMessage(err, "update the action"));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -291,7 +291,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, updated);
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update goal link"));
+        toast.error(mutationErrorMessage(err, "update the goal link"));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -303,7 +303,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await deleteAction(id);
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "delete action"));
+        toast.error(mutationErrorMessage(err, "delete the action"));
       }
     },
     [deleteAction, refresh]
