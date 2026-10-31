@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -96,7 +97,8 @@ describe("Google OAuth Flow Integration", () => {
 
       await waitFor(() => {
         expect(mockToastSuccess).toHaveBeenCalledWith(
-          "Google account connected successfully."
+          "Google account connected",
+          { id: "google-connected" }
         );
       });
 
@@ -104,6 +106,26 @@ describe("Google OAuth Flow Integration", () => {
       expect(mockReplace).toHaveBeenCalledWith("/settings/integrations", {
         scroll: false,
       });
+    });
+
+    it("shows one replaceable connected toast under Strict Mode", async () => {
+      vi.mocked(useSearchParams).mockReturnValue(
+        new URLSearchParams("google_connected=true") as never
+      );
+
+      render(
+        <StrictMode>
+          <IntegrationsPage />
+        </StrictMode>
+      );
+
+      await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+      for (const call of mockToastSuccess.mock.calls) {
+        expect(call).toEqual([
+          "Google account connected",
+          { id: "google-connected" },
+        ]);
+      }
     });
 
     it("shows success toast and refreshes when returning from Zoom OAuth", async () => {
@@ -115,7 +137,8 @@ describe("Google OAuth Flow Integration", () => {
 
       await waitFor(() => {
         expect(mockToastSuccess).toHaveBeenCalledWith(
-          "Zoom account connected successfully."
+          "Zoom account connected",
+          { id: "zoom-connected" }
         );
       });
 
@@ -136,7 +159,8 @@ describe("Google OAuth Flow Integration", () => {
 
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith(
-          "Google account connection was cancelled."
+          "Google connection cancelled",
+          { id: "google-error" }
         );
       });
 
@@ -154,7 +178,23 @@ describe("Google OAuth Flow Integration", () => {
 
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith(
-          "Couldn't connect your Google account · Try again"
+          "Couldn't connect your Google account · Try again",
+          { id: "google-error" }
+        );
+      });
+    });
+
+    it("shows error toast for Google invalid_state", async () => {
+      vi.mocked(useSearchParams).mockReturnValue(
+        new URLSearchParams("google_error=invalid_state") as never
+      );
+
+      render(<IntegrationsPage />);
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith(
+          "The connection took too long · Try again",
+          { id: "google-error" }
         );
       });
     });
@@ -168,7 +208,8 @@ describe("Google OAuth Flow Integration", () => {
 
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith(
-          "An unexpected error occurred connecting your Google account."
+          "Couldn't connect your Google account · Try again",
+          { id: "google-error" }
         );
       });
     });
@@ -182,7 +223,8 @@ describe("Google OAuth Flow Integration", () => {
 
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith(
-          "Zoom account connection was cancelled."
+          "Zoom connection cancelled",
+          { id: "zoom-error" }
         );
       });
     });

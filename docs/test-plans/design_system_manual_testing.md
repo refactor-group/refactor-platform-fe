@@ -197,6 +197,12 @@ Delete a topic on a session page.
 
 **Pass:** the toast names the deleted topic in quotes and offers Undo. Undo restores the topic.
 
+### Case E4: one connected toast
+
+Connect Google from Settings › Integrations.
+
+**Pass:** exactly one "Google account connected" toast.
+
 ## 7. Part F: global header (#504)
 
 ### Case F1: desktop layout

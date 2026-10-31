@@ -325,7 +325,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <p>Failed to load actions. Please try again later.</p>
+        <p>Couldn&apos;t load your actions. Refresh the page to try again.</p>
       </div>
     );
   }
