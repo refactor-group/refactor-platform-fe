@@ -319,7 +319,7 @@ Turn on Reduce Motion (macOS System Settings › Accessibility › Display), the
 
 **Pass:** the field appears and disappears at full width at once, with no widening animation.
 
-## 8. Part G: Join session menu (#PR-TBD)
+## 8. Part G: Join session menu (#506)
 
 Requires a backend build that includes rs#459 (`/coaching_sessions/nearest`). This part also covers the menu's building blocks from #503 (dots, strip, carousel, rows, Today block), which had no part of its own.
 
