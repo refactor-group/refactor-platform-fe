@@ -25,6 +25,30 @@ export { CoachingSessionInclude };
 
 const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
 
+/** A window of sessions around an instant, in one coaching relationship. */
+export interface NearestWindow {
+  relationshipId: Id;
+  /** A session's `date` verbatim, or an RFC 3339 instant. */
+  around: string;
+  before: number;
+  after: number;
+  include?: CoachingSessionInclude[];
+}
+
+export interface NearestQuery extends NearestWindow {
+  userId: Id;
+}
+
+function nearestParams(window: NearestWindow): Record<string, string> {
+  return {
+    coaching_relationship_id: window.relationshipId,
+    around: window.around,
+    before: String(window.before),
+    after: String(window.after),
+    ...(window.include && window.include.length > 0 && { include: window.include.join(",") }),
+  };
+}
+
 /**
  * API client for coaching session-related operations.
  *
@@ -253,6 +277,27 @@ export const CoachingSessionApi = {
 
     return CoachingSessionApi.listNested(userId, { params });
   },
+
+  /**
+   * Fetches the `before` sessions just before `around` and the `after` sessions
+   * at or after it, in one coaching relationship, sorted date DESC.
+   *
+   * @param around A session's naive UTC `date`, or an RFC 3339 instant
+   * @param before 0..10
+   * @param after 0..10
+   */
+  listNearestForUser: async (
+    userId: Id,
+    window: NearestWindow
+  ): Promise<EnrichedCoachingSession[]> =>
+    (
+      await EntityApi.listNestedFn<any>(
+        USERS_BASEURL,
+        userId,
+        "coaching_sessions/nearest",
+        { params: nearestParams(window) }
+      )
+    ).map(transformCoachingSession),
 
   listCountsForUser: async (
     userId: Id,
@@ -537,6 +582,32 @@ export const useEnrichedCoachingSessionsForUserCounts = (
   return {
     counts: entities,
     isLoading: userId ? isLoading : false,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * Sessions nearest an instant for one coaching relationship. `None` skips the
+ * fetch; every query field is in the SWR key.
+ */
+export const useNearestCoachingSessions = (query: Option<NearestQuery>) => {
+  const url = query.some
+    ? `${USERS_BASEURL}/${query.val.userId}/coaching_sessions/nearest`
+    : "";
+  const params = query.some ? nearestParams(query.val) : null;
+
+  const fetcher = () =>
+    query.some
+      ? CoachingSessionApi.listNearestForUser(query.val.userId, query.val)
+      : Promise.resolve([]);
+
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<EnrichedCoachingSession>(url, fetcher, params);
+
+  return {
+    sessions: entities,
+    isLoading: query.some ? isLoading : false,
     isError,
     refresh,
   };

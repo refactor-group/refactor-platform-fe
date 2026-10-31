@@ -68,13 +68,6 @@ export function actionStatusToString(status: ItemStatus): string {
   }
 }
 
-/// Given a valid ISO formatted date time string (timestampz in Postgresql types),
-/// return a valid DateTime object instance.
-export function getDateTimeFromString(dateTime: string): DateTime {
-  const dt = dateTime.trim();
-  return dt.trim().length > 0 ? DateTime.fromISO(dt) : DateTime.now();
-}
-
 // Type-safe transformation function with runtime validation that ensures
 // that raw ISO date time stamps are transformed into valid ts-luxon DateTime
 // instances.

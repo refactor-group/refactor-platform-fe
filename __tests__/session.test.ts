@@ -5,7 +5,7 @@ import {
   getUrgencyMessage,
   selectNextUpcomingSession,
   getSessionParticipantInfo,
-  getSessionParticipantName,
+  formatSessionTime,
   CoachingSessionBuckets,
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
@@ -349,39 +349,13 @@ describe("getSessionParticipantInfo", () => {
   });
 });
 
-describe("getSessionParticipantName", () => {
-  // Happy-path coach/coachee cases are covered by getSessionParticipantInfo tests
-  // above; this function now delegates to that. These tests exercise the
-  // behavior unique to the name variant: null → "Unknown" and the terse
-  // role-label collapse when the counterpart user object is missing.
-
-  it("returns 'Unknown' when the session has no relationship", () => {
-    const session = createMockEnrichedSession({ relationship: undefined });
-    expect(getSessionParticipantName(session, "coach-1")).toBe("Unknown");
+describe("formatSessionTime", () => {
+  it("formats a naive UTC date in the given timezone", () => {
+    expect(formatSessionTime("2026-08-25T19:30:00", "America/Chicago")).toBe("2:30 PM CDT");
   });
 
-  it("returns a role-aware fallback when the counterpart user is missing", () => {
-    const coachMissing = createMockEnrichedSession({ coach: undefined });
-    expect(getSessionParticipantName(coachMissing, "coachee-1")).toBe("Coach");
-    const coacheeMissing = createMockEnrichedSession({ coachee: undefined });
-    expect(getSessionParticipantName(coacheeMissing, "coach-1")).toBe("Coachee");
-  });
-
-  it("returns display_name when the loaded user has empty first/last names (regression)", () => {
-    const session = createMockEnrichedSession({
-      coachee: {
-        id: "coachee-1",
-        email: "alex@example.com",
-        first_name: "",
-        last_name: "",
-        display_name: "A. Chen",
-        timezone: "America/Los_Angeles",
-        roles: [],
-        created_at: "",
-        updated_at: "",
-      },
-    });
-    expect(getSessionParticipantName(session, "coach-1")).toBe("A. Chen");
+  it("follows the timezone's offset across DST", () => {
+    expect(formatSessionTime("2026-12-01T19:30:00", "America/Chicago")).toBe("1:30 PM CST");
   });
 });
 
