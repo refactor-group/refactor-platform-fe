@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
@@ -325,6 +325,56 @@ describe("GlobalSearch", () => {
     expect(push).toHaveBeenCalledWith("/coaching-sessions/sess-2?panel=actions&highlight=action-1");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open search" })).toBeInTheDocument();
+  });
+
+  describe("collapse animation", () => {
+    const mockMedia = (reducedMotion: boolean) => {
+      window.matchMedia = vi.fn((query: string) => ({
+        matches: query.includes("prefers-reduced-motion") ? reducedMotion : true,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+    };
+
+    afterEach(() => {
+      // jsdom ships without matchMedia; restore that.
+      delete (window as { matchMedia?: unknown }).matchMedia;
+    });
+
+    it("keeps the pill until the width transition ends, then focuses the magnifier", async () => {
+      mockMedia(false);
+      mockSearch({ kind: "idle" });
+      render(<GlobalSearch />, { wrapper: TestProviders });
+      const input = await expand();
+      const root = input.closest("[cmdk-root]")!.parentElement!;
+
+      await userEvent.keyboard("{Escape}");
+      expect(screen.getByRole("combobox", { name: "Search" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Open search" })).not.toBeInTheDocument();
+
+      // jsdom has no TransitionEvent, so propertyName must be attached by hand.
+      const transitionEnd = new Event("transitionend", { bubbles: true });
+      Object.defineProperty(transitionEnd, "propertyName", { value: "width" });
+      fireEvent(root, transitionEnd);
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Open search" })).toHaveFocus();
+    });
+
+    it("collapses at once under reduced motion", async () => {
+      mockMedia(true);
+      mockSearch({ kind: "idle" });
+      render(<GlobalSearch />, { wrapper: TestProviders });
+      await expand();
+
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Open search" })).toHaveFocus();
+    });
   });
 
   it("uses the design-system pill input", async () => {

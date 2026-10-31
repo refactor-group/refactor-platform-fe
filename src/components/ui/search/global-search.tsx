@@ -157,9 +157,28 @@ export function groupSearchHits(hits: SearchHit[]): SearchHitGroup[] {
 
 type FieldState =
   | { kind: "collapsed"; returnFocus: boolean }
+  | { kind: "collapsing"; returnFocus: boolean }
   | { kind: "expanded"; resultsOpen: boolean };
 
 const COLLAPSED: FieldState = { kind: "collapsed", returnFocus: false };
+const EXPANDED: FieldState = { kind: "expanded", resultsOpen: true };
+
+// Slightly longer than the width transition, in case transitionend never fires.
+const COLLAPSE_FALLBACK_MS = 260;
+
+// The width animation only runs on the sm+ inline pill, and not under reduced motion.
+const canAnimateCollapse = (): boolean =>
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(min-width: 640px)").matches &&
+  !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const collapseTo = (returnFocus: boolean): FieldState => ({
+  kind: canAnimateCollapse() ? "collapsing" : "collapsed",
+  returnFocus,
+});
+
+const finishCollapse = (current: FieldState): FieldState =>
+  current.kind === "collapsing" ? { kind: "collapsed", returnFocus: current.returnFocus } : current;
 
 interface GlobalSearchProps {
   className?: string;
@@ -183,6 +202,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   const { state, loadMore } = useSearch(query);
 
   const expanded = field.kind === "expanded";
+  const collapsing = field.kind === "collapsing";
 
   useEffect(() => {
     if (expanded) inputRef.current?.focus();
@@ -193,14 +213,18 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   }, [field]);
 
   useEffect(() => {
+    if (!collapsing) return;
+    const timer = setTimeout(() => setField(finishCollapse), COLLAPSE_FALLBACK_MS);
+    return () => clearTimeout(timer);
+  }, [collapsing]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const isShortcut =
         (event.key === "k" && (event.metaKey || event.ctrlKey)) || event.key === "/";
       if (!isShortcut || isTypingTarget(event.target)) return;
       event.preventDefault();
-      setField((current) =>
-        current.kind === "expanded" ? current : { kind: "expanded", resultsOpen: true }
-      );
+      setField((current) => (current.kind === "expanded" ? current : EXPANDED));
       inputRef.current?.focus();
     };
     document.addEventListener("keydown", onKeyDown);
@@ -217,13 +241,27 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
 
   const handleEscape = () => {
     if (query) clearQuery();
-    else setField({ kind: "collapsed", returnFocus: true });
+    else setField(collapseTo(true));
   };
 
   const handleBlur = useCallback(
     (event: FocusEvent<HTMLDivElement>) => {
       if (rootRef.current?.contains(event.relatedTarget)) return;
-      setField(query ? { kind: "expanded", resultsOpen: false } : COLLAPSED);
+      setField((current) => {
+        switch (current.kind) {
+          case "collapsed":
+            return current;
+          // Focus went elsewhere, so don't pull it back when the collapse finishes.
+          case "collapsing":
+            return { ...current, returnFocus: false };
+          case "expanded":
+            return query ? { kind: "expanded", resultsOpen: false } : collapseTo(false);
+          default: {
+            const _exhaustive: never = current;
+            throw new Error(`Unhandled search field state: ${_exhaustive}`);
+          }
+        }
+      });
     },
     [query]
   );
@@ -237,7 +275,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
         setCurrentCoachingRelationshipId(hit.coaching_relationship_id.val);
       }
       setQuery("");
-      setField(COLLAPSED);
+      setField(collapseTo(false));
       router.push(href.val);
     },
     [router, setCurrentCoachingRelationshipId]
@@ -249,13 +287,20 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
     <div
       ref={rootRef}
       className={cn(
-        "flex w-9 shrink-0 justify-end transition-[width] duration-200 ease-spring motion-reduce:transition-none sm:relative",
+        "flex w-9 shrink-0 justify-end transition-[width] duration-200 motion-reduce:transition-none sm:relative",
         expanded && "sm:w-[340px]",
+        // ease-spring front-loads the shrink so much that collapsing reads as a snap.
+        collapsing ? "overflow-hidden ease-in-out" : "ease-spring",
         className
       )}
       onBlur={handleBlur}
+      onTransitionEnd={(event) => {
+        if (event.propertyName === "width" && event.target === event.currentTarget) {
+          setField(finishCollapse);
+        }
+      }}
     >
-      {expanded ? (
+      {field.kind !== "collapsed" ? (
         <CommandPrimitive
           shouldFilter={false}
           loop
@@ -282,6 +327,8 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                 setResultsOpen(true);
               }}
               onFocus={() => setResultsOpen(true)}
+              onClick={() => collapsing && setField(EXPANDED)}
+              tabIndex={collapsing ? -1 : undefined}
               placeholder="Search sessions, topics, agreements, actions…"
               className={cn(
                 "h-9 w-full min-w-0 rounded-full border-0 bg-fill pl-9 text-item transition-colors duration-150 hover:bg-fill-hover focus:bg-card",
@@ -317,7 +364,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
       ) : (
         <OpenSearchButton
           ref={buttonRef}
-          onClick={() => setField({ kind: "expanded", resultsOpen: true })}
+          onClick={() => setField(EXPANDED)}
         />
       )}
     </div>

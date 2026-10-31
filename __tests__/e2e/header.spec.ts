@@ -186,6 +186,31 @@ const SEARCH_HITS = [
   { ...hitBase, type: 'agreement', id: 'agr-1', title: 'Plan every Monday', coaching_session_id: 'sess-1' },
 ]
 
+type WidthSample = { t: number; width: number }
+type WidthWindow = { collapseWidths: Promise<WidthSample[]> }
+
+// Runs in the page: records the root's width each frame for 300ms after the next Escape.
+function recordWidthAfterEscape(root: Element) {
+  ;(window as unknown as WidthWindow).collapseWidths = new Promise((resolve) => {
+    document.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key !== 'Escape') return
+        const start = performance.now()
+        const widths: WidthSample[] = []
+        const tick = () => {
+          const t = performance.now() - start
+          widths.push({ t: Math.round(t), width: Math.round(root.getBoundingClientRect().width) })
+          if (t < 300) requestAnimationFrame(tick)
+          else resolve(widths)
+        }
+        requestAnimationFrame(tick)
+      },
+      { capture: true, once: true }
+    )
+  })
+}
+
 async function mockSearch(page: Page) {
   await page.route(
     (url) => url.pathname.endsWith('/search'),
@@ -243,8 +268,17 @@ for (const viewport of [
     await page.keyboard.press('Escape')
     await expect(input).toHaveValue('')
     await expect(input).toBeFocused()
+    await page.locator('[cmdk-root]').locator('..').evaluate(recordWidthAfterEscape)
     await page.keyboard.press('Escape')
+    if (viewport.width >= 640) {
+      const widths = await page.evaluate(() => (window as unknown as WidthWindow).collapseWidths)
+      const at80 = widths.reduce((a, b) => (Math.abs(b.t - 80) < Math.abs(a.t - 80) ? b : a))
+      console.log('search root width during collapse', JSON.stringify(widths))
+      expect(at80.width).toBeGreaterThan(36)
+      expect(at80.width).toBeLessThan(340)
+    }
     await expect(input).toBeHidden()
+    await expect(openSearch).toBeVisible()
     await expect(openSearch).toBeFocused()
   })
 }
