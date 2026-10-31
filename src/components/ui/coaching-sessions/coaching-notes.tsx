@@ -104,10 +104,8 @@ const renderReadyEditor = (
       <div className="coaching-notes-editor">
         <div className="coaching-notes-error">
           <div className="text-center">
-            <p className="mb-2">❌ Failed to initialize editor</p>
-            <p className="text-sm opacity-80">
-              Error: {error instanceof Error ? error.message : "Unknown error"}
-            </p>
+            <p className="mb-2">Couldn&apos;t load the notes editor</p>
+            <p className="text-sm opacity-80">Refresh the page to try again.</p>
           </div>
         </div>
       </div>
@@ -208,7 +206,7 @@ const handleEditorContentError = (error: unknown) => {
   console.error("Editor content error:", error);
 
   // Show user-friendly error message via toast
-  toast.error("An error occurred while editing. Please try again.");
+  toast.error("Couldn't update the notes · Try again");
 };
 
 export { CoachingNotes };
