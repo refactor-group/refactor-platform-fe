@@ -85,7 +85,7 @@ export function GoalPickerPopover({
                     onClick={() => { onChange(goal.id); setOpen(false); }}
                   >
                     {isSelected ? (
-                      <Check className="h-3 w-3 shrink-0 text-primary" />
+                      <Check className="h-3 w-3 shrink-0 text-brand" />
                     ) : (
                       <span className="h-3 w-3 shrink-0" />
                     )}
