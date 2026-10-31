@@ -206,7 +206,7 @@ export function MemberCard({
     } catch (err) {
       console.error("Error resending invitation:", err);
       toast.error(
-        isForbiddenError(err) ? PERMISSION_DENIED_MESSAGE : "Failed to resend invitation"
+        isForbiddenError(err) ? PERMISSION_DENIED_MESSAGE : "Couldn't resend the invitation"
       );
     }
   };

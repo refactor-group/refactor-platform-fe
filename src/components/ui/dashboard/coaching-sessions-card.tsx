@@ -249,11 +249,8 @@ export function CoachingSessionsCard({
       // so this revalidate is load-bearing.
       refreshBucketData();
       setDeleteState({ kind: "closed" });
-    } catch (err) {
-      sonnerToast.error("Failed to delete session", {
-        description:
-          err instanceof Error ? err.message : "Please try again.",
-      });
+    } catch {
+      sonnerToast.error("Couldn't delete the session · Try again");
       setDeleteState({ kind: "closed" });
     }
   }, [deleteState, deleteSession, refreshBucketData]);

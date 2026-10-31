@@ -61,7 +61,6 @@ export function useTranscriptionToasts({
       toast.success("Transcript ready", {
         id: `transcript-ready-${sessionId}`,
         duration: 15_000,
-        description: "Your coaching session transcript is ready to view.",
         action: {
           label: "View",
           onClick: () => onOpenTranscript(),
@@ -85,22 +84,14 @@ export function useTranscriptionToasts({
       prevRecordingStatus !== MeetingRecordingStatus.Failed &&
       recordingStatus === MeetingRecordingStatus.Failed
     ) {
-      toast.error("Recording failed", {
+      toast.error("Recording failed · The recording bot couldn't finish this session", {
         id: `recording-failed-${sessionId}`,
         duration: Infinity,
-        description:
-          recording?.error_message ??
-          "The recording bot couldn't complete this session.",
         ...(onRetryTranscription
           ? { action: { label: "Retry", onClick: onRetryTranscription } }
           : {}),
       });
     }
-    // `recording?.error_message` intentionally omitted — this effect only
-    // fires on the edge into Failed, so a later refinement of the error
-    // string shouldn't re-fire the toast (the prev→curr transition is
-    // Failed→Failed at that point). The message is read at toast time.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     sessionId,
     recordingStatus,
@@ -116,20 +107,14 @@ export function useTranscriptionToasts({
       prevTranscriptionStatus !== TranscriptionStatus.Failed &&
       transcriptionStatus === TranscriptionStatus.Failed
     ) {
-      toast.error("Transcription failed", {
+      toast.error("Transcription failed · Couldn't create a transcript for this session", {
         id: `transcription-failed-${sessionId}`,
         duration: Infinity,
-        description:
-          transcription?.error_message ??
-          "We couldn't generate a transcript for this session.",
         ...(onRetryTranscription
           ? { action: { label: "Retry", onClick: onRetryTranscription } }
           : {}),
       });
     }
-    // `transcription?.error_message` intentionally omitted — see the
-    // analogous comment in the recording-failed effect above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     sessionId,
     transcriptionStatus,

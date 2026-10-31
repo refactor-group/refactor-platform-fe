@@ -10,7 +10,7 @@ import { MeetingIntegrationSection } from "@/components/ui/settings/meeting-inte
 function getErrorMessage(provider: string, errorCode: string): string {
   const messages: Record<string, string> = {
     access_denied: `${provider} account connection was cancelled.`,
-    exchange_failed: `Failed to connect ${provider} account. Please try again.`,
+    exchange_failed: `Couldn't connect your ${provider} account · Try again`,
     invalid_state: "Authentication session expired. Please try again.",
   };
   return (

@@ -94,7 +94,7 @@ describe("CoachingSessionsCard — resend invite", () => {
 
   it("shows a retry message on a 502", async () => {
     await confirmResend(HttpResponse.json({}, { status: 502 }));
-    expect(await screen.findByText("Couldn't resend the invite")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't resend the invite · Try again in a moment")).toBeInTheDocument();
   });
 
   it("offers to resend just this session for a legacy series", async () => {

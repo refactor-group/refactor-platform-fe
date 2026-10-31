@@ -307,7 +307,7 @@ export default function CoachingSessionsPage() {
   }
 
   const handleShareError = (_error: Error) => {
-    toast.error("Failed to copy session link.");
+    toast.error("Couldn't copy the session link");
   };
 
   const gridColumns = computeGridColumns(

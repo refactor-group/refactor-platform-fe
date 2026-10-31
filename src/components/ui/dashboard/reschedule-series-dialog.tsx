@@ -207,7 +207,7 @@ function RescheduleSeriesForm({
       } else if (error instanceof EntityApiError && error.status === 422) {
         message = "Couldn't reschedule the series. Please review the form and try again.";
       } else {
-        message = "Failed to reschedule the series. Please try again.";
+        message = "Couldn't reschedule the series · Try again";
       }
       toast.error(message);
       console.error("Failed to reschedule coaching session series:", error);
