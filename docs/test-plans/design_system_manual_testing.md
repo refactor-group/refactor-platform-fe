@@ -197,7 +197,7 @@ Delete a topic on a session page.
 
 **Pass:** the toast names the deleted topic in quotes and offers Undo. Undo restores the topic.
 
-## 7. Part F: global header (#PR-TBD)
+## 7. Part F: global header (#504)
 
 ### Case F1: desktop layout
 
