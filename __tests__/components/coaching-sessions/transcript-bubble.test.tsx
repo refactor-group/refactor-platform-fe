@@ -81,7 +81,7 @@ describe("TranscriptBubble — header visibility", () => {
 });
 
 describe("TranscriptBubble — variant and tail corner", () => {
-  it("applies iOS blue classes for primary", () => {
+  it("applies indigo classes for primary", () => {
     render(
       <TranscriptBubble
         segment={makeSegment()}
@@ -91,8 +91,8 @@ describe("TranscriptBubble — variant and tail corner", () => {
       />
     );
     const body = screen.getByTestId("transcript-bubble-body");
-    expect(body.className).toContain("bg-[#007AFF]");
-    expect(body.className).toContain("text-white");
+    expect(body.className).toContain("bg-primary");
+    expect(body.className).toContain("text-primary-foreground");
   });
 
   it("applies bordered light classes for secondary", () => {

@@ -418,3 +418,14 @@ Open `/coaching-sessions/<an id that doesn't exist>`, then open the menu.
 Open the menu and click through several coachees as fast as you can.
 
 **Pass:** the list always ends on the last coachee clicked, with their name above the dots, and never flips back to an earlier coachee's sessions.
+
+## 9. Part H: transcript bubbles (#507)
+
+### Case H1: indigo bubbles
+
+1. Open a session with a completed transcript in Light and open the transcript.
+2. Open the speaker filter.
+3. Jump to an action from a transcript suggestion.
+4. Repeat 1 to 3 in Dark.
+
+**Pass:** the coach's bubbles are indigo with white text, matching the accent elsewhere (e.g. the primary button). The speaker filter's coach swatch matches the bubbles. The action card highlights with an indigo ring. All of this holds in both themes.

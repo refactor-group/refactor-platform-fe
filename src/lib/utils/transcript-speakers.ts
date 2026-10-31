@@ -35,7 +35,7 @@ export function buildSpeakerStyles(
 const PRIMARY_STYLE: SpeakerStyle = {
   variant: "primary",
   alignment: "right",
-  swatchClass: "bg-[#007AFF]",
+  swatchClass: "bg-primary",
 };
 
 const SECONDARY_STYLE: SpeakerStyle = {
