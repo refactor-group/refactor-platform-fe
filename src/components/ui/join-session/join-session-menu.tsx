@@ -189,6 +189,7 @@ export function JoinSessionMenu() {
       <TriggerPill />
       <PopoverContent
         align="end"
+        collisionPadding={16}
         aria-label="Join session"
         className="flex max-h-[min(600px,80vh)] w-[420px] max-w-[calc(100vw-32px)] flex-col overflow-hidden rounded-popover p-0 shadow-popover"
       >

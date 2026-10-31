@@ -237,20 +237,37 @@ test.describe('Join session menu', () => {
     await expect(menu(page)).toBeHidden()
   })
 
-  test('fits at 375px without horizontal scroll', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 })
+  for (const width of [320, 375]) {
+    test(`stays inset at ${width}px without horizontal scroll`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 812 })
+      await page.goto('/dashboard')
+      await openMenu(page)
+      await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+
+      // toPass waits out the open animation's scale.
+      await expect(async () => {
+        const box = (await menu(page).boundingBox())!
+        expect(box.x).toBeGreaterThanOrEqual(16 - 0.5)
+        expect(box.x + box.width).toBeLessThanOrEqual(width - 16 + 0.5)
+      }).toPass()
+      const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }))
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+    })
+  }
+
+  test('lines up with the trigger at 1280px', async ({ page }) => {
     await page.goto('/dashboard')
     await openMenu(page)
     await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
 
-    const box = (await menu(page).boundingBox())!
-    expect(box.x).toBeGreaterThanOrEqual(0)
-    expect(box.x + box.width).toBeLessThanOrEqual(375)
-    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
-      scrollWidth: document.documentElement.scrollWidth,
-      clientWidth: document.documentElement.clientWidth,
-    }))
-    expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+    const pill = (await trigger(page).boundingBox())!
+    await expect(async () => {
+      const box = (await menu(page).boundingBox())!
+      expect(Math.abs(box.x + box.width - (pill.x + pill.width))).toBeLessThanOrEqual(1)
+    }).toPass()
   })
 
   test('a failed request offers Try again', async ({ page }) => {
