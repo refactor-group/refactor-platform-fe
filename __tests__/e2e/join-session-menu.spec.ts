@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page, type Route } from '@playwright/test'
 import { setupAuthentication, mockCommonApiRoutes, MOCK_USER_ID, SINGLE_RELATIONSHIP } from './helpers'
 
 // Chromium only: run with --project=chromium.
@@ -59,6 +59,7 @@ const NEAREST: Record<string, ReturnType<typeof session>[]> = {
     session('a1', 'rel-a', '2026-08-05T15:00:00', 'Session 1'),
   ],
   'rel-d': [session('d2', 'rel-d', '2026-08-28T15:00:00', 'Session 2'), DANIEL_KICKOFF],
+  'rel-l': [session('l1', 'rel-l', '2026-08-20T15:00:00', 'Pricing the retainer')],
   'rel-e': [
     session('e8', 'rel-e', '2026-09-01T15:00:00', 'Session 8'),
     EHAB_TODAY,
@@ -70,8 +71,18 @@ const json = (data: unknown) => ({ status: 200, contentType: 'application/json',
 
 type NearestRequest = { relationshipId: string; around: string; before: string; after: string }
 
+type NearestHandler = (route: Route, relationshipId: string) => Promise<void>
+
+const serveNearest: NearestHandler = (route, relationshipId) =>
+  route.fulfill(json(NEAREST[relationshipId] ?? []))
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Swap `handle` to change how `/nearest` answers from then on. */
+type NearestControl = { requests: NearestRequest[]; handle: NearestHandler }
+
 async function setup(page: Page, context: Parameters<typeof setupAuthentication>[1]) {
-  const requests: NearestRequest[] = []
+  const nearest: NearestControl = { requests: [], handle: serveNearest }
   await page.clock.setFixedTime(NOW)
   await setupAuthentication(page, context)
   await mockCommonApiRoutes(page, { relationships: RELATIONSHIPS })
@@ -88,15 +99,15 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
   await page.route('**/coaching_sessions/nearest**', (route) => {
     const params = new URL(route.request().url()).searchParams
     const relationshipId = params.get('coaching_relationship_id') ?? ''
-    requests.push({
+    nearest.requests.push({
       relationshipId,
       around: params.get('around') ?? '',
       before: params.get('before') ?? '',
       after: params.get('after') ?? '',
     })
-    return route.fulfill(json(NEAREST[relationshipId] ?? []))
+    return nearest.handle(route, relationshipId)
   })
-  return requests
+  return nearest
 }
 
 const trigger = (page: Page) => page.getByRole('button', { name: 'Join session' })
@@ -110,10 +121,12 @@ async function openMenu(page: Page) {
 }
 
 test.describe('Join session menu', () => {
+  let nearest: NearestControl
   let requests: NearestRequest[]
 
   test.beforeEach(async ({ page, context }) => {
-    requests = await setup(page, context)
+    nearest = await setup(page, context)
+    requests = nearest.requests
     await page.setViewportSize({ width: 1280, height: 800 })
   })
 
@@ -238,5 +251,93 @@ test.describe('Join session menu', () => {
       clientWidth: document.documentElement.clientWidth,
     }))
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+  })
+
+  test('a failed request offers Try again', async ({ page }) => {
+    nearest.handle = (route) => route.abort('failed')
+    await page.goto('/dashboard')
+    await openMenu(page)
+
+    await expect(menu(page).getByText("Couldn't load sessions")).toBeVisible()
+    nearest.handle = serveNearest
+    await menu(page).getByRole('button', { name: 'Try again' }).click()
+
+    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByText("Couldn't load sessions")).toBeHidden()
+  })
+
+  test('a server error shows the error state and no rows', async ({ page }) => {
+    nearest.handle = (route) =>
+      route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'internal' }) })
+    await page.goto('/dashboard')
+    await openMenu(page)
+
+    await expect(menu(page).getByText("Couldn't load sessions")).toBeVisible()
+    await expect(menu(page).getByRole('button', { name: 'Try again' })).toBeVisible()
+    await expect(menu(page).getByText(/^(Upcoming|Previous)$/)).toHaveCount(0)
+    await expect(menu(page).getByText('Saying no to new clients')).toBeHidden()
+  })
+
+  test('a slow response shows placeholder rows first', async ({ page }) => {
+    nearest.handle = async (route, relationshipId) => {
+      await sleep(1500)
+      await serveNearest(route, relationshipId)
+    }
+    await page.goto('/dashboard')
+    await openMenu(page)
+
+    await expect(menu(page).getByLabel('Loading sessions')).toBeVisible()
+    await expect(menu(page).getByText('Saying no to new clients')).toBeHidden()
+    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible({ timeout: 5000 })
+    await expect(menu(page).getByLabel('Loading sessions')).toBeHidden()
+  })
+
+  test('a session page that fails to load falls back to now', async ({ page }) => {
+    await page.route(
+      (url) => url.pathname === '/coaching_sessions/missing',
+      (route) => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'not_found' }) })
+    )
+    await page.goto('/coaching-sessions/missing')
+    await openMenu(page)
+    await expect(page).toHaveURL(/\/coaching-sessions\/missing$/)
+
+    await expect(person(page, 'Alex')).toHaveAttribute('aria-pressed', 'true')
+    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByLabel('Loading sessions')).toBeHidden()
+    await expect(menu(page).getByText('Current', { exact: true })).toHaveCount(0)
+    expect(requests).toEqual([{ relationshipId: 'rel-a', around: NOW, before: '2', after: '2' }])
+  })
+
+  test('switching people quickly ends on the last one', async ({ page }) => {
+    const delays: Record<string, number> = { 'rel-d': 2000, 'rel-e': 300, 'rel-l': 0 }
+    nearest.handle = async (route, relationshipId) => {
+      await sleep(delays[relationshipId] ?? 0)
+      await serveNearest(route, relationshipId)
+    }
+    await page.goto('/dashboard')
+    await openMenu(page)
+    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+
+    await person(page, 'Daniel').click()
+    await person(page, 'Ehab').click()
+    await person(page, 'Lena').click()
+    await expect(menu(page).getByText('Pricing the retainer')).toBeVisible()
+
+    // Flags any later render of the slow person's rows.
+    await page.evaluate(() => {
+      const w = window as unknown as { sawSlowRows: boolean }
+      w.sawSlowRows = false
+      new MutationObserver(() => {
+        const dialog = document.querySelector('[role="dialog"]')
+        if (dialog?.textContent?.includes('Kickoff')) w.sawSlowRows = true
+      }).observe(document.body, { childList: true, subtree: true, characterData: true })
+    })
+    await expect.poll(() => requests.filter((r) => r.relationshipId === 'rel-d').length).toBe(1)
+    await page.waitForTimeout(2500)
+
+    expect(await page.evaluate(() => (window as unknown as { sawSlowRows: boolean }).sawSlowRows)).toBe(false)
+    await expect(person(page, 'Lena')).toHaveAttribute('aria-pressed', 'true')
+    await expect(menu(page).getByText('Pricing the retainer')).toBeVisible()
+    await expect(menu(page).getByText('Kickoff')).toBeHidden()
   })
 })
