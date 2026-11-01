@@ -212,7 +212,7 @@ describe("Coaching session duration integration", () => {
   });
 
   describe("422 validation_error shows our duration copy", () => {
-    it("toasts our duration copy instead of the BE message or the generic 422 fallback", async () => {
+    it("toasts the generic 422 copy, not the BE message, since any field can be the cause", async () => {
       mockUpdate.mockRejectedValue(
         makeApiError(422, {
           status_code: 422,
@@ -240,7 +240,7 @@ describe("Coaching session duration integration", () => {
 
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith(
-          "That length isn't allowed · Pick a different duration"
+          "Couldn't update the session · Check the details and try again"
         );
       });
       expect(mockToastError).not.toHaveBeenCalledWith(

@@ -83,7 +83,8 @@ Auto follows the OS). Tailwind exposes each as a color.
 | Class | Light | Dark | Use |
 |---|---|---|---|
 | `inverse` / `inverse-foreground` | `#171717` / `#fafafa` | `#f4f4f5` / `#121214` | Toast and dot tooltip: the only surface that flips |
-| `toast-check` | `#86efac` | same | Leading check on confirmation toasts |
+| `toast-check` | `#86efac` | `#166534` | Leading check on confirmation toasts |
+| `toast-warning` | `#f2b25a` | `#b45309` | Leading icon on warning toasts |
 | `avatar` / `avatar-foreground` | `fill` / `#3f3f46` | `#26262c` / `#e4e4e7` | Org tile; all avatars in dark mode |
 
 ### Typography
@@ -176,7 +177,7 @@ className={cn(
 | In progress | `brand` ring, half-filled disc | `bg-brand-tint text-brand-strong` |
 | On hold | `on-hold-ring` ring, `on-hold-fill`, pause | `bg-on-hold-fill text-on-hold-text` |
 | Completed | solid `positive-solid`, white check; title muted | `bg-positive-tint text-positive` |
-| Won't do | solid `faint`, white ×; title muted | — |
+| Won't do | solid `muted-foreground` (`faint` in dark), white ×; title muted | — |
 
 ### Menus
 

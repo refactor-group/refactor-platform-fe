@@ -90,9 +90,10 @@ export function JoinMeetingButton({
       // Synchronous window.open avoids pop-up blockers; SWR optimistic
       // mutate transitions the button to the active view.
       openMeeting();
-      void startRecording(meetingUrl).catch(() =>
-        toast.error("Couldn't start transcription")
-      );
+      void startRecording(meetingUrl).catch((err) => {
+        console.error("Failed to start recording:", err);
+        toast.error("Couldn't start transcription");
+      });
     };
     return (
       <CoachIdleDropdownButton
@@ -111,9 +112,10 @@ export function JoinMeetingButton({
       onStop={
         isLive
           ? () =>
-              stopRecording().catch(() =>
-                toast.error("Couldn't stop recording")
-              )
+              stopRecording().catch((err) => {
+                console.error("Failed to stop recording:", err);
+                toast.error("Couldn't stop recording");
+              })
           : undefined
       }
     />

@@ -62,8 +62,10 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
 // The badge counts what the Actions page shows by default: open, due within
 // the last 30 days or later (or undated), with a known session.
 const OPEN_ACTION_COUNT = 3
-const RECENT = new Date().toISOString()
-const LONG_OVERDUE = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
+// mockActions pins the page's clock here, so the fixtures and the 30 day filter agree.
+const NOW = new Date('2026-11-01T17:00:00Z')
+const RECENT = NOW.toISOString()
+const LONG_OVERDUE = new Date(NOW.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString()
 const mockAction = (name: string, status: string, dueBy: string | null) => ({
   id: `action-${name}`,
   coaching_session_id: 'sess-1',
@@ -84,9 +86,10 @@ const ACTIONS = [
   mockAction('overdue', 'InProgress', LONG_OVERDUE),
 ]
 
-// Serves the batch actions request and saves status changes to a copy of
-// ACTIONS; resolves to the batch request URLs made so far.
+// Pins the page's clock to NOW, serves the batch actions request and saves
+// status changes to a copy of ACTIONS; resolves to the batch request URLs made so far.
 async function mockActions(page: Page) {
+  await page.clock.install({ time: NOW })
   const actions = ACTIONS.map((action) => ({ ...action }))
   const batchRequests: string[] = []
   await page.route('**/organizations/*/coaching_relationships/actions**', async (route) => {
@@ -210,7 +213,6 @@ test.describe('Open action count stays cached', () => {
 
   test("fetches once and doesn't refetch when the window regains focus", async ({ page }) => {
     const batchRequests = await mockActions(page)
-    await page.clock.install()
     await page.goto('/dashboard')
     await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
     // Past the app's 10s focus throttle, which starts at mount, so a focus
@@ -321,6 +323,47 @@ test('Appearance options fit inside the avatar menu', async ({ page, context }) 
   expect(autoBox.x + autoBox.width).toBeLessThanOrEqual(contentRight + 0.5)
 })
 
+test('the avatar menu stays reachable on a short screen', async ({ page, context }) => {
+  await setup(page, context)
+  await page.setViewportSize({ width: 812, height: 320 })
+  await page.goto('/dashboard')
+
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  await expect(async () => {
+    const box = (await menu.boundingBox())!
+    expect(box.y + box.height).toBeLessThanOrEqual(320 + 0.5)
+  }).toPass()
+
+  const logOut = menu.getByRole('menuitem', { name: 'Log out' })
+  await logOut.scrollIntoViewIfNeeded()
+  await expect(logOut).toBeInViewport()
+})
+
+for (const width of [640, 768, 1024]) {
+  test(`expanded search fits the header at ${width}px`, async ({ page, context }) => {
+    await setup(page, context)
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/dashboard')
+
+    await page.getByRole('button', { name: 'Open search' }).click()
+    const input = page.getByRole('combobox', { name: 'Search' })
+    await expect(input).toBeFocused()
+
+    await expect(async () => {
+      const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }))
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+      const avatar = (await page.getByRole('button', { name: 'Account menu' }).boundingBox())!
+      expect(avatar.x + avatar.width).toBeLessThanOrEqual(width + 0.5)
+      expect((await input.boundingBox())!.width).toBeGreaterThan(120)
+    }).toPass()
+  })
+}
+
 const hitBase = {
   score: 0.5,
   snippet: null,
@@ -363,6 +406,22 @@ function recordWidthAfterEscape(root: Element) {
     )
   })
 }
+
+test('tapping Clear on a phone empties the search and keeps it open', async ({ page, context }) => {
+  await setup(page, context)
+  await mockSearch(page)
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/dashboard')
+
+  await page.getByRole('button', { name: 'Open search' }).click()
+  const input = page.getByRole('combobox', { name: 'Search' })
+  await input.fill('weekly')
+  await page.getByRole('button', { name: 'Clear search' }).click()
+
+  await expect(input).toBeVisible()
+  await expect(input).toHaveValue('')
+  await expect(input).toBeFocused()
+})
 
 async function mockSearch(page: Page) {
   await page.route(
@@ -408,7 +467,7 @@ for (const viewport of [
     expect(panel.x).toBeGreaterThanOrEqual(0)
     expect(panel.x + panel.width).toBeLessThanOrEqual(viewport.width)
 
-    if (viewport.width < 640) {
+    if (viewport.width < 768) {
       const account = page.getByRole('button', { name: 'Account menu' })
       const box = (await account.boundingBox())!
       const covered = await account.evaluate(
@@ -423,7 +482,7 @@ for (const viewport of [
     await expect(input).toBeFocused()
     await page.locator('[cmdk-root]').locator('..').evaluate(recordWidthAfterEscape)
     await page.keyboard.press('Escape')
-    if (viewport.width >= 640) {
+    if (viewport.width >= 768) {
       const widths = await page.evaluate(() => (window as unknown as WidthWindow).collapseWidths)
       const at80 = widths.reduce((a, b) => (Math.abs(b.t - 80) < Math.abs(a.t - 80) ? b : a))
       console.log('search root width during collapse', JSON.stringify(widths))

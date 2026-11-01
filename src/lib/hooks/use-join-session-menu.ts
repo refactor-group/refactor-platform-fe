@@ -232,13 +232,14 @@ interface PersonSessionsInput {
   timezone: string;
 }
 
-/** Month labels highlight the person's current session, else today's, else now. */
+/** Month labels highlight what the window centres on: today's session, else the current one, else now. */
 function stripAnchor(input: PersonSessionsInput, relationshipId: Id): DateTime {
   const { current, today, now, timezone } = input;
+  if (today.some) return sessionStartIn(today.val.date, timezone);
   if (current.some && current.val.relationshipId === relationshipId) {
     return sessionStartIn(current.val.date, timezone);
   }
-  return today.some ? sessionStartIn(today.val.date, timezone) : now;
+  return now;
 }
 
 const LOADING: PersonSessionsState = { kind: "loading", previous: None };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import type {
   CSSProperties,
   FocusEvent,
@@ -90,6 +90,12 @@ function useSwipeToDismiss(onDismiss: () => void) {
     setStyle({ offsetX: dx, transition: None });
   };
 
+  const springBack = () =>
+    setStyle({
+      offsetX: 0,
+      transition: prefersReducedMotion() ? None : Some("transform .25s cubic-bezier(.2,.8,.2,1)"),
+    });
+
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (start.current.none) return;
     const wasSwiping = swipingRef.current;
@@ -112,10 +118,13 @@ function useSwipeToDismiss(onDismiss: () => void) {
       setTimeout(onDismiss, FLING_MS);
       return;
     }
-    setStyle({
-      offsetX: 0,
-      transition: reducedMotion ? None : Some("transform .25s cubic-bezier(.2,.8,.2,1)"),
-    });
+    springBack();
+  };
+
+  // The browser took the gesture over (e.g. to scroll), so put the pill back.
+  const onPointerCancel = () => {
+    reset();
+    springBack();
   };
 
   // A drag in any direction must not also count as a click.
@@ -135,7 +144,7 @@ function useSwipeToDismiss(onDismiss: () => void) {
     swiping,
     swipeStyle,
     consumeDragClick,
-    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: reset },
+    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
   };
 }
 
@@ -146,7 +155,7 @@ function LeadingIcon({ kind }: { kind: ToastKind }) {
     case "error":
       return <CircleAlert className="h-4 w-4 shrink-0 text-destructive" aria-hidden />;
     case "warning":
-      return <TriangleAlert className="h-4 w-4 shrink-0 text-warning" aria-hidden />;
+      return <TriangleAlert className="h-4 w-4 shrink-0 text-toast-warning" aria-hidden />;
     case "loading":
       return <Spinner className="h-4 w-4 shrink-0" aria-hidden="true" />;
     case "neutral":
@@ -157,6 +166,21 @@ function LeadingIcon({ kind }: { kind: ToastKind }) {
       throw new Error(`Unhandled toast kind: ${_exhaustive}`);
     }
   }
+}
+
+function subscribeToVisibility(onChange: () => void) {
+  document.addEventListener("visibilitychange", onChange);
+  return () => document.removeEventListener("visibilitychange", onChange);
+}
+
+// The countdown runs on the document timeline, which keeps advancing in a
+// hidden tab, so a toast raised there would expire unseen.
+function useTabHidden(): boolean {
+  return useSyncExternalStore(
+    subscribeToVisibility,
+    () => document.hidden,
+    () => false
+  );
 }
 
 function ActionButton({
@@ -236,7 +260,8 @@ export function ToastPill({
   const [hovered, setHovered] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const { swiping, swipeStyle, consumeDragClick, handlers } = useSwipeToDismiss(onDismiss);
-  const paused = hovered || focusWithin;
+  const tabHidden = useTabHidden();
+  const paused = hovered || focusWithin || tabHidden;
 
   const handleClick = () => {
     if (consumeDragClick()) return;
@@ -267,7 +292,7 @@ export function ToastPill({
       {...handlers}
     >
       <LeadingIcon kind={kind} />
-      <span className="min-w-0 truncate">{message}</span>
+      <span className="min-w-0 line-clamp-2 sm:line-clamp-1">{message}</span>
       {actionButton(action)}
       {actionButton(cancel)}
       {durationMs.some && (

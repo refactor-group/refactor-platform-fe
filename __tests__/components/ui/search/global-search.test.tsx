@@ -117,6 +117,19 @@ async function typeQuery(text: string) {
   return input;
 }
 
+const mockMedia = ({ wide, reducedMotion }: { wide: boolean; reducedMotion: boolean }) => {
+  window.matchMedia = vi.fn((query: string) => ({
+    matches: query.includes("prefers-reduced-motion") ? reducedMotion : wide,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
+
 describe("GlobalSearch", () => {
   const push = vi.fn();
 
@@ -305,14 +318,43 @@ describe("GlobalSearch", () => {
     expect(screen.getByRole("button", { name: "Open search" })).toBeInTheDocument();
   });
 
-  it("stays expanded on blur with a query", async () => {
+  describe("blur with a query", () => {
+    afterEach(() => {
+      delete (window as { matchMedia?: unknown }).matchMedia;
+    });
+
+    it("keeps the inline pill and its query", async () => {
+      mockMedia({ wide: true, reducedMotion: true });
+      mockSearch(loaded([goalHit]));
+      render(<GlobalSearch />, { wrapper: TestProviders });
+      const input = await typeQuery("weekly");
+
+      fireEvent.blur(input, { relatedTarget: null });
+      expect(screen.getByRole("combobox", { name: "Search" })).toHaveValue("weekly");
+      expect(screen.queryByText("Weekly planning habit")).not.toBeInTheDocument();
+    });
+
+    it("collapses the phone overlay so the header shows again, keeping the query", async () => {
+      mockMedia({ wide: false, reducedMotion: false });
+      mockSearch(loaded([goalHit]));
+      render(<GlobalSearch />, { wrapper: TestProviders });
+      const input = await typeQuery("weekly");
+
+      fireEvent.blur(input, { relatedTarget: null });
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Open search" }));
+      expect(screen.getByRole("combobox", { name: "Search" })).toHaveValue("weekly");
+    });
+  });
+
+  it("keeps focus in the field when Clear is pressed, so the overlay can't close first", async () => {
     mockSearch(loaded([goalHit]));
     render(<GlobalSearch />, { wrapper: TestProviders });
-    const input = await typeQuery("weekly");
+    await typeQuery("weekly");
 
-    fireEvent.blur(input, { relatedTarget: null });
-    expect(screen.getByRole("combobox", { name: "Search" })).toHaveValue("weekly");
-    expect(screen.queryByText("Weekly planning habit")).not.toBeInTheDocument();
+    const pressed = fireEvent.mouseDown(screen.getByRole("button", { name: "Clear search" }));
+    expect(pressed).toBe(false);
   });
 
   it("collapses after a hit is selected", async () => {
@@ -328,26 +370,13 @@ describe("GlobalSearch", () => {
   });
 
   describe("collapse animation", () => {
-    const mockMedia = (reducedMotion: boolean) => {
-      window.matchMedia = vi.fn((query: string) => ({
-        matches: query.includes("prefers-reduced-motion") ? reducedMotion : true,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      }));
-    };
-
     afterEach(() => {
       // jsdom ships without matchMedia; restore that.
       delete (window as { matchMedia?: unknown }).matchMedia;
     });
 
     it("keeps the pill until the width transition ends, then focuses the magnifier", async () => {
-      mockMedia(false);
+      mockMedia({ wide: true, reducedMotion: false });
       mockSearch({ kind: "idle" });
       render(<GlobalSearch />, { wrapper: TestProviders });
       const input = await expand();
@@ -366,7 +395,7 @@ describe("GlobalSearch", () => {
     });
 
     it("collapses at once under reduced motion", async () => {
-      mockMedia(true);
+      mockMedia({ wide: true, reducedMotion: true });
       mockSearch({ kind: "idle" });
       render(<GlobalSearch />, { wrapper: TestProviders });
       await expand();
@@ -387,7 +416,7 @@ describe("GlobalSearch", () => {
     expect(input.closest("[cmdk-root]")?.querySelector("kbd")).toBeNull();
 
     const panel = input.parentElement?.nextElementSibling;
-    expect(panel).toHaveClass("rounded-popover", "shadow-popover", "sm:w-[420px]");
+    expect(panel).toHaveClass("rounded-popover", "shadow-popover", "md:w-[420px]");
     expect(panel).toHaveTextContent("Weekly planning habit");
   });
 

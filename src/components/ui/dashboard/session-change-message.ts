@@ -17,24 +17,28 @@ function clockTime(start: DateTime): string {
   return start.toFormat(start.minute === 0 ? "h a" : "h:mm a");
 }
 
-/** "the Nov 4 @ 11 AM session with James Hodapp", in the user's timezone. */
+/** "Nov 4 @ 11 AM", in the user's timezone. */
+function startsAt(session: SessionRef, timezone: string): string {
+  const start = sessionStartIn(session.date, timezone);
+  return `${shortDate(start)} @ ${clockTime(start)}`;
+}
+
+/** "the Nov 4 @ 11 AM session with James Hodapp". */
 function theSession(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
   timezone: string
 ): string {
-  const start = sessionStartIn(session.date, timezone);
-  const coachee = withCoachee(relationships, session.coaching_relationship_id);
-  return `the ${shortDate(start)} @ ${clockTime(start)} session${coachee}`;
+  return `the ${startsAt(session, timezone)} session${withCoachee(relationships, session.coaching_relationship_id)}`;
 }
 
-/** e.g. "Created the Nov 4 @ 10 AM session with James Hodapp". */
+/** e.g. "Created a new session Nov 4 @ 10 AM with James Hodapp". */
 export function sessionCreatedMessage(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
   timezone: string
 ): string {
-  return `Created ${theSession(session, relationships, timezone)}`;
+  return `Created a new session ${startsAt(session, timezone)}${withCoachee(relationships, session.coaching_relationship_id)}`;
 }
 
 /** e.g. "Updated the Nov 6 @ 11 AM session with James Hodapp", with its new date and time. */

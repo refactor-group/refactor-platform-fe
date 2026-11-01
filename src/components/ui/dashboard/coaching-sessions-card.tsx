@@ -251,7 +251,8 @@ export function CoachingSessionsCard({
       refreshBucketData();
       setDeleteState({ kind: "closed" });
       sonnerToast.success(sessionRemovedMessage(session, relationships, userTimezone));
-    } catch {
+    } catch (err) {
+      console.error("Failed to delete coaching session:", err);
       sonnerToast.error("Couldn't delete the session · Try again");
       setDeleteState({ kind: "closed" });
     }

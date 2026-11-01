@@ -32,7 +32,8 @@ function DotTooltip({ session }: { session: MenuSession }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute -top-5 right-2.5 whitespace-nowrap rounded-full bg-inverse px-2.5 py-1 text-pill text-inverse-foreground tabular-nums"
+      // Capped to the strip so a long title truncates instead of leaving the menu.
+      className="pointer-events-none absolute -top-5 right-2.5 max-w-[calc(100%-1.25rem)] truncate rounded-full bg-inverse px-2.5 py-1 text-pill text-inverse-foreground tabular-nums"
     >
       {dotLabel(session)}
     </div>

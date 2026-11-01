@@ -9,10 +9,12 @@ import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
 import { addContextToActions } from "@/lib/utils/assigned-actions";
 
-// Session ids the session context was already refetched for, kept across
-// mounts. An id still missing after one refetch is outside the context's
-// window, so it isn't refetched again.
-const refetchedForSessionIds = new Set<Id>();
+// Session ids each session cache was already refetched for, kept across
+// mounts. An id still missing after one refetch is outside that cache's
+// window, so it isn't refetched again. Keyed per cache because mounts from
+// different days hold different ones, and each needs its own refetch.
+const refetchedForSessions = new Set<string>();
+const refetchKey = (cacheKey: string, sessionId: Id) => `${cacheKey}|${sessionId}`;
 
 /**
  * Refetches the session context when an action belongs to a session it
@@ -23,21 +25,24 @@ function useRefetchSessionsForUnknownActions(
   actions: Action[],
   knownSessionIds: Map<Id, unknown>,
   settled: boolean,
+  cacheKey: string,
   refetchSessions: () => unknown
 ) {
   const unknownIds = settled
     ? [...new Set(actions.map((a) => a.coaching_session_id))]
-        .filter((id) => !knownSessionIds.has(id) && !refetchedForSessionIds.has(id))
+        .filter((id) => !knownSessionIds.has(id) && !refetchedForSessions.has(refetchKey(cacheKey, id)))
         .join(",")
     : "";
 
   useEffect(() => {
-    // Another mounted instance may have refetched for these already.
-    const fresh = unknownIds.split(",").filter((id) => id && !refetchedForSessionIds.has(id));
+    // Another instance sharing this cache may have refetched for these already.
+    const fresh = unknownIds
+      .split(",")
+      .filter((id) => id && !refetchedForSessions.has(refetchKey(cacheKey, id)));
     if (fresh.length === 0) return;
-    fresh.forEach((id) => refetchedForSessionIds.add(id));
+    fresh.forEach((id) => refetchedForSessions.add(refetchKey(cacheKey, id)));
     refetchSessions();
-  }, [unknownIds, refetchSessions]);
+  }, [unknownIds, cacheKey, refetchSessions]);
 }
 
 /**
@@ -75,12 +80,14 @@ export function useAllActionsWithContext(
     isLoading: sessionsLoading,
     isError: sessionsError,
     refresh: refetchSessions,
+    cacheKey: sessionCacheKey,
   } = useSessionContextFetch(userId, options);
 
   useRefetchSessionsForUnknownActions(
     actions,
     lookupMaps.sessionMap,
     !actionsLoading && !sessionsLoading && !actionsError && !sessionsError,
+    sessionCacheKey,
     refetchSessions
   );
 

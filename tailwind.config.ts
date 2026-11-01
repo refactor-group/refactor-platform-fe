@@ -70,6 +70,7 @@ const config = {
   				foreground: 'hsl(var(--inverse-foreground))'
   			},
   			'toast-check': 'hsl(var(--toast-check))',
+  			'toast-warning': 'hsl(var(--toast-warning))',
   			avatar: {
   				DEFAULT: 'hsl(var(--avatar))',
   				foreground: 'hsl(var(--avatar-foreground))',

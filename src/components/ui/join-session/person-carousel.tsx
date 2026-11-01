@@ -6,7 +6,9 @@ import type { MenuPerson } from "@/components/ui/join-session/types";
 import type { Id } from "@/types/general";
 
 export const PEOPLE_PER_PAGE = 5;
-const CARD_STRIDE_PX = 71;
+const CARD_GAP_PX = 3;
+// A page always fits the track: 68px cards in the 420px menu, narrower on phones.
+const CARD_WIDTH = `calc((100% - ${(PEOPLE_PER_PAGE - 1) * CARD_GAP_PX}px) / ${PEOPLE_PER_PAGE})`;
 
 interface PersonCarouselProps {
   people: MenuPerson[];
@@ -43,7 +45,8 @@ function PersonCard({ person, selected, onPage, onSelect }: PersonCardProps) {
       aria-pressed={selected}
       inert={!onPage}
       onClick={() => onSelect(person.userId)}
-      className="flex w-[68px] flex-none flex-col items-center gap-[5px] rounded-input px-1 py-1.5 transition-colors duration-150 hover:bg-well focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      style={{ width: CARD_WIDTH }}
+      className="flex flex-none flex-col items-center gap-[5px] rounded-input px-1 py-1.5 transition-colors duration-150 hover:bg-well focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <PersonAvatar
         userId={person.userId}
@@ -86,8 +89,12 @@ export function PersonCarousel({
       </Button>
       <div className="min-w-0 flex-1 overflow-hidden">
         <div
-          className="flex gap-[3px] transition-transform duration-[250ms] ease-out motion-reduce:transition-none"
-          style={{ transform: `translateX(-${page * PEOPLE_PER_PAGE * CARD_STRIDE_PX}px)` }}
+          className="flex transition-transform duration-[250ms] ease-out motion-reduce:transition-none"
+          style={{
+            gap: CARD_GAP_PX,
+            // Each page is one track width plus the gap after its last card.
+            transform: `translateX(calc(${page} * (-100% - ${CARD_GAP_PX}px)))`,
+          }}
         >
           {people.map((person, index) => (
             <PersonCard

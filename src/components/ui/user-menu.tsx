@@ -78,7 +78,10 @@ export function UserMenu() {
           <PersonAvatar userId={userSession.id} initials={initials} size={36} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[268px] p-1.5">
+      <DropdownMenuContent
+        align="end"
+        className="max-h-[var(--radix-dropdown-menu-content-available-height)] w-[268px] overflow-y-auto p-1.5"
+      >
         <AccountHeader userSession={userSession} initials={initials} />
         <MenuSeparator />
         <OrganizationSection />

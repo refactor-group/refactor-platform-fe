@@ -82,6 +82,24 @@ describe("SessionDotStrip", () => {
     expect(tooltips()[0]).toHaveTextContent("Aug 18 · Title c");
   });
 
+  it("keeps the tooltip while a focused dot loses the pointer", () => {
+    const { tooltips } = renderStrip();
+    const dot = screen.getByRole("button", { name: "Aug 18 · Title c" });
+    fireEvent.focus(dot);
+    fireEvent.mouseEnter(dot);
+    fireEvent.mouseLeave(dot);
+    expect(tooltips()).toHaveLength(1);
+    fireEvent.blur(dot);
+    expect(tooltips()).toHaveLength(0);
+  });
+
+  it("keeps the tooltip within the strip so long titles truncate", () => {
+    const { tooltips } = renderStrip();
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "Aug 11 · Title p1" }));
+    expect(tooltips()[0]).toHaveClass("truncate", "max-w-[calc(100%-1.25rem)]");
+    expect(tooltips()[0]).not.toHaveClass("whitespace-nowrap");
+  });
+
   it("selects a session when its dot is clicked", () => {
     const { onSelect } = renderStrip();
     fireEvent.click(screen.getByRole("button", { name: "Sep 1 · Title f1" }));

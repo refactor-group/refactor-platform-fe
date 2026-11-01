@@ -166,11 +166,13 @@ const EXPANDED: FieldState = { kind: "expanded", resultsOpen: true };
 // Slightly longer than the width transition, in case transitionend never fires.
 const COLLAPSE_FALLBACK_MS = 260;
 
-// The width animation only runs on the sm+ inline pill, and not under reduced motion.
+// From md up the field is an inline pill; below it, an overlay across the header.
+const isInlineField = (): boolean =>
+  typeof window.matchMedia === "function" && window.matchMedia("(min-width: 768px)").matches;
+
+// The width animation only runs on the inline pill, and not under reduced motion.
 const canAnimateCollapse = (): boolean =>
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(min-width: 640px)").matches &&
-  !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  isInlineField() && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const collapseTo = (returnFocus: boolean): FieldState => ({
   kind: canAnimateCollapse() ? "collapsing" : "collapsed",
@@ -254,8 +256,11 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
           // Focus went elsewhere, so don't pull it back when the collapse finishes.
           case "collapsing":
             return { ...current, returnFocus: false };
+          // The inline pill keeps showing the query; the overlay would hide the header.
           case "expanded":
-            return query ? { kind: "expanded", resultsOpen: false } : collapseTo(false);
+            return query && isInlineField()
+              ? { kind: "expanded", resultsOpen: false }
+              : collapseTo(false);
           default: {
             const _exhaustive: never = current;
             throw new Error(`Unhandled search field state: ${_exhaustive}`);
@@ -287,8 +292,9 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
     <div
       ref={rootRef}
       className={cn(
-        "flex w-9 shrink-0 justify-end transition-[width] duration-200 motion-reduce:transition-none sm:relative",
-        expanded && "sm:w-[340px]",
+        "flex w-9 shrink-0 justify-end transition-[width] duration-200 motion-reduce:transition-none md:relative",
+        // The pill gives up width before the rest of the header row overflows.
+        expanded && "md:w-[340px] md:min-w-[160px] md:shrink",
         // ease-spring front-loads the shrink so much that collapsing reads as a snap.
         collapsing ? "overflow-hidden ease-in-out" : "ease-spring",
         className
@@ -305,8 +311,8 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
           shouldFilter={false}
           loop
           label="Search"
-          // Below sm the expanded field overlays the header row instead of squeezing it.
-          className="absolute inset-0 z-10 flex items-center bg-background px-4 sm:static sm:block sm:w-full sm:bg-transparent sm:px-0"
+          // Below md the expanded field overlays the header row instead of squeezing it.
+          className="absolute inset-0 z-10 flex items-center bg-background px-4 md:static md:block md:w-full md:bg-transparent md:px-0"
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();
@@ -342,6 +348,9 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                 variant="ghost"
                 size="icon"
                 aria-label="Clear search"
+                // Safari doesn't focus a tapped button, so the input's blur would
+                // close the overlay before this click lands.
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={clearQuery}
                 className="absolute right-1 h-7 w-7 rounded-full text-muted-foreground/60 hover:bg-fill-hover hover:text-foreground"
               >
@@ -352,7 +361,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
 
           {showResults && (
             <div
-              className="absolute left-4 right-4 top-full z-50 mt-2 overflow-hidden rounded-popover border bg-popover p-1.5 text-popover-foreground shadow-popover sm:left-auto sm:right-0 sm:w-[420px] sm:max-w-[calc(100vw-32px)]"
+              className="absolute left-4 right-4 top-full z-50 mt-2 overflow-hidden rounded-popover border bg-popover p-1.5 text-popover-foreground shadow-popover md:left-auto md:right-0 md:w-[420px] md:max-w-[calc(100vw-32px)]"
               // Keep focus in the input: otherwise mousedown blurs it and the
               // dropdown unmounts before the click reaches the item.
               onMouseDown={(event) => event.preventDefault()}

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { DateTime } from "ts-luxon";
+import { DateTime, Settings } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import { None, Some } from "@/types/option";
 import { AssignmentFilter, CoachViewMode, type AssignedActionWithContext } from "@/types/assigned-actions";
@@ -14,7 +14,15 @@ vi.mock("@/lib/hooks/use-all-actions-with-context", () => ({
   useAllActionsWithContext: (...args: unknown[]) => h.fetch(...args),
 }));
 
-const today = DateTime.now();
+// Fixtures and the page's time filter must see the same "now".
+const today = DateTime.fromISO("2026-11-01T12:00:00Z", { zone: "utc" });
+const originalNow = Settings.now;
+beforeAll(() => {
+  Settings.now = () => today.toMillis();
+});
+afterAll(() => {
+  Settings.now = originalNow;
+});
 const card = (status: ItemStatus, dueDaysFromNow?: number): AssignedActionWithContext =>
   ({
     action: createMockAction({

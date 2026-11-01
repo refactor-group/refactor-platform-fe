@@ -46,7 +46,7 @@ function GlyphShapes({ status }: { status: ItemStatus }) {
     case ItemStatus.WontDo:
       return (
         <>
-          <circle cx={10} cy={10} r={9} className="fill-faint" />
+          <circle cx={10} cy={10} r={9} className="fill-muted-foreground dark:fill-faint" />
           <path d="M7 7l6 6M13 7l-6 6" className="stroke-white" strokeWidth={1.8} />
         </>
       );

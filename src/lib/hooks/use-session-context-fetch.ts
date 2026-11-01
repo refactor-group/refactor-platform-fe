@@ -47,5 +47,8 @@ export function useSessionContextFetch(userId: string | null, options?: SWRConfi
     [sessions]
   );
 
-  return { lookupMaps, isLoading, isError, refresh };
+  // Mounts on different days hold different caches; this tells them apart.
+  const cacheKey = `${userId}:${oneYearAgo.toISODate()}:${oneYearFromNow.toISODate()}`;
+
+  return { lookupMaps, isLoading, isError, refresh, cacheKey };
 }

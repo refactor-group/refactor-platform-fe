@@ -29,7 +29,7 @@ const CoachingNotes = ({ onAddAs }: CoachingNotesProps) => {
   const { extensions, isReady, isLoading, error, resetCache } = useEditorCache();
 
   if (error) {
-    return renderErrorState(error, resetCache);
+    return renderErrorState(resetCache);
   }
 
   if (isLoading || extensions.length === 0) {
@@ -73,15 +73,14 @@ const LoadingState = () => {
   );
 };
 
-const renderErrorState = (error: Error | null, onRetry: () => void) => (
+const renderErrorState = (onRetry: () => void) => (
   <div className="coaching-notes-editor">
     <div className="coaching-notes-error">
       <div className="flex flex-col items-center text-center">
         <FileText className="size-12 text-muted-foreground mb-4" />
-        <p className="mb-2 font-medium">Could not load coaching notes</p>
+        <p className="mb-2 font-medium">Couldn&apos;t load the notes</p>
         <p className="text-sm text-muted-foreground mb-4">
-          {error?.message ||
-            "Please try again later or contact support if the issue persists."}
+          Try again, or refresh the page if it keeps happening.
         </p>
         <Button variant="outline" size="sm" onClick={onRetry}>
           Try Again
