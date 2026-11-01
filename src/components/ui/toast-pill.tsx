@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import type {
   CSSProperties,
   FocusEvent,
@@ -159,6 +159,21 @@ function LeadingIcon({ kind }: { kind: ToastKind }) {
   }
 }
 
+function subscribeToVisibility(onChange: () => void) {
+  document.addEventListener("visibilitychange", onChange);
+  return () => document.removeEventListener("visibilitychange", onChange);
+}
+
+// The countdown runs on the document timeline, which keeps advancing in a
+// hidden tab, so a toast raised there would expire unseen.
+function useTabHidden(): boolean {
+  return useSyncExternalStore(
+    subscribeToVisibility,
+    () => document.hidden,
+    () => false
+  );
+}
+
 function ActionButton({
   action,
   onDismiss,
@@ -236,7 +251,8 @@ export function ToastPill({
   const [hovered, setHovered] = useState(false);
   const [focusWithin, setFocusWithin] = useState(false);
   const { swiping, swipeStyle, consumeDragClick, handlers } = useSwipeToDismiss(onDismiss);
-  const paused = hovered || focusWithin;
+  const tabHidden = useTabHidden();
+  const paused = hovered || focusWithin || tabHidden;
 
   const handleClick = () => {
     if (consumeDragClick()) return;
@@ -267,7 +283,7 @@ export function ToastPill({
       {...handlers}
     >
       <LeadingIcon kind={kind} />
-      <span className="min-w-0 truncate">{message}</span>
+      <span className="min-w-0 line-clamp-2 sm:line-clamp-1">{message}</span>
       {actionButton(action)}
       {actionButton(cancel)}
       {durationMs.some && (

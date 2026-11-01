@@ -127,6 +127,19 @@ describe("ToastPill", () => {
     expect(pill).toHaveAttribute("data-paused", "true");
   });
 
+  it("pauses while the tab is hidden", () => {
+    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+    const { pill } = renderPill();
+    expect(pill).toHaveAttribute("data-paused", "true");
+
+    hidden.mockReturnValue(false);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(pill).toHaveAttribute("data-paused", "false");
+    hidden.mockRestore();
+  });
+
   it("dismisses on a horizontal swipe past the threshold", () => {
     const { pill, onDismiss } = renderPill();
     swipe(pill, { x: 100, y: 100 }, { x: 200, y: 100 });
