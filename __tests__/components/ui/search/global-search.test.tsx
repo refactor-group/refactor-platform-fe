@@ -191,4 +191,17 @@ describe("GlobalSearch", () => {
     await userEvent.keyboard("{Escape}");
     expect(input).toHaveValue("");
   });
+
+  it("uses the design-system pill input", async () => {
+    mockSearch(loaded([goalHit]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    const input = await typeQuery("weekly");
+
+    expect(input).toHaveClass("rounded-full", "bg-fill", "text-item");
+    expect(input).not.toHaveClass("rounded-md", "border-input");
+
+    const panel = input.parentElement?.nextElementSibling;
+    expect(panel).toHaveClass("rounded-popover", "shadow-popover");
+    expect(panel).toHaveTextContent("Weekly planning habit");
+  });
 });

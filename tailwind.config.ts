@@ -72,7 +72,23 @@ const config = {
   			'toast-check': 'hsl(var(--toast-check))',
   			avatar: {
   				DEFAULT: 'hsl(var(--avatar))',
-  				foreground: 'hsl(var(--avatar-foreground))'
+  				foreground: 'hsl(var(--avatar-foreground))',
+  				'1': 'hsl(var(--avatar-1))',
+  				'1-foreground': 'hsl(var(--avatar-1-foreground))',
+  				'2': 'hsl(var(--avatar-2))',
+  				'2-foreground': 'hsl(var(--avatar-2-foreground))',
+  				'3': 'hsl(var(--avatar-3))',
+  				'3-foreground': 'hsl(var(--avatar-3-foreground))',
+  				'4': 'hsl(var(--avatar-4))',
+  				'4-foreground': 'hsl(var(--avatar-4-foreground))',
+  				'5': 'hsl(var(--avatar-5))',
+  				'5-foreground': 'hsl(var(--avatar-5-foreground))',
+  				'6': 'hsl(var(--avatar-6))',
+  				'6-foreground': 'hsl(var(--avatar-6-foreground))',
+  				'7': 'hsl(var(--avatar-7))',
+  				'7-foreground': 'hsl(var(--avatar-7-foreground))',
+  				'8': 'hsl(var(--avatar-8))',
+  				'8-foreground': 'hsl(var(--avatar-8-foreground))'
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
