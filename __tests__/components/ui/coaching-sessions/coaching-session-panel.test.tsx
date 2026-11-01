@@ -503,9 +503,7 @@ describe("CoachingSessionPanel", () => {
     await user.click(screen.getAllByRole("button", { name: /delete/i })[0])
 
     await waitFor(() => {
-      expect(sonnerToast.error).toHaveBeenCalledWith("Failed to delete agreement", {
-        description: "An error occurred while deleting the agreement.",
-      })
+      expect(sonnerToast.error).toHaveBeenCalledWith("Couldn't delete the agreement")
     })
   })
 
@@ -526,9 +524,7 @@ describe("CoachingSessionPanel", () => {
     await user.click(screen.getAllByRole("button", { name: /^remove$/i })[0])
 
     await waitFor(() => {
-      expect(sonnerToast.error).toHaveBeenCalledWith("Failed to remove goal", {
-        description: "unlink failed",
-      })
+      expect(sonnerToast.error).toHaveBeenCalledWith("Couldn't remove the goal")
     })
   })
 })

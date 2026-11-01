@@ -196,10 +196,7 @@ describe("CoachingSessionTitle — save wiring", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() =>
-      expect(mockToastError).toHaveBeenCalledWith(
-        "Failed to save title",
-        expect.objectContaining({ description: expect.any(String) })
-      )
+      expect(mockToastError).toHaveBeenCalledWith("Couldn't save the title")
     );
     // The save attempt still resolves (rejection is caught, not propagated).
     expect(mockUpdateTitle).toHaveBeenCalledTimes(1);

@@ -154,7 +154,7 @@ describe("Google OAuth Flow Integration", () => {
 
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith(
-          "Failed to connect Google account. Please try again."
+          "Couldn't connect your Google account · Try again"
         );
       });
     });

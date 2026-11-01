@@ -37,11 +37,11 @@ function findActionById(
 }
 
 /** Show an error toast, distinguishing network errors from other failures. */
-function showActionError(message: string, err: unknown) {
+function showActionError(verb: string, err: unknown) {
   if (err instanceof EntityApiError && err.isNetworkError()) {
-    sonnerToast.error(`${message}. Connection to service was lost.`);
+    sonnerToast.error(`Couldn't ${verb} · Check your connection and try again`);
   } else {
-    sonnerToast.error(`${message}.`);
+    sonnerToast.error(`Couldn't ${verb}`);
   }
 }
 
@@ -200,14 +200,14 @@ function useActionCrud(
   const { mutate: globalMutate } = useSWRConfig();
 
   const updateField = useCallback(
-    async (id: Id, fields: Partial<Action>, errorMessage: string) => {
+    async (id: Id, fields: Partial<Action>, verb: string) => {
       const action = findActionById(id, sessionActions, allRelationshipActions);
       if (!action) return;
       try {
         await update(id, { ...action, ...fields });
         refresh();
       } catch (err) {
-        showActionError(errorMessage, err);
+        showActionError(verb, err);
       }
     },
     [sessionActions, allRelationshipActions, update, refresh]
@@ -241,7 +241,7 @@ function useActionCrud(
           revalidateGoalProgress();
         }
       } catch (err) {
-        showActionError("Failed to create action", err);
+        showActionError("create the action", err);
       }
     },
     [coachingSessionId, userId, create, refresh, revalidateGoalProgress]
@@ -257,7 +257,7 @@ function useActionCrud(
         refresh();
         revalidateGoalProgress();
       } catch (err) {
-        showActionError("Failed to update goal link", err);
+        showActionError("update the goal link", err);
       }
     },
     [sessionActions, allRelationshipActions, update, refresh, revalidateGoalProgress]
@@ -266,7 +266,7 @@ function useActionCrud(
   const handleStatusChange = useCallback(
     async (id: Id, newStatus: ItemStatus) => {
       const action = findActionById(id, sessionActions, allRelationshipActions);
-      await updateField(id, { status: newStatus }, "Failed to update status");
+      await updateField(id, { status: newStatus }, "update the status");
       if (action?.goal_id.some) {
         revalidateGoalProgress();
       }
@@ -276,19 +276,19 @@ function useActionCrud(
 
   const handleDueDateChange = useCallback(
     (id: Id, newDueBy: DateTime) =>
-      updateField(id, { due_by: Some(newDueBy) }, "Failed to update due date"),
+      updateField(id, { due_by: Some(newDueBy) }, "update the due date"),
     [updateField]
   );
 
   const handleAssigneesChange = useCallback(
     (id: Id, assigneeIds: Id[]) =>
-      updateField(id, { assignee_ids: assigneeIds }, "Failed to update assignees"),
+      updateField(id, { assignee_ids: assigneeIds }, "update the assignees"),
     [updateField]
   );
 
   const handleBodyChange = useCallback(
     (id: Id, newBody: string) =>
-      updateField(id, { body: newBody }, "Failed to update action"),
+      updateField(id, { body: newBody }, "update the action"),
     [updateField]
   );
 
@@ -300,7 +300,7 @@ function useActionCrud(
         await deleteAction(id);
         refresh();
       } catch (err) {
-        showActionError("Failed to delete action", err);
+        showActionError("delete the action", err);
         return;
       }
 
@@ -313,9 +313,7 @@ function useActionCrud(
               await create(action);
               refresh();
             } catch {
-              sonnerToast.error("Failed to undo", {
-                description: "Could not restore the action.",
-              });
+              sonnerToast.error("Couldn't restore the action");
             }
           },
         },

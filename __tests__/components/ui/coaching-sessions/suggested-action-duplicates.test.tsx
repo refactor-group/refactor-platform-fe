@@ -216,10 +216,9 @@ describe("ActionSectionContent duplicates and undo", () => {
     expect(toast).toHaveBeenCalledTimes(1);
     const [message, options] = vi.mocked(toast).mock.calls[0] as unknown as [
       string,
-      { description: string; duration: number; action: { label: string; onClick: () => void } },
+      { duration: number; action: { label: string; onClick: () => void } },
     ];
-    expect(message).toBe("Dismissed suggested action");
-    expect(options.description).toBe('"Schedule a skip-level 1:1 with Dana"');
+    expect(message).toBe('Dismissed "Schedule a skip-level 1:1 with Dana"');
     expect(options.duration).toBe(6000);
     expect(options.action.label).toBe("Undo");
 
@@ -251,8 +250,9 @@ describe("ActionSectionContent duplicates and undo", () => {
 
     await userEvent.click(screen.getByRole("button", DISMISS));
     await waitFor(() => expect(toast).toHaveBeenCalledTimes(1));
-    const options = vi.mocked(toast).mock.calls[0][1] as unknown as { description: string };
-    expect(options.description).toBe('"Write up the full delegation plan for th..."');
+    expect(vi.mocked(toast).mock.calls[0][0]).toBe(
+      'Dismissed "Write up the full delegation plan for th..."'
+    );
   });
 
   it("leaves the card dismissed when the restore fails", async () => {

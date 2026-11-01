@@ -183,7 +183,7 @@ describe("RescheduleSeriesDialog - submit path", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Failed to reschedule the series. Please try again."
+        "Couldn't reschedule the series · Try again"
       );
     });
 

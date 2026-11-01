@@ -28,7 +28,6 @@ export interface ToastAction {
 interface ToastPillProps {
   kind: ToastKind;
   message: string;
-  description: Option<string>;
   durationMs: Option<number>;
   action: Option<ToastAction>;
   cancel: Option<ToastAction>;
@@ -229,7 +228,6 @@ function CountdownRing({
 export function ToastPill({
   kind,
   message,
-  description,
   durationMs,
   action,
   cancel,
@@ -269,10 +267,7 @@ export function ToastPill({
       {...handlers}
     >
       <LeadingIcon kind={kind} />
-      <span className="min-w-0 truncate">
-        {message}
-        {description.some && <span> · {description.val}</span>}
-      </span>
+      <span className="min-w-0 truncate">{message}</span>
       {actionButton(action)}
       {actionButton(cancel)}
       {durationMs.some && (

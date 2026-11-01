@@ -9,7 +9,6 @@ type ToastMessage = string;
 
 export interface ToastOptions {
   id?: ToastId;
-  description?: string;
   /** Milliseconds; Infinity keeps the toast until dismissed. */
   duration?: number;
   action?: ToastAction;
@@ -48,7 +47,6 @@ function show(kind: ToastKind, message: ToastMessage, options: ToastOptions = {}
       <ToastPill
         kind={kind}
         message={message}
-        description={fromOptional(options.description)}
         durationMs={countdownFor(kind, options.duration)}
         action={fromOptional(options.action)}
         cancel={fromOptional(options.cancel)}

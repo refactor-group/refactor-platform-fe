@@ -168,3 +168,31 @@ With VoiceOver on, trigger an error toast, then a success toast.
 On `/settings/preferences` and, as a super admin, an `/admin` page, trigger any save that shows a toast.
 
 **Pass:** exactly one toast appears for each event.
+
+## 6. Part E: single-line toast copy (#502)
+
+### Case E1: one line, no technical detail
+
+Load the page first, then block the named request in DevTools and trigger the action:
+
+| Action | Block | Expected toast |
+|---|---|---|
+| Add a topic on a session page | `*/topics` | Couldn't add the topic |
+| Delete an agreement | `*/agreements/*` | Couldn't delete the agreement |
+| Change an action's status in the session panel | `*/actions/*` | Couldn't update the status |
+| Resend a session invite from the dashboard ⋮ menu (coach) | `*/resend_invite` | Couldn't resend the invite · Try again in a moment |
+| Delete a session from the dashboard ⋮ menu (coach) | `*/coaching_sessions/*` | Couldn't delete the session · Try again |
+
+**Pass:** each toast shows exactly the expected text on one line, with no trailing period, no HTTP status, no server message and no second line.
+
+### Case E2: network loss wording
+
+With DevTools network throttling set to **Offline**, change an action's status on the Actions page.
+
+**Pass:** "Couldn't update the status · Check your connection and try again".
+
+### Case E3: Undo confirmations
+
+Delete a topic on a session page.
+
+**Pass:** the toast names the deleted topic in quotes and offers Undo. Undo restores the topic.

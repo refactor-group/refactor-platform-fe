@@ -18,7 +18,6 @@ if (typeof window.PointerEvent === "undefined") {
 interface RenderArgs {
   kind?: ToastKind;
   message?: string;
-  description?: Option<string>;
   durationMs?: Option<number>;
   action?: Option<{ label: string; onClick: () => void }>;
   cancel?: Option<{ label: string; onClick: () => void }>;
@@ -30,7 +29,6 @@ function renderPill(args: RenderArgs = {}) {
     <ToastPill
       kind={args.kind ?? "neutral"}
       message={args.message ?? "Saved"}
-      description={args.description ?? None}
       durationMs={args.durationMs ?? Some(6000)}
       action={args.action ?? None}
       cancel={args.cancel ?? None}
@@ -79,11 +77,6 @@ describe("ToastPill", () => {
     const success = renderPill({ kind: "success" }).pill;
     expect(success).toHaveAttribute("role", "status");
     expect(success).toHaveAttribute("aria-live", "polite");
-  });
-
-  it("renders the description on the same line after a middle dot", () => {
-    const { pill } = renderPill({ message: "Failed", description: Some("Try again.") });
-    expect(pill.querySelector(".truncate")).toHaveTextContent("Failed · Try again.");
   });
 
   it("dismisses once when the pill is clicked", () => {
@@ -186,7 +179,6 @@ describe("ToastPill", () => {
         <ToastPill
           kind="neutral"
           message="Saved"
-          description={None}
           durationMs={None}
           action={None}
           cancel={None}

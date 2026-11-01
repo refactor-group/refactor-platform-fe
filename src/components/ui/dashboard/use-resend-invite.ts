@@ -43,8 +43,7 @@ function announceResendResult(
   const cause = failure.kind === "refused" ? failure.reason : failure.kind;
   switch (cause) {
     case ResendInviteRefusal.LegacySeries:
-      sonnerToast.error("This series can't be resent.", {
-        description: "You can resend this session instead.",
+      sonnerToast.error("This series can't be resent · Resend this session instead", {
         action: {
           label: "Resend this session",
           onClick: () => resendSessionInvite(ctx.session, ctx.participantName),
@@ -62,9 +61,7 @@ function announceResendResult(
     case "not_delivered":
     case "network":
     case "unexpected":
-      sonnerToast.error("Couldn't resend the invite", {
-        description: "Please try again in a moment.",
-      });
+      sonnerToast.error("Couldn't resend the invite · Try again in a moment");
       return;
     default: {
       const _exhaustive: never = cause;

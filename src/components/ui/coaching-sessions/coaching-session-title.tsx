@@ -71,11 +71,9 @@ const CoachingSessionTitle: FC = () => {
       await refresh();
     } catch (err) {
       console.error("Failed to save session title:", err);
-      sonnerToast.error("Failed to save title", {
-        description: isForbiddenError(err)
-          ? PERMISSION_DENIED_MESSAGE
-          : "An error occurred while saving the title.",
-      });
+      sonnerToast.error(
+        isForbiddenError(err) ? PERMISSION_DENIED_MESSAGE : "Couldn't save the title"
+      );
     } finally {
       setSave({ kind: "idle" });
     }

@@ -523,23 +523,17 @@ export function CoachingSessionPanel({
         refreshAllGoals();
         const goal = allGoals.find((g) => g.id === goalId);
         const name = goal ? goalTitle(goal) : "This goal";
-        sonnerToast.error("Already linked", {
-          description: `"${name}" is already linked to this session.`,
-        });
+        sonnerToast.error(`"${name}" is already linked to this session`);
         return { kind: "done" };
       }
       if (isCannotLinkCompletedGoalError(err)) {
         const goal = allGoals.find((g) => g.id === goalId);
         const name = goal ? goalTitle(goal) : "This goal";
-        sonnerToast.error("Goal is completed", {
-          description: `"${name}" is completed. Reopen it to in-progress before linking it to a session.`,
-        });
+        sonnerToast.error(`"${name}" is completed · Reopen it before linking it here`);
         return { kind: "done" };
       }
       console.error("Failed to link goal:", err);
-      sonnerToast.error("Failed to link goal", {
-        description: err.message,
-      });
+      sonnerToast.error("Couldn't link the goal");
       return { kind: "done" };
     },
     [coachingSessionId, allGoals, refreshSessionGoals, refreshAllGoals]
@@ -576,23 +570,17 @@ export function CoachingSessionPanel({
                   const err = relinkResult.error;
                   const limitInfo = extractActiveGoalLimitError(err);
                   if (limitInfo) {
-                    sonnerToast.error("Goal limit reached", {
-                      description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Demote one before restoring this goal.`,
-                    });
+                    sonnerToast.error("Too many goals in progress · Finish or pause one to restore this goal");
                   } else if (isGoalAlreadyLinkedToSessionError(err)) {
                     // Concurrent re-link won the race — the goal is back, so
                     // surface a softer message and refresh.
-                    sonnerToast("Goal already restored", {
-                      description: "Looks like it was added back from another window.",
-                    });
+                    sonnerToast("Goal was already restored in another window");
                     refreshSessionGoals();
                     refreshAllGoals();
                   } else if (isCannotLinkCompletedGoalError(err)) {
-                    sonnerToast.error("Goal is completed", {
-                      description: "Reopen this goal to in-progress before linking it again.",
-                    });
+                    sonnerToast.error("Goal is completed · Reopen it before linking it again");
                   } else {
-                    sonnerToast.error("Failed to undo", { description: err.message });
+                    sonnerToast.error("Couldn't undo");
                   }
                   return;
                 }
@@ -611,9 +599,7 @@ export function CoachingSessionPanel({
         },
         (err) => {
           console.error("Failed to unlink goal:", err);
-          sonnerToast.error("Failed to remove goal", {
-            description: err.message,
-          });
+          sonnerToast.error("Couldn't remove the goal");
         }
       );
     },
@@ -636,9 +622,7 @@ export function CoachingSessionPanel({
       } catch (err) {
         const limitInfo = extractActiveGoalLimitError(err);
         if (limitInfo) {
-          sonnerToast.error("Goal limit reached", {
-            description: `You already have ${limitInfo.maxInProgressGoals} goals in progress. Please complete or change the status of one before starting another.`,
-          });
+          sonnerToast.error("Too many goals in progress · Finish or pause one first");
         } else {
           console.error("Failed to create goal:", err);
         }
@@ -661,9 +645,7 @@ export function CoachingSessionPanel({
           const unlinkResult = await GoalApi.unlinkFromSession(coachingSessionId, swapGoalId);
           if (unlinkResult.isErr()) {
             console.error("Failed to unlink goal during swap:", unlinkResult.error);
-            sonnerToast.error("Failed to swap goal", {
-              description: unlinkResult.error.message,
-            });
+            sonnerToast.error("Couldn't swap the goal");
             return;
           }
         }
@@ -691,11 +673,7 @@ export function CoachingSessionPanel({
           refreshAllGoals();
         }
 
-        sonnerToast.error("Failed to swap goal", {
-
-          description: "An error occurred while swapping goals. The original goal has been restored.",
-
-        });
+        sonnerToast.error("Couldn't swap the goal · The original goal is back");
       }
     },
     [allGoals, linkedGoalIds, coachingSessionId, coachingRelationshipId, createGoal, updateGoal, refreshSessionGoals, refreshAllGoals]
@@ -724,11 +702,7 @@ export function CoachingSessionPanel({
             refreshSessionGoals();
             refreshAllGoals();
 
-            sonnerToast.error("Failed to swap goal", {
-
-              description: unlinkResult.error.message,
-
-            });
+            sonnerToast.error("Couldn't swap the goal");
             return;
           }
         }
@@ -747,11 +721,7 @@ export function CoachingSessionPanel({
             refreshAllGoals();
           }
 
-          sonnerToast.error("Failed to link replacement goal", {
-
-            description: linkResult.error.message,
-
-          });
+          sonnerToast.error("Couldn't link the new goal");
           return;
         }
 
@@ -770,11 +740,7 @@ export function CoachingSessionPanel({
           refreshAllGoals();
         }
 
-        sonnerToast.error("Failed to swap goal", {
-
-          description: "An error occurred while swapping goals. The original goal has been restored.",
-
-        });
+        sonnerToast.error("Couldn't swap the goal · The original goal is back");
       }
     },
     [allGoals, linkedGoalIds, coachingSessionId, updateGoal, refreshSessionGoals, refreshAllGoals]
@@ -790,9 +756,7 @@ export function CoachingSessionPanel({
         refreshAllGoals();
       } catch (err) {
         console.error("Failed to update goal:", err);
-        sonnerToast.error("Failed to update goal", {
-          description: "An error occurred while saving changes.",
-        });
+        sonnerToast.error("Couldn't save the goal");
       }
     },
     [allGoals, updateGoal, refreshSessionGoals, refreshAllGoals]
@@ -941,9 +905,7 @@ export function CoachingSessionPanel({
       setIsAddingAgreement(false);
     } catch (err) {
       console.error("Failed to create agreement:", err);
-      sonnerToast.error("Failed to create agreement", {
-        description: "An error occurred while creating the agreement.",
-      });
+      sonnerToast.error("Couldn't create the agreement");
     }
   }, [coachingSessionId, createAgreement, refreshAgreements]);
 
@@ -956,9 +918,7 @@ export function CoachingSessionPanel({
         refreshAgreements();
       } catch (err) {
         console.error("Failed to update agreement:", err);
-        sonnerToast.error("Failed to update agreement", {
-          description: "An error occurred while saving changes.",
-        });
+        sonnerToast.error("Couldn't save the agreement");
       }
     },
     [agreements, updateAgreement, refreshAgreements]
@@ -985,18 +945,14 @@ export function CoachingSessionPanel({
                 await createAgreement(agreement);
                 refreshAgreements();
               } catch {
-                sonnerToast.error("Failed to undo", {
-                  description: "Could not restore the agreement.",
-                });
+                sonnerToast.error("Couldn't restore the agreement");
               }
             },
           },
         });
       } catch (err) {
         console.error("Failed to delete agreement:", err);
-        sonnerToast.error("Failed to delete agreement", {
-          description: "An error occurred while deleting the agreement.",
-        });
+        sonnerToast.error("Couldn't delete the agreement");
       }
     },
     [agreements, deleteAgreement, createAgreement, refreshAgreements]
@@ -1011,9 +967,7 @@ export function CoachingSessionPanel({
         refreshTopics();
       } catch (err) {
         console.error("Failed to create topic:", err);
-        sonnerToast.error("Failed to add topic", {
-          description: "An error occurred while adding the topic.",
-        });
+        sonnerToast.error("Couldn't add the topic");
       }
     },
     [createTopic, refreshTopics]
@@ -1026,9 +980,7 @@ export function CoachingSessionPanel({
         refreshTopics();
       } catch (err) {
         console.error("Failed to update topic:", err);
-        sonnerToast.error("Failed to update topic", {
-          description: "An error occurred while saving changes.",
-        });
+        sonnerToast.error("Couldn't save the topic");
       }
     },
     [updateTopic, refreshTopics]
@@ -1057,18 +1009,14 @@ export function CoachingSessionPanel({
                 await undoTopic(coachingSessionId, id);
                 refreshTopics();
               } catch {
-                sonnerToast.error("Failed to undo", {
-                  description: "Could not restore the topic.",
-                });
+                sonnerToast.error("Couldn't restore the topic");
               }
             },
           },
         });
       } catch (err) {
         console.error("Failed to delete topic:", err);
-        sonnerToast.error("Failed to delete topic", {
-          description: "An error occurred while deleting the topic.",
-        });
+        sonnerToast.error("Couldn't delete the topic");
       }
     },
     [topics, deleteTopic, undoTopic, refreshTopics, coachingSessionId]
@@ -1091,9 +1039,7 @@ export function CoachingSessionPanel({
         });
       } catch (err) {
         console.error("Failed to reorder topics:", err);
-        sonnerToast.error("Failed to reorder topics", {
-          description: "An error occurred while saving the new order.",
-        });
+        sonnerToast.error("Couldn't save the new topic order");
       }
     },
     [topics, reorderTopics, refreshTopics]
@@ -1118,9 +1064,7 @@ export function CoachingSessionPanel({
         );
       } catch (err) {
         console.error("Failed to set topic priority:", err);
-        sonnerToast.error("Failed to save priority", {
-          description: "An error occurred while saving the priority.",
-        });
+        sonnerToast.error("Couldn't save the priority");
       }
     },
     [topics, rateTopic, refreshTopics]
@@ -1137,9 +1081,7 @@ export function CoachingSessionPanel({
           refreshTopics();
         } catch (err) {
           console.error("Failed to undo topic defer:", err);
-          sonnerToast.error("Failed to update topic", {
-            description: "An error occurred while updating the topic.",
-          });
+          sonnerToast.error("Couldn't update the topic");
         }
         return;
       }
@@ -1158,9 +1100,7 @@ export function CoachingSessionPanel({
                   await undoTopic(destination, id);
                   refreshTopics();
                 } catch {
-                  sonnerToast.error("Failed to undo", {
-                    description: "Could not bring the topic back.",
-                  });
+                  sonnerToast.error("Couldn't bring the topic back");
                 }
               },
             },
@@ -1168,9 +1108,7 @@ export function CoachingSessionPanel({
         }
       } catch (err) {
         console.error("Failed to set topic status:", err);
-        sonnerToast.error("Failed to update topic", {
-          description: "An error occurred while updating the topic.",
-        });
+        sonnerToast.error("Couldn't update the topic");
       }
     },
     [topics, setTopicStatus, undoTopic, refreshTopics, coachingSessionId]
@@ -1180,9 +1118,7 @@ export function CoachingSessionPanel({
     (body: string) => {
       const inserted = insertTextIntoNotes(body);
       if (!inserted) {
-        sonnerToast.error("Notes aren't ready yet", {
-          description: "Wait for the notes editor to finish loading, then try again.",
-        });
+        sonnerToast.error("Notes are still loading · Try again in a moment");
       }
     },
     [insertTextIntoNotes]
