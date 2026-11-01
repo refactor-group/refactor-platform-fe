@@ -158,9 +158,15 @@ test("e: Ehab schedules a BigTable coaching session with Jim", async ({ page }) 
 
   // The dashboard opens on Refactor Group, where Ehab is only a coachee and so
   // has no Add New button. Switch to BigTable, where he is admin and Jim's coach.
-  await page.getByRole("combobox").first().click();
-  await page.getByRole("option", { name: /BigTable/ }).click();
-  await expect(page.getByRole("combobox").first()).toContainText("BigTable");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page
+    .getByRole("menu")
+    .getByRole("menuitem")
+    .filter({ has: page.getByText("BigTable", { exact: true }) })
+    .click();
+  await expect(page.getByRole("banner").getByRole("link").first()).toHaveAccessibleName(
+    "BigTable"
+  );
 
   await page.click('button:has-text("Add New")');
   await page.getByRole("menuitem", { name: /session/i }).click();
