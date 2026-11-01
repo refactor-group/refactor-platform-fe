@@ -1,7 +1,7 @@
 // Interacts with the coaching_session endpoints
 
 import { siteConfig } from "@/site.config";
-import { Id } from "@/types/general";
+import { EntityApiError, Id } from "@/types/general";
 import {
   CoachingSession,
   defaultCoachingSession,
@@ -17,13 +17,39 @@ import { USERS_BASEURL } from "./users";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { Option } from "@/types/option";
 import { DateTime } from "ts-luxon";
-import type { Result } from "neverthrow";
+import { ResultAsync, type Result } from "neverthrow";
 import { attemptResend, type ResendInviteFailure } from "@/types/resend-invite";
 
 // Re-export for convenience
 export { CoachingSessionInclude };
 
 const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
+
+/** A window of sessions around an instant, in one coaching relationship. */
+export interface NearestWindow {
+  relationshipId: Id;
+  /** A session's `date` verbatim, or an RFC 3339 instant. */
+  around: string;
+  before: number;
+  after: number;
+  include?: CoachingSessionInclude[];
+}
+
+export interface NearestQuery extends NearestWindow {
+  userId: Id;
+  /** Part of the cache key only: a new value refetches the same window. */
+  fetchedFor: string;
+}
+
+function nearestParams(window: NearestWindow): Record<string, string> {
+  return {
+    coaching_relationship_id: window.relationshipId,
+    around: window.around,
+    before: String(window.before),
+    after: String(window.after),
+    ...(window.include && window.include.length > 0 && { include: window.include.join(",") }),
+  };
+}
 
 /**
  * API client for coaching session-related operations.
@@ -253,6 +279,25 @@ export const CoachingSessionApi = {
 
     return CoachingSessionApi.listNested(userId, { params });
   },
+
+  /**
+   * Fetches the `before` sessions just before `around` and the `after` sessions
+   * at or after it, in one coaching relationship, sorted date DESC.
+   *
+   * @param around A session's naive UTC `date`, or an RFC 3339 instant
+   * @param before 0..10
+   * @param after 0..10
+   */
+  listNearestForUser: (
+    userId: Id,
+    window: NearestWindow
+  ): ResultAsync<EnrichedCoachingSession[], EntityApiError> =>
+    ResultAsync.fromPromise(
+      EntityApi.listNestedFn<any>(USERS_BASEURL, userId, "coaching_sessions/nearest", {
+        params: nearestParams(window),
+      }).then((sessions) => sessions.map(transformCoachingSession)),
+      (e) => EntityApiError.from("GET", `${USERS_BASEURL}/${userId}/coaching_sessions/nearest`, e)
+    ),
 
   listCountsForUser: async (
     userId: Id,
@@ -537,6 +582,37 @@ export const useEnrichedCoachingSessionsForUserCounts = (
   return {
     counts: entities,
     isLoading: userId ? isLoading : false,
+    isError,
+    refresh,
+  };
+};
+
+/**
+ * Sessions nearest an instant for one coaching relationship. `None` skips the
+ * fetch; every query field is in the SWR key.
+ */
+export const useNearestCoachingSessions = (query: Option<NearestQuery>) => {
+  const url = query.some
+    ? `${USERS_BASEURL}/${query.val.userId}/coaching_sessions/nearest`
+    : "";
+  const params = query.some
+    ? { ...nearestParams(query.val), fetchedFor: query.val.fetchedFor }
+    : null;
+
+  // SWR wants a rejecting promise; unwrap the Result at this boundary.
+  const fetcher = async () => {
+    if (query.none) return [];
+    const result = await CoachingSessionApi.listNearestForUser(query.val.userId, query.val);
+    if (result.isErr()) throw result.error;
+    return result.value;
+  };
+
+  const { entities, isLoading, isError, refresh } =
+    EntityApi.useEntityList<EnrichedCoachingSession>(url, fetcher, params);
+
+  return {
+    sessions: entities,
+    isLoading: query.some ? isLoading : false,
     isError,
     refresh,
   };
