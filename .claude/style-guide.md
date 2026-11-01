@@ -136,7 +136,8 @@ Pills, `text-item font-medium`, no border, icon + label `gap-2`, 16px lucide ico
 
 - **Primary:** `bg-primary text-primary-foreground`, disabled `bg-primary-disabled`. One per view.
 - **Secondary:** `bg-fill hover:bg-fill-hover text-foreground`.
-- **Tertiary:** bare text + icon, `text-ink-2`.
+- **Tertiary:** `variant="tertiary"`, bare text + icon, `text-ink-2 hover:text-foreground`, no
+  background. Not `ghost`: ghost hover-fills and is for icon buttons in menus.
 - Heights: 40 default · 36 dense (header) · 44 modal confirm · 48 mobile footer.
 - **Icon-sizing gotcha:** `buttonVariants` forces `[&_svg]:size-4`; override with the important
   prefix (e.g. `!h-6 !w-6`).
