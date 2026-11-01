@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, PersonAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
@@ -13,6 +13,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CalendarIcon, UserRound } from "lucide-react";
@@ -58,6 +59,37 @@ export function resolveAssignees(
     .filter((a): a is AssigneeInfo => a !== undefined);
 
   return { allAssignees, resolvedAssignees };
+}
+
+// ---------------------------------------------------------------------------
+// AssigneeAvatars
+// ---------------------------------------------------------------------------
+
+/** The card footer's 26px assignee avatars, each named on hover. */
+export function AssigneeAvatars({ assignees }: { assignees: AssigneeInfo[] }) {
+  return (
+    <div className="flex items-center -space-x-1.5">
+      {assignees.map((a) => (
+        <TooltipProvider key={a.id} delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span aria-label={a.name} role="img">
+                <PersonAvatar
+                  userId={a.id}
+                  initials={a.initials}
+                  size={26}
+                  className="ring-2 ring-background"
+                />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              {a.name}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ))}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------

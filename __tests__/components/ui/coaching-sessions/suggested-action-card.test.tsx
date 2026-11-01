@@ -93,11 +93,12 @@ describe("SuggestedActionCard", () => {
     const link = within(card).getByRole("button", { name: /Show in transcript/ });
     expect(link).toHaveTextContent("Caleb Bourg · 12:34");
     expect(within(card).getByText("CB")).toBeInTheDocument();
-    expect(within(card).getByTestId("suggested-action-due")).toHaveTextContent("Oct 17, 2026");
-    expect(within(card).getByTestId("suggested-action-due")).toHaveAttribute(
-      "data-due-kind",
-      "spoken"
-    );
+    expect(within(card).getByRole("img", { name: "Caleb Bourg" })).toBeInTheDocument();
+    const due = within(card).getByTestId("suggested-action-due");
+    expect(due).toHaveTextContent(/^Due Oct 17$/);
+    expect(due).toHaveAttribute("data-due-kind", "spoken");
+    expect(due).toHaveClass("text-xs", "font-medium", "text-foreground");
+    expect(due).not.toHaveClass("font-bold");
   });
 
   it("gives the coach the accept, dismiss and edit controls and no lock note", () => {
@@ -145,8 +146,9 @@ describe("SuggestedActionCard", () => {
       RelationshipRole.Coach
     );
     const due = screen.getByTestId("suggested-action-due");
-    expect(due).toHaveTextContent("Oct 18, 2026");
+    expect(due).toHaveTextContent(/^Due Oct 18$/);
     expect(due).toHaveAttribute("data-due-kind", "default");
+    expect(due).toHaveClass("text-muted-foreground");
     await userEvent.click(due);
     expect(
       (await screen.findAllByText("No date mentioned. Defaults to a week from today")).length

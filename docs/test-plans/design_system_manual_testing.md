@@ -501,3 +501,9 @@ Hover a past session on the dashboard that has actions due.
 Repeat I1 and I4 in Dark, then I1 at 375px.
 
 **Pass:** glyphs, pills, the amber and on-hold meta and the hover border all read clearly in Dark. At 375px the status control, ⓘ, avatar and meta fit on the card without overlapping, and long titles wrap.
+
+### Case I6: suggested action cards
+
+Open a session's Actions panel with suggested actions from a transcript, one with a spoken date ("by Friday") and one without, in Light and Dark.
+
+**Pass:** suggested cards keep their dashed border, with the full card's radius, padding and 14px title. The footer shows 26px assignee avatars (or "Unassigned") and "Due Oct 17" in 12px text: the spoken date in ink and medium weight, the default date in grey. Tapping a date still shows where it came from. Accept, Edit and Dismiss work as before.

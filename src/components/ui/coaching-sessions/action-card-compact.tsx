@@ -16,13 +16,14 @@ import {
 } from "@/components/ui/tooltip";
 import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
 import {
+  AssigneeAvatars,
   DueDatePicker,
   AssigneePickerPopover,
   resolveAssignees,
+  type AssigneeInfo,
 } from "@/components/ui/coaching-sessions/action-card-parts";
 import { ActionStatusControl } from "@/components/ui/status/action-status-control";
 import { StatusMetaLine } from "@/components/ui/status/status-meta-line";
-import { PersonAvatar } from "@/components/ui/avatar";
 import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
 import { GoalPill } from "@/components/ui/goal-pill";
 import type { Action } from "@/types/action";
@@ -346,32 +347,12 @@ function ActionFooter({
   resolvedAssignees,
   action,
 }: {
-  resolvedAssignees: { id: Id; initials: string; name: string }[];
+  resolvedAssignees: AssigneeInfo[];
   action: Action;
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center -space-x-1.5">
-        {resolvedAssignees.map((a) => (
-          <TooltipProvider key={a.id} delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span aria-label={a.name} role="img">
-                  <PersonAvatar
-                    userId={a.id}
-                    initials={a.initials}
-                    size={26}
-                    className="ring-2 ring-background"
-                  />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">
-                {a.name}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))}
-      </div>
+      <AssigneeAvatars assignees={resolvedAssignees} />
       <StatusMetaLine
         status={action.status}
         dueBy={action.due_by}
