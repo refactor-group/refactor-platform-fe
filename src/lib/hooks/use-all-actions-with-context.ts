@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { SWRConfiguration } from "swr";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useActionsFetch } from "@/lib/hooks/use-actions-fetch";
 import { useSessionContextFetch } from "@/lib/hooks/use-session-context-fetch";
@@ -17,11 +18,13 @@ import { addContextToActions } from "@/lib/utils/assigned-actions";
  * @param viewMode - Whether to show the user's own actions or their coachees' actions
  * @param relationshipId - Optional filter to a specific coaching relationship (server-side)
  * @param assignmentFilter - Filter by assignment status (assigned/unassigned/all)
+ * @param options - SWR overrides for the actions and session fetches
  */
 export function useAllActionsWithContext(
   viewMode: CoachViewMode,
   relationshipId?: Id,
-  assignmentFilter: AssignmentFilter = AssignmentFilter.Assigned
+  assignmentFilter: AssignmentFilter = AssignmentFilter.Assigned,
+  options?: SWRConfiguration
 ) {
   const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
@@ -33,13 +36,13 @@ export function useAllActionsWithContext(
     isLoading: actionsLoading,
     isError: actionsError,
     refresh,
-  } = useActionsFetch(viewMode, relationshipId, assignmentFilter);
+  } = useActionsFetch(viewMode, relationshipId, assignmentFilter, options);
 
   const {
     lookupMaps,
     isLoading: sessionsLoading,
     isError: sessionsError,
-  } = useSessionContextFetch(userId);
+  } = useSessionContextFetch(userId, options);
 
   const actionsWithContext: AssignedActionWithContext[] = useMemo(
     () =>

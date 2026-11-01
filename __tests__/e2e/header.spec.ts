@@ -59,32 +59,78 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
   await mockOrganizations(page)
 }
 
+// The badge counts what the Actions page shows by default: open, due within
+// the last 30 days or later (or undated), with a known session.
 const OPEN_ACTION_COUNT = 3
-const ACTIONS = ['NotStarted', 'InProgress', 'OnHold', 'Completed', 'WontDo'].map((status, i) => ({
-  id: `action-${i}`,
+const RECENT = new Date().toISOString()
+const LONG_OVERDUE = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
+const mockAction = (name: string, status: string, dueBy: string | null) => ({
+  id: `action-${name}`,
   coaching_session_id: 'sess-1',
-  body: `${status} action`,
+  body: `${name} action`,
   user_id: MOCK_USER_ID,
   status,
-  status_changed_at: '2024-01-01T00:00:00Z',
-  due_by: null,
+  status_changed_at: RECENT,
+  due_by: dueBy,
   goal_id: null,
-  created_at: '2024-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z',
+  created_at: RECENT,
+  updated_at: RECENT,
   assignee_ids: [MOCK_USER_ID],
-}))
+})
+const ACTIONS = [
+  ...['NotStarted', 'InProgress', 'OnHold', 'Completed', 'WontDo'].map((status) =>
+    mockAction(status, status, null)
+  ),
+  mockAction('overdue', 'InProgress', LONG_OVERDUE),
+]
 
-// Only the user-scoped request gets actions, so the badge proves it asks for
-// the user's own actions rather than a role's.
+// Serves the batch actions request and saves status changes to a copy of
+// ACTIONS; resolves to the number of batch requests made so far.
 async function mockActions(page: Page) {
+  const actions = ACTIONS.map((action) => ({ ...action }))
+  let batchRequests = 0
   await page.route('**/organizations/*/coaching_relationships/actions**', async (route) => {
-    const ownActions = new URL(route.request().url()).searchParams.get('assignee') === MOCK_USER_ID
+    batchRequests++
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: { coachee_actions: { [MOCK_USER_ID]: ownActions ? ACTIONS : [] } } }),
+      body: JSON.stringify({ data: { coachee_actions: { [MOCK_USER_ID]: actions } } }),
     })
   })
+  await page.route('**/actions/action-*', async (route) => {
+    if (route.request().method() !== 'PUT') return route.continue()
+    const saved = route.request().postDataJSON()
+    const action = actions.find(({ id }) => route.request().url().endsWith(`/${id}`))
+    if (action) action.status = saved.status
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { ...action, ...saved } }),
+    })
+  })
+  // Session context for the actions; the page drops actions without it.
+  await page.route(
+    (url) => url.pathname.endsWith(`/users/${MOCK_USER_ID}/coaching_sessions`),
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: 'sess-1',
+              coaching_relationship_id: COACHING_TWO[0].id,
+              date: RECENT,
+              created_at: RECENT,
+              updated_at: RECENT,
+              relationship: COACHING_TWO[0],
+            },
+          ],
+        }),
+      })
+    }
+  )
+  return () => batchRequests
 }
 
 const actionsPill = (page: Page) =>
@@ -156,6 +202,44 @@ for (const viewport of [
     await expect(pill.getByText(String(OPEN_ACTION_COUNT), { exact: true })).toBeVisible()
   })
 }
+
+test.describe('Open action count stays cached', () => {
+  test.beforeEach(async ({ page, context }) => {
+    await setup(page, context)
+  })
+
+  test("fetches once and doesn't refetch when the window regains focus", async ({ page }) => {
+    const batchRequests = await mockActions(page)
+    await page.clock.install()
+    await page.goto('/dashboard')
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+    // Past the app's 10s focus throttle, which starts at mount, so a focus
+    // refetch would really fire.
+    await page.clock.fastForward(11_000)
+    const before = batchRequests()
+    expect(before).toBe(1) // one request; its scope doesn't flip while the page loads
+
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      window.dispatchEvent(new Event('focus'))
+    })
+    await page.waitForTimeout(1000)
+
+    expect(batchRequests()).toBe(before)
+  })
+
+  test('a status change on the Actions page lowers the count', async ({ page }) => {
+    await mockActions(page)
+    await page.goto('/actions')
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+
+    const card = page.locator('[data-kanban-card]').filter({ hasText: 'NotStarted action' })
+    await card.locator('[role="combobox"]').filter({ visible: true }).click()
+    await page.getByRole('option', { name: /Completed/ }).click()
+
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT - 1} open`)
+  })
+})
 
 test.describe('Header items never overlap', () => {
   test.beforeEach(async ({ page, context }) => {

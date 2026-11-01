@@ -1,99 +1,83 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
-import { UserActionsAssigneeFilter } from "@/types/assigned-actions";
-import { countOpenActions, useOpenActionCount } from "@/lib/hooks/use-open-action-count";
+import { None, Some } from "@/types/option";
+import { AssignmentFilter, CoachViewMode, type AssignedActionWithContext } from "@/types/assigned-actions";
+import { useOpenActionCount } from "@/lib/hooks/use-open-action-count";
+import { countVisibleActions, DEFAULT_ACTIONS_VIEW } from "@/lib/hooks/use-actions-view";
 import { createMockAction } from "../../test-utils";
 
-const h = vi.hoisted(() => ({
-  userId: "user-1",
-  currentOrganizationId: "org-1" as string | null,
-  fetch: vi.fn(),
+const h = vi.hoisted(() => ({ fetch: vi.fn() }));
+
+vi.mock("@/lib/hooks/use-all-actions-with-context", () => ({
+  useAllActionsWithContext: (...args: unknown[]) => h.fetch(...args),
 }));
 
-vi.mock("@/lib/providers/auth-store-provider", () => ({
-  useAuthStore: (selector: (state: unknown) => unknown) => selector({ userId: h.userId }),
-}));
-vi.mock("@/lib/hooks/use-current-organization", () => ({
-  useCurrentOrganization: () => ({ currentOrganizationId: h.currentOrganizationId }),
-}));
-vi.mock("@/lib/api/relationship-actions", () => ({
-  useBatchRelationshipActions: (...args: unknown[]) => h.fetch(...args),
-}));
+const today = DateTime.now();
+const card = (status: ItemStatus, dueDaysFromNow?: number): AssignedActionWithContext =>
+  ({
+    action: createMockAction({
+      id: `${status}-${dueDaysFromNow}`,
+      status,
+      due_by: dueDaysFromNow === undefined ? None : Some(today.plus({ days: dueDaysFromNow })),
+    }),
+  }) as AssignedActionWithContext;
 
-const actionsIn = (...statuses: ItemStatus[]) =>
-  statuses.map((status, i) => createMockAction({ id: `action-${i}`, status }));
+// What the Actions page's default view shows: open statuses, due in the last
+// 30 days or later, or undated.
+const ACTIONS = [
+  card(ItemStatus.NotStarted, 3),
+  card(ItemStatus.InProgress, -10),
+  card(ItemStatus.OnHold),
+  card(ItemStatus.InProgress, -45), // hidden by the page's 30 day range
+  card(ItemStatus.Completed, 1),
+  card(ItemStatus.WontDo, 1),
+];
 
-describe("countOpenActions", () => {
-  it("counts only not started, in progress and on hold actions", () => {
-    const actions = actionsIn(
-      ItemStatus.NotStarted,
-      ItemStatus.InProgress,
-      ItemStatus.OnHold,
-      ItemStatus.Completed,
-      ItemStatus.WontDo,
-      ItemStatus.InProgress
-    );
-
-    expect(countOpenActions(actions)).toBe(4);
-  });
-
-  it("is 0 with no actions", () => {
-    expect(countOpenActions([])).toBe(0);
+describe("countVisibleActions", () => {
+  it("counts the cards in the visible status columns", () => {
+    expect(countVisibleActions(ACTIONS, DEFAULT_ACTIONS_VIEW.statusVisibility)).toBe(4);
+    expect(countVisibleActions([], DEFAULT_ACTIONS_VIEW.statusVisibility)).toBe(0);
   });
 });
 
 describe("useOpenActionCount", () => {
   beforeEach(() => {
-    h.userId = "user-1";
-    h.currentOrganizationId = "org-1";
     h.fetch.mockReset().mockReturnValue({
-      actions: actionsIn(ItemStatus.InProgress, ItemStatus.OnHold, ItemStatus.Completed),
+      actionsWithContext: ACTIONS,
       isLoading: false,
       isError: false,
+      refresh: vi.fn(),
     });
   });
 
-  it("asks for the current user's assigned actions whatever their role", () => {
+  it("counts what the Actions page shows by default", () => {
     const { result } = renderHook(() => useOpenActionCount());
+    expect(result.current).toBe(3);
+  });
 
-    expect(result.current).toBe(2);
+  it("reads the page's default view from the cache without revalidating", () => {
+    renderHook(() => useOpenActionCount());
     expect(h.fetch).toHaveBeenCalledWith(
-      "org-1",
-      { assignee: "user-1", assignee_filter: UserActionsAssigneeFilter.Assigned },
-      { revalidateOnFocus: false }
+      CoachViewMode.MyActions,
+      undefined,
+      AssignmentFilter.Assigned,
+      {
+        revalidateOnMount: undefined,
+        revalidateIfStale: false,
+        revalidateOnFocus: false,
+        revalidateOnReconnect: false,
+      }
     );
   });
 
-  it("doesn't fetch without a user", () => {
-    h.userId = "";
-    renderHook(() => useOpenActionCount());
-
-    expect(h.fetch).toHaveBeenCalledWith(null, expect.anything(), expect.anything());
-  });
-
-  it("doesn't fetch without an organization", () => {
-    h.currentOrganizationId = null;
-    renderHook(() => useOpenActionCount());
-
-    expect(h.fetch).toHaveBeenCalledWith(null, expect.anything(), expect.anything());
-  });
-
-  it("is 0 while loading", () => {
-    h.fetch.mockReturnValue({ actions: [], isLoading: true, isError: false });
+  it.each([
+    ["while loading", { isLoading: true, isError: false }],
+    ["on error", { isLoading: false, isError: true }],
+  ])("is 0 %s", (_, state) => {
+    h.fetch.mockReturnValue({ actionsWithContext: ACTIONS, refresh: vi.fn(), ...state });
     const { result } = renderHook(() => useOpenActionCount());
-
-    expect(result.current).toBe(0);
-  });
-
-  it("is 0 on error, even with stale actions", () => {
-    h.fetch.mockReturnValue({
-      actions: actionsIn(ItemStatus.InProgress),
-      isLoading: false,
-      isError: true,
-    });
-    const { result } = renderHook(() => useOpenActionCount());
-
     expect(result.current).toBe(0);
   });
 });

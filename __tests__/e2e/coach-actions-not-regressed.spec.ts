@@ -60,9 +60,11 @@ test.describe('Coach viewing /actions (regression guard)', () => {
     page,
     context,
   }) => {
-    // Helper auth sets isACoach: true → Some(Coach) branch → assignee=coach.
+    // The user coaches in the current organization → Some(Coach) → assignee=coach.
     await setupAuthentication(page, context)
-    await mockCommonApiRoutes(page)
+    await mockCommonApiRoutes(page, {
+      relationships: [{ ...SINGLE_RELATIONSHIP[0], coach_id: MOCK_USER_ID }],
+    })
 
     await page.route('**/users/current/organizations', async (route) => {
       await route.fulfill({
@@ -110,10 +112,11 @@ test.describe('Coach viewing /actions (regression guard)', () => {
       page.getByText(COACH_ASSIGNED_ACTION.body).first()
     ).toBeVisible({ timeout: 15_000 })
 
-    // The default coach "My Actions" view sends assignee=coach. Sweep every
-    // batch request — at least one should carry the param.
+    // The default coach "My Actions" view sends assignee=coach, and the scope
+    // never flips while the relationships load.
     expect(batchUrls.length).toBeGreaterThan(0)
-    const anyCoachScope = batchUrls.some((url) => url.includes('assignee=coach'))
-    expect(anyCoachScope).toBe(true)
+    for (const url of batchUrls) {
+      expect(new URL(url).searchParams.get('assignee')).toBe('coach')
+    }
   })
 })

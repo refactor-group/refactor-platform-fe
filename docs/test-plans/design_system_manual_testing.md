@@ -332,11 +332,11 @@ With some open and some done actions assigned to you, open the dashboard at 1280
 
 **Pass:** the Actions pill shows an indigo badge with the number of your open actions at both widths. Completing one lowers the number by one. With none open, there is no badge.
 
-### Case F22: open action count for someone who coaches and is coached
+### Case F22: open action count matches the Actions page
 
-Log in as a user who coaches one person and is coached by someone else in the same organization, with open actions assigned to them in both relationships. Reload the dashboard a few times.
+Have one open action assigned to you that was due more than 30 days ago, plus a few due recently. Note the number on the Actions pill, open Actions without changing any filters, and count the cards. Reload the dashboard a few times, then switch to another window and back.
 
-**Pass:** the badge counts the open actions from both relationships, and the number doesn't change while the page loads.
+**Pass:** the badge equals the number of cards on the Actions page, and the long-overdue action isn't counted. The number doesn't change while the page loads or when you come back to the window.
 
 ## 8. Part G: Join session menu (#506)
 

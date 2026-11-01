@@ -1,30 +1,24 @@
-import { visibleStatuses } from "@/components/ui/actions/utils";
-import { useBatchRelationshipActions } from "@/lib/api/relationship-actions";
-import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import type { Action } from "@/types/action";
-import { StatusVisibility, UserActionsAssigneeFilter } from "@/types/assigned-actions";
+import type { SWRConfiguration } from "swr";
+import {
+  DEFAULT_ACTIONS_VIEW,
+  countVisibleActions,
+  useActionsView,
+} from "@/lib/hooks/use-actions-view";
 
-const OPEN_STATUSES = new Set(visibleStatuses(StatusVisibility.Open));
+// Fetch once, then serve the cache: action saves, accepted suggestions and SSE
+// events revalidate the actions (and session saves the sessions), so nothing
+// else needs to. `revalidateOnMount: undefined` clears the list hooks' `true`,
+// letting revalidateIfStale decide.
+const CACHED_ONLY: SWRConfiguration = {
+  revalidateOnMount: undefined,
+  revalidateIfStale: false,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+};
 
-export function countOpenActions(actions: Action[]): number {
-  return actions.filter((action) => OPEN_STATUSES.has(action.status)).length;
-}
-
-/**
- * Open actions assigned to the current user in the current organization, in
- * every relationship whatever their role; 0 until known. Action saves and SSE
- * events revalidate it, so it skips focus revalidation.
- */
+/** The number of cards the Actions page shows in its default view; 0 until known. */
 export function useOpenActionCount(): number {
-  const userId = useAuthStore((state) => state.userId);
-  const { currentOrganizationId } = useCurrentOrganization();
-  const { actions, isError } = useBatchRelationshipActions(
-    userId ? currentOrganizationId : null,
-    { assignee: userId, assignee_filter: UserActionsAssigneeFilter.Assigned },
-    { revalidateOnFocus: false }
-  );
-
-  // actions is [] while loading
-  return isError ? 0 : countOpenActions(actions);
+  const { filteredActions, isLoading, isError } = useActionsView(DEFAULT_ACTIONS_VIEW, CACHED_ONLY);
+  if (isLoading || isError) return 0;
+  return countVisibleActions(filteredActions, DEFAULT_ACTIONS_VIEW.statusVisibility);
 }
