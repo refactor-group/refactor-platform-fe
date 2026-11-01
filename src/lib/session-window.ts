@@ -138,9 +138,9 @@ export function shortDate(dt: DateTime): string {
   return dt.toFormat("LLL d");
 }
 
-/** A stored (UTC) session date as the user's local short date, e.g. "Nov 4". */
-export function sessionShortDate(date: string, timezone: string): string {
-  return shortDate(DateTime.fromISO(date, { zone: "utc" }).setZone(timezone));
+/** A stored (UTC) session date in the user's timezone. */
+export function sessionStartIn(date: string, timezone: string): DateTime {
+  return DateTime.fromISO(date, { zone: "utc" }).setZone(timezone);
 }
 
 export function timeOfDay(dt: DateTime): string {

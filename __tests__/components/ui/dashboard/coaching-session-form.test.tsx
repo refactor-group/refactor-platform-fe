@@ -32,6 +32,11 @@ vi.mock("@/lib/api/coaching-sessions", () => ({
   })),
 }));
 
+const mockCreateSeries = vi.fn();
+vi.mock("@/lib/api/coaching-session-series", () => ({
+  CoachingSessionSeriesApi: { create: (...args: unknown[]) => mockCreateSeries(...args) },
+}));
+
 vi.mock("@/lib/api/coaching-relationships", () => ({
   useCoachingRelationshipList: vi.fn(() => ({
     relationships: [],
@@ -310,13 +315,32 @@ describe("CoachingSessionForm – success toasts", () => {
     vi.useRealTimers();
   });
 
-  it("confirms an update with the session's local date", async () => {
+  function withJamesRelationship() {
+    vi.mocked(useCoachingRelationshipList).mockReturnValue({
+      relationships: [
+        createMockRelationship({
+          id: "rel-1",
+          coach_id: "user-1",
+          coachee_first_name: "James",
+          coachee_last_name: "Hodapp",
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useCoachingRelationshipList>);
+  }
+
+  it("confirms an update with the session's local date, coachee and time", async () => {
+    withJamesRelationship();
     render(
       <Wrapper>
         <CoachingSessionForm
           mode="update"
           // 03:00 UTC on Nov 5 is the evening of Nov 4 in Chicago.
-          existingSession={createMockSession({ date: "2026-11-05T03:00:00" })}
+          existingSession={createMockSession({
+            date: "2026-11-05T03:00:00",
+            coaching_relationship_id: "rel-1",
+          })}
           onOpenChange={vi.fn()}
           defaultDurationMinutes={60}
         />
@@ -326,24 +350,41 @@ describe("CoachingSessionForm – success toasts", () => {
     fireEvent.click(screen.getByRole("button", { name: /update session/i }));
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("Updated Nov 4 session");
+      expect(toast.success).toHaveBeenCalledWith("Updated Nov 4 session with James Hodapp at 9:00 PM");
     });
   });
 
-  it("confirms a new single session with its date", async () => {
+  function renderCreateForm() {
+    withJamesRelationship();
     render(
       <Wrapper>
         <CoachingSessionForm mode="create" onOpenChange={vi.fn()} defaultDurationMinutes={60} />
       </Wrapper>
     );
-
     fireEvent.click(screen.getByRole("gridcell", { name: "15" }));
     fireEvent.change(screen.getByLabelText(/time/i), { target: { value: "10:00" } });
+  }
+
+  it("confirms a new single session with its date, coachee and local time", async () => {
+    renderCreateForm();
     fireEvent.click(screen.getByRole("button", { name: /^create session$/i }));
 
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith("Created Oct 15 session");
+      expect(toast.success).toHaveBeenCalledWith(
+        "Created Oct 15 session with James Hodapp at 10:00 AM"
+      );
+    });
+  });
+
+  it("confirms a new series with its count and coachee", async () => {
+    mockCreateSeries.mockResolvedValue({ coaching_sessions: [{}, {}, {}] });
+    renderCreateForm();
+    fireEvent.click(screen.getByRole("switch", { name: "Repeats" }));
+    fireEvent.click(screen.getByRole("button", { name: /^create recurring sessions$/i }));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Created 3 recurring sessions with James Hodapp");
     });
   });
 });

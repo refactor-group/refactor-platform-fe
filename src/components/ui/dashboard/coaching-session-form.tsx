@@ -35,7 +35,10 @@ import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/types/entity-api-error";
 import { toast } from "@/lib/toast";
-import { sessionShortDate } from "@/lib/session-window";
+import {
+  seriesCreatedMessage,
+  sessionChangeMessage,
+} from "@/components/ui/dashboard/session-change-message";
 import { Provider } from "@/types/provider";
 import {
   CreateRecurringSessionRequest,
@@ -209,7 +212,9 @@ export default function CoachingSessionForm({
       provider: activeProvider ? activeProvider as Provider : undefined
     };
     await createCoachingSession(newCoachingSession);
-    toast.success(`Created ${sessionShortDate(dateTime, userTimezone)} session`);
+    toast.success(
+      sessionChangeMessage("Created", newCoachingSession, relationships, userTimezone)
+    );
   };
 
   const handleCreateRecurringSession = async (dateTime: string) => {
@@ -233,7 +238,7 @@ export default function CoachingSessionForm({
     };
     const created = await CoachingSessionSeriesApi.create(payload, userTimezone);
     const count = created.coaching_sessions.length;
-    toast.success(`Created ${count} recurring session${count === 1 ? "" : "s"}`);
+    toast.success(seriesCreatedMessage(count, relationshipId, relationships));
   };
 
   const handleUpdateSession = async (dateTime: string) => {
@@ -244,7 +249,9 @@ export default function CoachingSessionForm({
       duration_minutes: durationMinutes,
       updated_at: DateTime.now().toUTC(),
     });
-    toast.success(`Updated ${sessionShortDate(dateTime, userTimezone)} session`);
+    toast.success(
+      sessionChangeMessage("Updated", { ...existingSession, date: dateTime }, relationships, userTimezone)
+    );
   };
 
   const handleSubmit = async (e: FormEvent) => {

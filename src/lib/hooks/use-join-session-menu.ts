@@ -24,6 +24,7 @@ import {
   dotKind,
   livenessFromUrgency,
   monthGroups,
+  sessionStartIn,
   sessionWindow,
 } from "@/lib/session-window";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
@@ -146,7 +147,7 @@ export function peopleFor(
 export function toMenuSession(session: EnrichedCoachingSession, timezone: string): MenuSession {
   return {
     id: session.id,
-    start: startIn(session.date, timezone),
+    start: sessionStartIn(session.date, timezone),
     title:
       session.display_title && session.display_title.some
         ? session.display_title.val
@@ -215,10 +216,6 @@ export function windowQuery(input: WindowQueryInput): NearestWindow {
   };
 }
 
-function startIn(date: string, timezone: string): DateTime {
-  return DateTime.fromISO(date, { zone: "utc" }).setZone(timezone);
-}
-
 function idOf<T extends { id: Id }>(value: Option<T>): Option<Id> {
   return value.some ? Some(value.val.id) : None;
 }
@@ -239,9 +236,9 @@ interface PersonSessionsInput {
 function stripAnchor(input: PersonSessionsInput, relationshipId: Id): DateTime {
   const { current, today, now, timezone } = input;
   if (current.some && current.val.relationshipId === relationshipId) {
-    return startIn(current.val.date, timezone);
+    return sessionStartIn(current.val.date, timezone);
   }
-  return today.some ? startIn(today.val.date, timezone) : now;
+  return today.some ? sessionStartIn(today.val.date, timezone) : now;
 }
 
 const LOADING: PersonSessionsState = { kind: "loading", previous: None };

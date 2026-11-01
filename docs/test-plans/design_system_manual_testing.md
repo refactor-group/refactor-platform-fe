@@ -204,11 +204,11 @@ Connect Google from Settings › Integrations.
 
 **Pass:** exactly one "Google account connected" toast.
 
-### Case E5: single session confirmations
+### Case E5: session confirmations
 
-From the dashboard, create a one-off session, edit its date, then delete it.
+From the dashboard, create a one-off session with a coachee, edit its date, then delete it. Then create a recurring series.
 
-**Pass:** you see "Created Nov 4 session", "Updated Nov 6 session" and "Deleted Nov 6 session" in turn, each with that session's date in your time zone.
+**Pass:** you see "Created Nov 4 session with {coachee} at 10:00 AM", "Updated Nov 6 session with {coachee} at 10:00 AM" and "Deleted Nov 6 session with {coachee} at 10:00 AM" in turn, with the date and time in your time zone. The series shows "Created N recurring sessions with {coachee}".
 
 ## 7. Part F: global header (#504)
 

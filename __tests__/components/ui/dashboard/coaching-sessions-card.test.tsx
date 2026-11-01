@@ -87,6 +87,7 @@ const COACH_USER = {
 
 const STUB_SESSION = createMockEnrichedSession({
   id: "session-to-delete",
+  coaching_relationship_id: "rel-1",
   date: "2026-11-05T15:00:00",
 });
 
@@ -133,6 +134,7 @@ beforeEach(() => {
 
 describe("CoachingSessionsCard — delete flow", () => {
   it("opens the dialog, calls deleteSession + SWR mutate on confirm", async () => {
+    setupRelationships([{ id: "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" }]);
     mockDelete.mockResolvedValueOnce(undefined);
     const user = userEvent.setup();
     render(<CoachingSessionsCard onReschedule={vi.fn()} />);
@@ -157,7 +159,7 @@ describe("CoachingSessionsCard — delete flow", () => {
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     });
     expect(mockToastError).not.toHaveBeenCalled();
-    expect(mockToastSuccess).toHaveBeenCalledWith("Deleted Nov 5 session");
+    expect(mockToastSuccess).toHaveBeenCalledWith("Deleted Nov 5 session with Coachee One at 3:00 PM");
   });
 
   it("surfaces an error toast and closes the dialog when deleteSession rejects", async () => {
