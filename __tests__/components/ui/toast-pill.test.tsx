@@ -155,6 +155,19 @@ describe("ToastPill", () => {
     expect(pill).toHaveAttribute("data-swiping", "false");
   });
 
+  it("puts the pill back when the browser cancels a swipe", () => {
+    const { pill, onDismiss } = renderPill();
+    fireEvent.pointerDown(pill, { clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(pill, { clientX: 220, clientY: 100, pointerId: 1 });
+    expect(pill.style.opacity).toBe("0");
+
+    fireEvent.pointerCancel(pill, { pointerId: 1 });
+    expect(pill.style.transform).toBe("translateX(0px)");
+    expect(pill.style.opacity).toBe("1");
+    expect(pill).toHaveAttribute("data-swiping", "false");
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
   it("never starts a swipe on vertical movement", () => {
     const { pill, onDismiss } = renderPill();
     fireEvent.pointerDown(pill, { clientX: 100, clientY: 100, pointerId: 1 });

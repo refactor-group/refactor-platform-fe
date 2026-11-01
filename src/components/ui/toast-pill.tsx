@@ -112,10 +112,19 @@ function useSwipeToDismiss(onDismiss: () => void) {
       setTimeout(onDismiss, FLING_MS);
       return;
     }
+    springBack();
+  };
+
+  const springBack = () =>
     setStyle({
       offsetX: 0,
-      transition: reducedMotion ? None : Some("transform .25s cubic-bezier(.2,.8,.2,1)"),
+      transition: prefersReducedMotion() ? None : Some("transform .25s cubic-bezier(.2,.8,.2,1)"),
     });
+
+  // The browser took the gesture over (e.g. to scroll), so put the pill back.
+  const onPointerCancel = () => {
+    reset();
+    springBack();
   };
 
   // A drag in any direction must not also count as a click.
@@ -135,7 +144,7 @@ function useSwipeToDismiss(onDismiss: () => void) {
     swiping,
     swipeStyle,
     consumeDragClick,
-    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: reset },
+    handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
   };
 }
 
