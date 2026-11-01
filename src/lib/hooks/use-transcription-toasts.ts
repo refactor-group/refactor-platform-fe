@@ -37,7 +37,9 @@ export function useTranscriptionToasts({
   const { transcription } = useTranscription(sessionId);
 
   const recordingStatus = recording?.status;
+  const recordingError = recording?.error_message;
   const transcriptionStatus = transcription?.status;
+  const transcriptionError = transcription?.error_message;
   const transcriptionId = transcription?.id;
 
   const prevRecordingStatus = usePrevious(recordingStatus);
@@ -84,6 +86,7 @@ export function useTranscriptionToasts({
       prevRecordingStatus !== MeetingRecordingStatus.Failed &&
       recordingStatus === MeetingRecordingStatus.Failed
     ) {
+      console.error(`Recording failed for session ${sessionId}:`, recordingError);
       toast.error("Recording failed · The recording bot couldn't finish this session", {
         id: `recording-failed-${sessionId}`,
         duration: Infinity,
@@ -96,6 +99,7 @@ export function useTranscriptionToasts({
     sessionId,
     recordingStatus,
     prevRecordingStatus,
+    recordingError,
     onRetryTranscription,
   ]);
 
@@ -107,6 +111,7 @@ export function useTranscriptionToasts({
       prevTranscriptionStatus !== TranscriptionStatus.Failed &&
       transcriptionStatus === TranscriptionStatus.Failed
     ) {
+      console.error(`Transcription failed for session ${sessionId}:`, transcriptionError);
       toast.error("Transcription failed · Couldn't create a transcript for this session", {
         id: `transcription-failed-${sessionId}`,
         duration: Infinity,
@@ -119,6 +124,7 @@ export function useTranscriptionToasts({
     sessionId,
     transcriptionStatus,
     prevTranscriptionStatus,
+    transcriptionError,
     onRetryTranscription,
   ]);
 }

@@ -120,8 +120,12 @@ describe("useTranscriptionToasts — failures", () => {
       useTranscriptionToasts({ sessionId: SESSION_ID, onOpenTranscript: vi.fn() })
     );
 
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     setRecording(MeetingRecordingStatus.Failed, "Bot couldn't join");
     rerender();
+
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining(SESSION_ID), "Bot couldn't join");
+    logged.mockRestore();
 
     expect(toastError).toHaveBeenCalledTimes(1);
     const [title, opts] = toastError.mock.calls[0];
@@ -136,8 +140,15 @@ describe("useTranscriptionToasts — failures", () => {
       useTranscriptionToasts({ sessionId: SESSION_ID, onOpenTranscript: vi.fn() })
     );
 
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     setTranscription(TranscriptionStatus.Failed, "trans-1", "AssemblyAI rejected the audio");
     rerender();
+
+    expect(logged).toHaveBeenCalledWith(
+      expect.stringContaining(SESSION_ID),
+      "AssemblyAI rejected the audio"
+    );
+    logged.mockRestore();
 
     expect(toastError).toHaveBeenCalledTimes(1);
     const [title, opts] = toastError.mock.calls[0];
