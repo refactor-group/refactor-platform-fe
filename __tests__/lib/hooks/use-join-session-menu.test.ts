@@ -277,6 +277,28 @@ describe("useJoinSessionMenu", () => {
     expect(sessions.list.map((s) => s.title)).toEqual(["Plan", "Kickoff"]);
     expect(sessions.groups.map((g) => g.label)).toEqual(["Aug", "Sep"]);
   });
+
+  it("highlights today's month, which the window centres on, over an older current session's", () => {
+    serveCoachingSession(
+      createMockSession({ id: "priya-jun", coaching_relationship_id: "rel-p", date: "2026-06-02T15:00:00" })
+    );
+    vi.mocked(usePathname).mockReturnValue("/coaching-sessions/priya-jun");
+    vi.mocked(useNearestCoachingSessions).mockReturnValue({
+      sessions: [
+        createMockEnrichedSession({ id: "priya-jul", coaching_relationship_id: "rel-p", date: "2026-07-28T15:00:00" }),
+        PRIYA_TODAY,
+        createMockEnrichedSession({ id: "priya-sep", coaching_relationship_id: "rel-p", date: "2026-09-01T15:00:00" }),
+      ],
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    } as unknown as ReturnType<typeof useNearestCoachingSessions>);
+    const { result } = renderOpened();
+    expect(lastWindow().around).toBe(PRIYA_TODAY.date);
+    const { sessions } = result.current;
+    if (sessions.kind !== "loaded") throw new Error(`expected loaded, got ${sessions.kind}`);
+    expect(sessions.groups.filter((g) => g.selected).map((g) => g.label)).toEqual(["Aug"]);
+  });
   describe("while the next list loads", () => {
     const ehabSessions = [
       createMockEnrichedSession({ id: "ehab-s", coaching_relationship_id: "rel-e", date: "2026-08-18T15:00:00" }),
