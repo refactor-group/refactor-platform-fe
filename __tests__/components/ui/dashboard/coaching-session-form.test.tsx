@@ -350,7 +350,7 @@ describe("CoachingSessionForm – success toasts", () => {
     fireEvent.click(screen.getByRole("button", { name: /update session/i }));
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("Updated the 9 PM Nov 4 session with James Hodapp");
+      expect(toast.success).toHaveBeenCalledWith("Updated the Nov 4 @ 9 PM session with James Hodapp");
     });
   });
 
@@ -372,7 +372,7 @@ describe("CoachingSessionForm – success toasts", () => {
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
-        "Created Oct 15 session with James Hodapp at 10:00 AM"
+        "Created the Oct 15 @ 10 AM session with James Hodapp"
       );
     });
   });

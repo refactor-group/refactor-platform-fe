@@ -159,7 +159,7 @@ describe("CoachingSessionsCard — delete flow", () => {
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     });
     expect(mockToastError).not.toHaveBeenCalled();
-    expect(mockToastSuccess).toHaveBeenCalledWith("Removed the 3 PM Nov 5 session with Coachee One");
+    expect(mockToastSuccess).toHaveBeenCalledWith("Removed the Nov 5 @ 3 PM session with Coachee One");
   });
 
   it("surfaces an error toast and closes the dialog when deleteSession rejects", async () => {

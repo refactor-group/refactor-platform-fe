@@ -1,5 +1,5 @@
 import type { DateTime } from "ts-luxon";
-import { sessionStartIn, shortDate, timeOfDay } from "@/lib/session-window";
+import { sessionStartIn, shortDate } from "@/lib/session-window";
 import { getCoacheeName } from "@/lib/utils/relationship";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
@@ -17,7 +17,7 @@ function clockTime(start: DateTime): string {
   return start.toFormat(start.minute === 0 ? "h a" : "h:mm a");
 }
 
-/** "the 11 AM Nov 4 session with James Hodapp", in the user's timezone. */
+/** "the Nov 4 @ 11 AM session with James Hodapp", in the user's timezone. */
 function theSession(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
@@ -25,21 +25,19 @@ function theSession(
 ): string {
   const start = sessionStartIn(session.date, timezone);
   const coachee = withCoachee(relationships, session.coaching_relationship_id);
-  return `the ${clockTime(start)} ${shortDate(start)} session${coachee}`;
+  return `the ${shortDate(start)} @ ${clockTime(start)} session${coachee}`;
 }
 
-/** e.g. "Created Nov 4 session with James Hodapp at 10:00 AM", in the user's timezone. */
+/** e.g. "Created the Nov 4 @ 10 AM session with James Hodapp". */
 export function sessionCreatedMessage(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
   timezone: string
 ): string {
-  const start = sessionStartIn(session.date, timezone);
-  const coachee = withCoachee(relationships, session.coaching_relationship_id);
-  return `Created ${shortDate(start)} session${coachee} at ${timeOfDay(start)}`;
+  return `Created ${theSession(session, relationships, timezone)}`;
 }
 
-/** e.g. "Updated the 11 AM Nov 6 session with James Hodapp", with its new date and time. */
+/** e.g. "Updated the Nov 6 @ 11 AM session with James Hodapp", with its new date and time. */
 export function sessionUpdatedMessage(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
@@ -48,7 +46,7 @@ export function sessionUpdatedMessage(
   return `Updated ${theSession(session, relationships, timezone)}`;
 }
 
-/** e.g. "Removed the 11 AM Nov 4 session with James Hodapp". */
+/** e.g. "Removed the Nov 4 @ 11 AM session with James Hodapp". */
 export function sessionRemovedMessage(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
