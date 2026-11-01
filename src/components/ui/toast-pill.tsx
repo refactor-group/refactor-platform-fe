@@ -90,6 +90,12 @@ function useSwipeToDismiss(onDismiss: () => void) {
     setStyle({ offsetX: dx, transition: None });
   };
 
+  const springBack = () =>
+    setStyle({
+      offsetX: 0,
+      transition: prefersReducedMotion() ? None : Some("transform .25s cubic-bezier(.2,.8,.2,1)"),
+    });
+
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (start.current.none) return;
     const wasSwiping = swipingRef.current;
@@ -114,12 +120,6 @@ function useSwipeToDismiss(onDismiss: () => void) {
     }
     springBack();
   };
-
-  const springBack = () =>
-    setStyle({
-      offsetX: 0,
-      transition: prefersReducedMotion() ? None : Some("transform .25s cubic-bezier(.2,.8,.2,1)"),
-    });
 
   // The browser took the gesture over (e.g. to scroll), so put the pill back.
   const onPointerCancel = () => {
