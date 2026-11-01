@@ -16,7 +16,7 @@ import type { TranscriptSegment } from "@/types/transcription";
 export type BubbleAlignment = "left" | "right";
 
 /**
- * Bubble color theme. `primary` uses the iOS blue fill for the coach
+ * Bubble color theme. `primary` uses the indigo accent fill for the coach
  * ("outgoing"); `secondary` is the light/bordered variant for the
  * coachee ("incoming").
  */
@@ -139,7 +139,7 @@ function BubbleBody({
 
 function variantClasses(variant: BubbleVariant): string {
   if (variant === "primary") {
-    return "bg-[#007AFF] text-white rounded-[18px]";
+    return "bg-primary text-primary-foreground rounded-[18px]";
   }
   return "bg-white dark:bg-zinc-800 text-foreground rounded-[18px] border border-zinc-200 dark:border-zinc-700";
 }

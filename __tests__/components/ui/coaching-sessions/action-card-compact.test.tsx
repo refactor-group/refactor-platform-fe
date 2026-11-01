@@ -488,9 +488,9 @@ describe("CompactActionCard", () => {
 
       const flipCard = container.firstChild as HTMLElement;
       const face = flipCard.querySelector(".flip-card-front") as HTMLElement;
-      // The ring sits on the rounded face, in the transcript bubble's blue.
+      // The ring sits on the rounded face, in the brand accent.
       expect(face.className).toContain("ring-2");
-      expect(face.className).toContain("ring-[#007AFF]");
+      expect(face.className).toContain("ring-brand");
       expect(face.className).toContain("animate-highlight-tint");
       expect(flipCard.className).not.toContain("ring-2");
       expect(flipCard.className).toContain("motion-safe:animate-highlight-pulse");

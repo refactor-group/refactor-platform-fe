@@ -8,7 +8,7 @@ import {
 
 const OPTIONS: SpeakerFilterOption[] = [
   { value: "all", label: "All" },
-  { value: "Speaker A", label: "Speaker A", swatchClass: "bg-[#007AFF]" },
+  { value: "Speaker A", label: "Speaker A", swatchClass: "bg-primary" },
   { value: "Speaker B", label: "Speaker B", swatchClass: "bg-zinc-400" },
 ];
 
