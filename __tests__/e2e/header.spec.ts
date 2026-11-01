@@ -321,6 +321,24 @@ test('Appearance options fit inside the avatar menu', async ({ page, context }) 
   expect(autoBox.x + autoBox.width).toBeLessThanOrEqual(contentRight + 0.5)
 })
 
+test('the avatar menu stays reachable on a short screen', async ({ page, context }) => {
+  await setup(page, context)
+  await page.setViewportSize({ width: 812, height: 320 })
+  await page.goto('/dashboard')
+
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  await expect(async () => {
+    const box = (await menu.boundingBox())!
+    expect(box.y + box.height).toBeLessThanOrEqual(320 + 0.5)
+  }).toPass()
+
+  const logOut = menu.getByRole('menuitem', { name: 'Log out' })
+  await logOut.scrollIntoViewIfNeeded()
+  await expect(logOut).toBeInViewport()
+})
+
 const hitBase = {
   score: 0.5,
   snippet: null,
