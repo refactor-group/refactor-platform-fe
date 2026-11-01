@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DateTime } from "ts-luxon";
 import { useRouter } from "next/navigation";
@@ -93,6 +93,17 @@ describe("JoinSessionMenu", () => {
     const dialog = await openWith(model({ sessions: { kind: "loading", previous: None } }));
     expect(within(dialog).getByLabelText("Loading sessions").children).toHaveLength(3);
     expect(within(dialog).queryByText("Ehab Badawi")).not.toBeInTheDocument();
+  });
+
+  it("sizes the skeleton's date column like the loaded rows, so rows don't shift", async () => {
+    const loading = await openWith(model({ sessions: { kind: "loading", previous: None } }));
+    const placeholderColumn = within(loading).getByLabelText("Loading sessions").firstElementChild
+      ?.firstElementChild;
+    expect(placeholderColumn).toHaveClass("w-[92px]", "shrink-0");
+    cleanup();
+
+    const loaded = await openWith(model());
+    expect(within(loaded).getByText("Tue Aug 11")).toHaveClass("w-[92px]", "shrink-0");
   });
 
   it("keeps the previous list, inert, while the next person loads", async () => {

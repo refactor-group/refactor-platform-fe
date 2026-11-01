@@ -72,6 +72,9 @@ interface ListRowProps {
   onSelect: (id: Id) => void;
 }
 
+/** The list rows' fixed date column, shared with their loading placeholders. */
+export const LIST_DATE_COLUMN = "w-[92px] shrink-0";
+
 function ListRow({ session, isCurrent, now, onSelect }: ListRowProps) {
   const isFuture = session.start.toMillis() >= now.toMillis();
   return (
@@ -86,7 +89,7 @@ function ListRow({ session, isCurrent, now, onSelect }: ListRowProps) {
         isCurrent && "bg-brand-tint"
       )}
     >
-      <span className="w-[92px] shrink-0 text-label tabular-nums text-muted-foreground">
+      <span className={cn(LIST_DATE_COLUMN, "text-label tabular-nums text-muted-foreground")}>
         {listDate(session.start)}
       </span>
       <span className="min-w-0 flex-1">
