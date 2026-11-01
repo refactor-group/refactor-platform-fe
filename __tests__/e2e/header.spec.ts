@@ -85,12 +85,12 @@ const ACTIONS = [
 ]
 
 // Serves the batch actions request and saves status changes to a copy of
-// ACTIONS; resolves to the number of batch requests made so far.
+// ACTIONS; resolves to the batch request URLs made so far.
 async function mockActions(page: Page) {
   const actions = ACTIONS.map((action) => ({ ...action }))
-  let batchRequests = 0
+  const batchRequests: string[] = []
   await page.route('**/organizations/*/coaching_relationships/actions**', async (route) => {
-    batchRequests++
+    batchRequests.push(route.request().url())
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -130,7 +130,7 @@ async function mockActions(page: Page) {
       })
     }
   )
-  return () => batchRequests
+  return () => [...batchRequests]
 }
 
 const actionsPill = (page: Page) =>
@@ -216,7 +216,7 @@ test.describe('Open action count stays cached', () => {
     // Past the app's 10s focus throttle, which starts at mount, so a focus
     // refetch would really fire.
     await page.clock.fastForward(11_000)
-    const before = batchRequests()
+    const before = batchRequests().length
     expect(before).toBe(1) // one request; its scope doesn't flip while the page loads
 
     await page.evaluate(() => {
@@ -225,7 +225,27 @@ test.describe('Open action count stays cached', () => {
     })
     await page.waitForTimeout(1000)
 
-    expect(batchRequests()).toBe(before)
+    expect(batchRequests()).toHaveLength(before)
+  })
+
+  test('returning to an organization fetches its actions fresh', async ({ page }) => {
+    const batchRequests = await mockActions(page)
+    const acmeRequests = () => batchRequests().filter((url) => url.includes('/organizations/org-1/')).length
+    const switchTo = async (name: string) => {
+      await page.getByRole('button', { name: 'Account menu' }).click()
+      await page.getByRole('menu').getByRole('menuitem', { name: new RegExp(name) }).click()
+      await expect(orgTile(page)).toHaveAccessibleName(name)
+    }
+    await page.goto('/dashboard')
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+    expect(acmeRequests()).toBe(1)
+
+    await switchTo('Beta Inc')
+    await switchTo('Acme Corp')
+
+    // Acme's list wasn't refreshed while away, so it's fetched again rather than served stale.
+    await expect.poll(acmeRequests).toBe(2)
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
   })
 
   test('a status change on the Actions page lowers the count', async ({ page }) => {

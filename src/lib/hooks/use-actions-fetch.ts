@@ -1,6 +1,9 @@
 import type { SWRConfiguration } from "swr";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useBatchRelationshipActions } from "@/lib/api/relationship-actions";
+import {
+  useBatchRelationshipActions,
+  useForgetActionsOnOrganizationChange,
+} from "@/lib/api/relationship-actions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import type { Action } from "@/types/action";
@@ -81,6 +84,7 @@ export function useActionsFetch(
 ) {
   const userId = useAuthStore((state) => state.userId);
   const { currentOrganizationId } = useCurrentOrganization();
+  useForgetActionsOnOrganizationChange(currentOrganizationId);
   const {
     relationships,
     isLoading: relationshipsLoading,

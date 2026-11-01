@@ -1,6 +1,7 @@
 // Interacts with the action endpoints for CRUD operations
 // Note: For fetching lists of actions, use user-actions.ts instead
 
+import { useCallback } from "react";
 import { useSWRConfig } from "swr";
 import { siteConfig } from "@/site.config";
 import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
@@ -102,6 +103,18 @@ export const useAction = (id: Id) => {
 };
 
 /**
+ * Refreshes every cached action list, nested ones included (relationship,
+ * session and user lists, and the header's open action count).
+ */
+export const useRefreshActionLists = () => {
+  const { mutate } = useSWRConfig();
+  return useCallback(
+    () => revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/actions"),
+    [mutate]
+  );
+};
+
+/**
  * A custom React hook that provides mutation operations for actions with loading and error state management.
  * This hook simplifies creating, updating, and deleting actions while handling loading states,
  * error management, and cache invalidation automatically.
@@ -114,7 +127,7 @@ export const useAction = (id: Id) => {
  * error: Error object if the last operation failed, null otherwise
  */
 export const useActionMutation = () => {
-  const { mutate } = useSWRConfig();
+  const refreshActionLists = useRefreshActionLists();
   const mutation = EntityApi.useEntityMutation<Action>(ACTIONS_BASEURL, {
     create: ActionApi.create,
     createNested: ActionApi.createNested,
@@ -123,13 +136,12 @@ export const useActionMutation = () => {
     deleteNested: ActionApi.deleteNested,
   });
 
-  // useEntityMutation only refreshes keys under /actions; this also reaches
-  // nested lists such as the header's open action count.
+  // useEntityMutation only refreshes keys under /actions.
   const refreshingNested =
     <A extends unknown[], R>(operation: (...args: A) => Promise<R>) =>
     async (...args: A) => {
       const result = await operation(...args);
-      revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/actions");
+      refreshActionLists();
       return result;
     };
 

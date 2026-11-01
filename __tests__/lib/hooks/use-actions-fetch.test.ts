@@ -33,6 +33,7 @@ vi.mock("@/lib/api/coaching-relationships", () => ({
 }));
 vi.mock("@/lib/api/relationship-actions", () => ({
   useBatchRelationshipActions: (...args: unknown[]) => h.fetch(...args),
+  useForgetActionsOnOrganizationChange: vi.fn(),
 }));
 
 describe("assignmentFilterToRelationshipActionsParams", () => {

@@ -1,12 +1,44 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { SWRConfiguration } from "swr";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useActionsFetch } from "@/lib/hooks/use-actions-fetch";
 import { useSessionContextFetch } from "@/lib/hooks/use-session-context-fetch";
 import { AssignmentFilter, CoachViewMode } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
 import { addContextToActions } from "@/lib/utils/assigned-actions";
+
+// Session ids the session context was already refetched for, kept across
+// mounts. An id still missing after one refetch is outside the context's
+// window, so it isn't refetched again.
+const refetchedForSessionIds = new Set<Id>();
+
+/**
+ * Refetches the session context when an action belongs to a session it
+ * doesn't know, e.g. one created since the context was cached; without it the
+ * action has no context and is left out.
+ */
+function useRefetchSessionsForUnknownActions(
+  actions: Action[],
+  knownSessionIds: Map<Id, unknown>,
+  settled: boolean,
+  refetchSessions: () => unknown
+) {
+  const unknownIds = settled
+    ? [...new Set(actions.map((a) => a.coaching_session_id))]
+        .filter((id) => !knownSessionIds.has(id) && !refetchedForSessionIds.has(id))
+        .join(",")
+    : "";
+
+  useEffect(() => {
+    // Another mounted instance may have refetched for these already.
+    const fresh = unknownIds.split(",").filter((id) => id && !refetchedForSessionIds.has(id));
+    if (fresh.length === 0) return;
+    fresh.forEach((id) => refetchedForSessionIds.add(id));
+    refetchSessions();
+  }, [unknownIds, refetchSessions]);
+}
 
 /**
  * Fetches and enriches all actions for the current user (or their coachees).
@@ -42,7 +74,15 @@ export function useAllActionsWithContext(
     lookupMaps,
     isLoading: sessionsLoading,
     isError: sessionsError,
+    refresh: refetchSessions,
   } = useSessionContextFetch(userId, options);
+
+  useRefetchSessionsForUnknownActions(
+    actions,
+    lookupMaps.sessionMap,
+    !actionsLoading && !sessionsLoading && !actionsError && !sessionsError,
+    refetchSessions
+  );
 
   const actionsWithContext: AssignedActionWithContext[] = useMemo(
     () =>

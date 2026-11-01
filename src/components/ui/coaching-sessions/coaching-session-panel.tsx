@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSWRConfig } from "swr";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast as sonnerToast } from "@/lib/toast";
@@ -34,8 +33,8 @@ import {
   useDismissedActionSuggestionList,
   useScanStatus,
 } from "@/lib/api/transcript-suggestions";
+import { useRefreshActionLists } from "@/lib/api/actions";
 import { useSuggestionReview } from "@/lib/hooks/use-suggestion-review";
-import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
 import { useSuggestionScan } from "@/lib/hooks/use-suggestion-scan";
 import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
@@ -803,17 +802,12 @@ export function CoachingSessionPanel({
     refreshPending();
     refreshDismissed();
   }, [refreshPending, refreshDismissed]);
-  // An accepted suggestion becomes an action, so every action list refreshes,
-  // the panel's and the header's open action count alike.
-  const { mutate } = useSWRConfig();
-  const refreshAllActionLists = useCallback(
-    () => revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/actions"),
-    [mutate]
-  );
+  // An accepted suggestion becomes an action, so every action list refreshes.
+  const refreshActionLists = useRefreshActionLists();
   const suggestionReview = useSuggestionReview({
     coachingSessionId,
     refreshSuggestions,
-    refreshActions: refreshAllActionLists,
+    refreshActions: refreshActionLists,
     refreshGoalProgress: revalidateGoalProgress,
   });
   const { status: scanStatus, refresh: refreshScanStatus } = useScanStatus(coachingSessionId);

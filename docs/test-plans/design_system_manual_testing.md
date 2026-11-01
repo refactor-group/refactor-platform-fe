@@ -338,6 +338,12 @@ Have one open action assigned to you that was due more than 30 days ago, plus a 
 
 **Pass:** the badge equals the number of cards on the Actions page, and the long-overdue action isn't counted. The number doesn't change while the page loads or when you come back to the window.
 
+### Case F23: open action count catches up
+
+With two organizations, note the badge in the first, switch to the second, and have your coach complete one of your actions in the first organization. Switch back. Then have your coach create a new session with you and add an action for you in it, while you stay on the dashboard.
+
+**Pass:** after switching back, the badge shows one fewer. The coach's new action is counted within a few seconds, without reloading.
+
 ## 8. Part G: Join session menu (#506)
 
 Requires a backend build that includes rs#459 (`/coaching_sessions/nearest`). This part also covers the menu's building blocks from #503 (dots, strip, carousel, rows, Today block), which had no part of its own.

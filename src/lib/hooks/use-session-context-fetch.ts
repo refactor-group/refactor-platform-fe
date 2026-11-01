@@ -25,6 +25,7 @@ export function useSessionContextFetch(userId: string | null, options?: SWRConfi
     enrichedSessions: sessions,
     isLoading,
     isError,
+    refresh,
   // TODO(rs#374): pass the current organization once GET /users/{id}/actions
   // accepts one. Scoping these sessions alone would strip context off
   // out-of-organization actions rather than hide them.
@@ -46,5 +47,5 @@ export function useSessionContextFetch(userId: string | null, options?: SWRConfi
     [sessions]
   );
 
-  return { lookupMaps, isLoading, isError };
+  return { lookupMaps, isLoading, isError, refresh };
 }

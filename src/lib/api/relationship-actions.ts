@@ -2,8 +2,10 @@
 //   - Single relationship: GET /organizations/{org}/coaching_relationships/{rel}/actions
 //   - Batch (all relationships): GET /organizations/{org}/coaching_relationships/actions?assignee=...
 
-import type { SWRConfiguration } from "swr";
+import { useEffect, useRef } from "react";
+import { useSWRConfig, type SWRConfiguration } from "swr";
 import { useApiSWR } from "@/lib/hooks/use-api-swr";
+import { matchesEndpoint } from "@/lib/hooks/use-sse-cache-invalidation";
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import {
@@ -52,6 +54,32 @@ export function relationshipActionsUrl(orgId: Id, params: RelationshipActionsPar
     return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/${relId}/actions${qs}`;
   }
   return `${ORGANIZATIONS_BASEURL}/${orgId}/${COACHING_RELATIONSHIPS_PATH}/actions${qs}`;
+}
+
+/**
+ * Forgets an organization's cached action lists once it's no longer current.
+ * While away its lists have no subscribers, so action saves and SSE events
+ * can't refresh them; forgetting makes a return fetch fresh instead of
+ * showing a stale list.
+ */
+export function useForgetActionsOnOrganizationChange(currentOrganizationId: Id | null) {
+  const { mutate } = useSWRConfig();
+  const previous = useRef(currentOrganizationId);
+
+  useEffect(() => {
+    const left = previous.current;
+    previous.current = currentOrganizationId;
+    if (!left || left === currentOrganizationId) return;
+    const leftBaseUrl = `${ORGANIZATIONS_BASEURL}/${left}/${COACHING_RELATIONSHIPS_PATH}`;
+    // Writing undefined clears the data; `revalidate` also drops SWR's record
+    // of the last request, which a return within the dedupe window would
+    // otherwise reuse. With no subscribers nothing is fetched now.
+    mutate(
+      (key) => typeof key === "string" && matchesEndpoint(key, leftBaseUrl, "/actions"),
+      undefined,
+      { revalidate: true }
+    );
+  }, [currentOrganizationId, mutate]);
 }
 
 /** Fetches actions for a single relationship. Returns flat Action[]. */
