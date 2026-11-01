@@ -581,6 +581,7 @@ export function CoachingSessionPanel({
                   } else if (isCannotLinkCompletedGoalError(err)) {
                     sonnerToast.error("Goal is completed · Reopen it before linking it again");
                   } else {
+                    console.error("Failed to undo goal removal:", err);
                     sonnerToast.error("Couldn't undo");
                   }
                   return;
