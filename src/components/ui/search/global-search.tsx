@@ -186,7 +186,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
         shouldFilter={false}
         loop
         label="Search"
-        className="w-full"
+        className="w-full min-w-0"
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             event.preventDefault();
@@ -195,7 +195,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
           }
         }}
       >
-        <div className="relative flex items-center">
+        <div className="relative flex min-w-0 items-center">
           <Search
             className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground/60"
             aria-hidden
@@ -210,9 +210,9 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
             onFocus={() => setOpen(true)}
             placeholder="Search sessions, topics, agreements, actions…"
             className={cn(
-              "h-9 w-full rounded-full border-0 bg-fill pl-9 text-item transition-colors duration-150 hover:bg-fill-hover focus:bg-card",
+              "h-9 w-full min-w-0 rounded-full border-0 bg-fill pl-9 text-item transition-colors duration-150 hover:bg-fill-hover focus:bg-card",
               "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              query ? "pr-9" : "pr-14"
+              query ? "pr-9" : "pr-3 sm:pr-14"
             )}
           />
           {query ? (
