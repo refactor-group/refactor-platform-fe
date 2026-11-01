@@ -67,16 +67,19 @@ export interface CurrentSession {
   date: string;
 }
 
+export interface LoadedPersonSessions {
+  kind: "loaded";
+  person: MenuPerson;
+  list: MenuSession[];
+  groups: MonthGroup[];
+  kindOf: (session: MenuSession) => DotKind;
+}
+
 export type PersonSessionsState =
-  | { kind: "loading" }
+  /** `previous` is a list shown earlier, kept on screen while the next loads. */
+  | { kind: "loading"; previous: Option<LoadedPersonSessions> }
   | { kind: "error"; retry: () => void }
-  | {
-      kind: "loaded";
-      person: MenuPerson;
-      list: MenuSession[];
-      groups: MonthGroup[];
-      kindOf: (session: MenuSession) => DotKind;
-    }
+  | LoadedPersonSessions
   | { kind: "no-people" };
 
 export interface JoinSessionMenuModel {
@@ -241,14 +244,16 @@ function stripAnchor(input: PersonSessionsInput, relationshipId: Id): DateTime {
   return today.some ? startIn(today.val.date, timezone) : now;
 }
 
+const LOADING: PersonSessionsState = { kind: "loading", previous: None };
+
 function personSessions(input: PersonSessionsInput): PersonSessionsState {
   const { relationships, selected, nearest, now, timezone } = input;
   if (relationships.isError) return { kind: "error", retry: () => relationships.refresh() };
   if (selected.none) {
-    return relationships.isLoading || !input.hasOrganization ? { kind: "loading" } : { kind: "no-people" };
+    return relationships.isLoading || !input.hasOrganization ? LOADING : { kind: "no-people" };
   }
   if (nearest.isError) return { kind: "error", retry: () => nearest.refresh() };
-  if (!input.ready || nearest.isLoading) return { kind: "loading" };
+  if (!input.ready || nearest.isLoading) return LOADING;
 
   const today = idOf(input.today);
   const current = idOf(input.current);
@@ -373,7 +378,7 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
   );
 
   const now = DateTime.now().setZone(timezone);
-  const sessions = personSessions({
+  const computed = personSessions({
     relationships: relationshipList,
     hasOrganization: Boolean(currentOrganizationId),
     selected,
@@ -384,6 +389,25 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
     now,
     timezone,
   });
+
+  // The last loaded list, keyed by the fetched sessions (stable per request),
+  // shown while the next loads instead of blinking placeholder rows: any list
+  // once a person was picked this open, else only the same person's (reopening
+  // refetches, as each open asks around a new time).
+  const [lastLoaded, setLastLoaded] = useState<
+    Option<{ source: EnrichedCoachingSession[]; sessions: LoadedPersonSessions }>
+  >(None);
+  if (computed.kind === "loaded" && (lastLoaded.none || lastLoaded.val.source !== nearest.sessions)) {
+    setLastLoaded(Some({ source: nearest.sessions, sessions: computed }));
+  }
+  const showPrevious =
+    computed.kind === "loading" &&
+    lastLoaded.some &&
+    (chosen.some || (selectedId.some && lastLoaded.val.sessions.person.userId === selectedId.val));
+  const sessions: PersonSessionsState =
+    showPrevious && lastLoaded.some
+      ? { kind: "loading", previous: Some(lastLoaded.val.sessions) }
+      : computed;
 
   return {
     today: todayEntries(todays.sessions, userId, people, timezone),

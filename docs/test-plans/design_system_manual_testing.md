@@ -444,6 +444,12 @@ Open the menu and click through several coachees as fast as you can.
 
 **Pass:** the list always ends on the last coachee clicked, with their name above the dots, and never flips back to an earlier coachee's sessions.
 
+### Case G16: switching people loads cleanly
+
+Reload the page, open Join session, and click each person in turn. Repeat with the network throttled to Slow 4G in DevTools, then close and reopen the menu.
+
+**Pass:** the list swaps straight to the next person's sessions without placeholder rows blinking in between. On the slow network the previous list stays in place and fades slightly until the next one appears. Reopening shows the last list rather than placeholder rows.
+
 ## 9. Part H: transcript bubbles (#507)
 
 ### Case H1: indigo bubbles
