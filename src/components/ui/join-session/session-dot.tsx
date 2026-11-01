@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { cn } from "@/components/lib/utils";
 import type { DotKind } from "@/components/ui/join-session/types";
 
@@ -25,19 +26,31 @@ function dotClasses(kind: DotKind): string {
   }
 }
 
+// The preview stays up while the dot is hovered or focused, so leaving with the
+// pointer doesn't hide it from a keyboard user who is still on the dot.
+function usePreview(onPreview: (showing: boolean) => void) {
+  const active = useRef({ hover: false, focus: false });
+  const update = (change: Partial<typeof active.current>) => {
+    active.current = { ...active.current, ...change };
+    onPreview(active.current.hover || active.current.focus);
+  };
+  return {
+    onMouseEnter: () => update({ hover: true }),
+    onMouseLeave: () => update({ hover: false }),
+    onFocus: () => update({ focus: true }),
+    onBlur: () => update({ focus: false }),
+  };
+}
+
 export function SessionDot({ kind, label, onSelect, onPreview }: SessionDotProps) {
-  const show = () => onPreview(true);
-  const hide = () => onPreview(false);
+  const preview = usePreview(onPreview);
   return (
     <button
       type="button"
       aria-label={label}
       data-kind={kind}
       onClick={onSelect}
-      onMouseEnter={show}
-      onMouseLeave={hide}
-      onFocus={show}
-      onBlur={hide}
+      {...preview}
       className="group flex h-5 w-4 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span
