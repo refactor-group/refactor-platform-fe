@@ -54,7 +54,6 @@ import { CoachingSessionDurationInput } from "@/components/ui/coaching-sessions/
 import { RecurrenceFields } from "@/components/ui/dashboard/recurrence-fields";
 import { useRecurrenceState } from "@/lib/hooks/use-recurrence-state";
 import {
-  isDurationValidationError,
   validateDurationMinutes,
 } from "@/types/coaching-session-duration";
 
@@ -302,9 +301,7 @@ export default function CoachingSessionForm({
         console.error(`Failed to ${mode} coaching session:`, error);
       } else {
         let message: string;
-        if (isDurationValidationError(error)) {
-          message = "That length isn't allowed · Pick a different duration";
-        } else if (error.isNetworkError()) {
+        if (error.isNetworkError()) {
           message = `Couldn't ${mode} the session · Check your connection and try again`;
         } else if (error.status === 502) {
           message = "Couldn't create the Google Meet link · Try again";

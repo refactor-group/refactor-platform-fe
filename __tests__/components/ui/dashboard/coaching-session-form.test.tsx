@@ -387,6 +387,25 @@ describe("CoachingSessionForm – success toasts", () => {
       expect(toast.success).toHaveBeenCalledWith("Created 3 recurring sessions with James Hodapp");
     });
   });
+
+  it("does not blame the duration when the backend rejects a series", async () => {
+    mockCreateSeries.mockRejectedValue(
+      makeEntityApiError(422, {
+        status_code: 422,
+        error: "validation_error",
+        message: "monthly recurrence cannot start on day 31",
+      })
+    );
+    renderCreateForm();
+    fireEvent.click(screen.getByRole("switch", { name: "Repeats" }));
+    fireEvent.click(screen.getByRole("button", { name: /^create recurring sessions$/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Couldn't create the recurring sessions · Check the details and try again"
+      );
+    });
+  });
 });
 
 describe("CoachingSessionForm – calendar initial month", () => {
