@@ -7,9 +7,18 @@ const classesOf = (value: string) => value.split(/\s+/);
 
 describe("cn", () => {
   describe("custom font sizes", () => {
-    it("keeps a custom size alongside a text colour", () => {
-      expect(classesOf(cn("text-item", "text-primary-foreground"))).toEqual(
-        expect.arrayContaining(["text-item", "text-primary-foreground"])
+    it.each([
+      "text-page-title",
+      "text-headline",
+      "text-section",
+      "text-card-title",
+      "text-item",
+      "text-label",
+      "text-pill",
+      "text-tiny",
+    ])("keeps %s alongside a text colour", (size) => {
+      expect(classesOf(cn(size, "font-medium", "text-muted-foreground"))).toEqual(
+        expect.arrayContaining([size, "text-muted-foreground"])
       );
     });
 
