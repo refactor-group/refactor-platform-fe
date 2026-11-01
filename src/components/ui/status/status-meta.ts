@@ -17,6 +17,8 @@ export interface StatusMetaInput {
 }
 
 export const OVERDUE_META_CLASS = "font-medium text-warning-text";
+const PAUSED_META_CLASS = "text-on-hold-text";
+const PLAIN_META_CLASS = "text-muted-foreground";
 
 function isOverdue(dueBy: DateTime, now: DateTime): boolean {
   return dueBy.setZone(now.zone).startOf("day") < now.startOf("day");
@@ -64,6 +66,25 @@ export function formatStatusMeta(meta: StatusMeta): Option<string> {
       return Some(`Done ${shortDate(meta.at)}`);
     case "closed":
       return Some(`Closed ${shortDate(meta.at)}`);
+    default: {
+      const _exhaustive: never = meta;
+      throw new Error(`Unhandled status meta: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
+}
+
+/** Overdue reads amber, paused takes the on-hold tone, the rest stay muted. */
+export function statusMetaClass(meta: StatusMeta): string {
+  switch (meta.kind) {
+    case "overdue":
+      return OVERDUE_META_CLASS;
+    case "paused":
+      return PAUSED_META_CLASS;
+    case "none":
+    case "due":
+    case "done":
+    case "closed":
+      return PLAIN_META_CLASS;
     default: {
       const _exhaustive: never = meta;
       throw new Error(`Unhandled status meta: ${JSON.stringify(_exhaustive)}`);

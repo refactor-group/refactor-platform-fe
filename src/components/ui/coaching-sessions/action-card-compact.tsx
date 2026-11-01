@@ -16,11 +16,13 @@ import {
 } from "@/components/ui/tooltip";
 import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
 import {
-  StatusSelect,
   DueDatePicker,
   AssigneePickerPopover,
   resolveAssignees,
 } from "@/components/ui/coaching-sessions/action-card-parts";
+import { ActionStatusControl } from "@/components/ui/status/action-status-control";
+import { StatusMetaLine } from "@/components/ui/status/status-meta-line";
+import { PersonAvatar } from "@/components/ui/avatar";
 import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
 import { GoalPill } from "@/components/ui/goal-pill";
 import type { Action } from "@/types/action";
@@ -44,10 +46,10 @@ const markdownComponents = {
 
 // ── Compact Action Card (flip-card interaction) ──────────────────────
 //
-// Uses BaseCardCompactEditable with header/footer for a three-zone front face:
-//   Header: Status pill (interactive) + flip icon
-//   Body:   Expandable action text
-//   Footer: Assignee initials + due date
+// The design system's "full card" layout, on BaseCardCompactEditable:
+//   Header: Status control (glyph + pill + caret) + details button
+//   Body:   Expandable action text, muted once closed
+//   Footer: Assignee avatars + status meta line
 //
 // Back face provides full edit form for body, status, due date, assignees.
 // Review variant makes body read-only and hides delete.
@@ -84,6 +86,9 @@ export interface CompactActionCardProps {
   onDismiss?: () => void;
   className?: string;
 }
+
+// Full card: flat, radius 12, padding 14×16, border darkens on hover.
+const ACTION_FACE = "rounded-xl px-4 py-3.5 shadow-none hover:border-border-hover";
 
 // A highlighted card pulses once (unless the user prefers reduced motion).
 const HIGHLIGHT_CARD = "motion-safe:animate-highlight-pulse";
@@ -165,7 +170,7 @@ export function CompactActionCard({
       initialEditing={initialEditing}
       onDismiss={onDismiss}
       className={cn(className, highlighted && HIGHLIGHT_CARD)}
-      faceClassName={highlighted ? HIGHLIGHT_FACE : undefined}
+      faceClassName={cn(ACTION_FACE, highlighted && HIGHLIGHT_FACE)}
       renderHeader={({ onFlip }) => (
         <ActionHeader
           status={action.status}
@@ -174,14 +179,10 @@ export function CompactActionCard({
         />
       )}
       renderFront={() => (
-        <ActionBody body={body} goalTitle={linkedGoalTitle} />
+        <ActionBody body={body} goalTitle={linkedGoalTitle} closed={isClosed(action.status)} />
       )}
       renderFooter={() => (
-        <ActionFooter
-          resolvedAssignees={resolvedAssignees}
-          dueBy={action.due_by}
-          locale={locale}
-        />
+        <ActionFooter resolvedAssignees={resolvedAssignees} action={action} />
       )}
       renderBack={({ onDone, isEditing, onEditStart, onEditEnd }) =>
         isEditing ? (
@@ -267,21 +268,23 @@ function ActionHeader({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <StatusSelect status={status} onStatusChange={onStatusChange} />
+      <ActionStatusControl status={status} onStatusChange={onStatusChange} />
       <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-menu"
               aria-label="Action options"
               onClick={(e) => {
                 e.stopPropagation();
                 onFlip();
               }}
-              className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+              className="text-faint"
             >
-              <Info className="h-3.5 w-3.5" />
-            </button>
+              <Info />
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs">
             Edit action details
@@ -294,7 +297,20 @@ function ActionHeader({
 
 // ── Front face: Body ────────────────────────────────────────────────
 
-function ActionBody({ body, goalTitle }: { body: string; goalTitle?: string }) {
+/** Completed and Won't do actions read as closed: muted, never struck through. */
+function isClosed(status: ItemStatus): boolean {
+  return status === ItemStatus.Completed || status === ItemStatus.WontDo;
+}
+
+function ActionBody({
+  body,
+  goalTitle,
+  closed,
+}: {
+  body: string;
+  goalTitle?: string;
+  closed: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   if (!body) {
@@ -309,8 +325,9 @@ function ActionBody({ body, goalTitle }: { body: string; goalTitle?: string }) {
     <div>
       <div
         className={cn(
-          "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-[13px] font-medium [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-          !expanded && "max-h-[2.8em] overflow-hidden"
+          "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-sm font-medium [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          !expanded && "max-h-[2.8em] overflow-hidden",
+          closed && "text-muted-foreground prose-p:text-muted-foreground"
         )}
         onClick={() => setExpanded((prev) => !prev)}
       >
@@ -327,25 +344,26 @@ function ActionBody({ body, goalTitle }: { body: string; goalTitle?: string }) {
 
 function ActionFooter({
   resolvedAssignees,
-  dueBy,
-  locale,
+  action,
 }: {
-  resolvedAssignees: { initials: string; name: string }[];
-  dueBy: Option<DateTime>;
-  locale: string;
+  resolvedAssignees: { id: Id; initials: string; name: string }[];
+  action: Action;
 }) {
-  const formattedDate = dueBy.some
-    ? dueBy.val.setLocale(locale).toLocaleString(DateTime.DATE_MED)
-    : "No due date";
-
   return (
-    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-      <div className="flex items-center gap-1">
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center -space-x-1.5">
         {resolvedAssignees.map((a) => (
-          <TooltipProvider key={a.initials} delayDuration={300}>
+          <TooltipProvider key={a.id} delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-[11px] font-medium">{a.initials}</span>
+                <span aria-label={a.name} role="img">
+                  <PersonAvatar
+                    userId={a.id}
+                    initials={a.initials}
+                    size={26}
+                    className="ring-2 ring-background"
+                  />
+                </span>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
                 {a.name}
@@ -354,21 +372,11 @@ function ActionFooter({
           </TooltipProvider>
         ))}
       </div>
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              data-testid="action-due-date"
-              className="text-[11px] font-bold"
-            >
-              {formattedDate}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            {dueBy.some ? `Due ${formattedDate}` : formattedDate}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <StatusMetaLine
+        status={action.status}
+        dueBy={action.due_by}
+        statusChangedAt={action.status_changed_at}
+      />
     </div>
   );
 }
@@ -620,7 +628,7 @@ export function ActionEditForm({
         {onStatusChange && (
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-muted-foreground">Status</span>
-            <StatusSelect
+            <ActionStatusControl
               status={action.status}
               onStatusChange={onStatusChange}
             />

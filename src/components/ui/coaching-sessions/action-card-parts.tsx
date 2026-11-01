@@ -11,26 +11,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  CalendarIcon,
-  CheckCircle2,
-  Circle,
-  CircleDot,
-  PauseCircle,
-  UserRound,
-  XCircle,
-} from "lucide-react";
-import { ItemStatus, Id, actionStatusToString } from "@/types/general";
+import { CalendarIcon, UserRound } from "lucide-react";
+import { Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
@@ -38,64 +24,6 @@ import { DateTime } from "ts-luxon";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** A small lucide glyph indicating an Action's status. Pure presentational. */
-export interface ActionStatusIconProps {
-  status: ItemStatus;
-  className?: string;
-}
-
-function statusIconAndLabel(
-  status: ItemStatus
-): { Icon: typeof Circle; label: string } {
-  switch (status) {
-    case ItemStatus.NotStarted:
-      return { Icon: Circle, label: "Not started" };
-    case ItemStatus.InProgress:
-      return { Icon: CircleDot, label: "In progress" };
-    case ItemStatus.Completed:
-      return { Icon: CheckCircle2, label: "Completed" };
-    case ItemStatus.OnHold:
-      return { Icon: PauseCircle, label: "On hold" };
-    case ItemStatus.WontDo:
-      return { Icon: XCircle, label: "Won't do" };
-    default: {
-      const _exhaustive: never = status;
-      throw new Error(`Unhandled status: ${_exhaustive}`);
-    }
-  }
-}
-
-export function ActionStatusIcon({ status, className }: ActionStatusIconProps) {
-  const { Icon, label } = statusIconAndLabel(status);
-  return (
-    <Icon
-      role="img"
-      aria-label={label}
-      className={cn("h-4 w-4 text-muted-foreground/60 shrink-0", className)}
-    />
-  );
-}
-
-/** Tailwind background class for a status dot indicator */
-export function statusDotColor(status: ItemStatus): string {
-  switch (status) {
-    case ItemStatus.NotStarted:
-      return "bg-muted-foreground";
-    case ItemStatus.InProgress:
-      return "bg-green-500";
-    case ItemStatus.OnHold:
-      return "bg-amber-400";
-    case ItemStatus.Completed:
-      return "bg-primary";
-    case ItemStatus.WontDo:
-      return "bg-red-400";
-    default: {
-      const _exhaustive: never = status;
-      throw new Error(`Unhandled status: ${_exhaustive}`);
-    }
-  }
-}
 
 /** Derive initials from a display name (e.g. "Alex Rivera" -> "AR") */
 export function getInitials(name: string): string {
@@ -329,62 +257,5 @@ export function DueDatePicker({
         />
       </PopoverContent>
     </Popover>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// StatusSelect
-// ---------------------------------------------------------------------------
-
-export interface StatusSelectProps {
-  status: ItemStatus;
-  onStatusChange: (newStatus: ItemStatus) => void;
-}
-
-export function StatusSelect({ status, onStatusChange }: StatusSelectProps) {
-  return (
-    <Select
-      value={status}
-      onValueChange={(value) => onStatusChange(value as ItemStatus)}
-    >
-      <SelectTrigger
-        className="h-6 w-auto gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent whitespace-nowrap [&>svg]:h-3 [&>svg]:w-3"
-      >
-        <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(status))} />
-        {actionStatusToString(status)}
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ItemStatus.NotStarted}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.NotStarted))} />
-            Not Started
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.InProgress}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.InProgress))} />
-            In Progress
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.OnHold}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.OnHold))} />
-            On Hold
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.Completed}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.Completed))} />
-            Completed
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.WontDo}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.WontDo))} />
-            Won&apos;t Do
-          </span>
-        </SelectItem>
-      </SelectContent>
-    </Select>
   );
 }

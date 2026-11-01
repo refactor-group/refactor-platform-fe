@@ -48,6 +48,7 @@ Auto follows the OS). Tailwind exposes each as a color.
 | `fill` / `fill-hover` | `#f2f3f5` / `#e4e6ee` | `#26262c` / `#303037` | Secondary buttons, chips, icon buttons |
 | `well` | `#f7f7f8` | `#19191c` | Row hover inside menus, modal right pane |
 | `border` / `input` | `#e5e7eb` | `#2c2c33` | Borders |
+| `border-hover` | `#d4d4d8` | `#3f3f46` | Card border on hover (full action card) |
 | `hairline` | `#f0f0f0` | `#232328` | Row separators inside a card |
 
 `secondary`, `muted` and shadcn's `accent` all alias `fill`. Note shadcn's `accent` is the
