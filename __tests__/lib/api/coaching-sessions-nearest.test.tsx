@@ -31,6 +31,7 @@ const QUERY: NearestQuery = {
   around: "2026-10-30T14:00:00",
   before: 2,
   after: 3,
+  fetchedFor: "open-1",
 };
 
 const SESSION = {
@@ -62,10 +63,12 @@ describe("nearest coaching sessions", () => {
 
   it("listNearestForUser sends the exact path and params", async () => {
     const urls = serveNearest();
-    const sessions = await CoachingSessionApi.listNearestForUser("user-1", {
+    const result = await CoachingSessionApi.listNearestForUser("user-1", {
       ...QUERY,
       include: [CoachingSessionInclude.Relationship],
     });
+    if (result.isErr()) throw result.error;
+    const sessions = result.value;
 
     expect(urls).toHaveLength(1);
     expect(urls[0].pathname).toBe("/users/user-1/coaching_sessions/nearest");
@@ -77,6 +80,27 @@ describe("nearest coaching sessions", () => {
       include: "relationship",
     });
     expect(sessions.map((s) => s.id)).toEqual(["s1"]);
+  });
+
+  it("returns a typed error instead of throwing", async () => {
+    server.use(
+      http.get("*/users/:id/coaching_sessions/nearest", () =>
+        HttpResponse.json({ status_code: 422, error: "validation_error" }, { status: 422 })
+      )
+    );
+    const result = await CoachingSessionApi.listNearestForUser("user-1", QUERY);
+    expect(result.isErr() && result.error.status).toBe(422);
+  });
+
+  it("the hook surfaces a failed request as an error", async () => {
+    server.use(
+      http.get("*/users/:id/coaching_sessions/nearest", () =>
+        HttpResponse.json({ status_code: 500 }, { status: 500 })
+      )
+    );
+    const { result } = renderHook(() => useNearestCoachingSessions(Some(QUERY)), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBeTruthy());
+    expect(result.current.sessions).toEqual([]);
   });
 
   it("omits include when none is asked for", async () => {

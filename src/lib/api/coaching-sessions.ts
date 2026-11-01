@@ -1,7 +1,7 @@
 // Interacts with the coaching_session endpoints
 
 import { siteConfig } from "@/site.config";
-import { Id } from "@/types/general";
+import { EntityApiError, Id } from "@/types/general";
 import {
   CoachingSession,
   defaultCoachingSession,
@@ -17,7 +17,7 @@ import { USERS_BASEURL } from "./users";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { Option } from "@/types/option";
 import { DateTime } from "ts-luxon";
-import type { Result } from "neverthrow";
+import { ResultAsync, type Result } from "neverthrow";
 import { attemptResend, type ResendInviteFailure } from "@/types/resend-invite";
 
 // Re-export for convenience
@@ -288,18 +288,16 @@ export const CoachingSessionApi = {
    * @param before 0..10
    * @param after 0..10
    */
-  listNearestForUser: async (
+  listNearestForUser: (
     userId: Id,
     window: NearestWindow
-  ): Promise<EnrichedCoachingSession[]> =>
-    (
-      await EntityApi.listNestedFn<any>(
-        USERS_BASEURL,
-        userId,
-        "coaching_sessions/nearest",
-        { params: nearestParams(window) }
-      )
-    ).map(transformCoachingSession),
+  ): ResultAsync<EnrichedCoachingSession[], EntityApiError> =>
+    ResultAsync.fromPromise(
+      EntityApi.listNestedFn<any>(USERS_BASEURL, userId, "coaching_sessions/nearest", {
+        params: nearestParams(window),
+      }).then((sessions) => sessions.map(transformCoachingSession)),
+      (e) => EntityApiError.from("GET", `${USERS_BASEURL}/${userId}/coaching_sessions/nearest`, e)
+    ),
 
   listCountsForUser: async (
     userId: Id,
@@ -601,10 +599,13 @@ export const useNearestCoachingSessions = (query: Option<NearestQuery>) => {
     ? { ...nearestParams(query.val), fetchedFor: query.val.fetchedFor }
     : null;
 
-  const fetcher = () =>
-    query.some
-      ? CoachingSessionApi.listNearestForUser(query.val.userId, query.val)
-      : Promise.resolve([]);
+  // SWR wants a rejecting promise; unwrap the Result at this boundary.
+  const fetcher = async () => {
+    if (query.none) return [];
+    const result = await CoachingSessionApi.listNearestForUser(query.val.userId, query.val);
+    if (result.isErr()) throw result.error;
+    return result.value;
+  };
 
   const { entities, isLoading, isError, refresh } =
     EntityApi.useEntityList<EnrichedCoachingSession>(url, fetcher, params);
