@@ -6,7 +6,7 @@ interface StatusPillProps {
   className?: string;
 }
 
-export const STATUS_PILL_CLASSES: Record<ItemStatus, string> = {
+const STATUS_PILL_CLASSES: Record<ItemStatus, string> = {
   [ItemStatus.NotStarted]: "bg-fill text-ink-2",
   [ItemStatus.InProgress]: "bg-brand-tint text-brand-strong",
   [ItemStatus.OnHold]: "bg-on-hold-fill text-on-hold-text",
