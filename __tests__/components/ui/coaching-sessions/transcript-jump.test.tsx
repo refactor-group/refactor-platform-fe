@@ -165,7 +165,7 @@ describe("TranscriptPanel jump", () => {
   it("says so when the segment is not in this transcript", async () => {
     renderPanel(Some({ segmentId: "seg-404", nonce: 1 }));
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("That part of the transcript isn't available.")
+      expect(toast.error).toHaveBeenCalledWith("That part of the transcript isn't available")
     );
     expect(screen.queryByTestId("transcript-jump-mark")).not.toBeInTheDocument();
   });

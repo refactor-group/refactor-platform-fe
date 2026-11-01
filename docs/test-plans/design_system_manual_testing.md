@@ -182,6 +182,7 @@ Load the page first, then block the named request in DevTools and trigger the ac
 | Change an action's status in the session panel | `*/actions/*` | Couldn't update the status |
 | Resend a session invite from the dashboard ⋮ menu (coach) | `*/resend_invite` | Couldn't resend the invite · Try again in a moment |
 | Delete a session from the dashboard ⋮ menu (coach) | `*/coaching_sessions/*` | Couldn't delete the session · Try again |
+| Delete a recurring series from the dashboard ⋮ menu (coach) | `*/coaching_session_series/*` | Couldn't delete the series · Try again |
 
 **Pass:** each toast shows exactly the expected text on one line, with no trailing period, no HTTP status, no server message and no second line.
 

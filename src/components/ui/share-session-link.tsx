@@ -20,7 +20,7 @@ export async function copyCoachingSessionLinkWithToast(sessionId: string): Promi
   const { toast } = await import("@/lib/toast");
   try {
     await copyCoachingSessionLink(sessionId);
-    toast("Coaching session link copied successfully.");
+    toast("Session link copied");
   } catch (error) {
     console.error("Failed to copy link:", error);
     throw error;

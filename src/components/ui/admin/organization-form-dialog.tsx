@@ -97,8 +97,8 @@ export function OrganizationFormDialog({
       } else {
         toast.error(
           isEdit
-            ? "There was an error updating the organization"
-            : "There was an error creating the organization"
+            ? "Couldn't update the organization"
+            : "Couldn't create the organization"
         );
       }
     }

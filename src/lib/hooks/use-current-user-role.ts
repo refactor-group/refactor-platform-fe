@@ -112,11 +112,11 @@ export const useCurrentUserRole = (): UserRoleState => {
     if (!isLoggedIn) return;
 
     if (roleState.status === 'no_roles') {
-      toast.error('No roles assigned. Please contact support.', {
+      toast.error('Your account has no access yet · Contact support', {
         id: 'user-role-no-roles',
       });
     } else if (roleState.status === 'no_access') {
-      toast.warning(`You don't have access to this organization.`, {
+      toast.warning(`You don't have access to this organization`, {
         id: 'user-role-no-access',
       });
     }

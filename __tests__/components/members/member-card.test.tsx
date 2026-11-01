@@ -124,7 +124,7 @@ describe("MemberCard – resend invite error handling", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "You don't have permission to perform this action."
+        "You don't have permission to do that"
       )
     );
   });
@@ -143,7 +143,7 @@ describe("MemberCard – resend invite error handling", () => {
 });
 
 describe("MemberCard – assign relationship error handling", () => {
-  it("surfaces the backend message when the org is archived", async () => {
+  it("shows our archived copy, not the backend message, when the org is archived", async () => {
     mockCreateRelationship.mockRejectedValueOnce(
       apiError(409, {
         error: "organization_archived",
@@ -157,8 +157,11 @@ describe("MemberCard – assign relationship error handling", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "This organization is archived and cannot accept new changes."
+        "This organization is archived · It can't be changed"
       )
+    );
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "This organization is archived and cannot accept new changes."
     );
   });
 
@@ -171,7 +174,7 @@ describe("MemberCard – assign relationship error handling", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "You don't have permission to perform this action."
+        "You don't have permission to do that"
       )
     );
   });

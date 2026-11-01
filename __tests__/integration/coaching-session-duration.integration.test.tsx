@@ -211,8 +211,8 @@ describe("Coaching session duration integration", () => {
     });
   });
 
-  describe("422 validation_error surfaces BE message verbatim", () => {
-    it("toasts error.data.message instead of the generic 422 fallback", async () => {
+  describe("422 validation_error shows our duration copy", () => {
+    it("toasts our duration copy instead of the BE message or the generic 422 fallback", async () => {
       mockUpdate.mockRejectedValue(
         makeApiError(422, {
           status_code: 422,
@@ -240,9 +240,12 @@ describe("Coaching session duration integration", () => {
 
       await waitFor(() => {
         expect(mockToastError).toHaveBeenCalledWith(
-          "duration_minutes must be between 1 and 480 (got 999)"
+          "That length isn't allowed · Pick a different duration"
         );
       });
+      expect(mockToastError).not.toHaveBeenCalledWith(
+        "duration_minutes must be between 1 and 480 (got 999)"
+      );
     });
   });
 });

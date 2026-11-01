@@ -57,8 +57,8 @@ export function OrganizationRow({
       console.error("Error toggling organization archive:", error);
       toast.error(
         archived
-          ? "There was an error unarchiving the organization"
-          : "There was an error archiving the organization"
+          ? "Couldn't unarchive the organization"
+          : "Couldn't archive the organization"
       );
     }
   };

@@ -77,7 +77,7 @@ describe("starting a scan", () => {
     expect(result.isOk() && result.value).toBe(ScanStatus.Pending);
   });
 
-  it("returns the backend's reason when the scan is refused", async () => {
+  it("reports a 409 as refused", async () => {
     vi.mocked(sessionGuard.post).mockRejectedValue(
       httpError(409, {
         error: "conflict",
@@ -87,16 +87,13 @@ describe("starting a scan", () => {
 
     const result = await TranscriptSuggestionApi.startScan("s-1");
 
-    expect(result.isErr() && result.error).toEqual({
-      kind: "refused",
-      message: Some("Transcript already scanned for actions."),
-    });
+    expect(result.isErr() && result.error).toEqual({ kind: "refused" });
   });
 
-  it("treats a 422 as refused too, and a missing message as None", async () => {
+  it("treats a 422 as refused too", async () => {
     vi.mocked(sessionGuard.post).mockRejectedValue(httpError(422, "plain text"));
     const result = await TranscriptSuggestionApi.startScan("s-1");
-    expect(result.isErr() && result.error).toEqual({ kind: "refused", message: None });
+    expect(result.isErr() && result.error).toEqual({ kind: "refused" });
   });
 
   it("reports a lost connection as network", async () => {

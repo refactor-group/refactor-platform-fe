@@ -61,20 +61,14 @@ export type SuggestionFailure =
   | { kind: "no_longer_pending" }
   | { kind: "forbidden" }
   | { kind: "not_found" }
-  | { kind: "invalid"; message: Option<string> }
+  | { kind: "invalid" }
   | { kind: "network" }
   | { kind: "unexpected"; status: Option<number> };
-
-function messageOf(data: unknown): Option<string> {
-  if (typeof data !== "object" || data === null) return None;
-  const { message } = data as { message?: unknown };
-  return typeof message === "string" ? Some(message) : None;
-}
 
 function toSuggestionFailure(error: unknown): SuggestionFailure {
   if (!axios.isAxiosError(error)) return { kind: "unexpected", status: None };
   if (!error.response) return { kind: "network" };
-  const { status, data } = error.response;
+  const { status } = error.response;
   switch (status) {
     case 409:
       return { kind: "no_longer_pending" };
@@ -83,7 +77,7 @@ function toSuggestionFailure(error: unknown): SuggestionFailure {
     case 404:
       return { kind: "not_found" };
     case 422:
-      return { kind: "invalid", message: messageOf(data) };
+      return { kind: "invalid" };
     default:
       return { kind: "unexpected", status: Some(status) };
   }
@@ -91,16 +85,16 @@ function toSuggestionFailure(error: unknown): SuggestionFailure {
 
 /** A scan that did not start, reduced to what the scan button needs. */
 export type ScanFailure =
-  | { kind: "refused"; message: Option<string> }
+  | { kind: "refused" }
   | { kind: "network" }
   | { kind: "unexpected"; status: Option<number> };
 
 function toScanFailure(error: unknown): ScanFailure {
   if (!axios.isAxiosError(error)) return { kind: "unexpected", status: None };
   if (!error.response) return { kind: "network" };
-  const { status, data } = error.response;
+  const { status } = error.response;
   return status === 409 || status === 422
-    ? { kind: "refused", message: messageOf(data) }
+    ? { kind: "refused" }
     : { kind: "unexpected", status: Some(status) };
 }
 

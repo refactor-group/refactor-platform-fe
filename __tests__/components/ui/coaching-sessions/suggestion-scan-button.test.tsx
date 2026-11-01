@@ -130,17 +130,15 @@ describe("useSuggestionScan", () => {
     expect(toast.error).not.toHaveBeenCalled();
   });
 
-  it("shows the backend's reason when a scan is refused, and refreshes", async () => {
-    vi.mocked(TranscriptSuggestionApi.startScan).mockResolvedValue(
-      err({ kind: "refused", message: Some("A scan is already running.") })
-    );
+  it("words a refused scan, and refreshes", async () => {
+    vi.mocked(TranscriptSuggestionApi.startScan).mockResolvedValue(err({ kind: "refused" }));
     const { result, refresh } = setup();
 
     await act(async () => {
       await result.current.start();
     });
 
-    expect(toast.error).toHaveBeenCalledWith("A scan is already running.");
+    expect(toast.error).toHaveBeenCalledWith("Couldn't start the scan");
     expect(refresh).toHaveBeenCalled();
   });
 
@@ -153,7 +151,7 @@ describe("useSuggestionScan", () => {
     });
 
     expect(toast.error).toHaveBeenCalledWith(
-      "Couldn't start the scan. Connection to service was lost."
+      "Couldn't start the scan · Check your connection and try again"
     );
   });
 });

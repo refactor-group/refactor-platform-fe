@@ -27,7 +27,7 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
     ) => {
         try {
             await updateUser(userId, updatedUser)
-            toast("Profile has been updated.")
+            toast("Profile updated")
             
             // Update auth store timezone if it was changed
             if (updatedUser.timezone) {
@@ -36,7 +36,7 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
             
             refresh()
         } catch (error) {
-            toast(isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Error updating profile.")
+            toast(isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Couldn't update your profile")
             console.error("Error updating profile:", error)
         }
     }
@@ -44,11 +44,11 @@ export function MemberProfileContainer({ userId }: { userId: Id }) {
     const handlePasswordUpdate = async (updatedPassword: NewUserPassword) => {
         try {
             await updatePassword(userId, updatedPassword)
-            toast("Password has been updated.")
+            toast("Password updated")
             // Logout the user when the password is updated
             logoutUser()
         } catch (error) {
-            toast(isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Error updating password.")
+            toast(isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Couldn't update your password")
             console.error("Error updating password:", error)
         }
     }

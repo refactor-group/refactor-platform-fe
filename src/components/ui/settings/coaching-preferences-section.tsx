@@ -63,9 +63,9 @@ export const CoachingPreferencesSection: FC = () => {
           if (isForbiddenError(error)) {
             toast.error(PERMISSION_DENIED_MESSAGE);
           } else if (isDurationValidationError(error)) {
-            toast.error(error.data.message);
+            toast.error("That length isn't allowed · Pick a different duration");
           } else {
-            toast.error("Couldn't save preferences. Please try again.");
+            toast.error("Couldn't save your preferences · Try again");
           }
         }
       })();

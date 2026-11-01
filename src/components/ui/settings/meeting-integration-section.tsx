@@ -95,7 +95,7 @@ export const MeetingIntegrationSection: FC = () => {
       await OAuthConnectionApi.disconnect(connectedProvider);
       await Promise.all([googleRefresh(), zoomRefresh()]);
       setSelectedProvider(null);
-      toast.success(`${PROVIDER_LABELS[connectedProvider]} account disconnected.`);
+      toast.success(`${PROVIDER_LABELS[connectedProvider]} account disconnected`);
     } catch {
       toast.error(`Couldn't disconnect your ${PROVIDER_LABELS[connectedProvider]} account`);
     } finally {

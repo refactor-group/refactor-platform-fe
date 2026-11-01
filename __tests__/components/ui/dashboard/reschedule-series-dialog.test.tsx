@@ -123,7 +123,7 @@ describe("RescheduleSeriesDialog - submit path", () => {
     });
 
     expect(toast.success).toHaveBeenCalledWith(
-      "Series rescheduled. Future sessions were updated."
+      "Series rescheduled"
     );
     expect(onRescheduled).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -141,7 +141,7 @@ describe("RescheduleSeriesDialog - submit path", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Couldn't reschedule the series. Please review the form and try again."
+        "Couldn't reschedule the series · Check the details and try again"
       );
     });
     expect(onRescheduled).not.toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe("RescheduleSeriesDialog - submit path", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "You don't have permission to perform this action."
+        "You don't have permission to do that"
       );
     });
     expect(onRescheduled).not.toHaveBeenCalled();

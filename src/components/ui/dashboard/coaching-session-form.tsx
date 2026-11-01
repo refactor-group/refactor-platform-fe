@@ -231,9 +231,7 @@ export default function CoachingSessionForm({
     };
     const created = await CoachingSessionSeriesApi.create(payload, userTimezone);
     const count = created.coaching_sessions.length;
-    toast.success(
-      `Created ${count} recurring session${count === 1 ? "" : "s"}.`
-    );
+    toast.success(`Created ${count} recurring session${count === 1 ? "" : "s"}`);
   };
 
   const handleUpdateSession = async (dateTime: string) => {
@@ -289,7 +287,7 @@ export default function CoachingSessionForm({
       if (!(error instanceof EntityApiError)) {
         console.error(`Failed to ${mode} coaching session:`, error);
       } else if (error.status === 409 && error.data?.error === "oauth_token_revoked") {
-        toast.error("Your Google Meet integration has been disconnected. Please reconnect in Settings.");
+        toast.error("Google Meet is disconnected · Reconnect it in Settings");
         router.push("/settings/integrations");
       } else if (archivedMessage !== null) {
         toast.error(archivedMessage);
@@ -297,13 +295,13 @@ export default function CoachingSessionForm({
       } else {
         let message: string;
         if (isDurationValidationError(error)) {
-          message = error.data.message;
+          message = "That length isn't allowed · Pick a different duration";
         } else if (error.isNetworkError()) {
-          message = "Could not connect to server. Please check your internet connection.";
+          message = `Couldn't ${mode} the session · Check your connection and try again`;
         } else if (error.status === 502) {
-          message = "Could not create Google Meet link due to a connection error. Please try again.";
+          message = "Couldn't create the Google Meet link · Try again";
         } else if (error.status === 422) {
-          message = `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"}. Please review the form and try again.`;
+          message = `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"} · Check the details and try again`;
         } else if (isForbiddenError(error)) {
           message = PERMISSION_DENIED_MESSAGE;
         } else {

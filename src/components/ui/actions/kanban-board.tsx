@@ -229,7 +229,7 @@ export function KanbanBoard({
             highlightCard(id);
             onStatusChange(id, entry.originalStatus).catch(() => {
               rollbackOverride(id);
-              toast.error("Undo failed, could not restore action status.");
+              toast.error("Couldn't undo the move");
             });
           },
         },

@@ -42,7 +42,7 @@ export function DeleteOrganizationDialog({
     } catch (error) {
       console.error("Error deleting organization:", error);
       const notEmpty = organizationNotEmptyMessage(error);
-      toast.error(notEmpty ?? "There was an error deleting the organization");
+      toast.error(notEmpty ?? "Couldn't delete the organization");
     } finally {
       setIsDeleting(false);
     }

@@ -116,7 +116,7 @@ vi.mock("@/lib/api/entity-api", () => {
   }
   return {
     EntityApiError,
-    PERMISSION_DENIED_MESSAGE: "You don't have permission to perform this action.",
+    PERMISSION_DENIED_MESSAGE: "You don't have permission to do that",
     viewPermissionDeniedMessage: (resource: string) =>
       `You don't have permission to view ${resource}.`,
     isForbiddenError: (e: unknown) =>
@@ -607,7 +607,7 @@ describe("ActionsPageContainer", () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith(
-          "You don't have permission to perform this action."
+          "You don't have permission to do that"
         );
       });
     });

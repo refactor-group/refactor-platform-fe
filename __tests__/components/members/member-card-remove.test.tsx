@@ -175,8 +175,11 @@ describe("MemberCard – remove from organization", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "This user is the only admin of this organization. Assign another admin before removing them."
+        "They're this organization's only admin · Make someone else an admin first"
       )
+    );
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "This user is the only admin of this organization. Assign another admin before removing them."
     );
   });
 });

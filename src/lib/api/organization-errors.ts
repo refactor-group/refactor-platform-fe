@@ -2,46 +2,51 @@ import { EntityApiError } from "@/types/entity-api-error";
 
 /**
  * Structured 409 discriminators the backend returns for organization writes
- * (see board contract AdminOrganizationCRUD v2). Each helper returns the
- * backend's human message when the error matches, otherwise null — so callers
- * can do `toast.error(organizationArchivedMessage(error) ?? fallback)`.
+ * (see board contract AdminOrganizationCRUD v2). Each helper returns our copy
+ * when the error matches, otherwise null — so callers can do
+ * `toast.error(organizationArchivedMessage(error) ?? fallback)`.
  */
 function orgErrorMessage(
   error: unknown,
   code: string,
-  fallback: string
+  message: string
 ): string | null {
-  if (EntityApiError.isEntityApiError(error) && error.data?.error === code) {
-    return typeof error.data?.message === "string" ? error.data.message : fallback;
-  }
-  return null;
+  return EntityApiError.isEntityApiError(error) && error.data?.error === code
+    ? message
+    : null;
 }
 
-export const organizationNameTakenMessage = (error: unknown): string | null =>
-  orgErrorMessage(
-    error,
-    "organization_name_taken",
-    "An organization with that name already exists."
-  );
+/** Feeds the inline name field, so it keeps the backend's message when present. */
+export const organizationNameTakenMessage = (error: unknown): string | null => {
+  if (
+    EntityApiError.isEntityApiError(error) &&
+    error.data?.error === "organization_name_taken"
+  ) {
+    return typeof error.data?.message === "string"
+      ? error.data.message
+      : "An organization with that name already exists.";
+  }
+  return null;
+};
 
 export const organizationNotEmptyMessage = (error: unknown): string | null =>
   orgErrorMessage(
     error,
     "organization_not_empty",
-    "This organization still has coaching data and can't be deleted."
+    "This organization still has coaching data · It can't be deleted"
   );
 
 export const organizationArchivedMessage = (error: unknown): string | null =>
   orgErrorMessage(
     error,
     "organization_archived",
-    "This organization is archived and can't accept new changes."
+    "This organization is archived · It can't be changed"
   );
 
 /// Shown both by the lookup pre-check and by the server's 409, so the two
 /// paths cannot drift apart.
 export const USER_ALREADY_IN_ORGANIZATION_MESSAGE =
-  "This user is already a member of this organization.";
+  "They're already a member of this organization";
 
 export const userAlreadyInOrganizationMessage = (
   error: unknown
@@ -56,7 +61,7 @@ export const lastOrganizationAdminMessage = (error: unknown): string | null =>
   orgErrorMessage(
     error,
     "last_organization_admin",
-    "This user is the only admin of this organization. Assign another admin before removing them."
+    "They're this organization's only admin · Make someone else an admin first"
   );
 
 export const userBelongsToMultipleOrganizationsMessage = (
@@ -65,7 +70,7 @@ export const userBelongsToMultipleOrganizationsMessage = (
   orgErrorMessage(
     error,
     "user_belongs_to_multiple_organizations",
-    "This user belongs to other organizations. Remove them from this organization instead of deleting their account."
+    "They belong to other organizations · Remove them from this one instead"
   );
 
 /** Longest organization name the backend accepts (characters, trimmed). */
@@ -93,8 +98,7 @@ export const organizationNameInvalidMessage = (error: unknown): string | null =>
 
 /**
  * A `422 validation_error` from a membership role change — the backend rejects
- * granting SuperAdmin within an organization. Returns the backend's message,
- * else null. `validation_error` is a SHARED discriminator, so only call this
+ * granting SuperAdmin within an organization. Returns our copy, else null. `validation_error` is a SHARED discriminator, so only call this
  * from the role-change flow (never treat it as a global org error).
  */
 export const roleChangeInvalidMessage = (error: unknown): string | null => {
@@ -103,9 +107,7 @@ export const roleChangeInvalidMessage = (error: unknown): string | null => {
     error.status === 422 &&
     error.data?.error === "validation_error"
   ) {
-    return typeof error.data?.message === "string"
-      ? error.data.message
-      : "That role can't be assigned in this organization.";
+    return "That role can't be assigned in this organization";
   }
   return null;
 };
