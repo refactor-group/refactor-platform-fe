@@ -141,6 +141,17 @@ describe("useJoinSessionMenu", () => {
     });
   });
 
+  it("loads the second relationship with a person when its session is open", () => {
+    serveCoachingSession(
+      createMockSession({ id: "ehab-alt", coaching_relationship_id: "rel-e2", date: "2026-08-12T15:00:00" })
+    );
+    vi.mocked(usePathname).mockReturnValue("/coaching-sessions/ehab-alt");
+    const { result } = renderOpened();
+    expect(result.current.people.filter((p) => p.userId === "ehab")).toHaveLength(1);
+    expect(result.current.selectedId).toEqual(Some("ehab"));
+    expect(lastWindow().relationshipId).toBe("rel-e2");
+  });
+
   it("defaults to the first person off a session page", () => {
     const { result } = renderOpened();
     expect(result.current.selectedId).toEqual(Some("ehab"));

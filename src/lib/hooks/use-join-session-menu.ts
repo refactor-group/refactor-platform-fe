@@ -48,7 +48,14 @@ export interface TodayEntry {
   person: MenuPerson;
 }
 
+/** A person and every relationship the user has with them (two when they coach each other). */
 export interface PersonEntry {
+  person: MenuPerson;
+  relationshipIds: Id[];
+}
+
+/** The selected person, narrowed to the relationship whose sessions the menu shows. */
+interface SelectedPerson {
   person: MenuPerson;
   relationshipId: Id;
 }
@@ -112,7 +119,7 @@ function otherParticipant(rel: CoachingRelationshipWithUserNames, userId: Id): M
     : menuPerson(rel.coach_id, rel.coach_first_name, rel.coach_last_name);
 }
 
-/** One entry per other person; a person in two relationships keeps the first. */
+/** One entry per other person, holding each relationship the user has with them. */
 export function peopleFor(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
@@ -121,13 +128,14 @@ export function peopleFor(
     getRelationshipsForUser(userId, relationships),
     userId
   );
-  const seen = new Set<Id>();
-  return sorted.flatMap((rel) => {
+  const byPerson = new Map<Id, PersonEntry>();
+  for (const rel of sorted) {
     const person = otherParticipant(rel, userId);
-    if (seen.has(person.userId)) return [];
-    seen.add(person.userId);
-    return [{ person, relationshipId: rel.id }];
-  });
+    const entry = byPerson.get(person.userId);
+    if (entry) entry.relationshipIds.push(rel.id);
+    else byPerson.set(person.userId, { person, relationshipIds: [rel.id] });
+  }
+  return [...byPerson.values()];
 }
 
 export function toMenuSession(session: EnrichedCoachingSession, timezone: string): MenuSession {
@@ -153,7 +161,7 @@ function todayPerson(
 ): Option<MenuPerson> {
   const other = session.relationship?.coach_id === userId ? session.coachee : session.coach;
   if (other) return Some(personFromUser(other));
-  const entry = people.find((p) => p.relationshipId === session.coaching_relationship_id);
+  const entry = people.find((p) => p.relationshipIds.includes(session.coaching_relationship_id));
   return entry ? Some(entry.person) : None;
 }
 
@@ -213,7 +221,7 @@ function idOf<T extends { id: Id }>(value: Option<T>): Option<Id> {
 interface PersonSessionsInput {
   relationships: { isLoading: boolean; isError: unknown; refresh: () => unknown };
   hasOrganization: boolean;
-  selected: Option<PersonEntry>;
+  selected: Option<SelectedPerson>;
   nearest: { sessions: EnrichedCoachingSession[]; isLoading: boolean; isError: unknown; refresh: () => unknown };
   ready: boolean;
   today: Option<CoachingSession>;
@@ -273,7 +281,7 @@ function useCurrentSession(pathname: string): { current: Option<CurrentSession>;
   };
 }
 
-function resolveSelected(
+function resolvePerson(
   chosen: Option<Id>,
   people: PersonEntry[],
   current: Option<CurrentSession>
@@ -281,10 +289,36 @@ function resolveSelected(
   const byChoice = chosen.some ? people.find((p) => p.person.userId === chosen.val) : undefined;
   if (byChoice) return Some(byChoice);
   const byCurrent = current.some
-    ? people.find((p) => p.relationshipId === current.val.relationshipId)
+    ? people.find((p) => p.relationshipIds.includes(current.val.relationshipId))
     : undefined;
   if (byCurrent) return Some(byCurrent);
   return people.length > 0 ? Some(people[0]) : None;
+}
+
+/** The viewed session's relationship, else the one with a session today, else the first. */
+function relationshipFor(
+  entry: PersonEntry,
+  current: Option<CurrentSession>,
+  todays: EnrichedCoachingSession[]
+): Id {
+  const { relationshipIds } = entry;
+  if (current.some && relationshipIds.includes(current.val.relationshipId)) {
+    return current.val.relationshipId;
+  }
+  const today = todayAnchor(todays.filter((s) => relationshipIds.includes(s.coaching_relationship_id)));
+  return today.some ? today.val.coaching_relationship_id : relationshipIds[0];
+}
+
+function resolveSelected(
+  chosen: Option<Id>,
+  people: PersonEntry[],
+  current: Option<CurrentSession>,
+  todays: EnrichedCoachingSession[]
+): Option<SelectedPerson> {
+  const entry = resolvePerson(chosen, people, current);
+  return entry.some
+    ? Some({ person: entry.val.person, relationshipId: relationshipFor(entry.val, current, todays) })
+    : None;
 }
 
 export function useJoinSessionMenu(): JoinSessionMenuModel {
@@ -308,7 +342,7 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
 
   const people = peopleFor(userId, relationshipList.relationships);
   const menuPeople = people.map((p) => p.person);
-  const selected = resolveSelected(chosen, people, current);
+  const selected = resolveSelected(chosen, people, current, todays.sessions);
   const selectedId: Option<Id> = selected.some ? Some(selected.val.person.userId) : None;
   const page = clampPage(
     chosenPage.some ? chosenPage.val : selectedId.some ? pageOf(selectedId.val, menuPeople) : 0,
