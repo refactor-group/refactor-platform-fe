@@ -176,6 +176,21 @@ describe("useJoinSessionMenu", () => {
     });
   });
 
+  it("refetches a today-anchored window on every open", () => {
+    const { result } = renderOpened();
+    act(() => result.current.selectPerson("priya"));
+    const first = lastNearestQuery();
+
+    Settings.now = () => NOW.plus({ minutes: 5 }).toMillis();
+    act(() => result.current.reset());
+    act(() => result.current.selectPerson("priya"));
+    const second = lastNearestQuery();
+
+    if (first.none || second.none) throw new Error("expected nearest queries");
+    expect(second.val.around).toBe(first.val.around);
+    expect(second.val.fetchedFor).not.toBe(first.val.fetchedFor);
+  });
+
   it("anchors on the current session when it belongs to the person", () => {
     vi.mocked(usePathname).mockReturnValue("/coaching-sessions/ehab-7");
     renderOpened();

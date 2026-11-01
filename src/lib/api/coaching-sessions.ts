@@ -37,6 +37,8 @@ export interface NearestWindow {
 
 export interface NearestQuery extends NearestWindow {
   userId: Id;
+  /** Part of the cache key only: a new value refetches the same window. */
+  fetchedFor: string;
 }
 
 function nearestParams(window: NearestWindow): Record<string, string> {
@@ -595,7 +597,9 @@ export const useNearestCoachingSessions = (query: Option<NearestQuery>) => {
   const url = query.some
     ? `${USERS_BASEURL}/${query.val.userId}/coaching_sessions/nearest`
     : "";
-  const params = query.some ? nearestParams(query.val) : null;
+  const params = query.some
+    ? { ...nearestParams(query.val), fetchedFor: query.val.fetchedFor }
+    : null;
 
   const fetcher = () =>
     query.some

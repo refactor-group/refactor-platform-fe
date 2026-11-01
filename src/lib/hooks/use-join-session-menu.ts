@@ -358,6 +358,8 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
     ready && selected.some
       ? Some({
           userId,
+          // Each open refetches, so rows never outlive a session that moved or was deleted.
+          fetchedFor: String(openedAt.toMillis()),
           ...windowQuery({
             relationshipId: selected.val.relationshipId,
             today: anchorToday,
