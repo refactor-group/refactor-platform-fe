@@ -23,17 +23,17 @@ const ORDER = [
 
 const trigger = () => screen.getByRole("button", { name: "Change status" });
 const itemFor = (status: ItemStatus) =>
-  screen.getAllByRole("menuitem").find((el) => el.dataset.status === status)!;
+  screen.getAllByRole("menuitemradio").find((el) => el.dataset.status === status)!;
 
 describe("StatusMenu", () => {
   it("lists the five statuses in column order by accessible name", async () => {
     const user = userEvent.setup();
     renderMenu(ItemStatus.NotStarted);
     await user.click(trigger());
-    const items = await screen.findAllByRole("menuitem");
+    const items = await screen.findAllByRole("menuitemradio");
     expect(items).toHaveLength(5);
     const named = ORDER.map((s) =>
-      screen.getByRole("menuitem", { name: actionStatusToString(s) })
+      screen.getByRole("menuitemradio", { name: actionStatusToString(s) })
     );
     expect(named).toEqual(items);
   });
@@ -42,26 +42,26 @@ describe("StatusMenu", () => {
     const user = userEvent.setup();
     renderMenu(ItemStatus.InProgress);
     await user.click(trigger());
-    await screen.findAllByRole("menuitem");
+    await screen.findAllByRole("menuitemradio");
     expect(
-      screen.getAllByRole("menuitem", { name: actionStatusToString(s) })
+      screen.getAllByRole("menuitemradio", { name: actionStatusToString(s) })
     ).toHaveLength(1);
   });
 
-  it("marks only the current status", async () => {
+  it("announces only the current status as checked", async () => {
     const user = userEvent.setup();
     renderMenu(ItemStatus.InProgress);
     await user.click(trigger());
-    const items = await screen.findAllByRole("menuitem");
-    const current = items.filter((el) => el.dataset.current === "true");
-    expect(current.map((el) => el.dataset.status)).toEqual([ItemStatus.InProgress]);
+    await screen.findAllByRole("menuitemradio");
+    const checked = screen.getAllByRole("menuitemradio", { checked: true });
+    expect(checked.map((el) => el.dataset.status)).toEqual([ItemStatus.InProgress]);
   });
 
   it("calls onStatusChange once when choosing a different status", async () => {
     const user = userEvent.setup();
     const onChange = renderMenu(ItemStatus.InProgress);
     await user.click(trigger());
-    await screen.findAllByRole("menuitem");
+    await screen.findAllByRole("menuitemradio");
     await user.click(itemFor(ItemStatus.OnHold));
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith(ItemStatus.OnHold);
@@ -71,10 +71,10 @@ describe("StatusMenu", () => {
     const user = userEvent.setup();
     const onChange = renderMenu(ItemStatus.InProgress);
     await user.click(trigger());
-    await screen.findAllByRole("menuitem");
+    await screen.findAllByRole("menuitemradio");
     await user.click(itemFor(ItemStatus.InProgress));
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.queryAllByRole("menuitem")).toHaveLength(0);
+    expect(screen.queryAllByRole("menuitemradio")).toHaveLength(0);
   });
 
   it("selects the focused item via keyboard", async () => {
@@ -82,10 +82,10 @@ describe("StatusMenu", () => {
     const onChange = renderMenu(ItemStatus.OnHold);
     trigger().focus();
     await user.keyboard("{Enter}");
-    await screen.findAllByRole("menuitem");
+    await screen.findAllByRole("menuitemradio");
     await user.keyboard("{ArrowDown}");
     const focused = document.activeElement as HTMLElement;
-    expect(focused).toHaveAttribute("role", "menuitem");
+    expect(focused).toHaveAttribute("role", "menuitemradio");
     const focusedStatus = focused.dataset.status as ItemStatus;
     await user.keyboard("{Enter}");
     expect(onChange).toHaveBeenCalledTimes(1);
