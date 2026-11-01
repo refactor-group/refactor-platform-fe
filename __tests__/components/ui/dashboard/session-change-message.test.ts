@@ -17,7 +17,7 @@ const halfPast = { ...session, date: "2026-11-05T03:30:00" };
 describe("session change messages", () => {
   it("says what was created, with whom and when, locally", () => {
     expect(sessionCreatedMessage(session, relationships, "America/Chicago")).toBe(
-      "Created the Nov 4 @ 9 PM session with James Hodapp"
+      "Created a new session Nov 4 @ 9 PM with James Hodapp"
     );
   });
 
@@ -37,7 +37,7 @@ describe("session change messages", () => {
   });
 
   it("leaves the name out when the relationship isn't loaded", () => {
-    expect(sessionCreatedMessage(session, [], "UTC")).toBe("Created the Nov 5 @ 3 AM session");
+    expect(sessionCreatedMessage(session, [], "UTC")).toBe("Created a new session Nov 5 @ 3 AM");
     expect(sessionRemovedMessage(session, [], "UTC")).toBe("Removed the Nov 5 @ 3 AM session");
   });
 });

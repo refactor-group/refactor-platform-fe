@@ -372,7 +372,7 @@ describe("CoachingSessionForm – success toasts", () => {
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalled();
       expect(toast.success).toHaveBeenCalledWith(
-        "Created the Oct 15 @ 10 AM session with James Hodapp"
+        "Created a new session Oct 15 @ 10 AM with James Hodapp"
       );
     });
   });
