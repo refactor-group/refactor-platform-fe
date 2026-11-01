@@ -177,7 +177,7 @@ className={cn(
 | In progress | `brand` ring, half-filled disc | `bg-brand-tint text-brand-strong` |
 | On hold | `on-hold-ring` ring, `on-hold-fill`, pause | `bg-on-hold-fill text-on-hold-text` |
 | Completed | solid `positive-solid`, white check; title muted | `bg-positive-tint text-positive` |
-| Won't do | solid `faint`, white ×; title muted | — |
+| Won't do | solid `muted-foreground` (`faint` in dark), white ×; title muted | — |
 
 ### Menus
 

@@ -17,7 +17,7 @@ describe("StatusGlyph", () => {
     [ItemStatus.InProgress, "fill-brand"],
     [ItemStatus.OnHold, "fill-on-hold-fill"],
     [ItemStatus.NotStarted, "stroke-status-idle"],
-    [ItemStatus.WontDo, "fill-faint"],
+    [ItemStatus.WontDo, "fill-muted-foreground"],
   ])("draws %s with %s", (status, cls) => {
     const { container } = render(<StatusGlyph status={status} />);
     expect(container.querySelector(`.${cls}`)).not.toBeNull();
