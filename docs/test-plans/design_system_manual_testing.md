@@ -204,6 +204,12 @@ Connect Google from Settings › Integrations.
 
 **Pass:** exactly one "Google account connected" toast.
 
+### Case E5: single session confirmations
+
+From the dashboard, create a one-off session, edit its date, then delete it.
+
+**Pass:** you see "Created Nov 4 session", "Updated Nov 6 session" and "Deleted Nov 6 session" in turn, each with that session's date in your time zone.
+
 ## 7. Part F: global header (#504)
 
 ### Case F1: desktop layout

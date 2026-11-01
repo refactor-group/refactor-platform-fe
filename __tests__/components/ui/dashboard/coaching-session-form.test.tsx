@@ -22,10 +22,11 @@ vi.mock("@/lib/toast", () => ({
 }));
 
 const mockUpdate = vi.fn();
+const mockCreate = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", () => ({
   useCoachingSessionList: vi.fn(() => ({ refresh: vi.fn() })),
   useCoachingSessionMutation: vi.fn(() => ({
-    create: vi.fn(),
+    create: mockCreate,
     update: mockUpdate,
     delete: vi.fn(),
   })),
@@ -102,6 +103,7 @@ beforeEach(() => {
   });
 
   mockUpdate.mockResolvedValue(existingSession);
+  mockCreate.mockResolvedValue(existingSession);
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -290,6 +292,58 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
       expect(toast.error).toHaveBeenCalledWith(
         "Couldn't update the coaching session · Try again"
       );
+    });
+  });
+});
+
+describe("CoachingSessionForm – success toasts", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-08T12:00:00Z"));
+    // Chicago, so a late-evening session shows its local date, not UTC's.
+    mockAuthStore.mockReturnValue({
+      userSession: { id: "user-1", timezone: "America/Chicago" },
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("confirms an update with the session's local date", async () => {
+    render(
+      <Wrapper>
+        <CoachingSessionForm
+          mode="update"
+          // 03:00 UTC on Nov 5 is the evening of Nov 4 in Chicago.
+          existingSession={createMockSession({ date: "2026-11-05T03:00:00" })}
+          onOpenChange={vi.fn()}
+          defaultDurationMinutes={60}
+        />
+      </Wrapper>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /update session/i }));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Updated Nov 4 session");
+    });
+  });
+
+  it("confirms a new single session with its date", async () => {
+    render(
+      <Wrapper>
+        <CoachingSessionForm mode="create" onOpenChange={vi.fn()} defaultDurationMinutes={60} />
+      </Wrapper>
+    );
+
+    fireEvent.click(screen.getByRole("gridcell", { name: "15" }));
+    fireEvent.change(screen.getByLabelText(/time/i), { target: { value: "10:00" } });
+    fireEvent.click(screen.getByRole("button", { name: /^create session$/i }));
+
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith("Created Oct 15 session");
     });
   });
 });

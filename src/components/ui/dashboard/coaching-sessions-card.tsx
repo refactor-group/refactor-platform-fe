@@ -23,6 +23,7 @@ import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { USERS_BASEURL } from "@/lib/api/users";
 import type { Id } from "@/types/general";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
+import { sessionShortDate } from "@/lib/session-window";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
   type CoachingSession,
@@ -89,6 +90,7 @@ export function CoachingSessionsCard({
 }: CoachingSessionsCardProps) {
   const userSession = useAuthStore((s) => s.userSession);
   const userId = userSession?.id;
+  const userTimezone = userSession?.timezone || getBrowserTimezone();
   const { currentOrganizationId } = useCurrentOrganization();
   const { mutate } = useSWRConfig();
 
@@ -245,15 +247,17 @@ export function CoachingSessionsCard({
       // containing the entity baseUrl (`coaching_sessions/`), but the
       // dashboard fetches go through the user-scoped endpoint — those
       // cache keys are tuples that the string-only matcher misses.
-      // Disappearance of the row is the only feedback the user gets,
-      // so this revalidate is load-bearing.
+      // The row has to disappear, so this revalidate is load-bearing.
       refreshBucketData();
       setDeleteState({ kind: "closed" });
+      sonnerToast.success(
+        `Deleted ${sessionShortDate(session.date, userTimezone)} session`
+      );
     } catch {
       sonnerToast.error("Couldn't delete the session · Try again");
       setDeleteState({ kind: "closed" });
     }
-  }, [deleteState, deleteSession, refreshBucketData]);
+  }, [deleteState, deleteSession, refreshBucketData, userTimezone]);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -280,7 +284,7 @@ export function CoachingSessionsCard({
               relationshipFilter={relationshipFilter}
               organizationId={currentOrganizationId}
               viewerId={userSession.id}
-              userTimezone={userSession.timezone || getBrowserTimezone()}
+              userTimezone={userTimezone}
               mountNow={mountNow}
               onReschedule={onReschedule}
               onRequestDelete={handleRequestDelete}
@@ -298,7 +302,7 @@ export function CoachingSessionsCard({
           deleteState.kind === "closed" ? undefined : deleteState.session
         }
         participantName={pendingParticipantName}
-        userTimezone={userSession?.timezone || getBrowserTimezone()}
+        userTimezone={userTimezone}
         isDeleting={deleteState.kind === "deleting"}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
@@ -306,7 +310,7 @@ export function CoachingSessionsCard({
       <ResendInviteDialog {...resend.dialogProps} />
       <SeriesActionDialogs
         action={seriesAction}
-        userTimezone={userSession?.timezone || getBrowserTimezone()}
+        userTimezone={userTimezone}
         relationships={relationships}
         viewerId={userId}
         onClose={handleCloseSeriesAction}

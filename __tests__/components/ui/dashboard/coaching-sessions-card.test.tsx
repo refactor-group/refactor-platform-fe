@@ -51,9 +51,11 @@ vi.mock("swr", async () => {
 });
 
 const mockToastError = vi.fn();
+const mockToastSuccess = vi.fn();
 vi.mock("@/lib/toast", () => ({
   toast: {
     error: (...args: unknown[]) => mockToastError(...args),
+    success: (...args: unknown[]) => mockToastSuccess(...args),
   },
 }));
 
@@ -83,7 +85,10 @@ const COACH_USER = {
   timezone: "UTC",
 };
 
-const STUB_SESSION = createMockEnrichedSession({ id: "session-to-delete" });
+const STUB_SESSION = createMockEnrichedSession({
+  id: "session-to-delete",
+  date: "2026-11-05T15:00:00",
+});
 
 function setupAuth(user = COACH_USER) {
   mockAuthStore.mockReturnValue({ userSession: user, isACoach: true });
@@ -152,6 +157,7 @@ describe("CoachingSessionsCard — delete flow", () => {
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     });
     expect(mockToastError).not.toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith("Deleted Nov 5 session");
   });
 
   it("surfaces an error toast and closes the dialog when deleteSession rejects", async () => {
@@ -168,6 +174,7 @@ describe("CoachingSessionsCard — delete flow", () => {
       expect(mockToastError).toHaveBeenCalledWith("Couldn't delete the session · Try again");
     });
     expect(mockSWRMutate).not.toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     });

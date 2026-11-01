@@ -35,6 +35,7 @@ import { defaultCoachingSession } from "@/types/coaching-session";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/types/entity-api-error";
 import { toast } from "@/lib/toast";
+import { sessionShortDate } from "@/lib/session-window";
 import { Provider } from "@/types/provider";
 import {
   CreateRecurringSessionRequest,
@@ -208,6 +209,7 @@ export default function CoachingSessionForm({
       provider: activeProvider ? activeProvider as Provider : undefined
     };
     await createCoachingSession(newCoachingSession);
+    toast.success(`Created ${sessionShortDate(dateTime, userTimezone)} session`);
   };
 
   const handleCreateRecurringSession = async (dateTime: string) => {
@@ -242,6 +244,7 @@ export default function CoachingSessionForm({
       duration_minutes: durationMinutes,
       updated_at: DateTime.now().toUTC(),
     });
+    toast.success(`Updated ${sessionShortDate(dateTime, userTimezone)} session`);
   };
 
   const handleSubmit = async (e: FormEvent) => {
