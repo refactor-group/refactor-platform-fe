@@ -146,7 +146,7 @@ function LeadingIcon({ kind }: { kind: ToastKind }) {
     case "error":
       return <CircleAlert className="h-4 w-4 shrink-0 text-destructive" aria-hidden />;
     case "warning":
-      return <TriangleAlert className="h-4 w-4 shrink-0 text-warning" aria-hidden />;
+      return <TriangleAlert className="h-4 w-4 shrink-0 text-toast-warning" aria-hidden />;
     case "loading":
       return <Spinner className="h-4 w-4 shrink-0" aria-hidden="true" />;
     case "neutral":

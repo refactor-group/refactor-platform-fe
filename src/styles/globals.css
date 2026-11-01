@@ -79,6 +79,7 @@
     --inverse: 0 0% 9%;
     --inverse-foreground: 0 0% 98%;
     --toast-check: 141.7 76.6% 73.1%;
+    --toast-warning: 34.7 85.4% 65.1%;
 
     /* Neutral avatar / org tile */
     --avatar: var(--fill);
@@ -156,6 +157,8 @@
     /* Toast and tooltip invert to a light pill */
     --inverse: 240 4.8% 95.9%;
     --inverse-foreground: 240 5.3% 7.5%;
+    --toast-check: 142.8 64.2% 24.3%;
+    --toast-warning: 26 90.5% 37.1%;
 
     --avatar-foreground: 240 5.9% 90%;
     --avatar-1: var(--avatar);
