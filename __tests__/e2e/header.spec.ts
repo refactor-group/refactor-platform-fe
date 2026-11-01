@@ -162,6 +162,6 @@ test('Appearance options fit inside the avatar menu', async ({ page, context }) 
     return rect.right - el.clientLeft - parseFloat(getComputedStyle(el).paddingRight)
   })
   const autoBox = (await auto.boundingBox())!
-  console.log('menu content right', contentRight, 'Auto right', autoBox.x + autoBox.width)
-  expect(autoBox.x + autoBox.width).toBeLessThanOrEqual(contentRight)
+  // Half a pixel absorbs WebKit's subpixel text rounding.
+  expect(autoBox.x + autoBox.width).toBeLessThanOrEqual(contentRight + 0.5)
 })
