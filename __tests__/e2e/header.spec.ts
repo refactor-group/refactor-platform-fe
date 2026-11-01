@@ -405,6 +405,22 @@ function recordWidthAfterEscape(root: Element) {
   })
 }
 
+test('tapping Clear on a phone empties the search and keeps it open', async ({ page, context }) => {
+  await setup(page, context)
+  await mockSearch(page)
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/dashboard')
+
+  await page.getByRole('button', { name: 'Open search' }).click()
+  const input = page.getByRole('combobox', { name: 'Search' })
+  await input.fill('weekly')
+  await page.getByRole('button', { name: 'Clear search' }).click()
+
+  await expect(input).toBeVisible()
+  await expect(input).toHaveValue('')
+  await expect(input).toBeFocused()
+})
+
 async function mockSearch(page: Page) {
   await page.route(
     (url) => url.pathname.endsWith('/search'),
@@ -449,7 +465,7 @@ for (const viewport of [
     expect(panel.x).toBeGreaterThanOrEqual(0)
     expect(panel.x + panel.width).toBeLessThanOrEqual(viewport.width)
 
-    if (viewport.width < 640) {
+    if (viewport.width < 768) {
       const account = page.getByRole('button', { name: 'Account menu' })
       const box = (await account.boundingBox())!
       const covered = await account.evaluate(
@@ -464,7 +480,7 @@ for (const viewport of [
     await expect(input).toBeFocused()
     await page.locator('[cmdk-root]').locator('..').evaluate(recordWidthAfterEscape)
     await page.keyboard.press('Escape')
-    if (viewport.width >= 640) {
+    if (viewport.width >= 768) {
       const widths = await page.evaluate(() => (window as unknown as WidthWindow).collapseWidths)
       const at80 = widths.reduce((a, b) => (Math.abs(b.t - 80) < Math.abs(a.t - 80) ? b : a))
       console.log('search root width during collapse', JSON.stringify(widths))

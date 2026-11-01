@@ -348,6 +348,15 @@ describe("GlobalSearch", () => {
     });
   });
 
+  it("keeps focus in the field when Clear is pressed, so the overlay can't close first", async () => {
+    mockSearch(loaded([goalHit]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    const pressed = fireEvent.mouseDown(screen.getByRole("button", { name: "Clear search" }));
+    expect(pressed).toBe(false);
+  });
+
   it("collapses after a hit is selected", async () => {
     mockSearch(loaded([actionHit]));
     render(<GlobalSearch />, { wrapper: TestProviders });

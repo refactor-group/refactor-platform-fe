@@ -348,6 +348,9 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                 variant="ghost"
                 size="icon"
                 aria-label="Clear search"
+                // Safari doesn't focus a tapped button, so the input's blur would
+                // close the overlay before this click lands.
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={clearQuery}
                 className="absolute right-1 h-7 w-7 rounded-full text-muted-foreground/60 hover:bg-fill-hover hover:text-foreground"
               >
