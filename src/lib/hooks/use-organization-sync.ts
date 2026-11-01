@@ -31,15 +31,21 @@ export function useOrganizationSync() {
     forgetOrganizationForUser,
   } = useCurrentOrganization();
 
-  const { relationships } = useCoachingRelationshipList(currentOrganizationId ?? "");
+  const {
+    relationships,
+    isLoading: relationshipsLoading,
+    isError: relationshipsError,
+  } = useCoachingRelationshipList(currentOrganizationId ?? "");
 
+  // While relationships load the list is empty, which would read as "not a coach".
   useEffect(() => {
-    if (!userId || !relationships) {
+    if (!userId) {
       setIsACoach(false);
       return;
     }
+    if (relationshipsLoading || relationshipsError) return;
     setIsACoach(isUserCoach(userId, relationships));
-  }, [userId, relationships, setIsACoach]);
+  }, [userId, relationships, relationshipsLoading, relationshipsError, setIsACoach]);
 
   // Note: the default-selection fallback can go away once a user has the notion
   //       of a default Organization and currentOrganizationId can start out

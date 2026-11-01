@@ -11,6 +11,12 @@ const h = vi.hoisted(() => ({
     isLoading: false,
     isError: false as unknown,
   },
+  relationshipState: {
+    relationships: [] as unknown[],
+    isLoading: false,
+    isError: false as unknown,
+  },
+  setIsACoach: vi.fn(),
   currentOrganizationId: "",
   setCurrentOrganizationId: vi.fn(),
   lastOrganizationIdByUser: {} as Record<string, string>,
@@ -29,7 +35,7 @@ vi.mock("@/lib/api/organizations", () => ({
 }));
 
 vi.mock("@/lib/api/coaching-relationships", () => ({
-  useCoachingRelationshipList: () => ({ relationships: [] }),
+  useCoachingRelationshipList: () => h.relationshipState,
 }));
 
 vi.mock("@/lib/hooks/use-current-organization", () => ({
@@ -45,7 +51,7 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ userId: "user-1", isLoggedIn: true, setIsACoach: vi.fn() }),
+    selector({ userId: "user-1", isLoggedIn: true, setIsACoach: h.setIsACoach }),
 }));
 
 import { useOrganizationSync } from "@/lib/hooks/use-organization-sync";
@@ -53,6 +59,7 @@ import { useOrganizationSync } from "@/lib/hooks/use-organization-sync";
 function resetMocks() {
   vi.clearAllMocks();
   h.listState = { organizations: h.ORGANIZATIONS, isLoading: false, isError: false };
+  h.relationshipState = { relationships: [], isLoading: false, isError: false };
   h.currentOrganizationId = "";
   h.lastOrganizationIdByUser = {};
 }
@@ -154,5 +161,29 @@ describe("useOrganizationSync — remembering the last organization", () => {
     renderHook(() => useOrganizationSync());
 
     expect(h.rememberOrganizationForUser).not.toHaveBeenCalled();
+  });
+});
+
+describe("useOrganizationSync — coach flag", () => {
+  beforeEach(resetMocks);
+
+  it("leaves the coach flag alone while relationships load", () => {
+    h.relationshipState = { relationships: [], isLoading: true, isError: false };
+
+    renderHook(() => useOrganizationSync());
+
+    expect(h.setIsACoach).not.toHaveBeenCalled();
+  });
+
+  it("sets the coach flag once relationships load", () => {
+    h.relationshipState = {
+      relationships: [{ id: "rel-1", coach_id: "user-1", coachee_id: "user-2" }],
+      isLoading: false,
+      isError: false,
+    };
+
+    renderHook(() => useOrganizationSync());
+
+    expect(h.setIsACoach).toHaveBeenCalledWith(true);
   });
 });
