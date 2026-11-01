@@ -62,8 +62,10 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
 // The badge counts what the Actions page shows by default: open, due within
 // the last 30 days or later (or undated), with a known session.
 const OPEN_ACTION_COUNT = 3
-const RECENT = new Date().toISOString()
-const LONG_OVERDUE = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
+// mockActions pins the page's clock here, so the fixtures and the 30 day filter agree.
+const NOW = new Date('2026-11-01T17:00:00Z')
+const RECENT = NOW.toISOString()
+const LONG_OVERDUE = new Date(NOW.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString()
 const mockAction = (name: string, status: string, dueBy: string | null) => ({
   id: `action-${name}`,
   coaching_session_id: 'sess-1',
@@ -84,9 +86,10 @@ const ACTIONS = [
   mockAction('overdue', 'InProgress', LONG_OVERDUE),
 ]
 
-// Serves the batch actions request and saves status changes to a copy of
-// ACTIONS; resolves to the batch request URLs made so far.
+// Pins the page's clock to NOW, serves the batch actions request and saves
+// status changes to a copy of ACTIONS; resolves to the batch request URLs made so far.
 async function mockActions(page: Page) {
+  await page.clock.install({ time: NOW })
   const actions = ACTIONS.map((action) => ({ ...action }))
   const batchRequests: string[] = []
   await page.route('**/organizations/*/coaching_relationships/actions**', async (route) => {
@@ -210,7 +213,6 @@ test.describe('Open action count stays cached', () => {
 
   test("fetches once and doesn't refetch when the window regains focus", async ({ page }) => {
     const batchRequests = await mockActions(page)
-    await page.clock.install()
     await page.goto('/dashboard')
     await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
     // Past the app's 10s focus throttle, which starts at mount, so a focus
