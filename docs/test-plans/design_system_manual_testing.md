@@ -466,3 +466,38 @@ Reload the page, open Join session, and click each person in turn. Repeat with t
 4. Repeat 1 to 3 in Dark.
 
 **Pass:** the coach's bubbles are indigo with white text, matching the accent elsewhere (e.g. the primary button). The speaker filter's coach swatch matches the bubbles. The action card highlights with an indigo ring. All of this holds in both themes.
+
+## 10. Part I: action status layouts
+
+### Case I1: full card on the Actions page
+
+1. Have actions in all five statuses: one open and due in a few days, one open and past due, one on hold with a past due date, one completed and one won't do.
+2. Open Actions with Status set to All, at 1280px in Light.
+3. Hover one card, then click its status control (glyph, pill and caret) and choose another status.
+4. Click the ⓘ button on a card.
+
+**Pass:** each card shows the status control top-left and ⓘ top-right, the title, the assignee avatar bottom-left and one meta line bottom-right: "Due Nov 8", the past-due date in amber, "Paused · was due …" in the on-hold tone, "Done …" and "Closed …". The completed and won't-do titles are grey, not struck through. Hovering darkens the card's border and the status control gets a grey pill. The menu lists five statuses with a check on the current one, and choosing one moves the card to that column. ⓘ flips the card as before.
+
+### Case I2: full card in the session panel
+
+Open a session's Actions panel and repeat steps 3 and 4 of I1, then flip a card and click Edit.
+
+**Pass:** the cards look like the Actions page cards. On the edit face, the Status field uses the same control and menu, and changing it saves.
+
+### Case I3: keyboard
+
+Tab to a card's status control, press Enter, move with the arrow keys and press Enter on a new status.
+
+**Pass:** the control shows a focus ring, the menu opens with the current status checked, and the chosen status saves. A screen reader announces the control as "Status: …" and each option as checked or not checked.
+
+### Case I4: compact rows on the dashboard
+
+Hover a past session on the dashboard that has actions due.
+
+**Pass:** each action row shows the status glyph, the title, the meta line under it, the status pill and a chevron, with no assignee. Completed rows are grey, not struck through. Clicking a row opens that session's Actions panel.
+
+### Case I5: dark mode and 375px
+
+Repeat I1 and I4 in Dark, then I1 at 375px.
+
+**Pass:** glyphs, pills, the amber and on-hold meta and the hover border all read clearly in Dark. At 375px the status control, ⓘ, avatar and meta fit on the card without overlapping, and long titles wrap.
