@@ -407,7 +407,7 @@ describe("GlobalSearch", () => {
     expect(input.closest("[cmdk-root]")?.querySelector("kbd")).toBeNull();
 
     const panel = input.parentElement?.nextElementSibling;
-    expect(panel).toHaveClass("rounded-popover", "shadow-popover", "sm:w-[420px]");
+    expect(panel).toHaveClass("rounded-popover", "shadow-popover", "md:w-[420px]");
     expect(panel).toHaveTextContent("Weekly planning habit");
   });
 

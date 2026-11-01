@@ -339,6 +339,29 @@ test('the avatar menu stays reachable on a short screen', async ({ page, context
   await expect(logOut).toBeInViewport()
 })
 
+for (const width of [640, 768, 1024]) {
+  test(`expanded search fits the header at ${width}px`, async ({ page, context }) => {
+    await setup(page, context)
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/dashboard')
+
+    await page.getByRole('button', { name: 'Open search' }).click()
+    const input = page.getByRole('combobox', { name: 'Search' })
+    await expect(input).toBeFocused()
+
+    await expect(async () => {
+      const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }))
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+      const avatar = (await page.getByRole('button', { name: 'Account menu' }).boundingBox())!
+      expect(avatar.x + avatar.width).toBeLessThanOrEqual(width + 0.5)
+      expect((await input.boundingBox())!.width).toBeGreaterThan(120)
+    }).toPass()
+  })
+}
+
 const hitBase = {
   score: 0.5,
   snippet: null,
