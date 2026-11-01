@@ -183,3 +183,19 @@ export function isValidTimezone(timezone: string): boolean {
     return false;
   }
 }
+
+// Calendars work in plain days: midnight in the browser's timezone. These map
+// such a day to and from a profile timezone without shifting it.
+
+/** The calendar day picked in `date`, as midnight in `timezone`. */
+export function pickedDayIn(date: Date, timezone: string): DateTime {
+  return DateTime.fromObject(
+    { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() },
+    { zone: timezone }
+  );
+}
+
+/** `local`'s calendar day, as the browser-midnight Date a calendar expects. */
+export function calendarDayOf(local: DateTime): Date {
+  return new Date(local.year, local.month - 1, local.day);
+}
