@@ -270,3 +270,51 @@ Open the avatar menu and pick Dark, then Light, then Auto. With Auto selected, s
 Tab to your avatar and press Enter. Use the arrow keys to reach Dark in Appearance and press Enter, then press Esc.
 
 **Pass:** the menu opens on Enter, arrow keys reach every row including the three Appearance options, Enter switches to Dark, and Esc closes the menu with focus back on the avatar.
+
+### Case F13: search starts as a magnifier
+
+At 1280px, open the dashboard and hover the magnifier in the header.
+
+**Pass:** search is a round magnifier button, not a text field. The tooltip reads "Search" with a small ⌘K hint.
+
+### Case F14: opening search
+
+Click the magnifier. Press Esc twice, click on the page, then press ⌘K (Ctrl+K on Windows or Linux). Repeat with "/". Then click into a text field on the page and press ⌘K.
+
+**Pass:** the click, ⌘K and "/" each widen the magnifier into a search field with the cursor in it, with a smooth widening. ⌘K inside the other text field does nothing to search.
+
+### Case F15: grouped results
+
+Search for a word that appears in a session title, a goal, an action, an agreement and a topic.
+
+**Pass:** the results panel opens under the right edge of the field, wider than the field. Results are grouped under Sessions, Goals, Actions, Agreements and Topics in that order, Sessions first. Groups with no matches are left out. Each row shows its kind on the right.
+
+### Case F16: keyboard in results
+
+With grouped results showing, press the down arrow until the highlight passes the last session, keep going to the end, then pick a row and press Enter.
+
+**Pass:** the highlight moves from the last session straight into the first goal and on through every group, wrapping from the last row back to the first. Enter opens the highlighted result and search returns to the magnifier.
+
+### Case F17: Esc clears, then closes
+
+Type a query, press Esc, then press Esc again.
+
+**Pass:** the first Esc clears the text and keeps the field open with the cursor in it. The second Esc returns search to the magnifier, with focus on the magnifier.
+
+### Case F18: clicking away
+
+Open search and click elsewhere on the page without typing. Then open search, type a query, and click elsewhere. Click back into the field.
+
+**Pass:** with nothing typed, search returns to the magnifier. With a query, the field stays open showing the query and the results hide. Clicking back into the field shows the results again.
+
+### Case F19: search at 375px
+
+At 375px, open search and type a query.
+
+**Pass:** the field opens over the header row instead of pushing the other header items aside. The results panel spans the width of the field and stays on screen, and the page doesn't scroll sideways. Esc twice brings back the normal header.
+
+### Case F20: Reduce Motion
+
+Turn on Reduce Motion (macOS System Settings › Accessibility › Display), then open and close search at 1280px.
+
+**Pass:** the field appears and disappears at full width at once, with no widening animation.

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FocusEvent } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FocusEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Command as CommandPrimitive } from "cmdk";
 import {
@@ -19,6 +26,12 @@ import { Button } from "@/components/ui/button";
 import { CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { SearchSnippet } from "@/components/ui/search/search-snippet";
 import { useSearch, type SearchState } from "@/lib/api/search";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
@@ -118,14 +131,63 @@ const isTypingTarget = (target: EventTarget | null): boolean =>
   target instanceof HTMLTextAreaElement ||
   target instanceof HTMLSelectElement;
 
+/** Hits of one kind, in the server's order. */
+export interface SearchHitGroup {
+  type: SearchHitType;
+  heading: string;
+  hits: SearchHit[];
+}
+
+const GROUP_ORDER: ReadonlyArray<{ type: SearchHitType; heading: string }> = [
+  { type: SearchHitType.CoachingSession, heading: "Sessions" },
+  { type: SearchHitType.Goal, heading: "Goals" },
+  { type: SearchHitType.Action, heading: "Actions" },
+  { type: SearchHitType.Agreement, heading: "Agreements" },
+  { type: SearchHitType.Topic, heading: "Topics" },
+];
+
+/** Groups hits by kind, Sessions first; empty kinds are omitted. */
+export function groupSearchHits(hits: SearchHit[]): SearchHitGroup[] {
+  return GROUP_ORDER.map(({ type, heading }) => ({
+    type,
+    heading,
+    hits: hits.filter((hit) => hit.type === type),
+  })).filter((group) => group.hits.length > 0);
+}
+
+type FieldState =
+  | { kind: "collapsed"; returnFocus: boolean }
+  | { kind: "collapsing"; returnFocus: boolean }
+  | { kind: "expanded"; resultsOpen: boolean };
+
+const COLLAPSED: FieldState = { kind: "collapsed", returnFocus: false };
+const EXPANDED: FieldState = { kind: "expanded", resultsOpen: true };
+
+// Slightly longer than the width transition, in case transitionend never fires.
+const COLLAPSE_FALLBACK_MS = 260;
+
+// The width animation only runs on the sm+ inline pill, and not under reduced motion.
+const canAnimateCollapse = (): boolean =>
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(min-width: 640px)").matches &&
+  !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const collapseTo = (returnFocus: boolean): FieldState => ({
+  kind: canAnimateCollapse() ? "collapsing" : "collapsed",
+  returnFocus,
+});
+
+const finishCollapse = (current: FieldState): FieldState =>
+  current.kind === "collapsing" ? { kind: "collapsed", returnFocus: current.returnFocus } : current;
+
 interface GlobalSearchProps {
   className?: string;
 }
 
 /**
- * Header search field: debounced keyword search across sessions, goals,
- * actions, agreements and topics, with results in a dropdown beneath the
- * field. Cmd/Ctrl+K or "/" focuses it from anywhere outside a text input.
+ * Header search: a magnifier that expands into a debounced keyword search
+ * across sessions, goals, actions, agreements and topics, with grouped
+ * results beneath. Cmd/Ctrl+K or "/" opens it from outside a text input.
  */
 export function GlobalSearch({ className }: GlobalSearchProps) {
   const router = useRouter();
@@ -133,10 +195,28 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
     (state) => state.setCurrentCoachingRelationshipId
   );
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
+  const [field, setField] = useState<FieldState>(COLLAPSED);
   const inputRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const { state, loadMore } = useSearch(query);
+
+  const expanded = field.kind === "expanded";
+  const collapsing = field.kind === "collapsing";
+
+  useEffect(() => {
+    if (expanded) inputRef.current?.focus();
+  }, [expanded]);
+
+  useEffect(() => {
+    if (field.kind === "collapsed" && field.returnFocus) buttonRef.current?.focus();
+  }, [field]);
+
+  useEffect(() => {
+    if (!collapsing) return;
+    const timer = setTimeout(() => setField(finishCollapse), COLLAPSE_FALLBACK_MS);
+    return () => clearTimeout(timer);
+  }, [collapsing]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -144,21 +224,47 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
         (event.key === "k" && (event.metaKey || event.ctrlKey)) || event.key === "/";
       if (!isShortcut || isTypingTarget(event.target)) return;
       event.preventDefault();
+      setField((current) => (current.kind === "expanded" ? current : EXPANDED));
       inputRef.current?.focus();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const reset = useCallback(() => {
-    setQuery("");
-    setOpen(false);
-    inputRef.current?.blur();
-  }, []);
+  const setResultsOpen = (resultsOpen: boolean) =>
+    setField({ kind: "expanded", resultsOpen });
 
-  const handleBlur = useCallback((event: FocusEvent<HTMLDivElement>) => {
-    if (!rootRef.current?.contains(event.relatedTarget)) setOpen(false);
-  }, []);
+  const clearQuery = () => {
+    setQuery("");
+    inputRef.current?.focus();
+  };
+
+  const handleEscape = () => {
+    if (query) clearQuery();
+    else setField(collapseTo(true));
+  };
+
+  const handleBlur = useCallback(
+    (event: FocusEvent<HTMLDivElement>) => {
+      if (rootRef.current?.contains(event.relatedTarget)) return;
+      setField((current) => {
+        switch (current.kind) {
+          case "collapsed":
+            return current;
+          // Focus went elsewhere, so don't pull it back when the collapse finishes.
+          case "collapsing":
+            return { ...current, returnFocus: false };
+          case "expanded":
+            return query ? { kind: "expanded", resultsOpen: false } : collapseTo(false);
+          default: {
+            const _exhaustive: never = current;
+            throw new Error(`Unhandled search field state: ${_exhaustive}`);
+          }
+        }
+      });
+    },
+    [query]
+  );
 
   const handleSelect = useCallback(
     (hit: SearchHit) => {
@@ -168,85 +274,129 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
       if (hit.type === SearchHitType.Goal && hit.coaching_relationship_id.some) {
         setCurrentCoachingRelationshipId(hit.coaching_relationship_id.val);
       }
-      reset();
+      setQuery("");
+      setField(collapseTo(false));
       router.push(href.val);
     },
-    [reset, router, setCurrentCoachingRelationshipId]
+    [router, setCurrentCoachingRelationshipId]
   );
 
-  const showResults = open && isSearchableQuery(query);
+  const showResults = expanded && field.resultsOpen && isSearchableQuery(query);
 
   return (
     <div
       ref={rootRef}
-      className={cn("relative w-full", className)}
+      className={cn(
+        "flex w-9 shrink-0 justify-end transition-[width] duration-200 motion-reduce:transition-none sm:relative",
+        expanded && "sm:w-[340px]",
+        // ease-spring front-loads the shrink so much that collapsing reads as a snap.
+        collapsing ? "overflow-hidden ease-in-out" : "ease-spring",
+        className
+      )}
       onBlur={handleBlur}
+      onTransitionEnd={(event) => {
+        if (event.propertyName === "width" && event.target === event.currentTarget) {
+          setField(finishCollapse);
+        }
+      }}
     >
-      <CommandPrimitive
-        shouldFilter={false}
-        loop
-        label="Search"
-        className="w-full min-w-0"
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            if (query) reset();
-            else inputRef.current?.blur();
-          }
-        }}
-      >
-        <div className="relative flex min-w-0 items-center">
-          <Search
-            className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground/60"
-            aria-hidden
-          />
-          <CommandPrimitive.Input
-            ref={inputRef}
-            value={query}
-            onValueChange={(value) => {
-              setQuery(value);
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-            placeholder="Search sessions, topics, agreements, actions…"
-            className={cn(
-              "h-9 w-full min-w-0 rounded-full border-0 bg-fill pl-9 text-item transition-colors duration-150 hover:bg-fill-hover focus:bg-card",
-              "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              query ? "pr-9" : "pr-3 sm:pr-14"
+      {field.kind !== "collapsed" ? (
+        <CommandPrimitive
+          shouldFilter={false}
+          loop
+          label="Search"
+          // Below sm the expanded field overlays the header row instead of squeezing it.
+          className="absolute inset-0 z-10 flex items-center bg-background px-4 sm:static sm:block sm:w-full sm:bg-transparent sm:px-0"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              handleEscape();
+            }
+          }}
+        >
+          <div className="relative flex w-full min-w-0 items-center">
+            <Search
+              className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground/60"
+              aria-hidden
+            />
+            <CommandPrimitive.Input
+              ref={inputRef}
+              value={query}
+              onValueChange={(value) => {
+                setQuery(value);
+                setResultsOpen(true);
+              }}
+              onFocus={() => setResultsOpen(true)}
+              onClick={() => collapsing && setField(EXPANDED)}
+              tabIndex={collapsing ? -1 : undefined}
+              placeholder="Search"
+              className={cn(
+                "h-9 w-full min-w-0 rounded-full border-0 bg-fill pl-9 text-item transition-colors duration-150 hover:bg-fill-hover focus:bg-card",
+                "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border",
+                query ? "pr-9" : "pr-3"
+              )}
+            />
+            {query && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Clear search"
+                onClick={clearQuery}
+                className="absolute right-1 h-7 w-7 rounded-full text-muted-foreground/60 hover:bg-fill-hover hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
             )}
-          />
-          {query ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Clear search"
-              onClick={reset}
-              className="absolute right-1 h-7 w-7 rounded-full text-muted-foreground/60 hover:bg-fill-hover hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          ) : (
-            <kbd className="pointer-events-none absolute right-2 hidden h-5 select-none items-center gap-1 rounded-full bg-card px-2 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
-              ⌘K
-            </kbd>
-          )}
-        </div>
-
-        {showResults && (
-          <div
-            className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-popover border bg-popover text-popover-foreground shadow-popover"
-            // Keep focus in the input: otherwise mousedown blurs it and the
-            // dropdown unmounts before the click reaches the item.
-            onMouseDown={(event) => event.preventDefault()}
-          >
-            <SearchResults state={state} onSelect={handleSelect} onLoadMore={loadMore} />
           </div>
-        )}
-      </CommandPrimitive>
+
+          {showResults && (
+            <div
+              className="absolute left-4 right-4 top-full z-50 mt-2 overflow-hidden rounded-popover border bg-popover p-1.5 text-popover-foreground shadow-popover sm:left-auto sm:right-0 sm:w-[420px] sm:max-w-[calc(100vw-32px)]"
+              // Keep focus in the input: otherwise mousedown blurs it and the
+              // dropdown unmounts before the click reaches the item.
+              onMouseDown={(event) => event.preventDefault()}
+            >
+              <SearchResults state={state} onSelect={handleSelect} onLoadMore={loadMore} />
+            </div>
+          )}
+        </CommandPrimitive>
+      ) : (
+        <OpenSearchButton
+          ref={buttonRef}
+          onClick={() => setField(EXPANDED)}
+        />
+      )}
     </div>
   );
 }
+
+const OpenSearchButton = forwardRef<HTMLButtonElement, { onClick: () => void }>(
+  function OpenSearchButton({ onClick }, ref) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              ref={ref}
+              type="button"
+              variant="secondary"
+              size="icon-sm"
+              aria-label="Open search"
+              onClick={onClick}
+            >
+              <Search />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent className="flex items-center gap-2">
+            Search
+            <span className="text-tiny text-muted-foreground">⌘K</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+);
 
 interface SearchResultsProps {
   state: SearchState;
@@ -277,13 +427,17 @@ function SearchResults({ state, onSelect, onLoadMore }: SearchResultsProps) {
       }
       return (
         <CommandList className="max-h-[min(24rem,60vh)]">
-          {state.hits.length > 0 && (
-            <CommandPrimitive.Group className="p-1">
-              {state.hits.map((hit) => (
+          {groupSearchHits(state.hits).map((group) => (
+            <CommandPrimitive.Group
+              key={group.type}
+              heading={group.heading}
+              className="[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+            >
+              {group.hits.map((hit) => (
                 <SearchResultRow key={`${hit.type}:${hit.id}`} hit={hit} onSelect={onSelect} />
               ))}
             </CommandPrimitive.Group>
-          )}
+          ))}
           {state.loadMoreError.some && (
             <p role="alert" className="px-3 py-2 text-center text-xs text-destructive">
               {errorMessage(state.loadMoreError.val)}
@@ -354,10 +508,7 @@ function SearchResultRow({ hit, onSelect }: SearchResultRowProps) {
     >
       <HitIcon type={hit.type} className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60" />
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <span className="truncate text-[13px] font-medium text-foreground">{hit.title}</span>
-          <span className="shrink-0 text-xs text-muted-foreground">{TYPE_LABELS[hit.type]}</span>
-        </div>
+        <div className="truncate text-[13px] font-medium text-foreground">{hit.title}</div>
         {hit.snippet.some && (
           <SearchSnippet
             snippet={hit.snippet.val}
@@ -370,6 +521,7 @@ function SearchResultRow({ hit, onSelect }: SearchResultRowProps) {
           </div>
         )}
       </div>
+      <span className="ml-auto shrink-0 text-tiny text-faint">{TYPE_LABELS[hit.type]}</span>
     </CommandItem>
   );
 }
