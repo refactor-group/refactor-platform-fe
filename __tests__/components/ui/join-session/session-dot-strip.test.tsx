@@ -100,6 +100,13 @@ describe("SessionDotStrip", () => {
     expect(tooltips()[0]).not.toHaveClass("whitespace-nowrap");
   });
 
+  it("draws the current dot in the brand accent, which lightens in dark mode", () => {
+    renderStrip();
+    const dot = screen.getByRole("button", { name: "Aug 18 · Title c" }).firstElementChild;
+    expect(dot).toHaveClass("bg-brand");
+    expect(dot).not.toHaveClass("bg-primary");
+  });
+
   it("selects a session when its dot is clicked", () => {
     const { onSelect } = renderStrip();
     fireEvent.click(screen.getByRole("button", { name: "Sep 1 · Title f1" }));

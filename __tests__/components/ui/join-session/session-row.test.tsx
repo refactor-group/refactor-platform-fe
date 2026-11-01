@@ -37,7 +37,7 @@ describe("SessionRow list variant", () => {
 
   it("pulses a live session and tints its tag", () => {
     const { button } = renderList(session("2026-08-25T11:55", "live"));
-    expect(button.querySelector(".animate-live-pulse")).not.toBeNull();
+    expect(button.querySelector(".animate-live-pulse")).toHaveClass("bg-brand");
     expect(screen.getByText("Previous")).toHaveClass("text-brand");
   });
 

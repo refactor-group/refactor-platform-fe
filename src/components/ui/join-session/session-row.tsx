@@ -46,7 +46,7 @@ function LiveDot() {
   return (
     <span
       aria-hidden
-      className="h-1.5 w-1.5 rounded-full bg-primary animate-live-pulse"
+      className="h-1.5 w-1.5 rounded-full bg-brand animate-live-pulse"
     />
   );
 }
