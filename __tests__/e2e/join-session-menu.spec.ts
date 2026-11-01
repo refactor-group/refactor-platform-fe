@@ -325,6 +325,32 @@ test.describe('Join session menu', () => {
     expect(requests).toEqual([{ relationshipId: 'rel-a', around: NOW, before: '2', after: '2' }])
   })
 
+  test('switching people keeps the list on screen until the next one loads', async ({ page }) => {
+    nearest.handle = async (route, relationshipId) => {
+      if (relationshipId === 'rel-d') await sleep(800)
+      await serveNearest(route, relationshipId)
+    }
+    await page.goto('/dashboard')
+    await openMenu(page)
+    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+
+    // Flags any placeholder row while Daniel's sessions load.
+    await page.evaluate(() => {
+      const w = window as unknown as { sawPlaceholders: boolean }
+      w.sawPlaceholders = false
+      new MutationObserver(() => {
+        if (document.querySelector('[role="dialog"] .animate-pulse')) w.sawPlaceholders = true
+      }).observe(document.body, { childList: true, subtree: true })
+    })
+    await person(page, 'Daniel').click()
+
+    await expect(menu(page).getByLabel('Loading sessions')).toHaveAttribute('inert', '')
+    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByText('Kickoff')).toBeVisible()
+    await expect(menu(page).getByText('Saying no to new clients')).toBeHidden()
+    expect(await page.evaluate(() => (window as unknown as { sawPlaceholders: boolean }).sawPlaceholders)).toBe(false)
+  })
+
   test('switching people quickly ends on the last one', async ({ page }) => {
     const delays: Record<string, number> = { 'rel-d': 2000, 'rel-e': 300, 'rel-l': 0 }
     nearest.handle = async (route, relationshipId) => {

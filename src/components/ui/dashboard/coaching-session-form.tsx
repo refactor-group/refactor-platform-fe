@@ -32,9 +32,14 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useState, useMemo, useEffect, useRef, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { defaultCoachingSession } from "@/types/coaching-session";
-import { getBrowserTimezone } from "@/lib/timezone-utils";
+import { calendarDayOf, getBrowserTimezone, pickedDayIn } from "@/lib/timezone-utils";
 import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/types/entity-api-error";
 import { toast } from "@/lib/toast";
+import {
+  seriesCreatedMessage,
+  sessionCreatedMessage,
+  sessionUpdatedMessage,
+} from "@/components/ui/dashboard/session-change-message";
 import { Provider } from "@/types/provider";
 import {
   CreateRecurringSessionRequest,
@@ -112,8 +117,7 @@ export default function CoachingSessionForm({
     // Convert stored UTC time back to user's local timezone for editing
     const userTimezone = userSession?.timezone || getBrowserTimezone();
     const utcDateTime = DateTime.fromISO(existingSession.date, { zone: 'utc' });
-    const localDateTime = utcDateTime.setZone(userTimezone);
-    return localDateTime.toJSDate();
+    return calendarDayOf(utcDateTime.setZone(userTimezone));
   });
 
   const [sessionTime, setSessionTime] = useState<string>(() => {
@@ -159,7 +163,7 @@ export default function CoachingSessionForm({
   // weekday to be included — otherwise 422. The hook auto-seeds it.
   const startWeekday = useMemo<Weekday | null>(() => {
     if (!sessionDate) return null;
-    const local = DateTime.fromJSDate(sessionDate).setZone(userTimezone);
+    const local = pickedDayIn(sessionDate, userTimezone);
     return weekdayFromLuxon(local.weekday);
   }, [sessionDate, userTimezone]);
 
@@ -208,6 +212,9 @@ export default function CoachingSessionForm({
       provider: activeProvider ? activeProvider as Provider : undefined
     };
     await createCoachingSession(newCoachingSession);
+    toast.success(
+      sessionCreatedMessage(newCoachingSession, relationships, userTimezone)
+    );
   };
 
   const handleCreateRecurringSession = async (dateTime: string) => {
@@ -231,7 +238,7 @@ export default function CoachingSessionForm({
     };
     const created = await CoachingSessionSeriesApi.create(payload, userTimezone);
     const count = created.coaching_sessions.length;
-    toast.success(`Created ${count} recurring session${count === 1 ? "" : "s"}`);
+    toast.success(seriesCreatedMessage(count, relationshipId, relationships));
   };
 
   const handleUpdateSession = async (dateTime: string) => {
@@ -242,6 +249,9 @@ export default function CoachingSessionForm({
       duration_minutes: durationMinutes,
       updated_at: DateTime.now().toUTC(),
     });
+    toast.success(
+      sessionUpdatedMessage({ ...existingSession, date: dateTime }, relationships, userTimezone)
+    );
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -265,9 +275,7 @@ export default function CoachingSessionForm({
 
     // Create datetime in user's timezone, then convert to UTC for storage
     const userTimezone = userSession?.timezone || getBrowserTimezone();
-    const localDateTime = DateTime.fromJSDate(sessionDate)
-      .setZone(userTimezone)
-      .set({ hour: hours, minute: minutes });
+    const localDateTime = pickedDayIn(sessionDate, userTimezone).set({ hour: hours, minute: minutes });
 
     // Convert to UTC for consistent storage
     const utcDateTime = localDateTime.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss");
@@ -321,7 +329,7 @@ export default function CoachingSessionForm({
     if (!isRecurring) return null;
     const userTimezone = userSession?.timezone || getBrowserTimezone();
     const start = sessionDate
-      ? DateTime.fromJSDate(sessionDate).setZone(userTimezone)
+      ? pickedDayIn(sessionDate, userTimezone)
       : null;
     return validateRecurrence({
       frequency,
@@ -460,7 +468,7 @@ export default function CoachingSessionForm({
               startWeekday={startWeekday}
               startDate={
                 sessionDate
-                  ? DateTime.fromJSDate(sessionDate).setZone(userTimezone)
+                  ? pickedDayIn(sessionDate, userTimezone)
                   : null
               }
               timezone={userTimezone}

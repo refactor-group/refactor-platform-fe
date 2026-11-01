@@ -1,5 +1,6 @@
 // Interacts with the coaching_session endpoints
 
+import type { SWRConfiguration } from "swr";
 import { siteConfig } from "@/site.config";
 import { EntityApiError, Id } from "@/types/general";
 import {
@@ -461,6 +462,7 @@ export const useCoachingSessionMutation = () => {
  * @param organizationId Optional organization to scope sessions to. Part of the
  *   SWR key, so switching organizations refetches instead of serving the
  *   previous organization's cached list.
+ * @param options SWR overrides
  * @returns Object containing enriched sessions, loading state, error, and refresh function
  */
 export const useEnrichedCoachingSessionsForUser = (
@@ -472,7 +474,8 @@ export const useEnrichedCoachingSessionsForUser = (
   sortOrder?: ApiSortOrder,
   relationshipId?: Id,
   tz?: string,
-  organizationId?: Id
+  organizationId?: Id,
+  options?: SWRConfiguration
 ) => {
   // Only create params when userId is valid - null params skips the SWR fetch
   const params = userId
@@ -510,7 +513,8 @@ export const useEnrichedCoachingSessionsForUser = (
     EntityApi.useEntityList<EnrichedCoachingSession>(
       url,
       fetcher,
-      params
+      params,
+      options
     );
 
   return {

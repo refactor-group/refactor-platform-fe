@@ -11,7 +11,7 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { isUserCoachInRelationship, isUserCoacheeInRelationship, sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
 import { useActionMutation } from "@/lib/api/actions";
 import { Some, None } from "@/types/option";
-import { useAllActionsWithContext } from "@/lib/hooks/use-all-actions-with-context";
+import { DEFAULT_ACTIONS_VIEW, useActionsView } from "@/lib/hooks/use-actions-view";
 import {
   AssignmentFilter,
   CoachViewMode,
@@ -19,7 +19,6 @@ import {
   TimeRange,
 } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
-import { applyTimeFilter } from "@/components/ui/actions/utils";
 import { ActionsPageHeader } from "@/components/ui/actions/actions-page-header";
 import { KanbanBoard } from "@/components/ui/actions/kanban-board";
 import {
@@ -32,10 +31,10 @@ import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Default filter values — used for initialization and URL cleanup
-const DEFAULT_STATUS = StatusVisibility.Open;
-const DEFAULT_RANGE = TimeRange.Last30Days;
-const DEFAULT_VIEW = CoachViewMode.MyActions;
-const DEFAULT_ASSIGNMENT = AssignmentFilter.Assigned;
+const DEFAULT_STATUS = DEFAULT_ACTIONS_VIEW.statusVisibility;
+const DEFAULT_RANGE = DEFAULT_ACTIONS_VIEW.timeRange;
+const DEFAULT_VIEW = DEFAULT_ACTIONS_VIEW.viewMode;
+const DEFAULT_ASSIGNMENT = DEFAULT_ACTIONS_VIEW.assignmentFilter;
 
 /** Validates a URL param against an enum's values, returning the fallback if invalid. */
 function parseEnum<T extends string>(
@@ -166,8 +165,9 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // Data fetching
   // ---------------------------------------------------------------------------
 
-  const { actionsWithContext, isLoading, isError, refresh } =
-    useAllActionsWithContext(viewMode, relationshipId, assignmentFilter);
+  // The header's open action count reads the same view with the defaults.
+  const { actionsWithContext, filteredActions, isLoading, isError, refresh } =
+    useActionsView({ viewMode, relationshipId, assignmentFilter, timeRange, statusVisibility });
 
   const { relationships } = useCoachingRelationshipList(
     currentOrganizationId
@@ -193,15 +193,6 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
       }
     );
   }, [relationships, userId]);
-
-  // ---------------------------------------------------------------------------
-  // Client-side filters
-  // ---------------------------------------------------------------------------
-
-  const filteredActions = useMemo(
-    () => applyTimeFilter(actionsWithContext, timeRange),
-    [actionsWithContext, timeRange]
-  );
 
   // ---------------------------------------------------------------------------
   // Mutations

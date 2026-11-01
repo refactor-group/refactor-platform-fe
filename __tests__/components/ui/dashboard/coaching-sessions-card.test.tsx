@@ -51,9 +51,11 @@ vi.mock("swr", async () => {
 });
 
 const mockToastError = vi.fn();
+const mockToastSuccess = vi.fn();
 vi.mock("@/lib/toast", () => ({
   toast: {
     error: (...args: unknown[]) => mockToastError(...args),
+    success: (...args: unknown[]) => mockToastSuccess(...args),
   },
 }));
 
@@ -83,7 +85,11 @@ const COACH_USER = {
   timezone: "UTC",
 };
 
-const STUB_SESSION = createMockEnrichedSession({ id: "session-to-delete" });
+const STUB_SESSION = createMockEnrichedSession({
+  id: "session-to-delete",
+  coaching_relationship_id: "rel-1",
+  date: "2026-11-05T15:00:00",
+});
 
 function setupAuth(user = COACH_USER) {
   mockAuthStore.mockReturnValue({ userSession: user, isACoach: true });
@@ -128,6 +134,7 @@ beforeEach(() => {
 
 describe("CoachingSessionsCard — delete flow", () => {
   it("opens the dialog, calls deleteSession + SWR mutate on confirm", async () => {
+    setupRelationships([{ id: "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" }]);
     mockDelete.mockResolvedValueOnce(undefined);
     const user = userEvent.setup();
     render(<CoachingSessionsCard onReschedule={vi.fn()} />);
@@ -152,6 +159,7 @@ describe("CoachingSessionsCard — delete flow", () => {
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     });
     expect(mockToastError).not.toHaveBeenCalled();
+    expect(mockToastSuccess).toHaveBeenCalledWith("Removed the Nov 5 @ 3 PM session with Coachee One");
   });
 
   it("surfaces an error toast and closes the dialog when deleteSession rejects", async () => {
@@ -168,6 +176,7 @@ describe("CoachingSessionsCard — delete flow", () => {
       expect(mockToastError).toHaveBeenCalledWith("Couldn't delete the session · Try again");
     });
     expect(mockSWRMutate).not.toHaveBeenCalled();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from 'react';
-import { useSWRConfig } from 'swr';
+import { useSWRConfig, type ScopedMutator } from 'swr';
 import { siteConfig } from '@/site.config';
 import type { Agreement } from '@/types/agreement';
 import type { Id } from '@/types/general';
@@ -29,6 +29,28 @@ export function matchesEndpoint(
   if (!url.startsWith(baseUrl)) return false;
   const pattern = new RegExp(`${endpointPath}(/|\\?|$)`);
   return pattern.test(url);
+}
+
+/**
+ * Revalidates every SWR cache entry whose URL matches `endpointPath` at any
+ * depth (see {@link matchesEndpoint}), keeping current data on screen while
+ * the refetch runs. Writing `undefined` (SWR's default) would empty lists for
+ * a beat and remount their subtrees, a visible flash.
+ */
+export function revalidateEndpointCaches(
+  mutate: ScopedMutator,
+  baseUrl: string,
+  endpointPath: string,
+) {
+  return mutate(
+    (key) => {
+      const url = typeof key === 'string' ? key : Array.isArray(key) ? key[0] : null;
+      if (typeof url !== 'string') return false;
+      return matchesEndpoint(url, baseUrl, endpointPath);
+    },
+    undefined,
+    { revalidate: true, populateCache: false }
+  );
 }
 
 /**
@@ -82,19 +104,7 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
    * `/users/{id}/actions[?...]` and `/organizations/{org}/coaching_relationships/{rel}/actions[?...]`.
    */
   const invalidateEndpoint = useCallback((endpointPath: string, eventName: string) => {
-    mutate(
-      (key) => {
-        const url = typeof key === 'string' ? key : Array.isArray(key) ? key[0] : null;
-        if (typeof url !== 'string') return false;
-        return matchesEndpoint(url, baseUrl, endpointPath);
-      },
-      undefined,
-      // Revalidate WITHOUT blanking the cache. Writing `undefined` (the default)
-      // empties the list for a beat, which unmounts/remounts list subtrees (a
-      // visible flash); populateCache: false keeps the current data on screen
-      // while the refetch runs in the background.
-      { revalidate: true, populateCache: false }
-    );
+    revalidateEndpointCaches(mutate, baseUrl, endpointPath);
     console.log(`[SSE] Revalidated ${endpointPath} cache after ${eventName}`);
   }, [mutate, baseUrl]);
 

@@ -90,9 +90,35 @@ describe("JoinSessionMenu", () => {
   });
 
   it("shows skeleton rows while loading, without the strip", async () => {
-    const dialog = await openWith(model({ sessions: { kind: "loading" } }));
+    const dialog = await openWith(model({ sessions: { kind: "loading", previous: None } }));
     expect(within(dialog).getByLabelText("Loading sessions").children).toHaveLength(3);
     expect(within(dialog).queryByText("Ehab Badawi")).not.toBeInTheDocument();
+  });
+
+  it("keeps the previous list, inert, while the next person loads", async () => {
+    const dialog = await openWith(model({ sessions: { kind: "loading", previous: Some(loaded) } }));
+    const busy = within(dialog).getByLabelText("Loading sessions");
+
+    expect(busy).toHaveAttribute("aria-busy", "true");
+    expect(busy).toHaveAttribute("inert");
+    expect(within(busy).getByText("Ehab Badawi")).toBeInTheDocument();
+    expect(within(busy).getByText("Session 8")).toBeInTheDocument();
+  });
+
+  it("swaps in the loaded list on the same element, so nothing blinks", async () => {
+    vi.mocked(useJoinSessionMenu).mockReturnValue(
+      model({ sessions: { kind: "loading", previous: Some(loaded) } })
+    );
+    const { rerender } = render(<JoinSessionMenu />);
+    await userEvent.click(screen.getByRole("button", { name: "Join session" }));
+    const list = within(screen.getByRole("dialog")).getByLabelText("Loading sessions");
+
+    vi.mocked(useJoinSessionMenu).mockReturnValue(model({ sessions: loaded }));
+    rerender(<JoinSessionMenu />);
+
+    expect(list).toBeInTheDocument();
+    expect(list).toHaveAttribute("aria-busy", "false");
+    expect(list).not.toHaveAttribute("inert");
   });
 
   it("offers Try again on error", async () => {

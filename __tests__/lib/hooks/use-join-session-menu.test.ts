@@ -277,4 +277,69 @@ describe("useJoinSessionMenu", () => {
     expect(sessions.list.map((s) => s.title)).toEqual(["Plan", "Kickoff"]);
     expect(sessions.groups.map((g) => g.label)).toEqual(["Aug", "Sep"]);
   });
+  describe("while the next list loads", () => {
+    const ehabSessions = [
+      createMockEnrichedSession({ id: "ehab-s", coaching_relationship_id: "rel-e", date: "2026-08-18T15:00:00" }),
+    ];
+    const priyaSessions = [
+      createMockEnrichedSession({ id: "priya-s", coaching_relationship_id: "rel-p", date: "2026-08-19T15:00:00" }),
+    ];
+    // Per relationship, a stable sessions array (as SWR serves it) or loading.
+    let loaded: Record<string, EnrichedCoachingSession[]>;
+
+    beforeEach(() => {
+      loaded = { "rel-e": ehabSessions };
+      vi.mocked(useNearestCoachingSessions).mockImplementation((query) => {
+        const sessions = query.some ? loaded[query.val.relationshipId] : undefined;
+        return {
+          sessions: sessions ?? [],
+          isLoading: query.some && !sessions,
+          isError: undefined,
+          refresh: vi.fn(),
+        } as unknown as ReturnType<typeof useNearestCoachingSessions>;
+      });
+    });
+
+    const previousPerson = (state: ReturnType<typeof useJoinSessionMenu>["sessions"]) =>
+      state.kind === "loading" && state.previous.some ? state.previous.val.person.firstName : "none";
+
+    it("keeps the previous person's list until the next person's loads", () => {
+      const { result, rerender } = renderOpened();
+      expect(result.current.sessions.kind).toBe("loaded");
+
+      act(() => result.current.selectPerson("priya"));
+      expect(previousPerson(result.current.sessions)).toBe("Ehab");
+
+      loaded["rel-p"] = priyaSessions;
+      rerender();
+      expect(result.current.sessions.kind).toBe("loaded");
+      if (result.current.sessions.kind === "loaded") {
+        expect(result.current.sessions.person.firstName).toBe("Priya");
+      }
+    });
+
+    it("on reopening, keeps the list only if it's the same person's", () => {
+      const { result } = renderOpened();
+      delete loaded["rel-e"]; // each open asks around a new time
+      act(() => result.current.reset());
+      expect(previousPerson(result.current.sessions)).toBe("Ehab");
+
+      loaded["rel-e"] = ehabSessions;
+      loaded["rel-p"] = priyaSessions;
+      act(() => result.current.selectPerson("priya"));
+      expect(result.current.sessions.kind).toBe("loaded");
+
+      delete loaded["rel-e"];
+      act(() => result.current.reset()); // back to Ehab, whose list is loading
+      expect(result.current.sessions.kind).toBe("loading");
+      expect(previousPerson(result.current.sessions)).toBe("none");
+    });
+
+    it("shows placeholder rows on the first open", () => {
+      delete loaded["rel-e"];
+      const { result } = renderOpened();
+      expect(previousPerson(result.current.sessions)).toBe("none");
+      expect(result.current.sessions.kind).toBe("loading");
+    });
+  });
 });

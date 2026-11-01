@@ -9,6 +9,7 @@ import { JoinSessionMenu } from "@/components/ui/join-session/join-session-menu"
 import { UserMenu } from "@/components/ui/user-menu";
 import { GlobalSearch } from "@/components/ui/search/global-search";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useOpenActionCount } from "@/lib/hooks/use-open-action-count";
 import { useOrganizationSync } from "@/lib/hooks/use-organization-sync";
 import { useShowSessionSwitcher } from "@/lib/hooks/use-show-session-switcher";
 
@@ -57,18 +58,21 @@ const DESTINATIONS = [
 
 function DestinationNav() {
   const pathname = usePathname() ?? "";
+  const openActionCount = useOpenActionCount();
 
   return (
     <nav aria-label="Main" className="flex shrink-0 items-center gap-1">
       {DESTINATIONS.map(({ href, label, mobile }) => {
         const isActive = pathname.startsWith(href);
+        const count = href === "/actions" ? openActionCount : 0;
         return (
           <Link
             key={href}
             href={href}
             aria-current={isActive ? "page" : undefined}
+            aria-label={count > 0 ? `${label}, ${count} open` : undefined}
             className={cn(
-              "h-[34px] items-center rounded-full px-3.5 text-sm font-medium transition-colors duration-150 sm:h-9",
+              "h-[34px] items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors duration-150 sm:h-9",
               mobile ? "flex" : "hidden sm:flex",
               isActive
                 ? "bg-fill text-foreground"
@@ -76,10 +80,23 @@ function DestinationNav() {
             )}
           >
             {label}
+            {count > 0 && <CountBadge count={count} />}
           </Link>
         );
       })}
     </nav>
+  );
+}
+
+function CountBadge({ count }: { count: number }) {
+  return (
+    // No room below 360px; the link's aria-label still carries the count.
+    <span
+      aria-hidden="true"
+      className="flex max-[359px]:hidden h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-tiny font-semibold tabular-nums text-primary-foreground"
+    >
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }
 

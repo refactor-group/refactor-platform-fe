@@ -5,6 +5,11 @@ import { SiteHeader } from '@/components/ui/site-header';
 
 const h = vi.hoisted(() => ({
   setIsACoach: vi.fn(),
+  openActionCount: vi.fn(),
+}));
+
+vi.mock('@/lib/hooks/use-open-action-count', () => ({
+  useOpenActionCount: (): number => h.openActionCount(),
 }));
 
 vi.mock('@/lib/providers/auth-store-provider', () => ({
@@ -64,6 +69,7 @@ describe('SiteHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/actions');
+    h.openActionCount.mockReturnValue(0);
   });
 
   it('leads with the current organization, linking to the dashboard', () => {
@@ -97,5 +103,42 @@ describe('SiteHeader', () => {
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(h.setIsACoach).toHaveBeenCalledWith(true);
+  });
+
+  describe('open action count', () => {
+    const actionsLink = () =>
+      within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: /^Actions/ });
+
+    it('shows the count on the Actions pill', () => {
+      h.openActionCount.mockReturnValue(3);
+      render(<SiteHeader />);
+
+      expect(actionsLink()).toHaveAccessibleName('Actions, 3 open');
+      expect(actionsLink()).toHaveAttribute('aria-current', 'page');
+      expect(within(actionsLink()).getByText('3')).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('caps the visible count at 99+', () => {
+      h.openActionCount.mockReturnValue(100);
+      render(<SiteHeader />);
+
+      expect(within(actionsLink()).getByText('99+')).toBeInTheDocument();
+      expect(actionsLink()).toHaveAccessibleName('Actions, 100 open');
+    });
+
+    it('hides the badge with no open actions', () => {
+      render(<SiteHeader />);
+
+      expect(actionsLink()).toHaveAccessibleName('Actions');
+      expect(actionsLink()).toHaveTextContent(/^Actions$/);
+    });
+
+    it('never puts the count on Dashboard', () => {
+      h.openActionCount.mockReturnValue(3);
+      render(<SiteHeader />);
+
+      const nav = screen.getByRole('navigation', { name: 'Main' });
+      expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveTextContent(/^Dashboard$/);
+    });
   });
 });

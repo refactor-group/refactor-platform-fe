@@ -8,6 +8,7 @@ import { toast } from "@/lib/toast";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
+import { AssignmentFilter, CoachViewMode } from "@/types/assigned-actions";
 import { siteConfig } from "@/site.config";
 import { EntityApiError } from "@/lib/api/entity-api";
 import { ActionsPageContainer } from "@/components/ui/actions/actions-page-container";
@@ -88,9 +89,10 @@ let mockActionsData: AssignedActionWithContext[] = [];
 let mockIsLoading = false;
 let mockIsError: unknown = false;
 const mockRefresh = vi.fn();
+const mockFetchArgs = vi.fn();
 
 vi.mock("@/lib/hooks/use-all-actions-with-context", () => ({
-  useAllActionsWithContext: () => ({
+  useAllActionsWithContext: (...args: unknown[]) => (mockFetchArgs(...args), {
     actionsWithContext: mockActionsData,
     isLoading: mockIsLoading,
     isError: mockIsError,
@@ -241,6 +243,22 @@ describe("ActionsPageContainer", () => {
     const headers = getColumnHeaders();
     expect(headers).toContain("Not Started");
     expect(headers).toContain("In Progress");
+  });
+
+  // The header's open action count shares this request (and its cache entry).
+  it("fetches the default view with the header count's arguments", () => {
+    render(
+      <Wrapper>
+        <ActionsPageContainer locale={siteConfig.locale} />
+      </Wrapper>
+    );
+
+    expect(mockFetchArgs).toHaveBeenCalledWith(
+      CoachViewMode.MyActions,
+      undefined,
+      AssignmentFilter.Assigned,
+      undefined
+    );
   });
 
   it("shows loading skeletons while data is fetching", () => {

@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/components/lib/utils";
 import { PersonCarousel } from "@/components/ui/join-session/person-carousel";
 import { SessionDotStrip } from "@/components/ui/join-session/session-dot-strip";
 import { SessionRow } from "@/components/ui/join-session/session-row";
@@ -13,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   type JoinSessionMenuModel,
-  type PersonSessionsState,
+  type LoadedPersonSessions,
   useJoinSessionMenu,
 } from "@/lib/hooks/use-join-session-menu";
 import { shortDate } from "@/lib/session-window";
@@ -76,15 +77,13 @@ function EmptyRow({ person }: { person: MenuPerson }) {
   );
 }
 
-type LoadedSessions = Extract<PersonSessionsState, { kind: "loaded" }>;
-
-function findIn(state: LoadedSessions, id: Id): Option<MenuSession> {
+function findIn(state: LoadedPersonSessions, id: Id): Option<MenuSession> {
   const found = [...state.list, ...state.groups.flatMap((g) => g.sessions)].find((s) => s.id === id);
   return found ? Some(found) : None;
 }
 
 interface LoadedSectionProps {
-  state: LoadedSessions;
+  state: LoadedPersonSessions;
   current: JoinSessionMenuModel["current"];
   now: JoinSessionMenuModel["now"];
   onOpen: OpenSession;
@@ -120,21 +119,46 @@ function LoadedSection({ state, current, now, onOpen }: LoadedSectionProps) {
   );
 }
 
+interface SessionListProps extends LoadedSectionProps {
+  busy: boolean;
+}
+
+/**
+ * The same element whether loaded or loading the next person, so the swap
+ * keeps the DOM. A quick load swaps lists cleanly; a slow one dims the old
+ * list after a beat (the delay applies only on the way into busy).
+ */
+function SessionList({ busy, ...props }: SessionListProps) {
+  return (
+    <Section>
+      <div
+        aria-busy={busy}
+        aria-label={busy ? "Loading sessions" : undefined}
+        inert={busy}
+        className={cn("transition-opacity duration-200", busy && "opacity-50 delay-300")}
+      >
+        <LoadedSection {...props} />
+      </div>
+    </Section>
+  );
+}
+
 function PersonSection({ menu, onOpen }: { menu: JoinSessionMenuModel; onOpen: OpenSession }) {
   const { sessions } = menu;
+  const list = { current: menu.current, now: menu.now, onOpen };
   switch (sessions.kind) {
     case "no-people":
       return null;
     case "loading":
-      return <Section><LoadingRows /></Section>;
+      return sessions.previous.some ? (
+        <SessionList busy state={sessions.previous.val} {...list} />
+      ) : (
+        <Section><LoadingRows /></Section>
+      );
     case "error":
       return <Section><ErrorRow message="Couldn't load sessions" retry={sessions.retry} /></Section>;
     case "loaded":
-      return (
-        <Section>
-          <LoadedSection state={sessions} current={menu.current} now={menu.now} onOpen={onOpen} />
-        </Section>
-      );
+      return <SessionList busy={false} state={sessions} {...list} />;
     default: {
       const _exhaustive: never = sessions;
       throw new Error(`Unhandled sessions state: ${JSON.stringify(_exhaustive)}`);

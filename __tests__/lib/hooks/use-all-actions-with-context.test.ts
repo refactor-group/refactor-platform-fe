@@ -15,6 +15,7 @@ import type { EnrichedCoachingSession } from "@/lib/api/coaching-sessions";
 // ---------------------------------------------------------------------------
 
 const mockRefreshActions = vi.fn();
+const mockRefreshSessions = vi.fn();
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (sel: (s: Record<string, unknown>) => unknown) =>
@@ -56,6 +57,7 @@ let mockActionsLoading = false;
 let mockActionsError = false;
 
 vi.mock("@/lib/api/relationship-actions", () => ({
+  useForgetActionsOnOrganizationChange: vi.fn(),
   useBatchRelationshipActions: () => ({
     actions: mockActions,
     isLoading: mockActionsLoading,
@@ -74,6 +76,7 @@ vi.mock("@/lib/api/coaching-sessions", () => ({
     enrichedSessions: mockSessions,
     isLoading: mockSessionsLoading,
     isError: mockSessionsError,
+    refresh: mockRefreshSessions,
   }),
   CoachingSessionInclude: {
     Relationship: "relationship",
@@ -190,6 +193,53 @@ describe("useAllActionsWithContext", () => {
 
     expect(result.current.actionsWithContext).toEqual([]);
     expect(result.current.isLoading).toBe(false);
+  });
+
+  // Session ids are unique per test: refetched ids are remembered across mounts.
+  describe("refetching sessions for an action in an unknown session", () => {
+    it("refetches the sessions once, even across remounts", () => {
+      mockActions = [makeTestAction({ coaching_session_id: "new-session-a" })];
+      mockSessions = [makeTestSession()];
+
+      const { rerender, unmount } = renderHook(() =>
+        useAllActionsWithContext(CoachViewMode.MyActions)
+      );
+      rerender();
+      unmount();
+      renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+
+      expect(mockRefreshSessions).toHaveBeenCalledTimes(1);
+    });
+
+    it("refetches again for another unknown session", () => {
+      mockActions = [makeTestAction({ coaching_session_id: "new-session-b" })];
+      mockSessions = [makeTestSession()];
+      const { rerender } = renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+
+      mockActions = [
+        makeTestAction({ coaching_session_id: "new-session-b" }),
+        makeTestAction({ id: "action-2", coaching_session_id: "new-session-c" }),
+      ];
+      rerender();
+
+      expect(mockRefreshSessions).toHaveBeenCalledTimes(2);
+    });
+
+    it("waits until actions and sessions have loaded", () => {
+      mockActions = [makeTestAction({ coaching_session_id: "new-session-d" })];
+      mockSessionsLoading = true;
+      renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+
+      expect(mockRefreshSessions).not.toHaveBeenCalled();
+    });
+
+    it("doesn't refetch when every session is known", () => {
+      mockActions = [makeTestAction()];
+      mockSessions = [makeTestSession()];
+      renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+
+      expect(mockRefreshSessions).not.toHaveBeenCalled();
+    });
   });
 
   it("excludes orphaned actions with no matching session", () => {

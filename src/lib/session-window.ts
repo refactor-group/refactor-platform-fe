@@ -1,4 +1,4 @@
-import type { DateTime } from "ts-luxon";
+import { DateTime } from "ts-luxon";
 import type {
   DotKind,
   Liveness,
@@ -136,6 +136,11 @@ export function listDate(dt: DateTime): string {
 
 export function shortDate(dt: DateTime): string {
   return dt.toFormat("LLL d");
+}
+
+/** A stored (UTC) session date in the user's timezone. */
+export function sessionStartIn(date: string, timezone: string): DateTime {
+  return DateTime.fromISO(date, { zone: "utc" }).setZone(timezone);
 }
 
 export function timeOfDay(dt: DateTime): string {

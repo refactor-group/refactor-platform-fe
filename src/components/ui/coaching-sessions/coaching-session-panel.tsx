@@ -33,6 +33,7 @@ import {
   useDismissedActionSuggestionList,
   useScanStatus,
 } from "@/lib/api/transcript-suggestions";
+import { useRefreshActionLists } from "@/lib/api/actions";
 import { useSuggestionReview } from "@/lib/hooks/use-suggestion-review";
 import { useSuggestionScan } from "@/lib/hooks/use-suggestion-scan";
 import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
@@ -786,7 +787,6 @@ export function CoachingSessionPanel({
     handleBodyChange,
     handleDelete: handleActionDelete,
     sessionDateMap,
-    refresh: refreshActions,
     revalidateGoalProgress,
   } = usePanelActions({
     userId,
@@ -802,10 +802,12 @@ export function CoachingSessionPanel({
     refreshPending();
     refreshDismissed();
   }, [refreshPending, refreshDismissed]);
+  // An accepted suggestion becomes an action, so every action list refreshes.
+  const refreshActionLists = useRefreshActionLists();
   const suggestionReview = useSuggestionReview({
     coachingSessionId,
     refreshSuggestions,
-    refreshActions,
+    refreshActions: refreshActionLists,
     refreshGoalProgress: revalidateGoalProgress,
   });
   const { status: scanStatus, refresh: refreshScanStatus } = useScanStatus(coachingSessionId);

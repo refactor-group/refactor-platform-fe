@@ -126,6 +126,7 @@ vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
 }));
 
 vi.mock("@/lib/api/actions", () => ({
+  useRefreshActionLists: () => vi.fn(),
   useActionMutation: vi.fn(() => ({ create: vi.fn(), update: vi.fn(), delete: vi.fn(), isLoading: false, error: null })),
 }));
 

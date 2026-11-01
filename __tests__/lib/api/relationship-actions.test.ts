@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { relationshipActionsUrl } from "@/lib/api/relationship-actions";
+import { createElement, type ReactNode } from "react";
+import { renderHook, waitFor } from "@testing-library/react";
+import { SWRConfig, type Cache } from "swr";
+import {
+  relationshipActionsUrl,
+  useForgetActionsOnOrganizationChange,
+} from "@/lib/api/relationship-actions";
 import {
   AssigneeScope,
   UserActionsAssigneeFilter,
@@ -43,5 +49,39 @@ describe("relationshipActionsUrl", () => {
 
     expect(batchUrl).toContain("assignee=coach");
     expect(singleUrl).toContain("assignee=coach");
+  });
+});
+
+describe("useForgetActionsOnOrganizationChange", () => {
+  const params = { assignee_filter: UserActionsAssigneeFilter.Assigned };
+  // SWR keeps the original key on each entry (`_k`); filter mutations match on it.
+  const seeded = (key: string, data: unknown) =>
+    [key, { data, _k: key, error: undefined, isValidating: false, isLoading: false }] as const;
+
+  it("forgets the action lists of the organization left, and only those", () => {
+    const cache = new Map<string, unknown>([
+      seeded(relationshipActionsUrl("org-a", params), ["a"]),
+      seeded(relationshipActionsUrl("org-a", { ...params, coaching_relationship_id: "rel-1" }), ["a1"]),
+      seeded(relationshipActionsUrl("org-b", params), ["b"]),
+      seeded("https://example.test/organizations/org-a", { id: "org-a" }),
+    ]);
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(SWRConfig, { value: { provider: () => cache as Cache } }, children);
+
+    const { rerender } = renderHook(
+      ({ orgId }) => useForgetActionsOnOrganizationChange(orgId),
+      { wrapper, initialProps: { orgId: "org-a" as string | null } }
+    );
+    rerender({ orgId: "org-b" });
+
+    const dataAt = (key: string) => (cache.get(key) as { data: unknown } | undefined)?.data;
+    return waitFor(() => {
+      expect(dataAt(relationshipActionsUrl("org-a", params))).toBeUndefined();
+      expect(
+        dataAt(relationshipActionsUrl("org-a", { ...params, coaching_relationship_id: "rel-1" }))
+      ).toBeUndefined();
+      expect(dataAt(relationshipActionsUrl("org-b", params))).toEqual(["b"]);
+      expect(dataAt("https://example.test/organizations/org-a")).toEqual({ id: "org-a" });
+    });
   });
 });

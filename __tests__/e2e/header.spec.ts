@@ -59,6 +59,83 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
   await mockOrganizations(page)
 }
 
+// The badge counts what the Actions page shows by default: open, due within
+// the last 30 days or later (or undated), with a known session.
+const OPEN_ACTION_COUNT = 3
+const RECENT = new Date().toISOString()
+const LONG_OVERDUE = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
+const mockAction = (name: string, status: string, dueBy: string | null) => ({
+  id: `action-${name}`,
+  coaching_session_id: 'sess-1',
+  body: `${name} action`,
+  user_id: MOCK_USER_ID,
+  status,
+  status_changed_at: RECENT,
+  due_by: dueBy,
+  goal_id: null,
+  created_at: RECENT,
+  updated_at: RECENT,
+  assignee_ids: [MOCK_USER_ID],
+})
+const ACTIONS = [
+  ...['NotStarted', 'InProgress', 'OnHold', 'Completed', 'WontDo'].map((status) =>
+    mockAction(status, status, null)
+  ),
+  mockAction('overdue', 'InProgress', LONG_OVERDUE),
+]
+
+// Serves the batch actions request and saves status changes to a copy of
+// ACTIONS; resolves to the batch request URLs made so far.
+async function mockActions(page: Page) {
+  const actions = ACTIONS.map((action) => ({ ...action }))
+  const batchRequests: string[] = []
+  await page.route('**/organizations/*/coaching_relationships/actions**', async (route) => {
+    batchRequests.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { coachee_actions: { [MOCK_USER_ID]: actions } } }),
+    })
+  })
+  await page.route('**/actions/action-*', async (route) => {
+    if (route.request().method() !== 'PUT') return route.continue()
+    const saved = route.request().postDataJSON()
+    const action = actions.find(({ id }) => route.request().url().endsWith(`/${id}`))
+    if (action) action.status = saved.status
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { ...action, ...saved } }),
+    })
+  })
+  // Session context for the actions; the page drops actions without it.
+  await page.route(
+    (url) => url.pathname.endsWith(`/users/${MOCK_USER_ID}/coaching_sessions`),
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: 'sess-1',
+              coaching_relationship_id: COACHING_TWO[0].id,
+              date: RECENT,
+              created_at: RECENT,
+              updated_at: RECENT,
+              relationship: COACHING_TWO[0],
+            },
+          ],
+        }),
+      })
+    }
+  )
+  return () => [...batchRequests]
+}
+
+const actionsPill = (page: Page) =>
+  page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /^Actions/ })
+
 type Box = { x: number; y: number; width: number; height: number }
 
 const intersects = (a: Box, b: Box) =>
@@ -110,9 +187,84 @@ test.describe('Header fits the viewport', () => {
   }
 })
 
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 375, height: 812 },
+]) {
+  test(`Actions pill shows the open action count at ${viewport.width}px`, async ({ page, context }) => {
+    await setup(page, context)
+    await mockActions(page)
+    await page.setViewportSize(viewport)
+    await page.goto('/dashboard')
+
+    const pill = actionsPill(page)
+    await expect(pill).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+    await expect(pill.getByText(String(OPEN_ACTION_COUNT), { exact: true })).toBeVisible()
+  })
+}
+
+test.describe('Open action count stays cached', () => {
+  test.beforeEach(async ({ page, context }) => {
+    await setup(page, context)
+  })
+
+  test("fetches once and doesn't refetch when the window regains focus", async ({ page }) => {
+    const batchRequests = await mockActions(page)
+    await page.clock.install()
+    await page.goto('/dashboard')
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+    // Past the app's 10s focus throttle, which starts at mount, so a focus
+    // refetch would really fire.
+    await page.clock.fastForward(11_000)
+    const before = batchRequests().length
+    expect(before).toBe(1) // one request; its scope doesn't flip while the page loads
+
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+      window.dispatchEvent(new Event('focus'))
+    })
+    await page.waitForTimeout(1000)
+
+    expect(batchRequests()).toHaveLength(before)
+  })
+
+  test('returning to an organization fetches its actions fresh', async ({ page }) => {
+    const batchRequests = await mockActions(page)
+    const acmeRequests = () => batchRequests().filter((url) => url.includes('/organizations/org-1/')).length
+    const switchTo = async (name: string) => {
+      await page.getByRole('button', { name: 'Account menu' }).click()
+      await page.getByRole('menu').getByRole('menuitem', { name: new RegExp(name) }).click()
+      await expect(orgTile(page)).toHaveAccessibleName(name)
+    }
+    await page.goto('/dashboard')
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+    expect(acmeRequests()).toBe(1)
+
+    await switchTo('Beta Inc')
+    await switchTo('Acme Corp')
+
+    // Acme's list wasn't refreshed while away, so it's fetched again rather than served stale.
+    await expect.poll(acmeRequests).toBe(2)
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+  })
+
+  test('a status change on the Actions page lowers the count', async ({ page }) => {
+    await mockActions(page)
+    await page.goto('/actions')
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+
+    const card = page.locator('[data-kanban-card]').filter({ hasText: 'NotStarted action' })
+    await card.locator('[role="combobox"]').filter({ visible: true }).click()
+    await page.getByRole('option', { name: /Completed/ }).click()
+
+    await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT - 1} open`)
+  })
+})
+
 test.describe('Header items never overlap', () => {
   test.beforeEach(async ({ page, context }) => {
     await setup(page, context)
+    await mockActions(page)
   })
 
   for (const width of [320, 360, 375]) {
@@ -121,10 +273,11 @@ test.describe('Header items never overlap', () => {
       await page.goto('/dashboard')
       const join = page.getByRole('button', { name: 'Join session' })
       await expect(join).toBeVisible()
+      await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
 
       const items = {
         tile: orgTile(page),
-        actions: page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Actions' }),
+        actions: actionsPill(page),
         search: page.getByRole('button', { name: 'Open search' }),
         join,
         account: page.getByRole('button', { name: 'Account menu' }),

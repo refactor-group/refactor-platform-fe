@@ -204,6 +204,12 @@ Connect Google from Settings › Integrations.
 
 **Pass:** exactly one "Google account connected" toast.
 
+### Case E5: session confirmations
+
+From the dashboard, create a one-off session with a coachee, edit its date, then delete it. Then create a recurring series.
+
+**Pass:** you see "Created the Nov 4 @ 10 AM session with {coachee}", "Updated the Nov 6 @ 10 AM session with {coachee}" and "Removed the Nov 6 @ 10 AM session with {coachee}" in turn, with the date and time in your time zone. The series shows "Created N recurring sessions with {coachee}".
+
 ## 7. Part F: global header (#504)
 
 ### Case F1: desktop layout
@@ -326,6 +332,24 @@ Turn on Reduce Motion (macOS System Settings › Accessibility › Display), the
 
 **Pass:** the field appears and disappears at full width at once, with no widening animation.
 
+### Case F21: open action count
+
+With some open and some done actions assigned to you, open the dashboard at 1280px and at 375px. Open Actions, mark one open action Completed, and look at the Actions pill. Then complete or close every open action.
+
+**Pass:** the Actions pill shows an indigo badge with the number of your open actions at both widths. Completing one lowers the number by one. With none open, there is no badge.
+
+### Case F22: open action count matches the Actions page
+
+Have one open action assigned to you that was due more than 30 days ago, plus a few due recently. Note the number on the Actions pill, open Actions without changing any filters, and count the cards. Reload the dashboard a few times, then switch to another window and back.
+
+**Pass:** the badge equals the number of cards on the Actions page, and the long-overdue action isn't counted. The number doesn't change while the page loads or when you come back to the window.
+
+### Case F23: open action count catches up
+
+With two organizations, note the badge in the first, switch to the second, and have your coach complete one of your actions in the first organization. Switch back. Then have your coach create a new session with you and add an action for you in it, while you stay on the dashboard.
+
+**Pass:** after switching back, the badge shows one fewer. The coach's new action is counted within a few seconds, without reloading.
+
 ## 8. Part G: Join session menu (#506)
 
 Requires a backend build that includes rs#459 (`/coaching_sessions/nearest`). This part also covers the menu's building blocks from #503 (dots, strip, carousel, rows, Today block), which had no part of its own.
@@ -425,6 +449,12 @@ Open `/coaching-sessions/<an id that doesn't exist>`, then open the menu.
 Open the menu and click through several coachees as fast as you can.
 
 **Pass:** the list always ends on the last coachee clicked, with their name above the dots, and never flips back to an earlier coachee's sessions.
+
+### Case G16: switching people loads cleanly
+
+Reload the page, open Join session, and click each person in turn. Repeat with the network throttled to Slow 4G in DevTools, then close and reopen the menu.
+
+**Pass:** the list swaps straight to the next person's sessions without placeholder rows blinking in between. On the slow network the previous list stays in place and fades slightly until the next one appears. Reopening shows the last list rather than placeholder rows.
 
 ## 9. Part H: transcript bubbles (#507)
 

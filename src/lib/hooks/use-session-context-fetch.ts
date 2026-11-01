@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { SWRConfiguration } from "swr";
 import { getOneYearAgo, getOneYearFromNow } from "@/lib/utils/date";
 import {
   useEnrichedCoachingSessionsForUser,
@@ -14,8 +15,9 @@ import type { SessionLookupMaps } from "@/lib/utils/assigned-actions";
  * used to add context (relationship, goal, session info) to actions.
  *
  * @param userId - The current user's ID, or null to skip fetching
+ * @param options - SWR overrides for the sessions fetch
  */
-export function useSessionContextFetch(userId: string | null) {
+export function useSessionContextFetch(userId: string | null, options?: SWRConfiguration) {
   const oneYearAgo = useMemo(() => getOneYearAgo(), []);
   const oneYearFromNow = useMemo(() => getOneYearFromNow(), []);
 
@@ -23,18 +25,27 @@ export function useSessionContextFetch(userId: string | null) {
     enrichedSessions: sessions,
     isLoading,
     isError,
+    refresh,
   // TODO(rs#374): pass the current organization once GET /users/{id}/actions
   // accepts one. Scoping these sessions alone would strip context off
   // out-of-organization actions rather than hide them.
-  } = useEnrichedCoachingSessionsForUser(userId, oneYearAgo, oneYearFromNow, [
-    CoachingSessionInclude.Relationship,
-    CoachingSessionInclude.Goal,
-  ]);
+  } = useEnrichedCoachingSessionsForUser(
+    userId,
+    oneYearAgo,
+    oneYearFromNow,
+    [CoachingSessionInclude.Relationship, CoachingSessionInclude.Goal],
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    options
+  );
 
   const lookupMaps: SessionLookupMaps = useMemo(
     () => buildSessionLookupMaps(sessions ?? []),
     [sessions]
   );
 
-  return { lookupMaps, isLoading, isError };
+  return { lookupMaps, isLoading, isError, refresh };
 }
