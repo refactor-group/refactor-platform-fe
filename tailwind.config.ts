@@ -28,7 +28,51 @@ const config = {
   			foreground: 'hsl(var(--foreground))',
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				foreground: 'hsl(var(--primary-foreground))',
+  				disabled: 'hsl(var(--primary-disabled))'
+  			},
+  			brand: {
+  				DEFAULT: 'hsl(var(--brand))',
+  				strong: 'hsl(var(--brand-strong))',
+  				tint: 'hsl(var(--brand-tint))',
+  				'tint-2': 'hsl(var(--brand-tint-2))',
+  				border: 'hsl(var(--brand-border))',
+  				dot: 'hsl(var(--brand-dot))',
+  				month: 'hsl(var(--brand-month))'
+  			},
+  			'ink-2': 'hsl(var(--ink-2))',
+  			faint: 'hsl(var(--faint))',
+  			'disabled-icon': 'hsl(var(--disabled-icon))',
+  			fill: {
+  				DEFAULT: 'hsl(var(--fill))',
+  				hover: 'hsl(var(--fill-hover))'
+  			},
+  			well: 'hsl(var(--well))',
+  			hairline: 'hsl(var(--hairline))',
+  			positive: {
+  				DEFAULT: 'hsl(var(--positive))',
+  				solid: 'hsl(var(--positive-solid))',
+  				tint: 'hsl(var(--positive-tint))',
+  				wash: 'hsl(var(--positive-wash))'
+  			},
+  			warning: {
+  				DEFAULT: 'hsl(var(--warning))',
+  				text: 'hsl(var(--warning-text))'
+  			},
+  			'on-hold': {
+  				ring: 'hsl(var(--on-hold-ring))',
+  				fill: 'hsl(var(--on-hold-fill))',
+  				text: 'hsl(var(--on-hold-text))'
+  			},
+  			'status-idle': 'hsl(var(--status-idle))',
+  			inverse: {
+  				DEFAULT: 'hsl(var(--inverse))',
+  				foreground: 'hsl(var(--inverse-foreground))'
+  			},
+  			'toast-check': 'hsl(var(--toast-check))',
+  			avatar: {
+  				DEFAULT: 'hsl(var(--avatar))',
+  				foreground: 'hsl(var(--avatar-foreground))'
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
@@ -68,7 +112,31 @@ const config = {
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: 'calc(var(--radius) - 4px)',
+  			card: '16px',
+  			popover: '14px',
+  			input: '10px'
+  		},
+  		boxShadow: {
+  			card: 'var(--shadow-card)',
+  			popover: 'var(--shadow-popover)',
+  			toast: 'var(--shadow-toast)'
+  		},
+  		backgroundImage: {
+  			'hero-wash': 'var(--hero-wash)'
+  		},
+  		fontSize: {
+  			'page-title': ['32px', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
+  			headline: ['28px', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
+  			section: ['26px', { lineHeight: '1.25', letterSpacing: '-0.01em' }],
+  			'card-title': ['17px', { lineHeight: '1.35', letterSpacing: '-0.01em' }],
+  			item: ['13.5px', '1.4'],
+  			label: ['12.5px', '1.4'],
+  			pill: ['11.5px', '1.3'],
+  			tiny: ['11px', '1.3']
+  		},
+  		transitionTimingFunction: {
+  			spring: 'cubic-bezier(.2, .8, .2, 1)'
   		},
   		keyframes: {
   			'accordion-down': {
@@ -111,6 +179,14 @@ const config = {
   					transform: 'scale(0.85)',
   				}
   			},
+  			'live-pulse': {
+  				'0%, 100%': {
+  					opacity: '1'
+  				},
+  				'50%': {
+  					opacity: '.35'
+  				}
+  			},
   			'highlight-pulse': {
   				'0%, 100%': {
   					transform: 'scale(1)',
@@ -148,6 +224,7 @@ const config = {
   			'slide-in-from-left': 'slide-in-from-left 0.4s ease-out',
   			'kanban-card-exit': 'kanban-card-exit 350ms ease-in both',
   			'kanban-card-enter': 'kanban-card-enter 350ms ease-out both',
+  			'live-pulse': 'live-pulse 2s ease-in-out infinite',
   			'highlight-pulse': 'highlight-pulse 600ms ease-out',
   			'highlight-tint': 'highlight-tint 2s ease-out both'
   		},
