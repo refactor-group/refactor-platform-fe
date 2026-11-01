@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
+import { AssigneePickerPopover } from "@/components/ui/coaching-sessions/action-card-parts";
 import { GoalPill } from "@/components/ui/goal-pill";
 import { ItemStatus } from "@/types/general";
 import { createMockGoal } from "../../../test-utils";
@@ -134,5 +135,70 @@ describe("GoalPickerPopover", () => {
     await user.click(screen.getByText("None"));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("AssigneePickerPopover", () => {
+  const PEOPLE = [
+    { id: "coach-1", name: "Jim Hodapp", initials: "JH" },
+    { id: "coachee-1", name: "Caleb Bourg", initials: "CB" },
+  ];
+
+  function renderPicker(assigneeIds: string[], onToggle = vi.fn(), disabledReasons = {}) {
+    render(
+      <Wrapper>
+        <AssigneePickerPopover
+          allAssignees={PEOPLE}
+          resolvedAssignees={PEOPLE.filter((p) => assigneeIds.includes(p.id))}
+          assigneeIds={assigneeIds}
+          onToggle={onToggle}
+          disabledReasons={disabledReasons}
+        />
+      </Wrapper>
+    );
+    return onToggle;
+  }
+
+  it("shows the assignees' avatars in a borderless field pill", () => {
+    renderPicker(["coach-1"]);
+    const trigger = screen.getByRole("button", { name: "Assignees" });
+    expect(trigger).toHaveClass("rounded-full", "hover:bg-fill");
+    expect(trigger).not.toHaveClass("border");
+    expect(within(trigger).getByText("JH")).toBeInTheDocument();
+  });
+
+  it("says Unassigned when nobody is assigned", () => {
+    renderPicker([]);
+    expect(within(screen.getByRole("button", { name: "Assignees" })).getByText("Unassigned")).toBeInTheDocument();
+  });
+
+  it("lists people with avatars and a check on the assigned ones, and toggles on click", async () => {
+    const onToggle = renderPicker(["coach-1"]);
+    await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
+
+    const list = screen.getByRole("listbox", { name: "Assignees" });
+    const jim = within(list).getByRole("option", { name: /Jim Hodapp/ });
+    const caleb = within(list).getByRole("option", { name: /Caleb Bourg/ });
+    expect(jim).toHaveAttribute("aria-selected", "true");
+    expect(jim.querySelector("svg.text-brand")).not.toBeNull();
+    expect(caleb).toHaveAttribute("aria-selected", "false");
+    expect(caleb.querySelector("svg.text-brand")).toBeNull();
+    expect(list.querySelector('[role="checkbox"]')).toBeNull();
+
+    await userEvent.click(caleb);
+    expect(onToggle).toHaveBeenCalledWith("coachee-1");
+  });
+
+  it("explains and blocks a person who can't be picked", async () => {
+    const onToggle = renderPicker([], vi.fn(), {
+      "coach-1": "Only your coach can assign an action to themselves.",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
+
+    const jim = screen.getByRole("option", { name: /Jim Hodapp/ });
+    expect(jim).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("Only your coach can assign an action to themselves.")).toBeInTheDocument();
+    await userEvent.click(jim);
+    expect(onToggle).not.toHaveBeenCalled();
   });
 });

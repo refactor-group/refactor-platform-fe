@@ -16,6 +16,7 @@ import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-edita
 import { AssigneeAvatars, resolveAssignees } from "@/components/ui/coaching-sessions/action-card-parts";
 import { ActionEditForm } from "@/components/ui/coaching-sessions/action-card-compact";
 import { cn } from "@/components/lib/utils";
+import { CARD_BUTTON } from "@/components/ui/card-field";
 import { mayActOnSuggestion, suggestionDue } from "@/lib/utils/transcript-suggestions";
 import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
 import { useTapTooltip } from "@/lib/hooks/use-tap-tooltip";
@@ -182,7 +183,7 @@ function SuggestionView({
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
             <Button
               size="sm"
-              className={ROW_BUTTON}
+              className={CARD_BUTTON}
               disabled={pending}
               onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && (() => onAccept(None)))}
             >
@@ -190,9 +191,9 @@ function SuggestionView({
               Accept
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
-              className={ROW_BUTTON}
+              className={CARD_BUTTON}
               disabled={pending}
               onClick={onAccept ? onEdit : undefined}
             >
@@ -201,7 +202,7 @@ function SuggestionView({
             <Button
               variant="ghost"
               size="sm"
-              className={cn(ROW_BUTTON, "text-muted-foreground")}
+              className={cn(CARD_BUTTON, "text-muted-foreground")}
               disabled={pending}
               onClick={run(onDismiss)}
             >
@@ -311,7 +312,6 @@ function SuggestionEditBack({
         onCancel={onClose}
         saveLabel="Accept"
         saveIcon={Check}
-        buttonClassName="max-md:h-10 max-md:min-w-10"
         fieldsDisabled={confirming.some}
         footerOverride={
           confirming.some && duplicateOf.some ? (
@@ -354,7 +354,6 @@ function DuplicateMarker({
   );
 }
 
-const ROW_BUTTON = "h-6 gap-1 text-[11px] px-2 max-md:h-10 max-md:min-w-10";
 
 /** Runs one request at a time; `pending` stays true while it is in flight. */
 function useInFlight() {
@@ -412,14 +411,14 @@ function DuplicateConfirm({
         </button>
       </p>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button size="sm" className={ROW_BUTTON} disabled={pending} onClick={onAddAnyway}>
+        <Button size="sm" className={CARD_BUTTON} disabled={pending} onClick={onAddAnyway}>
           <Check className="!h-3 !w-3" aria-hidden />
           Add anyway
         </Button>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
-          className={ROW_BUTTON}
+          className={CARD_BUTTON}
           disabled={pending}
           onClick={onKeepExisting}
         >
@@ -428,7 +427,7 @@ function DuplicateConfirm({
         <Button
           variant="ghost"
           size="sm"
-          className={cn(ROW_BUTTON, "text-muted-foreground")}
+          className={cn(CARD_BUTTON, "text-muted-foreground")}
           onClick={onCancel}
         >
           Cancel

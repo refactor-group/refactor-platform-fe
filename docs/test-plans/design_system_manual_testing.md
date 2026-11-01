@@ -507,3 +507,11 @@ Repeat I1 and I4 in Dark, then I1 at 375px.
 Open a session's Actions panel with suggested actions from a transcript, one with a spoken date ("by Friday") and one without, in Light and Dark.
 
 **Pass:** suggested cards keep their dashed border, with the full card's radius, padding and 14px title. The footer shows 26px assignee avatars (or "Unassigned") and "Due Oct 17" in 12px text: the spoken date in ink and medium weight, the default date in grey. Tapping a date still shows where it came from. Accept, Edit and Dismiss work as before.
+
+### Case I7: back and edit faces
+
+1. On the Actions page, click a card's ⓘ, then Edit. Open the Status, Due date, Assignee(s) and Linked goal controls in turn.
+2. On a suggested action card, click Edit and open the same controls.
+3. Repeat 1 in Dark and at 375px.
+
+**Pass:** the back shows the meta line (e.g. "Due Nov 8") and Done, a 14px title, assignee avatars with names, and pill-shaped Edit and Delete buttons. In edit mode the labels are 12.5px grey, and each control is a borderless pill that turns grey on hover, with a caret. The assignee menu lists each person with a 26px avatar and an indigo check on the assigned ones, with no checkboxes; a person who can't be picked is dimmed with the reason below. The goal menu puts its check on the right. Save and Cancel (Accept and Cancel on suggestions) are pills. Everything reads clearly in Dark and fits at 375px.

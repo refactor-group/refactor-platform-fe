@@ -167,7 +167,9 @@ describe("CompactActionCard", () => {
         </Wrapper>
       );
 
-      expect(screen.getByText("JH")).toBeInTheDocument();
+      const front = document.querySelector<HTMLElement>(".flip-card-front")!;
+      expect(within(front).getByText("JH")).toBeInTheDocument();
+      expect(within(front).getByRole("img", { name: "Jim Hodapp" })).toBeInTheDocument();
     });
 
     describe("meta line", () => {
@@ -186,7 +188,8 @@ describe("CompactActionCard", () => {
             <CompactActionCard {...baseProps({ action: createMockAction(overrides) })} />
           </Wrapper>
         );
-        return screen.getByText((_, el) => el?.hasAttribute("data-meta") ?? false);
+        const front = document.querySelector<HTMLElement>(".flip-card-front")!;
+        return within(front).getByText((_, el) => el?.hasAttribute("data-meta") ?? false);
       };
 
       it("shows the due date for an open action", () => {
@@ -338,6 +341,21 @@ describe("CompactActionCard", () => {
       expect(screen.getByText("Edit")).toBeInTheDocument();
       expect(screen.getByText("Delete")).toBeInTheDocument();
       expect(screen.getByText("Done")).toBeInTheDocument();
+    });
+
+    it("shows the meta line and pill buttons on the back, not the old bold due date", async () => {
+      render(
+        <Wrapper>
+          <CompactActionCard {...baseProps()} />
+        </Wrapper>
+      );
+
+      await flipToBack();
+
+      const back = document.querySelector<HTMLElement>(".flip-card-back")!;
+      expect(back.querySelector("[data-meta='due']")).toHaveTextContent(/^Due /);
+      expect(within(back).queryByText(/^Due: /)).not.toBeInTheDocument();
+      expect(within(back).getByRole("button", { name: "Edit" })).toHaveClass("rounded-full", "h-7");
     });
 
     it("shows a textarea with the action body after clicking Edit", async () => {

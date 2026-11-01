@@ -11,7 +11,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Check, ChevronDown, Link2, Unlink } from "lucide-react";
+import { Check, Link2, Unlink } from "lucide-react";
+import { FIELD_TRIGGER, FieldCaret, PICKER_CONTENT, PICKER_ROW } from "@/components/ui/card-field";
 import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
@@ -45,17 +46,14 @@ export function GoalPickerPopover({
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent cursor-pointer whitespace-nowrap max-w-[160px]",
-                !selectedGoal && "text-muted-foreground border-dashed"
-              )}
+              className={cn(FIELD_TRIGGER, !selectedGoal && "text-muted-foreground")}
               disabled={disabled}
             >
-              <Link2 className="h-3 w-3 shrink-0" />
+              <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
               <span className="truncate">
                 {selectedGoal ? selectedGoal.title : "None"}
               </span>
-              <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
+              <FieldCaret />
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
@@ -63,13 +61,13 @@ export function GoalPickerPopover({
           {selectedGoal ? selectedGoal.title : "No goal linked to this action"}
         </TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-72 p-2">
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground px-2 py-1">
-            Current Session Goals
+      <PopoverContent align="end" className={cn("w-72", PICKER_CONTENT)}>
+        <div className="flex flex-col">
+          <span className="px-2 pb-1 pt-1 text-label font-medium text-muted-foreground">
+            Current session goals
           </span>
           {goals.length === 0 ? (
-            <span className="text-[11px] text-muted-foreground px-2 py-1.5">
+            <span className="px-2 py-2 text-item text-muted-foreground">
               No goals in this session
             </span>
           ) : (
@@ -81,15 +79,11 @@ export function GoalPickerPopover({
                     key={goal.id}
                     role="option"
                     aria-selected={isSelected}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[11px] hover:bg-accent transition-colors"
+                    className={cn(PICKER_ROW, "cursor-pointer py-1.5 hover:bg-well")}
                     onClick={() => { onChange(goal.id); setOpen(false); }}
                   >
-                    {isSelected ? (
-                      <Check className="h-3 w-3 shrink-0 text-brand" />
-                    ) : (
-                      <span className="h-3 w-3 shrink-0" />
-                    )}
-                    <span className="line-clamp-2">{goal.title}</span>
+                    <span className="min-w-0 flex-1 line-clamp-2">{goal.title}</span>
+                    {isSelected && <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden />}
                   </div>
                 );
               })}
@@ -97,14 +91,14 @@ export function GoalPickerPopover({
           )}
           {selectedGoalId && (
             <>
-              <div className="my-1 h-px bg-border" />
+              <div className="my-1 h-px bg-hairline" />
               <div
                 role="option"
                 aria-selected={false}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-muted-foreground hover:bg-accent transition-colors"
+                className={cn(PICKER_ROW, "cursor-pointer text-muted-foreground hover:bg-well")}
                 onClick={() => { onChange(undefined); setOpen(false); }}
               >
-                <Unlink className="h-3 w-3 shrink-0" />
+                <Unlink className="h-4 w-4 shrink-0" aria-hidden />
                 <span>Unlink</span>
               </div>
             </>

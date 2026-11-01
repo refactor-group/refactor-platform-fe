@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, AvatarFallback, PersonAvatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { PersonAvatar } from "@/components/ui/avatar";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -16,7 +14,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CalendarIcon, UserRound } from "lucide-react";
+import { CalendarIcon, Check, UserRound } from "lucide-react";
+import {
+  FIELD_TRIGGER,
+  FieldCaret,
+  PICKER_CONTENT,
+  PICKER_ROW,
+} from "@/components/ui/card-field";
 import { Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -65,8 +69,29 @@ export function resolveAssignees(
 // AssigneeAvatars
 // ---------------------------------------------------------------------------
 
-/** The card footer's 26px assignee avatars, each named on hover. */
-export function AssigneeAvatars({ assignees }: { assignees: AssigneeInfo[] }) {
+/** 26px assignee avatars, each named on hover unless the caller names them another way. */
+export function AssigneeAvatars({
+  assignees,
+  named = true,
+}: {
+  assignees: AssigneeInfo[];
+  named?: boolean;
+}) {
+  if (!named) {
+    return (
+      <span className="flex items-center -space-x-1.5" aria-hidden>
+        {assignees.map((a) => (
+          <PersonAvatar
+            key={a.id}
+            userId={a.id}
+            initials={a.initials}
+            size={26}
+            className="ring-2 ring-background"
+          />
+        ))}
+      </span>
+    );
+  }
   return (
     <div className="flex items-center -space-x-1.5">
       {assignees.map((a) => (
@@ -125,37 +150,27 @@ export function AssigneePickerPopover({
             <button
               type="button"
               aria-label="Assignees"
-              className="flex -space-x-2 cursor-pointer hover:opacity-80"
+              className={cn(FIELD_TRIGGER, "pl-1")}
               disabled={disabled}
             >
               {resolvedAssignees.length > 0 ? (
-                resolvedAssignees.map((assignee) => (
-                  <Avatar
-                    key={assignee.id}
-                    className="h-8 w-8 border-2 border-background"
-                  >
-                    <AvatarFallback className="text-[11px]">
-                      {assignee.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                ))
+                <AssigneeAvatars assignees={resolvedAssignees} named={false} />
               ) : (
-                <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/50">
-                  <AvatarFallback className="text-muted-foreground">
-                    <UserRound className="!h-4 !w-4" />
-                  </AvatarFallback>
-                </Avatar>
+                <>
+                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border border-dashed border-muted-foreground/50 text-muted-foreground">
+                    <UserRound className="h-3.5 w-3.5" aria-hidden />
+                  </span>
+                  <span className="text-muted-foreground">Unassigned</span>
+                </>
               )}
+              <FieldCaret />
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>Assignees</TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-48 p-2" collisionPadding={8}>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground px-2 py-1">
-            Assignees
-          </span>
+      <PopoverContent align="end" className={cn("w-60", PICKER_CONTENT)} collisionPadding={8}>
+        <div role="listbox" aria-label="Assignees" aria-multiselectable="true" className="flex flex-col">
           {allAssignees.map((assignee) => {
             const isAssigned = assigneeIds.includes(assignee.id);
             const reason = disabledReasons[assignee.id];
@@ -167,30 +182,23 @@ export function AssigneePickerPopover({
                 aria-disabled={reason !== undefined ? "true" : undefined}
                 title={reason}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                  PICKER_ROW,
                   reason !== undefined
                     ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer hover:bg-accent"
+                    : "cursor-pointer hover:bg-well"
                 )}
                 onClick={() => {
                   if (reason === undefined) onToggle(assignee.id);
                 }}
               >
-                <Checkbox checked={isAssigned} />
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-[10px]">
-                    {assignee.initials}
-                  </AvatarFallback>
-                </Avatar>
-                <span>{assignee.name}</span>
+                <PersonAvatar userId={assignee.id} initials={assignee.initials} size={26} />
+                <span className="min-w-0 flex-1 truncate">{assignee.name}</span>
+                {isAssigned && <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden />}
               </div>
             );
           })}
           {reasons.map((r) => (
-            <p
-              key={r}
-              className="px-2 pt-1 text-[11px] leading-snug text-muted-foreground"
-            >
+            <p key={r} className="px-2 pb-1 pt-1.5 text-xs leading-snug text-muted-foreground">
               {r}
             </p>
           ))}
@@ -199,7 +207,6 @@ export function AssigneePickerPopover({
     </Popover>
   );
 }
-
 
 // ---------------------------------------------------------------------------
 // DueDatePicker
@@ -240,18 +247,11 @@ export function DueDatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       {variant === "button" ? (
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(
-              "h-9 text-xs gap-1.5",
-              !value && "text-muted-foreground"
-            )}
-            disabled={disabled}
-          >
-            <CalendarIcon className="h-3.5 w-3.5" />
-            {formattedDate}
-          </Button>
+          <button type="button" className={FIELD_TRIGGER} disabled={disabled}>
+            <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="tabular-nums">{formattedDate}</span>
+            <FieldCaret />
+          </button>
         </PopoverTrigger>
       ) : isOverdue ? (
         <Tooltip>
@@ -281,7 +281,7 @@ export function DueDatePicker({
           </button>
         </PopoverTrigger>
       )}
-      <PopoverContent className="w-auto p-0">
+      <PopoverContent align="end" className={cn("w-auto p-0", PICKER_CONTENT)}>
         <Calendar
           mode="single"
           selected={value.toJSDate()}
