@@ -161,9 +161,13 @@ test.describe('Coachee viewing /actions', () => {
 
     // Load-bearing assertion for the bug fix: no request to the batch endpoint
     // includes `assignee=` (coachee broad view omits scope so the backend's
-    // visibility predicate handles narrowing).
-    expect(batchUrls.length).toBeGreaterThan(0)
-    for (const url of batchUrls) {
+    // visibility predicate handles narrowing). The header's open action count
+    // is the one request scoped to the user's own id.
+    const pageUrls = batchUrls.filter(
+      (url) => new URL(url).searchParams.get('assignee') !== MOCK_USER_ID
+    )
+    expect(pageUrls.length).toBeGreaterThan(0)
+    for (const url of pageUrls) {
       expect(url).not.toContain('assignee=')
     }
   })

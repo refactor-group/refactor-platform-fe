@@ -332,6 +332,12 @@ With some open and some done actions assigned to you, open the dashboard at 1280
 
 **Pass:** the Actions pill shows an indigo badge with the number of your open actions at both widths. Completing one lowers the number by one. With none open, there is no badge.
 
+### Case F22: open action count for someone who coaches and is coached
+
+Log in as a user who coaches one person and is coached by someone else in the same organization, with open actions assigned to them in both relationships. Reload the dashboard a few times.
+
+**Pass:** the badge counts the open actions from both relationships, and the number doesn't change while the page loads.
+
 ## 8. Part G: Join session menu (#506)
 
 Requires a backend build that includes rs#459 (`/coaching_sessions/nearest`). This part also covers the menu's building blocks from #503 (dots, strip, carousel, rows, Today block), which had no part of its own.

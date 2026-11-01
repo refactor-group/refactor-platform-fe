@@ -1,7 +1,9 @@
 // Interacts with the action endpoints for CRUD operations
 // Note: For fetching lists of actions, use user-actions.ts instead
 
+import { useSWRConfig } from "swr";
 import { siteConfig } from "@/site.config";
+import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
 import { Id } from "@/types/general";
 import { Action, defaultAction, serializeAction, type ActionWire } from "@/types/action";
 import { EntityApi } from "./entity-api";
@@ -112,11 +114,31 @@ export const useAction = (id: Id) => {
  * error: Error object if the last operation failed, null otherwise
  */
 export const useActionMutation = () => {
-  return EntityApi.useEntityMutation<Action>(ACTIONS_BASEURL, {
+  const { mutate } = useSWRConfig();
+  const mutation = EntityApi.useEntityMutation<Action>(ACTIONS_BASEURL, {
     create: ActionApi.create,
     createNested: ActionApi.createNested,
     update: ActionApi.update,
     delete: ActionApi.delete,
     deleteNested: ActionApi.deleteNested,
   });
+
+  // useEntityMutation only refreshes keys under /actions; this also reaches
+  // nested lists such as the header's open action count.
+  const refreshingNested =
+    <A extends unknown[], R>(operation: (...args: A) => Promise<R>) =>
+    async (...args: A) => {
+      const result = await operation(...args);
+      revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/actions");
+      return result;
+    };
+
+  return {
+    ...mutation,
+    create: refreshingNested(mutation.create),
+    createNested: refreshingNested(mutation.createNested),
+    update: refreshingNested(mutation.update),
+    delete: refreshingNested(mutation.delete),
+    deleteNested: refreshingNested(mutation.deleteNested),
+  };
 };

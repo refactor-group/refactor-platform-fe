@@ -1,13 +1,9 @@
 import { visibleStatuses } from "@/components/ui/actions/utils";
-import { useActionsFetch } from "@/lib/hooks/use-actions-fetch";
+import { useBatchRelationshipActions } from "@/lib/api/relationship-actions";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { Action } from "@/types/action";
-import {
-  AssignmentFilter,
-  CoachViewMode,
-  StatusVisibility,
-} from "@/types/assigned-actions";
-import { type Option, Some, None } from "@/types/option";
+import { StatusVisibility, UserActionsAssigneeFilter } from "@/types/assigned-actions";
 
 const OPEN_STATUSES = new Set(visibleStatuses(StatusVisibility.Open));
 
@@ -15,16 +11,20 @@ export function countOpenActions(actions: Action[]): number {
   return actions.filter((action) => OPEN_STATUSES.has(action.status)).length;
 }
 
-/** Open actions assigned to the current user in the current organization; None until known. */
-export function useOpenActionCount(): Option<number> {
+/**
+ * Open actions assigned to the current user in the current organization, in
+ * every relationship whatever their role; 0 until known. Action saves and SSE
+ * events revalidate it, so it skips focus revalidation.
+ */
+export function useOpenActionCount(): number {
+  const userId = useAuthStore((state) => state.userId);
   const { currentOrganizationId } = useCurrentOrganization();
-  // Same arguments as the Actions page's default view, so both share one SWR cache entry.
-  const { actions, isLoading, isError } = useActionsFetch(
-    CoachViewMode.MyActions,
-    undefined,
-    AssignmentFilter.Assigned
+  const { actions, isError } = useBatchRelationshipActions(
+    userId ? currentOrganizationId : null,
+    { assignee: userId, assignee_filter: UserActionsAssigneeFilter.Assigned },
+    { revalidateOnFocus: false }
   );
 
-  if (!currentOrganizationId || isLoading || isError) return None;
-  return Some(countOpenActions(actions));
+  // actions is [] while loading
+  return isError ? 0 : countOpenActions(actions);
 }

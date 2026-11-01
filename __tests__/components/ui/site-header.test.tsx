@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { usePathname } from 'next/navigation';
 import { SiteHeader } from '@/components/ui/site-header';
-import { None, Some, type Option } from '@/types/option';
 
 const h = vi.hoisted(() => ({
   setIsACoach: vi.fn(),
@@ -10,7 +9,7 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/hooks/use-open-action-count', () => ({
-  useOpenActionCount: (): Option<number> => h.openActionCount(),
+  useOpenActionCount: (): number => h.openActionCount(),
 }));
 
 vi.mock('@/lib/providers/auth-store-provider', () => ({
@@ -70,7 +69,7 @@ describe('SiteHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/actions');
-    h.openActionCount.mockReturnValue(None);
+    h.openActionCount.mockReturnValue(0);
   });
 
   it('leads with the current organization, linking to the dashboard', () => {
@@ -111,7 +110,7 @@ describe('SiteHeader', () => {
       within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: /^Actions/ });
 
     it('shows the count on the Actions pill', () => {
-      h.openActionCount.mockReturnValue(Some(3));
+      h.openActionCount.mockReturnValue(3);
       render(<SiteHeader />);
 
       expect(actionsLink()).toHaveAccessibleName('Actions, 3 open');
@@ -120,22 +119,26 @@ describe('SiteHeader', () => {
     });
 
     it('caps the visible count at 99+', () => {
-      h.openActionCount.mockReturnValue(Some(100));
+      h.openActionCount.mockReturnValue(100);
       render(<SiteHeader />);
 
       expect(within(actionsLink()).getByText('99+')).toBeInTheDocument();
       expect(actionsLink()).toHaveAccessibleName('Actions, 100 open');
     });
 
-    it.each([
-      ['with no open actions', Some(0)],
-      ['while loading', None],
-    ])('hides the badge %s', (_, count) => {
-      h.openActionCount.mockReturnValue(count);
+    it('hides the badge with no open actions', () => {
       render(<SiteHeader />);
 
       expect(actionsLink()).toHaveAccessibleName('Actions');
       expect(actionsLink()).toHaveTextContent(/^Actions$/);
+    });
+
+    it('never puts the count on Dashboard', () => {
+      h.openActionCount.mockReturnValue(3);
+      render(<SiteHeader />);
+
+      const nav = screen.getByRole('navigation', { name: 'Main' });
+      expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveTextContent(/^Dashboard$/);
     });
   });
 });

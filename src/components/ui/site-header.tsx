@@ -12,7 +12,6 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useOpenActionCount } from "@/lib/hooks/use-open-action-count";
 import { useOrganizationSync } from "@/lib/hooks/use-organization-sync";
 import { useShowSessionSwitcher } from "@/lib/hooks/use-show-session-switcher";
-import { unwrapOr } from "@/types/option";
 
 export function SiteHeader() {
   useOrganizationSync();
@@ -53,19 +52,19 @@ function OrganizationHomeLink() {
 }
 
 const DESTINATIONS = [
-  { href: "/dashboard", label: "Dashboard", mobile: false, counted: false },
-  { href: "/actions", label: "Actions", mobile: true, counted: true },
+  { href: "/dashboard", label: "Dashboard", mobile: false },
+  { href: "/actions", label: "Actions", mobile: true },
 ] as const;
 
 function DestinationNav() {
   const pathname = usePathname() ?? "";
-  const openActionCount = unwrapOr(useOpenActionCount(), 0);
+  const openActionCount = useOpenActionCount();
 
   return (
     <nav aria-label="Main" className="flex shrink-0 items-center gap-1">
-      {DESTINATIONS.map(({ href, label, mobile, counted }) => {
+      {DESTINATIONS.map(({ href, label, mobile }) => {
         const isActive = pathname.startsWith(href);
-        const count = counted ? openActionCount : 0;
+        const count = href === "/actions" ? openActionCount : 0;
         return (
           <Link
             key={href}

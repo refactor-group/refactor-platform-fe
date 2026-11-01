@@ -74,12 +74,15 @@ const ACTIONS = ['NotStarted', 'InProgress', 'OnHold', 'Completed', 'WontDo'].ma
   assignee_ids: [MOCK_USER_ID],
 }))
 
+// Only the user-scoped request gets actions, so the badge proves it asks for
+// the user's own actions rather than a role's.
 async function mockActions(page: Page) {
   await page.route('**/organizations/*/coaching_relationships/actions**', async (route) => {
+    const ownActions = new URL(route.request().url()).searchParams.get('assignee') === MOCK_USER_ID
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: { coachee_actions: { [MOCK_USER_ID]: ACTIONS } } }),
+      body: JSON.stringify({ data: { coachee_actions: { [MOCK_USER_ID]: ownActions ? ACTIONS : [] } } }),
     })
   })
 }

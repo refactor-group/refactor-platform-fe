@@ -2,6 +2,7 @@
 //   - Single relationship: GET /organizations/{org}/coaching_relationships/{rel}/actions
 //   - Batch (all relationships): GET /organizations/{org}/coaching_relationships/actions?assignee=...
 
+import type { SWRConfiguration } from "swr";
 import { useApiSWR } from "@/lib/hooks/use-api-swr";
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
@@ -77,10 +78,12 @@ async function fetchBatchRelationshipActions(url: string): Promise<Action[]> {
  *
  * @param orgId Organization ID, or null to skip fetching
  * @param params Query parameters for filtering and sorting
+ * @param options SWR overrides, e.g. to turn off focus revalidation
  */
 export function useBatchRelationshipActions(
   orgId: Id | null,
-  params: RelationshipActionsParams
+  params: RelationshipActionsParams,
+  options?: SWRConfiguration<Action[]>
 ) {
   const url = orgId ? relationshipActionsUrl(orgId, params) : null;
   const isSingleRelationship = !!params.coaching_relationship_id;
@@ -92,7 +95,7 @@ export function useBatchRelationshipActions(
       isSingleRelationship
         ? fetchSingleRelationshipActions(url!)
         : fetchBatchRelationshipActions(url!),
-    { revalidateOnMount: true, shouldRetryOnError: false }
+    { revalidateOnMount: true, shouldRetryOnError: false, ...options }
   );
 
   return {
