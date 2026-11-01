@@ -6,6 +6,7 @@ const VARIANTS = [
   "destructive",
   "outline",
   "secondary",
+  "tertiary",
   "ghost",
   "link",
 ] as const;
@@ -49,6 +50,13 @@ describe("buttonVariants", () => {
     expect(buttonVariants({ variant: "secondary" })).not.toContain(
       "text-ink-2"
     );
+  });
+
+  it("keeps tertiary as bare text with no fill, unlike ghost", () => {
+    const tertiary = buttonVariants({ variant: "tertiary" }).split(" ");
+    expect(tertiary).toEqual(expect.arrayContaining(["text-ink-2", "hover:text-foreground"]));
+    expect(tertiary.some((cls) => cls.includes("bg-"))).toBe(false);
+    expect(buttonVariants({ variant: "ghost" })).toContain("hover:bg-fill");
   });
 
   it("gives ghost menu buttons a disabled icon tone", () => {
