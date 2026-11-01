@@ -326,6 +326,12 @@ Turn on Reduce Motion (macOS System Settings › Accessibility › Display), the
 
 **Pass:** the field appears and disappears at full width at once, with no widening animation.
 
+### Case F21: open action count
+
+With some open and some done actions assigned to you, open the dashboard at 1280px and at 375px. Open Actions, mark one open action Completed, and look at the Actions pill. Then complete or close every open action.
+
+**Pass:** the Actions pill shows an indigo badge with the number of your open actions at both widths. Completing one lowers the number by one. With none open, there is no badge.
+
 ## 8. Part G: Join session menu (#506)
 
 Requires a backend build that includes rs#459 (`/coaching_sessions/nearest`). This part also covers the menu's building blocks from #503 (dots, strip, carousel, rows, Today block), which had no part of its own.

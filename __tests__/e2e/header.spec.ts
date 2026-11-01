@@ -59,6 +59,34 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
   await mockOrganizations(page)
 }
 
+const OPEN_ACTION_COUNT = 3
+const ACTIONS = ['NotStarted', 'InProgress', 'OnHold', 'Completed', 'WontDo'].map((status, i) => ({
+  id: `action-${i}`,
+  coaching_session_id: 'sess-1',
+  body: `${status} action`,
+  user_id: MOCK_USER_ID,
+  status,
+  status_changed_at: '2024-01-01T00:00:00Z',
+  due_by: null,
+  goal_id: null,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+  assignee_ids: [MOCK_USER_ID],
+}))
+
+async function mockActions(page: Page) {
+  await page.route('**/organizations/*/coaching_relationships/actions**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { coachee_actions: { [MOCK_USER_ID]: ACTIONS } } }),
+    })
+  })
+}
+
+const actionsPill = (page: Page) =>
+  page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /^Actions/ })
+
 type Box = { x: number; y: number; width: number; height: number }
 
 const intersects = (a: Box, b: Box) =>
@@ -110,9 +138,26 @@ test.describe('Header fits the viewport', () => {
   }
 })
 
+for (const viewport of [
+  { width: 1280, height: 800 },
+  { width: 375, height: 812 },
+]) {
+  test(`Actions pill shows the open action count at ${viewport.width}px`, async ({ page, context }) => {
+    await setup(page, context)
+    await mockActions(page)
+    await page.setViewportSize(viewport)
+    await page.goto('/dashboard')
+
+    const pill = actionsPill(page)
+    await expect(pill).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
+    await expect(pill.getByText(String(OPEN_ACTION_COUNT), { exact: true })).toBeVisible()
+  })
+}
+
 test.describe('Header items never overlap', () => {
   test.beforeEach(async ({ page, context }) => {
     await setup(page, context)
+    await mockActions(page)
   })
 
   for (const width of [320, 360, 375]) {
@@ -121,10 +166,11 @@ test.describe('Header items never overlap', () => {
       await page.goto('/dashboard')
       const join = page.getByRole('button', { name: 'Join session' })
       await expect(join).toBeVisible()
+      await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
 
       const items = {
         tile: orgTile(page),
-        actions: page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Actions' }),
+        actions: actionsPill(page),
         search: page.getByRole('button', { name: 'Open search' }),
         join,
         account: page.getByRole('button', { name: 'Account menu' }),
