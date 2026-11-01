@@ -162,7 +162,7 @@ export function MemberCard({
 
     try {
       await deleteUser(currentOrganizationId, userId);
-      toast.success("Member deleted successfully");
+      toast.success("Member deleted");
       onRefresh();
     } catch (error) {
       console.error("Error deleting member:", error);
@@ -268,7 +268,7 @@ export function MemberCard({
       }
 
       toast.success(
-        `Successfully assigned ${assignedMember.first_name} ${assignedMember.last_name} as ${assignMode} for ${selectedMember.first_name} ${selectedMember.last_name}`
+        `${assignedMember.first_name} ${assignedMember.last_name} is now ${selectedMember.first_name} ${selectedMember.last_name}'s ${assignMode.toLowerCase()}`
       );
       onRefresh();
       setAssignDialogOpen(false);

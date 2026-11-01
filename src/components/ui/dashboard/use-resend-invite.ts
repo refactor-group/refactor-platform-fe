@@ -53,8 +53,8 @@ function announceResendResult(
     case ResendInviteRefusal.NoUpcomingSessions:
       sonnerToast.error(
         ctx.isSeries
-          ? "This series has no upcoming sessions."
-          : "This session has already happened."
+          ? "This series has no upcoming sessions"
+          : "This session has already happened"
       );
       return;
     case ResendInviteRefusal.SeriesMember:

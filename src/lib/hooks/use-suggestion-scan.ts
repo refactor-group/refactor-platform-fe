@@ -8,11 +8,11 @@ import type { Id } from "@/types/general";
 export function scanFailureMessage(f: ScanFailure): string {
   switch (f.kind) {
     case "refused":
-      return f.message.some ? f.message.val : "Couldn't start the scan.";
+      return "Couldn't start the scan";
     case "network":
-      return "Couldn't start the scan. Connection to service was lost.";
+      return "Couldn't start the scan · Check your connection and try again";
     case "unexpected":
-      return "Couldn't start the scan.";
+      return "Couldn't start the scan";
     default: {
       const _exhaustive: never = f;
       throw new Error(`Unhandled scan failure: ${JSON.stringify(_exhaustive)}`);

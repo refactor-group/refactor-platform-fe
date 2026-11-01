@@ -193,7 +193,7 @@ describe('useCurrentUserRole', () => {
     renderHook(() => useCurrentUserRole());
 
     expect(mockToast.error).toHaveBeenCalledWith(
-      'No roles assigned. Please contact support.',
+      'Your account has no access yet · Contact support',
       { id: 'user-role-no-roles' }
     );
   });
@@ -256,7 +256,7 @@ describe('useCurrentUserRole', () => {
     renderHook(() => useCurrentUserRole());
 
     expect(mockToast.warning).toHaveBeenCalledWith(
-      "You don't have access to this organization.",
+      "You don't have access to this organization",
       { id: 'user-role-no-access' }
     );
   });

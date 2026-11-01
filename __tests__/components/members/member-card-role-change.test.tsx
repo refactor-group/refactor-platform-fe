@@ -131,6 +131,9 @@ const LAST_ADMIN_BODY = {
   status_code: 409,
 };
 
+const LAST_ADMIN_COPY =
+  "They're this organization's only admin · Make someone else an admin first";
+
 const adminMembership = () => [
   createMockUserRole({ role: Role.Admin, organization_id: "org-1" }),
 ];
@@ -275,7 +278,8 @@ describe("MemberCard – role change action", () => {
     await chooseRoleAction(user, DEMOTE);
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(LAST_ADMIN_BODY.message);
+    expect(alert).toHaveTextContent(LAST_ADMIN_COPY);
+    expect(alert).not.toHaveTextContent(LAST_ADMIN_BODY.message);
     expect(toast.error).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
   });
@@ -289,9 +293,7 @@ describe("MemberCard – role change action", () => {
     renderCard({ roles: adminMembership() });
 
     await chooseRoleAction(user, DEMOTE);
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      LAST_ADMIN_BODY.message
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(LAST_ADMIN_COPY);
 
     await openMenu(user);
     // Close it again before asserting: while the menu is open Radix marks the
@@ -312,7 +314,9 @@ describe("MemberCard – role change action", () => {
 
     await chooseRoleAction(user, DEMOTE);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(lorem);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(LAST_ADMIN_COPY);
+    expect(alert).not.toHaveTextContent(lorem);
     expect(toast.error).not.toHaveBeenCalled();
   });
 
@@ -333,8 +337,11 @@ describe("MemberCard – role change action", () => {
     await chooseRoleAction(user, PROMOTE);
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("This organization is archived.")
+      expect(toast.error).toHaveBeenCalledWith(
+        "This organization is archived · It can't be changed"
+      )
     );
+    expect(toast.error).not.toHaveBeenCalledWith("This organization is archived.");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 

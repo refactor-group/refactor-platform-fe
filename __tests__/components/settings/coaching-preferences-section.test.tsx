@@ -133,7 +133,7 @@ describe("CoachingPreferencesSection", () => {
       expect(mockUpdate).not.toHaveBeenCalled();
     });
 
-    it("surfaces the BE's validation_error message verbatim on 422", async () => {
+    it("shows our duration copy, not the BE's validation_error message, on 422", async () => {
       mockUpdate.mockRejectedValue(
         makeApiError(422, {
           status_code: 422,
@@ -153,6 +153,9 @@ describe("CoachingPreferencesSection", () => {
       });
 
       expect(mockToastError).toHaveBeenCalledWith(
+        "That length isn't allowed · Pick a different duration"
+      );
+      expect(mockToastError).not.toHaveBeenCalledWith(
         "default_coaching_session_duration_minutes must be between 1 and 480 (got 999)"
       );
     });
@@ -172,7 +175,7 @@ describe("CoachingPreferencesSection", () => {
       });
 
       expect(mockToastError).toHaveBeenCalledWith(
-        "You don't have permission to perform this action."
+        "You don't have permission to do that"
       );
     });
 
@@ -191,7 +194,7 @@ describe("CoachingPreferencesSection", () => {
       });
 
       expect(mockToastError).toHaveBeenCalledWith(
-        "Couldn't save preferences. Please try again."
+        "Couldn't save your preferences · Try again"
       );
     });
   });

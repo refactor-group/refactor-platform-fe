@@ -425,8 +425,11 @@ describe("AddMemberDialog – attaching an existing member", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "This user is already a member of this organization."
+        "They're already a member of this organization"
       )
+    );
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "This user is already a member of this organization."
     );
   });
   it("discards a lookup that lands after the email was edited", async () => {
@@ -478,7 +481,7 @@ describe("AddMemberDialog – attaching an existing member", () => {
     await user.type(screen.getByLabelText("Email"), ADA.email);
     await user.click(screen.getByRole("button", { name: "Find" }));
 
-    await screen.findByText("This user is already a member of this organization.");
+    await screen.findByText("They're already a member of this organization");
     // No confirmation card, so there is no role or coach to fill in and no
     // request to send.
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();

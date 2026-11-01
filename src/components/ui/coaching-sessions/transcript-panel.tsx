@@ -306,7 +306,7 @@ function useSegmentJump(
 
     const target = segments.find((s) => s.id === segmentId);
     if (!target) {
-      toast.error("That part of the transcript isn't available.");
+      toast.error("That part of the transcript isn't available");
       return;
     }
     if (filterValue !== ALL_SPEAKERS && target.speaker_label !== filterValue) {

@@ -16,19 +16,17 @@ export type SuggestionOp = "accept" | "dismiss" | "restore";
 export function suggestionFailureMessage(op: SuggestionOp, f: SuggestionFailure): string {
   switch (f.kind) {
     case "no_longer_pending":
-      return "Someone already handled this suggestion.";
+      return "Someone already handled this suggestion";
     case "forbidden":
-      return "Only your coach can change this suggestion.";
+      return "Only your coach can change this suggestion";
     case "not_found":
-      return "This suggestion is no longer available.";
+      return "This suggestion is no longer available";
     case "invalid":
-      return f.message.some
-        ? f.message.val
-        : `Couldn't ${op} the suggestion. Check it and try again.`;
+      return `Couldn't ${op} the suggestion · Check it and try again`;
     case "network":
-      return `Couldn't ${op} the suggestion. Connection to service was lost.`;
+      return `Couldn't ${op} the suggestion · Check your connection and try again`;
     case "unexpected":
-      return `Couldn't ${op} the suggestion.`;
+      return `Couldn't ${op} the suggestion`;
     default: {
       const _exhaustive: never = f;
       throw new Error(`Unhandled suggestion failure: ${JSON.stringify(_exhaustive)}`);

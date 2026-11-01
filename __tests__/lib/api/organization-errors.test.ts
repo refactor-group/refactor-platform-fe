@@ -18,20 +18,20 @@ function apiError(status: number, data: unknown): EntityApiError {
 }
 
 describe("organization error discriminators", () => {
-  it("returns the backend message when the error code matches", () => {
+  it("returns our copy, not the backend message, when the error code matches", () => {
     const err = apiError(409, {
       error: "organization_archived",
       message: "This organization is archived and cannot accept new changes.",
     });
     expect(organizationArchivedMessage(err)).toBe(
-      "This organization is archived and cannot accept new changes."
+      "This organization is archived · It can't be changed"
     );
   });
 
-  it("falls back to a default message when the matched error has none", () => {
+  it("returns our copy when the matched error has no message", () => {
     const err = apiError(409, { error: "organization_archived" });
     expect(organizationArchivedMessage(err)).toBe(
-      "This organization is archived and can't accept new changes."
+      "This organization is archived · It can't be changed"
     );
   });
 
@@ -55,7 +55,9 @@ describe("organization error discriminators", () => {
       message: "not empty",
     });
     expect(organizationNameTakenMessage(nameTaken)).toBe("taken");
-    expect(organizationNotEmptyMessage(notEmpty)).toBe("not empty");
+    expect(organizationNotEmptyMessage(notEmpty)).toBe(
+      "This organization still has coaching data · It can't be deleted"
+    );
     expect(organizationNameTakenMessage(notEmpty)).toBeNull();
     expect(organizationNotEmptyMessage(nameTaken)).toBeNull();
   });

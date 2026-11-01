@@ -178,21 +178,12 @@ describe("typed failures", () => {
     });
   });
 
-  it("422 on accept with edits is invalid and carries the backend message when present", async () => {
+  it("422 on accept with edits is invalid", async () => {
     vi.mocked(sessionGuard.post).mockRejectedValue(
       httpError(422, { error: "unprocessable_entity", message: "Body must not be empty" })
     );
     expect(await failureOf(TranscriptSuggestionApi.accept("s-1", "sug-1", Some(edits)))).toEqual({
       kind: "invalid",
-      message: Some("Body must not be empty"),
-    });
-  });
-
-  it("422 without a message is invalid with None", async () => {
-    vi.mocked(sessionGuard.post).mockRejectedValue(httpError(422, "plain text"));
-    expect(await failureOf(TranscriptSuggestionApi.accept("s-1", "sug-1", Some(edits)))).toEqual({
-      kind: "invalid",
-      message: None,
     });
   });
 

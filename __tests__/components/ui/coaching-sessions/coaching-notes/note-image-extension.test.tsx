@@ -333,7 +333,7 @@ describe("Coaching note image extension", () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
 
-      expect(toast.error).toHaveBeenCalledWith("That kind of file can't be added to a note.");
+      expect(toast.error).toHaveBeenCalledWith("That kind of file can't be added to a note");
       expect(mockUpload).not.toHaveBeenCalled();
       expect(editor.getJSON()).toEqual(before);
     }

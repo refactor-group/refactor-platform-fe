@@ -61,12 +61,12 @@ describe("useSuggestionReview.restore", () => {
     });
 
     expect(restored).toBe(false);
-    expect(toast.error).toHaveBeenCalledWith("Couldn't restore the suggestion.");
+    expect(toast.error).toHaveBeenCalledWith("Couldn't restore the suggestion");
   });
 
   it("words restore failures", () => {
     expect(suggestionFailureMessage("restore", { kind: "network" })).toBe(
-      "Couldn't restore the suggestion. Connection to service was lost."
+      "Couldn't restore the suggestion · Check your connection and try again"
     );
   });
 });

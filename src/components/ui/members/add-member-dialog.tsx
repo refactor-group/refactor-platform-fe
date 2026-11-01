@@ -133,7 +133,7 @@ export function AddMemberDialog({
       setCoachId(NO_COACH);
       onMemberAdded();
       const name = `${formData.firstName} ${formData.lastName}`;
-      toast.success(`New Member ${name} added successfully`);
+      toast.success(`${name} added`);
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating user:", error);
@@ -141,7 +141,7 @@ export function AddMemberDialog({
         organizationArchivedMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
-            : "There was an error adding the member"),
+            : "Couldn't add the member"),
       );
     }
   };
@@ -232,7 +232,7 @@ export function AddMemberDialog({
           organizationArchivedMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
-            : "There was an error adding the member"),
+            : "Couldn't add the member"),
       );
     } finally {
       setIsAdding(false);

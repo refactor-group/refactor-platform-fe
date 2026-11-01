@@ -78,7 +78,7 @@ describe("useSuggestionReview", () => {
     });
 
     expect(accepted).toEqual(None);
-    expect(toast.error).toHaveBeenCalledWith("Someone already handled this suggestion.");
+    expect(toast.error).toHaveBeenCalledWith("Someone already handled this suggestion");
     expect(refreshSuggestions).toHaveBeenCalled();
     expect(refreshActions).not.toHaveBeenCalled();
   });
@@ -107,13 +107,11 @@ describe("useSuggestionReview", () => {
     });
 
     expect(dismissed).toBe(false);
-    expect(toast.error).toHaveBeenCalledWith("Only your coach can change this suggestion.");
+    expect(toast.error).toHaveBeenCalledWith("Only your coach can change this suggestion");
   });
 
-  it("shows the backend's validation message on a failed accept with edits", async () => {
-    vi.mocked(TranscriptSuggestionApi.accept).mockResolvedValue(
-      err({ kind: "invalid", message: Some("Body must not be empty") })
-    );
+  it("words a failed accept with edits", async () => {
+    vi.mocked(TranscriptSuggestionApi.accept).mockResolvedValue(err({ kind: "invalid" }));
     const { result } = setup();
 
     let accepted;
@@ -122,7 +120,9 @@ describe("useSuggestionReview", () => {
     });
 
     expect(accepted).toEqual(None);
-    expect(toast.error).toHaveBeenCalledWith("Body must not be empty");
+    expect(toast.error).toHaveBeenCalledWith(
+      "Couldn't accept the suggestion · Check it and try again"
+    );
   });
 
   it("no longer offers a separate save", () => {
@@ -134,22 +134,22 @@ describe("useSuggestionReview", () => {
 describe("suggestionFailureMessage", () => {
   it("words every failure", () => {
     expect(suggestionFailureMessage("accept", { kind: "no_longer_pending" })).toBe(
-      "Someone already handled this suggestion."
+      "Someone already handled this suggestion"
     );
     expect(suggestionFailureMessage("accept", { kind: "forbidden" })).toBe(
-      "Only your coach can change this suggestion."
+      "Only your coach can change this suggestion"
     );
     expect(suggestionFailureMessage("dismiss", { kind: "not_found" })).toBe(
-      "This suggestion is no longer available."
+      "This suggestion is no longer available"
     );
-    expect(suggestionFailureMessage("accept", { kind: "invalid", message: None })).toBe(
-      "Couldn't accept the suggestion. Check it and try again."
+    expect(suggestionFailureMessage("accept", { kind: "invalid" })).toBe(
+      "Couldn't accept the suggestion · Check it and try again"
     );
     expect(suggestionFailureMessage("accept", { kind: "network" })).toBe(
-      "Couldn't accept the suggestion. Connection to service was lost."
+      "Couldn't accept the suggestion · Check your connection and try again"
     );
     expect(suggestionFailureMessage("dismiss", { kind: "unexpected", status: Some(500) })).toBe(
-      "Couldn't dismiss the suggestion."
+      "Couldn't dismiss the suggestion"
     );
   });
 });

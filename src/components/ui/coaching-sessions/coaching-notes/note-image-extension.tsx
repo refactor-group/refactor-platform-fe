@@ -145,9 +145,9 @@ export interface NoteImageUploadContext {
 function rejectionMessage(kind: ImageRejectionKind): string {
   switch (kind) {
     case ImageRejectionKind.UnsupportedType:
-      return "That kind of file can't be added to a note.";
+      return "That kind of file can't be added to a note";
     case ImageRejectionKind.TooLarge:
-      return "That image is too large to add.";
+      return "That image is too large to add";
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unhandled image rejection kind: ${_exhaustive}`);
@@ -158,19 +158,19 @@ function rejectionMessage(kind: ImageRejectionKind): string {
 function uploadFailureMessage(kind: UploadFailureKind): string {
   switch (kind) {
     case UploadFailureKind.TooLarge:
-      return "That image is too large to add.";
+      return "That image is too large to add";
     case UploadFailureKind.UnsupportedType:
-      return "That kind of file can't be added to a note.";
+      return "That kind of file can't be added to a note";
     case UploadFailureKind.StorageUnavailable:
-      return "Images can't be added right now. Please try again later.";
+      return "Images can't be added right now · Try again later";
     case UploadFailureKind.Forbidden:
-      return "You don't have permission to add images to this session.";
+      return "You don't have permission to add images to this session";
     case UploadFailureKind.NotFound:
-      return "That image couldn't be added. Please try again.";
+      return "Couldn't add the image · Try again";
     case UploadFailureKind.Network:
-      return "That image couldn't be uploaded. Check your connection and try again.";
+      return "Couldn't upload the image · Check your connection and try again";
     case UploadFailureKind.Unknown:
-      return "That image couldn't be added. Please try again.";
+      return "Couldn't add the image · Try again";
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unhandled upload failure kind: ${_exhaustive}`);
@@ -180,7 +180,7 @@ function uploadFailureMessage(kind: UploadFailureKind): string {
 
 function progressLabel(fraction: number): string {
   const percent = Math.min(99, Math.round(fraction * 100));
-  return `Adding image, ${percent}%`;
+  return `Adding image · ${percent}%`;
 }
 
 type ToastId = string | number;
@@ -347,7 +347,7 @@ export async function uploadFilesInOrder(
         await uploadAndInsertImage(editor, file, context, anchor?.current());
       } catch (error) {
         console.error("Adding an image to the note failed unexpectedly:", error);
-        toast.error("That image couldn't be added. Please try again.");
+        toast.error("Couldn't add the image · Try again");
       }
     }
   } finally {
@@ -380,10 +380,10 @@ export const createNoteImageFileHandler = (context: NoteImageUploadContext) =>
   });
 
 export const FOREIGN_IMAGE_STRIPPED_MESSAGE =
-  "Images pasted from another app weren't included. Paste or drag the image itself to add it.";
+  "Images from other apps weren't pasted · Paste or drag the image itself";
 
 export const OTHER_SESSION_IMAGE_STRIPPED_MESSAGE =
-  "Images from another session weren't included. Add the image to this session instead.";
+  "Images from another session weren't pasted · Add them to this session instead";
 
 export interface SanitizedPaste {
   html: string;

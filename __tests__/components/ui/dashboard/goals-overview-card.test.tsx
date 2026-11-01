@@ -189,7 +189,7 @@ describe("GoalsOverviewCard", () => {
 
     render(<GoalsOverviewCard />);
     expect(
-      screen.getByText("You don't have permission to perform this action.")
+      screen.getByText("You don't have permission to do that")
     ).toBeInTheDocument();
     // The generic fetch-failure copy must not also appear.
     expect(

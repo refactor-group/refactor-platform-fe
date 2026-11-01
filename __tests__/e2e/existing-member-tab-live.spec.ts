@@ -118,7 +118,7 @@ test("@single-org an existing member is rejected at lookup, not on submit", asyn
   await page.click('button:has-text("Find")');
 
   await expect(
-    page.getByText("This user is already a member of this organization.")
+    page.getByText("They're already a member of this organization")
   ).toBeVisible();
   // Scoped to the dialog: his member card is on the page behind it.
   await expect(

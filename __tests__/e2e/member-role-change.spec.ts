@@ -21,6 +21,8 @@ const DEMOTE = 'Revoke organization admin access'
 
 const LAST_ADMIN_MESSAGE =
   'This user is the only admin of this organization. Grant another member the Admin role first.'
+const LAST_ADMIN_COPY =
+  "They're this organization's only admin · Make someone else an admin first"
 
 const makeRole = (userId: string, role: 'Admin' | 'User') => ({
   id: `role-${userId}`,
@@ -197,7 +199,7 @@ test.describe('Organization members — role change from the row menu (e2e)', ()
     await page.getByRole('menuitem', { name: DEMOTE }).click()
 
     await expect(memberRow(page, ADMIN_NAME).getByRole('alert')).toHaveText(
-      LAST_ADMIN_MESSAGE
+      LAST_ADMIN_COPY
     )
     // Proves the refusal came from a real demotion, not an arbitrary request.
     expect(roleRequests[0].body).toEqual({ role: 'User' })

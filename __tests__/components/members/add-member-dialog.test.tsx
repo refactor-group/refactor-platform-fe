@@ -51,7 +51,7 @@ function fillForm() {
 describe("AddMemberDialog write-freeze handling", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("surfaces the backend message when the org is archived", async () => {
+  it("shows our archived copy, not the backend message, when the org is archived", async () => {
     mockCreateNested.mockRejectedValueOnce(
       apiError(409, {
         error: "organization_archived",
@@ -72,8 +72,11 @@ describe("AddMemberDialog write-freeze handling", () => {
 
     await waitFor(() =>
       expect(mockToastError).toHaveBeenCalledWith(
-        "This organization is archived and cannot accept new changes."
+        "This organization is archived · It can't be changed"
       )
+    );
+    expect(mockToastError).not.toHaveBeenCalledWith(
+      "This organization is archived and cannot accept new changes."
     );
   });
 
@@ -93,7 +96,7 @@ describe("AddMemberDialog write-freeze handling", () => {
 
     await waitFor(() =>
       expect(mockToastError).toHaveBeenCalledWith(
-        "You don't have permission to perform this action."
+        "You don't have permission to do that"
       )
     );
   });
@@ -114,7 +117,7 @@ describe("AddMemberDialog write-freeze handling", () => {
 
     await waitFor(() =>
       expect(mockToastError).toHaveBeenCalledWith(
-        "There was an error adding the member"
+        "Couldn't add the member"
       )
     );
   });

@@ -197,7 +197,7 @@ function RescheduleSeriesForm({
 
     try {
       await update(series.id, payload);
-      toast.success("Series rescheduled. Future sessions were updated.");
+      toast.success("Series rescheduled");
       onRescheduled?.();
       onClose();
     } catch (error) {
@@ -205,7 +205,7 @@ function RescheduleSeriesForm({
       if (isForbiddenError(error)) {
         message = PERMISSION_DENIED_MESSAGE;
       } else if (error instanceof EntityApiError && error.status === 422) {
-        message = "Couldn't reschedule the series. Please review the form and try again.";
+        message = "Couldn't reschedule the series · Check the details and try again";
       } else {
         message = "Couldn't reschedule the series · Try again";
       }

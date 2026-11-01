@@ -142,7 +142,7 @@ export class EntityApiError extends Error {
  * failures where the user is authenticated but not allowed to perform the action.
  */
 export const PERMISSION_DENIED_MESSAGE =
-  "You don't have permission to perform this action.";
+  "You don't have permission to do that";
 
 /**
  * User-facing message for a 403 on a read/view. Keeps the shared prefix and

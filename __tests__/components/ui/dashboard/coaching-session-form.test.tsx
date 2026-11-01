@@ -188,7 +188,7 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Your Google Meet integration has been disconnected. Please reconnect in Settings."
+        "Google Meet is disconnected · Reconnect it in Settings"
       );
       expect(mockPush).toHaveBeenCalledWith("/settings/integrations");
     });
@@ -204,7 +204,7 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Could not connect to server. Please check your internet connection."
+        "Couldn't update the session · Check your connection and try again"
       );
       expect(mockPush).not.toHaveBeenCalled();
     });
@@ -220,7 +220,7 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Could not create Google Meet link due to a connection error. Please try again."
+        "Couldn't create the Google Meet link · Try again"
       );
     });
   });
@@ -235,7 +235,7 @@ describe("CoachingSessionForm – handleSubmit error handling", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "You don't have permission to perform this action."
+        "You don't have permission to do that"
       );
       expect(mockPush).not.toHaveBeenCalled();
     });

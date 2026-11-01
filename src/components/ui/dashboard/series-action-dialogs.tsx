@@ -95,7 +95,7 @@ function SeriesActionDialogsInner({
   // returns a default series with an empty id on error).
   useEffect(() => {
     if (isError) {
-      toast.error("Couldn't load the recurring series. Please try again.");
+      toast.error("Couldn't load the series · Try again");
       onClose();
     }
   }, [isError, onClose]);
@@ -114,13 +114,11 @@ function SeriesActionDialogsInner({
     setIsDeleting(true);
     try {
       await deleteSeries(seriesId);
-      toast.success(
-        "Recurring series deleted. Future sessions were removed; past sessions were kept."
-      );
+      toast.success("Series deleted · Past sessions were kept");
       onMutated();
       onClose();
     } catch {
-      toast.error("Couldn't delete the recurring series. Please try again.");
+      toast.error("Couldn't delete the series · Try again");
       setIsDeleting(false);
     }
   };
