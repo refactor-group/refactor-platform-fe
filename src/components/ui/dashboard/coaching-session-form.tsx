@@ -37,7 +37,8 @@ import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/t
 import { toast } from "@/lib/toast";
 import {
   seriesCreatedMessage,
-  sessionChangeMessage,
+  sessionCreatedMessage,
+  sessionUpdatedMessage,
 } from "@/components/ui/dashboard/session-change-message";
 import { Provider } from "@/types/provider";
 import {
@@ -213,7 +214,7 @@ export default function CoachingSessionForm({
     };
     await createCoachingSession(newCoachingSession);
     toast.success(
-      sessionChangeMessage("Created", newCoachingSession, relationships, userTimezone)
+      sessionCreatedMessage(newCoachingSession, relationships, userTimezone)
     );
   };
 
@@ -250,7 +251,7 @@ export default function CoachingSessionForm({
       updated_at: DateTime.now().toUTC(),
     });
     toast.success(
-      sessionChangeMessage("Updated", { ...existingSession, date: dateTime }, relationships, userTimezone)
+      sessionUpdatedMessage({ ...existingSession, date: dateTime }, relationships, userTimezone)
     );
   };
 

@@ -1,9 +1,8 @@
+import type { DateTime } from "ts-luxon";
 import { sessionStartIn, shortDate, timeOfDay } from "@/lib/session-window";
 import { getCoacheeName } from "@/lib/utils/relationship";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
-
-export type SessionChange = "Created" | "Updated" | "Deleted";
 
 /** " with James Hodapp", or nothing if the relationship isn't loaded. */
 function withCoachee(relationships: CoachingRelationshipWithUserNames[], relationshipId: Id): string {
@@ -11,16 +10,51 @@ function withCoachee(relationships: CoachingRelationshipWithUserNames[], relatio
   return relationship ? ` with ${getCoacheeName(relationship)}` : "";
 }
 
-/** e.g. "Created Nov 4 session with James Hodapp at 10:00 AM", in the user's timezone. */
-export function sessionChangeMessage(
-  change: SessionChange,
-  session: { date: string; coaching_relationship_id: Id },
+type SessionRef = { date: string; coaching_relationship_id: Id };
+
+/** "11 AM" on the hour, else "11:30 AM". */
+function clockTime(start: DateTime): string {
+  return start.toFormat(start.minute === 0 ? "h a" : "h:mm a");
+}
+
+/** "the 11 AM Nov 4 session with James Hodapp", in the user's timezone. */
+function theSession(
+  session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
   timezone: string
 ): string {
   const start = sessionStartIn(session.date, timezone);
   const coachee = withCoachee(relationships, session.coaching_relationship_id);
-  return `${change} ${shortDate(start)} session${coachee} at ${timeOfDay(start)}`;
+  return `the ${clockTime(start)} ${shortDate(start)} session${coachee}`;
+}
+
+/** e.g. "Created Nov 4 session with James Hodapp at 10:00 AM", in the user's timezone. */
+export function sessionCreatedMessage(
+  session: SessionRef,
+  relationships: CoachingRelationshipWithUserNames[],
+  timezone: string
+): string {
+  const start = sessionStartIn(session.date, timezone);
+  const coachee = withCoachee(relationships, session.coaching_relationship_id);
+  return `Created ${shortDate(start)} session${coachee} at ${timeOfDay(start)}`;
+}
+
+/** e.g. "Updated the 11 AM Nov 6 session with James Hodapp", with its new date and time. */
+export function sessionUpdatedMessage(
+  session: SessionRef,
+  relationships: CoachingRelationshipWithUserNames[],
+  timezone: string
+): string {
+  return `Updated ${theSession(session, relationships, timezone)}`;
+}
+
+/** e.g. "Removed the 11 AM Nov 4 session with James Hodapp". */
+export function sessionRemovedMessage(
+  session: SessionRef,
+  relationships: CoachingRelationshipWithUserNames[],
+  timezone: string
+): string {
+  return `Removed ${theSession(session, relationships, timezone)}`;
 }
 
 /** e.g. "Created 3 recurring sessions with James Hodapp". */

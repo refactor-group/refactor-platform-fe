@@ -208,7 +208,7 @@ Connect Google from Settings › Integrations.
 
 From the dashboard, create a one-off session with a coachee, edit its date, then delete it. Then create a recurring series.
 
-**Pass:** you see "Created Nov 4 session with {coachee} at 10:00 AM", "Updated Nov 6 session with {coachee} at 10:00 AM" and "Deleted Nov 6 session with {coachee} at 10:00 AM" in turn, with the date and time in your time zone. The series shows "Created N recurring sessions with {coachee}".
+**Pass:** you see "Created Nov 4 session with {coachee} at 10:00 AM", "Updated the 10 AM Nov 6 session with {coachee}" and "Removed the 10 AM Nov 6 session with {coachee}" in turn, with the date and time in your time zone. The series shows "Created N recurring sessions with {coachee}".
 
 ## 7. Part F: global header (#504)
 

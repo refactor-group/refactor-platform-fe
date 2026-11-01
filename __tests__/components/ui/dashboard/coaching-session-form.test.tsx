@@ -350,7 +350,7 @@ describe("CoachingSessionForm – success toasts", () => {
     fireEvent.click(screen.getByRole("button", { name: /update session/i }));
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("Updated Nov 4 session with James Hodapp at 9:00 PM");
+      expect(toast.success).toHaveBeenCalledWith("Updated the 9 PM Nov 4 session with James Hodapp");
     });
   });
 

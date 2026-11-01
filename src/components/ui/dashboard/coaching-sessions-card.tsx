@@ -23,7 +23,7 @@ import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { USERS_BASEURL } from "@/lib/api/users";
 import type { Id } from "@/types/general";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { sessionChangeMessage } from "@/components/ui/dashboard/session-change-message";
+import { sessionRemovedMessage } from "@/components/ui/dashboard/session-change-message";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
   type CoachingSession,
@@ -250,7 +250,7 @@ export function CoachingSessionsCard({
       // The row has to disappear, so this revalidate is load-bearing.
       refreshBucketData();
       setDeleteState({ kind: "closed" });
-      sonnerToast.success(sessionChangeMessage("Deleted", session, relationships, userTimezone));
+      sonnerToast.success(sessionRemovedMessage(session, relationships, userTimezone));
     } catch {
       sonnerToast.error("Couldn't delete the session · Try again");
       setDeleteState({ kind: "closed" });
