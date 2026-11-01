@@ -256,6 +256,31 @@ test.describe('Join session menu', () => {
       }))
       expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
     })
+
+    test(`fits a full page of people between the arrows at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 812 })
+      await page.goto('/dashboard')
+      await openMenu(page)
+
+      const prev = menu(page).getByRole('button', { name: 'Previous people' })
+      const next = menu(page).getByRole('button', { name: 'Next people' })
+      const cardsBetweenArrows = async () => {
+        const left = (await prev.boundingBox())!
+        const right = (await next.boundingBox())!
+        const cards = menu(page).locator('button[aria-pressed]:not([inert])')
+        await expect(cards.first()).toBeVisible()
+        for (const card of await cards.all()) {
+          const box = (await card.boundingBox())!
+          expect(box.x).toBeGreaterThanOrEqual(left.x + left.width - 0.5)
+          expect(box.x + box.width).toBeLessThanOrEqual(right.x + 0.5)
+        }
+        return cards.count()
+      }
+
+      await expect(async () => expect(await cardsBetweenArrows()).toBe(5)).toPass()
+      await next.click()
+      await expect(async () => expect(await cardsBetweenArrows()).toBeGreaterThan(0)).toPass()
+    })
   }
 
   test('lines up with the trigger at 1280px', async ({ page }) => {
