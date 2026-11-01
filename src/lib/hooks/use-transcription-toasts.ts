@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import { useMeetingRecording } from "@/lib/api/meeting-recordings";
 import { useTranscription } from "@/lib/api/transcriptions";

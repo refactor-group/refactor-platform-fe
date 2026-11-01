@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useOAuthConnection } from "@/lib/api/oauth-connection";
 import { Provider } from "@/types/provider";
 import { MeetingIntegrationSection } from "@/components/ui/settings/meeting-integration-section";

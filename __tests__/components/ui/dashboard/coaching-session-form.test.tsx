@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import CoachingSessionForm from "@/components/ui/dashboard/coaching-session-form";
 import { TestProviders } from "@/test-utils/providers";
 import { EntityApiError } from "@/types/general";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import { createMockRelationship, createMockSession } from "../../../test-utils";
@@ -14,7 +14,7 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: {
     error: vi.fn(),
     success: vi.fn(),

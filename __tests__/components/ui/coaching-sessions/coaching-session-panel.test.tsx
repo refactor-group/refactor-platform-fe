@@ -183,7 +183,7 @@ const { mockSonnerToast } = vi.hoisted(() => {
   const mockSonnerToast = vi.fn()
   return { mockSonnerToast }
 })
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: Object.assign(mockSonnerToast, {
     error: vi.fn(),
   }),
@@ -192,7 +192,7 @@ vi.mock("sonner", () => ({
 // Import after mocks
 import { useGoalsBySession, useGoalList, GoalApi } from "@/lib/api/goals"
 import { useAgreementList } from "@/lib/api/agreements"
-import { toast as sonnerToast } from "sonner"
+import { toast as sonnerToast } from "@/lib/toast"
 import { err } from "neverthrow"
 
 const goal1 = createMockGoal({

@@ -5,7 +5,6 @@ import { siteConfig } from "@/site.config";
 import { SiteHeader } from "@/components/ui/site-header";
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { Toaster } from "@/components/ui/sonner";
 import { PageContainer } from "@/components/ui/page-container";
 
 export const metadata: Metadata = {
@@ -27,7 +26,6 @@ export default function AdminLayout({
           <main className="flex-1 p-6 min-w-0">
             <PageContainer>{children}</PageContainer>
           </main>
-          <Toaster />
         </SidebarInset>
       </div>
     </SidebarProvider>

@@ -5,11 +5,11 @@ import { useAuthStore } from '@/lib/providers/auth-store-provider';
 import { useCurrentOrganization } from '@/lib/hooks/use-current-organization';
 import { Role } from '@/types/user';
 import type { UserRole, User } from '@/types/user';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 vi.mock('@/lib/providers/auth-store-provider');
 vi.mock('@/lib/hooks/use-current-organization');
-vi.mock('sonner');
+vi.mock('@/lib/toast');
 
 describe('useCurrentUserRole', () => {
   const mockUseAuthStore = vi.mocked(useAuthStore);

@@ -146,12 +146,12 @@ vi.mock("@/site.config", () => ({
   siteConfig: { locale: "en-US", env: { backendServiceURL: "http://localhost:3000" } },
 }))
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: Object.assign(vi.fn(), { error: vi.fn() }),
 }))
 
 import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics"
-import { toast as sonnerToast } from "sonner"
+import { toast as sonnerToast } from "@/lib/toast"
 
 const topic = (over: Partial<CoachingSessionTopic>): CoachingSessionTopic => ({
   ...defaultCoachingSessionTopic(),

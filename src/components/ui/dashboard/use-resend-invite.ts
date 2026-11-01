@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast } from "@/lib/toast";
 import type { Result } from "neverthrow";
 import type { ResendInviteDialogProps } from "@/components/ui/dashboard/resend-invite-dialog";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";

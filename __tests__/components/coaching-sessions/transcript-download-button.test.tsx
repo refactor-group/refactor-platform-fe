@@ -18,7 +18,7 @@ vi.mock("@/lib/api/transcriptions", () => ({
 vi.mock("@/lib/utils/transcript-download-file", () => ({ saveBlobAs: vi.fn() }));
 
 const toastError = vi.fn();
-vi.mock("sonner", () => ({ toast: { error: (...args: unknown[]) => toastError(...args) } }));
+vi.mock("@/lib/toast", () => ({ toast: { error: (...args: unknown[]) => toastError(...args) } }));
 
 function renderButton(scope: DownloadScope) {
   return render(

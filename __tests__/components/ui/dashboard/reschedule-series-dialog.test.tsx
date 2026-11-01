@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { RescheduleSeriesDialog } from "@/components/ui/dashboard/reschedule-series-dialog";
 import { CoachingSessionSeries } from "@/types/coaching-session-series";
 import { Frequency } from "@/types/recurrence";
@@ -10,7 +10,7 @@ import { EntityApiError } from "@/types/entity-api-error";
 
 // ── Module mocks ──────────────────────────────────────────────────────────────
 
-vi.mock("sonner", () => ({
+vi.mock("@/lib/toast", () => ({
   toast: {
     error: vi.fn(),
     success: vi.fn(),

@@ -5,7 +5,7 @@ import { render, renderHook, act, screen, waitFor } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ok, err } from "neverthrow";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SuggestionScanButton } from "@/components/ui/coaching-sessions/suggestion-scan-button";
 import { useSuggestionScan } from "@/lib/hooks/use-suggestion-scan";
@@ -13,7 +13,7 @@ import { TranscriptSuggestionApi } from "@/lib/api/transcript-suggestions";
 import { ScanStatus } from "@/types/transcript-suggestion";
 import { Some } from "@/types/option";
 
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
+vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
 vi.mock("@/lib/api/transcript-suggestions", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api/transcript-suggestions")>(

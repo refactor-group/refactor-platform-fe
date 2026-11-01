@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { actionPreview } from "@/lib/utils/action-preview";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested-action-card";

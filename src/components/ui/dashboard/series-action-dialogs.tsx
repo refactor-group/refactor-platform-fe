@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { DeleteSeriesDialog } from "@/components/ui/dashboard/delete-series-dialog";
 import { RescheduleSeriesDialog } from "@/components/ui/dashboard/reschedule-series-dialog";
 import { SeriesDetailDialog } from "@/components/ui/dashboard/series-detail-dialog";

@@ -17,7 +17,7 @@ export async function copyCoachingSessionLink(sessionId: string): Promise<void> 
 
 // Legacy version with toast for backward compatibility
 export async function copyCoachingSessionLinkWithToast(sessionId: string): Promise<void> {
-  const { toast } = await import("sonner");
+  const { toast } = await import("@/lib/toast");
   try {
     await copyCoachingSessionLink(sessionId);
     toast("Coaching session link copied successfully.");
