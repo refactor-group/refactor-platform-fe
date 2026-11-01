@@ -222,6 +222,30 @@ describe("useJoinSessionMenu", () => {
     expect(lastWindow().around).toBe("2026-08-25T19:00:00Z");
   });
 
+  it("reports a failed Today request with a retry, and still loads the person's window", () => {
+    const refreshToday = vi.fn();
+    vi.mocked(useTodaysSessions).mockReturnValue({
+      sessions: [],
+      isLoading: false,
+      error: new Error("boom"),
+      refresh: refreshToday,
+      _tick: 0,
+    } as unknown as ReturnType<typeof useTodaysSessions>);
+    const { result } = renderOpened();
+
+    expect(result.current.today).toEqual([]);
+    if (result.current.todayError.none) throw new Error("expected a today error");
+    refreshToday.mockClear(); // opening the menu refreshed it once already
+    result.current.todayError.val();
+    expect(refreshToday).toHaveBeenCalledTimes(1);
+    expect(lastNearestQuery().some).toBe(true);
+  });
+
+  it("has no Today error when the request succeeds", () => {
+    const { result } = renderOpened();
+    expect(result.current.todayError.none).toBe(true);
+  });
+
   it("puts today's sessions in the Today block with their person", () => {
     const { result } = renderOpened();
     expect(result.current.today).toHaveLength(1);

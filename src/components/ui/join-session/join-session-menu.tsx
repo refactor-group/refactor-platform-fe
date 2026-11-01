@@ -57,10 +57,10 @@ function LoadingRows() {
   );
 }
 
-function ErrorRow({ retry }: { retry: () => void }) {
+function ErrorRow({ message, retry }: { message: string; retry: () => void }) {
   return (
     <div className="flex min-h-11 items-center gap-2 px-2.5 text-sm text-muted-foreground">
-      Couldn&apos;t load sessions
+      {message}
       <Button variant="link" className="h-auto p-0 text-sm" onClick={retry}>
         Try again
       </Button>
@@ -128,7 +128,7 @@ function PersonSection({ menu, onOpen }: { menu: JoinSessionMenuModel; onOpen: O
     case "loading":
       return <Section><LoadingRows /></Section>;
     case "error":
-      return <Section><ErrorRow retry={sessions.retry} /></Section>;
+      return <Section><ErrorRow message="Couldn't load sessions" retry={sessions.retry} /></Section>;
     case "loaded":
       return (
         <Section>
@@ -153,7 +153,13 @@ function MenuBody({ menu, onOpen }: { menu: JoinSessionMenuModel; onOpen: OpenSe
   };
   return (
     <div className="min-h-0 overflow-y-auto">
-      <TodayBlock entries={menu.today} onSelect={openToday} />
+      {menu.todayError.some ? (
+        <Section>
+          <ErrorRow message="Couldn't load today's sessions" retry={menu.todayError.val} />
+        </Section>
+      ) : (
+        <TodayBlock entries={menu.today} onSelect={openToday} />
+      )}
       {menu.selectedId.some && (
         <PersonCarousel
           people={menu.people}

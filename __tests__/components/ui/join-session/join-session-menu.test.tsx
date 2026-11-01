@@ -49,6 +49,7 @@ const push = vi.fn();
 function model(overrides: Partial<JoinSessionMenuModel> = {}): JoinSessionMenuModel {
   return {
     today: [{ session: priyaToday, person: priya }],
+    todayError: None,
     people: [ehab, priya],
     selectedId: Some("ehab"),
     page: 0,
@@ -98,6 +99,16 @@ describe("JoinSessionMenu", () => {
     const retry = vi.fn();
     const dialog = await openWith(model({ sessions: { kind: "error", retry } }));
     expect(within(dialog).getByText(/Couldn.t load sessions/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Try again" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it("says when today's sessions failed and retries them, still listing the person's", async () => {
+    const retry = vi.fn();
+    const dialog = await openWith(model({ today: [], todayError: Some(retry) }));
+
+    expect(within(dialog).getByText("Couldn't load today's sessions")).toBeInTheDocument();
+    expect(within(dialog).getByText("Session 7")).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Try again" }));
     expect(retry).toHaveBeenCalledTimes(1);
   });

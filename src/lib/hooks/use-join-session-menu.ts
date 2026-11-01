@@ -81,6 +81,8 @@ export type PersonSessionsState =
 
 export interface JoinSessionMenuModel {
   today: TodayEntry[];
+  /** A retry when today's sessions failed to load, so the menu can say so. */
+  todayError: Option<() => void>;
   people: MenuPerson[];
   selectedId: Option<Id>;
   page: number;
@@ -385,6 +387,7 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
 
   return {
     today: todayEntries(todays.sessions, userId, people, timezone),
+    todayError: todays.error ? Some(() => todays.refresh()) : None,
     people: menuPeople,
     selectedId,
     page,
