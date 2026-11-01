@@ -166,11 +166,13 @@ const EXPANDED: FieldState = { kind: "expanded", resultsOpen: true };
 // Slightly longer than the width transition, in case transitionend never fires.
 const COLLAPSE_FALLBACK_MS = 260;
 
-// The width animation only runs on the sm+ inline pill, and not under reduced motion.
+// From sm up the field is an inline pill; below it, an overlay across the header.
+const isInlineField = (): boolean =>
+  typeof window.matchMedia === "function" && window.matchMedia("(min-width: 640px)").matches;
+
+// The width animation only runs on the inline pill, and not under reduced motion.
 const canAnimateCollapse = (): boolean =>
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(min-width: 640px)").matches &&
-  !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  isInlineField() && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const collapseTo = (returnFocus: boolean): FieldState => ({
   kind: canAnimateCollapse() ? "collapsing" : "collapsed",
@@ -254,8 +256,11 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
           // Focus went elsewhere, so don't pull it back when the collapse finishes.
           case "collapsing":
             return { ...current, returnFocus: false };
+          // The inline pill keeps showing the query; the overlay would hide the header.
           case "expanded":
-            return query ? { kind: "expanded", resultsOpen: false } : collapseTo(false);
+            return query && isInlineField()
+              ? { kind: "expanded", resultsOpen: false }
+              : collapseTo(false);
           default: {
             const _exhaustive: never = current;
             throw new Error(`Unhandled search field state: ${_exhaustive}`);
