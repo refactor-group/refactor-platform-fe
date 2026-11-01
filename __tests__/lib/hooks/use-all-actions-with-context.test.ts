@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { DateTime } from "ts-luxon";
+import { DateTime, Settings } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
 import {
@@ -221,6 +221,24 @@ describe("useAllActionsWithContext", () => {
         makeTestAction({ id: "action-2", coaching_session_id: "new-session-c" }),
       ];
       rerender();
+
+      expect(mockRefreshSessions).toHaveBeenCalledTimes(2);
+    });
+
+    it("refetches each session cache, such as a header mounted yesterday and a page today", () => {
+      const originalNow = Settings.now;
+      const lateYesterday = DateTime.fromISO("2026-11-01T23:59:00Z").toMillis();
+      const earlyToday = DateTime.fromISO("2026-11-02T00:01:00Z").toMillis();
+      mockActions = [makeTestAction({ coaching_session_id: "new-session-e" })];
+      mockSessions = [makeTestSession()];
+      try {
+        Settings.now = () => lateYesterday;
+        renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+        Settings.now = () => earlyToday;
+        renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+      } finally {
+        Settings.now = originalNow;
+      }
 
       expect(mockRefreshSessions).toHaveBeenCalledTimes(2);
     });
