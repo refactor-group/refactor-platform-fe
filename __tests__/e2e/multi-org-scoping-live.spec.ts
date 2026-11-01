@@ -12,6 +12,8 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PASSWORD = "password";
 const EHAB = "ehab.bandar@gmail.com";
+// The seed names Jim "James" or "Jim" depending on its age; only the surname is stable.
+const SESSION_WITH_JIM = /^Session with (James|Jim) Hodapp$/;
 
 /**
  * Browser time is pinned for every test in this file. The seeded BigTable
@@ -36,37 +38,51 @@ async function login(page: Page, email: string) {
   await page.waitForURL(/dashboard/, { timeout: 20000 });
 }
 
-function switcher(page: Page) {
-  return page.getByRole("combobox").first();
+function organizationLink(page: Page) {
+  return page.getByRole("banner").getByRole("link").first();
+}
+
+async function openOrganizationList(page: Page) {
+  await page.getByRole("button", { name: "Account menu" }).click();
+  return page.getByRole("menu");
 }
 
 async function selectOrganization(page: Page, name: string) {
-  await switcher(page).click();
-  await page.getByRole("listbox").getByText(name, { exact: true }).click();
-  await expect(switcher(page)).toContainText(name);
+  const menu = await openOrganizationList(page);
+  await menu
+    .getByRole("menuitem")
+    .filter({ has: page.getByText(name, { exact: true }) })
+    .click();
+  await expect(organizationLink(page)).toHaveAccessibleName(name);
 }
 
-test("the switcher avatar shows the selected organization's initials, not a fixed RG", async ({
+test("the header tile shows the selected organization's initials, not a fixed RG", async ({
   page,
 }) => {
   await login(page, EHAB);
 
   await selectOrganization(page, "Refactor Group");
-  await expect(switcher(page)).toContainText("RG");
+  await expect(organizationLink(page).getByText("RG", { exact: true })).toBeVisible();
 
   await selectOrganization(page, "BigTable");
   // The regression: this stayed "RG" for every organization.
-  await expect(switcher(page)).toContainText("BT");
-  await expect(switcher(page)).not.toContainText("RG");
+  await expect(organizationLink(page).getByText("BT", { exact: true })).toBeVisible();
+  await expect(organizationLink(page).getByText("RG", { exact: true })).toHaveCount(0);
 });
 
-test("the dropdown gives each organization its own initials", async ({ page }) => {
+test("the organization list gives each organization its own initials", async ({ page }) => {
   await login(page, EHAB);
 
-  await switcher(page).click();
-  const list = page.getByRole("listbox");
-  await expect(list.getByText("RG", { exact: true })).toBeVisible();
-  await expect(list.getByText("BT", { exact: true })).toBeVisible();
+  const menu = await openOrganizationList(page);
+  for (const [name, initials] of [
+    ["Refactor Group", "RG"],
+    ["BigTable", "BT"],
+  ]) {
+    const item = menu
+      .getByRole("menuitem")
+      .filter({ has: page.getByText(name, { exact: true }) });
+    await expect(item.getByText(initials, { exact: true })).toBeVisible();
+  }
 });
 
 test("session requests carry the selected organization and refetch on switch", async ({
@@ -131,12 +147,12 @@ test("the Upcoming Session card is empty in the organization that has no session
   await login(page, EHAB);
 
   await selectOrganization(page, "Refactor Group");
-  await expect(page.getByText("Session with Jim Hodapp")).toHaveCount(0, {
+  await expect(page.getByText(SESSION_WITH_JIM)).toHaveCount(0, {
     timeout: 15000,
   });
 
   await selectOrganization(page, "BigTable");
-  await expect(page.getByText("Session with Jim Hodapp").first()).toBeVisible({
+  await expect(page.getByText(SESSION_WITH_JIM).first()).toBeVisible({
     timeout: 15000,
   });
 });
@@ -153,7 +169,7 @@ test("a cold dashboard load never requests sessions without an organization", as
 
   // Fresh context, so the organization is not known until /organizations returns.
   await login(page, EHAB);
-  await expect(switcher(page)).toContainText(/Refactor Group|BigTable/);
+  await expect(organizationLink(page)).toHaveAccessibleName(/Refactor Group|BigTable/);
   await expect(page.getByText(/Coaching Sessions/).first()).toBeVisible({
     timeout: 15000,
   });
