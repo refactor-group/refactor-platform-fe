@@ -150,6 +150,23 @@ async function openStatusMenu(card: Locator) {
 // Tests
 // ---------------------------------------------------------------------------
 
+test('a kanban card fits on a 375px phone', async ({ page, context }) => {
+  await setupAuthentication(page, context)
+  await setupActionsPage(page)
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/actions')
+  const card = page.locator('[data-kanban-card]').first()
+  await expect(card).toBeVisible({ timeout: 15_000 })
+
+  await expect(async () => {
+    const box = (await card.boundingBox())!
+    expect(box.x).toBeGreaterThanOrEqual(16 - 0.5)
+    expect(box.x + box.width).toBeLessThanOrEqual(375 - 16 + 0.5)
+  }).toPass()
+  const heading = (await page.getByRole('heading', { name: 'Actions', level: 1 }).boundingBox())!
+  expect(heading.x).toBeLessThanOrEqual(16 + 0.5)
+})
+
 test.describe('Actions page: exit animation and toast on status change', () => {
   test.beforeEach(async ({ page, context }) => {
     await setupAuthentication(page, context)
