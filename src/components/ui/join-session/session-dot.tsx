@@ -16,9 +16,9 @@ function dotClasses(kind: DotKind): string {
     case "upcoming":
       return "h-[9px] w-[9px] border-2 border-brand bg-card";
     case "today":
-      return "h-[11px] w-[11px] bg-primary shadow-[0_0_0_3px_hsl(var(--brand-tint-2))]";
+      return "h-[11px] w-[11px] bg-brand shadow-[0_0_0_3px_hsl(var(--brand-tint-2))]";
     case "current":
-      return "h-3 w-3 bg-primary";
+      return "h-3 w-3 bg-brand";
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unhandled dot kind: ${_exhaustive}`);

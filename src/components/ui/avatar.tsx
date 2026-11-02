@@ -79,7 +79,7 @@ function PersonAvatar({
       data-selected={selected ? "true" : "false"}
       className={cn(
         PERSON_AVATAR_SIZE_CLASSES[size],
-        selected && "ring-2 ring-primary ring-offset-2 ring-offset-card",
+        selected && "ring-2 ring-brand ring-offset-2 ring-offset-card",
         className
       )}
     >
