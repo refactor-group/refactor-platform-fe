@@ -17,7 +17,7 @@ const people: CarouselPerson[] = Array.from({ length: 7 }, (_, i) => ({
     fullName: `Name${i + 1} Last`,
     initials: `N${i + 1}`,
   },
-  when: Some({ text: "Thu", tone: "muted" }),
+  when: Some({ text: "Thu", tone: "muted", past: false }),
   inactive: false,
 }));
 
@@ -78,13 +78,16 @@ describe("PersonCarousel when lines and inactive people", () => {
 
   it("shows each person's when line in its tone", () => {
     const list: CarouselPerson[] = [
-      { ...people[0], when: Some({ text: "2:30pm", tone: "accent" }) },
-      { ...people[1], when: Some({ text: "Last Jun 16", tone: "faint" }), inactive: true },
+      { ...people[0], when: Some({ text: "2:30pm", tone: "accent", past: false }) },
+      { ...people[1], when: Some({ text: "Jun 16", tone: "faint", past: true }), inactive: true },
       { ...people[2], when: None },
     ];
     renderCarousel(0, "u1", list);
     expect(screen.getByText("2:30pm")).toHaveClass("text-brand", "tabular-nums", "truncate");
-    expect(screen.getByText("Last Jun 16")).toHaveClass("text-faint");
+    const past = screen.getByText("Jun 16");
+    expect(past).toHaveClass("text-faint");
+    expect(past).toHaveTextContent("Last Jun 16");
+    expect(past.querySelector(".sr-only")).toHaveTextContent("Last");
     expect(card("Name2")).toHaveClass("opacity-55");
     expect(card("Name1")).not.toHaveClass("opacity-55");
   });

@@ -31,18 +31,18 @@ describe("personActivity", () => {
 
 describe("whenLine", () => {
   it("shows today's time in the accent, lowercase with no space", () => {
-    expect(whenLine({ kind: "upcoming", next: at("2026-08-25T14:30") }, NOW)).toEqual({ text: "2:30pm", tone: "accent" });
+    expect(whenLine({ kind: "upcoming", next: at("2026-08-25T14:30") }, NOW)).toEqual({ text: "2:30pm", tone: "accent", past: false });
   });
 
   it("shows a weekday within the week and a date after it", () => {
-    expect(whenLine({ kind: "upcoming", next: at("2026-08-31T09:00") }, NOW)).toEqual({ text: "Mon", tone: "muted" });
-    expect(whenLine({ kind: "upcoming", next: at("2026-09-01T09:00") }, NOW)).toEqual({ text: "Sep 1", tone: "muted" });
+    expect(whenLine({ kind: "upcoming", next: at("2026-08-31T09:00") }, NOW)).toEqual({ text: "Mon", tone: "muted", past: false });
+    expect(whenLine({ kind: "upcoming", next: at("2026-09-01T09:00") }, NOW)).toEqual({ text: "Sep 1", tone: "muted", past: false });
   });
 
-  it("shows the last session, faint once inactive", () => {
-    expect(whenLine({ kind: "recent", last: at("2026-08-11T10:00") }, NOW)).toEqual({ text: "Last Aug 11", tone: "muted" });
-    expect(whenLine({ kind: "inactive", last: Some(at("2026-06-16T10:00")) }, NOW)).toEqual({ text: "Last Jun 16", tone: "faint" });
-    expect(whenLine({ kind: "inactive", last: None }, NOW)).toEqual({ text: "No sessions", tone: "faint" });
+  it("shows a past session as its faint date alone, so it fits", () => {
+    expect(whenLine({ kind: "recent", last: at("2026-08-11T10:00") }, NOW)).toEqual({ text: "Aug 11", tone: "faint", past: true });
+    expect(whenLine({ kind: "inactive", last: Some(at("2026-06-16T10:00")) }, NOW)).toEqual({ text: "Jun 16", tone: "faint", past: true });
+    expect(whenLine({ kind: "inactive", last: None }, NOW)).toEqual({ text: "No sessions", tone: "faint", past: false });
   });
 });
 

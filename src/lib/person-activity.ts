@@ -44,22 +44,26 @@ function daysAhead(date: DateTime, now: DateTime): number {
   return date.startOf("day").diff(now.startOf("day"), "days").days;
 }
 
-function lastLine(last: DateTime, tone: WhenLine["tone"]): WhenLine {
-  return { text: `Last ${last.toFormat("LLL d")}`, tone };
+function lastLine(last: DateTime): WhenLine {
+  return { text: last.toFormat("LLL d"), tone: "faint", past: true };
 }
 
 export function whenLine(activity: PersonActivity, now: DateTime): WhenLine {
   switch (activity.kind) {
     case "upcoming": {
       const days = daysAhead(activity.next, now);
-      if (days <= 0) return { text: activity.next.toFormat("h:mma").toLowerCase(), tone: "accent" };
-      if (days < WEEK_DAYS) return { text: activity.next.toFormat("ccc"), tone: "muted" };
-      return { text: activity.next.toFormat("LLL d"), tone: "muted" };
+      if (days <= 0) {
+        return { text: activity.next.toFormat("h:mma").toLowerCase(), tone: "accent", past: false };
+      }
+      if (days < WEEK_DAYS) return { text: activity.next.toFormat("ccc"), tone: "muted", past: false };
+      return { text: activity.next.toFormat("LLL d"), tone: "muted", past: false };
     }
     case "recent":
-      return lastLine(activity.last, "muted");
+      return lastLine(activity.last);
     case "inactive":
-      return activity.last.some ? lastLine(activity.last.val, "faint") : { text: "No sessions", tone: "faint" };
+      return activity.last.some
+        ? lastLine(activity.last.val)
+        : { text: "No sessions", tone: "faint", past: false };
     default: {
       const _exhaustive: never = activity;
       throw new Error(`Unhandled person activity: ${JSON.stringify(_exhaustive)}`);

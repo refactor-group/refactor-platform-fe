@@ -53,7 +53,10 @@ export function cardCount(people: number, hiddenInactive: number): number {
 function When({ line }: { line: Option<WhenLine> }) {
   // A blank line while loading keeps the cards from changing height.
   return line.some ? (
-    <span className={cn(WHEN, WHEN_TONE[line.val.tone])}>{line.val.text}</span>
+    <span className={cn(WHEN, WHEN_TONE[line.val.tone])}>
+      {line.val.past && <span className="sr-only">Last </span>}
+      {line.val.text}
+    </span>
   ) : (
     <span aria-hidden className={WHEN}>{"\u00a0"}</span>
   );

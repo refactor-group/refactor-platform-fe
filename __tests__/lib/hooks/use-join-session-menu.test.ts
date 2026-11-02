@@ -341,7 +341,7 @@ describe("useJoinSessionMenu", () => {
       serveActivity([ZED_FRIDAY, EHAB_RECENT, PRIYA_TODAY]);
       const { result } = renderOpened();
       expect(names(result.current.people)).toEqual(["Priya", "Zed", "Ehab"]);
-      expect(whens(result.current.people)).toEqual(["4:30pm/accent", "Fri/muted", "Last Aug 11/muted"]);
+      expect(whens(result.current.people)).toEqual(["4:30pm/accent", "Fri/muted", "Aug 11/faint"]);
       expect(result.current.hiddenInactive).toBe(0);
     });
 
@@ -367,7 +367,7 @@ describe("useJoinSessionMenu", () => {
       act(() => result.current.showInactive());
       expect(names(result.current.people)).toEqual(["Priya", "Ehab", "Zed"]);
       expect(result.current.people[2]).toMatchObject({ inactive: true });
-      expect(whens(result.current.people)[2]).toBe("Last Jun 16/faint");
+      expect(whens(result.current.people)[2]).toBe("Jun 16/faint");
       expect(result.current.hiddenInactive).toBe(0);
 
       act(() => result.current.reset());

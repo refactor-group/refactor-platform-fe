@@ -21,6 +21,8 @@ export interface MenuPerson {
 export interface WhenLine {
   text: string;
   tone: "accent" | "muted" | "faint";
+  /** A past session's date: read as "Last {date}", shown as just the date to fit. */
+  past: boolean;
 }
 
 export interface CarouselPerson {

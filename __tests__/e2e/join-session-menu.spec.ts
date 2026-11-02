@@ -171,6 +171,7 @@ test.describe('Join session menu', () => {
       /AlexSep 2$/,
       /LenaLast Aug 20$/,
     ])
+    await expect(person(page, 'Lena').getByText('Last', { exact: true })).toHaveClass('sr-only')
     await expect(showInactive(page)).toHaveText('+2InactiveShow')
     await expect(menu(page).getByRole('button', { name: 'Next people' })).toBeDisabled()
   })

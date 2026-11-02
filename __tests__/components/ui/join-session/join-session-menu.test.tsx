@@ -51,8 +51,8 @@ function model(overrides: Partial<JoinSessionMenuModel> = {}): JoinSessionMenuMo
     today: [{ session: priyaToday, person: priya }],
     todayError: None,
     people: [
-      { person: ehab, when: Some({ text: "Thu", tone: "muted" }), inactive: false },
-      { person: priya, when: Some({ text: "4:30pm", tone: "accent" }), inactive: false },
+      { person: ehab, when: Some({ text: "Thu", tone: "muted", past: false }), inactive: false },
+      { person: priya, when: Some({ text: "4:30pm", tone: "accent", past: false }), inactive: false },
     ],
     hiddenInactive: 0,
     showInactive: vi.fn(),
