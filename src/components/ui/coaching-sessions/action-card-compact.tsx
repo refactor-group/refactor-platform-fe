@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
 import type { TextareaMarkdownRef } from "textarea-markdown-editor";
-import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Info, Pencil, Strikethrough, Trash2 } from "lucide-react";
+import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Pencil, Strikethrough, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +23,15 @@ import {
   type AssigneeInfo,
 } from "@/components/ui/coaching-sessions/action-card-parts";
 import { ActionStatusControl } from "@/components/ui/status/action-status-control";
-import { CARD_BUTTON, FIELD_LABEL } from "@/components/ui/card-field";
+import {
+  CARD_BUTTON,
+  CARD_DONE,
+  CARD_FACE,
+  CARD_TEXTAREA,
+  CARD_TITLE,
+  CardDetailsButton,
+  FIELD_LABEL,
+} from "@/components/ui/card-field";
 import { StatusMetaLine } from "@/components/ui/status/status-meta-line";
 import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
 import { GoalPill } from "@/components/ui/goal-pill";
@@ -88,9 +96,6 @@ export interface CompactActionCardProps {
   onDismiss?: () => void;
   className?: string;
 }
-
-// Full card: flat, radius 12, padding 14×16, border darkens on hover.
-const ACTION_FACE = "rounded-xl px-4 py-3.5 shadow-none hover:border-border-hover";
 
 // A highlighted card pulses once (unless the user prefers reduced motion).
 const HIGHLIGHT_CARD = "motion-safe:animate-highlight-pulse";
@@ -172,7 +177,7 @@ export function CompactActionCard({
       initialEditing={initialEditing}
       onDismiss={onDismiss}
       className={cn(className, highlighted && HIGHLIGHT_CARD)}
-      faceClassName={cn(ACTION_FACE, highlighted && HIGHLIGHT_FACE)}
+      faceClassName={cn(CARD_FACE, highlighted && HIGHLIGHT_FACE)}
       renderHeader={({ onFlip }) => (
         <ActionHeader
           status={action.status}
@@ -271,28 +276,7 @@ function ActionHeader({
   return (
     <div className="flex items-center justify-between gap-2">
       <ActionStatusControl status={status} onStatusChange={onStatusChange} />
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-menu"
-              aria-label="Action options"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFlip();
-              }}
-              className="text-faint"
-            >
-              <Info />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            Edit action details
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <CardDetailsButton label="Action options" tooltip="Edit action details" onClick={onFlip} />
     </div>
   );
 }
@@ -327,7 +311,8 @@ function ActionBody({
     <div>
       <div
         className={cn(
-          "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-sm font-medium [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          CARD_TITLE,
           !expanded && "max-h-[2.8em] overflow-hidden",
           closed && "text-muted-foreground prose-p:text-muted-foreground"
         )}
@@ -405,7 +390,7 @@ function ActionBackView({
         <button
           type="button"
           onClick={onDone}
-          className="ml-auto text-label font-medium text-brand transition-colors hover:text-brand/80"
+          className={cn("ml-auto", CARD_DONE)}
         >
           Done
         </button>
@@ -414,7 +399,8 @@ function ActionBackView({
       {body ? (
         <div
           className={cn(
-            "text-sm font-medium prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+            "prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+            CARD_TITLE,
             isClosed(action.status) && "text-muted-foreground prose-p:text-muted-foreground"
           )}
         >
@@ -594,7 +580,7 @@ export function ActionEditForm({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             readOnly={fieldsDisabled}
-            className="w-full min-h-[80px] max-h-[200px] overflow-y-auto overscroll-contain rounded-input border border-border bg-card px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            className={cn(CARD_TEXTAREA, "min-h-[80px] max-h-[200px] overflow-y-auto overscroll-contain")}
             autoFocus
           />
         </div>

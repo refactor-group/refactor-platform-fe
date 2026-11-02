@@ -515,3 +515,11 @@ Open a session's Actions panel with suggested actions from a transcript, one wit
 3. Repeat 1 in Dark and at 375px.
 
 **Pass:** the back shows the meta line (e.g. "Due Nov 8") and Done, a 14px title, assignee avatars with names, and pill-shaped Edit and Delete buttons. In edit mode the labels are 12.5px grey, and each control is a borderless pill that turns grey on hover, with a caret. The assignee menu lists each person with a 26px avatar and an indigo check on the assigned ones, with no checkboxes; a person who can't be picked is dimmed with the reason below. The goal menu puts its check on the right. Save and Cancel (Accept and Cancel on suggestions) are pills. Everything reads clearly in Dark and fits at 375px.
+
+### Case I8: agreement, goal and topic cards
+
+1. Open a session's Agreements panel: flip an agreement with ⓘ, then click Edit.
+2. Open the Goals panel and do the same with a goal; also open the goal browser and the swap view.
+3. Open the Topics panel and mark a topic discussed; hover a topic.
+
+**Pass:** agreement and goal cards share the action card's flat shape (radius 12, border that darkens on hover), 14px title and 28px ⓘ button. Their backs show the Done link and pill-shaped Edit and Delete (Remove for goals) buttons; the agreement back says "Agreed …". Their edit forms use the 14px, 10px-radius fields and pill Save and Cancel. Topic rows have the same border and radius; a discussed topic is faded, not struck through; the insert and delete buttons appear on hover as 28px round buttons.

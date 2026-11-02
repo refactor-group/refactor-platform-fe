@@ -43,7 +43,9 @@ describe("SessionHoverDetail action rows (compact layout)", () => {
     expect(row).toHaveAttribute("href", "/coaching-sessions/sess-9?panel=actions");
     expect(screen.getByRole("img", { name: "In Progress" })).toBeInTheDocument();
     expect(screen.getByText("Due Aug 20")).toHaveClass("text-warning-text");
-    expect(row.querySelector('span[data-status="InProgress"]')).toHaveTextContent("In Progress");
+    expect(screen.getByText("In Progress", { selector: 'span[data-status="InProgress"]' })).toBeInTheDocument();
+    // Display-only here: no status buttons on the dashboard.
+    expect(screen.queryByRole("button", { name: /^Status:/ })).not.toBeInTheDocument();
   });
 
   it("mutes a completed action without striking it through", () => {

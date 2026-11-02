@@ -1,14 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { DateTime } from "ts-luxon";
-import { ChevronRight, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { SessionGoalList } from "@/components/ui/session-goal-list";
-import { StatusGlyph } from "@/components/ui/status/status-glyph";
-import { StatusPill } from "@/components/ui/status/status-pill";
-import { StatusMetaLine } from "@/components/ui/status/status-meta-line";
+import { ActionStatusRow } from "@/components/ui/status/action-status-row";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
-import { cn } from "@/components/lib/utils";
 import { formatDateWithTime } from "@/lib/utils/date";
 import type { Action } from "@/types/action";
 import {
@@ -16,7 +12,6 @@ import {
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
 import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
-import { ItemStatus } from "@/types/general";
 
 export interface SessionHoverDetailProps {
   session: EnrichedCoachingSession;
@@ -103,35 +98,15 @@ export function SessionHoverDetail({
   );
 }
 
-// The design system's compact row: no assignee, since the card already names the person.
 function ActionDueRow({ action }: { action: Action }) {
-  const closed =
-    action.status === ItemStatus.Completed || action.status === ItemStatus.WontDo;
-
   return (
-    <Link
+    <ActionStatusRow
+      title={action.body ?? ""}
+      status={action.status}
+      dueBy={action.due_by}
+      statusChangedAt={action.status_changed_at}
       href={`/coaching-sessions/${action.coaching_session_id}?panel=${PanelSection.Actions}`}
-      className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-md transition-colors hover:bg-muted/30"
-    >
-      <StatusGlyph status={action.status} className="shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p
-          className={cn(
-            "truncate text-item font-medium leading-snug",
-            closed && "text-muted-foreground"
-          )}
-        >
-          {action.body}
-        </p>
-        <StatusMetaLine
-          status={action.status}
-          dueBy={action.due_by}
-          statusChangedAt={action.status_changed_at}
-          className="mt-0.5 block"
-        />
-      </div>
-      <StatusPill status={action.status} className="shrink-0" />
-      <ChevronRight className="h-3.5 w-3.5 text-faint shrink-0" />
-    </Link>
+      className="-mx-3"
+    />
   );
 }
