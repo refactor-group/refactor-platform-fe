@@ -389,6 +389,13 @@ describe("useJoinSessionMenu", () => {
       expect(names(result.current.people)).toContain("Zed");
     });
 
+    it("lists the relationship behind the card's date when a person has two", () => {
+      serveActivity([session("rel-e", "2026-08-11T15:00:00"), session("rel-e2", "2026-08-27T15:00:00")])
+      const { result } = renderOpened();
+      act(() => result.current.selectPerson("ehab"));
+      expect(lastWindow().relationshipId).toBe("rel-e2");
+    });
+
     it("keeps name order, hides no one and holds the window while activity loads", () => {
       serveActivity([], { isLoading: true });
       const { result } = renderOpened();

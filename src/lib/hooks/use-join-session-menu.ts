@@ -24,6 +24,7 @@ import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
   type PersonActivity,
+  activityRelationship,
   byActivity,
   isInactive,
   personActivity,
@@ -251,6 +252,7 @@ export function activityByPerson(
         .map((s) => ({
           start: sessionStartIn(s.date, timezone),
           over: calculateSessionUrgency(s) === SessionUrgency.Past,
+          relationshipId: s.coaching_relationship_id,
         }));
       return [person.userId, personActivity(theirs, now)];
     })
@@ -352,30 +354,41 @@ function resolvePerson(
   return people.length > 0 ? Some(people[0]) : None;
 }
 
-/** The viewed session's relationship, else the one with a session today, else the first. */
+/**
+ * The viewed session's relationship, else the one with a session today, else
+ * the one behind the card's when line, else the first.
+ */
 function relationshipFor(
   entry: PersonEntry,
   current: Option<CurrentSession>,
-  todays: EnrichedCoachingSession[]
+  todays: EnrichedCoachingSession[],
+  activity: Option<PersonActivity>
 ): Id {
   const { relationshipIds } = entry;
   if (current.some && relationshipIds.includes(current.val.relationshipId)) {
     return current.val.relationshipId;
   }
   const today = todayAnchor(todays.filter((s) => relationshipIds.includes(s.coaching_relationship_id)));
-  return today.some ? today.val.coaching_relationship_id : relationshipIds[0];
+  if (today.some) return today.val.coaching_relationship_id;
+  const shown = activity.some ? activityRelationship(activity.val) : None;
+  return shown.some ? shown.val : relationshipIds[0];
 }
 
 function resolveSelected(
   chosen: Option<Id>,
   people: PersonEntry[],
   current: Option<CurrentSession>,
-  todays: EnrichedCoachingSession[]
+  todays: EnrichedCoachingSession[],
+  activities: Option<ActivityByPerson>
 ): Option<SelectedPerson> {
   const entry = resolvePerson(chosen, people, current);
-  return entry.some
-    ? Some({ person: entry.val.person, relationshipId: relationshipFor(entry.val, current, todays) })
-    : None;
+  if (entry.none) return None;
+  const found = activities.some ? activities.val.get(entry.val.person.userId) : undefined;
+  const activity = found ? Some(found) : None;
+  return Some({
+    person: entry.val.person,
+    relationshipId: relationshipFor(entry.val, current, todays, activity),
+  });
 }
 
 export function useJoinSessionMenu(): JoinSessionMenuModel {
@@ -420,7 +433,7 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
     ? byActivity(everyone, (p) => activities.val.get(p.person.userId) ?? NO_SESSIONS)
     : everyone;
 
-  const selected = resolveSelected(chosen, people, current, todays.sessions);
+  const selected = resolveSelected(chosen, people, current, todays.sessions, activities);
   const selectedId: Option<Id> = selected.some ? Some(selected.val.person.userId) : None;
   const ordered = people.map((p) => carouselPerson(p.person, activities, now));
   // A selected inactive person (e.g. the open session's) is never hidden.
