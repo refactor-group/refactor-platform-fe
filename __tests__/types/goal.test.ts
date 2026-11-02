@@ -5,6 +5,7 @@ import {
   isGoal,
   isGoalArray,
   parseGoal,
+  normalizeGoal,
   defaultGoal,
   defaultGoals,
   getGoalById,
@@ -102,6 +103,22 @@ describe('isGoalArray', () => {
 
   it('returns false for a non-array', () => {
     expect(isGoalArray(makeGoalData())).toBe(false)
+  })
+})
+
+describe('a goal without a description (body: null on the wire)', () => {
+  it('is still a goal', () => {
+    expect(isGoal(makeGoalData({ body: null }))).toBe(true)
+  })
+
+  it('parses to an empty body', () => {
+    expect(parseGoal(makeGoalData({ body: null })).body).toBe('')
+  })
+
+  it('normalizes to an empty body', () => {
+    const wire = { ...parseGoal(makeGoalData()), body: null }
+    expect(normalizeGoal(wire).body).toBe('')
+    expect(normalizeGoal({ ...wire, body: 'Kept' }).body).toBe('Kept')
   })
 })
 
