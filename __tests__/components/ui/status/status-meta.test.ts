@@ -66,10 +66,14 @@ describe("formatStatusMeta", () => {
   ];
 
   it.each(cases)("formats %s", (_label, meta, expected) => {
-    expect(formatStatusMeta(meta)).toEqual(Some(expected));
+    expect(formatStatusMeta(meta, "en-US")).toEqual(Some(expected));
   });
 
   it("returns None for none", () => {
-    expect(formatStatusMeta({ kind: "none" }).none).toBe(true);
+    expect(formatStatusMeta({ kind: "none" }, "en-US").none).toBe(true);
+  });
+
+  it("writes month names in the given locale", () => {
+    expect(formatStatusMeta({ kind: "done", at: at("2026-08-15") }, "fr")).toEqual(Some("Done août 15"));
   });
 });

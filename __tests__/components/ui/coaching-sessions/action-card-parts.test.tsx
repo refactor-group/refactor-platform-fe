@@ -3,8 +3,9 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ActionStatusIcon } from "@/components/ui/coaching-sessions/action-card-parts";
 import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
+import { AssigneePickerPopover, DueDatePicker } from "@/components/ui/coaching-sessions/action-card-parts";
+import { DateTime } from "ts-luxon";
 import { GoalPill } from "@/components/ui/goal-pill";
 import { ItemStatus } from "@/types/general";
 import { createMockGoal } from "../../../test-utils";
@@ -138,25 +139,85 @@ describe("GoalPickerPopover", () => {
   });
 });
 
-describe("ActionStatusIcon", () => {
-  const cases: Array<{ status: ItemStatus; testId: string; label: string }> = [
-    { status: ItemStatus.NotStarted, testId: "icon-not-started", label: "Not started" },
-    { status: ItemStatus.InProgress, testId: "icon-in-progress", label: "In progress" },
-    { status: ItemStatus.Completed, testId: "icon-completed", label: "Completed" },
-    { status: ItemStatus.OnHold, testId: "icon-on-hold", label: "On hold" },
-    { status: ItemStatus.WontDo, testId: "icon-wont-do", label: "Won't do" },
+describe("AssigneePickerPopover", () => {
+  const PEOPLE = [
+    { id: "coach-1", name: "Jim Hodapp", initials: "JH" },
+    { id: "coachee-1", name: "Caleb Bourg", initials: "CB" },
   ];
 
-  it.each(cases)("renders an aria-labelled icon for $label", ({ status, label }) => {
-    render(<ActionStatusIcon status={status} />);
-    expect(screen.getByRole("img", { name: label })).toBeInTheDocument();
+  function renderPicker(assigneeIds: string[], onToggle = vi.fn(), disabledReasons = {}) {
+    render(
+      <Wrapper>
+        <AssigneePickerPopover
+          allAssignees={PEOPLE}
+          resolvedAssignees={PEOPLE.filter((p) => assigneeIds.includes(p.id))}
+          assigneeIds={assigneeIds}
+          onToggle={onToggle}
+          disabledReasons={disabledReasons}
+        />
+      </Wrapper>
+    );
+    return onToggle;
+  }
+
+  it("shows the assignees' avatars in a borderless field pill", () => {
+    renderPicker(["coach-1"]);
+    const trigger = screen.getByRole("button", { name: "Assignees" });
+    expect(trigger).toHaveClass("rounded-full", "hover:bg-fill");
+    expect(trigger).not.toHaveClass("border");
+    expect(within(trigger).getByText("JH")).toBeInTheDocument();
   });
 
-  it("forwards a custom className to the rendered icon", () => {
-    const { container } = render(
-      <ActionStatusIcon status={ItemStatus.Completed} className="text-red-500" />
+  it("says Unassigned when nobody is assigned", () => {
+    renderPicker([]);
+    expect(within(screen.getByRole("button", { name: "Assignees" })).getByText("Unassigned")).toBeInTheDocument();
+  });
+
+  it("lists people with avatars and a check on the assigned ones, and toggles on click", async () => {
+    const onToggle = renderPicker(["coach-1"]);
+    await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
+
+    const list = screen.getByRole("listbox", { name: "Assignees" });
+    const jim = within(list).getByRole("option", { name: /Jim Hodapp/ });
+    const caleb = within(list).getByRole("option", { name: /Caleb Bourg/ });
+    expect(jim).toHaveAttribute("aria-selected", "true");
+    expect(jim.querySelector("svg.text-brand")).not.toBeNull();
+    expect(caleb).toHaveAttribute("aria-selected", "false");
+    expect(caleb.querySelector("svg.text-brand")).toBeNull();
+    expect(list.querySelector('[role="checkbox"]')).toBeNull();
+
+    await userEvent.click(caleb);
+    expect(onToggle).toHaveBeenCalledWith("coachee-1");
+  });
+
+  it("explains and blocks a person who can't be picked", async () => {
+    const onToggle = renderPicker([], vi.fn(), {
+      "coach-1": "Only your coach can assign an action to themselves.",
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
+
+    const jim = screen.getByRole("option", { name: /Jim Hodapp/ });
+    expect(jim).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText("Only your coach can assign an action to themselves.")).toBeInTheDocument();
+    await userEvent.click(jim);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+});
+
+describe("DueDatePicker", () => {
+  it("opens the calendar on the due date's month, not today's", async () => {
+    render(
+      <Wrapper>
+        <DueDatePicker
+          value={DateTime.fromISO("2025-02-14")}
+          onChange={vi.fn()}
+          locale="en-US"
+          variant="button"
+        />
+      </Wrapper>
     );
-    const svg = container.querySelector("svg");
-    expect(svg?.getAttribute("class")).toContain("text-red-500");
+
+    await userEvent.click(screen.getByRole("button", { name: /Feb 14, 2025/ }));
+    expect(screen.getByText("February 2025")).toBeInTheDocument();
   });
 });

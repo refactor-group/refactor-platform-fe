@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Info, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { cn } from "@/components/lib/utils";
+import {
+  CARD_BUTTON,
+  CARD_DONE,
+  CARD_FACE,
+  CARD_TEXTAREA,
+  CARD_TITLE,
+  CardDetailsButton,
+} from "@/components/ui/card-field";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -62,6 +71,7 @@ export function CompactAgreementCard({
       canFlip={canInteract}
       initialEditing={initialEditing}
       onDismiss={onDismiss}
+      faceClassName={CARD_FACE}
       renderFront={({ onFlip }) => (
         <AgreementFrontFace
           body={body}
@@ -113,31 +123,14 @@ function AgreementFrontFace({
 }) {
   return (
     <div className="flex items-start justify-between gap-2">
-      <ContentExpandable text={body} className="text-[13px] font-medium" />
-      <div className="flex items-center gap-1 shrink-0 mt-0.5">
-        {canInteract ? (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Agreement options"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFlip();
-                  }}
-                  className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-                >
-                  <Info className="h-3.5 w-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                Edit or delete agreement
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : null}
-      </div>
+      <ContentExpandable text={body} className={CARD_TITLE} />
+      {canInteract && (
+        <CardDetailsButton
+          label="Agreement options"
+          tooltip="Edit or delete agreement"
+          onClick={onFlip}
+        />
+      )}
     </div>
   );
 }
@@ -165,8 +158,8 @@ function AgreementBackFace({
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-[11px] text-muted-foreground/60 cursor-default">
-                {formattedDate}
+              <span className="cursor-default text-xs tabular-nums text-muted-foreground">
+                Agreed {formattedDate}
               </span>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
@@ -174,39 +167,25 @@ function AgreementBackFace({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <button
-          type="button"
-          onClick={onDone}
-          className="text-[12px] font-medium text-brand hover:text-brand/80 transition-colors"
-        >
+        <button type="button" onClick={onDone} className={CARD_DONE}>
           Done
         </button>
       </div>
 
-      <p className="text-[13px] font-medium whitespace-pre-wrap">
+      <p className={cn(CARD_TITLE, "whitespace-pre-wrap")}>
         {body}
       </p>
 
       <div className="flex items-center justify-end gap-2 pt-3">
         {onEdit && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 gap-1 text-[11px] px-2"
-            onClick={onEdit}
-          >
-            <Pencil className="!h-2.5 !w-2.5" />
+          <Button variant="secondary" size="sm" className={CARD_BUTTON} onClick={onEdit}>
+            <Pencil className="!h-3 !w-3" aria-hidden />
             Edit
           </Button>
         )}
         {onDelete && (
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-6 gap-1 text-[11px] px-2"
-            onClick={onDelete}
-          >
-            <Trash2 className="!h-2.5 !w-2.5" />
+          <Button variant="destructive" size="sm" className={CARD_BUTTON} onClick={onDelete}>
+            <Trash2 className="!h-3 !w-3" aria-hidden />
             Delete
           </Button>
         )}
@@ -251,13 +230,13 @@ function AgreementEditForm({
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        className="w-full min-h-[120px] rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+        className={cn(CARD_TEXTAREA, "min-h-[120px]")}
         autoFocus
       />
       <div className="flex items-center justify-end gap-2">
         <Button
           size="sm"
-          className="h-6 gap-1 text-[11px] px-2"
+          className={CARD_BUTTON}
           onClick={handleSave}
           disabled={isSaving || !body.trim()}
         >
@@ -266,7 +245,7 @@ function AgreementEditForm({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 gap-1 text-[11px] px-2 text-muted-foreground"
+          className={cn(CARD_BUTTON, "text-muted-foreground")}
           onClick={onCancel}
           disabled={isSaving}
         >

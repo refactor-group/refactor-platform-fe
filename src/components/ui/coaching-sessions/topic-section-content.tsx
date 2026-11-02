@@ -86,6 +86,10 @@ export function reorderTopicIds(
 
 // Memoized so a list-level re-render (e.g. one topic's priority changing)
 // repaints only the row whose props actually changed, not every row.
+// Row actions: the 28px menu icon button, faint, shown on hover or focus.
+const TOPIC_ROW_ICON =
+  "text-faint opacity-0 transition-opacity focus-visible:opacity-100 group-hover/topic:opacity-100";
+
 const TopicRow = memo(function TopicRow({
   topic,
   isAuthor,
@@ -156,8 +160,8 @@ const TopicRow = memo(function TopicRow({
     <div
       ref={readOnly ? undefined : setRef}
       className={cn(
-        "group/topic relative flex items-start gap-2 rounded-lg border bg-card px-2 py-1.5 transition-colors",
-        showDropLine ? "border-foreground/30" : "border-border/50 hover:border-border",
+        "group/topic relative flex items-start gap-2 rounded-xl border bg-card px-2 py-2 transition-colors",
+        showDropLine ? "border-foreground/30" : "border-border hover:border-border-hover",
         isDragging && "opacity-40"
       )}
     >
@@ -169,7 +173,7 @@ const TopicRow = memo(function TopicRow({
         <button
           type="button"
           aria-label="Reorder topic"
-          className="mt-0.5 shrink-0 cursor-grab touch-none rounded p-1 text-muted-foreground/30 transition-colors hover:text-muted-foreground active:cursor-grabbing"
+          className="mt-0.5 shrink-0 cursor-grab touch-none rounded-full p-1 text-faint transition-colors hover:text-muted-foreground active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >
@@ -207,7 +211,7 @@ const TopicRow = memo(function TopicRow({
             onBlur={commit}
             // Match the display label's box model (px-1.5 py-1, no border) so
             // the card height is identical in display and edit.
-            className="min-h-0 resize-none rounded-md border-0 px-1.5 py-1 text-[13px] leading-snug shadow-none"
+            className="min-h-0 resize-none rounded-input border-0 px-1.5 py-1 text-item leading-snug shadow-none"
           />
         ) : (
           <button
@@ -215,14 +219,15 @@ const TopicRow = memo(function TopicRow({
             onClick={readOnly ? undefined : startEditing}
             disabled={readOnly}
             className={cn(
-              "rounded-md px-1.5 py-1 text-left text-[13px] leading-snug transition-colors",
-              !readOnly && "hover:bg-muted/50"
+              "rounded-input px-1.5 py-1 text-left text-item leading-snug transition-colors",
+              !readOnly && "hover:bg-well"
             )}
           >
             <span
               className={cn(
                 "line-clamp-3",
-                discussed && "text-muted-foreground/60 line-through"
+                // Faded, never struck through: the design system has no strikethrough.
+                discussed && "text-muted-foreground/60"
               )}
             >
               {topic.body}
@@ -246,26 +251,30 @@ const TopicRow = memo(function TopicRow({
 
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
             {!readOnly && onInsertToNotes && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-menu"
                 aria-label="Insert into notes"
                 title="Insert into notes at the cursor"
                 onClick={() => onInsertToNotes(topic.body)}
-                className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover/topic:opacity-100"
+                className={TOPIC_ROW_ICON}
               >
-                <TextCursorInput className="h-4 w-4" />
-              </button>
+                <TextCursorInput aria-hidden />
+              </Button>
             )}
 
             {(isAuthor || canDeleteAny) && !readOnly && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-menu"
                 aria-label="Delete topic"
                 onClick={() => onDelete(topic.id)}
-                className="rounded-md p-1 text-muted-foreground/40 opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover/topic:opacity-100"
+                className={cn(TOPIC_ROW_ICON, "hover:bg-destructive/10 hover:text-destructive")}
               >
-                <Trash2 className="h-4 w-4" />
-              </button>
+                <Trash2 aria-hidden />
+              </Button>
             )}
           </div>
         </div>
@@ -353,7 +362,7 @@ export function TopicSectionContent({
   return (
     <div className="space-y-2">
       {topics.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/50 py-6 px-4 text-center">
+        <div className="rounded-xl border border-dashed border-border py-6 px-4 text-center">
           <p className="text-sm text-muted-foreground/60 italic">
             No topics yet. Add what you&apos;d like to focus on this session.
           </p>
@@ -372,14 +381,14 @@ export function TopicSectionContent({
 
           <DragOverlay>
             {activeTopic ? (
-              <div className="flex items-start gap-2 rounded-lg border border-border bg-card px-2 py-1.5 shadow-lg">
+              <div className="flex items-start gap-2 rounded-xl border border-border-hover bg-card px-2 py-2 shadow-popover">
                 <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40" />
                 <Avatar className="mt-0.5 h-6 w-6 shrink-0">
                   <AvatarFallback className="bg-muted text-[10px] font-medium text-muted-foreground">
                     {nameInitials(resolveAuthorName(activeTopic.user_id))}
                   </AvatarFallback>
                 </Avatar>
-                <span className="px-1.5 py-1 text-[13px] leading-snug line-clamp-3">
+                <span className="px-1.5 py-1 text-item leading-snug line-clamp-3">
                   {activeTopic.body}
                 </span>
               </div>
@@ -404,7 +413,7 @@ export function TopicSectionContent({
               }
             }}
             placeholder="Add a topic…"
-            className="min-h-9 resize-none py-2 text-[13px] leading-snug"
+            className="min-h-9 resize-none rounded-input py-2 text-item leading-snug"
           />
           <Button
             size="sm"

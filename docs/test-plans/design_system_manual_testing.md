@@ -466,3 +466,60 @@ Reload the page, open Join session, and click each person in turn. Repeat with t
 4. Repeat 1 to 3 in Dark.
 
 **Pass:** the coach's bubbles are indigo with white text, matching the accent elsewhere (e.g. the primary button). The speaker filter's coach swatch matches the bubbles. The action card highlights with an indigo ring. All of this holds in both themes.
+
+## 10. Part I: action status layouts
+
+### Case I1: full card on the Actions page
+
+1. Have actions in all five statuses: one open and due in a few days, one open and past due, one on hold with a past due date, one completed and one won't do.
+2. Open Actions with Status set to All, at 1280px in Light.
+3. Hover one card, then click its status control (glyph, pill and caret) and choose another status.
+4. Click the ⓘ button on a card.
+
+**Pass:** each card shows the status control top-left and ⓘ top-right, the title, the assignee avatar bottom-left and one meta line bottom-right: "Due Nov 8", the past-due date in amber, "Paused · was due …" in the on-hold tone, "Done …" and "Closed …". The completed and won't-do titles are grey, not struck through. Hovering darkens the card's border and the status control gets a grey pill. The menu lists five statuses with a check on the current one, and choosing one moves the card to that column. ⓘ flips the card as before.
+
+### Case I2: full card in the session panel
+
+Open a session's Actions panel and repeat steps 3 and 4 of I1, then flip a card and click Edit.
+
+**Pass:** the cards look like the Actions page cards. On the edit face, the Status field uses the same control and menu, and changing it saves.
+
+### Case I3: keyboard
+
+Tab to a card's status control, press Enter, move with the arrow keys and press Enter on a new status.
+
+**Pass:** the control shows a focus ring, the menu opens with the current status checked, and the chosen status saves. A screen reader announces the control as "Status: …" and each option as checked or not checked.
+
+### Case I4: compact rows on the dashboard
+
+Hover a past session on the dashboard that has actions due.
+
+**Pass:** each action row shows the status glyph, the title, the meta line under it, the status pill and a chevron, with no assignee. Completed rows are grey, not struck through. Clicking a row opens that session's Actions panel.
+
+### Case I5: dark mode and 375px
+
+Repeat I1 and I4 in Dark, then I1 at 375px.
+
+**Pass:** glyphs, pills, the amber and on-hold meta and the hover border all read clearly in Dark. At 375px the status control, ⓘ, avatar and meta fit on the card without overlapping, and long titles wrap.
+
+### Case I6: suggested action cards
+
+Open a session's Actions panel with suggested actions from a transcript, one with a spoken date ("by Friday") and one without, in Light and Dark.
+
+**Pass:** suggested cards keep their dashed border, with the full card's radius, padding and 14px title. The footer shows 26px assignee avatars (or "Unassigned") and "Due Oct 17" in 12px text: the spoken date in ink and medium weight, the default date in grey. Tapping a date still shows where it came from. Accept, Edit and Dismiss work as before.
+
+### Case I7: back and edit faces
+
+1. On the Actions page, click a card's ⓘ, then Edit. Open the Status, Due date, Assignee(s) and Linked goal controls in turn.
+2. On a suggested action card, click Edit and open the same controls.
+3. Repeat 1 in Dark and at 375px.
+
+**Pass:** the back shows the meta line (e.g. "Due Nov 8") and Done, a 14px title, assignee avatars with names, and pill-shaped Edit and Delete buttons. In edit mode the labels are 12.5px grey, and each control is a borderless pill that turns grey on hover, with a caret. The assignee menu lists each person with a 26px avatar and an indigo check on the assigned ones, with no checkboxes; a person who can't be picked is dimmed with the reason below. The goal menu puts its check on the right. Save and Cancel (Accept and Cancel on suggestions) are pills. Everything reads clearly in Dark and fits at 375px.
+
+### Case I8: agreement, goal and topic cards
+
+1. Open a session's Agreements panel: flip an agreement with ⓘ, then click Edit.
+2. Open the Goals panel and do the same with a goal; also open the goal browser and the swap view.
+3. Open the Topics panel and mark a topic discussed; hover a topic.
+
+**Pass:** agreement and goal cards share the action card's flat shape (radius 12, border that darkens on hover), 14px title and 28px ⓘ button. Their backs show the Done link and pill-shaped Edit and Delete (Remove for goals) buttons; the agreement back says "Agreed …". Their edit forms use the 14px, 10px-radius fields and pill Save and Cancel. Topic rows have the same border and radius; a discussed topic is faded, not struck through; the insert and delete buttons appear on hover as 28px round buttons.

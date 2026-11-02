@@ -121,7 +121,7 @@ describe("DashboardContainer auto-refresh wiring", () => {
   });
 
   it("captures both cards' refresh callbacks on mount", () => {
-    render(<DashboardContainer />);
+    render(<DashboardContainer locale="en-US" />);
 
     // Both cards register their refresh fn through the container's
     // `onRefreshNeeded` callbacks. Failing here means the container
@@ -134,7 +134,7 @@ describe("DashboardContainer auto-refresh wiring", () => {
   });
 
   it("invokes ALL card refreshes when the create/edit dialog closes", () => {
-    render(<DashboardContainer />);
+    render(<DashboardContainer locale="en-US" />);
 
     // Pre-state: refreshes haven't been called as a result of dialog
     // close yet (they're plumbed but the dialog is closed at mount).
@@ -162,7 +162,7 @@ describe("DashboardContainer auto-refresh wiring", () => {
     upcomingSessionRefreshSpy.mockClear();
     coachingSessionsCardRefreshSpy.mockClear();
 
-    render(<DashboardContainer />);
+    render(<DashboardContainer locale="en-US" />);
 
     // Mount alone — no dialog interaction yet — must not fire any
     // refresh. If it did, every dashboard render would re-fetch, which

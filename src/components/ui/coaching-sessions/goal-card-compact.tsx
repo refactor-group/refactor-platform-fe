@@ -1,7 +1,16 @@
 "use client";
 
 import { useRef } from "react";
-import { Info, Pencil, CircleMinus } from "lucide-react";
+import { Pencil, CircleMinus } from "lucide-react";
+import { cn } from "@/components/lib/utils";
+import {
+  CARD_BUTTON,
+  CARD_DONE,
+  CARD_FACE,
+  CARD_SURFACE,
+  CARD_TITLE,
+  CardDetailsButton,
+} from "@/components/ui/card-field";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -60,14 +69,14 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
       <button
         type="button"
         onClick={swapMode.onSelect}
-        className="w-full text-left rounded-lg border border-border bg-background p-3 space-y-2 transition-all hover:border-foreground/20 cursor-pointer group/card"
+        className={cn(CARD_SURFACE, "w-full cursor-pointer space-y-2 text-left group/card")}
       >
         <div className="flex items-start justify-between gap-2">
-          <span ref={titleRef} className="text-[13px] font-medium line-clamp-2 min-w-0">
+          <span ref={titleRef} className={cn(CARD_TITLE, "line-clamp-2 min-w-0")}>
             {title}
           </span>
         </div>
-        <div className="flex items-center justify-end text-[11px]">
+        <div className="flex items-center justify-end text-xs">
           <span className="text-muted-foreground/0 group-hover/card:text-muted-foreground transition-colors">
             Replace this goal
           </span>
@@ -81,15 +90,15 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
     return (
       <div
         onClick={onSelect}
-        className="rounded-lg border border-border bg-background p-3 space-y-2 group/card transition-colors shadow-sm hover:border-foreground/20 cursor-pointer"
+        className={cn(CARD_SURFACE, "cursor-pointer space-y-2 group/card")}
       >
         <div className="flex items-start justify-between gap-2">
-          <span ref={titleRef} className="text-[13px] font-medium line-clamp-2 min-w-0">
+          <span ref={titleRef} className={cn(CARD_TITLE, "line-clamp-2 min-w-0")}>
             {title}
           </span>
         </div>
 
-        <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
+        <div className="flex items-center justify-end text-xs text-muted-foreground">
           <GoalProgressIcon
             progress={progressMetrics.progress}
             actionsCompleted={progressMetrics.actions_completed}
@@ -107,6 +116,7 @@ export function CompactGoalCard({ goal, onRemove, onUpdate, onSelect, swapMode }
   return (
     <BaseCardCompactEditable
       canFlip={canInteract}
+      faceClassName={CARD_FACE}
       renderFront={({ onFlip }) => (
         <FrontFace
           title={title}
@@ -177,37 +187,20 @@ function FrontFace({
       <div className="flex items-start justify-between gap-2">
         <ContentExpandable
           text={title}
-          className="text-[13px] font-medium"
+          className={CARD_TITLE}
           overflowText={hasBody ? body : undefined}
           hasOverflow={hasBody}
         />
-        <div className="flex items-center gap-1 shrink-0 mt-0.5">
-          {canInteract ? (
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={`Goal options for ${title}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onFlip();
-                    }}
-                    className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-                  >
-                    <Info className="h-3.5 w-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Edit or remove goal
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : null}
-        </div>
+        {canInteract && (
+          <CardDetailsButton
+            label={`Goal options for ${title}`}
+            tooltip="Edit or remove goal"
+            onClick={onFlip}
+          />
+        )}
       </div>
 
-      <div className="flex items-center justify-end text-[11px] text-muted-foreground/60">
+      <div className="flex items-center justify-end text-xs text-muted-foreground">
         <GoalProgressIcon
           progress={progress}
           actionsCompleted={actionsCompleted}
@@ -245,30 +238,26 @@ function BackFace({
     <div className="space-y-3">
       {/* Done button — top right, matching macOS widget pattern */}
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={onDone}
-          className="text-[12px] font-medium text-brand hover:text-brand/80 transition-colors"
-        >
+        <button type="button" onClick={onDone} className={CARD_DONE}>
           Done
         </button>
       </div>
 
       {/* Full goal title */}
-      <p className="text-[13px] font-medium">
+      <p className={CARD_TITLE}>
         {title}
       </p>
 
       {/* Goal body preview */}
       {hasBody && (
-        <p className="text-[12px] text-muted-foreground/70 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+        <p className="text-label leading-relaxed text-muted-foreground line-clamp-3 whitespace-pre-wrap">
           {body}
         </p>
       )}
 
       {/* Progress summary */}
       {actionsTotal > 0 && (
-        <p className="text-[11px] text-muted-foreground/60">
+        <p className="text-xs tabular-nums text-muted-foreground">
           {actionsCompleted}/{actionsTotal} actions &middot; {percent}%
         </p>
       )}
@@ -276,13 +265,8 @@ function BackFace({
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2 pt-3">
         {onEdit && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 gap-1 text-[11px] px-2"
-            onClick={onEdit}
-          >
-            <Pencil className="!h-2.5 !w-2.5" />
+          <Button variant="secondary" size="sm" className={CARD_BUTTON} onClick={onEdit}>
+            <Pencil className="!h-3 !w-3" aria-hidden />
             Edit
           </Button>
         )}
@@ -290,13 +274,8 @@ function BackFace({
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="h-6 gap-1 text-[11px] px-2"
-                  onClick={onRemove}
-                >
-                  <CircleMinus className="!h-2.5 !w-2.5" />
+                <Button variant="destructive" size="sm" className={CARD_BUTTON} onClick={onRemove}>
+                  <CircleMinus className="!h-3 !w-3" aria-hidden />
                   Remove
                 </Button>
               </TooltipTrigger>

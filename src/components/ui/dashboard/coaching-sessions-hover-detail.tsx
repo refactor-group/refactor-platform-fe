@@ -1,13 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
 import { DateTime } from "ts-luxon";
-import { ChevronRight, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { SessionGoalList } from "@/components/ui/session-goal-list";
-import { ActionStatusIcon } from "@/components/ui/coaching-sessions/action-card-parts";
+import { ActionStatusRow } from "@/components/ui/status/action-status-row";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
-import { cn } from "@/components/lib/utils";
 import { formatDateWithTime } from "@/lib/utils/date";
 import type { Action } from "@/types/action";
 import {
@@ -15,13 +12,13 @@ import {
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
 import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
-import { ItemStatus } from "@/types/general";
 
 export interface SessionHoverDetailProps {
   session: EnrichedCoachingSession;
   participantName: string;
   userTimezone: string;
   reviewActions: Action[];
+  locale: string;
 }
 
 export function SessionHoverDetailEmpty() {
@@ -40,6 +37,7 @@ export function SessionHoverDetail({
   participantName,
   userTimezone,
   reviewActions,
+  locale,
 }: SessionHoverDetailProps) {
   const goals = session.goals ?? [];
   const scheduledDateTime = DateTime.fromISO(session.date, {
@@ -93,7 +91,7 @@ export function SessionHoverDetail({
           // with `?panel=actions` so the Actions panel opens automatically.
           <div className="divide-y divide-border/50">
             {reviewActions.map((action) => (
-              <ActionDueRow key={action.id} action={action} />
+              <ActionDueRow key={action.id} action={action} locale={locale} />
             ))}
           </div>
         )}
@@ -102,32 +100,16 @@ export function SessionHoverDetail({
   );
 }
 
-function ActionDueRow({ action }: { action: Action }) {
-  const isCompleted = action.status === ItemStatus.Completed;
-  const dueLabel = useMemo(
-    () =>
-      action.due_by.some ? `Due ${action.due_by.val.toFormat("MMM d")}` : "No due date",
-    [action.due_by]
-  );
-
+function ActionDueRow({ action, locale }: { action: Action; locale: string }) {
   return (
-    <Link
+    <ActionStatusRow
+      title={action.body ?? ""}
+      status={action.status}
+      dueBy={action.due_by}
+      statusChangedAt={action.status_changed_at}
       href={`/coaching-sessions/${action.coaching_session_id}?panel=${PanelSection.Actions}`}
-      className="flex items-center gap-3 py-3 px-3 -mx-3 rounded-md transition-colors hover:bg-muted/30"
-    >
-      <ActionStatusIcon status={action.status} className="shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p
-          className={cn(
-            "text-sm leading-snug",
-            isCompleted && "text-muted-foreground line-through"
-          )}
-        >
-          {action.body}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">{dueLabel}</p>
-      </div>
-      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/25 shrink-0" />
-    </Link>
+      locale={locale}
+      className="-mx-3"
+    />
   );
 }

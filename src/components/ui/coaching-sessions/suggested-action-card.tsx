@@ -13,9 +13,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
-import { resolveAssignees } from "@/components/ui/coaching-sessions/action-card-parts";
+import { AssigneeAvatars, resolveAssignees } from "@/components/ui/coaching-sessions/action-card-parts";
 import { ActionEditForm } from "@/components/ui/coaching-sessions/action-card-compact";
 import { cn } from "@/components/lib/utils";
+import { CARD_BUTTON } from "@/components/ui/card-field";
 import { mayActOnSuggestion, suggestionDue } from "@/lib/utils/transcript-suggestions";
 import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
 import { useTapTooltip } from "@/lib/hooks/use-tap-tooltip";
@@ -59,7 +60,8 @@ export function SuggestedActionCard(props: SuggestedActionCardProps) {
       <div data-testid="suggested-action-card" className="min-w-0">
         <BaseCardCompactEditable
           editOnFlip
-          faceClassName="border-dashed border-foreground/30 bg-card shadow-none hover:border-foreground/30"
+          // The full action card's shape; the dashed border marks it as a suggestion.
+          faceClassName="rounded-xl border-dashed border-foreground/30 bg-card px-4 py-3.5 shadow-none hover:border-foreground/30"
           renderFront={({ onFlip }) => <SuggestionView {...props} onEdit={onFlip} />}
           renderBack={({ isEditing, onDone }) =>
             // Mounted only while showing, so each edit starts fresh.
@@ -156,21 +158,12 @@ function SuggestionView({
         </figcaption>
       </figure>
 
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-        <div className="flex items-center gap-1 max-md:min-h-10">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex items-center max-md:min-h-10">
           {resolvedAssignees.length === 0 ? (
-            <span className="italic text-muted-foreground/70">Unassigned</span>
+            <span className="text-xs italic text-muted-foreground">Unassigned</span>
           ) : (
-            resolvedAssignees.map((a) => (
-              <Tooltip key={a.id}>
-                <TooltipTrigger asChild>
-                  <span className="font-medium">{a.initials}</span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  {a.name}
-                </TooltipContent>
-              </Tooltip>
-            ))
+            <AssigneeAvatars assignees={resolvedAssignees} />
           )}
         </div>
         <SuggestionDueLabel suggestion={suggestion} locale={locale} />
@@ -190,7 +183,7 @@ function SuggestionView({
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
             <Button
               size="sm"
-              className={ROW_BUTTON}
+              className={CARD_BUTTON}
               disabled={pending}
               onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && (() => onAccept(None)))}
             >
@@ -198,9 +191,9 @@ function SuggestionView({
               Accept
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
-              className={ROW_BUTTON}
+              className={CARD_BUTTON}
               disabled={pending}
               onClick={onAccept ? onEdit : undefined}
             >
@@ -209,7 +202,7 @@ function SuggestionView({
             <Button
               variant="ghost"
               size="sm"
-              className={cn(ROW_BUTTON, "text-muted-foreground")}
+              className={cn(CARD_BUTTON, "text-muted-foreground")}
               disabled={pending}
               onClick={run(onDismiss)}
             >
@@ -319,7 +312,6 @@ function SuggestionEditBack({
         onCancel={onClose}
         saveLabel="Accept"
         saveIcon={Check}
-        buttonClassName="max-md:h-10 max-md:min-w-10"
         fieldsDisabled={confirming.some}
         footerOverride={
           confirming.some && duplicateOf.some ? (
@@ -362,7 +354,6 @@ function DuplicateMarker({
   );
 }
 
-const ROW_BUTTON = "h-6 gap-1 text-[11px] px-2 max-md:h-10 max-md:min-w-10";
 
 /** Runs one request at a time; `pending` stays true while it is in flight. */
 function useInFlight() {
@@ -420,14 +411,14 @@ function DuplicateConfirm({
         </button>
       </p>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button size="sm" className={ROW_BUTTON} disabled={pending} onClick={onAddAnyway}>
+        <Button size="sm" className={CARD_BUTTON} disabled={pending} onClick={onAddAnyway}>
           <Check className="!h-3 !w-3" aria-hidden />
           Add anyway
         </Button>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
-          className={ROW_BUTTON}
+          className={CARD_BUTTON}
           disabled={pending}
           onClick={onKeepExisting}
         >
@@ -436,7 +427,7 @@ function DuplicateConfirm({
         <Button
           variant="ghost"
           size="sm"
-          className={cn(ROW_BUTTON, "text-muted-foreground")}
+          className={cn(CARD_BUTTON, "text-muted-foreground")}
           onClick={onCancel}
         >
           Cancel
@@ -453,7 +444,7 @@ function SuggestionBody({ body }: { body: string }) {
       data-testid="suggested-action-body"
       data-expanded={expanded ? "true" : "false"}
       className={cn(
-        "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-[13px] font-medium leading-[1.55] [overflow-wrap:anywhere] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-sm font-medium leading-[1.55] [overflow-wrap:anywhere] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         !expanded && "max-h-[2.8em] overflow-hidden"
       )}
       onClick={() => setExpanded((prev) => !prev)}
@@ -473,16 +464,21 @@ function SuggestionDueLabel({
   const tap = useTapTooltip();
   const due = suggestionDue(suggestion, locale);
   const kind = due.spoken ? "spoken" : "default";
-  const weight = due.spoken ? "font-bold" : "font-normal";
+  // The meta line of the full card; a date heard in the transcript reads stronger than a default one.
+  const tone = cn(
+    "text-xs tabular-nums",
+    due.spoken ? "font-medium text-foreground" : "text-muted-foreground"
+  );
+  const text = `Due ${due.at.setLocale(locale).toFormat("MMM d")}`;
 
   if (due.tooltip.none) {
     return (
       <span
         data-testid="suggested-action-due"
         data-due-kind={kind}
-        className={cn("tabular-nums max-md:flex max-md:min-h-10 max-md:items-center", weight)}
+        className={cn(tone, "max-md:flex max-md:min-h-10 max-md:items-center")}
       >
-        {due.label}
+        {text}
       </span>
     );
   }
@@ -496,11 +492,11 @@ function SuggestionDueLabel({
           data-testid="suggested-action-due"
           data-due-kind={kind}
           className={cn(
-            "cursor-help tabular-nums underline decoration-dotted decoration-muted-foreground/50 underline-offset-[3px] max-md:min-h-10",
-            weight
+            tone,
+            "cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-[3px] max-md:min-h-10"
           )}
         >
-          {due.label}
+          {text}
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-64 text-xs">

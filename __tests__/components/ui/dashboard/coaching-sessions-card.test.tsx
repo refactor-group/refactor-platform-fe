@@ -137,7 +137,7 @@ describe("CoachingSessionsCard — delete flow", () => {
     setupRelationships([{ id: "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" }]);
     mockDelete.mockResolvedValueOnce(undefined);
     const user = userEvent.setup();
-    render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+    render(<CoachingSessionsCard locale="en-US" onReschedule={vi.fn()} />);
 
     await user.click(screen.getByTestId("bucket-stub-delete"));
 
@@ -165,7 +165,7 @@ describe("CoachingSessionsCard — delete flow", () => {
   it("surfaces an error toast and closes the dialog when deleteSession rejects", async () => {
     mockDelete.mockRejectedValueOnce(new Error("network down"));
     const user = userEvent.setup();
-    render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+    render(<CoachingSessionsCard locale="en-US" onReschedule={vi.fn()} />);
 
     await user.click(screen.getByTestId("bucket-stub-delete"));
     await user.click(
@@ -193,7 +193,7 @@ describe("CoachingSessionsCard — stale relationship filter cleanup", () => {
       { id: "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" },
     ]);
 
-    render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+    render(<CoachingSessionsCard locale="en-US" onReschedule={vi.fn()} />);
 
     await waitFor(() => {
       expect(mockSetRelationshipFilter).toHaveBeenCalledWith(undefined);
@@ -208,7 +208,7 @@ describe("CoachingSessionsCard — stale relationship filter cleanup", () => {
     setupFilterStore({ relationshipFilter: "rel-1" });
     setupRelationships([], /* isLoading */ true);
 
-    render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+    render(<CoachingSessionsCard locale="en-US" onReschedule={vi.fn()} />);
 
     expect(mockSetRelationshipFilter).not.toHaveBeenCalled();
   });
@@ -219,7 +219,7 @@ describe("CoachingSessionsCard — stale relationship filter cleanup", () => {
       { id: "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" },
     ]);
 
-    render(<CoachingSessionsCard onReschedule={vi.fn()} />);
+    render(<CoachingSessionsCard locale="en-US" onReschedule={vi.fn()} />);
 
     expect(mockSetRelationshipFilter).not.toHaveBeenCalled();
   });

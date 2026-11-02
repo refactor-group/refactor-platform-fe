@@ -74,7 +74,7 @@ async function confirmResend(seriesResponse: Response) {
   const user = userEvent.setup();
   render(
     <>
-      <CoachingSessionsCard onReschedule={vi.fn()} />
+      <CoachingSessionsCard locale="en-US" onReschedule={vi.fn()} />
       <Toaster theme="light" />
     </>
   );
