@@ -366,7 +366,7 @@ export function AddMemberDialog({
           </div>
           <Button
             type="button"
-            variant="ghost"
+            variant="tertiary"
             size="sm"
             onClick={resetLookup}
             aria-label={`Clear ${foundUser.val.first_name} ${foundUser.val.last_name}`}

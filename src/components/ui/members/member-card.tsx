@@ -296,7 +296,7 @@ export function MemberCard({
           {renderInviteStatusBadge(user.invite_status)}
           {canResendInvite && (
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="sm"
               className="h-6 px-2 text-xs"
               onClick={handleResendInvite}

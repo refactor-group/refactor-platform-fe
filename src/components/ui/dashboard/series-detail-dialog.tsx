@@ -127,9 +127,9 @@ function SeriesDetailSessions({
       {remaining > 0 && (
         <div className="flex justify-center pt-2">
           <Button
-            variant="ghost"
+            variant="tertiary"
             size="sm"
-            className="h-7 text-xs text-muted-foreground gap-1.5"
+            className="h-7 text-xs gap-1.5"
             onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
           >
             View {Math.min(remaining, PAGE_SIZE)} more

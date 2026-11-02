@@ -243,9 +243,9 @@ function AgreementEditForm({
           Save
         </Button>
         <Button
-          variant="ghost"
+          variant="tertiary"
           size="sm"
-          className={cn(CARD_BUTTON, "text-muted-foreground")}
+          className={CARD_BUTTON}
           onClick={onCancel}
           disabled={isSaving}
         >

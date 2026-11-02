@@ -650,9 +650,9 @@ export function ActionEditForm({
             {saveLabel}
           </Button>
           <Button
-            variant="ghost"
+            variant="tertiary"
             size="sm"
-            className={cn(CARD_BUTTON, "text-muted-foreground", buttonClassName)}
+            className={cn(CARD_BUTTON, buttonClassName)}
             onClick={onCancel}
             disabled={isSaving}
           >

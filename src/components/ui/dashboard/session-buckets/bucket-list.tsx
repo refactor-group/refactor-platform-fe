@@ -182,9 +182,9 @@ export function BucketList({
       })}
       <div className="px-6 py-3 flex justify-center border-t">
         <Button
-          variant="ghost"
+          variant="tertiary"
           size="sm"
-          className="h-7 text-xs text-muted-foreground gap-1.5"
+          className="h-7 text-xs gap-1.5"
           onClick={onShowMore}
           disabled={showMoreLoading || showMoreDisabled}
           aria-busy={showMoreLoading}

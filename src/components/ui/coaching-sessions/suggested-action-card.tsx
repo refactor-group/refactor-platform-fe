@@ -200,9 +200,9 @@ function SuggestionView({
               Edit
             </Button>
             <Button
-              variant="ghost"
+              variant="tertiary"
               size="sm"
-              className={cn(CARD_BUTTON, "text-muted-foreground")}
+              className={CARD_BUTTON}
               disabled={pending}
               onClick={run(onDismiss)}
             >
@@ -425,9 +425,9 @@ function DuplicateConfirm({
           Keep existing
         </Button>
         <Button
-          variant="ghost"
+          variant="tertiary"
           size="sm"
-          className={cn(CARD_BUTTON, "text-muted-foreground")}
+          className={CARD_BUTTON}
           onClick={onCancel}
         >
           Cancel

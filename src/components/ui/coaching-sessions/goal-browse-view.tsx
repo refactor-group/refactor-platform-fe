@@ -131,9 +131,9 @@ export function GoalBrowseView({
       {/* Actions */}
       <div className="flex items-center justify-end pt-2 border-t border-border/30">
         <Button
-          variant="ghost"
+          variant="tertiary"
           size="sm"
-          className="h-8 text-xs text-muted-foreground"
+          className="h-8 text-xs"
           onClick={onCancel}
         >
           Cancel

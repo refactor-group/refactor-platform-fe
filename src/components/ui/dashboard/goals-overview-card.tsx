@@ -283,9 +283,9 @@ export function GoalsOverviewCard() {
               {SHOW_VIEW_ALL_GOALS_LINK && (
                 <div className="pt-3 mt-auto flex justify-end">
                   <Button
-                    variant="ghost"
+                    variant="tertiary"
                     size="sm"
-                    className="text-xs text-muted-foreground hover:text-foreground gap-1 h-7"
+                    className="text-xs gap-1 h-7"
                     disabled
                   >
                     View all goals
