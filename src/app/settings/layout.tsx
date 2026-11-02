@@ -19,7 +19,7 @@ export default function SettingsLayout({
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
-      <main className="flex-1 p-6 min-w-0">
+      <main className="flex-1 p-4 sm:p-6 min-w-0">
         <PageContainer>
           <div className="lg:max-w-[70%]">
             {/* SettingsNav renders both mobile (horizontal tabs above)
