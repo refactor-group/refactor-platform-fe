@@ -33,14 +33,14 @@ const f2 = s("f2", "2026-09-08T10:00");
 const f3 = s("f3", "2026-09-15T10:00");
 
 describe("sessionWindow", () => {
-  it("pivots on today's session", () => {
+  it("pivots on today's session and lists oldest first", () => {
     const result = sessionWindow({
       sessions: [p3, p2, p1, T, f1, f2, f3],
       today: Some("T"),
       current: None,
       now,
     });
-    expect(ids(result.list)).toEqual(["f2", "f1", "p1", "p2"]);
+    expect(ids(result.list)).toEqual(["p2", "p1", "f1", "f2"]);
     expect(ids(result.dots)).toEqual(["p2", "p1", "T", "f1", "f2"]);
   });
 
@@ -51,7 +51,7 @@ describe("sessionWindow", () => {
       current: Some("p2"),
       now,
     });
-    expect(ids(result.list)).toEqual(["f1", "p1", "p2", "p3", "p4"]);
+    expect(ids(result.list)).toEqual(["p4", "p3", "p2", "p1", "f1"]);
   });
 
   it("splits around now when neither is set, regardless of input order", () => {
@@ -61,7 +61,7 @@ describe("sessionWindow", () => {
       current: None,
       now,
     });
-    expect(ids(result.list)).toEqual(["f2", "f1", "p1", "p2"]);
+    expect(ids(result.list)).toEqual(["p2", "p1", "f1", "f2"]);
   });
 
   it("handles sparse and empty histories", () => {
@@ -79,7 +79,7 @@ describe("sessionWindow", () => {
       current: None,
       now,
     });
-    expect(ids(result.list)).toEqual(["f2", "f1"]);
+    expect(ids(result.list)).toEqual(["f1", "f2"]);
   });
 
   it("falls through to the around-now rule when today's id is missing", () => {
@@ -89,7 +89,7 @@ describe("sessionWindow", () => {
       current: None,
       now,
     });
-    expect(ids(result.list)).toEqual(["f2", "f1", "p1", "p2"]);
+    expect(ids(result.list)).toEqual(["p2", "p1", "f1", "f2"]);
   });
 
   it("never lists more than 5 sessions for a long history", () => {
