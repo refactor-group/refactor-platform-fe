@@ -16,6 +16,7 @@ function renderRow(props: Partial<Parameters<typeof ActionStatusRow>[0]> = {}) {
       dueBy={Some(NOW.plus({ days: 5 }))}
       statusChangedAt={NOW}
       href="/coaching-sessions/s1?panel=actions"
+      locale="en-US"
       {...props}
     />
   );

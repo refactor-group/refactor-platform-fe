@@ -230,6 +230,24 @@ describe("CompactActionCard", () => {
         expect(meta).toHaveTextContent("Closed Aug 13");
       });
 
+      it("writes the date in the card's locale", () => {
+        render(
+          <Wrapper>
+            <CompactActionCard
+              {...baseProps({
+                locale: "fr",
+                action: createMockAction({
+                  status: ItemStatus.Completed,
+                  status_changed_at: fakeNow.minus({ days: 10 }),
+                }),
+              })}
+            />
+          </Wrapper>
+        );
+        const front = document.querySelector<HTMLElement>(".flip-card-front")!;
+        expect(front.querySelector("[data-meta]")).toHaveTextContent("Done août 15");
+      });
+
       it("shows nothing for an open action without a due date", () => {
         render(
           <Wrapper>

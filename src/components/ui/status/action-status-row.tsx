@@ -19,6 +19,7 @@ interface ActionStatusRowProps {
   statusChangedAt: DateTime;
   /** Where the row goes: the action in its session. */
   href: string;
+  locale: string;
   /** When given, the glyph and pill open the status menu; otherwise they only show the status. */
   onStatusChange?: (status: ItemStatus) => void;
   className?: string;
@@ -34,6 +35,7 @@ export function ActionStatusRow({
   dueBy,
   statusChangedAt,
   href,
+  locale,
   onStatusChange,
   className,
 }: ActionStatusRowProps) {
@@ -64,6 +66,7 @@ export function ActionStatusRow({
           status={status}
           dueBy={dueBy}
           statusChangedAt={statusChangedAt}
+          locale={locale}
           className="mt-0.5 block"
         />
       </div>

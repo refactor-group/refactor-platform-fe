@@ -8,13 +8,14 @@ import {
 } from "@/components/ui/status/status-meta";
 
 interface StatusMetaLineProps extends StatusMetaInput {
+  locale: string;
   className?: string;
 }
 
 /** "Due Aug 20", "Done Aug 15", "Paused · was due Aug 18" or "Closed Aug 13"; nothing for an open, undated item. */
-export function StatusMetaLine({ className, ...input }: StatusMetaLineProps) {
+export function StatusMetaLine({ locale, className, ...input }: StatusMetaLineProps) {
   const meta = statusMeta(input, DateTime.now());
-  const text = formatStatusMeta(meta);
+  const text = formatStatusMeta(meta, locale);
   if (text.none) return null;
   return (
     <span

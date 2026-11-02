@@ -12,7 +12,7 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 
-export function DashboardContainer() {
+export function DashboardContainer({ locale }: { locale: string }) {
   // Used to live inside the per-card relationship selector. Now that the
   // dashboard has no visible selector (the new CoachingSessionsCard is
   // user-scoped), wire the hook here so single-relationship users still get
@@ -93,6 +93,7 @@ export function DashboardContainer() {
           onReschedule={handleOpenDialog}
           onRefreshNeeded={handleSessionsCardRefreshNeeded}
           onSeriesMutated={handleSeriesMutated}
+          locale={locale}
         />
       </div>
       <CoachingSessionDialog

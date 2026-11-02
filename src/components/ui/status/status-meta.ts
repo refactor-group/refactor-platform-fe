@@ -49,23 +49,24 @@ export function statusMeta(input: StatusMetaInput, now: DateTime): StatusMeta {
   }
 }
 
-const shortDate = (dt: DateTime): string => dt.toFormat("MMM d");
+const shortDate = (dt: DateTime, locale: string): string => dt.setLocale(locale).toFormat("MMM d");
 
-export function formatStatusMeta(meta: StatusMeta): Option<string> {
+/** The meta line's text, with month names in the given locale. */
+export function formatStatusMeta(meta: StatusMeta, locale: string): Option<string> {
   switch (meta.kind) {
     case "none":
       return None;
     case "due":
     case "overdue":
-      return Some(`Due ${shortDate(meta.dueBy)}`);
+      return Some(`Due ${shortDate(meta.dueBy, locale)}`);
     case "paused":
       return Some(
-        meta.dueBy.some ? `Paused · was due ${shortDate(meta.dueBy.val)}` : "Paused"
+        meta.dueBy.some ? `Paused · was due ${shortDate(meta.dueBy.val, locale)}` : "Paused"
       );
     case "done":
-      return Some(`Done ${shortDate(meta.at)}`);
+      return Some(`Done ${shortDate(meta.at, locale)}`);
     case "closed":
-      return Some(`Closed ${shortDate(meta.at)}`);
+      return Some(`Closed ${shortDate(meta.at, locale)}`);
     default: {
       const _exhaustive: never = meta;
       throw new Error(`Unhandled status meta: ${JSON.stringify(_exhaustive)}`);

@@ -15,6 +15,7 @@ function renderWith(actions: ReturnType<typeof createMockAction>[]) {
       participantName="Ehab Badawi"
       userTimezone="UTC"
       reviewActions={actions}
+      locale="en-US"
     />
   );
 }

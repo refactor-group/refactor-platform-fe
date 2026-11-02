@@ -189,7 +189,7 @@ export function CompactActionCard({
         <ActionBody body={body} goalTitle={linkedGoalTitle} closed={isClosed(action.status)} />
       )}
       renderFooter={() => (
-        <ActionFooter resolvedAssignees={resolvedAssignees} action={action} />
+        <ActionFooter resolvedAssignees={resolvedAssignees} action={action} locale={locale} />
       )}
       renderBack={({ onDone, isEditing, onEditStart, onEditEnd }) =>
         isEditing ? (
@@ -332,9 +332,11 @@ function ActionBody({
 function ActionFooter({
   resolvedAssignees,
   action,
+  locale,
 }: {
   resolvedAssignees: AssigneeInfo[];
   action: Action;
+  locale: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
@@ -343,6 +345,7 @@ function ActionFooter({
         status={action.status}
         dueBy={action.due_by}
         statusChangedAt={action.status_changed_at}
+        locale={locale}
       />
     </div>
   );
@@ -386,6 +389,7 @@ function ActionBackView({
           status={action.status}
           dueBy={action.due_by}
           statusChangedAt={action.status_changed_at}
+          locale={locale}
         />
         <button
           type="button"

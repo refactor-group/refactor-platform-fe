@@ -18,6 +18,7 @@ export interface SessionHoverDetailProps {
   participantName: string;
   userTimezone: string;
   reviewActions: Action[];
+  locale: string;
 }
 
 export function SessionHoverDetailEmpty() {
@@ -36,6 +37,7 @@ export function SessionHoverDetail({
   participantName,
   userTimezone,
   reviewActions,
+  locale,
 }: SessionHoverDetailProps) {
   const goals = session.goals ?? [];
   const scheduledDateTime = DateTime.fromISO(session.date, {
@@ -89,7 +91,7 @@ export function SessionHoverDetail({
           // with `?panel=actions` so the Actions panel opens automatically.
           <div className="divide-y divide-border/50">
             {reviewActions.map((action) => (
-              <ActionDueRow key={action.id} action={action} />
+              <ActionDueRow key={action.id} action={action} locale={locale} />
             ))}
           </div>
         )}
@@ -98,7 +100,7 @@ export function SessionHoverDetail({
   );
 }
 
-function ActionDueRow({ action }: { action: Action }) {
+function ActionDueRow({ action, locale }: { action: Action; locale: string }) {
   return (
     <ActionStatusRow
       title={action.body ?? ""}
@@ -106,6 +108,7 @@ function ActionDueRow({ action }: { action: Action }) {
       dueBy={action.due_by}
       statusChangedAt={action.status_changed_at}
       href={`/coaching-sessions/${action.coaching_session_id}?panel=${PanelSection.Actions}`}
+      locale={locale}
       className="-mx-3"
     />
   );
