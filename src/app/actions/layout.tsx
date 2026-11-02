@@ -17,7 +17,8 @@ export default function ActionsLayout({
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
-      <main className="flex-1 p-6 min-w-0">{children}</main>
+      {/* PageContainer's 16px is the page padding on phones; the board needs every pixel. */}
+      <main className="flex-1 min-w-0 sm:p-6">{children}</main>
     </div>
   );
 }
