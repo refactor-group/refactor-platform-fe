@@ -7,6 +7,7 @@ import {
   type NearestQuery,
   useCoachingSession,
   useNearestCoachingSessions,
+  useNearestEachCoachingSessions,
 } from "@/lib/api/coaching-sessions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
@@ -28,6 +29,7 @@ vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/coaching-sessions")>()),
   useCoachingSession: vi.fn(),
   useNearestCoachingSessions: vi.fn(),
+  useNearestEachCoachingSessions: vi.fn(),
 }));
 
 const NOW = DateTime.fromISO("2026-08-25T19:00:00Z", { zone: "utc" });
@@ -83,6 +85,14 @@ function lastWindow() {
   return { relationshipId, around, before, after };
 }
 
+function serveActivity(sessions: EnrichedCoachingSession[], state: { isLoading?: boolean; isError?: unknown } = {}) {
+  vi.mocked(useNearestEachCoachingSessions).mockReturnValue({
+    sessions,
+    isLoading: state.isLoading ?? false,
+    isError: state.isError,
+  });
+}
+
 function renderOpened() {
   const rendered = renderHook(() => useJoinSessionMenu());
   act(() => rendered.result.current.reset());
@@ -116,6 +126,7 @@ describe("useJoinSessionMenu", () => {
       isError: undefined,
       refresh: vi.fn(),
     } as unknown as ReturnType<typeof useNearestCoachingSessions>);
+    serveActivity([]);
   });
 
   afterEach(() => {
@@ -132,8 +143,8 @@ describe("useJoinSessionMenu", () => {
 
   it("lists one person per other participant, sorted by name", () => {
     const { result } = renderOpened();
-    expect(result.current.people.map((p) => p.firstName)).toEqual(["Ehab", "Priya", "Zed"]);
-    expect(result.current.people[0]).toEqual({
+    expect(result.current.people.map((p) => p.person.firstName)).toEqual(["Ehab", "Priya", "Zed"]);
+    expect(result.current.people[0].person).toEqual({
       userId: "ehab",
       firstName: "Ehab",
       fullName: "Ehab Badawi",
@@ -147,7 +158,7 @@ describe("useJoinSessionMenu", () => {
     );
     vi.mocked(usePathname).mockReturnValue("/coaching-sessions/ehab-alt");
     const { result } = renderOpened();
-    expect(result.current.people.filter((p) => p.userId === "ehab")).toHaveLength(1);
+    expect(result.current.people.filter((p) => p.person.userId === "ehab")).toHaveLength(1);
     expect(result.current.selectedId).toEqual(Some("ehab"));
     expect(lastWindow().relationshipId).toBe("rel-e2");
   });
@@ -261,7 +272,7 @@ describe("useJoinSessionMenu", () => {
     expect(result.current.selectedId).toEqual(Some("ehab"));
   });
 
-  it("maps the response into a loaded window", () => {
+  it("maps the response into a loaded window, oldest first", () => {
     vi.mocked(useNearestCoachingSessions).mockReturnValue({
       sessions: [
         createMockEnrichedSession({ id: "next", date: "2026-09-01T15:00:00", display_title: Some("Plan") }),
@@ -274,7 +285,7 @@ describe("useJoinSessionMenu", () => {
     const { result } = renderOpened();
     const { sessions } = result.current;
     if (sessions.kind !== "loaded") throw new Error(`expected loaded, got ${sessions.kind}`);
-    expect(sessions.list.map((s) => s.title)).toEqual(["Plan", "Kickoff"]);
+    expect(sessions.list.map((s) => s.title)).toEqual(["Kickoff", "Plan"]);
     expect(sessions.groups.map((g) => g.label)).toEqual(["Aug", "Sep"]);
   });
 
@@ -299,6 +310,102 @@ describe("useJoinSessionMenu", () => {
     if (sessions.kind !== "loaded") throw new Error(`expected loaded, got ${sessions.kind}`);
     expect(sessions.groups.filter((g) => g.selected).map((g) => g.label)).toEqual(["Aug"]);
   });
+  describe("carousel activity", () => {
+    const session = (relationshipId: string, date: string) =>
+      createMockEnrichedSession({ id: `${relationshipId}-${date}`, coaching_relationship_id: relationshipId, date });
+    const ZED_FRIDAY = session("rel-z", "2026-08-28T15:00:00");
+    const EHAB_RECENT = session("rel-e", "2026-08-11T15:00:00");
+    const ZED_OLD = session("rel-z", "2026-06-16T15:00:00");
+    const PRIYA_LATER = session("rel-p", "2026-09-10T15:00:00");
+
+    const names = (people: { person: { firstName: string } }[]) => people.map((p) => p.person.firstName);
+    const whens = (people: { when: Option<{ text: string; tone: string }> }[]) =>
+      people.map((p) => (p.when.some ? `${p.when.val.text}/${p.when.val.tone}` : "-"));
+
+    it("asks for the sessions either side of the open instant across every relationship", () => {
+      renderOpened();
+      const calls = vi.mocked(useNearestEachCoachingSessions).mock.calls;
+      const query = calls[calls.length - 1][0];
+      if (query.none) throw new Error("expected an activity query");
+      expect(query.val.relationshipIds).toEqual(["rel-e", "rel-e2", "rel-p", "rel-z"]);
+      expect(query.val.around).toBe("2026-08-25T19:00:00Z");
+    });
+
+    it("asks for nothing until the menu first opens", () => {
+      renderHook(() => useJoinSessionMenu());
+      const calls = vi.mocked(useNearestEachCoachingSessions).mock.calls;
+      expect(calls[calls.length - 1][0].none).toBe(true);
+    });
+
+    it("orders by soonest upcoming session, then recent people, with when lines", () => {
+      serveActivity([ZED_FRIDAY, EHAB_RECENT, PRIYA_TODAY]);
+      const { result } = renderOpened();
+      expect(names(result.current.people)).toEqual(["Priya", "Zed", "Ehab"]);
+      expect(whens(result.current.people)).toEqual(["4:30pm/accent", "Fri/muted", "Last Aug 11/muted"]);
+      expect(result.current.hiddenInactive).toBe(0);
+    });
+
+    it("defaults to the person with the soonest session", () => {
+      serveActivity([ZED_FRIDAY, EHAB_RECENT, PRIYA_TODAY]);
+      const { result } = renderOpened();
+      expect(result.current.selectedId).toEqual(Some("priya"));
+    });
+
+    it("shows a date for sessions a week or more away", () => {
+      serveActivity([PRIYA_LATER, EHAB_RECENT, ZED_FRIDAY]);
+      const { result } = renderOpened();
+      expect(names(result.current.people)).toEqual(["Zed", "Priya", "Ehab"]);
+      expect(whens(result.current.people)[1]).toBe("Sep 10/muted");
+    });
+
+    it("hides inactive people until shown, then appends them faded, until the next open", () => {
+      serveActivity([PRIYA_TODAY, EHAB_RECENT, ZED_OLD]);
+      const { result } = renderOpened();
+      expect(names(result.current.people)).toEqual(["Priya", "Ehab"]);
+      expect(result.current.hiddenInactive).toBe(1);
+
+      act(() => result.current.showInactive());
+      expect(names(result.current.people)).toEqual(["Priya", "Ehab", "Zed"]);
+      expect(result.current.people[2]).toMatchObject({ inactive: true });
+      expect(whens(result.current.people)[2]).toBe("Last Jun 16/faint");
+      expect(result.current.hiddenInactive).toBe(0);
+
+      act(() => result.current.reset());
+      expect(result.current.hiddenInactive).toBe(1);
+    });
+
+    it("sorts inactive people by most recent session, never-met last", () => {
+      serveActivity([PRIYA_TODAY, ZED_OLD]);
+      const { result } = renderOpened();
+      act(() => result.current.showInactive());
+      expect(names(result.current.people)).toEqual(["Priya", "Zed", "Ehab"]);
+      expect(whens(result.current.people)[2]).toBe("No sessions/faint");
+    });
+
+    it("never hides the selected person, even when inactive", () => {
+      serveActivity([PRIYA_TODAY, ZED_OLD]);
+      const { result } = renderOpened();
+      act(() => result.current.selectPerson("zed"));
+      expect(names(result.current.people)).toContain("Zed");
+    });
+
+    it("keeps name order, hides no one and holds the window while activity loads", () => {
+      serveActivity([], { isLoading: true });
+      const { result } = renderOpened();
+      expect(names(result.current.people)).toEqual(["Ehab", "Priya", "Zed"]);
+      expect(result.current.people.every((p) => p.when.none)).toBe(true);
+      expect(lastNearestQuery().none).toBe(true);
+    });
+
+    it("falls back to name order when activity fails", () => {
+      serveActivity([], { isError: new Error("boom") });
+      const { result } = renderOpened();
+      expect(names(result.current.people)).toEqual(["Ehab", "Priya", "Zed"]);
+      expect(result.current.hiddenInactive).toBe(0);
+      expect(lastNearestQuery().some).toBe(true);
+    });
+  });
+
   describe("while the next list loads", () => {
     const ehabSessions = [
       createMockEnrichedSession({ id: "ehab-s", coaching_relationship_id: "rel-e", date: "2026-08-18T15:00:00" }),
