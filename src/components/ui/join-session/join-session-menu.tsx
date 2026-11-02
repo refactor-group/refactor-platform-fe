@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { PersonCarousel } from "@/components/ui/join-session/person-carousel";
 import { SessionDotStrip } from "@/components/ui/join-session/session-dot-strip";
-import { SessionRow } from "@/components/ui/join-session/session-row";
+import { LIST_DATE_COLUMN, SessionRow } from "@/components/ui/join-session/session-row";
 import { TodayBlock } from "@/components/ui/join-session/today-block";
 import type { MenuPerson, MenuSession } from "@/components/ui/join-session/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -50,7 +50,9 @@ function LoadingRows() {
     <div aria-busy="true" aria-label="Loading sessions">
       {[0, 1, 2].map((n) => (
         <div key={n} className="flex min-h-11 items-center gap-2.5 px-2.5 py-[5px]">
-          <Skeleton className="h-3.5 w-[72px]" />
+          <span className={LIST_DATE_COLUMN}>
+            <Skeleton className="h-3.5 w-[72px]" />
+          </span>
           <Skeleton className="h-3.5 flex-1" />
         </div>
       ))}

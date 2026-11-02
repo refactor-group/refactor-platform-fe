@@ -16,6 +16,8 @@ const buttonVariants = cva(
         outline:
           "border border-input bg-background hover:bg-fill hover:text-foreground",
         secondary: "bg-fill text-foreground hover:bg-fill-hover",
+        // Bare text + icon. Ghost hover-fills and is for icon buttons in menus.
+        tertiary: "text-ink-2 hover:text-foreground",
         ghost: "text-ink-2 hover:bg-fill hover:text-foreground",
         link: "text-brand underline-offset-4 hover:underline",
       },
