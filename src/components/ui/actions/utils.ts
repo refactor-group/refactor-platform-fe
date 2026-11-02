@@ -23,26 +23,6 @@ export const STATUS_COLUMN_ORDER: ItemStatus[] = [
   ItemStatus.WontDo,
 ];
 
-/** Tailwind background color class for each status column indicator */
-export function statusColor(status: ItemStatus): string {
-  switch (status) {
-    case ItemStatus.NotStarted:
-      return "bg-slate-400";
-    case ItemStatus.InProgress:
-      return "bg-blue-500";
-    case ItemStatus.OnHold:
-      return "bg-amber-400";
-    case ItemStatus.Completed:
-      return "bg-green-500";
-    case ItemStatus.WontDo:
-      return "bg-gray-400";
-    default: {
-      const _exhaustive: never = status;
-      throw new Error(`Unhandled status: ${_exhaustive}`);
-    }
-  }
-}
-
 /** Group items into status buckets, preserving order within each bucket */
 export function groupByStatus<T>(
   items: T[],

@@ -9,7 +9,6 @@ import {
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import {
   STATUS_COLUMN_ORDER,
-  statusColor,
   groupByStatus,
   applyTimeFilter,
   visibleStatuses,
@@ -86,20 +85,6 @@ describe("actionStatusToString", () => {
     expect(actionStatusToString(ItemStatus.OnHold)).toBe("On Hold");
     expect(actionStatusToString(ItemStatus.Completed)).toBe("Completed");
     expect(actionStatusToString(ItemStatus.WontDo)).toBe("Won't Do");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// statusColor
-// ---------------------------------------------------------------------------
-
-describe("statusColor", () => {
-  it("returns a Tailwind class for each status", () => {
-    expect(statusColor(ItemStatus.NotStarted)).toBe("bg-slate-400");
-    expect(statusColor(ItemStatus.InProgress)).toBe("bg-blue-500");
-    expect(statusColor(ItemStatus.OnHold)).toBe("bg-amber-400");
-    expect(statusColor(ItemStatus.Completed)).toBe("bg-green-500");
-    expect(statusColor(ItemStatus.WontDo)).toBe("bg-gray-400");
   });
 });
 
