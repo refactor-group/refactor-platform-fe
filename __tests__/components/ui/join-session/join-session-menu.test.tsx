@@ -36,7 +36,7 @@ const priyaToday = session("p-today", "2026-08-25T16:30", "Hiring loop");
 const loaded: PersonSessionsState = {
   kind: "loaded",
   person: ehab,
-  list: [s8, s7],
+  list: [s7, s8],
   groups: [
     { key: "2026-08", label: "Aug", selected: true, sessions: [s7] },
     { key: "2026-09", label: "Sep", selected: false, sessions: [s8] },
@@ -50,7 +50,12 @@ function model(overrides: Partial<JoinSessionMenuModel> = {}): JoinSessionMenuMo
   return {
     today: [{ session: priyaToday, person: priya }],
     todayError: None,
-    people: [ehab, priya],
+    people: [
+      { person: ehab, when: Some({ text: "Thu", tone: "muted", past: false }), inactive: false },
+      { person: priya, when: Some({ text: "4:30pm", tone: "accent", past: false }), inactive: false },
+    ],
+    hiddenInactive: 0,
+    showInactive: vi.fn(),
     selectedId: Some("ehab"),
     page: 0,
     current: None,

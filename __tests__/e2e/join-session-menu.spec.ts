@@ -78,11 +78,15 @@ const serveNearest: NearestHandler = (route, relationshipId) =>
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-/** Swap `handle` to change how `/nearest` answers from then on. */
-type NearestControl = { requests: NearestRequest[]; handle: NearestHandler }
+/**
+ * Swap `handle` to change how the selected person's `/nearest` window answers
+ * from then on. The carousel's one-either-side requests land in `activity` and
+ * are always served.
+ */
+type NearestControl = { requests: NearestRequest[]; activity: NearestRequest[]; handle: NearestHandler }
 
 async function setup(page: Page, context: Parameters<typeof setupAuthentication>[1]) {
-  const nearest: NearestControl = { requests: [], handle: serveNearest }
+  const nearest: NearestControl = { requests: [], activity: [], handle: serveNearest }
   await page.clock.setFixedTime(NOW)
   await setupAuthentication(page, context)
   await mockCommonApiRoutes(page, { relationships: RELATIONSHIPS })
@@ -99,12 +103,17 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
   await page.route('**/coaching_sessions/nearest**', (route) => {
     const params = new URL(route.request().url()).searchParams
     const relationshipId = params.get('coaching_relationship_id') ?? ''
-    nearest.requests.push({
+    const request = {
       relationshipId,
       around: params.get('around') ?? '',
       before: params.get('before') ?? '',
       after: params.get('after') ?? '',
-    })
+    }
+    if (request.before === '1' && request.after === '1') {
+      nearest.activity.push(request)
+      return serveNearest(route, relationshipId)
+    }
+    nearest.requests.push(request)
     return nearest.handle(route, relationshipId)
   })
   return nearest
@@ -114,6 +123,10 @@ const trigger = (page: Page) => page.getByRole('button', { name: 'Join session' 
 const menu = (page: Page) => page.getByRole('dialog', { name: 'Join session' })
 const person = (page: Page, firstName: string) =>
   menu(page).locator('button[aria-pressed]').filter({ hasText: firstName })
+const showInactive = (page: Page) => menu(page).getByRole('button', { name: /^Show \d+ inactive$/ })
+// Ehab, whose session today is the soonest, is selected by default.
+const EHAB_ROW = 'Session 6'
+const EHAB_TODAY_WINDOW = { relationshipId: 'rel-e', around: EHAB_TODAY.date, before: '2', after: '3' }
 
 async function openMenu(page: Page) {
   await trigger(page).click()
@@ -130,86 +143,115 @@ test.describe('Join session menu', () => {
     await page.setViewportSize({ width: 1280, height: 800 })
   })
 
-  test('shows the Today block and the first person by default', async ({ page }) => {
+  test('shows the Today block and the soonest person by default', async ({ page }) => {
     await page.goto('/dashboard')
     await expect(trigger(page)).toBeVisible()
     await page.waitForLoadState('networkidle')
     expect(requests).toEqual([])
+    expect(nearest.activity).toEqual([])
     await openMenu(page)
 
     const today = menu(page).locator('section').filter({ hasText: 'Today' }).first()
     await expect(today).toContainText('Ehab Badawi')
     await expect(today).toContainText('Today · 4:30 PM')
-    await expect(person(page, 'Alex')).toHaveAttribute('aria-pressed', 'true')
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
-    expect(requests).toEqual([{ relationshipId: 'rel-a', around: NOW, before: '2', after: '2' }])
+    await expect(person(page, 'Ehab')).toHaveAttribute('aria-pressed', 'true')
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
+    expect(requests).toEqual([EHAB_TODAY_WINDOW])
+    expect(nearest.activity.map((r) => r.relationshipId).sort()).toEqual(PEOPLE.map(([id]) => id))
+    expect(nearest.activity.every((r) => r.around === NOW)).toBe(true)
   })
 
-  test('pages the carousel', async ({ page }) => {
+  test('orders people by their next session, with a when line', async ({ page }) => {
+    await page.goto('/dashboard')
+    await openMenu(page)
+
+    await expect(menu(page).locator('button[aria-pressed]')).toHaveText([
+      /Ehab4:30pm$/,
+      /DanielFri$/,
+      /AlexSep 2$/,
+      /LenaLast Aug 20$/,
+    ])
+    await expect(person(page, 'Lena').getByText('Last', { exact: true })).toHaveClass('sr-only')
+    await expect(showInactive(page)).toHaveText('+2InactiveShow')
+    await expect(menu(page).getByRole('button', { name: 'Next people' })).toBeDisabled()
+  })
+
+  test('shows inactive people on demand, then hides them again on reopen', async ({ page }) => {
     await page.goto('/dashboard')
     await openMenu(page)
 
     const prev = menu(page).getByRole('button', { name: 'Previous people' })
     const next = menu(page).getByRole('button', { name: 'Next people' })
-    await expect(prev).toBeDisabled()
-    await expect(person(page, 'Priya')).toBeVisible()
+    await expect(person(page, 'Sarah')).toHaveCount(0)
+    await showInactive(page).click()
+    await expect(showInactive(page)).toHaveCount(0)
 
     await next.click()
     await expect(next).toBeDisabled()
     await expect(prev).toBeEnabled()
     const sarah = person(page, 'Sarah')
     await expect(sarah).toBeInViewport()
+    await expect(sarah).toHaveText(/SarahNo sessions$/)
+    await expect(sarah).toHaveCSS('opacity', '0.55')
     await sarah.click()
     await expect(sarah).toHaveAttribute('aria-pressed', 'true')
     await expect(menu(page)).toBeVisible()
     await expect(menu(page).getByText('No sessions with Sarah yet')).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await openMenu(page)
+    await expect(showInactive(page)).toBeVisible()
+    await expect(person(page, 'Sarah')).toHaveCount(0)
+  })
+
+  test('lists the window oldest first', async ({ page }) => {
+    await page.goto('/dashboard')
+    await openMenu(page)
+    await person(page, 'Alex').click()
+
+    const titles = menu(page).getByText(/^(Session 1|Saying no to new clients|Session 3)$/)
+    await expect(titles).toHaveText(['Session 1', 'Saying no to new clients', 'Session 3'])
   })
 
   test('picking a person re-requests their sessions', async ({ page }) => {
     await page.goto('/dashboard')
     await openMenu(page)
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
 
     await person(page, 'Daniel').click()
 
     await expect(menu(page).getByText('Kickoff')).toBeVisible()
-    await expect(menu(page).getByText('Saying no to new clients')).toBeHidden()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeHidden()
     expect(requests.at(-1)).toEqual({ relationshipId: 'rel-d', around: NOW, before: '2', after: '2' })
   })
 
   test("today's person anchors on the today session", async ({ page }) => {
     await page.goto('/dashboard')
     await openMenu(page)
-    await person(page, 'Ehab').click()
 
     await expect(menu(page).getByText('Session 8')).toBeVisible()
-    expect(requests.at(-1)).toEqual({
-      relationshipId: 'rel-e',
-      around: EHAB_TODAY.date,
-      before: '2',
-      after: '3',
-    })
+    expect(requests).toEqual([EHAB_TODAY_WINDOW])
   })
 
   test('hovering a dot shows exactly one tooltip', async ({ page }) => {
     await page.goto('/dashboard')
     await openMenu(page)
 
-    await menu(page).getByRole('button', { name: 'Aug 12 · Saying no to new clients' }).hover()
+    await menu(page).getByRole('button', { name: 'Aug 18 · Session 6' }).hover()
     const tooltips = menu(page).locator('.bg-inverse')
     await expect(tooltips).toHaveCount(1)
-    await expect(tooltips).toHaveText('Aug 12 · Saying no to new clients')
+    await expect(tooltips).toHaveText('Aug 18 · Session 6')
   })
 
   test('a row opens its session and confirms', async ({ page }) => {
     await page.goto('/dashboard')
     await openMenu(page)
 
-    await menu(page).getByText('Saying no to new clients').click()
+    await menu(page).getByText(EHAB_ROW).click()
 
-    await expect(page).toHaveURL(/\/coaching-sessions\/a2$/)
+    await expect(page).toHaveURL(/\/coaching-sessions\/e6$/)
     await expect(menu(page)).toBeHidden()
-    await expect(page.getByText('Opened Alex · Aug 12 · Saying no to new clients')).toBeVisible()
+    await expect(page.getByText('Opened Ehab · Aug 18 · Session 6')).toBeVisible()
   })
 
   test('on a session page the current row is marked', async ({ page }) => {
@@ -242,7 +284,7 @@ test.describe('Join session menu', () => {
       await page.setViewportSize({ width, height: 812 })
       await page.goto('/dashboard')
       await openMenu(page)
-      await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+      await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
 
       // toPass waits out the open animation's scale.
       await expect(async () => {
@@ -277,6 +319,7 @@ test.describe('Join session menu', () => {
         return cards.count()
       }
 
+      await showInactive(page).click()
       await expect(async () => expect(await cardsBetweenArrows()).toBe(5)).toPass()
       await next.click()
       await expect(async () => expect(await cardsBetweenArrows()).toBeGreaterThan(0)).toPass()
@@ -286,7 +329,7 @@ test.describe('Join session menu', () => {
   test('lines up with the trigger at 1280px', async ({ page }) => {
     await page.goto('/dashboard')
     await openMenu(page)
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
 
     const pill = (await trigger(page).boundingBox())!
     await expect(async () => {
@@ -304,7 +347,7 @@ test.describe('Join session menu', () => {
     nearest.handle = serveNearest
     await menu(page).getByRole('button', { name: 'Try again' }).click()
 
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
     await expect(menu(page).getByText("Couldn't load sessions")).toBeHidden()
   })
 
@@ -317,7 +360,7 @@ test.describe('Join session menu', () => {
     await expect(menu(page).getByText("Couldn't load sessions")).toBeVisible()
     await expect(menu(page).getByRole('button', { name: 'Try again' })).toBeVisible()
     await expect(menu(page).getByText(/^(Upcoming|Previous)$/)).toHaveCount(0)
-    await expect(menu(page).getByText('Saying no to new clients')).toBeHidden()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeHidden()
   })
 
   test('a slow response shows placeholder rows first', async ({ page }) => {
@@ -329,8 +372,8 @@ test.describe('Join session menu', () => {
     await openMenu(page)
 
     await expect(menu(page).getByLabel('Loading sessions')).toBeVisible()
-    await expect(menu(page).getByText('Saying no to new clients')).toBeHidden()
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible({ timeout: 5000 })
+    await expect(menu(page).getByText(EHAB_ROW)).toBeHidden()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible({ timeout: 5000 })
     await expect(menu(page).getByLabel('Loading sessions')).toBeHidden()
   })
 
@@ -343,11 +386,11 @@ test.describe('Join session menu', () => {
     await openMenu(page)
     await expect(page).toHaveURL(/\/coaching-sessions\/missing$/)
 
-    await expect(person(page, 'Alex')).toHaveAttribute('aria-pressed', 'true')
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(person(page, 'Ehab')).toHaveAttribute('aria-pressed', 'true')
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
     await expect(menu(page).getByLabel('Loading sessions')).toBeHidden()
     await expect(menu(page).getByText('Current', { exact: true })).toHaveCount(0)
-    expect(requests).toEqual([{ relationshipId: 'rel-a', around: NOW, before: '2', after: '2' }])
+    expect(requests).toEqual([EHAB_TODAY_WINDOW])
   })
 
   test('switching people keeps the list on screen until the next one loads', async ({ page }) => {
@@ -357,7 +400,7 @@ test.describe('Join session menu', () => {
     }
     await page.goto('/dashboard')
     await openMenu(page)
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
 
     // Flags any placeholder row while Daniel's sessions load.
     await page.evaluate(() => {
@@ -370,9 +413,9 @@ test.describe('Join session menu', () => {
     await person(page, 'Daniel').click()
 
     await expect(menu(page).getByLabel('Loading sessions')).toHaveAttribute('inert', '')
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
     await expect(menu(page).getByText('Kickoff')).toBeVisible()
-    await expect(menu(page).getByText('Saying no to new clients')).toBeHidden()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeHidden()
     expect(await page.evaluate(() => (window as unknown as { sawPlaceholders: boolean }).sawPlaceholders)).toBe(false)
   })
 
@@ -384,7 +427,7 @@ test.describe('Join session menu', () => {
     }
     await page.goto('/dashboard')
     await openMenu(page)
-    await expect(menu(page).getByText('Saying no to new clients')).toBeVisible()
+    await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
 
     await person(page, 'Daniel').click()
     await person(page, 'Ehab').click()

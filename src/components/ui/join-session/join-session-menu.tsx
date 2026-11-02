@@ -189,6 +189,8 @@ function MenuBody({ menu, onOpen }: { menu: JoinSessionMenuModel; onOpen: OpenSe
       {menu.selectedId.some && (
         <PersonCarousel
           people={menu.people}
+          hiddenInactive={menu.hiddenInactive}
+          onShowInactive={menu.showInactive}
           selectedId={menu.selectedId.val}
           page={menu.page}
           onPageChange={menu.setPage}

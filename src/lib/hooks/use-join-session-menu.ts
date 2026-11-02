@@ -4,22 +4,32 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import type {
+  CarouselPerson,
   DotKind,
   MenuPerson,
   MenuSession,
   MonthGroup,
 } from "@/components/ui/join-session/types";
-import { clampPage, pageOf } from "@/components/ui/join-session/person-carousel";
+import { cardCount, clampPage, pageOf } from "@/components/ui/join-session/person-carousel";
 import {
   CoachingSessionInclude,
   type NearestWindow,
   useCoachingSession,
   useNearestCoachingSessions,
+  useNearestEachCoachingSessions,
 } from "@/lib/api/coaching-sessions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import {
+  type PersonActivity,
+  activityRelationship,
+  byActivity,
+  isInactive,
+  personActivity,
+  whenLine,
+} from "@/lib/person-activity";
 import {
   dotKind,
   livenessFromUrgency,
@@ -87,7 +97,11 @@ export interface JoinSessionMenuModel {
   today: TodayEntry[];
   /** A retry when today's sessions failed to load, so the menu can say so. */
   todayError: Option<() => void>;
-  people: MenuPerson[];
+  /** The carousel's people: soonest session first, inactive ones only once shown. */
+  people: CarouselPerson[];
+  /** Inactive people behind the carousel's trailing card. */
+  hiddenInactive: number;
+  showInactive: () => void;
   selectedId: Option<Id>;
   page: number;
   current: Option<Id>;
@@ -210,10 +224,50 @@ export function windowQuery(input: WindowQueryInput): NearestWindow {
   }
   return {
     relationshipId,
-    around: now.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+    around: utcInstant(now),
     before: 2,
     after: 2,
   };
+}
+
+function utcInstant(dt: DateTime): string {
+  return dt.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+}
+
+type ActivityByPerson = Map<Id, PersonActivity>;
+
+const NO_SESSIONS: PersonActivity = { kind: "inactive", last: None };
+
+/** Each person's activity from the sessions nearest now across their relationships. */
+export function activityByPerson(
+  people: PersonEntry[],
+  sessions: EnrichedCoachingSession[],
+  now: DateTime,
+  timezone: string
+): ActivityByPerson {
+  return new Map(
+    people.map(({ person, relationshipIds }) => {
+      const theirs = sessions
+        .filter((s) => relationshipIds.includes(s.coaching_relationship_id))
+        .map((s) => ({
+          start: sessionStartIn(s.date, timezone),
+          over: calculateSessionUrgency(s) === SessionUrgency.Past,
+          relationshipId: s.coaching_relationship_id,
+        }));
+      return [person.userId, personActivity(theirs, now)];
+    })
+  );
+}
+
+function carouselPerson(
+  person: MenuPerson,
+  activities: Option<ActivityByPerson>,
+  now: DateTime
+): CarouselPerson {
+  const activity = activities.some ? activities.val.get(person.userId) : undefined;
+  return activity
+    ? { person, when: Some(whenLine(activity, now)), inactive: isInactive(activity) }
+    : { person, when: None, inactive: false };
 }
 
 function idOf<T extends { id: Id }>(value: Option<T>): Option<Id> {
@@ -300,30 +354,41 @@ function resolvePerson(
   return people.length > 0 ? Some(people[0]) : None;
 }
 
-/** The viewed session's relationship, else the one with a session today, else the first. */
+/**
+ * The viewed session's relationship, else the one with a session today, else
+ * the one behind the card's when line, else the first.
+ */
 function relationshipFor(
   entry: PersonEntry,
   current: Option<CurrentSession>,
-  todays: EnrichedCoachingSession[]
+  todays: EnrichedCoachingSession[],
+  activity: Option<PersonActivity>
 ): Id {
   const { relationshipIds } = entry;
   if (current.some && relationshipIds.includes(current.val.relationshipId)) {
     return current.val.relationshipId;
   }
   const today = todayAnchor(todays.filter((s) => relationshipIds.includes(s.coaching_relationship_id)));
-  return today.some ? today.val.coaching_relationship_id : relationshipIds[0];
+  if (today.some) return today.val.coaching_relationship_id;
+  const shown = activity.some ? activityRelationship(activity.val) : None;
+  return shown.some ? shown.val : relationshipIds[0];
 }
 
 function resolveSelected(
   chosen: Option<Id>,
   people: PersonEntry[],
   current: Option<CurrentSession>,
-  todays: EnrichedCoachingSession[]
+  todays: EnrichedCoachingSession[],
+  activities: Option<ActivityByPerson>
 ): Option<SelectedPerson> {
   const entry = resolvePerson(chosen, people, current);
-  return entry.some
-    ? Some({ person: entry.val.person, relationshipId: relationshipFor(entry.val, current, todays) })
-    : None;
+  if (entry.none) return None;
+  const found = activities.some ? activities.val.get(entry.val.person.userId) : undefined;
+  const activity = found ? Some(found) : None;
+  return Some({
+    person: entry.val.person,
+    relationshipId: relationshipFor(entry.val, current, todays, activity),
+  });
 }
 
 export function useJoinSessionMenu(): JoinSessionMenuModel {
@@ -344,21 +409,49 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
   const [openedAt, setOpenedAt] = useState(() => DateTime.utc());
   // `/nearest` waits for the first open so closed headers cost nothing.
   const [hasOpened, setHasOpened] = useState(false);
+  const [inactiveShown, setInactiveShown] = useState(false);
+  const now = DateTime.now().setZone(timezone);
 
-  const people = peopleFor(userId, relationshipList.relationships);
-  const menuPeople = people.map((p) => p.person);
-  const selected = resolveSelected(chosen, people, current, todays.sessions);
+  const everyone = peopleFor(userId, relationshipList.relationships);
+  const activity = useNearestEachCoachingSessions(
+    hasOpened && everyone.length > 0
+      ? Some({
+          userId,
+          relationshipIds: everyone.flatMap((p) => p.relationshipIds),
+          around: utcInstant(openedAt),
+          fetchedFor: String(openedAt.toMillis()),
+        })
+      : None
+  );
+  // Without activity (loading or failed) the carousel keeps name order and hides no one.
+  const activitySettled = !activity.isLoading;
+  const activities: Option<ActivityByPerson> =
+    hasOpened && activitySettled && !activity.isError
+      ? Some(activityByPerson(everyone, activity.sessions, now, timezone))
+      : None;
+  const people = activities.some
+    ? byActivity(everyone, (p) => activities.val.get(p.person.userId) ?? NO_SESSIONS)
+    : everyone;
+
+  const selected = resolveSelected(chosen, people, current, todays.sessions, activities);
   const selectedId: Option<Id> = selected.some ? Some(selected.val.person.userId) : None;
+  const ordered = people.map((p) => carouselPerson(p.person, activities, now));
+  // A selected inactive person (e.g. the open session's) is never hidden.
+  const revealed =
+    inactiveShown || ordered.some((p) => p.inactive && selectedId.some && p.person.userId === selectedId.val);
+  const visible = revealed ? ordered : ordered.filter((p) => !p.inactive);
+  const hiddenInactive = ordered.length - visible.length;
   const page = clampPage(
-    chosenPage.some ? chosenPage.val : selectedId.some ? pageOf(selectedId.val, menuPeople) : 0,
-    menuPeople.length
+    chosenPage.some ? chosenPage.val : selectedId.some ? pageOf(selectedId.val, visible) : 0,
+    cardCount(visible.length, hiddenInactive)
   );
 
   const personTodays = selected.some
     ? todays.sessions.filter((s) => s.coaching_relationship_id === selected.val.relationshipId)
     : [];
   const anchorToday = todayAnchor(personTodays);
-  const ready = hasOpened && selected.some && !todays.isLoading && currentSettled;
+  // Waiting for activity keeps the default person from switching mid-load.
+  const ready = hasOpened && selected.some && !todays.isLoading && currentSettled && activitySettled;
   const nearest = useNearestCoachingSessions(
     ready && selected.some
       ? Some({
@@ -375,7 +468,6 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
       : None
   );
 
-  const now = DateTime.now().setZone(timezone);
   const computed = personSessions({
     relationships: relationshipList,
     hasOrganization: Boolean(currentOrganizationId),
@@ -408,9 +500,11 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
       : computed;
 
   return {
-    today: todayEntries(todays.sessions, userId, people, timezone),
+    today: todayEntries(todays.sessions, userId, everyone, timezone),
     todayError: todays.error ? Some(() => todays.refresh()) : None,
-    people: menuPeople,
+    people: visible,
+    hiddenInactive,
+    showInactive: () => setInactiveShown(true),
     selectedId,
     page,
     current: idOf(current),
@@ -421,6 +515,7 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
     reset: () => {
       setChosen(None);
       setChosenPage(None);
+      setInactiveShown(false);
       setOpenedAt(DateTime.utc());
       setHasOpened(true);
       todays.refresh();

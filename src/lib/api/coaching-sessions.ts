@@ -621,3 +621,46 @@ export const useNearestCoachingSessions = (query: Option<NearestQuery>) => {
     refresh,
   };
 };
+
+/** The sessions on either side of one instant, for each of several relationships. */
+export interface NearestEachQuery {
+  userId: Id;
+  relationshipIds: Id[];
+  around: string;
+  /** Part of the cache key only: a new value refetches. */
+  fetchedFor: string;
+}
+
+/**
+ * The last session before and the first after `around`, per relationship, in
+ * one SWR entry. `None` skips the fetch. Sessions are returned in one flat list.
+ */
+export const useNearestEachCoachingSessions = (query: Option<NearestEachQuery>) => {
+  const url = query.some
+    ? `${USERS_BASEURL}/${query.val.userId}/coaching_sessions/nearest`
+    : "";
+  const params = query.some
+    ? {
+        coaching_relationship_ids: query.val.relationshipIds.join(","),
+        around: query.val.around,
+        fetchedFor: query.val.fetchedFor,
+      }
+    : null;
+
+  const fetcher = async () => {
+    if (query.none) return [];
+    const { userId, relationshipIds, around } = query.val;
+    const result = await ResultAsync.combine(
+      relationshipIds.map((relationshipId) =>
+        CoachingSessionApi.listNearestForUser(userId, { relationshipId, around, before: 1, after: 1 })
+      )
+    );
+    if (result.isErr()) throw result.error;
+    return result.value.flat();
+  };
+
+  const { entities, isLoading, isError } =
+    EntityApi.useEntityList<EnrichedCoachingSession>(url, fetcher, params);
+
+  return { sessions: entities, isLoading: query.some ? isLoading : false, isError };
+};

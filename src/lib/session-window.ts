@@ -75,13 +75,13 @@ export function sessionWindow(input: WindowInput): SessionWindow {
     const newer = newerThan(sorted, todayIndex);
     const older = olderThan(sorted, todayIndex);
     return {
-      list: [...newer, ...older],
+      list: oldestFirst([...newer, ...older]),
       dots: oldestFirst([...newer, sorted[todayIndex], ...older]),
     };
   }
 
   const currentIndex = indexOf(sorted, input.current);
-  const list =
+  const window =
     currentIndex >= 0
       ? [
           ...newerThan(sorted, currentIndex),
@@ -89,7 +89,9 @@ export function sessionWindow(input: WindowInput): SessionWindow {
           ...olderThan(sorted, currentIndex),
         ]
       : aroundNow(sorted, input.now);
-  return { list, dots: oldestFirst(list) };
+  // The list reads oldest to newest, the same direction as the dots.
+  const list = oldestFirst(window);
+  return { list, dots: list };
 }
 
 function matches(id: Option<Id>, session: MenuSession): boolean {
