@@ -194,6 +194,11 @@ describe('parseGoalProgressResponse', () => {
     expect(result[1].title).toBe('Goal B')
   })
 
+  it('parses a goal without a description (body: null) to an empty body', () => {
+    const result = parseGoalProgressResponse({ goal_progress: [makeGoalWithProgressData({ body: null })] })
+    expect(result[0].body).toBe('')
+  })
+
   it('parses a response with an empty array', () => {
     const result = parseGoalProgressResponse({ goal_progress: [] })
     expect(result).toHaveLength(0)

@@ -7,6 +7,8 @@ import { Id, EntityApiError } from "@/types/general";
 import {
   Goal,
   defaultGoal,
+  normalizeGoal,
+  type GoalWire,
 } from "@/types/goal";
 import { ApiSortOrder, GoalSortField } from "@/types/sorting";
 import { EntityApi, ApiResponse } from "./entity-api";
@@ -46,7 +48,7 @@ export const GoalApi = {
       params.sort_order = sortOrder;
     }
 
-    return EntityApi.listFn<Goal>(GOALS_BASEURL, { params });
+    return (await EntityApi.listFn<GoalWire>(GOALS_BASEURL, { params })).map(normalizeGoal);
   },
 
   /**
@@ -57,12 +59,9 @@ export const GoalApi = {
    * @returns Promise resolving to an array of Goal objects linked to the session
    */
   listNested: async (coachingSessionId: Id): Promise<Goal[]> => {
-    return EntityApi.listNestedFn<Goal>(
-      COACHING_SESSIONS_BASEURL,
-      coachingSessionId,
-      'goals',
-      {}
-    );
+    return (
+      await EntityApi.listNestedFn<GoalWire>(COACHING_SESSIONS_BASEURL, coachingSessionId, 'goals', {})
+    ).map(normalizeGoal);
   },
 
   /**
@@ -72,7 +71,7 @@ export const GoalApi = {
    * @returns Promise resolving to the Goal object
    */
   get: async (id: Id): Promise<Goal> =>
-    EntityApi.getFn<Goal>(`${GOALS_BASEURL}/${id}`),
+    normalizeGoal(await EntityApi.getFn<GoalWire>(`${GOALS_BASEURL}/${id}`)),
 
   /**
    * Creates a new goal.
@@ -81,10 +80,7 @@ export const GoalApi = {
    * @returns Promise resolving to the created Goal object
    */
   create: async (goal: Goal): Promise<Goal> =>
-    EntityApi.createFn<Goal, Goal>(
-      GOALS_BASEURL,
-      goal
-    ),
+    normalizeGoal(await EntityApi.createFn<Goal, GoalWire>(GOALS_BASEURL, goal)),
 
   createNested: async (
     _id: Id,
@@ -104,10 +100,7 @@ export const GoalApi = {
     id: Id,
     goal: Goal
   ): Promise<Goal> =>
-    EntityApi.updateFn<Goal, Goal>(
-      `${GOALS_BASEURL}/${id}`,
-      goal
-    ),
+    normalizeGoal(await EntityApi.updateFn<Goal, GoalWire>(`${GOALS_BASEURL}/${id}`, goal)),
 
   /**
    * Deletes a goal.
@@ -116,9 +109,7 @@ export const GoalApi = {
    * @returns Promise resolving to the deleted Goal object
    */
   delete: async (id: Id): Promise<Goal> =>
-    EntityApi.deleteFn<null, Goal>(
-      `${GOALS_BASEURL}/${id}`
-    ),
+    normalizeGoal(await EntityApi.deleteFn<null, GoalWire>(`${GOALS_BASEURL}/${id}`)),
 
   /**
    * Deletes a goal nested under another entity (foreign key relationship).
@@ -178,7 +169,7 @@ export const GoalApi = {
 
 /** Response shape from GET /coaching_sessions/goals batch endpoint. */
 interface BatchSessionGoalsResponse {
-  session_goals: Record<Id, Goal[]>;
+  session_goals: Record<Id, GoalWire[]>;
 }
 
 /**
@@ -197,7 +188,12 @@ async function fetchBatchSessionGoals(
       params: { coaching_relationship_id: coachingRelationshipId },
     }
   );
-  return response.data.data.session_goals;
+  return Object.fromEntries(
+    Object.entries(response.data.data.session_goals).map(([sessionId, goals]) => [
+      sessionId,
+      goals.map(normalizeGoal),
+    ])
+  );
 }
 
 /**

@@ -175,6 +175,14 @@ export interface Goal {
   updated_at: DateTime;
 }
 
+/** A goal as the backend sends it: the description is optional (`Option<String>`). */
+export type GoalWire = Omit<Goal, "body"> & { body: string | null };
+
+/** The app models a goal without a description as an empty body. */
+export function normalizeGoal(goal: GoalWire): Goal {
+  return { ...goal, body: goal.body ?? "" };
+}
+
 export function parseGoal(data: any): Goal {
   if (!isGoal(data)) {
     throw new Error("Invalid Goal data");
@@ -185,7 +193,7 @@ export function parseGoal(data: any): Goal {
     created_in_session_id: data.created_in_session_id ?? null,
     user_id: data.user_id,
     title: data.title,
-    body: data.body,
+    body: data.body ?? "",
     status: data.status,
     status_changed_at: data.status_changed_at,
     completed_at: data.completed_at,
@@ -207,7 +215,7 @@ export function isGoal(value: unknown): value is Goal {
     (object.created_in_session_id === null || typeof object.created_in_session_id === "string") &&
     typeof object.user_id === "string" &&
     typeof object.title === "string" &&
-    typeof object.body === "string" &&
+    (object.body === null || typeof object.body === "string") &&
     typeof object.status === "string" &&
     (object.target_date === null || typeof object.target_date === "string") &&
     typeof object.status_changed_at === "string" &&
