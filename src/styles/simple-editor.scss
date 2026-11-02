@@ -638,6 +638,11 @@
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
+  /* The stacked mobile layout has no fixed height for flex-1 to fill */
+  .coaching-notes-editor {
+    min-height: 60dvh;
+  }
+
   .coaching-notes-toolbar {
     padding: 0.25rem;
     gap: 0.125rem;
