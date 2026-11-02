@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useEnrichedCoachingSessionsForUser } from "@/lib/api/coaching-sessions";
 import { TestProviders } from "@/test-utils/providers";
-import { DateTime } from "ts-luxon";
+import { DateTime, Settings } from "ts-luxon";
 import {
   createMockUser,
   createMockOrganization,
@@ -173,7 +173,7 @@ describe("useTodaysSessions", () => {
       "date",
       "asc",
       undefined,
-      undefined,
+      expect.anything(),
       CURRENT_ORGANIZATION_ID
     );
   });
@@ -250,26 +250,20 @@ describe("useTodaysSessions", () => {
     expect(firstDate.toMillis()).toBeLessThan(secondDate.toMillis());
   });
 
-  it("should filter to only today's sessions", async () => {
-    const { result } = renderHook(() => useTodaysSessions(), {
-      wrapper: TestProviders,
-    });
-
-    await waitFor(
-      () => {
-        expect(result.current.isLoading).toBe(false);
-      },
-      { timeout: 3000 }
-    );
-
-    // All sessions should have valid date fields
-    result.current.sessions.forEach((session) => {
-      // Session should have valid date string
-      expect(session.date).toBeTruthy();
-      expect(typeof session.date).toBe("string");
-      // Should be parseable as ISO date
-      expect(() => DateTime.fromISO(session.date)).not.toThrow();
-    });
+  it("asks for today's local date in the user's timezone, even once UTC is on tomorrow", () => {
+    const originalNow = Settings.now;
+    // Monday 8pm in Los Angeles is already Tuesday in UTC.
+    const mondayEvening = DateTime.fromISO("2026-11-02T20:00", { zone: "America/Los_Angeles" }).toMillis();
+    Settings.now = () => mondayEvening;
+    try {
+      renderHook(() => useTodaysSessions(), { wrapper: TestProviders });
+      const [, from, to, , , , , tz] = vi.mocked(useEnrichedCoachingSessionsForUser).mock.calls.at(-1)!;
+      expect(from.toISODate()).toBe("2026-11-02");
+      expect(to.toISODate()).toBe("2026-11-02");
+      expect(tz).toBe("America/Los_Angeles");
+    } finally {
+      Settings.now = originalNow;
+    }
   });
 
   it("should handle errors gracefully", async () => {
