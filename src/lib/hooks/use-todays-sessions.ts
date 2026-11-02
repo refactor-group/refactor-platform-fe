@@ -40,19 +40,11 @@ export function useTodaysSessions(
     setTick(prev => prev + 1);
   }, 30000);
 
-  // Calculate today's date range in user's timezone
+  // Today's calendar date in the user's timezone. The API sends dates only, so
+  // `tz` makes the backend read it as that local day; UTC dates would cover
+  // whichever UTC days the local day overlaps (e.g. tomorrow's sessions in the US).
   const today = DateTime.now().setZone(timezone);
-  const startOfDay = today.startOf("day");
-  const endOfDay = today.endOf("day");
 
-  // Convert to UTC for backend date filtering
-  // The backend stores timestamps in UTC but we need sessions that fall within
-  // "today" in the user's local timezone
-  const startOfDayUTC = startOfDay.toUTC();
-  const endOfDayUTC = endOfDay.toUTC();
-
-  // Fetch sessions with all related data in ONE API call
-  // Use UTC dates for backend filtering since backend stores timestamps in UTC
   // TypeScript non-null assertion: middleware guarantees userId exists on protected routes
   // If userId is briefly undefined during hydration, SWR will show loading state
   // A null user id skips the fetch. Waiting for the organization matters as much
@@ -61,13 +53,13 @@ export function useTodaysSessions(
   const { enrichedSessions, isLoading, isError, refresh } =
     useEnrichedCoachingSessionsForUser(
       currentOrganizationId ? userId! : null,
-      startOfDayUTC,
-      endOfDayUTC,
+      today,
+      today,
       include,
       "date",
       "asc",
       undefined,
-      undefined,
+      timezone,
       currentOrganizationId ?? undefined
     );
 
