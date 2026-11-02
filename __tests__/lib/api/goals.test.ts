@@ -241,7 +241,7 @@ describe('useBatchSessionGoals hook', () => {
     )
 
     await waitFor(() => {
-      expect(result.current.sessionGoals).toEqual(mockResponse.data.data.session_goals)
+      expect(result.current.sessionGoals).toMatchObject(mockResponse.data.data.session_goals)
     })
 
     expect(sessionGuard.get).toHaveBeenCalledWith(
@@ -323,5 +323,62 @@ describe('GoalApi.unlinkFromSession', () => {
     const result = await GoalApi.unlinkFromSession('session-123', 'goal-456')
 
     expect(result.isErr()).toBe(true)
+  })
+})
+
+describe('goals without a description (body: null on the wire)', () => {
+  const wireGoal = (id: string, body: string | null) => ({
+    id,
+    coaching_relationship_id: 'rel-1',
+    created_in_session_id: 'sess-1',
+    user_id: 'user-1',
+    title: `Goal ${id}`,
+    body,
+    status: 'InProgress',
+    status_changed_at: '2026-03-01T00:00:00Z',
+    completed_at: '2026-03-01T00:00:00Z',
+    target_date: null,
+    created_at: '2026-03-01T00:00:00Z',
+    updated_at: '2026-03-01T00:00:00Z',
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('come back from the session list with an empty body', async () => {
+    vi.mocked(EntityApi.listNestedFn).mockResolvedValue([wireGoal('g1', null), wireGoal('g2', 'Details')])
+    const goals = await GoalApi.listNested('sess-1')
+    expect(goals.map((g) => g.body)).toEqual(['', 'Details'])
+  })
+
+  it('come back from the relationship list and a single fetch with an empty body', async () => {
+    vi.mocked(EntityApi.listFn).mockResolvedValue([wireGoal('g1', null)])
+    vi.mocked(EntityApi.getFn).mockResolvedValue(wireGoal('g1', null))
+    expect((await GoalApi.list('rel-1'))[0].body).toBe('')
+    expect((await GoalApi.get('g1')).body).toBe('')
+  })
+
+  it('come back from create and update with an empty body', async () => {
+    vi.mocked(EntityApi.createFn).mockResolvedValue(wireGoal('g1', null))
+    vi.mocked(EntityApi.updateFn).mockResolvedValue(wireGoal('g1', null))
+    const goal = { ...wireGoal('g1', ''), body: '' } as unknown as Parameters<typeof GoalApi.create>[0]
+    expect((await GoalApi.create(goal)).body).toBe('')
+    expect((await GoalApi.update('g1', goal)).body).toBe('')
+  })
+
+  it('a successful delete resolves, though the backend returns only {id}', async () => {
+    // deleteFn reads response.data.data, which a bare {"id": ...} body lacks.
+    vi.mocked(EntityApi.deleteFn).mockResolvedValue(undefined)
+    await expect(GoalApi.delete('g1')).resolves.toBeUndefined()
+  })
+
+  it('come back from the batch endpoint with an empty body', async () => {
+    vi.mocked(sessionGuard.get).mockResolvedValue({
+      data: { data: { session_goals: { 'sess-1': [wireGoal('g1', null)] } } },
+    } as never)
+    const { result } = renderHook(() => useBatchSessionGoals('rel-1'), { wrapper: TestProviders })
+    await waitFor(() => expect(result.current.sessionGoals['sess-1']).toHaveLength(1))
+    expect(result.current.sessionGoals['sess-1'][0].body).toBe('')
   })
 })

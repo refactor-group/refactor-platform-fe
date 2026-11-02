@@ -91,7 +91,7 @@ interface GoalWithProgressRaw {
   goal_id: string;
   coaching_relationship_id: string;
   title: string;
-  body: string;
+  body: string | null;
   status: string;
   status_changed_at: string;
   target_date: string | null;
@@ -115,7 +115,7 @@ function isGoalWithProgressRaw(value: unknown): value is GoalWithProgressRaw {
     typeof obj.goal_id === "string" &&
     typeof obj.coaching_relationship_id === "string" &&
     typeof obj.title === "string" &&
-    typeof obj.body === "string" &&
+    (obj.body === null || typeof obj.body === "string") &&
     typeof obj.status === "string" &&
     typeof obj.status_changed_at === "string" &&
     (obj.target_date === null || typeof obj.target_date === "string") &&
@@ -134,7 +134,8 @@ function parseGoalWithProgress(value: unknown): GoalWithProgress {
     goal_id: value.goal_id,
     coaching_relationship_id: value.coaching_relationship_id,
     title: value.title,
-    body: value.body,
+    // The backend sends an optional description; the app models none as empty.
+    body: value.body ?? "",
     status: value.status as ItemStatus,
     status_changed_at: value.status_changed_at,
     target_date: value.target_date,
