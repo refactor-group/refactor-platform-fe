@@ -1,6 +1,7 @@
 "use client";
 
 import { DateTime } from "ts-luxon";
+import { ResultAsync } from "neverthrow";
 import { MessageSquare } from "lucide-react";
 import { SessionGoalList } from "@/components/ui/session-goal-list";
 import { ActionStatusRow } from "@/components/ui/status/action-status-row";
@@ -106,18 +107,16 @@ export function SessionHoverDetail({
   );
 }
 
-/** Saves a new status; the action lists and any linked goal's progress refresh after. */
 function useSetActionStatus() {
   const { update } = useActionMutation();
   const revalidateGoalProgress = useRevalidateGoalProgress();
-  return async (action: Action, status: ItemStatus) => {
-    try {
-      await update(action.id, { ...action, status });
-      if (action.goal_id.some) revalidateGoalProgress();
-    } catch (err) {
-      toast.error(actionErrorMessage("update the status", err));
-    }
-  };
+  return (action: Action, status: ItemStatus) =>
+    ResultAsync.fromPromise(update(action.id, { ...action, status }), (err) => err).match(
+      () => {
+        if (action.goal_id.some) revalidateGoalProgress();
+      },
+      (err) => toast.error(actionErrorMessage("update the status", err))
+    );
 }
 
 interface ActionDueRowProps {
