@@ -25,7 +25,7 @@ import {
 import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { organizationArchivedMessage } from "@/lib/api/organization-errors";
+import { SessionWrite, sessionWriteFailure } from "@/lib/api/coaching-session-errors";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -33,7 +33,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, type FormEvent } fro
 import { useRouter } from "next/navigation";
 import { defaultCoachingSession } from "@/types/coaching-session";
 import { calendarDayOf, getBrowserTimezone, pickedDayIn } from "@/lib/timezone-utils";
-import { EntityApiError, PERMISSION_DENIED_MESSAGE, isForbiddenError } from "@/types/entity-api-error";
+import { toSessionDate } from "@/lib/session-window";
 import { toast } from "@/lib/toast";
 import {
   seriesCreatedMessage,
@@ -276,8 +276,7 @@ export default function CoachingSessionForm({
     const userTimezone = userSession?.timezone || getBrowserTimezone();
     const localDateTime = pickedDayIn(sessionDate, userTimezone).set({ hour: hours, minute: minutes });
 
-    // Convert to UTC for consistent storage
-    const utcDateTime = localDateTime.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss");
+    const utcDateTime = toSessionDate(localDateTime);
 
     const handler =
       mode === "update"
@@ -290,30 +289,29 @@ export default function CoachingSessionForm({
       await handler(utcDateTime);
       refresh();
     } catch (error) {
-      const archivedMessage = organizationArchivedMessage(error);
-      if (!(error instanceof EntityApiError)) {
-        console.error(`Failed to ${mode} coaching session:`, error);
-      } else if (error.status === 409 && error.data?.error === "oauth_token_revoked") {
-        toast.error("Google Meet is disconnected · Reconnect it in Settings");
-        router.push("/settings/integrations");
-      } else if (archivedMessage !== null) {
-        toast.error(archivedMessage);
-        console.error(`Failed to ${mode} coaching session:`, error);
-      } else {
-        let message: string;
-        if (error.isNetworkError()) {
-          message = `Couldn't ${mode} the session · Check your connection and try again`;
-        } else if (error.status === 502) {
-          message = "Couldn't create the Google Meet link · Try again";
-        } else if (error.status === 422) {
-          message = `Couldn't ${mode === "update" ? "update" : "create"} ${isRecurring ? "the recurring sessions" : "the session"} · Check the details and try again`;
-        } else if (isForbiddenError(error)) {
-          message = PERMISSION_DENIED_MESSAGE;
-        } else {
-          message = `Couldn't ${mode} the coaching session · Try again`;
+      const write =
+        mode === "update"
+          ? SessionWrite.Update
+          : isRecurring
+            ? SessionWrite.CreateSeries
+            : SessionWrite.Create;
+      const failure = sessionWriteFailure(error, write);
+      switch (failure.kind) {
+        case "reconnect":
+          toast.error(failure.message);
+          router.push("/settings/integrations");
+          break;
+        case "toast":
+          toast.error(failure.message);
+          console.error(`Failed to ${mode} coaching session:`, error);
+          break;
+        case "unexpected":
+          console.error(`Failed to ${mode} coaching session:`, error);
+          break;
+        default: {
+          const _exhaustive: never = failure;
+          throw new Error(`Unhandled session write failure: ${JSON.stringify(_exhaustive)}`);
         }
-        toast.error(message);
-        console.error(`Failed to ${mode} coaching session:`, error);
       }
     } finally {
       resetForm();

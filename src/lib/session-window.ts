@@ -145,6 +145,18 @@ export function sessionStartIn(date: string, timezone: string): DateTime {
   return DateTime.fromISO(date, { zone: "utc" }).setZone(timezone);
 }
 
+export function sessionEndIn(
+  session: { date: string; duration_minutes: number },
+  timezone: string
+): DateTime {
+  return sessionStartIn(session.date, timezone).plus({ minutes: session.duration_minutes });
+}
+
+/** A local time as the stored naive UTC session date. */
+export function toSessionDate(local: DateTime): string {
+  return local.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss");
+}
+
 export function timeOfDay(dt: DateTime): string {
   return dt.toFormat("h:mm a");
 }
