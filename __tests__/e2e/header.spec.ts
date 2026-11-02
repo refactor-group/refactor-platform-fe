@@ -256,8 +256,8 @@ test.describe('Open action count stays cached', () => {
     await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT} open`)
 
     const card = page.locator('[data-kanban-card]').filter({ hasText: 'NotStarted action' })
-    await card.locator('[role="combobox"]').filter({ visible: true }).click()
-    await page.getByRole('option', { name: /Completed/ }).click()
+    await card.getByRole('button', { name: /^Status: / }).click()
+    await page.getByRole('menuitemradio', { name: /Completed/ }).click()
 
     await expect(actionsPill(page)).toHaveAccessibleName(`Actions, ${OPEN_ACTION_COUNT - 1} open`)
   })

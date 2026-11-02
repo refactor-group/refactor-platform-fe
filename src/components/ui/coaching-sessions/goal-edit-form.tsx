@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/components/lib/utils";
+import { CARD_BUTTON, CARD_TEXTAREA, FIELD_LABEL } from "@/components/ui/card-field";
 
 // ── Goal Edit Form ──────────────────────────────────────────────────
 
@@ -55,7 +57,7 @@ export function GoalEditForm({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <label htmlFor="goal-title" className="text-[11px] font-medium text-muted-foreground">
+        <label htmlFor="goal-title" className={FIELD_LABEL}>
           Title
         </label>
         <input
@@ -66,12 +68,12 @@ export function GoalEditForm({
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Goal title"
-          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] font-medium placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border"
+          className={cn(CARD_TEXTAREA, "font-medium placeholder:text-muted-foreground/60")}
         />
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="goal-description" className="text-[11px] font-medium text-muted-foreground">
+        <label htmlFor="goal-description" className={FIELD_LABEL}>
           Description
         </label>
         <textarea
@@ -81,14 +83,14 @@ export function GoalEditForm({
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Add detail to your goal..."
-          className="w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-[12px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/10 focus:border-border resize-none"
+          className={cn(CARD_TEXTAREA, "placeholder:text-muted-foreground/60")}
         />
       </div>
 
       <div className="flex items-center justify-end gap-2">
         <Button
           size="sm"
-          className="h-6 gap-1 text-[11px] px-2"
+          className={CARD_BUTTON}
           disabled={!title.trim() || !hasChanges}
           onClick={handleSave}
         >
@@ -97,7 +99,7 @@ export function GoalEditForm({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 gap-1 text-[11px] px-2 text-muted-foreground"
+          className={cn(CARD_BUTTON, "text-muted-foreground")}
           onClick={onCancel}
         >
           Cancel

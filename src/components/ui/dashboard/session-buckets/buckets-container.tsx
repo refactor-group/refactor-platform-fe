@@ -46,6 +46,7 @@ export interface BucketsContainerProps {
   organizationId: Id | undefined;
   viewerId: Id;
   userTimezone: string;
+  locale: string;
   mountNow: DateTime;
   onReschedule: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
@@ -79,6 +80,7 @@ export function BucketsContainer({
   organizationId,
   viewerId,
   userTimezone,
+  locale,
   mountNow,
   onReschedule,
   onRequestDelete,
@@ -502,6 +504,7 @@ export function BucketsContainer({
             participantName={selectedParticipant.participantName}
             userTimezone={userTimezone}
             reviewActions={selectedReviewActions}
+            locale={locale}
           />
         ) : (
           <SessionHoverDetailEmpty />

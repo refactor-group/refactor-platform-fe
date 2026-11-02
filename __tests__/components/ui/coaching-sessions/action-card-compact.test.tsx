@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { DateTime } from "ts-luxon";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DateTime, Settings } from "ts-luxon";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import { ItemStatus } from "@/types/general";
-import { Some } from "@/types/option";
+import { None, Some } from "@/types/option";
 import { createMockAction, createMockGoal } from "../../../test-utils";
 
 // Mock DueDatePicker to avoid coupling tests to the react-day-picker calendar
@@ -167,58 +167,144 @@ describe("CompactActionCard", () => {
         </Wrapper>
       );
 
-      expect(screen.getByText("JH")).toBeInTheDocument();
+      const front = document.querySelector<HTMLElement>(".flip-card-front")!;
+      expect(within(front).getByText("JH")).toBeInTheDocument();
+      expect(within(front).getByRole("img", { name: "Jim Hodapp" })).toBeInTheDocument();
     });
 
-    it("renders the due date in the footer", () => {
-      const dueDate = DateTime.fromISO("2026-04-05");
-      render(
-        <Wrapper>
-          <CompactActionCard
-            {...baseProps({
-              action: createMockAction({ due_by: Some(dueDate) }),
-            })}
-          />
-        </Wrapper>
-      );
+    describe("meta line", () => {
+      const fakeNow = DateTime.fromISO("2026-08-25T12:00:00Z", { zone: "utc" });
+      const originalNow = Settings.now;
+      beforeEach(() => {
+        Settings.now = () => fakeNow.toMillis();
+      });
+      afterEach(() => {
+        Settings.now = originalNow;
+      });
 
-      // Due date appears in the footer (data-testid) on the front face
-      const dueDateEl = screen.getByTestId("action-due-date");
-      expect(dueDateEl.textContent).toMatch(/Apr 5, 2026/);
-    });
+      const metaFor = (overrides: Parameters<typeof createMockAction>[0]) => {
+        render(
+          <Wrapper>
+            <CompactActionCard {...baseProps({ action: createMockAction(overrides) })} />
+          </Wrapper>
+        );
+        const front = document.querySelector<HTMLElement>(".flip-card-front")!;
+        return within(front).getByText((_, el) => el?.hasAttribute("data-meta") ?? false);
+      };
 
-    it("renders the due date in bold when overdue", () => {
-      const pastDate = DateTime.now().minus({ days: 3 });
-      render(
-        <Wrapper>
-          <CompactActionCard
-            {...baseProps({
-              action: createMockAction({ due_by: Some(pastDate) }),
-            })}
-          />
-        </Wrapper>
-      );
+      it("shows the due date for an open action", () => {
+        const meta = metaFor({ due_by: Some(fakeNow.plus({ days: 5 })) });
+        expect(meta).toHaveTextContent("Due Aug 30");
+        expect(meta).toHaveClass("text-muted-foreground");
+      });
 
-      // Find the due date element and check for bold styling
-      const dueDateEl = screen.getByTestId("action-due-date");
-      expect(dueDateEl.className).toContain("font-bold");
+      it("shows an overdue date in amber, not bold", () => {
+        const meta = metaFor({ due_by: Some(fakeNow.minus({ days: 3 })) });
+        expect(meta).toHaveTextContent("Due Aug 22");
+        expect(meta).toHaveClass("text-warning-text", "font-medium");
+        expect(meta).not.toHaveClass("font-bold");
+      });
+
+      it("says when a paused action was due", () => {
+        const meta = metaFor({
+          status: ItemStatus.OnHold,
+          due_by: Some(fakeNow.minus({ days: 7 })),
+        });
+        expect(meta).toHaveTextContent("Paused · was due Aug 18");
+        expect(meta).toHaveClass("text-on-hold-text");
+      });
+
+      it("shows when a completed action was done", () => {
+        const meta = metaFor({
+          status: ItemStatus.Completed,
+          status_changed_at: fakeNow.minus({ days: 10 }),
+        });
+        expect(meta).toHaveTextContent("Done Aug 15");
+      });
+
+      it("shows when a won't-do action was closed", () => {
+        const meta = metaFor({
+          status: ItemStatus.WontDo,
+          status_changed_at: fakeNow.minus({ days: 12 }),
+        });
+        expect(meta).toHaveTextContent("Closed Aug 13");
+      });
+
+      it("writes the date in the card's locale", () => {
+        render(
+          <Wrapper>
+            <CompactActionCard
+              {...baseProps({
+                locale: "fr",
+                action: createMockAction({
+                  status: ItemStatus.Completed,
+                  status_changed_at: fakeNow.minus({ days: 10 }),
+                }),
+              })}
+            />
+          </Wrapper>
+        );
+        const front = document.querySelector<HTMLElement>(".flip-card-front")!;
+        expect(front.querySelector("[data-meta]")).toHaveTextContent("Done août 15");
+      });
+
+      it("shows nothing for an open action without a due date", () => {
+        render(
+          <Wrapper>
+            <CompactActionCard {...baseProps({ action: createMockAction({ due_by: None }) })} />
+          </Wrapper>
+        );
+        const front = document.querySelector<HTMLElement>(".flip-card-front")!;
+        expect(front.querySelector("[data-meta]")).toBeNull();
+        expect(within(front).queryByText("No due date")).not.toBeInTheDocument();
+      });
     });
   });
 
   // ── Front face: Status pill presence ───────────────────────────────
 
-  describe("status pill on front face", () => {
-    it("renders the status pill as an interactive select trigger in the header", () => {
+  describe("status control on front face", () => {
+    it("is one button in the header named by the current status", () => {
       render(
         <Wrapper>
           <CompactActionCard {...baseProps()} />
         </Wrapper>
       );
 
-      // The status pill is a select trigger containing status text inside the header
-      const statusText = screen.getByText("Not Started");
-      const header = statusText.closest("[data-slot='card-header']");
-      expect(header).not.toBeNull();
+      const control = screen.getByRole("button", { name: "Status: Not Started" });
+      expect(control.closest("[data-slot='card-header']")).not.toBeNull();
+      expect(control).toHaveTextContent("Not Started");
+    });
+
+    it("opens the status menu and saves the chosen status", async () => {
+      const onStatusChange = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <Wrapper>
+          <CompactActionCard {...baseProps({ onStatusChange })} />
+        </Wrapper>
+      );
+
+      await user.click(screen.getByRole("button", { name: "Status: Not Started" }));
+      expect(screen.getByRole("menuitemradio", { name: /Not Started/, checked: true })).toBeInTheDocument();
+      await user.click(screen.getByRole("menuitemradio", { name: /Completed/ }));
+
+      expect(onStatusChange).toHaveBeenCalledWith("action-1", ItemStatus.Completed);
+    });
+
+    it("mutes a closed action's title without striking it through", () => {
+      const { container } = render(
+        <Wrapper>
+          <CompactActionCard
+            {...baseProps({ action: createMockAction({ status: ItemStatus.Completed }) })}
+          />
+        </Wrapper>
+      );
+
+      const front = container.querySelector<HTMLElement>(".flip-card-front")!;
+      const body = within(front).getByText("Follow up on resume review").closest(".prose");
+      expect(body).toHaveClass("text-muted-foreground");
+      expect(front.querySelector(".line-through")).toBeNull();
     });
   });
 
@@ -273,6 +359,21 @@ describe("CompactActionCard", () => {
       expect(screen.getByText("Edit")).toBeInTheDocument();
       expect(screen.getByText("Delete")).toBeInTheDocument();
       expect(screen.getByText("Done")).toBeInTheDocument();
+    });
+
+    it("shows the meta line and pill buttons on the back, not the old bold due date", async () => {
+      render(
+        <Wrapper>
+          <CompactActionCard {...baseProps()} />
+        </Wrapper>
+      );
+
+      await flipToBack();
+
+      const back = document.querySelector<HTMLElement>(".flip-card-back")!;
+      expect(back.querySelector("[data-meta='due']")).toHaveTextContent(/^Due /);
+      expect(within(back).queryByText(/^Due: /)).not.toBeInTheDocument();
+      expect(within(back).getByRole("button", { name: "Edit" })).toHaveClass("rounded-full", "h-7");
     });
 
     it("shows a textarea with the action body after clicking Edit", async () => {

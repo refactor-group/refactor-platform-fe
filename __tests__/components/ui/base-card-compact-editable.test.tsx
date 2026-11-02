@@ -15,6 +15,7 @@ describe("BaseCardCompactEditable", () => {
   function renderWithTestContent(props?: {
     canFlip?: boolean;
     initialEditing?: boolean;
+    faceClassName?: string;
     onDismiss?: () => void;
     renderHeader?: (p: { onFlip: () => void }) => ReactNode;
     renderFooter?: () => ReactNode;
@@ -23,6 +24,7 @@ describe("BaseCardCompactEditable", () => {
       <BaseCardCompactEditable
         canFlip={props?.canFlip}
         initialEditing={props?.initialEditing}
+        faceClassName={props?.faceClassName}
         onDismiss={props?.onDismiss}
         renderHeader={props?.renderHeader}
         renderFooter={props?.renderFooter}
@@ -177,6 +179,14 @@ describe("BaseCardCompactEditable", () => {
 
     // Should NOT render the flip card structure
     expect(document.querySelector(".flip-card-container")).toBeNull();
+  });
+
+  it("gives a new card the same face classes as a saved one", () => {
+    renderWithTestContent({ initialEditing: true, faceClassName: "rounded-xl px-4 py-3.5 shadow-none" });
+
+    const card = screen.getByText("Back content").closest(".animate-in");
+    expect(card).toHaveClass("rounded-xl", "px-4", "py-3.5", "shadow-none");
+    expect(card).not.toHaveClass("rounded-lg", "p-3", "shadow-sm");
   });
 
   it("calls onDismiss immediately when initialEditing Done is clicked", async () => {

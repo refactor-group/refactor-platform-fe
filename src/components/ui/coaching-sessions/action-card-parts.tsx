@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { PersonAvatar } from "@/components/ui/avatar";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -11,26 +9,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CalendarIcon, Check, UserRound } from "lucide-react";
 import {
-  CalendarIcon,
-  CheckCircle2,
-  Circle,
-  CircleDot,
-  PauseCircle,
-  UserRound,
-  XCircle,
-} from "lucide-react";
-import { ItemStatus, Id, actionStatusToString } from "@/types/general";
+  FIELD_TRIGGER,
+  FieldCaret,
+  PICKER_CONTENT,
+  PICKER_ROW,
+} from "@/components/ui/card-field";
+import { Id } from "@/types/general";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
@@ -38,64 +29,6 @@ import { DateTime } from "ts-luxon";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** A small lucide glyph indicating an Action's status. Pure presentational. */
-export interface ActionStatusIconProps {
-  status: ItemStatus;
-  className?: string;
-}
-
-function statusIconAndLabel(
-  status: ItemStatus
-): { Icon: typeof Circle; label: string } {
-  switch (status) {
-    case ItemStatus.NotStarted:
-      return { Icon: Circle, label: "Not started" };
-    case ItemStatus.InProgress:
-      return { Icon: CircleDot, label: "In progress" };
-    case ItemStatus.Completed:
-      return { Icon: CheckCircle2, label: "Completed" };
-    case ItemStatus.OnHold:
-      return { Icon: PauseCircle, label: "On hold" };
-    case ItemStatus.WontDo:
-      return { Icon: XCircle, label: "Won't do" };
-    default: {
-      const _exhaustive: never = status;
-      throw new Error(`Unhandled status: ${_exhaustive}`);
-    }
-  }
-}
-
-export function ActionStatusIcon({ status, className }: ActionStatusIconProps) {
-  const { Icon, label } = statusIconAndLabel(status);
-  return (
-    <Icon
-      role="img"
-      aria-label={label}
-      className={cn("h-4 w-4 text-muted-foreground/60 shrink-0", className)}
-    />
-  );
-}
-
-/** Tailwind background class for a status dot indicator */
-export function statusDotColor(status: ItemStatus): string {
-  switch (status) {
-    case ItemStatus.NotStarted:
-      return "bg-muted-foreground";
-    case ItemStatus.InProgress:
-      return "bg-green-500";
-    case ItemStatus.OnHold:
-      return "bg-amber-400";
-    case ItemStatus.Completed:
-      return "bg-primary";
-    case ItemStatus.WontDo:
-      return "bg-red-400";
-    default: {
-      const _exhaustive: never = status;
-      throw new Error(`Unhandled status: ${_exhaustive}`);
-    }
-  }
-}
 
 /** Derive initials from a display name (e.g. "Alex Rivera" -> "AR") */
 export function getInitials(name: string): string {
@@ -133,6 +66,58 @@ export function resolveAssignees(
 }
 
 // ---------------------------------------------------------------------------
+// AssigneeAvatars
+// ---------------------------------------------------------------------------
+
+/** 26px assignee avatars, each named on hover unless the caller names them another way. */
+export function AssigneeAvatars({
+  assignees,
+  named = true,
+}: {
+  assignees: AssigneeInfo[];
+  named?: boolean;
+}) {
+  if (!named) {
+    return (
+      <span className="flex items-center -space-x-1.5" aria-hidden>
+        {assignees.map((a) => (
+          <PersonAvatar
+            key={a.id}
+            userId={a.id}
+            initials={a.initials}
+            size={26}
+            className="ring-2 ring-background"
+          />
+        ))}
+      </span>
+    );
+  }
+  return (
+    <div className="flex items-center -space-x-1.5">
+      {assignees.map((a) => (
+        <TooltipProvider key={a.id} delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span aria-label={a.name} role="img">
+                <PersonAvatar
+                  userId={a.id}
+                  initials={a.initials}
+                  size={26}
+                  className="ring-2 ring-background"
+                />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              {a.name}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // AssigneePickerPopover
 // ---------------------------------------------------------------------------
 
@@ -165,37 +150,27 @@ export function AssigneePickerPopover({
             <button
               type="button"
               aria-label="Assignees"
-              className="flex -space-x-2 cursor-pointer hover:opacity-80"
+              className={cn(FIELD_TRIGGER, "pl-1")}
               disabled={disabled}
             >
               {resolvedAssignees.length > 0 ? (
-                resolvedAssignees.map((assignee) => (
-                  <Avatar
-                    key={assignee.id}
-                    className="h-8 w-8 border-2 border-background"
-                  >
-                    <AvatarFallback className="text-[11px]">
-                      {assignee.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                ))
+                <AssigneeAvatars assignees={resolvedAssignees} named={false} />
               ) : (
-                <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/50">
-                  <AvatarFallback className="text-muted-foreground">
-                    <UserRound className="!h-4 !w-4" />
-                  </AvatarFallback>
-                </Avatar>
+                <>
+                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border border-dashed border-muted-foreground/50 text-muted-foreground">
+                    <UserRound className="h-3.5 w-3.5" aria-hidden />
+                  </span>
+                  <span className="text-muted-foreground">Unassigned</span>
+                </>
               )}
+              <FieldCaret />
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>Assignees</TooltipContent>
       </Tooltip>
-      <PopoverContent className="w-48 p-2" collisionPadding={8}>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-muted-foreground px-2 py-1">
-            Assignees
-          </span>
+      <PopoverContent align="end" className={cn("w-60", PICKER_CONTENT)} collisionPadding={8}>
+        <div role="listbox" aria-label="Assignees" aria-multiselectable="true" className="flex flex-col">
           {allAssignees.map((assignee) => {
             const isAssigned = assigneeIds.includes(assignee.id);
             const reason = disabledReasons[assignee.id];
@@ -207,30 +182,23 @@ export function AssigneePickerPopover({
                 aria-disabled={reason !== undefined ? "true" : undefined}
                 title={reason}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                  PICKER_ROW,
                   reason !== undefined
                     ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer hover:bg-accent"
+                    : "cursor-pointer hover:bg-well"
                 )}
                 onClick={() => {
                   if (reason === undefined) onToggle(assignee.id);
                 }}
               >
-                <Checkbox checked={isAssigned} />
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-[10px]">
-                    {assignee.initials}
-                  </AvatarFallback>
-                </Avatar>
-                <span>{assignee.name}</span>
+                <PersonAvatar userId={assignee.id} initials={assignee.initials} size={26} />
+                <span className="min-w-0 flex-1 truncate">{assignee.name}</span>
+                {isAssigned && <Check className="h-4 w-4 shrink-0 text-brand" aria-hidden />}
               </div>
             );
           })}
           {reasons.map((r) => (
-            <p
-              key={r}
-              className="px-2 pt-1 text-[11px] leading-snug text-muted-foreground"
-            >
+            <p key={r} className="px-2 pb-1 pt-1.5 text-xs leading-snug text-muted-foreground">
               {r}
             </p>
           ))}
@@ -239,7 +207,6 @@ export function AssigneePickerPopover({
     </Popover>
   );
 }
-
 
 // ---------------------------------------------------------------------------
 // DueDatePicker
@@ -280,18 +247,11 @@ export function DueDatePicker({
     <Popover open={open} onOpenChange={setOpen}>
       {variant === "button" ? (
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(
-              "h-9 text-xs gap-1.5",
-              !value && "text-muted-foreground"
-            )}
-            disabled={disabled}
-          >
-            <CalendarIcon className="h-3.5 w-3.5" />
-            {formattedDate}
-          </Button>
+          <button type="button" className={FIELD_TRIGGER} disabled={disabled}>
+            <CalendarIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="tabular-nums">{formattedDate}</span>
+            <FieldCaret />
+          </button>
         </PopoverTrigger>
       ) : isOverdue ? (
         <Tooltip>
@@ -321,70 +281,15 @@ export function DueDatePicker({
           </button>
         </PopoverTrigger>
       )}
-      <PopoverContent className="w-auto p-0">
+      <PopoverContent align="end" className={cn("w-auto p-0", PICKER_CONTENT)}>
         <Calendar
           mode="single"
           selected={value.toJSDate()}
+          // Open on the due date's month, not today's.
+          defaultMonth={value.toJSDate()}
           onSelect={handleSelect}
         />
       </PopoverContent>
     </Popover>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// StatusSelect
-// ---------------------------------------------------------------------------
-
-export interface StatusSelectProps {
-  status: ItemStatus;
-  onStatusChange: (newStatus: ItemStatus) => void;
-}
-
-export function StatusSelect({ status, onStatusChange }: StatusSelectProps) {
-  return (
-    <Select
-      value={status}
-      onValueChange={(value) => onStatusChange(value as ItemStatus)}
-    >
-      <SelectTrigger
-        className="h-6 w-auto gap-1.5 rounded-full border border-border bg-background px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-accent whitespace-nowrap [&>svg]:h-3 [&>svg]:w-3"
-      >
-        <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(status))} />
-        {actionStatusToString(status)}
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ItemStatus.NotStarted}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.NotStarted))} />
-            Not Started
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.InProgress}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.InProgress))} />
-            In Progress
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.OnHold}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.OnHold))} />
-            On Hold
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.Completed}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.Completed))} />
-            Completed
-          </span>
-        </SelectItem>
-        <SelectItem value={ItemStatus.WontDo}>
-          <span className="flex items-center gap-1.5">
-            <span className={cn("inline-block h-2 w-2 rounded-full shrink-0", statusDotColor(ItemStatus.WontDo))} />
-            Won&apos;t Do
-          </span>
-        </SelectItem>
-      </SelectContent>
-    </Select>
   );
 }

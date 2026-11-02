@@ -73,6 +73,8 @@ export interface CoachingSessionsCardProps {
    *  the parent uses this to refresh sibling cards (e.g. UpcomingSession).
    *  The card already revalidates its own buckets internally. */
   onSeriesMutated?: () => void;
+  /** Formats dates in the session detail. */
+  locale: string;
 }
 
 /**
@@ -87,6 +89,7 @@ export function CoachingSessionsCard({
   onReschedule,
   onRefreshNeeded,
   onSeriesMutated,
+  locale,
 }: CoachingSessionsCardProps) {
   const userSession = useAuthStore((s) => s.userSession);
   const userId = userSession?.id;
@@ -284,6 +287,7 @@ export function CoachingSessionsCard({
               organizationId={currentOrganizationId}
               viewerId={userSession.id}
               userTimezone={userTimezone}
+              locale={locale}
               mountNow={mountNow}
               onReschedule={onReschedule}
               onRequestDelete={handleRequestDelete}

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import TextareaMarkdown from "textarea-markdown-editor";
 import type { TextareaMarkdownRef } from "textarea-markdown-editor";
-import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Info, Pencil, Strikethrough, Trash2 } from "lucide-react";
+import { ArrowUpRight, Bold, Italic, Link2, List, ListOrdered, Pencil, Strikethrough, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,11 +16,23 @@ import {
 } from "@/components/ui/tooltip";
 import { BaseCardCompactEditable } from "@/components/ui/base-card-compact-editable";
 import {
-  StatusSelect,
+  AssigneeAvatars,
   DueDatePicker,
   AssigneePickerPopover,
   resolveAssignees,
+  type AssigneeInfo,
 } from "@/components/ui/coaching-sessions/action-card-parts";
+import { ActionStatusControl } from "@/components/ui/status/action-status-control";
+import {
+  CARD_BUTTON,
+  CARD_DONE,
+  CARD_FACE,
+  CARD_TEXTAREA,
+  CARD_TITLE,
+  CardDetailsButton,
+  FIELD_LABEL,
+} from "@/components/ui/card-field";
+import { StatusMetaLine } from "@/components/ui/status/status-meta-line";
 import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
 import { GoalPill } from "@/components/ui/goal-pill";
 import type { Action } from "@/types/action";
@@ -44,10 +56,10 @@ const markdownComponents = {
 
 // ── Compact Action Card (flip-card interaction) ──────────────────────
 //
-// Uses BaseCardCompactEditable with header/footer for a three-zone front face:
-//   Header: Status pill (interactive) + flip icon
-//   Body:   Expandable action text
-//   Footer: Assignee initials + due date
+// The design system's "full card" layout, on BaseCardCompactEditable:
+//   Header: Status control (glyph + pill + caret) + details button
+//   Body:   Expandable action text, muted once closed
+//   Footer: Assignee avatars + status meta line
 //
 // Back face provides full edit form for body, status, due date, assignees.
 // Review variant makes body read-only and hides delete.
@@ -165,7 +177,7 @@ export function CompactActionCard({
       initialEditing={initialEditing}
       onDismiss={onDismiss}
       className={cn(className, highlighted && HIGHLIGHT_CARD)}
-      faceClassName={highlighted ? HIGHLIGHT_FACE : undefined}
+      faceClassName={cn(CARD_FACE, highlighted && HIGHLIGHT_FACE)}
       renderHeader={({ onFlip }) => (
         <ActionHeader
           status={action.status}
@@ -174,14 +186,10 @@ export function CompactActionCard({
         />
       )}
       renderFront={() => (
-        <ActionBody body={body} goalTitle={linkedGoalTitle} />
+        <ActionBody body={body} goalTitle={linkedGoalTitle} closed={isClosed(action.status)} />
       )}
       renderFooter={() => (
-        <ActionFooter
-          resolvedAssignees={resolvedAssignees}
-          dueBy={action.due_by}
-          locale={locale}
-        />
+        <ActionFooter resolvedAssignees={resolvedAssignees} action={action} locale={locale} />
       )}
       renderBack={({ onDone, isEditing, onEditStart, onEditEnd }) =>
         isEditing ? (
@@ -267,34 +275,28 @@ function ActionHeader({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <StatusSelect status={status} onStatusChange={onStatusChange} />
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Action options"
-              onClick={(e) => {
-                e.stopPropagation();
-                onFlip();
-              }}
-              className="rounded-full p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-            >
-              <Info className="h-3.5 w-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            Edit action details
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <ActionStatusControl status={status} onStatusChange={onStatusChange} />
+      <CardDetailsButton label="Action options" tooltip="Edit action details" onClick={onFlip} />
     </div>
   );
 }
 
 // ── Front face: Body ────────────────────────────────────────────────
 
-function ActionBody({ body, goalTitle }: { body: string; goalTitle?: string }) {
+/** Completed and Won't do actions read as closed: muted, never struck through. */
+function isClosed(status: ItemStatus): boolean {
+  return status === ItemStatus.Completed || status === ItemStatus.WontDo;
+}
+
+function ActionBody({
+  body,
+  goalTitle,
+  closed,
+}: {
+  body: string;
+  goalTitle?: string;
+  closed: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   if (!body) {
@@ -309,8 +311,10 @@ function ActionBody({ body, goalTitle }: { body: string; goalTitle?: string }) {
     <div>
       <div
         className={cn(
-          "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none text-[13px] font-medium [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-          !expanded && "max-h-[2.8em] overflow-hidden"
+          "min-w-0 cursor-pointer prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          CARD_TITLE,
+          !expanded && "max-h-[2.8em] overflow-hidden",
+          closed && "text-muted-foreground prose-p:text-muted-foreground"
         )}
         onClick={() => setExpanded((prev) => !prev)}
       >
@@ -327,48 +331,22 @@ function ActionBody({ body, goalTitle }: { body: string; goalTitle?: string }) {
 
 function ActionFooter({
   resolvedAssignees,
-  dueBy,
+  action,
   locale,
 }: {
-  resolvedAssignees: { initials: string; name: string }[];
-  dueBy: Option<DateTime>;
+  resolvedAssignees: AssigneeInfo[];
+  action: Action;
   locale: string;
 }) {
-  const formattedDate = dueBy.some
-    ? dueBy.val.setLocale(locale).toLocaleString(DateTime.DATE_MED)
-    : "No due date";
-
   return (
-    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-      <div className="flex items-center gap-1">
-        {resolvedAssignees.map((a) => (
-          <TooltipProvider key={a.initials} delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-[11px] font-medium">{a.initials}</span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">
-                {a.name}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))}
-      </div>
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              data-testid="action-due-date"
-              className="text-[11px] font-bold"
-            >
-              {formattedDate}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="text-xs">
-            {dueBy.some ? `Due ${formattedDate}` : formattedDate}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    <div className="flex items-center justify-between gap-2">
+      <AssigneeAvatars assignees={resolvedAssignees} />
+      <StatusMetaLine
+        status={action.status}
+        dueBy={action.due_by}
+        statusChangedAt={action.status_changed_at}
+        locale={locale}
+      />
     </div>
   );
 }
@@ -391,7 +369,7 @@ function ActionBackView({
   action: Action;
   body: string;
   locale: string;
-  resolvedAssignees: { initials: string; name: string }[];
+  resolvedAssignees: AssigneeInfo[];
   goalTitle?: string;
   onGoalUnlink?: () => void;
   sourceSessionId?: Id;
@@ -400,39 +378,45 @@ function ActionBackView({
   onEdit: () => void;
   onDelete?: () => void;
 }) {
-  const formattedDate = action.due_by.some
-    ? action.due_by.val.setLocale(locale).toLocaleString(DateTime.DATE_MED)
-    : null;
-
   const formattedSessionDate = sourceSessionDate
     ?.setLocale(locale)
     .toLocaleString(DateTime.DATE_MED);
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold">
-          {formattedDate ? `Due: ${formattedDate}` : "No due date"}
-        </span>
+      <div className="flex min-h-7 items-center justify-between gap-2">
+        <StatusMetaLine
+          status={action.status}
+          dueBy={action.due_by}
+          statusChangedAt={action.status_changed_at}
+          locale={locale}
+        />
         <button
           type="button"
           onClick={onDone}
-          className="text-[12px] font-medium text-brand hover:text-brand/80 transition-colors"
+          className={cn("ml-auto", CARD_DONE)}
         >
           Done
         </button>
       </div>
 
       {body ? (
-        <div className="text-[13px] font-medium prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+        <div
+          className={cn(
+            "prose prose-sm prose-neutral dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+            CARD_TITLE,
+            isClosed(action.status) && "text-muted-foreground prose-p:text-muted-foreground"
+          )}
+        >
           <ReactMarkdown components={markdownComponents}>{body}</ReactMarkdown>
         </div>
       ) : (
-        <p className="text-[13px] text-muted-foreground/50 italic">No description</p>
+        <p className="text-sm italic text-muted-foreground/60">No description</p>
       )}
 
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>
+      <div className="flex items-center gap-2">
+        {resolvedAssignees.length > 0 && <AssigneeAvatars assignees={resolvedAssignees} named={false} />}
+        <span className="text-xs text-muted-foreground">
           {resolvedAssignees.map((a) => a.name).join(", ") || "Unassigned"}
         </span>
       </div>
@@ -449,12 +433,12 @@ function ActionBackView({
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                    size="icon-menu"
+                    className="text-muted-foreground hover:text-foreground"
                     asChild
                   >
                     <Link href={`/coaching-sessions/${sourceSessionId}?panel=actions&highlight=${action.id}`}>
-                      <ArrowUpRight className="!h-3.5 !w-3.5" />
+                      <ArrowUpRight aria-hidden />
                     </Link>
                   </Button>
                 </TooltipTrigger>
@@ -468,23 +452,13 @@ function ActionBackView({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 gap-1 text-[11px] px-2"
-            onClick={onEdit}
-          >
-            <Pencil className="!h-2.5 !w-2.5" />
+          <Button variant="secondary" size="sm" className={CARD_BUTTON} onClick={onEdit}>
+            <Pencil className="!h-3 !w-3" aria-hidden />
             Edit
           </Button>
           {onDelete && (
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-6 gap-1 text-[11px] px-2"
-              onClick={onDelete}
-            >
-              <Trash2 className="!h-2.5 !w-2.5" />
+            <Button variant="destructive" size="sm" className={CARD_BUTTON} onClick={onDelete}>
+              <Trash2 className="!h-3 !w-3" aria-hidden />
               Delete
             </Button>
           )}
@@ -610,7 +584,7 @@ export function ActionEditForm({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             readOnly={fieldsDisabled}
-            className="w-full min-h-[80px] max-h-[200px] overflow-y-auto overscroll-contain rounded-md border border-border bg-background px-2 py-1.5 text-[13px] resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+            className={cn(CARD_TEXTAREA, "min-h-[80px] max-h-[200px] overflow-y-auto overscroll-contain")}
             autoFocus
           />
         </div>
@@ -619,15 +593,15 @@ export function ActionEditForm({
       <div className="space-y-2">
         {onStatusChange && (
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">Status</span>
-            <StatusSelect
+            <span className={FIELD_LABEL}>Status</span>
+            <ActionStatusControl
               status={action.status}
               onStatusChange={onStatusChange}
             />
           </div>
         )}
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">Due date</span>
+          <span className={FIELD_LABEL}>Due date</span>
           <DueDatePicker
             value={
               action.due_by.some
@@ -641,7 +615,7 @@ export function ActionEditForm({
           />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">Assignee(s)</span>
+          <span className={FIELD_LABEL}>Assignee(s)</span>
           <AssigneePickerPopover
             allAssignees={allAssignees}
             resolvedAssignees={resolvedAssignees}
@@ -653,7 +627,7 @@ export function ActionEditForm({
         </div>
         {goals && onGoalSelect && (
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">Linked goal</span>
+            <span className={FIELD_LABEL}>Linked goal</span>
             <GoalPickerPopover
               goals={goals}
               selectedGoalId={selectedGoalId}
@@ -668,7 +642,7 @@ export function ActionEditForm({
         <div className="flex items-center justify-end gap-2 pt-3">
           <Button
             size="sm"
-            className={cn("h-6 gap-1 text-[11px] px-2", buttonClassName)}
+            className={cn(CARD_BUTTON, buttonClassName)}
             onClick={handleSave}
             disabled={isSaving || !body.trim()}
           >
@@ -678,7 +652,7 @@ export function ActionEditForm({
           <Button
             variant="ghost"
             size="sm"
-            className={cn("h-6 gap-1 text-[11px] px-2 text-muted-foreground", buttonClassName)}
+            className={cn(CARD_BUTTON, "text-muted-foreground", buttonClassName)}
             onClick={onCancel}
             disabled={isSaving}
           >
@@ -707,17 +681,19 @@ export function MarkdownToolbarButton({
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-menu"
+            aria-label={label}
             disabled={disabled}
             onClick={(e) => {
               e.preventDefault();
               onClick();
             }}
-            className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:pointer-events-none disabled:opacity-50"
           >
-            <Icon className="h-3.5 w-3.5" />
-          </button>
+            <Icon aria-hidden />
+          </Button>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
           {label}
