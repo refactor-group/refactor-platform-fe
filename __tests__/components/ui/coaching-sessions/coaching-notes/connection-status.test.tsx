@@ -1,4 +1,5 @@
 import { render, screen, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as React from 'react'
 import { ConnectionStatus } from '@/components/ui/coaching-sessions/coaching-notes/connection-status'
@@ -194,6 +195,29 @@ describe('ConnectionStatus', () => {
 
       const status = await findStatus('Not connected')
       expect(status.querySelector('.lucide-cloud-off')).toHaveClass('text-destructive')
+    })
+  })
+
+  describe('Tooltip', () => {
+    it('shows the status in a tooltip on hover', async () => {
+      const user = userEvent.setup()
+      renderStatus()
+      await triggerProviderEvent('synced')
+
+      await user.hover(await findStatus('Connected'))
+
+      expect(await screen.findByRole('tooltip')).toHaveTextContent('Connected')
+    })
+
+    it('shows the status in a tooltip on keyboard focus', async () => {
+      const user = userEvent.setup()
+      mockToken({})
+      renderStatus()
+      await findStatus('Not connected')
+
+      await user.tab()
+
+      expect(await screen.findByRole('tooltip')).toHaveTextContent('Not connected')
     })
   })
 

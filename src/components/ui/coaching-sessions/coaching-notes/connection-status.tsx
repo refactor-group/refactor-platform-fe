@@ -1,4 +1,5 @@
 import { useEffect, useReducer } from "react";
+import type { ReactNode } from "react";
 import { Cloud, CloudOff } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -15,7 +16,7 @@ enum ConnectionState {
 
 interface ConnectionStatusConfig {
   label: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }
 
 /**
