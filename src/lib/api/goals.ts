@@ -109,7 +109,8 @@ export const GoalApi = {
    * @returns Promise resolving to the deleted Goal object
    */
   delete: async (id: Id): Promise<Goal> =>
-    normalizeGoal(await EntityApi.deleteFn<null, GoalWire>(`${GOALS_BASEURL}/${id}`)),
+    // The backend answers a delete with a bare {id}, not a goal, so there is nothing to normalize.
+    EntityApi.deleteFn<null, Goal>(`${GOALS_BASEURL}/${id}`),
 
   /**
    * Deletes a goal nested under another entity (foreign key relationship).

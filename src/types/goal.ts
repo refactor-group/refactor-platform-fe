@@ -203,7 +203,8 @@ export function parseGoal(data: any): Goal {
   };
 }
 
-export function isGoal(value: unknown): value is Goal {
+/** Checks the backend shape, so the description may still be null; parseGoal normalizes it. */
+export function isGoal(value: unknown): value is GoalWire {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -227,7 +228,7 @@ export function isGoal(value: unknown): value is Goal {
 
 export function isGoalArray(
   value: unknown
-): value is Goal[] {
+): value is GoalWire[] {
   return Array.isArray(value) && value.every(isGoal);
 }
 

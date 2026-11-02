@@ -367,6 +367,12 @@ describe('goals without a description (body: null on the wire)', () => {
     expect((await GoalApi.update('g1', goal)).body).toBe('')
   })
 
+  it('a successful delete resolves, though the backend returns only {id}', async () => {
+    // deleteFn reads response.data.data, which a bare {"id": ...} body lacks.
+    vi.mocked(EntityApi.deleteFn).mockResolvedValue(undefined)
+    await expect(GoalApi.delete('g1')).resolves.toBeUndefined()
+  })
+
   it('come back from the batch endpoint with an empty body', async () => {
     vi.mocked(sessionGuard.get).mockResolvedValue({
       data: { data: { session_goals: { 'sess-1': [wireGoal('g1', null)] } } },
