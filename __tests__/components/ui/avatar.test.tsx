@@ -45,10 +45,10 @@ describe("PersonAvatar", () => {
     );
     const selected = rootOf("SE");
     expect(selected).toHaveAttribute("data-selected", "true");
-    expect(selected).toHaveClass("ring-primary");
+    expect(selected).toHaveClass("ring-brand");
     const unselected = rootOf("UN");
     expect(unselected).toHaveAttribute("data-selected", "false");
-    expect(unselected).not.toHaveClass("ring-primary");
+    expect(unselected).not.toHaveClass("ring-brand");
   });
 
   it.each<[PersonAvatarSize, string]>([
