@@ -1,5 +1,7 @@
 // Goal progress API — dedicated module mirroring backend's goal_progress module pattern.
 
+import { useCallback } from "react";
+import { useSWRConfig } from "swr";
 import { siteConfig } from "@/site.config";
 import { Id, ItemStatus } from "@/types/general";
 import {
@@ -12,6 +14,7 @@ import {
 import { type Option, None } from "@/types/option";
 import { type AssigneeScope } from "@/types/assigned-actions";
 import { EntityApi } from "./entity-api";
+import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
 
 /**
  * Deterministic serialization of a params record for use in an SWR cache
@@ -185,4 +188,17 @@ export const useGoalProgressList = (
     isError,
     refresh,
   };
+};
+
+/** Covers both progress endpoints: one goal's, and a relationship's goal list. */
+export const useRevalidateGoalProgress = () => {
+  const { mutate } = useSWRConfig();
+  return useCallback(
+    () =>
+      Promise.all([
+        revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/goals/[^/]+/progress"),
+        revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/goal_progress"),
+      ]),
+    [mutate]
+  );
 };

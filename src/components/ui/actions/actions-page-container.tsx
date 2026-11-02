@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import { DateTime } from "ts-luxon";
 import { toast } from "@/lib/toast";
+import { actionErrorMessage } from "@/lib/utils/action-error-message";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -22,8 +23,6 @@ import type { Id, ItemStatus } from "@/types/general";
 import { ActionsPageHeader } from "@/components/ui/actions/actions-page-header";
 import { KanbanBoard } from "@/components/ui/actions/kanban-board";
 import {
-  EntityApiError,
-  PERMISSION_DENIED_MESSAGE,
   viewPermissionDeniedMessage,
   isForbiddenError,
 } from "@/lib/api/entity-api";
@@ -45,17 +44,6 @@ function parseEnum<T extends string>(
   if (!value) return fallback;
   const valid = new Set(Object.values(enumObj));
   return valid.has(value as T) ? (value as T) : fallback;
-}
-
-/** Maps a failed action mutation to a user-facing message. `action` reads as
- * the verb phrase in "Couldn't <action>" (e.g. "update the status"). */
-function mutationErrorMessage(err: unknown, action: string): string {
-  if (err instanceof EntityApiError) {
-    if (err.isForbidden()) return PERMISSION_DENIED_MESSAGE;
-    if (err.isNetworkError())
-      return `Couldn't ${action} · Check your connection and try again`;
-  }
-  return `Couldn't ${action}`;
 }
 
 interface ActionsPageContainerProps {
@@ -214,7 +202,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         // No explicit refresh() — the optimistic update already moved the card
         // visually, and SWR will revalidate on its own schedule.
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update the status"));
+        toast.error(actionErrorMessage("update the status", err));
         throw err; // Re-throw so the board can roll back optimistic updates
       }
     },
@@ -230,7 +218,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, { ...ctx.action, due_by: Some(newDueBy) });
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update the due date"));
+        toast.error(actionErrorMessage("update the due date", err));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -245,7 +233,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, { ...ctx.action, assignee_ids: assigneeIds });
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update the assignees"));
+        toast.error(actionErrorMessage("update the assignees", err));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -266,7 +254,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, updated);
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update the action"));
+        toast.error(actionErrorMessage("update the action", err));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -282,7 +270,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, updated);
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "update the goal link"));
+        toast.error(actionErrorMessage("update the goal link", err));
       }
     },
     [actionsWithContext, updateAction, refresh]
@@ -294,7 +282,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await deleteAction(id);
         refresh();
       } catch (err) {
-        toast.error(mutationErrorMessage(err, "delete the action"));
+        toast.error(actionErrorMessage("delete the action", err));
       }
     },
     [deleteAction, refresh]

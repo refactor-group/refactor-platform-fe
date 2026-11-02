@@ -17,7 +17,7 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
-      <main className="flex-1 p-6 min-w-0">{children}</main>
+      <main className="flex-1 p-4 sm:p-6 min-w-0">{children}</main>
     </div>
   );
 }

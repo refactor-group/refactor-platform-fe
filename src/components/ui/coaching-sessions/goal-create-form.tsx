@@ -114,9 +114,9 @@ export function GoalCreateForm({
           {submitLabel}
         </Button>
         <Button
-          variant="ghost"
+          variant="tertiary"
           size="sm"
-          className="h-8 text-xs text-muted-foreground"
+          className="h-8 text-xs"
           onClick={onCancel}
         >
           Cancel

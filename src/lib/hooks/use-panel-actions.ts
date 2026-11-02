@@ -1,18 +1,19 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect } from "react";
-import { useSWRConfig } from "swr";
 import { toast as sonnerToast } from "@/lib/toast";
 import { actionPreview } from "@/lib/utils/action-preview";
+import { actionErrorMessage } from "@/lib/utils/action-error-message";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
+import { useRevalidateGoalProgress } from "@/lib/api/goal-progress";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import { UserActionsScope } from "@/types/assigned-actions";
 import { sortActionArray, defaultAction } from "@/types/action";
 import { Some, None } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
-import { ItemStatus, EntityApiError } from "@/types/general";
+import { ItemStatus } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
 import { filterReviewActions } from "@/lib/utils/session";
@@ -34,15 +35,6 @@ function findActionById(
     sessionActions.find((a) => a.id === id) ??
     allRelationshipActions.find((a) => a.id === id)
   );
-}
-
-/** Show an error toast, distinguishing network errors from other failures. */
-function showActionError(verb: string, err: unknown) {
-  if (err instanceof EntityApiError && err.isNetworkError()) {
-    sonnerToast.error(`Couldn't ${verb} · Check your connection and try again`);
-  } else {
-    sonnerToast.error(`Couldn't ${verb}`);
-  }
 }
 
 // ── Sub-hooks ─────────────────────────────────────────────────────
@@ -197,7 +189,6 @@ function useActionCrud(
   refresh: () => void
 ) {
   const { create, update, delete: deleteAction } = useActionMutation();
-  const { mutate: globalMutate } = useSWRConfig();
 
   const updateField = useCallback(
     async (id: Id, fields: Partial<Action>, verb: string) => {
@@ -207,20 +198,13 @@ function useActionCrud(
         await update(id, { ...action, ...fields });
         refresh();
       } catch (err) {
-        showActionError(verb, err);
+        sonnerToast.error(actionErrorMessage(verb, err));
       }
     },
     [sessionActions, allRelationshipActions, update, refresh]
   );
 
-  /** Revalidate all goal progress SWR caches after a goal link or status change. */
-  const revalidateGoalProgress = useCallback(() => {
-    globalMutate(
-      (key: unknown) => typeof key === "string" && key.includes("/goals/") && key.endsWith("/progress"),
-      undefined,
-      { revalidate: true }
-    );
-  }, [globalMutate]);
+  const revalidateGoalProgress = useRevalidateGoalProgress();
 
   const handleCreate = useCallback(
     async (body: string, assigneeIds?: Id[], goalId?: Id, dueBy?: DateTime) => {
@@ -241,7 +225,7 @@ function useActionCrud(
           revalidateGoalProgress();
         }
       } catch (err) {
-        showActionError("create the action", err);
+        sonnerToast.error(actionErrorMessage("create the action", err));
       }
     },
     [coachingSessionId, userId, create, refresh, revalidateGoalProgress]
@@ -257,7 +241,7 @@ function useActionCrud(
         refresh();
         revalidateGoalProgress();
       } catch (err) {
-        showActionError("update the goal link", err);
+        sonnerToast.error(actionErrorMessage("update the goal link", err));
       }
     },
     [sessionActions, allRelationshipActions, update, refresh, revalidateGoalProgress]
@@ -300,7 +284,7 @@ function useActionCrud(
         await deleteAction(id);
         refresh();
       } catch (err) {
-        showActionError("delete the action", err);
+        sonnerToast.error(actionErrorMessage("delete the action", err));
         return;
       }
 

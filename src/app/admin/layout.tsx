@@ -18,7 +18,7 @@ export default function AdminLayout({
   return (
     <div className="flex min-h-screen w-full flex-col">
       <SiteHeader />
-      <main className="flex-1 p-6 min-w-0">
+      <main className="flex-1 p-4 sm:p-6 min-w-0">
         <PageContainer>{children}</PageContainer>
       </main>
     </div>

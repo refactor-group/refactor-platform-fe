@@ -126,7 +126,7 @@ function DismissedRow({
         <span>{dismissedLabel}</span>
         {mayRestore ? (
           <Button
-            variant="ghost"
+            variant="tertiary"
             size="sm"
             className="h-6 gap-1 text-[11px] px-2 max-md:h-10"
             disabled={pending || !onRestore}

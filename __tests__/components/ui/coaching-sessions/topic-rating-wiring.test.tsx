@@ -88,6 +88,7 @@ vi.mock("@/lib/api/coaching-session-views", () => ({
 }));
 
 vi.mock("@/lib/api/goal-progress", () => ({
+  useRevalidateGoalProgress: () => vi.fn(),
   useGoalProgress: vi.fn(() => ({
     progressMetrics: undefined,
     isLoading: false,

@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/components/lib/utils";
-import { statusColor } from "@/components/ui/actions/utils";
+import { StatusGlyph } from "@/components/ui/status/status-glyph";
 import { actionStatusToString } from "@/types/general";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
 import type { KanbanCardCallbacks } from "@/components/ui/actions/kanban-action-card";
@@ -47,10 +47,7 @@ export const KanbanColumn = memo(function KanbanColumn({
     >
       {/* Column header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <span
-          className={cn("h-2.5 w-2.5 rounded-full", statusColor(status))}
-          aria-hidden
-        />
+        <StatusGlyph status={status} decorative className="h-4 w-4" />
         <h3 className="text-sm font-medium">{actionStatusToString(status)}</h3>
         <span className="ml-auto text-xs text-muted-foreground tabular-nums rounded-full bg-muted px-2 py-0.5">
           {visibleCount}

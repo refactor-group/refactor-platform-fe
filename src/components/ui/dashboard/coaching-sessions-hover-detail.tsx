@@ -1,12 +1,18 @@
 "use client";
 
 import { DateTime } from "ts-luxon";
+import { ResultAsync } from "neverthrow";
 import { MessageSquare } from "lucide-react";
 import { SessionGoalList } from "@/components/ui/session-goal-list";
 import { ActionStatusRow } from "@/components/ui/status/action-status-row";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
+import { useActionMutation } from "@/lib/api/actions";
+import { useRevalidateGoalProgress } from "@/lib/api/goal-progress";
+import { toast } from "@/lib/toast";
+import { actionErrorMessage } from "@/lib/utils/action-error-message";
 import { formatDateWithTime } from "@/lib/utils/date";
 import type { Action } from "@/types/action";
+import type { ItemStatus } from "@/types/general";
 import {
   isPastSession,
   type EnrichedCoachingSession,
@@ -39,6 +45,7 @@ export function SessionHoverDetail({
   reviewActions,
   locale,
 }: SessionHoverDetailProps) {
+  const setStatus = useSetActionStatus();
   const goals = session.goals ?? [];
   const scheduledDateTime = DateTime.fromISO(session.date, {
     zone: "utc",
@@ -91,7 +98,7 @@ export function SessionHoverDetail({
           // with `?panel=actions` so the Actions panel opens automatically.
           <div className="divide-y divide-border/50">
             {reviewActions.map((action) => (
-              <ActionDueRow key={action.id} action={action} locale={locale} />
+              <ActionDueRow key={action.id} action={action} locale={locale} onStatusChange={setStatus} />
             ))}
           </div>
         )}
@@ -100,7 +107,25 @@ export function SessionHoverDetail({
   );
 }
 
-function ActionDueRow({ action, locale }: { action: Action; locale: string }) {
+function useSetActionStatus() {
+  const { update } = useActionMutation();
+  const revalidateGoalProgress = useRevalidateGoalProgress();
+  return (action: Action, status: ItemStatus) =>
+    ResultAsync.fromPromise(update(action.id, { ...action, status }), (err) => err).match(
+      () => {
+        if (action.goal_id.some) revalidateGoalProgress();
+      },
+      (err) => toast.error(actionErrorMessage("update the status", err))
+    );
+}
+
+interface ActionDueRowProps {
+  action: Action;
+  locale: string;
+  onStatusChange: (action: Action, status: ItemStatus) => void;
+}
+
+function ActionDueRow({ action, locale, onStatusChange }: ActionDueRowProps) {
   return (
     <ActionStatusRow
       title={action.body ?? ""}
@@ -109,6 +134,7 @@ function ActionDueRow({ action, locale }: { action: Action; locale: string }) {
       statusChangedAt={action.status_changed_at}
       href={`/coaching-sessions/${action.coaching_session_id}?panel=${PanelSection.Actions}`}
       locale={locale}
+      onStatusChange={(status) => onStatusChange(action, status)}
       className="-mx-3"
     />
   );
