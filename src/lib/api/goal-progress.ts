@@ -14,6 +14,7 @@ import {
 import { type Option, None } from "@/types/option";
 import { type AssigneeScope } from "@/types/assigned-actions";
 import { EntityApi } from "./entity-api";
+import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
 
 /**
  * Deterministic serialization of a params record for use in an SWR cache
@@ -189,16 +190,15 @@ export const useGoalProgressList = (
   };
 };
 
-/** Revalidates every cached goal's progress, e.g. after a linked action's status changes. */
+/** Covers both progress endpoints: one goal's, and a relationship's goal list. */
 export const useRevalidateGoalProgress = () => {
   const { mutate } = useSWRConfig();
   return useCallback(
     () =>
-      mutate(
-        (key: unknown) => typeof key === "string" && key.includes("/goals/") && key.endsWith("/progress"),
-        undefined,
-        { revalidate: true }
-      ),
+      Promise.all([
+        revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/goals/[^/]+/progress"),
+        revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/goal_progress"),
+      ]),
     [mutate]
   );
 };
