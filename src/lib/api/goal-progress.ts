@@ -1,5 +1,7 @@
 // Goal progress API — dedicated module mirroring backend's goal_progress module pattern.
 
+import { useCallback } from "react";
+import { useSWRConfig } from "swr";
 import { siteConfig } from "@/site.config";
 import { Id, ItemStatus } from "@/types/general";
 import {
@@ -185,4 +187,18 @@ export const useGoalProgressList = (
     isError,
     refresh,
   };
+};
+
+/** Revalidates every cached goal's progress, e.g. after a linked action's status changes. */
+export const useRevalidateGoalProgress = () => {
+  const { mutate } = useSWRConfig();
+  return useCallback(
+    () =>
+      mutate(
+        (key: unknown) => typeof key === "string" && key.includes("/goals/") && key.endsWith("/progress"),
+        undefined,
+        { revalidate: true }
+      ),
+    [mutate]
+  );
 };

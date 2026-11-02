@@ -22,6 +22,7 @@ function apiError(status: number): EntityApiError {
 // ── Hook mocks ─────────────────────────────────────────────────────────
 const mockUseGoalProgressList = vi.fn();
 vi.mock("@/lib/api/goal-progress", () => ({
+  useRevalidateGoalProgress: () => vi.fn(),
   useGoalProgressList: (...args: unknown[]) => mockUseGoalProgressList(...args),
 }));
 

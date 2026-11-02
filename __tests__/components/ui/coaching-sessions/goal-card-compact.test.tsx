@@ -9,6 +9,7 @@ import { None } from "@/types/option"
 
 // Mock the goal progress hook so tests don't fire real API calls
 vi.mock("@/lib/api/goal-progress", () => ({
+  useRevalidateGoalProgress: () => vi.fn(),
   useGoalProgress: () => ({
     progressMetrics: {
       actions_completed: 3,
