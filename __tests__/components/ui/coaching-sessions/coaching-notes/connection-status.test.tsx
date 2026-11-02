@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as React from 'react'
 import { ConnectionStatus } from '@/components/ui/coaching-sessions/coaching-notes/connection-status'
 import { EditorCacheProvider } from '@/components/ui/coaching-sessions/editor-cache-context'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 // Mock external dependencies
 vi.mock('@/lib/api/collaboration-token', () => ({
@@ -112,6 +113,27 @@ const triggerProviderEvent = async (eventName: string, ...args: any[]) => {
   })
 }
 
+const renderStatus = () =>
+  render(
+    <TooltipProvider>
+      <EditorCacheProvider sessionId="test-session">
+        <ConnectionStatus />
+      </EditorCacheProvider>
+    </TooltipProvider>
+  )
+
+// The label is sr-only text inside the status element; the tooltip isn't mounted until hover
+const findStatus = async (label: string) =>
+  (await screen.findByText(label)).closest('[role="status"]') as HTMLElement
+
+const mockToken = (overrides: Record<string, unknown>) =>
+  vi.mocked(useCollaborationToken).mockReturnValue({
+    jwt: null,
+    isLoading: false,
+    isError: false,
+    ...overrides
+  })
+
 describe('ConnectionStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -132,209 +154,71 @@ describe('ConnectionStatus', () => {
   })
 
   describe('Connection States', () => {
-    it('should display "Connected" when provider is synced', async () => {
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      // Trigger synced event for all handlers
+    it('shows "Connected" when provider is synced', async () => {
+      renderStatus()
       await triggerProviderEvent('synced')
 
-      // Should show "Connected" badge
-      const badge = await screen.findByText('Connected')
-      expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-secondary') // Secondary variant for connected state
+      const status = await findStatus('Connected')
+      expect(status.querySelector('.lucide-cloud')).toBeInTheDocument()
     })
 
-    it('should display "Connecting..." when provider is initializing', () => {
-      // Mock loading state
-      vi.mocked(useCollaborationToken).mockReturnValue({
-        jwt: null,
-        isLoading: true,
-        isError: false
-      })
+    it('shows "Connecting" when provider is initializing', async () => {
+      mockToken({ isLoading: true })
+      renderStatus()
 
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      // Should show "Connecting..." badge
-      const badge = screen.getByText('Connecting...')
-      expect(badge).toBeInTheDocument()
+      expect(await findStatus('Connecting')).toBeInTheDocument()
     })
 
-    it('should display "Offline" when provider disconnects', async () => {
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      // First sync
+    it('shows "Not connected" when provider disconnects', async () => {
+      renderStatus()
       await triggerProviderEvent('synced')
+      await findStatus('Connected')
 
-      // Wait for Connected state
-      await screen.findByText('Connected')
-
-      // Then disconnect
       await triggerProviderEvent('disconnect')
 
-      // Should show "Offline" badge
-      const badge = await screen.findByText('Offline')
-      expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-secondary') // Secondary variant for offline state
+      const status = await findStatus('Not connected')
+      expect(status.querySelector('.lucide-cloud-off')).toHaveClass('text-warning')
     })
 
-    it('should display "Offline" when no JWT token is available', () => {
-      vi.mocked(useCollaborationToken).mockReturnValue({
-        jwt: null,
-        isLoading: false,
-        isError: false
-      })
+    it('shows "Not connected" when no JWT token is available', async () => {
+      mockToken({})
+      renderStatus()
 
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      // Should show "Offline" badge
-      const badge = screen.getByText('Offline')
-      expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-secondary') // Secondary variant for offline mode
+      const status = await findStatus('Not connected')
+      expect(status.querySelector('.lucide-cloud-off')).toHaveClass('text-warning')
     })
 
-    it('should display "Error" when JWT token fetch fails', () => {
-      vi.mocked(useCollaborationToken).mockReturnValue({
-        jwt: null,
-        isLoading: false,
-        isError: new Error('Token fetch failed')
-      })
+    it('shows a destructive "Not connected" when JWT token fetch fails', async () => {
+      mockToken({ isError: new Error('Token fetch failed') })
+      renderStatus()
 
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      // Should show "Error" badge - token fetch failure now shows error state with retry option
-      const badge = screen.getByText('Error')
-      expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-destructive') // Destructive variant for error state
+      const status = await findStatus('Not connected')
+      expect(status.querySelector('.lucide-cloud-off')).toHaveClass('text-destructive')
     })
-
   })
 
   describe('Connection Transitions', () => {
-    it('should transition from Connecting to Connected on sync', async () => {
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      // Initially should be connecting or offline
+    it('transitions from Connecting to Connected on sync', async () => {
+      renderStatus()
       expect(screen.queryByText('Connected')).not.toBeInTheDocument()
 
-      // Trigger sync event
       await triggerProviderEvent('synced')
 
-      // Should transition to Connected
-      const connectedBadge = await screen.findByText('Connected')
-      expect(connectedBadge).toBeInTheDocument()
+      expect(await findStatus('Connected')).toBeInTheDocument()
     })
 
-    it('should transition from Connected to Offline on disconnect event', async () => {
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      // Trigger sync to get to connected state
+    it('transitions from Not connected back to Connected on reconnect', async () => {
+      renderStatus()
       await triggerProviderEvent('synced')
-      await screen.findByText('Connected')
-
-      // Trigger disconnect
-      await triggerProviderEvent('disconnect')
-
-      // Should transition to Offline
-      const offlineBadge = await screen.findByText('Offline')
-      expect(offlineBadge).toBeInTheDocument()
-    })
-
-    it('should transition from Offline back to Connected on reconnect', async () => {
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      // Sync -> Disconnect -> Reconnect
-      await triggerProviderEvent('synced')
-      await screen.findByText('Connected')
+      await findStatus('Connected')
 
       await triggerProviderEvent('disconnect')
-      await screen.findByText('Offline')
+      await findStatus('Not connected')
 
       await triggerProviderEvent('connect')
       await triggerProviderEvent('synced')
 
-      // Should transition back to Connected
-      const connectedBadge = await screen.findByText('Connected')
-      expect(connectedBadge).toBeInTheDocument()
-    })
-  })
-
-  describe('Visual States', () => {
-    it('should use secondary variant for connected state', async () => {
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      await triggerProviderEvent('synced')
-
-      const badge = await screen.findByText('Connected')
-      expect(badge.className).toContain('bg-secondary')
-    })
-
-    it('should use secondary variant for offline state', async () => {
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      await triggerProviderEvent('synced')
-      await screen.findByText('Connected')
-
-      await triggerProviderEvent('disconnect')
-
-      const badge = await screen.findByText('Offline')
-      expect(badge.className).toContain('bg-secondary')
-    })
-
-    it('should use default variant for connecting state', () => {
-      vi.mocked(useCollaborationToken).mockReturnValue({
-        jwt: null,
-        isLoading: true,
-        isError: false
-      })
-
-      render(
-        <EditorCacheProvider sessionId="test-session">
-          <ConnectionStatus />
-        </EditorCacheProvider>
-      )
-
-      const badge = screen.getByText('Connecting...')
-      expect(badge.className).toContain('bg-primary')
+      expect(await findStatus('Connected')).toBeInTheDocument()
     })
   })
 })
