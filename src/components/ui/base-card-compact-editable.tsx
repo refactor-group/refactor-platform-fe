@@ -55,6 +55,7 @@ export function BaseCardCompactEditable({
     return (
       <InitialEditCard
         className={className}
+        faceClassName={faceClassName}
         onDismiss={onDismiss}
         renderBack={renderBack}
       />
@@ -80,10 +81,13 @@ export function BaseCardCompactEditable({
 
 function InitialEditCard({
   className,
+  faceClassName,
   onDismiss,
   renderBack,
 }: {
   className?: string;
+  /** The same face classes as the flip card, so a new card looks like a saved one. */
+  faceClassName?: string;
   onDismiss?: () => void;
   renderBack: BaseCardCompactEditableProps["renderBack"];
 }) {
@@ -98,6 +102,7 @@ function InitialEditCard({
     <div
       className={cn(
         "rounded-lg border border-border bg-background p-3 shadow-sm animate-in zoom-in-95 fade-in duration-300",
+        faceClassName,
         className
       )}
     >

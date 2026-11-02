@@ -4,7 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
-import { AssigneePickerPopover } from "@/components/ui/coaching-sessions/action-card-parts";
+import { AssigneePickerPopover, DueDatePicker } from "@/components/ui/coaching-sessions/action-card-parts";
+import { DateTime } from "ts-luxon";
 import { GoalPill } from "@/components/ui/goal-pill";
 import { ItemStatus } from "@/types/general";
 import { createMockGoal } from "../../../test-utils";
@@ -200,5 +201,23 @@ describe("AssigneePickerPopover", () => {
     expect(screen.getByText("Only your coach can assign an action to themselves.")).toBeInTheDocument();
     await userEvent.click(jim);
     expect(onToggle).not.toHaveBeenCalled();
+  });
+});
+
+describe("DueDatePicker", () => {
+  it("opens the calendar on the due date's month, not today's", async () => {
+    render(
+      <Wrapper>
+        <DueDatePicker
+          value={DateTime.fromISO("2025-02-14")}
+          onChange={vi.fn()}
+          locale="en-US"
+          variant="button"
+        />
+      </Wrapper>
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /Feb 14, 2025/ }));
+    expect(screen.getByText("February 2025")).toBeInTheDocument();
   });
 });

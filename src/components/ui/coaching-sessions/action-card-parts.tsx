@@ -285,6 +285,8 @@ export function DueDatePicker({
         <Calendar
           mode="single"
           selected={value.toJSDate()}
+          // Open on the due date's month, not today's.
+          defaultMonth={value.toJSDate()}
           onSelect={handleSelect}
         />
       </PopoverContent>
