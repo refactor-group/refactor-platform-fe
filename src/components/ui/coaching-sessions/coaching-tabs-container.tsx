@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CoachingNotes } from "@/components/ui/coaching-sessions/coaching-notes";
+import { ConnectionStatus } from "@/components/ui/coaching-sessions/coaching-notes/connection-status";
 import type { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 
 interface CoachingTabsContainerProps {
@@ -23,7 +24,10 @@ const CoachingTabsContainer = ({
     <Card className="row-span-1 h-full flex flex-col min-h-0 min-w-0">
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Notes</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">Notes</h3>
+            <ConnectionStatus />
+          </div>
           {onToggleMaximize && (
             <Tooltip>
               <TooltipTrigger asChild>

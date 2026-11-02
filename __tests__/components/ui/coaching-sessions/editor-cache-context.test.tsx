@@ -88,6 +88,7 @@ import { useCollaborationToken, fetchCollaborationTokenWithRetry } from '@/lib/a
 import { useAuthStore } from '@/lib/providers/auth-store-provider'
 import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role'
 import { ConnectionStatus } from '@/components/ui/coaching-sessions/coaching-notes/connection-status'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { MAX_NOTE_IMAGE_BYTES } from '@/components/ui/coaching-sessions/coaching-notes/constants'
 import { Some, None } from '@/types/option'
 import { okAsync, errAsync } from 'neverthrow'
@@ -832,9 +833,11 @@ describe('EditorCacheProvider', () => {
       }
 
       return (
-        <div data-testid="editor-area">
-          <ConnectionStatus />
-        </div>
+        <TooltipProvider>
+          <div data-testid="editor-area">
+            <ConnectionStatus />
+          </div>
+        </TooltipProvider>
       )
     }
 
@@ -846,7 +849,7 @@ describe('EditorCacheProvider', () => {
       vi.useRealTimers()
     })
 
-    it('should transition from loading skeleton to editor with Offline badge on sync timeout', async () => {
+    it('should transition from loading skeleton to editor with Not connected status on sync timeout', async () => {
       render(
         <EditorCacheProvider sessionId="test-session">
           <CoachingNotesSimulator />
@@ -868,11 +871,11 @@ describe('EditorCacheProvider', () => {
         expect(screen.getByTestId('editor-area')).toBeInTheDocument()
       })
 
-      // ConnectionStatus badge should show "Offline" (provider exists but never synced)
-      expect(screen.getByText('Offline')).toBeInTheDocument()
+      // ConnectionStatus should show "Not connected" (provider exists but never synced)
+      expect(screen.getByText('Not connected')).toBeInTheDocument()
     })
 
-    it('should transition from loading skeleton to editor with Connected badge on normal sync', async () => {
+    it('should transition from loading skeleton to editor with Connected status on normal sync', async () => {
       render(
         <EditorCacheProvider sessionId="test-session">
           <CoachingNotesSimulator />
@@ -889,7 +892,7 @@ describe('EditorCacheProvider', () => {
         mockProvider._triggerEvent('synced')
       })
 
-      // Editor area should appear with Connected badge
+      // Editor area should appear with Connected status
       await waitFor(() => {
         expect(screen.queryByTestId('loading-skeleton')).not.toBeInTheDocument()
         expect(screen.getByTestId('editor-area')).toBeInTheDocument()

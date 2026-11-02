@@ -1,6 +1,8 @@
 import { useEffect, useReducer } from "react";
-import { Badge } from "@/components/ui/badge";
+import type { ReactNode } from "react";
+import { Cloud, CloudOff } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
 import type { TiptapCollabProvider } from "@hocuspocus/provider";
 import { WebSocketStatus } from "@hocuspocus/provider";
@@ -12,21 +14,14 @@ enum ConnectionState {
   Error = "error",
 }
 
-enum BadgeVariant {
-  Default = "default",
-  Secondary = "secondary",
-  Destructive = "destructive",
-  Outline = "outline",
-}
-
 interface ConnectionStatusConfig {
-  text: string;
-  variant: BadgeVariant;
+  label: string;
+  icon: ReactNode;
 }
 
 /**
  * ConnectionStatus displays the current connection state of the TipTap collaboration provider.
- * Shows a badge indicating whether the editor is connected to the collaboration server.
+ * Shows an icon (label in a tooltip) indicating whether the editor is connected to the collaboration server.
  *
  * States:
  * - Connecting: Provider is initializing (isLoading = true) - shows spinner
@@ -77,12 +72,21 @@ export const ConnectionStatus = () => {
   const statusConfig = getStatusConfig(connectionState);
 
   return (
-    <Badge variant={statusConfig.variant} className="ml-auto">
-      {statusConfig.text}
-      {connectionState === ConnectionState.Connecting && (
-        <Spinner className="ml-1.5" />
-      )}
-    </Badge>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          role="status"
+          tabIndex={0}
+          className="inline-flex items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {statusConfig.icon}
+          <span className="sr-only">{statusConfig.label}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>{statusConfig.label}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -125,17 +129,29 @@ const determineConnectionState = (
 };
 
 /**
- * Maps connection state to badge configuration
+ * Maps connection state to its icon and label
  */
 const getStatusConfig = (state: ConnectionState): ConnectionStatusConfig => {
   switch (state) {
     case ConnectionState.Connecting:
-      return { text: "Connecting...", variant: BadgeVariant.Default };
+      return {
+        label: "Connecting",
+        icon: <Spinner aria-hidden className="size-3.5 text-muted-foreground" />,
+      };
     case ConnectionState.Connected:
-      return { text: "Connected", variant: BadgeVariant.Secondary };
+      return {
+        label: "Connected",
+        icon: <Cloud aria-hidden className="h-3.5 w-3.5 text-muted-foreground/50" />,
+      };
     case ConnectionState.Offline:
-      return { text: "Offline", variant: BadgeVariant.Secondary };
+      return {
+        label: "Not connected",
+        icon: <CloudOff aria-hidden className="h-3.5 w-3.5 text-warning" />,
+      };
     case ConnectionState.Error:
-      return { text: "Error", variant: BadgeVariant.Destructive };
+      return {
+        label: "Not connected",
+        icon: <CloudOff aria-hidden className="h-3.5 w-3.5 text-destructive" />,
+      };
   }
 };

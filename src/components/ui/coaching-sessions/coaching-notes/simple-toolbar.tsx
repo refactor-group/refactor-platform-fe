@@ -6,7 +6,6 @@ import {
   Toolbar,
   ToolbarGroup,
   ToolbarSeparator,
-  Spacer,
 } from "@/components/ui/tiptap-ui-primitive";
 
 // --- TipTap UI Components ---
@@ -23,7 +22,6 @@ import {
 } from "@/components/ui/tiptap-ui";
 
 // --- Coaching Notes Components ---
-import { ConnectionStatus } from "./connection-status";
 import type { NoteImageUploadContext } from "./note-image-extension";
 import type { Option } from "@/types/option";
 
@@ -92,10 +90,6 @@ export const SimpleToolbar: FC<SimpleToolbarProps> = ({
           <ImageUploadButton editor={editor} context={imageContext.val} />
         )}
       </ToolbarGroup>
-
-      <Spacer />
-
-      <ConnectionStatus />
     </Toolbar>
   );
 };
