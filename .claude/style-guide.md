@@ -152,6 +152,7 @@ hover `bg-fill`, disabled `text-disabled-icon`. Always set `aria-label`.
 
 `rounded-full text-xs font-medium`, height 22–26. Selected `bg-primary text-primary-foreground`;
 unselected `bg-fill`. Filter chip: `bg-card border` with a trailing `text-faint` × that clears it.
+Dialog chips (`Chip size="md"`): 36px tall, 44 below 900px (the `modal` screen), `px-4 text-[13px]`.
 
 ### Rows & quiet affordances
 

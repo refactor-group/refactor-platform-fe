@@ -20,6 +20,10 @@ const config = {
   		}
   	},
   	extend: {
+  		// Keep in sync with src/lib/breakpoints.ts.
+  		screens: {
+  			modal: '900px'
+  		},
   		colors: {
   			border: {
   				DEFAULT: 'hsl(var(--border))',

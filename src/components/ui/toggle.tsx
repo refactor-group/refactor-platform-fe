@@ -14,6 +14,9 @@ const toggleVariants = cva(
         default: "bg-transparent",
         outline:
           "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground",
+        // Sized by the caller; pair with size={null} so no min-w applies.
+        round:
+          "rounded-full bg-fill text-foreground hover:bg-fill-hover hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground motion-reduce:transition-none",
       },
       size: {
         default: "h-10 px-3 min-w-10",

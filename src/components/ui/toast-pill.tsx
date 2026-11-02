@@ -10,6 +10,7 @@ import type {
 } from "react";
 import { Check, CircleAlert, TriangleAlert } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { prefersReducedMotion } from "@/lib/utils/motion";
 import { type Option, None, Some } from "@/types/option";
 
 export type ToastKind =
@@ -52,10 +53,6 @@ interface SwipeStyle {
   offsetX: number;
   transition: Option<string>;
 }
-
-const prefersReducedMotion = () =>
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function useSwipeToDismiss(onDismiss: () => void) {
   const start = useRef<Option<SwipeStart>>(None);
