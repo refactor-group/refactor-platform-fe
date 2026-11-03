@@ -12,7 +12,7 @@ export function ScheduleSummary({ userId, initials, firstName, count, provider }
       <div className="mt-2.5 flex items-center gap-3">
         <PersonAvatar userId={userId} initials={initials} size={36} />
         <div className="min-w-0">
-          <p className="truncate text-item font-medium tabular-nums">{createsLine(count, firstName)}</p>
+          <p className="line-clamp-2 break-words text-item font-medium tabular-nums">{createsLine(count, firstName)}</p>
           {meeting.some && <p className="truncate text-xs text-muted-foreground">{meeting.val}</p>}
         </div>
       </div>

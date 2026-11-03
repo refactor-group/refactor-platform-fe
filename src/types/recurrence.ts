@@ -219,10 +219,10 @@ export function validateRecurrence({
   if (interval < 1) return "Interval must be at least 1.";
   if (end.kind === "count") {
     if (!Number.isInteger(end.count) || end.count < 1) {
-      return "Number of occurrences must be at least 1.";
+      return "Enter at least 1 session.";
     }
     if (end.count > MAX_OCCURRENCES) {
-      return `Maximum ${MAX_OCCURRENCES} occurrences.`;
+      return "That's too many sessions. End the series sooner.";
     }
   } else {
     if (!end.until) return "Pick an end date.";
@@ -237,7 +237,7 @@ export function validateRecurrence({
       }
       const spanDays = Math.floor(until.diff(startOfDay, "days").days) + 1;
       if (spanDays > MAX_SPAN_DAYS) {
-        return `End date is beyond the ${MAX_SPAN_DAYS}-day window.`;
+        return "That end date is too far out. Pick an earlier one.";
       }
     }
   }

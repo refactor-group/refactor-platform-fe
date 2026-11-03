@@ -7,7 +7,7 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@/lib/hooks/use-dialog-recurrence";
 import { useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
-import { moveChanged, moveHint, movePerson, moveRail, moveStart, seriesRepeatFrom } from "@/lib/move-draft";
+import { moveChanged, moveHint, movePerson, moveRail, moveStart, seriesRepeatFrom, startMoved } from "@/lib/move-draft";
 import type { PersonEntry } from "@/lib/people";
 import {
   type NewSessionDialogModel,
@@ -126,6 +126,7 @@ export function useNewSessionDialog(
   const resolution = resolveDraft.some ? resolveDraft.val.resolution : UNRESOLVED;
   const other = clash.some ? data.busySource.find((s) => s.id === clash.val.session.id) : undefined;
   const movable = other !== undefined && other.relationship?.coach_id === data.userId;
+  const overlap = { clash: clashSession, keepOnly: !movable, resolution };
 
   const order = stepOrder(moving.some ? { kind: "move", appliesTo: inSeries, following } : { kind: "schedule" }, clash.some);
   const current = currentStep(order, step);
@@ -138,7 +139,14 @@ export function useNewSessionDialog(
         ? Some({ session: other, personName: clash.val.session.personName, start: resolution.start })
         : None;
     if (moving.some) {
-      const moved = { session: moving.val, personName: person.fullName, start: at, minutes, moveOther };
+      const moved = {
+        session: moving.val,
+        personName: person.fullName,
+        start: at,
+        startMoved: startMoved(moving.val, at, timezone),
+        minutes,
+        moveOther,
+      };
       const seriesId = moving.val.coaching_session_series_id;
       if (!following || seriesId.none || repeat.kind !== "repeat") return { kind: "move", ...moved };
       const { frequency, end } = repeat;
@@ -178,16 +186,16 @@ export function useNewSessionDialog(
     mover: moving.some && entry.some ? Some(moverOf(entry.val, moving.val, timezone)) : None,
     step: current,
     rail: moving.some
-      ? moveRail({ order, step, start, changed, scope, repeat, clash: clashSession, resolution })
-      : scheduleRail({ order, step, personName, start, repeat, clash: clashSession, resolution }),
+      ? moveRail({ order, step, start, changed, scope, repeat, ...overlap })
+      : scheduleRail({ order, step, personName, start, repeat, ...overlap }),
     position: stepPosition(order, step),
     onPrev: prev.some ? Some(() => setStep(prev.val)) : None,
     onNext: next.some ? Some(() => setStep(next.val)) : None,
     lead: leadFor({
       last: next.none,
       hint: moving.some
-        ? moveHint({ changed, following, clash: clashSession, resolution })
-        : scheduleHint({ personName, start, clash: clashSession, resolution }),
+        ? moveHint({ changed, following, ...overlap })
+        : scheduleHint({ personName, start, ...overlap }),
       label: moving.some ? moveSubmitLabel(following) : scheduleSubmitLabel(repeat),
       error,
       submitting,

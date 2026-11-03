@@ -30,14 +30,14 @@ describe("sessionWriteFailure: rescheduling a series", () => {
     });
     expect(sessionWriteFailure(apiError(409, { error: "conflict" }), SessionWrite.RescheduleSeries)).toEqual({
       kind: "toast",
-      message: "Couldn't update the coaching session · Try again",
+      message: "Couldn't update the session · Try again",
     });
   });
 
   it("keeps the content conflict to series reschedules", () => {
     expect(sessionWriteFailure(apiError(409, CONTENT_CONFLICT), SessionWrite.Update)).toEqual({
       kind: "toast",
-      message: "Couldn't update the coaching session · Try again",
+      message: "Couldn't update the session · Try again",
     });
   });
 });

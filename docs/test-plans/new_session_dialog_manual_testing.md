@@ -105,9 +105,9 @@ Pick A.
 
 ### Case B5: nobody to schedule
 
-Log in as a coach with no people in this organization and open the dialog.
+Log in as a coach with no people in this organization.
 
-**Pass:** "You don't coach anyone in this organization yet." and no empty grid.
+**Pass:** Add New has no Coaching session item, so the dialog can't open onto an empty grid.
 
 ### Case B6: order and sub-lines
 
@@ -181,7 +181,7 @@ Pick B, choose today, and type B's session time into the time field.
 
 Click "Use {time} instead".
 
-**Pass:** the time changes, the pill goes back to the list, Resolve overlap leaves the rail, and the position reads "2 of 3".
+**Pass:** the time changes, the pill goes back to the list, Resolve overlap leaves the rail, and the position reads "2 of 3". Repeat with a session after 5 PM: the link offers the next free time that evening.
 
 ### Case C10: duration
 
@@ -243,7 +243,7 @@ Choose After 8, then On a date about four months out.
 
 Enter 0 sessions, then an end date before the start.
 
-**Pass:** one inline message each time, and the confirm is disabled.
+**Pass:** "Enter at least 1 session." and "End date must be on or after the first session.", one at a time, and the confirm is disabled. A count or end date far beyond a year says so without naming a limit.
 
 ### Case D5: the weekday follows the date
 
@@ -299,7 +299,7 @@ Block `PUT /coaching_sessions/*` and schedule with a move.
 
 Overlap a session where you're the coachee.
 
-**Pass:** no day circles or chips, only "Keep both at {time}".
+**Pass:** no day circles or chips, only "Keep both at {time}". The footer reads "Keep both, or go back and pick another time." and the rail "Keep both or pick another time".
 
 ### Case E7: later clashes (known limit)
 
@@ -381,7 +381,7 @@ Pick another free day, keep the time, and confirm.
 
 Change only the duration and confirm.
 
-**Pass:** the session keeps its time and takes the new length.
+**Pass:** the session keeps its time and takes the new length. The toast reads "Updated · {first name} · {Weekday, Month D}, {time} · {n} min".
 
 ### Case G5: overlap
 
@@ -405,7 +405,7 @@ Reschedule the same series session to another weekday and pick "This and followi
 
 Open a series session row's menu › Edit series, on an upcoming session and then on a past one.
 
-**Pass:** each opens Reschedule session with "This and following sessions" already selected: on that session for the upcoming row, on the series' next upcoming session for the past one. Changing only Ends and confirming updates the rule without moving the dates.
+**Pass:** each opens Reschedule session with "This and following sessions" already selected: on that session for the upcoming row, on the series' next upcoming session for the past one. Changing only Ends and confirming updates the rule without moving the dates, and the toast reads "Updated · {first name}'s series · {rule}".
 
 ### Case G6c: this and following, no change hint
 

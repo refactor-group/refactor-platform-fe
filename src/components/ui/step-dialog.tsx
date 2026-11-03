@@ -241,7 +241,7 @@ function DesktopStepDialog(props: StepDialogProps) {
       className={cn(
         "fixed left-1/2 top-1/2 z-50 grid w-[860px] max-h-[calc(100vh-48px)] -translate-x-1/2 -translate-y-1/2 grid-cols-[300px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-card shadow-modal outline-none dark:border",
         heightClass(props.height),
-        "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] motion-reduce:animate-none"
+        "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
       )}
     >
       <Rail
@@ -318,7 +318,7 @@ function MobileStepDialog(props: StepDialogProps) {
       onOpenAutoFocus={focusContent}
       aria-describedby={undefined}
       onKeyDown={confirmOnEnter(props.lead)}
-      className="fixed inset-0 z-50 flex flex-col bg-well outline-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:animate-none"
+      className="fixed inset-0 z-50 flex flex-col bg-well outline-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
     >
       <MobileTopBar title={props.title} position={props.position} />
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-6">
@@ -341,7 +341,7 @@ export function StepDialog(props: StepDialogProps) {
   return (
     <DialogPrimitive.Root open={props.open} onOpenChange={(open) => !open && props.onClose()}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-scrim duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:animate-none" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-scrim duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none" />
         {desktop ? <DesktopStepDialog {...props} /> : <MobileStepDialog {...props} />}
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

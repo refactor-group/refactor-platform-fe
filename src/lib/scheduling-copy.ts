@@ -41,10 +41,15 @@ function daysAhead(day: DateTime, now: DateTime): number {
   return Math.round(day.startOf("day").diff(now.setZone(day.zone).startOf("day"), "days").days);
 }
 
-function firstSessionLine(next: DateTime, now: DateTime): string {
+function firstSessionDay(next: DateTime, now: DateTime): string {
   const days = daysAhead(next, now);
-  const when = days >= 0 && days <= FIRST_SESSION_WEEKDAY_DAYS ? next.toFormat("cccc") : shortDate(next);
-  return `First session ${when}`;
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  return days > 1 && days <= FIRST_SESSION_WEEKDAY_DAYS ? next.toFormat("cccc") : shortDate(next);
+}
+
+function firstSessionLine(next: DateTime, now: DateTime): string {
+  return `First session ${firstSessionDay(next, now)}`;
 }
 
 export function whoSubline(input: WhoSublineInput, now: DateTime): string {

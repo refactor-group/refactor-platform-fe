@@ -16,7 +16,7 @@ function scopeOf(value: string): MoveScope {
 
 export function AppliesToStep({ scope, onScopeChange }: AppliesToModel) {
   return (
-    <RadioGroup value={scope} onValueChange={(value) => onScopeChange(scopeOf(value))} className="gap-2.5">
+    <RadioGroup aria-label="Applies to" value={scope} onValueChange={(value) => onScopeChange(scopeOf(value))} className="gap-2.5">
       {CHOICES.map((choice) => (
         <RadioCardItem
           key={choice.scope}

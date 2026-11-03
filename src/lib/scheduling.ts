@@ -76,8 +76,14 @@ export function overlapping(slot: Slot, busy: BusySession[]): BusySession[] {
   return busy.filter((b) => slot.start < b.end && end > b.start).sort(byStart);
 }
 
+/** A slot already past the working day may look until midnight. */
+function searchLimit(slot: Slot, hours: WorkingHours): DateTime {
+  const workEnd = atMinute(slot.start, hours.end);
+  return endOf(slot) > workEnd ? slot.start.startOf("day").plus({ days: 1 }) : workEnd;
+}
+
 export function nextFreeStart(slot: Slot, busy: BusySession[], hours: WorkingHours): Option<DateTime> {
-  const dayEnd = atMinute(slot.start, hours.end);
+  const dayEnd = searchLimit(slot, hours);
   for (let offset = SLOT_STEP_MINUTES; ; offset += SLOT_STEP_MINUTES) {
     const candidate = { start: slot.start.plus({ minutes: offset }), minutes: slot.minutes };
     if (endOf(candidate) > dayEnd) return None;

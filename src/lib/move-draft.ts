@@ -1,8 +1,8 @@
 import type { DateTime } from "ts-luxon";
 import type { StepRailItem } from "@/components/ui/step-dialog";
 import { type PersonEntry, menuPerson } from "@/lib/people";
-import { type Resolution, type RuleInput, resolveHint, rulePayload, stepRail } from "@/lib/schedule-draft";
-import type { BusySession, MoveScope, RepeatChoice, StepKind } from "@/lib/scheduling";
+import { type ClashState, type RuleInput, resolveHint, rulePayload, stepRail } from "@/lib/schedule-draft";
+import type { MoveScope, RepeatChoice, StepKind } from "@/lib/scheduling";
 import { sessionStartIn, toSessionDate } from "@/lib/session-window";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
@@ -30,36 +30,35 @@ export function moveStart(session: EnrichedCoachingSession, timezone: string): {
   return { day: start.startOf("day"), time: start.toFormat("HH:mm") };
 }
 
+export function startMoved(session: EnrichedCoachingSession, start: DateTime, timezone: string): boolean {
+  return start.toMillis() !== sessionStartIn(session.date, timezone).toMillis();
+}
+
 export function moveChanged(
   session: EnrichedCoachingSession,
   slot: { start: Option<DateTime>; minutes: number },
   timezone: string
 ): boolean {
   if (slot.minutes !== session.duration_minutes) return true;
-  return slot.start.some && slot.start.val.toMillis() !== sessionStartIn(session.date, timezone).toMillis();
+  return slot.start.some && startMoved(session, slot.start.val, timezone);
 }
 
-export function moveHint(input: {
-  changed: boolean;
-  following: boolean;
-  clash: Option<BusySession>;
-  resolution: Resolution;
-}): Option<string> {
+export function moveHint(input: ClashState & { changed: boolean; following: boolean }): Option<string> {
   // A rule-only edit of this and following is a valid change.
   if (!input.changed && !input.following) return Some(UNCHANGED_HINT);
-  return resolveHint(input.clash, input.resolution);
+  return resolveHint(input);
 }
 
-export function moveRail(input: {
-  order: StepKind[];
-  step: StepKind;
-  start: Option<DateTime>;
-  changed: boolean;
-  scope: MoveScope;
-  repeat: RepeatChoice;
-  clash: Option<BusySession>;
-  resolution: Resolution;
-}): StepRailItem[] {
+export function moveRail(
+  input: ClashState & {
+    order: StepKind[];
+    step: StepKind;
+    start: Option<DateTime>;
+    changed: boolean;
+    scope: MoveScope;
+    repeat: RepeatChoice;
+  }
+): StepRailItem[] {
   const { changed, ...rest } = input;
   return stepRail({ ...rest, personName: None, whenDone: changed });
 }

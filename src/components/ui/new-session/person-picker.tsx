@@ -56,6 +56,21 @@ function SearchField({ query, onQueryChange }: { query: string; onQueryChange: (
   );
 }
 
+const CLOCK_TIME = /(\d{1,2}:\d{2} [AP]M)/;
+
+/** Keeps "10:00 AM" on one line. */
+function Subline({ text }: { text: string }) {
+  return text.split(CLOCK_TIME).map((part, index) =>
+    CLOCK_TIME.test(part) ? (
+      <span key={index} className="whitespace-nowrap">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
 interface PersonCardProps {
   person: PickerPerson;
   selected: boolean;
@@ -71,13 +86,15 @@ function PersonCard({ person, selected, onSelect }: PersonCardProps) {
       className={cn(
         "flex min-h-14 items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors duration-150 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
         selected && "bg-card",
-        person.inactive && "opacity-55"
+        person.inactive && !selected && "opacity-55"
       )}
     >
       <PersonAvatar userId={person.userId} initials={person.initials} size={36} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="line-clamp-2 break-words text-sm font-medium text-foreground">{person.fullName}</span>
-        <span className="line-clamp-2 text-xs text-muted-foreground tabular-nums">{person.subline}</span>
+        <span className="line-clamp-2 text-xs text-muted-foreground tabular-nums">
+          <Subline text={person.subline} />
+        </span>
       </span>
       {selected && <CheckDisc size={20} tone="brand" />}
     </button>

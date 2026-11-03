@@ -45,7 +45,7 @@ function toastMessage(error: EntityApiError, write: SessionWrite): string {
     return `Couldn't ${verb(write)} ${invalidTarget(write)} · Check the details and try again`;
   }
   if (isForbiddenError(error)) return PERMISSION_DENIED_MESSAGE;
-  return `Couldn't ${verb(write)} the coaching session · Try again`;
+  return `Couldn't ${verb(write)} the session · Try again`;
 }
 
 function hasContentConflict(error: EntityApiError, write: SessionWrite): boolean {

@@ -354,14 +354,20 @@ export function seriesPayload(
 
 // ─── Rail and hint ───────────────────────────────────────────────────
 
-interface ScheduleRailInput {
+/** An overlap and how far it's settled. */
+export interface ClashState {
+  clash: Option<BusySession>;
+  /** The clashing session isn't the user's to move, so it can only be kept. */
+  keepOnly: boolean;
+  resolution: Resolution;
+}
+
+interface ScheduleRailInput extends ClashState {
   order: StepKind[];
   step: StepKind;
   personName: Option<string>;
   start: Option<DateTime>;
   repeat: RepeatChoice;
-  clash: Option<BusySession>;
-  resolution: Resolution;
 }
 
 /** The rail for any mode; `whenDone` is when the When row gets its check. */
@@ -375,12 +381,12 @@ function startLine(start: DateTime): string {
 }
 
 function resolutionValue(input: StepRailInput): string {
-  const { clash, resolution, start } = input;
+  const { clash, keepOnly, resolution, start } = input;
   if (clash.none) return "Choose a new time";
   const first = firstNameOf(clash.val.personName);
   switch (resolution.kind) {
     case "unresolved":
-      return `Choose a new time for ${first}`;
+      return keepOnly ? "Keep both or pick another time" : `Choose a new time for ${first}`;
     case "move":
       return `Move ${first} to ${shortDay(resolution.start)}, ${timeOfDay(resolution.start)}`;
     case "keep":
@@ -430,19 +436,18 @@ export function scheduleRail(input: ScheduleRailInput): StepRailItem[] {
 }
 
 /** Asks how to settle an overlap that's still open. */
-export function resolveHint(clash: Option<BusySession>, resolution: Resolution): Option<string> {
-  return clash.some && resolution.kind === "unresolved"
-    ? Some(`Pick a new time for ${firstNameOf(clash.val.personName)}, or keep both.`)
-    : None;
+export function resolveHint({ clash, keepOnly, resolution }: ClashState): Option<string> {
+  if (clash.none || resolution.kind !== "unresolved") return None;
+  return Some(
+    keepOnly
+      ? "Keep both, or go back and pick another time."
+      : `Pick a new time for ${firstNameOf(clash.val.personName)}, or keep both.`
+  );
 }
 
-export function scheduleHint(input: {
-  personName: Option<string>;
-  start: Option<DateTime>;
-  clash: Option<BusySession>;
-  resolution: Resolution;
-}): Option<string> {
-  const { personName, start, clash, resolution } = input;
-  if (personName.none || start.none) return Some(MISSING_HINT);
-  return resolveHint(clash, resolution);
+export function scheduleHint(
+  input: ClashState & { personName: Option<string>; start: Option<DateTime> }
+): Option<string> {
+  if (input.personName.none || input.start.none) return Some(MISSING_HINT);
+  return resolveHint(input);
 }

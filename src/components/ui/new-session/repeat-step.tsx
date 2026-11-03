@@ -29,8 +29,12 @@ function isChosen(model: RepeatModel, frequency: Option<Frequency>): boolean {
   return repeat.kind === "repeat" && repeat.frequency === frequency.val;
 }
 
-function SectionLabel({ children }: { children: string }) {
-  return <p className="text-label font-medium text-muted-foreground">{children}</p>;
+function SectionLabel({ id, children }: { id: string; children: string }) {
+  return (
+    <p id={id} className="text-label font-medium text-muted-foreground">
+      {children}
+    </p>
+  );
 }
 
 function FrequencyChips(model: RepeatModel) {
@@ -51,17 +55,19 @@ function FrequencyChips(model: RepeatModel) {
 }
 
 interface EndFieldsProps {
+  labelledBy: string;
   end: RecurrenceEnd;
   defaultEnd: RepeatModel["defaultEnd"];
   onEndChange: (end: RecurrenceEnd) => void;
 }
 
-function EndFields({ end, defaultEnd, onEndChange }: EndFieldsProps) {
+function EndFields({ labelledBy, end, defaultEnd, onEndChange }: EndFieldsProps) {
   const id = useId();
   const count = end.kind === "count" ? end.count : defaultEnd.count;
   const until = end.kind === "until" ? end.until : defaultEnd.until;
   return (
     <RadioGroup
+      aria-labelledby={labelledBy}
       value={end.kind}
       onValueChange={(kind) =>
         onEndChange(kind === "until" ? { kind: "until", until } : { kind: "count", count })
@@ -102,19 +108,25 @@ function EndFields({ end, defaultEnd, onEndChange }: EndFieldsProps) {
 
 export function RepeatStep(model: RepeatModel) {
   const { repeat, error } = model;
+  const id = useId();
   return (
     <div className="flex flex-col gap-6">
       <FrequencyChips {...model} />
       {repeat.kind === "repeat" && frequencySupportsWeekdays(repeat.frequency) && (
         <div className="flex flex-col gap-2.5">
-          <SectionLabel>On these days</SectionLabel>
-          <WeekdayPicker value={model.byWeekdays} locked={model.lockedWeekday} onChange={model.onWeekdaysChange} />
+          <SectionLabel id={`${id}-days`}>On these days</SectionLabel>
+          <WeekdayPicker
+            labelledBy={`${id}-days`}
+            value={model.byWeekdays}
+            locked={model.lockedWeekday}
+            onChange={model.onWeekdaysChange}
+          />
         </div>
       )}
       {repeat.kind === "repeat" && (
         <div className="flex flex-col gap-2.5">
-          <SectionLabel>Ends</SectionLabel>
-          <EndFields end={repeat.end} defaultEnd={model.defaultEnd} onEndChange={model.onEndChange} />
+          <SectionLabel id={`${id}-ends`}>Ends</SectionLabel>
+          <EndFields labelledBy={`${id}-ends`} end={repeat.end} defaultEnd={model.defaultEnd} onEndChange={model.onEndChange} />
           {error.some && (
             <p role="alert" className="text-xs text-destructive">
               {error.val}

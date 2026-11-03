@@ -129,7 +129,7 @@ describe("NewSessionDialog: move errors", () => {
     const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("Couldn't update the coaching session · Try again")
+      expect(toast.error).toHaveBeenCalledWith("Couldn't update the session · Try again")
     );
     expect(push).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();

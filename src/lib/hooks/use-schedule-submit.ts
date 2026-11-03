@@ -10,6 +10,8 @@ import {
   otherMoveFailedMessage,
   rescheduledMessage,
   scheduledMessage,
+  seriesUpdatedMessage,
+  updatedMessage,
 } from "@/components/ui/dashboard/session-change-message";
 import { CoachingSessionApi } from "@/lib/api/coaching-sessions";
 import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
@@ -37,6 +39,8 @@ interface MovePlan {
   session: EnrichedCoachingSession;
   personName: string;
   start: DateTime;
+  /** False when only the length or the series rule changed. */
+  startMoved: boolean;
   minutes: number;
   moveOther: Option<OtherSessionMove>;
 }
@@ -135,8 +139,14 @@ function successMessage(plan: SessionPlan, otherMove: Option<OtherMove>): string
     case "schedule":
       return scheduledMessage({ personName, start, minutes: plan.minutes, repeat: plan.repeat, otherMove });
     case "move":
-    case "following":
-      return rescheduledMessage({ personName, start, following: plan.kind === "following", otherMove });
+      return plan.startMoved
+        ? rescheduledMessage({ personName, start, following: false, otherMove })
+        : updatedMessage({ personName, start, minutes: plan.minutes, otherMove });
+    case "following": {
+      if (plan.startMoved) return rescheduledMessage({ personName, start, following: true, otherMove });
+      const repeat: RepeatChoice = { kind: "repeat", frequency: plan.frequency, end: plan.end };
+      return seriesUpdatedMessage({ personName, repeat, otherMove });
+    }
     default: {
       const _exhaustive: never = plan;
       throw new Error(`Unhandled session plan: ${JSON.stringify(_exhaustive)}`);
