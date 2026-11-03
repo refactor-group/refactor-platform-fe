@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
 import type { PickerPerson } from "@/components/ui/new-session/person-picker";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -83,7 +83,8 @@ export function useScheduleData(range: BusyRange): ScheduleData {
 
   const { currentOrganizationId } = useCurrentOrganization();
   const relationships = useCoachingRelationshipList(currentOrganizationId);
-  const entries = schedulablePeople(userId, relationships.relationships ?? []);
+  const relationshipList = relationships.relationships;
+  const entries = useMemo(() => schedulablePeople(userId, relationshipList), [userId, relationshipList]);
 
   const activity = useNearestEachCoachingSessions(
     entries.length > 0
@@ -95,7 +96,11 @@ export function useScheduleData(range: BusyRange): ScheduleData {
         })
       : None
   );
-  const nearest = activity.isLoading || activity.isError ? None : Some(activity.sessions);
+  const nearestReady = !activity.isLoading && !activity.isError;
+  const nearest = useMemo(
+    () => (nearestReady ? Some(activity.sessions) : None),
+    [nearestReady, activity.sessions]
+  );
 
   const history = useEnrichedCoachingSessionsForUser(
     userId,
@@ -126,11 +131,20 @@ export function useScheduleData(range: BusyRange): ScheduleData {
   const { connections } = useOAuthConnections();
   const { user } = useUser(userId);
 
+  // The dialog's open time is "now" for the Who list; it needn't tick while open.
+  const picker = useMemo(
+    () => pickerPeople({ people: entries, nearest, history, now: openedAt, timezone }),
+    [entries, nearest, history, openedAt, timezone]
+  );
+  const known = useMemo(() => knownSessions(nearest, history), [nearest, history]);
+  const busy = useMemo(() => busySessions(busySource, userId, timezone), [busySource, userId, timezone]);
+  const coachStarts = useMemo(() => coachStartsFrom(history, openedAt, timezone), [history, openedAt, timezone]);
+
   const people: PeopleState = relationships.isError
     ? { kind: "error" }
     : relationships.isLoading
       ? { kind: "loading" }
-      : { kind: "loaded", entries, picker: pickerPeople({ people: entries, nearest, history, now, timezone }) };
+      : { kind: "loaded", entries, picker };
 
   return {
     userId,
@@ -138,10 +152,10 @@ export function useScheduleData(range: BusyRange): ScheduleData {
     now,
     month,
     people,
-    known: knownSessions(nearest, history),
+    known,
     busySource,
-    busy: busySessions(busySource, userId, timezone),
-    coachStarts: coachStartsFrom(history, now, timezone),
+    busy,
+    coachStarts,
     provider: providerOf(connections),
     defaultMinutes: user?.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,
   };

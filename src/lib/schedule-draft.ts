@@ -102,16 +102,21 @@ export function knownSessions(
   return [...byId.values()];
 }
 
+function placeAll(sessions: EnrichedCoachingSession[], now: DateTime, timezone: string): Placed[] {
+  return sessions.map((s) => place(s, now, timezone)).sort((a, b) => a.start.toMillis() - b.start.toMillis());
+}
+
 function placedFor(
   relationshipIds: Id[],
   sessions: EnrichedCoachingSession[],
   now: DateTime,
   timezone: string
 ): Placed[] {
-  return sessions
-    .filter((s) => relationshipIds.includes(s.coaching_relationship_id))
-    .map((s) => place(s, now, timezone))
-    .sort((a, b) => a.start.toMillis() - b.start.toMillis());
+  return placeAll(
+    sessions.filter((s) => relationshipIds.includes(s.coaching_relationship_id)),
+    now,
+    timezone
+  );
 }
 
 function usualOf(placed: Placed[], timezone: string): Option<UsualSlot> {
@@ -143,11 +148,22 @@ function startOf(placed: Placed | undefined): Option<DateTime> {
   return placed ? Some(placed.start) : None;
 }
 
+/** Each person's sessions in one pass, in the given order. */
+function sessionsPerPerson(people: PersonEntry[], sessions: EnrichedCoachingSession[]): EnrichedCoachingSession[][] {
+  const owners = new Map<Id, Set<number>>();
+  people.forEach((entry, i) =>
+    entry.relationshipIds.forEach((id) => owners.set(id, (owners.get(id) ?? new Set<number>()).add(i)))
+  );
+  const own = people.map((): EnrichedCoachingSession[] => []);
+  for (const s of sessions) owners.get(s.coaching_relationship_id)?.forEach((i) => own[i].push(s));
+  return own;
+}
+
 export function pickerPeople(input: PickerPeopleInput): PickerPerson[] {
   const { people, nearest, now, timezone } = input;
-  const sessions = knownSessions(nearest, input.history);
-  const entries = people.map((entry) => {
-    const placed = placedFor(entry.relationshipIds, sessions, now, timezone);
+  const own = sessionsPerPerson(people, knownSessions(nearest, input.history));
+  const entries = people.map((entry, i) => {
+    const placed = placeAll(own[i], now, timezone);
     const subline = whoSubline(
       {
         usual: usualOf(placed, timezone),
