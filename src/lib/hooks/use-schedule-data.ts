@@ -161,9 +161,19 @@ export function useScheduleData(range: BusyRange): ScheduleData {
   };
 }
 
-/** The series once it has loaded; the hook's placeholder has another id until then. */
-export function useLoadedSeries(seriesId: Id): Option<CoachingSessionSeriesWithSessions> {
+/** A moved session's series: none for a one-off, then loading until it loads or fails. */
+export type SeriesLoad =
+  | { kind: "none" }
+  | { kind: "loading" }
+  | { kind: "loaded"; series: CoachingSessionSeriesWithSessions }
+  | { kind: "error" };
+
+export const NO_SERIES: SeriesLoad = { kind: "none" };
+
+export function useLoadedSeries(seriesId: Id): SeriesLoad {
   const timezone = useScheduleTimezone();
-  const { series, isLoading } = useCoachingSessionSeries(seriesId, timezone);
-  return !isLoading && series.id === seriesId ? Some(series) : None;
+  const { series, isLoading, isError } = useCoachingSessionSeries(seriesId, timezone);
+  if (isError) return { kind: "error" };
+  // The hook's placeholder has another id until the series arrives.
+  return !isLoading && series.id === seriesId ? { kind: "loaded", series } : { kind: "loading" };
 }

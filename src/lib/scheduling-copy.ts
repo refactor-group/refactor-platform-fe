@@ -1,5 +1,5 @@
 import { DateTime, Info } from "ts-luxon";
-import { type BusySession, MoveScope, type RepeatChoice, type UsualSlot } from "@/lib/scheduling";
+import { type BusySession, type Cadence, MoveScope, type RepeatChoice, type UsualSlot } from "@/lib/scheduling";
 import { shortDate, timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 import { type Option, None, Some } from "@/types/option";
@@ -90,21 +90,10 @@ export function insteadLabel(start: DateTime): string {
   return `Use ${timeOfDay(start)} instead`;
 }
 
-function frequencyPhrase(frequency: Frequency): string {
-  switch (frequency) {
-    case Frequency.Daily:
-      return "Daily";
-    case Frequency.Weekly:
-      return "Weekly";
-    case Frequency.Biweekly:
-      return "Every 2 weeks";
-    case Frequency.Monthly:
-      return "Monthly";
-    default: {
-      const _exhaustive: never = frequency;
-      throw new Error(`Unhandled frequency: ${_exhaustive}`);
-    }
-  }
+/** "Weekly", "Every 2 weeks", "Every 3 months". */
+export function cadenceLabel(cadence: Cadence): string {
+  const phrase = rhythmPhrase(cadence);
+  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
 }
 
 function endPhrase(end: RecurrenceEnd): string {
@@ -125,7 +114,7 @@ export function repeatLabel(choice: RepeatChoice): string {
     case "none":
       return "Doesn't repeat";
     case "repeat":
-      return `${frequencyPhrase(choice.frequency)}, ${endPhrase(choice.end)}`;
+      return `${cadenceLabel(choice)}, ${endPhrase(choice.end)}`;
     default: {
       const _exhaustive: never = choice;
       throw new Error(`Unhandled repeat choice: ${JSON.stringify(_exhaustive)}`);
@@ -163,7 +152,7 @@ function every(count: number, unit: string, single: string): string {
   return count === 1 ? single : `every ${count} ${unit}s`;
 }
 
-function rhythmPhrase({ frequency, interval }: SeriesRecurrence): string {
+function rhythmPhrase({ frequency, interval }: Cadence): string {
   switch (frequency) {
     case Frequency.Daily:
       return every(interval, "day", "daily");

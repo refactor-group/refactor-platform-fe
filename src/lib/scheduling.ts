@@ -34,9 +34,13 @@ export interface UsualSlot {
   minute: number;
 }
 
-export type RepeatChoice =
-  | { kind: "none" }
-  | { kind: "repeat"; frequency: Frequency; end: RecurrenceEnd };
+/** How often a series repeats: every `interval` of `frequency`. */
+export interface Cadence {
+  frequency: Frequency;
+  interval: number;
+}
+
+export type RepeatChoice = { kind: "none" } | ({ kind: "repeat"; end: RecurrenceEnd } & Cadence);
 
 const SLOT_STEP_MINUTES = 30;
 const MAX_SUGGESTIONS = 5;

@@ -14,7 +14,7 @@ function scopeOf(value: string): MoveScope {
   return value === MoveScope.Following ? MoveScope.Following : MoveScope.This;
 }
 
-export function AppliesToStep({ scope, onScopeChange }: AppliesToModel) {
+export function AppliesToStep({ scope, followingAvailable, onScopeChange }: AppliesToModel) {
   return (
     <RadioGroup aria-label="Applies to" value={scope} onValueChange={(value) => onScopeChange(scopeOf(value))} className="gap-2.5">
       {CHOICES.map((choice) => (
@@ -23,6 +23,7 @@ export function AppliesToStep({ scope, onScopeChange }: AppliesToModel) {
           value={choice.scope}
           title={moveScopeTitle(choice.scope)}
           description={choice.description}
+          disabled={choice.scope === MoveScope.Following && !followingAvailable}
         />
       ))}
     </RadioGroup>

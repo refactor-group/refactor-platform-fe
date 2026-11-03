@@ -11,6 +11,7 @@ import { type Option, None, Some } from "@/types/option";
 import { Frequency, type RecurrenceEnd, type RescheduleSeriesRequest, type Weekday } from "@/types/recurrence";
 
 const UNCHANGED_HINT = "Pick a new date or time.";
+const SERIES_LOADING_HINT = "Loading the series…";
 
 /** The other participant: their roster entry, else the session's own coach or coachee. */
 export function movePerson(session: EnrichedCoachingSession, userId: Id, entries: PersonEntry[]): Option<PersonEntry> {
@@ -43,7 +44,11 @@ export function moveChanged(
   return slot.start.some && startMoved(session, slot.start.val, timezone);
 }
 
-export function moveHint(input: ClashState & { changed: boolean; following: boolean }): Option<string> {
+export function moveHint(
+  input: ClashState & { changed: boolean; following: boolean; seriesLoading: boolean }
+): Option<string> {
+  // Without the series, the Repeat step shows defaults rather than its rule.
+  if (input.following && input.seriesLoading) return Some(SERIES_LOADING_HINT);
   // A rule-only edit of this and following is a valid change.
   if (!input.changed && !input.following) return Some(UNCHANGED_HINT);
   return resolveHint(input);
@@ -66,6 +71,7 @@ export function moveRail(
 /** The Repeat step's starting point when moving this and following. */
 export interface SeriesRepeat {
   frequency: Frequency;
+  interval: number;
   byWeekdays: Weekday[];
   end: RecurrenceEnd;
 }
@@ -81,7 +87,9 @@ export function seriesRepeatFrom(
   const { frequency, interval, by_weekdays, until } = series.rule.recurrence;
   const from = startMillis(session);
   return {
-    frequency: frequency === Frequency.Weekly && interval === 2 ? Frequency.Biweekly : frequency,
+    ...(frequency === Frequency.Weekly && interval === 2
+      ? { frequency: Frequency.Biweekly, interval: 1 }
+      : { frequency, interval }),
     byWeekdays: by_weekdays ?? [],
     end: until.some
       ? { kind: "until", until: until.val }

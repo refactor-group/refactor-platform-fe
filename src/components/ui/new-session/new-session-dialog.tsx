@@ -9,13 +9,12 @@ import { WhenStep } from "@/components/ui/new-session/when-step";
 import { WhoStep } from "@/components/ui/new-session/who-step";
 import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
 import { useNewSessionDialog } from "@/lib/hooks/use-new-session-dialog";
-import { useLoadedSeries } from "@/lib/hooks/use-schedule-data";
+import { NO_SERIES, type SeriesLoad, useLoadedSeries } from "@/lib/hooks/use-schedule-data";
 import type { NewSessionDialogModel } from "@/lib/new-session-dialog-model";
 import { StepKind } from "@/lib/scheduling";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
-import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
 import type { Id } from "@/types/general";
-import { type Option, None } from "@/types/option";
+import { None } from "@/types/option";
 import type { ReactNode } from "react";
 
 interface StepContent {
@@ -37,10 +36,10 @@ function stepContent(model: NewSessionDialogModel): StepContent {
         ? { title: "Resolve overlap", subline: model.resolve.val.subline, body: <ResolveStep {...model.resolve.val} /> }
         : { title: "Resolve overlap", body: null };
     case StepKind.AppliesTo: {
-      const { ruleLine } = model.appliesTo;
+      const { subline } = model.appliesTo;
       return {
         title: "Applies to",
-        subline: ruleLine.some ? ruleLine.val : undefined,
+        subline: subline.some ? subline.val : undefined,
         body: <AppliesToStep {...model.appliesTo} />,
       };
     }
@@ -61,7 +60,7 @@ export function NewSessionDialog({ request, onClose }: NewSessionDialogProps) {
   return seriesId.some ? (
     <SeriesSessionDialog seriesId={seriesId.val} request={request} onClose={onClose} />
   ) : (
-    <NewSessionDialogView request={request} series={None} onClose={onClose} />
+    <NewSessionDialogView request={request} series={NO_SERIES} onClose={onClose} />
   );
 }
 
@@ -75,7 +74,7 @@ function NewSessionDialogView({
   request,
   series,
   onClose,
-}: NewSessionDialogProps & { series: Option<CoachingSessionSeriesWithSessions> }) {
+}: NewSessionDialogProps & { series: SeriesLoad }) {
   const model = useNewSessionDialog(request, series, onClose);
   const content = stepContent(model);
   return (

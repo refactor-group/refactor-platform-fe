@@ -5,7 +5,7 @@ import type { DateTime } from "ts-luxon";
 import { MODAL_DESKTOP_QUERY } from "@/lib/breakpoints";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@/lib/hooks/use-dialog-recurrence";
-import { useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
+import { type SeriesLoad, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
 import { moveChanged, moveHint, movePerson, moveRail, seriesRepeatFrom, startMoved } from "@/lib/move-draft";
 import type { PersonEntry } from "@/lib/people";
@@ -22,6 +22,7 @@ import {
   peopleEntries,
   repeatChoice,
   resolveModel,
+  seriesCadenceOf,
   startAt,
   summaryOf,
   usualOf,
@@ -65,12 +66,16 @@ function repeatPrefill(
   return Some({ repeat: seriesRepeatFrom(series.val, moving.val), weekday: weekdayFromLuxon(slot.weekday) });
 }
 
-/** `series` is the moved session's series once loaded; None for a one-off or while loading. */
+const SERIES_FAILED_LINE = "Couldn't load the series, so only this session can change.";
+
+/** `seriesLoad` is the moved session's series; none for a one-off. */
 export function useNewSessionDialog(
   request: NewSessionRequest,
-  series: Option<CoachingSessionSeriesWithSessions>,
+  seriesLoad: SeriesLoad,
   onClose: () => void
 ): NewSessionDialogModel {
+  const series = seriesLoad.kind === "loaded" ? Some(seriesLoad.series) : None;
+  const seriesFailed = seriesLoad.kind === "error";
   const desktop = useMediaQuery(MODAL_DESKTOP_QUERY);
   const zone = useScheduleTimezone();
   const [initial] = useState(() => initialDraft(request, zone));
@@ -86,7 +91,9 @@ export function useNewSessionDialog(
   const [savedResolve, setSavedResolve] = useState<Option<ResolveDraft>>(None);
   const [scope, setScope] = useState(request.kind === "move" ? request.scope : MoveScope.This);
   const inSeries = moving.some && moving.val.coaching_session_series_id.some;
-  const following = inSeries && scope === MoveScope.Following;
+  // A series that couldn't load can only have this session moved.
+  const effectiveScope = seriesFailed ? MoveScope.This : scope;
+  const following = inSeries && effectiveScope === MoveScope.Following;
   const repeatOn = moving.some ? following : repeating;
 
   const data = useScheduleData({ month, selected: day });
@@ -97,17 +104,19 @@ export function useNewSessionDialog(
   const minutes = chosenMinutes.some ? chosenMinutes.val : data.defaultMinutes;
   const start = startAt(day, time);
   const startWeekday = day.some ? weekdayFromLuxon(day.val.weekday) : null;
+  const prefill = repeatPrefill(moving, series, zone);
   const recurrence = useDialogRecurrence({
     enabled: repeatOn,
     startWeekday,
     timezone,
-    prefill: repeatPrefill(moving, series, zone),
+    prefill,
   });
-  const repeat = repeatChoice(repeatOn, recurrence.frequency, recurrence.end);
+  const cadence = { frequency: recurrence.frequency, interval: recurrence.interval };
+  const repeat = repeatChoice(repeatOn, cadence, recurrence.end);
   const recurrenceError = repeatOn
     ? validateRecurrence({
         frequency: recurrence.frequency,
-        interval: 1,
+        interval: recurrence.interval,
         byWeekdays: recurrence.byWeekdays,
         end: recurrence.end,
         start: start.some ? start.val : null,
@@ -150,8 +159,17 @@ export function useNewSessionDialog(
       };
       const seriesId = moving.val.coaching_session_series_id;
       if (!following || seriesId.none || repeat.kind !== "repeat") return { kind: "move", ...moved };
-      const { frequency, end } = repeat;
-      return { kind: "following", ...moved, seriesId: seriesId.val, frequency, end, byWeekdays: recurrence.byWeekdays, timezone };
+      const { frequency, interval, end } = repeat;
+      return {
+        kind: "following",
+        ...moved,
+        seriesId: seriesId.val,
+        frequency,
+        interval,
+        end,
+        byWeekdays: recurrence.byWeekdays,
+        timezone,
+      };
     }
     return {
       kind: "schedule",
@@ -187,7 +205,7 @@ export function useNewSessionDialog(
     mover: moving.some && entry.some ? Some(moverOf(entry.val, moving.val, timezone)) : None,
     step: current,
     rail: moving.some
-      ? moveRail({ order, step, start, changed, scope, repeat, ...overlap })
+      ? moveRail({ order, step, start, changed, scope: effectiveScope, repeat, ...overlap })
       : scheduleRail({ order, step, personName, start, repeat, ...overlap }),
     position: stepPosition(order, step),
     onPrev: prev.some ? Some(() => setStep(prev.val)) : None,
@@ -195,7 +213,7 @@ export function useNewSessionDialog(
     lead: leadFor({
       last: next.none,
       hint: moving.some
-        ? moveHint({ changed, following, ...overlap })
+        ? moveHint({ changed, following, seriesLoading: seriesLoad.kind === "loading", ...overlap })
         : scheduleHint({ personName, start, ...overlap }),
       label: moving.some ? moveSubmitLabel(following) : scheduleSubmitLabel(repeat),
       error,
@@ -208,8 +226,13 @@ export function useNewSessionDialog(
         : None,
     who: { state: whoState(data), selectedId: personId, onSelect: selectPerson },
     appliesTo: {
-      scope,
-      ruleLine: series.some && personName.some ? Some(seriesRuleLine(personName.val, series.val.rule.recurrence)) : None,
+      scope: effectiveScope,
+      subline: seriesFailed
+        ? Some(SERIES_FAILED_LINE)
+        : series.some && personName.some
+          ? Some(seriesRuleLine(personName.val, series.val.rule.recurrence))
+          : None,
+      followingAvailable: !seriesFailed,
       onScopeChange: setScope,
     },
     when: {
@@ -250,10 +273,11 @@ export function useNewSessionDialog(
       byWeekdays: recurrence.byWeekdays,
       lockedWeekday: startWeekday ?? weekdayFromLuxon(now.weekday),
       defaultEnd: { count: DEFAULT_REPEAT_COUNT, until: untilAfter(start.some ? start.val : now) },
+      seriesCadence: seriesCadenceOf(prefill.some ? Some(prefill.val.repeat) : None),
       error,
-      onRepeatChange: (frequency) => {
-        setRepeating(frequency.some);
-        if (frequency.some) recurrence.setFrequency(frequency.val);
+      onRepeatChange: (choice) => {
+        setRepeating(choice.some);
+        if (choice.some) recurrence.setCadence(choice.val);
       },
       onWeekdaysChange: recurrence.setByWeekdays,
       onEndChange: recurrence.setEnd,

@@ -64,6 +64,7 @@ export type SessionPlan =
       kind: "following";
       seriesId: Id;
       frequency: Frequency;
+      interval: number;
       byWeekdays: Weekday[];
       end: RecurrenceEnd;
       timezone: string;
@@ -80,7 +81,7 @@ function firstWrite(plan: SessionPlan): Promise<unknown> {
       const { repeat } = plan;
       return repeat.kind === "repeat"
         ? CoachingSessionSeriesApi.create(
-            seriesPayload({ ...plan, frequency: repeat.frequency, end: repeat.end }),
+            seriesPayload({ ...plan, frequency: repeat.frequency, interval: repeat.interval, end: repeat.end }),
             plan.timezone
           )
         : CoachingSessionApi.create(sessionPayload(plan));
@@ -144,7 +145,8 @@ function successMessage(plan: SessionPlan, otherMove: Option<OtherMove>): string
         : updatedMessage({ personName, start, minutes: plan.minutes, otherMove });
     case "following": {
       if (plan.startMoved) return rescheduledMessage({ personName, start, following: true, otherMove });
-      const repeat: RepeatChoice = { kind: "repeat", frequency: plan.frequency, end: plan.end };
+      const { frequency, interval, end } = plan;
+      const repeat: RepeatChoice = { kind: "repeat", frequency, interval, end };
       return seriesUpdatedMessage({ personName, repeat, otherMove });
     }
     default: {

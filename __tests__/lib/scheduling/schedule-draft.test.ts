@@ -314,7 +314,7 @@ describe("scheduleRail", () => {
       step: StepKind.When,
       personName: Some("Priya Raman"),
       start,
-      repeat: { kind: "repeat", frequency: Frequency.Weekly, end: { kind: "count", count: 8 } },
+      repeat: { kind: "repeat", frequency: Frequency.Weekly, interval: 1, end: { kind: "count", count: 8 } },
       clash: Some(EHAB),
       resolution: { kind: "unresolved" },
     });

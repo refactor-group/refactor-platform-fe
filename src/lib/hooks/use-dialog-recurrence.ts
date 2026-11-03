@@ -4,6 +4,7 @@ import { useState } from "react";
 import { type RecurrenceStateInit, useRecurrenceState } from "@/lib/hooks/use-recurrence-state";
 import type { SeriesRepeat } from "@/lib/move-draft";
 import { swapStartWeekday } from "@/lib/schedule-draft";
+import type { Cadence } from "@/lib/scheduling";
 import { type Option, None, Some } from "@/types/option";
 import type { Frequency, RecurrenceEnd, Weekday } from "@/types/recurrence";
 
@@ -25,9 +26,10 @@ export interface DialogRecurrenceArgs {
 
 export interface DialogRecurrence {
   frequency: Frequency;
+  interval: number;
   byWeekdays: Weekday[];
   end: RecurrenceEnd;
-  setFrequency: (frequency: Frequency) => void;
+  setCadence: (cadence: Cadence) => void;
   setByWeekdays: (days: Weekday[]) => void;
   setEnd: (end: RecurrenceEnd) => void;
 }
@@ -53,6 +55,7 @@ export function useDialogRecurrence({ enabled, startWeekday, timezone, prefill }
       : { days: recurrence.byWeekdays, from: seenWeekday ? Some(seenWeekday) : None };
     if (applying.some) {
       recurrence.setFrequency(applying.val.repeat.frequency);
+      recurrence.setInterval(applying.val.repeat.interval);
       recurrence.setEnd(applying.val.repeat.end);
     }
     recurrence.setByWeekdays(from.some && startWeekday ? swapStartWeekday(days, from.val, startWeekday) : days);
@@ -67,9 +70,13 @@ export function useDialogRecurrence({ enabled, startWeekday, timezone, prefill }
 
   return {
     frequency: recurrence.frequency,
+    interval: recurrence.interval,
     byWeekdays: recurrence.byWeekdays,
     end: recurrence.end,
-    setFrequency: touch(recurrence.setFrequency),
+    setCadence: touch(({ frequency, interval }: Cadence) => {
+      recurrence.setFrequency(frequency);
+      recurrence.setInterval(interval);
+    }),
     setByWeekdays: touch(recurrence.setByWeekdays),
     setEnd: touch(recurrence.setEnd),
   };

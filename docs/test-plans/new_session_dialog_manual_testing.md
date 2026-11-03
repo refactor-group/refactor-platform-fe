@@ -449,6 +449,18 @@ Block `POST /coaching_session_series/*/reschedule`, then make it return a 422.
 
 **Pass:** "Couldn't update the session · Check your connection and try again", then "Couldn't update the session · Check the details and try again". The dialog stays open each time.
 
+### Case G6h: a series that repeats every few weeks or months
+
+The dialog can't create these, so make them through the API: a weekly series every 3 weeks and a monthly series every 2 months. Open Edit series on each, change only Ends and confirm. Then open Edit series on the every-3-weeks series again, pick Weekly and confirm.
+
+**Pass:** the Repeat step offers the series' own rhythm as an extra choice ("Every 3 weeks", "Every 2 months"), selected, and the rail reads "{rhythm}, for {n} sessions". After the first confirm each series keeps its rhythm (View series shows the same rule, and the dates keep their spacing). Picking Weekly drops the extra choice's selection and turns the series weekly. A weekly series every 2 weeks shows the usual "Every 2 weeks" choice, not an extra one.
+
+### Case G6i: the series hasn't loaded
+
+In DevTools, throttle `GET /coaching_session_series/*` to Slow 3G and open Edit series, then block it and reschedule a series session.
+
+**Pass:** while it loads, the last step says "Loading the series…" and there's no confirm. With the block, Applies to reads "Couldn't load the series, so only this session can change.", "This and following sessions" is disabled, "This session only" is selected, and confirming moves only that session. Edit series opened under the block also falls back to this session only.
+
 ### Case G7: errors
 
 Block `PUT /coaching_sessions/*` and confirm.

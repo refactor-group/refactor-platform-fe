@@ -346,15 +346,16 @@ export function sessionPayload(input: {
 /** A series rule as the wire wants it, with `until` as the naive-UTC end of that day. */
 export interface RuleInput {
   frequency: Frequency;
+  interval: number;
   byWeekdays: Weekday[];
   end: RecurrenceEnd;
   timezone: string;
 }
 
-export function rulePayload({ frequency, byWeekdays, end, timezone }: RuleInput): Recurrence {
+export function rulePayload({ frequency, interval, byWeekdays, end, timezone }: RuleInput): Recurrence {
   const wireEnd: RecurrenceEnd =
     end.kind === "until" ? { kind: "until", until: untilDateToUtcDateTime(end.until, timezone) } : end;
-  return recurrenceToPayload(frequency, 1, byWeekdays, wireEnd);
+  return recurrenceToPayload(frequency, interval, byWeekdays, wireEnd);
 }
 
 export function seriesPayload(

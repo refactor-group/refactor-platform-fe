@@ -84,6 +84,7 @@ describe("seriesRepeatFrom", () => {
   it("counts this session and the ones after it", () => {
     expect(seriesRepeatFrom(series(recurrence()), E_18)).toEqual({
       frequency: Frequency.Weekly,
+      interval: 1,
       byWeekdays: [Weekday.Tue],
       end: { kind: "count", count: 3 },
     });
@@ -97,6 +98,12 @@ describe("seriesRepeatFrom", () => {
   it("treats every 2 weeks as Biweekly", () => {
     const repeat = seriesRepeatFrom(series(recurrence({ interval: 2 })), E_18);
     expect(repeat.frequency).toBe(Frequency.Biweekly);
+    expect(repeat.interval).toBe(1);
+  });
+
+  it("keeps any other interval", () => {
+    const repeat = seriesRepeatFrom(series(recurrence({ interval: 3 })), E_18);
+    expect([repeat.frequency, repeat.interval]).toEqual([Frequency.Weekly, 3]);
   });
 });
 
@@ -108,6 +115,7 @@ describe("followingPayload", () => {
         start: at("2026-08-20T14:30"),
         minutes: 50,
         frequency: Frequency.Weekly,
+        interval: 1,
         byWeekdays: [Weekday.Thu],
         end: { kind: "count", count: 3 },
         timezone: ZONE,
@@ -126,10 +134,25 @@ describe("followingPayload", () => {
       start: at("2026-08-20T14:30"),
       minutes: 50,
       frequency: Frequency.Monthly,
+      interval: 1,
       byWeekdays: [],
       end: { kind: "until", until: "2026-12-15" },
       timezone: ZONE,
     });
     expect(payload.recurrence).toEqual({ frequency: Frequency.Monthly, until: "2026-12-16T05:59:59" });
+  });
+
+  it("sends an interval other than 1", () => {
+    const payload = followingPayload({
+      sessionId: "e-18",
+      start: at("2026-08-20T14:30"),
+      minutes: 50,
+      frequency: Frequency.Monthly,
+      interval: 2,
+      byWeekdays: [],
+      end: { kind: "count", count: 3 },
+      timezone: ZONE,
+    });
+    expect(payload.recurrence).toEqual({ frequency: Frequency.Monthly, interval: 2, count: 3 });
   });
 });

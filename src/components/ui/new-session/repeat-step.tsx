@@ -6,16 +6,25 @@ import { Chip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/input";
 import { WeekdayPicker } from "@/components/ui/new-session/weekday-picker";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { RepeatModel } from "@/lib/new-session-dialog-model";
+import { type RepeatModel, STANDARD_CADENCES, sameCadence } from "@/lib/new-session-dialog-model";
+import type { Cadence } from "@/lib/scheduling";
+import { cadenceLabel } from "@/lib/scheduling-copy";
 import { type Option, None, Some } from "@/types/option";
-import { Frequency, type RecurrenceEnd, frequencySupportsWeekdays } from "@/types/recurrence";
+import { type RecurrenceEnd, frequencySupportsWeekdays } from "@/types/recurrence";
 
-const CHOICES: { label: string; frequency: Option<Frequency> }[] = [
-  { label: "Doesn't repeat", frequency: None },
-  { label: "Weekly", frequency: Some(Frequency.Weekly) },
-  { label: "Every 2 weeks", frequency: Some(Frequency.Biweekly) },
-  { label: "Monthly", frequency: Some(Frequency.Monthly) },
-];
+interface RepeatOption {
+  label: string;
+  cadence: Option<Cadence>;
+}
+
+function repeatOptions({ optional, seriesCadence }: RepeatModel): RepeatOption[] {
+  const none: RepeatOption[] = optional ? [{ label: "Doesn't repeat", cadence: None }] : [];
+  const series: RepeatOption[] = seriesCadence.some
+    ? [{ label: cadenceLabel(seriesCadence.val), cadence: seriesCadence }]
+    : [];
+  const standard = STANDARD_CADENCES.map((cadence) => ({ label: cadenceLabel(cadence), cadence: Some(cadence) }));
+  return [...none, ...series, ...standard];
+}
 
 const FIELD_CLASSES = "h-11 tabular-nums modal:h-9";
 // A 44px tap box below 900px with the 16px circle drawn inside it.
@@ -23,10 +32,9 @@ const RADIO_CLASSES =
   "relative -ml-3.5 -mr-2.5 h-11 w-11 shrink-0 border-0 before:absolute before:left-1/2 before:top-1/2 before:h-4 before:w-4 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:border before:border-primary modal:ml-0 modal:mr-0 modal:h-4 modal:w-4";
 const LABEL_CLASSES = "flex h-11 items-center pr-1 text-sm modal:h-auto";
 
-function isChosen(model: RepeatModel, frequency: Option<Frequency>): boolean {
-  const { repeat } = model;
-  if (frequency.none) return repeat.kind === "none";
-  return repeat.kind === "repeat" && repeat.frequency === frequency.val;
+function isChosen({ repeat }: RepeatModel, cadence: Option<Cadence>): boolean {
+  if (cadence.none) return repeat.kind === "none";
+  return repeat.kind === "repeat" && sameCadence(repeat, cadence.val);
 }
 
 function SectionLabel({ id, children }: { id: string; children: string }) {
@@ -40,14 +48,14 @@ function SectionLabel({ id, children }: { id: string; children: string }) {
 function FrequencyChips(model: RepeatModel) {
   return (
     <div className="flex flex-wrap gap-x-1.5 gap-y-2.5">
-      {CHOICES.filter((choice) => model.optional || choice.frequency.some).map((choice) => (
+      {repeatOptions(model).map((option) => (
         <Chip
-          key={choice.label}
+          key={option.label}
           size="md"
-          selected={isChosen(model, choice.frequency)}
-          onClick={() => model.onRepeatChange(choice.frequency)}
+          selected={isChosen(model, option.cadence)}
+          onClick={() => model.onRepeatChange(option.cadence)}
         >
-          {choice.label}
+          {option.label}
         </Chip>
       ))}
     </div>

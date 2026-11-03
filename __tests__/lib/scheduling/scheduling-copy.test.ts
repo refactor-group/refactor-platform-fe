@@ -84,13 +84,13 @@ describe("When step lines", () => {
 describe("Repeat labels", () => {
   it("describes each choice", () => {
     expect(repeatLabel({ kind: "none" })).toBe("Doesn't repeat");
-    expect(repeatLabel({ kind: "repeat", frequency: Frequency.Weekly, end: { kind: "count", count: 8 } })).toBe(
+    expect(repeatLabel({ kind: "repeat", frequency: Frequency.Weekly, interval: 1, end: { kind: "count", count: 8 } })).toBe(
       "Weekly, for 8 sessions"
     );
-    expect(repeatLabel({ kind: "repeat", frequency: Frequency.Biweekly, end: { kind: "until", until: "2026-12-15" } })).toBe(
+    expect(repeatLabel({ kind: "repeat", frequency: Frequency.Biweekly, interval: 1, end: { kind: "until", until: "2026-12-15" } })).toBe(
       "Every 2 weeks, until Dec 15"
     );
-    expect(repeatLabel({ kind: "repeat", frequency: Frequency.Monthly, end: { kind: "count", count: 1 } })).toBe(
+    expect(repeatLabel({ kind: "repeat", frequency: Frequency.Monthly, interval: 1, end: { kind: "count", count: 1 } })).toBe(
       "Monthly, for 1 session"
     );
   });
@@ -99,10 +99,10 @@ describe("Repeat labels", () => {
 describe("submit labels", () => {
   it("counts what scheduling creates", () => {
     expect(scheduleSubmitLabel({ kind: "none" })).toBe("Schedule session");
-    expect(scheduleSubmitLabel({ kind: "repeat", frequency: Frequency.Weekly, end: { kind: "count", count: 8 } })).toBe(
+    expect(scheduleSubmitLabel({ kind: "repeat", frequency: Frequency.Weekly, interval: 1, end: { kind: "count", count: 8 } })).toBe(
       "Schedule 8 sessions"
     );
-    expect(scheduleSubmitLabel({ kind: "repeat", frequency: Frequency.Weekly, end: { kind: "until", until: "2026-12-15" } })).toBe(
+    expect(scheduleSubmitLabel({ kind: "repeat", frequency: Frequency.Weekly, interval: 1, end: { kind: "until", until: "2026-12-15" } })).toBe(
       "Schedule series"
     );
   });
