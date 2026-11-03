@@ -76,7 +76,7 @@ function PersonCard({ person, selected, onSelect }: PersonCardProps) {
     >
       <PersonAvatar userId={person.userId} initials={person.initials} size={36} />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium text-foreground">{person.fullName}</span>
+        <span className="line-clamp-2 break-words text-sm font-medium text-foreground">{person.fullName}</span>
         <span className="line-clamp-2 text-xs text-muted-foreground tabular-nums">{person.subline}</span>
       </span>
       {selected && <CheckDisc size={20} tone="brand" />}
