@@ -141,8 +141,8 @@ describe("NewSessionDialog: move", () => {
     expect(day("Tuesday, August 18")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText("Start time")).toHaveValue("14:30");
     expect(screen.getByRole("button", { name: "50 min" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByRole("button", { name: "Previous step" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Next step" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous step" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next step" })).toBeDisabled();
   });
 
   it("leaves the moved session out of busy days and overlaps", () => {

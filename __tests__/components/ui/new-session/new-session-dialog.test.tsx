@@ -254,7 +254,7 @@ describe("NewSessionDialog: Repeat", () => {
     expect(screen.getByRole("heading", { name: "Repeat" })).toBeInTheDocument();
     expect(screen.getByText("3 of 3")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Doesn't repeat" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByRole("button", { name: "Next step" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next step" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Schedule session" })).toBeEnabled();
   });
 

@@ -33,7 +33,7 @@ At 1440×900, open the dialog.
 
 Step Who › When › Repeat and back with the arrows.
 
-**Pass:** the dialog never changes size, and the footer (position and arrows) stays in the same place on every step. Previous is hidden on the first step and Next on the last.
+**Pass:** the dialog never changes size, and the footer (position and arrows) stays in the same place on every step. Both arrows always show: Previous is disabled on the first step and Next on the last.
 
 ### Case A3: short window
 

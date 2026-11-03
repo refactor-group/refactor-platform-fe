@@ -123,10 +123,17 @@ function CloseButton({ size, className }: { size: "icon-sm" | "icon-md"; classNa
   );
 }
 
-function PrevButton({ onPrev }: { onPrev: () => void }) {
+function StepArrow({ direction, onStep }: { direction: "prev" | "next"; onStep: Option<() => void> }) {
+  const prev = direction === "prev";
   return (
-    <Button variant="secondary" size="icon-lg" aria-label="Previous step" onClick={onPrev}>
-      <ArrowLeft />
+    <Button
+      variant="secondary"
+      size="icon-lg"
+      aria-label={prev ? "Previous step" : "Next step"}
+      disabled={onStep.none}
+      onClick={onStep.some ? onStep.val : undefined}
+    >
+      {prev ? <ArrowLeft /> : <ArrowRight />}
     </Button>
   );
 }
@@ -218,12 +225,8 @@ function PaneFooter({
       <span className="mr-1 text-label tabular-nums text-muted-foreground">
         {positionText(position)}
       </span>
-      {onPrev.some && <PrevButton onPrev={onPrev.val} />}
-      {onNext.some && (
-        <Button variant="secondary" size="icon-lg" aria-label="Next step" onClick={onNext.val}>
-          <ArrowRight />
-        </Button>
-      )}
+      <StepArrow direction="prev" onStep={onPrev} />
+      <StepArrow direction="next" onStep={onNext} />
     </div>
   );
 }
@@ -297,7 +300,7 @@ function MobileFooter({
 }: Pick<StepDialogProps, "lead" | "onPrev" | "onNext">) {
   return (
     <div className="flex shrink-0 items-center gap-3 border-t border-hairline bg-card px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-      {onPrev.some && <PrevButton onPrev={onPrev.val} />}
+      <StepArrow direction="prev" onStep={onPrev} />
       {lead.kind === "hint" ? (
         <p className="flex-1 text-[13px] text-muted-foreground">{lead.text}</p>
       ) : (
