@@ -325,6 +325,12 @@ Pick a move on Resolve, then go back to When and change the time so it clashes w
 
 **Pass:** Resolve now names the new session and starts unresolved, with no leftover choice from before.
 
+### Case E10: a new time or length on the same clash resets the choice
+
+Overlap B's session, move B to a free chip on Resolve, then go back to When. Change the start time by 15 or 30 minutes so it still overlaps B. Then do it again, this time changing only the duration.
+
+**Pass:** each time, the rail goes back to "Choose a new time for {B}" without a check, and Resolve starts unresolved: no chip is highlighted, the footer says "Pick a new time for {B}, or keep both." and there's no confirm. The chips are free times around the new time, so picking one and scheduling leaves no overlap between the new session and B's. The same goes for "keep both".
+
 ## 7. Part F: submit (PR 5)
 
 ### Case F1: one session
