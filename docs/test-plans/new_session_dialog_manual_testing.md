@@ -1,6 +1,6 @@
 # Test Plan: Manually Testing the New Session Dialog
 
-Checks the stepped New session dialog: the shared StepDialog shell, then schedule mode step by step (Who, When, Repeat, Resolve overlap) and submit. Later parts cover move mode. Each part names the PR it covers; run a part against that layer or anything above it in the stack.
+Checks the stepped New session dialog: the shared StepDialog shell, schedule mode step by step (Who, When, Repeat, Resolve overlap) and submit, then move mode (Reschedule). Each part names the PR it covers; run a part against that layer or anything above it in the stack.
 
 Results go in the PR for the layer under test, not in this plan.
 
@@ -273,21 +273,71 @@ Look at the rail footer with Google connected, Zoom connected, and neither.
 
 **Pass:** "Google Meet link included", "Zoom link included", and no line.
 
-## 8. Part G: copy and theme sweep (PR 5)
+## 8. Part G: move mode (PR 6)
 
-### Case G1: copy
+### Case G1: opening
 
-Read every string in the dialog.
+On the dashboard, open a session row's menu › Reschedule, then the Upcoming card's Reschedule.
+
+**Pass:** each opens "Reschedule session" for that session. The rail shows the person's avatar and name and "Currently {Ddd, Mmm D, h:mm A}". There's no Who step, the position reads "1 of 1", and the calendar, time and duration hold the session's current values.
+
+### Case G2: no change yet
+
+Look at the footer before changing anything.
+
+**Pass:** "Pick a new date or time." and no confirm. The session's own day doesn't count it as busy, and its own time doesn't overlap.
+
+### Case G3: moving
+
+Pick another free day, keep the time, and confirm.
+
+**Pass:** the confirm reads "Reschedule session". The toast reads "Rescheduled · {first name} to {Weekday, Month D}, {time}". The row moves without a reload. Open the session: it's the same session, with its notes and topics.
+
+### Case G4: duration only
+
+Change only the duration and confirm.
+
+**Pass:** the session keeps its time and takes the new length.
+
+### Case G5: overlap
+
+Move onto another session you coach, then resolve by moving that one.
+
+**Pass:** "1 of 2", then Resolve overlap as in Part E. The toast ends "· {name} moves to {Ddd D}, {time}", and both sessions show in their new places.
+
+### Case G6: a series session
+
+Reschedule one session of a weekly series.
+
+**Pass:** only that session moves; the series' other sessions stay put. (Moving "this and following" comes later.)
+
+### Case G7: errors
+
+Block `PUT /coaching_sessions/*` and confirm.
+
+**Pass:** "Couldn't update the session · Check your connection and try again", and the dialog stays open with your choices.
+
+### Case G8: who can reschedule
+
+Look at past sessions, and log in as the coachee.
+
+**Pass:** neither shows Reschedule.
+
+## 9. Part H: copy and theme sweep (PR 5, PR 6)
+
+### Case H1: copy
+
+Read every string in the dialog, in both modes.
 
 **Pass:** "session", never "call"; "series", never "term"; "person" or "people", never "coachee". No em dashes, and no limits or ids.
 
-### Case G2: dark mode
+### Case H2: dark mode
 
 Go through every step in Dark.
 
 **Pass:** the rail's current row, rail border, scrim, tooltip and toast use the dark tokens, with no white flashes. The tooltip is inverted like the toast.
 
-### Case G3: reduced motion
+### Case H3: reduced motion
 
 Turn on reduced motion in the OS.
 

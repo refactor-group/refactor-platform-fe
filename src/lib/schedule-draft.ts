@@ -357,11 +357,16 @@ interface ScheduleRailInput {
   resolution: Resolution;
 }
 
+/** The rail for any mode; `whenDone` is when the When row gets its check. */
+export interface StepRailInput extends ScheduleRailInput {
+  whenDone: boolean;
+}
+
 function startLine(start: DateTime): string {
   return `${formatWeekdayDate(start)}, ${timeOfDay(start)}`;
 }
 
-function resolutionValue(input: ScheduleRailInput): string {
+function resolutionValue(input: StepRailInput): string {
   const { clash, resolution, start } = input;
   if (clash.none) return "Choose a new time";
   const first = firstNameOf(clash.val.personName);
@@ -379,13 +384,13 @@ function resolutionValue(input: ScheduleRailInput): string {
   }
 }
 
-function railRow(kind: StepKind, input: ScheduleRailInput, current: StepKind): Omit<StepRailItem, "id" | "current"> {
+function railRow(kind: StepKind, input: StepRailInput, current: StepKind): Omit<StepRailItem, "id" | "current"> {
   const { order, personName, start, repeat, resolution } = input;
   switch (kind) {
     case StepKind.Who:
       return { label: "Who", value: personName.some ? personName.val : "Choose a person", done: personName.some };
     case StepKind.When:
-      return { label: "When", value: start.some ? startLine(start.val) : "Set a date and time", done: start.some };
+      return { label: "When", value: start.some ? startLine(start.val) : "Set a date and time", done: input.whenDone };
     case StepKind.Repeat:
       return {
         label: "Repeats",
@@ -395,7 +400,7 @@ function railRow(kind: StepKind, input: ScheduleRailInput, current: StepKind): O
     case StepKind.Resolve:
       return { label: "Resolve overlap", value: resolutionValue(input), done: resolution.kind !== "unresolved" };
     case StepKind.AppliesTo:
-      throw new Error("Applies to isn't a schedule step");
+      throw new Error("Applies to isn't a step yet");
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unhandled step: ${_exhaustive}`);
@@ -403,9 +408,20 @@ function railRow(kind: StepKind, input: ScheduleRailInput, current: StepKind): O
   }
 }
 
-export function scheduleRail(input: ScheduleRailInput): StepRailItem[] {
+export function stepRail(input: StepRailInput): StepRailItem[] {
   const current = currentStep(input.order, input.step);
   return input.order.map((kind) => ({ id: kind, ...railRow(kind, input, current), current: kind === current }));
+}
+
+export function scheduleRail(input: ScheduleRailInput): StepRailItem[] {
+  return stepRail({ ...input, whenDone: input.start.some });
+}
+
+/** Asks how to settle an overlap that's still open. */
+export function resolveHint(clash: Option<BusySession>, resolution: Resolution): Option<string> {
+  return clash.some && resolution.kind === "unresolved"
+    ? Some(`Pick a new time for ${firstNameOf(clash.val.personName)}, or keep both.`)
+    : None;
 }
 
 export function scheduleHint(input: {
@@ -416,8 +432,5 @@ export function scheduleHint(input: {
 }): Option<string> {
   const { personName, start, clash, resolution } = input;
   if (personName.none || start.none) return Some(MISSING_HINT);
-  if (clash.some && resolution.kind === "unresolved") {
-    return Some(`Pick a new time for ${firstNameOf(clash.val.personName)}, or keep both.`);
-  }
-  return None;
+  return resolveHint(clash, resolution);
 }

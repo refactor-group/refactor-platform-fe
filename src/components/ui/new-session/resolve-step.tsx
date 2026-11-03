@@ -3,7 +3,7 @@
 import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
 import { Chip } from "@/components/ui/chip";
-import type { ResolveModel } from "@/lib/hooks/use-new-session-dialog";
+import type { ResolveModel } from "@/lib/new-session-dialog-model";
 import { timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 

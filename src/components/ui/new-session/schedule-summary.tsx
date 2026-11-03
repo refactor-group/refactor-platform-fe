@@ -1,7 +1,7 @@
 "use client";
 
 import { PersonAvatar } from "@/components/ui/avatar";
-import type { SummaryModel } from "@/lib/hooks/use-new-session-dialog";
+import type { SummaryModel } from "@/lib/new-session-dialog-model";
 import { createsLine, meetingLine } from "@/lib/scheduling-copy";
 
 export function ScheduleSummary({ userId, initials, firstName, count, provider }: SummaryModel) {

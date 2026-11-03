@@ -26,7 +26,6 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { sessionRemovedMessage } from "@/components/ui/dashboard/session-change-message";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
-  type CoachingSession,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
 import {
@@ -58,15 +57,10 @@ type DeleteDialogState =
   | { kind: "deleting"; session: EnrichedCoachingSession };
 
 export interface CoachingSessionsCardProps {
-  /** Opens the create/edit dialog with the given session pre-filled. */
-  onReschedule: (session: CoachingSession | EnrichedCoachingSession) => void;
-  /** Surfaces the card's internal SWR `refresh()` to the parent so it can
-   *  force a revalidate after a create/edit dialog closes. The
-   *  user-scoped enriched fetch uses a tuple SWR key (`[url, params]`),
-   *  which `useEntityMutation`'s auto-invalidation skips because it
-   *  filters by `typeof key === "string"`. Without this hook-up, newly-
-   *  created sessions wouldn't appear in the list until a hard reload.
-   *  Mirrors `UpcomingSessionCard.onRefreshNeeded`. */
+  /** Opens the New session dialog to move the given session. */
+  onReschedule: (session: EnrichedCoachingSession) => void;
+  /** Surfaces the card's SWR `refresh()` so the parent can revalidate it
+   *  after a series changes elsewhere. Mirrors `UpcomingSessionCard.onRefreshNeeded`. */
   onRefreshNeeded?: (refresh: () => void) => void;
   /** Fires after a series is rescheduled or deleted from a session row's
    *  kebab. Re-materialization changes future sessions across surfaces, so

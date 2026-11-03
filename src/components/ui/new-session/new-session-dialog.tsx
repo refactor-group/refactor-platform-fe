@@ -1,12 +1,14 @@
 "use client";
 
+import { MoveHeader } from "@/components/ui/new-session/move-header";
 import { RepeatStep } from "@/components/ui/new-session/repeat-step";
 import { ResolveStep } from "@/components/ui/new-session/resolve-step";
 import { ScheduleSummary } from "@/components/ui/new-session/schedule-summary";
 import { WhenStep } from "@/components/ui/new-session/when-step";
 import { WhoStep } from "@/components/ui/new-session/who-step";
 import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
-import { type NewSessionDialogModel, useNewSessionDialog } from "@/lib/hooks/use-new-session-dialog";
+import { useNewSessionDialog } from "@/lib/hooks/use-new-session-dialog";
+import type { NewSessionDialogModel } from "@/lib/new-session-dialog-model";
 import { StepKind } from "@/lib/scheduling";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import type { ReactNode } from "react";
@@ -30,7 +32,7 @@ function stepContent(model: NewSessionDialogModel): StepContent {
         ? { title: "Resolve overlap", subline: model.resolve.val.subline, body: <ResolveStep {...model.resolve.val} /> }
         : { title: "Resolve overlap", body: null };
     case StepKind.AppliesTo:
-      throw new Error("Applies to isn't a schedule step");
+      throw new Error("Applies to isn't a step yet");
     default: {
       const _exhaustive: never = model.step;
       throw new Error(`Unhandled step: ${_exhaustive}`);
@@ -50,8 +52,9 @@ export function NewSessionDialog({ request, onClose }: NewSessionDialogProps) {
     <StepDialog
       open
       onClose={onClose}
-      title="New session"
+      title={model.title}
       height={StepDialogHeight.Tall}
+      railHeader={model.mover.some ? <MoveHeader {...model.mover.val} /> : undefined}
       steps={model.rail}
       railFooter={model.summary.some ? <ScheduleSummary {...model.summary.val} /> : undefined}
       stepTitle={content.title}

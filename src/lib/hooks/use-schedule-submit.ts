@@ -8,6 +8,7 @@ import type { DateTime } from "ts-luxon";
 import {
   type OtherMove,
   otherMoveFailedMessage,
+  rescheduledMessage,
   scheduledMessage,
 } from "@/components/ui/dashboard/session-change-message";
 import { CoachingSessionApi } from "@/lib/api/coaching-sessions";
@@ -25,39 +26,72 @@ import { type Option, None, Some } from "@/types/option";
 import type { Provider } from "@/types/provider";
 import type { Weekday } from "@/types/recurrence";
 
-/** Everything a submit needs, chosen and valid. */
-export interface SchedulePlan {
-  relationshipId: Id;
+interface OtherSessionMove {
+  session: EnrichedCoachingSession;
   personName: string;
   start: DateTime;
-  minutes: number;
-  provider: Option<Provider>;
-  repeat: RepeatChoice;
-  byWeekdays: Weekday[];
-  timezone: string;
-  move: Option<{ session: EnrichedCoachingSession; personName: string; start: DateTime }>;
 }
+
+/** Everything a submit needs, chosen and valid. */
+export type SessionPlan =
+  | {
+      kind: "schedule";
+      relationshipId: Id;
+      personName: string;
+      start: DateTime;
+      minutes: number;
+      provider: Option<Provider>;
+      repeat: RepeatChoice;
+      byWeekdays: Weekday[];
+      timezone: string;
+      moveOther: Option<OtherSessionMove>;
+    }
+  | {
+      kind: "move";
+      session: EnrichedCoachingSession;
+      personName: string;
+      start: DateTime;
+      minutes: number;
+      moveOther: Option<OtherSessionMove>;
+    };
 
 type MoveOutcome =
   | { kind: "none" }
   | { kind: "moved"; otherMove: OtherMove }
   | { kind: "failed"; personName: string };
 
-function createWrite(plan: SchedulePlan): ResultAsync<unknown, unknown> {
-  const { repeat } = plan;
-  const write: Promise<unknown> =
-    repeat.kind === "repeat"
-      ? CoachingSessionSeriesApi.create(
-          seriesPayload({ ...plan, frequency: repeat.frequency, end: repeat.end }),
-          plan.timezone
-        )
-      : CoachingSessionApi.create(sessionPayload(plan));
-  return ResultAsync.fromPromise(write, (error) => error);
+function firstWrite(plan: SessionPlan): Promise<unknown> {
+  switch (plan.kind) {
+    case "schedule": {
+      const { repeat } = plan;
+      return repeat.kind === "repeat"
+        ? CoachingSessionSeriesApi.create(
+            seriesPayload({ ...plan, frequency: repeat.frequency, end: repeat.end }),
+            plan.timezone
+          )
+        : CoachingSessionApi.create(sessionPayload(plan));
+    }
+    case "move":
+      return CoachingSessionApi.update(plan.session.id, {
+        ...plan.session,
+        date: toSessionDate(plan.start),
+        duration_minutes: plan.minutes,
+      });
+    default: {
+      const _exhaustive: never = plan;
+      throw new Error(`Unhandled session plan: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
 }
 
-function moveWrite(plan: SchedulePlan): ResultAsync<MoveOutcome, never> {
-  if (plan.move.none) return okAsync({ kind: "none" });
-  const { session, personName, start } = plan.move.val;
+function writeKind(plan: SessionPlan): SessionWrite {
+  if (plan.kind === "move") return SessionWrite.Update;
+  return plan.repeat.kind === "repeat" ? SessionWrite.CreateSeries : SessionWrite.Create;
+}
+
+function moveOtherWrite(plan: SessionPlan): ResultAsync<MoveOutcome, never> {
+  if (plan.moveOther.none) return okAsync({ kind: "none" });
+  const { session, personName, start } = plan.moveOther.val;
   return ResultAsync.fromPromise(
     CoachingSessionApi.update(session.id, { ...session, date: toSessionDate(start) }),
     (error) => error
@@ -69,22 +103,28 @@ function moveWrite(plan: SchedulePlan): ResultAsync<MoveOutcome, never> {
     });
 }
 
-function confirmScheduled(plan: SchedulePlan, moved: MoveOutcome) {
-  toast.success(
-    scheduledMessage({
-      personName: plan.personName,
-      start: plan.start,
-      minutes: plan.minutes,
-      repeat: plan.repeat,
-      otherMove: moved.kind === "moved" ? Some(moved.otherMove) : None,
-    })
-  );
+function successMessage(plan: SessionPlan, otherMove: Option<OtherMove>): string {
+  const { personName, start } = plan;
+  switch (plan.kind) {
+    case "schedule":
+      return scheduledMessage({ personName, start, minutes: plan.minutes, repeat: plan.repeat, otherMove });
+    case "move":
+      return rescheduledMessage({ personName, start, following: false, otherMove });
+    default: {
+      const _exhaustive: never = plan;
+      throw new Error(`Unhandled session plan: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
+}
+
+function confirmWritten(plan: SessionPlan, moved: MoveOutcome) {
+  toast.success(successMessage(plan, moved.kind === "moved" ? Some(moved.otherMove) : None));
   if (moved.kind === "failed") toast.error(otherMoveFailedMessage(moved.personName));
 }
 
 export interface ScheduleSubmit {
   submitting: boolean;
-  submit: (plan: SchedulePlan) => void;
+  submit: (plan: SessionPlan) => void;
 }
 
 export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
@@ -93,9 +133,9 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false);
 
-  const onFailed = (plan: SchedulePlan, error: unknown) => {
-    const write = plan.repeat.kind === "repeat" ? SessionWrite.CreateSeries : SessionWrite.Create;
-    const failure = sessionWriteFailure(error, write);
+  const onFailed = (plan: SessionPlan, error: unknown) => {
+    const failure = sessionWriteFailure(error, writeKind(plan));
+    const logMessage = `Failed to ${plan.kind === "move" ? "reschedule" : "schedule"} coaching session:`;
     switch (failure.kind) {
       case "reconnect":
         toast.error(failure.message);
@@ -104,10 +144,10 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
         break;
       case "toast":
         toast.error(failure.message);
-        console.error("Failed to schedule coaching session:", error);
+        console.error(logMessage, error);
         break;
       case "unexpected":
-        console.error("Failed to schedule coaching session:", error);
+        console.error(logMessage, error);
         break;
       default: {
         const _exhaustive: never = failure;
@@ -116,16 +156,16 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
     }
   };
 
-  const submit = (plan: SchedulePlan) => {
+  const submit = (plan: SessionPlan) => {
     if (inFlight.current) return;
     inFlight.current = true;
     setSubmitting(true);
-    void createWrite(plan)
-      .andThen(() => moveWrite(plan))
+    void ResultAsync.fromPromise(firstWrite(plan), (error) => error)
+      .andThen(() => moveOtherWrite(plan))
       .match(
         (moved) => {
           void revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/coaching_sessions");
-          confirmScheduled(plan, moved);
+          confirmWritten(plan, moved);
           onClose();
         },
         (error) => {

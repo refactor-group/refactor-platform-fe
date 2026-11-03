@@ -68,12 +68,14 @@ function providerOf(connections: { provider: Provider }[] | null): Option<Provid
   return first ? Some(first.provider) : None;
 }
 
+export function useScheduleTimezone(): string {
+  const timezone = useAuthStore((state) => state.userSession?.timezone);
+  return timezone || getBrowserTimezone();
+}
+
 export function useScheduleData(range: BusyRange): ScheduleData {
-  const { userId, userSession } = useAuthStore((state) => ({
-    userId: state.userId,
-    userSession: state.userSession,
-  }));
-  const timezone = userSession?.timezone || getBrowserTimezone();
+  const userId = useAuthStore((state) => state.userId);
+  const timezone = useScheduleTimezone();
   const now = DateTime.now().setZone(timezone);
   const [openedAt] = useState(() => DateTime.now().setZone(timezone));
 

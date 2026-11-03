@@ -6,7 +6,7 @@ import { Chip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/input";
 import { WeekdayPicker } from "@/components/ui/new-session/weekday-picker";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { RepeatModel } from "@/lib/hooks/use-new-session-dialog";
+import type { RepeatModel } from "@/lib/new-session-dialog-model";
 import { type Option, None, Some } from "@/types/option";
 import { Frequency, type RecurrenceEnd, frequencySupportsWeekdays } from "@/types/recurrence";
 
