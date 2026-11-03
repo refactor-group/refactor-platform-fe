@@ -2,7 +2,7 @@
 
 import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
-import { CreateRecurringSessionRequest } from "@/types/recurrence";
+import { CreateRecurringSessionRequest, RescheduleSeriesRequest } from "@/types/recurrence";
 import {
   CoachingSessionSeries,
   CoachingSessionSeriesWithSessions,
@@ -71,20 +71,18 @@ export const CoachingSessionSeriesApi = {
     ),
 
   /**
-   * Reschedules a series: replaces the rule and re-materializes future
-   * sessions. Past sessions are untouched. Returns the series with its sessions.
+   * Moves the given session and every later one in its series onto a new rule.
+   * The series may come back under a new id (a split).
    */
-  update: (
-    id: Id,
-    payload: CreateRecurringSessionRequest,
+  reschedule: (
+    seriesId: Id,
+    payload: RescheduleSeriesRequest,
     timezone: string
   ): Promise<CoachingSessionSeriesWithSessions> =>
-    EntityApi.updateFn<
-      CreateRecurringSessionRequest,
-      CoachingSessionSeriesWithSessionsRaw
-    >(`${COACHING_SESSION_SERIES_BASEURL}/${id}`, payload).then((raw) =>
-      parseCoachingSessionSeriesWithSessions(raw, timezone)
-    ),
+    EntityApi.createFn<RescheduleSeriesRequest, CoachingSessionSeriesWithSessionsRaw>(
+      `${COACHING_SESSION_SERIES_BASEURL}/${seriesId}/reschedule`,
+      payload
+    ).then((raw) => parseCoachingSessionSeriesWithSessions(raw, timezone)),
 
   /**
    * Deletes a series and its future sessions; past sessions survive.
@@ -148,12 +146,12 @@ export const useCoachingSessionSeries = (id: Id, timezone: string) => {
 };
 
 /**
- * Mutation hook for series create/reschedule/delete with loading + error state
+ * Mutation hook for series create/delete with loading + error state
  * and automatic invalidation of series-list cache keys.
  *
- * Note: this only invalidates `coaching_session_series` keys. Because a
- * reschedule re-materializes and a delete drops future sessions, callers
- * displaying `coaching_sessions` lists must `refresh()` those separately.
+ * Note: this only invalidates `coaching_session_series` keys. Because a delete
+ * drops future sessions, callers displaying `coaching_sessions` lists must
+ * `refresh()` those separately.
  */
 export const useCoachingSessionSeriesMutation = (timezone: string) => {
   return EntityApi.useEntityMutation<
@@ -161,8 +159,6 @@ export const useCoachingSessionSeriesMutation = (timezone: string) => {
     CoachingSessionSeriesWithSessions
   >(COACHING_SESSION_SERIES_BASEURL, {
     create: (payload) => CoachingSessionSeriesApi.create(payload, timezone),
-    update: (id, payload) =>
-      CoachingSessionSeriesApi.update(id, payload, timezone),
     delete: CoachingSessionSeriesApi.delete,
   });
 };

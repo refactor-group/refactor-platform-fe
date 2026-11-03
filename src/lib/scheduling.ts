@@ -191,14 +191,20 @@ export enum StepKind {
   Resolve = "resolve",
 }
 
-export type StepMode = { kind: "schedule" } | { kind: "move"; appliesTo: boolean };
+export enum MoveScope {
+  This = "this",
+  Following = "following",
+}
+
+export type StepMode = { kind: "schedule" } | { kind: "move"; appliesTo: boolean; following: boolean };
 
 function baseSteps(mode: StepMode): StepKind[] {
   switch (mode.kind) {
     case "schedule":
       return [StepKind.Who, StepKind.When, StepKind.Repeat];
     case "move":
-      return mode.appliesTo ? [StepKind.When, StepKind.AppliesTo] : [StepKind.When];
+      if (!mode.appliesTo) return [StepKind.When];
+      return mode.following ? [StepKind.When, StepKind.AppliesTo, StepKind.Repeat] : [StepKind.When, StepKind.AppliesTo];
     default: {
       const _exhaustive: never = mode;
       throw new Error(`Unhandled step mode: ${JSON.stringify(_exhaustive)}`);

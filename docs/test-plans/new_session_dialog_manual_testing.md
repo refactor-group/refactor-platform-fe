@@ -305,11 +305,23 @@ Move onto another session you coach, then resolve by moving that one.
 
 **Pass:** "1 of 2", then Resolve overlap as in Part E. The toast ends "· {name} moves to {Ddd D}, {time}", and both sessions show in their new places.
 
-### Case G6: a series session
+### Case G6: a series session, this one only
 
-Reschedule one session of a weekly series.
+Reschedule one session of a weekly series and go to Applies to.
 
-**Pass:** only that session moves; the series' other sessions stay put. (Moving "this and following" comes later.)
+**Pass:** "Applies to" with "{name}'s series repeats weekly on {weekday}s." and two 56px cards, "This session only" selected. Confirming moves only that session; the series' other sessions stay put.
+
+### Case G6a: this and following
+
+Reschedule the same series session to another weekday and pick "This and following sessions".
+
+**Pass:** a Repeat step appears ("2 of 3"), prefilled with the series' rule: no "Doesn't repeat", the new weekday selected in place of the old one, and Ends counting this session and the ones after it. The confirm reads "Reschedule this and following" and the toast ends "· and following". That session and the later ones move to the new weekday and time, earlier ones don't, and the moved sessions keep their notes and topics.
+
+### Case G6b: Edit series
+
+Open a series session row's menu › Edit series, on an upcoming session and then on a past one.
+
+**Pass:** each opens Reschedule session with "This and following sessions" already selected: on that session for the upcoming row, on the series' next upcoming session for the past one. Changing only Ends and confirming updates the rule without moving the dates.
 
 ### Case G7: errors
 

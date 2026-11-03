@@ -33,7 +33,7 @@ function SectionLabel({ children }: { children: string }) {
 function FrequencyChips(model: RepeatModel) {
   return (
     <div className="flex flex-wrap gap-x-1.5 gap-y-2.5">
-      {CHOICES.map((choice) => (
+      {CHOICES.filter((choice) => model.optional || choice.frequency.some).map((choice) => (
         <Chip
           key={choice.label}
           size="md"

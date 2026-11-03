@@ -115,6 +115,14 @@ export interface CreateRecurringSessionRequest {
   duration_minutes?: number;
 }
 
+/** POST /coaching_session_series/:id/reschedule; `count` counts from `coaching_session_id`. */
+export interface RescheduleSeriesRequest {
+  coaching_session_id: Id;
+  start_at: string;
+  duration_minutes: number;
+  recurrence: Recurrence;
+}
+
 export function recurrenceToPayload(
   frequency: Frequency,
   interval: number,

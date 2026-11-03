@@ -10,6 +10,7 @@ import {
   type Slot,
   type UsualSlot,
   type WorkingHours,
+  MoveScope,
   StepKind,
   currentStep,
   freeSlots,
@@ -17,7 +18,7 @@ import {
   overlapping,
   usualSlot,
 } from "@/lib/scheduling";
-import { firstNameOf, repeatLabel, shortDay, whoSubline } from "@/lib/scheduling-copy";
+import { firstNameOf, moveScopeTitle, repeatLabel, shortDay, whoSubline } from "@/lib/scheduling-copy";
 import { sessionEndIn, sessionStartIn, timeOfDay, toSessionDate } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 import {
@@ -33,6 +34,7 @@ import {
   type CreateRecurringSessionRequest,
   Frequency,
   MAX_SPAN_DAYS,
+  type Recurrence,
   type RecurrenceEnd,
   WEEKDAYS_ORDERED,
   type Weekday,
@@ -325,23 +327,28 @@ export function sessionPayload(input: {
   };
 }
 
-export function seriesPayload(input: {
-  relationshipId: Id;
-  start: DateTime;
-  minutes: number;
+/** A series rule as the wire wants it, with `until` as the naive-UTC end of that day. */
+export interface RuleInput {
   frequency: Frequency;
   byWeekdays: Weekday[];
   end: RecurrenceEnd;
   timezone: string;
-}): CreateRecurringSessionRequest {
-  const { end, timezone } = input;
+}
+
+export function rulePayload({ frequency, byWeekdays, end, timezone }: RuleInput): Recurrence {
   const wireEnd: RecurrenceEnd =
     end.kind === "until" ? { kind: "until", until: untilDateToUtcDateTime(end.until, timezone) } : end;
+  return recurrenceToPayload(frequency, 1, byWeekdays, wireEnd);
+}
+
+export function seriesPayload(
+  input: RuleInput & { relationshipId: Id; start: DateTime; minutes: number }
+): CreateRecurringSessionRequest {
   return {
     coaching_relationship_id: input.relationshipId,
     start_at: toSessionDate(input.start),
     duration_minutes: input.minutes,
-    recurrence: recurrenceToPayload(input.frequency, 1, input.byWeekdays, wireEnd),
+    recurrence: rulePayload(input),
   };
 }
 
@@ -360,6 +367,7 @@ interface ScheduleRailInput {
 /** The rail for any mode; `whenDone` is when the When row gets its check. */
 export interface StepRailInput extends ScheduleRailInput {
   whenDone: boolean;
+  scope: MoveScope;
 }
 
 function startLine(start: DateTime): string {
@@ -400,7 +408,11 @@ function railRow(kind: StepKind, input: StepRailInput, current: StepKind): Omit<
     case StepKind.Resolve:
       return { label: "Resolve overlap", value: resolutionValue(input), done: resolution.kind !== "unresolved" };
     case StepKind.AppliesTo:
-      throw new Error("Applies to isn't a step yet");
+      return {
+        label: "Applies to",
+        value: moveScopeTitle(input.scope),
+        done: order.indexOf(kind) < order.indexOf(current),
+      };
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unhandled step: ${_exhaustive}`);
@@ -414,7 +426,7 @@ export function stepRail(input: StepRailInput): StepRailItem[] {
 }
 
 export function scheduleRail(input: ScheduleRailInput): StepRailItem[] {
-  return stepRail({ ...input, whenDone: input.start.some });
+  return stepRail({ ...input, whenDone: input.start.some, scope: MoveScope.This });
 }
 
 /** Asks how to settle an overlap that's still open. */

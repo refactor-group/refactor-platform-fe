@@ -1,10 +1,11 @@
 import { DateTime, Info } from "ts-luxon";
-import type { BusySession, RepeatChoice, UsualSlot } from "@/lib/scheduling";
+import { type BusySession, MoveScope, type RepeatChoice, type UsualSlot } from "@/lib/scheduling";
 import { shortDate, timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 import { type Option, None, Some } from "@/types/option";
 import { Provider } from "@/types/provider";
-import { Frequency, type RecurrenceEnd } from "@/types/recurrence";
+import type { SeriesRecurrence } from "@/types/coaching-session-series";
+import { Frequency, type RecurrenceEnd, WEEKDAYS_ORDERED, frequencySupportsWeekdays } from "@/types/recurrence";
 
 const FIRST_SESSION_WEEKDAY_DAYS = 6;
 
@@ -138,6 +139,54 @@ export function scheduleSubmitLabel(choice: RepeatChoice): string {
       throw new Error(`Unhandled repeat choice: ${JSON.stringify(_exhaustive)}`);
     }
   }
+}
+
+export function moveScopeTitle(scope: MoveScope): string {
+  switch (scope) {
+    case MoveScope.This:
+      return "This session only";
+    case MoveScope.Following:
+      return "This and following sessions";
+    default: {
+      const _exhaustive: never = scope;
+      throw new Error(`Unhandled move scope: ${_exhaustive}`);
+    }
+  }
+}
+
+function every(count: number, unit: string, single: string): string {
+  return count === 1 ? single : `every ${count} ${unit}s`;
+}
+
+function rhythmPhrase({ frequency, interval }: SeriesRecurrence): string {
+  switch (frequency) {
+    case Frequency.Daily:
+      return every(interval, "day", "daily");
+    case Frequency.Weekly:
+      return every(interval, "week", "weekly");
+    case Frequency.Biweekly:
+      return every(interval * 2, "week", "weekly");
+    case Frequency.Monthly:
+      return every(interval, "month", "monthly");
+    default: {
+      const _exhaustive: never = frequency;
+      throw new Error(`Unhandled frequency: ${_exhaustive}`);
+    }
+  }
+}
+
+/** "Mondays, Wednesdays and Fridays". */
+function weekdaysPhrase(days: SeriesRecurrence["by_weekdays"]): string {
+  const names = WEEKDAYS_ORDERED.flatMap((day, index) =>
+    days?.includes(day) ? [`${Info.weekdays("long")[index]}s`] : []
+  );
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join("");
+}
+
+/** "Ehab's series repeats weekly on Tuesdays." */
+export function seriesRuleLine(personName: string, recurrence: SeriesRecurrence): string {
+  const days = frequencySupportsWeekdays(recurrence.frequency) ? weekdaysPhrase(recurrence.by_weekdays) : "";
+  return `${firstNameOf(personName)}'s series repeats ${rhythmPhrase(recurrence)}${days ? ` on ${days}` : ""}.`;
 }
 
 export function moveSubmitLabel(following: boolean): string {

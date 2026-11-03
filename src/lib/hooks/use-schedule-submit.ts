@@ -15,6 +15,7 @@ import { CoachingSessionApi } from "@/lib/api/coaching-sessions";
 import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { SessionWrite, sessionWriteFailure } from "@/lib/api/coaching-session-errors";
 import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
+import { followingPayload } from "@/lib/move-draft";
 import { seriesPayload, sessionPayload } from "@/lib/schedule-draft";
 import type { RepeatChoice } from "@/lib/scheduling";
 import { toSessionDate } from "@/lib/session-window";
@@ -24,12 +25,20 @@ import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import type { Provider } from "@/types/provider";
-import type { Weekday } from "@/types/recurrence";
+import type { Frequency, RecurrenceEnd, Weekday } from "@/types/recurrence";
 
 interface OtherSessionMove {
   session: EnrichedCoachingSession;
   personName: string;
   start: DateTime;
+}
+
+interface MovePlan {
+  session: EnrichedCoachingSession;
+  personName: string;
+  start: DateTime;
+  minutes: number;
+  moveOther: Option<OtherSessionMove>;
 }
 
 /** Everything a submit needs, chosen and valid. */
@@ -46,14 +55,15 @@ export type SessionPlan =
       timezone: string;
       moveOther: Option<OtherSessionMove>;
     }
-  | {
-      kind: "move";
-      session: EnrichedCoachingSession;
-      personName: string;
-      start: DateTime;
-      minutes: number;
-      moveOther: Option<OtherSessionMove>;
-    };
+  | ({ kind: "move" } & MovePlan)
+  | ({
+      kind: "following";
+      seriesId: Id;
+      frequency: Frequency;
+      byWeekdays: Weekday[];
+      end: RecurrenceEnd;
+      timezone: string;
+    } & MovePlan);
 
 type MoveOutcome =
   | { kind: "none" }
@@ -77,6 +87,12 @@ function firstWrite(plan: SessionPlan): Promise<unknown> {
         date: toSessionDate(plan.start),
         duration_minutes: plan.minutes,
       });
+    case "following":
+      return CoachingSessionSeriesApi.reschedule(
+        plan.seriesId,
+        followingPayload({ ...plan, sessionId: plan.session.id }),
+        plan.timezone
+      );
     default: {
       const _exhaustive: never = plan;
       throw new Error(`Unhandled session plan: ${JSON.stringify(_exhaustive)}`);
@@ -85,8 +101,18 @@ function firstWrite(plan: SessionPlan): Promise<unknown> {
 }
 
 function writeKind(plan: SessionPlan): SessionWrite {
-  if (plan.kind === "move") return SessionWrite.Update;
-  return plan.repeat.kind === "repeat" ? SessionWrite.CreateSeries : SessionWrite.Create;
+  switch (plan.kind) {
+    case "schedule":
+      return plan.repeat.kind === "repeat" ? SessionWrite.CreateSeries : SessionWrite.Create;
+    case "move":
+      return SessionWrite.Update;
+    case "following":
+      return SessionWrite.RescheduleSeries;
+    default: {
+      const _exhaustive: never = plan;
+      throw new Error(`Unhandled session plan: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
 }
 
 function moveOtherWrite(plan: SessionPlan): ResultAsync<MoveOutcome, never> {
@@ -109,7 +135,8 @@ function successMessage(plan: SessionPlan, otherMove: Option<OtherMove>): string
     case "schedule":
       return scheduledMessage({ personName, start, minutes: plan.minutes, repeat: plan.repeat, otherMove });
     case "move":
-      return rescheduledMessage({ personName, start, following: false, otherMove });
+    case "following":
+      return rescheduledMessage({ personName, start, following: plan.kind === "following", otherMove });
     default: {
       const _exhaustive: never = plan;
       throw new Error(`Unhandled session plan: ${JSON.stringify(_exhaustive)}`);
@@ -135,7 +162,7 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
 
   const onFailed = (plan: SessionPlan, error: unknown) => {
     const failure = sessionWriteFailure(error, writeKind(plan));
-    const logMessage = `Failed to ${plan.kind === "move" ? "reschedule" : "schedule"} coaching session:`;
+    const logMessage = `Failed to ${plan.kind === "schedule" ? "schedule" : "reschedule"} coaching session:`;
     switch (failure.kind) {
       case "reconnect":
         toast.error(failure.message);
@@ -165,6 +192,10 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
       .match(
         (moved) => {
           void revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/coaching_sessions");
+          // A reschedule can split the series under a new id.
+          if (plan.kind === "following") {
+            void revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/coaching_session_series");
+          }
           confirmWritten(plan, moved);
           onClose();
         },

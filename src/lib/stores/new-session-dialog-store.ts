@@ -1,12 +1,13 @@
 import type { DateTime } from "ts-luxon";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import { MoveScope } from "@/lib/scheduling";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
 
 export type NewSessionRequest =
   | { kind: "schedule"; date: Option<DateTime> }
-  | { kind: "move"; session: EnrichedCoachingSession };
+  | { kind: "move"; session: EnrichedCoachingSession; scope: MoveScope };
 
 interface NewSessionDialogState {
   /** `id` changes on every open so the dialog remounts with fresh state. */
@@ -15,7 +16,7 @@ interface NewSessionDialogState {
 
 interface NewSessionDialogActions {
   openSchedule: (date: Option<DateTime>) => void;
-  openMoveSession: (session: EnrichedCoachingSession) => void;
+  openMoveSession: (session: EnrichedCoachingSession, scope?: MoveScope) => void;
   close: () => void;
 }
 
@@ -32,7 +33,7 @@ export const createNewSessionDialogStore = () => {
       return {
         open: None,
         openSchedule: (date) => openWith({ kind: "schedule", date }),
-        openMoveSession: (session) => openWith({ kind: "move", session }),
+        openMoveSession: (session, scope = MoveScope.This) => openWith({ kind: "move", session, scope }),
         close: () => set({ open: None }),
       };
     })

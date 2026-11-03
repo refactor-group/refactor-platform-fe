@@ -9,6 +9,7 @@ import {
   type BusyClash,
   type BusySession,
   DEFAULT_WORKING_HOURS,
+  type MoveScope,
   type RepeatChoice,
   StepKind,
   type UsualSlot,
@@ -53,8 +54,17 @@ export interface WhenModel {
   onMinutesChange: (minutes: number) => void;
 }
 
+export interface AppliesToModel {
+  scope: MoveScope;
+  /** The series' rule, once it has loaded. */
+  ruleLine: Option<string>;
+  onScopeChange: (scope: MoveScope) => void;
+}
+
 export interface RepeatModel {
   repeat: RepeatChoice;
+  /** Offers "Doesn't repeat". */
+  optional: boolean;
   byWeekdays: Weekday[];
   lockedWeekday: Weekday;
   /** What each end option starts at when chosen. */
@@ -106,6 +116,7 @@ export interface NewSessionDialogModel {
   summary: Option<SummaryModel>;
   who: WhoModel;
   when: WhenModel;
+  appliesTo: AppliesToModel;
   repeat: RepeatModel;
   resolve: Option<ResolveModel>;
 }
