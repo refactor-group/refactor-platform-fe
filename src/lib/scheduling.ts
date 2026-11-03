@@ -159,13 +159,13 @@ export function suggestTimes(input: SuggestTimesInput): DateTime[] {
     ...frequentMinutes(coachStarts),
     ...roundHourMinutes(minutes, hours),
   ];
-  const dayBusy = busyOn(busy, day, None);
   const seen = new Set<number>();
   const kept: DateTime[] = [];
   for (const minute of candidates) {
     const start = atMinute(day, minute);
     if (start < now || seen.has(start.toMillis())) continue;
-    if (overlapping({ start, minutes }, dayBusy).length > 0) continue;
+    // All of busy, not just the day's: a session can cross midnight either way.
+    if (overlapping({ start, minutes }, busy).length > 0) continue;
     seen.add(start.toMillis());
     kept.push(start);
     if (kept.length === MAX_SUGGESTIONS) break;
