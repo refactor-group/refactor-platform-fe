@@ -5,6 +5,7 @@ import { sessionStartIn } from "@/lib/session-window";
 import { calculateSessionUrgency } from "@/lib/utils/session";
 import {
   type CoachingRelationshipWithUserNames,
+  getRelationshipsAsCoach,
   getRelationshipsForUser,
   sortRelationshipsByParticipantName,
 } from "@/types/coaching-relationship";
@@ -54,6 +55,14 @@ export function peopleFor(
     else byPerson.set(person.userId, { person, relationshipIds: [rel.id] });
   }
   return [...byPerson.values()];
+}
+
+/** The people the user coaches, in name order. */
+export function schedulablePeople(
+  userId: Id,
+  relationships: CoachingRelationshipWithUserNames[]
+): PersonEntry[] {
+  return peopleFor(userId, getRelationshipsAsCoach(userId, relationships));
 }
 
 type ActivityByPerson = Map<Id, PersonActivity>;

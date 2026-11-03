@@ -1,6 +1,6 @@
 // Mirrors the backend payload for POST /coaching_sessions/recurring.
-// Field rules (enforced server-side, see also client-side guards in
-// coaching-session-form.tsx):
+// Field rules (enforced server-side, mirrored client-side by
+// validateRecurrence below):
 // - start_at: first occurrence equals start_at, stored UTC
 // - interval: step multiplier (weekly + interval:2 ≡ biweekly + interval:1)
 // - by_weekdays: weekly/biweekly only; must include start_at's weekday

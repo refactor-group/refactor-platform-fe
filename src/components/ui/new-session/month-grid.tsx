@@ -129,11 +129,31 @@ function WeekdayHeader() {
   );
 }
 
+type TooltipAlign = "start" | "center" | "end";
+
+/** Edge columns anchor to their side so the step body's scroll box doesn't clip the tooltip. */
+function tooltipAlign(date: DateTime): TooltipAlign {
+  if (date.weekday <= 2) return "start";
+  if (date.weekday >= 6) return "end";
+  return "center";
+}
+
+const TOOLTIP_ALIGN_CLASSES: Record<TooltipAlign, string> = {
+  start: "left-0",
+  center: "left-1/2 -translate-x-1/2",
+  end: "right-0",
+};
+
 function DayTooltip({ day }: { day: GridDay }) {
+  const align = tooltipAlign(day.date);
   return (
     <div
       role="tooltip"
-      className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-[10px] bg-inverse px-2.5 py-2 text-xs text-inverse-foreground shadow-popover"
+      data-align={align}
+      className={cn(
+        "pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-[10px] bg-inverse px-2.5 py-2 text-xs text-inverse-foreground shadow-popover",
+        TOOLTIP_ALIGN_CLASSES[align]
+      )}
     >
       <p className="text-tiny opacity-70 tabular-nums">{shortDay(day.date)}</p>
       {day.sessions.map((session) => (
@@ -184,7 +204,7 @@ function DayCell({ day, tabStop, tooltip, onSelect, onHover, onKeyDown, buttonRe
         onMouseLeave={() => onHover(false)}
         onKeyDown={onKeyDown}
         className={cn(
-          "relative inline-flex h-11 w-11 items-center justify-center rounded-full text-[13px] tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring modal:h-9 modal:w-9 motion-reduce:transition-none",
+          "relative inline-flex aspect-square w-full max-w-11 items-center justify-center rounded-full text-[13px] tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring modal:max-w-9 motion-reduce:transition-none",
           dayButtonClasses(day)
         )}
       >

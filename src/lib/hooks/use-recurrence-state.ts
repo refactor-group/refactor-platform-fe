@@ -26,7 +26,7 @@ const DEFAULT_END: RecurrenceEnd = { kind: "count", count: 4 };
 
 /**
  * Owns the recurrence-rule form state (frequency / interval / weekdays / end)
- * shared by the create-session form and the series reschedule dialog, plus the
+ * shared by the New session dialog and the series reschedule dialog, plus the
  * auto-seed effect that keeps the first session's weekday selected.
  */
 export function useRecurrenceState({

@@ -2,7 +2,7 @@
 
 import type { DateTime } from "ts-luxon";
 import { Button } from "@/components/ui/button";
-import type { BusySession } from "@/lib/scheduling";
+import type { BusyClash, BusySession } from "@/lib/scheduling";
 import {
   busyHeader,
   busyRange,
@@ -11,11 +11,6 @@ import {
   overlapLine,
 } from "@/lib/scheduling-copy";
 import type { Option } from "@/types/option";
-
-export interface BusyClash {
-  session: BusySession;
-  instead: Option<DateTime>;
-}
 
 interface BusyNoteProps {
   day: DateTime;
