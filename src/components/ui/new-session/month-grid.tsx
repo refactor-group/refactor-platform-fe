@@ -138,7 +138,9 @@ function DayTooltipContent({ day }: { day: GridDay }) {
         side="top"
         sideOffset={4}
         collisionPadding={8}
-        className="pointer-events-none z-[60] whitespace-nowrap rounded-[10px] bg-inverse px-2.5 py-2 text-xs text-inverse-foreground shadow-popover animate-in fade-in-0 motion-reduce:animate-none"
+        // Inline, because in a modal Radix sets pointer-events: auto on the content inline.
+        style={{ pointerEvents: "none" }}
+        className="z-[60] whitespace-nowrap rounded-[10px] bg-inverse px-2.5 py-2 text-xs text-inverse-foreground shadow-popover animate-in fade-in-0 motion-reduce:animate-none"
       >
         <p className="text-tiny opacity-70 tabular-nums">{shortDay(day.date)}</p>
         {day.sessions.map((session) => (
