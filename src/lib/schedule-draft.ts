@@ -11,7 +11,6 @@ import {
   type UsualSlot,
   type WorkingHours,
   StepKind,
-  busyOn,
   currentStep,
   freeSlots,
   nextFreeStart,
@@ -219,7 +218,7 @@ export function busyWindow(month: DateTime, selected: Option<DateTime>): { from:
 export function clashFor(slot: Slot, busy: BusySession[], hours: WorkingHours): Option<BusyClash> {
   const [first] = overlapping(slot, busy);
   if (!first) return None;
-  return Some({ session: first, instead: nextFreeStart(slot, busyOn(busy, slot.start, None), hours) });
+  return Some({ session: first, instead: nextFreeStart(slot, busy, hours) });
 }
 
 // ─── Resolve overlap ─────────────────────────────────────────────────
