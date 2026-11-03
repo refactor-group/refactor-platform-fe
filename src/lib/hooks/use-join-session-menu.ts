@@ -217,13 +217,13 @@ export interface WindowQueryInput {
 export function windowQuery(input: WindowQueryInput): NearestWindow {
   const { relationshipId, today, current, now } = input;
   if (today.some) {
-    return { relationshipId, around: today.val.date, before: 2, after: 3 };
+    return { relationshipIds: [relationshipId], around: today.val.date, before: 2, after: 3 };
   }
   if (current.some && current.val.relationshipId === relationshipId) {
-    return { relationshipId, around: current.val.date, before: 2, after: 3 };
+    return { relationshipIds: [relationshipId], around: current.val.date, before: 2, after: 3 };
   }
   return {
-    relationshipId,
+    relationshipIds: [relationshipId],
     around: utcInstant(now),
     before: 2,
     after: 2,
