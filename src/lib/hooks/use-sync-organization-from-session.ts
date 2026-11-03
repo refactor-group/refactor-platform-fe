@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { useOrganizationList } from "@/lib/api/organizations";
 import { organizationToSwitchTo } from "@/lib/coaching-session-organization";
@@ -8,11 +8,13 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import type { OrganizationMembership } from "@/lib/hooks/use-reconcile-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { CoachingSession } from "@/types/coaching-session";
-import { None, unwrapOr, type Option } from "@/types/option";
+import type { Id } from "@/types/general";
+import { None, Some, unwrapOr, type Option } from "@/types/option";
 
 /**
  * Selects the organization owning the open session, so its relationship reads
- * resolve. Doesn't remember it, like the members route.
+ * resolve. Doesn't remember it, like the members route. Decides once per session,
+ * so a later switch from the user menu sticks.
  */
 export function useSyncOrganizationFromSession(session: Option<CoachingSession>): void {
   const userId = useAuthStore((state) => state.userId);
@@ -33,10 +35,15 @@ export function useSyncOrganizationFromSession(session: Option<CoachingSession>)
     currentOrganizationId,
     membership,
   });
-  // Keyed on the id, not the Option, so a re-render doesn't select it again.
+  // Keyed on strings, not Options, so a re-render doesn't run it again.
   const targetId = unwrapOr(target, "");
+  const sessionId = membership.kind === "loaded" && session.some ? session.val.id : "";
+  const decidedFor = useRef<Option<Id>>(None);
 
   useEffect(() => {
+    if (!sessionId) return;
+    if (decidedFor.current.some && decidedFor.current.val === sessionId) return;
+    decidedFor.current = Some(sessionId);
     if (targetId) setCurrentOrganizationId(targetId);
-  }, [targetId, setCurrentOrganizationId]);
+  }, [sessionId, targetId, setCurrentOrganizationId]);
 }
