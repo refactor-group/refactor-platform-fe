@@ -320,6 +320,28 @@ describe("NewSessionDialog: Resolve overlap", () => {
     );
   });
 
+  it("asks again when the new time changes but still overlaps the same session", () => {
+    toResolve();
+    fireEvent.click(screen.getByRole("button", { name: "3:30 PM" }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous step" }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous step" }));
+    typeTime("14:45");
+    expect(railRow("Resolve overlap")).toHaveTextContent("Choose a new time for Ehab");
+    next();
+    next();
+    expect(screen.getByText("Pick a new time for Ehab, or keep both.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Schedule session" })).not.toBeInTheDocument();
+  });
+
+  it("asks again when the duration changes", () => {
+    toResolve();
+    fireEvent.click(screen.getByRole("button", { name: "3:30 PM" }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous step" }));
+    fireEvent.click(screen.getByRole("button", { name: "Previous step" }));
+    fireEvent.click(screen.getByRole("button", { name: "60 min" }));
+    expect(railRow("Resolve overlap")).toHaveTextContent("Choose a new time for Ehab");
+  });
+
   it("keeps both without moving anything", async () => {
     const onClose = toResolve();
     fireEvent.click(screen.getByRole("button", { name: /keep both at 2:30 PM/i }));

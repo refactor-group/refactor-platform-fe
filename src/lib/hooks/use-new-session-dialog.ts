@@ -131,9 +131,11 @@ export interface NewSessionDialogModel {
   resolve: Option<ResolveModel>;
 }
 
-/** How an overlap is being settled; tied to one clash so a different one starts over. */
+/** How an overlap is being settled; a different clash, start or length starts over. */
 interface ResolveDraft {
   clashId: Id;
+  newStartMs: number;
+  minutes: number;
   day: DateTime;
   resolution: Resolution;
 }
@@ -237,11 +239,21 @@ function resolveModel(input: ResolveInput): ResolveModel {
   };
 }
 
-function draftFor(clash: Option<BusyClash>, saved: Option<ResolveDraft>): Option<ResolveDraft> {
+function draftFor(
+  clash: Option<BusyClash>,
+  newSlot: { start: DateTime; minutes: number },
+  saved: Option<ResolveDraft>
+): Option<ResolveDraft> {
   if (clash.none) return None;
   const { session } = clash.val;
-  if (saved.some && saved.val.clashId === session.id) return saved;
-  return Some({ clashId: session.id, day: session.start.startOf("day"), resolution: UNRESOLVED });
+  const key = { clashId: session.id, newStartMs: newSlot.start.toMillis(), minutes: newSlot.minutes };
+  const same =
+    saved.some &&
+    saved.val.clashId === key.clashId &&
+    saved.val.newStartMs === key.newStartMs &&
+    saved.val.minutes === key.minutes;
+  if (same) return saved;
+  return Some({ ...key, day: session.start.startOf("day"), resolution: UNRESOLVED });
 }
 
 function untilAfter(start: DateTime): string {
@@ -297,7 +309,7 @@ export function useNewSessionDialog(request: NewSessionRequest, onClose: () => v
   // Only the first session of a series is checked.
   const clash = start.some ? clashFor({ start: start.val, minutes }, busy, DEFAULT_WORKING_HOURS) : None;
   const clashSession = clash.some ? Some(clash.val.session) : None;
-  const resolveDraft = draftFor(clash, savedResolve);
+  const resolveDraft = start.some ? draftFor(clash, { start: start.val, minutes }, savedResolve) : None;
   const resolution = resolveDraft.some ? resolveDraft.val.resolution : UNRESOLVED;
   const other = clash.some ? data.busySource.find((s) => s.id === clash.val.session.id) : undefined;
   const movable = other !== undefined && other.relationship?.coach_id === data.userId;
