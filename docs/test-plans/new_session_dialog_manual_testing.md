@@ -57,13 +57,25 @@ Press Tab repeatedly, then Shift+Tab.
 
 Resize to 899px wide, then 375px.
 
-**Pass:** a full-screen step view replaces the modal, never a shrunken modal. A 56px top bar reads "New session · 1 of 3" with a close button, every control is at least 44px tall, and the footer stays pinned with a round back button and a Next pill.
+**Pass:** a full-screen step view replaces the modal, never a shrunken modal. A 56px top bar reads "New session · 1 of 3" with a close button, every control is at least 44px tall, and the footer stays pinned. The round back button always shows and is disabled on the first step; a Next pill shows until the last step, where the confirm takes its place. Nothing scrolls sideways on any step. At 320px the calendar days are round, not ovals.
 
 ### Case A7: screen reader
 
 Open the dialog with VoiceOver on.
 
 **Pass:** it announces a dialog named "New session". Rail rows read as steps, with their values, and the current one is announced as the current step.
+
+### Case A8: long values
+
+Pick a person with a long name and a date like "Wednesday, September 30", at 1440px and at 375px.
+
+**Pass:** rail values and person sub-lines wrap to at most two lines instead of being cut off with "…". The dialog keeps its size.
+
+### Case A9: opening focus
+
+Open the dialog with the mouse, then press Tab once.
+
+**Pass:** no control shows a focus ring on open. The first Tab lands on the first control.
 
 ## 3. Part B: Who (PR 5)
 
@@ -96,6 +108,24 @@ Pick A.
 Log in as a coach with no people in this organization and open the dialog.
 
 **Pass:** "You don't coach anyone in this organization yet." and no empty grid.
+
+### Case B6: order and sub-lines
+
+Look at the order of the grid and each card's sub-line.
+
+**Pass:** people with an upcoming session come first, soonest first, then people seen in the last 30 days. Someone with an upcoming first session and no history reads "First session {weekday}" (or "{Mmm D}" beyond a week). Someone active with no usual time reads "Last session {Mmm D}".
+
+### Case B7: loading and errors
+
+Throttle the network to Slow 3G and open the dialog. Then block `**/coaching_relationships**` and open it again.
+
+**Pass:** grey placeholder cards while people load, never an empty grid. With the block, "Couldn't load the people you coach. Close and try again."
+
+### Case B8: picking someone inactive
+
+Search for an inactive person and pick them, then clear the search.
+
+**Pass:** the pick works and stays selected after clearing the search; the rail and summary show them.
 
 ## 4. Part C: When (PR 5)
 
@@ -171,6 +201,24 @@ With prerequisite 4 set, compare the chips, busy ranges and rail summary with th
 
 **Pass:** all show profile time zone times.
 
+### Case C13: tooltip edges
+
+Hover days with sessions in the Monday and Sunday columns, and a day with four or more sessions with long names, at 900px and 1440px.
+
+**Pass:** the tooltip always shows in full, inside the window, never cut off by the dialog. It flips or shifts at the edges.
+
+### Case C14: calendar keyboard
+
+Tab into the calendar and use the arrow keys, then Enter.
+
+**Pass:** one day is tabbable at a time; arrows move by day and week, across into the next or previous month; Enter picks the focused day. Past days are skipped.
+
+### Case C15: which times are suggested
+
+Have one past session at an odd time (say 12:01 AM) and two at another (say 7:30 AM).
+
+**Pass:** the time used twice can show as a chip, even outside 9 AM to 5 PM; the one used once never does.
+
 ## 5. Part D: Repeat (PR 5)
 
 ### Case D1: repeat options
@@ -196,6 +244,24 @@ Choose After 8, then On a date about four months out.
 Enter 0 sessions, then an end date before the start.
 
 **Pass:** one inline message each time, and the confirm is disabled.
+
+### Case D5: the weekday follows the date
+
+Choose Weekly, add Monday, then go back to When and move the date from a Thursday to a Friday.
+
+**Pass:** Repeat now has Monday and Friday selected, not Thursday, and the confirm stays enabled.
+
+### Case D6: every 2 weeks and monthly
+
+Choose Every 2 weeks with an end date, then Monthly starting on the 30th.
+
+**Pass:** Every 2 weeks: the footer's count matches every other week up to the end date. Monthly on the 29th to 31st: one inline message asking for the 28th or earlier, and the confirm is disabled.
+
+### Case D7: several weekdays with an end date
+
+Weekly on Tuesday and Thursday, ending on a date four weeks out.
+
+**Pass:** the footer's count matches every Tuesday and Thursday from the start up to and including the end date.
 
 ## 6. Part E: Resolve overlap (PR 5)
 
@@ -241,6 +307,18 @@ Make a weekly series whose third session clashes but whose first doesn't.
 
 **Pass (for now):** no overlap is flagged and the series is created. This records a known limit, so a later fix flips this case.
 
+### Case E8: switching days
+
+On Resolve overlap, pick each day circle in turn.
+
+**Pass:** the chips change to that day's free times; a past day can't be picked; the selected day stays highlighted.
+
+### Case E9: a different clash resets the choice
+
+Pick a move on Resolve, then go back to When and change the time so it clashes with a different session.
+
+**Pass:** Resolve now names the new session and starts unresolved, with no leftover choice from before.
+
 ## 7. Part F: submit (PR 5)
 
 ### Case F1: one session
@@ -272,6 +350,12 @@ Try offline (block all requests), with Google disconnected (revoke it in Setting
 Look at the rail footer with Google connected, Zoom connected, and neither.
 
 **Pass:** "Google Meet link included", "Zoom link included", and no line.
+
+### Case F6: more create errors
+
+Make the create fail with a 502 (Meet link), a 403 and a 422 in turn (DevTools › Network › override the response, or block and use a test backend).
+
+**Pass:** "Couldn't create the Google Meet link · Try again", the permission message, and "Couldn't create the session · Check the details and try again". The dialog stays open with your choices each time.
 
 ## 8. Part G: move mode (PR 6)
 
@@ -323,6 +407,36 @@ Open a series session row's menu › Edit series, on an upcoming session and the
 
 **Pass:** each opens Reschedule session with "This and following sessions" already selected: on that session for the upcoming row, on the series' next upcoming session for the past one. Changing only Ends and confirming updates the rule without moving the dates.
 
+### Case G6c: this and following, no change hint
+
+Open Edit series and look at the last step before changing anything.
+
+**Pass:** no "Pick a new date or time." hint; the confirm "Reschedule this and following" is available, because changing only the rule is allowed. The rail shows Applies to and Repeats rows.
+
+### Case G6d: the series splits
+
+Use this and following on the third session of a four-session series.
+
+**Pass:** the first two sessions stay where they were and keep their series; the third and fourth move and now belong to a new series (View series on each shows the right rule). The dashboard updates without a reload.
+
+### Case G6e: later sessions with content
+
+Add a topic to the last session of a series. Then Edit series on an earlier one and lower Ends so that session would be dropped.
+
+**Pass:** "Some later sessions have notes or actions · Keep enough sessions to cover them", the dialog stays open, and nothing in the series changes.
+
+### Case G6f: Edit series with nothing upcoming
+
+Open Edit series on a past session of a series that has ended. Then block `GET /coaching_session_series/*` and open Edit series on a past session again.
+
+**Pass:** "This series has no upcoming sessions", and no dialog. With the block, "Couldn't load the series · Try again".
+
+### Case G6g: other this and following errors
+
+Block `POST /coaching_session_series/*/reschedule`, then make it return a 422.
+
+**Pass:** "Couldn't update the session · Check your connection and try again", then "Couldn't update the session · Check the details and try again". The dialog stays open each time.
+
 ### Case G7: errors
 
 Block `PUT /coaching_sessions/*` and confirm.
@@ -335,7 +449,13 @@ Look at past sessions, and log in as the coachee.
 
 **Pass:** neither shows Reschedule.
 
-## 9. Part H: copy and theme sweep (PR 5, PR 6)
+### Case G9: move mode on a phone
+
+At 375px, reschedule a series session through each step: When, Applies to, Repeat, Resolve overlap.
+
+**Pass:** the person and "Currently …" show at the top of the body; the Applies to cards fill the width with readable text; nothing scrolls sideways; the footer stays pinned.
+
+## 9. Part H: copy and theme sweep (PR 5, PR 6, PR 7)
 
 ### Case H1: copy
 
@@ -347,10 +467,16 @@ Read every string in the dialog, in both modes.
 
 Go through every step in Dark.
 
-**Pass:** the rail's current row, rail border, scrim, tooltip and toast use the dark tokens, with no white flashes. The tooltip is inverted like the toast.
+**Pass:** the rail's current row, rail border, scrim, tooltip, Applies to cards and toast use the dark tokens, with no white flashes. The tooltip is inverted like the toast.
 
 ### Case H3: reduced motion
 
 Turn on reduced motion in the OS.
 
 **Pass:** no open or close animation.
+
+### Case H4: screen reader on the step controls
+
+With VoiceOver, go through Applies to, Repeat and Resolve overlap.
+
+**Pass:** the Applies to cards read as a radio group with their title and description; frequency chips and weekday circles announce pressed or not pressed; the sessions count and end date fields have names; the Resolve day circles read the full date.
