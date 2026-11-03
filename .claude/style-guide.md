@@ -123,6 +123,13 @@ Inter. Headings are **regular weight** with `-0.01em` tracking (baked into the s
 - **Hero card** (one per screen, e.g. next session): `bg-hero-wash border-brand-border`.
 - **Toast:** `bg-inverse text-inverse-foreground rounded-full shadow-toast`, bottom center.
   The only dark surface in light mode (and the only light one in dark mode).
+- **Stepped modal (`StepDialog`, `ui/step-dialog.tsx`):** use it for every stepped or sectioned
+  modal. Desktop is 860 × 560 (`Tall`) or 520 (`Standard`), height fixed across steps; a 300px
+  `bg-card` rail (title, steps with the current row `bg-rail-current`, optional footer) beside a
+  `bg-well` pane whose body is the only scroll region and whose footer is pinned. `bg-scrim`
+  overlay, `shadow-modal`, dark adds a 1px `border`. Below 900px (`modal` screen) it becomes a
+  full-screen step view: 56px top bar ("Title · n of m" + 44px close), 26px step title, scrolling
+  body, sticky footer with a 48px back circle and a Next or confirm pill.
 - Page width comes from `PageContainer` (`max-w-screen-2xl`); don't set your own max width.
 - Loading, empty and error states render inside the **same** card chrome so the grid never
   jumps (`GoalsOverviewCardSkeleton`, `GoalsOverviewCardError`).
@@ -232,5 +239,5 @@ Full-width header button; chevron `transition-transform duration-200`, `rotate-1
 
 - Per-person pastel avatar palette (light mode only; dark avatars are neutral).
 - Form field density and validation styling.
-- Mobile bottom sheet and full-screen step view.
+- Mobile bottom sheet.
 - Data-viz guidance on `chart-1…5`.

@@ -105,6 +105,12 @@
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.05);
     --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05);
     --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.25);
+    --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.3);
+
+    /* Stepped modal: scrim, current rail row, rail divider */
+    --scrim: rgba(24, 22, 32, 0.45);
+    --rail-current: 80 9.7% 93.9%;
+    --rail-border: 0 0% 92.9%;
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -181,6 +187,10 @@
     --avatar-8-foreground: var(--avatar-foreground);
 
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.45);
+
+    --scrim: rgba(0, 0, 0, 0.6);
+    --rail-current: var(--fill);
+    --rail-border: var(--border);
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
