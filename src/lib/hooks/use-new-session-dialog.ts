@@ -7,7 +7,7 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@/lib/hooks/use-dialog-recurrence";
 import { useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
-import { moveChanged, moveHint, movePerson, moveRail, moveStart, seriesRepeatFrom, startMoved } from "@/lib/move-draft";
+import { moveChanged, moveHint, movePerson, moveRail, seriesRepeatFrom, startMoved } from "@/lib/move-draft";
 import type { PersonEntry } from "@/lib/people";
 import {
   type NewSessionDialogModel,
@@ -28,6 +28,7 @@ import {
   whoState,
 } from "@/lib/new-session-dialog-model";
 import { clashFor, prefillWhen, scheduleHint, scheduleRail } from "@/lib/schedule-draft";
+import { seriesSlotStart } from "@/lib/session-window";
 import {
   DEFAULT_WORKING_HOURS,
   MoveScope,
@@ -60,8 +61,8 @@ function repeatPrefill(
   timezone: string
 ): Option<RepeatPrefill> {
   if (moving.none || series.none) return None;
-  const { day } = moveStart(moving.val, timezone);
-  return Some({ repeat: seriesRepeatFrom(series.val, moving.val), weekday: weekdayFromLuxon(day.weekday) });
+  const slot = seriesSlotStart(moving.val, timezone);
+  return Some({ repeat: seriesRepeatFrom(series.val, moving.val), weekday: weekdayFromLuxon(slot.weekday) });
 }
 
 /** `series` is the moved session's series once loaded; None for a one-off or while loading. */

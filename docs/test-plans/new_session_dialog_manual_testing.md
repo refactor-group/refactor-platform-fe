@@ -129,9 +129,9 @@ Search for an inactive person and pick them, then clear the search.
 
 ### Case B9: a series session moved on its own
 
-Reschedule A's next session alone ("This session only") from Tuesday 2:30 PM to Wednesday 9:00 AM. Open the dialog and pick A, then go to When. Afterwards, use "This and following sessions" to move A's series to Thursdays at 2:30 PM and open the dialog again.
+Reschedule A's next session alone ("This session only") from Tuesday 2:30 PM to Wednesday 9:00 AM. Open the dialog and pick A, then go to When. Afterwards, reschedule that moved session to Thursday at 2:30 PM with "This and following sessions", then open the dialog again.
 
-**Pass:** after the single move, A's card still reads "Usually Tuesdays, 2:30 PM", and When prefills A's next free Tuesday at 2:30 PM. One moved session never changes someone's usual time. After the series moves, the card reads "Usually Thursdays, 2:30 PM".
+**Pass:** after the single move, A's card still reads "Usually Tuesdays, 2:30 PM", and When prefills A's next free Tuesday at 2:30 PM. One moved session never changes someone's usual time. On the way, Repeat has only Thursday selected (not Tuesday or Wednesday) and the confirm is enabled. After the series moves, the card reads "Usually Thursdays, 2:30 PM".
 
 ## 4. Part C: When (PR 5)
 

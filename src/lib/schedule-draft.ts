@@ -19,7 +19,7 @@ import {
   usualSlot,
 } from "@/lib/scheduling";
 import { firstNameOf, moveScopeTitle, repeatLabel, shortDay, whoSubline } from "@/lib/scheduling-copy";
-import { sessionEndIn, sessionStartIn, timeOfDay, toSessionDate } from "@/lib/session-window";
+import { seriesSlotStart, sessionEndIn, sessionStartIn, timeOfDay, toSessionDate } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 import {
   type CoachingSession,
@@ -114,16 +114,10 @@ function placedFor(
     .sort((a, b) => a.start.toMillis() - b.start.toMillis());
 }
 
-/** The series slot a placed session occupies, or its own start when the slot is unknown. */
-function seriesSlot({ session, start }: Placed, timezone: string): DateTime {
-  const slot = session.ical_recurrence_id;
-  return slot.some ? sessionStartIn(slot.val, timezone) : start;
-}
-
 function usualOf(placed: Placed[], timezone: string): Option<UsualSlot> {
   const series = placed.find((p) => !p.over && p.session.coaching_session_series_id.some);
   const history = placed.filter((p) => p.over).map((p) => p.start);
-  return usualSlot(series ? Some(seriesSlot(series, timezone)) : None, history);
+  return usualSlot(series ? Some(seriesSlotStart(series.session, timezone)) : None, history);
 }
 
 export function usualFor(
