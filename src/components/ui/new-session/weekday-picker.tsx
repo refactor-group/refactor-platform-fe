@@ -26,7 +26,7 @@ export function WeekdayPicker({ value, locked, onChange }: WeekdayPickerProps) {
       size={null}
       value={value}
       onValueChange={handleChange}
-      className="flex-wrap justify-start gap-1.5"
+      className="flex-wrap justify-start gap-1 modal:gap-1.5"
     >
       {WEEKDAYS_ORDERED.map((day, index) => (
         <ToggleGroupItem

@@ -20,7 +20,7 @@ const CHOICES: { label: string; frequency: Option<Frequency> }[] = [
 const FIELD_CLASSES = "h-11 tabular-nums modal:h-9";
 // A 44px tap box below 900px with the 16px circle drawn inside it.
 const RADIO_CLASSES =
-  "relative -mr-2.5 h-11 w-11 shrink-0 border-0 before:absolute before:left-1/2 before:top-1/2 before:h-4 before:w-4 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:border before:border-primary modal:mr-0 modal:h-4 modal:w-4";
+  "relative -ml-3.5 -mr-2.5 h-11 w-11 shrink-0 border-0 before:absolute before:left-1/2 before:top-1/2 before:h-4 before:w-4 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:border before:border-primary modal:ml-0 modal:mr-0 modal:h-4 modal:w-4";
 const LABEL_CLASSES = "flex h-11 items-center pr-1 text-sm modal:h-auto";
 
 function isChosen(model: RepeatModel, frequency: Option<Frequency>): boolean {
