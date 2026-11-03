@@ -53,7 +53,13 @@ function DurationStepper({ value, onChange }: DurationFieldProps) {
   }
 
   const commit = () => {
-    const next = clampDuration(parseInt(draft, 10));
+    const typed = parseInt(draft, 10);
+    // A cleared or non-numeric box keeps the duration it had.
+    if (Number.isNaN(typed)) {
+      setDraft(String(value));
+      return;
+    }
+    const next = clampDuration(typed);
     setDraft(String(next));
     onChange(next);
   };
