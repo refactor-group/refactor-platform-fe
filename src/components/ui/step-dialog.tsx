@@ -188,10 +188,14 @@ function Rail({
   );
 }
 
-function PaneHeader({ stepTitle, stepSubline }: Pick<StepDialogProps, "stepTitle" | "stepSubline">) {
+function StepHeading({
+  desktop,
+  stepTitle,
+  stepSubline,
+}: Pick<StepDialogProps, "stepTitle" | "stepSubline"> & { desktop: boolean }) {
   return (
     <div>
-      <h2 className="text-headline leading-[1.15]">{stepTitle}</h2>
+      <h2 className={desktop ? "text-headline leading-[1.15]" : "text-section"}>{stepTitle}</h2>
       {stepSubline && <StepSubline text={stepSubline} />}
     </div>
   );
@@ -228,41 +232,6 @@ function PaneFooter({
       <StepArrow direction="prev" onStep={onPrev} />
       <StepArrow direction="next" onStep={onNext} />
     </div>
-  );
-}
-
-function DesktopStepDialog(props: StepDialogProps) {
-  return (
-    <DialogPrimitive.Content
-      tabIndex={-1}
-      onOpenAutoFocus={focusContent}
-      aria-describedby={undefined}
-      onKeyDown={confirmOnEnter(props.lead)}
-      className={cn(
-        "fixed left-1/2 top-1/2 z-50 grid w-[860px] max-h-[calc(100vh-48px)] -translate-x-1/2 -translate-y-1/2 grid-cols-[300px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-card shadow-modal outline-none dark:border",
-        heightClass(props.height),
-        "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
-      )}
-    >
-      <Rail
-        title={props.title}
-        railHeader={props.railHeader}
-        steps={props.steps}
-        railFooter={props.railFooter}
-      />
-      <div className="relative flex min-h-0 flex-col bg-well pb-7 pl-11 pr-9 pt-8">
-        <CloseButton size="icon-sm" className="absolute right-4 top-4" />
-        <PaneHeader stepTitle={props.stepTitle} stepSubline={props.stepSubline} />
-        {/* Inset padding offset by negative margins so edge focus rings aren't clipped. */}
-        <div className="-mx-1 -mb-1 mt-5 min-h-0 flex-1 overflow-y-auto p-1">{props.children}</div>
-        <PaneFooter
-          lead={props.lead}
-          position={props.position}
-          onPrev={props.onPrev}
-          onNext={props.onNext}
-        />
-      </div>
-    </DialogPrimitive.Content>
   );
 }
 
@@ -311,24 +280,61 @@ function MobileFooter({
   );
 }
 
-function MobileStepDialog(props: StepDialogProps) {
+// ─── One tree for both layouts ──────────────────────────────────────
+
+const ANIMATE =
+  "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none";
+
+function contentClass(desktop: boolean, height: StepDialogHeight): string {
+  return desktop
+    ? cn(
+        "fixed left-1/2 top-1/2 z-50 grid w-[860px] max-h-[calc(100vh-48px)] -translate-x-1/2 -translate-y-1/2 grid-cols-[300px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] overflow-hidden rounded-card shadow-modal outline-none dark:border",
+        heightClass(height),
+        ANIMATE,
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
+      )
+    : cn("fixed inset-0 z-50 flex flex-col bg-well outline-none", ANIMATE);
+}
+
+/**
+ * Both layouts share one element tree, so crossing 900px restyles the step body instead of
+ * remounting it, and anything held in it (a search, a half-typed value) survives.
+ */
+function StepDialogContent({ desktop, ...props }: StepDialogProps & { desktop: boolean }) {
   return (
     <DialogPrimitive.Content
       tabIndex={-1}
       onOpenAutoFocus={focusContent}
       aria-describedby={undefined}
       onKeyDown={confirmOnEnter(props.lead)}
-      className="fixed inset-0 z-50 flex flex-col bg-well outline-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
+      className={contentClass(desktop, props.height)}
     >
-      <MobileTopBar title={props.title} position={props.position} />
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-6">
-        {props.railHeader && <div className="mb-6">{props.railHeader}</div>}
-        <h2 className="text-section">{props.stepTitle}</h2>
-        {props.stepSubline && <StepSubline text={props.stepSubline} />}
-        <div className="mt-6">{props.children}</div>
-        {props.railFooter && <div className="mt-8">{props.railFooter}</div>}
+      {desktop ? (
+        <Rail title={props.title} railHeader={props.railHeader} steps={props.steps} railFooter={props.railFooter} />
+      ) : (
+        <MobileTopBar title={props.title} position={props.position} />
+      )}
+      <div
+        className={
+          desktop
+            ? "relative flex min-h-0 flex-col bg-well pb-7 pl-11 pr-9 pt-8"
+            : "min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-6"
+        }
+      >
+        {desktop && <CloseButton size="icon-sm" className="absolute right-4 top-4" />}
+        {!desktop && props.railHeader && <div className="mb-6">{props.railHeader}</div>}
+        <StepHeading desktop={desktop} stepTitle={props.stepTitle} stepSubline={props.stepSubline} />
+        {/* Desktop insets the scroll box by its negative margins so edge focus rings aren't clipped. */}
+        <div className={desktop ? "-mx-1 -mb-1 mt-5 min-h-0 flex-1 overflow-y-auto p-1" : "mt-6"}>
+          {props.children}
+        </div>
+        {desktop ? (
+          <PaneFooter lead={props.lead} position={props.position} onPrev={props.onPrev} onNext={props.onNext} />
+        ) : (
+          props.railFooter && <div className="mt-8">{props.railFooter}</div>
+        )}
       </div>
-      <MobileFooter lead={props.lead} onPrev={props.onPrev} onNext={props.onNext} />
+      {!desktop && <MobileFooter lead={props.lead} onPrev={props.onPrev} onNext={props.onNext} />}
     </DialogPrimitive.Content>
   );
 }
@@ -341,8 +347,8 @@ export function StepDialog(props: StepDialogProps) {
   return (
     <DialogPrimitive.Root open={props.open} onOpenChange={(open) => !open && props.onClose()}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-scrim duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none" />
-        {desktop ? <DesktopStepDialog {...props} /> : <MobileStepDialog {...props} />}
+        <DialogPrimitive.Overlay className={cn("fixed inset-0 z-50 bg-scrim", ANIMATE)} />
+        <StepDialogContent desktop={desktop} {...props} />
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
