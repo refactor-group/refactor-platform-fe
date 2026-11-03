@@ -150,7 +150,7 @@ function RailRow({ step }: { step: StepRailItem }) {
         <div className="truncate text-xs font-medium text-muted-foreground">{step.label}</div>
         <div
           className={cn(
-            "truncate text-item font-medium",
+            "line-clamp-2 break-words text-item font-medium",
             step.done ? "text-foreground" : "text-muted-foreground"
           )}
         >
@@ -250,7 +250,8 @@ function DesktopStepDialog(props: StepDialogProps) {
       <div className="relative flex min-h-0 flex-col bg-well pb-7 pl-11 pr-9 pt-8">
         <CloseButton size="icon-sm" className="absolute right-4 top-4" />
         <PaneHeader stepTitle={props.stepTitle} stepSubline={props.stepSubline} />
-        <div className="mt-6 min-h-0 flex-1 overflow-y-auto">{props.children}</div>
+        {/* Inset padding offset by negative margins so edge focus rings aren't clipped. */}
+        <div className="-mx-1 -mb-1 mt-5 min-h-0 flex-1 overflow-y-auto p-1">{props.children}</div>
         <PaneFooter
           lead={props.lead}
           position={props.position}

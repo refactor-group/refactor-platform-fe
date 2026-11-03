@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import type { KeyboardEvent } from "react";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DateTime, Info } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
@@ -129,40 +130,25 @@ function WeekdayHeader() {
   );
 }
 
-type TooltipAlign = "start" | "center" | "end";
-
-/** Edge columns anchor to their side so the step body's scroll box doesn't clip the tooltip. */
-function tooltipAlign(date: DateTime): TooltipAlign {
-  if (date.weekday <= 2) return "start";
-  if (date.weekday >= 6) return "end";
-  return "center";
-}
-
-const TOOLTIP_ALIGN_CLASSES: Record<TooltipAlign, string> = {
-  start: "left-0",
-  center: "left-1/2 -translate-x-1/2",
-  end: "right-0",
-};
-
-function DayTooltip({ day }: { day: GridDay }) {
-  const align = tooltipAlign(day.date);
+function DayTooltipContent({ day }: { day: GridDay }) {
+  // Portaled with collision handling so the dialog body's scroll box can't clip it.
   return (
-    <div
-      role="tooltip"
-      data-align={align}
-      className={cn(
-        "pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap rounded-[10px] bg-inverse px-2.5 py-2 text-xs text-inverse-foreground shadow-popover",
-        TOOLTIP_ALIGN_CLASSES[align]
-      )}
-    >
-      <p className="text-tiny opacity-70 tabular-nums">{shortDay(day.date)}</p>
-      {day.sessions.map((session) => (
-        <p key={session.id} className="flex justify-between gap-4 tabular-nums">
-          <span>{session.personName}</span>
-          <span>{busyRange(session)}</span>
-        </p>
-      ))}
-    </div>
+    <TooltipPrimitive.Portal>
+      <TooltipPrimitive.Content
+        side="top"
+        sideOffset={4}
+        collisionPadding={8}
+        className="pointer-events-none z-[60] whitespace-nowrap rounded-[10px] bg-inverse px-2.5 py-2 text-xs text-inverse-foreground shadow-popover animate-in fade-in-0 motion-reduce:animate-none"
+      >
+        <p className="text-tiny opacity-70 tabular-nums">{shortDay(day.date)}</p>
+        {day.sessions.map((session) => (
+          <p key={session.id} className="flex justify-between gap-4 tabular-nums">
+            <span>{session.personName}</span>
+            <span>{busyRange(session)}</span>
+          </p>
+        ))}
+      </TooltipPrimitive.Content>
+    </TooltipPrimitive.Portal>
   );
 }
 
@@ -191,32 +177,37 @@ interface DayCellProps {
 function DayCell({ day, tabStop, tooltip, onSelect, onHover, onKeyDown, buttonRef }: DayCellProps) {
   return (
     <div className="relative flex justify-center">
-      <button
-        ref={buttonRef}
-        type="button"
-        aria-label={dayLabel(day)}
-        aria-pressed={day.isSelected}
-        aria-current={day.isToday ? "date" : undefined}
-        disabled={day.past}
-        tabIndex={tabStop ? 0 : -1}
-        onClick={() => onSelect(day.date.startOf("day"))}
-        onMouseEnter={() => onHover(true)}
-        onMouseLeave={() => onHover(false)}
-        onKeyDown={onKeyDown}
-        className={cn(
-          "relative inline-flex aspect-square w-full max-w-11 items-center justify-center rounded-full text-[13px] tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring modal:max-w-9 motion-reduce:transition-none",
-          dayButtonClasses(day)
-        )}
-      >
-        {day.date.day}
-        {day.sessions.length > 0 && (
-          <span
-            aria-hidden
-            className={cn("absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full", busyDotClasses(day))}
-          />
-        )}
-      </button>
-      {tooltip && <DayTooltip day={day} />}
+      {/* Hover intent alone opens it; Radix's own open requests are ignored. */}
+      <TooltipPrimitive.Root open={tooltip} onOpenChange={() => {}}>
+        <TooltipPrimitive.Trigger asChild>
+          <button
+            ref={buttonRef}
+            type="button"
+            aria-label={dayLabel(day)}
+            aria-pressed={day.isSelected}
+            aria-current={day.isToday ? "date" : undefined}
+            disabled={day.past}
+            tabIndex={tabStop ? 0 : -1}
+            onClick={() => onSelect(day.date.startOf("day"))}
+            onMouseEnter={() => onHover(true)}
+            onMouseLeave={() => onHover(false)}
+            onKeyDown={onKeyDown}
+            className={cn(
+              "relative inline-flex aspect-square w-full max-w-11 items-center justify-center rounded-full text-[13px] tabular-nums transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring modal:max-w-9 motion-reduce:transition-none",
+              dayButtonClasses(day)
+            )}
+          >
+            {day.date.day}
+            {day.sessions.length > 0 && (
+              <span
+                aria-hidden
+                className={cn("absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full", busyDotClasses(day))}
+              />
+            )}
+          </button>
+        </TooltipPrimitive.Trigger>
+        {tooltip && <DayTooltipContent day={day} />}
+      </TooltipPrimitive.Root>
     </div>
   );
 }
@@ -243,29 +234,31 @@ export function MonthGrid(props: MonthGridProps) {
   };
 
   return (
-    <div>
-      <MonthHeader month={month} today={today} onMonthChange={onMonthChange} />
-      <WeekdayHeader />
-      <div data-testid="month-grid-days" className="mt-1 grid grid-cols-7 gap-y-0.5">
-        {Array.from({ length: leadingBlanks }, (_, index) => (
-          <div key={`blank-${index}`} aria-hidden />
-        ))}
-        {days.map((day, index) => (
-          <DayCell
-            key={day.date.toMillis()}
-            day={day}
-            tabStop={index === tabStop}
-            tooltip={hover.active.some && hover.active.val === dayKey(day)}
-            onSelect={onSelect}
-            onHover={(hovering) => hoverDay(day, hovering)}
-            onKeyDown={(event) => moveFocus(index, event)}
-            buttonRef={(node) => {
-              if (node) buttons.current.set(index, node);
-              else buttons.current.delete(index);
-            }}
-          />
-        ))}
+    <TooltipPrimitive.Provider delayDuration={0}>
+      <div>
+        <MonthHeader month={month} today={today} onMonthChange={onMonthChange} />
+        <WeekdayHeader />
+        <div data-testid="month-grid-days" className="mt-1 grid grid-cols-7 gap-y-0.5">
+          {Array.from({ length: leadingBlanks }, (_, index) => (
+            <div key={`blank-${index}`} aria-hidden />
+          ))}
+          {days.map((day, index) => (
+            <DayCell
+              key={day.date.toMillis()}
+              day={day}
+              tabStop={index === tabStop}
+              tooltip={hover.active.some && hover.active.val === dayKey(day)}
+              onSelect={onSelect}
+              onHover={(hovering) => hoverDay(day, hovering)}
+              onKeyDown={(event) => moveFocus(index, event)}
+              buttonRef={(node) => {
+                if (node) buttons.current.set(index, node);
+                else buttons.current.delete(index);
+              }}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+    </TooltipPrimitive.Provider>
   );
 }
