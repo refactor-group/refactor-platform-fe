@@ -82,7 +82,7 @@ function DurationStepper({ value, onChange }: DurationFieldProps) {
           if (event.key === "Enter") commit();
         }}
         className={cn(
-          "w-11 border-0 bg-transparent text-center text-[13px] font-medium tabular-nums focus-visible:outline-none",
+          "w-11 border-0 bg-transparent text-center text-[13px] font-medium tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
           "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         )}
       />
