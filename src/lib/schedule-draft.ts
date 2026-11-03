@@ -114,10 +114,16 @@ function placedFor(
     .sort((a, b) => a.start.toMillis() - b.start.toMillis());
 }
 
-function usualOf(placed: Placed[]): Option<UsualSlot> {
+/** The series slot a placed session occupies, or its own start when the slot is unknown. */
+function seriesSlot({ session, start }: Placed, timezone: string): DateTime {
+  const slot = session.ical_recurrence_id;
+  return slot.some ? sessionStartIn(slot.val, timezone) : start;
+}
+
+function usualOf(placed: Placed[], timezone: string): Option<UsualSlot> {
   const series = placed.find((p) => !p.over && p.session.coaching_session_series_id.some);
   const history = placed.filter((p) => p.over).map((p) => p.start);
-  return usualSlot(series ? Some(series.start) : None, history);
+  return usualSlot(series ? Some(seriesSlot(series, timezone)) : None, history);
 }
 
 export function usualFor(
@@ -126,7 +132,7 @@ export function usualFor(
   now: DateTime,
   timezone: string
 ): Option<UsualSlot> {
-  return usualOf(placedFor(relationshipIds, sessions, now, timezone));
+  return usualOf(placedFor(relationshipIds, sessions, now, timezone), timezone);
 }
 
 // ─── Who ─────────────────────────────────────────────────────────────
@@ -150,7 +156,7 @@ export function pickerPeople(input: PickerPeopleInput): PickerPerson[] {
     const placed = placedFor(entry.relationshipIds, sessions, now, timezone);
     const subline = whoSubline(
       {
-        usual: usualOf(placed),
+        usual: usualOf(placed, timezone),
         next: startOf(placed.find((p) => !p.over)),
         last: startOf(placed.filter((p) => p.over).at(-1)),
       },

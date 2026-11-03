@@ -127,6 +127,12 @@ Search for an inactive person and pick them, then clear the search.
 
 **Pass:** the pick works and stays selected after clearing the search; the rail and summary show them.
 
+### Case B9: a series session moved on its own
+
+Reschedule A's next session alone ("This session only") from Tuesday 2:30 PM to Wednesday 9:00 AM. Open the dialog and pick A, then go to When. Afterwards, use "This and following sessions" to move A's series to Thursdays at 2:30 PM and open the dialog again.
+
+**Pass:** after the single move, A's card still reads "Usually Tuesdays, 2:30 PM", and When prefills A's next free Tuesday at 2:30 PM. One moved session never changes someone's usual time. After the series moves, the card reads "Usually Thursdays, 2:30 PM".
+
 ## 4. Part C: When (PR 5)
 
 ### Case C1: prefill
