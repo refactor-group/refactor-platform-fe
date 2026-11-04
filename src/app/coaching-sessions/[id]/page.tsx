@@ -31,6 +31,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentRelationshipRole } from "@/lib/hooks/use-current-relationship-role";
+import { useSyncOrganizationFromSession } from "@/lib/hooks/use-sync-organization-from-session";
 import { useCoachingSessionLayout } from "@/lib/hooks/use-coaching-session-layout";
 import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import ShareSessionLink from "@/components/ui/share-session-link";
@@ -147,6 +148,9 @@ export default function CoachingSessionsPage() {
 
   // Get current coaching session from URL
   const { currentCoachingSession, currentCoachingSessionId, isError } = useCurrentCoachingSession();
+
+  // A session in another organization selects it, so its relationship reads resolve.
+  useSyncOrganizationFromSession(currentCoachingSession ? Some(currentCoachingSession) : None);
 
   // Get current coaching relationship state and data
   const { currentCoachingRelationshipId, setCurrentCoachingRelationshipId, refresh } =
