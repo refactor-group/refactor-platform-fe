@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_WORKING_HOURS, suggestTimes } from "@/lib/scheduling";
-import { None, Some } from "@/types/option";
+import { Some } from "@/types/option";
 import { NOW, TUESDAY, busy, hhmm } from "./fixtures";
 
 const base = { day: TUESDAY, coachStarts: [], hours: DEFAULT_WORKING_HOURS, now: NOW };
