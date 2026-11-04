@@ -3,11 +3,6 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { Settings } from "ts-luxon";
 import { useRouter } from "next/navigation";
 import { NewSessionDialog } from "@/components/ui/new-session/new-session-dialog";
-import { NewSessionDialogHost } from "@/components/ui/new-session/new-session-dialog-host";
-import {
-  NewSessionDialogStoreProvider,
-  useNewSessionDialogStore,
-} from "@/lib/providers/new-session-dialog-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import {
   CoachingSessionApi,
