@@ -26,9 +26,12 @@ export { CoachingSessionInclude };
 
 const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/coaching_sessions`;
 
-/** A window of sessions around an instant, in one coaching relationship. */
+/** The most relationship ids one `/nearest` request accepts. */
+export const NEAREST_MAX_RELATIONSHIPS = 50;
+
+/** A window of sessions around an instant, per coaching relationship. */
 export interface NearestWindow {
-  relationshipId: Id;
+  relationshipIds: Id[];
   /** A session's `date` verbatim, or an RFC 3339 instant. */
   around: string;
   before: number;
@@ -44,7 +47,7 @@ export interface NearestQuery extends NearestWindow {
 
 function nearestParams(window: NearestWindow): Record<string, string> {
   return {
-    coaching_relationship_id: window.relationshipId,
+    coaching_relationship_ids: window.relationshipIds.join(","),
     around: window.around,
     before: String(window.before),
     after: String(window.after),
@@ -283,7 +286,7 @@ export const CoachingSessionApi = {
 
   /**
    * Fetches the `before` sessions just before `around` and the `after` sessions
-   * at or after it, in one coaching relationship, sorted date DESC.
+   * at or after it, in each of up to 50 coaching relationships, sorted date DESC.
    *
    * @param around A session's naive UTC `date`, or an RFC 3339 instant
    * @param before 0..10
@@ -631,15 +634,23 @@ export interface NearestEachQuery {
   fetchedFor: string;
 }
 
+function chunks<T>(items: T[], size: number): T[][] {
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, i) =>
+    items.slice(i * size, (i + 1) * size)
+  );
+}
+
 /**
  * The last session before and the first after `around`, per relationship, in
- * one SWR entry. `None` skips the fetch. Sessions are returned in one flat list.
+ * one SWR entry: one request per 50 relationships. `None` or no relationships
+ * skips the fetch. Sessions are returned in one flat list.
  */
 export const useNearestEachCoachingSessions = (query: Option<NearestEachQuery>) => {
+  const active = query.some && query.val.relationshipIds.length > 0;
   const url = query.some
     ? `${USERS_BASEURL}/${query.val.userId}/coaching_sessions/nearest`
     : "";
-  const params = query.some
+  const params = active
     ? {
         coaching_relationship_ids: query.val.relationshipIds.join(","),
         around: query.val.around,
@@ -651,8 +662,13 @@ export const useNearestEachCoachingSessions = (query: Option<NearestEachQuery>) 
     if (query.none) return [];
     const { userId, relationshipIds, around } = query.val;
     const result = await ResultAsync.combine(
-      relationshipIds.map((relationshipId) =>
-        CoachingSessionApi.listNearestForUser(userId, { relationshipId, around, before: 1, after: 1 })
+      chunks(relationshipIds, NEAREST_MAX_RELATIONSHIPS).map((group) =>
+        CoachingSessionApi.listNearestForUser(userId, {
+          relationshipIds: group,
+          around,
+          before: 1,
+          after: 1,
+        })
       )
     );
     if (result.isErr()) throw result.error;
@@ -662,5 +678,5 @@ export const useNearestEachCoachingSessions = (query: Option<NearestEachQuery>) 
   const { entities, isLoading, isError } =
     EntityApi.useEntityList<EnrichedCoachingSession>(url, fetcher, params);
 
-  return { sessions: entities, isLoading: query.some ? isLoading : false, isError };
+  return { sessions: entities, isLoading: active ? isLoading : false, isError };
 };
