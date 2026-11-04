@@ -20,6 +20,10 @@ const config = {
   		}
   	},
   	extend: {
+  		// Keep in sync with src/lib/breakpoints.ts.
+  		screens: {
+  			modal: '900px'
+  		},
   		colors: {
   			border: {
   				DEFAULT: 'hsl(var(--border))',
@@ -52,6 +56,8 @@ const config = {
   			},
   			well: 'hsl(var(--well))',
   			hairline: 'hsl(var(--hairline))',
+  			'rail-current': 'hsl(var(--rail-current))',
+  			'rail-border': 'hsl(var(--rail-border))',
   			positive: {
   				DEFAULT: 'hsl(var(--positive))',
   				solid: 'hsl(var(--positive-solid))',
@@ -130,7 +136,11 @@ const config = {
   		boxShadow: {
   			card: 'var(--shadow-card)',
   			popover: 'var(--shadow-popover)',
-  			toast: 'var(--shadow-toast)'
+  			toast: 'var(--shadow-toast)',
+  			modal: 'var(--shadow-modal)'
+  		},
+  		backgroundColor: {
+  			scrim: 'var(--scrim)'
   		},
   		backgroundImage: {
   			'hero-wash': 'var(--hero-wash)'
