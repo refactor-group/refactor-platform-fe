@@ -11,6 +11,9 @@
 - Validate all code against standards before task completion
 - PR reviews require both files if coding standards referenced
 
+## Running E2E Locally
+Run Playwright specs with `npm run test:e2e:docker -- <spec> [--project=...]` (needs `npm run dev` and Docker Desktop). It uses CI's Playwright image, derived from the installed `@playwright/test` version. Native Firefox hangs at startup on macOS 27, so don't run `--project=firefox` natively. Run natively only to watch a test headed.
+
 ## PR Preview Environments
 
 ### Architecture
