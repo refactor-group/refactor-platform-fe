@@ -36,15 +36,6 @@ function theSession(
   return `the ${startsAt(session, timezone)} session${withCoachee(relationships, session.coaching_relationship_id)}`;
 }
 
-/** e.g. "Created a new session Nov 4 @ 10 AM with James Hodapp". */
-export function sessionCreatedMessage(
-  session: SessionRef,
-  relationships: CoachingRelationshipWithUserNames[],
-  timezone: string
-): string {
-  return `Created a new session ${startsAt(session, timezone)}${withCoachee(relationships, session.coaching_relationship_id)}`;
-}
-
 /** e.g. "Updated the Nov 6 @ 11 AM session with James Hodapp", with its new date and time. */
 export function sessionUpdatedMessage(
   session: SessionRef,
@@ -61,15 +52,6 @@ export function sessionRemovedMessage(
   timezone: string
 ): string {
   return `Removed ${theSession(session, relationships, timezone)}`;
-}
-
-/** e.g. "Created 3 recurring sessions with James Hodapp". */
-export function seriesCreatedMessage(
-  count: number,
-  relationshipId: Id,
-  relationships: CoachingRelationshipWithUserNames[]
-): string {
-  return `Created ${count} recurring session${count === 1 ? "" : "s"}${withCoachee(relationships, relationshipId)}`;
 }
 
 export interface OtherMove {
@@ -102,6 +84,10 @@ export function scheduledMessage(input: {
     ...(repeat.kind === "repeat" ? [repeatLabel(repeat)] : []),
     ...otherMoveParts(otherMove),
   ].join(" · ");
+}
+
+export function otherMoveFailedMessage(personName: string): string {
+  return `Couldn't move ${firstNameOf(personName)}'s session · Reschedule it from the dashboard`;
 }
 
 /** e.g. "Rescheduled · Ehab to Thursday, August 20, 2:00 PM · and following". */

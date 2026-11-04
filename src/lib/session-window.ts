@@ -157,6 +157,11 @@ export function toSessionDate(local: DateTime): string {
   return local.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss");
 }
 
+/** An instant as the `/nearest` query's UTC timestamp. */
+export function utcInstant(dt: DateTime): string {
+  return dt.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+}
+
 export function timeOfDay(dt: DateTime): string {
   return dt.toFormat("h:mm a");
 }

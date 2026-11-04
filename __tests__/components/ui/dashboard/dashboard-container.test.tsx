@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DashboardContainer } from "@/components/ui/dashboard/dashboard-container";
+import { None } from "@/types/option";
+import { createMockSession } from "../../../test-utils";
 
 // ── Auto-refresh contract (integration) ─────────────────────────────────
 //
@@ -24,8 +26,9 @@ import { DashboardContainer } from "@/components/ui/dashboard/dashboard-containe
 //
 // Each mock card calls the captured `onRefreshNeeded` with a fixed spy on
 // mount. The dialog mock exposes a button so the test can simulate
-// `onOpenChange(false)` (the close path the real dialog takes after a
-// create/edit submit).
+// `onOpenChange(false)` (the close path the real dialog takes after an
+// edit submit). Creating a session goes through the New session dialog
+// store instead.
 
 const upcomingSessionRefreshSpy = vi.fn();
 const coachingSessionsCardRefreshSpy = vi.fn();
@@ -33,8 +36,12 @@ const coachingSessionsCardRefreshSpy = vi.fn();
 vi.mock("@/components/ui/dashboard/upcoming-session-card", () => ({
   UpcomingSessionCard: ({
     onRefreshNeeded,
+    onReschedule,
+    onCreateSession,
   }: {
     onRefreshNeeded?: (fn: () => void) => void;
+    onReschedule?: (session: ReturnType<typeof createMockSession>) => void;
+    onCreateSession?: () => void;
   }) => {
     // Defer the parent's `setState` until after render to mirror the real
     // card's `useEffect`-based registration and avoid React's "setState
@@ -42,7 +49,16 @@ vi.mock("@/components/ui/dashboard/upcoming-session-card", () => ({
     useEffect(() => {
       onRefreshNeeded?.(upcomingSessionRefreshSpy);
     }, [onRefreshNeeded]);
-    return <div data-testid="upcoming-session-card-stub" />;
+    return (
+      <div data-testid="upcoming-session-card-stub">
+        <button data-testid="reschedule-stub" onClick={() => onReschedule?.(createMockSession())}>
+          Reschedule
+        </button>
+        <button data-testid="card-create-stub" onClick={() => onCreateSession?.()}>
+          Schedule
+        </button>
+      </div>
+    );
   },
 }));
 
@@ -69,6 +85,11 @@ vi.mock("@/components/ui/dashboard/dashboard-header", () => ({
       Add New
     </button>
   ),
+}));
+
+const openSchedule = vi.fn();
+vi.mock("@/lib/providers/new-session-dialog-store-provider", () => ({
+  useNewSessionDialogStore: (selector: (state: unknown) => unknown) => selector({ openSchedule }),
 }));
 
 // CoachingSessionDialog renders nothing meaningful but exposes a button
@@ -133,7 +154,18 @@ describe("DashboardContainer auto-refresh wiring", () => {
     // baseline. The next test exercises the call path.
   });
 
-  it("invokes ALL card refreshes when the create/edit dialog closes", () => {
+  it("opens the New session dialog from the header and the upcoming card", () => {
+    render(<DashboardContainer locale="en-US" />);
+
+    fireEvent.click(screen.getByTestId("open-dialog-stub"));
+    fireEvent.click(screen.getByTestId("card-create-stub"));
+
+    expect(openSchedule).toHaveBeenCalledTimes(2);
+    expect(openSchedule).toHaveBeenCalledWith(None);
+    expect(screen.queryByTestId("close-dialog-stub")).not.toBeInTheDocument();
+  });
+
+  it("invokes ALL card refreshes when the reschedule dialog closes", () => {
     render(<DashboardContainer locale="en-US" />);
 
     // Pre-state: refreshes haven't been called as a result of dialog
@@ -141,8 +173,8 @@ describe("DashboardContainer auto-refresh wiring", () => {
     upcomingSessionRefreshSpy.mockClear();
     coachingSessionsCardRefreshSpy.mockClear();
 
-    // Open the dialog via the header stub.
-    fireEvent.click(screen.getByTestId("open-dialog-stub"));
+    // Open the dialog via the card's reschedule stub.
+    fireEvent.click(screen.getByTestId("reschedule-stub"));
     // Dialog stub renders only when open.
     expect(screen.getByTestId("close-dialog-stub")).toBeInTheDocument();
 

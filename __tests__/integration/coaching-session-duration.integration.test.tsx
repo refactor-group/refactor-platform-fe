@@ -40,12 +40,10 @@ vi.mock("@/lib/api/users", () => ({
   }),
 }));
 
-const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", () => ({
   useCoachingSessionList: () => ({ refresh: vi.fn() }),
   useCoachingSessionMutation: () => ({
-    create: mockCreate,
     update: mockUpdate,
   }),
 }));
@@ -115,48 +113,6 @@ describe("Coaching session duration integration", () => {
     });
   });
 
-  describe("create mode: pre-populates from coach default and sends duration_minutes", () => {
-    it("opens with coach's stored default (50) in the duration input", async () => {
-      render(<CoachingSessionDialog open onOpenChange={vi.fn()} />);
-      const durationInput = await screen.findByRole("combobox", {
-        name: /duration in minutes/i,
-      });
-      expect(durationInput).toHaveValue("50");
-    });
-
-    it("includes duration_minutes in the POST /coaching_sessions payload", async () => {
-      mockCreate.mockResolvedValue(undefined);
-      const user = userEvent.setup();
-      render(<CoachingSessionDialog open onOpenChange={vi.fn()} />);
-
-      const today = new Date();
-      const dayLabel = String(today.getDate());
-      const dayButtons = screen.getAllByRole("gridcell", { name: dayLabel });
-      await user.click(dayButtons[0]);
-
-      const timeInput = document.getElementById(
-        "session-time"
-      ) as HTMLInputElement;
-      fireEvent.change(timeInput, { target: { value: "10:00" } });
-
-      const durationInput = screen.getByRole("combobox", {
-        name: /duration in minutes/i,
-      });
-      fireEvent.change(durationInput, { target: { value: "30" } });
-
-      const submitButton = screen.getByRole("button", { name: /create session/i });
-      await act(async () => {
-        await user.click(submitButton);
-      });
-
-      await waitFor(() => {
-        expect(mockCreate).toHaveBeenCalled();
-      });
-      const payload = mockCreate.mock.calls[0][0];
-      expect(payload.duration_minutes).toBe(30);
-    });
-  });
-
   describe("update mode: pre-populates from existing session", () => {
     it("renders the input with existingSession.duration_minutes (not the coach default)", async () => {
       const existing = createMockSession({
@@ -167,7 +123,7 @@ describe("Coaching session duration integration", () => {
         <CoachingSessionDialog
           open
           onOpenChange={vi.fn()}
-          coachingSessionToEdit={existing}
+          coachingSession={existing}
         />
       );
       const durationInput = await screen.findByRole("combobox", {
@@ -188,7 +144,7 @@ describe("Coaching session duration integration", () => {
         <CoachingSessionDialog
           open
           onOpenChange={vi.fn()}
-          coachingSessionToEdit={existing}
+          coachingSession={existing}
         />
       );
 
@@ -229,7 +185,7 @@ describe("Coaching session duration integration", () => {
         <CoachingSessionDialog
           open
           onOpenChange={vi.fn()}
-          coachingSessionToEdit={existing}
+          coachingSession={existing}
         />
       );
 
