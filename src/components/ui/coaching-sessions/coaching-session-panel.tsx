@@ -450,6 +450,12 @@ export function CoachingSessionPanel({
 
   // ── Section state ────────────────────────────────────────────────
   const [activeSection, setActiveSection] = useState<PanelSection>(defaultSection);
+  // In-app navigation changes the URL without remounting, so follow a new default.
+  const [adoptedSection, setAdoptedSection] = useState<PanelSection>(defaultSection);
+  if (adoptedSection !== defaultSection) {
+    setAdoptedSection(defaultSection);
+    setActiveSection(defaultSection);
+  }
 
   const handleSectionChange = useCallback((section: PanelSection) => {
     setActiveSection(section);

@@ -149,15 +149,21 @@ export function ActionSectionContent({
   const tabTarget =
     !highlightRequest.some || highlightActive ? highlightTarget : null;
 
+  // A deep link can also name a pending suggestion: it lives in New and gets scrolled to, not ringed.
+  const suggestionTargetId = useMemo((): Id | null => {
+    if (highlightRequest.some || !highlightId) return null;
+    return actionSuggestions.some((s) => s.id === highlightId) ? highlightId : null;
+  }, [highlightRequest, highlightId, actionSuggestions]);
+
   const requiredTab = useMemo((): ActionTab | null => {
     if (tabTarget) {
       return reviewActions.some((a) => a.id === tabTarget.id)
         ? "due"
         : "new";
     }
-    if (isAddingAction) return "new";
+    if (suggestionTargetId || isAddingAction) return "new";
     return null;
-  }, [tabTarget, reviewActions, isAddingAction]);
+  }, [tabTarget, suggestionTargetId, reviewActions, isAddingAction]);
 
   // Switch tab when required (highlight deep-link or adding action).
   // setState during render is a React-supported pattern for derived state.
@@ -179,7 +185,7 @@ export function ActionSectionContent({
 
   // Scroll to highlighted card and clear highlight after animation.
   // Depend on the key so a repeat request for the same action still fires.
-  const highlightTargetId = highlightTarget?.id ?? null;
+  const highlightTargetId = highlightTarget?.id ?? suggestionTargetId;
   useEffect(() => {
     if (!highlightTargetId || !highlightKey) return;
 
@@ -402,6 +408,7 @@ export function ActionSectionContent({
             {visibleSuggestions.map((suggestion) => (
               <div
                 key={suggestion.id}
+                ref={(el) => setCardRef(suggestion.id, el)}
                 className={cn(
                   exitingIds.has(suggestion.id)
                     ? "animate-kanban-card-exit"

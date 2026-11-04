@@ -6,6 +6,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
+import { useSearchParams } from "next/navigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested-action-card";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
@@ -223,6 +224,35 @@ describe("ActionSectionContent review flow", () => {
       ...handlers,
     };
   }
+
+  it("switches to the New tab and scrolls when the URL highlights a pending suggestion", async () => {
+    const scrollSpy = vi.spyOn(window, "scrollBy");
+    const suggestion = makeSuggestion();
+    const reviewActions = [createMockAction({ id: "due-1", body: "Review action one" })];
+    const props = { ...sectionProps([suggestion], [], {}), reviewActions };
+    const { rerender } = render(
+      <Wrapper>
+        <ActionSectionContent {...props} />
+      </Wrapper>
+    );
+    await userEvent.click(screen.getByTestId("action-tab-due"));
+    expect(screen.queryByTestId("suggested-action-card")).not.toBeInTheDocument();
+
+    // Same mounted section, new URL: what a search result click produces on an open session.
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams({ panel: "actions", highlight: suggestion.id }) as never
+    );
+    rerender(
+      <Wrapper>
+        <ActionSectionContent {...props} />
+      </Wrapper>
+    );
+
+    expect(screen.getByTestId("suggested-action-card")).toBeInTheDocument();
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalled());
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
+    scrollSpy.mockRestore();
+  });
 
   it("removes an accepted card and rings the new action once it arrives", async () => {
     // jsdom has no layout, so nothing scrolls on its own and centering falls back to the window.

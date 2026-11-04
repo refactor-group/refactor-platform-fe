@@ -35,6 +35,14 @@ export function searchHitHref(hit: SearchHit): Option<string> {
       return hit.coaching_session_id.some
         ? Some(sessionHref(hit.coaching_session_id.val))
         : None;
+    case SearchHitType.TranscriptSuggestion:
+      // Pending suggestions live in the actions panel's "New" tab; the
+      // highlight selects that tab and scrolls to the card.
+      return hit.coaching_session_id.some
+        ? Some(
+            `${sessionHref(hit.coaching_session_id.val, PanelSection.Actions)}&highlight=${hit.id}`
+          )
+        : None;
     default: {
       const _exhaustive: never = hit;
       throw new Error(`Unhandled search hit type: ${_exhaustive}`);

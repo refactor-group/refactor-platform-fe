@@ -7,7 +7,7 @@ import { useSearch, type SearchState } from "@/lib/api/search";
 import { TestProviders } from "@/test-utils/providers";
 import { Some, None } from "@/types/option";
 import { ItemStatus } from "@/types/general";
-import { SearchHitType, type SearchHit } from "@/types/search";
+import { SearchHitType, TranscriptSuggestionTarget, type SearchHit } from "@/types/search";
 import { TopicStatus } from "@/types/coaching-session-topic";
 
 vi.mock("@/lib/api/search", async (importOriginal) => {
@@ -91,6 +91,22 @@ const topicHit: SearchHit = {
 };
 
 const secondActionHit: SearchHit = { ...actionHit, id: "action-2", title: "Book the weekly slot" };
+
+const suggestionHit: SearchHit = {
+  type: SearchHitType.TranscriptSuggestion,
+  id: "sugg-1",
+  score: 0.2,
+  title: "Send the weekly recap to the team",
+  snippet: Some("send the <mark>weekly</mark> recap"),
+  created_at: "2026-09-01T10:00:00Z",
+  updated_at: "2026-09-01T10:00:00Z",
+  organization_id: "org-1",
+  coaching_relationship_id: Some("rel-1"),
+  target: TranscriptSuggestionTarget.Action,
+  coaching_session_id: Some("sess-2"),
+  session_date: "2026-09-01T09:00:00",
+  session_title: "Weekly sync",
+};
 
 const loaded = (hits: SearchHit[], nextCursor = None as ReturnType<typeof Some<string>> | typeof None): SearchState => ({
   kind: "loaded",
@@ -180,6 +196,18 @@ describe("GlobalSearch", () => {
 
     expect(push).toHaveBeenCalledWith("/coaching-sessions/sess-2?panel=actions&highlight=action-1");
     expect(await expand()).toHaveValue("");
+  });
+
+  it("renders a pending suggestion and opens its session's actions panel", async () => {
+    mockSearch(loaded([suggestionHit]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    expect(screen.getByText("Suggestion")).toBeInTheDocument();
+    expect(screen.getByText("Pending review · Weekly sync")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("Send the weekly recap to the team"));
+    expect(push).toHaveBeenCalledWith("/coaching-sessions/sess-2?panel=actions&highlight=sugg-1");
   });
 
   it("keeps the dropdown open while the pointer is pressed on a result", async () => {
