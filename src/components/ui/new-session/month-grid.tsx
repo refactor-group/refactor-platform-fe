@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -11,7 +11,7 @@ import { useHoverIntent } from "@/lib/hooks/use-hover-intent";
 import { type BusySession, busyOn } from "@/lib/scheduling";
 import { busyRange, sessionCount, shortDay } from "@/lib/scheduling-copy";
 import { formatWeekdayDate } from "@/lib/utils/date";
-import { type Option, None } from "@/types/option";
+import { type Option, None, Some } from "@/types/option";
 
 interface MonthGridProps {
   month: DateTime;
@@ -220,14 +220,26 @@ export function MonthGrid(props: MonthGridProps) {
   const tabStop = tabStopIndex(days);
   const leadingBlanks = month.startOf("month").weekday - 1;
   const buttons = useRef(new Map<number, HTMLButtonElement>());
+  const pendingFocus = useRef<Option<DateTime>>(None);
   const hover = useHoverIntent<string>(TOOLTIP_DELAY_MS);
+
+  const focusDay = (date: DateTime) => buttons.current.get(date.day - 1)?.focus();
+
+  useEffect(() => {
+    if (pendingFocus.current.none || !pendingFocus.current.val.hasSame(month, "month")) return;
+    focusDay(pendingFocus.current.val);
+    pendingFocus.current = None;
+  }, [month]);
 
   const moveFocus = (index: number, event: KeyboardEvent<HTMLButtonElement>) => {
     const step = ARROW_STEPS[event.key];
     if (step === undefined) return;
     event.preventDefault();
-    const target = days[index + step];
-    if (target && !target.past) buttons.current.get(index + step)?.focus();
+    const target = days[index].date.plus({ days: step });
+    if (target < today.startOf("day")) return;
+    if (target.hasSame(month, "month")) return focusDay(target);
+    pendingFocus.current = Some(target);
+    onMonthChange(target.startOf("month"));
   };
 
   const hoverDay = (day: GridDay, hovering: boolean) => {

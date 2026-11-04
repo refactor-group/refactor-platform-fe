@@ -30,9 +30,10 @@ export interface BucketListProps {
   selectedId: Id | undefined;
   onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
+  onEditSeries: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
   onRequestResendInvite: (session: EnrichedCoachingSession) => void;
-  onSeriesAction: (action: "view" | "edit" | "delete", seriesId: Id) => void;
+  onSeriesAction: (action: "view" | "delete", seriesId: Id) => void;
   /** Bucket keys that just appeared in the list — animated in on render. */
   recentlyAddedKeys: Set<string>;
   showMoreLabel: string;
@@ -64,6 +65,7 @@ export function BucketList({
   selectedId,
   onSelect,
   onReschedule,
+  onEditSeries,
   onRequestDelete,
   onRequestResendInvite,
   onSeriesAction,
@@ -172,6 +174,7 @@ export function BucketList({
               selectedId={selectedId}
               onSelect={onSelect}
               onReschedule={onReschedule}
+              onEditSeries={onEditSeries}
               onRequestDelete={onRequestDelete}
               onRequestResendInvite={onRequestResendInvite}
               onSeriesAction={onSeriesAction}

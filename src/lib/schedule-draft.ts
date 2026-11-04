@@ -10,6 +10,7 @@ import {
   type Slot,
   type UsualSlot,
   type WorkingHours,
+  MoveScope,
   StepKind,
   currentStep,
   freeSlots,
@@ -17,8 +18,8 @@ import {
   overlapping,
   usualSlot,
 } from "@/lib/scheduling";
-import { firstNameOf, repeatLabel, shortDay, whoSubline } from "@/lib/scheduling-copy";
-import { sessionEndIn, sessionStartIn, timeOfDay, toSessionDate } from "@/lib/session-window";
+import { firstNameOf, moveScopeTitle, repeatLabel, shortDay, whoSubline } from "@/lib/scheduling-copy";
+import { seriesSlotStart, sessionEndIn, sessionStartIn, timeOfDay, toSessionDate } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 import {
   type CoachingSession,
@@ -33,6 +34,7 @@ import {
   type CreateRecurringSessionRequest,
   Frequency,
   MAX_SPAN_DAYS,
+  type Recurrence,
   type RecurrenceEnd,
   WEEKDAYS_ORDERED,
   type Weekday,
@@ -49,6 +51,25 @@ export type Resolution =
   | { kind: "keep" };
 
 const MISSING_HINT = "Choose a person, date and time to schedule.";
+
+/** Whether the busy read for the shown range has come back. */
+export type Availability = { kind: "loading" } | { kind: "error" } | { kind: "loaded" };
+
+/** Until the busy read is in, an empty calendar would read as free. */
+export function availabilityHint(availability: Availability): Option<string> {
+  switch (availability.kind) {
+    case "loading":
+      return Some("Checking your calendar…");
+    case "error":
+      return Some("Couldn't check your calendar. Close and try again.");
+    case "loaded":
+      return None;
+    default: {
+      const _exhaustive: never = availability;
+      throw new Error(`Unhandled availability: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
+}
 
 // ─── Sessions ────────────────────────────────────────────────────────
 
@@ -100,22 +121,27 @@ export function knownSessions(
   return [...byId.values()];
 }
 
+function placeAll(sessions: EnrichedCoachingSession[], now: DateTime, timezone: string): Placed[] {
+  return sessions.map((s) => place(s, now, timezone)).sort((a, b) => a.start.toMillis() - b.start.toMillis());
+}
+
 function placedFor(
   relationshipIds: Id[],
   sessions: EnrichedCoachingSession[],
   now: DateTime,
   timezone: string
 ): Placed[] {
-  return sessions
-    .filter((s) => relationshipIds.includes(s.coaching_relationship_id))
-    .map((s) => place(s, now, timezone))
-    .sort((a, b) => a.start.toMillis() - b.start.toMillis());
+  return placeAll(
+    sessions.filter((s) => relationshipIds.includes(s.coaching_relationship_id)),
+    now,
+    timezone
+  );
 }
 
-function usualOf(placed: Placed[]): Option<UsualSlot> {
+function usualOf(placed: Placed[], timezone: string): Option<UsualSlot> {
   const series = placed.find((p) => !p.over && p.session.coaching_session_series_id.some);
   const history = placed.filter((p) => p.over).map((p) => p.start);
-  return usualSlot(series ? Some(series.start) : None, history);
+  return usualSlot(series ? Some(seriesSlotStart(series.session, timezone)) : None, history);
 }
 
 export function usualFor(
@@ -124,7 +150,7 @@ export function usualFor(
   now: DateTime,
   timezone: string
 ): Option<UsualSlot> {
-  return usualOf(placedFor(relationshipIds, sessions, now, timezone));
+  return usualOf(placedFor(relationshipIds, sessions, now, timezone), timezone);
 }
 
 // ─── Who ─────────────────────────────────────────────────────────────
@@ -141,14 +167,25 @@ function startOf(placed: Placed | undefined): Option<DateTime> {
   return placed ? Some(placed.start) : None;
 }
 
+/** Each person's sessions in one pass, in the given order. */
+function sessionsPerPerson(people: PersonEntry[], sessions: EnrichedCoachingSession[]): EnrichedCoachingSession[][] {
+  const owners = new Map<Id, Set<number>>();
+  people.forEach((entry, i) =>
+    entry.relationshipIds.forEach((id) => owners.set(id, (owners.get(id) ?? new Set<number>()).add(i)))
+  );
+  const own = people.map((): EnrichedCoachingSession[] => []);
+  for (const s of sessions) owners.get(s.coaching_relationship_id)?.forEach((i) => own[i].push(s));
+  return own;
+}
+
 export function pickerPeople(input: PickerPeopleInput): PickerPerson[] {
   const { people, nearest, now, timezone } = input;
-  const sessions = knownSessions(nearest, input.history);
-  const entries = people.map((entry) => {
-    const placed = placedFor(entry.relationshipIds, sessions, now, timezone);
+  const own = sessionsPerPerson(people, knownSessions(nearest, input.history));
+  const entries = people.map((entry, i) => {
+    const placed = placeAll(own[i], now, timezone);
     const subline = whoSubline(
       {
-        usual: usualOf(placed),
+        usual: usualOf(placed, timezone),
         next: startOf(placed.find((p) => !p.over)),
         last: startOf(placed.filter((p) => p.over).at(-1)),
       },
@@ -216,9 +253,9 @@ export function busyWindow(month: DateTime, selected: Option<DateTime>): { from:
 }
 
 export function clashFor(slot: Slot, busy: BusySession[], hours: WorkingHours): Option<BusyClash> {
-  const [first] = overlapping(slot, busy);
+  const [first, ...others] = overlapping(slot, busy);
   if (!first) return None;
-  return Some({ session: first, instead: nextFreeStart(slot, busy, hours) });
+  return Some({ session: first, others, instead: nextFreeStart(slot, busy, hours) });
 }
 
 // ─── Resolve overlap ─────────────────────────────────────────────────
@@ -325,53 +362,79 @@ export function sessionPayload(input: {
   };
 }
 
-export function seriesPayload(input: {
-  relationshipId: Id;
-  start: DateTime;
-  minutes: number;
+/** A series rule as the wire wants it, with `until` as the naive-UTC end of that day. */
+export interface RuleInput {
   frequency: Frequency;
+  interval: number;
   byWeekdays: Weekday[];
   end: RecurrenceEnd;
   timezone: string;
-}): CreateRecurringSessionRequest {
-  const { end, timezone } = input;
+}
+
+export function rulePayload({ frequency, interval, byWeekdays, end, timezone }: RuleInput): Recurrence {
   const wireEnd: RecurrenceEnd =
     end.kind === "until" ? { kind: "until", until: untilDateToUtcDateTime(end.until, timezone) } : end;
+  return recurrenceToPayload(frequency, interval, byWeekdays, wireEnd);
+}
+
+export function seriesPayload(
+  input: RuleInput & { relationshipId: Id; start: DateTime; minutes: number }
+): CreateRecurringSessionRequest {
   return {
     coaching_relationship_id: input.relationshipId,
     start_at: toSessionDate(input.start),
     duration_minutes: input.minutes,
-    recurrence: recurrenceToPayload(input.frequency, 1, input.byWeekdays, wireEnd),
+    recurrence: rulePayload(input),
   };
 }
 
 // ─── Rail and hint ───────────────────────────────────────────────────
 
-interface ScheduleRailInput {
+/** An overlap and how far it's settled. */
+export interface ClashState {
+  clash: Option<BusySession>;
+  /** The clashing session isn't the user's to move, or there are several, so it can only be kept. */
+  keepOnly: boolean;
+  /** The new time overlaps more than one session. */
+  several: boolean;
+  resolution: Resolution;
+}
+
+/** What "keep" keeps: "both" sessions, or "all" of them. */
+export function keptWord(several: boolean): string {
+  return several ? "all" : "both";
+}
+
+interface ScheduleRailInput extends ClashState {
   order: StepKind[];
   step: StepKind;
   personName: Option<string>;
   start: Option<DateTime>;
   repeat: RepeatChoice;
-  clash: Option<BusySession>;
-  resolution: Resolution;
+}
+
+/** The rail for any mode; `whenDone` is when the When row gets its check. */
+export interface StepRailInput extends ScheduleRailInput {
+  whenDone: boolean;
+  scope: MoveScope;
 }
 
 function startLine(start: DateTime): string {
   return `${formatWeekdayDate(start)}, ${timeOfDay(start)}`;
 }
 
-function resolutionValue(input: ScheduleRailInput): string {
-  const { clash, resolution, start } = input;
+function resolutionValue(input: StepRailInput): string {
+  const { clash, keepOnly, several, resolution, start } = input;
+  const kept = keptWord(several);
   if (clash.none) return "Choose a new time";
   const first = firstNameOf(clash.val.personName);
   switch (resolution.kind) {
     case "unresolved":
-      return `Choose a new time for ${first}`;
+      return keepOnly ? `Keep ${kept} or pick another time` : `Choose a new time for ${first}`;
     case "move":
       return `Move ${first} to ${shortDay(resolution.start)}, ${timeOfDay(resolution.start)}`;
     case "keep":
-      return start.some ? `Keep both at ${timeOfDay(start.val)}` : "Keep both";
+      return start.some ? `Keep ${kept} at ${timeOfDay(start.val)}` : `Keep ${kept}`;
     default: {
       const _exhaustive: never = resolution;
       throw new Error(`Unhandled resolution: ${JSON.stringify(_exhaustive)}`);
@@ -379,13 +442,13 @@ function resolutionValue(input: ScheduleRailInput): string {
   }
 }
 
-function railRow(kind: StepKind, input: ScheduleRailInput, current: StepKind): Omit<StepRailItem, "id" | "current"> {
+function railRow(kind: StepKind, input: StepRailInput, current: StepKind): Omit<StepRailItem, "id" | "current"> {
   const { order, personName, start, repeat, resolution } = input;
   switch (kind) {
     case StepKind.Who:
       return { label: "Who", value: personName.some ? personName.val : "Choose a person", done: personName.some };
     case StepKind.When:
-      return { label: "When", value: start.some ? startLine(start.val) : "Set a date and time", done: start.some };
+      return { label: "When", value: start.some ? startLine(start.val) : "Set a date and time", done: input.whenDone };
     case StepKind.Repeat:
       return {
         label: "Repeats",
@@ -395,7 +458,11 @@ function railRow(kind: StepKind, input: ScheduleRailInput, current: StepKind): O
     case StepKind.Resolve:
       return { label: "Resolve overlap", value: resolutionValue(input), done: resolution.kind !== "unresolved" };
     case StepKind.AppliesTo:
-      throw new Error("Applies to isn't a schedule step");
+      return {
+        label: "Applies to",
+        value: moveScopeTitle(input.scope),
+        done: order.indexOf(kind) < order.indexOf(current),
+      };
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unhandled step: ${_exhaustive}`);
@@ -403,21 +470,29 @@ function railRow(kind: StepKind, input: ScheduleRailInput, current: StepKind): O
   }
 }
 
-export function scheduleRail(input: ScheduleRailInput): StepRailItem[] {
+export function stepRail(input: StepRailInput): StepRailItem[] {
   const current = currentStep(input.order, input.step);
   return input.order.map((kind) => ({ id: kind, ...railRow(kind, input, current), current: kind === current }));
 }
 
-export function scheduleHint(input: {
-  personName: Option<string>;
-  start: Option<DateTime>;
-  clash: Option<BusySession>;
-  resolution: Resolution;
-}): Option<string> {
-  const { personName, start, clash, resolution } = input;
-  if (personName.none || start.none) return Some(MISSING_HINT);
-  if (clash.some && resolution.kind === "unresolved") {
-    return Some(`Pick a new time for ${firstNameOf(clash.val.personName)}, or keep both.`);
-  }
-  return None;
+export function scheduleRail(input: ScheduleRailInput): StepRailItem[] {
+  return stepRail({ ...input, whenDone: input.start.some, scope: MoveScope.This });
+}
+
+/** Asks how to settle an overlap that's still open. */
+export function resolveHint({ clash, keepOnly, several, resolution }: ClashState): Option<string> {
+  if (clash.none || resolution.kind !== "unresolved") return None;
+  return Some(
+    keepOnly
+      ? `Keep ${keptWord(several)}, or go back and pick another time.`
+      : `Pick a new time for ${firstNameOf(clash.val.personName)}, or keep both.`
+  );
+}
+
+export function scheduleHint(
+  input: ClashState & { personName: Option<string>; start: Option<DateTime>; availability: Availability }
+): Option<string> {
+  if (input.personName.none || input.start.none) return Some(MISSING_HINT);
+  const checking = availabilityHint(input.availability);
+  return checking.some ? checking : resolveHint(input);
 }

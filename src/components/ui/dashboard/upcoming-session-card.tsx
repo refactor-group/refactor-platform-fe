@@ -45,8 +45,8 @@ interface UpcomingSessionCardProps {
   onCreateSession: () => void;
   /** Invoked with the selected session when the user clicks Reschedule. */
   onReschedule?: (session: EnrichedCoachingSession) => void;
-  /** Surfaces the internal hook's refresh function to the parent so it can
-   *  force a refresh after a dialog closes. */
+  /** Surfaces the internal hook's refresh function so the parent can
+   *  revalidate it after a series changes. */
   onRefreshNeeded?: (refresh: () => void) => void;
 }
 
@@ -67,8 +67,7 @@ export function UpcomingSessionCard({
   const { userSession, isACoach } = useAuthStore((state) => state);
   const { sessions, isLoading, error, refresh } = useTodaysSessions();
 
-  // Surface refresh to parent (e.g. DashboardContainer) so it can force a
-  // re-fetch after the create/edit dialog closes.
+  // Surface refresh to the parent so it can re-fetch after a series changes.
   useEffect(() => {
     onRefreshNeeded?.(refresh);
   }, [onRefreshNeeded, refresh]);

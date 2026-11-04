@@ -49,9 +49,10 @@ export interface BucketsContainerProps {
   locale: string;
   mountNow: DateTime;
   onReschedule: (session: EnrichedCoachingSession) => void;
+  onEditSeries: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
   onRequestResendInvite: (session: EnrichedCoachingSession) => void;
-  onSeriesAction: (action: "view" | "edit" | "delete", seriesId: Id) => void;
+  onSeriesAction: (action: "view" | "delete", seriesId: Id) => void;
 }
 
 const SHOW_MORE_INCREMENT_MONTHS = 6;
@@ -83,6 +84,7 @@ export function BucketsContainer({
   locale,
   mountNow,
   onReschedule,
+  onEditSeries,
   onRequestDelete,
   onRequestResendInvite,
   onSeriesAction,
@@ -386,6 +388,7 @@ export function BucketsContainer({
             selectedId={selectedId}
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
+            onEditSeries={onEditSeries}
             onRequestDelete={onRequestDelete}
             onRequestResendInvite={onRequestResendInvite}
             onSeriesAction={onSeriesAction}
@@ -402,6 +405,7 @@ export function BucketsContainer({
             selectedId={selectedId}
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
+            onEditSeries={onEditSeries}
             onRequestDelete={onRequestDelete}
             onRequestResendInvite={onRequestResendInvite}
             onSeriesAction={onSeriesAction}
@@ -421,6 +425,7 @@ export function BucketsContainer({
             selectedId={selectedId}
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
+            onEditSeries={onEditSeries}
             onRequestDelete={onRequestDelete}
             onRequestResendInvite={onRequestResendInvite}
             onSeriesAction={onSeriesAction}
@@ -448,6 +453,7 @@ export function BucketsContainer({
             selectedId={selectedId}
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
+            onEditSeries={onEditSeries}
             onRequestDelete={onRequestDelete}
             onRequestResendInvite={onRequestResendInvite}
             onSeriesAction={onSeriesAction}
@@ -464,6 +470,7 @@ export function BucketsContainer({
             selectedId={selectedId}
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
+            onEditSeries={onEditSeries}
             onRequestDelete={onRequestDelete}
             onRequestResendInvite={onRequestResendInvite}
             onSeriesAction={onSeriesAction}
@@ -486,6 +493,7 @@ export function BucketsContainer({
             selectedId={selectedId}
             onSelect={setSelectedSession}
             onReschedule={onReschedule}
+            onEditSeries={onEditSeries}
             onRequestDelete={onRequestDelete}
             onRequestResendInvite={onRequestResendInvite}
             onSeriesAction={onSeriesAction}
