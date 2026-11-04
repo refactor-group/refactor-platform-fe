@@ -17,7 +17,8 @@ interface NewSessionDialogState {
 interface NewSessionDialogActions {
   openSchedule: (date: Option<DateTime>) => void;
   openMoveSession: (session: EnrichedCoachingSession, scope?: MoveScope) => void;
-  close: () => void;
+  /** Closes request `id` only, so a late save from an earlier dialog can't close a newer one. */
+  close: (id: number) => void;
 }
 
 export type NewSessionDialogStore = NewSessionDialogState & NewSessionDialogActions;
@@ -25,7 +26,7 @@ export type NewSessionDialogStore = NewSessionDialogState & NewSessionDialogActi
 export const createNewSessionDialogStore = () => {
   let opens = 0;
   return create<NewSessionDialogStore>()(
-    devtools((set) => {
+    devtools((set, get) => {
       const openWith = (request: NewSessionRequest) => {
         opens += 1;
         set({ open: Some({ id: opens, request }) });
@@ -34,7 +35,10 @@ export const createNewSessionDialogStore = () => {
         open: None,
         openSchedule: (date) => openWith({ kind: "schedule", date }),
         openMoveSession: (session, scope = MoveScope.This) => openWith({ kind: "move", session, scope }),
-        close: () => set({ open: None }),
+        close: (id) => {
+          const { open } = get();
+          if (open.some && open.val.id === id) set({ open: None });
+        },
       };
     })
   );
