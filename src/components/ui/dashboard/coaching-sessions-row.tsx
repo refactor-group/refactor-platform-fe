@@ -41,6 +41,8 @@ export interface SessionRowProps {
   /** Fires when the user clicks the row to select it for preview. */
   onSelect: () => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
+  /** Opens this session's series for editing. Coach-only, series sessions only. */
+  onEditSeries: (session: EnrichedCoachingSession) => void;
   /** Hands the session up to the card so it can drive the
    *  `<DeleteSessionDialog>` and the delete mutation. Not invoked on
    *  rows where the viewer isn't a coach — the kebab item is hidden. */
@@ -48,12 +50,9 @@ export interface SessionRowProps {
   /** Hands the session up to the card, which owns the resend dialog. Coach-only. */
   onRequestResendInvite: (session: EnrichedCoachingSession) => void;
   /** Hands a series action up to the card so it can fetch the series and
-   *  drive the view/edit/delete dialogs. Only invoked for sessions that
-   *  belong to a series; edit/delete items are coach-only. */
-  onSeriesAction: (
-    action: "view" | "edit" | "delete",
-    seriesId: Id
-  ) => void;
+   *  drive the view/delete dialogs. Only invoked for sessions that belong to
+   *  a series; delete is coach-only. */
+  onSeriesAction: (action: "view" | "delete", seriesId: Id) => void;
 }
 
 export function SessionRow({
@@ -64,6 +63,7 @@ export function SessionRow({
   isSelected,
   onSelect,
   onReschedule,
+  onEditSeries,
   onRequestDelete,
   onRequestResendInvite,
   onSeriesAction,
@@ -213,9 +213,7 @@ export function SessionRow({
             )}
             {canManageSeries && (
               <DropdownMenuItem
-                onClick={() =>
-                  seriesId.some && onSeriesAction("edit", seriesId.val)
-                }
+                onClick={() => onEditSeries(session)}
                 data-testid="session-row-edit-series"
               >
                 <CalendarSync className="mr-2 h-4 w-4" />

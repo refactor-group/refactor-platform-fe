@@ -7,5 +7,6 @@ export function NewSessionDialogHost() {
   const open = useNewSessionDialogStore((state) => state.open);
   const close = useNewSessionDialogStore((state) => state.close);
   if (open.none) return null;
-  return <NewSessionDialog key={open.val.id} request={open.val.request} onClose={close} />;
+  const { id, request } = open.val;
+  return <NewSessionDialog key={id} request={request} onClose={() => close(id)} />;
 }

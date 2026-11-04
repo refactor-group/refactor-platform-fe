@@ -20,7 +20,12 @@ import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { createMockSession } from "../../../test-utils";
+import { MoveScope } from "@/lib/scheduling";
+import { None } from "@/types/option";
 import { ALL, E_18, NEAREST, NOW, RELATIONSHIPS } from "../../../lib/scheduling/roster";
+
+/** Ehab's Tuesday session as a one-off, so move mode has no Applies to step. */
+const ONE_OFF = { ...E_18, coaching_session_series_id: None };
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
@@ -119,7 +124,7 @@ afterEach(() => {
 
 function renderMove() {
   const onClose = vi.fn();
-  render(<NewSessionDialog request={{ kind: "move", session: E_18 }} onClose={onClose} />);
+  render(<NewSessionDialog request={{ kind: "move", session: ONE_OFF, scope: MoveScope.This }} onClose={onClose} />);
   return onClose;
 }
 
@@ -221,7 +226,7 @@ describe("NewSessionDialogHost: move", () => {
   function Mover() {
     const openMoveSession = useNewSessionDialogStore((state) => state.openMoveSession);
     return (
-      <button type="button" onClick={() => openMoveSession(E_18)}>
+      <button type="button" onClick={() => openMoveSession(ONE_OFF)}>
         Move
       </button>
     );

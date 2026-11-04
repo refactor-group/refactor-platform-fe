@@ -8,19 +8,21 @@ import { type Resolution, occurrenceCount, resolveDays, resolveSlots, usualFor }
 import {
   type BusyClash,
   type BusySession,
+  type Cadence,
   DEFAULT_WORKING_HOURS,
+  type MoveScope,
   type RepeatChoice,
   StepKind,
   type UsualSlot,
 } from "@/lib/scheduling";
-import { currentlyLine, overlapsNewLine, resolveSubline } from "@/lib/scheduling-copy";
+import { currentlyLine, overlapsNewLine, overlapsNewLines, resolveSubline } from "@/lib/scheduling-copy";
 import { sessionStartIn } from "@/lib/session-window";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import type { Provider } from "@/types/provider";
-import type { Frequency, RecurrenceEnd, Weekday } from "@/types/recurrence";
+import { Frequency, type RecurrenceEnd, type Weekday } from "@/types/recurrence";
 
 export const UNRESOLVED: Resolution = { kind: "unresolved" };
 
@@ -53,14 +55,29 @@ export interface WhenModel {
   onMinutesChange: (minutes: number) => void;
 }
 
+export interface AppliesToModel {
+  scope: MoveScope;
+  /** The series' rule once it has loaded, or why only this session can change. */
+  subline: Option<string>;
+  /** False when the series couldn't load. */
+  followingAvailable: boolean;
+  onScopeChange: (scope: MoveScope) => void;
+}
+
 export interface RepeatModel {
   repeat: RepeatChoice;
+  /** Offers "Doesn't repeat". */
+  optional: boolean;
+  /** The series' rule is still loading, so nothing can be changed against the defaults. */
+  locked: boolean;
   byWeekdays: Weekday[];
   lockedWeekday: Weekday;
   /** What each end option starts at when chosen. */
   defaultEnd: { count: number; until: string };
+  /** The series' own rhythm when no standard choice matches it. */
+  seriesCadence: Option<Cadence>;
   error: Option<string>;
-  onRepeatChange: (frequency: Option<Frequency>) => void;
+  onRepeatChange: (cadence: Option<Cadence>) => void;
   onWeekdaysChange: (days: Weekday[]) => void;
   onEndChange: (end: RecurrenceEnd) => void;
 }
@@ -68,6 +85,8 @@ export interface RepeatModel {
 export interface ResolveModel {
   subline: string;
   movable: boolean;
+  /** The new time overlaps more than one session. */
+  several: boolean;
   newStart: DateTime;
   days: { day: DateTime; past: boolean }[];
   selectedDay: DateTime;
@@ -106,6 +125,7 @@ export interface NewSessionDialogModel {
   summary: Option<SummaryModel>;
   who: WhoModel;
   when: WhenModel;
+  appliesTo: AppliesToModel;
   repeat: RepeatModel;
   resolve: Option<ResolveModel>;
 }
@@ -153,8 +173,26 @@ export function usualOf(data: ScheduleData, entry: Option<PersonEntry>): Option<
   return entry.some ? usualFor(entry.val.relationshipIds, data.known, data.now, data.timezone) : None;
 }
 
-export function repeatChoice(repeating: boolean, frequency: Frequency, end: RecurrenceEnd): RepeatChoice {
-  return repeating ? { kind: "repeat", frequency, end } : { kind: "none" };
+export function repeatChoice(repeating: boolean, cadence: Cadence, end: RecurrenceEnd): RepeatChoice {
+  return repeating ? { kind: "repeat", ...cadence, end } : { kind: "none" };
+}
+
+/** The Repeat step's standard choices. */
+export const STANDARD_CADENCES: readonly Cadence[] = [
+  { frequency: Frequency.Weekly, interval: 1 },
+  { frequency: Frequency.Biweekly, interval: 1 },
+  { frequency: Frequency.Monthly, interval: 1 },
+];
+
+export function sameCadence(a: Cadence, b: Cadence): boolean {
+  return a.frequency === b.frequency && a.interval === b.interval;
+}
+
+/** A series' rhythm the standard choices can't show, offered as a choice of its own. */
+export function seriesCadenceOf(repeat: Option<Cadence>): Option<Cadence> {
+  if (repeat.none) return None;
+  const { frequency, interval } = repeat.val;
+  return STANDARD_CADENCES.some((c) => sameCadence(c, repeat.val)) ? None : Some({ frequency, interval });
 }
 
 export function createsCount(repeat: RepeatChoice, start: Option<DateTime>, byWeekdays: Weekday[]): number {
@@ -199,9 +237,15 @@ interface ResolveInput {
 
 export function resolveModel(input: ResolveInput): ResolveModel {
   const { clash, start, minutes, movable, draft, busy, now, onChange } = input;
+  const several = clash.others.length > 0;
   return {
-    subline: movable ? resolveSubline(clash.session) : overlapsNewLine(clash.session),
+    subline: several
+      ? overlapsNewLines([clash.session, ...clash.others])
+      : movable
+        ? resolveSubline(clash.session)
+        : overlapsNewLine(clash.session),
     movable,
+    several,
     newStart: start,
     days: resolveDays(clash.session.start, now),
     selectedDay: draft.day,

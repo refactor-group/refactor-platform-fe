@@ -13,7 +13,12 @@ import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { MoveScope } from "@/lib/scheduling";
+import { None } from "@/types/option";
 import { ALL, E_18, NEAREST, NOW, RELATIONSHIPS, session } from "../../../lib/scheduling/roster";
+
+/** A one-off, so confirm sits on the When step. */
+const ONE_OFF = { ...E_18, coaching_session_series_id: None };
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
@@ -83,7 +88,7 @@ afterEach(() => {
 
 function renderMove(moved: EnrichedCoachingSession) {
   const onClose = vi.fn();
-  render(<NewSessionDialog request={{ kind: "move", session: moved }} onClose={onClose} />);
+  render(<NewSessionDialog request={{ kind: "move", session: moved, scope: MoveScope.This }} onClose={onClose} />);
   return onClose;
 }
 
@@ -112,7 +117,7 @@ describe("NewSessionDialog: move draft", () => {
 describe("NewSessionDialog: move errors", () => {
   it("sends a revoked Google connection to Settings", async () => {
     update.mockRejectedValue(apiError(409, { error: "oauth_token_revoked" }));
-    const onClose = renderMove(E_18);
+    const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() => expect(push).toHaveBeenCalledWith("/settings/integrations"));
     expect(toast.error).toHaveBeenCalledWith("Google Meet is disconnected · Reconnect it in Settings");
@@ -121,10 +126,10 @@ describe("NewSessionDialog: move errors", () => {
 
   it("doesn't send another conflict to Settings", async () => {
     update.mockRejectedValue(apiError(409, { error: "other_conflict" }));
-    const onClose = renderMove(E_18);
+    const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("Couldn't update the coaching session · Try again")
+      expect(toast.error).toHaveBeenCalledWith("Couldn't update the session · Try again")
     );
     expect(push).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
@@ -134,7 +139,7 @@ describe("NewSessionDialog: move errors", () => {
     update.mockRejectedValue(
       apiError(422, { error: "validation_error", message: "duration_minutes must be between 1 and 480" })
     );
-    const onClose = renderMove(E_18);
+    const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("Couldn't update the session · Check the details and try again")
@@ -145,7 +150,7 @@ describe("NewSessionDialog: move errors", () => {
   it("only logs an error that isn't from the API", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     update.mockRejectedValue(new Error("Unexpected"));
-    const onClose = renderMove(E_18);
+    const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() => expect(consoleError).toHaveBeenCalled());
     expect(toast.error).not.toHaveBeenCalled();

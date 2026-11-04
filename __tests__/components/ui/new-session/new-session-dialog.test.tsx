@@ -272,7 +272,7 @@ describe("NewSessionDialog: Repeat", () => {
     toRepeat();
     fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
     fireEvent.change(screen.getByRole("spinbutton", { name: "Number of sessions" }), { target: { value: "0" } });
-    expect(screen.getByText("Number of occurrences must be at least 1.")).toBeInTheDocument();
+    expect(screen.getByText("Enter at least 1 session.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Schedule/ })).toBeDisabled();
   });
 });

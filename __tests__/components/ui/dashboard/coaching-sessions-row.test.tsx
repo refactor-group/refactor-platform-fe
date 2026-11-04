@@ -28,11 +28,13 @@ function renderRow(opts: {
   onReschedule?: ReturnType<typeof vi.fn>;
   onRequestDelete?: ReturnType<typeof vi.fn>;
   onSeriesAction?: ReturnType<typeof vi.fn>;
+  onEditSeries?: ReturnType<typeof vi.fn>;
   onSelect?: ReturnType<typeof vi.fn>;
 }) {
   const onReschedule = opts.onReschedule ?? vi.fn();
   const onRequestDelete = opts.onRequestDelete ?? vi.fn();
   const onSeriesAction = opts.onSeriesAction ?? vi.fn();
+  const onEditSeries = opts.onEditSeries ?? vi.fn();
   const onSelect = opts.onSelect ?? vi.fn();
   const onRequestResendInvite = opts.onRequestResendInvite ?? vi.fn();
   const session = createMockEnrichedSession({
@@ -51,6 +53,7 @@ function renderRow(opts: {
       onRequestDelete={onRequestDelete}
       onRequestResendInvite={onRequestResendInvite}
       onSeriesAction={onSeriesAction}
+      onEditSeries={onEditSeries}
     />
   );
   return {
@@ -59,6 +62,7 @@ function renderRow(opts: {
     onRequestDelete,
     onRequestResendInvite,
     onSeriesAction,
+    onEditSeries,
     onSelect,
   };
 }
@@ -161,7 +165,6 @@ describe("SessionRow — series actions in the kebab", () => {
 
   it.each([
     ["view", "session-row-view-series"],
-    ["edit", "session-row-edit-series"],
     ["delete", "session-row-delete-series"],
   ] as const)(
     "invokes onSeriesAction('%s', seriesId) when its item fires",
@@ -174,6 +177,15 @@ describe("SessionRow — series actions in the kebab", () => {
       expect(onSeriesAction).toHaveBeenCalledWith(action, "series-1");
     }
   );
+
+  it("hands the session to onEditSeries from Edit series", async () => {
+    const onEditSeries = vi.fn();
+    const { session } = renderRow({ viewerId: COACH_ID, seriesId: "series-1", onEditSeries });
+    const user = await openKebab();
+
+    await user.click(screen.getByTestId("session-row-edit-series"));
+    expect(onEditSeries).toHaveBeenCalledWith(session);
+  });
 });
 
 describe("SessionRow — primary action button", () => {

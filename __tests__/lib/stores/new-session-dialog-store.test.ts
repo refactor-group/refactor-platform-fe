@@ -16,7 +16,7 @@ describe("newSessionDialogStore", () => {
     store.getState().openSchedule(Some(AUG_20));
     const open = store.getState().open;
     expect(open.some && open.val.request).toEqual({ kind: "schedule", date: Some(AUG_20) });
-    store.getState().close();
+    store.getState().close(open.some ? open.val.id : -1);
     expect(store.getState().open).toEqual(None);
   });
 
@@ -24,9 +24,19 @@ describe("newSessionDialogStore", () => {
     const store = createNewSessionDialogStore();
     store.getState().openSchedule(None);
     const first = store.getState().open;
-    store.getState().close();
+    store.getState().close(first.some ? first.val.id : -1);
     store.getState().openSchedule(None);
     const second = store.getState().open;
     expect(first.some && second.some && first.val.id !== second.val.id).toBe(true);
+  });
+
+  it("ignores a close from an earlier request, so a late save can't close a newer dialog", () => {
+    const store = createNewSessionDialogStore();
+    store.getState().openSchedule(None);
+    const first = store.getState().open;
+    store.getState().openSchedule(Some(AUG_20));
+    const second = store.getState().open;
+    store.getState().close(first.some ? first.val.id : -1);
+    expect(store.getState().open).toEqual(second);
   });
 });

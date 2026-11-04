@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
 import type { PickerPerson } from "@/components/ui/new-session/person-picker";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -9,16 +9,18 @@ import {
   useEnrichedCoachingSessionsForUser,
   useNearestEachCoachingSessions,
 } from "@/lib/api/coaching-sessions";
+import { useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useUser } from "@/lib/api/users";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { type PersonEntry, schedulablePeople } from "@/lib/people";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { busySessions, busyWindow, knownSessions, pickerPeople } from "@/lib/schedule-draft";
+import { type Availability, busySessions, busyWindow, knownSessions, pickerPeople } from "@/lib/schedule-draft";
 import type { BusySession } from "@/lib/scheduling";
 import { sessionEndIn, sessionStartIn, utcInstant } from "@/lib/session-window";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
@@ -44,6 +46,8 @@ export interface ScheduleData {
   /** Sessions in the busy range, kept whole so an overlapped one can be moved. */
   busySource: EnrichedCoachingSession[];
   busy: BusySession[];
+  /** Whether `busy` has been read; empty while loading or failed isn't free. */
+  availability: Availability;
   coachStarts: DateTime[];
   provider: Option<Provider>;
   defaultMinutes: number;
@@ -81,7 +85,8 @@ export function useScheduleData(range: BusyRange): ScheduleData {
 
   const { currentOrganizationId } = useCurrentOrganization();
   const relationships = useCoachingRelationshipList(currentOrganizationId);
-  const entries = schedulablePeople(userId, relationships.relationships ?? []);
+  const relationshipList = relationships.relationships;
+  const entries = useMemo(() => schedulablePeople(userId, relationshipList), [userId, relationshipList]);
 
   const activity = useNearestEachCoachingSessions(
     entries.length > 0
@@ -93,7 +98,11 @@ export function useScheduleData(range: BusyRange): ScheduleData {
         })
       : None
   );
-  const nearest = activity.isLoading || activity.isError ? None : Some(activity.sessions);
+  const nearestReady = !activity.isLoading && !activity.isError;
+  const nearest = useMemo(
+    () => (nearestReady ? Some(activity.sessions) : None),
+    [nearestReady, activity.sessions]
+  );
 
   const history = useEnrichedCoachingSessionsForUser(
     userId,
@@ -110,7 +119,7 @@ export function useScheduleData(range: BusyRange): ScheduleData {
     "month"
   );
   const window = busyWindow(month, range.selected);
-  const busySource = useEnrichedCoachingSessionsForUser(
+  const busyRead = useEnrichedCoachingSessionsForUser(
     userId,
     window.from,
     window.to,
@@ -119,16 +128,31 @@ export function useScheduleData(range: BusyRange): ScheduleData {
     undefined,
     undefined,
     timezone
-  ).enrichedSessions;
+  );
+  const busySource = busyRead.enrichedSessions;
+  const availability: Availability = busyRead.isError
+    ? { kind: "error" }
+    : busyRead.isLoading
+      ? { kind: "loading" }
+      : { kind: "loaded" };
 
   const { connections } = useOAuthConnections();
   const { user } = useUser(userId);
+
+  // The dialog's open time is "now" for the Who list; it needn't tick while open.
+  const picker = useMemo(
+    () => pickerPeople({ people: entries, nearest, history, now: openedAt, timezone }),
+    [entries, nearest, history, openedAt, timezone]
+  );
+  const known = useMemo(() => knownSessions(nearest, history), [nearest, history]);
+  const busy = useMemo(() => busySessions(busySource, userId, timezone), [busySource, userId, timezone]);
+  const coachStarts = useMemo(() => coachStartsFrom(history, openedAt, timezone), [history, openedAt, timezone]);
 
   const people: PeopleState = relationships.isError
     ? { kind: "error" }
     : relationships.isLoading
       ? { kind: "loading" }
-      : { kind: "loaded", entries, picker: pickerPeople({ people: entries, nearest, history, now, timezone }) };
+      : { kind: "loaded", entries, picker };
 
   return {
     userId,
@@ -136,11 +160,29 @@ export function useScheduleData(range: BusyRange): ScheduleData {
     now,
     month,
     people,
-    known: knownSessions(nearest, history),
+    known,
     busySource,
-    busy: busySessions(busySource, userId, timezone),
-    coachStarts: coachStartsFrom(history, now, timezone),
+    busy,
+    availability,
+    coachStarts,
     provider: providerOf(connections),
     defaultMinutes: user?.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,
   };
+}
+
+/** A moved session's series: none for a one-off, then loading until it loads or fails. */
+export type SeriesLoad =
+  | { kind: "none" }
+  | { kind: "loading" }
+  | { kind: "loaded"; series: CoachingSessionSeriesWithSessions }
+  | { kind: "error" };
+
+export const NO_SERIES: SeriesLoad = { kind: "none" };
+
+export function useLoadedSeries(seriesId: Id): SeriesLoad {
+  const timezone = useScheduleTimezone();
+  const { series, isLoading, isError } = useCoachingSessionSeries(seriesId, timezone);
+  if (isError) return { kind: "error" };
+  // The hook's placeholder has another id until the series arrives.
+  return !isLoading && series.id === seriesId ? { kind: "loaded", series } : { kind: "loading" };
 }
