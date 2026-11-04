@@ -3,11 +3,6 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { Settings } from "ts-luxon";
 import { useRouter } from "next/navigation";
 import { NewSessionDialog } from "@/components/ui/new-session/new-session-dialog";
-import { NewSessionDialogHost } from "@/components/ui/new-session/new-session-dialog-host";
-import {
-  NewSessionDialogStoreProvider,
-  useNewSessionDialogStore,
-} from "@/lib/providers/new-session-dialog-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import {
   CoachingSessionApi,
@@ -16,8 +11,6 @@ import {
 } from "@/lib/api/coaching-sessions";
 import { CoachingSessionSeriesApi, useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
-import { toast } from "@/lib/toast";
-import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { createMockSession } from "../../../test-utils";
 import { MoveScope } from "@/lib/scheduling";
@@ -81,14 +74,6 @@ function serveRelationships(relationships: CoachingRelationshipWithUserNames[]) 
     isError: undefined,
     refresh: vi.fn(),
   } as unknown as ReturnType<typeof useCoachingRelationshipList>);
-}
-
-function apiError(status?: number, data?: unknown): EntityApiError {
-  const axiosLike = Object.assign(new Error("Request failed"), {
-    isAxiosError: true,
-    response: status !== undefined ? { status, statusText: "Error", data } : undefined,
-  });
-  return new EntityApiError("POST", "/coaching_sessions", axiosLike);
 }
 
 const originalNow = Settings.now;
@@ -164,7 +149,6 @@ const rail = () => within(screen.getByRole("list", { name: "Steps" }));
 const railRow = (label: string) => rail().getAllByRole("listitem").find((row) => row.textContent?.startsWith(label));
 const day = (label: string) => screen.getByRole("button", { name: new RegExp(`^${label}(,|$)`) });
 const next = () => fireEvent.click(screen.getByRole("button", { name: "Next step" }));
-const prev = () => fireEvent.click(screen.getByRole("button", { name: "Previous step" }));
 
 function serveSeries(series: unknown, state: { isLoading?: boolean; isError?: unknown } = {}) {
   vi.mocked(useCoachingSessionSeries).mockReturnValue({

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { Settings } from "ts-luxon";
 import { useRouter } from "next/navigation";
 import { NewSessionDialog } from "@/components/ui/new-session/new-session-dialog";
@@ -11,7 +11,6 @@ import {
 } from "@/lib/api/coaching-sessions";
 import { CoachingSessionSeriesApi, useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
-import { MoveScope } from "@/lib/scheduling";
 import { busySessions, pickerPeople } from "@/lib/schedule-draft";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -144,25 +143,9 @@ function renderSchedule() {
   render(<NewSessionDialog request={{ kind: "schedule", date: None }} onClose={vi.fn()} />);
 }
 
-function renderMove(target: EnrichedCoachingSession, scope = MoveScope.This) {
-  const onClose = vi.fn();
-  render(<NewSessionDialog request={{ kind: "move", session: target, scope }} onClose={onClose} />);
-  return onClose;
-}
-
-const rail = () => within(screen.getByRole("list", { name: "Steps" }));
-const railRow = (label: string) => rail().getAllByRole("listitem").find((row) => row.textContent?.startsWith(label));
 const next = () => fireEvent.click(screen.getByRole("button", { name: "Next step" }));
 const person = (name: string) => screen.getByRole("button", { name: new RegExp(name) });
-const day = (label: string) => screen.getByRole("button", { name: new RegExp(`^${label}(,|$)`) });
 const typeTime = (value: string) => fireEvent.change(screen.getByLabelText("Start time"), { target: { value } });
-const focused = () => document.activeElement?.getAttribute("aria-label") ?? "";
-
-function toWhen() {
-  renderSchedule();
-  fireEvent.click(person("Priya Raman"));
-  next();
-}
 
 const rebuilds = () => ({
   people: vi.mocked(pickerPeople).mock.calls.length,
