@@ -99,11 +99,11 @@ describe("StepDialog on desktop", () => {
     expect(props.onNext.some && props.onNext.val).toHaveBeenCalled();
   });
 
-  it("hides prev on the first step and next on the last", () => {
+  it("keeps prev and next, disabled, with no step that way", () => {
     viewport(true);
     renderDialog({ onPrev: None, onNext: None });
-    expect(screen.queryByRole("button", { name: "Previous step" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Next step" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous step" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next step" })).toBeDisabled();
   });
 
   it("confirms from the footer", () => {
@@ -184,6 +184,13 @@ describe("StepDialog below 900px", () => {
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(props.onPrev.some && props.onPrev.val).toHaveBeenCalled();
     expect(props.onNext.some && props.onNext.val).toHaveBeenCalled();
+  });
+
+  it("keeps the back circle, disabled, on the first step", () => {
+    viewport(false);
+    renderDialog({ onPrev: None });
+    expect(screen.getByRole("button", { name: "Previous step" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
   });
 
   it("puts the confirm in the footer on the last step", () => {

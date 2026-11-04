@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   otherMoveFailedMessage,
   sessionRemovedMessage,
-  sessionUpdatedMessage,
 } from "@/components/ui/dashboard/session-change-message";
 import { createMockRelationship } from "../../../test-utils";
 
@@ -14,10 +13,7 @@ const session = { date: "2026-11-05T03:00:00", coaching_relationship_id: "rel-1"
 const halfPast = { ...session, date: "2026-11-05T03:30:00" };
 
 describe("session change messages", () => {
-  it("says what was updated or removed, and when", () => {
-    expect(sessionUpdatedMessage(session, relationships, "America/Chicago")).toBe(
-      "Updated the Nov 4 @ 9 PM session with James Hodapp"
-    );
+  it("says what was removed, and when", () => {
     expect(sessionRemovedMessage(session, relationships, "America/Chicago")).toBe(
       "Removed the Nov 4 @ 9 PM session with James Hodapp"
     );

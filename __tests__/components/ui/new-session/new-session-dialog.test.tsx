@@ -254,7 +254,7 @@ describe("NewSessionDialog: Repeat", () => {
     expect(screen.getByRole("heading", { name: "Repeat" })).toBeInTheDocument();
     expect(screen.getByText("3 of 3")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Doesn't repeat" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByRole("button", { name: "Next step" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next step" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Schedule session" })).toBeEnabled();
   });
 
@@ -272,7 +272,7 @@ describe("NewSessionDialog: Repeat", () => {
     toRepeat();
     fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
     fireEvent.change(screen.getByRole("spinbutton", { name: "Number of sessions" }), { target: { value: "0" } });
-    expect(screen.getByText("Number of occurrences must be at least 1.")).toBeInTheDocument();
+    expect(screen.getByText("Enter at least 1 session.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Schedule/ })).toBeDisabled();
   });
 });
