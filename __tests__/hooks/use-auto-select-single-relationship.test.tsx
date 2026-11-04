@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { useAutoSelectSingleRelationship } from '@/lib/hooks/use-auto-select-single-relationship'
 import { CoachingRelationshipWithUserNames } from '@/types/coaching_relationship'

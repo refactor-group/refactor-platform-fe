@@ -61,7 +61,9 @@ export function clampDuration(minutes: number): number {
 }
 
 export function stepDuration(minutes: number, direction: 1 | -1): number {
-  return clampDuration(clampDuration(minutes) + direction * DURATION_FIELD_STEP);
+  // A length outside the field's range steps to the nearest bound first.
+  if (minutes > DURATION_FIELD_MAX || minutes < DURATION_FIELD_MIN) return clampDuration(minutes);
+  return clampDuration(minutes + direction * DURATION_FIELD_STEP);
 }
 
 export function matchingChip(minutes: number): Option<number> {

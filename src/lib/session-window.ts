@@ -145,6 +145,15 @@ export function sessionStartIn(date: string, timezone: string): DateTime {
   return DateTime.fromISO(date, { zone: "utc" }).setZone(timezone);
 }
 
+/** The series slot a session occupies, or its own start when the slot is unknown. */
+export function seriesSlotStart(
+  session: { date: string; ical_recurrence_id: Option<string> },
+  timezone: string
+): DateTime {
+  const slot = session.ical_recurrence_id;
+  return sessionStartIn(slot.some ? slot.val : session.date, timezone);
+}
+
 export function sessionEndIn(
   session: { date: string; duration_minutes: number },
   timezone: string
@@ -155,6 +164,11 @@ export function sessionEndIn(
 /** A local time as the stored naive UTC session date. */
 export function toSessionDate(local: DateTime): string {
   return local.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss");
+}
+
+/** An instant as the `/nearest` query's UTC timestamp. */
+export function utcInstant(dt: DateTime): string {
+  return dt.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 }
 
 export function timeOfDay(dt: DateTime): string {

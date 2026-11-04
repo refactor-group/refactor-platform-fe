@@ -1,40 +1,27 @@
 import { useEffect } from "react";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DashboardContainer } from "@/components/ui/dashboard/dashboard-container";
+import { None } from "@/types/option";
+import { createMockEnrichedSession } from "../../../test-utils";
 
-// ── Auto-refresh contract (integration) ─────────────────────────────────
-//
-// `DashboardContainer` is the seam where the dialog-close → refresh wiring
-// lives. The dashboard's two user-scoped fetches (UpcomingSessionCard and
-// CoachingSessionsCard) both use tuple SWR keys (`[url, params]`). The
-// shared `useEntityMutation` auto-invalidation filters by `typeof key ===
-// "string"` and silently skips tuple keys, so both cards depend on the
-// container plumbing their `refresh()` callbacks back through the dialog
-// close path.
-//
-// Without this test, a future refactor that drops `onRefreshNeeded` from
-// either card (or fails to call the captured callbacks on dialog close)
-// would let stale create/edit data reach users without any unit-test
-// failure. The card-level tests pin each card's *outgoing* contract; this
-// test pins the container's *consumption* of both contracts together.
+// The container wires the cards to the New session dialog store and keeps
+// the cards' refresh plumbing for series changes. Cards and dialogs are
+// stubbed; the contract lives in the container's wiring.
 
-// All imports of the actual cards/dialogs are mocked because the contract
-// under test lives in the container's wiring, not in the cards themselves.
-//
-// Each mock card calls the captured `onRefreshNeeded` with a fixed spy on
-// mount. The dialog mock exposes a button so the test can simulate
-// `onOpenChange(false)` (the close path the real dialog takes after a
-// create/edit submit).
-
+const rescheduled = createMockEnrichedSession({ id: "sess-1" });
 const upcomingSessionRefreshSpy = vi.fn();
 const coachingSessionsCardRefreshSpy = vi.fn();
 
 vi.mock("@/components/ui/dashboard/upcoming-session-card", () => ({
   UpcomingSessionCard: ({
     onRefreshNeeded,
+    onReschedule,
+    onCreateSession,
   }: {
     onRefreshNeeded?: (fn: () => void) => void;
+    onReschedule?: (session: ReturnType<typeof createMockEnrichedSession>) => void;
+    onCreateSession?: () => void;
   }) => {
     // Defer the parent's `setState` until after render to mirror the real
     // card's `useEffect`-based registration and avoid React's "setState
@@ -42,7 +29,16 @@ vi.mock("@/components/ui/dashboard/upcoming-session-card", () => ({
     useEffect(() => {
       onRefreshNeeded?.(upcomingSessionRefreshSpy);
     }, [onRefreshNeeded]);
-    return <div data-testid="upcoming-session-card-stub" />;
+    return (
+      <div data-testid="upcoming-session-card-stub">
+        <button data-testid="reschedule-stub" onClick={() => onReschedule?.(rescheduled)}>
+          Reschedule
+        </button>
+        <button data-testid="card-create-stub" onClick={() => onCreateSession?.()}>
+          Schedule
+        </button>
+      </div>
+    );
   },
 }));
 
@@ -71,26 +67,10 @@ vi.mock("@/components/ui/dashboard/dashboard-header", () => ({
   ),
 }));
 
-// CoachingSessionDialog renders nothing meaningful but exposes a button
-// that fires `onOpenChange(false)` so the test can simulate the close
-// path. We use this rather than mounting the real dialog because the
-// real dialog requires a backend submit to fire the close callback.
-vi.mock("@/components/ui/dashboard/coaching-session-dialog", () => ({
-  CoachingSessionDialog: ({
-    open,
-    onOpenChange,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }) =>
-    open ? (
-      <button
-        data-testid="close-dialog-stub"
-        onClick={() => onOpenChange(false)}
-      >
-        Close
-      </button>
-    ) : null,
+const openSchedule = vi.fn();
+const openMoveSession = vi.fn();
+vi.mock("@/lib/providers/new-session-dialog-store-provider", () => ({
+  useNewSessionDialogStore: (selector: (state: unknown) => unknown) => selector({ openSchedule, openMoveSession }),
 }));
 
 // Container also pulls relationship state for the auto-select hook —
@@ -128,44 +108,34 @@ describe("DashboardContainer auto-refresh wiring", () => {
     // either dropped a prop or stopped passing it.
     expect(upcomingSessionRefreshSpy).not.toHaveBeenCalled();
     expect(coachingSessionsCardRefreshSpy).not.toHaveBeenCalled();
-    // The card *stubs* are responsible for invoking onRefreshNeeded
-    // with these spies; the assertion above just establishes the
-    // baseline. The next test exercises the call path.
   });
 
-  it("invokes ALL card refreshes when the create/edit dialog closes", () => {
+  it("opens the New session dialog from the header and the upcoming card", () => {
     render(<DashboardContainer locale="en-US" />);
 
-    // Pre-state: refreshes haven't been called as a result of dialog
-    // close yet (they're plumbed but the dialog is closed at mount).
-    upcomingSessionRefreshSpy.mockClear();
-    coachingSessionsCardRefreshSpy.mockClear();
-
-    // Open the dialog via the header stub.
     fireEvent.click(screen.getByTestId("open-dialog-stub"));
-    // Dialog stub renders only when open.
-    expect(screen.getByTestId("close-dialog-stub")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("card-create-stub"));
 
-    // Close the dialog via the stub's `onOpenChange(false)` button.
-    act(() => {
-      fireEvent.click(screen.getByTestId("close-dialog-stub"));
-    });
-
-    // The contract: dialog-close fires every card's refresh. If a future
-    // refactor wires the dialog's onOpenChange to a path that only refreshes
-    // some cards, this assertion will fail.
-    expect(upcomingSessionRefreshSpy).toHaveBeenCalledTimes(1);
-    expect(coachingSessionsCardRefreshSpy).toHaveBeenCalledTimes(1);
+    expect(openSchedule).toHaveBeenCalledTimes(2);
+    expect(openSchedule).toHaveBeenCalledWith(None);
   });
 
-  it("does not fire refreshes on initial mount (only on dialog close)", () => {
+  it("reschedules a session in the New session dialog", () => {
+    render(<DashboardContainer locale="en-US" />);
+
+    fireEvent.click(screen.getByTestId("reschedule-stub"));
+
+    expect(openMoveSession).toHaveBeenCalledWith(rescheduled);
+    expect(openSchedule).not.toHaveBeenCalled();
+  });
+
+  it("does not fire refreshes on initial mount", () => {
     upcomingSessionRefreshSpy.mockClear();
     coachingSessionsCardRefreshSpy.mockClear();
 
     render(<DashboardContainer locale="en-US" />);
 
-    // Mount alone — no dialog interaction yet — must not fire any
-    // refresh. If it did, every dashboard render would re-fetch, which
+    // Mount alone must not fire any refresh. If it did, every dashboard render would re-fetch, which
     // would also break SWR's cache-warmth semantics elsewhere.
     expect(upcomingSessionRefreshSpy).not.toHaveBeenCalled();
     expect(coachingSessionsCardRefreshSpy).not.toHaveBeenCalled();

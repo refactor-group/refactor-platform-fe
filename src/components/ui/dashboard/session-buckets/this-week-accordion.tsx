@@ -36,9 +36,10 @@ export interface ThisWeekAccordionProps {
   selectedId: Id | undefined;
   onSelect: (session: EnrichedCoachingSession) => void;
   onReschedule: (session: EnrichedCoachingSession) => void;
+  onEditSeries: (session: EnrichedCoachingSession) => void;
   onRequestDelete: (session: EnrichedCoachingSession) => void;
   onRequestResendInvite: (session: EnrichedCoachingSession) => void;
-  onSeriesAction: (action: "view" | "edit" | "delete", seriesId: Id) => void;
+  onSeriesAction: (action: "view" | "delete", seriesId: Id) => void;
 }
 
 const SESSION_INCLUDES: CoachingSessionInclude[] = [
@@ -59,6 +60,7 @@ export function ThisWeekAccordion({
   selectedId,
   onSelect,
   onReschedule,
+  onEditSeries,
   onRequestDelete,
   onRequestResendInvite,
   onSeriesAction,
@@ -147,6 +149,7 @@ export function ThisWeekAccordion({
                 isSelected={selectedId === session.id}
                 onSelect={() => onSelect(session)}
                 onReschedule={onReschedule}
+                onEditSeries={onEditSeries}
                 onRequestDelete={onRequestDelete}
                 onRequestResendInvite={onRequestResendInvite}
                 onSeriesAction={onSeriesAction}

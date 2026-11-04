@@ -5,6 +5,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WEEKDAYS_ORDERED, type Weekday } from "@/types/recurrence";
 
 interface WeekdayPickerProps {
+  labelledBy: string;
   value: Weekday[];
   /** The start weekday; always kept. */
   locked: Weekday;
@@ -13,7 +14,7 @@ interface WeekdayPickerProps {
 
 const LONG_NAMES = Info.weekdays("long");
 
-export function WeekdayPicker({ value, locked, onChange }: WeekdayPickerProps) {
+export function WeekdayPicker({ labelledBy, value, locked, onChange }: WeekdayPickerProps) {
   const handleChange = (next: string[]) => {
     if (!next.includes(locked)) return;
     onChange(WEEKDAYS_ORDERED.filter((day) => next.includes(day)));
@@ -22,11 +23,12 @@ export function WeekdayPicker({ value, locked, onChange }: WeekdayPickerProps) {
   return (
     <ToggleGroup
       type="multiple"
+      aria-labelledby={labelledBy}
       variant="round"
       size={null}
       value={value}
       onValueChange={handleChange}
-      className="flex-wrap justify-start gap-1.5"
+      className="flex-wrap justify-start gap-1 modal:gap-1.5"
     >
       {WEEKDAYS_ORDERED.map((day, index) => (
         <ToggleGroupItem

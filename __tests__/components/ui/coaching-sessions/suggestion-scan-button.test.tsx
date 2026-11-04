@@ -11,7 +11,6 @@ import { SuggestionScanButton } from "@/components/ui/coaching-sessions/suggesti
 import { useSuggestionScan } from "@/lib/hooks/use-suggestion-scan";
 import { TranscriptSuggestionApi } from "@/lib/api/transcript-suggestions";
 import { ScanStatus } from "@/types/transcript-suggestion";
-import { Some } from "@/types/option";
 
 vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 

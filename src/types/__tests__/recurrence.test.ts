@@ -247,13 +247,13 @@ describe("validateRecurrence", () => {
         ...baseInput,
         end: { kind: "count", count: 0 },
       })
-    ).toBe("Number of occurrences must be at least 1.");
+    ).toBe("Enter at least 1 session.");
     expect(
       validateRecurrence({
         ...baseInput,
         end: { kind: "count", count: 1.5 },
       })
-    ).toBe("Number of occurrences must be at least 1.");
+    ).toBe("Enter at least 1 session.");
   });
 
   it("rejects a count above the backend cap", () => {
@@ -262,7 +262,7 @@ describe("validateRecurrence", () => {
         ...baseInput,
         end: { kind: "count", count: MAX_OCCURRENCES + 1 },
       })
-    ).toBe(`Maximum ${MAX_OCCURRENCES} occurrences.`);
+    ).toBe("That's too many sessions. End the series sooner.");
   });
 
   it("accepts a count at exactly the backend cap", () => {
@@ -319,7 +319,7 @@ describe("validateRecurrence", () => {
         ...baseInput,
         end: { kind: "until", until: tooFar },
       })
-    ).toBe(`End date is beyond the ${MAX_SPAN_DAYS}-day window.`);
+    ).toBe("That end date is too far out. Pick an earlier one.");
   });
 
   it("accepts an `until` exactly at the 366-day cap", () => {

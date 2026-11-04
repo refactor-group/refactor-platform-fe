@@ -5,7 +5,6 @@ import {
   StepDialogHeight,
   type StepDialogLead,
   type StepRailItem,
-  StepState,
 } from "@/components/ui/step-dialog";
 import { None, Some } from "@/types/option";
 
@@ -19,9 +18,9 @@ function viewport(desktop: boolean) {
 afterEach(() => vi.unstubAllGlobals());
 
 const STEPS: StepRailItem[] = [
-  { id: "who", label: "Who", value: "Ehab Badawi", state: StepState.Done },
-  { id: "when", label: "When", value: "Tuesday, August 18, 2:30 PM", state: StepState.Current },
-  { id: "repeat", label: "Repeats", value: "Doesn't repeat", state: StepState.Pending },
+  { id: "who", label: "Who", value: "Ehab Badawi", done: true, current: false },
+  { id: "when", label: "When", value: "Tuesday, August 18, 2:30 PM", done: true, current: true },
+  { id: "repeat", label: "Repeats", value: "Doesn't repeat", done: false, current: false },
 ];
 
 function renderDialog(overrides: Partial<Parameters<typeof StepDialog>[0]> = {}) {
@@ -74,6 +73,15 @@ describe("StepDialog on desktop", () => {
     expect(rows[0]).not.toHaveAttribute("aria-current");
   });
 
+  it("marks done rows, including a current one, with a check", () => {
+    viewport(true);
+    renderDialog();
+    const rows = within(screen.getByRole("list", { name: "Steps" })).getAllByRole("listitem");
+    expect(rows[0].querySelector("svg")).not.toBeNull();
+    expect(rows[1].querySelector("svg")).not.toBeNull();
+    expect(rows[2].querySelector("svg")).toBeNull();
+  });
+
   it("renders the rail header and footer slots", () => {
     viewport(true);
     renderDialog({ railHeader: <p>Currently Tue, Aug 18</p>, railFooter: <p>Scheduling will create</p> });
@@ -91,11 +99,11 @@ describe("StepDialog on desktop", () => {
     expect(props.onNext.some && props.onNext.val).toHaveBeenCalled();
   });
 
-  it("hides prev on the first step and next on the last", () => {
+  it("keeps prev and next, disabled, with no step that way", () => {
     viewport(true);
     renderDialog({ onPrev: None, onNext: None });
-    expect(screen.queryByRole("button", { name: "Previous step" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Next step" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous step" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next step" })).toBeDisabled();
   });
 
   it("confirms from the footer", () => {
@@ -176,6 +184,13 @@ describe("StepDialog below 900px", () => {
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(props.onPrev.some && props.onPrev.val).toHaveBeenCalled();
     expect(props.onNext.some && props.onNext.val).toHaveBeenCalled();
+  });
+
+  it("keeps the back circle, disabled, on the first step", () => {
+    viewport(false);
+    renderDialog({ onPrev: None });
+    expect(screen.getByRole("button", { name: "Previous step" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
   });
 
   it("puts the confirm in the footer on the last step", () => {

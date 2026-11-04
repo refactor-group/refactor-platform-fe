@@ -1,0 +1,12 @@
+"use client";
+
+import { NewSessionDialog } from "@/components/ui/new-session/new-session-dialog";
+import { useNewSessionDialogStore } from "@/lib/providers/new-session-dialog-store-provider";
+
+export function NewSessionDialogHost() {
+  const open = useNewSessionDialogStore((state) => state.open);
+  const close = useNewSessionDialogStore((state) => state.close);
+  if (open.none) return null;
+  const { id, request } = open.val;
+  return <NewSessionDialog key={id} request={request} onClose={() => close(id)} />;
+}

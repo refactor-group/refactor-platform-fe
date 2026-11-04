@@ -72,7 +72,10 @@ npm run test:coverage
 
 #### End-to-End Tests
 ```bash
-# Run E2E tests (requires dev server to be running)
+# Run E2E tests in Docker, in CI's Playwright image (requires dev server and Docker Desktop)
+npm run test:e2e:docker
+
+# Run E2E tests natively (requires dev server to be running)
 npm run test:e2e
 
 # Run E2E tests with interactive UI
@@ -104,9 +107,14 @@ These test complete user workflows in a real browser:
 # First, start the development server in one terminal
 npm run dev
 
-# Then in another terminal, run E2E tests
-npm run test:e2e
+# Then in another terminal, run E2E tests in Docker
+npm run test:e2e:docker
+
+# Pass Playwright arguments after --, e.g. one spec in one browser
+npm run test:e2e:docker -- __tests__/e2e/header.spec.ts --project=firefox
 ```
+
+`test:e2e:docker` runs the specs in CI's Playwright image, against your dev server, with 2 workers by default. Prefer it: it matches CI's browsers and OS, and native Firefox hangs at startup on macOS 27. Run natively (`npm run test:e2e`, add `--headed` or `--debug`) when you want to watch a test in a browser.
 
 **What this covers:**
 - State persistence across page navigation

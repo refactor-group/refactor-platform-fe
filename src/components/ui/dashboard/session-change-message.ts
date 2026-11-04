@@ -36,24 +36,6 @@ function theSession(
   return `the ${startsAt(session, timezone)} session${withCoachee(relationships, session.coaching_relationship_id)}`;
 }
 
-/** e.g. "Created a new session Nov 4 @ 10 AM with James Hodapp". */
-export function sessionCreatedMessage(
-  session: SessionRef,
-  relationships: CoachingRelationshipWithUserNames[],
-  timezone: string
-): string {
-  return `Created a new session ${startsAt(session, timezone)}${withCoachee(relationships, session.coaching_relationship_id)}`;
-}
-
-/** e.g. "Updated the Nov 6 @ 11 AM session with James Hodapp", with its new date and time. */
-export function sessionUpdatedMessage(
-  session: SessionRef,
-  relationships: CoachingRelationshipWithUserNames[],
-  timezone: string
-): string {
-  return `Updated ${theSession(session, relationships, timezone)}`;
-}
-
 /** e.g. "Removed the Nov 4 @ 11 AM session with James Hodapp". */
 export function sessionRemovedMessage(
   session: SessionRef,
@@ -61,15 +43,6 @@ export function sessionRemovedMessage(
   timezone: string
 ): string {
   return `Removed ${theSession(session, relationships, timezone)}`;
-}
-
-/** e.g. "Created 3 recurring sessions with James Hodapp". */
-export function seriesCreatedMessage(
-  count: number,
-  relationshipId: Id,
-  relationships: CoachingRelationshipWithUserNames[]
-): string {
-  return `Created ${count} recurring session${count === 1 ? "" : "s"}${withCoachee(relationships, relationshipId)}`;
 }
 
 export interface OtherMove {
@@ -104,6 +77,10 @@ export function scheduledMessage(input: {
   ].join(" · ");
 }
 
+export function otherMoveFailedMessage(personName: string): string {
+  return `Couldn't move ${firstNameOf(personName)}'s session · Reschedule it from the dashboard`;
+}
+
 /** e.g. "Rescheduled · Ehab to Thursday, August 20, 2:00 PM · and following". */
 export function rescheduledMessage(input: {
   personName: string;
@@ -116,6 +93,38 @@ export function rescheduledMessage(input: {
     "Rescheduled",
     `${firstNameOf(personName)} to ${formatWeekdayDate(start)}, ${timeOfDay(start)}`,
     ...(following ? ["and following"] : []),
+    ...otherMoveParts(otherMove),
+  ].join(" · ");
+}
+
+/** e.g. "Updated · Priya · Tuesday, August 18, 4:30 PM · 55 min". */
+export function updatedMessage(input: {
+  personName: string;
+  start: DateTime;
+  minutes: number;
+  otherMove: Option<OtherMove>;
+}): string {
+  const { personName, start, minutes, otherMove } = input;
+  return [
+    "Updated",
+    firstNameOf(personName),
+    `${formatWeekdayDate(start)}, ${timeOfDay(start)}`,
+    `${minutes} min`,
+    ...otherMoveParts(otherMove),
+  ].join(" · ");
+}
+
+/** e.g. "Updated · Ehab's series · Weekly, for 4 sessions". */
+export function seriesUpdatedMessage(input: {
+  personName: string;
+  repeat: RepeatChoice;
+  otherMove: Option<OtherMove>;
+}): string {
+  const { personName, repeat, otherMove } = input;
+  return [
+    "Updated",
+    `${firstNameOf(personName)}'s series`,
+    repeatLabel(repeat),
     ...otherMoveParts(otherMove),
   ].join(" · ");
 }

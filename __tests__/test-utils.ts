@@ -90,6 +90,8 @@ export function createMockSession(
     duration_minutes: 60,
     title: None,
     coaching_session_series_id: None,
+    organization_id: None,
+    ical_recurrence_id: None,
     created_at: now, // CoachingSession expects DateTime object
     updated_at: now,
     ...overrides,
@@ -122,6 +124,8 @@ export function createMockEnrichedSession(
     duration_minutes: 60,
     title: None,
     coaching_session_series_id: None,
+    organization_id: None,
+    ical_recurrence_id: None,
     created_at: now,
     updated_at: now,
     relationship: {

@@ -1,6 +1,6 @@
 // Mirrors the backend payload for POST /coaching_sessions/recurring.
-// Field rules (enforced server-side, see also client-side guards in
-// coaching-session-form.tsx):
+// Field rules (enforced server-side, mirrored client-side by
+// validateRecurrence below):
 // - start_at: first occurrence equals start_at, stored UTC
 // - interval: step multiplier (weekly + interval:2 ≡ biweekly + interval:1)
 // - by_weekdays: weekly/biweekly only; must include start_at's weekday
@@ -115,6 +115,14 @@ export interface CreateRecurringSessionRequest {
   duration_minutes?: number;
 }
 
+/** POST /coaching_session_series/:id/reschedule; `count` counts from `coaching_session_id`. */
+export interface RescheduleSeriesRequest {
+  coaching_session_id: Id;
+  start_at: string;
+  duration_minutes: number;
+  recurrence: Recurrence;
+}
+
 export function recurrenceToPayload(
   frequency: Frequency,
   interval: number,
@@ -211,10 +219,10 @@ export function validateRecurrence({
   if (interval < 1) return "Interval must be at least 1.";
   if (end.kind === "count") {
     if (!Number.isInteger(end.count) || end.count < 1) {
-      return "Number of occurrences must be at least 1.";
+      return "Enter at least 1 session.";
     }
     if (end.count > MAX_OCCURRENCES) {
-      return `Maximum ${MAX_OCCURRENCES} occurrences.`;
+      return "That's too many sessions. End the series sooner.";
     }
   } else {
     if (!end.until) return "Pick an end date.";
@@ -229,7 +237,7 @@ export function validateRecurrence({
       }
       const spanDays = Math.floor(until.diff(startOfDay, "days").days) + 1;
       if (spanDays > MAX_SPAN_DAYS) {
-        return `End date is beyond the ${MAX_SPAN_DAYS}-day window.`;
+        return "That end date is too far out. Pick an earlier one.";
       }
     }
   }

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { EditorContent, useEditor } from '@tiptap/react'
 import { render, waitFor } from '@testing-library/react'
 import * as Y from 'yjs'

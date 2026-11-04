@@ -27,7 +27,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 const QUERY: NearestQuery = {
   userId: "user-1",
-  relationshipId: "rel-1",
+  relationshipIds: ["rel-1"],
   around: "2026-10-30T14:00:00",
   before: 2,
   after: 3,
@@ -73,7 +73,7 @@ describe("nearest coaching sessions", () => {
     expect(urls).toHaveLength(1);
     expect(urls[0].pathname).toBe("/users/user-1/coaching_sessions/nearest");
     expect(Object.fromEntries(urls[0].searchParams)).toEqual({
-      coaching_relationship_id: "rel-1",
+      coaching_relationship_ids: "rel-1",
       around: "2026-10-30T14:00:00",
       before: "2",
       after: "3",

@@ -35,6 +35,7 @@ import {
   monthGroups,
   sessionStartIn,
   sessionWindow,
+  utcInstant,
 } from "@/lib/session-window";
 import {
   type PersonEntry,
@@ -173,21 +174,17 @@ export interface WindowQueryInput {
 export function windowQuery(input: WindowQueryInput): NearestWindow {
   const { relationshipId, today, current, now } = input;
   if (today.some) {
-    return { relationshipId, around: today.val.date, before: 2, after: 3 };
+    return { relationshipIds: [relationshipId], around: today.val.date, before: 2, after: 3 };
   }
   if (current.some && current.val.relationshipId === relationshipId) {
-    return { relationshipId, around: current.val.date, before: 2, after: 3 };
+    return { relationshipIds: [relationshipId], around: current.val.date, before: 2, after: 3 };
   }
   return {
-    relationshipId,
+    relationshipIds: [relationshipId],
     around: utcInstant(now),
     before: 2,
     after: 2,
   };
-}
-
-function utcInstant(dt: DateTime): string {
-  return dt.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 }
 
 type ActivityByPerson = ReturnType<typeof activityByPerson>;

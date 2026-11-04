@@ -14,19 +14,20 @@ import { BucketsContainer } from "@/components/ui/dashboard/session-buckets/buck
 import { DeleteSessionDialog } from "@/components/ui/dashboard/delete-session-dialog";
 import { ResendInviteDialog } from "@/components/ui/dashboard/resend-invite-dialog";
 import { useResendInvite } from "@/components/ui/dashboard/use-resend-invite";
-import { SeriesActionDialogs } from "@/components/ui/dashboard/series-action-dialogs";
+import { useEditSeries } from "@/components/ui/dashboard/use-edit-series";
+import { type SeriesAction, SeriesActionDialogs } from "@/components/ui/dashboard/series-action-dialogs";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { USERS_BASEURL } from "@/lib/api/users";
+import type { MoveScope } from "@/lib/scheduling";
 import type { Id } from "@/types/general";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { sessionRemovedMessage } from "@/components/ui/dashboard/session-change-message";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
-  type CoachingSession,
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
 import {
@@ -58,17 +59,12 @@ type DeleteDialogState =
   | { kind: "deleting"; session: EnrichedCoachingSession };
 
 export interface CoachingSessionsCardProps {
-  /** Opens the create/edit dialog with the given session pre-filled. */
-  onReschedule: (session: CoachingSession | EnrichedCoachingSession) => void;
-  /** Surfaces the card's internal SWR `refresh()` to the parent so it can
-   *  force a revalidate after a create/edit dialog closes. The
-   *  user-scoped enriched fetch uses a tuple SWR key (`[url, params]`),
-   *  which `useEntityMutation`'s auto-invalidation skips because it
-   *  filters by `typeof key === "string"`. Without this hook-up, newly-
-   *  created sessions wouldn't appear in the list until a hard reload.
-   *  Mirrors `UpcomingSessionCard.onRefreshNeeded`. */
+  /** Opens the New session dialog to move the given session, this one only by default. */
+  onReschedule: (session: EnrichedCoachingSession, scope?: MoveScope) => void;
+  /** Surfaces the card's SWR `refresh()` so the parent can revalidate it
+   *  after a series changes elsewhere. Mirrors `UpcomingSessionCard.onRefreshNeeded`. */
   onRefreshNeeded?: (refresh: () => void) => void;
-  /** Fires after a series is rescheduled or deleted from a session row's
+  /** Fires after a series is deleted from a session row's
    *  kebab. Re-materialization changes future sessions across surfaces, so
    *  the parent uses this to refresh sibling cards (e.g. UpcomingSession).
    *  The card already revalidates its own buckets internally. */
@@ -197,17 +193,16 @@ export function CoachingSessionsCard({
   const resend = useResendInvite();
 
   // ── Series actions ───────────────────────────────────────────────────
-  // A session row's kebab surfaces view / edit / delete for the series it
-  // belongs to. The row only knows the `coaching_session_series_id`, so the
-  // owning dialog component fetches the full series by id. A single piece of
-  // state drives all three dialogs; `SeriesActionDialogs` mounts only while
-  // active so its fetch hook always receives a real id.
-  const [seriesAction, setSeriesAction] = useState<
-    { kind: "closed" } | { kind: "view" | "edit" | "delete"; seriesId: Id }
-  >({ kind: "closed" });
+  // A session row's kebab surfaces view / delete for the series it belongs
+  // to. The row only knows the `coaching_session_series_id`, so the owning
+  // dialog component fetches the full series by id. A single piece of state
+  // drives both dialogs; `SeriesActionDialogs` mounts only while active so
+  // its fetch hook always receives a real id.
+  const [seriesAction, setSeriesAction] = useState<SeriesAction>({ kind: "closed" });
+  const handleEditSeries = useEditSeries(userTimezone, onReschedule);
 
   const handleSeriesAction = useCallback(
-    (action: "view" | "edit" | "delete", seriesId: Id) =>
+    (action: "view" | "delete", seriesId: Id) =>
       setSeriesAction({ kind: action, seriesId }),
     []
   );
@@ -217,7 +212,7 @@ export function CoachingSessionsCard({
     []
   );
 
-  // After a reschedule/delete the future sessions change, so revalidate this
+  // After a delete the future sessions change, so revalidate this
   // card's buckets and let the parent refresh sibling cards.
   const handleSeriesMutated = useCallback(() => {
     refreshBucketData();
@@ -290,6 +285,7 @@ export function CoachingSessionsCard({
               locale={locale}
               mountNow={mountNow}
               onReschedule={onReschedule}
+              onEditSeries={handleEditSeries}
               onRequestDelete={handleRequestDelete}
               onRequestResendInvite={resend.requestResend}
               onSeriesAction={handleSeriesAction}

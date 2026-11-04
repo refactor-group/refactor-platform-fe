@@ -18,6 +18,13 @@ export interface WorkingHours {
 
 export const DEFAULT_WORKING_HOURS: WorkingHours = { start: 9 * 60, end: 17 * 60 };
 
+export interface BusyClash {
+  session: BusySession;
+  /** Any further sessions the new time also overlaps. */
+  others: BusySession[];
+  instead: Option<DateTime>;
+}
+
 export interface Slot {
   start: DateTime;
   minutes: number;
@@ -29,12 +36,18 @@ export interface UsualSlot {
   minute: number;
 }
 
-export type RepeatChoice =
-  | { kind: "none" }
-  | { kind: "repeat"; frequency: Frequency; end: RecurrenceEnd };
+/** How often a series repeats: every `interval` of `frequency`. */
+export interface Cadence {
+  frequency: Frequency;
+  interval: number;
+}
+
+export type RepeatChoice = { kind: "none" } | ({ kind: "repeat"; end: RecurrenceEnd } & Cadence);
 
 const SLOT_STEP_MINUTES = 30;
 const MAX_SUGGESTIONS = 5;
+/** A start time counts as a habit once it has been used this many times. */
+const MIN_REPEATS = 2;
 
 function byStart<T extends { start: DateTime }>(a: T, b: T): number {
   return a.start.toMillis() - b.start.toMillis();
@@ -69,8 +82,14 @@ export function overlapping(slot: Slot, busy: BusySession[]): BusySession[] {
   return busy.filter((b) => slot.start < b.end && end > b.start).sort(byStart);
 }
 
+/** A slot already past the working day may look until midnight. */
+function searchLimit(slot: Slot, hours: WorkingHours): DateTime {
+  const workEnd = atMinute(slot.start, hours.end);
+  return endOf(slot) > workEnd ? slot.start.startOf("day").plus({ days: 1 }) : workEnd;
+}
+
 export function nextFreeStart(slot: Slot, busy: BusySession[], hours: WorkingHours): Option<DateTime> {
-  const dayEnd = atMinute(slot.start, hours.end);
+  const dayEnd = searchLimit(slot, hours);
   for (let offset = SLOT_STEP_MINUTES; ; offset += SLOT_STEP_MINUTES) {
     const candidate = { start: slot.start.plus({ minutes: offset }), minutes: slot.minutes };
     if (endOf(candidate) > dayEnd) return None;
@@ -119,7 +138,7 @@ export function usualSlot(seriesStart: Option<DateTime>, history: DateTime[]): O
     return Some({ weekday: seriesStart.val.weekday, minute: minuteOfDay(seriesStart.val) });
   }
   const [top] = tallySlots(history)
-    .filter((t) => t.count >= 2)
+    .filter((t) => t.count >= MIN_REPEATS)
     .sort((a, b) => b.count - a.count || b.latest.toMillis() - a.latest.toMillis());
   return top ? Some(top.slot) : None;
 }
@@ -134,14 +153,17 @@ export interface SuggestTimesInput {
   now: DateTime;
 }
 
-/** The coach's start times of day, most frequent first, ties earlier first. */
+/** The coach's start times of day seen at least twice, most frequent first, ties earlier first. */
 function frequentMinutes(starts: DateTime[]): number[] {
   const counts = new Map<number, number>();
   for (const start of starts) {
     const minute = minuteOfDay(start);
     counts.set(minute, (counts.get(minute) ?? 0) + 1);
   }
-  return [...counts.entries()].sort(([ma, ca], [mb, cb]) => cb - ca || ma - mb).map(([m]) => m);
+  return [...counts.entries()]
+    .filter(([, count]) => count >= MIN_REPEATS)
+    .sort(([ma, ca], [mb, cb]) => cb - ca || ma - mb)
+    .map(([m]) => m);
 }
 
 function roundHourMinutes(minutes: number, hours: WorkingHours): number[] {
@@ -181,14 +203,20 @@ export enum StepKind {
   Resolve = "resolve",
 }
 
-export type StepMode = { kind: "schedule" } | { kind: "move"; appliesTo: boolean };
+export enum MoveScope {
+  This = "this",
+  Following = "following",
+}
+
+export type StepMode = { kind: "schedule" } | { kind: "move"; appliesTo: boolean; following: boolean };
 
 function baseSteps(mode: StepMode): StepKind[] {
   switch (mode.kind) {
     case "schedule":
       return [StepKind.Who, StepKind.When, StepKind.Repeat];
     case "move":
-      return mode.appliesTo ? [StepKind.When, StepKind.AppliesTo] : [StepKind.When];
+      if (!mode.appliesTo) return [StepKind.When];
+      return mode.following ? [StepKind.When, StepKind.AppliesTo, StepKind.Repeat] : [StepKind.When, StepKind.AppliesTo];
     default: {
       const _exhaustive: never = mode;
       throw new Error(`Unhandled step mode: ${JSON.stringify(_exhaustive)}`);

@@ -1,10 +1,11 @@
 import { DateTime, Info } from "ts-luxon";
-import type { BusySession, RepeatChoice, UsualSlot } from "@/lib/scheduling";
+import { type BusySession, type Cadence, MoveScope, type RepeatChoice, type UsualSlot } from "@/lib/scheduling";
 import { shortDate, timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 import { type Option, None, Some } from "@/types/option";
 import { Provider } from "@/types/provider";
-import { Frequency, type RecurrenceEnd } from "@/types/recurrence";
+import type { SeriesRecurrence } from "@/types/coaching-session-series";
+import { Frequency, type RecurrenceEnd, WEEKDAYS_ORDERED, frequencySupportsWeekdays } from "@/types/recurrence";
 
 const FIRST_SESSION_WEEKDAY_DAYS = 6;
 
@@ -40,10 +41,15 @@ function daysAhead(day: DateTime, now: DateTime): number {
   return Math.round(day.startOf("day").diff(now.setZone(day.zone).startOf("day"), "days").days);
 }
 
-function firstSessionLine(next: DateTime, now: DateTime): string {
+function firstSessionDay(next: DateTime, now: DateTime): string {
   const days = daysAhead(next, now);
-  const when = days >= 0 && days <= FIRST_SESSION_WEEKDAY_DAYS ? next.toFormat("cccc") : shortDate(next);
-  return `First session ${when}`;
+  if (days === 0) return "today";
+  if (days === 1) return "tomorrow";
+  return days > 1 && days <= FIRST_SESSION_WEEKDAY_DAYS ? next.toFormat("cccc") : shortDate(next);
+}
+
+function firstSessionLine(next: DateTime, now: DateTime): string {
+  return `First session ${firstSessionDay(next, now)}`;
 }
 
 export function whoSubline(input: WhoSublineInput, now: DateTime): string {
@@ -84,21 +90,10 @@ export function insteadLabel(start: DateTime): string {
   return `Use ${timeOfDay(start)} instead`;
 }
 
-function frequencyPhrase(frequency: Frequency): string {
-  switch (frequency) {
-    case Frequency.Daily:
-      return "Daily";
-    case Frequency.Weekly:
-      return "Weekly";
-    case Frequency.Biweekly:
-      return "Every 2 weeks";
-    case Frequency.Monthly:
-      return "Monthly";
-    default: {
-      const _exhaustive: never = frequency;
-      throw new Error(`Unhandled frequency: ${_exhaustive}`);
-    }
-  }
+/** "Weekly", "Every 2 weeks", "Every 3 months". */
+export function cadenceLabel(cadence: Cadence): string {
+  const phrase = rhythmPhrase(cadence);
+  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
 }
 
 function endPhrase(end: RecurrenceEnd): string {
@@ -119,7 +114,7 @@ export function repeatLabel(choice: RepeatChoice): string {
     case "none":
       return "Doesn't repeat";
     case "repeat":
-      return `${frequencyPhrase(choice.frequency)}, ${endPhrase(choice.end)}`;
+      return `${cadenceLabel(choice)}, ${endPhrase(choice.end)}`;
     default: {
       const _exhaustive: never = choice;
       throw new Error(`Unhandled repeat choice: ${JSON.stringify(_exhaustive)}`);
@@ -138,6 +133,54 @@ export function scheduleSubmitLabel(choice: RepeatChoice): string {
       throw new Error(`Unhandled repeat choice: ${JSON.stringify(_exhaustive)}`);
     }
   }
+}
+
+export function moveScopeTitle(scope: MoveScope): string {
+  switch (scope) {
+    case MoveScope.This:
+      return "This session only";
+    case MoveScope.Following:
+      return "This and following sessions";
+    default: {
+      const _exhaustive: never = scope;
+      throw new Error(`Unhandled move scope: ${_exhaustive}`);
+    }
+  }
+}
+
+function every(count: number, unit: string, single: string): string {
+  return count === 1 ? single : `every ${count} ${unit}s`;
+}
+
+function rhythmPhrase({ frequency, interval }: Cadence): string {
+  switch (frequency) {
+    case Frequency.Daily:
+      return every(interval, "day", "daily");
+    case Frequency.Weekly:
+      return every(interval, "week", "weekly");
+    case Frequency.Biweekly:
+      return every(interval * 2, "week", "weekly");
+    case Frequency.Monthly:
+      return every(interval, "month", "monthly");
+    default: {
+      const _exhaustive: never = frequency;
+      throw new Error(`Unhandled frequency: ${_exhaustive}`);
+    }
+  }
+}
+
+/** "Mondays, Wednesdays and Fridays". */
+function weekdaysPhrase(days: SeriesRecurrence["by_weekdays"]): string {
+  const names = WEEKDAYS_ORDERED.flatMap((day, index) =>
+    days?.includes(day) ? [`${Info.weekdays("long")[index]}s`] : []
+  );
+  return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join("");
+}
+
+/** "Ehab's series repeats weekly on Tuesdays." */
+export function seriesRuleLine(personName: string, recurrence: SeriesRecurrence): string {
+  const days = frequencySupportsWeekdays(recurrence.frequency) ? weekdaysPhrase(recurrence.by_weekdays) : "";
+  return `${firstNameOf(personName)}'s series repeats ${rhythmPhrase(recurrence)}${days ? ` on ${days}` : ""}.`;
 }
 
 export function moveSubmitLabel(following: boolean): string {
@@ -169,6 +212,18 @@ export function currentlyLine(start: DateTime): string {
   return `Currently ${start.toFormat("ccc")}, ${shortDate(start)}, ${timeOfDay(start)}`;
 }
 
+/** For a session the user can't move: "Ehab's session on Tue 18 at 2:30 PM overlaps the new one." */
+export function overlapsNewLine(clash: BusySession): string {
+  return `${firstNameOf(clash.personName)}'s session on ${shortDay(clash.start)} at ${timeOfDay(clash.start)} overlaps the new one.`;
+}
+
+/** For several sessions: "Ehab's and Priya's sessions overlap the new one." */
+export function overlapsNewLines(clashes: BusySession[]): string {
+  const owners = clashes.map((c) => `${firstNameOf(c.personName)}'s`);
+  const named = owners.length > 1 ? `${owners.slice(0, -1).join(", ")} and ${owners[owners.length - 1]}` : owners[0];
+  return `${named} sessions overlap the new one.`;
+}
+
 export function resolveSubline(clash: BusySession): string {
-  return `${firstNameOf(clash.personName)}'s session on ${shortDay(clash.start)} at ${timeOfDay(clash.start)} overlaps the new one. Move it to:`;
+  return `${overlapsNewLine(clash)} Move it to:`;
 }

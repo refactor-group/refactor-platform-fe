@@ -2,7 +2,7 @@
 
 import type { DateTime } from "ts-luxon";
 import { Button } from "@/components/ui/button";
-import type { BusySession } from "@/lib/scheduling";
+import type { BusyClash, BusySession } from "@/lib/scheduling";
 import {
   busyHeader,
   busyRange,
@@ -11,11 +11,6 @@ import {
   overlapLine,
 } from "@/lib/scheduling-copy";
 import type { Option } from "@/types/option";
-
-export interface BusyClash {
-  session: BusySession;
-  instead: Option<DateTime>;
-}
 
 interface BusyNoteProps {
   day: DateTime;
@@ -45,7 +40,7 @@ function InsteadButton({ start, onUseInstead }: { start: DateTime; onUseInstead:
       variant="link"
       size={null}
       onClick={() => onUseInstead(start)}
-      className="h-auto p-0 align-baseline text-xs font-medium"
+      className="inline-flex h-auto min-h-11 items-center p-0 align-baseline text-xs font-medium modal:min-h-0"
     >
       {insteadLabel(start)}
     </Button>
@@ -60,10 +55,10 @@ function BusyList({ day, sessions }: { day: DateTime; sessions: BusySession[] })
         {sessions.map((session) => (
           <li
             key={session.id}
-            className="flex items-center justify-between gap-4 border-t border-hairline py-1.5"
+            className="flex items-start justify-between gap-4 border-t border-hairline py-1.5"
           >
-            <span className="truncate text-foreground">{session.personName}</span>
-            <span className="shrink-0 text-muted-foreground tabular-nums">{busyRange(session)}</span>
+            <span className="line-clamp-2 min-w-0 break-words text-foreground">{session.personName}</span>
+            <span className="shrink-0 whitespace-nowrap text-muted-foreground tabular-nums">{busyRange(session)}</span>
           </li>
         ))}
       </ul>
