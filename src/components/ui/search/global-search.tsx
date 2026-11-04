@@ -36,6 +36,7 @@ import {
 import { SearchSnippet } from "@/components/ui/search/search-snippet";
 import { useSearch, type SearchState } from "@/lib/api/search";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { prefersReducedMotion } from "@/lib/utils/motion";
 import { searchHitHref } from "@/lib/utils/search-hit-href";
 import { actionStatusToString } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
@@ -180,7 +181,7 @@ const isInlineField = (): boolean =>
 
 // The width animation only runs on the inline pill, and not under reduced motion.
 const canAnimateCollapse = (): boolean =>
-  isInlineField() && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  isInlineField() && !prefersReducedMotion();
 
 const collapseTo = (returnFocus: boolean): FieldState => ({
   kind: canAnimateCollapse() ? "collapsing" : "collapsed",

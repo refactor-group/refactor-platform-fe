@@ -28,13 +28,15 @@ const buttonVariants = cva(
         xl: "h-12 px-6",
         icon: "h-10 w-10",
         "icon-sm": "h-9 w-9",
+        "icon-md": "h-11 w-11",
+        "icon-lg": "h-12 w-12 [&_svg]:size-[18px]",
         "icon-menu": "h-7 w-7 [&_svg]:size-3.5",
       },
     },
     compoundVariants: [
       {
         variant: "secondary",
-        size: ["icon", "icon-sm"],
+        size: ["icon", "icon-sm", "icon-md", "icon-lg"],
         className: "text-ink-2",
       },
       {

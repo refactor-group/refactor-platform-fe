@@ -8,7 +8,7 @@ import { Frequency, type RecurrenceEnd } from "@/types/recurrence";
 
 const FIRST_SESSION_WEEKDAY_DAYS = 6;
 
-function sessions(count: number): string {
+export function sessionCount(count: number): string {
   return `${count} session${count === 1 ? "" : "s"}`;
 }
 
@@ -104,7 +104,7 @@ function frequencyPhrase(frequency: Frequency): string {
 function endPhrase(end: RecurrenceEnd): string {
   switch (end.kind) {
     case "count":
-      return `for ${sessions(end.count)}`;
+      return `for ${sessionCount(end.count)}`;
     case "until":
       return `until ${shortDate(DateTime.fromISO(end.until))}`;
     default: {
@@ -132,7 +132,7 @@ export function scheduleSubmitLabel(choice: RepeatChoice): string {
     case "none":
       return "Schedule session";
     case "repeat":
-      return choice.end.kind === "count" ? `Schedule ${sessions(choice.end.count)}` : "Schedule series";
+      return choice.end.kind === "count" ? `Schedule ${sessionCount(choice.end.count)}` : "Schedule series";
     default: {
       const _exhaustive: never = choice;
       throw new Error(`Unhandled repeat choice: ${JSON.stringify(_exhaustive)}`);
@@ -145,7 +145,7 @@ export function moveSubmitLabel(following: boolean): string {
 }
 
 export function createsLine(count: number, firstName: string): string {
-  return `${sessions(count)} with ${firstName}`;
+  return `${sessionCount(count)} with ${firstName}`;
 }
 
 function providerName(provider: Provider): string {
