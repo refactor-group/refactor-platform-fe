@@ -11,7 +11,7 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
 import { useForgetRelationshipOutsideOrganization } from "@/lib/hooks/use-forget-relationship-outside-organization";
 import { useNewSessionDialogStore } from "@/lib/providers/new-session-dialog-store-provider";
-import { None } from "@/types/option";
+import { None, Some } from "@/types/option";
 
 export function DashboardContainer({ locale }: { locale: string }) {
   // Used to live inside the per-card relationship selector. Now that the
