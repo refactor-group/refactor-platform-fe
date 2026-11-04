@@ -20,7 +20,7 @@ const twMerge = extendTailwindMerge({
         },
       ],
       rounded: [{ rounded: ["card", "popover", "input"] }],
-      shadow: [{ shadow: ["card", "popover", "toast"] }],
+      shadow: [{ shadow: ["card", "popover", "toast", "modal"] }],
       ease: [{ ease: ["spring"] }],
     },
   },
