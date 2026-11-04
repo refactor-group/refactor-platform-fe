@@ -6,6 +6,8 @@ import { None, Some, type Option } from "@/types/option";
 import { createMockSession } from "../../test-utils";
 
 const org = { current: "acme" };
+const memberships = { organizations: [{ id: "acme" }, { id: "bigtable" }], isLoading: false };
+const rememberOrganizationForUser = vi.fn();
 const setCurrentOrganizationId = vi.fn((id: string) => {
   org.current = id;
 });
@@ -14,14 +16,14 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) => selector({ userId: "me", isLoggedIn: true }),
 }));
 vi.mock("@/lib/hooks/use-current-organization", () => ({
-  useCurrentOrganization: () => ({ currentOrganizationId: org.current, setCurrentOrganizationId }),
+  useCurrentOrganization: () => ({
+    currentOrganizationId: org.current,
+    setCurrentOrganizationId,
+    rememberOrganizationForUser,
+  }),
 }));
 vi.mock("@/lib/api/organizations", () => ({
-  useOrganizationList: () => ({
-    organizations: [{ id: "acme" }, { id: "bigtable" }],
-    isLoading: false,
-    isError: false,
-  }),
+  useOrganizationList: () => ({ ...memberships, isError: false }),
 }));
 
 function sessionIn(id: string, organizationId: string): Option<CoachingSession> {
@@ -43,12 +45,31 @@ function openSession(session: Option<CoachingSession>) {
 
 beforeEach(() => {
   org.current = "acme";
-  setCurrentOrganizationId.mockClear();
+  memberships.organizations = [{ id: "acme" }, { id: "bigtable" }];
+  memberships.isLoading = false;
+  vi.clearAllMocks();
 });
 
 describe("useSyncOrganizationFromSession", () => {
-  it("selects the session's organization when the page opens", () => {
+  it("selects the session's organization once, without remembering it", () => {
     openSession(sessionIn("s-1", "bigtable"));
+    expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
+    expect(setCurrentOrganizationId).toHaveBeenCalledWith("bigtable");
+    expect(rememberOrganizationForUser).not.toHaveBeenCalled();
+  });
+
+  it("leaves the selection alone when the user isn't a member there", () => {
+    memberships.organizations = [{ id: "acme" }];
+    openSession(sessionIn("s-1", "bigtable"));
+    expect(setCurrentOrganizationId).not.toHaveBeenCalled();
+  });
+
+  it("waits for the user's organizations, then selects", () => {
+    memberships.isLoading = true;
+    const { rerender } = openSession(sessionIn("s-1", "bigtable"));
+    expect(setCurrentOrganizationId).not.toHaveBeenCalled();
+    memberships.isLoading = false;
+    rerender({ s: sessionIn("s-1", "bigtable") });
     expect(setCurrentOrganizationId).toHaveBeenCalledWith("bigtable");
   });
 

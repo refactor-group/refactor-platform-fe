@@ -1,21 +1,9 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { organizationToSwitchTo } from "@/lib/coaching-session-organization";
-import { useSyncOrganizationFromSession } from "@/lib/hooks/use-sync-organization-from-session";
 import type { OrganizationMembership } from "@/lib/hooks/use-reconcile-current-organization";
-import { useOrganizationList } from "@/lib/api/organizations";
-import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { serializeCoachingSession, transformCoachingSession } from "@/types/coaching-session";
-import type { CoachingSession } from "@/types/coaching-session";
 import { None, Some } from "@/types/option";
-import { createMockOrganization, createMockSession } from "../test-utils";
-
-vi.mock("@/lib/providers/auth-store-provider", () => ({
-  useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ userId: "user-1", isLoggedIn: true }),
-}));
-vi.mock("@/lib/api/organizations", () => ({ useOrganizationList: vi.fn() }));
-vi.mock("@/lib/hooks/use-current-organization", () => ({ useCurrentOrganization: vi.fn() }));
+import { createMockOrganization } from "../test-utils";
 
 const ACME = createMockOrganization({ id: "org-acme", name: "Acme Corp" });
 const BIGTABLE = createMockOrganization({ id: "org-bigtable", name: "BigTable" });
@@ -101,58 +89,5 @@ describe("organization_id on the wire", () => {
     expect(serializeCoachingSession(transformCoachingSession(raw("org-bigtable")))).not.toHaveProperty(
       "organization_id"
     );
-  });
-});
-
-describe("useSyncOrganizationFromSession", () => {
-  const setCurrentOrganizationId = vi.fn();
-  const rememberOrganizationForUser = vi.fn();
-
-  function serve(current: string, organizations = [ACME, BIGTABLE], isLoading = false) {
-    vi.mocked(useCurrentOrganization).mockReturnValue({
-      currentOrganizationId: current,
-      setCurrentOrganizationId,
-      rememberOrganizationForUser,
-    } as unknown as ReturnType<typeof useCurrentOrganization>);
-    vi.mocked(useOrganizationList).mockReturnValue({
-      organizations,
-      isLoading,
-      isError: false,
-      refresh: vi.fn(),
-    } as unknown as ReturnType<typeof useOrganizationList>);
-  }
-
-  const session = (organizationId: string): CoachingSession =>
-    ({ ...createMockSession({ id: "s-1" }), organization_id: Some(organizationId) }) as CoachingSession;
-
-  beforeEach(() => vi.clearAllMocks());
-
-  it("selects the session's organization once, without changing the remembered one", () => {
-    serve("org-acme");
-    const { rerender } = renderHook(() => useSyncOrganizationFromSession(Some(session("org-bigtable"))));
-    rerender();
-    expect(setCurrentOrganizationId).toHaveBeenCalledTimes(1);
-    expect(setCurrentOrganizationId).toHaveBeenCalledWith("org-bigtable");
-    expect(rememberOrganizationForUser).not.toHaveBeenCalled();
-  });
-
-  it("leaves the selection alone for a session in the selected organization", () => {
-    serve("org-acme");
-    renderHook(() => useSyncOrganizationFromSession(Some(session("org-acme"))));
-    expect(setCurrentOrganizationId).not.toHaveBeenCalled();
-  });
-
-  it("leaves the selection alone when the user isn't a member of the session's organization", () => {
-    serve("org-acme", [ACME]);
-    renderHook(() => useSyncOrganizationFromSession(Some(session("org-bigtable"))));
-    expect(setCurrentOrganizationId).not.toHaveBeenCalled();
-  });
-
-  it("waits for the session and for the user's organizations", () => {
-    serve("org-acme", [], true);
-    renderHook(() => useSyncOrganizationFromSession(Some(session("org-bigtable"))));
-    serve("org-acme");
-    renderHook(() => useSyncOrganizationFromSession(None));
-    expect(setCurrentOrganizationId).not.toHaveBeenCalled();
   });
 });

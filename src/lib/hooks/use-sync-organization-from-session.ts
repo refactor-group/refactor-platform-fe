@@ -9,7 +9,7 @@ import type { OrganizationMembership } from "@/lib/hooks/use-reconcile-current-o
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { CoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
-import { None, Some, unwrapOr, type Option } from "@/types/option";
+import { None, Some, type Option } from "@/types/option";
 
 /**
  * Selects the organization owning the open session, so its relationship reads
@@ -30,20 +30,26 @@ export function useSyncOrganizationFromSession(session: Option<CoachingSession>)
     [isLoggedIn, userId, isLoading, isError, organizations]
   );
 
-  const target = organizationToSwitchTo({
-    sessionOrganizationId: session.some ? session.val.organization_id : None,
-    currentOrganizationId,
-    membership,
-  });
-  // Keyed on strings, not Options, so a re-render doesn't run it again.
-  const targetId = unwrapOr(target, "");
-  const sessionId = membership.kind === "loaded" && session.some ? session.val.id : "";
+  // Some once there's a session and memberships to decide it against.
+  const decision: Option<{ sessionId: Id; target: Option<Id> }> =
+    membership.kind === "loaded" && session.some
+      ? Some({
+          sessionId: session.val.id,
+          target: organizationToSwitchTo({
+            sessionOrganizationId: session.val.organization_id,
+            currentOrganizationId,
+            membership,
+          }),
+        })
+      : None;
   const decidedFor = useRef<Option<Id>>(None);
 
+  // Runs after every render; decidedFor makes it act once per session.
   useEffect(() => {
-    if (!sessionId) return;
+    if (decision.none) return;
+    const { sessionId, target } = decision.val;
     if (decidedFor.current.some && decidedFor.current.val === sessionId) return;
     decidedFor.current = Some(sessionId);
-    if (targetId) setCurrentOrganizationId(targetId);
-  }, [sessionId, targetId, setCurrentOrganizationId]);
+    if (target.some) setCurrentOrganizationId(target.val);
+  });
 }
