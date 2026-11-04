@@ -27,7 +27,6 @@ import {
   activityRelationship,
   byActivity,
   isInactive,
-  personActivity,
   whenLine,
 } from "@/lib/person-activity";
 import {
@@ -37,13 +36,14 @@ import {
   sessionStartIn,
   sessionWindow,
 } from "@/lib/session-window";
+import {
+  type PersonEntry,
+  activityByPerson,
+  menuPerson,
+  peopleFor,
+} from "@/lib/people";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { calculateSessionUrgency } from "@/lib/utils/session";
-import {
-  type CoachingRelationshipWithUserNames,
-  getRelationshipsForUser,
-  sortRelationshipsByParticipantName,
-} from "@/types/coaching-relationship";
 import type {
   CoachingSession,
   EnrichedCoachingSession,
@@ -57,12 +57,6 @@ import type { User } from "@/types/user";
 export interface TodayEntry {
   session: MenuSession;
   person: MenuPerson;
-}
-
-/** A person and every relationship the user has with them (two when they coach each other). */
-export interface PersonEntry {
-  person: MenuPerson;
-  relationshipIds: Id[];
 }
 
 /** The selected person, narrowed to the relationship whose sessions the menu shows. */
@@ -118,44 +112,6 @@ const SESSION_PATH = /^\/coaching-sessions\/([^/]+)/;
 export function sessionIdFromPath(pathname: string): Option<Id> {
   const match = SESSION_PATH.exec(pathname);
   return match ? Some(match[1]) : None;
-}
-
-function initialsOf(first: string, last: string): string {
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
-}
-
-function menuPerson(userId: Id, first: string, last: string): MenuPerson {
-  return {
-    userId,
-    firstName: first,
-    fullName: `${first} ${last}`.trim(),
-    initials: initialsOf(first, last),
-  };
-}
-
-function otherParticipant(rel: CoachingRelationshipWithUserNames, userId: Id): MenuPerson {
-  return rel.coach_id === userId
-    ? menuPerson(rel.coachee_id, rel.coachee_first_name, rel.coachee_last_name)
-    : menuPerson(rel.coach_id, rel.coach_first_name, rel.coach_last_name);
-}
-
-/** One entry per other person, holding each relationship the user has with them. */
-export function peopleFor(
-  userId: Id,
-  relationships: CoachingRelationshipWithUserNames[]
-): PersonEntry[] {
-  const sorted = sortRelationshipsByParticipantName(
-    getRelationshipsForUser(userId, relationships),
-    userId
-  );
-  const byPerson = new Map<Id, PersonEntry>();
-  for (const rel of sorted) {
-    const person = otherParticipant(rel, userId);
-    const entry = byPerson.get(person.userId);
-    if (entry) entry.relationshipIds.push(rel.id);
-    else byPerson.set(person.userId, { person, relationshipIds: [rel.id] });
-  }
-  return [...byPerson.values()];
 }
 
 export function toMenuSession(session: EnrichedCoachingSession, timezone: string): MenuSession {
@@ -234,30 +190,9 @@ function utcInstant(dt: DateTime): string {
   return dt.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 }
 
-type ActivityByPerson = Map<Id, PersonActivity>;
+type ActivityByPerson = ReturnType<typeof activityByPerson>;
 
 const NO_SESSIONS: PersonActivity = { kind: "inactive", last: None };
-
-/** Each person's activity from the sessions nearest now across their relationships. */
-export function activityByPerson(
-  people: PersonEntry[],
-  sessions: EnrichedCoachingSession[],
-  now: DateTime,
-  timezone: string
-): ActivityByPerson {
-  return new Map(
-    people.map(({ person, relationshipIds }) => {
-      const theirs = sessions
-        .filter((s) => relationshipIds.includes(s.coaching_relationship_id))
-        .map((s) => ({
-          start: sessionStartIn(s.date, timezone),
-          over: calculateSessionUrgency(s) === SessionUrgency.Past,
-          relationshipId: s.coaching_relationship_id,
-        }));
-      return [person.userId, personActivity(theirs, now)];
-    })
-  );
-}
 
 function carouselPerson(
   person: MenuPerson,

@@ -1,8 +1,12 @@
 import type { DateTime } from "ts-luxon";
-import { sessionStartIn, shortDate } from "@/lib/session-window";
+import type { RepeatChoice } from "@/lib/scheduling";
+import { firstNameOf, repeatLabel, shortDay } from "@/lib/scheduling-copy";
+import { sessionStartIn, shortDate, timeOfDay } from "@/lib/session-window";
+import { formatWeekdayDate } from "@/lib/utils/date";
 import { getCoacheeName } from "@/lib/utils/relationship";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
+import type { Option } from "@/types/option";
 
 /** " with James Hodapp", or nothing if the relationship isn't loaded. */
 function withCoachee(relationships: CoachingRelationshipWithUserNames[], relationshipId: Id): string {
@@ -66,4 +70,52 @@ export function seriesCreatedMessage(
   relationships: CoachingRelationshipWithUserNames[]
 ): string {
   return `Created ${count} recurring session${count === 1 ? "" : "s"}${withCoachee(relationships, relationshipId)}`;
+}
+
+export interface OtherMove {
+  personName: string;
+  start: DateTime;
+}
+
+/** "Priya moves to Wed 19, 3:30 PM". */
+function otherMoveParts(otherMove: Option<OtherMove>): string[] {
+  if (otherMove.none) return [];
+  const { personName, start } = otherMove.val;
+  return [`${firstNameOf(personName)} moves to ${shortDay(start)}, ${timeOfDay(start)}`];
+}
+
+/** e.g. "Scheduled · Ehab Badawi · Tuesday, August 18 · 2:30 PM · 50 min · Weekly, for 8 sessions". */
+export function scheduledMessage(input: {
+  personName: string;
+  start: DateTime;
+  minutes: number;
+  repeat: RepeatChoice;
+  otherMove: Option<OtherMove>;
+}): string {
+  const { personName, start, minutes, repeat, otherMove } = input;
+  return [
+    "Scheduled",
+    personName,
+    formatWeekdayDate(start),
+    timeOfDay(start),
+    `${minutes} min`,
+    ...(repeat.kind === "repeat" ? [repeatLabel(repeat)] : []),
+    ...otherMoveParts(otherMove),
+  ].join(" · ");
+}
+
+/** e.g. "Rescheduled · Ehab to Thursday, August 20, 2:00 PM · and following". */
+export function rescheduledMessage(input: {
+  personName: string;
+  start: DateTime;
+  following: boolean;
+  otherMove: Option<OtherMove>;
+}): string {
+  const { personName, start, following, otherMove } = input;
+  return [
+    "Rescheduled",
+    `${firstNameOf(personName)} to ${formatWeekdayDate(start)}, ${timeOfDay(start)}`,
+    ...(following ? ["and following"] : []),
+    ...otherMoveParts(otherMove),
+  ].join(" · ");
 }
