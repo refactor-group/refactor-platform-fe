@@ -314,7 +314,7 @@ describe("scheduleRail", () => {
       step: StepKind.When,
       personName: Some("Priya Raman"),
       start,
-      repeat: { kind: "repeat", frequency: Frequency.Weekly, end: { kind: "count", count: 8 } },
+      repeat: { kind: "repeat", frequency: Frequency.Weekly, interval: 1, end: { kind: "count", count: 8 } },
       clash: Some(EHAB),
       resolution: { kind: "unresolved" },
     });
@@ -358,7 +358,7 @@ describe("scheduleRail", () => {
 });
 
 describe("scheduleHint", () => {
-  const ready = { personName: Some("Priya Raman"), start: Some(fixtureAt("2026-08-18T14:30")) };
+  const ready = { availability: { kind: "loaded" } as const, personName: Some("Priya Raman"), start: Some(fixtureAt("2026-08-18T14:30")) };
 
   it("asks for what's missing", () => {
     const missing = "Choose a person, date and time to schedule.";
