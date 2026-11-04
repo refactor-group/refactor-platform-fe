@@ -10,6 +10,7 @@ import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
+import { useForgetRelationshipOutsideOrganization } from "@/lib/hooks/use-forget-relationship-outside-organization";
 import { useNewSessionDialogStore } from "@/lib/providers/new-session-dialog-store-provider";
 import type { CoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
@@ -21,12 +22,23 @@ export function DashboardContainer({ locale }: { locale: string }) {
   // auto-selection — UpcomingSessionCard and GoalsOverviewCard depend on a
   // selected `currentCoachingRelationshipId`.
   const { currentOrganizationId } = useCurrentOrganization();
-  const { relationships, isLoading: isLoadingRelationships } =
-    useCoachingRelationshipList(currentOrganizationId);
+  const {
+    relationships,
+    isLoading: isLoadingRelationships,
+    isError: relationshipsError,
+  } = useCoachingRelationshipList(currentOrganizationId);
   const {
     currentCoachingRelationshipId,
     setCurrentCoachingRelationshipId,
+    resetCoachingRelationshipState,
   } = useCurrentCoachingRelationship();
+  useForgetRelationshipOutsideOrganization({
+    relationships,
+    isLoading: isLoadingRelationships,
+    isError: !!relationshipsError,
+    currentId: currentCoachingRelationshipId ? Some(currentCoachingRelationshipId) : None,
+    forget: resetCoachingRelationshipState,
+  });
   useAutoSelectSingleRelationship(
     relationships,
     isLoadingRelationships,
