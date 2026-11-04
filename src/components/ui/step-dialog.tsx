@@ -12,17 +12,12 @@ import { MODAL_DESKTOP_QUERY } from "@/lib/breakpoints";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import type { Option } from "@/types/option";
 
-export enum StepState {
-  Done = "done",
-  Current = "current",
-  Pending = "pending",
-}
-
 export interface StepRailItem {
   id: string;
   label: string;
   value: string;
-  state: StepState;
+  done: boolean;
+  current: boolean;
 }
 
 /** Tall is 560px (New session), Standard is 520px. */
@@ -97,6 +92,12 @@ function confirmOnEnter(lead: StepDialogLead) {
   };
 }
 
+/** Focus the dialog itself on open so no control shows a ring until the user tabs. */
+function focusContent(event: Event) {
+  event.preventDefault();
+  if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus();
+}
+
 function positionText({ index, total }: StepPosition): string {
   return `${index} of ${total}`;
 }
@@ -137,21 +138,20 @@ function StepSubline({ text }: { text: string }) {
 // ─── Desktop: rail + pane ────────────────────────────────────────────
 
 function RailRow({ step }: { step: StepRailItem }) {
-  const current = step.state === StepState.Current;
   return (
     <li
-      aria-current={current ? "step" : undefined}
-      className={cn("flex gap-2.5 rounded-lg p-2.5", current && "bg-rail-current")}
+      aria-current={step.current ? "step" : undefined}
+      className={cn("flex gap-2.5 rounded-lg p-2.5", step.current && "bg-rail-current")}
     >
-      {step.state === StepState.Done && (
+      {step.done && (
         <CheckDisc size={16} tone="positive" className="mt-0.5" />
       )}
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium text-muted-foreground">{step.label}</div>
         <div
           className={cn(
-            "truncate text-item font-medium",
-            step.state === StepState.Done ? "text-foreground" : "text-muted-foreground"
+            "line-clamp-2 break-words text-item font-medium",
+            step.done ? "text-foreground" : "text-muted-foreground"
           )}
         >
           {step.value}
@@ -231,6 +231,8 @@ function PaneFooter({
 function DesktopStepDialog(props: StepDialogProps) {
   return (
     <DialogPrimitive.Content
+      tabIndex={-1}
+      onOpenAutoFocus={focusContent}
       aria-describedby={undefined}
       onKeyDown={confirmOnEnter(props.lead)}
       className={cn(
@@ -248,7 +250,8 @@ function DesktopStepDialog(props: StepDialogProps) {
       <div className="relative flex min-h-0 flex-col bg-well pb-7 pl-11 pr-9 pt-8">
         <CloseButton size="icon-sm" className="absolute right-4 top-4" />
         <PaneHeader stepTitle={props.stepTitle} stepSubline={props.stepSubline} />
-        <div className="mt-6 min-h-0 flex-1 overflow-y-auto">{props.children}</div>
+        {/* Inset padding offset by negative margins so edge focus rings aren't clipped. */}
+        <div className="-mx-1 -mb-1 mt-5 min-h-0 flex-1 overflow-y-auto p-1">{props.children}</div>
         <PaneFooter
           lead={props.lead}
           position={props.position}
@@ -308,6 +311,8 @@ function MobileFooter({
 function MobileStepDialog(props: StepDialogProps) {
   return (
     <DialogPrimitive.Content
+      tabIndex={-1}
+      onOpenAutoFocus={focusContent}
       aria-describedby={undefined}
       onKeyDown={confirmOnEnter(props.lead)}
       className="fixed inset-0 z-50 flex flex-col bg-well outline-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:animate-none"

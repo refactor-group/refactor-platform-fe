@@ -169,6 +169,11 @@ export function currentlyLine(start: DateTime): string {
   return `Currently ${start.toFormat("ccc")}, ${shortDate(start)}, ${timeOfDay(start)}`;
 }
 
+/** For a session the user can't move: "Ehab's session on Tue 18 at 2:30 PM overlaps the new one." */
+export function overlapsNewLine(clash: BusySession): string {
+  return `${firstNameOf(clash.personName)}'s session on ${shortDay(clash.start)} at ${timeOfDay(clash.start)} overlaps the new one.`;
+}
+
 export function resolveSubline(clash: BusySession): string {
-  return `${firstNameOf(clash.personName)}'s session on ${shortDay(clash.start)} at ${timeOfDay(clash.start)} overlaps the new one. Move it to:`;
+  return `${overlapsNewLine(clash)} Move it to:`;
 }

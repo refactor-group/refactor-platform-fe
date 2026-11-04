@@ -206,9 +206,9 @@ Connect Google from Settings › Integrations.
 
 ### Case E5: session confirmations
 
-From the dashboard, create a one-off session with a coachee, edit its date, then delete it. Then create a recurring series.
+From the dashboard, schedule a one-off session with a coachee from the New session dialog, edit its date, then delete it. Then schedule a weekly series.
 
-**Pass:** you see "Created a new session Nov 4 @ 10 AM with {coachee}", "Updated the Nov 6 @ 10 AM session with {coachee}" and "Removed the Nov 6 @ 10 AM session with {coachee}" in turn, with the date and time in your time zone. The series shows "Created N recurring sessions with {coachee}".
+**Pass:** you see "Scheduled · {name} · {Weekday, Month D} · {time} · {n} min", "Updated the Nov 6 @ 10 AM session with {coachee}" and "Removed the Nov 6 @ 10 AM session with {coachee}" in turn, with the date and time in your time zone. The series shows "Scheduled · {name} · {Weekday, Month D} · {time} · {n} min · Weekly, for N sessions".
 
 ## 7. Part F: global header (#504)
 

@@ -171,15 +171,17 @@ test("e: Ehab schedules a BigTable coaching session with Jim", async ({ page }) 
   await page.click('button:has-text("Add New")');
   await page.getByRole("menuitem", { name: /session/i }).click();
 
-  await page.click("#coachee-select");
-  await page.getByRole("option", { name: "Jim Hodapp", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "New session" });
+  await dialog.getByRole("button", { name: /Jim Hodapp/ }).click();
+  await dialog.getByRole("button", { name: "Next step" }).click();
 
-  // Create Session stays disabled until a date and time are both chosen.
-  await page.getByRole("button", { name: "Go to next month" }).click();
-  await page.getByRole("gridcell", { name: "15", exact: true }).click();
-  await page.fill("#session-time", "10:00");
+  await dialog.getByRole("button", { name: "Next month" }).click();
+  await dialog.getByRole("button", { name: /^\w+, \w+ 15(,|$)/ }).click();
+  await dialog.getByLabel("Start time").fill("10:00");
+  await dialog.getByRole("button", { name: "Next step" }).click();
 
-  const submit = page.getByRole("button", { name: "Create Session" });
+  // Schedule session only shows once a person, date and time are all chosen.
+  const submit = dialog.getByRole("button", { name: "Schedule session" });
   await expect(submit).toBeEnabled({ timeout: 10000 });
   await submit.click();
 

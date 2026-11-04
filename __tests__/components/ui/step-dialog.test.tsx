@@ -5,7 +5,6 @@ import {
   StepDialogHeight,
   type StepDialogLead,
   type StepRailItem,
-  StepState,
 } from "@/components/ui/step-dialog";
 import { None, Some } from "@/types/option";
 
@@ -19,9 +18,9 @@ function viewport(desktop: boolean) {
 afterEach(() => vi.unstubAllGlobals());
 
 const STEPS: StepRailItem[] = [
-  { id: "who", label: "Who", value: "Ehab Badawi", state: StepState.Done },
-  { id: "when", label: "When", value: "Tuesday, August 18, 2:30 PM", state: StepState.Current },
-  { id: "repeat", label: "Repeats", value: "Doesn't repeat", state: StepState.Pending },
+  { id: "who", label: "Who", value: "Ehab Badawi", done: true, current: false },
+  { id: "when", label: "When", value: "Tuesday, August 18, 2:30 PM", done: true, current: true },
+  { id: "repeat", label: "Repeats", value: "Doesn't repeat", done: false, current: false },
 ];
 
 function renderDialog(overrides: Partial<Parameters<typeof StepDialog>[0]> = {}) {
@@ -72,6 +71,15 @@ describe("StepDialog on desktop", () => {
     expect(rows[0]).toHaveTextContent("Ehab Badawi");
     expect(rows[1]).toHaveAttribute("aria-current", "step");
     expect(rows[0]).not.toHaveAttribute("aria-current");
+  });
+
+  it("marks done rows, including a current one, with a check", () => {
+    viewport(true);
+    renderDialog();
+    const rows = within(screen.getByRole("list", { name: "Steps" })).getAllByRole("listitem");
+    expect(rows[0].querySelector("svg")).not.toBeNull();
+    expect(rows[1].querySelector("svg")).not.toBeNull();
+    expect(rows[2].querySelector("svg")).toBeNull();
   });
 
   it("renders the rail header and footer slots", () => {
