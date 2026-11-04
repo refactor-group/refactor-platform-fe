@@ -207,7 +207,7 @@ describe("GlobalSearch", () => {
     expect(screen.getByText("Pending review · Weekly sync")).toBeInTheDocument();
 
     await userEvent.click(screen.getByText("Send the weekly recap to the team"));
-    expect(push).toHaveBeenCalledWith("/coaching-sessions/sess-2?panel=actions");
+    expect(push).toHaveBeenCalledWith("/coaching-sessions/sess-2?panel=actions&highlight=sugg-1");
   });
 
   it("keeps the dropdown open while the pointer is pressed on a result", async () => {

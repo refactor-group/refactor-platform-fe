@@ -281,6 +281,27 @@ describe("CoachingSessionPanel", () => {
     expect(screen.queryByText("Improve technical leadership")).not.toBeInTheDocument()
   })
 
+  it("follows a new default section after mount, as in-app navigation changes the URL", () => {
+    setupMocks()
+    const { rerender } = render(
+      <CoachingSessionPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Topics}
+      />
+    )
+    expect(screen.queryByText("Improve technical leadership")).not.toBeInTheDocument()
+
+    rerender(
+      <CoachingSessionPanel
+        coachingSessionId="session-1"
+        coachingRelationshipId="rel-1"
+        defaultSection={PanelSection.Goals}
+      />
+    )
+    expect(screen.getAllByText("Improve technical leadership").length).toBeGreaterThanOrEqual(1)
+  })
+
   it("renders the section selector dropdown", () => {
     setupMocks()
     render(

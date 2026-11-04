@@ -88,7 +88,9 @@ describe("searchHitHref", () => {
       session_date: "2026-01-01T00:00:00",
       session_title: "Weekly sync",
     };
-    expect(searchHitHref(hit)).toEqual(Some("/coaching-sessions/sess-1?panel=actions"));
+    expect(searchHitHref(hit)).toEqual(
+      Some("/coaching-sessions/sess-1?panel=actions&highlight=hit-1")
+    );
     expect(searchHitHref({ ...hit, coaching_session_id: None }).none).toBe(true);
   });
 });
