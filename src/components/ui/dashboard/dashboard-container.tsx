@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CoachingSessionDialog } from "@/components/ui/dashboard/coaching-session-dialog";
 import { CoachingSessionsCard } from "@/components/ui/dashboard/coaching-sessions-card";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
@@ -12,8 +11,7 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
 import { useForgetRelationshipOutsideOrganization } from "@/lib/hooks/use-forget-relationship-outside-organization";
 import { useNewSessionDialogStore } from "@/lib/providers/new-session-dialog-store-provider";
-import type { CoachingSession } from "@/types/coaching-session";
-import { type Option, None, Some } from "@/types/option";
+import { None } from "@/types/option";
 
 export function DashboardContainer({ locale }: { locale: string }) {
   // Used to live inside the per-card relationship selector. Now that the
@@ -47,24 +45,11 @@ export function DashboardContainer({ locale }: { locale: string }) {
   );
 
   const openSchedule = useNewSessionDialogStore((state) => state.openSchedule);
-  const [sessionToEdit, setSessionToEdit] = useState<Option<CoachingSession>>(None);
+  const openMoveSession = useNewSessionDialogStore((state) => state.openMoveSession);
   const [refreshUpcomingSession, setRefreshUpcomingSession] = useState<(() => void) | null>(() => null);
   const [refreshSessionsCard, setRefreshSessionsCard] = useState<(() => void) | null>(() => null);
 
-  const handleReschedule = (session: CoachingSession) => setSessionToEdit(Some(session));
   const handleCreateSession = () => openSchedule(None);
-
-  const handleCloseDialog = () => {
-    setSessionToEdit(None);
-    // Force-refresh BOTH affected surfaces after an edit. The
-    // user-scoped fetches behind these cards use a tuple SWR key
-    // (`[url, params]`) which `useEntityMutation`'s auto-invalidation
-    // skips (it filters by `typeof key === "string"`), so without these
-    // explicit calls an edited session wouldn't update in either
-    // card until a hard reload.
-    refreshUpcomingSession?.();
-    refreshSessionsCard?.();
-  };
 
   // Stable references so the cards' onRefreshNeeded useEffects don't
   // refire on every parent render.
@@ -90,7 +75,7 @@ export function DashboardContainer({ locale }: { locale: string }) {
           Width follows the page's max-w-screen-2xl via PageContainer. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 mb-8 w-full">
         <UpcomingSessionCard
-          onReschedule={handleReschedule}
+          onReschedule={openMoveSession}
           onCreateSession={handleCreateSession}
           onRefreshNeeded={handleUpcomingSessionRefreshNeeded}
         />
@@ -99,19 +84,12 @@ export function DashboardContainer({ locale }: { locale: string }) {
 
       <div className="w-full">
         <CoachingSessionsCard
-          onReschedule={handleReschedule}
+          onReschedule={openMoveSession}
           onRefreshNeeded={handleSessionsCardRefreshNeeded}
           onSeriesMutated={handleSeriesMutated}
           locale={locale}
         />
       </div>
-      {sessionToEdit.some && (
-        <CoachingSessionDialog
-          open
-          onOpenChange={handleCloseDialog}
-          coachingSession={sessionToEdit.val}
-        />
-      )}
     </>
   );
 }

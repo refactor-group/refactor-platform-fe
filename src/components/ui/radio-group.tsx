@@ -46,15 +46,17 @@ interface RadioCardItemProps {
   value: string
   title: string
   description: string
+  disabled?: boolean
 }
 
-function RadioCardItem({ value, title, description }: RadioCardItemProps) {
+function RadioCardItem({ value, title, description, disabled }: RadioCardItemProps) {
   const id = useId()
   const titleId = `${id}-title`
   const descriptionId = `${id}-description`
   return (
     <RadioGroupPrimitive.Item
       value={value}
+      disabled={disabled}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
       className="group flex min-h-14 w-full items-center gap-3 rounded-[12px] border bg-card px-4 py-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand motion-reduce:transition-none"

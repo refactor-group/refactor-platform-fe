@@ -9,6 +9,7 @@ export enum SessionWrite {
   Create = "create",
   CreateSeries = "create_series",
   Update = "update",
+  RescheduleSeries = "reschedule_series",
 }
 
 export type SessionWriteFailure =
@@ -22,6 +23,7 @@ function verb(write: SessionWrite): string {
     case SessionWrite.CreateSeries:
       return "create";
     case SessionWrite.Update:
+    case SessionWrite.RescheduleSeries:
       return "update";
     default: {
       const _exhaustive: never = write;
@@ -43,11 +45,22 @@ function toastMessage(error: EntityApiError, write: SessionWrite): string {
     return `Couldn't ${verb(write)} ${invalidTarget(write)} · Check the details and try again`;
   }
   if (isForbiddenError(error)) return PERMISSION_DENIED_MESSAGE;
-  return `Couldn't ${verb(write)} the coaching session · Try again`;
+  return `Couldn't ${verb(write)} the session · Try again`;
+}
+
+function hasContentConflict(error: EntityApiError, write: SessionWrite): boolean {
+  return (
+    write === SessionWrite.RescheduleSeries &&
+    error.status === 409 &&
+    error.data?.details?.reason === "sessions_have_content"
+  );
 }
 
 export function sessionWriteFailure(error: unknown, write: SessionWrite): SessionWriteFailure {
   if (!(error instanceof EntityApiError)) return { kind: "unexpected" };
+  if (hasContentConflict(error, write)) {
+    return { kind: "toast", message: "Some later sessions have notes or actions · Keep enough sessions to cover them" };
+  }
   if (error.status === 409 && error.data?.error === "oauth_token_revoked") {
     return { kind: "reconnect", message: "Google Meet is disconnected · Reconnect it in Settings" };
   }

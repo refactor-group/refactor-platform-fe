@@ -79,7 +79,7 @@ export interface GoalWithProgress {
   title: string;
   body: string;
   status: ItemStatus;
-  status_changed_at: string;
+  status_changed_at: Option<string>;
   target_date: string | null;
   created_at: string;
   updated_at: string;
@@ -93,7 +93,7 @@ interface GoalWithProgressRaw {
   title: string;
   body: string | null;
   status: string;
-  status_changed_at: string;
+  status_changed_at: string | null;
   target_date: string | null;
   created_at: string;
   updated_at: string;
@@ -117,7 +117,7 @@ function isGoalWithProgressRaw(value: unknown): value is GoalWithProgressRaw {
     typeof obj.title === "string" &&
     (obj.body === null || typeof obj.body === "string") &&
     typeof obj.status === "string" &&
-    typeof obj.status_changed_at === "string" &&
+    (obj.status_changed_at === null || typeof obj.status_changed_at === "string") &&
     (obj.target_date === null || typeof obj.target_date === "string") &&
     typeof obj.created_at === "string" &&
     typeof obj.updated_at === "string" &&
@@ -137,7 +137,7 @@ function parseGoalWithProgress(value: unknown): GoalWithProgress {
     // The backend sends an optional description; the app models none as empty.
     body: value.body ?? "",
     status: value.status as ItemStatus,
-    status_changed_at: value.status_changed_at,
+    status_changed_at: value.status_changed_at !== null ? Some(value.status_changed_at) : None,
     target_date: value.target_date,
     created_at: value.created_at,
     updated_at: value.updated_at,
