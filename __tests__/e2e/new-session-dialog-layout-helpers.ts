@@ -344,7 +344,7 @@ export function measureLayout({ desktop }: { desktop: boolean }): LayoutReport {
     }
     if (scroller) {
       const saved = scroller.scrollTop
-      ;(el as HTMLElement & { scrollIntoViewIfNeeded: (center?: boolean) => void }).scrollIntoViewIfNeeded(false)
+      el.scrollIntoView({ block: "nearest", inline: "nearest" })
       const after = el.getBoundingClientRect()
       const box = innerBox(scroller)
       if (after.top < box.top - T || after.bottom > box.bottom + T) {
