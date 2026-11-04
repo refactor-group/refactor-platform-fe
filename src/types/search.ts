@@ -13,6 +13,8 @@ export enum SearchHitType {
   Action = "action",
   Agreement = "agreement",
   Topic = "topic",
+  /** An AI suggestion still awaiting review; accepted ones surface as the entity they created. */
+  TranscriptSuggestion = "transcript_suggestion",
 }
 
 /** Values accepted by the `types` query parameter. */
@@ -22,6 +24,12 @@ export enum SearchableType {
   Actions = "actions",
   Agreements = "agreements",
   Topics = "topics",
+  TranscriptSuggestions = "transcript_suggestions",
+}
+
+/** What accepting a transcript suggestion creates. */
+export enum TranscriptSuggestionTarget {
+  Action = "action",
 }
 
 export enum SearchMode {
@@ -92,12 +100,22 @@ export interface TopicHit extends SearchHitBase {
   priority: Option<TopicPriority>;
 }
 
+/** Always pending: there is no `status`, since accepted and dismissed suggestions never match. */
+export interface TranscriptSuggestionHit extends SearchHitBase {
+  type: SearchHitType.TranscriptSuggestion;
+  target: TranscriptSuggestionTarget;
+  coaching_session_id: Option<Id>;
+  session_date: string;
+  session_title: string;
+}
+
 export type SearchHit =
   | CoachingSessionHit
   | GoalHit
   | ActionHit
   | AgreementHit
-  | TopicHit;
+  | TopicHit
+  | TranscriptSuggestionHit;
 
 /** The wire response also echoes `query` and `limit`; nothing here reads them, so they are not modeled. */
 export interface SearchResponse {
@@ -183,6 +201,7 @@ function parseBase(obj: Raw): SearchHitBase {
 const ITEM_STATUSES = Object.values(ItemStatus);
 const TOPIC_STATUSES = Object.values(TopicStatus);
 const TOPIC_PRIORITIES = Object.values(TopicPriority);
+const SUGGESTION_TARGETS = Object.values(TranscriptSuggestionTarget);
 
 /**
  * Parses one raw hit. Returns `None` for hit types this client doesn't know,
@@ -235,6 +254,15 @@ export function parseSearchHit(value: unknown): Option<SearchHit> {
         priority: TOPIC_PRIORITIES.includes(value.priority as TopicPriority)
           ? Some(value.priority as TopicPriority)
           : None,
+      });
+    case SearchHitType.TranscriptSuggestion:
+      return Some({
+        ...parseBase(value),
+        type: SearchHitType.TranscriptSuggestion,
+        target: parseEnum(SUGGESTION_TARGETS, value.target, TranscriptSuggestionTarget.Action),
+        coaching_session_id: optionalString(value.coaching_session_id),
+        session_date: requireString(value, "session_date"),
+        session_title: requireString(value, "session_title"),
       });
     default:
       return None;

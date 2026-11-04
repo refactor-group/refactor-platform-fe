@@ -3,7 +3,7 @@ import { searchHitHref } from "@/lib/utils/search-hit-href";
 import { Some, None } from "@/types/option";
 import { ItemStatus } from "@/types/general";
 import { TopicStatus } from "@/types/coaching-session-topic";
-import { SearchHitType, type SearchHit } from "@/types/search";
+import { SearchHitType, TranscriptSuggestionTarget, type SearchHit } from "@/types/search";
 
 const base = {
   id: "hit-1",
@@ -77,5 +77,18 @@ describe("searchHitHref", () => {
       priority: None,
     };
     expect(searchHitHref(topic)).toEqual(Some("/coaching-sessions/s"));
+  });
+
+  it("links transcript suggestions to their session's actions panel", () => {
+    const hit: SearchHit = {
+      ...base,
+      type: SearchHitType.TranscriptSuggestion,
+      target: TranscriptSuggestionTarget.Action,
+      coaching_session_id: Some("sess-1"),
+      session_date: "2026-01-01T00:00:00",
+      session_title: "Weekly sync",
+    };
+    expect(searchHitHref(hit)).toEqual(Some("/coaching-sessions/sess-1?panel=actions"));
+    expect(searchHitHref({ ...hit, coaching_session_id: None }).none).toBe(true);
   });
 });

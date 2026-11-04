@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   SearchHitType,
+  TranscriptSuggestionTarget,
   isSearchableQuery,
   parseSearchHit,
   parseSearchResponse,
@@ -79,6 +80,23 @@ describe("parseSearchHit", () => {
     if (!hit.some || hit.val.type !== SearchHitType.Topic) throw new Error("expected topic");
     expect(hit.val.status).toBe(TopicStatus.Discussed);
     expect(hit.val.priority).toEqual({ some: true, none: false, val: TopicPriority.High });
+  });
+
+  it("parses a transcript suggestion hit", () => {
+    const hit = parseSearchHit({
+      ...base,
+      type: "transcript_suggestion",
+      target: "action",
+      coaching_session_id: "sess-1",
+      session_date: "2026-09-01T09:00:00",
+      session_title: "Weekly sync",
+    });
+    if (!hit.some || hit.val.type !== SearchHitType.TranscriptSuggestion) {
+      throw new Error("expected transcript suggestion");
+    }
+    expect(hit.val.target).toBe(TranscriptSuggestionTarget.Action);
+    expect(hit.val.coaching_session_id).toEqual({ some: true, none: false, val: "sess-1" });
+    expect(hit.val.session_title).toBe("Weekly sync");
   });
 
   it("returns None for hit types this client does not know", () => {

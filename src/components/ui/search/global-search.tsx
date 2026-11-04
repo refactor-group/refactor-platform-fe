@@ -16,6 +16,7 @@ import {
   Handshake,
   MessageSquare,
   Search,
+  Sparkles,
   Target,
   X,
 } from "lucide-react";
@@ -51,6 +52,7 @@ const TYPE_LABELS: Record<SearchHitType, string> = {
   [SearchHitType.Action]: "Action",
   [SearchHitType.Agreement]: "Agreement",
   [SearchHitType.Topic]: "Topic",
+  [SearchHitType.TranscriptSuggestion]: "Suggestion",
 };
 
 function HitIcon({ type, className }: { type: SearchHitType; className?: string }) {
@@ -65,6 +67,8 @@ function HitIcon({ type, className }: { type: SearchHitType; className?: string 
       return <Handshake className={className} aria-hidden />;
     case SearchHitType.Topic:
       return <MessageSquare className={className} aria-hidden />;
+    case SearchHitType.TranscriptSuggestion:
+      return <Sparkles className={className} aria-hidden />;
     default: {
       const _exhaustive: never = type;
       throw new Error(`Unhandled search hit type: ${_exhaustive}`);
@@ -97,6 +101,9 @@ function hitMeta(hit: SearchHit): Option<string> {
     case SearchHitType.Topic:
       parts.push(hit.status);
       if (hit.priority.some) parts.push(`${hit.priority.val} priority`);
+      break;
+    case SearchHitType.TranscriptSuggestion:
+      parts.push("Pending review", hit.session_title);
       break;
     default: {
       const _exhaustive: never = hit;
@@ -144,6 +151,7 @@ const GROUP_ORDER: ReadonlyArray<{ type: SearchHitType; heading: string }> = [
   { type: SearchHitType.Action, heading: "Actions" },
   { type: SearchHitType.Agreement, heading: "Agreements" },
   { type: SearchHitType.Topic, heading: "Topics" },
+  { type: SearchHitType.TranscriptSuggestion, heading: "Suggestions" },
 ];
 
 /** Groups hits by kind, Sessions first; empty kinds are omitted. */
@@ -188,7 +196,8 @@ interface GlobalSearchProps {
 
 /**
  * Header search: a magnifier that expands into a debounced keyword search
- * across sessions, goals, actions, agreements and topics, with grouped
+ * across sessions, goals, actions, agreements, topics and pending transcript
+ * suggestions, with grouped
  * results beneath. Cmd/Ctrl+K or "/" opens it from outside a text input.
  */
 export function GlobalSearch({ className }: GlobalSearchProps) {
