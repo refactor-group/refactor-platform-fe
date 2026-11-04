@@ -25,6 +25,8 @@ export interface CoachingSession {
   meeting_url?: string;
   provider?: Provider;
   coaching_session_series_id: Option<Id>;
+  // Owning organization; only the single-session read carries it.
+  organization_id: Option<Id>;
   // The series slot this session occupies (naive UTC, like `date`); kept when moved alone.
   ical_recurrence_id: Option<string>;
   created_at: DateTime;
@@ -155,7 +157,7 @@ export function getCoachingSessionById(
 /** Wire shape where Option fields are unwrapped to string | null for JSON. */
 export type CoachingSessionWire = Omit<
   CoachingSession,
-  "title" | "coaching_session_series_id" | "display_title" | "ical_recurrence_id"
+  "title" | "coaching_session_series_id" | "display_title" | "organization_id" | "ical_recurrence_id"
 > & {
   title: string | null;
   ical_recurrence_id: string | null;
@@ -185,6 +187,8 @@ export function transformCoachingSession(raw: any): EnrichedCoachingSession {
       typeof raw.coaching_session_series_id === "string"
         ? Some(raw.coaching_session_series_id)
         : None,
+    organization_id:
+      typeof raw.organization_id === "string" ? Some(raw.organization_id) : None,
     ical_recurrence_id:
       typeof raw.ical_recurrence_id === "string" ? Some(raw.ical_recurrence_id) : None,
     series: transformSeriesSummary(raw.series),
@@ -205,8 +209,13 @@ function transformSeriesSummary(raw: any): Option<CoachingSessionSeriesSummary> 
 export function serializeCoachingSession(
   session: EnrichedCoachingSession
 ): CoachingSessionWire {
-  // display_title and series are server-computed/read-only — never send them back.
-  const { display_title: _displayTitle, series: _series, ...rest } = session;
+  // display_title, series and organization_id are read-only — never send them back.
+  const {
+    display_title: _displayTitle,
+    series: _series,
+    organization_id: _organizationId,
+    ...rest
+  } = session;
   return {
     ...rest,
     title: session.title.some ? session.title.val : null,
@@ -226,6 +235,7 @@ export function defaultCoachingSession(): CoachingSession {
     duration_minutes: FALLBACK_DURATION_MINUTES,
     title: None,
     coaching_session_series_id: None,
+    organization_id: None,
     ical_recurrence_id: None,
     created_at: now,
     updated_at: now,

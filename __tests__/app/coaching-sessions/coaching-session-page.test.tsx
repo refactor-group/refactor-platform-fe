@@ -8,7 +8,7 @@ import { useCurrentCoachingSession } from '@/lib/hooks/use-current-coaching-sess
 import { useCurrentCoachingRelationship } from '@/lib/hooks/use-current-coaching-relationship'
 import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship-role'
 import { createMockCoachingSession } from '../../factories/coaching-session.factory'
-import { None, Some } from '@/types/option'
+import { Some } from '@/types/option'
 import { RelationshipRole } from '@/types/relationship-role'
 
 // Mock Next.js navigation hooks
@@ -121,19 +121,6 @@ function mockRoleAsCoach() {
     hasActiveRelationship: true,
     relationshipId: 'rel-123',
     userId: 'user-123',
-    coachId: 'user-123',
-    coacheeId: 'coachee-456',
-  })
-}
-
-function mockRoleAsCoachee() {
-  vi.mocked(useCurrentRelationshipRole).mockReturnValue({
-    relationship_role: Some(RelationshipRole.Coachee),
-    isCoachInCurrentRelationship: false,
-    isCoacheeInCurrentRelationship: true,
-    hasActiveRelationship: true,
-    relationshipId: 'rel-123',
-    userId: 'coachee-456',
     coachId: 'user-123',
     coacheeId: 'coachee-456',
   })

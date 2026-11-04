@@ -7,7 +7,6 @@ import {
 } from "@/lib/api/transcript-suggestions";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { ScanStatus } from "@/types/transcript-suggestion";
-import { Some, None } from "@/types/option";
 
 vi.mock("@/lib/auth/session-guard", () => ({
   sessionGuard: { get: vi.fn(), put: vi.fn(), post: vi.fn() },

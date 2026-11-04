@@ -5,7 +5,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
-import { ItemStatus } from "@/types/general";
 import { Some } from "@/types/option";
 import { createMockAction } from "../../../test-utils";
 

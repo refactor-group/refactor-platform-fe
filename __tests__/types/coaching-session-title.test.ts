@@ -44,7 +44,7 @@ describe("transformCoachingSession — wraps wire title into Option<string>", ()
   });
 
   it("wraps an absent (undefined) title as None (defensive)", () => {
-    const { title, ...noTitle } = rawWire;
+    const { title: _title, ...noTitle } = rawWire;
     const s = transformCoachingSession(noTitle);
     expect(s.title.none).toBe(true);
   });

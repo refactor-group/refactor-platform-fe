@@ -7,7 +7,6 @@ import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
 import { AssigneePickerPopover, DueDatePicker } from "@/components/ui/coaching-sessions/action-card-parts";
 import { DateTime } from "ts-luxon";
 import { GoalPill } from "@/components/ui/goal-pill";
-import { ItemStatus } from "@/types/general";
 import { createMockGoal } from "../../../test-utils";
 
 function Wrapper({ children }: { children: ReactNode }) {
