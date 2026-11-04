@@ -1,7 +1,15 @@
 import type { DateTime } from "ts-luxon";
 import type { StepRailItem } from "@/components/ui/step-dialog";
 import { type PersonEntry, menuPerson } from "@/lib/people";
-import { type ClashState, type RuleInput, resolveHint, rulePayload, stepRail } from "@/lib/schedule-draft";
+import {
+  type Availability,
+  type ClashState,
+  type RuleInput,
+  availabilityHint,
+  resolveHint,
+  rulePayload,
+  stepRail,
+} from "@/lib/schedule-draft";
 import type { MoveScope, RepeatChoice, StepKind } from "@/lib/scheduling";
 import { sessionStartIn, toSessionDate } from "@/lib/session-window";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
@@ -45,13 +53,14 @@ export function moveChanged(
 }
 
 export function moveHint(
-  input: ClashState & { changed: boolean; following: boolean; seriesLoading: boolean }
+  input: ClashState & { changed: boolean; following: boolean; seriesLoading: boolean; availability: Availability }
 ): Option<string> {
   // Without the series, the Repeat step shows defaults rather than its rule.
   if (input.following && input.seriesLoading) return Some(SERIES_LOADING_HINT);
   // A rule-only edit of this and following is a valid change.
   if (!input.changed && !input.following) return Some(UNCHANGED_HINT);
-  return resolveHint(input);
+  const checking = availabilityHint(input.availability);
+  return checking.some ? checking : resolveHint(input);
 }
 
 export function moveRail(

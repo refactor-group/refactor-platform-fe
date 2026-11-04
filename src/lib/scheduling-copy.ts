@@ -217,6 +217,13 @@ export function overlapsNewLine(clash: BusySession): string {
   return `${firstNameOf(clash.personName)}'s session on ${shortDay(clash.start)} at ${timeOfDay(clash.start)} overlaps the new one.`;
 }
 
+/** For several sessions: "Ehab's and Priya's sessions overlap the new one." */
+export function overlapsNewLines(clashes: BusySession[]): string {
+  const owners = clashes.map((c) => `${firstNameOf(c.personName)}'s`);
+  const named = owners.length > 1 ? `${owners.slice(0, -1).join(", ")} and ${owners[owners.length - 1]}` : owners[0];
+  return `${named} sessions overlap the new one.`;
+}
+
 export function resolveSubline(clash: BusySession): string {
   return `${overlapsNewLine(clash)} Move it to:`;
 }

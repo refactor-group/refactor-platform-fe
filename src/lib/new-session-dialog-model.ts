@@ -15,7 +15,7 @@ import {
   StepKind,
   type UsualSlot,
 } from "@/lib/scheduling";
-import { currentlyLine, overlapsNewLine, resolveSubline } from "@/lib/scheduling-copy";
+import { currentlyLine, overlapsNewLine, overlapsNewLines, resolveSubline } from "@/lib/scheduling-copy";
 import { sessionStartIn } from "@/lib/session-window";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -68,6 +68,8 @@ export interface RepeatModel {
   repeat: RepeatChoice;
   /** Offers "Doesn't repeat". */
   optional: boolean;
+  /** The series' rule is still loading, so nothing can be changed against the defaults. */
+  locked: boolean;
   byWeekdays: Weekday[];
   lockedWeekday: Weekday;
   /** What each end option starts at when chosen. */
@@ -83,6 +85,8 @@ export interface RepeatModel {
 export interface ResolveModel {
   subline: string;
   movable: boolean;
+  /** The new time overlaps more than one session. */
+  several: boolean;
   newStart: DateTime;
   days: { day: DateTime; past: boolean }[];
   selectedDay: DateTime;
@@ -233,9 +237,15 @@ interface ResolveInput {
 
 export function resolveModel(input: ResolveInput): ResolveModel {
   const { clash, start, minutes, movable, draft, busy, now, onChange } = input;
+  const several = clash.others.length > 0;
   return {
-    subline: movable ? resolveSubline(clash.session) : overlapsNewLine(clash.session),
+    subline: several
+      ? overlapsNewLines([clash.session, ...clash.others])
+      : movable
+        ? resolveSubline(clash.session)
+        : overlapsNewLine(clash.session),
     movable,
+    several,
     newStart: start,
     days: resolveDays(clash.session.start, now),
     selectedDay: draft.day,

@@ -118,7 +118,7 @@ export function RepeatStep(model: RepeatModel) {
   const { repeat, error } = model;
   const id = useId();
   return (
-    <div className="flex flex-col gap-6">
+    <fieldset disabled={model.locked} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0">
       <FrequencyChips {...model} />
       {repeat.kind === "repeat" && frequencySupportsWeekdays(repeat.frequency) && (
         <div className="flex flex-col gap-2.5">
@@ -142,6 +142,6 @@ export function RepeatStep(model: RepeatModel) {
           )}
         </div>
       )}
-    </div>
+    </fieldset>
   );
 }

@@ -52,6 +52,25 @@ export type Resolution =
 
 const MISSING_HINT = "Choose a person, date and time to schedule.";
 
+/** Whether the busy read for the shown range has come back. */
+export type Availability = { kind: "loading" } | { kind: "error" } | { kind: "loaded" };
+
+/** Until the busy read is in, an empty calendar would read as free. */
+export function availabilityHint(availability: Availability): Option<string> {
+  switch (availability.kind) {
+    case "loading":
+      return Some("Checking your calendar…");
+    case "error":
+      return Some("Couldn't check your calendar. Close and try again.");
+    case "loaded":
+      return None;
+    default: {
+      const _exhaustive: never = availability;
+      throw new Error(`Unhandled availability: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
+}
+
 // ─── Sessions ────────────────────────────────────────────────────────
 
 interface Placed {
@@ -234,9 +253,9 @@ export function busyWindow(month: DateTime, selected: Option<DateTime>): { from:
 }
 
 export function clashFor(slot: Slot, busy: BusySession[], hours: WorkingHours): Option<BusyClash> {
-  const [first] = overlapping(slot, busy);
+  const [first, ...others] = overlapping(slot, busy);
   if (!first) return None;
-  return Some({ session: first, instead: nextFreeStart(slot, busy, hours) });
+  return Some({ session: first, others, instead: nextFreeStart(slot, busy, hours) });
 }
 
 // ─── Resolve overlap ─────────────────────────────────────────────────
@@ -374,9 +393,16 @@ export function seriesPayload(
 /** An overlap and how far it's settled. */
 export interface ClashState {
   clash: Option<BusySession>;
-  /** The clashing session isn't the user's to move, so it can only be kept. */
+  /** The clashing session isn't the user's to move, or there are several, so it can only be kept. */
   keepOnly: boolean;
+  /** The new time overlaps more than one session. */
+  several: boolean;
   resolution: Resolution;
+}
+
+/** What "keep" keeps: "both" sessions, or "all" of them. */
+export function keptWord(several: boolean): string {
+  return several ? "all" : "both";
 }
 
 interface ScheduleRailInput extends ClashState {
@@ -398,16 +424,17 @@ function startLine(start: DateTime): string {
 }
 
 function resolutionValue(input: StepRailInput): string {
-  const { clash, keepOnly, resolution, start } = input;
+  const { clash, keepOnly, several, resolution, start } = input;
+  const kept = keptWord(several);
   if (clash.none) return "Choose a new time";
   const first = firstNameOf(clash.val.personName);
   switch (resolution.kind) {
     case "unresolved":
-      return keepOnly ? "Keep both or pick another time" : `Choose a new time for ${first}`;
+      return keepOnly ? `Keep ${kept} or pick another time` : `Choose a new time for ${first}`;
     case "move":
       return `Move ${first} to ${shortDay(resolution.start)}, ${timeOfDay(resolution.start)}`;
     case "keep":
-      return start.some ? `Keep both at ${timeOfDay(start.val)}` : "Keep both";
+      return start.some ? `Keep ${kept} at ${timeOfDay(start.val)}` : `Keep ${kept}`;
     default: {
       const _exhaustive: never = resolution;
       throw new Error(`Unhandled resolution: ${JSON.stringify(_exhaustive)}`);
@@ -453,18 +480,19 @@ export function scheduleRail(input: ScheduleRailInput): StepRailItem[] {
 }
 
 /** Asks how to settle an overlap that's still open. */
-export function resolveHint({ clash, keepOnly, resolution }: ClashState): Option<string> {
+export function resolveHint({ clash, keepOnly, several, resolution }: ClashState): Option<string> {
   if (clash.none || resolution.kind !== "unresolved") return None;
   return Some(
     keepOnly
-      ? "Keep both, or go back and pick another time."
+      ? `Keep ${keptWord(several)}, or go back and pick another time.`
       : `Pick a new time for ${firstNameOf(clash.val.personName)}, or keep both.`
   );
 }
 
 export function scheduleHint(
-  input: ClashState & { personName: Option<string>; start: Option<DateTime> }
+  input: ClashState & { personName: Option<string>; start: Option<DateTime>; availability: Availability }
 ): Option<string> {
   if (input.personName.none || input.start.none) return Some(MISSING_HINT);
-  return resolveHint(input);
+  const checking = availabilityHint(input.availability);
+  return checking.some ? checking : resolveHint(input);
 }

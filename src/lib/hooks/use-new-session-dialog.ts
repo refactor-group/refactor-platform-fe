@@ -135,8 +135,10 @@ export function useNewSessionDialog(
   const resolveDraft = start.some ? draftFor(clash, { start: start.val, minutes }, savedResolve) : None;
   const resolution = resolveDraft.some ? resolveDraft.val.resolution : UNRESOLVED;
   const other = clash.some ? data.busySource.find((s) => s.id === clash.val.session.id) : undefined;
-  const movable = other !== undefined && other.relationship?.coach_id === data.userId;
-  const overlap = { clash: clashSession, keepOnly: !movable, resolution };
+  // Moving one of several overlapped sessions wouldn't clear the time, so several can only be kept.
+  const several = clash.some && clash.val.others.length > 0;
+  const movable = !several && other !== undefined && other.relationship?.coach_id === data.userId;
+  const overlap = { clash: clashSession, keepOnly: !movable, several, resolution };
 
   const order = stepOrder(moving.some ? { kind: "move", appliesTo: inSeries, following } : { kind: "schedule" }, clash.some);
   const current = currentStep(order, step);
@@ -213,8 +215,14 @@ export function useNewSessionDialog(
     lead: leadFor({
       last: next.none,
       hint: moving.some
-        ? moveHint({ changed, following, seriesLoading: seriesLoad.kind === "loading", ...overlap })
-        : scheduleHint({ personName, start, ...overlap }),
+        ? moveHint({
+            changed,
+            following,
+            seriesLoading: seriesLoad.kind === "loading",
+            availability: data.availability,
+            ...overlap,
+          })
+        : scheduleHint({ personName, start, availability: data.availability, ...overlap }),
       label: moving.some ? moveSubmitLabel(following) : scheduleSubmitLabel(repeat),
       error,
       submitting,
@@ -270,6 +278,7 @@ export function useNewSessionDialog(
     repeat: {
       repeat,
       optional: moving.none,
+      locked: following && seriesLoad.kind === "loading",
       byWeekdays: recurrence.byWeekdays,
       lockedWeekday: startWeekday ?? weekdayFromLuxon(now.weekday),
       defaultEnd: { count: DEFAULT_REPEAT_COUNT, until: untilAfter(start.some ? start.val : now) },

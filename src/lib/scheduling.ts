@@ -20,6 +20,8 @@ export const DEFAULT_WORKING_HOURS: WorkingHours = { start: 9 * 60, end: 17 * 60
 
 export interface BusyClash {
   session: BusySession;
+  /** Any further sessions the new time also overlaps. */
+  others: BusySession[];
   instead: Option<DateTime>;
 }
 

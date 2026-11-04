@@ -15,7 +15,7 @@ import { useUser } from "@/lib/api/users";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { type PersonEntry, schedulablePeople } from "@/lib/people";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { busySessions, busyWindow, knownSessions, pickerPeople } from "@/lib/schedule-draft";
+import { type Availability, busySessions, busyWindow, knownSessions, pickerPeople } from "@/lib/schedule-draft";
 import type { BusySession } from "@/lib/scheduling";
 import { sessionEndIn, sessionStartIn, utcInstant } from "@/lib/session-window";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
@@ -46,6 +46,8 @@ export interface ScheduleData {
   /** Sessions in the busy range, kept whole so an overlapped one can be moved. */
   busySource: EnrichedCoachingSession[];
   busy: BusySession[];
+  /** Whether `busy` has been read; empty while loading or failed isn't free. */
+  availability: Availability;
   coachStarts: DateTime[];
   provider: Option<Provider>;
   defaultMinutes: number;
@@ -117,7 +119,7 @@ export function useScheduleData(range: BusyRange): ScheduleData {
     "month"
   );
   const window = busyWindow(month, range.selected);
-  const busySource = useEnrichedCoachingSessionsForUser(
+  const busyRead = useEnrichedCoachingSessionsForUser(
     userId,
     window.from,
     window.to,
@@ -126,7 +128,13 @@ export function useScheduleData(range: BusyRange): ScheduleData {
     undefined,
     undefined,
     timezone
-  ).enrichedSessions;
+  );
+  const busySource = busyRead.enrichedSessions;
+  const availability: Availability = busyRead.isError
+    ? { kind: "error" }
+    : busyRead.isLoading
+      ? { kind: "loading" }
+      : { kind: "loaded" };
 
   const { connections } = useOAuthConnections();
   const { user } = useUser(userId);
@@ -155,6 +163,7 @@ export function useScheduleData(range: BusyRange): ScheduleData {
     known,
     busySource,
     busy,
+    availability,
     coachStarts,
     provider: providerOf(connections),
     defaultMinutes: user?.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,

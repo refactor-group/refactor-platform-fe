@@ -266,3 +266,21 @@ describe("NewSessionDialog: the series hasn't loaded", () => {
     expect(reschedule).not.toHaveBeenCalled();
   });
 });
+
+describe("NewSessionDialog: Repeat while the series loads", () => {
+  it("can't be edited until the rule arrives, then shows the rule", () => {
+    serveSeries({ ...SERIES, id: "" }, { isLoading: true });
+    const { rerender } = render(
+      <NewSessionDialog request={{ kind: "move", session: E_18, scope: MoveScope.Following }} onClose={vi.fn()} />
+    );
+    next();
+    next();
+    expect(screen.getByRole("button", { name: "Monthly" })).toBeDisabled();
+    expect(screen.getByRole("spinbutton", { name: "Number of sessions" })).toBeDisabled();
+
+    serveSeries(withRecurrence(Frequency.Monthly, 1));
+    rerender(<NewSessionDialog request={{ kind: "move", session: E_18, scope: MoveScope.Following }} onClose={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Monthly" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Monthly" })).toHaveAttribute("aria-pressed", "true");
+  });
+});

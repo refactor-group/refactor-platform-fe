@@ -58,12 +58,12 @@ describe("moveChanged", () => {
 describe("moveHint", () => {
   it("asks for a change first, then for the overlap", () => {
     const unresolved = { kind: "unresolved" } as const;
-    expect(moveHint({ changed: false, clash: None, resolution: unresolved })).toEqual(Some("Pick a new date or time."));
-    expect(moveHint({ changed: true, clash: Some(priya), resolution: unresolved })).toEqual(
+    expect(moveHint({ availability: { kind: "loaded" }, changed: false, clash: None, resolution: unresolved })).toEqual(Some("Pick a new date or time."));
+    expect(moveHint({ availability: { kind: "loaded" }, changed: true, clash: Some(priya), resolution: unresolved })).toEqual(
       Some("Pick a new time for Priya, or keep both.")
     );
-    expect(moveHint({ changed: true, clash: Some(priya), resolution: { kind: "keep" } })).toEqual(None);
-    expect(moveHint({ changed: true, clash: None, resolution: unresolved })).toEqual(None);
+    expect(moveHint({ availability: { kind: "loaded" }, changed: true, clash: Some(priya), resolution: { kind: "keep" } })).toEqual(None);
+    expect(moveHint({ availability: { kind: "loaded" }, changed: true, clash: None, resolution: unresolved })).toEqual(None);
   });
 });
 
