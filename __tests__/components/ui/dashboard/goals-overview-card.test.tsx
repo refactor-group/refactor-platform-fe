@@ -58,7 +58,7 @@ function makeGoalWithProgress(
     title: "Test goal",
     body: "Test body",
     status: ItemStatus.InProgress,
-    status_changed_at: "2026-02-01T00:00:00Z",
+    status_changed_at: Some("2026-02-01T00:00:00Z"),
     target_date: null,
     created_at: "2026-01-15T00:00:00Z",
     updated_at: "2026-02-20T00:00:00Z",
