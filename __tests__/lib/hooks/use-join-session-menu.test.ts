@@ -81,8 +81,8 @@ function lastNearestQuery(): Option<NearestQuery> {
 function lastWindow() {
   const query = lastNearestQuery();
   if (query.none) throw new Error("expected a nearest query");
-  const { relationshipId, around, before, after } = query.val;
-  return { relationshipId, around, before, after };
+  const { relationshipIds, around, before, after } = query.val;
+  return { relationshipIds, around, before, after };
 }
 
 function serveActivity(sessions: EnrichedCoachingSession[], state: { isLoading?: boolean; isError?: unknown } = {}) {
@@ -160,7 +160,7 @@ describe("useJoinSessionMenu", () => {
     const { result } = renderOpened();
     expect(result.current.people.filter((p) => p.person.userId === "ehab")).toHaveLength(1);
     expect(result.current.selectedId).toEqual(Some("ehab"));
-    expect(lastWindow().relationshipId).toBe("rel-e2");
+    expect(lastWindow().relationshipIds).toEqual(["rel-e2"]);
   });
 
   it("defaults to the first person off a session page", () => {
@@ -180,7 +180,7 @@ describe("useJoinSessionMenu", () => {
     const { result } = renderOpened();
     act(() => result.current.selectPerson("priya"));
     expect(lastWindow()).toEqual({
-      relationshipId: "rel-p",
+      relationshipIds: ["rel-p"],
       around: "2026-08-25T21:30:00",
       before: 2,
       after: 3,
@@ -206,7 +206,7 @@ describe("useJoinSessionMenu", () => {
     vi.mocked(usePathname).mockReturnValue("/coaching-sessions/ehab-7");
     renderOpened();
     expect(lastWindow()).toEqual({
-      relationshipId: "rel-e",
+      relationshipIds: ["rel-e"],
       around: "2026-08-11T15:00:00",
       before: 2,
       after: 3,
@@ -218,7 +218,7 @@ describe("useJoinSessionMenu", () => {
     const { result } = renderOpened();
     act(() => result.current.selectPerson("zed"));
     expect(lastWindow()).toEqual({
-      relationshipId: "rel-z",
+      relationshipIds: ["rel-z"],
       around: "2026-08-25T19:00:00Z",
       before: 2,
       after: 2,
@@ -393,7 +393,7 @@ describe("useJoinSessionMenu", () => {
       serveActivity([session("rel-e", "2026-08-11T15:00:00"), session("rel-e2", "2026-08-27T15:00:00")])
       const { result } = renderOpened();
       act(() => result.current.selectPerson("ehab"));
-      expect(lastWindow().relationshipId).toBe("rel-e2");
+      expect(lastWindow().relationshipIds).toEqual(["rel-e2"]);
     });
 
     it("keeps name order, hides no one and holds the window while activity loads", () => {
@@ -426,7 +426,7 @@ describe("useJoinSessionMenu", () => {
     beforeEach(() => {
       loaded = { "rel-e": ehabSessions };
       vi.mocked(useNearestCoachingSessions).mockImplementation((query) => {
-        const sessions = query.some ? loaded[query.val.relationshipId] : undefined;
+        const sessions = query.some ? loaded[query.val.relationshipIds[0]] : undefined;
         return {
           sessions: sessions ?? [],
           isLoading: query.some && !sessions,

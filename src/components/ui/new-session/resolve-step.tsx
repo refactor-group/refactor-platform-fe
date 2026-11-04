@@ -3,7 +3,8 @@
 import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
 import { Chip } from "@/components/ui/chip";
-import type { ResolveModel } from "@/lib/hooks/use-new-session-dialog";
+import type { ResolveModel } from "@/lib/new-session-dialog-model";
+import { keptWord } from "@/lib/schedule-draft";
 import { timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 
@@ -41,7 +42,7 @@ function DayCircle({ day, past, selected, onSelect }: DayCircleProps) {
 
 function KeepBoth({ model }: { model: ResolveModel }) {
   const kept = model.resolution.kind === "keep";
-  const label = `${model.movable ? "keep" : "Keep"} both at ${timeOfDay(model.newStart)}`;
+  const label = `${model.movable ? "keep" : "Keep"} ${keptWord(model.several)} at ${timeOfDay(model.newStart)}`;
   return (
     <p className="text-[13px] text-muted-foreground">
       {model.movable && "Or "}

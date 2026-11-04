@@ -145,6 +145,15 @@ export function sessionStartIn(date: string, timezone: string): DateTime {
   return DateTime.fromISO(date, { zone: "utc" }).setZone(timezone);
 }
 
+/** The series slot a session occupies, or its own start when the slot is unknown. */
+export function seriesSlotStart(
+  session: { date: string; ical_recurrence_id: Option<string> },
+  timezone: string
+): DateTime {
+  const slot = session.ical_recurrence_id;
+  return sessionStartIn(slot.some ? slot.val : session.date, timezone);
+}
+
 export function sessionEndIn(
   session: { date: string; duration_minutes: number },
   timezone: string

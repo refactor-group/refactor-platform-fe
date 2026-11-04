@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { None, Some } from '@/types/option'
 import {
   GoalProgress,
   parseGoalProgressMetrics,
@@ -197,6 +198,18 @@ describe('parseGoalProgressResponse', () => {
   it('parses a goal without a description (body: null) to an empty body', () => {
     const result = parseGoalProgressResponse({ goal_progress: [makeGoalWithProgressData({ body: null })] })
     expect(result[0].body).toBe('')
+  })
+
+  it('reads status_changed_at as None for a goal whose status never changed', () => {
+    const result = parseGoalProgressResponse({
+      goal_progress: [makeGoalWithProgressData({ status_changed_at: null })],
+    })
+    expect(result[0].status_changed_at).toEqual(None)
+  })
+
+  it('reads a present status_changed_at as Some', () => {
+    const result = parseGoalProgressResponse({ goal_progress: [makeGoalWithProgressData()] })
+    expect(result[0].status_changed_at).toEqual(Some('2026-02-01T00:00:00Z'))
   })
 
   it('parses a response with an empty array', () => {

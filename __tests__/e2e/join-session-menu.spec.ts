@@ -69,12 +69,21 @@ const NEAREST: Record<string, ReturnType<typeof session>[]> = {
 
 const json = (data: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) })
 
+/** `relationshipId` is the raw `coaching_relationship_ids` value: one id for a person's window. */
 type NearestRequest = { relationshipId: string; around: string; before: string; after: string }
 
 type NearestHandler = (route: Route, relationshipId: string) => Promise<void>
 
-const serveNearest: NearestHandler = (route, relationshipId) =>
-  route.fulfill(json(NEAREST[relationshipId] ?? []))
+// Every requested relationship's sessions, merged newest first like the endpoint.
+const serveNearest: NearestHandler = (route, relationshipIds) =>
+  route.fulfill(
+    json(
+      relationshipIds
+        .split(',')
+        .flatMap((id) => NEAREST[id] ?? [])
+        .sort((a, b) => b.date.localeCompare(a.date))
+    )
+  )
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -102,7 +111,7 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
   )
   await page.route('**/coaching_sessions/nearest**', (route) => {
     const params = new URL(route.request().url()).searchParams
-    const relationshipId = params.get('coaching_relationship_id') ?? ''
+    const relationshipId = params.get('coaching_relationship_ids') ?? ''
     const request = {
       relationshipId,
       around: params.get('around') ?? '',
@@ -157,7 +166,8 @@ test.describe('Join session menu', () => {
     await expect(person(page, 'Ehab')).toHaveAttribute('aria-pressed', 'true')
     await expect(menu(page).getByText(EHAB_ROW)).toBeVisible()
     expect(requests).toEqual([EHAB_TODAY_WINDOW])
-    expect(nearest.activity.map((r) => r.relationshipId).sort()).toEqual(PEOPLE.map(([id]) => id))
+    expect(nearest.activity).toHaveLength(1)
+    expect(nearest.activity[0].relationshipId.split(',').sort()).toEqual(PEOPLE.map(([id]) => id).sort())
     expect(nearest.activity.every((r) => r.around === NOW)).toBe(true)
   })
 

@@ -2,7 +2,7 @@
 
 import { PersonPicker } from "@/components/ui/new-session/person-picker";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { WhoModel } from "@/lib/hooks/use-new-session-dialog";
+import type { WhoModel } from "@/lib/new-session-dialog-model";
 
 const SKELETON_CARDS = 4;
 

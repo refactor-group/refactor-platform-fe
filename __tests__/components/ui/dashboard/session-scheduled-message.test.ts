@@ -23,7 +23,7 @@ describe("scheduledMessage", () => {
       personName: "Ehab Badawi",
       start: at("2026-08-18T14:30"),
       minutes: 50,
-      repeat: { kind: "repeat", frequency: Frequency.Weekly, end: { kind: "count", count: 8 } },
+      repeat: { kind: "repeat", frequency: Frequency.Weekly, interval: 1, end: { kind: "count", count: 8 } },
       otherMove: Some({ personName: "Priya Raman", start: at("2026-08-19T15:30") }),
     });
     expect(message).toBe(

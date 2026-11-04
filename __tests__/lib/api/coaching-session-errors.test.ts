@@ -67,10 +67,10 @@ describe("sessionWriteFailure", () => {
 
   it("falls back to a retry message", () => {
     expect(sessionWriteFailure(apiError(500), SessionWrite.CreateSeries)).toEqual(
-      toast("Couldn't create the coaching session · Try again")
+      toast("Couldn't create the session · Try again")
     );
     expect(sessionWriteFailure(apiError(500), SessionWrite.Update)).toEqual(
-      toast("Couldn't update the coaching session · Try again")
+      toast("Couldn't update the session · Try again")
     );
   });
 });

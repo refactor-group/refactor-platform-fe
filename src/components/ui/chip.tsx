@@ -22,7 +22,7 @@ export function Chip({ selected, size = "sm", className, ...props }: ChipProps) 
       type="button"
       aria-pressed={selected}
       className={cn(
-        "inline-flex items-center rounded-full font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+        "inline-flex items-center rounded-full font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none",
         CHIP_SIZE_CLASSES[size],
         selected
           ? "bg-primary text-primary-foreground"
