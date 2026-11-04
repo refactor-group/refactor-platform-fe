@@ -1,4 +1,5 @@
 import type { CoachingSession } from '@/types/coaching-session'
+import { None } from '@/types/option'
 
 /**
  * Creates a mock CoachingSession for testing purposes.
@@ -22,6 +23,7 @@ export function createMockCoachingSession(
     coaching_relationship_id: 'rel-123',
     date: now,
     duration_minutes: 60,
+    organization_id: None,
     created_at: now,
     updated_at: now,
     ...overrides,
