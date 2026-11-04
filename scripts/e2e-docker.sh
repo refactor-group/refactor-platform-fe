@@ -20,6 +20,10 @@ if ! curl -s -o /dev/null http://localhost:3000; then
   echo "Nothing on localhost:3000. Start the dev server (npm run dev) and try again." >&2
   exit 1
 fi
+if [[ -n "${LIVE_E2E:-}" ]] && ! curl -s -o /dev/null http://localhost:4000; then
+  echo "LIVE_E2E is set but nothing is on localhost:4000. Start the backend and try again." >&2
+  exit 1
+fi
 
 # The dev server compiles pages on demand; more workers than this time out page loads.
 args=("$@")
@@ -28,21 +32,26 @@ args=("$@")
 tty=()
 [[ -t 1 ]] && tty=(-t)
 
-# playwright.config.ts targets localhost:3000, so forward that to the host's dev server.
+# The app is on localhost:3000 and calls the backend on localhost:4000 (live specs),
+# so forward both to the host.
+# LIVE_E2E: passed through so the opt-in for *-live specs still works.
 # PLAYWRIGHT_HTML_OPEN=never: the html reporter would otherwise serve the report and wait.
 exec docker run --rm ${tty[@]+"${tty[@]}"} --ipc=host \
   -v "$PWD":/work -w /work \
+  -e LIVE_E2E \
   -e PLAYWRIGHT_HTML_OPEN=never \
   "$image" \
   bash -c '
     node -e "
       const net = require(\"net\");
-      net.createServer((c) => {
-        const u = net.connect(3000, \"host.docker.internal\");
-        c.pipe(u).pipe(c);
-        c.on(\"error\", () => u.destroy());
-        u.on(\"error\", () => c.destroy());
-      }).listen(3000, \"127.0.0.1\");
+      for (const port of [3000, 4000]) {
+        net.createServer((c) => {
+          const u = net.connect(port, \"host.docker.internal\");
+          c.pipe(u).pipe(c);
+          c.on(\"error\", () => u.destroy());
+          u.on(\"error\", () => c.destroy());
+        }).listen(port, \"127.0.0.1\");
+      }
     " &
     sleep 1
     exec npx playwright test "$@"
