@@ -1,9 +1,7 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MeetingIntegrationSection } from "@/components/ui/settings/meeting-integration-section";
 import { OAuthConnection } from "@/types/oauth-connection";
-import { Provider } from "@/types/provider";
 import {
   createMockGoogleOAuthConnectionState,
   createMockZoomOAuthConnectionState,

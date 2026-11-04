@@ -196,7 +196,7 @@ describe('LinkPopover', () => {
       const user = userEvent.setup()
       const { extensions, content } = createEditorWithContent('Test content')
 
-      const { rerender } = renderWithProviders(
+      renderWithProviders(
         <EditorProvider extensions={extensions} content={content}>
           <div>
             <div data-testid="static-toolbar" style={{ display: 'block' }}>
@@ -225,7 +225,7 @@ describe('LinkPopover', () => {
       const user = userEvent.setup()
       const { extensions, content } = createEditorWithContent('<p>Test text</p>')
 
-      const { container } = renderWithProviders(
+      renderWithProviders(
         <EditorProvider extensions={extensions} content={content}>
           <div>
             <LinkPopover />
@@ -282,7 +282,7 @@ describe('LinkPopover', () => {
       const user = userEvent.setup()
       const { extensions, content } = createEditorWithContent('Test content')
 
-      const { container } = renderWithProviders(
+      renderWithProviders(
         <div>
           <EditorProvider extensions={extensions} content={content}>
             <LinkPopover />
@@ -356,7 +356,6 @@ describe('LinkPopover', () => {
 
   describe('Auto-Open Behavior (Google Docs style)', () => {
     it('should open popover when cursor is inside link (keyboard or mouse)', async () => {
-      const user = userEvent.setup()
       const { extensions, content } = createEditorWithContent(
         '<p>Text with <a href="https://example.com">existing link</a> here</p>'
       )
