@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  seriesCreatedMessage,
-  sessionCreatedMessage,
+  otherMoveFailedMessage,
   sessionRemovedMessage,
   sessionUpdatedMessage,
 } from "@/components/ui/dashboard/session-change-message";
@@ -15,12 +14,6 @@ const session = { date: "2026-11-05T03:00:00", coaching_relationship_id: "rel-1"
 const halfPast = { ...session, date: "2026-11-05T03:30:00" };
 
 describe("session change messages", () => {
-  it("says what was created, with whom and when, locally", () => {
-    expect(sessionCreatedMessage(session, relationships, "America/Chicago")).toBe(
-      "Created a new session Nov 4 @ 9 PM with James Hodapp"
-    );
-  });
-
   it("says what was updated or removed, and when", () => {
     expect(sessionUpdatedMessage(session, relationships, "America/Chicago")).toBe(
       "Updated the Nov 4 @ 9 PM session with James Hodapp"
@@ -37,14 +30,14 @@ describe("session change messages", () => {
   });
 
   it("leaves the name out when the relationship isn't loaded", () => {
-    expect(sessionCreatedMessage(session, [], "UTC")).toBe("Created a new session Nov 5 @ 3 AM");
     expect(sessionRemovedMessage(session, [], "UTC")).toBe("Removed the Nov 5 @ 3 AM session");
   });
 });
 
-describe("seriesCreatedMessage", () => {
-  it("counts the sessions and names the coachee", () => {
-    expect(seriesCreatedMessage(3, "rel-1", relationships)).toBe("Created 3 recurring sessions with James Hodapp");
-    expect(seriesCreatedMessage(1, "rel-1", relationships)).toBe("Created 1 recurring session with James Hodapp");
+describe("otherMoveFailedMessage", () => {
+  it("names the person whose session stayed put", () => {
+    expect(otherMoveFailedMessage("Ehab Badawi")).toBe(
+      "Couldn't move Ehab's session · Reschedule it from the dashboard"
+    );
   });
 });

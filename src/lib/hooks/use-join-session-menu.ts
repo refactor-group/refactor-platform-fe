@@ -35,6 +35,7 @@ import {
   monthGroups,
   sessionStartIn,
   sessionWindow,
+  utcInstant,
 } from "@/lib/session-window";
 import {
   type PersonEntry,
@@ -184,10 +185,6 @@ export function windowQuery(input: WindowQueryInput): NearestWindow {
     before: 2,
     after: 2,
   };
-}
-
-function utcInstant(dt: DateTime): string {
-  return dt.toUTC().toFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 }
 
 type ActivityByPerson = ReturnType<typeof activityByPerson>;

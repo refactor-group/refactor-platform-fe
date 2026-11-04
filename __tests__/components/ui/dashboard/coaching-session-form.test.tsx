@@ -22,19 +22,12 @@ vi.mock("@/lib/toast", () => ({
 }));
 
 const mockUpdate = vi.fn();
-const mockCreate = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", () => ({
   useCoachingSessionList: vi.fn(() => ({ refresh: vi.fn() })),
   useCoachingSessionMutation: vi.fn(() => ({
-    create: mockCreate,
     update: mockUpdate,
     delete: vi.fn(),
   })),
-}));
-
-const mockCreateSeries = vi.fn();
-vi.mock("@/lib/api/coaching-session-series", () => ({
-  CoachingSessionSeriesApi: { create: (...args: unknown[]) => mockCreateSeries(...args) },
 }));
 
 vi.mock("@/lib/api/coaching-relationships", () => ({
@@ -108,76 +101,21 @@ beforeEach(() => {
   });
 
   mockUpdate.mockResolvedValue(existingSession);
-  mockCreate.mockResolvedValue(existingSession);
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("CoachingSessionForm – coachee dropdown ordering", () => {
-  function renderCreateForm() {
-    render(
-      <Wrapper>
-        <CoachingSessionForm mode="create" onOpenChange={vi.fn()} defaultDurationMinutes={60} />
-      </Wrapper>
-    );
-  }
-
-  it("lists coachees alphabetically by full name when the user is the coach", () => {
-    vi.mocked(useCoachingRelationshipList).mockReturnValue({
-      relationships: [
-        createMockRelationship({
-          id: "r-zoe",
-          coach_id: "user-1",
-          coachee_first_name: "Zoe",
-          coachee_last_name: "Zimmerman",
-        }),
-        createMockRelationship({
-          id: "r-alice",
-          coach_id: "user-1",
-          coachee_first_name: "Alice",
-          coachee_last_name: "Anderson",
-        }),
-        createMockRelationship({
-          id: "r-mike",
-          coach_id: "user-1",
-          coachee_first_name: "Mike",
-          coachee_last_name: "Miller",
-        }),
-      ],
-      isLoading: false,
-      isError: false,
-      refresh: vi.fn(),
-    });
-
-    renderCreateForm();
-
-    fireEvent.click(screen.getByLabelText("Select Coachee"));
-
-    const optionNames = screen
-      .getAllByRole("option")
-      .map((o) => o.textContent?.trim());
-    expect(optionNames).toEqual([
-      "Alice Anderson",
-      "Mike Miller",
-      "Zoe Zimmerman",
-    ]);
-  });
-});
-
 describe("CoachingSessionForm – handleSubmit error handling", () => {
   /**
-   * Renders the form in update mode. The existingSession pre-fills both
-   * sessionDate and sessionTime, so the submit button is enabled without
-   * needing to interact with the Calendar.
+   * The existingSession pre-fills both sessionDate and sessionTime, so the
+   * submit button is enabled without needing to interact with the Calendar.
    */
   function renderUpdateForm() {
     render(
       <Wrapper>
         <CoachingSessionForm
-          mode="update"
           existingSession={existingSession}
           onOpenChange={vi.fn()}
-          defaultDurationMinutes={60}
         />
       </Wrapper>
     );
@@ -335,14 +273,12 @@ describe("CoachingSessionForm – success toasts", () => {
     render(
       <Wrapper>
         <CoachingSessionForm
-          mode="update"
           // 03:00 UTC on Nov 5 is the evening of Nov 4 in Chicago.
           existingSession={createMockSession({
             date: "2026-11-05T03:00:00",
             coaching_relationship_id: "rel-1",
           })}
           onOpenChange={vi.fn()}
-          defaultDurationMinutes={60}
         />
       </Wrapper>
     );
@@ -351,59 +287,6 @@ describe("CoachingSessionForm – success toasts", () => {
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("Updated the Nov 4 @ 9 PM session with James Hodapp");
-    });
-  });
-
-  function renderCreateForm() {
-    withJamesRelationship();
-    render(
-      <Wrapper>
-        <CoachingSessionForm mode="create" onOpenChange={vi.fn()} defaultDurationMinutes={60} />
-      </Wrapper>
-    );
-    fireEvent.click(screen.getByRole("gridcell", { name: "15" }));
-    fireEvent.change(screen.getByLabelText(/time/i), { target: { value: "10:00" } });
-  }
-
-  it("confirms a new single session with its date, coachee and local time", async () => {
-    renderCreateForm();
-    fireEvent.click(screen.getByRole("button", { name: /^create session$/i }));
-
-    await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalled();
-      expect(toast.success).toHaveBeenCalledWith(
-        "Created a new session Oct 15 @ 10 AM with James Hodapp"
-      );
-    });
-  });
-
-  it("confirms a new series with its count and coachee", async () => {
-    mockCreateSeries.mockResolvedValue({ coaching_sessions: [{}, {}, {}] });
-    renderCreateForm();
-    fireEvent.click(screen.getByRole("switch", { name: "Repeats" }));
-    fireEvent.click(screen.getByRole("button", { name: /^create recurring sessions$/i }));
-
-    await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("Created 3 recurring sessions with James Hodapp");
-    });
-  });
-
-  it("does not blame the duration when the backend rejects a series", async () => {
-    mockCreateSeries.mockRejectedValue(
-      makeEntityApiError(422, {
-        status_code: 422,
-        error: "validation_error",
-        message: "monthly recurrence cannot start on day 31",
-      })
-    );
-    renderCreateForm();
-    fireEvent.click(screen.getByRole("switch", { name: "Repeats" }));
-    fireEvent.click(screen.getByRole("button", { name: /^create recurring sessions$/i }));
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
-        "Couldn't create the recurring sessions · Check the details and try again"
-      );
     });
   });
 });
@@ -423,10 +306,8 @@ describe("CoachingSessionForm – calendar initial month", () => {
     render(
       <Wrapper>
         <CoachingSessionForm
-          mode="update"
           existingSession={createMockSession({ date: scheduled.toISO()! })}
           onOpenChange={vi.fn()}
-          defaultDurationMinutes={60}
         />
       </Wrapper>
     );
