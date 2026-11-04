@@ -2,7 +2,6 @@ import {
   createConnectedPresence,
   createDisconnectedPresence,
   toUserPresence,
-  type UserPresence
 } from '@/types/presence';
 import { RelationshipRole } from '@/types/relationship-role';
 

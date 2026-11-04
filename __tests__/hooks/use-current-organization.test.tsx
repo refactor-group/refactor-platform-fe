@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { useCurrentOrganization } from '@/lib/hooks/use-current-organization'
 import { TestProviders } from '@/test-utils/providers'
 
