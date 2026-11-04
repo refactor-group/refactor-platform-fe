@@ -4,7 +4,7 @@ import { BusyNote } from "@/components/ui/new-session/busy-note";
 import { DurationField } from "@/components/ui/new-session/duration-field";
 import { MonthGrid } from "@/components/ui/new-session/month-grid";
 import { TimeField } from "@/components/ui/new-session/time-field";
-import type { WhenModel } from "@/lib/hooks/use-new-session-dialog";
+import type { WhenModel } from "@/lib/new-session-dialog-model";
 
 export function WhenStep(props: WhenModel) {
   const { day, clash, onTimeChange } = props;

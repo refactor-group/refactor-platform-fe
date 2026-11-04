@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "@/lib/toast";
 import { DeleteSeriesDialog } from "@/components/ui/dashboard/delete-series-dialog";
-import { RescheduleSeriesDialog } from "@/components/ui/dashboard/reschedule-series-dialog";
 import { SeriesDetailDialog } from "@/components/ui/dashboard/series-detail-dialog";
 import {
   useCoachingSessionSeries,
@@ -17,7 +16,7 @@ import { Id } from "@/types/general";
 
 export type SeriesAction =
   | { kind: "closed" }
-  | { kind: "view" | "edit" | "delete"; seriesId: Id };
+  | { kind: "view" | "delete"; seriesId: Id };
 
 export interface SeriesActionDialogsProps {
   action: SeriesAction;
@@ -25,13 +24,13 @@ export interface SeriesActionDialogsProps {
   relationships: CoachingRelationshipWithUserNames[];
   viewerId: Id | undefined;
   onClose: () => void;
-  /** Called after a reschedule or delete succeeds, so the host can revalidate
+  /** Called after a delete succeeds, so the host can revalidate
    *  affected session lists. */
   onMutated: () => void;
 }
 
 /**
- * Drives the view / edit / delete dialogs for a series referenced from a
+ * Drives the view / delete dialogs for a series referenced from a
  * session row's kebab. The row only carries the `coaching_session_series_id`,
  * so the fetching inner component resolves the full series by id.
  *
@@ -64,7 +63,7 @@ export function SeriesActionDialogs({
 }
 
 interface SeriesActionDialogsInnerProps {
-  kind: "view" | "edit" | "delete";
+  kind: "view" | "delete";
   seriesId: Id;
   userTimezone: string;
   relationships: CoachingRelationshipWithUserNames[];
@@ -129,16 +128,6 @@ function SeriesActionDialogsInner({
         series={loaded}
         userTimezone={userTimezone}
         onClose={onClose}
-      />
-    );
-  }
-
-  if (kind === "edit") {
-    return (
-      <RescheduleSeriesDialog
-        series={loaded}
-        onClose={onClose}
-        onRescheduled={onMutated}
       />
     );
   }

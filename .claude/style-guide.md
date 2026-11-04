@@ -129,7 +129,8 @@ Inter. Headings are **regular weight** with `-0.01em` tracking (baked into the s
   `bg-well` pane whose body is the only scroll region and whose footer is pinned. `bg-scrim`
   overlay, `shadow-modal`, dark adds a 1px `border`. Below 900px (`modal` screen) it becomes a
   full-screen step view: 56px top bar ("Title · n of m" + 44px close), 26px step title, scrolling
-  body, sticky footer with a 48px back circle and a Next or confirm pill.
+  body, sticky footer with a 48px back circle and a Next or confirm pill. Step arrows always
+  show, disabled at the ends.
 - Page width comes from `PageContainer` (`max-w-screen-2xl`); don't set your own max width.
 - Loading, empty and error states render inside the **same** card chrome so the grid never
   jumps (`GoalsOverviewCardSkeleton`, `GoalsOverviewCardError`).

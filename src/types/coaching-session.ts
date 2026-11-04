@@ -25,6 +25,8 @@ export interface CoachingSession {
   meeting_url?: string;
   provider?: Provider;
   coaching_session_series_id: Option<Id>;
+  // The series slot this session occupies (naive UTC, like `date`); kept when moved alone.
+  ical_recurrence_id: Option<string>;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -153,9 +155,10 @@ export function getCoachingSessionById(
 /** Wire shape where Option fields are unwrapped to string | null for JSON. */
 export type CoachingSessionWire = Omit<
   CoachingSession,
-  "title" | "coaching_session_series_id" | "display_title"
+  "title" | "coaching_session_series_id" | "display_title" | "ical_recurrence_id"
 > & {
   title: string | null;
+  ical_recurrence_id: string | null;
   coaching_session_series_id?: Id;
 };
 
@@ -182,6 +185,8 @@ export function transformCoachingSession(raw: any): EnrichedCoachingSession {
       typeof raw.coaching_session_series_id === "string"
         ? Some(raw.coaching_session_series_id)
         : None,
+    ical_recurrence_id:
+      typeof raw.ical_recurrence_id === "string" ? Some(raw.ical_recurrence_id) : None,
     series: transformSeriesSummary(raw.series),
   };
 }
@@ -208,6 +213,7 @@ export function serializeCoachingSession(
     coaching_session_series_id: session.coaching_session_series_id.some
       ? session.coaching_session_series_id.val
       : undefined,
+    ical_recurrence_id: session.ical_recurrence_id.some ? session.ical_recurrence_id.val : null,
   };
 }
 
@@ -220,6 +226,7 @@ export function defaultCoachingSession(): CoachingSession {
     duration_minutes: FALLBACK_DURATION_MINUTES,
     title: None,
     coaching_session_series_id: None,
+    ical_recurrence_id: None,
     created_at: now,
     updated_at: now,
   };
