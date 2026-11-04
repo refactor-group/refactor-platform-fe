@@ -1,5 +1,6 @@
 import { Result, ok, err } from "neverthrow";
 import { EntityApiError } from "@/types/general";
+import { type Option, None, Some } from "@/types/option";
 
 export const MIN_DURATION_MINUTES = 1;
 export const MAX_DURATION_MINUTES = 480;
@@ -46,4 +47,24 @@ export function isDurationValidationError(
     data.error === DurationErrorCode.ValidationError &&
     typeof data.message === "string"
   );
+}
+
+export const DURATION_CHIPS = [30, 45, 50, 60] as const;
+export const DURATION_FIELD_MIN = 15;
+export const DURATION_FIELD_MAX = 180;
+export const DURATION_FIELD_STEP = 5;
+
+export function clampDuration(minutes: number): number {
+  if (Number.isNaN(minutes)) return DURATION_FIELD_MIN;
+  const rounded = Math.round(minutes / DURATION_FIELD_STEP) * DURATION_FIELD_STEP;
+  return Math.min(DURATION_FIELD_MAX, Math.max(DURATION_FIELD_MIN, rounded));
+}
+
+export function stepDuration(minutes: number, direction: 1 | -1): number {
+  return clampDuration(clampDuration(minutes) + direction * DURATION_FIELD_STEP);
+}
+
+export function matchingChip(minutes: number): Option<number> {
+  const chip = DURATION_CHIPS.find((c) => c === minutes);
+  return chip === undefined ? None : Some(chip);
 }

@@ -20,6 +20,7 @@ import { RecurrenceFields } from "@/components/ui/dashboard/recurrence-fields";
 import { useRecurrenceState } from "@/lib/hooks/use-recurrence-state";
 import { useCoachingSessionSeriesMutation } from "@/lib/api/coaching-session-series";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { toSessionDate } from "@/lib/session-window";
 import { calendarDayOf, getBrowserTimezone, pickedDayIn } from "@/lib/timezone-utils";
 import {
   EntityApiError,
@@ -173,10 +174,9 @@ function RescheduleSeriesForm({
     setIsSubmitting(true);
 
     const [hours, minutes] = sessionTime.split(":").map(Number);
-    const utcDateTime = pickedDayIn(sessionDate, userTimezone)
-      .set({ hour: hours, minute: minutes })
-      .toUTC()
-      .toFormat("yyyy-MM-dd'T'HH:mm:ss");
+    const utcDateTime = toSessionDate(
+      pickedDayIn(sessionDate, userTimezone).set({ hour: hours, minute: minutes })
+    );
 
     const recurrence: Recurrence = recurrenceToPayload(
       frequency,
