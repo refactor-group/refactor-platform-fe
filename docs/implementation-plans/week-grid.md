@@ -20,7 +20,7 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 6 | Mobile day strip, agenda, Move sheet | Not started |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Not started |
 
-PRs 1 and 2 merge together, and each later PR merges on its own (D13). Each PR opens as a draft. The results of each PR's manual test part go in its description. `docs/test-plans/week_grid_manual_testing.md` grows by one part per PR.
+PRs 1 and 2 merge together, and each later PR merges on its own (D13). Each PR opens as a draft. The results of each PR's manual test part go in its description. `docs/test-plans/week_grid_manual_testing.md` is written up front for the whole feature. It has one part per PR plus a final end-to-end pass (Part 9). It's frozen acceptance, so a PR may correct a case only with Jim's approval.
 
 ## Components
 
