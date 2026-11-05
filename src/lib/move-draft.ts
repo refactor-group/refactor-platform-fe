@@ -11,7 +11,7 @@ import {
   stepRail,
 } from "@/lib/schedule-draft";
 import type { MoveScope, RepeatChoice, StepKind } from "@/lib/scheduling";
-import { sessionStartIn, toSessionDate } from "@/lib/session-window";
+import { seriesSlotStart, sessionStartIn, toSessionDate } from "@/lib/session-window";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
 import type { Id } from "@/types/general";
@@ -41,6 +41,41 @@ export function moveStart(session: EnrichedCoachingSession, timezone: string): {
 
 export function startMoved(session: EnrichedCoachingSession, start: DateTime, timezone: string): boolean {
   return start.toMillis() !== sessionStartIn(session.date, timezone).toMillis();
+}
+
+/** The rule a this-and-following edit asks for, beside the series' current one. */
+export interface FollowingRule {
+  frequency: Frequency;
+  interval: number;
+  byWeekdays: Weekday[];
+  current: SeriesRepeat;
+}
+
+/** The new rule fills the slots the series already has: same first slot, rhythm and weekdays. */
+function sameSlots(anchor: CoachingSession, start: DateTime, rule: FollowingRule, timezone: string): boolean {
+  const { current } = rule;
+  return (
+    seriesSlotStart(anchor, timezone).toMillis() === start.toMillis() &&
+    rule.frequency === current.frequency &&
+    rule.interval === current.interval &&
+    rule.byWeekdays.length === current.byWeekdays.length &&
+    rule.byWeekdays.every((day) => current.byWeekdays.includes(day))
+  );
+}
+
+/**
+ * Whether a this-and-following edit moves anything. With the series' slots unchanged, only the
+ * anchor can move; any other rule moves the sessions on its slots.
+ */
+export function followingMoves(input: {
+  anchor: CoachingSession;
+  start: DateTime;
+  rule: FollowingRule;
+  timezone: string;
+}): boolean {
+  const { anchor, start, rule, timezone } = input;
+  if (!sameSlots(anchor, start, rule, timezone)) return true;
+  return sessionStartIn(anchor.date, timezone).toMillis() !== start.toMillis();
 }
 
 export function moveChanged(

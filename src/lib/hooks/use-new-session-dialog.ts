@@ -7,7 +7,15 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@/lib/hooks/use-dialog-recurrence";
 import { type SeriesLoad, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
-import { moveChanged, moveHint, movePerson, moveRail, seriesRepeatFrom, startMoved } from "@/lib/move-draft";
+import {
+  followingMoves,
+  moveChanged,
+  moveHint,
+  movePerson,
+  moveRail,
+  seriesRepeatFrom,
+  startMoved,
+} from "@/lib/move-draft";
 import type { PersonEntry } from "@/lib/people";
 import {
   type NewSessionDialogModel,
@@ -42,7 +50,7 @@ import {
   stepPosition,
   suggestTimes,
 } from "@/lib/scheduling";
-import { moveSubmitLabel, scheduleSubmitLabel, seriesRuleLine } from "@/lib/scheduling-copy";
+import { followingMoveLine, moveSubmitLabel, moveTitle, scheduleSubmitLabel, seriesRuleLine } from "@/lib/scheduling-copy";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
@@ -187,6 +195,21 @@ export function useNewSessionDialog(
     };
   };
 
+  const moves: Option<string> =
+    moving.some &&
+    following &&
+    prefill.some &&
+    start.some &&
+    repeat.kind === "repeat" &&
+    followingMoves({
+      anchor: moving.val,
+      start: start.val,
+      rule: { ...cadence, byWeekdays: recurrence.byWeekdays, current: prefill.val.repeat },
+      timezone,
+    })
+      ? Some(followingMoveLine(cadence, recurrence.byWeekdays, start.val))
+      : None;
+
   const confirm = () => {
     if (entry.none || start.none) return;
     submit(planFor(entry.val, start.val));
@@ -203,7 +226,7 @@ export function useNewSessionDialog(
   };
 
   return {
-    title: moving.some ? "Reschedule session" : "New session",
+    title: moving.some ? moveTitle(following) : "New session",
     mover: moving.some && entry.some ? Some(moverOf(entry.val, moving.val, timezone)) : None,
     step: current,
     rail: moving.some
@@ -232,6 +255,7 @@ export function useNewSessionDialog(
       entry.some && moving.none
         ? Some(summaryOf(entry.val, createsCount(repeat, start, recurrence.byWeekdays), data.provider))
         : None,
+    moves,
     who: { state: whoState(data), selectedId: personId, onSelect: selectPerson },
     appliesTo: {
       scope: effectiveScope,

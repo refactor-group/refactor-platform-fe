@@ -411,13 +411,13 @@ Reschedule one session of a weekly series and go to Applies to.
 
 Reschedule the same series session to another weekday and pick "This and following sessions".
 
-**Pass:** a Repeat step appears ("2 of 3"), prefilled with the series' rule: no "Doesn't repeat", the new weekday selected in place of the old one, and Ends counting this session and the ones after it. The confirm reads "Reschedule this and following" and the toast ends "· and following". That session and the later ones move to the new weekday and time, earlier ones don't, and the moved sessions keep their notes and topics.
+**Pass:** the title changes to "Reschedule series", and a Repeat step appears ("2 of 3"), prefilled with the series' rule: no "Doesn't repeat", the new weekday selected in place of the old one, and Ends counting this session and the ones after it. The confirm reads "Reschedule this and following" and the toast ends "· and following". That session and the later ones move to the new weekday and time, earlier ones don't, and the moved sessions keep their notes and topics.
 
 ### Case G6b: Edit series
 
 Open a series session row's menu › Edit series, on an upcoming session and then on a past one.
 
-**Pass:** each opens Reschedule session with "This and following sessions" already selected: on that session for the upcoming row, on the series' next upcoming session for the past one. Changing only Ends and confirming updates the rule without moving the dates, and the toast reads "Updated · {first name}'s series · {rule}".
+**Pass:** each opens "Reschedule series" with "This and following sessions" already selected: on that session for the upcoming row, on the series' next upcoming session for the past one. Changing only Ends and confirming updates the rule without moving the dates, and the toast reads "Updated · {first name}'s series · {rule}".
 
 ### Case G6c: this and following, no change hint
 
@@ -460,6 +460,42 @@ The dialog can't create these, so make them through the API: a weekly series eve
 In DevTools, throttle `GET /coaching_session_series/*` to Slow 3G and open Edit series, then block it and reschedule a series session.
 
 **Pass:** while it loads, the last step says "Loading the series…" and there's no confirm. With the block, Applies to reads "Couldn't load the series, so only this session can change.", "This and following sessions" is disabled, "This session only" is selected, and confirming moves only that session. Edit series opened under the block also falls back to this session only.
+
+### Case G6j: sessions changed on their own keep their changes
+
+Create a weekly series of 5 (say Thursdays 6:00 PM, 60 min). Reschedule three of them with "This session only":
+- the 3rd to the next day, same time;
+- the 4th to 90 min, same date and time;
+- the 5th to the next day at another time, and 30 min.
+
+Then open Edit series on the 1st and change only Ends from 5 to 6.
+
+**Pass:** no "Rescheduling will" summary in the rail, since nothing moves. After confirming, the toast reads "Updated · {first name}'s series · Weekly, for 6 sessions". No session moves or changes length: the 3rd and 5th stay on their own days, and the 4th and 5th keep 90 and 30 min. A 6th session appears a week after the last Thursday.
+
+### Case G6k: the summary of the move
+
+On the same series, open Edit series on the 2nd session and set 4:00 PM and 45 min.
+
+**Pass:** the rail footer reads "Rescheduling will" / "Move this and following sessions to Thursdays, 4:00 PM". After confirming:
+
+| Session | After |
+|---|---|
+| 1st | unchanged |
+| 2nd | Thursday 4:00 PM, 45 min |
+| 3rd | its own day at 6:00 PM, 45 min |
+| 4th | Thursday 4:00 PM, 90 min |
+| 5th | its own day and time, 30 min |
+| 6th | Thursday 4:00 PM, 45 min |
+
+### Case G6l: when the summary shows
+
+Open Edit series and change nothing. Change the time. Pick "This session only" on Applies to, then "This and following sessions" again. Pick another weekday on Repeat.
+
+**Pass:**
+- No summary until something would move. It appears once the time changes.
+- With "This session only" there's no summary and the title reads "Reschedule session".
+- Back on "This and following sessions", the title reads "Reschedule series" and the summary returns.
+- The summary's weekdays follow the Repeat step.
 
 ### Case G7: errors
 

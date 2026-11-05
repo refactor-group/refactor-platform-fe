@@ -162,6 +162,7 @@ const railRow = (label: string) => rail().getAllByRole("listitem").find((row) =>
 const day = (label: string) => screen.getByRole("button", { name: new RegExp(`^${label}(,|$)`) });
 const next = () => fireEvent.click(screen.getByRole("button", { name: "Next step" }));
 const prev = () => fireEvent.click(screen.getByRole("button", { name: "Previous step" }));
+const typeTime = (value: string) => fireEvent.change(screen.getByLabelText("Start time"), { target: { value } });
 
 describe("NewSessionDialog: a series session", () => {
   it("adds Applies to, with this session only by default", () => {
@@ -247,6 +248,31 @@ describe("NewSessionDialog: a series session", () => {
       },
       ZONE
     );
+  });
+
+  it("summarizes where this and following moves", () => {
+    renderMove(MoveScope.Following);
+    typeTime("13:30");
+    expect(screen.getByText("Rescheduling will")).toBeInTheDocument();
+    expect(screen.getByText("Move this and following sessions to Tuesdays, 1:30 PM")).toBeInTheDocument();
+  });
+
+  it("has no summary while the edit moves nothing", () => {
+    renderMove(MoveScope.Following);
+    expect(screen.queryByText("Rescheduling will")).not.toBeInTheDocument();
+  });
+
+  it("titles the dialog by what it changes", () => {
+    renderMove(MoveScope.Following);
+    expect(screen.getByRole("dialog", { name: "Reschedule series" })).toBeInTheDocument();
+    next();
+    fireEvent.click(screen.getByRole("radio", { name: /This session only/ }));
+    expect(screen.getByRole("dialog", { name: "Reschedule session" })).toBeInTheDocument();
+  });
+
+  it("has no summary when moving this session only", () => {
+    renderMove();
+    expect(screen.queryByText("Rescheduling will")).not.toBeInTheDocument();
   });
 
   it("explains a refusal to drop later sessions that have content", async () => {

@@ -123,6 +123,8 @@ export interface NewSessionDialogModel {
   onNext: Option<() => void>;
   lead: StepDialogLead;
   summary: Option<SummaryModel>;
+  /** This and following only: "Move this and following sessions to Tuesdays, 2:00 PM". */
+  moves: Option<string>;
   who: WhoModel;
   when: WhenModel;
   appliesTo: AppliesToModel;
