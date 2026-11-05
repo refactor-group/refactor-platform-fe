@@ -14,8 +14,8 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (`feat/week-grid-nav`, through `8964e5da`), approved |
 | 3 | Prepare pill, Ready footer, live note | Folded into PRs 1 and 2 (Jim, 2026-11-05); Part 3 of the test plan runs with PR 2 |
 | 4 | Person filter, chip, dimmed cards | Done (`feat/week-grid-filter`, through `d9961f3e`), approved |
-| BE 1 | Working hours on the user (rs) | Contract `UserWorkingHours` v1 posted (topic `week-grid`), awaiting backend |
-| BE 2 | One reschedule email once changes settle (rs) | Contract `SessionRescheduleNoticeSettle` v1 posted (topic `week-grid`), awaiting backend |
+| BE 1 | Working hours on the user (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); backend builds this first |
+| BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
 | 5 | Drag to move, Undo, working hours in Settings and the dialog | Not started |
 | 6 | Mobile day strip, agenda, Move sheet | Not started |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Not started |
@@ -96,6 +96,11 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - Adds `users.working_hours_start` and `users.working_hours_end` as local `TIME`, defaulting to 08:00 and 17:30, on 30-minute steps.
   - Exposed on `GET /users/{id}` and `PUT /users/{id}`.
   - Board topic: `UserWorkingHours`.
+  - Agreed details:
+    - strict `HH:MM`, and the latest end is `23:30`;
+    - a single field is checked against the stored other one;
+    - the fields appear wherever the full user does;
+    - a violation is a 422.
 - **BE 2: settled reschedule emails.**
   - A single-session move no longer emails straight away. `coaching_sessions` gains:
     - `notified_date` and `notified_duration_minutes`;
@@ -105,6 +110,12 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - An Undo means nothing is due. Claims follow `claim_due_reminders`.
   - The reminder sweep skips sessions whose new time hasn't been announced yet.
   - Board topic: `SessionRescheduleNoticeSettle`.
+  - Agreed details:
+    - it also covers dialog reschedules, so they email 60 to 75 seconds later;
+    - a session starting within 5 minutes skips the wait;
+    - an immediate send (this and following, a series edit, resend) absorbs a pending move;
+    - a failed send retries up to 3 times;
+    - the timings are set by `SESSION_RESCHEDULE_SETTLE_SECONDS` and `SESSION_RESCHEDULE_SETTLE_MAX_SECONDS`.
 
 ## Phase 1c rules
 
