@@ -13,9 +13,9 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (`6fe0e8be`), approved |
 | 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (`feat/week-grid-nav`, through `8964e5da`), approved |
 | 3 | Prepare pill, Ready footer, live note | Folded into PRs 1 and 2 (Jim, 2026-11-05); Part 3 of the test plan runs with PR 2 |
-| 4 | Person filter, chip, dimmed cards | In review (`feat/week-grid-filter`, through `d9961f3e`) |
-| BE 1 | Working hours on the user (rs) | Not started |
-| BE 2 | One reschedule email once changes settle (rs) | Not started |
+| 4 | Person filter, chip, dimmed cards | Done (`feat/week-grid-filter`, through `d9961f3e`), approved |
+| BE 1 | Working hours on the user (rs) | Contract `UserWorkingHours` v1 posted (topic `week-grid`), awaiting backend |
+| BE 2 | One reschedule email once changes settle (rs) | Contract `SessionRescheduleNoticeSettle` v1 posted (topic `week-grid`), awaiting backend |
 | 5 | Drag to move, Undo, working hours in Settings and the dialog | Not started |
 | 6 | Mobile day strip, agenda, Move sheet | Not started |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Not started |
