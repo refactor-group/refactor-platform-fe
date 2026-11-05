@@ -320,12 +320,12 @@ describe("WeekPanel card clicks", () => {
     expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
   });
 
-  it("hints at double-click on a past card", () => {
+  it("does nothing on a single click on a past card", () => {
     renderPanel();
     fireEvent.click(screen.getByTestId("session-card-early-today"));
     act(() => vi.advanceTimersByTime(260));
     expect(run).not.toHaveBeenCalled();
-    expect(toast).toHaveBeenCalledWith("Past session · double-click to open its notes");
+    expect(toast).not.toHaveBeenCalled();
   });
 });
 

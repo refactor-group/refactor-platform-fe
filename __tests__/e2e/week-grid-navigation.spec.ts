@@ -73,9 +73,9 @@ test.describe('Week grid navigation and clicks', () => {
     expect(dialogSeen).toBe(false)
   })
 
-  test('a past card explains how to open it', async ({ page }) => {
-    await page.getByTestId('session-card-monday-past').click()
-    await expect(page.getByText('Past session · double-click to open its notes')).toBeVisible()
+  test('a past card opens on double-click', async ({ page }) => {
+    await page.getByTestId('session-card-monday-past').dblclick()
+    await page.waitForURL('**/coaching-sessions/monday-past')
   })
 
   test('Schedule session and an empty day open the dialog', async ({ page }) => {

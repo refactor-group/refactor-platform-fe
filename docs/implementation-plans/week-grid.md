@@ -123,8 +123,7 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - Schedule session and the empty-day Schedule follow `isACoach`, the same rule as Add New. Every empty day from today on shows "+ Schedule", in any week; past days never do.
 - A single click waits 260ms for a possible double-click:
   - on an upcoming session the viewer coaches, it opens Reschedule;
-  - on a past session, it shows the hint toast;
-  - otherwise it does nothing.
+  - otherwise it does nothing. A past session will open the Session glance once that's designed (Jim, 2026-11-05).
 - A double-click or Enter opens the session page.
 - This week is disabled while on the current week, which gives it its faint look.
 
@@ -146,4 +145,5 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - The store (week offset, filter, recently moved) comes with the first phase that reads it (PR 2), so it never ships unused.
 - Live uses the app's urgency levels: under way, imminent, or soon (within 2 hours). The handoff says "within the hour"; the shared thresholds win.
 
+- **Session glance (needs design):** a single click on a past card should open a dashboard dialog reviewing that session. The design system names a "Session glance" modal in the shared modal shell, and a bottom sheet on mobile, but there's no spec yet. It waits on a design handoff.
 - The backend's `/coaching_sessions/counts` loses its only caller after 1c. Raise it on the board.

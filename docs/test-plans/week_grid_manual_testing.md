@@ -191,9 +191,9 @@ Single-click A's card.
 
 ### Case 2.9: past card click
 
-Single-click D's card.
+Single-click D's card, then double-click it.
 
-**Pass:** the toast reads "Past session · double-click to open its notes". A double-click opens the notes.
+**Pass:** the single click does nothing, with no toast and no dialog. The double-click opens the session page.
 
 ### Case 2.10: after rescheduling
 

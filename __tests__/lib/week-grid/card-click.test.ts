@@ -16,9 +16,9 @@ describe("cardClick", () => {
     expect(cardClick(cardView(live, COACH))).toBe(CardClick.Reschedule);
   });
 
-  it("hints how to open a past session, for anyone", () => {
-    expect(cardClick(cardView(past, COACH))).toBe(CardClick.PastHint);
-    expect(cardClick(cardView(past, COACHEE))).toBe(CardClick.PastHint);
+  it("does nothing on a past session until the Session glance is designed", () => {
+    expect(cardClick(cardView(past, COACH))).toBe(CardClick.Nothing);
+    expect(cardClick(cardView(past, COACHEE))).toBe(CardClick.Nothing);
   });
 
   it("does nothing on an upcoming session the viewer is coached in", () => {
