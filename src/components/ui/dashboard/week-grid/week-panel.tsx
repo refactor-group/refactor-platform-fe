@@ -53,12 +53,13 @@ function useWeekAt(offset: number, now: DateTime, timezone: string): Week {
   );
 }
 
-function useWeekNavigation(isCurrentWeek: boolean, week: Week): WeekNavigation {
+function useWeekNavigation(isCurrentWeek: boolean, canSchedule: boolean, week: Week): WeekNavigation {
   const { previousWeek, nextWeek, thisWeek } = useWeekGridStore((s) => s);
   const { hasEarlier, hasLater } = useWeekEdges(week);
   return {
     canGoEarlier: hasEarlier,
-    canGoLater: hasLater,
+    // A coach can always page ahead to schedule into an empty week.
+    canGoLater: canSchedule || hasLater,
     isCurrentWeek,
     onPrevious: previousWeek,
     onNext: nextWeek,
@@ -72,10 +73,10 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const weekOffset = useWeekGridStore((s) => s.weekOffset);
   const week = useWeekAt(weekOffset, now, timezone);
   const isCurrentWeek = weekOffset === CURRENT_WEEK;
-  const navigation = useWeekNavigation(isCurrentWeek, week);
+  const canSchedule = useAuthStore((s) => s.isACoach);
+  const navigation = useWeekNavigation(isCurrentWeek, canSchedule, week);
   const { sessions, isLoading, isError, refresh } = useWeekSessions(week);
   const viewerId = useAuthStore((s) => s.userId);
-  const canSchedule = useAuthStore((s) => s.isACoach);
 
   const { mutate } = useSWRConfig();
   const onSessionsChanged = useCallback(() => {
@@ -111,8 +112,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     navigation,
     onSchedule: canSchedule ? Some(() => onSchedule(None)) : None,
   };
-  const scheduleDay =
-    canSchedule && isCurrentWeek ? Some((day: DateTime) => onSchedule(Some(day))) : None;
+  const scheduleDay = canSchedule ? Some((day: DateTime) => onSchedule(Some(day))) : None;
 
   return (
     <section
