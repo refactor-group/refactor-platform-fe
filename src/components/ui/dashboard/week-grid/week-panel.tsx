@@ -109,8 +109,8 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     title: weekTitle(weekOffset, week),
     range: weekRange(week),
     navigation,
+    onSchedule: canSchedule ? Some(() => onSchedule(None)) : None,
   };
-  const scheduleSession = canSchedule ? Some(() => onSchedule(None)) : None;
   const scheduleDay =
     canSchedule && isCurrentWeek ? Some((day: DateTime) => onSchedule(Some(day))) : None;
 
@@ -122,21 +122,17 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     >
       {isLoading ? (
         <>
-          <WeekPanelHeader {...header} subline={None} onSchedule={None} />
+          <WeekPanelHeader {...header} subline={None} />
           <WeekGridSkeleton />
         </>
       ) : isError ? (
         <>
-          <WeekPanelHeader {...header} subline={None} onSchedule={None} />
+          <WeekPanelHeader {...header} subline={None} />
           <WeekPanelError onRetry={refresh} />
         </>
       ) : (
         <>
-          <WeekPanelHeader
-            {...header}
-            subline={Some(sublineFor(days, isCurrentWeek))}
-            onSchedule={scheduleSession}
-          />
+          <WeekPanelHeader {...header} subline={Some(sublineFor(days, isCurrentWeek))} />
           <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} />
         </>
       )}
