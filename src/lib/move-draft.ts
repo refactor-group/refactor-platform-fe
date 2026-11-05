@@ -11,7 +11,7 @@ import {
   stepRail,
 } from "@/lib/schedule-draft";
 import type { MoveScope, RepeatChoice, StepKind } from "@/lib/scheduling";
-import { sessionStartIn, toSessionDate } from "@/lib/session-window";
+import { seriesSlotStart, sessionStartIn, toSessionDate } from "@/lib/session-window";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
 import type { Id } from "@/types/general";
@@ -43,16 +43,11 @@ export function startMoved(session: EnrichedCoachingSession, start: DateTime, ti
   return start.toMillis() !== sessionStartIn(session.date, timezone).toMillis();
 }
 
-/** The occurrence of the series rule a session fills; a legacy session without one fills its own date. */
-function slotStart(session: CoachingSession, timezone: string): DateTime {
-  return sessionStartIn(session.ical_recurrence_id.some ? session.ical_recurrence_id.val : session.date, timezone);
-}
-
 /** Moved on its own: it happens away from the occurrence it fills. */
 function movedAlone(session: CoachingSession, timezone: string): boolean {
   return (
     session.ical_recurrence_id.some &&
-    sessionStartIn(session.date, timezone).toMillis() !== slotStart(session, timezone).toMillis()
+    sessionStartIn(session.date, timezone).toMillis() !== seriesSlotStart(session, timezone).toMillis()
   );
 }
 
@@ -68,7 +63,7 @@ export interface FollowingRule {
 function sameSlots(anchor: CoachingSession, start: DateTime, rule: FollowingRule, timezone: string): boolean {
   const { current } = rule;
   return (
-    slotStart(anchor, timezone).toMillis() === start.toMillis() &&
+    seriesSlotStart(anchor, timezone).toMillis() === start.toMillis() &&
     rule.frequency === current.frequency &&
     rule.interval === current.interval &&
     rule.byWeekdays.length === current.byWeekdays.length &&
@@ -97,7 +92,7 @@ export function followingMoveCount(input: {
   const keepsItsTime = (s: CoachingSession) => movedAlone(s, timezone) && at(s) >= start.toMillis();
   const filled = sessions
     .filter((s) => s.id !== anchor.id && after(s))
-    .sort((a, b) => slotStart(a, timezone).toMillis() - slotStart(b, timezone).toMillis() || a.id.localeCompare(b.id))
+    .sort((a, b) => seriesSlotStart(a, timezone).toMillis() - seriesSlotStart(b, timezone).toMillis() || a.id.localeCompare(b.id))
     .slice(0, Math.max(slots - 1, 0));
   return 1 + filled.filter((s) => !keepsItsTime(s)).length;
 }
