@@ -4,6 +4,7 @@ import { AppliesToStep } from "@/components/ui/new-session/applies-to-step";
 import { MoveHeader } from "@/components/ui/new-session/move-header";
 import { RepeatStep } from "@/components/ui/new-session/repeat-step";
 import { ResolveStep } from "@/components/ui/new-session/resolve-step";
+import { RescheduleSummary } from "@/components/ui/new-session/reschedule-summary";
 import { ScheduleSummary } from "@/components/ui/new-session/schedule-summary";
 import { WhenStep } from "@/components/ui/new-session/when-step";
 import { WhoStep } from "@/components/ui/new-session/who-step";
@@ -70,6 +71,12 @@ function SeriesSessionDialog({ seriesId, ...props }: NewSessionDialogProps & { s
   return <NewSessionDialogView {...props} series={series} />;
 }
 
+function railFooter({ summary, moves }: NewSessionDialogModel) {
+  if (summary.some) return <ScheduleSummary {...summary.val} />;
+  if (moves.some) return <RescheduleSummary moves={moves.val} />;
+  return undefined;
+}
+
 function NewSessionDialogView({
   request,
   series,
@@ -85,7 +92,7 @@ function NewSessionDialogView({
       height={StepDialogHeight.Tall}
       railHeader={model.mover.some ? <MoveHeader {...model.mover.val} /> : undefined}
       steps={model.rail}
-      railFooter={model.summary.some ? <ScheduleSummary {...model.summary.val} /> : undefined}
+      railFooter={railFooter(model)}
       stepTitle={content.title}
       stepSubline={content.subline}
       lead={model.lead}

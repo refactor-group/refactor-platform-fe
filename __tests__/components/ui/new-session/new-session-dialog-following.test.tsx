@@ -11,13 +11,14 @@ import {
 } from "@/lib/api/coaching-sessions";
 import { CoachingSessionSeriesApi, useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
+import { toSessionDate } from "@/lib/session-window";
 import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { createMockSession } from "../../../test-utils";
 import { MoveScope } from "@/lib/scheduling";
 import { None, Some } from "@/types/option";
-import { ALL, E_04, E_11, E_18, NEAREST, NOW, RELATIONSHIPS, ZONE, session } from "../../../lib/scheduling/roster";
+import { ALL, E_04, E_11, E_18, NEAREST, NOW, RELATIONSHIPS, ZONE, at, session } from "../../../lib/scheduling/roster";
 import { Frequency, Weekday } from "@/types/recurrence";
 
 
@@ -162,6 +163,7 @@ const railRow = (label: string) => rail().getAllByRole("listitem").find((row) =>
 const day = (label: string) => screen.getByRole("button", { name: new RegExp(`^${label}(,|$)`) });
 const next = () => fireEvent.click(screen.getByRole("button", { name: "Next step" }));
 const prev = () => fireEvent.click(screen.getByRole("button", { name: "Previous step" }));
+const typeTime = (value: string) => fireEvent.change(screen.getByLabelText("Start time"), { target: { value } });
 
 describe("NewSessionDialog: a series session", () => {
   it("adds Applies to, with this session only by default", () => {
@@ -247,6 +249,36 @@ describe("NewSessionDialog: a series session", () => {
       },
       ZONE
     );
+  });
+
+  it("summarizes how many sessions this and following moves", () => {
+    renderMove(MoveScope.Following);
+    typeTime("13:30");
+    expect(screen.getByText("Rescheduling will")).toBeInTheDocument();
+    expect(screen.getByText("Move 3 sessions to Tuesdays, 1:30 PM")).toBeInTheDocument();
+  });
+
+  it("has no summary while the edit moves nothing", () => {
+    renderMove(MoveScope.Following);
+    expect(screen.queryByText("Rescheduling will")).not.toBeInTheDocument();
+  });
+
+  it("leaves a session moved on its own out of the summary", () => {
+    const movedAlone = { ...E_25, date: toSessionDate(at("2026-08-26T14:30")), ical_recurrence_id: Some(E_25.date) };
+    vi.mocked(useCoachingSessionSeries).mockReturnValue({
+      series: { ...SERIES, coaching_sessions: [E_04, E_11, E_18, movedAlone, E_01] },
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    } as unknown as ReturnType<typeof useCoachingSessionSeries>);
+    renderMove(MoveScope.Following);
+    typeTime("13:30");
+    expect(screen.getByText("Move 2 sessions to Tuesdays, 1:30 PM")).toBeInTheDocument();
+  });
+
+  it("has no summary when moving this session only", () => {
+    renderMove();
+    expect(screen.queryByText("Rescheduling will")).not.toBeInTheDocument();
   });
 
   it("explains a refusal to drop later sessions that have content", async () => {

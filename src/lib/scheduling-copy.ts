@@ -5,7 +5,7 @@ import { formatWeekdayDate } from "@/lib/utils/date";
 import { type Option, None, Some } from "@/types/option";
 import { Provider } from "@/types/provider";
 import type { SeriesRecurrence } from "@/types/coaching-session-series";
-import { Frequency, type RecurrenceEnd, WEEKDAYS_ORDERED, frequencySupportsWeekdays } from "@/types/recurrence";
+import { Frequency, type RecurrenceEnd, WEEKDAYS_ORDERED, type Weekday, frequencySupportsWeekdays } from "@/types/recurrence";
 
 const FIRST_SESSION_WEEKDAY_DAYS = 6;
 
@@ -185,6 +185,13 @@ export function seriesRuleLine(personName: string, recurrence: SeriesRecurrence)
 
 export function moveSubmitLabel(following: boolean): string {
   return following ? "Reschedule this and following" : "Reschedule session";
+}
+
+/** "Move 2 sessions to Tuesdays, 2:00 PM". */
+export function followingMoveLine(count: number, cadence: Cadence, byWeekdays: Weekday[], start: DateTime): string {
+  const time = timeOfDay(start);
+  const days = frequencySupportsWeekdays(cadence.frequency) ? weekdaysPhrase(byWeekdays) : "";
+  return `Move ${sessionCount(count)} to ${days ? `${days}, ${time}` : `${time}, ${rhythmPhrase(cadence)}`}`;
 }
 
 export function createsLine(count: number, firstName: string): string {

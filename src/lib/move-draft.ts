@@ -43,6 +43,65 @@ export function startMoved(session: EnrichedCoachingSession, start: DateTime, ti
   return start.toMillis() !== sessionStartIn(session.date, timezone).toMillis();
 }
 
+/** The occurrence of the series rule a session fills; a legacy session without one fills its own date. */
+function slotStart(session: CoachingSession, timezone: string): DateTime {
+  return sessionStartIn(session.ical_recurrence_id.some ? session.ical_recurrence_id.val : session.date, timezone);
+}
+
+/** Moved on its own: it happens away from the occurrence it fills. */
+function movedAlone(session: CoachingSession, timezone: string): boolean {
+  return (
+    session.ical_recurrence_id.some &&
+    sessionStartIn(session.date, timezone).toMillis() !== slotStart(session, timezone).toMillis()
+  );
+}
+
+/** The rule a this-and-following edit asks for, beside the series' current one. */
+export interface FollowingRule {
+  frequency: Frequency;
+  interval: number;
+  byWeekdays: Weekday[];
+  current: SeriesRepeat;
+}
+
+/** The new rule fills the slots the series already has: same first slot, rhythm and weekdays. */
+function sameSlots(anchor: CoachingSession, start: DateTime, rule: FollowingRule, timezone: string): boolean {
+  const { current } = rule;
+  return (
+    slotStart(anchor, timezone).toMillis() === start.toMillis() &&
+    rule.frequency === current.frequency &&
+    rule.interval === current.interval &&
+    rule.byWeekdays.length === current.byWeekdays.length &&
+    rule.byWeekdays.every((day) => current.byWeekdays.includes(day))
+  );
+}
+
+/**
+ * How many sessions a this-and-following reschedule moves (RescheduleSessionAndFollowing v6).
+ * With the same slots, only the anchor can move. Otherwise: the anchor, plus each later session
+ * that fills one of the new rule's `slots`, unless it was moved on its own to the new start or
+ * later. Sessions past the last slot are removed, not moved.
+ */
+export function followingMoveCount(input: {
+  anchor: CoachingSession;
+  sessions: CoachingSession[];
+  start: DateTime;
+  slots: number;
+  rule: FollowingRule;
+  timezone: string;
+}): number {
+  const { anchor, sessions, start, slots, rule, timezone } = input;
+  const at = (s: CoachingSession) => sessionStartIn(s.date, timezone).toMillis();
+  if (sameSlots(anchor, start, rule, timezone)) return at(anchor) === start.toMillis() ? 0 : 1;
+  const after = (s: CoachingSession) => at(s) > at(anchor) || (at(s) === at(anchor) && s.id > anchor.id);
+  const keepsItsTime = (s: CoachingSession) => movedAlone(s, timezone) && at(s) >= start.toMillis();
+  const filled = sessions
+    .filter((s) => s.id !== anchor.id && after(s))
+    .sort((a, b) => slotStart(a, timezone).toMillis() - slotStart(b, timezone).toMillis() || a.id.localeCompare(b.id))
+    .slice(0, Math.max(slots - 1, 0));
+  return 1 + filled.filter((s) => !keepsItsTime(s)).length;
+}
+
 export function moveChanged(
   session: EnrichedCoachingSession,
   slot: { start: Option<DateTime>; minutes: number },
