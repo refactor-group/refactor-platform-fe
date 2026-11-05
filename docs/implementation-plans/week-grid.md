@@ -13,7 +13,7 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (`6fe0e8be`), approved |
 | 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (`feat/week-grid-nav`, through `8964e5da`), approved |
 | 3 | Prepare pill, Ready footer, live note | Folded into PRs 1 and 2 (Jim, 2026-11-05); Part 3 of the test plan runs with PR 2 |
-| 4 | Person filter, chip, dimmed cards | In progress (`feat/week-grid-filter`, stacked on PR 2) |
+| 4 | Person filter, chip, dimmed cards | In review (`feat/week-grid-filter`, through `d9961f3e`) |
 | BE 1 | Working hours on the user (rs) | Not started |
 | BE 2 | One reschedule email once changes settle (rs) | Not started |
 | 5 | Drag to move, Undo, working hours in Settings and the dialog | Not started |
@@ -145,5 +145,5 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - The store (week offset, filter, recently moved) comes with the first phase that reads it (PR 2), so it never ships unused.
 - Live uses the app's urgency levels: under way, imminent, or soon (within 2 hours). The handoff says "within the hour"; the shared thresholds win.
 
-- **Session glance (needs design):** a single click on a past card should open a dashboard dialog reviewing that session. The design system names a "Session glance" modal in the shared modal shell, and a bottom sheet on mobile, but there's no spec yet. It waits on a design handoff.
+- **Session glance (needs design):** a single click on a past card should open a dashboard dialog showing that session at a glance: its most important insights, actions assigned, suggested actions still waiting, agreements made, and topics discussed. Until it exists, the single click does nothing. The design system names a "Session glance" modal in the shared modal shell, and a bottom sheet on mobile, but there's no spec yet. It waits on a design handoff.
 - The backend's `/coaching_sessions/counts` loses its only caller after 1c. Raise it on the board.
