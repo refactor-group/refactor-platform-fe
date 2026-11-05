@@ -1,0 +1,22 @@
+import type { CardView } from "@/lib/week-grid/card";
+import type { DayGroup } from "@/lib/week-grid/week";
+import { DayColumn } from "./day-column";
+import type { OnSessionAction } from "./session-card-menu";
+
+export interface WeekGridProps {
+  days: DayGroup<CardView>[];
+  onAction: OnSessionAction;
+}
+
+// Columns stack below lg until the mobile day strip lands (plan D13).
+export const WEEK_GRID_CLASS = "mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-7";
+
+export function WeekGrid({ days, onAction }: WeekGridProps) {
+  return (
+    <div className={WEEK_GRID_CLASS}>
+      {days.map((group) => (
+        <DayColumn key={group.day.toISODate()} group={group} onAction={onAction} />
+      ))}
+    </div>
+  );
+}

@@ -1,7 +1,6 @@
 import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore, useAuthStoreApi } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
-import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
@@ -17,9 +16,6 @@ export function useLogoutUser() {
   const { delete: deleteUserSession } = useUserSessionMutation();
   const { resetCoachingRelationshipState } = useCoachingRelationshipStateStore(
     (state) => state
-  );
-  const resetCoachingSessionsCardFilters = useCoachingSessionsCardFilterStore(
-    (s) => s.resetCoachingSessionsCardFilters
   );
   const resetOrganizationState = useOrganizationStateStore(
     (s) => s.resetOrganizationState
@@ -65,7 +61,6 @@ export function useLogoutUser() {
     for (const teardown of [
       resetOrganizationState,
       resetCoachingRelationshipState,
-      resetCoachingSessionsCardFilters,
       clearCache,
     ]) {
       try {

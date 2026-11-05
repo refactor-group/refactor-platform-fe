@@ -14,6 +14,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { formatDateWithTime } from "@/lib/utils/date";
+import { SessionRemoval } from "@/lib/session-actions";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 
 export interface DeleteSessionDialogProps {
@@ -21,10 +22,11 @@ export interface DeleteSessionDialogProps {
    *  state from this single value (instead of a parallel boolean) prevents
    *  desync between the dialog and the row that triggered it. */
   session: EnrichedCoachingSession | undefined;
+  removal: SessionRemoval;
   participantName: string;
   userTimezone: string;
   /** While true, both buttons are disabled and the confirm button reads
-   *  "Deleting…". The dialog cannot be dismissed via overlay/escape during
+   *  "Cancelling…" or "Removing…". The dialog cannot be dismissed via overlay/escape during
    *  this window — closing mid-flight would orphan the API call's UI
    *  effects. */
   isDeleting: boolean;
@@ -32,8 +34,35 @@ export interface DeleteSessionDialogProps {
   onConfirm: () => void;
 }
 
+interface RemovalCopy {
+  title: string;
+  verb: string;
+  confirm: string;
+  busy: string;
+}
+
+function removalCopy(removal: SessionRemoval): RemovalCopy {
+  switch (removal) {
+    case SessionRemoval.Cancel:
+      return {
+        title: "Cancel this coaching session?",
+        verb: "cancels",
+        confirm: "Cancel session",
+        busy: "Cancelling…",
+      };
+    case SessionRemoval.Remove:
+      return {
+        title: "Remove this coaching session?",
+        verb: "removes",
+        confirm: "Remove session",
+        busy: "Removing…",
+      };
+  }
+}
+
 export function DeleteSessionDialog({
   session,
+  removal,
   participantName,
   userTimezone,
   isDeleting,
@@ -41,6 +70,7 @@ export function DeleteSessionDialog({
   onConfirm,
 }: DeleteSessionDialogProps) {
   const open = session !== undefined;
+  const copy = removalCopy(removal);
 
   const dateLabel = session
     ? formatDateWithTime(
@@ -60,14 +90,9 @@ export function DeleteSessionDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this coaching session?</AlertDialogTitle>
+          <AlertDialogTitle>{copy.title}</AlertDialogTitle>
           <AlertDialogDescription>
-            {/* Unified copy across both tabs. We always disclose the
-                cascading loss (notes, completed actions) — for upcoming
-                sessions this is harmlessly informational since none have
-                accumulated yet, and the consistency keeps the friction
-                appropriate to the irreversibility of the action. */}
-            This will permanently remove the session with{" "}
+            This {copy.verb} the session with{" "}
             <span className="font-medium text-foreground">
               {participantName}
             </span>{" "}
@@ -75,18 +100,17 @@ export function DeleteSessionDialog({
             <span className="font-medium text-foreground tabular-nums">
               {dateLabel}
             </span>
-            , along with all of its notes and completed actions. This
-            can&apos;t be undone.
+            , along with its notes and actions. This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           {/* Don't wire `onCancel` here — `AlertDialogCancel` already
               triggers `onOpenChange(false)`, which in turn calls onCancel.
               A direct `onClick` would double-fire it. */}
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Keep session</AlertDialogCancel>
           <AlertDialogAction
             // `e.preventDefault()` keeps the dialog open across the await
-            // boundary so the in-flight "Deleting…" label is visible. The
+            // boundary so the in-flight label is visible. The
             // parent closes the dialog by clearing `session` once the
             // mutation settles.
             onClick={(e) => {
@@ -96,7 +120,7 @@ export function DeleteSessionDialog({
             disabled={isDeleting}
             className={cn(buttonVariants({ variant: "destructive" }))}
           >
-            {isDeleting ? "Deleting…" : "Delete session"}
+            {isDeleting ? copy.busy : copy.confirm}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

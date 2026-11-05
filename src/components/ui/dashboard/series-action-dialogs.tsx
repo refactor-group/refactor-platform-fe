@@ -113,11 +113,11 @@ function SeriesActionDialogsInner({
     setIsDeleting(true);
     try {
       await deleteSeries(seriesId);
-      toast.success("Series deleted · Past sessions were kept");
+      toast.success("Series cancelled · Past sessions were kept");
       onMutated();
       onClose();
     } catch {
-      toast.error("Couldn't delete the series · Try again");
+      toast.error("Couldn't cancel the series · Try again");
       setIsDeleting(false);
     }
   };

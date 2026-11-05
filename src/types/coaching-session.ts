@@ -51,7 +51,7 @@ export enum CoachingSessionInclude {
 }
 
 /** The part of a session's series the list view needs. */
-export interface CoachingSessionSeriesSummary {
+interface CoachingSessionSeriesSummary {
   id: Id;
   last_session_date: DateTime; // parsed as UTC, like session.date
 }

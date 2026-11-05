@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { CoachingSessionsCard } from "@/components/ui/dashboard/coaching-sessions-card";
 import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
 import { UpcomingSessionCard } from "@/components/ui/dashboard/upcoming-session-card";
+import { WeekPanel } from "@/components/ui/dashboard/week-grid/week-panel";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
@@ -13,12 +13,9 @@ import { useForgetRelationshipOutsideOrganization } from "@/lib/hooks/use-forget
 import { useNewSessionDialogStore } from "@/lib/providers/new-session-dialog-store-provider";
 import { None, Some } from "@/types/option";
 
-export function DashboardContainer({ locale }: { locale: string }) {
-  // Used to live inside the per-card relationship selector. Now that the
-  // dashboard has no visible selector (the new CoachingSessionsCard is
-  // user-scoped), wire the hook here so single-relationship users still get
-  // auto-selection — UpcomingSessionCard and GoalsOverviewCard depend on a
-  // selected `currentCoachingRelationshipId`.
+export function DashboardContainer() {
+  // The dashboard has no relationship selector, so single-relationship users
+  // are auto-selected here for UpcomingSessionCard and GoalsOverviewCard.
   const { currentOrganizationId } = useCurrentOrganization();
   const {
     relationships,
@@ -47,25 +44,18 @@ export function DashboardContainer({ locale }: { locale: string }) {
   const openSchedule = useNewSessionDialogStore((state) => state.openSchedule);
   const openMoveSession = useNewSessionDialogStore((state) => state.openMoveSession);
   const [refreshUpcomingSession, setRefreshUpcomingSession] = useState<(() => void) | null>(() => null);
-  const [refreshSessionsCard, setRefreshSessionsCard] = useState<(() => void) | null>(() => null);
 
   const handleCreateSession = () => openSchedule(None);
 
-  // Stable references so the cards' onRefreshNeeded useEffects don't
-  // refire on every parent render.
+  // Stable, so the card's onRefreshNeeded effect doesn't refire every render.
   const handleUpcomingSessionRefreshNeeded = useCallback(
     (refreshFn: () => void) => setRefreshUpcomingSession(() => refreshFn),
-    [],
-  );
-  const handleSessionsCardRefreshNeeded = useCallback(
-    (refreshFn: () => void) => setRefreshSessionsCard(() => refreshFn),
     [],
   );
 
   const handleSeriesMutated = useCallback(() => {
     refreshUpcomingSession?.();
-    refreshSessionsCard?.();
-  }, [refreshUpcomingSession, refreshSessionsCard]);
+  }, [refreshUpcomingSession]);
 
   return (
     <>
@@ -83,12 +73,7 @@ export function DashboardContainer({ locale }: { locale: string }) {
       </div>
 
       <div className="w-full">
-        <CoachingSessionsCard
-          onReschedule={openMoveSession}
-          onRefreshNeeded={handleSessionsCardRefreshNeeded}
-          onSeriesMutated={handleSeriesMutated}
-          locale={locale}
-        />
+        <WeekPanel onReschedule={openMoveSession} onSeriesMutated={handleSeriesMutated} />
       </div>
     </>
   );

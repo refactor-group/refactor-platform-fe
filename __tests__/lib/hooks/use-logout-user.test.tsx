@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
   logout: vi.fn(),
   deleteUserSession: vi.fn().mockResolvedValue(undefined),
   resetCoachingRelationshipState: vi.fn(),
-  resetCoachingSessionsCardFilters: vi.fn(),
   resetOrganizationState: vi.fn(),
   clearCache: vi.fn(),
   replace: vi.fn(),
@@ -49,13 +48,6 @@ vi.mock("@/lib/providers/coaching-relationship-state-store-provider", () => ({
     }),
 }));
 
-vi.mock("@/lib/providers/coaching-sessions-card-filter-store-provider", () => ({
-  useCoachingSessionsCardFilterStore: (selector: (s: unknown) => unknown) =>
-    selector({
-      resetCoachingSessionsCardFilters: mocks.resetCoachingSessionsCardFilters,
-    }),
-}));
-
 vi.mock("@/lib/providers/organization-state-store-provider", () => ({
   useOrganizationStateStore: (selector: (s: unknown) => unknown) =>
     selector({ resetOrganizationState: mocks.resetOrganizationState }),
@@ -77,7 +69,6 @@ describe("useLogoutUser", () => {
     mocks.executeAll.mockResolvedValue(undefined);
     mocks.clearCache.mockImplementation(() => {});
     mocks.resetCoachingRelationshipState.mockImplementation(() => {});
-    mocks.resetCoachingSessionsCardFilters.mockImplementation(() => {});
     mocks.resetOrganizationState.mockImplementation(() => {});
   });
 
@@ -111,7 +102,6 @@ describe("useLogoutUser", () => {
     expect(mocks.logout).toHaveBeenCalled();
     expect(mocks.clearCache).toHaveBeenCalledTimes(1);
     expect(mocks.resetCoachingRelationshipState).toHaveBeenCalledTimes(1);
-    expect(mocks.resetCoachingSessionsCardFilters).toHaveBeenCalledTimes(1);
   });
 
   // A teardown step that throws must not strand the ones after it — otherwise
@@ -127,7 +117,6 @@ describe("useLogoutUser", () => {
     await result.current();
 
     expect(mocks.resetOrganizationState).toHaveBeenCalledTimes(1);
-    expect(mocks.resetCoachingSessionsCardFilters).toHaveBeenCalledTimes(1);
     expect(mocks.clearCache).toHaveBeenCalledTimes(1);
     expect(mocks.replace).toHaveBeenCalledWith("/");
   });

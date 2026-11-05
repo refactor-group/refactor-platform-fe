@@ -4,7 +4,6 @@ import { ReactNode } from 'react';
 import { AuthStoreProvider } from '@/lib/providers/auth-store-provider';
 import { OrganizationStateStoreProvider } from '@/lib/providers/organization-state-store-provider';
 import { CoachingRelationshipStateStoreProvider } from '@/lib/providers/coaching-relationship-state-store-provider';
-import { CoachingSessionsCardFilterStoreProvider } from '@/lib/providers/coaching-sessions-card-filter-store-provider';
 import { UiPreferencesStoreProvider } from '@/lib/providers/ui-preferences-state-store-provider';
 import { NewSessionDialogStoreProvider } from '@/lib/providers/new-session-dialog-store-provider';
 import { NewSessionDialogHost } from '@/components/ui/new-session/new-session-dialog-host';
@@ -27,28 +26,26 @@ export function Providers({ children }: ProvidersProps) {
     <AuthStoreProvider>
       <OrganizationStateStoreProvider>
         <CoachingRelationshipStateStoreProvider>
-          <CoachingSessionsCardFilterStoreProvider>
-            <UiPreferencesStoreProvider>
-              <NewSessionDialogStoreProvider>
-                <SessionCleanupProvider>
-                  <SWRConfig
-                    value={{
-                      revalidateIfStale: true,
-                      focusThrottleInterval: 10000,
-                      provider: () => new Map(),
-                    }}
-                  >
-                    <UserSessionSync>
-                      <SSEProvider>
-                        {children}
-                        <NewSessionDialogHost />
-                      </SSEProvider>
-                    </UserSessionSync>
-                  </SWRConfig>
-                </SessionCleanupProvider>
-              </NewSessionDialogStoreProvider>
-            </UiPreferencesStoreProvider>
-          </CoachingSessionsCardFilterStoreProvider>
+          <UiPreferencesStoreProvider>
+            <NewSessionDialogStoreProvider>
+              <SessionCleanupProvider>
+                <SWRConfig
+                  value={{
+                    revalidateIfStale: true,
+                    focusThrottleInterval: 10000,
+                    provider: () => new Map(),
+                  }}
+                >
+                  <UserSessionSync>
+                    <SSEProvider>
+                      {children}
+                      <NewSessionDialogHost />
+                    </SSEProvider>
+                  </UserSessionSync>
+                </SWRConfig>
+              </SessionCleanupProvider>
+            </NewSessionDialogStoreProvider>
+          </UiPreferencesStoreProvider>
         </CoachingRelationshipStateStoreProvider>
       </OrganizationStateStoreProvider>
     </AuthStoreProvider>

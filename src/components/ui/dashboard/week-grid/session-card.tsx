@@ -1,0 +1,106 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowRight, Check } from "lucide-react";
+import { cn } from "@/components/lib/utils";
+import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
+import { timeOfDay } from "@/lib/session-window";
+import {
+  CardFooter,
+  CardTense,
+  cardNoteText,
+  type CardNote,
+  type CardView,
+} from "@/lib/week-grid/card";
+import { SessionCardMenu, type OnSessionAction } from "./session-card-menu";
+
+export interface SessionCardProps {
+  view: CardView;
+  onAction: OnSessionAction;
+}
+
+export function SessionCard({ view, onAction }: SessionCardProps) {
+  const isPast = view.tense === CardTense.Past;
+  const time = timeOfDay(view.start);
+
+  return (
+    <SessionCardMenu view={view} onAction={onAction}>
+      <div
+        data-testid={`session-card-${view.session.id}`}
+        data-tense={view.tense}
+        tabIndex={0}
+        aria-label={`${time}, ${view.name}`}
+        className={cn(
+          "flex min-h-[104px] flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          isPast ? "bg-well" : "bg-card shadow-card"
+        )}
+      >
+        <span
+          className={cn(
+            "text-xs tabular-nums",
+            isPast ? "text-faint" : "text-muted-foreground"
+          )}
+        >
+          {time}
+        </span>
+        <span
+          className={cn(
+            "truncate text-[13px] font-semibold",
+            isPast ? "text-muted-foreground" : "text-foreground"
+          )}
+        >
+          {view.name}
+        </span>
+        <CardNoteLine note={view.note} />
+        <div className="mt-auto">
+          <CardFooterLine footer={view.footer} sessionId={view.session.id} />
+        </div>
+      </div>
+    </SessionCardMenu>
+  );
+}
+
+function CardNoteLine({ note }: { note: CardNote }) {
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1.5 text-tiny tabular-nums",
+        note.kind === "noTopics" ? "text-warning-text" : "text-muted-foreground"
+      )}
+    >
+      {note.kind === "relative" && note.pulse && (
+        <PulsingDot tone={PulsingDotTone.Accent} className="h-1.5 w-1.5" />
+      )}
+      {cardNoteText(note)}
+    </span>
+  );
+}
+
+function CardFooterLine({ footer, sessionId }: { footer: CardFooter; sessionId: string }) {
+  switch (footer) {
+    case CardFooter.Ready:
+      return (
+        <span className="flex items-center gap-1 text-tiny font-medium text-positive">
+          <Check className="h-3 w-3" aria-hidden />
+          Ready
+        </span>
+      );
+    case CardFooter.Prepare:
+      return (
+        <Link
+          href={`/coaching-sessions/${sessionId}`}
+          className="inline-flex h-[26px] items-center gap-1 rounded-full bg-fill px-2.5 text-tiny font-medium text-foreground transition-colors duration-150 hover:bg-fill-hover"
+        >
+          Prepare
+          <ArrowRight className="h-3 w-3" aria-hidden />
+        </Link>
+      );
+    case CardFooter.Done:
+      return <span className="text-tiny font-medium text-faint">Done</span>;
+    default: {
+      const _exhaustive: never = footer;
+      throw new Error(`Unhandled card footer: ${_exhaustive}`);
+    }
+  }
+}

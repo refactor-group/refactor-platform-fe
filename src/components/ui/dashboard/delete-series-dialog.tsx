@@ -44,9 +44,9 @@ export function DeleteSeriesDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this recurring series?</AlertDialogTitle>
+          <AlertDialogTitle>Cancel this recurring series?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove the{" "}
+            This cancels the{" "}
             <span className="font-medium text-foreground">{frequency}</span>{" "}
             series
             {participantName && (
@@ -58,12 +58,12 @@ export function DeleteSeriesDialog({
                 </span>
               </>
             )}{" "}
-            from today onward, along with all of its notes and completed
-            actions. This can&apos;t be undone.
+            from today onward, along with its notes and actions. This
+            can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Keep series</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
@@ -72,7 +72,7 @@ export function DeleteSeriesDialog({
             disabled={isDeleting}
             className={cn(buttonVariants({ variant: "destructive" }))}
           >
-            {isDeleting ? "Deleting…" : "Delete series"}
+            {isDeleting ? "Cancelling…" : "Cancel series"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

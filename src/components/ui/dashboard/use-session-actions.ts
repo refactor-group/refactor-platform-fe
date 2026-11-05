@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast as sonnerToast } from "@/lib/toast";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { useResendInvite } from "@/components/ui/dashboard/use-resend-invite";
@@ -12,11 +13,10 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
-import { SessionAction } from "@/lib/session-actions";
+import { SessionAction, SessionRemoval, sessionRemovalFor } from "@/lib/session-actions";
 import type { MoveScope } from "@/lib/scheduling";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
-import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import type { Id } from "@/types/general";
+import { isPastSession, type EnrichedCoachingSession } from "@/types/coaching-session";
 
 /**
  * Models the only legal states of the delete-confirmation flow, so the type
@@ -24,8 +24,8 @@ import type { Id } from "@/types/general";
  */
 type DeleteDialogState =
   | { kind: "closed" }
-  | { kind: "pending"; session: EnrichedCoachingSession }
-  | { kind: "deleting"; session: EnrichedCoachingSession };
+  | { kind: "pending"; session: EnrichedCoachingSession; removal: SessionRemoval }
+  | { kind: "deleting"; session: EnrichedCoachingSession; removal: SessionRemoval };
 
 export interface UseSessionActionsInput {
   userTimezone: string;
@@ -36,9 +36,16 @@ export interface UseSessionActionsInput {
 
 export interface SessionActions {
   run: (action: SessionAction, session: EnrichedCoachingSession) => void;
-  // The row's series callbacks carry only the series id, not the session.
-  openSeries: (kind: "view" | "delete", seriesId: Id) => void;
   dialogs: SessionActionDialogsProps;
+}
+
+function removalFailedMessage(removal: SessionRemoval): string {
+  switch (removal) {
+    case SessionRemoval.Cancel:
+      return "Couldn't cancel the session · Try again";
+    case SessionRemoval.Remove:
+      return "Couldn't remove the session · Try again";
+  }
 }
 
 /** Runs a session's menu actions and owns the confirmation dialogs they open. */
@@ -48,6 +55,7 @@ export function useSessionActions({
   onSessionsChanged,
   onSeriesMutated,
 }: UseSessionActionsInput): SessionActions {
+  const router = useRouter();
   const userSession = useAuthStore((s) => s.userSession);
   const { currentOrganizationId } = useCurrentOrganization();
   const { relationships } = useCoachingRelationshipList(currentOrganizationId);
@@ -58,14 +66,9 @@ export function useSessionActions({
   const [seriesAction, setSeriesAction] = useState<SeriesAction>({ kind: "closed" });
   const editSeries = useEditSeries(userTimezone, onReschedule);
 
-  const openSeries = useCallback(
-    (kind: "view" | "delete", seriesId: Id) => setSeriesAction({ kind, seriesId }),
-    []
-  );
   const closeSeriesAction = useCallback(() => setSeriesAction({ kind: "closed" }), []);
 
-  // After a delete the future sessions change, so revalidate this
-  // card's buckets and let the parent refresh sibling cards.
+  // A series change moves future sessions, so sibling cards refresh too.
   const handleSeriesMutated = useCallback(() => {
     onSessionsChanged();
     onSeriesMutated?.();
@@ -81,18 +84,17 @@ export function useSessionActions({
 
   const confirmDelete = useCallback(async () => {
     if (deleteState.kind !== "pending") return;
-    const { session } = deleteState;
-    setDeleteState({ kind: "deleting", session });
+    const { session, removal } = deleteState;
+    setDeleteState({ kind: "deleting", session, removal });
     try {
       await deleteSession(session.id);
-      // The user-scoped session caches use tuple keys the mutation's own
-      // invalidation misses, so the row only disappears after this revalidate.
+      // The mutation's own invalidation misses the user-scoped session caches.
       onSessionsChanged();
       setDeleteState({ kind: "closed" });
-      sonnerToast.success(sessionRemovedMessage(session, relationships, userTimezone));
+      sonnerToast.success(sessionRemovedMessage(session, relationships, userTimezone, removal));
     } catch (err) {
       console.error("Failed to delete coaching session:", err);
-      sonnerToast.error("Couldn't delete the session · Try again");
+      sonnerToast.error(removalFailedMessage(removal));
       setDeleteState({ kind: "closed" });
     }
   }, [deleteState, deleteSession, onSessionsChanged, relationships, userTimezone]);
@@ -102,11 +104,14 @@ export function useSessionActions({
     (action: SessionAction, session: EnrichedCoachingSession) => {
       const seriesId = session.coaching_session_series_id;
       switch (action) {
+        case SessionAction.OpenSession:
+          router.push(`/coaching-sessions/${session.id}`);
+          return;
         case SessionAction.Reschedule:
           onReschedule(session);
           return;
         case SessionAction.ViewSeries:
-          if (seriesId.some) openSeries("view", seriesId.val);
+          if (seriesId.some) setSeriesAction({ kind: "view", seriesId: seriesId.val });
           return;
         case SessionAction.EditSeries:
           editSeries(session);
@@ -118,22 +123,26 @@ export function useSessionActions({
           requestResend(session);
           return;
         case SessionAction.DeleteSession:
-          setDeleteState({ kind: "pending", session });
+          setDeleteState({
+            kind: "pending",
+            session,
+            removal: sessionRemovalFor(isPastSession(session)),
+          });
           return;
         case SessionAction.DeleteSeries:
-          if (seriesId.some) openSeries("delete", seriesId.val);
+          if (seriesId.some) setSeriesAction({ kind: "delete", seriesId: seriesId.val });
           return;
       }
     },
-    [onReschedule, openSeries, editSeries, requestResend]
+    [router, onReschedule, editSeries, requestResend]
   );
 
   return {
     run,
-    openSeries,
     dialogs: {
       deleteSession: {
         session: deleteState.kind === "closed" ? undefined : deleteState.session,
+        removal: deleteState.kind === "closed" ? SessionRemoval.Cancel : deleteState.removal,
         participantName: pendingParticipantName,
         userTimezone,
         isDeleting: deleteState.kind === "deleting",
