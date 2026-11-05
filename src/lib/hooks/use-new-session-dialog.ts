@@ -8,7 +8,7 @@ import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@
 import { type SeriesLoad, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
 import {
-  followingMoveCount,
+  followingMoves,
   moveChanged,
   moveHint,
   movePerson,
@@ -195,20 +195,19 @@ export function useNewSessionDialog(
     };
   };
 
-  const moveCount =
-    moving.some && following && series.some && prefill.some && start.some && repeat.kind === "repeat"
-      ? followingMoveCount({
-          anchor: moving.val,
-          sessions: series.val.coaching_sessions,
-          start: start.val,
-          slots: createsCount(repeat, start, recurrence.byWeekdays),
-          rule: { ...cadence, byWeekdays: recurrence.byWeekdays, current: prefill.val.repeat },
-          timezone,
-        })
-      : 0;
   const moves: Option<string> =
-    start.some && moveCount > 0
-      ? Some(followingMoveLine(moveCount, cadence, recurrence.byWeekdays, start.val))
+    moving.some &&
+    following &&
+    prefill.some &&
+    start.some &&
+    repeat.kind === "repeat" &&
+    followingMoves({
+      anchor: moving.val,
+      start: start.val,
+      rule: { ...cadence, byWeekdays: recurrence.byWeekdays, current: prefill.val.repeat },
+      timezone,
+    })
+      ? Some(followingMoveLine(cadence, recurrence.byWeekdays, start.val))
       : None;
 
   const confirm = () => {

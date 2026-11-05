@@ -470,13 +470,13 @@ Create a weekly series of 5 (say Thursdays 6:00 PM, 60 min). Reschedule three of
 
 Then open Edit series on the 1st and change only Ends from 5 to 6.
 
-**Pass:** no "Rescheduling will" summary in the rail. After confirming, the toast reads "Updated · {first name}'s series · Weekly, for 6 sessions". No session moves or changes length: the 3rd and 5th stay on their own days, and the 4th and 5th keep 90 and 30 min. A 6th session appears a week after the last Thursday.
+**Pass:** no "Rescheduling will" summary in the rail, since nothing moves. After confirming, the toast reads "Updated · {first name}'s series · Weekly, for 6 sessions". No session moves or changes length: the 3rd and 5th stay on their own days, and the 4th and 5th keep 90 and 30 min. A 6th session appears a week after the last Thursday.
 
-### Case G6k: the summary of what moves
+### Case G6k: the summary of the move
 
 On the same series, open Edit series on the 2nd session and set 4:00 PM and 45 min.
 
-**Pass:** the rail footer reads "Rescheduling will" / "Move 3 sessions to Thursdays, 4:00 PM". After confirming:
+**Pass:** the rail footer reads "Rescheduling will" / "Move this and following sessions to Thursdays, 4:00 PM". After confirming:
 
 | Session | After |
 |---|---|
@@ -487,8 +487,6 @@ On the same series, open Edit series on the 2nd session and set 4:00 PM and 45 m
 | 5th | its own day and time, 30 min |
 | 6th | Thursday 4:00 PM, 45 min |
 
-Exactly three sessions change time, as the summary said.
-
 ### Case G6l: when the summary shows
 
 Open Edit series and change nothing. Change the time. Pick "This session only" on Applies to, then "This and following sessions" again. Pick another weekday on Repeat.
@@ -497,7 +495,7 @@ Open Edit series and change nothing. Change the time. Pick "This session only" o
 - No summary until something would move. It appears once the time changes.
 - With "This session only" there's no summary and the title reads "Reschedule session".
 - Back on "This and following sessions", the title reads "Reschedule series" and the summary returns.
-- The summary's weekdays and count follow the Repeat step.
+- The summary's weekdays follow the Repeat step.
 
 ### Case G7: errors
 

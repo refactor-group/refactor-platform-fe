@@ -43,14 +43,6 @@ export function startMoved(session: EnrichedCoachingSession, start: DateTime, ti
   return start.toMillis() !== sessionStartIn(session.date, timezone).toMillis();
 }
 
-/** Moved on its own: it happens away from the occurrence it fills. */
-function movedAlone(session: CoachingSession, timezone: string): boolean {
-  return (
-    session.ical_recurrence_id.some &&
-    sessionStartIn(session.date, timezone).toMillis() !== seriesSlotStart(session, timezone).toMillis()
-  );
-}
-
 /** The rule a this-and-following edit asks for, beside the series' current one. */
 export interface FollowingRule {
   frequency: Frequency;
@@ -72,29 +64,18 @@ function sameSlots(anchor: CoachingSession, start: DateTime, rule: FollowingRule
 }
 
 /**
- * How many sessions a this-and-following reschedule moves (RescheduleSessionAndFollowing v6).
- * With the same slots, only the anchor can move. Otherwise: the anchor, plus each later session
- * that fills one of the new rule's `slots`, unless it was moved on its own to the new start or
- * later. Sessions past the last slot are removed, not moved.
+ * Whether a this-and-following edit moves anything. With the series' slots unchanged, only the
+ * anchor can move; any other rule moves the sessions on its slots.
  */
-export function followingMoveCount(input: {
+export function followingMoves(input: {
   anchor: CoachingSession;
-  sessions: CoachingSession[];
   start: DateTime;
-  slots: number;
   rule: FollowingRule;
   timezone: string;
-}): number {
-  const { anchor, sessions, start, slots, rule, timezone } = input;
-  const at = (s: CoachingSession) => sessionStartIn(s.date, timezone).toMillis();
-  if (sameSlots(anchor, start, rule, timezone)) return at(anchor) === start.toMillis() ? 0 : 1;
-  const after = (s: CoachingSession) => at(s) > at(anchor) || (at(s) === at(anchor) && s.id > anchor.id);
-  const keepsItsTime = (s: CoachingSession) => movedAlone(s, timezone) && at(s) >= start.toMillis();
-  const filled = sessions
-    .filter((s) => s.id !== anchor.id && after(s))
-    .sort((a, b) => seriesSlotStart(a, timezone).toMillis() - seriesSlotStart(b, timezone).toMillis() || a.id.localeCompare(b.id))
-    .slice(0, Math.max(slots - 1, 0));
-  return 1 + filled.filter((s) => !keepsItsTime(s)).length;
+}): boolean {
+  const { anchor, start, rule, timezone } = input;
+  if (!sameSlots(anchor, start, rule, timezone)) return true;
+  return sessionStartIn(anchor.date, timezone).toMillis() !== start.toMillis();
 }
 
 export function moveChanged(

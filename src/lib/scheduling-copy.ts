@@ -191,11 +191,11 @@ export function moveSubmitLabel(following: boolean): string {
   return following ? "Reschedule this and following" : "Reschedule session";
 }
 
-/** "Move 2 sessions to Tuesdays, 2:00 PM". */
-export function followingMoveLine(count: number, cadence: Cadence, byWeekdays: Weekday[], start: DateTime): string {
+/** "Move this and following sessions to Tuesdays, 2:00 PM". */
+export function followingMoveLine(cadence: Cadence, byWeekdays: Weekday[], start: DateTime): string {
   const time = timeOfDay(start);
   const days = frequencySupportsWeekdays(cadence.frequency) ? weekdaysPhrase(byWeekdays) : "";
-  return `Move ${sessionCount(count)} to ${days ? `${days}, ${time}` : `${time}, ${rhythmPhrase(cadence)}`}`;
+  return `Move this and following sessions to ${days ? `${days}, ${time}` : `${time}, ${rhythmPhrase(cadence)}`}`;
 }
 
 export function createsLine(count: number, firstName: string): string {
