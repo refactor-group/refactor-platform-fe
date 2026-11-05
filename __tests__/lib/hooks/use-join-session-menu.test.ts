@@ -117,7 +117,6 @@ describe("useJoinSessionMenu", () => {
       isLoading: false,
       error: undefined,
       refresh: vi.fn(),
-      _tick: 0,
     } as unknown as ReturnType<typeof useTodaysSessions>);
     serveCoachingSession(EHAB_CURRENT);
     vi.mocked(useNearestCoachingSessions).mockReturnValue({
@@ -240,7 +239,6 @@ describe("useJoinSessionMenu", () => {
       isLoading: false,
       error: new Error("boom"),
       refresh: refreshToday,
-      _tick: 0,
     } as unknown as ReturnType<typeof useTodaysSessions>);
     const { result } = renderOpened();
 

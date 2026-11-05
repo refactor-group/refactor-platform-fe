@@ -1,17 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { createElement, Fragment, useMemo } from "react";
 import Link from "next/link";
 import { DateTime } from "ts-luxon";
-import {
-  CalendarClock,
-  CalendarRange,
-  CalendarSync,
-  Link2,
-  MailPlus,
-  MoreVertical,
-  Trash2,
-} from "lucide-react";
+import { MoreVertical } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +21,18 @@ import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
 import type { Id } from "@/types/general";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
+import {
+  SessionAction,
+  sessionActionHint,
+  sessionActionLabel,
+  sessionActionsFor,
+  type SessionActionItem,
+} from "@/lib/session-actions";
+import {
+  isDestructive,
+  sessionActionIcon,
+  sessionActionTestId,
+} from "@/components/ui/dashboard/session-action-meta";
 
 export interface SessionRowProps {
   session: EnrichedCoachingSession;
@@ -73,26 +77,34 @@ export function SessionRow({
     [session, viewerId]
   );
 
-  // Reschedule remains coach-only and upcoming-only (matches prior behavior).
-  // Delete is coach-only across both tabs — the cost asymmetry between
-  // upcoming and previous deletions is conveyed by the dialog copy, not by
-  // gating availability.
-  // Share link is available to every viewer on every tab — read-only,
-  // produces a URL the recipient can navigate to (the backend gates on
-  // actual access). Because Share is universal, the kebab itself is
-  // never empty — the dropdown is rendered unconditionally below.
-  const canReschedule = !isPast && participant?.isCoach === true;
-  const canDelete = participant?.isCoach === true;
+  const items = sessionActionsFor(session, {
+    isCoach: participant?.isCoach === true,
+    isPast,
+    now: DateTime.now(),
+  });
 
-  // Series actions surface only on rows whose session belongs to a series.
-  // Viewing the series' sessions is open to any viewer (matches the old
-  // ungated "View series"); editing/deleting the series is coach-only,
-  // mirroring the Reschedule/Delete gating above. The series operations
-  // target the whole series, so they aren't upcoming-gated.
-  const seriesId = session.coaching_session_series_id;
-  const canViewSeries = seriesId.some;
-  const canManageSeries = seriesId.some && participant?.isCoach === true;
-  const canResendInvite = participant?.isCoach === true;
+  const runAction = (action: SessionAction) => {
+    const seriesId = session.coaching_session_series_id;
+    switch (action) {
+      case SessionAction.Reschedule:
+        return onReschedule(session);
+      case SessionAction.ViewSeries:
+        if (seriesId.some) onSeriesAction("view", seriesId.val);
+        return;
+      case SessionAction.EditSeries:
+        return onEditSeries(session);
+      case SessionAction.ShareLink:
+        // Fire-and-forget: the helper toasts both success and error itself.
+        return void copyCoachingSessionLinkWithToast(session.id);
+      case SessionAction.ResendInvite:
+        return onRequestResendInvite(session);
+      case SessionAction.DeleteSession:
+        return onRequestDelete(session);
+      case SessionAction.DeleteSeries:
+        if (seriesId.some) onSeriesAction("delete", seriesId.val);
+        return;
+    }
+  };
 
   const participantName = participant?.participantName ?? "Unknown";
   const participantInitials = participant
@@ -191,78 +203,18 @@ export function SessionRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {canReschedule && (
-              <DropdownMenuItem
-                onClick={() => onReschedule(session)}
-                data-testid="session-row-reschedule"
-              >
-                <CalendarClock className="mr-2 h-4 w-4" />
-                Reschedule
-              </DropdownMenuItem>
-            )}
-            {canViewSeries && (
-              <DropdownMenuItem
-                onClick={() =>
-                  seriesId.some && onSeriesAction("view", seriesId.val)
-                }
-                data-testid="session-row-view-series"
-              >
-                <CalendarRange className="mr-2 h-4 w-4" />
-                View series
-              </DropdownMenuItem>
-            )}
-            {canManageSeries && (
-              <DropdownMenuItem
-                onClick={() => onEditSeries(session)}
-                data-testid="session-row-edit-series"
-              >
-                <CalendarSync className="mr-2 h-4 w-4" />
-                Edit series
-              </DropdownMenuItem>
-            )}
-            {(canReschedule || canViewSeries) && <DropdownMenuSeparator />}
-            <DropdownMenuItem
-              // Fire-and-forget: `copyCoachingSessionLinkWithToast`
-              // surfaces both success ("link copied") and error toasts
-              // itself, so the row doesn't need to handle either.
-              onClick={() =>
-                void copyCoachingSessionLinkWithToast(session.id)
-              }
-              data-testid="session-row-share-link"
-            >
-              <Link2 className="mr-2 h-4 w-4" />
-              Share link
-            </DropdownMenuItem>
-            {canResendInvite && (
-              <ResendInviteMenuItem
-                session={session}
-                isPast={isPast}
-                onSelect={() => onRequestResendInvite(session)}
-              />
-            )}
-            {(canDelete || canManageSeries) && <DropdownMenuSeparator />}
-            {canDelete && (
-              <DropdownMenuItem
-                onClick={() => onRequestDelete(session)}
-                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                data-testid="session-row-delete"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete session
-              </DropdownMenuItem>
-            )}
-            {canManageSeries && (
-              <DropdownMenuItem
-                onClick={() =>
-                  seriesId.some && onSeriesAction("delete", seriesId.val)
-                }
-                className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                data-testid="session-row-delete-series"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete series
-              </DropdownMenuItem>
-            )}
+            {items.map((item, i) => (
+              <Fragment key={item.action}>
+                {i > 0 && items[i - 1].group !== item.group && (
+                  <DropdownMenuSeparator />
+                )}
+                <SessionActionMenuItem
+                  item={item}
+                  session={session}
+                  onSelect={() => runAction(item.action)}
+                />
+              </Fragment>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
         <Link href={`/coaching-sessions/${session.id}`}>
@@ -279,47 +231,46 @@ export function SessionRow({
   );
 }
 
-// An unknown series (not requested, or absent) stays enabled; the backend decides.
-function hasUpcomingSession(
-  session: EnrichedCoachingSession,
-  isPast: boolean
-): boolean {
-  if (!session.coaching_session_series_id.some) return !isPast;
-  const series = session.series;
-  if (series === undefined || series.none) return true;
-  return series.val.last_session_date > DateTime.now();
-}
+const DESTRUCTIVE_ITEM_CLASS =
+  "text-destructive focus:text-destructive focus:bg-destructive/10";
 
-function ResendInviteMenuItem({
+function SessionActionMenuItem({
+  item,
   session,
-  isPast,
   onSelect,
 }: {
+  item: SessionActionItem;
   session: EnrichedCoachingSession;
-  isPast: boolean;
   onSelect: () => void;
 }) {
-  const label = session.coaching_session_series_id.some
-    ? "Resend series invite"
-    : "Resend invite";
-  const enabled = hasUpcomingSession(session, isPast);
+  const label = sessionActionLabel(item.action, session);
+  const hint = sessionActionHint(item);
+  // Resend invite keeps its two-line layout so a hint can sit under the label.
+  const twoLine = item.action === SessionAction.ResendInvite;
 
   return (
     <DropdownMenuItem
-      disabled={!enabled}
+      disabled={!item.enabled}
       onClick={onSelect}
-      data-testid="session-row-resend-invite"
-      className="items-start"
+      data-testid={sessionActionTestId(item.action)}
+      className={cn(
+        isDestructive(item.group) && DESTRUCTIVE_ITEM_CLASS,
+        twoLine && "items-start"
+      )}
     >
-      <MailPlus className="mr-2 mt-0.5 h-4 w-4" />
-      <div className="flex flex-col">
-        <span>{label}</span>
-        {!enabled && (
-          <span className="text-xs text-muted-foreground">
-            No upcoming sessions
-          </span>
-        )}
-      </div>
+      {createElement(sessionActionIcon(item.action), {
+        className: cn("mr-2 h-4 w-4", twoLine && "mt-0.5"),
+      })}
+      {twoLine ? (
+        <div className="flex flex-col">
+          <span>{label}</span>
+          {hint.some && (
+            <span className="text-xs text-muted-foreground">{hint.val}</span>
+          )}
+        </div>
+      ) : (
+        label
+      )}
     </DropdownMenuItem>
   );
 }

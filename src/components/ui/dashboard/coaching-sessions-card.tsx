@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { DateTime } from "ts-luxon";
-import { toast as sonnerToast } from "@/lib/toast";
 import { useSWRConfig } from "swr";
 import { Card, CardContent } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,22 +10,16 @@ import {
   type RelationshipOption,
 } from "@/components/ui/dashboard/coaching-sessions-card-header";
 import { BucketsContainer } from "@/components/ui/dashboard/session-buckets/buckets-container";
-import { DeleteSessionDialog } from "@/components/ui/dashboard/delete-session-dialog";
-import { ResendInviteDialog } from "@/components/ui/dashboard/resend-invite-dialog";
-import { useResendInvite } from "@/components/ui/dashboard/use-resend-invite";
-import { useEditSeries } from "@/components/ui/dashboard/use-edit-series";
-import { type SeriesAction, SeriesActionDialogs } from "@/components/ui/dashboard/series-action-dialogs";
+import { SessionActionDialogs } from "@/components/ui/dashboard/session-action-dialogs";
+import { useSessionActions } from "@/components/ui/dashboard/use-session-actions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingSessionsCardFilterStore } from "@/lib/providers/coaching-sessions-card-filter-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { USERS_BASEURL } from "@/lib/api/users";
 import type { MoveScope } from "@/lib/scheduling";
-import type { Id } from "@/types/general";
+import { SessionAction } from "@/lib/session-actions";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { sessionRemovedMessage } from "@/components/ui/dashboard/session-change-message";
-import { getSessionParticipantInfo } from "@/lib/utils/session";
 import {
   type EnrichedCoachingSession,
 } from "@/types/coaching-session";
@@ -45,18 +38,6 @@ const matchesUserSessionsCache = (key: unknown): boolean => {
         : null;
   return url !== null && url.includes(USERS_BASEURL);
 };
-
-/**
- * Models the only legal states of the delete-confirmation flow. Using a
- * discriminated union over `{ session: T | undefined } + { isDeleting:
- * boolean }` so the type system rejects `isDeleting=true` with no
- * session — an impossible state that two parallel `useState` calls
- * would silently allow.
- */
-type DeleteDialogState =
-  | { kind: "closed" }
-  | { kind: "pending"; session: EnrichedCoachingSession }
-  | { kind: "deleting"; session: EnrichedCoachingSession };
 
 export interface CoachingSessionsCardProps {
   /** Opens the New session dialog to move the given session, this one only by default. */
@@ -171,90 +152,26 @@ export function CoachingSessionsCard({
     onRefreshNeeded?.(() => refreshBucketDataRef.current());
   }, [onRefreshNeeded]);
 
-  // ── Delete flow ──────────────────────────────────────────────────────
-  // The dialog and mutation live here (alongside SWR) so a single dialog
-  // instance serves every row and SWR cache invalidation runs at the same
-  // scope as the fetch that populated it. `useEntityMutation` auto-mutates
-  // every SWR key matching the entity baseUrl on success — no manual
-  // refresh call is needed (but see #387 for the tuple-key gap that
-  // forces the explicit `refreshSessions()` below).
-  //
-  // Discriminated union models the only legal states: `closed`, `pending`
-  // (dialog open, awaiting confirm), `deleting` (mutation in flight). The
-  // alternative — separate `session: T | undefined` + `isDeleting:
-  // boolean` — admits an impossible state (deleting with no session)
-  // that the type system would never catch. Following the project's
-  // strict-nullability convention.
-  const { delete: deleteSession } = useCoachingSessionMutation();
-  const [deleteState, setDeleteState] = useState<DeleteDialogState>({
-    kind: "closed",
+  const actions = useSessionActions({
+    userTimezone,
+    onReschedule,
+    onSessionsChanged: refreshBucketData,
+    onSeriesMutated,
   });
-
-  const resend = useResendInvite();
-
-  // ── Series actions ───────────────────────────────────────────────────
-  // A session row's kebab surfaces view / delete for the series it belongs
-  // to. The row only knows the `coaching_session_series_id`, so the owning
-  // dialog component fetches the full series by id. A single piece of state
-  // drives both dialogs; `SeriesActionDialogs` mounts only while active so
-  // its fetch hook always receives a real id.
-  const [seriesAction, setSeriesAction] = useState<SeriesAction>({ kind: "closed" });
-  const handleEditSeries = useEditSeries(userTimezone, onReschedule);
-
-  const handleSeriesAction = useCallback(
-    (action: "view" | "delete", seriesId: Id) =>
-      setSeriesAction({ kind: action, seriesId }),
-    []
+  const { run } = actions;
+  const bucketActions = useMemo(
+    () => ({
+      onReschedule: (session: EnrichedCoachingSession) =>
+        run(SessionAction.Reschedule, session),
+      onEditSeries: (session: EnrichedCoachingSession) =>
+        run(SessionAction.EditSeries, session),
+      onRequestDelete: (session: EnrichedCoachingSession) =>
+        run(SessionAction.DeleteSession, session),
+      onRequestResendInvite: (session: EnrichedCoachingSession) =>
+        run(SessionAction.ResendInvite, session),
+    }),
+    [run]
   );
-
-  const handleCloseSeriesAction = useCallback(
-    () => setSeriesAction({ kind: "closed" }),
-    []
-  );
-
-  // After a delete the future sessions change, so revalidate this
-  // card's buckets and let the parent refresh sibling cards.
-  const handleSeriesMutated = useCallback(() => {
-    refreshBucketData();
-    onSeriesMutated?.();
-  }, [refreshBucketData, onSeriesMutated]);
-
-  const pendingParticipantName = useMemo(() => {
-    if (deleteState.kind === "closed" || !userSession) return "";
-    const info = getSessionParticipantInfo(deleteState.session, userSession.id);
-    return info?.participantName ?? "Unknown";
-  }, [deleteState, userSession]);
-
-  const handleRequestDelete = useCallback(
-    (session: EnrichedCoachingSession) =>
-      setDeleteState({ kind: "pending", session }),
-    []
-  );
-
-  const handleCancelDelete = useCallback(() => {
-    setDeleteState({ kind: "closed" });
-  }, []);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (deleteState.kind !== "pending") return;
-    const { session } = deleteState;
-    setDeleteState({ kind: "deleting", session });
-    try {
-      await deleteSession(session.id);
-      // `useEntityMutation`'s built-in cache invalidation matches keys
-      // containing the entity baseUrl (`coaching_sessions/`), but the
-      // dashboard fetches go through the user-scoped endpoint — those
-      // cache keys are tuples that the string-only matcher misses.
-      // The row has to disappear, so this revalidate is load-bearing.
-      refreshBucketData();
-      setDeleteState({ kind: "closed" });
-      sonnerToast.success(sessionRemovedMessage(session, relationships, userTimezone));
-    } catch (err) {
-      console.error("Failed to delete coaching session:", err);
-      sonnerToast.error("Couldn't delete the session · Try again");
-      setDeleteState({ kind: "closed" });
-    }
-  }, [deleteState, deleteSession, refreshBucketData, relationships, userTimezone]);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -284,37 +201,13 @@ export function CoachingSessionsCard({
               userTimezone={userTimezone}
               locale={locale}
               mountNow={mountNow}
-              onReschedule={onReschedule}
-              onEditSeries={handleEditSeries}
-              onRequestDelete={handleRequestDelete}
-              onRequestResendInvite={resend.requestResend}
-              onSeriesAction={handleSeriesAction}
+              {...bucketActions}
+              onSeriesAction={actions.openSeries}
             />
           )}
         </CardContent>
       </Card>
-      {/* Translate the discriminated state at the boundary — the dialog
-          remains a generic primitive that takes
-          `session?: T` + `isDeleting: boolean`. */}
-      <DeleteSessionDialog
-        session={
-          deleteState.kind === "closed" ? undefined : deleteState.session
-        }
-        participantName={pendingParticipantName}
-        userTimezone={userTimezone}
-        isDeleting={deleteState.kind === "deleting"}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
-      />
-      <ResendInviteDialog {...resend.dialogProps} />
-      <SeriesActionDialogs
-        action={seriesAction}
-        userTimezone={userTimezone}
-        relationships={relationships}
-        viewerId={userId}
-        onClose={handleCloseSeriesAction}
-        onMutated={handleSeriesMutated}
-      />
+      <SessionActionDialogs {...actions.dialogs} />
     </TooltipProvider>
   );
 }
