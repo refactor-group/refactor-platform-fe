@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DateTime } from "ts-luxon";
 import { Some } from "@/types/option";
 import { defaultCoachingSessionTopic } from "@/types/coaching-session-topic";
@@ -31,8 +31,10 @@ function view(utc: string, topicCount: number, context = COACH, series = false) 
 
 function renderCard(v = view("2026-08-19T15:00:00", 3)) {
   const onAction = vi.fn();
-  render(<SessionCard view={v} onAction={onAction} />);
-  return { onAction, card: screen.getByTestId("session-card-s-1") };
+  const onSelect = vi.fn();
+  const onOpen = vi.fn();
+  render(<SessionCard view={v} onAction={onAction} onSelect={onSelect} onOpen={onOpen} />);
+  return { onAction, onSelect, onOpen, card: screen.getByTestId("session-card-s-1") };
 }
 
 function openMenu(card: HTMLElement) {
@@ -136,5 +138,59 @@ describe("SessionCard context menu", () => {
   it("tags each item with a stable test id", () => {
     const { card } = renderCard();
     expect(within(openMenu(card)).getByTestId("session-action-resend-invite")).toBeInTheDocument();
+  });
+});
+
+describe("SessionCard clicks", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("selects the card once the double-click window passes", () => {
+    vi.useFakeTimers();
+    const v = view("2026-08-19T15:00:00", 3);
+    const { card, onSelect, onOpen } = renderCard(v);
+    fireEvent.click(card);
+    expect(onSelect).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(260);
+    expect(onSelect).toHaveBeenCalledWith(v);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("opens on a double-click without selecting first", () => {
+    vi.useFakeTimers();
+    const v = view("2026-08-19T15:00:00", 3);
+    const { card, onSelect, onOpen } = renderCard(v);
+    fireEvent.click(card);
+    fireEvent.click(card);
+    fireEvent.doubleClick(card);
+    vi.advanceTimersByTime(1000);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledWith(v);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("opens on Enter", () => {
+    const v = view("2026-08-19T15:00:00", 3);
+    const { card, onOpen } = renderCard(v);
+    fireEvent.keyDown(card, { key: "Enter" });
+    expect(onOpen).toHaveBeenCalledWith(v);
+  });
+
+  it("leaves Prepare to its own link", () => {
+    vi.useFakeTimers();
+    const { card, onSelect, onOpen } = renderCard(view("2026-08-19T15:00:00", 0));
+    const prepare = within(card).getByRole("link", { name: /Prepare/ });
+    fireEvent.keyDown(prepare, { key: "Enter" });
+    fireEvent.click(prepare);
+    vi.advanceTimersByTime(1000);
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it("does not select on a right-click", () => {
+    vi.useFakeTimers();
+    const { card, onSelect } = renderCard();
+    fireEvent.contextMenu(card);
+    vi.advanceTimersByTime(1000);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

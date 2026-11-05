@@ -44,6 +44,7 @@ vi.mock("@/components/ui/dashboard/upcoming-session-card", () => ({
 let weekPanelProps: {
   onReschedule?: (session: ReturnType<typeof createMockEnrichedSession>) => void;
   onSeriesMutated?: () => void;
+  onSchedule?: (date: unknown) => void;
 } = {};
 vi.mock("@/components/ui/dashboard/week-grid/week-panel", () => ({
   WeekPanel: (props: typeof weekPanelProps) => {
@@ -106,6 +107,12 @@ describe("DashboardContainer auto-refresh wiring", () => {
     render(<DashboardContainer />);
     weekPanelProps.onReschedule?.(rescheduled);
     expect(openMoveSession).toHaveBeenCalledWith(rescheduled);
+  });
+
+  it("schedules from the week panel in the New session dialog", () => {
+    render(<DashboardContainer />);
+    weekPanelProps.onSchedule?.(None);
+    expect(openSchedule).toHaveBeenCalledWith(None);
   });
 
   it("refreshes the upcoming card after the week panel changes a series", () => {

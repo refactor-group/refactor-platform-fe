@@ -1,10 +1,12 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DateTime } from "ts-luxon";
 import type { Week } from "@/lib/week-grid/week";
 import { SessionAction } from "@/lib/session-actions";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { WeekPanel } from "@/components/ui/dashboard/week-grid/week-panel";
+import { WeekGridStoreProvider } from "@/lib/providers/week-grid-store-provider";
+import type { WeekEdges } from "@/lib/week-grid/week";
 import { createMockEnrichedSession } from "../../../../test-utils";
 
 const TZ = "America/Chicago";
@@ -34,10 +36,17 @@ vi.mock("@/lib/hooks/use-week-sessions", () => ({
   },
 }));
 
+let isACoach = true;
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (select: (s: unknown) => unknown) =>
-    select({ userId: "coach-1", userSession: { id: "coach-1", timezone: TZ } }),
+    select({ userId: "coach-1", isACoach, userSession: { id: "coach-1", timezone: TZ } }),
 }));
+
+let edges: WeekEdges = { hasEarlier: true, hasLater: true };
+vi.mock("@/lib/hooks/use-week-edges", () => ({ useWeekEdges: () => edges }));
+
+const toast = vi.fn();
+vi.mock("@/lib/toast", () => ({ toast: (...args: unknown[]) => toast(...args) }));
 vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => TZ }));
 
 const run = vi.fn();
@@ -52,7 +61,13 @@ vi.mock("@/components/ui/dashboard/session-action-dialogs", () => ({ SessionActi
 
 const onReschedule = vi.fn();
 const onSeriesMutated = vi.fn();
-const renderPanel = () => render(<WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} />);
+const onSchedule = vi.fn();
+const renderPanel = () =>
+  render(
+    <WeekGridStoreProvider>
+      <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />
+    </WeekGridStoreProvider>
+  );
 const day = (label: string) => screen.getByRole("group", { name: label });
 
 beforeEach(() => {
@@ -60,6 +75,8 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   requestedWeeks.length = 0;
   vi.clearAllMocks();
+  isACoach = true;
+  edges = { hasEarlier: true, hasLater: true };
   result = {
     sessions: [LATE_TODAY, THURSDAY, EARLY_TODAY, NEXT_WEEK],
     isLoading: false,
@@ -90,7 +107,7 @@ describe("WeekPanel", () => {
 
   it("shows seven days, Monday first, and marks today", () => {
     renderPanel();
-    const days = screen.getAllByRole("group");
+    const days = screen.getAllByRole("group", { name: /, August/ });
     expect(days).toHaveLength(7);
     expect(days[0]).toHaveAccessibleName("Monday, August 17");
     expect(days[6]).toHaveAccessibleName("Sunday, August 23");
@@ -139,7 +156,7 @@ describe("WeekPanel", () => {
     renderPanel();
     expect(screen.getByText("Couldn't load this week's sessions.")).toBeInTheDocument();
     expect(screen.queryByText(/0 sessions/)).not.toBeInTheDocument();
-    expect(screen.queryAllByRole("group")).toHaveLength(0);
+    expect(screen.queryAllByRole("group", { name: /, August/ })).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledTimes(1);
   });
@@ -159,5 +176,109 @@ describe("WeekPanel live clock", () => {
     result = { ...result, sessions: [soon] };
     renderPanel();
     expect(screen.getByTestId("session-card-soon")).toHaveTextContent("in 40 min");
+  });
+});
+
+const button = (name: string | RegExp) => screen.getByRole("button", { name });
+
+describe("WeekPanel paging", () => {
+  it("pages forward and back, titling each week", () => {
+    renderPanel();
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("region", { name: "Next week" })).toHaveTextContent("Aug 24 – 30");
+    expect(requestedWeeks.at(-1)?.start.toISODate()).toBe("2026-08-24");
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("region", { name: "Week of Aug 31" })).toHaveTextContent("Aug 31 – Sep 6");
+    fireEvent.click(button("Previous week"));
+    fireEvent.click(button("Previous week"));
+    fireEvent.click(button("Previous week"));
+    expect(screen.getByRole("region", { name: "Last week" })).toBeInTheDocument();
+  });
+
+  it("returns to this week, and This week is disabled while there", () => {
+    renderPanel();
+    expect(button("This week")).toBeDisabled();
+    fireEvent.click(button("Next week"));
+    expect(button("This week")).toBeEnabled();
+    fireEvent.click(button("This week"));
+    expect(screen.getByRole("region", { name: "This week" })).toBeInTheDocument();
+  });
+
+  it("drops today's count away from the current week", () => {
+    result = { ...result, sessions: [] };
+    renderPanel();
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("region", { name: "Next week" })).not.toHaveTextContent("today");
+  });
+
+  it("disables the arrows at the ends of the viewer's sessions", () => {
+    edges = { hasEarlier: false, hasLater: true };
+    renderPanel();
+    expect(button("Previous week")).toBeDisabled();
+    expect(button("Next week")).toBeEnabled();
+  });
+});
+
+describe("WeekPanel scheduling", () => {
+  it("opens the dialog with no day from Schedule session", () => {
+    renderPanel();
+    fireEvent.click(button("Schedule session"));
+    expect(onSchedule).toHaveBeenCalledTimes(1);
+    expect(onSchedule.mock.calls[0][0].none).toBe(true);
+  });
+
+  it("opens the dialog on an empty day of the current week", () => {
+    renderPanel();
+    fireEvent.click(within(day("Wednesday, August 19")).getByRole("button", { name: "Schedule on Wednesday, August 19" }));
+    const [date] = onSchedule.mock.calls[0];
+    expect(date.some && date.val.toISODate()).toBe("2026-08-19");
+  });
+
+  it("offers no schedule on a past day or another week", () => {
+    renderPanel();
+    expect(within(day("Monday, August 17")).queryByRole("button")).not.toBeInTheDocument();
+    fireEvent.click(button("Next week"));
+    expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
+  });
+
+  it("hides scheduling from someone who coaches nobody, but keeps the arrows", () => {
+    isACoach = false;
+    renderPanel();
+    expect(screen.queryByRole("button", { name: "Schedule session" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
+    expect(button("Next week")).toBeInTheDocument();
+  });
+});
+
+describe("WeekPanel card clicks", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(NOW);
+  });
+
+  it("reschedules an upcoming session on a single click", () => {
+    renderPanel();
+    fireEvent.click(screen.getByTestId("session-card-thursday"));
+    act(() => vi.advanceTimersByTime(260));
+    expect(run).toHaveBeenCalledWith(SessionAction.Reschedule, THURSDAY);
+  });
+
+  it("opens the session on a double-click, without rescheduling", () => {
+    renderPanel();
+    const card = screen.getByTestId("session-card-thursday");
+    fireEvent.click(card);
+    fireEvent.click(card);
+    fireEvent.doubleClick(card);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
+  });
+
+  it("hints at double-click on a past card", () => {
+    renderPanel();
+    fireEvent.click(screen.getByTestId("session-card-early-today"));
+    act(() => vi.advanceTimersByTime(260));
+    expect(run).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith("Past session · double-click to open its notes");
   });
 });

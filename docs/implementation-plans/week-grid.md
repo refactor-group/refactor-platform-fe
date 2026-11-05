@@ -10,8 +10,8 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | --- | --- | --- |
 | 1a | Extract `useNow` and the session actions, with no behavior change | Done (`aea3a6b8`), approved |
 | 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (`57a8c48e`), approved |
-| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | In progress |
-| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Not started |
+| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (`6fe0e8be`), approved |
+| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | In progress (`feat/week-grid-nav`, stacked on PR 1) |
 | 3 | Prepare pill, Ready footer, live note | Not started |
 | 4 | Person filter, chip, dimmed cards | Not started |
 | BE 1 | Working hours on the user (rs) | Not started |
@@ -113,6 +113,18 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - Menu test ids become `session-action-<action>`, since the row is gone.
 - The Prepare pill links to the session page now (D2), so PR 3 keeps only what's left of it.
 - `DashboardContainer` loses its `locale` prop, which only the old card used.
+
+## PR 2 rules
+
+- `useWeekGridStore` holds only the week offset for now. Its provider wraps the dashboard, so leaving the dashboard resets it, and logout needs no reset. It isn't persisted.
+- The arrows ask `/nearest` around this Monday and next Monday, for every relationship the viewer is in. While either read is loading or has failed, the arrows stay enabled.
+- Schedule session and the empty-day Schedule follow `isACoach`, the same rule as Add New.
+- A single click waits 260ms for a possible double-click:
+  - on an upcoming session the viewer coaches, it opens Reschedule;
+  - on a past session, it shows the hint toast;
+  - otherwise it does nothing.
+- A double-click or Enter opens the session page.
+- This week is disabled while on the current week, which gives it its faint look.
 
 ## Follow-ups
 
