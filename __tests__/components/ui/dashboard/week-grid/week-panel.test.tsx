@@ -166,7 +166,7 @@ describe("WeekPanel", () => {
     renderPanel();
     const panel = screen.getByRole("region", { name: "This week" });
     expect(panel).toHaveAttribute("aria-busy", "true");
-    expect(panel).not.toHaveTextContent(/sessions?\b/);
+    expect(panel).not.toHaveTextContent(/\d+ sessions?\b/);
   });
 });
 
@@ -239,6 +239,12 @@ describe("WeekPanel scheduling", () => {
     expect(within(day("Monday, August 17")).queryByRole("button")).not.toBeInTheDocument();
     fireEvent.click(button("Next week"));
     expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps Schedule session while a week loads", () => {
+    result = { ...result, sessions: [], isLoading: true };
+    renderPanel();
+    expect(button("Schedule session")).toBeInTheDocument();
   });
 
   it("hides scheduling from someone who coaches nobody, but keeps the arrows", () => {
