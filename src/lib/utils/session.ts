@@ -42,9 +42,9 @@ export const EVENING_START_HOUR = 17;
  * Story: "Categorize sessions by how soon they start"
  */
 export function calculateSessionUrgency(
-  session: CoachingSession
+  session: CoachingSession,
+  now: DateTime = DateTime.now()
 ): SessionUrgency {
-  const now = DateTime.now();
   // Parse session date as UTC (backend stores in UTC)
   const sessionTime = DateTime.fromISO(session.date, { zone: 'utc' });
   const sessionEndTime = sessionTime.plus({ minutes: session.duration_minutes });
