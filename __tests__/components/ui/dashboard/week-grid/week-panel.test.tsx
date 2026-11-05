@@ -7,6 +7,8 @@ import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { WeekPanel } from "@/components/ui/dashboard/week-grid/week-panel";
 import { WeekGridStoreProvider } from "@/lib/providers/week-grid-store-provider";
 import type { WeekEdges } from "@/lib/week-grid/week";
+import { PersonGroup, type FilterPerson } from "@/lib/week-grid/filter";
+import { None, Some, type Option } from "@/types/option";
 import { createMockEnrichedSession } from "../../../../test-utils";
 
 const TZ = "America/Chicago";
@@ -45,6 +47,15 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 let edges: WeekEdges = { hasEarlier: true, hasLater: true };
 vi.mock("@/lib/hooks/use-week-edges", () => ({ useWeekEdges: () => edges }));
 
+const ALEX: FilterPerson = { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-1"], group: PersonGroup.Coachees };
+const SAM: FilterPerson = { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam"], group: PersonGroup.Coachees };
+let selectedPerson: Option<FilterPerson> = None;
+const selectPerson = vi.fn();
+const clearPerson = vi.fn();
+vi.mock("@/lib/hooks/use-week-filter", () => ({
+  useWeekFilter: () => ({ people: [ALEX, SAM], selected: selectedPerson, select: selectPerson, clear: clearPerson }),
+}));
+
 const toast = vi.fn();
 vi.mock("@/lib/toast", () => ({ toast: (...args: unknown[]) => toast(...args) }));
 vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => TZ }));
@@ -77,6 +88,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   isACoach = true;
   edges = { hasEarlier: true, hasLater: true };
+  selectedPerson = None;
   result = {
     sessions: [LATE_TODAY, THURSDAY, EARLY_TODAY, NEXT_WEEK],
     isLoading: false,
@@ -314,5 +326,58 @@ describe("WeekPanel card clicks", () => {
     act(() => vi.advanceTimersByTime(260));
     expect(run).not.toHaveBeenCalled();
     expect(toast).toHaveBeenCalledWith("Past session · double-click to open its notes");
+  });
+});
+
+const SAM_FRIDAY = createMockEnrichedSession({
+  id: "sam-friday",
+  date: "2026-08-21T15:00:00",
+  duration_minutes: 50,
+  topics: [],
+  coaching_relationship_id: "rel-sam",
+});
+
+describe("WeekPanel person filter", () => {
+  it("shows the filter pill to a coach only", () => {
+    renderPanel();
+    expect(button("All sessions")).toBeInTheDocument();
+  });
+
+  it("hides the filter from someone who coaches nobody", () => {
+    isACoach = false;
+    renderPanel();
+    expect(screen.queryByRole("button", { name: "All sessions" })).not.toBeInTheDocument();
+  });
+
+  it("dims other people's cards in place and counts only the visible ones", () => {
+    selectedPerson = Some(SAM);
+    result = { ...result, sessions: [THURSDAY, SAM_FRIDAY, LATE_TODAY] };
+    renderPanel();
+    expect(screen.getByTestId("session-card-thursday")).toHaveAttribute("data-dimmed", "true");
+    expect(screen.getByTestId("session-card-late-today")).toHaveAttribute("data-dimmed", "true");
+    expect(screen.getByTestId("session-card-sam-friday")).toHaveAttribute("data-dimmed", "false");
+    expect(screen.getAllByTestId(/^session-card-/)).toHaveLength(3);
+    const panel = screen.getByRole("region", { name: "This week" });
+    expect(panel).toHaveTextContent("1 session");
+    expect(panel).not.toHaveTextContent("today");
+  });
+
+  it("shows a removable chip for the selected person", () => {
+    selectedPerson = Some(SAM);
+    renderPanel();
+    fireEvent.click(button("Clear Sam Ruiz"));
+    expect(clearPerson).toHaveBeenCalledTimes(1);
+  });
+
+  it("says when nothing in the week matches", () => {
+    selectedPerson = Some(SAM);
+    renderPanel();
+    expect(screen.getByText("No sessions match this week.")).toBeInTheDocument();
+  });
+
+  it("stays quiet when nothing is filtered", () => {
+    result = { ...result, sessions: [] };
+    renderPanel();
+    expect(screen.queryByText("No sessions match this week.")).not.toBeInTheDocument();
   });
 });

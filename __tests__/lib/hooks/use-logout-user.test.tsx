@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   deleteUserSession: vi.fn().mockResolvedValue(undefined),
   resetCoachingRelationshipState: vi.fn(),
   resetOrganizationState: vi.fn(),
+  resetWeekGrid: vi.fn(),
   clearCache: vi.fn(),
   replace: vi.fn(),
   executeAll: vi.fn().mockResolvedValue(undefined),
@@ -51,6 +52,11 @@ vi.mock("@/lib/providers/coaching-relationship-state-store-provider", () => ({
 vi.mock("@/lib/providers/organization-state-store-provider", () => ({
   useOrganizationStateStore: (selector: (s: unknown) => unknown) =>
     selector({ resetOrganizationState: mocks.resetOrganizationState }),
+}));
+
+vi.mock("@/lib/providers/week-grid-store-provider", () => ({
+  useWeekGridStore: (selector: (s: unknown) => unknown) =>
+    selector({ resetWeekGrid: mocks.resetWeekGrid }),
 }));
 
 vi.mock("@/lib/api/entity-api", () => ({
@@ -102,6 +108,7 @@ describe("useLogoutUser", () => {
     expect(mocks.logout).toHaveBeenCalled();
     expect(mocks.clearCache).toHaveBeenCalledTimes(1);
     expect(mocks.resetCoachingRelationshipState).toHaveBeenCalledTimes(1);
+    expect(mocks.resetWeekGrid).toHaveBeenCalledTimes(1);
   });
 
   // A teardown step that throws must not strand the ones after it — otherwise

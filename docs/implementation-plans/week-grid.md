@@ -11,9 +11,9 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 1a | Extract `useNow` and the session actions, with no behavior change | Done (`aea3a6b8`), approved |
 | 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (`57a8c48e`), approved |
 | 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (`6fe0e8be`), approved |
-| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | In progress (`feat/week-grid-nav`, stacked on PR 1) |
-| 3 | Prepare pill, Ready footer, live note | Not started |
-| 4 | Person filter, chip, dimmed cards | Not started |
+| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (`feat/week-grid-nav`, through `8964e5da`), approved |
+| 3 | Prepare pill, Ready footer, live note | Folded into PRs 1 and 2 (Jim, 2026-11-05); Part 3 of the test plan runs with PR 2 |
+| 4 | Person filter, chip, dimmed cards | In progress (`feat/week-grid-filter`, stacked on PR 2) |
 | BE 1 | Working hours on the user (rs) | Not started |
 | BE 2 | One reschedule email once changes settle (rs) | Not started |
 | 5 | Drag to move, Undo, working hours in Settings and the dialog | Not started |
@@ -116,7 +116,7 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 
 ## PR 2 rules
 
-- `useWeekGridStore` holds only the week offset for now. Its provider wraps the dashboard, so leaving the dashboard resets it, and logout needs no reset. It isn't persisted.
+- `useWeekGridStore` holds the week offset (PR 2) and the person filter (PR 4).
 - The previous arrow asks `/nearest` around this Monday, for every relationship the viewer is in. It disables once nothing is earlier.
 - For a coach, the next arrow never disables, so any future week can be scheduled. For a coachee, it disables once nothing is later, read from `/nearest` around next Monday.
 - While a read is loading or has failed, its arrow stays enabled.
@@ -127,6 +127,18 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - otherwise it does nothing.
 - A double-click or Enter opens the session page.
 - This week is disabled while on the current week, which gives it its faint look.
+
+## PR 4 rules
+
+- Test plan case 4.6 needs the filter to survive leaving the dashboard and to reset at logout. So the store's provider moves from the dashboard to the app-wide `providers.tsx`.
+  - Only the filter is kept in `sessionStorage`, under the key `week-grid-store`.
+  - The week offset lives in memory, so it survives in-app navigation but not a reload.
+  - Logout calls `resetWeekGrid`.
+- The filter lists the people the viewer coaches (`schedulablePeople`), in name order. Coachees and Inactive come from `activityByPerson` and `isInactive`, read from `/nearest` around now. Peers stay deferred.
+- A saved filter for someone the viewer no longer coaches is dropped once relationships load.
+- Filtered-out cards stay in place at 28% opacity. The subline and today's count include only visible cards. With a filter on and nothing visible, "No sessions match this week." shows.
+- The filter applies to the week grid only, since the briefing it was meant to share with isn't built.
+- The search field and the name match are extracted from `person-picker.tsx`, so the dialog and the filter share them.
 
 ## Follow-ups
 
