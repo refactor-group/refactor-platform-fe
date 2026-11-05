@@ -1,21 +1,29 @@
+import type { DateTime } from "ts-luxon";
 import type { CardView } from "@/lib/week-grid/card";
 import type { DayGroup } from "@/lib/week-grid/week";
+import type { Option } from "@/types/option";
 import { DayColumn } from "./day-column";
-import type { OnSessionAction } from "./session-card-menu";
+import type { SessionCardHandlers } from "./session-card";
 
 export interface WeekGridProps {
   days: DayGroup<CardView>[];
-  onAction: OnSessionAction;
+  handlers: SessionCardHandlers;
+  onSchedule: Option<(day: DateTime) => void>;
 }
 
 // Columns stack below lg until the mobile day strip lands (plan D13).
 export const WEEK_GRID_CLASS = "mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-7";
 
-export function WeekGrid({ days, onAction }: WeekGridProps) {
+export function WeekGrid({ days, handlers, onSchedule }: WeekGridProps) {
   return (
     <div className={WEEK_GRID_CLASS}>
       {days.map((group) => (
-        <DayColumn key={group.day.toISODate()} group={group} onAction={onAction} />
+        <DayColumn
+          key={group.day.toISODate()}
+          group={group}
+          handlers={handlers}
+          onSchedule={onSchedule}
+        />
       ))}
     </div>
   );

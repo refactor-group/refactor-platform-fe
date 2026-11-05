@@ -1,9 +1,11 @@
 "use client";
 
+import type { KeyboardEvent, SyntheticEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
+import { useClickOrDoubleClick } from "@/lib/hooks/use-click-or-double-click";
 import { timeOfDay } from "@/lib/session-window";
 import {
   CardFooter,
@@ -14,14 +16,26 @@ import {
 } from "@/lib/week-grid/card";
 import { SessionCardMenu, type OnSessionAction } from "./session-card-menu";
 
-export interface SessionCardProps {
-  view: CardView;
+export interface SessionCardHandlers {
   onAction: OnSessionAction;
+  onSelect: (view: CardView) => void;
+  onOpen: (view: CardView) => void;
 }
 
-export function SessionCard({ view, onAction }: SessionCardProps) {
+export interface SessionCardProps extends SessionCardHandlers {
+  view: CardView;
+}
+
+export function SessionCard({ view, onAction, onSelect, onOpen }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const time = timeOfDay(view.start);
+  const clicks = useClickOrDoubleClick(
+    () => onSelect(view),
+    () => onOpen(view)
+  );
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && e.target === e.currentTarget) onOpen(view);
+  };
 
   return (
     <SessionCardMenu view={view} onAction={onAction}>
@@ -30,8 +44,12 @@ export function SessionCard({ view, onAction }: SessionCardProps) {
         data-tense={view.tense}
         tabIndex={0}
         aria-label={`${time}, ${view.name}`}
+        onClick={clicks.onClick}
+        onDoubleClick={clicks.onDoubleClick}
+        onKeyDown={onKeyDown}
         className={cn(
           "flex min-h-[104px] flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+          !isPast && view.canManage && "cursor-pointer",
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           isPast ? "bg-well" : "bg-card shadow-card"
         )}
@@ -59,6 +77,10 @@ export function SessionCard({ view, onAction }: SessionCardProps) {
       </div>
     </SessionCardMenu>
   );
+}
+
+function stopPropagation(e: SyntheticEvent) {
+  e.stopPropagation();
 }
 
 function CardNoteLine({ note }: { note: CardNote }) {
@@ -90,6 +112,8 @@ function CardFooterLine({ footer, sessionId }: { footer: CardFooter; sessionId: 
       return (
         <Link
           href={`/coaching-sessions/${sessionId}`}
+          onClick={stopPropagation}
+          onKeyDown={stopPropagation}
           className="inline-flex h-[26px] items-center gap-1 rounded-full bg-fill px-2.5 text-tiny font-medium text-foreground transition-colors duration-150 hover:bg-fill-hover"
         >
           Prepare

@@ -17,6 +17,12 @@ export enum CardFooter {
   Prepare = "prepare",
 }
 
+export enum CardClick {
+  Reschedule = "reschedule",
+  PastHint = "past-hint",
+  Nothing = "nothing",
+}
+
 export type CardNote =
   | { kind: "relative"; text: string; pulse: boolean }
   | { kind: "topics"; count: number }
@@ -54,6 +60,11 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,
   };
+}
+
+export function cardClick(view: CardView): CardClick {
+  if (view.tense === CardTense.Past) return CardClick.PastHint;
+  return view.canManage ? CardClick.Reschedule : CardClick.Nothing;
 }
 
 export function cardNoteText(note: CardNote): string {

@@ -1,10 +1,17 @@
 import { DateTime } from "ts-luxon";
 import { sessionCount } from "@/lib/scheduling-copy";
+import { sessionStartIn } from "@/lib/session-window";
+import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Option } from "@/types/option";
 
 export interface Week {
   start: DateTime;
   days: DateTime[];
+}
+
+export interface WeekEdges {
+  hasEarlier: boolean;
+  hasLater: boolean;
 }
 
 export interface DayGroup<T> {
@@ -46,6 +53,20 @@ export function weekRange(week: Week): string {
 export function weekSubline(visible: number, today: Option<number>): string {
   const count = sessionCount(visible);
   return today.some && today.val > 0 ? `${count} · ${today.val} today` : count;
+}
+
+export function weekEdges(
+  aroundStart: EnrichedCoachingSession[],
+  aroundEnd: EnrichedCoachingSession[],
+  week: Week
+): WeekEdges {
+  const zone = week.start.zoneName;
+  const nextStart = week.start.plus({ weeks: 1 });
+  const startOf = (s: EnrichedCoachingSession) => sessionStartIn(s.date, zone);
+  return {
+    hasEarlier: aroundStart.some((s) => startOf(s) < week.start),
+    hasLater: aroundEnd.some((s) => startOf(s) >= nextStart),
+  };
 }
 
 export function groupByDay<T>(

@@ -1,16 +1,18 @@
+import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
 import type { CardView } from "@/lib/week-grid/card";
 import type { DayGroup } from "@/lib/week-grid/week";
+import { type Option, None, Some } from "@/types/option";
 import { EmptyDay } from "./empty-day";
-import { SessionCard } from "./session-card";
-import type { OnSessionAction } from "./session-card-menu";
+import { SessionCard, type SessionCardHandlers } from "./session-card";
 
 export interface DayColumnProps {
   group: DayGroup<CardView>;
-  onAction: OnSessionAction;
+  handlers: SessionCardHandlers;
+  onSchedule: Option<(day: DateTime) => void>;
 }
 
-export function DayColumn({ group, onAction }: DayColumnProps) {
+export function DayColumn({ group, handlers, onSchedule }: DayColumnProps) {
   return (
     <div
       role="group"
@@ -23,14 +25,19 @@ export function DayColumn({ group, onAction }: DayColumnProps) {
     >
       <DayLabel group={group} />
       {group.items.length === 0 ? (
-        <EmptyDay />
+        <EmptyDay day={group.day} onSchedule={scheduleOn(group, onSchedule)} />
       ) : (
-        group.items.map((view) => (
-          <SessionCard key={view.session.id} view={view} onAction={onAction} />
-        ))
+        group.items.map((view) => <SessionCard key={view.session.id} view={view} {...handlers} />)
       )}
     </div>
   );
+}
+
+function scheduleOn(
+  group: DayGroup<CardView>,
+  onSchedule: Option<(day: DateTime) => void>
+): Option<() => void> {
+  return onSchedule.some && !group.isPast ? Some(() => onSchedule.val(group.day)) : None;
 }
 
 function DayLabel({ group }: { group: DayGroup<CardView> }) {
