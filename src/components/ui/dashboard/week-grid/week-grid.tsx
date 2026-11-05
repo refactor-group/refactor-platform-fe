@@ -1,12 +1,12 @@
 import type { DateTime } from "ts-luxon";
-import type { CardView } from "@/lib/week-grid/card";
+import type { GridCard } from "@/lib/week-grid/card";
 import type { DayGroup } from "@/lib/week-grid/week";
 import type { Option } from "@/types/option";
 import { DayColumn } from "./day-column";
 import type { SessionCardHandlers } from "./session-card";
 
 export interface WeekGridProps {
-  days: DayGroup<CardView>[];
+  days: DayGroup<GridCard>[];
   handlers: SessionCardHandlers;
   onSchedule: Option<(day: DateTime) => void>;
 }

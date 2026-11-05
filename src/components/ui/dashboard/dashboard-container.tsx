@@ -11,7 +11,6 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { useAutoSelectSingleRelationship } from "@/lib/hooks/use-auto-select-single-relationship";
 import { useForgetRelationshipOutsideOrganization } from "@/lib/hooks/use-forget-relationship-outside-organization";
 import { useNewSessionDialogStore } from "@/lib/providers/new-session-dialog-store-provider";
-import { WeekGridStoreProvider } from "@/lib/providers/week-grid-store-provider";
 import { None, Some } from "@/types/option";
 
 export function DashboardContainer() {
@@ -59,7 +58,7 @@ export function DashboardContainer() {
   }, [refreshUpcomingSession]);
 
   return (
-    <WeekGridStoreProvider>
+    <>
       <DashboardHeader onCreateSession={handleCreateSession} />
 
       {/* Upcoming Session + Goals Overview (2-col grid on md+).
@@ -80,6 +79,6 @@ export function DashboardContainer() {
           onSchedule={openSchedule}
         />
       </div>
-    </WeekGridStoreProvider>
+    </>
   );
 }

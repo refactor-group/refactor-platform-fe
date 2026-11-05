@@ -38,6 +38,11 @@ function otherParticipant(rel: CoachingRelationshipWithUserNames, userId: Id): M
     : menuPerson(rel.coach_id, rel.coach_first_name, rel.coach_last_name);
 }
 
+/** Case-insensitive substring match on the trimmed query; a blank query matches everyone. */
+export function matchesPersonName(fullName: string, query: string): boolean {
+  return fullName.toLowerCase().includes(query.trim().toLowerCase());
+}
+
 /** One entry per other person, holding each relationship the user has with them. */
 export function peopleFor(
   userId: Id,

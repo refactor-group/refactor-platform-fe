@@ -44,6 +44,10 @@ export interface CardView {
   canManage: boolean;
 }
 
+export interface GridCard extends CardView {
+  dimmed: boolean;
+}
+
 const MINUTES_PER_HOUR = 60;
 
 export function cardView(session: EnrichedCoachingSession, context: CardContext): CardView {

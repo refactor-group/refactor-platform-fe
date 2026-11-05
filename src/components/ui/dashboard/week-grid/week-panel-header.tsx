@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FilterChip } from "@/components/ui/chip";
 import type { Option } from "@/types/option";
+import { WeekFilter, type WeekFilterProps } from "./week-filter";
 
 export interface WeekNavigation {
   canGoEarlier: boolean;
@@ -17,6 +19,7 @@ export interface WeekPanelHeaderProps {
   range: string;
   subline: Option<string>;
   navigation: WeekNavigation;
+  filter: Option<WeekFilterProps>;
   onSchedule: Option<() => void>;
 }
 
@@ -26,6 +29,7 @@ export function WeekPanelHeader({
   range,
   subline,
   navigation,
+  filter,
   onSchedule,
 }: WeekPanelHeaderProps) {
   return (
@@ -37,11 +41,15 @@ export function WeekPanelHeader({
           </h2>
           <span className="text-card-title tabular-nums text-ink-2">{range}</span>
         </div>
-        {subline.some && (
-          <p className="mt-1 text-sm tabular-nums text-muted-foreground">{subline.val}</p>
-        )}
+        <div className="mt-1 flex flex-wrap items-center gap-2 empty:hidden">
+          {subline.some && <p className="text-sm tabular-nums text-muted-foreground">{subline.val}</p>}
+          {filter.some && filter.val.selected.some && (
+            <FilterChip label={filter.val.selected.val.fullName} onClear={filter.val.onClear} />
+          )}
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-4">
+        {filter.some && <WeekFilter {...filter.val} />}
         <WeekNavigationControls navigation={navigation} />
         {onSchedule.some && (
           <Button size="sm" className="bg-brand px-4 text-[13px] hover:bg-brand/90" onClick={onSchedule.val}>

@@ -24,9 +24,10 @@ export interface SessionCardHandlers {
 
 export interface SessionCardProps extends SessionCardHandlers {
   view: CardView;
+  dimmed?: boolean;
 }
 
-export function SessionCard({ view, onAction, onSelect, onOpen }: SessionCardProps) {
+export function SessionCard({ view, dimmed = false, onAction, onSelect, onOpen }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const time = timeOfDay(view.start);
   const clicks = useClickOrDoubleClick(
@@ -42,6 +43,7 @@ export function SessionCard({ view, onAction, onSelect, onOpen }: SessionCardPro
       <div
         data-testid={`session-card-${view.session.id}`}
         data-tense={view.tense}
+        data-dimmed={String(dimmed)}
         tabIndex={0}
         aria-label={`${time}, ${view.name}`}
         onClick={clicks.onClick}
@@ -51,7 +53,8 @@ export function SessionCard({ view, onAction, onSelect, onOpen }: SessionCardPro
           "flex min-h-[104px] flex-col gap-1.5 rounded-xl p-[11px] outline-none",
           !isPast && view.canManage && "cursor-pointer",
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          isPast ? "bg-well" : "bg-card shadow-card"
+          isPast ? "bg-well" : "bg-card shadow-card",
+          dimmed && "opacity-[.28]"
         )}
       >
         <span
