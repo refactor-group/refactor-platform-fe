@@ -44,7 +44,7 @@ The pure model lives in `src/lib/week-grid/`: `week.ts`, `card.ts`, `filter.ts` 
 | D1 | Card actions go in a context menu: right-click, long-press, or the Menu key (shadcn `context-menu`). They reuse the existing dialogs. On mobile, Move… opens the Move sheet. |
 | D2 | The Prepare pill opens the session page until a prepare-modal handoff exists. |
 | D3 | Ready means the session has at least one topic (`include=topics`). It lives in one function, to be swapped for a server value later. |
-| D4 | An empty-day click opens the dialog at Who, with the day preset (`openSchedule(day)`). |
+| D4 | An empty-day click opens the dialog at Who, with the day preset (`openSchedule(day)`). It works on any empty day from today on, in any week (Jim, 2026-11-05). |
 | D5 | Working hours are stored on the user and editable in Settings. They drive both the drop slots and the dialog's after-hours checks. |
 | D6 | Rights are per session. Drag, click-to-reschedule and the full menu appear only where the viewer coaches. Schedule and the filter appear when the viewer coaches anyone. |
 | D7 | Below `lg` (1024px), the grid becomes the day strip and agenda. |
@@ -117,8 +117,10 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 ## PR 2 rules
 
 - `useWeekGridStore` holds only the week offset for now. Its provider wraps the dashboard, so leaving the dashboard resets it, and logout needs no reset. It isn't persisted.
-- The arrows ask `/nearest` around this Monday and next Monday, for every relationship the viewer is in. While either read is loading or has failed, the arrows stay enabled.
-- Schedule session and the empty-day Schedule follow `isACoach`, the same rule as Add New.
+- The previous arrow asks `/nearest` around this Monday, for every relationship the viewer is in. It disables once nothing is earlier.
+- For a coach, the next arrow never disables, so any future week can be scheduled. For a coachee, it disables once nothing is later, read from `/nearest` around next Monday.
+- While a read is loading or has failed, its arrow stays enabled.
+- Schedule session and the empty-day Schedule follow `isACoach`, the same rule as Add New. Every empty day from today on shows "+ Schedule", in any week; past days never do.
 - A single click waits 260ms for a possible double-click:
   - on an upcoming session the viewer coaches, it opens Reschedule;
   - on a past session, it shows the hint toast;

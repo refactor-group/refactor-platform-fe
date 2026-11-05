@@ -211,11 +211,24 @@ describe("WeekPanel paging", () => {
     expect(screen.getByRole("region", { name: "Next week" })).not.toHaveTextContent("today");
   });
 
-  it("disables the arrows at the ends of the viewer's sessions", () => {
+  it("stops the previous arrow at the viewer's first session", () => {
     edges = { hasEarlier: false, hasLater: true };
     renderPanel();
     expect(button("Previous week")).toBeDisabled();
     expect(button("Next week")).toBeEnabled();
+  });
+
+  it("never stops a coach paging forward, so any future week can be scheduled", () => {
+    edges = { hasEarlier: true, hasLater: false };
+    renderPanel();
+    expect(button("Next week")).toBeEnabled();
+  });
+
+  it("stops a coachee's next arrow at their last session", () => {
+    isACoach = false;
+    edges = { hasEarlier: true, hasLater: false };
+    renderPanel();
+    expect(button("Next week")).toBeDisabled();
   });
 });
 
@@ -234,10 +247,25 @@ describe("WeekPanel scheduling", () => {
     expect(date.some && date.val.toISODate()).toBe("2026-08-19");
   });
 
-  it("offers no schedule on a past day or another week", () => {
+  it("offers no schedule on a past day", () => {
     renderPanel();
     expect(within(day("Monday, August 17")).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("offers schedule on every empty day of a future week", () => {
+    result = { ...result, sessions: [] };
+    renderPanel();
     fireEvent.click(button("Next week"));
+    expect(screen.getAllByRole("button", { name: /^Schedule on/ })).toHaveLength(7);
+    fireEvent.click(within(day("Monday, August 24")).getByRole("button", { name: "Schedule on Monday, August 24" }));
+    const [date] = onSchedule.mock.calls[0];
+    expect(date.some && date.val.toISODate()).toBe("2026-08-24");
+  });
+
+  it("offers no schedule anywhere in a past week", () => {
+    result = { ...result, sessions: [] };
+    renderPanel();
+    fireEvent.click(button("Previous week"));
     expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
   });
 

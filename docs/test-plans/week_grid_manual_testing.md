@@ -149,12 +149,11 @@ Page away, then click **This week**.
 
 ### Case 2.3: arrow ends
 
-Page back until the previous arrow disables. Then page forward until the next arrow disables.
+As the coach, page back until the previous arrow disables, then page forward ten weeks past F's session.
 
 **Pass:**
 - Previous disables on the week holding the earliest session.
-- Next disables on F's week, six weeks out.
-- Neither arrow ever lands on a week with nothing beyond it.
+- Next never disables for the coach, so any future week can be reached.
 
 ### Case 2.4: Schedule session
 
@@ -162,9 +161,9 @@ Click **Schedule session**.
 
 **Pass:** the New session dialog opens on Who, with no day preset.
 
-### Case 2.5: empty day on the current week
+### Case 2.5: empty day from today on
 
-Hover an empty, non-past day of the current week, then click it.
+Hover an empty day from today on, in this week and in a week two or more weeks ahead, then click it.
 
 **Pass:**
 - On hover, the dashed border turns lavender and "+ Schedule" appears.
@@ -172,7 +171,7 @@ Hover an empty, non-past day of the current week, then click it.
 
 ### Case 2.6: empty days that aren't schedulable
 
-Hover a past empty day, and an empty day on another week.
+Hover a past empty day of this week, and an empty day of last week.
 
 **Pass:** no hover affordance, and a click does nothing.
 
