@@ -8,8 +8,8 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 
 | Phase | Scope | State |
 | --- | --- | --- |
-| 1a | Extract `useNow` and the session actions, with no behavior change | In progress |
-| 1b | Model in `src/lib/week-grid/`, its frozen tests, and the store | Not started |
+| 1a | Extract `useNow` and the session actions, with no behavior change | Done (`aea3a6b8`), approved |
+| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | In progress |
 | 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Not started |
 | 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Not started |
 | 3 | Prepare pill, Ready footer, live note | Not started |
@@ -107,5 +107,9 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - Board topic: `SessionRescheduleNoticeSettle`.
 
 ## Follow-ups
+
+- 1c: remove `useSessionActions.openSeries`, the row's copy of the action switch, and the two comments naming the row and the card, once the buckets are gone.
+- The store (week offset, filter, recently moved) comes with the first phase that reads it (PR 2), so it never ships unused.
+- Live uses the app's urgency levels: under way, imminent, or soon (within 2 hours). The handoff says "within the hour"; the shared thresholds win.
 
 - The backend's `/coaching_sessions/counts` loses its only caller after 1c. Raise it on the board.
