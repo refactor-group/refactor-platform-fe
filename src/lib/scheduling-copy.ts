@@ -183,6 +183,10 @@ export function seriesRuleLine(personName: string, recurrence: SeriesRecurrence)
   return `${firstNameOf(personName)}'s series repeats ${rhythmPhrase(recurrence)}${days ? ` on ${days}` : ""}.`;
 }
 
+export function moveTitle(following: boolean): string {
+  return following ? "Reschedule series" : "Reschedule session";
+}
+
 export function moveSubmitLabel(following: boolean): string {
   return following ? "Reschedule this and following" : "Reschedule session";
 }

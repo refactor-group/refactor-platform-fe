@@ -276,6 +276,14 @@ describe("NewSessionDialog: a series session", () => {
     expect(screen.getByText("Move 2 sessions to Tuesdays, 1:30 PM")).toBeInTheDocument();
   });
 
+  it("titles the dialog by what it changes", () => {
+    renderMove(MoveScope.Following);
+    expect(screen.getByRole("dialog", { name: "Reschedule series" })).toBeInTheDocument();
+    next();
+    fireEvent.click(screen.getByRole("radio", { name: /This session only/ }));
+    expect(screen.getByRole("dialog", { name: "Reschedule session" })).toBeInTheDocument();
+  });
+
   it("has no summary when moving this session only", () => {
     renderMove();
     expect(screen.queryByText("Rescheduling will")).not.toBeInTheDocument();

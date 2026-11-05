@@ -6,6 +6,7 @@ import {
   currentlyLine,
   meetingLine,
   moveSubmitLabel,
+  moveTitle,
   nothingElseLine,
   overlapLine,
   repeatLabel,
@@ -105,6 +106,11 @@ describe("submit labels", () => {
     expect(scheduleSubmitLabel({ kind: "repeat", frequency: Frequency.Weekly, interval: 1, end: { kind: "until", until: "2026-12-15" } })).toBe(
       "Schedule series"
     );
+  });
+
+  it("titles a move by its scope", () => {
+    expect(moveTitle(false)).toBe("Reschedule session");
+    expect(moveTitle(true)).toBe("Reschedule series");
   });
 
   it("names the move scope", () => {

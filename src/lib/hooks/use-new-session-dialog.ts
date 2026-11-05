@@ -50,7 +50,7 @@ import {
   stepPosition,
   suggestTimes,
 } from "@/lib/scheduling";
-import { followingMoveLine, moveSubmitLabel, scheduleSubmitLabel, seriesRuleLine } from "@/lib/scheduling-copy";
+import { followingMoveLine, moveSubmitLabel, moveTitle, scheduleSubmitLabel, seriesRuleLine } from "@/lib/scheduling-copy";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
@@ -227,7 +227,7 @@ export function useNewSessionDialog(
   };
 
   return {
-    title: moving.some ? "Reschedule session" : "New session",
+    title: moving.some ? moveTitle(following) : "New session",
     mover: moving.some && entry.some ? Some(moverOf(entry.val, moving.val, timezone)) : None,
     step: current,
     rail: moving.some
