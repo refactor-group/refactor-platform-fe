@@ -19,7 +19,6 @@ export enum CardFooter {
 
 export enum CardClick {
   Reschedule = "reschedule",
-  PastHint = "past-hint",
   Nothing = "nothing",
 }
 
@@ -67,8 +66,7 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
 }
 
 export function cardClick(view: CardView): CardClick {
-  if (view.tense === CardTense.Past) return CardClick.PastHint;
-  return view.canManage ? CardClick.Reschedule : CardClick.Nothing;
+  return view.tense !== CardTense.Past && view.canManage ? CardClick.Reschedule : CardClick.Nothing;
 }
 
 export function cardNoteText(note: CardNote): string {

@@ -17,7 +17,6 @@ import { useWeekFilter } from "@/lib/hooks/use-week-filter";
 import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
 import { SessionAction } from "@/lib/session-actions";
 import type { MoveScope } from "@/lib/scheduling";
-import { toast } from "@/lib/toast";
 import { CardClick, cardClick, cardView, type CardView, type GridCard } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
 import {
@@ -44,7 +43,6 @@ export interface WeekPanelProps {
 }
 
 const CURRENT_WEEK = 0;
-const PAST_HINT = "Past session · double-click to open its notes";
 
 // Keyed on the local date so the fetch key holds steady across clock ticks.
 function useWeekAt(offset: number, now: DateTime, timezone: string): Week {
@@ -159,9 +157,6 @@ function onCardSelect(view: CardView, run: OnSessionAction) {
   switch (click) {
     case CardClick.Reschedule:
       run(SessionAction.Reschedule, view.session);
-      return;
-    case CardClick.PastHint:
-      toast(PAST_HINT);
       return;
     case CardClick.Nothing:
       return;
