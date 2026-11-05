@@ -35,10 +35,8 @@ const json = (data: unknown) => ({ status: 200, contentType: 'application/json',
 
 let resendPosts: string[]
 
-async function openRowMenu(page: Page, sessionId: string) {
-  const row = page.getByRole('region', { name: 'Today' }).getByTestId(`session-row-${sessionId}`)
-  await row.hover()
-  await row.getByRole('button', { name: 'Session actions' }).click()
+async function openCardMenu(page: Page, sessionId: string) {
+  await page.getByTestId(`session-card-${sessionId}`).click({ button: 'right' })
 }
 
 test.describe('Resend calendar invite', () => {
@@ -51,7 +49,6 @@ test.describe('Resend calendar invite', () => {
       (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
       (route) => route.fulfill(json([SERIES_SESSION, PAST_ONE_OFF]))
     )
-    await page.route('**/coaching_sessions/counts**', (route) => route.fulfill(json({ counts: [] })))
     await page.route('**/resend_invite', (route) => {
       resendPosts.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`)
       return route.fulfill({ status: 204 })
@@ -60,7 +57,7 @@ test.describe('Resend calendar invite', () => {
   })
 
   test('a double-clicked confirm sends one series resend', async ({ page }) => {
-    await openRowMenu(page, SERIES_SESSION.id)
+    await openCardMenu(page, SERIES_SESSION.id)
     await page.getByRole('menuitem', { name: 'Resend series invite' }).click()
     await page
       .getByRole('alertdialog', { name: 'Resend series invite?' })
@@ -71,12 +68,10 @@ test.describe('Resend calendar invite', () => {
     expect(resendPosts).toEqual(['POST /coaching_session_series/series-1/resend_invite'])
   })
 
-  test('the item is disabled on a past one-off', async ({ page }) => {
-    await page.getByRole('tab', { name: 'Previous' }).click()
-    await openRowMenu(page, PAST_ONE_OFF.id)
+  test('a past one-off offers no resend', async ({ page }) => {
+    await openCardMenu(page, PAST_ONE_OFF.id)
 
-    const item = page.getByTestId('session-row-resend-invite')
-    await expect(item).toHaveAttribute('aria-disabled', 'true')
-    await expect(item).toContainText('No upcoming sessions')
+    await expect(page.getByRole('menuitem')).toHaveText(['Open session', 'Remove session…'])
+    await expect(page.getByTestId('session-action-resend-invite')).toHaveCount(0)
   })
 })

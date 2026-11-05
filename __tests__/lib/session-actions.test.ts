@@ -1,37 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { DateTime } from "ts-luxon";
-import { None, Some } from "@/types/option";
+import { Some } from "@/types/option";
 import { createMockEnrichedSession } from "../test-utils";
 import {
   SessionAction,
   SessionActionGroup,
-  sessionActionHint,
+  SessionRemoval,
   sessionActionLabel,
   sessionActionsFor,
+  sessionRemovalFor,
 } from "@/lib/session-actions";
 
-const NOW = DateTime.fromISO("2026-11-05T15:00:00Z", { zone: "utc" });
-
 const oneOff = createMockEnrichedSession();
-const seriesAhead = createMockEnrichedSession({
-  coaching_session_series_id: Some("series-1"),
-  series: Some({ id: "series-1", last_session_date: NOW.plus({ weeks: 4 }) }),
-});
-const seriesFinished = createMockEnrichedSession({
-  coaching_session_series_id: Some("series-1"),
-  series: Some({ id: "series-1", last_session_date: NOW.minus({ weeks: 1 }) }),
-});
-const seriesUnknown = createMockEnrichedSession({
-  coaching_session_series_id: Some("series-1"),
-});
+const inSeries = createMockEnrichedSession({ coaching_session_series_id: Some("series-1") });
 
-function actions(session = oneOff, isCoach = true, isPast = false) {
-  return sessionActionsFor(session, { isCoach, isPast, now: NOW }).map((i) => i.action);
-}
+const COACH_UPCOMING = { isCoach: true, isPast: false };
+const COACH_PAST = { isCoach: true, isPast: true };
+const COACHEE_UPCOMING = { isCoach: false, isPast: false };
+const COACHEE_PAST = { isCoach: false, isPast: true };
+
+const actions = (session = oneOff, context = COACH_UPCOMING) =>
+  sessionActionsFor(session, context).map((i) => i.action);
 
 describe("sessionActionsFor", () => {
-  it("gives a coach every one-off action for an upcoming session, in menu order", () => {
+  it("gives a coach the one-off actions for an upcoming session, in menu order", () => {
     expect(actions()).toEqual([
+      SessionAction.OpenSession,
       SessionAction.Reschedule,
       SessionAction.ShareLink,
       SessionAction.ResendInvite,
@@ -39,8 +32,9 @@ describe("sessionActionsFor", () => {
     ]);
   });
 
-  it("adds the series actions for a series session", () => {
-    expect(actions(seriesAhead)).toEqual([
+  it("adds the series actions for an upcoming series session", () => {
+    expect(actions(inSeries)).toEqual([
+      SessionAction.OpenSession,
       SessionAction.Reschedule,
       SessionAction.ViewSeries,
       SessionAction.EditSeries,
@@ -51,24 +45,21 @@ describe("sessionActionsFor", () => {
     ]);
   });
 
-  it("drops Reschedule on a past session but keeps delete for a coach", () => {
-    expect(actions(oneOff, true, true)).toEqual([
-      SessionAction.ShareLink,
-      SessionAction.ResendInvite,
-      SessionAction.DeleteSession,
-    ]);
+  it("gives a coach only Open and Remove on a past session, series or not", () => {
+    expect(actions(oneOff, COACH_PAST)).toEqual([SessionAction.OpenSession, SessionAction.DeleteSession]);
+    expect(actions(inSeries, COACH_PAST)).toEqual([SessionAction.OpenSession, SessionAction.DeleteSession]);
   });
 
-  it("gives a coachee only Share link, plus View series on a series session", () => {
-    expect(actions(oneOff, false)).toEqual([SessionAction.ShareLink]);
-    expect(actions(seriesAhead, false)).toEqual([SessionAction.ViewSeries, SessionAction.ShareLink]);
+  it("gives a coachee only Open session", () => {
+    for (const context of [COACHEE_UPCOMING, COACHEE_PAST]) {
+      expect(actions(oneOff, context)).toEqual([SessionAction.OpenSession]);
+      expect(actions(inSeries, context)).toEqual([SessionAction.OpenSession]);
+    }
   });
 
-  it("groups items as schedule, share, then destructive", () => {
-    const groups = sessionActionsFor(seriesAhead, { isCoach: true, isPast: false, now: NOW }).map(
-      (i) => i.group
-    );
-    expect(groups).toEqual([
+  it("groups items as navigate, schedule, share, then destructive", () => {
+    expect(sessionActionsFor(inSeries, COACH_UPCOMING).map((i) => i.group)).toEqual([
+      SessionActionGroup.Navigate,
       SessionActionGroup.Schedule,
       SessionActionGroup.Schedule,
       SessionActionGroup.Schedule,
@@ -77,55 +68,36 @@ describe("sessionActionsFor", () => {
       SessionActionGroup.Destructive,
       SessionActionGroup.Destructive,
     ]);
-  });
-
-  it.each([
-    ["an upcoming one-off", oneOff, false, true],
-    ["a past one-off", oneOff, true, false],
-    ["a series with a session ahead, even from a past row", seriesAhead, true, true],
-    ["a finished series", seriesFinished, false, false],
-    ["a series whose end is unknown", seriesUnknown, true, true],
-  ])("enables Resend invite for %s: %s", (_label, session, isPast, enabled) => {
-    const resend = sessionActionsFor(session, { isCoach: true, isPast, now: NOW }).find(
-      (i) => i.action === SessionAction.ResendInvite
-    );
-    expect(resend?.enabled).toBe(enabled);
-  });
-
-  it("enables every other action", () => {
-    const items = sessionActionsFor(seriesAhead, { isCoach: true, isPast: false, now: NOW });
-    expect(items.filter((i) => i.action !== SessionAction.ResendInvite).every((i) => i.enabled)).toBe(true);
   });
 });
 
 describe("sessionActionLabel", () => {
   it.each([
-    [SessionAction.Reschedule, oneOff, "Reschedule"],
-    [SessionAction.ViewSeries, seriesAhead, "View series"],
-    [SessionAction.EditSeries, seriesAhead, "Edit series"],
-    [SessionAction.ShareLink, oneOff, "Share link"],
-    [SessionAction.ResendInvite, oneOff, "Resend invite"],
-    [SessionAction.ResendInvite, seriesAhead, "Resend series invite"],
-    [SessionAction.DeleteSession, oneOff, "Delete session"],
-    [SessionAction.DeleteSeries, seriesAhead, "Delete series"],
-  ])("labels %s", (action, session, label) => {
-    expect(sessionActionLabel(action, session)).toBe(label);
+    [SessionAction.OpenSession, oneOff, COACH_UPCOMING, "Open session"],
+    [SessionAction.Reschedule, oneOff, COACH_UPCOMING, "Reschedule…"],
+    [SessionAction.ViewSeries, inSeries, COACH_UPCOMING, "View series"],
+    [SessionAction.EditSeries, inSeries, COACH_UPCOMING, "Edit series…"],
+    [SessionAction.ShareLink, oneOff, COACH_UPCOMING, "Share link"],
+    [SessionAction.ResendInvite, oneOff, COACH_UPCOMING, "Resend invite"],
+    [SessionAction.ResendInvite, inSeries, COACH_UPCOMING, "Resend series invite"],
+    [SessionAction.DeleteSession, oneOff, COACH_UPCOMING, "Cancel session…"],
+    [SessionAction.DeleteSession, oneOff, COACH_PAST, "Remove session…"],
+    [SessionAction.DeleteSeries, inSeries, COACH_UPCOMING, "Cancel series…"],
+  ])("labels %s", (action, session, context, label) => {
+    expect(sessionActionLabel(action, session, context)).toBe(label);
+  });
+
+  it("never says Delete", () => {
+    const labels = [COACH_UPCOMING, COACH_PAST].flatMap((context) =>
+      sessionActionsFor(inSeries, context).map((i) => sessionActionLabel(i.action, inSeries, context))
+    );
+    expect(labels.join(" ")).not.toMatch(/delete/i);
   });
 });
 
-describe("sessionActionHint", () => {
-  it("explains a disabled Resend invite and nothing else", () => {
-    const items = sessionActionsFor(seriesFinished, { isCoach: true, isPast: false, now: NOW });
-    const hints = items.map((i) => sessionActionHint(i));
-    const resendIndex = items.findIndex((i) => i.action === SessionAction.ResendInvite);
-    expect(hints[resendIndex]).toEqual(Some("No upcoming sessions"));
-    expect(hints.filter((_, i) => i !== resendIndex).every((h) => h.none)).toBe(true);
-  });
-
-  it("is None for an enabled Resend invite", () => {
-    const resend = sessionActionsFor(oneOff, { isCoach: true, isPast: false, now: NOW }).find(
-      (i) => i.action === SessionAction.ResendInvite
-    );
-    expect(resend && sessionActionHint(resend)).toEqual(None);
+describe("sessionRemovalFor", () => {
+  it("cancels an upcoming session and removes a past one", () => {
+    expect(sessionRemovalFor(false)).toBe(SessionRemoval.Cancel);
+    expect(sessionRemovalFor(true)).toBe(SessionRemoval.Remove);
   });
 });

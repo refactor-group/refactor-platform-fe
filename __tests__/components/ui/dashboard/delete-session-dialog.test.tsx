@@ -1,111 +1,73 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { DeleteSessionDialog } from "@/components/ui/dashboard/delete-session-dialog";
+import { SessionRemoval } from "@/lib/session-actions";
 import { createMockEnrichedSession } from "../../../test-utils";
 
-// ── Standalone tests for the dialog ──────────────────────────────────────
-//
-// The card-level integration tests cover the wire-up (which menu fires what,
-// which mutation runs on confirm, which toast surfaces on failure). These
-// tests pin behavior that's hard to exercise through the card because the
-// mutation mock resolves synchronously — primarily the `isDeleting`
-// in-flight state and the unified dialog copy.
+function renderDialog(overrides: Partial<React.ComponentProps<typeof DeleteSessionDialog>> = {}) {
+  const props = {
+    session: createMockEnrichedSession({ id: "s1", date: "2099-03-15T14:00:00Z" }),
+    removal: SessionRemoval.Cancel,
+    participantName: "Alex Chen",
+    userTimezone: "UTC",
+    isDeleting: false,
+    onCancel: vi.fn(),
+    onConfirm: vi.fn(),
+    ...overrides,
+  };
+  render(<DeleteSessionDialog {...props} />);
+  return props;
+}
 
 describe("DeleteSessionDialog", () => {
-  function renderDialog(
-    overrides: Partial<React.ComponentProps<typeof DeleteSessionDialog>> = {}
-  ) {
-    const session = createMockEnrichedSession({
-      id: "s1",
-      date: "2099-03-15T14:00:00Z",
-    });
-    const onCancel = vi.fn();
-    const onConfirm = vi.fn();
-    render(
-      <DeleteSessionDialog
-        session={session}
-        participantName="Alex Chen"
-        userTimezone="UTC"
-        isDeleting={false}
-        onCancel={onCancel}
-        onConfirm={onConfirm}
-        {...overrides}
-      />
-    );
-    return { onCancel, onConfirm };
-  }
-
-  it("does not render the dialog when `session` is undefined", () => {
-    render(
-      <DeleteSessionDialog
-        session={undefined}
-        participantName=""
-        userTimezone="UTC"
-        isDeleting={false}
-        onCancel={vi.fn()}
-        onConfirm={vi.fn()}
-      />
-    );
-    expect(
-      screen.queryByRole("alertdialog", {
-        name: /delete this coaching session/i,
-      })
-    ).not.toBeInTheDocument();
+  it("renders nothing when no session is pending", () => {
+    renderDialog({ session: undefined });
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
-  it("uses the unified copy that names the cascading loss explicitly", () => {
-    // The dialog deliberately uses the same copy for upcoming and previous
-    // sessions — one mental model, one piece of copy. For upcoming sessions
-    // the cascading-loss disclosure is informational (none yet); for
-    // previous sessions it's load-bearing. Either way, the user gets a
-    // consistent, irreversibility-aware confirmation.
+  it("asks to cancel an upcoming session, with Keep session as the way out", () => {
     renderDialog();
-    expect(
-      screen.getByText(/notes and completed actions/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/can't be undone/i)
-    ).toBeInTheDocument();
+    const dialog = screen.getByRole("alertdialog", { name: "Cancel this coaching session?" });
+    expect(dialog).toHaveTextContent("Alex Chen");
+    expect(dialog).toHaveTextContent(/notes and actions/);
+    expect(dialog).toHaveTextContent("can't be undone");
+    expect(screen.getByRole("button", { name: "Cancel session" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Keep session" })).toBeInTheDocument();
   });
 
-  it("includes the participant name in the body", () => {
-    renderDialog({ participantName: "Bob Belderbos" });
-    expect(screen.getByText("Bob Belderbos")).toBeInTheDocument();
+  it("asks to remove a past session", () => {
+    renderDialog({ removal: SessionRemoval.Remove });
+    const dialog = screen.getByRole("alertdialog", { name: "Remove this coaching session?" });
+    expect(dialog).toHaveTextContent(/notes and actions/);
+    expect(screen.getByRole("button", { name: "Remove session" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Keep session" })).toBeInTheDocument();
   });
 
-  it("invokes onConfirm but keeps the dialog open across the await boundary so isDeleting can render", () => {
+  it.each([SessionRemoval.Cancel, SessionRemoval.Remove])("never says Delete (%s)", (removal) => {
+    renderDialog({ removal });
+    expect(screen.getByRole("alertdialog")).not.toHaveTextContent(/delet/i);
+  });
+
+  it("confirms without closing, so the in-flight label can show", () => {
     const { onConfirm } = renderDialog();
-    fireEvent.click(
-      screen.getByRole("button", { name: /^delete session$/i })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel session" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    // Dialog is still mounted — closing is the parent's responsibility once
-    // the mutation settles. Without `e.preventDefault()` in the click
-    // handler, AlertDialogAction would close immediately, throwing away the
-    // "Deleting…" affordance.
-    expect(
-      screen.getByRole("alertdialog", {
-        name: /delete this coaching session/i,
-      })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
 
-  it("invokes onCancel when Cancel is clicked", () => {
-    const { onCancel } = renderDialog();
-    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+  it("Keep session calls onCancel once", () => {
+    const { onCancel, onConfirm } = renderDialog();
+    fireEvent.click(screen.getByRole("button", { name: "Keep session" }));
     expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it("disables both buttons while isDeleting and swaps the confirm label", () => {
-    renderDialog({ isDeleting: true });
-    const cancel = screen.getByRole("button", { name: /cancel/i });
-    const confirm = screen.getByRole("button", { name: /deleting/i });
-    expect(cancel).toBeDisabled();
-    expect(confirm).toBeDisabled();
-    // Sanity: the at-rest confirm copy isn't visible during the in-flight
-    // window — it's been replaced by the in-flight label.
-    expect(
-      screen.queryByRole("button", { name: /^delete session$/i })
-    ).not.toBeInTheDocument();
+  it.each([
+    [SessionRemoval.Cancel, "Cancelling…"],
+    [SessionRemoval.Remove, "Removing…"],
+  ])("disables both buttons while in flight (%s)", (removal, busy) => {
+    renderDialog({ removal, isDeleting: true });
+    expect(screen.getByRole("button", { name: "Keep session" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: busy })).toBeDisabled();
   });
 });

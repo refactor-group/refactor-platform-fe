@@ -9,8 +9,8 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | Phase | Scope | State |
 | --- | --- | --- |
 | 1a | Extract `useNow` and the session actions, with no behavior change | Done (`aea3a6b8`), approved |
-| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | In progress |
-| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Not started |
+| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (`57a8c48e`), approved |
+| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | In progress |
 | 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Not started |
 | 3 | Prepare pill, Ready footer, live note | Not started |
 | 4 | Person filter, chip, dimmed cards | Not started |
@@ -105,6 +105,14 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - An Undo means nothing is due. Claims follow `claim_due_reminders`.
   - The reminder sweep skips sessions whose new time hasn't been announced yet.
   - Board topic: `SessionRescheduleNoticeSettle`.
+
+## Phase 1c rules
+
+- The menu follows D1 and D17 exactly. An upcoming session the viewer coaches gets every item. A past one gets Open session and Remove session…. A session the viewer is coached in gets Open session only.
+- Resend invite therefore never shows on a past card, so its disabled state and hint are deleted.
+- Menu test ids become `session-action-<action>`, since the row is gone.
+- The Prepare pill links to the session page now (D2), so PR 3 keeps only what's left of it.
+- `DashboardContainer` loses its `locale` prop, which only the old card used.
 
 ## Follow-ups
 

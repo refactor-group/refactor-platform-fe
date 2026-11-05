@@ -104,7 +104,6 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
     (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
     (route) => route.fulfill(json([EHAB_TODAY]))
   )
-  await page.route('**/coaching_sessions/counts**', (route) => route.fulfill(json({ counts: [] })))
   await page.route(
     (url) => url.pathname === `/coaching_sessions/${DANIEL_KICKOFF.id}`,
     (route) => route.fulfill(json(DANIEL_KICKOFF))
