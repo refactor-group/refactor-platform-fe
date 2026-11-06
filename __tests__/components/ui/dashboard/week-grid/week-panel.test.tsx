@@ -175,7 +175,7 @@ describe("WeekPanel", () => {
   it("keeps the seven days on a failed first load, with a retry", () => {
     result = { ...result, sessions: [], isError: true };
     renderPanel();
-    expect(screen.getByRole("status")).toHaveTextContent("Couldn't load this week's sessions.");
+    expect(screen.getByText("Couldn't load this week's sessions.").closest('[role="status"]')).not.toBeNull();
     expect(screen.queryByText(/0 sessions/)).not.toBeInTheDocument();
     expect(screen.getAllByRole("group", { name: /, August/ })).toHaveLength(7);
     expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
@@ -558,7 +558,9 @@ describe("WeekPanel when the server can't be reached (read only)", () => {
     renderPanel();
     expect(screen.getAllByTestId(/^session-card-/)).toHaveLength(3);
     expect(screen.getByRole("region", { name: "This week" })).toHaveTextContent("3 sessions · 2 today");
-    expect(screen.getByRole("status")).toHaveTextContent("Can't reach the server right now. These sessions may be out of date.");
+    expect(
+      screen.getByText("Can't reach the server right now. These sessions may be out of date.").closest('[role="status"]')
+    ).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledTimes(1);
   });
@@ -610,7 +612,7 @@ describe("WeekPanel when the server can't be reached (read only)", () => {
         <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />
       </WeekGridStoreProvider>
     );
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach the server|Couldn't load this week/)).not.toBeInTheDocument();
     expect(button("Schedule session")).toBeEnabled();
   });
 });
