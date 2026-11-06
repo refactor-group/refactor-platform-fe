@@ -186,6 +186,18 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
     - Anything else is ignored.
   - **Trailing click:** a drag never also counts as a click.
 
+## Offline (read only), Jim 2026-11-06
+
+When the session read fails, the panel keeps working instead of collapsing to an error.
+- **Already-loaded week:** SWR still holds the sessions, so they stay on screen with "Can't reach the server right now. These sessions may be out of date." and Try again.
+- **Week never loaded:** it shows the seven empty days, with "Couldn't load this week's sessions." and Try again.
+- **Read only either way:**
+  - no drag, Move, single-click reschedule or empty-day Schedule;
+  - Schedule session is disabled;
+  - the menu offers Open session only.
+- **Still works:** the filter, and paging to weeks already loaded.
+- It returns to normal on the next successful read. Nothing is saved to disk, so it doesn't survive a reload.
+
 ## Follow-ups
 
 - 1c: remove `useSessionActions.openSeries`, the row's copy of the action switch, and the two comments naming the row and the card, once the buckets are gone.

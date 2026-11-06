@@ -172,12 +172,13 @@ describe("WeekPanel", () => {
     expect(typeof actionsInput.onSessionsChanged).toBe("function");
   });
 
-  it("shows an error with a retry instead of an empty week", () => {
+  it("keeps the seven days on a failed first load, with a retry", () => {
     result = { ...result, sessions: [], isError: true };
     renderPanel();
-    expect(screen.getByText("Couldn't load this week's sessions.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Couldn't load this week's sessions.");
     expect(screen.queryByText(/0 sessions/)).not.toBeInTheDocument();
-    expect(screen.queryAllByRole("group", { name: /, August/ })).toHaveLength(0);
+    expect(screen.getAllByRole("group", { name: /, August/ })).toHaveLength(7);
+    expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledTimes(1);
   });
@@ -545,5 +546,71 @@ describe("WeekPanel moved cards (D10)", () => {
     expect(screen.getByLabelText("moved count")).toHaveTextContent("1");
     rerender(tree(false));
     expect(screen.getByLabelText("moved count")).toHaveTextContent("0");
+  });
+});
+
+describe("WeekPanel when the server can't be reached (read only)", () => {
+  beforeEach(() => {
+    result = { ...result, isError: true };
+  });
+
+  it("keeps showing the sessions it already loaded, with a notice and a retry", () => {
+    renderPanel();
+    expect(screen.getAllByTestId(/^session-card-/)).toHaveLength(3);
+    expect(screen.getByRole("region", { name: "This week" })).toHaveTextContent("3 sessions · 2 today");
+    expect(screen.getByRole("status")).toHaveTextContent("Can't reach the server right now. These sessions may be out of date.");
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables scheduling and hides the empty-day schedule", () => {
+    renderPanel();
+    expect(button("Schedule session")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
+  });
+
+  it("offers only Open session in the menu, and a single click does nothing", () => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(NOW);
+    renderPanel();
+    fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual(["Open session"]);
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    fireEvent.click(screen.getByTestId("session-card-thursday"));
+    act(() => vi.advanceTimersByTime(260));
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("doesn't let cards drag", () => {
+    renderPanel();
+    expect(screen.getByTestId("session-card-thursday")).toHaveAttribute("data-draggable", "false");
+  });
+
+  it("still filters and pages", () => {
+    selectedPerson = Some(SAM);
+    renderPanel();
+    expect(screen.getByTestId("session-card-thursday")).toHaveAttribute("data-dimmed", "true");
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("region", { name: "Next week" })).toBeInTheDocument();
+  });
+
+  it("offers no Move in the agenda", () => {
+    wide = false;
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "Thursday, August 20" }));
+    expect(within(screen.getByTestId("session-card-thursday")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Open session" })).toBeInTheDocument();
+  });
+
+  it("goes back to normal once a read succeeds", () => {
+    const { rerender } = renderPanel();
+    result = { ...result, isError: false };
+    rerender(
+      <WeekGridStoreProvider>
+        <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />
+      </WeekGridStoreProvider>
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(button("Schedule session")).toBeEnabled();
   });
 });
