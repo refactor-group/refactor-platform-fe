@@ -42,6 +42,8 @@ export interface CardView {
   note: CardNote;
   footer: CardFooter;
   canManage: boolean;
+  /** Not ended, or started today: still open to reschedule, drag and Move (D18). */
+  editable: boolean;
 }
 
 export interface GridCard extends CardView {
@@ -53,21 +55,23 @@ const MINUTES_PER_HOUR = 60;
 export function cardView(session: EnrichedCoachingSession, context: CardContext): CardView {
   const urgency = calculateSessionUrgency(session, context.now);
   const start = sessionStartIn(session.date, context.timezone);
+  const tense = tenseOf(urgency);
   const topicCount = session.topics?.length ?? 0;
   const participant = getSessionParticipantInfo(session, context.viewerId);
   return {
     session,
     start,
     name: participant?.participantName ?? "Unknown",
-    tense: tenseOf(urgency),
+    tense,
     note: noteOf(urgency, minutesUntil(start, context.now), topicCount),
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,
+    editable: tense !== CardTense.Past || start.hasSame(context.now.setZone(context.timezone), "day"),
   };
 }
 
 export function cardClick(view: CardView): CardClick {
-  return view.tense !== CardTense.Past && view.canManage ? CardClick.Reschedule : CardClick.Nothing;
+  return view.editable && view.canManage ? CardClick.Reschedule : CardClick.Nothing;
 }
 
 export function cardNoteText(note: CardNote): string {

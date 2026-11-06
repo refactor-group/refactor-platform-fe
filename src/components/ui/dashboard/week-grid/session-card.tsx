@@ -51,7 +51,7 @@ export function SessionCard({
 }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const isAgenda = layout === SessionCardLayout.Agenda;
-  const canMove = !isPast && view.canManage;
+  const canMove = view.editable && view.canManage;
   const draggable = canMove && justDragged.some;
   const time = timeOfDay(view.start);
   const clicks = useClickOrDoubleClick(
