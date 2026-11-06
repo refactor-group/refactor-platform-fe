@@ -13,8 +13,8 @@ const at = (utc: string) => createMockEnrichedSession({ date: utc, duration_minu
 const ENDED_TODAY = at("2026-08-18T15:00:00");
 // 10:00 AM yesterday.
 const YESTERDAY = at("2026-08-17T15:00:00");
-// 12:30 AM today in Chicago, which is still the 17th in UTC.
-const JUST_AFTER_MIDNIGHT = at("2026-08-18T05:30:00");
+// 9:00 PM yesterday in Chicago, which is already today in UTC.
+const LATE_YESTERDAY = at("2026-08-18T02:00:00");
 const TOMORROW = at("2026-08-19T15:00:00");
 
 describe("editable", () => {
@@ -29,7 +29,7 @@ describe("editable", () => {
   });
 
   it("judges today in the viewer's zone, not UTC", () => {
-    expect(cardView(JUST_AFTER_MIDNIGHT, COACH).editable).toBe(true);
+    expect(cardView(LATE_YESTERDAY, COACH).editable).toBe(false);
   });
 
   it("is false for a session from an earlier day", () => {
