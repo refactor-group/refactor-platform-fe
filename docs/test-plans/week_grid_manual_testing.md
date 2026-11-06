@@ -130,6 +130,16 @@ Reload with the user sessions request blocked.
 
 **Pass:** the panel shows an error state with a retry, not an empty week. Unblock it and retry: the week loads.
 
+### Case 1.14: now line
+
+On the current week, look at today's column, then wait a minute.
+
+**Pass:**
+- A thin brand line with the current time sits between the sessions that have started and those still to come. Before any session it sits on top, and after the last one it sits at the bottom.
+- The time on it advances without a reload.
+- No other day or week shows it.
+- On a phone, today's agenda shows the same line.
+
 ## 3. Part 2: Navigation and scheduling (PR 2)
 
 ### Case 2.1: paging

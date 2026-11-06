@@ -654,3 +654,39 @@ describe("WeekPanel sessions that ended earlier today", () => {
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual(["Open session", "Remove session…"]);
   });
 });
+
+describe("WeekPanel now line", () => {
+  const nowLine = () => screen.getByRole("separator", { name: "Now, 1:45 PM" });
+
+  it("sits in today's column between the session that started and the one still to come", () => {
+    renderPanel();
+    const today = day("Tuesday, August 18");
+    const order = Array.from(today.querySelectorAll('[data-testid^="session-card-"], [role="separator"]')).map(
+      (el) => el.getAttribute("data-testid") ?? "now"
+    );
+    expect(order).toEqual(["session-card-early-today", "now", "session-card-late-today"]);
+    expect(within(today).getByRole("separator", { name: "Now, 1:45 PM" })).toHaveTextContent("1:45 PM");
+  });
+
+  it("shows only once, and never on another day or week", () => {
+    renderPanel();
+    expect(screen.getAllByRole("separator", { name: /^Now,/ })).toHaveLength(1);
+    expect(within(day("Thursday, August 20")).queryByRole("separator")).not.toBeInTheDocument();
+    fireEvent.click(button("Next week"));
+    expect(screen.queryByRole("separator", { name: /^Now,/ })).not.toBeInTheDocument();
+  });
+
+  it("sits above the dashed box on an empty today", () => {
+    result = { ...result, sessions: [THURSDAY] };
+    renderPanel();
+    expect(within(day("Tuesday, August 18")).getByRole("separator", { name: "Now, 1:45 PM" })).toBeInTheDocument();
+  });
+
+  it("shows in today's agenda below 1024px too", () => {
+    wide = false;
+    renderPanel();
+    expect(nowLine()).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Thursday, August 20" }));
+    expect(screen.queryByRole("separator", { name: /^Now,/ })).not.toBeInTheDocument();
+  });
+});
