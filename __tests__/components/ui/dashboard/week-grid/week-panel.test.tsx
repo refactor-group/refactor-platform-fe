@@ -56,6 +56,9 @@ vi.mock("@/lib/hooks/use-week-filter", () => ({
   useWeekFilter: () => ({ people: [ALEX, SAM], selected: selectedPerson, select: selectPerson, clear: clearPerson }),
 }));
 
+const moveSession = vi.fn();
+vi.mock("@/lib/hooks/use-move-session", () => ({ useMoveSession: () => moveSession }));
+
 let wide = true;
 vi.mock("@/lib/hooks/use-media-query", () => ({
   useMediaQuery: (query: string) => (query === "(min-width: 1024px)" ? wide : false),
@@ -442,5 +445,68 @@ describe("WeekPanel below 1024px", () => {
     selectedPerson = Some(SAM);
     renderPanel();
     expect(screen.getByTestId("session-card-late-today")).toHaveAttribute("data-dimmed", "true");
+  });
+});
+
+describe("WeekPanel Move sheet below 1024px", () => {
+  beforeEach(() => {
+    wide = false;
+  });
+
+  const pill = (name: string) => screen.getByRole("button", { name });
+  const moveSheet = () => screen.getByRole("dialog", { name: "Move Alex's session" });
+
+  it("offers Move on an upcoming agenda card the viewer coaches, and not on a past one", () => {
+    renderPanel();
+    expect(within(screen.getByTestId("session-card-early-today")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
+    fireEvent.click(pill("Thursday, August 20"));
+    expect(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" })).toBeInTheDocument();
+  });
+
+  it("offers no Move to someone who coaches nobody", () => {
+    isACoach = false;
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    expect(within(screen.getByTestId("session-card-thursday")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
+  });
+
+  it("moves the session to a picked slot through the sheet", () => {
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    expect(within(moveSheet()).getByRole("button", { name: "10:00 AM, current" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "11:00 AM" }));
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "Move session" }));
+    expect(moveSession).toHaveBeenCalledTimes(1);
+    const [{ session, name, to }] = moveSession.mock.calls[0];
+    expect(session).toBe(THURSDAY);
+    expect(name).toBe("Alex Chen");
+    expect(to.toISO()).toBe(DateTime.fromISO("2026-08-20T11:00", { zone: TZ }).toISO());
+    expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
+  });
+
+  it("opens the same sheet from the long-press menu's Move…", () => {
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Move…" }));
+    expect(moveSheet()).toBeInTheDocument();
+  });
+
+  it("names other sessions' slots as taken", () => {
+    result = { ...result, sessions: [THURSDAY, { ...SAM_FRIDAY, id: "sam-thursday", date: "2026-08-20T17:00:00" }] };
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    const taken = within(moveSheet()).getByRole("button", { name: /^12:00 PM/ });
+    expect(taken).toBeDisabled();
+  });
+});
+
+describe("WeekPanel desktop menu", () => {
+  it("has no Move… on the wide layout", () => {
+    renderPanel();
+    fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
+    expect(screen.queryByRole("menuitem", { name: "Move…" })).not.toBeInTheDocument();
   });
 });

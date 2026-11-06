@@ -13,10 +13,11 @@ import {
 const oneOff = createMockEnrichedSession();
 const inSeries = createMockEnrichedSession({ coaching_session_series_id: Some("series-1") });
 
-const COACH_UPCOMING = { isCoach: true, isPast: false };
-const COACH_PAST = { isCoach: true, isPast: true };
-const COACHEE_UPCOMING = { isCoach: false, isPast: false };
-const COACHEE_PAST = { isCoach: false, isPast: true };
+const COACH_UPCOMING = { isCoach: true, isPast: false, isCompact: false };
+const COACH_PAST = { isCoach: true, isPast: true, isCompact: false };
+const COACHEE_UPCOMING = { isCoach: false, isPast: false, isCompact: false };
+const COACHEE_PAST = { isCoach: false, isPast: true, isCompact: false };
+const COACH_UPCOMING_COMPACT = { isCoach: true, isPast: false, isCompact: true };
 
 const actions = (session = oneOff, context = COACH_UPCOMING) =>
   sessionActionsFor(session, context).map((i) => i.action);
@@ -68,6 +69,30 @@ describe("sessionActionsFor", () => {
       SessionActionGroup.Destructive,
       SessionActionGroup.Destructive,
     ]);
+  });
+});
+
+describe("sessionActionsFor on a compact layout", () => {
+  it("adds Move after Reschedule for an upcoming session the viewer coaches", () => {
+    expect(actions(oneOff, COACH_UPCOMING_COMPACT)).toEqual([
+      SessionAction.OpenSession,
+      SessionAction.Reschedule,
+      SessionAction.Move,
+      SessionAction.ShareLink,
+      SessionAction.ResendInvite,
+      SessionAction.DeleteSession,
+    ]);
+    const move = sessionActionsFor(oneOff, COACH_UPCOMING_COMPACT).find((i) => i.action === SessionAction.Move);
+    expect(move?.group).toBe(SessionActionGroup.Schedule);
+  });
+
+  it("never offers Move on a past session or to a coachee", () => {
+    expect(actions(oneOff, { ...COACH_PAST, isCompact: true })).not.toContain(SessionAction.Move);
+    expect(actions(oneOff, { ...COACHEE_UPCOMING, isCompact: true })).not.toContain(SessionAction.Move);
+  });
+
+  it("labels it Move…", () => {
+    expect(sessionActionLabel(SessionAction.Move, oneOff, COACH_UPCOMING_COMPACT)).toBe("Move…");
   });
 });
 

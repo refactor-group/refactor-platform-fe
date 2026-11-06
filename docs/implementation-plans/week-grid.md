@@ -17,7 +17,7 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | BE 1 | Working hours on the user (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); backend builds this first |
 | BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
 | 5 | Drag to move, Undo, working hours in Settings and the dialog | Not started |
-| 6 | Mobile day strip, agenda, Move sheet | 6a (strip, agenda, Back to this week) in progress on `feat/week-grid-mobile`; 6b (Move sheet, with the slot model and move write PR 5 reuses) next |
+| 6 | Mobile day strip, agenda, Move sheet | 6a done (`feat/week-grid-mobile`, through `3cbb495e`); 6b (Move sheet, slot model, move write) in progress |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Not started |
 
 PRs 1 and 2 merge together, and each later PR merges on its own (D13). Each PR opens as a draft. The results of each PR's manual test part go in its description. `docs/test-plans/week_grid_manual_testing.md` is written up front for the whole feature. It has one part per PR plus a final end-to-end pass (Part 9). It's frozen acceptance, so a PR may correct a case only with Jim's approval.
@@ -157,6 +157,15 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - **Selected day:** the store holds `selectedDay`, and paging clears it. The default is today on the current week, otherwise Monday. Like the week offset, it isn't persisted.
 - **Agenda cards:** these are the session cards with an Open session button added. Long-press opens the same context menu. An empty day reads "No sessions", with "+ Schedule" from today on.
 - **"Back to this week":** a button below the header on narrow screens, once you've paged away.
+- **6b, the slot model:** `slots.ts` (`daySlots`) builds the 30-minute starts from the start of working hours to the end, inclusive, so 8:00 to 17:30 gives 20 slots.
+  - Each slot is free, taken (with the holder's first name), current or past.
+  - The moving session's own slot is always included, even outside working hours.
+  - Drag (PR 5) reuses it.
+- **6b, working hours:** `useWorkingHours()` returns the backend's future default (8:00 to 17:30) until BE 1 lands, and then reads the user. The dialog keeps `DEFAULT_WORKING_HOURS` (9 to 5) until PR 5 swaps it, per D5.
+- **6b, move write:** `writeSessionMove` is extracted from the dialog's submit, so the dialog, the sheet and drag all write a move the same way.
+  - `useMoveSession` refreshes every `/coaching_sessions` read, marks the card "Moved" (D10), and shows "Moved Ehab to Thu, 10:00 AM · this session only" with Undo.
+  - The moved marks clear when the week panel unmounts.
+- **6b, entry points:** "Move" on agenda cards, and "Move…" in the narrow-layout menu, for upcoming sessions the viewer coaches. The sheet only allows free slots, so a clash can't happen there.
 
 ## Follow-ups
 

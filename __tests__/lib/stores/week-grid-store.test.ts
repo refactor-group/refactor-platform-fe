@@ -73,6 +73,20 @@ describe("week grid store", () => {
     expect(store.getState().selectedDay).toEqual(None);
   });
 
+  it("remembers moved sessions until cleared, and never stores them", () => {
+    const store = createWeekGridStore();
+    store.getState().markMoved("s-1");
+    store.getState().markMoved("s-2");
+    store.getState().markMoved("s-1");
+    expect(store.getState().recentlyMoved).toEqual(["s-1", "s-2"]);
+    expect(createWeekGridStore().getState().recentlyMoved).toEqual([]);
+    store.getState().clearMoved();
+    expect(store.getState().recentlyMoved).toEqual([]);
+    store.getState().markMoved("s-3");
+    store.getState().resetWeekGrid();
+    expect(store.getState().recentlyMoved).toEqual([]);
+  });
+
   it("gives each store its own week", () => {
     const a = createWeekGridStore();
     const b = createWeekGridStore();
