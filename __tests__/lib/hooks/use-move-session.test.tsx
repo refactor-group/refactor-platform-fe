@@ -18,7 +18,7 @@ vi.mock("@/lib/hooks/use-sse-cache-invalidation", async (importOriginal) => ({
   revalidateEndpointCaches: (...a: unknown[]) => revalidate(...a),
 }));
 
-const toast = Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() });
+const { toast } = vi.hoisted(() => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 vi.mock("@/lib/toast", () => ({ toast }));
 
 const TZ = "America/Chicago";
