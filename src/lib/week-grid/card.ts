@@ -92,6 +92,11 @@ export function markMoved(view: CardView): CardView {
   return { ...view, tense, note: { kind: "moved" } };
 }
 
+/** A card nobody can change: no reschedule, no drag, and a menu of Open session only. */
+export function readOnlyView(view: CardView): CardView {
+  return { ...view, canManage: false };
+}
+
 function tenseOf(urgency: SessionUrgency): CardTense {
   switch (urgency) {
     case SessionUrgency.Past:

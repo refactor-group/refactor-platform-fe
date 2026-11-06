@@ -23,7 +23,15 @@ import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import { SessionAction } from "@/lib/session-actions";
 import { MoveScope } from "@/lib/scheduling";
 import { firstNameOf } from "@/lib/scheduling-copy";
-import { CardClick, cardClick, cardView, markMoved, type CardView, type GridCard } from "@/lib/week-grid/card";
+import {
+  CardClick,
+  cardClick,
+  cardView,
+  markMoved,
+  readOnlyView,
+  type CardView,
+  type GridCard,
+} from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
 import { slotsForMove, type MoveSlotsContext } from "@/lib/week-grid/slots";
 import {
@@ -64,13 +72,13 @@ function useWeekAt(offset: number, now: DateTime, timezone: string): Week {
   );
 }
 
-function useWeekNavigation(isCurrentWeek: boolean, canSchedule: boolean, week: Week): WeekNavigation {
+function useWeekNavigation(isCurrentWeek: boolean, isCoach: boolean, week: Week): WeekNavigation {
   const { previousWeek, nextWeek, thisWeek } = useWeekGridStore((s) => s);
   const { hasEarlier, hasLater } = useWeekEdges(week);
   return {
     canGoEarlier: hasEarlier,
     // A coach can always page ahead to schedule into an empty week.
-    canGoLater: canSchedule || hasLater,
+    canGoLater: isCoach || hasLater,
     isCurrentWeek,
     onPrevious: previousWeek,
     onNext: nextWeek,
@@ -93,9 +101,12 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const weekOffset = useWeekGridStore((s) => s.weekOffset);
   const week = useWeekAt(weekOffset, now, timezone);
   const isCurrentWeek = weekOffset === CURRENT_WEEK;
-  const canSchedule = useAuthStore((s) => s.isACoach);
-  const navigation = useWeekNavigation(isCurrentWeek, canSchedule, week);
+  const isCoach = useAuthStore((s) => s.isACoach);
+  const navigation = useWeekNavigation(isCurrentWeek, isCoach, week);
   const { sessions, isLoading, isError, refresh } = useWeekSessions(week);
+  // SWR keeps the last sessions when a read fails, so they stay visible but can't be changed.
+  const readOnly = isError;
+  const canSchedule = isCoach && !readOnly;
   const viewerId = useAuthStore((s) => s.userId);
   const filter = useWeekFilter();
   const { selected } = filter;
@@ -118,11 +129,12 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
 
   const days = useMemo(() => {
     const cards = sessions.map((s): GridCard => {
-      const view = cardView(s, { viewerId, now, timezone });
+      const base = cardView(s, { viewerId, now, timezone });
+      const view = readOnly ? readOnlyView(base) : base;
       return { ...(recentlyMoved.includes(s.id) ? markMoved(view) : view), dimmed: isFilteredOut(s, selected) };
     });
     return groupByDay(cards, (c) => c.start, week, now);
-  }, [sessions, viewerId, now, timezone, week, selected, recentlyMoved]);
+  }, [sessions, viewerId, now, timezone, week, selected, recentlyMoved, readOnly]);
 
   const [moveTarget, setMoveTarget] = useState<Option<CardView>>(None);
   const openMove = useCallback(
@@ -169,14 +181,17 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     title: weekTitle(weekOffset, week),
     range: weekRange(week),
     navigation,
-    filter: canSchedule
+    filter: isCoach
       ? Some({ people: filter.people, selected, onSelect: filter.select, onClear: filter.clear })
       : None,
-    onSchedule: canSchedule ? Some(() => onSchedule(None)) : None,
+    onSchedule: isCoach ? Some(() => onSchedule(None)) : None,
+    readOnly,
   };
   const scheduleDay = canSchedule ? Some((day: DateTime) => onSchedule(Some(day))) : None;
   const noMatches = selected.some && visibleCount(days) === 0;
-  const subline = isLoading || isError ? None : Some(sublineFor(days, isCurrentWeek));
+  const hasSessions = sessions.length > 0;
+  // A failed read with nothing cached must not claim "0 sessions".
+  const subline = isLoading || (readOnly && !hasSessions) ? None : Some(sublineFor(days, isCurrentWeek));
 
   return (
     <section
@@ -186,10 +201,9 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     >
       <WeekPanelHeader {...header} subline={subline} />
       {!wide && !isCurrentWeek && <BackToThisWeek onClick={navigation.onThisWeek} />}
+      {!isLoading && readOnly && <ReadOnlyNotice hasSessions={hasSessions} onRetry={refresh} />}
       {isLoading ? (
         wide ? <WeekGridSkeleton /> : <DayAgendaSkeleton />
-      ) : isError ? (
-        <WeekPanelError onRetry={refresh} />
       ) : wide ? (
         <div className="relative">
           <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} />
@@ -291,11 +305,17 @@ function DayAgendaSkeleton() {
   );
 }
 
-function WeekPanelError({ onRetry }: { onRetry: () => void }) {
+function readOnlyNoticeText(hasSessions: boolean): string {
+  return hasSessions
+    ? "Can't reach the server right now. These sessions may be out of date."
+    : "Couldn't load this week's sessions.";
+}
+
+function ReadOnlyNotice({ hasSessions, onRetry }: { hasSessions: boolean; onRetry: () => void }) {
   return (
-    <div className="mt-6 flex flex-col items-start gap-3">
-      <p className="text-sm text-muted-foreground">Couldn&apos;t load this week&apos;s sessions.</p>
-      <Button variant="secondary" onClick={onRetry}>
+    <div role="status" className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <p className="text-sm text-muted-foreground">{readOnlyNoticeText(hasSessions)}</p>
+      <Button variant="secondary" size="sm" onClick={onRetry}>
         Try again
       </Button>
     </div>
