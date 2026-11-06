@@ -16,7 +16,7 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 4 | Person filter, chip, dimmed cards | Done (`feat/week-grid-filter`, through `d9961f3e`), approved |
 | BE 1 | Working hours on the user (rs) | refactor-platform-rs#472, verified by the frontend (`user_working_hours_fe_verified`) |
 | BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
-| 5 | Drag to move, Undo, working hours in Settings and the dialog | 5a done (`59923419`; live Settings check pending the backend); 5b (drag) in progress on `feat/week-grid-drag` |
+| 5 | Drag to move, Undo, working hours in Settings and the dialog | In review (`feat/week-grid-drag`, through `bdffa11f`); live checks wait on BE 2 (Part 8) and a live Settings save |
 | 6 | Mobile day strip, agenda, Move sheet | Done (`feat/week-grid-mobile`, through `085e2308`), approved |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Done (`feat/week-grid-roles`, `2af79d89`), approved; test plan 7.1 corrected to Open session only (Jim, 2026-11-06) |
 
@@ -192,5 +192,6 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - The store (week offset, filter, recently moved) comes with the first phase that reads it (PR 2), so it never ships unused.
 - Live uses the app's urgency levels: under way, imminent, or soon (within 2 hours). The handoff says "within the hour"; the shared thresholds win.
 
+- **Keyboard drag is weak:** Space, the arrows, then Space works, and screen readers hear "Picked up …", each slot, and the result. But it takes several presses to reach the next day, and the picked-up card's own day unfolds. A drop that never moved counts as "Not moved". Keyboard users are better served by the menu's Reschedule…; improve this only if it's asked for.
 - **Session glance (needs design):** a single click on a past card should open a dashboard dialog showing that session at a glance: its most important insights, actions assigned, suggested actions still waiting, agreements made, and topics discussed. Until it exists, the single click does nothing. The design system names a "Session glance" modal in the shared modal shell, and a bottom sheet on mobile, but there's no spec yet. It waits on a design handoff.
 - The backend's `/coaching_sessions/counts` loses its only caller after 1c. Raise it on the board.
