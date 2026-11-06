@@ -20,13 +20,12 @@ import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
 import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
 import { useWorkingHours } from "@/lib/hooks/use-working-hours";
-import { busySessions } from "@/lib/schedule-draft";
 import { SessionAction } from "@/lib/session-actions";
-import type { MoveScope, WorkingHours } from "@/lib/scheduling";
+import { MoveScope } from "@/lib/scheduling";
 import { firstNameOf } from "@/lib/scheduling-copy";
 import { CardClick, cardClick, cardView, markMoved, type CardView, type GridCard } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
-import { daySlots } from "@/lib/week-grid/slots";
+import { slotsForMove, type MoveSlotsContext } from "@/lib/week-grid/slots";
 import {
   agendaDay,
   groupByDay,
@@ -39,18 +38,17 @@ import {
 } from "@/lib/week-grid/week";
 import { siteConfig } from "@/site.config";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import { DayAgenda } from "./day-agenda";
 import { DayStrip } from "./day-strip";
 import { MoveSheet, type MoveSheetModel } from "./move-sheet";
 import type { SessionCardHandlers } from "./session-card";
 import type { OnSessionAction } from "./session-card-menu";
-import { WeekGrid, WEEK_GRID_CLASS } from "./week-grid";
+import { WeekGrid, WEEK_GRID_CLASS, type GridDrag } from "./week-grid";
 import { WeekPanelHeader, type WeekNavigation } from "./week-panel-header";
 
 export interface WeekPanelProps {
-  onReschedule: (session: EnrichedCoachingSession, scope?: MoveScope) => void;
+  onReschedule: (session: EnrichedCoachingSession, scope?: MoveScope, target?: Option<DateTime>) => void;
   onSeriesMutated: () => void;
   onSchedule: (date: Option<DateTime>) => void;
 }
@@ -80,24 +78,12 @@ function useWeekNavigation(isCurrentWeek: boolean, canSchedule: boolean, week: W
   };
 }
 
-interface MoveContext {
-  days: DayGroup<GridCard>[];
-  sessions: EnrichedCoachingSession[];
-  viewerId: Id;
-  timezone: string;
-  hours: WorkingHours;
-  now: DateTime;
-}
-
-function moveSheetModel(view: CardView, context: MoveContext): MoveSheetModel {
-  const { days, sessions, viewerId, timezone, hours, now } = context;
-  const busy = busySessions(sessions, viewerId, timezone);
-  const [moving] = busySessions([view.session], viewerId, timezone);
+function moveSheetModel(view: CardView, days: DayGroup<GridCard>[], context: MoveSlotsContext): MoveSheetModel {
   return {
     name: firstNameOf(view.name),
     current: view.start,
     days: days.map((d) => ({ day: d.day, past: d.isPast })),
-    slotsFor: (day) => daySlots({ day, moving, busy, hours, now }),
+    slotsFor: slotsForMove(view.session, context),
   };
 }
 
@@ -159,10 +145,14 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   );
 
   const hours = useWorkingHours();
-  const moveModel = moveTarget.some
-    ? Some(moveSheetModel(moveTarget.val, { days, sessions, viewerId, timezone, hours, now }))
-    : None;
+  const slotsContext = { sessions, viewerId, timezone, hours, now };
+  const moveModel = moveTarget.some ? Some(moveSheetModel(moveTarget.val, days, slotsContext)) : None;
   const moveSession = useMoveSession();
+  const drag: GridDrag = {
+    slotsFor: (session) => slotsForMove(session, slotsContext),
+    onMove: ({ session, name }, to) => moveSession({ session, name, to }),
+    onResolve: ({ session }, to) => onReschedule(session, MoveScope.This, Some(to)),
+  };
   const selectDay = useWeekGridStore((s) => s.selectDay);
   const closeMove = () => setMoveTarget(None);
   const confirmMove = (to: DateTime) => {
@@ -202,7 +192,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
         <WeekPanelError onRetry={refresh} />
       ) : wide ? (
         <div className="relative">
-          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} />
+          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} />
           {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
         </div>
       ) : (

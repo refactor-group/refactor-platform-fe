@@ -1,7 +1,8 @@
 "use client";
 
-import type { KeyboardEvent, SyntheticEvent } from "react";
+import type { KeyboardEvent, RefObject, SyntheticEvent } from "react";
 import Link from "next/link";
+import { useDraggable } from "@dnd-kit/core";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   type CardNote,
   type CardView,
 } from "@/lib/week-grid/card";
+import { type Option, None } from "@/types/option";
 import { SessionCardMenu, type OnSessionAction } from "./session-card-menu";
 
 export interface SessionCardHandlers {
@@ -33,12 +35,15 @@ export interface SessionCardProps extends SessionCardHandlers {
   view: CardView;
   dimmed?: boolean;
   layout?: SessionCardLayout;
+  /** Present where cards drag; true just after a drag, so its trailing click is ignored. */
+  justDragged?: Option<RefObject<boolean>>;
 }
 
 export function SessionCard({
   view,
   dimmed = false,
   layout = SessionCardLayout.Grid,
+  justDragged = None,
   onAction,
   onSelect,
   onOpen,
@@ -47,33 +52,48 @@ export function SessionCard({
   const isPast = view.tense === CardTense.Past;
   const isAgenda = layout === SessionCardLayout.Agenda;
   const canMove = !isPast && view.canManage;
+  const draggable = canMove && justDragged.some;
   const time = timeOfDay(view.start);
   const clicks = useClickOrDoubleClick(
     () => onSelect(view),
     () => onOpen(view)
   );
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: view.session.id, disabled: !draggable });
+  const onClick = () => {
+    if (justDragged.some && justDragged.val.current) return;
+    clicks.onClick();
+  };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && e.target === e.currentTarget) onOpen(view);
+    listeners?.onKeyDown?.(e);
   };
 
   return (
     <SessionCardMenu view={view} isCompact={isAgenda} onAction={onAction}>
       <div
+        ref={setNodeRef}
         data-testid={`session-card-${view.session.id}`}
         data-tense={view.tense}
         data-dimmed={String(dimmed)}
+        data-draggable={String(draggable)}
         tabIndex={0}
         aria-label={`${time}, ${view.name}`}
-        onClick={clicks.onClick}
+        {...(draggable && {
+          "aria-roledescription": attributes["aria-roledescription"],
+          "aria-describedby": attributes["aria-describedby"],
+        })}
+        {...listeners}
+        onClick={onClick}
         onDoubleClick={clicks.onDoubleClick}
         onKeyDown={onKeyDown}
         className={cn(
           "flex flex-col gap-1.5 rounded-xl p-[11px] outline-none",
           layout === SessionCardLayout.Grid && "min-h-[104px]",
-          !isPast && view.canManage && "cursor-pointer",
+          canMove && (draggable ? "cursor-grab" : "cursor-pointer"),
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           isPast ? "bg-well" : "bg-card shadow-card",
-          dimmed && "opacity-[.28]"
+          dimmed && "opacity-[.28]",
+          isDragging && "cursor-grabbing opacity-[.35] outline-dashed outline-1 outline-faint"
         )}
       >
         <span

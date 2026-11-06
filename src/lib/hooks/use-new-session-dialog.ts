@@ -41,7 +41,8 @@ import { clashFor, prefillWhen, scheduleHint, scheduleRail } from "@/lib/schedul
 import { seriesSlotStart } from "@/lib/session-window";
 import {
   MoveScope,
-  type StepKind,
+  StepKind,
+  type StepMode,
   busyOn,
   currentStep,
   nextStep,
@@ -149,7 +150,10 @@ export function useNewSessionDialog(
   const movable = !several && other !== undefined && other.relationship?.coach_id === data.userId;
   const overlap = { clash: clashSession, keepOnly: !movable, several, resolution };
 
-  const order = stepOrder(moving.some ? { kind: "move", appliesTo: inSeries, following } : { kind: "schedule" }, clash.some);
+  // A drop onto a taken slot opens on Resolve; hold it there until the busy read can find the overlap.
+  const awaitingClash = initial.step === StepKind.Resolve && data.availability.kind === "loading";
+  const mode: StepMode = moving.some ? { kind: "move", appliesTo: inSeries, following } : { kind: "schedule" };
+  const order = stepOrder(mode, clash.some || awaitingClash);
   const current = currentStep(order, step);
   const next = nextStep(order, current);
   const prev = prevStep(order, current);

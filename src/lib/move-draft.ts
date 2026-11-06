@@ -33,9 +33,13 @@ export function movePerson(session: EnrichedCoachingSession, userId: Id, entries
   });
 }
 
-/** The session's start as "HH:mm" on its day, in `timezone`. */
-export function moveStart(session: EnrichedCoachingSession, timezone: string): { day: DateTime; time: string } {
-  const start = sessionStartIn(session.date, timezone);
+/** The dropped target, else the session's start, as "HH:mm" on its day in `timezone`. */
+export function moveStart(
+  session: EnrichedCoachingSession,
+  target: Option<DateTime>,
+  timezone: string
+): { day: DateTime; time: string } {
+  const start = target.some ? target.val.setZone(timezone) : sessionStartIn(session.date, timezone);
   return { day: start.startOf("day"), time: start.toFormat("HH:mm") };
 }
 
