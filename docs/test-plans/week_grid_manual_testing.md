@@ -415,7 +415,7 @@ Log in as the coachee-only user.
 - There's no Schedule session button and no filter.
 - Empty days have no hover affordance, and cards don't drag.
 - Card click does nothing; double-click opens the session.
-- The context menu offers only Open session, Share link and View series.
+- The context menu offers only Open session, on upcoming and past cards alike.
 - Week arrows still page.
 
 ### Case 7.2: mixed
