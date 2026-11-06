@@ -201,6 +201,7 @@ describe("CoachingPreferencesSection", () => {
 
   describe("working hours", () => {
     beforeEach(() => {
+      mockUpdate.mockResolvedValue(undefined);
       mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
       mockUserState = {
         ...mockUserState,
