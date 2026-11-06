@@ -153,7 +153,7 @@ beforeEach(() => {
 
 function renderMove(scope = MoveScope.This) {
   const onClose = vi.fn();
-  render(<NewSessionDialog request={{ kind: "move", session: E_18, scope }} onClose={onClose} />);
+  render(<NewSessionDialog request={{ kind: "move", session: E_18, scope, target: None }} onClose={onClose} />);
   return onClose;
 }
 

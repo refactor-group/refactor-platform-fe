@@ -16,7 +16,7 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 4 | Person filter, chip, dimmed cards | Done (`feat/week-grid-filter`, through `d9961f3e`), approved |
 | BE 1 | Working hours on the user (rs) | refactor-platform-rs#472, verified by the frontend (`user_working_hours_fe_verified`) |
 | BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
-| 5 | Drag to move, Undo, working hours in Settings and the dialog | 5a (working hours end to end) in progress on `feat/week-grid-drag`; 5b (drag) next |
+| 5 | Drag to move, Undo, working hours in Settings and the dialog | 5a done (`59923419`; live Settings check pending the backend); 5b (drag) in progress on `feat/week-grid-drag` |
 | 6 | Mobile day strip, agenda, Move sheet | Done (`feat/week-grid-mobile`, through `085e2308`), approved |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Done (`feat/week-grid-roles`, `2af79d89`), approved; test plan 7.1 corrected to Open session only (Jim, 2026-11-06) |
 
@@ -176,7 +176,15 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - The New session dialog's after-hours checks and suggestions use it, which retires `DEFAULT_WORKING_HOURS` (D5).
   - Settings > Coaching preferences gets two half-hour selects that autosave together, like the default duration.
   - Tests that relied on 9 to 5 now pass an explicit `NINE_TO_FIVE` fixture or mock a 9-to-5 user.
-- **5b, drag:** see its handoff.
+- **5b, drag (wide layout only):**
+  - **Sensors:** dnd-kit with `MouseSensor` (6px to start, left button only) and `KeyboardSensor`. Touch never drags, and right-click never drags.
+  - **What drags:** upcoming cards the viewer coaches (`data-draggable`).
+  - **While dragging:** the hovered non-past day unfolds into `daySlots` (`drop-slot-<date>-<HH:mm>`), and a tilted ghost follows the pointer.
+  - **Drops:** `dropOutcome` decides.
+    - A free slot moves the session via `useMoveSession`.
+    - A taken slot opens the reschedule dialog on Resolve, at the dropped time, through `openMoveSession(session, This, Some(target))`.
+    - Anything else is ignored.
+  - **Trailing click:** a drag never also counts as a click.
 
 ## Follow-ups
 

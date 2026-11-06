@@ -141,7 +141,7 @@ beforeEach(() => {
 
 function renderMove(scope = MoveScope.This) {
   const onClose = vi.fn();
-  render(<NewSessionDialog request={{ kind: "move", session: E_18, scope }} onClose={onClose} />);
+  render(<NewSessionDialog request={{ kind: "move", session: E_18, scope, target: None }} onClose={onClose} />);
   return onClose;
 }
 
@@ -255,7 +255,7 @@ describe("NewSessionDialog: Repeat while the series loads", () => {
   it("can't be edited until the rule arrives, then shows the rule", () => {
     serveSeries({ ...SERIES, id: "" }, { isLoading: true });
     const { rerender } = render(
-      <NewSessionDialog request={{ kind: "move", session: E_18, scope: MoveScope.Following }} onClose={vi.fn()} />
+      <NewSessionDialog request={{ kind: "move", session: E_18, scope: MoveScope.Following, target: None }} onClose={vi.fn()} />
     );
     next();
     next();
@@ -263,7 +263,7 @@ describe("NewSessionDialog: Repeat while the series loads", () => {
     expect(screen.getByRole("spinbutton", { name: "Number of sessions" })).toBeDisabled();
 
     serveSeries(withRecurrence(Frequency.Monthly, 1));
-    rerender(<NewSessionDialog request={{ kind: "move", session: E_18, scope: MoveScope.Following }} onClose={vi.fn()} />);
+    rerender(<NewSessionDialog request={{ kind: "move", session: E_18, scope: MoveScope.Following, target: None }} onClose={vi.fn()} />);
     expect(screen.getByRole("button", { name: "Monthly" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Monthly" })).toHaveAttribute("aria-pressed", "true");
   });
