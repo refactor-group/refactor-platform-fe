@@ -3,12 +3,15 @@
 import { useCallback, useId, useMemo } from "react";
 import { DateTime } from "ts-luxon";
 import { useSWRConfig } from "swr";
+import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SessionActionDialogs } from "@/components/ui/dashboard/session-action-dialogs";
 import { useSessionActions } from "@/components/ui/dashboard/use-session-actions";
+import { WEEK_GRID_QUERY } from "@/lib/breakpoints";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
+import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useNow } from "@/lib/hooks/use-now";
 import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
@@ -20,6 +23,7 @@ import type { MoveScope } from "@/lib/scheduling";
 import { CardClick, cardClick, cardView, type CardView, type GridCard } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
 import {
+  agendaDay,
   groupByDay,
   weekOf,
   weekRange,
@@ -31,6 +35,8 @@ import {
 import { siteConfig } from "@/site.config";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
+import { DayAgenda } from "./day-agenda";
+import { DayStrip } from "./day-strip";
 import type { SessionCardHandlers } from "./session-card";
 import type { OnSessionAction } from "./session-card-menu";
 import { WeekGrid, WEEK_GRID_CLASS } from "./week-grid";
@@ -79,6 +85,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const viewerId = useAuthStore((s) => s.userId);
   const filter = useWeekFilter();
   const { selected } = filter;
+  const wide = useMediaQuery(WEEK_GRID_QUERY);
 
   const { mutate } = useSWRConfig();
   const onSessionsChanged = useCallback(() => {
@@ -121,6 +128,8 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     onSchedule: canSchedule ? Some(() => onSchedule(None)) : None,
   };
   const scheduleDay = canSchedule ? Some((day: DateTime) => onSchedule(Some(day))) : None;
+  const noMatches = selected.some && visibleCount(days) === 0;
+  const subline = isLoading || isError ? None : Some(sublineFor(days, isCurrentWeek));
 
   return (
     <section
@@ -128,27 +137,55 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
       aria-busy={isLoading}
       className="rounded-card border bg-card p-7"
     >
+      <WeekPanelHeader {...header} subline={subline} />
+      {!wide && !isCurrentWeek && <BackToThisWeek onClick={navigation.onThisWeek} />}
       {isLoading ? (
-        <>
-          <WeekPanelHeader {...header} subline={None} />
-          <WeekGridSkeleton />
-        </>
+        wide ? <WeekGridSkeleton /> : <DayAgendaSkeleton />
       ) : isError ? (
-        <>
-          <WeekPanelHeader {...header} subline={None} />
-          <WeekPanelError onRetry={refresh} />
-        </>
+        <WeekPanelError onRetry={refresh} />
+      ) : wide ? (
+        <div className="relative">
+          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} />
+          {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
+        </div>
       ) : (
-        <>
-          <WeekPanelHeader {...header} subline={Some(sublineFor(days, isCurrentWeek))} />
-          <div className="relative">
-            <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} />
-            {selected.some && visibleCount(days) === 0 && <NoMatches />}
-          </div>
-        </>
+        <WeekAgenda days={days} week={week} now={now} handlers={handlers} onSchedule={scheduleDay} noMatches={noMatches} />
       )}
       <SessionActionDialogs {...actions.dialogs} />
     </section>
+  );
+}
+
+interface WeekAgendaProps {
+  days: DayGroup<GridCard>[];
+  week: Week;
+  now: DateTime;
+  handlers: SessionCardHandlers;
+  onSchedule: Option<(day: DateTime) => void>;
+  noMatches: boolean;
+}
+
+function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches }: WeekAgendaProps) {
+  const selectedDay = useWeekGridStore((s) => s.selectedDay);
+  const selectDay = useWeekGridStore((s) => s.selectDay);
+  const day = agendaDay(week, selectedDay, now);
+  const group = days.find((g) => g.day.hasSame(day, "day")) ?? days[0];
+  return (
+    <>
+      <DayStrip days={days} selected={day} onSelect={(d) => selectDay(d.toFormat(ISO_DATE))} />
+      {noMatches && <NoMatches className="mt-4" />}
+      <DayAgenda group={group} handlers={handlers} onSchedule={onSchedule} />
+    </>
+  );
+}
+
+const ISO_DATE = "yyyy-MM-dd";
+
+function BackToThisWeek({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="link" className="mt-3 h-auto px-0 text-[13px]" onClick={onClick}>
+      Back to this week
+    </Button>
   );
 }
 
@@ -178,9 +215,9 @@ function sublineFor(days: DayGroup<GridCard>[], isCurrentWeek: boolean): string 
   return weekSubline(visibleCount(days), isCurrentWeek ? Some(today) : None);
 }
 
-function NoMatches() {
+function NoMatches({ className }: { className: string }) {
   return (
-    <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+    <p className={cn("text-sm text-muted-foreground", className)}>
       No sessions match this week.
     </p>
   );
@@ -192,6 +229,16 @@ function WeekGridSkeleton() {
       {Array.from({ length: 7 }, (_, i) => (
         <Skeleton key={i} className="h-32 rounded-xl" />
       ))}
+    </div>
+  );
+}
+
+function DayAgendaSkeleton() {
+  return (
+    <div className="mt-6 flex flex-col gap-2.5">
+      <Skeleton className="mb-3.5 h-11 rounded-full" />
+      <Skeleton className="h-24 rounded-xl" />
+      <Skeleton className="h-24 rounded-xl" />
     </div>
   );
 }

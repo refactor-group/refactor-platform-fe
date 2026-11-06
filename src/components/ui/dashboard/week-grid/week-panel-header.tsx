@@ -80,7 +80,7 @@ function WeekNavigationControls({ navigation }: { navigation: WeekNavigation }) 
       <Button
         variant="secondary"
         size="sm"
-        className="text-[13px] disabled:text-faint disabled:opacity-100"
+        className="hidden text-[13px] disabled:text-faint disabled:opacity-100 lg:inline-flex"
         disabled={navigation.isCurrentWeek}
         onClick={navigation.onThisWeek}
       >

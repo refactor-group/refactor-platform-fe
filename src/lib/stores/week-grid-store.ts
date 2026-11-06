@@ -6,6 +6,7 @@ import { type Option, None, Some } from "@/types/option";
 interface WeekGridState {
   weekOffset: number;
   personFilter: Option<Id>;
+  selectedDay: Option<string>;
 }
 
 interface WeekGridActions {
@@ -14,12 +15,13 @@ interface WeekGridActions {
   thisWeek: () => void;
   setPersonFilter: (id: Id) => void;
   clearPersonFilter: () => void;
+  selectDay: (iso: string) => void;
   resetWeekGrid: () => void;
 }
 
 export type WeekGridStore = WeekGridState & WeekGridActions;
 
-const initialState: WeekGridState = { weekOffset: 0, personFilter: None };
+const initialState: WeekGridState = { weekOffset: 0, personFilter: None, selectedDay: None };
 
 export const createWeekGridStore = () =>
   create<WeekGridStore>()(
@@ -27,11 +29,12 @@ export const createWeekGridStore = () =>
       persist(
         (set) => ({
           ...initialState,
-          previousWeek: () => set((s) => ({ weekOffset: s.weekOffset - 1 })),
-          nextWeek: () => set((s) => ({ weekOffset: s.weekOffset + 1 })),
-          thisWeek: () => set({ weekOffset: 0 }),
+          previousWeek: () => set((s) => ({ weekOffset: s.weekOffset - 1, selectedDay: None })),
+          nextWeek: () => set((s) => ({ weekOffset: s.weekOffset + 1, selectedDay: None })),
+          thisWeek: () => set({ weekOffset: 0, selectedDay: None }),
           setPersonFilter: (id) => set({ personFilter: Some(id) }),
           clearPersonFilter: () => set({ personFilter: None }),
+          selectDay: (iso) => set({ selectedDay: Some(iso) }),
           resetWeekGrid: () => set(initialState),
         }),
         {

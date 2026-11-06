@@ -11,8 +11,7 @@ export interface WeekGridProps {
   onSchedule: Option<(day: DateTime) => void>;
 }
 
-// Columns stack below lg until the mobile day strip lands (plan D13).
-export const WEEK_GRID_CLASS = "mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-7";
+export const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
 
 export function WeekGrid({ days, handlers, onSchedule }: WeekGridProps) {
   return (

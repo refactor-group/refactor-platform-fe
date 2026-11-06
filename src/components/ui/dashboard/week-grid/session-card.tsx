@@ -4,6 +4,7 @@ import type { KeyboardEvent, SyntheticEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/components/lib/utils";
+import { Button } from "@/components/ui/button";
 import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
 import { useClickOrDoubleClick } from "@/lib/hooks/use-click-or-double-click";
 import { timeOfDay } from "@/lib/session-window";
@@ -22,12 +23,25 @@ export interface SessionCardHandlers {
   onOpen: (view: CardView) => void;
 }
 
+export enum SessionCardLayout {
+  Grid = "grid",
+  Agenda = "agenda",
+}
+
 export interface SessionCardProps extends SessionCardHandlers {
   view: CardView;
   dimmed?: boolean;
+  layout?: SessionCardLayout;
 }
 
-export function SessionCard({ view, dimmed = false, onAction, onSelect, onOpen }: SessionCardProps) {
+export function SessionCard({
+  view,
+  dimmed = false,
+  layout = SessionCardLayout.Grid,
+  onAction,
+  onSelect,
+  onOpen,
+}: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const time = timeOfDay(view.start);
   const clicks = useClickOrDoubleClick(
@@ -50,7 +64,8 @@ export function SessionCard({ view, dimmed = false, onAction, onSelect, onOpen }
         onDoubleClick={clicks.onDoubleClick}
         onKeyDown={onKeyDown}
         className={cn(
-          "flex min-h-[104px] flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+          "flex flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+          layout === SessionCardLayout.Grid && "min-h-[104px]",
           !isPast && view.canManage && "cursor-pointer",
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           isPast ? "bg-well" : "bg-card shadow-card",
@@ -74,8 +89,9 @@ export function SessionCard({ view, dimmed = false, onAction, onSelect, onOpen }
           {view.name}
         </span>
         <CardNoteLine note={view.note} />
-        <div className="mt-auto">
+        <div className="mt-auto flex items-center justify-between gap-2">
           <CardFooterLine footer={view.footer} sessionId={view.session.id} />
+          {layout === SessionCardLayout.Agenda && <OpenSessionButton onOpen={() => onOpen(view)} />}
         </div>
       </div>
     </SessionCardMenu>
@@ -84,6 +100,24 @@ export function SessionCard({ view, dimmed = false, onAction, onSelect, onOpen }
 
 function stopPropagation(e: SyntheticEvent) {
   e.stopPropagation();
+}
+
+function OpenSessionButton({ onOpen }: { onOpen: () => void }) {
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      className="text-[13px]"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen();
+      }}
+      onDoubleClick={stopPropagation}
+      onKeyDown={stopPropagation}
+    >
+      Open session
+    </Button>
+  );
 }
 
 function CardNoteLine({ note }: { note: CardNote }) {

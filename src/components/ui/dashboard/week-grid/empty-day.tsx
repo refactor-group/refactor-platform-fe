@@ -13,17 +13,37 @@ const EMPTY_DAY_CLASS = "h-32 w-full rounded-xl border border-dashed border-bord
 export function EmptyDay({ day, onSchedule }: EmptyDayProps) {
   if (onSchedule.none) return <div className={EMPTY_DAY_CLASS} />;
   return (
+    <ScheduleDayButton
+      day={day}
+      onSchedule={onSchedule.val}
+      className={cn(
+        EMPTY_DAY_CLASS,
+        "hover:border-brand-border hover:bg-brand-tint focus-visible:border-brand-border focus-visible:bg-brand-tint"
+      )}
+      labelClassName="opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+    />
+  );
+}
+
+export interface ScheduleDayButtonProps {
+  day: DateTime;
+  onSchedule: () => void;
+  className?: string;
+  labelClassName?: string;
+}
+
+export function ScheduleDayButton({ day, onSchedule, className, labelClassName }: ScheduleDayButtonProps) {
+  return (
     <button
       type="button"
       aria-label={`Schedule on ${day.toFormat("cccc, LLLL d")}`}
-      onClick={onSchedule.val}
+      onClick={onSchedule}
       className={cn(
-        EMPTY_DAY_CLASS,
         "group flex items-center justify-center outline-none transition-colors duration-150",
-        "hover:border-brand-border hover:bg-brand-tint focus-visible:border-brand-border focus-visible:bg-brand-tint"
+        className
       )}
     >
-      <span className="flex items-center gap-1 text-xs font-medium text-brand opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
+      <span className={cn("flex items-center gap-1 text-xs font-medium text-brand", labelClassName)}>
         <Plus className="h-3.5 w-3.5" aria-hidden />
         Schedule
       </span>
