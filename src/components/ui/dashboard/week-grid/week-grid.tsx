@@ -25,7 +25,7 @@ import { firstNameOf } from "@/lib/scheduling-copy";
 import type { CardView, GridCard } from "@/lib/week-grid/card";
 import { CANCELLED_LINE, droppedLine, overAnnouncement, pickedUpLine } from "@/lib/week-grid/drag-announcements";
 import { settledOutcome, targetOutcome, type DaySlot, type DropOutcome, type DropTarget } from "@/lib/week-grid/slots";
-import type { DayGroup } from "@/lib/week-grid/week";
+import { nowLineOn, type DayGroup } from "@/lib/week-grid/week";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
 import { DayColumn, type ColumnDrag } from "./day-column";
@@ -43,6 +43,7 @@ export interface WeekGridProps {
   handlers: SessionCardHandlers;
   onSchedule: Option<(day: DateTime) => void>;
   drag: GridDrag;
+  now: DateTime;
 }
 
 export const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
@@ -60,7 +61,7 @@ const AUTO_SCROLL = { threshold: { x: 0, y: 0.1 } };
 // The keyboard has no pointer, so it falls back to the dragged rect.
 const collision: CollisionDetection = (args) => (args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args));
 
-export function WeekGrid({ days, handlers, onSchedule, drag }: WeekGridProps) {
+export function WeekGrid({ days, handlers, onSchedule, drag, now }: WeekGridProps) {
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { keyboardCodes: KEYBOARD_CODES })
@@ -123,6 +124,7 @@ export function WeekGrid({ days, handlers, onSchedule, drag }: WeekGridProps) {
             onSchedule={onSchedule}
             drag={columnDrag(group)}
             justDragged={justDragged}
+            now={nowLineOn(group, now)}
           />
         ))}
       </div>

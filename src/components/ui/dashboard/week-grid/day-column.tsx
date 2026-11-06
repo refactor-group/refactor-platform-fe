@@ -8,6 +8,7 @@ import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
 import { type Option, Some } from "@/types/option";
 import { DropSlots } from "./drop-slots";
 import { EmptyDay } from "./empty-day";
+import { withNowLine } from "./now-line";
 import { SessionCard, type SessionCardHandlers } from "./session-card";
 
 /** How a column looks while a card is dragged. */
@@ -22,9 +23,10 @@ export interface DayColumnProps {
   onSchedule: Option<(day: DateTime) => void>;
   drag: ColumnDrag;
   justDragged: RefObject<boolean>;
+  now: Option<DateTime>;
 }
 
-export function DayColumn({ group, handlers, onSchedule, drag, justDragged }: DayColumnProps) {
+export function DayColumn({ group, handlers, onSchedule, drag, justDragged, now }: DayColumnProps) {
   const { setNodeRef } = useDroppable({
     id: `day:${group.day.toISODate()}`,
     data: { kind: "day", day: group.day } satisfies DropTarget,
@@ -45,23 +47,33 @@ export function DayColumn({ group, handlers, onSchedule, drag, justDragged }: Da
       )}
     >
       <DayLabel group={group} />
-      <DayBody group={group} handlers={handlers} onSchedule={onSchedule} drag={drag} justDragged={justDragged} />
+      <DayBody
+        group={group}
+        handlers={handlers}
+        onSchedule={onSchedule}
+        drag={drag}
+        justDragged={justDragged}
+        now={now}
+      />
     </div>
   );
 }
 
-function DayBody({ group, handlers, onSchedule, drag, justDragged }: DayColumnProps) {
+function DayBody({ group, handlers, onSchedule, drag, justDragged, now }: DayColumnProps) {
   if (drag.kind === "over") return <DropSlots slots={drag.slots} hovered={drag.hovered} name={drag.name} />;
-  if (group.items.length === 0) return <EmptyDay day={group.day} onSchedule={scheduleOn(group, onSchedule)} />;
-  return group.items.map((card) => (
-    <SessionCard
-      key={card.session.id}
-      view={card}
-      dimmed={card.dimmed}
-      justDragged={Some(justDragged)}
-      {...handlers}
-    />
-  ));
+  const nodes =
+    group.items.length === 0
+      ? [<EmptyDay key="empty" day={group.day} onSchedule={scheduleOn(group, onSchedule)} />]
+      : group.items.map((card) => (
+          <SessionCard
+            key={card.session.id}
+            view={card}
+            dimmed={card.dimmed}
+            justDragged={Some(justDragged)}
+            {...handlers}
+          />
+        ));
+  return withNowLine(nodes, group.items, now);
 }
 
 function DayLabel({ group }: { group: DayGroup<GridCard> }) {

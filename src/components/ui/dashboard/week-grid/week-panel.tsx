@@ -37,6 +37,7 @@ import { slotsForMove, type MoveSlotsContext } from "@/lib/week-grid/slots";
 import {
   agendaDay,
   groupByDay,
+  nowLineOn,
   weekOf,
   weekRange,
   weekSubline,
@@ -206,7 +207,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
         wide ? <WeekGridSkeleton /> : <DayAgendaSkeleton />
       ) : wide ? (
         <div className="relative">
-          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} />
+          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} now={now} />
           {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
         </div>
       ) : (
@@ -236,7 +237,7 @@ function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches }: WeekAg
     <>
       <DayStrip days={days} selected={day} onSelect={(d) => selectDay(d.toFormat(ISO_DATE))} />
       {noMatches && <NoMatches className="mt-4" />}
-      <DayAgenda group={group} handlers={handlers} onSchedule={onSchedule} />
+      <DayAgenda group={group} handlers={handlers} onSchedule={onSchedule} now={nowLineOn(group, now)} />
     </>
   );
 }
