@@ -1,5 +1,6 @@
 import { Id } from "@/types/general";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
+import { WORKING_HOURS_FALLBACK, formatClock } from "@/lib/working-hours";
 
 /**
  * Represents a user role assignment within an organization or at the system level.
@@ -35,6 +36,9 @@ export interface User {
   display_name: string;
   timezone: string;
   default_coaching_session_duration_minutes: number;
+  /** "HH:MM" on a 30-minute step. */
+  working_hours_start: string;
+  working_hours_end: string;
   roles: UserRole[];
   invite_status: InviteStatus | null;
 }
@@ -88,6 +92,8 @@ export function parseUser(data: unknown): User {
     timezone: data.timezone || "UTC",
     default_coaching_session_duration_minutes:
       data.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,
+    working_hours_start: data.working_hours_start ?? formatClock(WORKING_HOURS_FALLBACK.start),
+    working_hours_end: data.working_hours_end ?? formatClock(WORKING_HOURS_FALLBACK.end),
     roles: data.roles,
     invite_status: data.invite_status,
   };
@@ -119,6 +125,8 @@ export function defaultUser(): User {
     display_name: "",
     timezone: "UTC",
     default_coaching_session_duration_minutes: FALLBACK_DURATION_MINUTES,
+    working_hours_start: formatClock(WORKING_HOURS_FALLBACK.start),
+    working_hours_end: formatClock(WORKING_HOURS_FALLBACK.end),
     roles: [],
     invite_status: null,
   };

@@ -34,6 +34,8 @@ export function ProfileInfoUpdateForm({
     timezone: user.timezone || getBrowserTimezone(),
     default_coaching_session_duration_minutes:
       user.default_coaching_session_duration_minutes,
+    working_hours_start: user.working_hours_start,
+    working_hours_end: user.working_hours_end,
     roles: user.roles,
     invite_status: user.invite_status,
   });

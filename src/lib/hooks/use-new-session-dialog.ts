@@ -7,6 +7,7 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@/lib/hooks/use-dialog-recurrence";
 import { type SeriesLoad, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
+import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import {
   followingMoves,
   moveChanged,
@@ -39,7 +40,6 @@ import {
 import { clashFor, prefillWhen, scheduleHint, scheduleRail } from "@/lib/schedule-draft";
 import { seriesSlotStart } from "@/lib/session-window";
 import {
-  DEFAULT_WORKING_HOURS,
   MoveScope,
   type StepKind,
   busyOn,
@@ -109,6 +109,7 @@ export function useNewSessionDialog(
   // The session being moved never counts as busy.
   const busy = moving.some ? data.busy.filter((b) => b.id !== moving.val.id) : data.busy;
   const { submitting, submit } = useScheduleSubmit(onClose);
+  const hours = useWorkingHours();
   const minutes = chosenMinutes.some ? chosenMinutes.val : data.defaultMinutes;
   const start = startAt(day, time);
   const startWeekday = day.some ? weekdayFromLuxon(day.val.weekday) : null;
@@ -138,7 +139,7 @@ export function useNewSessionDialog(
   const personName = entry.some ? Some(entry.val.person.fullName) : None;
   const changed = moving.some && moveChanged(moving.val, { start, minutes }, timezone);
   // Only the first session of a series is checked.
-  const clash = start.some ? clashFor({ start: start.val, minutes }, busy, DEFAULT_WORKING_HOURS) : None;
+  const clash = start.some ? clashFor({ start: start.val, minutes }, busy, hours) : None;
   const clashSession = clash.some ? Some(clash.val.session) : None;
   const resolveDraft = start.some ? draftFor(clash, { start: start.val, minutes }, savedResolve) : None;
   const resolution = resolveDraft.some ? resolveDraft.val.resolution : UNRESOLVED;
@@ -281,7 +282,7 @@ export function useNewSessionDialog(
             usual: usualOf(data, entry),
             coachStarts: data.coachStarts,
             busy,
-            hours: DEFAULT_WORKING_HOURS,
+            hours,
             now,
           })
         : [],
@@ -325,6 +326,7 @@ export function useNewSessionDialog(
               movable,
               draft: resolveDraft.val,
               busy,
+              hours,
               now,
               onChange: (draft) => setSavedResolve(Some(draft)),
             })

@@ -16,10 +16,6 @@ export interface WorkingHours {
   end: number;
 }
 
-export const DEFAULT_WORKING_HOURS: WorkingHours = { start: 9 * 60, end: 17 * 60 };
-// The backend's default until user hours are read.
-export const USER_WORKING_HOURS_FALLBACK: WorkingHours = { start: 8 * 60, end: 17 * 60 + 30 };
-
 export interface BusyClash {
   session: BusySession;
   /** Any further sessions the new time also overlaps. */

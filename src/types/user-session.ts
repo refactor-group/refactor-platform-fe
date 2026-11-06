@@ -1,5 +1,4 @@
-import { User } from "@/types/user";
-import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
+import { User, defaultUser } from "@/types/user";
 
 /**
  * This is an intersection type that combines the User type with additional properties.
@@ -21,18 +20,7 @@ const _isUserSession = (value: unknown): value is UserSession => {
 };
 
 export function defaultUserSession(): UserSession {
-  return {
-    id: "",
-    email: "",
-    password: "",
-    first_name: "",
-    last_name: "",
-    display_name: "",
-    timezone: "UTC",
-    default_coaching_session_duration_minutes: FALLBACK_DURATION_MINUTES,
-    roles: [],
-    invite_status: null,
-  };
+  return defaultUser();
 }
 
 export function userSessionToString(
