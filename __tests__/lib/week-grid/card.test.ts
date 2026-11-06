@@ -35,13 +35,13 @@ describe("cardView", () => {
   it("is Live with a pulsing relative note when the session starts soon", () => {
     const view = cardView(session("2026-08-18T19:30:00", 0), COACH);
     expect(view.tense).toBe(CardTense.Live);
-    expect(view.note).toEqual({ kind: "relative", text: "in 45 min", pulse: true });
+    expect(view.note).toEqual({ kind: "relative", text: "in 45 min", pulse: true, topicCount: 0 });
   });
 
   it("reads now while the session is under way", () => {
     const view = cardView(session("2026-08-18T18:30:00", 2), COACH);
     expect(view.tense).toBe(CardTense.Live);
-    expect(view.note).toEqual({ kind: "relative", text: "now", pulse: true });
+    expect(view.note).toEqual({ kind: "relative", text: "now", pulse: true, topicCount: 2 });
   });
 
   it("writes hours and minutes for a start more than an hour away", () => {
@@ -49,11 +49,13 @@ describe("cardView", () => {
       kind: "relative",
       text: "in 1 hr 20 min",
       pulse: true,
+      topicCount: 0,
     });
     expect(cardView(session("2026-08-18T20:45:00", 0), COACH).note).toEqual({
       kind: "relative",
       text: "in 2 hr",
       pulse: true,
+      topicCount: 0,
     });
   });
 
@@ -93,7 +95,9 @@ describe("cardView", () => {
 
 describe("cardNoteText", () => {
   it.each([
-    [{ kind: "relative" as const, text: "in 45 min", pulse: true }, "in 45 min"],
+    [{ kind: "relative" as const, text: "in 45 min", pulse: true, topicCount: 0 }, "in 45 min · No topics yet"],
+    [{ kind: "relative" as const, text: "now", pulse: true, topicCount: 1 }, "now · 1 topic"],
+    [{ kind: "relative" as const, text: "in 1 hr 20 min", pulse: true, topicCount: 3 }, "in 1 hr 20 min · 3 topics"],
     [{ kind: "topics" as const, count: 1 }, "1 topic"],
     [{ kind: "topics" as const, count: 3 }, "3 topics"],
     [{ kind: "topics" as const, count: 0 }, "No topics"],

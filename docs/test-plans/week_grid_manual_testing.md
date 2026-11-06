@@ -67,7 +67,7 @@ Open the dashboard as the coach.
 ### Case 1.5: card contents
 
 **Pass:**
-- **B:** pulsing dot and "in 40 min" (or close to it), plus a **Prepare** pill.
+- **B:** pulsing dot and "in 40 min · No topics yet" (or close to it), with "No topics yet" in amber, plus a **Prepare** pill.
 - **C:** "3 topics" and a green **✓ Ready**.
 - **A** (when more than 2 hours away): **No topics yet** in amber, plus Prepare.
 - **D:** grey background with no shadow, faint time, muted name, "2 topics", and **Done**.
