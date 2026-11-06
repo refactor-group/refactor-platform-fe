@@ -59,6 +59,12 @@ describe("daySlots", () => {
     expect(wednesday.some((s) => s.state.kind === "current")).toBe(false);
   });
 
+  it("keeps the current slot current even once its start has passed", () => {
+    const byTime = new Map(slots({ now: at("2026-08-18T15:00") }).map((s) => [label(s), s.state]));
+    expect(byTime.get("14:30")).toEqual({ kind: "current" });
+    expect(byTime.get("14:00")).toEqual({ kind: "past" });
+  });
+
   it("marks starts before now as past", () => {
     const byTime = new Map(slots({ now: at("2026-08-18T10:15") }).map((s) => [label(s), s.state]));
     expect(byTime.get("10:00")).toEqual({ kind: "past" });

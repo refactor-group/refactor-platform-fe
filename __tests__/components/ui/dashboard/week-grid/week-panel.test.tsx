@@ -5,7 +5,7 @@ import type { Week } from "@/lib/week-grid/week";
 import { SessionAction } from "@/lib/session-actions";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { WeekPanel } from "@/components/ui/dashboard/week-grid/week-panel";
-import { WeekGridStoreProvider } from "@/lib/providers/week-grid-store-provider";
+import { WeekGridStoreProvider, useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
 import type { WeekEdges } from "@/lib/week-grid/week";
 import { PersonGroup, type FilterPerson } from "@/lib/week-grid/filter";
 import { None, Some, type Option } from "@/types/option";
@@ -508,5 +508,42 @@ describe("WeekPanel desktop menu", () => {
     renderPanel();
     fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
     expect(screen.queryByRole("menuitem", { name: "Move…" })).not.toBeInTheDocument();
+  });
+});
+
+function MarkMoved({ id }: { id: string }) {
+  const markMoved = useWeekGridStore((s) => s.markMoved);
+  return <button onClick={() => markMoved(id)}>mark {id}</button>;
+}
+function MovedCount() {
+  return <output aria-label="moved count">{useWeekGridStore((s) => s.recentlyMoved.length)}</output>;
+}
+
+describe("WeekPanel moved cards (D10)", () => {
+  it("reads Moved on a card the viewer just moved", () => {
+    render(
+      <WeekGridStoreProvider>
+        <MarkMoved id="thursday" />
+        <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />
+      </WeekGridStoreProvider>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "mark thursday" }));
+    expect(screen.getByTestId("session-card-thursday")).toHaveTextContent("Moved");
+    expect(screen.getByTestId("session-card-late-today")).not.toHaveTextContent("Moved");
+  });
+
+  it("forgets moved cards once the panel goes away", () => {
+    const tree = (withPanel: boolean) => (
+      <WeekGridStoreProvider>
+        <MarkMoved id="thursday" />
+        <MovedCount />
+        {withPanel && <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />}
+      </WeekGridStoreProvider>
+    );
+    const { rerender } = render(tree(true));
+    fireEvent.click(screen.getByRole("button", { name: "mark thursday" }));
+    expect(screen.getByLabelText("moved count")).toHaveTextContent("1");
+    rerender(tree(false));
+    expect(screen.getByLabelText("moved count")).toHaveTextContent("0");
   });
 });
