@@ -18,6 +18,7 @@ interface WeekGridActions {
   clearPersonFilter: () => void;
   selectDay: (iso: string) => void;
   markMoved: (id: Id) => void;
+  unmarkMoved: (id: Id) => void;
   clearMoved: () => void;
   resetWeekGrid: () => void;
 }
@@ -45,6 +46,7 @@ export const createWeekGridStore = () =>
           selectDay: (iso) => set({ selectedDay: Some(iso) }),
           markMoved: (id) =>
             set((s) => (s.recentlyMoved.includes(id) ? s : { recentlyMoved: [...s.recentlyMoved, id] })),
+          unmarkMoved: (id) => set((s) => ({ recentlyMoved: s.recentlyMoved.filter((m) => m !== id) })),
           clearMoved: () => set({ recentlyMoved: [] }),
           resetWeekGrid: () => set(initialState),
         }),

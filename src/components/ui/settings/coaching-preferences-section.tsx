@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FC } from "react";
 import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
@@ -26,7 +26,7 @@ import {
   isForbiddenError,
   PERMISSION_DENIED_MESSAGE,
 } from "@/types/entity-api-error";
-import { None, Some } from "@/types/option";
+import { type Option, None, Some } from "@/types/option";
 import type { User } from "@/types/user";
 import { clockLabel, formatClock, halfHourClocks, parseClock, workingHoursOf } from "@/lib/working-hours";
 
@@ -49,6 +49,12 @@ function savedPreferences(user: User | undefined): Preferences {
 
 function hoursChanged(a: Preferences, b: Preferences): boolean {
   return a.working_hours_start !== b.working_hours_start || a.working_hours_end !== b.working_hours_end;
+}
+
+function samePreferences(a: Preferences, b: Preferences): boolean {
+  return (
+    a.default_coaching_session_duration_minutes === b.default_coaching_session_duration_minutes && !hoursChanged(a, b)
+  );
 }
 
 function startsBeforeEnd(prefs: Preferences): boolean {
@@ -101,6 +107,8 @@ export const CoachingPreferencesSection: FC = () => {
 
   const saved = useMemo(() => savedPreferences(user), [user]);
   const [draft, setDraft] = useState<Preferences>(saved);
+  // A server that drops a field leaves the draft dirty, so a sent draft waits for the next edit.
+  const sent = useRef<Option<Preferences>>(None);
 
   useEffect(() => {
     setDraft(saved);
@@ -119,7 +127,9 @@ export const CoachingPreferencesSection: FC = () => {
   // PUT when `update`'s identity changes mid-request and reruns the effect.
   useEffect(() => {
     if (!user || !isDirty || !isValid || isSaving) return;
+    if (sent.current.some && samePreferences(sent.current.val, draft)) return;
     const timer = setTimeout(() => {
+      sent.current = Some(draft);
       void (async () => {
         try {
           await update(userId, { ...user, ...draft });

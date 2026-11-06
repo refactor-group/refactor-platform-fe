@@ -251,6 +251,22 @@ describe("CoachingPreferencesSection", () => {
       expect(mockUpdate).toHaveBeenCalledTimes(1);
     });
 
+    it("sends a change once when the saved user keeps its identity and the save effect reruns", async () => {
+      // SWR keeps the same user object when the server returns identical data, while the save
+      // hooks hand back new values each render, so the effect reruns with the draft still dirty.
+      mockRefresh.mockReset();
+      const { rerender } = render(<CoachingPreferencesSection />);
+      fireEvent.change(start(), { target: { value: "09:00" } });
+      for (let i = 0; i < 4; i += 1) {
+        await act(async () => {
+          vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+        });
+        mockUserState = { ...mockUserState, refresh: vi.fn() };
+        rerender(<CoachingPreferencesSection />);
+      }
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+    });
+
     it("doesn't save when the start isn't before the end, and says why", async () => {
       render(<CoachingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "18:00" } });

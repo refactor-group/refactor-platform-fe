@@ -24,6 +24,7 @@ const MOVE_FAILED = "Couldn't move the session · Try again";
 export function useMoveSession(): (input: MoveSessionInput) => void {
   const { mutate } = useSWRConfig();
   const markMoved = useWeekGridStore((s) => s.markMoved);
+  const unmarkMoved = useWeekGridStore((s) => s.unmarkMoved);
 
   return useCallback(
     ({ session, name, to }: MoveSessionInput) => {
@@ -32,7 +33,8 @@ export function useMoveSession(): (input: MoveSessionInput) => void {
           () => void revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/coaching_sessions")
         );
       // The original start in the target's zone, so Undo writes back the same instant.
-      const undo = () => void write(sessionStartIn(session.date, to.zoneName ?? "utc")).mapErr(failed);
+      const undo = () =>
+        void write(sessionStartIn(session.date, to.zoneName ?? "utc")).match(() => unmarkMoved(session.id), failed);
 
       void write(to).match(
         () => {
@@ -42,7 +44,7 @@ export function useMoveSession(): (input: MoveSessionInput) => void {
         failed
       );
     },
-    [mutate, markMoved]
+    [mutate, markMoved, unmarkMoved]
   );
 }
 
