@@ -80,14 +80,14 @@ function DayLabel({ group }: { group: DayGroup<GridCard> }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-1 text-[13px] tabular-nums",
+        "flex h-5 items-center gap-1.5 text-[12.5px] tabular-nums",
         group.isToday ? "font-semibold text-foreground" : "font-medium text-muted-foreground/60",
         group.isPast && "opacity-[.55]"
       )}
     >
       <span>{group.day.toFormat("ccc")}</span>
       {group.isToday ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-primary-foreground">
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-[5px] text-[11px] font-semibold text-primary-foreground">
           {group.day.toFormat("d")}
         </span>
       ) : (

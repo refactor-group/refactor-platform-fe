@@ -88,7 +88,7 @@ export function SessionCard({
         onKeyDown={onKeyDown}
         className={cn(
           "flex flex-col gap-1.5 rounded-xl p-[11px] outline-none",
-          layout === SessionCardLayout.Grid && "min-h-[104px]",
+          layout === SessionCardLayout.Grid && "min-h-32",
           canMove && (draggable ? "cursor-grab" : "cursor-pointer"),
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           isPast ? "bg-well" : "bg-card shadow-card",
