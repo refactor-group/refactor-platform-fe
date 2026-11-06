@@ -11,6 +11,7 @@ import { busySessions } from "@/lib/schedule-draft";
 import { firstNameOf } from "@/lib/scheduling-copy";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
+import type { Option } from "@/types/option";
 
 export type SlotState =
   | { kind: "free" }
@@ -83,6 +84,8 @@ export function slotsForMove(session: EnrichedCoachingSession, context: MoveSlot
 
 export type DropOutcome = { kind: "move"; start: DateTime } | { kind: "resolve"; start: DateTime } | { kind: "ignore" };
 
+const IGNORE: DropOutcome = { kind: "ignore" };
+
 export function dropOutcome(slot: DaySlot): DropOutcome {
   const { start, state } = slot;
   switch (state.kind) {
@@ -98,4 +101,14 @@ export function dropOutcome(slot: DaySlot): DropOutcome {
       throw new Error(`Unhandled slot state: ${JSON.stringify(_exhaustive)}`);
     }
   }
+}
+
+/** What dropping on `target` does; anything but a slot is ignored. */
+export function targetOutcome(target: Option<DropTarget>): DropOutcome {
+  return target.some && target.val.kind === "slot" ? dropOutcome(target.val.slot) : IGNORE;
+}
+
+/** A drop that never moved, like Space then Space, changes nothing. */
+export function settledOutcome(outcome: DropOutcome, delta: { x: number; y: number }): DropOutcome {
+  return delta.x === 0 && delta.y === 0 ? IGNORE : outcome;
 }

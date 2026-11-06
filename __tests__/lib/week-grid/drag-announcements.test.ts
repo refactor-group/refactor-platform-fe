@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
-import { CANCELLED_LINE, droppedLine, overLine, pickedUpLine } from "@/lib/week-grid/drag-announcements";
+import { CANCELLED_LINE, droppedLine, overAnnouncement, overLine, pickedUpLine } from "@/lib/week-grid/drag-announcements";
 import type { DaySlot, DropTarget } from "@/lib/week-grid/slots";
 import { None, Some } from "@/types/option";
 
@@ -21,12 +21,19 @@ describe("drag announcements", () => {
     expect(overLine(None)).toEqual(None);
   });
 
+  it("leads the first over with the pick-up line", () => {
+    const pickup = Some("Picked up Jane Smith's session at 10:00 AM.");
+    expect(overAnnouncement(pickup, Some(slot({ kind: "free" })))).toEqual(
+      Some("Picked up Jane Smith's session at 10:00 AM. Friday 10:00 AM, free.")
+    );
+    expect(overAnnouncement(pickup, None)).toEqual(pickup);
+    expect(overAnnouncement(None, Some(day))).toEqual(Some("Friday."));
+  });
+
   it("says what a drop did", () => {
-    expect(droppedLine(Some(slot({ kind: "free" })))).toBe("Moved to Friday 10:00 AM.");
-    expect(droppedLine(Some(slot({ kind: "taken", holder: "Priya" })))).toBe("That time is taken. Opening reschedule.");
-    expect(droppedLine(Some(slot({ kind: "current" })))).toBe("Not moved.");
-    expect(droppedLine(Some(day))).toBe("Not moved.");
-    expect(droppedLine(None)).toBe("Not moved.");
+    expect(droppedLine({ kind: "move", start: FRIDAY_10 })).toBe("Moved to Friday 10:00 AM.");
+    expect(droppedLine({ kind: "resolve", start: FRIDAY_10 })).toBe("That time is taken. Opening reschedule.");
+    expect(droppedLine({ kind: "ignore" })).toBe("Not moved.");
     expect(CANCELLED_LINE).toBe("Move cancelled.");
   });
 });

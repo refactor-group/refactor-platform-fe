@@ -1,7 +1,7 @@
 import type { DateTime } from "ts-luxon";
 import { timeOfDay } from "@/lib/session-window";
 import type { CardView } from "@/lib/week-grid/card";
-import { dropOutcome, type DropTarget } from "@/lib/week-grid/slots";
+import type { DropOutcome, DropTarget } from "@/lib/week-grid/slots";
 import { type Option, None, Some } from "@/types/option";
 
 export const CANCELLED_LINE = "Move cancelled.";
@@ -31,9 +31,14 @@ export function overLine(target: Option<DropTarget>): Option<string> {
   }
 }
 
-export function droppedLine(target: Option<DropTarget>): string {
-  if (target.none || target.val.kind === "day") return "Not moved.";
-  const outcome = dropOutcome(target.val.slot);
+/** The first over after a pick-up also carries the pick-up line, since the live region keeps only its last message. */
+export function overAnnouncement(pickup: Option<string>, target: Option<DropTarget>): Option<string> {
+  const line = overLine(target);
+  if (pickup.none) return line;
+  return Some(line.some ? `${pickup.val} ${line.val}` : pickup.val);
+}
+
+export function droppedLine(outcome: DropOutcome): string {
   switch (outcome.kind) {
     case "move":
       return `Moved to ${dayTime(outcome.start)}.`;

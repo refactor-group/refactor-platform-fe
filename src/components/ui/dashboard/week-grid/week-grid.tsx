@@ -14,6 +14,7 @@ import {
   type Announcements,
   type CollisionDetection,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragOverEvent,
   type DragStartEvent,
   type Over,
@@ -22,8 +23,8 @@ import {
 import type { DateTime } from "ts-luxon";
 import { firstNameOf } from "@/lib/scheduling-copy";
 import type { CardView, GridCard } from "@/lib/week-grid/card";
-import { CANCELLED_LINE, droppedLine, overLine, pickedUpLine } from "@/lib/week-grid/drag-announcements";
-import { dropOutcome, type DaySlot, type DropTarget } from "@/lib/week-grid/slots";
+import { CANCELLED_LINE, droppedLine, overAnnouncement, pickedUpLine } from "@/lib/week-grid/drag-announcements";
+import { settledOutcome, targetOutcome, type DaySlot, type DropOutcome, type DropTarget } from "@/lib/week-grid/slots";
 import type { DayGroup } from "@/lib/week-grid/week";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
@@ -67,11 +68,15 @@ export function WeekGrid({ days, handlers, onSchedule, drag }: WeekGridProps) {
   const [dragged, setDragged] = useState<Option<GridCard>>(None);
   const [over, setOver] = useState<Option<DropTarget>>(None);
   const justDragged = useRef(false);
+  const [speech] = useState(createDragSpeech);
 
   const onDragStart = ({ active }: DragStartEvent) => {
-    setDragged(cardWith(days, active.id));
+    const card = cardWith(days, active.id);
+    speech.pickUp(card);
+    setDragged(card);
     justDragged.current = true;
   };
+  const onDragMove = ({ delta }: DragMoveEvent) => speech.move(delta);
   const onDragOver = (event: DragOverEvent) => setOver(dropTargetOf(event.over));
   const endDrag = () => {
     setDragged(None);
@@ -81,9 +86,10 @@ export function WeekGrid({ days, handlers, onSchedule, drag }: WeekGridProps) {
       justDragged.current = false;
     });
   };
-  const onDragEnd = ({ over: target }: DragEndEvent) => {
-    const dropped = dropTargetOf(target);
-    if (dragged.some && dropped.some && dropped.val.kind === "slot") dropOn(dragged.val, dropped.val.slot, drag);
+  const onDragEnd = ({ over: target, delta }: DragEndEvent) => {
+    const outcome = settledOutcome(targetOutcome(dropTargetOf(target)), delta);
+    speech.drop(outcome);
+    if (dragged.some) dropOn(dragged.val, outcome, drag);
     endDrag();
   };
 
@@ -100,9 +106,10 @@ export function WeekGrid({ days, handlers, onSchedule, drag }: WeekGridProps) {
     <DndContext
       sensors={sensors}
       collisionDetection={collision}
-      accessibility={{ screenReaderInstructions: SCREEN_READER_INSTRUCTIONS, announcements: announcementsFor(days) }}
+      accessibility={{ screenReaderInstructions: SCREEN_READER_INSTRUCTIONS, announcements: speech.announcements }}
       autoScroll={AUTO_SCROLL}
       onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
       onDragCancel={endDrag}
@@ -134,18 +141,37 @@ function cardWith(days: DayGroup<GridCard>[], id: UniqueIdentifier): Option<Grid
   return card ? Some(card) : None;
 }
 
-function announcementsFor(days: DayGroup<GridCard>[]): Announcements {
+interface DragSpeech {
+  pickUp: (card: Option<CardView>) => void;
+  move: (delta: { x: number; y: number }) => void;
+  drop: (outcome: DropOutcome) => void;
+  announcements: Announcements;
+}
+
+// dnd-kit calls the grid's handlers before announcing. The pick-up line rides on every over until
+// the card first moves, since picking it up unfolds its own day and fires two overs at once.
+function createDragSpeech(): DragSpeech {
+  let pickup: Option<string> = None;
+  let dropped: DropOutcome = { kind: "ignore" };
   return {
-    onDragStart: ({ active }) => {
-      const card = cardWith(days, active.id);
-      return card.some ? pickedUpLine(card.val) : undefined;
+    pickUp: (card) => {
+      pickup = card.some ? Some(pickedUpLine(card.val)) : None;
     },
-    onDragOver: ({ over }) => {
-      const line = overLine(dropTargetOf(over));
-      return line.some ? line.val : undefined;
+    move: (delta) => {
+      if (delta.x !== 0 || delta.y !== 0) pickup = None;
     },
-    onDragEnd: ({ over }) => droppedLine(dropTargetOf(over)),
-    onDragCancel: () => CANCELLED_LINE,
+    drop: (outcome) => {
+      dropped = outcome;
+    },
+    announcements: {
+      onDragStart: () => (pickup.some ? pickup.val : undefined),
+      onDragOver: ({ over }) => {
+        const line = overAnnouncement(pickup, dropTargetOf(over));
+        return line.some ? line.val : undefined;
+      },
+      onDragEnd: () => droppedLine(dropped),
+      onDragCancel: () => CANCELLED_LINE,
+    },
   };
 }
 
@@ -163,8 +189,7 @@ function hoveredSlot(over: Option<DropTarget>): Option<DateTime> {
   return over.some && over.val.kind === "slot" ? Some(over.val.slot.start) : None;
 }
 
-function dropOn(view: CardView, slot: DaySlot, drag: GridDrag) {
-  const outcome = dropOutcome(slot);
+function dropOn(view: CardView, outcome: DropOutcome, drag: GridDrag) {
   switch (outcome.kind) {
     case "move":
       drag.onMove(view, outcome.start);
