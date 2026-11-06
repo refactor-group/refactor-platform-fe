@@ -13,6 +13,7 @@ import {
   CardFooter,
   CardTense,
   cardNoteText,
+  liveTopicsText,
   type CardNote,
   type CardView,
 } from "@/lib/week-grid/card";
@@ -160,7 +161,16 @@ function CardNoteLine({ note }: { note: CardNote }) {
       {note.kind === "relative" && note.pulse && (
         <PulsingDot tone={PulsingDotTone.Accent} className="h-1.5 w-1.5" />
       )}
-      {cardNoteText(note)}
+      {note.kind === "relative" ? <RelativeNote text={note.text} topicCount={note.topicCount} /> : cardNoteText(note)}
+    </span>
+  );
+}
+
+function RelativeNote({ text, topicCount }: { text: string; topicCount: number }) {
+  return (
+    <span>
+      {text} ·{" "}
+      <span className={cn(topicCount === 0 && "text-warning-text")}>{liveTopicsText(topicCount)}</span>
     </span>
   );
 }

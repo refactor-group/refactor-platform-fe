@@ -23,7 +23,7 @@ export enum CardClick {
 }
 
 export type CardNote =
-  | { kind: "relative"; text: string; pulse: boolean }
+  | { kind: "relative"; text: string; pulse: boolean; topicCount: number }
   | { kind: "topics"; count: number }
   | { kind: "noTopics" }
   | { kind: "moved" };
@@ -51,6 +51,7 @@ export interface GridCard extends CardView {
 }
 
 const MINUTES_PER_HOUR = 60;
+const NO_TOPICS_YET = "No topics yet";
 
 export function cardView(session: EnrichedCoachingSession, context: CardContext): CardView {
   const urgency = calculateSessionUrgency(session, context.now);
@@ -77,11 +78,11 @@ export function cardClick(view: CardView): CardClick {
 export function cardNoteText(note: CardNote): string {
   switch (note.kind) {
     case "relative":
-      return note.text;
+      return `${note.text} · ${liveTopicsText(note.topicCount)}`;
     case "topics":
       return topicCountText(note.count);
     case "noTopics":
-      return "No topics yet";
+      return NO_TOPICS_YET;
     case "moved":
       return "Moved";
     default: {
@@ -89,6 +90,11 @@ export function cardNoteText(note: CardNote): string {
       throw new Error(`Unhandled card note: ${JSON.stringify(_exhaustive)}`);
     }
   }
+}
+
+/** A live card's topic status, flagged in the card when there are none. */
+export function liveTopicsText(count: number): string {
+  return count === 0 ? NO_TOPICS_YET : topicCountText(count);
 }
 
 export function markMoved(view: CardView): CardView {
@@ -121,10 +127,10 @@ function tenseOf(urgency: SessionUrgency): CardTense {
 function noteOf(urgency: SessionUrgency, minutes: number, topicCount: number): CardNote {
   switch (urgency) {
     case SessionUrgency.Underway:
-      return { kind: "relative", text: "now", pulse: true };
+      return { kind: "relative", text: "now", pulse: true, topicCount };
     case SessionUrgency.Imminent:
     case SessionUrgency.Soon:
-      return { kind: "relative", text: relativeStartText(minutes), pulse: true };
+      return { kind: "relative", text: relativeStartText(minutes), pulse: true, topicCount };
     case SessionUrgency.Later:
       return topicCount > 0 ? { kind: "topics", count: topicCount } : { kind: "noTopics" };
     case SessionUrgency.Past:
