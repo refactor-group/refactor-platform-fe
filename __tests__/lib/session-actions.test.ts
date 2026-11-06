@@ -13,11 +13,12 @@ import {
 const oneOff = createMockEnrichedSession();
 const inSeries = createMockEnrichedSession({ coaching_session_series_id: Some("series-1") });
 
-const COACH_UPCOMING = { isCoach: true, isPast: false, isCompact: false };
-const COACH_PAST = { isCoach: true, isPast: true, isCompact: false };
-const COACHEE_UPCOMING = { isCoach: false, isPast: false, isCompact: false };
-const COACHEE_PAST = { isCoach: false, isPast: true, isCompact: false };
-const COACH_UPCOMING_COMPACT = { isCoach: true, isPast: false, isCompact: true };
+const COACH_UPCOMING = { isCoach: true, isPast: false, hasEnded: false, isCompact: false };
+const COACH_PAST = { isCoach: true, isPast: true, hasEnded: true, isCompact: false };
+const COACHEE_UPCOMING = { isCoach: false, isPast: false, hasEnded: false, isCompact: false };
+const COACHEE_PAST = { isCoach: false, isPast: true, hasEnded: true, isCompact: false };
+const COACH_UPCOMING_COMPACT = { isCoach: true, isPast: false, hasEnded: false, isCompact: true };
+const COACH_ENDED_TODAY = { isCoach: true, isPast: false, hasEnded: true, isCompact: false };
 
 const actions = (session = oneOff, context = COACH_UPCOMING) =>
   sessionActionsFor(session, context).map((i) => i.action);
@@ -117,6 +118,19 @@ describe("sessionActionLabel", () => {
       sessionActionsFor(inSeries, context).map((i) => sessionActionLabel(i.action, inSeries, context))
     );
     expect(labels.join(" ")).not.toMatch(/delete/i);
+  });
+});
+
+describe("a session that ended earlier today", () => {
+  it("keeps every action, but says Remove rather than Cancel", () => {
+    expect(actions(oneOff, COACH_ENDED_TODAY)).toEqual([
+      SessionAction.OpenSession,
+      SessionAction.Reschedule,
+      SessionAction.ShareLink,
+      SessionAction.ResendInvite,
+      SessionAction.DeleteSession,
+    ]);
+    expect(sessionActionLabel(SessionAction.DeleteSession, oneOff, COACH_ENDED_TODAY)).toBe("Remove session…");
   });
 });
 

@@ -201,6 +201,16 @@ Reschedule C to Friday through the dialog.
 
 **Pass:** the card moves to Friday without a reload.
 
+### Case 2.11: a session that ended earlier today
+
+Use a session from earlier today that has already ended.
+
+**Pass:**
+- It still looks past (grey, with Done).
+- A single click opens Reschedule, and it drags on desktop or offers Move on a phone.
+- Its menu has every item, with **Remove session…** instead of Cancel.
+- A session from yesterday stays locked: Open session and Remove session… only.
+
 ## 4. Part 3: Prepare and readiness (PR 3)
 
 ### Case 3.1: Prepare pill

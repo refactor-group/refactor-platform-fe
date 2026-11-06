@@ -19,6 +19,7 @@ const session = (id: string, date: string) =>
   createMockEnrichedSession({ id, date, duration_minutes: 50, topics: [] });
 const LATE_TODAY = session("late-today", "2026-08-18T21:30:00");
 const EARLY_TODAY = session("early-today", "2026-08-18T15:00:00");
+const MONDAY_PAST = session("monday-past", "2026-08-17T15:00:00");
 const THURSDAY = session("thursday", "2026-08-20T15:00:00");
 const NEXT_WEEK = session("next-week", "2026-08-25T15:00:00");
 
@@ -330,12 +331,20 @@ describe("WeekPanel card clicks", () => {
     expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
   });
 
-  it("does nothing on a single click on a past card", () => {
+  it("does nothing on a single click on a card from an earlier day", () => {
+    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
     renderPanel();
-    fireEvent.click(screen.getByTestId("session-card-early-today"));
+    fireEvent.click(screen.getByTestId("session-card-monday-past"));
     act(() => vi.advanceTimersByTime(260));
     expect(run).not.toHaveBeenCalled();
     expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("reschedules a session that ended earlier today on a single click", () => {
+    renderPanel();
+    fireEvent.click(screen.getByTestId("session-card-early-today"));
+    act(() => vi.advanceTimersByTime(260));
+    expect(run).toHaveBeenCalledWith(SessionAction.Reschedule, EARLY_TODAY);
   });
 });
 
@@ -457,9 +466,12 @@ describe("WeekPanel Move sheet below 1024px", () => {
   const pill = (name: string) => screen.getByRole("button", { name });
   const moveSheet = () => screen.getByRole("dialog", { name: "Move Alex's session" });
 
-  it("offers Move on an upcoming agenda card the viewer coaches, and not on a past one", () => {
+  it("offers Move on an agenda card the viewer can still change, and not on an earlier day's", () => {
+    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
     renderPanel();
-    expect(within(screen.getByTestId("session-card-early-today")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("session-card-early-today")).getByRole("button", { name: "Move" })).toBeInTheDocument();
+    fireEvent.click(pill("Monday, August 17"));
+    expect(within(screen.getByTestId("session-card-monday-past")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
     fireEvent.click(pill("Thursday, August 20"));
     expect(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" })).toBeInTheDocument();
   });
@@ -614,5 +626,31 @@ describe("WeekPanel when the server can't be reached (read only)", () => {
     );
     expect(screen.queryByText(/Can't reach the server|Couldn't load this week/)).not.toBeInTheDocument();
     expect(button("Schedule session")).toBeEnabled();
+  });
+});
+
+describe("WeekPanel sessions that ended earlier today", () => {
+  it("keep the full menu, with Remove rather than Cancel, and still drag", () => {
+    renderPanel();
+    const card = screen.getByTestId("session-card-early-today");
+    expect(card).toHaveAttribute("data-tense", "past");
+    expect(card).toHaveAttribute("data-draggable", "true");
+    fireEvent.contextMenu(card);
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual([
+      "Open session",
+      "Reschedule…",
+      "Share link",
+      "Resend invite",
+      "Remove session…",
+    ]);
+  });
+
+  it("leave an earlier day's sessions locked", () => {
+    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
+    renderPanel();
+    const card = screen.getByTestId("session-card-monday-past");
+    expect(card).toHaveAttribute("data-draggable", "false");
+    fireEvent.contextMenu(card);
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual(["Open session", "Remove session…"]);
   });
 });
