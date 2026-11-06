@@ -32,6 +32,12 @@ describe("editable", () => {
     expect(cardView(LATE_YESTERDAY, COACH).editable).toBe(false);
   });
 
+  it("still counts this morning as today in the evening, when UTC has moved on", () => {
+    // 9:00 PM in Chicago on the 18th, already the 19th in UTC.
+    const evening = { ...COACH, now: DateTime.fromISO("2026-08-19T02:00:00Z", { zone: "utc" }) };
+    expect(cardView(ENDED_TODAY, evening).editable).toBe(true);
+  });
+
   it("is false for a session from an earlier day", () => {
     expect(cardView(YESTERDAY, COACH).editable).toBe(false);
   });
