@@ -167,6 +167,17 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - The moved marks clear when the week panel unmounts.
 - **6b, entry points:** "Move" on agenda cards, and "Move…" in the narrow-layout menu, for upcoming sessions the viewer coaches. The sheet only allows free slots, so a clash can't happen there.
 
+## PR 5 rules
+
+- **5a, working hours end to end:**
+  - `User` gains `working_hours_start` and `working_hours_end` (`"HH:MM"`).
+  - `src/lib/working-hours.ts` parses and formats them; unreadable or backwards hours fall back to 8:00 to 17:30.
+  - `useWorkingHours()` reads the signed-in user, with that same fallback while loading.
+  - The New session dialog's after-hours checks and suggestions use it, which retires `DEFAULT_WORKING_HOURS` (D5).
+  - Settings > Coaching preferences gets two half-hour selects that autosave together, like the default duration.
+  - Tests that relied on 9 to 5 now pass an explicit `NINE_TO_FIVE` fixture or mock a 9-to-5 user.
+- **5b, drag:** see its handoff.
+
 ## Follow-ups
 
 - 1c: remove `useSessionActions.openSeries`, the row's copy of the action switch, and the two comments naming the row and the card, once the buckets are gone.

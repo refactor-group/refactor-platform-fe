@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_WORKING_HOURS, suggestTimes } from "@/lib/scheduling";
+import { suggestTimes } from "@/lib/scheduling";
 import { None } from "@/types/option";
 import { EHAB, NOW, PRIYA, TUESDAY, at, hhmm } from "./fixtures";
+
+const NINE_TO_FIVE = { start: 9 * 60, end: 17 * 60 };
 
 const base = {
   day: TUESDAY,
   minutes: 50,
   usual: None,
   busy: [EHAB, PRIYA],
-  hours: DEFAULT_WORKING_HOURS,
+  hours: NINE_TO_FIVE,
   now: NOW,
 };
 

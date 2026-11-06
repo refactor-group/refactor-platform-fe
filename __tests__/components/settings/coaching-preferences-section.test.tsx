@@ -198,4 +198,63 @@ describe("CoachingPreferencesSection", () => {
       );
     });
   });
+
+  describe("working hours", () => {
+    beforeEach(() => {
+      mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
+      mockUserState = {
+        ...mockUserState,
+        user: createMockUser({ id: "user-1", working_hours_start: "08:00", working_hours_end: "17:30" }),
+      };
+    });
+
+    const start = () => screen.getByRole("combobox", { name: "Working hours start" });
+    const end = () => screen.getByRole("combobox", { name: "Working hours end" });
+
+    it("shows the saved hours on half-hour steps", () => {
+      render(<CoachingPreferencesSection />);
+      expect(start()).toHaveValue("08:00");
+      expect(end()).toHaveValue("17:30");
+      expect(screen.getAllByRole("option", { name: "8:30 AM" }).length).toBeGreaterThan(0);
+      expect(start().querySelectorAll("option")).toHaveLength(48);
+    });
+
+    it("saves both hours together after the debounce", async () => {
+      render(<CoachingPreferencesSection />);
+      fireEvent.change(start(), { target: { value: "09:00" } });
+      expect(mockUpdate).not.toHaveBeenCalled();
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+      expect(mockUpdate.mock.calls[0][1]).toMatchObject({
+        working_hours_start: "09:00",
+        working_hours_end: "17:30",
+      });
+      expect(mockRefresh).toHaveBeenCalled();
+    });
+
+    it("doesn't save when the start isn't before the end, and says why", async () => {
+      render(<CoachingPreferencesSection />);
+      fireEvent.change(start(), { target: { value: "18:00" } });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 2);
+      });
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(screen.getByText("Start must be before end.")).toBeInTheDocument();
+    });
+
+    it("shows its own copy on a 422", async () => {
+      mockUpdate.mockRejectedValueOnce(
+        makeApiError(422, { status_code: 422, error: "validation_error", message: "working_hours_start must be before working_hours_end" })
+      );
+      render(<CoachingPreferencesSection />);
+      fireEvent.change(end(), { target: { value: "16:00" } });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+      expect(mockToastError).toHaveBeenCalledWith("Those hours didn't save · Start must be before end");
+    });
+  });
 });
+

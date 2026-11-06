@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
 import { SessionWrite, sessionWriteFailure } from "@/lib/api/coaching-session-errors";
-import { DEFAULT_WORKING_HOURS, nextFreeStart } from "@/lib/scheduling";
+import { nextFreeStart } from "@/lib/scheduling";
 import { whoSubline } from "@/lib/scheduling-copy";
 import { EntityApiError } from "@/types/entity-api-error";
 import { None, Some } from "@/types/option";
 import { Frequency, MAX_OCCURRENCES, MAX_SPAN_DAYS, Weekday, validateRecurrence } from "@/types/recurrence";
 import { NOW, at, busy } from "./fixtures";
+
+const NINE_TO_FIVE = { start: 9 * 60, end: 17 * 60 };
 
 describe("whoSubline: a first session soon", () => {
   it("says today for a first session later today", () => {
@@ -33,19 +35,19 @@ describe("nextFreeStart: outside working hours", () => {
 
   it("offers the next free start that evening when the chosen time is already past the working day", () => {
     const slot = { start: at("2026-08-18T18:00"), minutes: 60 };
-    expect(nextFreeStart(slot, [evening], DEFAULT_WORKING_HOURS)).toEqual(Some(at("2026-08-18T19:00")));
+    expect(nextFreeStart(slot, [evening], NINE_TO_FIVE)).toEqual(Some(at("2026-08-18T19:00")));
   });
 
   it("never runs past midnight", () => {
     const late = busy("s-late", "Blake Today", "2026-08-18T23:00", "2026-08-18T23:50");
     const slot = { start: at("2026-08-18T23:00"), minutes: 60 };
-    expect(nextFreeStart(slot, [late], DEFAULT_WORKING_HOURS)).toEqual(None);
+    expect(nextFreeStart(slot, [late], NINE_TO_FIVE)).toEqual(None);
   });
 
   it("still keeps a working-hours choice inside working hours", () => {
     const afternoon = busy("s-pm", "Priya Raman", "2026-08-18T16:00", "2026-08-18T16:50");
     const slot = { start: at("2026-08-18T16:00"), minutes: 60 };
-    expect(nextFreeStart(slot, [afternoon], DEFAULT_WORKING_HOURS)).toEqual(None);
+    expect(nextFreeStart(slot, [afternoon], NINE_TO_FIVE)).toEqual(None);
   });
 });
 

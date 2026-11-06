@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_WORKING_HOURS, suggestTimes } from "@/lib/scheduling";
+import { suggestTimes } from "@/lib/scheduling";
 import { Some } from "@/types/option";
 import { NOW, TUESDAY, busy, hhmm } from "./fixtures";
 
-const base = { day: TUESDAY, coachStarts: [], hours: DEFAULT_WORKING_HOURS, now: NOW };
+const NINE_TO_FIVE = { start: 9 * 60, end: 17 * 60 };
+
+const base = { day: TUESDAY, coachStarts: [], hours: NINE_TO_FIVE, now: NOW };
 
 describe("suggestTimes across midnight", () => {
   it("skips a late start that runs into a session the next morning", () => {
