@@ -56,6 +56,11 @@ vi.mock("@/lib/hooks/use-week-filter", () => ({
   useWeekFilter: () => ({ people: [ALEX, SAM], selected: selectedPerson, select: selectPerson, clear: clearPerson }),
 }));
 
+let wide = true;
+vi.mock("@/lib/hooks/use-media-query", () => ({
+  useMediaQuery: (query: string) => (query === "(min-width: 1024px)" ? wide : false),
+}));
+
 const toast = vi.fn();
 vi.mock("@/lib/toast", () => ({ toast: (...args: unknown[]) => toast(...args) }));
 vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => TZ }));
@@ -89,6 +94,7 @@ beforeEach(() => {
   isACoach = true;
   edges = { hasEarlier: true, hasLater: true };
   selectedPerson = None;
+  wide = true;
   result = {
     sessions: [LATE_TODAY, THURSDAY, EARLY_TODAY, NEXT_WEEK],
     isLoading: false,
@@ -379,5 +385,62 @@ describe("WeekPanel person filter", () => {
     result = { ...result, sessions: [] };
     renderPanel();
     expect(screen.queryByText("No sessions match this week.")).not.toBeInTheDocument();
+  });
+});
+
+describe("WeekPanel below 1024px", () => {
+  beforeEach(() => {
+    wide = false;
+  });
+
+  const pill = (name: string) => screen.getByRole("button", { name });
+
+  it("swaps the columns for a day strip and today's agenda", () => {
+    renderPanel();
+    expect(screen.queryAllByRole("group", { name: /, August/ })).toHaveLength(0);
+    expect(pill("Tuesday, August 18")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("heading", { name: "Tuesday, August 18" })).toBeInTheDocument();
+    expect(screen.getAllByTestId(/^session-card-/).map((c) => c.dataset.testid)).toEqual([
+      "session-card-early-today",
+      "session-card-late-today",
+    ]);
+  });
+
+  it("shows another day's sessions when its pill is tapped", () => {
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    expect(screen.getByRole("heading", { name: "Thursday, August 20" })).toBeInTheDocument();
+    expect(screen.getAllByTestId(/^session-card-/).map((c) => c.dataset.testid)).toEqual(["session-card-thursday"]);
+  });
+
+  it("says No sessions on an empty day, with Schedule from today on", () => {
+    renderPanel();
+    fireEvent.click(pill("Wednesday, August 19"));
+    expect(screen.getByText("No sessions")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Schedule on Wednesday, August 19" }));
+    expect(onSchedule).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a session from its agenda card", () => {
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Open session" }));
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
+  });
+
+  it("selects Monday on another week, and offers a way back", () => {
+    renderPanel();
+    expect(screen.queryByRole("button", { name: "Back to this week" })).not.toBeInTheDocument();
+    fireEvent.click(button("Next week"));
+    expect(pill("Monday, August 24")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(button("Back to this week"));
+    expect(screen.getByRole("region", { name: "This week" })).toBeInTheDocument();
+    expect(pill("Tuesday, August 18")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the filter's dimming in the agenda", () => {
+    selectedPerson = Some(SAM);
+    renderPanel();
+    expect(screen.getByTestId("session-card-late-today")).toHaveAttribute("data-dimmed", "true");
   });
 });

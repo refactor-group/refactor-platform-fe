@@ -51,6 +51,28 @@ describe("week grid store", () => {
     expect(second.getState().weekOffset).toBe(0);
   });
 
+  it("selects an agenda day, and paging forgets it", () => {
+    const store = createWeekGridStore();
+    store.getState().selectDay("2026-08-21");
+    expect(store.getState().selectedDay).toEqual(Some("2026-08-21"));
+    store.getState().nextWeek();
+    expect(store.getState().selectedDay).toEqual(None);
+    store.getState().selectDay("2026-08-26");
+    store.getState().previousWeek();
+    expect(store.getState().selectedDay).toEqual(None);
+    store.getState().selectDay("2026-08-21");
+    store.getState().thisWeek();
+    expect(store.getState().selectedDay).toEqual(None);
+  });
+
+  it("clears the agenda day on logout and never stores it", () => {
+    const store = createWeekGridStore();
+    store.getState().selectDay("2026-08-21");
+    expect(createWeekGridStore().getState().selectedDay).toEqual(None);
+    store.getState().resetWeekGrid();
+    expect(store.getState().selectedDay).toEqual(None);
+  });
+
   it("gives each store its own week", () => {
     const a = createWeekGridStore();
     const b = createWeekGridStore();
