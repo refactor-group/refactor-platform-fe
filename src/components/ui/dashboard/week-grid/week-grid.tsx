@@ -11,22 +11,24 @@ import {
   rectIntersection,
   useSensor,
   useSensors,
+  type Announcements,
   type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
   type Over,
+  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import type { DateTime } from "ts-luxon";
 import { firstNameOf } from "@/lib/scheduling-copy";
 import type { CardView, GridCard } from "@/lib/week-grid/card";
-import { dropOutcome, type DaySlot } from "@/lib/week-grid/slots";
+import { CANCELLED_LINE, droppedLine, overLine, pickedUpLine } from "@/lib/week-grid/drag-announcements";
+import { dropOutcome, type DaySlot, type DropTarget } from "@/lib/week-grid/slots";
 import type { DayGroup } from "@/lib/week-grid/week";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
 import { DayColumn, type ColumnDrag } from "./day-column";
 import { DragGhost } from "./drag-ghost";
-import type { DropTarget } from "./drop-slots";
 import type { SessionCardHandlers } from "./session-card";
 
 export interface GridDrag {
@@ -47,10 +49,8 @@ export const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
 // Enter stays the card's open key, so only Space picks up and drops.
 const KEYBOARD_CODES = { start: [KeyboardCode.Space], cancel: [KeyboardCode.Esc], end: [KeyboardCode.Space] };
 
-const ACCESSIBILITY = {
-  screenReaderInstructions: {
-    draggable: "To move a session, press Space, use the arrow keys to pick a time, then press Space to drop or Escape to cancel.",
-  },
+const SCREEN_READER_INSTRUCTIONS = {
+  draggable: "To move a session, press Space, use the arrow keys to pick a time, then press Space to drop or Escape to cancel.",
 };
 
 // Only near the top or bottom edge, so picking up a low card doesn't scroll the page away.
@@ -69,8 +69,7 @@ export function WeekGrid({ days, handlers, onSchedule, drag }: WeekGridProps) {
   const justDragged = useRef(false);
 
   const onDragStart = ({ active }: DragStartEvent) => {
-    const card = days.flatMap((d) => d.items).find((c) => c.session.id === active.id);
-    setDragged(card ? Some(card) : None);
+    setDragged(cardWith(days, active.id));
     justDragged.current = true;
   };
   const onDragOver = (event: DragOverEvent) => setOver(dropTargetOf(event.over));
@@ -101,7 +100,7 @@ export function WeekGrid({ days, handlers, onSchedule, drag }: WeekGridProps) {
     <DndContext
       sensors={sensors}
       collisionDetection={collision}
-      accessibility={ACCESSIBILITY}
+      accessibility={{ screenReaderInstructions: SCREEN_READER_INSTRUCTIONS, announcements: announcementsFor(days) }}
       autoScroll={AUTO_SCROLL}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -129,6 +128,26 @@ export function WeekGrid({ days, handlers, onSchedule, drag }: WeekGridProps) {
 
 const IDLE: ColumnDrag = { kind: "idle" };
 const OPEN: ColumnDrag = { kind: "open" };
+
+function cardWith(days: DayGroup<GridCard>[], id: UniqueIdentifier): Option<GridCard> {
+  const card = days.flatMap((d) => d.items).find((c) => c.session.id === id);
+  return card ? Some(card) : None;
+}
+
+function announcementsFor(days: DayGroup<GridCard>[]): Announcements {
+  return {
+    onDragStart: ({ active }) => {
+      const card = cardWith(days, active.id);
+      return card.some ? pickedUpLine(card.val) : undefined;
+    },
+    onDragOver: ({ over }) => {
+      const line = overLine(dropTargetOf(over));
+      return line.some ? line.val : undefined;
+    },
+    onDragEnd: ({ over }) => droppedLine(dropTargetOf(over)),
+    onDragCancel: () => CANCELLED_LINE,
+  };
+}
 
 function dropTargetOf(over: Over | null): Option<DropTarget> {
   const data = over?.data.current as DropTarget | undefined;

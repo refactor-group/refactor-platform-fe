@@ -2,11 +2,8 @@ import { useDroppable } from "@dnd-kit/core";
 import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
 import { timeOfDay } from "@/lib/session-window";
-import { dropOutcome, type DaySlot, type SlotState } from "@/lib/week-grid/slots";
+import { dropOutcome, type DaySlot, type DropTarget, type SlotState } from "@/lib/week-grid/slots";
 import { type Option, None, Some } from "@/types/option";
-
-/** What a droppable carries in its `data`. */
-export type DropTarget = { kind: "day"; day: DateTime } | { kind: "slot"; slot: DaySlot };
 
 export interface DropSlotsProps {
   slots: DaySlot[];

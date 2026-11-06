@@ -3,10 +3,10 @@ import { useDroppable } from "@dnd-kit/core";
 import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
 import type { GridCard } from "@/lib/week-grid/card";
-import type { DaySlot } from "@/lib/week-grid/slots";
+import type { DaySlot, DropTarget } from "@/lib/week-grid/slots";
 import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
 import { type Option, Some } from "@/types/option";
-import { DropSlots, type DropTarget } from "./drop-slots";
+import { DropSlots } from "./drop-slots";
 import { EmptyDay } from "./empty-day";
 import { SessionCard, type SessionCardHandlers } from "./session-card";
 

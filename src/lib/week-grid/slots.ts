@@ -23,6 +23,9 @@ export interface DaySlot {
   state: SlotState;
 }
 
+/** What a drop target carries in its `data`. */
+export type DropTarget = { kind: "day"; day: DateTime } | { kind: "slot"; slot: DaySlot };
+
 export interface DaySlotsInput {
   day: DateTime;
   moving: BusySession;
