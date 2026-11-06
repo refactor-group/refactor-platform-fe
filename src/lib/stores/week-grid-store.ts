@@ -7,6 +7,7 @@ interface WeekGridState {
   weekOffset: number;
   personFilter: Option<Id>;
   selectedDay: Option<string>;
+  recentlyMoved: Id[];
 }
 
 interface WeekGridActions {
@@ -16,12 +17,19 @@ interface WeekGridActions {
   setPersonFilter: (id: Id) => void;
   clearPersonFilter: () => void;
   selectDay: (iso: string) => void;
+  markMoved: (id: Id) => void;
+  clearMoved: () => void;
   resetWeekGrid: () => void;
 }
 
 export type WeekGridStore = WeekGridState & WeekGridActions;
 
-const initialState: WeekGridState = { weekOffset: 0, personFilter: None, selectedDay: None };
+const initialState: WeekGridState = {
+  weekOffset: 0,
+  personFilter: None,
+  selectedDay: None,
+  recentlyMoved: [],
+};
 
 export const createWeekGridStore = () =>
   create<WeekGridStore>()(
@@ -35,6 +43,9 @@ export const createWeekGridStore = () =>
           setPersonFilter: (id) => set({ personFilter: Some(id) }),
           clearPersonFilter: () => set({ personFilter: None }),
           selectDay: (iso) => set({ selectedDay: Some(iso) }),
+          markMoved: (id) =>
+            set((s) => (s.recentlyMoved.includes(id) ? s : { recentlyMoved: [...s.recentlyMoved, id] })),
+          clearMoved: () => set({ recentlyMoved: [] }),
           resetWeekGrid: () => set(initialState),
         }),
         {

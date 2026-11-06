@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useMemo } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { useSWRConfig } from "swr";
 import { cn } from "@/components/lib/utils";
@@ -12,16 +12,21 @@ import { WEEK_GRID_QUERY } from "@/lib/breakpoints";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
+import { useMoveSession } from "@/lib/hooks/use-move-session";
 import { useNow } from "@/lib/hooks/use-now";
 import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
 import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
 import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
+import { useWorkingHours } from "@/lib/hooks/use-working-hours";
+import { busySessions } from "@/lib/schedule-draft";
 import { SessionAction } from "@/lib/session-actions";
-import type { MoveScope } from "@/lib/scheduling";
-import { CardClick, cardClick, cardView, type CardView, type GridCard } from "@/lib/week-grid/card";
+import type { MoveScope, WorkingHours } from "@/lib/scheduling";
+import { firstNameOf } from "@/lib/scheduling-copy";
+import { CardClick, cardClick, cardView, markMoved, type CardView, type GridCard } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
+import { daySlots } from "@/lib/week-grid/slots";
 import {
   agendaDay,
   groupByDay,
@@ -34,9 +39,11 @@ import {
 } from "@/lib/week-grid/week";
 import { siteConfig } from "@/site.config";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import { DayAgenda } from "./day-agenda";
 import { DayStrip } from "./day-strip";
+import { MoveSheet, type MoveSheetModel } from "./move-sheet";
 import type { SessionCardHandlers } from "./session-card";
 import type { OnSessionAction } from "./session-card-menu";
 import { WeekGrid, WEEK_GRID_CLASS } from "./week-grid";
@@ -73,6 +80,27 @@ function useWeekNavigation(isCurrentWeek: boolean, canSchedule: boolean, week: W
   };
 }
 
+interface MoveContext {
+  days: DayGroup<GridCard>[];
+  sessions: EnrichedCoachingSession[];
+  viewerId: Id;
+  timezone: string;
+  hours: WorkingHours;
+  now: DateTime;
+}
+
+function moveSheetModel(view: CardView, context: MoveContext): MoveSheetModel {
+  const { days, sessions, viewerId, timezone, hours, now } = context;
+  const busy = busySessions(sessions, viewerId, timezone);
+  const [moving] = busySessions([view.session], viewerId, timezone);
+  return {
+    name: firstNameOf(view.name),
+    current: view.start,
+    days: days.map((d) => ({ day: d.day, past: d.isPast })),
+    slotsFor: (day) => daySlots({ day, moving, busy, hours, now }),
+  };
+}
+
 export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPanelProps) {
   const timezone = useScheduleTimezone();
   const now = useNow(30_000);
@@ -98,23 +126,52 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     onSeriesMutated,
   });
 
+  const recentlyMoved = useWeekGridStore((s) => s.recentlyMoved);
+  const clearMoved = useWeekGridStore((s) => s.clearMoved);
+  useEffect(() => clearMoved, [clearMoved]);
+
+  const days = useMemo(() => {
+    const cards = sessions.map((s): GridCard => {
+      const view = cardView(s, { viewerId, now, timezone });
+      return { ...(recentlyMoved.includes(s.id) ? markMoved(view) : view), dimmed: isFilteredOut(s, selected) };
+    });
+    return groupByDay(cards, (c) => c.start, week, now);
+  }, [sessions, viewerId, now, timezone, week, selected, recentlyMoved]);
+
+  const [moveTarget, setMoveTarget] = useState<Option<CardView>>(None);
+  const openMove = useCallback(
+    (session: EnrichedCoachingSession) => {
+      const view = days.flatMap((d) => d.items).find((c) => c.session.id === session.id);
+      if (view) setMoveTarget(Some(view));
+    },
+    [days]
+  );
+
   const { run } = actions;
   const handlers = useMemo<SessionCardHandlers>(
     () => ({
-      onAction: run,
+      onAction: (action, session) => (action === SessionAction.Move ? openMove(session) : run(action, session)),
       onSelect: (view) => onCardSelect(view, run),
       onOpen: (view) => run(SessionAction.OpenSession, view.session),
+      ...(canSchedule && { onMove: (view: CardView) => setMoveTarget(Some(view)) }),
     }),
-    [run]
+    [run, openMove, canSchedule]
   );
 
-  const days = useMemo(() => {
-    const cards = sessions.map((s): GridCard => ({
-      ...cardView(s, { viewerId, now, timezone }),
-      dimmed: isFilteredOut(s, selected),
-    }));
-    return groupByDay(cards, (c) => c.start, week, now);
-  }, [sessions, viewerId, now, timezone, week, selected]);
+  const hours = useWorkingHours();
+  const moveModel = moveTarget.some
+    ? Some(moveSheetModel(moveTarget.val, { days, sessions, viewerId, timezone, hours, now }))
+    : None;
+  const moveSession = useMoveSession();
+  const selectDay = useWeekGridStore((s) => s.selectDay);
+  const closeMove = () => setMoveTarget(None);
+  const confirmMove = (to: DateTime) => {
+    if (moveTarget.none) return;
+    const { session, name } = moveTarget.val;
+    moveSession({ session, name, to });
+    selectDay(to.toFormat(ISO_DATE));
+    closeMove();
+  };
 
   const titleId = useId();
   const header = {
@@ -152,6 +209,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
         <WeekAgenda days={days} week={week} now={now} handlers={handlers} onSchedule={scheduleDay} noMatches={noMatches} />
       )}
       <SessionActionDialogs {...actions.dialogs} />
+      <MoveSheet model={moveModel} onConfirm={confirmMove} onClose={closeMove} />
     </section>
   );
 }

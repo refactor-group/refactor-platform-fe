@@ -25,7 +25,8 @@ export enum CardClick {
 export type CardNote =
   | { kind: "relative"; text: string; pulse: boolean }
   | { kind: "topics"; count: number }
-  | { kind: "noTopics" };
+  | { kind: "noTopics" }
+  | { kind: "moved" };
 
 export interface CardContext {
   viewerId: Id;
@@ -77,11 +78,18 @@ export function cardNoteText(note: CardNote): string {
       return topicCountText(note.count);
     case "noTopics":
       return "No topics yet";
+    case "moved":
+      return "Moved";
     default: {
       const _exhaustive: never = note;
       throw new Error(`Unhandled card note: ${JSON.stringify(_exhaustive)}`);
     }
   }
+}
+
+export function markMoved(view: CardView): CardView {
+  const tense = view.tense === CardTense.Live ? CardTense.Upcoming : view.tense;
+  return { ...view, tense, note: { kind: "moved" } };
 }
 
 function tenseOf(urgency: SessionUrgency): CardTense {

@@ -17,6 +17,8 @@ export interface WorkingHours {
 }
 
 export const DEFAULT_WORKING_HOURS: WorkingHours = { start: 9 * 60, end: 17 * 60 };
+// The backend's default until user hours are read.
+export const USER_WORKING_HOURS_FALLBACK: WorkingHours = { start: 8 * 60, end: 17 * 60 + 30 };
 
 export interface BusyClash {
   session: BusySession;
@@ -44,7 +46,7 @@ export interface Cadence {
 
 export type RepeatChoice = { kind: "none" } | ({ kind: "repeat"; end: RecurrenceEnd } & Cadence);
 
-const SLOT_STEP_MINUTES = 30;
+export const SLOT_STEP_MINUTES = 30;
 const MAX_SUGGESTIONS = 5;
 /** A start time counts as a habit once it has been used this many times. */
 const MIN_REPEATS = 2;
@@ -62,7 +64,7 @@ function minuteOfDay(dt: DateTime): number {
 }
 
 /** `minute` past midnight on `day`'s local date, in its zone. */
-function atMinute(day: DateTime, minute: number): DateTime {
+export function atMinute(day: DateTime, minute: number): DateTime {
   return day.startOf("day").set({ hour: Math.floor(minute / 60), minute: minute % 60 });
 }
 

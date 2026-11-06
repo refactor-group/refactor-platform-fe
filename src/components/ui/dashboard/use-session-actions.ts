@@ -110,6 +110,9 @@ export function useSessionActions({
         case SessionAction.Reschedule:
           onReschedule(session);
           return;
+        case SessionAction.Move:
+          // The week panel opens the Move sheet itself.
+          return;
         case SessionAction.ViewSeries:
           if (seriesId.some) setSeriesAction({ kind: "view", seriesId: seriesId.val });
           return;

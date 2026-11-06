@@ -19,6 +19,7 @@ import { SessionWrite, sessionWriteFailure } from "@/lib/api/coaching-session-er
 import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
 import { followingPayload } from "@/lib/move-draft";
 import { seriesPayload, sessionPayload } from "@/lib/schedule-draft";
+import { writeSessionMove } from "@/lib/session-move";
 import type { RepeatChoice } from "@/lib/scheduling";
 import { toSessionDate } from "@/lib/session-window";
 import { toast } from "@/lib/toast";
@@ -87,11 +88,7 @@ function firstWrite(plan: SessionPlan): Promise<unknown> {
         : CoachingSessionApi.create(sessionPayload(plan));
     }
     case "move":
-      return CoachingSessionApi.update(plan.session.id, {
-        ...plan.session,
-        date: toSessionDate(plan.start),
-        duration_minutes: plan.minutes,
-      });
+      return writeSessionMove(plan.session, plan.start, plan.minutes);
     case "following":
       return CoachingSessionSeriesApi.reschedule(
         plan.seriesId,

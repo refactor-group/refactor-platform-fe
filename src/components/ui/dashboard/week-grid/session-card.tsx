@@ -21,6 +21,7 @@ export interface SessionCardHandlers {
   onAction: OnSessionAction;
   onSelect: (view: CardView) => void;
   onOpen: (view: CardView) => void;
+  onMove?: (view: CardView) => void;
 }
 
 export enum SessionCardLayout {
@@ -41,8 +42,11 @@ export function SessionCard({
   onAction,
   onSelect,
   onOpen,
+  onMove,
 }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
+  const isAgenda = layout === SessionCardLayout.Agenda;
+  const canMove = !isPast && view.canManage;
   const time = timeOfDay(view.start);
   const clicks = useClickOrDoubleClick(
     () => onSelect(view),
@@ -53,7 +57,7 @@ export function SessionCard({
   };
 
   return (
-    <SessionCardMenu view={view} onAction={onAction}>
+    <SessionCardMenu view={view} isCompact={isAgenda} onAction={onAction}>
       <div
         data-testid={`session-card-${view.session.id}`}
         data-tense={view.tense}
@@ -89,9 +93,14 @@ export function SessionCard({
           {view.name}
         </span>
         <CardNoteLine note={view.note} />
-        <div className="mt-auto flex items-center justify-between gap-2">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
           <CardFooterLine footer={view.footer} sessionId={view.session.id} />
-          {layout === SessionCardLayout.Agenda && <OpenSessionButton onOpen={() => onOpen(view)} />}
+          {isAgenda && (
+            <div className="ml-auto flex items-center gap-2">
+              {canMove && onMove && <CardButton label="Move" onClick={() => onMove(view)} />}
+              <CardButton label="Open session" onClick={() => onOpen(view)} />
+            </div>
+          )}
         </div>
       </div>
     </SessionCardMenu>
@@ -102,7 +111,7 @@ function stopPropagation(e: SyntheticEvent) {
   e.stopPropagation();
 }
 
-function OpenSessionButton({ onOpen }: { onOpen: () => void }) {
+function CardButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <Button
       variant="secondary"
@@ -110,12 +119,12 @@ function OpenSessionButton({ onOpen }: { onOpen: () => void }) {
       className="text-[13px]"
       onClick={(e) => {
         e.stopPropagation();
-        onOpen();
+        onClick();
       }}
       onDoubleClick={stopPropagation}
       onKeyDown={stopPropagation}
     >
-      Open session
+      {label}
     </Button>
   );
 }
