@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
 import { createMockEnrichedSession } from "../../test-utils";
-import { CardClick, CardTense, cardClick, cardView, readOnlyView } from "@/lib/week-grid/card";
+import { CardClick, CardTense, cardClick, cardView, readOnlyView, sessionLocked } from "@/lib/week-grid/card";
 
 // Tuesday, August 18 2026, 1:45 PM in Chicago.
 const NOW = DateTime.fromISO("2026-08-18T18:45:00Z", { zone: "utc" });
@@ -52,5 +52,22 @@ describe("cardClick with today's ended sessions", () => {
     expect(cardClick(cardView(ENDED_TODAY, COACHEE))).toBe(CardClick.Nothing);
     expect(cardClick(cardView(YESTERDAY, COACH))).toBe(CardClick.Nothing);
     expect(cardClick(readOnlyView(cardView(ENDED_TODAY, COACH)))).toBe(CardClick.Nothing);
+  });
+});
+
+describe("sessionLocked", () => {
+  it("locks only sessions from an earlier day, judged in the viewer's zone", () => {
+    expect(sessionLocked(TOMORROW, NOW, COACH.timezone)).toBe(false);
+    expect(sessionLocked(ENDED_TODAY, NOW, COACH.timezone)).toBe(false);
+    expect(sessionLocked(YESTERDAY, NOW, COACH.timezone)).toBe(true);
+    expect(sessionLocked(LATE_YESTERDAY, NOW, COACH.timezone)).toBe(true);
+    const evening = DateTime.fromISO("2026-08-19T02:00:00Z", { zone: "utc" });
+    expect(sessionLocked(ENDED_TODAY, evening, COACH.timezone)).toBe(false);
+  });
+
+  it("agrees with the card's editable flag", () => {
+    for (const s of [TOMORROW, ENDED_TODAY, YESTERDAY, LATE_YESTERDAY]) {
+      expect(cardView(s, COACH).editable).toBe(!sessionLocked(s, NOW, COACH.timezone));
+    }
   });
 });

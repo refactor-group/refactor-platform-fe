@@ -630,7 +630,7 @@ describe("WeekPanel when the server can't be reached (read only)", () => {
 });
 
 describe("WeekPanel sessions that ended earlier today", () => {
-  it("keep the full menu, with Remove rather than Cancel, and still drag", () => {
+  it("keep the full menu, cancel like any session still to change, and still drag", () => {
     renderPanel();
     const card = screen.getByTestId("session-card-early-today");
     expect(card).toHaveAttribute("data-tense", "past");
@@ -641,7 +641,7 @@ describe("WeekPanel sessions that ended earlier today", () => {
       "Reschedule…",
       "Share link",
       "Resend invite",
-      "Remove session…",
+      "Cancel session…",
     ]);
   });
 
