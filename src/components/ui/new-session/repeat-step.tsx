@@ -124,7 +124,10 @@ export function RepeatStep(model: RepeatModel) {
       <FrequencyChips {...model} />
       {repeat.kind === "repeat" && frequencySupportsWeekdays(repeat.frequency) && (
         <div className="flex flex-col gap-2.5">
-          <SectionLabel id={`${id}-days`}>On these days</SectionLabel>
+          <div className="flex items-baseline gap-1.5">
+            <SectionLabel id={`${id}-days`}>Repeats on</SectionLabel>
+            <span className="text-label text-faint">(select 1 or more)</span>
+          </div>
           <WeekdayPicker
             labelledBy={`${id}-days`}
             value={model.byWeekdays}
