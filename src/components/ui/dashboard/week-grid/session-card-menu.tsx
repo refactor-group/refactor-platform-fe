@@ -21,7 +21,7 @@ import {
   type SessionActionContext,
   type SessionActionItem,
 } from "@/lib/session-actions";
-import { CardTense, type CardView } from "@/lib/week-grid/card";
+import type { CardView } from "@/lib/week-grid/card";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 
 export type OnSessionAction = (action: SessionAction, session: EnrichedCoachingSession) => void;
@@ -39,7 +39,6 @@ export function SessionCardMenu({ view, isCompact, onAction, children }: Session
   const context: SessionActionContext = {
     isCoach: view.canManage,
     isPast: !view.editable,
-    hasEnded: view.tense === CardTense.Past,
     isCompact,
   };
   const items = sessionActionsFor(view.session, context);

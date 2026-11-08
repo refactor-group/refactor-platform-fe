@@ -67,8 +67,14 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
     note: noteOf(urgency, minutesUntil(start, context.now), topicCount),
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,
-    editable: tense !== CardTense.Past || start.hasSame(context.now.setZone(context.timezone), "day"),
+    editable: !sessionLocked(session, context.now, context.timezone),
   };
+}
+
+/** Ended, and not started on today's date in the zone: only Open session and Remove remain. */
+export function sessionLocked(session: EnrichedCoachingSession, now: DateTime, timezone: string): boolean {
+  const ended = calculateSessionUrgency(session, now) === SessionUrgency.Past;
+  return ended && !sessionStartIn(session.date, timezone).hasSame(now.setZone(timezone), "day");
 }
 
 export function cardClick(view: CardView): CardClick {

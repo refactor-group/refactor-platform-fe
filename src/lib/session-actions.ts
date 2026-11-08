@@ -28,7 +28,6 @@ export interface SessionActionContext {
   isCoach: boolean;
   /** Locked: only Open session and the delete item remain. */
   isPast: boolean;
-  hasEnded: boolean;
   isCompact: boolean;
 }
 
@@ -135,7 +134,7 @@ export function sessionActionLabel(
     case SessionAction.ResendInvite:
       return inSeries(session) ? "Resend series invite" : "Resend invite";
     case SessionAction.DeleteSession:
-      return removalLabel(sessionRemovalFor(context.hasEnded));
+      return removalLabel(sessionRemovalFor(context.isPast));
     case SessionAction.DeleteSeries:
       return "Cancel series…";
   }

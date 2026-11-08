@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DateTime } from "ts-luxon";
 import { toast as sonnerToast } from "@/lib/toast";
 import { copyCoachingSessionLinkWithToast } from "@/components/ui/share-session-link";
 import { useResendInvite } from "@/components/ui/dashboard/use-resend-invite";
@@ -16,7 +17,8 @@ import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
 import { SessionAction, SessionRemoval, sessionRemovalFor } from "@/lib/session-actions";
 import type { MoveScope } from "@/lib/scheduling";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
-import { isPastSession, type EnrichedCoachingSession } from "@/types/coaching-session";
+import { sessionLocked } from "@/lib/week-grid/card";
+import type { EnrichedCoachingSession } from "@/types/coaching-session";
 
 /**
  * Models the only legal states of the delete-confirmation flow, so the type
@@ -129,7 +131,7 @@ export function useSessionActions({
           setDeleteState({
             kind: "pending",
             session,
-            removal: sessionRemovalFor(isPastSession(session)),
+            removal: sessionRemovalFor(sessionLocked(session, DateTime.now(), userTimezone)),
           });
           return;
         case SessionAction.DeleteSeries:
@@ -137,7 +139,7 @@ export function useSessionActions({
           return;
       }
     },
-    [router, onReschedule, editSeries, requestResend]
+    [router, onReschedule, editSeries, requestResend, userTimezone]
   );
 
   return {
