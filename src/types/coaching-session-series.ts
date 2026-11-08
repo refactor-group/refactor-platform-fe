@@ -200,27 +200,36 @@ export function seriesRecurrenceToEnd(
   return { kind: "count", count: 4 };
 }
 
+/** How a series repeats, e.g. "Weekly on Mon, Wed". */
+export function seriesRepeatsText(rule: SeriesRule): string {
+  const { frequency, interval, by_weekdays } = rule.recurrence;
+  const onDays =
+    by_weekdays && by_weekdays.length > 0 ? ` on ${by_weekdays.map(weekdayLabel).join(", ")}` : "";
+  return `${frequencyPhrase(frequency, interval)}${onDays}`;
+}
+
+function sessionCountText(n: number): string {
+  return `${n} session${n === 1 ? "" : "s"}`;
+}
+
+/** When a series ends, e.g. "Until Aug 15, 2026", "After 8 sessions" or "No end date". */
+export function seriesEndText(rule: SeriesRule): string {
+  const { count, until } = rule.recurrence;
+  if (count.some) return `After ${sessionCountText(count.val)}`;
+  if (until.some) return `Until ${DateTime.fromISO(until.val).toFormat("LLL d, yyyy")}`;
+  return "No end date";
+}
+
+function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 /**
  * Renders a series' recurrence rule as a single human-readable line, e.g.
  * "Weekly on Mon, Wed · 24 sessions" or "Bi-weekly on Mon · until Aug 15, 2026".
  */
 export function formatSeriesRule(rule: SeriesRule): string {
-  const { recurrence } = rule;
-  const base = frequencyPhrase(recurrence.frequency, recurrence.interval);
-  const onDays =
-    recurrence.by_weekdays && recurrence.by_weekdays.length > 0
-      ? ` on ${recurrence.by_weekdays.map(weekdayLabel).join(", ")}`
-      : "";
-
-  let end: string;
-  if (recurrence.count.some) {
-    const n = recurrence.count.val;
-    end = `${n} session${n === 1 ? "" : "s"}`;
-  } else if (recurrence.until.some) {
-    end = `until ${DateTime.fromISO(recurrence.until.val).toFormat("LLL d, yyyy")}`;
-  } else {
-    end = "no end date";
-  }
-
-  return `${base}${onDays} · ${end}`;
+  const { count } = rule.recurrence;
+  const end = count.some ? sessionCountText(count.val) : lowerFirst(seriesEndText(rule));
+  return `${seriesRepeatsText(rule)} · ${end}`;
 }

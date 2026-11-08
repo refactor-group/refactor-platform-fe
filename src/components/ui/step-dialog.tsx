@@ -102,6 +102,16 @@ function positionText({ index, total }: StepPosition): string {
   return `${index} of ${total}`;
 }
 
+/** A read-only single view has nowhere to go, so it shows no position, arrows or footer. */
+function isSingleView({
+  position,
+  onPrev,
+  onNext,
+  lead,
+}: Pick<StepDialogProps, "position" | "onPrev" | "onNext" | "lead">): boolean {
+  return position.total === 1 && onPrev.none && onNext.none && lead.kind === "none";
+}
+
 // ─── Shared pieces ───────────────────────────────────────────────────
 
 function ConfirmButton({ lead, size }: { lead: ConfirmLead; size: "lg" | "xl" }) {
@@ -178,11 +188,13 @@ function Rail({
     <div className="flex min-h-0 flex-col border-r border-rail-border bg-card pb-6 pl-6 pr-4 pt-7">
       <DialogPrimitive.Title className="text-card-title font-semibold">{title}</DialogPrimitive.Title>
       {railHeader && <div className="mt-3.5">{railHeader}</div>}
-      <ol aria-label="Steps" className="-mx-2 mt-[18px]">
-        {steps.map((step) => (
-          <RailRow key={step.id} step={step} />
-        ))}
-      </ol>
+      {steps.length > 0 && (
+        <ol aria-label="Steps" className="-mx-2 mt-[18px]">
+          {steps.map((step) => (
+            <RailRow key={step.id} step={step} />
+          ))}
+        </ol>
+      )}
       {railFooter && <div className="mt-auto border-t border-hairline pt-3.5">{railFooter}</div>}
     </div>
   );
@@ -222,6 +234,7 @@ function PaneFooter({
   onPrev,
   onNext,
 }: Pick<StepDialogProps, "lead" | "position" | "onPrev" | "onNext">) {
+  if (isSingleView({ position, onPrev, onNext, lead })) return null;
   return (
     <div className="mt-auto flex items-center gap-2 pt-4">
       <PaneLead lead={lead} />
@@ -237,14 +250,22 @@ function PaneFooter({
 
 // ─── Mobile: full-screen step view ───────────────────────────────────
 
-function MobileTopBar({ title, position }: Pick<StepDialogProps, "title" | "position">) {
+function MobileTopBar({
+  title,
+  position,
+  single,
+}: Pick<StepDialogProps, "title" | "position"> & { single: boolean }) {
   return (
     <div className="flex h-14 shrink-0 items-center border-b border-hairline bg-card px-4">
       <DialogPrimitive.Title className="text-item font-medium">{title}</DialogPrimitive.Title>
-      <span aria-hidden className="mx-1.5 text-muted-foreground">
-        ·
-      </span>
-      <span className="text-item tabular-nums text-muted-foreground">{positionText(position)}</span>
+      {!single && (
+        <>
+          <span aria-hidden className="mx-1.5 text-muted-foreground">
+            ·
+          </span>
+          <span className="text-item tabular-nums text-muted-foreground">{positionText(position)}</span>
+        </>
+      )}
       <div className="flex-1" />
       <CloseButton size="icon-md" />
     </div>
@@ -264,9 +285,11 @@ function MobileFooterAction({ lead, onNext }: Pick<StepDialogProps, "lead" | "on
 
 function MobileFooter({
   lead,
+  position,
   onPrev,
   onNext,
-}: Pick<StepDialogProps, "lead" | "onPrev" | "onNext">) {
+}: Pick<StepDialogProps, "lead" | "position" | "onPrev" | "onNext">) {
+  if (isSingleView({ position, lead, onPrev, onNext })) return null;
   return (
     <div className="flex shrink-0 items-center gap-3 border-t border-hairline bg-card px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
       <StepArrow direction="prev" onStep={onPrev} />
@@ -312,7 +335,7 @@ function StepDialogContent({ desktop, ...props }: StepDialogProps & { desktop: b
       {desktop ? (
         <Rail title={props.title} railHeader={props.railHeader} steps={props.steps} railFooter={props.railFooter} />
       ) : (
-        <MobileTopBar title={props.title} position={props.position} />
+        <MobileTopBar title={props.title} position={props.position} single={isSingleView(props)} />
       )}
       <div
         className={
@@ -334,7 +357,9 @@ function StepDialogContent({ desktop, ...props }: StepDialogProps & { desktop: b
           props.railFooter && <div className="mt-8">{props.railFooter}</div>
         )}
       </div>
-      {!desktop && <MobileFooter lead={props.lead} onPrev={props.onPrev} onNext={props.onNext} />}
+      {!desktop && (
+        <MobileFooter lead={props.lead} position={props.position} onPrev={props.onPrev} onNext={props.onNext} />
+      )}
     </DialogPrimitive.Content>
   );
 }

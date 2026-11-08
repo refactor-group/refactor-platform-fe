@@ -1,21 +1,21 @@
 "use client";
 
 import { AppliesToStep } from "@/components/ui/new-session/applies-to-step";
-import { MoveHeader } from "@/components/ui/new-session/move-header";
 import { RepeatStep } from "@/components/ui/new-session/repeat-step";
 import { ResolveStep } from "@/components/ui/new-session/resolve-step";
 import { RescheduleSummary } from "@/components/ui/new-session/reschedule-summary";
 import { ScheduleSummary } from "@/components/ui/new-session/schedule-summary";
 import { WhenStep } from "@/components/ui/new-session/when-step";
 import { WhoStep } from "@/components/ui/new-session/who-step";
+import { PersonHeader } from "@/components/ui/person-header";
 import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
 import { useNewSessionDialog } from "@/lib/hooks/use-new-session-dialog";
 import { NO_SERIES, type SeriesLoad, useLoadedSeries } from "@/lib/hooks/use-schedule-data";
-import type { NewSessionDialogModel } from "@/lib/new-session-dialog-model";
+import type { MoverModel, NewSessionDialogModel } from "@/lib/new-session-dialog-model";
 import { StepKind } from "@/lib/scheduling";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import type { Id } from "@/types/general";
-import { None } from "@/types/option";
+import { None, Some } from "@/types/option";
 import type { ReactNode } from "react";
 
 interface StepContent {
@@ -77,6 +77,10 @@ function railFooter({ summary, moves }: NewSessionDialogModel) {
   return undefined;
 }
 
+function MoverHeader({ currently, ...person }: MoverModel) {
+  return <PersonHeader {...person} detail={Some(currently)} />;
+}
+
 function NewSessionDialogView({
   request,
   series,
@@ -90,7 +94,7 @@ function NewSessionDialogView({
       onClose={onClose}
       title={model.title}
       height={StepDialogHeight.Tall}
-      railHeader={model.mover.some ? <MoveHeader {...model.mover.val} /> : undefined}
+      railHeader={model.mover.some ? <MoverHeader {...model.mover.val} /> : undefined}
       steps={model.rail}
       railFooter={railFooter(model)}
       stepTitle={content.title}

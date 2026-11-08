@@ -10,9 +10,11 @@ import {
 } from "@/lib/api/coaching-session-series";
 import {
   CoachingRelationshipWithUserNames,
+  getOtherPersonId,
   getOtherPersonName,
 } from "@/types/coaching-relationship";
 import { Id } from "@/types/general";
+import { None, Some } from "@/types/option";
 
 export type SeriesAction =
   | { kind: "closed" }
@@ -106,8 +108,14 @@ function SeriesActionDialogsInner({
   const relationship = loaded
     ? relationships.find((r) => r.id === loaded.coaching_relationship_id)
     : undefined;
-  const participantName =
-    relationship && viewerId ? getOtherPersonName(relationship, viewerId) : "";
+  const person =
+    relationship && viewerId
+      ? Some({
+          userId: getOtherPersonId(relationship, viewerId),
+          fullName: getOtherPersonName(relationship, viewerId),
+        })
+      : None;
+  const participantName = person.some ? person.val.fullName : "";
 
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
@@ -126,6 +134,7 @@ function SeriesActionDialogsInner({
     return (
       <SeriesDetailDialog
         series={loaded}
+        person={person}
         userTimezone={userTimezone}
         onClose={onClose}
       />
