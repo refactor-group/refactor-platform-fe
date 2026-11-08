@@ -329,20 +329,44 @@ export function swapStartWeekday(days: Weekday[], from: Weekday, to: Weekday): W
   return WEEKDAYS_ORDERED.filter((d) => next.includes(d));
 }
 
+// Past the backend's span cap the series is invalid anyway; stop walking there.
+function* occurrenceDays(input: OccurrenceInput): Generator<DateTime> {
+  const first = input.start.startOf("day");
+  for (let offset = 0; offset < MAX_SPAN_DAYS + 1; offset += 1) {
+    const day = first.plus({ days: offset });
+    if (occursOn(day, input)) yield day;
+  }
+}
+
 export function occurrenceCount(input: OccurrenceInput): number {
   const { start, end } = input;
   if (end.kind === "count") return end.count;
-  const first = start.startOf("day");
   const until = DateTime.fromISO(end.until, { zone: start.zone }).startOf("day");
   if (!until.isValid) return 0;
   let count = 0;
-  // Past the backend's span cap the series is invalid anyway; stop counting there.
-  for (let offset = 0; offset < MAX_SPAN_DAYS + 1; offset += 1) {
-    const day = first.plus({ days: offset });
+  for (const day of occurrenceDays(input)) {
     if (day > until) break;
-    if (occursOn(day, input)) count += 1;
+    count += 1;
   }
   return count;
+}
+
+export function lastOccurrence(input: OccurrenceInput): Option<DateTime> {
+  const { start, end } = input;
+  if (end.kind !== "count" || !Number.isInteger(end.count) || end.count < 1) return None;
+  let seen = 0;
+  for (const day of occurrenceDays(input)) {
+    seen += 1;
+    if (seen === end.count) {
+      return Some(day.set({ hour: start.hour, minute: start.minute, second: start.second, millisecond: start.millisecond }));
+    }
+  }
+  return None;
+}
+
+export function lastSessionText(last: DateTime, start: DateTime): string {
+  const format = last.year === start.year ? "ccc, LLL d" : "ccc, LLL d, yyyy";
+  return `the last on ${last.toFormat(format)}`;
 }
 
 // ─── Payloads ────────────────────────────────────────────────────────
