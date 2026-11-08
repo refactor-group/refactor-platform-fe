@@ -219,6 +219,15 @@ export function meetingLine(provider: Option<Provider>): Option<string> {
   return provider.some ? Some(`${providerName(provider.val)} link included`) : None;
 }
 
+/** "Today", "Tomorrow", "In 3 days" or "In 2 weeks", counted in calendar days in start's zone. */
+export function relativeDayText(start: DateTime, now: DateTime): string {
+  const days = Math.round(start.startOf("day").diff(now.setZone(start.zone).startOf("day"), "days").days);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days < 14) return `In ${days} days`;
+  return `In ${Math.floor(days / 7)} weeks`;
+}
+
 export function currentlyLine(start: DateTime): string {
   return `Currently ${start.toFormat("ccc")}, ${shortDate(start)}, ${timeOfDay(start)}`;
 }

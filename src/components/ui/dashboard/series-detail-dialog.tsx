@@ -11,6 +11,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
 import { useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
 import { initialsOf } from "@/lib/people";
+import { relativeDayText } from "@/lib/scheduling-copy";
+import { sessionStartIn } from "@/lib/session-window";
 import { type CoachingSession, isPastSession } from "@/types/coaching-session";
 import {
   type CoachingSessionSeries,
@@ -36,7 +38,7 @@ const PAGE_SIZE = 10;
 
 enum SessionRowStatus {
   Done = "done",
-  Next = "next",
+  Soonest = "soonest",
   Later = "later",
 }
 
@@ -58,19 +60,18 @@ interface Fact {
 // ─── Pure formatting ─────────────────────────────────────────────────
 
 /** "Tue, Nov 10 · 4:30 PM", with ", 2027" after the date when it isn't this year. */
-function sessionRowText(date: string, timezone: string, now: DateTime): string {
-  const start = DateTime.fromISO(date, { zone: "utc" }).setZone(timezone);
-  const year = start.year === now.setZone(timezone).year ? "" : start.toFormat(", yyyy");
+function sessionRowText(start: DateTime, now: DateTime): string {
+  const year = start.year === now.setZone(start.zone).year ? "" : start.toFormat(", yyyy");
   return `${start.toFormat("ccc, LLL d")}${year} · ${start.toFormat("h:mm a")}`;
 }
 
-/** Past sessions are done; the first one after them is next. */
+/** Past sessions are done; the first one after them is the soonest. */
 function sessionRows(sessions: CoachingSession[]): SessionRow[] {
   const past = sessions.map((session) => isPastSession(session));
-  const nextIndex = past.indexOf(false);
+  const soonestIndex = past.indexOf(false);
   return sessions.map((session, i) => ({
     session,
-    status: past[i] ? SessionRowStatus.Done : i === nextIndex ? SessionRowStatus.Next : SessionRowStatus.Later,
+    status: past[i] ? SessionRowStatus.Done : i === soonestIndex ? SessionRowStatus.Soonest : SessionRowStatus.Later,
   }));
 }
 
@@ -130,12 +131,12 @@ function SeriesRailHeader({ person, facts }: { person: Option<SeriesPerson>; fac
 
 // ─── Pane ────────────────────────────────────────────────────────────
 
-function RowStatusLabel({ status }: { status: SessionRowStatus }) {
+function RowStatusLabel({ status, start, now }: { status: SessionRowStatus; start: DateTime; now: DateTime }) {
   switch (status) {
     case SessionRowStatus.Done:
       return <span className="text-xs text-muted-foreground">Done</span>;
-    case SessionRowStatus.Next:
-      return <span className="text-xs font-medium text-brand">Next</span>;
+    case SessionRowStatus.Soonest:
+      return <span className="text-xs font-medium text-brand">{relativeDayText(start, now)}</span>;
     case SessionRowStatus.Later:
       return null;
     default: {
@@ -146,6 +147,7 @@ function RowStatusLabel({ status }: { status: SessionRowStatus }) {
 }
 
 function SessionRowLink({ row, timezone, now }: { row: SessionRow; timezone: string; now: DateTime }) {
+  const start = sessionStartIn(row.session.date, timezone);
   return (
     <Link
       href={`/coaching-sessions/${row.session.id}`}
@@ -157,9 +159,9 @@ function SessionRowLink({ row, timezone, now }: { row: SessionRow; timezone: str
           row.status === SessionRowStatus.Done ? "text-muted-foreground" : "text-foreground"
         )}
       >
-        {sessionRowText(row.session.date, timezone, now)}
+        {sessionRowText(start, now)}
       </span>
-      <RowStatusLabel status={row.status} />
+      <RowStatusLabel status={row.status} start={start} now={now} />
       <ChevronRight aria-hidden className="h-4 w-4 text-faint" />
     </Link>
   );
