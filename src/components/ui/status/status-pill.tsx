@@ -1,4 +1,5 @@
 import { cn } from "@/components/lib/utils";
+import { Pill } from "@/components/ui/pill";
 import { ItemStatus, actionStatusToString } from "@/types/general";
 
 interface StatusPillProps {
@@ -16,15 +17,8 @@ const STATUS_PILL_CLASSES: Record<ItemStatus, string> = {
 
 export function StatusPill({ status, className }: StatusPillProps) {
   return (
-    <span
-      data-status={status}
-      className={cn(
-        "inline-flex h-6 items-center whitespace-nowrap rounded-full px-[9px] text-pill font-medium",
-        STATUS_PILL_CLASSES[status],
-        className
-      )}
-    >
+    <Pill data-status={status} className={cn(STATUS_PILL_CLASSES[status], className)}>
       {actionStatusToString(status)}
-    </span>
+    </Pill>
   );
 }

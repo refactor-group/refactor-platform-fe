@@ -7,6 +7,7 @@ import { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PersonHeader } from "@/components/ui/person-header";
+import { Pill } from "@/components/ui/pill";
 import { Spinner } from "@/components/ui/spinner";
 import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
 import { useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
@@ -136,7 +137,7 @@ function RowStatusLabel({ status, start, now }: { status: SessionRowStatus; star
     case SessionRowStatus.Done:
       return <span className="text-xs text-muted-foreground">Done</span>;
     case SessionRowStatus.Soonest:
-      return <span className="text-xs font-medium text-brand">{relativeDayText(start, now)}</span>;
+      return <Pill className="bg-brand-tint text-brand-strong">{relativeDayText(start, now)}</Pill>;
     case SessionRowStatus.Later:
       return null;
     default: {
