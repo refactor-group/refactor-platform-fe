@@ -191,7 +191,7 @@ for (const viewport of VIEWPORTS) {
       })
       await inState(page, viewport, 'Repeat › Weekly', async () => {
         await button(page, 'Weekly').click()
-        await expect(dialog(page).getByText('On these days')).toBeVisible()
+        await expect(dialog(page).getByText('Repeats on')).toBeVisible()
         await expect(dialog(page).getByText('Ends', { exact: true })).toBeVisible()
       })
       await inState(page, viewport, "Repeat › Ends 'On' a date", async () => {
