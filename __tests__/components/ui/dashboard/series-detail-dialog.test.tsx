@@ -79,7 +79,7 @@ describe("SeriesDetailDialog", () => {
     expect(d).toHaveTextContent("2 upcoming · 2 done");
   });
 
-  it("lists each session with its day and time, marking done and next", () => {
+  it("lists each session with its day and time, marking done and when the next one is", () => {
     renderDialog();
     const rows = within(dialog()).getAllByRole("listitem");
     expect(rows.map((r) => r.textContent)).toEqual([
@@ -90,8 +90,14 @@ describe("SeriesDetailDialog", () => {
     ]);
     expect(rows[0]).toHaveTextContent("Done");
     expect(rows[1]).toHaveTextContent("Done");
-    expect(rows[2]).toHaveTextContent("Next");
-    expect(rows[3]).not.toHaveTextContent(/Done|Next/);
+    expect(rows[2]).toHaveTextContent("Tomorrow");
+    expect(rows[2]).not.toHaveTextContent("Next");
+    expect(rows[3]).not.toHaveTextContent(/Done|Tomorrow|In \d/);
+  });
+
+  it("says how far off the next session is", () => {
+    renderDialog(sessions(["2026-11-03T22:30:00", "2026-11-12T22:30:00"]));
+    expect(within(dialog()).getAllByRole("listitem")[1]).toHaveTextContent("In 3 days");
   });
 
   it("adds the year only when it isn't this year", () => {
