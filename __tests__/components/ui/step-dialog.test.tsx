@@ -106,6 +106,21 @@ describe("StepDialog on desktop", () => {
     expect(screen.getByRole("button", { name: "Next step" })).toBeDisabled();
   });
 
+  it("shows no position or arrows for a single-step dialog", () => {
+    viewport(true);
+    renderDialog({ position: { index: 1, total: 1 }, onPrev: None, onNext: None });
+    expect(screen.queryByText("1 of 1")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Previous step" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next step" })).not.toBeInTheDocument();
+  });
+
+  it("shows no position or arrows for a single-step dialog on a phone either", () => {
+    viewport(false);
+    renderDialog({ position: { index: 1, total: 1 }, onPrev: None, onNext: None });
+    expect(screen.queryByText(/1 of 1/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Previous step" })).not.toBeInTheDocument();
+  });
+
   it("confirms from the footer", () => {
     viewport(true);
     const lead = confirm();
