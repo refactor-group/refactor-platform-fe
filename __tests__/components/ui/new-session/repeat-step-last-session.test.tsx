@@ -1,12 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { DateTime } from "ts-luxon";
 import { None, Some, type Option } from "@/types/option";
 import { Frequency, Weekday, type RecurrenceEnd } from "@/types/recurrence";
 import { RepeatStep } from "@/components/ui/new-session/repeat-step";
 import type { RepeatModel } from "@/lib/new-session-dialog-model";
 
-function renderStep(end: RecurrenceEnd, lastSession: Option<DateTime>) {
+function renderStep(end: RecurrenceEnd, lastSession: Option<string>) {
   const model: RepeatModel = {
     repeat: { kind: "repeat", frequency: Frequency.Weekly, interval: 1, end },
     optional: true,
@@ -24,7 +23,7 @@ function renderStep(end: RecurrenceEnd, lastSession: Option<DateTime>) {
   render(<RepeatStep {...model} />);
 }
 
-const DEC_13 = DateTime.fromISO("2026-12-13T15:00", { zone: "America/Chicago" });
+const DEC_13 = "the last on Sun, Dec 13";
 
 describe("Repeat step: the last session", () => {
   it("names the last session beside After N sessions", () => {
