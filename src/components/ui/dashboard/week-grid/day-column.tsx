@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { GridCard } from "@/lib/week-grid/card";
 import type { DaySlot, DropTarget } from "@/lib/week-grid/slots";
 import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
@@ -22,9 +23,10 @@ export interface DayColumnProps {
   onSchedule: Option<(day: DateTime) => void>;
   drag: ColumnDrag;
   justDragged: RefObject<boolean>;
+  isLoading: boolean;
 }
 
-export function DayColumn({ group, handlers, onSchedule, drag, justDragged }: DayColumnProps) {
+export function DayColumn({ group, handlers, onSchedule, drag, justDragged, isLoading }: DayColumnProps) {
   const { setNodeRef } = useDroppable({
     id: `day:${group.day.toISODate()}`,
     data: { kind: "day", day: group.day } satisfies DropTarget,
@@ -45,12 +47,20 @@ export function DayColumn({ group, handlers, onSchedule, drag, justDragged }: Da
       )}
     >
       <DayLabel group={group} />
-      <DayBody group={group} handlers={handlers} onSchedule={onSchedule} drag={drag} justDragged={justDragged} />
+      <DayBody
+        group={group}
+        handlers={handlers}
+        onSchedule={onSchedule}
+        drag={drag}
+        justDragged={justDragged}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
 
-function DayBody({ group, handlers, onSchedule, drag, justDragged }: DayColumnProps) {
+function DayBody({ group, handlers, onSchedule, drag, justDragged, isLoading }: DayColumnProps) {
+  if (isLoading) return <Skeleton className="h-32 rounded-xl" />;
   if (drag.kind === "over") return <DropSlots slots={drag.slots} hovered={drag.hovered} name={drag.name} />;
   if (group.items.length === 0) return <EmptyDay day={group.day} onSchedule={scheduleOn(group, onSchedule)} />;
   return group.items.map((card) => (

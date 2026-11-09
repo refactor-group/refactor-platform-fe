@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
 import { TopicStatus } from "@/types/coaching-session-topic";
+import { None } from "@/types/option";
 import {
   CoachingSessionInclude,
   serializeCoachingSession,
@@ -42,13 +43,13 @@ describe("topics include", () => {
 
   it("parses included topics with the topic transform", () => {
     const session = transformCoachingSession({ ...wire, topics: [topic] });
-    expect(session.topics).toHaveLength(1);
-    expect(session.topics?.[0].status).toBe(TopicStatus.Discussed);
-    expect(session.topics?.[0]).not.toHaveProperty("display_order");
+    expect(session.topics.some && session.topics.val).toHaveLength(1);
+    expect(session.topics.some && session.topics.val[0].status).toBe(TopicStatus.Discussed);
+    expect(session.topics.some && session.topics.val[0]).not.toHaveProperty("display_order");
   });
 
-  it("leaves topics undefined when they were not included", () => {
-    expect(transformCoachingSession(wire).topics).toBeUndefined();
+  it("marks topics as absent when they were not included", () => {
+    expect(transformCoachingSession(wire).topics).toEqual(None);
   });
 
   it("never sends topics back to the backend", () => {

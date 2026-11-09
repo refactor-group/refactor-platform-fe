@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
-import { useSWRConfig } from "swr";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +14,7 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useMoveSession } from "@/lib/hooks/use-move-session";
 import { useNow } from "@/lib/hooks/use-now";
 import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
-import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
+import { useRefreshCoachingSessions } from "@/lib/hooks/use-sse-cache-invalidation";
 import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
 import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
@@ -36,7 +35,6 @@ import {
   type DayGroup,
   type Week,
 } from "@/lib/week-grid/week";
-import { siteConfig } from "@/site.config";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
 import { DayAgenda } from "./day-agenda";
@@ -44,7 +42,7 @@ import { DayStrip } from "./day-strip";
 import { MoveSheet, type MoveSheetModel } from "./move-sheet";
 import type { SessionCardHandlers } from "./session-card";
 import type { OnSessionAction } from "./session-card-menu";
-import { WeekGrid, WEEK_GRID_CLASS, type GridDrag } from "./week-grid";
+import { WeekGrid, type GridDrag } from "./week-grid";
 import { WeekPanelHeader, type WeekNavigation } from "./week-panel-header";
 
 export interface WeekPanelProps {
@@ -101,10 +99,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const { selected } = filter;
   const wide = useMediaQuery(WEEK_GRID_QUERY);
 
-  const { mutate } = useSWRConfig();
-  const onSessionsChanged = useCallback(() => {
-    void revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/coaching_sessions");
-  }, [mutate]);
+  const onSessionsChanged = useRefreshCoachingSessions();
   const actions = useSessionActions({
     userTimezone: timezone,
     onReschedule,
@@ -187,12 +182,16 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
       <WeekPanelHeader {...header} subline={subline} />
       {!wide && !isCurrentWeek && <BackToThisWeek onClick={navigation.onThisWeek} />}
       {isLoading ? (
-        wide ? <WeekGridSkeleton /> : <DayAgendaSkeleton />
+        wide ? (
+          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} isLoading />
+        ) : (
+          <DayAgendaSkeleton />
+        )
       ) : isError ? (
         <WeekPanelError onRetry={refresh} />
       ) : wide ? (
         <div className="relative">
-          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} />
+          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} isLoading={false} />
           {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
         </div>
       ) : (
@@ -240,6 +239,9 @@ function BackToThisWeek({ onClick }: { onClick: () => void }) {
 function onCardSelect(view: CardView, run: OnSessionAction) {
   const click = cardClick(view);
   switch (click) {
+    case CardClick.Open:
+      run(SessionAction.OpenSession, view.session);
+      return;
     case CardClick.Reschedule:
       run(SessionAction.Reschedule, view.session);
       return;
@@ -268,16 +270,6 @@ function NoMatches({ className }: { className: string }) {
     <p className={cn("text-sm text-muted-foreground", className)}>
       No sessions match this week.
     </p>
-  );
-}
-
-function WeekGridSkeleton() {
-  return (
-    <div className={WEEK_GRID_CLASS}>
-      {Array.from({ length: 7 }, (_, i) => (
-        <Skeleton key={i} className="h-32 rounded-xl" />
-      ))}
-    </div>
   );
 }
 
