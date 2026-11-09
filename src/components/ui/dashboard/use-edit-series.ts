@@ -9,6 +9,7 @@ import { MoveScope } from "@/lib/scheduling";
 import { sessionStartIn } from "@/lib/session-window";
 import { toast } from "@/lib/toast";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { None } from "@/types/option";
 
 type OpenMove = (session: EnrichedCoachingSession, scope: MoveScope) => void;
 
@@ -25,7 +26,7 @@ function openNextOfSeries(row: EnrichedCoachingSession, timezone: string, openMo
         return;
       }
       const { relationship, coach, coachee } = row;
-      openMove({ ...next.val, relationship, coach, coachee }, MoveScope.Following);
+      openMove({ ...next.val, relationship, coach, coachee, topics: None }, MoveScope.Following);
     },
     (error) => {
       console.error("Failed to load the coaching session series:", error);

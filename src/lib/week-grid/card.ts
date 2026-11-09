@@ -18,6 +18,7 @@ export enum CardFooter {
 }
 
 export enum CardClick {
+  Open = "open",
   Reschedule = "reschedule",
   Nothing = "nothing",
 }
@@ -42,6 +43,7 @@ export interface CardView {
   note: CardNote;
   footer: CardFooter;
   canManage: boolean;
+  underway: boolean;
 }
 
 export interface GridCard extends CardView {
@@ -53,7 +55,7 @@ const MINUTES_PER_HOUR = 60;
 export function cardView(session: EnrichedCoachingSession, context: CardContext): CardView {
   const urgency = calculateSessionUrgency(session, context.now);
   const start = sessionStartIn(session.date, context.timezone);
-  const topicCount = session.topics?.length ?? 0;
+  const topicCount = session.topics.some ? session.topics.val.length : 0;
   const participant = getSessionParticipantInfo(session, context.viewerId);
   return {
     session,
@@ -63,10 +65,12 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
     note: noteOf(urgency, minutesUntil(start, context.now), topicCount),
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,
+    underway: urgency === SessionUrgency.Underway,
   };
 }
 
 export function cardClick(view: CardView): CardClick {
+  if (view.underway) return CardClick.Open;
   return view.tense !== CardTense.Past && view.canManage ? CardClick.Reschedule : CardClick.Nothing;
 }
 

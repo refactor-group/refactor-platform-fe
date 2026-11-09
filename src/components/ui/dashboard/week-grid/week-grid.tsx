@@ -3,27 +3,31 @@ import type { GridCard } from "@/lib/week-grid/card";
 import type { DayGroup } from "@/lib/week-grid/week";
 import type { Option } from "@/types/option";
 import { DayColumn } from "./day-column";
-import type { SessionCardHandlers } from "./session-card";
+import { SessionCardHint, type SessionCardHandlers } from "./session-card";
 
 export interface WeekGridProps {
   days: DayGroup<GridCard>[];
   handlers: SessionCardHandlers;
   onSchedule: Option<(day: DateTime) => void>;
+  isLoading: boolean;
 }
 
-export const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
+const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
 
-export function WeekGrid({ days, handlers, onSchedule }: WeekGridProps) {
+export function WeekGrid({ days, handlers, onSchedule, isLoading }: WeekGridProps) {
   return (
-    <div className={WEEK_GRID_CLASS}>
-      {days.map((group) => (
-        <DayColumn
-          key={group.day.toISODate()}
-          group={group}
-          handlers={handlers}
-          onSchedule={onSchedule}
-        />
-      ))}
-    </div>
+    <SessionCardHint>
+      <div className={WEEK_GRID_CLASS}>
+        {days.map((group) => (
+          <DayColumn
+            key={group.day.toISODate()}
+            group={group}
+            handlers={handlers}
+            onSchedule={onSchedule}
+            isLoading={isLoading}
+          />
+        ))}
+      </div>
+    </SessionCardHint>
   );
 }
