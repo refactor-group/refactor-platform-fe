@@ -306,16 +306,14 @@ describe("WeekPanel scheduling", () => {
 });
 
 describe("WeekPanel card clicks", () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
-    vi.setSystemTime(NOW);
-  });
-
-  it("reschedules an upcoming session on a single click", () => {
+  it.each([
+    ["an upcoming session", "thursday"],
+    ["a past session", "early-today"],
+  ])("opens %s on a single click", (_label, id) => {
     renderPanel();
-    fireEvent.click(screen.getByTestId("session-card-thursday"));
-    act(() => vi.advanceTimersByTime(260));
-    expect(run).toHaveBeenCalledWith(SessionAction.Reschedule, THURSDAY);
+    fireEvent.click(screen.getByTestId(`session-card-${id}`));
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, id === "thursday" ? THURSDAY : EARLY_TODAY);
   });
 
   it("opens a session that's under way on a single click", () => {
@@ -323,26 +321,14 @@ describe("WeekPanel card clicks", () => {
     result = { ...result, sessions: [underway] };
     renderPanel();
     fireEvent.click(screen.getByTestId("session-card-underway"));
-    act(() => vi.advanceTimersByTime(260));
     expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, underway);
   });
 
-  it("opens the session on a double-click, without rescheduling", () => {
+  it("never reschedules or shows a toast on a click", () => {
     renderPanel();
-    const card = screen.getByTestId("session-card-thursday");
-    fireEvent.click(card);
-    fireEvent.click(card);
-    fireEvent.doubleClick(card);
-    act(() => vi.advanceTimersByTime(1000));
-    expect(run).toHaveBeenCalledTimes(1);
-    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
-  });
-
-  it("does nothing on a single click on a past card", () => {
-    renderPanel();
+    fireEvent.click(screen.getByTestId("session-card-thursday"));
     fireEvent.click(screen.getByTestId("session-card-early-today"));
-    act(() => vi.advanceTimersByTime(260));
-    expect(run).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalledWith(SessionAction.Reschedule, expect.anything());
     expect(toast).not.toHaveBeenCalled();
   });
 });
@@ -399,3 +385,4 @@ describe("WeekPanel person filter", () => {
     expect(screen.queryByText("No sessions match this week.")).not.toBeInTheDocument();
   });
 });
+

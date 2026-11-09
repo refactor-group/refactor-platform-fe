@@ -17,12 +17,6 @@ export enum CardFooter {
   Prepare = "prepare",
 }
 
-export enum CardClick {
-  Open = "open",
-  Reschedule = "reschedule",
-  Nothing = "nothing",
-}
-
 export type CardNote =
   | { kind: "relative"; text: string; pulse: boolean }
   | { kind: "topics"; count: number }
@@ -42,7 +36,6 @@ export interface CardView {
   note: CardNote;
   footer: CardFooter;
   canManage: boolean;
-  underway: boolean;
 }
 
 export interface GridCard extends CardView {
@@ -64,13 +57,7 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
     note: noteOf(urgency, minutesUntil(start, context.now), topicCount),
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,
-    underway: urgency === SessionUrgency.Underway,
   };
-}
-
-export function cardClick(view: CardView): CardClick {
-  if (view.underway) return CardClick.Open;
-  return view.tense !== CardTense.Past && view.canManage ? CardClick.Reschedule : CardClick.Nothing;
 }
 
 export function cardNoteText(note: CardNote): string {

@@ -46,7 +46,7 @@ The pure model lives in `src/lib/week-grid/`: `week.ts`, `card.ts`, `filter.ts` 
 | D3 | Ready means the session has at least one topic (`include=topics`). It lives in one function, to be swapped for a server value later. |
 | D4 | An empty-day click opens the dialog at Who, with the day preset (`openSchedule(day)`). It works on any empty day from today on, in any week (Jim, 2026-11-05). |
 | D5 | Working hours are stored on the user and editable in Settings. They drive both the drop slots and the dialog's after-hours checks. |
-| D6 | Rights are per session. Drag, click-to-reschedule and the full menu appear only where the viewer coaches. Schedule and the filter appear when the viewer coaches anyone. |
+| D6 | Rights are per session. Drag, Move and the full menu appear only where the viewer coaches. Schedule and the filter appear when the viewer coaches anyone. |
 | D7 | Below `lg` (1024px), the grid becomes the day strip and agenda. |
 | D8 | Prepare works on any week. |
 | D9 | The handoff stays in Claude Docs and is linked from each PR. |
@@ -132,11 +132,7 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - For a coach, the next arrow never disables, so any future week can be scheduled. For a coachee, it disables once nothing is later, read from `/nearest` around next Monday.
 - While a read is loading or has failed, its arrow stays enabled.
 - Schedule session and the empty-day Schedule follow `isACoach`, the same rule as Add New. Every empty day from today on shows "+ Schedule", in any week; past days never do.
-- A single click waits 260ms for a possible double-click:
-  - on an upcoming session the viewer coaches, it opens Reschedule;
-  - otherwise it does nothing. A past session will open the Session glance once that's designed (Jim, 2026-11-05).
-- A session that's under way opens on a single click, for anyone (review of #536, 2026-11-08).
-- A double-click or Enter opens the session page.
+- A single click or Enter opens the session, whether it's past, under way or upcoming, for anyone. There is no double-click and no click delay. Rescheduling is done through the menu's Reschedule…, drag, or Move (Jim, 2026-11-09; replaces 8a's click-to-reschedule).
 - This week is disabled while on the current week, which gives it its faint look.
 
 ## PR 4 rules
@@ -157,5 +153,5 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - The store (week offset, filter, recently moved) comes with the first phase that reads it (PR 2), so it never ships unused.
 - Live uses the app's urgency levels: under way, imminent, or soon (within 2 hours). The handoff says "within the hour"; the shared thresholds win.
 
-- **Session glance (needs design):** a single click on a past card should open a dashboard dialog showing that session at a glance: its most important insights, actions assigned, suggested actions still waiting, agreements made, and topics discussed. Until it exists, the single click does nothing. The design system names a "Session glance" modal in the shared modal shell, and a bottom sheet on mobile, but there's no spec yet. It waits on a design handoff.
+- **Session glance (needs design):** a single click on a past card should open a dashboard dialog showing that session at a glance: its most important insights, actions assigned, suggested actions still waiting, agreements made, and topics discussed. Until it exists, a single click opens the session page. The design system names a "Session glance" modal in the shared modal shell, and a bottom sheet on mobile, but there's no spec yet. It waits on a design handoff.
 - The backend's `/coaching_sessions/counts` loses its only caller after 1c. Raise it on the board.

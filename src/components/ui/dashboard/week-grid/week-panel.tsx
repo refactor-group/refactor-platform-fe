@@ -15,7 +15,7 @@ import { useWeekFilter } from "@/lib/hooks/use-week-filter";
 import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
 import { SessionAction } from "@/lib/session-actions";
 import type { MoveScope } from "@/lib/scheduling";
-import { CardClick, cardClick, cardView, type CardView, type GridCard } from "@/lib/week-grid/card";
+import { cardView, type GridCard } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
 import {
   groupByDay,
@@ -29,7 +29,6 @@ import {
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
 import type { SessionCardHandlers } from "./session-card";
-import type { OnSessionAction } from "./session-card-menu";
 import { WeekGrid } from "./week-grid";
 import { WeekPanelHeader, type WeekNavigation } from "./week-panel-header";
 
@@ -89,7 +88,6 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const handlers = useMemo<SessionCardHandlers>(
     () => ({
       onAction: run,
-      onSelect: (view) => onCardSelect(view, run),
       onOpen: (view) => run(SessionAction.OpenSession, view.session),
     }),
     [run]
@@ -144,24 +142,6 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
       <SessionActionDialogs {...actions.dialogs} />
     </section>
   );
-}
-
-function onCardSelect(view: CardView, run: OnSessionAction) {
-  const click = cardClick(view);
-  switch (click) {
-    case CardClick.Open:
-      run(SessionAction.OpenSession, view.session);
-      return;
-    case CardClick.Reschedule:
-      run(SessionAction.Reschedule, view.session);
-      return;
-    case CardClick.Nothing:
-      return;
-    default: {
-      const _exhaustive: never = click;
-      throw new Error(`Unhandled card click: ${_exhaustive}`);
-    }
-  }
 }
 
 const visible = (cards: GridCard[]) => cards.filter((c) => !c.dimmed).length;
