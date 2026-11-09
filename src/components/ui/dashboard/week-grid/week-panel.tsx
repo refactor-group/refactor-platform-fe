@@ -36,7 +36,7 @@ import {
   type Week,
 } from "@/lib/week-grid/week";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import { type Option, None, Some } from "@/types/option";
+import { type Option, None, Some, unwrapOr } from "@/types/option";
 import { DayAgenda } from "./day-agenda";
 import { DayStrip } from "./day-strip";
 import { MoveSheet, type MoveSheetModel } from "./move-sheet";
@@ -96,7 +96,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const viewerId = useAuthStore((s) => s.userId);
   const filter = useWeekFilter();
   const { selected } = filter;
-  const wide = useMediaQuery(WEEK_GRID_QUERY);
+  const width = useMediaQuery(WEEK_GRID_QUERY);
 
   const recentlyMoved = useWeekGridStore((s) => s.recentlyMoved);
   const clearMoved = useWeekGridStore((s) => s.clearMoved);
@@ -183,35 +183,72 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   };
   const scheduleDay = canSchedule ? Some((day: DateTime) => onSchedule(Some(day))) : None;
   const noMatches = selected.some && visibleCount(days) === 0;
-  const subline = isLoading || isError ? None : Some(sublineFor(days, isCurrentWeek));
+  const busy = isLoading || width.none;
+  const subline = busy || isError ? None : Some(sublineFor(days, isCurrentWeek));
 
   return (
     <section
       aria-labelledby={titleId}
-      aria-busy={isLoading}
+      aria-busy={busy}
       className="rounded-card border bg-card p-7"
     >
       <WeekPanelHeader {...header} subline={subline} />
-      {!wide && !isCurrentWeek && <BackToThisWeek onClick={navigation.onThisWeek} />}
-      {isLoading ? (
-        wide ? (
-          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} isLoading />
-        ) : (
-          <DayAgendaSkeleton />
-        )
-      ) : isError ? (
-        <WeekPanelError onRetry={refresh} />
-      ) : wide ? (
-        <div className="relative">
-          <WeekGrid days={days} handlers={handlers} onSchedule={scheduleDay} drag={drag} isLoading={false} />
-          {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
-        </div>
-      ) : (
-        <WeekAgenda days={days} week={week} now={now} handlers={handlers} onSchedule={scheduleDay} noMatches={noMatches} />
+      {!isCurrentWeek && !unwrapOr(width, false) && (
+        <BackToThisWeek pending={width.none} onClick={navigation.onThisWeek} />
       )}
+      <WeekBody
+        width={width}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={refresh}
+        days={days}
+        week={week}
+        now={now}
+        handlers={handlers}
+        onSchedule={scheduleDay}
+        noMatches={noMatches}
+        drag={drag}
+      />
       <SessionActionDialogs {...actions.dialogs} />
       <MoveSheet model={moveModel} onConfirm={confirmMove} onClose={closeMove} />
     </section>
+  );
+}
+
+interface WeekBodyProps extends WeekAgendaProps {
+  width: Option<boolean>;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+  drag: GridDrag;
+}
+
+/** Until the width is known, both loading layouts render and CSS shows one. */
+function WeekBody({ width, isLoading, isError, onRetry, drag, ...agenda }: WeekBodyProps) {
+  const { days, handlers, onSchedule, noMatches } = agenda;
+  if (width.none) return <PendingLayouts {...agenda} drag={drag} />;
+  const wide = width.val;
+  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading /> : <DayAgendaSkeleton />;
+  if (isError) return <WeekPanelError onRetry={onRetry} />;
+  if (!wide) return <WeekAgenda {...agenda} />;
+  return (
+    <div className="relative">
+      <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading={false} />
+      {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
+    </div>
+  );
+}
+
+function PendingLayouts({ days, handlers, onSchedule, drag }: WeekAgendaProps & { drag: GridDrag }) {
+  return (
+    <>
+      <div data-testid="week-grid-pending" className="hidden lg:block">
+        <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading />
+      </div>
+      <div data-testid="day-agenda-pending" className="lg:hidden">
+        <DayAgendaSkeleton />
+      </div>
+    </>
   );
 }
 
@@ -240,9 +277,9 @@ function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches }: WeekAg
 
 const ISO_DATE = "yyyy-MM-dd";
 
-function BackToThisWeek({ onClick }: { onClick: () => void }) {
+function BackToThisWeek({ pending, onClick }: { pending: boolean; onClick: () => void }) {
   return (
-    <Button variant="link" className="mt-3 h-auto px-0 text-[13px]" onClick={onClick}>
+    <Button variant="link" className={cn("mt-3 h-auto px-0 text-[13px]", pending && "lg:hidden")} onClick={onClick}>
       Back to this week
     </Button>
   );
