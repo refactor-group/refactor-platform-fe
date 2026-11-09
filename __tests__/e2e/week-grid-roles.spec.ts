@@ -1,20 +1,19 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
-import { setupAuthentication, mockCommonApiRoutes, MOCK_USER_ID, AUTH_STORE_STATE } from './helpers'
+import { setupAuthentication, mockCommonApiRoutes, mockRelationship, MOCK_USER_ID, AUTH_STORE_STATE } from './helpers'
 
-test.use({ timezoneId: 'America/Chicago', locale: 'en-US' })
+// The phone agenda shows one day, so the grid cases pin a desktop width.
+test.use({ timezoneId: 'America/Chicago', locale: 'en-US', viewport: { width: 1280, height: 900 } })
 
-const relationship = (id: string, coachId: string, coacheeId: string, coach: string, coachee: string) => ({
-  id,
-  coach_id: coachId,
-  coachee_id: coacheeId,
-  organization_id: 'org-1',
-  coach_first_name: coach.split(' ')[0],
-  coach_last_name: coach.split(' ')[1],
-  coachee_first_name: coachee.split(' ')[0],
-  coachee_last_name: coachee.split(' ')[1],
-  created_at: '2024-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z',
-})
+const relationship = (id: string, coachId: string, coacheeId: string, coach: string, coachee: string) =>
+  mockRelationship(id, {
+    coach_id: coachId,
+    coachee_id: coacheeId,
+    coach_first_name: coach.split(' ')[0],
+    coach_last_name: coach.split(' ')[1],
+    coachee_first_name: coachee.split(' ')[0],
+    coachee_last_name: coachee.split(' ')[1],
+  })
+type Relationship = ReturnType<typeof relationship>
 const person = (id: string, name: string) => ({
   id,
   first_name: name.split(' ')[0],
@@ -25,13 +24,14 @@ const person = (id: string, name: string) => ({
 const COACHED_BY_ROSA = relationship('rel-rosa', 'user-rosa', MOCK_USER_ID, 'Rosa Diaz', 'Test User')
 const COACHING_JANE = relationship('rel-jane', MOCK_USER_ID, 'user-jane', 'Test User', 'Jane Smith')
 
-const session = (id: string, date: string, rel: ReturnType<typeof relationship>) => ({
+const session = (id: string, date: string, rel: Relationship, seriesId: string | null = null) => ({
   id,
   coaching_relationship_id: rel.id,
   date,
   duration_minutes: 50,
   title: null,
-  coaching_session_series_id: null,
+  coaching_session_series_id: seriesId,
+  series: seriesId === null ? null : { id: seriesId, last_session_date: '2026-12-31T15:00:00' },
   created_at: '2026-10-01T12:00:00Z',
   updated_at: '2026-10-01T12:00:00Z',
   relationship: rel,
@@ -44,7 +44,9 @@ const session = (id: string, date: string, rel: ReturnType<typeof relationship>)
 const NOW = '2026-10-21T17:00:00Z'
 const ROSA_THURSDAY = session('rosa-thursday', '2026-10-22T15:00:00', COACHED_BY_ROSA)
 const ROSA_MONDAY = session('rosa-monday', '2026-10-19T15:00:00', COACHED_BY_ROSA)
+const ROSA_SERIES_FRIDAY = session('rosa-series-friday', '2026-10-23T18:00:00', COACHED_BY_ROSA, 'series-rosa')
 const JANE_FRIDAY = session('jane-friday', '2026-10-23T15:00:00', COACHING_JANE)
+const JANE_TODAY = session('jane-today', '2026-10-21T20:00:00', COACHING_JANE)
 const FAR_AHEAD = session('far-ahead', '2027-01-04T15:00:00', COACHED_BY_ROSA)
 
 const json = (data: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) })
@@ -52,13 +54,13 @@ const json = (data: unknown) => ({ status: 200, contentType: 'application/json',
 async function open(
   page: Page,
   context: BrowserContext,
-  input: { isACoach: boolean; relationships: unknown[]; sessions: unknown[] }
+  input: { isACoach: boolean; relationships: Relationship[]; sessions: unknown[] }
 ) {
   await page.clock.setFixedTime(NOW)
   await setupAuthentication(page, context)
   const auth = JSON.stringify({ ...AUTH_STORE_STATE, state: { ...AUTH_STORE_STATE.state, isACoach: input.isACoach } })
   await page.addInitScript((value) => localStorage.setItem('auth-store', value), auth)
-  await mockCommonApiRoutes(page, { relationships: input.relationships as never })
+  await mockCommonApiRoutes(page, { relationships: input.relationships })
   await page.route(
     (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
     (route) => route.fulfill(json(input.sessions))
@@ -92,7 +94,7 @@ test.describe('Week grid for someone who coaches nobody (7.1)', () => {
     await open(page, context, {
       isACoach: false,
       relationships: [COACHED_BY_ROSA],
-      sessions: [ROSA_THURSDAY, ROSA_MONDAY],
+      sessions: [ROSA_THURSDAY, ROSA_MONDAY, ROSA_SERIES_FRIDAY],
     })
   })
 
@@ -110,6 +112,10 @@ test.describe('Week grid for someone who coaches nobody (7.1)', () => {
   test('the menu offers only Open session, upcoming or past', async ({ page }) => {
     expect(await menuItems(page, 'rosa-thursday')).toEqual(['Open session'])
     expect(await menuItems(page, 'rosa-monday')).toEqual(['Open session'])
+  })
+
+  test('a session in a series still offers only Open session, with no View series', async ({ page }) => {
+    expect(await menuItems(page, 'rosa-series-friday')).toEqual(['Open session'])
   })
 
   test('the week arrows still page', async ({ page }) => {
@@ -152,7 +158,25 @@ test.describe('Week grid for someone who coaches and is coached (7.2)', () => {
 
   test('the filter lists only the people they coach', async ({ page }) => {
     await page.getByRole('button', { name: 'All sessions' }).click()
-    const options = page.getByRole('dialog').getByRole('option')
-    await expect(options).toHaveText(['All sessions', 'Jane Smith'])
+    const people = page.getByRole('group', { name: 'Filter by person' }).getByRole('button')
+    await expect(people).toHaveCount(2)
+    await expect(people.nth(0)).toHaveAccessibleName(/^All sessions/)
+    await expect(people.nth(1)).toHaveAccessibleName(/^Jane Smith/)
+  })
+})
+
+test.describe('Week grid on a phone for someone who coaches', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test.beforeEach(async ({ page, context }) => {
+    await open(page, context, {
+      isACoach: true,
+      relationships: [COACHED_BY_ROSA, COACHING_JANE],
+      sessions: [JANE_TODAY],
+    })
+  })
+
+  test("today's agenda offers Move on a session they coach", async ({ page }) => {
+    expect(await menuItems(page, 'jane-today')).toContain('Move…')
   })
 })
