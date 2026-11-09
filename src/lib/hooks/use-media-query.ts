@@ -1,8 +1,14 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { type Option, None, Some } from "@/types/option";
 
-export function useMediaQuery(query: string): boolean {
+// Shared instances keep the snapshot stable for useSyncExternalStore.
+const MATCHES = Some(true);
+const MISSES = Some(false);
+
+/** Whether the query matches; None until the browser can answer. */
+export function useMediaQuery(query: string): Option<boolean> {
   const subscribe = useCallback(
     (onChange: () => void) => {
       const mql = window.matchMedia(query);
@@ -11,6 +17,6 @@ export function useMediaQuery(query: string): boolean {
     },
     [query]
   );
-  const getSnapshot = () => window.matchMedia(query).matches;
-  return useSyncExternalStore(subscribe, getSnapshot, () => false);
+  const getSnapshot = () => (window.matchMedia(query).matches ? MATCHES : MISSES);
+  return useSyncExternalStore<Option<boolean>>(subscribe, getSnapshot, () => None);
 }
