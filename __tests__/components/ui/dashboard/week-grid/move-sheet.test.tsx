@@ -19,7 +19,7 @@ const MODEL: MoveSheetModel = {
   current: CURRENT,
   now: NOW,
   days,
-  suggestionsFor: (day) => [day.set({ hour: 10 }), day.set({ hour: 11 }), day.set({ hour: 15 })],
+  suggestionsFor: (day) => [day.set({ hour: 15 }), day.set({ hour: 16 }), day.set({ hour: 17 })],
   busyOn: (day) => (day.hasSame(PRIYA.start, "day") ? [PRIYA] : []),
   clashAt: (start): Option<BusyClash> =>
     start >= PRIYA.start && start < PRIYA.end
@@ -58,18 +58,18 @@ describe("MoveSheet", () => {
   it("offers only the day's suggested times as chips, plus an exact time field", () => {
     renderSheet();
     const chips = within(sheet()).getAllByRole("button", { name: /^\d{1,2}:\d{2} [AP]M$/ });
-    expect(chips.map((c) => c.textContent)).toEqual(["10:00 AM", "11:00 AM", "3:00 PM"]);
+    expect(chips.map((c) => c.textContent)).toEqual(["3:00 PM", "4:00 PM", "5:00 PM"]);
     expect(timeInput()).toBeInTheDocument();
   });
 
   it("moves to a suggested time on another day", () => {
     const { onConfirm } = renderSheet();
     fireEvent.click(dayButton("Thursday, August 20"));
-    fireEvent.click(chip("11:00 AM"));
-    expect(chip("11:00 AM")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(chip("4:00 PM"));
+    expect(chip("4:00 PM")).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(confirm());
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(onConfirm.mock.calls[0][0].toISO()).toBe(at("2026-08-20T11:00").toISO());
+    expect(onConfirm.mock.calls[0][0].toISO()).toBe(at("2026-08-20T16:00").toISO());
   });
 
   it("moves to an exact time typed into the field", () => {
@@ -81,17 +81,17 @@ describe("MoveSheet", () => {
 
   it("clears the time when the day changes, so Move never targets a time off screen", () => {
     renderSheet();
-    fireEvent.click(chip("11:00 AM"));
+    fireEvent.click(chip("4:00 PM"));
     expect(confirm()).toBeEnabled();
     fireEvent.click(dayButton("Thursday, August 20"));
     expect(timeInput()).toHaveValue("");
-    expect(chip("11:00 AM")).toHaveAttribute("aria-pressed", "false");
+    expect(chip("4:00 PM")).toHaveAttribute("aria-pressed", "false");
     expect(confirm()).toBeDisabled();
   });
 
   it("goes back to disabled at the current time", () => {
     renderSheet();
-    fireEvent.click(chip("11:00 AM"));
+    fireEvent.click(chip("4:00 PM"));
     fireEvent.change(timeInput(), { target: { value: "14:30" } });
     expect(confirm()).toBeDisabled();
   });

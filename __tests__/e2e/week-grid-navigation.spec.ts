@@ -67,7 +67,9 @@ test.describe('Week grid navigation and clicks', () => {
       }
     )
     const next = page.getByRole('button', { name: 'Next week' })
-    const top = async () => (await next.boundingBox())!.y
+    // Measured against the panel, so scrolling the arrow into view to click it doesn't count.
+    const top = () =>
+      next.evaluate((el) => el.getBoundingClientRect().top - el.closest('section')!.getBoundingClientRect().top)
     const home = await top()
     for (const title of ['Next week', 'Week of Nov 2', 'Week of Nov 9']) {
       delay = 1500
