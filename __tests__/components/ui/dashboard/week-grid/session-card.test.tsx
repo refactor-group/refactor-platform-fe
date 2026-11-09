@@ -55,6 +55,11 @@ describe("SessionCard", () => {
     expect(card).toHaveTextContent("3 topics");
   });
 
+  it("shows how long the session runs beside its start", () => {
+    const { card } = renderCard();
+    expect(card).toHaveTextContent("10:00 AM · 50 min");
+  });
+
   it("is keyboard focusable and carries its tense", () => {
     const { card } = renderCard(view("2026-08-17T15:00:00", 2));
     expect(card).toHaveAttribute("tabindex", "0");

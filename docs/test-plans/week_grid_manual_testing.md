@@ -58,6 +58,7 @@ Open the dashboard as the coach.
 **Pass:**
 - A's Tuesday, B today, C Thursday and D's earlier day each appear once, in the right column.
 - Times match the profile time zone, not the machine's.
+- Each card shows its length after the time, for example "2:30 PM · 50 min".
 - Within a day, cards sort by start time.
 
 ### Case 1.4: subline
