@@ -51,7 +51,7 @@ vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => {
     ...actual,
     useNearestEachCoachingSessions: vi.fn(),
     useEnrichedCoachingSessionsForUser: vi.fn(),
-    CoachingSessionApi: { ...actual.CoachingSessionApi, create: vi.fn(), update: vi.fn() },
+    CoachingSessionApi: { ...actual.CoachingSessionApi, create: vi.fn(), update: vi.fn(), move: vi.fn() },
   };
 });
 vi.mock("@/lib/api/coaching-session-series", async (importOriginal) => {
@@ -61,7 +61,7 @@ vi.mock("@/lib/api/coaching-session-series", async (importOriginal) => {
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const create = vi.mocked(CoachingSessionApi.create);
-const update = vi.mocked(CoachingSessionApi.update);
+const move = vi.mocked(CoachingSessionApi.move);
 const createSeries = vi.mocked(CoachingSessionSeriesApi.create);
 const push = vi.fn();
 
@@ -111,7 +111,7 @@ beforeEach(() => {
     refresh: vi.fn(),
   } as unknown as ReturnType<typeof useOAuthConnections>);
   create.mockResolvedValue(createMockSession({ id: "new" }));
-  update.mockResolvedValue(createMockSession({ id: "e-18" }));
+  move.mockResolvedValue(createMockSession({ id: "e-18" }));
   createSeries.mockResolvedValue({ coaching_sessions: Array(8).fill(createMockSession()) } as unknown as Awaited<
     ReturnType<typeof CoachingSessionSeriesApi.create>
   >);
@@ -169,10 +169,10 @@ describe("NewSessionDialog: move", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reschedule session" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(create).not.toHaveBeenCalled();
-    expect(update).toHaveBeenCalledTimes(1);
-    expect(update).toHaveBeenCalledWith(
+    expect(move).toHaveBeenCalledTimes(1);
+    expect(move).toHaveBeenCalledWith(
       "e-18",
-      expect.objectContaining({ id: "e-18", date: "2026-08-20T19:30:00", duration_minutes: 50 })
+      { date: "2026-08-20T19:30:00", duration_minutes: 50 }
     );
     expect(toast.success).toHaveBeenCalledWith("Rescheduled · Ehab to Thursday, August 20, 2:30 PM");
   });
@@ -182,7 +182,7 @@ describe("NewSessionDialog: move", () => {
     fireEvent.click(screen.getByRole("button", { name: "Increase duration" }));
     fireEvent.click(screen.getByRole("button", { name: "Reschedule session" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(update).toHaveBeenCalledWith(
+    expect(move).toHaveBeenCalledWith(
       "e-18",
       expect.objectContaining({ date: "2026-08-18T19:30:00", duration_minutes: 55 })
     );
@@ -202,15 +202,16 @@ describe("NewSessionDialog: move", () => {
     expect(railRow("Resolve overlap")).toHaveTextContent("Move Priya to Tue 18, 9:00 AM");
     fireEvent.click(screen.getByRole("button", { name: "Reschedule session" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(update).toHaveBeenNthCalledWith(1, "e-18", expect.objectContaining({ date: "2026-08-18T21:30:00" }));
-    expect(update).toHaveBeenNthCalledWith(2, "p-18", expect.objectContaining({ date: "2026-08-18T14:00:00" }));
+    expect(move).toHaveBeenNthCalledWith(1, "e-18", expect.objectContaining({ date: "2026-08-18T21:30:00" }));
+    expect(move).toHaveBeenNthCalledWith(2, "p-18", expect.objectContaining({ date: "2026-08-18T14:00:00" }));
+    expect(Object.keys(move.mock.calls[1][1]).sort()).toEqual(["date", "duration_minutes"]);
     expect(toast.success).toHaveBeenCalledWith(
       "Rescheduled · Ehab to Tuesday, August 18, 4:30 PM · Priya moves to Tue 18, 9:00 AM"
     );
   });
 
   it("stays open on a retryable error", async () => {
-    update.mockRejectedValue(apiError());
+    move.mockRejectedValue(apiError());
     const onClose = renderMove();
     fireEvent.click(day("Thursday, August 20"));
     fireEvent.click(screen.getByRole("button", { name: "Reschedule session" }));

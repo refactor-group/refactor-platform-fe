@@ -24,11 +24,24 @@ const slots = (input: Partial<Parameters<typeof daySlots>[0]> = {}) =>
 const label = (s: { start: DateTime }) => s.start.toFormat("HH:mm");
 
 describe("daySlots", () => {
-  it("lists every 30 minutes from the start to the end of working hours", () => {
-    const all = slots();
-    expect(all).toHaveLength(20);
+  it("lists every 30 minutes whose session would end by the end of working hours", () => {
+    const all = slots({ day: at("2026-08-19T00:00") });
+    expect(all).toHaveLength(18);
     expect(label(all[0])).toBe("08:00");
-    expect(label(all[19])).toBe("17:30");
+    expect(label(all[17])).toBe("16:30");
+  });
+
+  it("offers a start whose session ends exactly at the end of working hours", () => {
+    const hour = busy("moving", "Ehab Bandar", "2026-08-18T14:30", 60);
+    const all = slots({ day: at("2026-08-19T00:00"), moving: hour, busy: [hour] });
+    expect(label(all[all.length - 1])).toBe("16:30");
+  });
+
+  it("keeps the current slot even when it runs past the end of working hours", () => {
+    const late = busy("moving", "Ehab Bandar", "2026-08-18T17:00");
+    const all = slots({ moving: late, busy: [late, PRIYA] });
+    expect(all.map(label).slice(-2)).toEqual(["16:30", "17:00"]);
+    expect(all[all.length - 1].state).toEqual({ kind: "current" });
   });
 
   it("marks slots the moving session would overlap as taken, naming the holder", () => {
@@ -49,9 +62,9 @@ describe("daySlots", () => {
   it("keeps the current slot even outside working hours, in time order", () => {
     const late = busy("moving", "Ehab Bandar", "2026-08-18T18:00");
     const all = slots({ moving: late, busy: [late, PRIYA] });
-    expect(all).toHaveLength(21);
-    expect(label(all[20])).toBe("18:00");
-    expect(all[20].state).toEqual({ kind: "current" });
+    expect(all).toHaveLength(19);
+    expect(label(all[18])).toBe("18:00");
+    expect(all[18].state).toEqual({ kind: "current" });
   });
 
   it("has no current slot on another day", () => {
