@@ -13,7 +13,8 @@ const UNKNOWN_EDGES: WeekEdges = { hasEarlier: true, hasLater: true };
 export function useWeekEdges(week: Week): WeekEdges {
   const userId = useAuthStore((s) => s.userId);
   const { currentOrganizationId } = useCurrentOrganization();
-  const { relationships } = useCoachingRelationshipList(currentOrganizationId);
+  const relationshipList = useCoachingRelationshipList(currentOrganizationId);
+  const { relationships } = relationshipList;
   const relationshipIds = peopleFor(userId, relationships).flatMap((p) => p.relationshipIds);
 
   const aroundStart = useNearestEachCoachingSessions(
@@ -23,7 +24,7 @@ export function useWeekEdges(week: Week): WeekEdges {
     nearestQuery(userId, relationshipIds, utcInstant(week.start.plus({ weeks: 1 })))
   );
 
-  const settled = [aroundStart, aroundEnd].every((r) => !r.isLoading && !r.isError);
+  const settled = [relationshipList, aroundStart, aroundEnd].every((r) => !r.isLoading && !r.isError);
   return settled ? weekEdges(aroundStart.sessions, aroundEnd.sessions, week) : UNKNOWN_EDGES;
 }
 
