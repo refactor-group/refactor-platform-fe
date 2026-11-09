@@ -196,26 +196,55 @@ function RelativeNote({ text, topicCount }: { text: string; topicCount: number }
   );
 }
 
+enum PillTone {
+  Neutral = "neutral",
+  Positive = "positive",
+}
+
+const PILL_TONE: Record<PillTone, string> = {
+  [PillTone.Neutral]: "bg-fill text-foreground hover:bg-fill-hover",
+  [PillTone.Positive]: "bg-positive-tint text-positive hover:bg-positive-wash",
+};
+
+function CardFooterPill({
+  sessionId,
+  tone,
+  children,
+}: {
+  sessionId: string;
+  tone: PillTone;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={`/coaching-sessions/${sessionId}`}
+      onClick={stopPropagation}
+      onKeyDown={stopPropagation}
+      className={cn(
+        "inline-flex h-[26px] items-center gap-1 rounded-full px-2.5 text-tiny font-medium transition-colors duration-150",
+        PILL_TONE[tone]
+      )}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function CardFooterLine({ footer, sessionId }: { footer: CardFooter; sessionId: string }) {
   switch (footer) {
     case CardFooter.Ready:
       return (
-        <span className="flex items-center gap-1 text-tiny font-medium text-positive">
+        <CardFooterPill sessionId={sessionId} tone={PillTone.Positive}>
           <Check className="h-3 w-3" aria-hidden />
           Ready
-        </span>
+        </CardFooterPill>
       );
     case CardFooter.Prepare:
       return (
-        <Link
-          href={`/coaching-sessions/${sessionId}`}
-          onClick={stopPropagation}
-          onKeyDown={stopPropagation}
-          className="inline-flex h-[26px] items-center gap-1 rounded-full bg-fill px-2.5 text-tiny font-medium text-foreground transition-colors duration-150 hover:bg-fill-hover"
-        >
+        <CardFooterPill sessionId={sessionId} tone={PillTone.Neutral}>
           Prepare
           <ArrowRight className="h-3 w-3" aria-hidden />
-        </Link>
+        </CardFooterPill>
       );
     case CardFooter.Done:
       return <span className="text-tiny font-medium text-faint">Done</span>;
