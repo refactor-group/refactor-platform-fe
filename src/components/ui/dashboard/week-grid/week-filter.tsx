@@ -6,6 +6,7 @@ import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PersonSearchField, PersonSearchSize } from "@/components/ui/person-search";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   PersonGroup,
   filterLabel,
@@ -18,17 +19,20 @@ import type { Option } from "@/types/option";
 
 export interface WeekFilterProps {
   people: FilterPerson[];
+  grouped: boolean;
   selected: Option<FilterPerson>;
   onSelect: (userId: Id) => void;
   onClear: () => void;
+  onOpen: () => void;
 }
 
-export function WeekFilter({ people, selected, onSelect, onClear }: WeekFilterProps) {
+export function WeekFilter({ people, grouped, selected, onSelect, onClear, onOpen }: WeekFilterProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const onOpenChange = (next: boolean) => {
     setOpen(next);
-    if (!next) setQuery("");
+    if (next) onOpen();
+    else setQuery("");
   };
   const choose = (pick: () => void) => {
     pick();
@@ -48,20 +52,24 @@ export function WeekFilter({ people, selected, onSelect, onClear }: WeekFilterPr
       <PopoverContent align="start" sideOffset={6} className="w-[280px] p-1.5">
         <PersonSearchField query={query} onQueryChange={setQuery} size={PersonSearchSize.Compact} />
         <div className="mt-1.5 max-h-[300px] overflow-y-auto">
-          <div role="listbox" aria-label="Filter by person">
+          <div role="group" aria-label="Filter by person">
             <FilterOption selected={selected.none} muted={false} onChoose={() => choose(onClear)}>
               All sessions
             </FilterOption>
-            {sections.map((section) => (
-              <FilterGroup
-                key={section.group}
-                section={section}
-                selected={selected}
-                onChoose={(userId) => choose(() => onSelect(userId))}
-              />
-            ))}
+            {grouped ? (
+              sections.map((section) => (
+                <FilterGroup
+                  key={section.group}
+                  section={section}
+                  selected={selected}
+                  onChoose={(userId) => choose(() => onSelect(userId))}
+                />
+              ))
+            ) : (
+              <LoadingPeople />
+            )}
           </div>
-          {sections.length === 0 && (
+          {grouped && sections.length === 0 && (
             <p className="px-2.5 py-2 text-sm text-muted-foreground">No one matches.</p>
           )}
         </div>
@@ -70,6 +78,18 @@ export function WeekFilter({ people, selected, onSelect, onClear }: WeekFilterPr
         </p>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function LoadingPeople() {
+  return (
+    <div role="status" aria-label="Loading people" className="mt-1.5">
+      {[0, 1, 2].map((n) => (
+        <div key={n} className="flex min-h-9 items-center px-2.5">
+          <Skeleton className="h-3.5 w-3/5" />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -111,8 +131,7 @@ function FilterOption({ selected, muted, onChoose, children }: FilterOptionProps
   return (
     <button
       type="button"
-      role="option"
-      aria-selected={selected}
+      aria-pressed={selected}
       onClick={onChoose}
       className={cn(
         "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-item transition-colors duration-150 hover:bg-well focus-visible:bg-fill focus-visible:outline-none motion-reduce:transition-none",
