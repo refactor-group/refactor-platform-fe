@@ -40,7 +40,7 @@ vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => {
     ...actual,
     useNearestEachCoachingSessions: vi.fn(),
     useEnrichedCoachingSessionsForUser: vi.fn(),
-    CoachingSessionApi: { ...actual.CoachingSessionApi, create: vi.fn(), update: vi.fn() },
+    CoachingSessionApi: { ...actual.CoachingSessionApi, create: vi.fn(), update: vi.fn(), move: vi.fn() },
   };
 });
 vi.mock("@/lib/api/coaching-session-series", async (importOriginal) => {
@@ -50,7 +50,7 @@ vi.mock("@/lib/api/coaching-session-series", async (importOriginal) => {
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const create = vi.mocked(CoachingSessionApi.create);
-const update = vi.mocked(CoachingSessionApi.update);
+const move = vi.mocked(CoachingSessionApi.move);
 const createSeries = vi.mocked(CoachingSessionSeriesApi.create);
 const push = vi.fn();
 
@@ -92,7 +92,7 @@ beforeEach(() => {
     refresh: vi.fn(),
   } as unknown as ReturnType<typeof useOAuthConnections>);
   create.mockResolvedValue(createMockSession({ id: "new" }));
-  update.mockResolvedValue(createMockSession({ id: "e-18" }));
+  move.mockResolvedValue(createMockSession({ id: "e-18" }));
   createSeries.mockResolvedValue({ coaching_sessions: Array(8).fill(createMockSession()) } as unknown as Awaited<
     ReturnType<typeof CoachingSessionSeriesApi.create>
   >);
@@ -149,6 +149,6 @@ describe("NewSessionDialog: a time over several sessions", () => {
     expect(railRow("Resolve overlap")).toHaveTextContent("Keep all at 3:00 PM");
     fireEvent.click(screen.getByRole("button", { name: "Schedule session" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(update).not.toHaveBeenCalled();
+    expect(move).not.toHaveBeenCalled();
   });
 });

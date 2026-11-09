@@ -76,8 +76,11 @@ const toast = vi.fn();
 vi.mock("@/lib/toast", () => ({ toast: (...args: unknown[]) => toast(...args) }));
 vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => TZ }));
 
-const run = vi.fn();
 let actionsInput: Record<string, unknown> = {};
+// Like the real hook, Move goes to the onMove the panel hands it.
+const run = vi.fn((action: SessionAction, session: EnrichedCoachingSession) => {
+  if (action === SessionAction.Move) (actionsInput.onMove as (s: EnrichedCoachingSession) => void)(session);
+});
 vi.mock("@/components/ui/dashboard/use-session-actions", () => ({
   useSessionActions: (input: Record<string, unknown>) => {
     actionsInput = input;
@@ -513,6 +516,7 @@ describe("WeekPanel Move sheet below 1024px", () => {
     fireEvent.click(pill("Thursday, August 20"));
     fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
     fireEvent.click(screen.getByRole("menuitem", { name: "Move…" }));
+    expect(run).toHaveBeenCalledWith(SessionAction.Move, THURSDAY);
     expect(moveSheet()).toBeInTheDocument();
   });
 

@@ -6,10 +6,10 @@ import { WeekGridStoreProvider, useWeekGridStore } from "@/lib/providers/week-gr
 import { useMoveSession } from "@/lib/hooks/use-move-session";
 import { createMockEnrichedSession } from "../../test-utils";
 
-const update = vi.fn();
+const move = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/coaching-sessions")>();
-  return { ...actual, CoachingSessionApi: { ...actual.CoachingSessionApi, update: (...a: unknown[]) => update(...a) } };
+  return { ...actual, CoachingSessionApi: { ...actual.CoachingSessionApi, move: (...a: unknown[]) => move(...a) } };
 });
 
 const revalidate = vi.fn();
@@ -34,18 +34,18 @@ const flush = () => act(async () => {});
 beforeEach(() => {
   sessionStorage.clear();
   vi.clearAllMocks();
-  update.mockResolvedValue({});
+  move.mockResolvedValue({});
 });
 
 describe("useMoveSession", () => {
-  it("writes the new start in UTC, keeping the rest of the session", async () => {
+  it("writes only the new start, in UTC, and the duration", async () => {
     const { result } = setup();
     act(() => result.current.move({ session, name: "Ehab Bandar", to: TO }));
     await flush();
-    expect(update).toHaveBeenCalledTimes(1);
-    const [id, body] = update.mock.calls[0];
+    expect(move).toHaveBeenCalledTimes(1);
+    const [id, body] = move.mock.calls[0];
     expect(id).toBe("s-1");
-    expect(body).toMatchObject({ id: "s-1", date: "2026-08-20T15:00:00", duration_minutes: 50 });
+    expect(body).toEqual({ date: "2026-08-20T15:00:00", duration_minutes: 50 });
   });
 
   it("refreshes session reads, marks the card moved, and offers Undo", async () => {
@@ -65,14 +65,14 @@ describe("useMoveSession", () => {
     await flush();
     act(() => toast.mock.calls[0][1].action.onClick());
     await flush();
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(update.mock.calls[1][1]).toMatchObject({ date: "2026-08-18T19:30:00" });
+    expect(move).toHaveBeenCalledTimes(2);
+    expect(move.mock.calls[1][1]).toEqual({ date: "2026-08-18T19:30:00", duration_minutes: 50 });
     expect(revalidate).toHaveBeenCalledTimes(2);
     expect(result.current.moved).toEqual([]);
   });
 
   it("says so when the move fails, and marks nothing", async () => {
-    update.mockRejectedValue(new Error("boom"));
+    move.mockRejectedValue(new Error("boom"));
     const { result } = setup();
     act(() => result.current.move({ session, name: "Ehab Bandar", to: TO }));
     await flush();
