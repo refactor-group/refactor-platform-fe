@@ -101,7 +101,7 @@ export const MOCK_ORGANIZATIONS: MockOrganization[] = [
 ]
 
 /** Build a mock coaching relationship with sensible defaults. */
-function mockRelationship(
+export function mockRelationship(
   id: string,
   overrides: Partial<MockCoachingRelationship> = {}
 ): MockCoachingRelationship {

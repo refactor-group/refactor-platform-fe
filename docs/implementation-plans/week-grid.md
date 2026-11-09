@@ -8,17 +8,17 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 
 | Phase | Scope | State |
 | --- | --- | --- |
-| 1a | Extract `useNow` and the session actions, with no behavior change | Done (`aea3a6b8`), approved |
-| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (`57a8c48e`), approved |
-| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (`6fe0e8be`), approved |
-| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (`feat/week-grid-nav`, through `8964e5da`), approved |
+| 1a | Extract `useNow` and the session actions, with no behavior change | Done (PR #536), approved |
+| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (PR #536), approved |
+| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (PR #536), approved |
+| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (PR #536), approved |
 | 3 | Prepare pill, Ready footer, live note | Folded into PRs 1 and 2 (Jim, 2026-11-05); Part 3 of the test plan runs with PR 2 |
-| 4 | Person filter, chip, dimmed cards | Done (`feat/week-grid-filter`, through `d9961f3e`), approved |
+| 4 | Person filter, chip, dimmed cards | Done (PR #537), approved |
 | BE 1 | Working hours on the user (rs) | refactor-platform-rs#472, verified by the frontend (`user_working_hours_fe_verified`) |
 | BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
-| 5 | Drag to move, Undo, working hours in Settings and the dialog | In review (`feat/week-grid-drag`, through `bdffa11f`); live checks wait on BE 2 (Part 8) and a live Settings save |
-| 6 | Mobile day strip, agenda, Move sheet | Done (`feat/week-grid-mobile`, through `085e2308`), approved |
-| 7 | Coachee-only e2e and the manual test plan's roles part | Done (`feat/week-grid-roles`, `2af79d89`), approved; test plan 7.1 corrected to Open session only (Jim, 2026-11-06) |
+| 5 | Drag to move, Undo, working hours in Settings and the dialog | In review (PR #540); live checks wait on BE 2 (Part 8) and a live Settings save |
+| 6 | Mobile day strip, agenda, Move sheet | Done (PR #538), approved |
+| 7 | Coachee-only e2e and the manual test plan's roles part | Done (PR #539), approved; test plan 7.1 corrected to Open session only (Jim, 2026-11-06) |
 
 PRs 1 and 2 merge together, and each later PR merges on its own (D13). Each PR opens as a draft. The results of each PR's manual test part go in its description. `docs/test-plans/week_grid_manual_testing.md` is written up front for the whole feature. It has one part per PR plus a final end-to-end pass (Part 9). It's frozen acceptance, so a PR may correct a case only with Jim's approval.
 
