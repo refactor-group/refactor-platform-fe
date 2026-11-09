@@ -56,25 +56,13 @@ test.describe('Week grid navigation and clicks', () => {
     await expect(panel(page, 'Last week')).toBeVisible()
   })
 
-  test('a single click reschedules an upcoming session', async ({ page }) => {
+  test('a single click opens an upcoming session', async ({ page }) => {
     await page.getByTestId('session-card-thursday').click()
-    await expect(page.getByRole('dialog')).toBeVisible()
-    await expect(page.getByRole('dialog')).toContainText('Reschedule session')
-  })
-
-  test('a double-click opens the session without the dialog', async ({ page }) => {
-    let dialogSeen = false
-    void page.getByRole('dialog').waitFor({ state: 'visible', timeout: 2000 }).then(
-      () => (dialogSeen = true),
-      () => {}
-    )
-    await page.getByTestId('session-card-thursday').dblclick()
     await page.waitForURL('**/coaching-sessions/thursday')
-    expect(dialogSeen).toBe(false)
   })
 
-  test('a past card opens on double-click', async ({ page }) => {
-    await page.getByTestId('session-card-monday-past').dblclick()
+  test('a single click opens a past session', async ({ page }) => {
+    await page.getByTestId('session-card-monday-past').click()
     await page.waitForURL('**/coaching-sessions/monday-past')
   })
 

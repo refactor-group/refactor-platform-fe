@@ -17,12 +17,6 @@ export enum CardFooter {
   Prepare = "prepare",
 }
 
-export enum CardClick {
-  Open = "open",
-  Reschedule = "reschedule",
-  Nothing = "nothing",
-}
-
 export type CardNote =
   | { kind: "relative"; text: string; pulse: boolean; topicCount: number }
   | { kind: "topics"; count: number }
@@ -45,7 +39,6 @@ export interface CardView {
   canManage: boolean;
   /** Not ended, or started today: still open to reschedule, drag and Move (D18). */
   editable: boolean;
-  underway: boolean;
 }
 
 export interface GridCard extends CardView {
@@ -70,7 +63,6 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,
     editable: !sessionLocked(session, context.now, context.timezone),
-    underway: urgency === SessionUrgency.Underway,
   };
 }
 
@@ -78,11 +70,6 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
 export function sessionLocked(session: EnrichedCoachingSession, now: DateTime, timezone: string): boolean {
   const ended = calculateSessionUrgency(session, now) === SessionUrgency.Past;
   return ended && !sessionStartIn(session.date, timezone).hasSame(now.setZone(timezone), "day");
-}
-
-export function cardClick(view: CardView): CardClick {
-  if (view.underway) return CardClick.Open;
-  return view.editable && view.canManage ? CardClick.Reschedule : CardClick.Nothing;
 }
 
 export function cardNoteText(note: CardNote): string {

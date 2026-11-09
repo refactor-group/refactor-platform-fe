@@ -317,16 +317,14 @@ describe("WeekPanel scheduling", () => {
 });
 
 describe("WeekPanel card clicks", () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
-    vi.setSystemTime(NOW);
-  });
-
-  it("reschedules an upcoming session on a single click", () => {
+  it.each([
+    ["an upcoming session", "thursday"],
+    ["a past session", "early-today"],
+  ])("opens %s on a single click", (_label, id) => {
     renderPanel();
-    fireEvent.click(screen.getByTestId("session-card-thursday"));
-    act(() => vi.advanceTimersByTime(260));
-    expect(run).toHaveBeenCalledWith(SessionAction.Reschedule, THURSDAY);
+    fireEvent.click(screen.getByTestId(`session-card-${id}`));
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, id === "thursday" ? THURSDAY : EARLY_TODAY);
   });
 
   it("opens a session that's under way on a single click", () => {
@@ -334,35 +332,28 @@ describe("WeekPanel card clicks", () => {
     result = { ...result, sessions: [underway] };
     renderPanel();
     fireEvent.click(screen.getByTestId("session-card-underway"));
-    act(() => vi.advanceTimersByTime(260));
     expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, underway);
   });
 
-  it("opens the session on a double-click, without rescheduling", () => {
+  it("never reschedules or shows a toast on a click", () => {
     renderPanel();
-    const card = screen.getByTestId("session-card-thursday");
-    fireEvent.click(card);
-    fireEvent.click(card);
-    fireEvent.doubleClick(card);
-    act(() => vi.advanceTimersByTime(1000));
-    expect(run).toHaveBeenCalledTimes(1);
-    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
-  });
-
-  it("does nothing on a single click on a card from an earlier day", () => {
-    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
-    renderPanel();
-    fireEvent.click(screen.getByTestId("session-card-monday-past"));
-    act(() => vi.advanceTimersByTime(260));
-    expect(run).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("session-card-thursday"));
+    fireEvent.click(screen.getByTestId("session-card-early-today"));
+    expect(run).not.toHaveBeenCalledWith(SessionAction.Reschedule, expect.anything());
     expect(toast).not.toHaveBeenCalled();
   });
 
-  it("reschedules a session that ended earlier today on a single click", () => {
+  it("opens a card from an earlier day on a single click", () => {
+    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
+    renderPanel();
+    fireEvent.click(screen.getByTestId("session-card-monday-past"));
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, MONDAY_PAST);
+  });
+
+  it("opens a session that ended earlier today on a single click", () => {
     renderPanel();
     fireEvent.click(screen.getByTestId("session-card-early-today"));
-    act(() => vi.advanceTimersByTime(260));
-    expect(run).toHaveBeenCalledWith(SessionAction.Reschedule, EARLY_TODAY);
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, EARLY_TODAY);
   });
 });
 
@@ -601,16 +592,13 @@ describe("WeekPanel when the server can't be reached (read only)", () => {
     expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
   });
 
-  it("offers only Open session in the menu, and a single click does nothing", () => {
-    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
-    vi.setSystemTime(NOW);
+  it("offers only Open session in the menu, and a single click opens the session", () => {
     renderPanel();
     fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
     expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual(["Open session"]);
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
     fireEvent.click(screen.getByTestId("session-card-thursday"));
-    act(() => vi.advanceTimersByTime(260));
-    expect(run).not.toHaveBeenCalled();
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
   });
 
   it("doesn't let cards drag", () => {

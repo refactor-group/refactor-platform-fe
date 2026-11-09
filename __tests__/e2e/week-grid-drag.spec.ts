@@ -135,12 +135,12 @@ test.describe('Week grid drag to move', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })
 
-  test('a quick click still reschedules, and a right-click opens the menu without a drag', async ({ page }) => {
+  test('a quick click opens, and a right-click opens the menu without a drag', async ({ page }) => {
     await page.getByTestId('session-card-thursday').click({ button: 'right' })
     await expect(page.getByRole('menu')).toBeVisible()
     await page.keyboard.press('Escape')
     await page.getByTestId('session-card-thursday').click()
-    await expect(page.getByRole('dialog')).toContainText('Reschedule session')
+    await page.waitForURL('**/coaching-sessions/thursday')
     expect(writes).toEqual([])
   })
 

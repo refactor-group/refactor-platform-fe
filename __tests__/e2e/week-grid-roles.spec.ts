@@ -73,10 +73,9 @@ async function open(
 
 const card = (page: Page, id: string) => page.getByTestId(`session-card-${id}`)
 
-async function expectNoDialogAfterClick(page: Page, id: string) {
+async function expectClickOpens(page: Page, id: string) {
   await card(page, id).click()
-  await page.waitForTimeout(600)
-  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.waitForURL(`**/coaching-sessions/${id}`)
 }
 
 async function menuItems(page: Page, id: string) {
@@ -104,10 +103,8 @@ test.describe('Week grid for someone who coaches nobody (7.1)', () => {
     await expect(page.getByRole('button', { name: /^Schedule on/ })).toHaveCount(0)
   })
 
-  test('a single click does nothing and a double-click opens the session', async ({ page }) => {
-    await expectNoDialogAfterClick(page, 'rosa-thursday')
-    await card(page, 'rosa-thursday').dblclick()
-    await page.waitForURL('**/coaching-sessions/rosa-thursday')
+  test('a single click opens the session', async ({ page }) => {
+    await expectClickOpens(page, 'rosa-thursday')
   })
 
   test('the menu offers only Open session, upcoming or past', async ({ page }) => {
@@ -137,7 +134,7 @@ test.describe('Week grid for someone who coaches and is coached (7.2)', () => {
     await expect(page.getByRole('button', { name: 'All sessions' })).toBeVisible()
   })
 
-  test('a session they coach reschedules on a click and has the full menu', async ({ page }) => {
+  test('a session they coach opens on a click and has the full menu', async ({ page }) => {
     expect(await menuItems(page, 'jane-friday')).toEqual([
       'Open session',
       'Reschedule…',
@@ -145,13 +142,12 @@ test.describe('Week grid for someone who coaches and is coached (7.2)', () => {
       'Resend invite',
       'Cancel session…',
     ])
-    await card(page, 'jane-friday').click()
-    await expect(page.getByRole('dialog')).toContainText('Reschedule session')
+    await expectClickOpens(page, 'jane-friday')
   })
 
   test('a session they are coached in behaves as for a coachee', async ({ page }) => {
     expect(await menuItems(page, 'rosa-thursday')).toEqual(['Open session'])
-    await expectNoDialogAfterClick(page, 'rosa-thursday')
+    await expectClickOpens(page, 'rosa-thursday')
   })
 
   test('the filter lists only the people they coach', async ({ page }) => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
 import { createMockEnrichedSession } from "../../test-utils";
-import { CardClick, CardTense, cardClick, cardView, readOnlyView, sessionLocked } from "@/lib/week-grid/card";
+import { CardTense, cardView, sessionLocked } from "@/lib/week-grid/card";
 
 // Tuesday, August 18 2026, 1:45 PM in Chicago.
 const NOW = DateTime.fromISO("2026-08-18T18:45:00Z", { zone: "utc" });
@@ -40,18 +40,6 @@ describe("editable", () => {
 
   it("is false for a session from an earlier day", () => {
     expect(cardView(YESTERDAY, COACH).editable).toBe(false);
-  });
-});
-
-describe("cardClick with today's ended sessions", () => {
-  it("reschedules a session the viewer coaches that ended earlier today", () => {
-    expect(cardClick(cardView(ENDED_TODAY, COACH))).toBe(CardClick.Reschedule);
-  });
-
-  it("still does nothing for a coachee, an earlier day, or read only", () => {
-    expect(cardClick(cardView(ENDED_TODAY, COACHEE))).toBe(CardClick.Nothing);
-    expect(cardClick(cardView(YESTERDAY, COACH))).toBe(CardClick.Nothing);
-    expect(cardClick(readOnlyView(cardView(ENDED_TODAY, COACH)))).toBe(CardClick.Nothing);
   });
 });
 
