@@ -44,7 +44,7 @@ vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => {
     ...actual,
     useNearestEachCoachingSessions: vi.fn(),
     useEnrichedCoachingSessionsForUser: vi.fn(),
-    CoachingSessionApi: { ...actual.CoachingSessionApi, create: vi.fn(), update: vi.fn() },
+    CoachingSessionApi: { ...actual.CoachingSessionApi, create: vi.fn(), update: vi.fn(), move: vi.fn() },
   };
 });
 vi.mock("@/lib/api/coaching-session-series", async (importOriginal) => {
@@ -58,7 +58,7 @@ vi.mock("@/lib/api/coaching-session-series", async (importOriginal) => {
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const create = vi.mocked(CoachingSessionApi.create);
-const update = vi.mocked(CoachingSessionApi.update);
+const move = vi.mocked(CoachingSessionApi.move);
 const reschedule = vi.mocked(CoachingSessionSeriesApi.reschedule);
 
 const EHAB = { id: "ehab", first: "Ehab", last: "Badawi" };
@@ -129,7 +129,7 @@ beforeEach(() => {
     refresh: vi.fn(),
   } as unknown as ReturnType<typeof useCoachingSessionSeries>);
   create.mockResolvedValue(createMockSession({ id: "new" }));
-  update.mockResolvedValue(createMockSession({ id: "p-18" }));
+  move.mockResolvedValue(createMockSession({ id: "p-18" }));
   reschedule.mockResolvedValue(SERIES as unknown as Awaited<ReturnType<typeof CoachingSessionSeriesApi.reschedule>>);
 });
 

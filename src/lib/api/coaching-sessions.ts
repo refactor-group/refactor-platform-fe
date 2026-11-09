@@ -147,6 +147,16 @@ export const CoachingSessionApi = {
       )
     ),
 
+  /** Moves a session: the PUT carries only the new start and duration, so other fields stay as they are. */
+  move: (
+    id: Id,
+    move: { date: string; duration_minutes: number }
+  ): Promise<unknown> =>
+    EntityApi.updateFn<typeof move, unknown>(
+      `${COACHING_SESSIONS_BASEURL}/${id}`,
+      move
+    ),
+
   /**
    * Updates only a coaching session's title via the dedicated participant-gated
    * endpoint. Unlike `update` (PUT, coach-only scheduling), this PATCH is

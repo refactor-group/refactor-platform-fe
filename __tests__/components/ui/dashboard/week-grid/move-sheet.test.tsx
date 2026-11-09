@@ -69,6 +69,19 @@ describe("MoveSheet", () => {
     expect(onConfirm.mock.calls[0][0].toISO()).toBe(at("2026-08-20T10:00").toISO());
   });
 
+  it("drops a pick when the day changes, so Move never targets a time off screen", () => {
+    renderSheet();
+    fireEvent.click(within(sheet()).getByRole("button", { name: "10:00 AM" }));
+    expect(confirm()).toBeEnabled();
+    fireEvent.click(within(sheet()).getByRole("button", { name: "Thursday, August 20" }));
+    expect(within(sheet()).getByRole("button", { name: "10:00 AM" })).toHaveAttribute("aria-pressed", "false");
+    expect(confirm()).toBeDisabled();
+    fireEvent.click(within(sheet()).getByRole("button", { name: "Tuesday, August 18" }));
+    expect(within(sheet()).getByRole("button", { name: "10:00 AM" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(sheet()).getByRole("button", { name: "2:30 PM, current" })).toHaveAttribute("aria-pressed", "true");
+    expect(confirm()).toBeDisabled();
+  });
+
   it("goes back to disabled when the current slot is picked again", () => {
     renderSheet();
     fireEvent.click(within(sheet()).getByRole("button", { name: "10:00 AM" }));
