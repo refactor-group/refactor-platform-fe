@@ -32,7 +32,7 @@ let mockUserState = {
 
 vi.mock("@/lib/api/users", () => ({
   useUser: () => mockUserState,
-  useUserMutation: () => ({
+  useUserPreferencesMutation: () => ({
     update: mockUpdate,
     isLoading: false,
   }),
@@ -95,7 +95,7 @@ describe("CoachingPreferencesSection", () => {
       expect(mockUpdate).toHaveBeenCalledTimes(1);
       const [calledId, calledPayload] = mockUpdate.mock.calls[0];
       expect(calledId).toBe("user-1");
-      expect(calledPayload.default_coaching_session_duration_minutes).toBe(45);
+      expect(calledPayload).toEqual({ default_coaching_session_duration_minutes: 45 });
     });
 
     it("coalesces rapid changes into a single PUT (debounce)", async () => {
@@ -228,7 +228,7 @@ describe("CoachingPreferencesSection", () => {
         vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
       });
       expect(mockUpdate).toHaveBeenCalledTimes(1);
-      expect(mockUpdate.mock.calls[0][1]).toMatchObject({
+      expect(mockUpdate.mock.calls[0][1]).toEqual({
         working_hours_start: "09:00",
         working_hours_end: "17:30",
       });
@@ -255,6 +255,50 @@ describe("CoachingPreferencesSection", () => {
         vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
       });
       expect(mockToastError).toHaveBeenCalledWith("Those hours didn't save · Start must be before end");
+    });
+
+    it("on a 422 for a save of both, blames neither field alone", async () => {
+      mockUpdate.mockRejectedValueOnce(
+        makeApiError(422, { status_code: 422, error: "validation_error", message: "out of range" })
+      );
+      render(<CoachingPreferencesSection />);
+      fireEvent.change(screen.getByRole("combobox", { name: /duration in minutes/i }), { target: { value: "45" } });
+      fireEvent.change(end(), { target: { value: "16:00" } });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+      expect(mockUpdate.mock.calls[0][1]).toEqual({
+        default_coaching_session_duration_minutes: 45,
+        working_hours_start: "08:00",
+        working_hours_end: "16:00",
+      });
+      expect(mockToastError).toHaveBeenCalledWith("Your preferences didn't save · Check the duration and hours");
+    });
+
+    it("shows newly saved values when the user is read again", () => {
+      const { rerender } = render(<CoachingPreferencesSection />);
+      mockUserState = {
+        ...mockUserState,
+        user: createMockUser({ id: "user-1", working_hours_start: "10:00", working_hours_end: "17:30" }),
+      };
+      rerender(<CoachingPreferencesSection />);
+      expect(start()).toHaveValue("10:00");
+    });
+
+    it("keeps an unsaved edit when the user is read again", () => {
+      const { rerender } = render(<CoachingPreferencesSection />);
+      fireEvent.change(end(), { target: { value: "16:00" } });
+      mockUserState = {
+        ...mockUserState,
+        user: createMockUser({
+          id: "user-1",
+          default_coaching_session_duration_minutes: 30,
+          working_hours_start: "08:00",
+          working_hours_end: "17:30",
+        }),
+      };
+      rerender(<CoachingPreferencesSection />);
+      expect(end()).toHaveValue("16:00");
     });
   });
 });

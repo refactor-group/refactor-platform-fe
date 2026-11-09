@@ -8,6 +8,7 @@ import {
   parseClock,
   workingHoursOf,
 } from "@/lib/working-hours";
+import { defaultUser, parseUser } from "@/types/user";
 import { createMockUser } from "../test-utils";
 
 describe("parseClock", () => {
@@ -58,5 +59,14 @@ describe("workingHoursOf", () => {
     expect(workingHoursOf(Some(bad))).toEqual(WORKING_HOURS_FALLBACK);
     const backwards = createMockUser({ working_hours_start: "18:00", working_hours_end: "09:00" });
     expect(workingHoursOf(Some(backwards))).toEqual(WORKING_HOURS_FALLBACK);
+  });
+
+  it("fills a user's missing hours with the same fallback", () => {
+    const fallback = { working_hours_start: "08:00", working_hours_end: "17:30" };
+    expect(defaultUser()).toMatchObject(fallback);
+    const { working_hours_start: _s, working_hours_end: _e, ...wire } = createMockUser();
+    expect(parseUser(wire)).toMatchObject(fallback);
+    expect(formatClock(WORKING_HOURS_FALLBACK.start)).toBe(fallback.working_hours_start);
+    expect(formatClock(WORKING_HOURS_FALLBACK.end)).toBe(fallback.working_hours_end);
   });
 });
