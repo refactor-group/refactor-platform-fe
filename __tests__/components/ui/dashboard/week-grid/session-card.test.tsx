@@ -65,6 +65,16 @@ describe("SessionCard", () => {
     expect(card).toHaveAccessibleDescription(/Shift\+F10 shows actions/);
   });
 
+  it("tells screen reader users when the filter leaves a card out", () => {
+    const onAction = vi.fn();
+    const onOpen = vi.fn();
+    render(<SessionCard view={view("2026-08-19T15:00:00", 3)} dimmed onAction={onAction} onOpen={onOpen} />);
+    expect(screen.getByTestId("session-card-s-1")).toHaveAccessibleDescription(/Filtered out/);
+    cleanup();
+    const { card } = renderCard();
+    expect(card).not.toHaveAccessibleDescription(/Filtered out/);
+  });
+
   it("is keyboard focusable and carries its tense", () => {
     const { card } = renderCard(view("2026-08-17T15:00:00", 2));
     expect(card).toHaveAttribute("tabindex", "0");
