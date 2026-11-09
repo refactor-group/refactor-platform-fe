@@ -198,7 +198,7 @@ When the session read fails, the panel keeps working instead of collapsing to an
   - the menu offers Open session only.
 - **Still works:** the filter, and paging to weeks already loaded.
 - It returns to normal on the next successful read: SWR retries failed reads with backoff, and Try again or paging also refetch. Nothing is saved to disk, so it doesn't survive a reload.
-- Built in `8321fde5` on `feat/week-grid-offline`.
+- Built on `feat/week-grid-offline`, which lands in PR #541.
 
 ## Follow-ups
 
