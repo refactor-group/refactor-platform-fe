@@ -62,7 +62,8 @@ export function DayColumn({ group, handlers, onSchedule, drag, justDragged, isLo
 function DayBody({ group, handlers, onSchedule, drag, justDragged, isLoading }: DayColumnProps) {
   if (isLoading) return <Skeleton className="h-32 rounded-xl" />;
   if (drag.kind === "over") return <DropSlots slots={drag.slots} hovered={drag.hovered} name={drag.name} />;
-  if (group.items.length === 0) return <EmptyDay day={group.day} isToday={group.isToday} onSchedule={scheduleOn(group, onSchedule)} />;
+  if (group.items.length === 0)
+    return <EmptyDay day={group.day} isToday={group.isToday} onSchedule={scheduleOn(group, onSchedule)} />;
   return group.items.map((card) => (
     <SessionCard
       key={card.session.id}
