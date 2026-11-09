@@ -117,6 +117,15 @@ describe("StepDialog on desktop", () => {
     expect(screen.queryByRole("button", { name: "Next step" })).not.toBeInTheDocument();
   });
 
+  it("lists no steps and ignores Enter in a single view", () => {
+    viewport(true);
+    const lead = confirm();
+    renderDialog({ variant: StepDialogVariant.Single, lead });
+    expect(screen.queryByRole("list", { name: "Steps" })).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByText("Step body"), { key: "Enter" });
+    expect(lead.kind === "confirm" && lead.onConfirm).not.toHaveBeenCalled();
+  });
+
   it("keeps the position and arrows for a one-step flow", () => {
     viewport(true);
     renderDialog({ position: { index: 1, total: 1 }, onPrev: None, onNext: None });
