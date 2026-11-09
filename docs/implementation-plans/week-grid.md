@@ -17,7 +17,7 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | BE 1 | Working hours on the user (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); backend builds this first |
 | BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
 | 5 | Drag to move, Undo, working hours in Settings and the dialog | Not started |
-| 6 | Mobile day strip, agenda, Move sheet | 6a and 6b in review (`feat/week-grid-mobile`, through `e0d4906c`) |
+| 6 | Mobile day strip, agenda, Move sheet | 6a and 6b in review (PR #538) |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Not started |
 
 PRs 1 and 2 merge together, and each later PR merges on its own (D13). Each PR opens as a draft. The results of each PR's manual test part go in its description. `docs/test-plans/week_grid_manual_testing.md` is written up front for the whole feature. It has one part per PR plus a final end-to-end pass (Part 9). It's frozen acceptance, so a PR may correct a case only with Jim's approval.
