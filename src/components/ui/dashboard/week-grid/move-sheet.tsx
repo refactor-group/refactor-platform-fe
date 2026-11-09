@@ -117,14 +117,15 @@ interface MoveSheetActionProps {
 }
 
 function MoveSheetAction({ model, start, clash, onConfirm, onResolve }: MoveSheetActionProps) {
-  if (start.some && clash) {
+  const ahead = start.some && start.val >= model.now;
+  if (start.some && ahead && clash) {
     return (
       <Button className="w-full" onClick={() => onResolve(start.val)}>
         Resolve overlap…
       </Button>
     );
   }
-  const canMove = start.some && start.val.toMillis() !== model.current.toMillis() && start.val >= model.now;
+  const canMove = start.some && ahead && start.val.toMillis() !== model.current.toMillis();
   return (
     <Button className="w-full" disabled={!canMove} onClick={() => start.some && onConfirm(start.val)}>
       Move session
