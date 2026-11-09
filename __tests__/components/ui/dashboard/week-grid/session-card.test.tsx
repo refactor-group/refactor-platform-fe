@@ -106,6 +106,15 @@ describe("SessionCard", () => {
     expect(shape(ready)).toEqual(prepareShape);
   });
 
+  it.each([
+    ["Prepare", 0],
+    ["Ready", 3],
+  ])("ends the %s pill with the same arrow", (name, topicCount) => {
+    const { card } = renderCard(view("2026-08-19T15:00:00", topicCount));
+    const pill = within(card).getByRole("link", { name: new RegExp(name as string) });
+    expect(pill.lastElementChild?.getAttribute("class")).toMatch(/lucide-arrow-right/);
+  });
+
   it("leaves Ready to its own link, like Prepare", () => {
     const { card, onOpen } = renderCard();
     const ready = within(card).getByRole("link", { name: /Ready/ });
