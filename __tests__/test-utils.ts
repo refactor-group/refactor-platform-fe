@@ -170,6 +170,7 @@ export function createMockEnrichedSession(
       updated_at: now,
     },
     goals: [],
+    topics: None,
     ...overrides,
   };
 }

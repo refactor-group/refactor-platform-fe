@@ -27,6 +27,7 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import { type EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
+import { enrichedTitleSource } from "@/types/coaching-session-title";
 import { SessionUrgency } from "@/types/session-display";
 import { UserActionsScope } from "@/types/assigned-actions";
 
@@ -263,7 +264,7 @@ function HeaderRow({
           Session with {participantName}
         </h3>
         <CoachingSessionTitleText
-          session={session}
+          session={enrichedTitleSource(session)}
           hideWhenFallback
           hideWhenRedundantWithGoals
           className="text-sm text-muted-foreground mt-0.5 truncate"

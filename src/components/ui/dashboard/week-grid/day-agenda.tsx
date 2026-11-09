@@ -5,7 +5,7 @@ import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
 import type { Option } from "@/types/option";
 import { ScheduleDayButton } from "./empty-day";
 import { withNowLine } from "./now-line";
-import { SessionCard, SessionCardLayout, type SessionCardHandlers } from "./session-card";
+import { SessionCard, SessionCardHint, SessionCardLayout, type SessionCardHandlers } from "./session-card";
 
 export interface DayAgendaProps {
   group: DayGroup<GridCard>;
@@ -16,12 +16,13 @@ export interface DayAgendaProps {
 
 export function DayAgenda({ group, handlers, onSchedule, now }: DayAgendaProps) {
   const headingId = useId();
+  const nodes = withNowLine(agendaNodes(group, handlers, onSchedule), group.items, now);
   return (
     <section aria-labelledby={headingId} className="mt-6 flex flex-col gap-2.5">
       <h3 id={headingId} className="text-sm font-semibold text-foreground">
         {group.day.toFormat("cccc, LLLL d")}
       </h3>
-      {withNowLine(agendaNodes(group, handlers, onSchedule), group.items, now)}
+      {group.items.length > 0 ? <SessionCardHint>{nodes}</SessionCardHint> : nodes}
     </section>
   );
 }

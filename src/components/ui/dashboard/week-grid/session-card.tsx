@@ -1,6 +1,7 @@
 "use client";
 
-import type { KeyboardEvent, RefObject, SyntheticEvent } from "react";
+import { createContext, useContext, useId, useMemo } from "react";
+import type { KeyboardEvent, ReactNode, RefObject, SyntheticEvent } from "react";
 import Link from "next/link";
 import { useDraggable } from "@dnd-kit/core";
 import { ArrowRight, Check } from "lucide-react";
@@ -18,7 +19,7 @@ import {
   type CardNote,
   type CardView,
 } from "@/lib/week-grid/card";
-import { type Option, None } from "@/types/option";
+import { type Option, None, Some } from "@/types/option";
 import { SessionCardMenu, type OnSessionAction } from "./session-card-menu";
 
 export interface SessionCardHandlers {
@@ -41,6 +42,30 @@ export interface SessionCardProps extends SessionCardHandlers {
   justDragged?: Option<RefObject<boolean>>;
 }
 
+const CARD_HINT = "Enter opens the session. Shift+F10 shows actions.";
+
+const CardHintContext = createContext<Option<string>>(None);
+
+/** Renders the cards' keyboard hint once for every card inside it to reference. */
+export function SessionCardHint({ children }: { children: ReactNode }) {
+  const id = useId();
+  const hintId = useMemo(() => Some(id), [id]);
+  return (
+    <CardHintContext.Provider value={hintId}>
+      <CardHintText id={id} />
+      {children}
+    </CardHintContext.Provider>
+  );
+}
+
+function CardHintText({ id }: { id: string }) {
+  return (
+    <span id={id} className="sr-only">
+      {CARD_HINT}
+    </span>
+  );
+}
+
 export function SessionCard({
   view,
   dimmed = false,
@@ -55,6 +80,9 @@ export function SessionCard({
   const isAgenda = layout === SessionCardLayout.Agenda;
   const canMove = view.editable && view.canManage;
   const draggable = canMove && justDragged.some;
+  const sharedHint = useContext(CardHintContext);
+  const ownHintId = useId();
+  const hintId = sharedHint.some ? sharedHint.val : ownHintId;
   const time = timeOfDay(view.start);
   const clicks = useClickOrDoubleClick(
     () => onSelect(view),
@@ -71,61 +99,62 @@ export function SessionCard({
   };
 
   return (
-    <SessionCardMenu view={view} isCompact={isAgenda} onAction={onAction}>
-      <div
-        ref={setNodeRef}
-        data-testid={`session-card-${view.session.id}`}
-        data-tense={view.tense}
-        data-dimmed={String(dimmed)}
-        data-draggable={String(draggable)}
-        tabIndex={0}
-        aria-label={`${time}, ${view.name}`}
-        {...(draggable && {
-          "aria-roledescription": attributes["aria-roledescription"],
-          "aria-describedby": attributes["aria-describedby"],
-        })}
-        {...listeners}
-        onClick={onClick}
-        onDoubleClick={clicks.onDoubleClick}
-        onKeyDown={onKeyDown}
-        className={cn(
-          "flex flex-col gap-1.5 rounded-xl p-[11px] outline-none",
-          layout === SessionCardLayout.Grid && "min-h-32",
-          canMove && (draggable ? "cursor-grab" : "cursor-pointer"),
-          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          isPast ? "bg-well" : "bg-card shadow-card",
-          dimmed && "opacity-[.28]",
-          isDragging && "cursor-grabbing opacity-[.35] outline-dashed outline-1 outline-faint"
-        )}
-      >
-        <span
+    <>
+      <SessionCardMenu view={view} isCompact={isAgenda} onAction={onAction}>
+        <div
+          ref={setNodeRef}
+          data-testid={`session-card-${view.session.id}`}
+          data-tense={view.tense}
+          data-dimmed={String(dimmed)}
+          data-draggable={String(draggable)}
+          tabIndex={0}
+          aria-label={`${time}, ${view.name}`}
+          aria-describedby={draggable ? `${hintId} ${attributes["aria-describedby"]}` : hintId}
+          {...(draggable && { "aria-roledescription": attributes["aria-roledescription"] })}
+          {...listeners}
+          onClick={onClick}
+          onDoubleClick={clicks.onDoubleClick}
+          onKeyDown={onKeyDown}
           className={cn(
-            "truncate text-xs tabular-nums",
-            isPast ? "text-faint" : "text-muted-foreground"
+            "flex flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+            layout === SessionCardLayout.Grid && "min-h-32",
+            draggable ? "cursor-grab" : (view.underway || canMove) && "cursor-pointer",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            isPast ? "bg-well" : "bg-card shadow-card",
+            dimmed && "opacity-[.28]",
+            isDragging && "cursor-grabbing opacity-[.35] outline-dashed outline-1 outline-faint"
           )}
         >
-          {time} · {durationText(view.session.duration_minutes)}
-        </span>
-        <span
-          className={cn(
-            "truncate text-[13px] font-semibold",
-            isPast ? "text-muted-foreground" : "text-foreground"
-          )}
-        >
-          {view.name}
-        </span>
-        <CardNoteLine note={view.note} />
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
-          <CardFooterLine footer={view.footer} sessionId={view.session.id} />
-          {isAgenda && (
-            <div className="ml-auto flex items-center gap-2">
-              {canMove && onMove && <CardButton label="Move" onClick={() => onMove(view)} />}
-              <CardButton label="Open session" onClick={() => onOpen(view)} />
-            </div>
-          )}
+          <span
+            className={cn(
+              "truncate text-xs tabular-nums",
+              isPast ? "text-faint" : "text-muted-foreground"
+            )}
+          >
+            {time} · {durationText(view.session.duration_minutes)}
+          </span>
+          <span
+            className={cn(
+              "truncate text-[13px] font-semibold",
+              isPast ? "text-muted-foreground" : "text-foreground"
+            )}
+          >
+            {view.name}
+          </span>
+          <CardNoteLine note={view.note} />
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
+            <CardFooterLine footer={view.footer} sessionId={view.session.id} />
+            {isAgenda && (
+              <div className="ml-auto flex items-center gap-2">
+                {canMove && onMove && <CardButton label="Move" onClick={() => onMove(view)} />}
+                <CardButton label="Open session" onClick={() => onOpen(view)} />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </SessionCardMenu>
+      </SessionCardMenu>
+      {sharedHint.none && <CardHintText id={ownHintId} />}
+    </>
   );
 }
 
