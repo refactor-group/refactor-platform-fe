@@ -8,7 +8,7 @@ import type { DaySlot, DropTarget } from "@/lib/week-grid/slots";
 import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
 import { type Option, Some } from "@/types/option";
 import { DropSlots } from "./drop-slots";
-import { EmptyDay } from "./empty-day";
+import { EmptyDay, UnloadedDay } from "./empty-day";
 import { withNowLine } from "./now-line";
 import { SessionCard, type SessionCardHandlers } from "./session-card";
 
@@ -26,9 +26,10 @@ export interface DayColumnProps {
   justDragged: RefObject<boolean>;
   now: Option<DateTime>;
   isLoading: boolean;
+  isUnloaded: boolean;
 }
 
-export function DayColumn({ group, handlers, onSchedule, drag, justDragged, now, isLoading }: DayColumnProps) {
+export function DayColumn({ group, handlers, onSchedule, drag, justDragged, now, isLoading, isUnloaded }: DayColumnProps) {
   const { setNodeRef } = useDroppable({
     id: `day:${group.day.toISODate()}`,
     data: { kind: "day", day: group.day } satisfies DropTarget,
@@ -57,23 +58,28 @@ export function DayColumn({ group, handlers, onSchedule, drag, justDragged, now,
         justDragged={justDragged}
         now={now}
         isLoading={isLoading}
+        isUnloaded={isUnloaded}
       />
     </div>
   );
 }
 
-function DayBody({ group, handlers, onSchedule, drag, justDragged, now, isLoading }: DayColumnProps) {
+function DayBody({ group, handlers, onSchedule, drag, justDragged, now, isLoading, isUnloaded }: DayColumnProps) {
   if (isLoading) return <Skeleton className="h-32 rounded-xl" />;
   if (drag.kind === "over") return <DropSlots slots={drag.slots} hovered={drag.hovered} name={drag.name} />;
   const nodes =
     group.items.length === 0
       ? [
-          <EmptyDay
-            key="empty"
-            day={group.day}
-            isToday={group.isToday}
-            onSchedule={scheduleOn(group, onSchedule)}
-          />,
+          isUnloaded ? (
+            <UnloadedDay key="empty" />
+          ) : (
+            <EmptyDay
+              key="empty"
+              day={group.day}
+              isToday={group.isToday}
+              onSchedule={scheduleOn(group, onSchedule)}
+            />
+          ),
         ]
       : group.items.map((card) => (
           <SessionCard

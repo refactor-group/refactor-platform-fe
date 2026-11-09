@@ -146,7 +146,7 @@ export const CoachingPreferencesSection: FC = () => {
   const [edits, setEdits] = useState<UserPreferencesUpdate>({});
   const shown = useMemo<Preferences>(() => ({ ...saved, ...edits }), [saved, edits]);
   const changes = useMemo(() => changedPreferences(shown, saved), [shown, saved]);
-  // A server that drops a field leaves it changed, so a sent value waits for the next edit.
+  // Blocks a second PUT of the same values until the save settles.
   const sent = useRef<Option<Preferences>>(None);
 
   const durationMinutes = shown.default_coaching_session_duration_minutes;
@@ -168,9 +168,12 @@ export const CoachingPreferencesSection: FC = () => {
         try {
           await update(userId, changes);
           await refresh();
-          setEdits((prev) => withoutSent(prev, changes));
         } catch (error) {
           toast.error(saveErrorMessage(error, changes));
+        } finally {
+          // Settled either way: show the saved values, and let the same pick save again.
+          setEdits((prev) => withoutSent(prev, changes));
+          sent.current = None;
         }
       })();
     }, AUTOSAVE_DEBOUNCE_MS);
