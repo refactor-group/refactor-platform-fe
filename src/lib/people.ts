@@ -70,7 +70,7 @@ export function schedulablePeople(
   return peopleFor(userId, getRelationshipsAsCoach(userId, relationships));
 }
 
-type ActivityByPerson = Map<Id, PersonActivity>;
+export type ActivityByPerson = Map<Id, PersonActivity>;
 
 /** Each person's activity from the sessions nearest now across their relationships. */
 export function activityByPerson(

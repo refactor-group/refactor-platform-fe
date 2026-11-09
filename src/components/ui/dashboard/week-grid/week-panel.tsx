@@ -174,7 +174,14 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     range: weekRange(week),
     navigation,
     filter: isCoach
-      ? Some({ people: filter.people, selected, onSelect: filter.select, onClear: filter.clear })
+      ? Some({
+          people: filter.people,
+          grouped: filter.grouped,
+          selected,
+          onSelect: filter.select,
+          onClear: filter.clear,
+          onOpen: filter.load,
+        })
       : None,
     onSchedule: isCoach ? Some(() => onSchedule(None)) : None,
     readOnly,
