@@ -31,12 +31,12 @@ const CARD_HINT = "Enter opens the session. Shift+F10 shows actions.";
 const CardHintContext = createContext<Option<string>>(None);
 
 /** Renders the cards' keyboard hint once for every card inside it to reference. */
-export function SessionCardHint({ children }: { children: ReactNode }) {
+export function SessionCardHint({ children, active = true }: { children: ReactNode; active?: boolean }) {
   const id = useId();
   const hintId = useMemo(() => Some(id), [id]);
   return (
     <CardHintContext.Provider value={hintId}>
-      <CardHintText id={id} />
+      {active && <CardHintText id={id} />}
       {children}
     </CardHintContext.Provider>
   );
