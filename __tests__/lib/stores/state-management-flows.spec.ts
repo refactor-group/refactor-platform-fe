@@ -18,7 +18,7 @@ test.describe('State Management Flows', () => {
 
     // Wait for the dashboard to render before checking storage.
     await expect(
-      page.getByText('Coaching Sessions', { exact: true })
+      page.getByRole('region', { name: 'This week' })
     ).toBeVisible({ timeout: 15_000 })
 
     // Verify the organization state written by setupAuthentication survives
@@ -50,9 +50,9 @@ test.describe('State Management Flows', () => {
     await page.goto('/dashboard')
 
     // The app should not crash — verify the dashboard still renders its
-    // key heading despite the 403 on coaching_sessions.
+    // week panel despite the 403 on coaching_sessions.
     await expect(
-      page.getByText('Coaching Sessions', { exact: true })
+      page.getByRole('region', { name: 'This week' })
     ).toBeVisible({ timeout: 15_000 })
 
     expect(page.url()).toContain('/dashboard')
@@ -62,14 +62,14 @@ test.describe('State Management Flows', () => {
     await page.goto('/dashboard')
 
     await expect(
-      page.getByText('Coaching Sessions', { exact: true })
+      page.getByRole('region', { name: 'This week' })
     ).toBeVisible({ timeout: 15_000 })
 
     // Refresh — addInitScript re-runs, so auth state should survive.
     await page.reload()
 
     await expect(
-      page.getByText('Coaching Sessions', { exact: true })
+      page.getByRole('region', { name: 'This week' })
     ).toBeVisible({ timeout: 15_000 })
 
     const authState = await page.evaluate(() => {
@@ -113,7 +113,7 @@ test.describe('State Management Flows', () => {
       // localStorage on every load, so the app may not redirect even with
       // a 401 from validate_session. Verify it still renders key UI.
       await expect(
-        page.getByText('Coaching Sessions', { exact: true })
+        page.getByRole('region', { name: 'This week' })
       ).toBeVisible({ timeout: 15_000 })
     }
   })
