@@ -83,6 +83,7 @@ test.describe('Week grid drag to move', () => {
       slot(page, '2026-10-23', '10:00')
     )
     await expect(page.getByText('Moved Jane to Fri, 10:00 AM · this session only')).toBeVisible()
+    expect(new URL(page.url()).pathname).toBe('/dashboard')
     expect(writes).toEqual([{ id: 'thursday', date: '2026-10-23T15:00:00' }])
     await page.getByRole('button', { name: 'Undo' }).click()
     await expect.poll(() => writes.length).toBe(2)
