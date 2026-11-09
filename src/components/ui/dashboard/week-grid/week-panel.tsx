@@ -22,7 +22,7 @@ import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import { SessionAction } from "@/lib/session-actions";
 import { MoveScope } from "@/lib/scheduling";
 import { firstNameOf } from "@/lib/scheduling-copy";
-import { CardClick, cardClick, cardView, markMoved, type CardView, type GridCard } from "@/lib/week-grid/card";
+import { cardView, markMoved, type CardView, type GridCard } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
 import { slotsForMove, type MoveSlotsContext } from "@/lib/week-grid/slots";
 import {
@@ -41,7 +41,6 @@ import { DayAgenda } from "./day-agenda";
 import { DayStrip } from "./day-strip";
 import { MoveSheet, type MoveSheetModel } from "./move-sheet";
 import type { SessionCardHandlers } from "./session-card";
-import type { OnSessionAction } from "./session-card-menu";
 import { WeekGrid, type GridDrag } from "./week-grid";
 import { WeekPanelHeader, type WeekNavigation } from "./week-panel-header";
 
@@ -132,7 +131,6 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const handlers = useMemo<SessionCardHandlers>(
     () => ({
       onAction: (action, session) => (action === SessionAction.Move ? openMove(session) : run(action, session)),
-      onSelect: (view) => onCardSelect(view, run),
       onOpen: (view) => run(SessionAction.OpenSession, view.session),
       ...(canSchedule && { onMove: (view: CardView) => setMoveTarget(Some(view)) }),
     }),
@@ -234,24 +232,6 @@ function BackToThisWeek({ onClick }: { onClick: () => void }) {
       Back to this week
     </Button>
   );
-}
-
-function onCardSelect(view: CardView, run: OnSessionAction) {
-  const click = cardClick(view);
-  switch (click) {
-    case CardClick.Open:
-      run(SessionAction.OpenSession, view.session);
-      return;
-    case CardClick.Reschedule:
-      run(SessionAction.Reschedule, view.session);
-      return;
-    case CardClick.Nothing:
-      return;
-    default: {
-      const _exhaustive: never = click;
-      throw new Error(`Unhandled card click: ${_exhaustive}`);
-    }
-  }
 }
 
 const visible = (cards: GridCard[]) => cards.filter((c) => !c.dimmed).length;

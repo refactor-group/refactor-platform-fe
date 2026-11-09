@@ -8,7 +8,6 @@ import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
-import { useClickOrDoubleClick } from "@/lib/hooks/use-click-or-double-click";
 import { timeOfDay } from "@/lib/session-window";
 import {
   CardFooter,
@@ -22,7 +21,6 @@ import { SessionCardMenu, type OnSessionAction } from "./session-card-menu";
 
 export interface SessionCardHandlers {
   onAction: OnSessionAction;
-  onSelect: (view: CardView) => void;
   onOpen: (view: CardView) => void;
   onMove?: (view: CardView) => void;
 }
@@ -70,7 +68,6 @@ export function SessionCard({
   layout = SessionCardLayout.Grid,
   justDragged = None,
   onAction,
-  onSelect,
   onOpen,
   onMove,
 }: SessionCardProps) {
@@ -82,14 +79,10 @@ export function SessionCard({
   const ownHintId = useId();
   const hintId = sharedHint.some ? sharedHint.val : ownHintId;
   const time = timeOfDay(view.start);
-  const clicks = useClickOrDoubleClick(
-    () => onSelect(view),
-    () => onOpen(view)
-  );
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: view.session.id, disabled: !draggable });
   const onClick = () => {
     if (justDragged.some && justDragged.val.current) return;
-    clicks.onClick();
+    onOpen(view);
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && e.target === e.currentTarget) onOpen(view);
@@ -111,12 +104,11 @@ export function SessionCard({
           {...(draggable && { "aria-roledescription": attributes["aria-roledescription"] })}
           {...listeners}
           onClick={onClick}
-          onDoubleClick={clicks.onDoubleClick}
           onKeyDown={onKeyDown}
           className={cn(
-            "flex flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+            "flex cursor-pointer flex-col gap-1.5 rounded-xl p-[11px] outline-none",
             layout === SessionCardLayout.Grid && "min-h-[104px]",
-            draggable ? "cursor-grab" : (view.underway || canMove) && "cursor-pointer",
+            draggable && "cursor-grab",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             isPast ? "bg-well" : "bg-card shadow-card",
             dimmed && "opacity-[.28]",
@@ -170,7 +162,6 @@ function CardButton({ label, onClick }: { label: string; onClick: () => void }) 
         e.stopPropagation();
         onClick();
       }}
-      onDoubleClick={stopPropagation}
       onKeyDown={stopPropagation}
     >
       {label}
