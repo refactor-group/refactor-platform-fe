@@ -267,7 +267,7 @@ describe("CoachingPreferencesSection", () => {
       expect(mockUpdate).toHaveBeenCalledTimes(1);
     });
 
-    it("a failed save isn't retried until the next edit", async () => {
+    it("a failed save shows the saved value again, and picking the same value retries", async () => {
       mockUpdate.mockRejectedValue(makeApiError(403, { status_code: 403, error: "forbidden" }));
       const { rerender } = render(<CoachingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "09:00" } });
@@ -280,7 +280,8 @@ describe("CoachingPreferencesSection", () => {
       }
       expect(mockUpdate).toHaveBeenCalledTimes(1);
       expect(mockToastError).toHaveBeenCalledTimes(1);
-      fireEvent.change(start(), { target: { value: "09:30" } });
+      expect(start()).toHaveValue("08:00");
+      fireEvent.change(start(), { target: { value: "09:00" } });
       await act(async () => {
         vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
       });
