@@ -125,6 +125,7 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - on an upcoming session the viewer coaches, it opens Reschedule;
   - on a past session, it shows the hint toast;
   - otherwise it does nothing.
+- A session that's under way opens on a single click, for anyone (review of #536, 2026-11-08).
 - A double-click or Enter opens the session page.
 - This week is disabled while on the current week, which gives it its faint look.
 
