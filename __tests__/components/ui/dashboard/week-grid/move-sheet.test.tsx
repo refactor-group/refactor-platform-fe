@@ -118,6 +118,14 @@ describe("MoveSheet", () => {
     expect(onResolve.mock.calls[0][0].toISO()).toBe(at("2026-08-20T09:15").toISO());
   });
 
+  it("won't resolve an overlap in the past either", () => {
+    const clash: BusyClash = { session: PRIYA, others: [], instead: None };
+    renderSheet(Some({ ...MODEL, clashAt: () => Some(clash) }));
+    fireEvent.change(timeInput(), { target: { value: "12:00" } });
+    expect(within(sheet()).queryByRole("button", { name: "Resolve overlap…" })).not.toBeInTheDocument();
+    expect(confirm()).toBeDisabled();
+  });
+
   it("takes the offered free time instead of the overlap", () => {
     renderSheet();
     fireEvent.click(dayButton("Thursday, August 20"));
