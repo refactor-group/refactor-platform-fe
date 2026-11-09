@@ -29,7 +29,7 @@ export function DayColumn({ group, handlers, onSchedule, isLoading }: DayColumnP
       {isLoading ? (
         <Skeleton className="h-32 rounded-xl" />
       ) : group.items.length === 0 ? (
-        <EmptyDay day={group.day} onSchedule={scheduleOn(group, onSchedule)} />
+        <EmptyDay day={group.day} isToday={group.isToday} onSchedule={scheduleOn(group, onSchedule)} />
       ) : (
         group.items.map((view) => <SessionCard key={view.session.id} view={view} {...handlers} />)
       )}
