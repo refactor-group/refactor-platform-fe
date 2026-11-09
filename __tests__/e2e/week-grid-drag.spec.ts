@@ -113,7 +113,9 @@ test.describe('Week grid drag to move', () => {
     await dragTo(page, page.getByTestId('session-card-thursday'), day(page, 'Friday, October 23'), () =>
       slot(page, '2026-10-23', '09:00')
     )
-    await expect(page.getByRole('dialog')).toBeVisible()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByRole('heading', { name: 'Resolve overlap' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: /at 9:00 AM$/ })).toBeVisible()
     expect(writes).toEqual([])
   })
 
@@ -133,9 +135,11 @@ test.describe('Week grid drag to move', () => {
     if (!title) throw new Error('no box')
     await page.mouse.move(title.x + 10, title.y + 5, { steps: 10 })
     await page.mouse.up()
-    await page.waitForTimeout(400)
-    expect(writes).toEqual([])
     await expect(page.getByRole('dialog')).toHaveCount(0)
+    // A real move after it: had the stray drop written, its PUT would land first.
+    await dragTo(page, card, day(page, 'Friday, October 23'), () => slot(page, '2026-10-23', '10:00'))
+    await expect.poll(() => writes.length).toBe(1)
+    expect(writes).toEqual([{ id: 'thursday', date: '2026-10-23T15:00:00' }])
   })
 
   test('a quick click opens, and a right-click opens the menu without a drag', async ({ page }) => {
