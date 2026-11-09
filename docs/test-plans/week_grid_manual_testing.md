@@ -175,25 +175,25 @@ Hover a past empty day of this week, and an empty day of last week.
 
 **Pass:** no hover affordance, and a click does nothing.
 
-### Case 2.7: click versus double-click
+### Case 2.7: a click opens any session
 
-Single-click C's card, then close the dialog. Double-click C's card.
+Click C's card (upcoming), then come back and click D's (past), then B's while it's under way.
+
+**Pass:** each single click opens that session's page straight away. No dialog opens, nothing reschedules, and there's no delay.
+
+### Case 2.8: rescheduling from a card
+
+Right-click C's card and choose **Reschedule…**. Do the same on A's card.
 
 **Pass:**
-- The single click opens the dialog in Reschedule mode, prefilled with C's day, time and length.
-- The double-click opens C's session page, with no dialog flashing first.
+- The dialog opens in Reschedule mode, prefilled with C's day, time and length.
+- On A, the series card, its Applies to step offers "this session" or "this and following".
 
-### Case 2.8: series card click
+### Case 2.9: keyboard
 
-Single-click A's card.
+Tab to a card and press Enter.
 
-**Pass:** the dialog's Applies to step offers "this session" or "this and following".
-
-### Case 2.9: past card click
-
-Single-click D's card.
-
-**Pass:** the toast reads "Past session · double-click to open its notes". A double-click opens the notes.
+**Pass:** the session opens, the same as a click.
 
 ### Case 2.10: after rescheduling
 

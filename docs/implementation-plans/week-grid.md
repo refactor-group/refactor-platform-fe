@@ -121,12 +121,7 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - For a coach, the next arrow never disables, so any future week can be scheduled. For a coachee, it disables once nothing is later, read from `/nearest` around next Monday.
 - While a read is loading or has failed, its arrow stays enabled.
 - Schedule session and the empty-day Schedule follow `isACoach`, the same rule as Add New. Every empty day from today on shows "+ Schedule", in any week; past days never do.
-- A single click waits 260ms for a possible double-click:
-  - on an upcoming session the viewer coaches, it opens Reschedule;
-  - on a past session, it shows the hint toast;
-  - otherwise it does nothing.
-- A session that's under way opens on a single click, for anyone (review of #536, 2026-11-08).
-- A double-click or Enter opens the session page.
+- A single click or Enter opens the session, whether it's past, under way or upcoming, for anyone. There is no double-click and no click delay. Rescheduling is done through the menu's Reschedule…, drag, or Move (Jim, 2026-11-09; replaces 8a's click-to-reschedule).
 - This week is disabled while on the current week, which gives it its faint look.
 
 ## Follow-ups
