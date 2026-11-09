@@ -102,7 +102,9 @@ test.describe('Week grid drag to move', () => {
     if (!d) throw new Error('no box')
     await page.mouse.move(d.x + d.width / 2, d.y + 40, { steps: 10 })
     await expect(slot(page, '2026-10-23', '08:00')).toBeVisible()
-    await expect(slot(page, '2026-10-23', '17:30')).toBeVisible()
+    // A 50-minute session's last start still ends by 5:30 PM.
+    await expect(slot(page, '2026-10-23', '16:30')).toBeVisible()
+    await expect(slot(page, '2026-10-23', '17:00')).toHaveCount(0)
     await expect(slot(page, '2026-10-23', '09:00')).toContainText('Jane')
     await page.mouse.up()
   })

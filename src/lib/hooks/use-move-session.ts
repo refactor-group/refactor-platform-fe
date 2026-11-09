@@ -27,7 +27,7 @@ export function useMoveSession(): (input: MoveSessionInput) => void {
   return useCallback(
     ({ session, name, to }: MoveSessionInput) => {
       const write = (start: DateTime) =>
-        ResultAsync.fromPromise(writeSessionMove(session, start, session.duration_minutes), (error) => error).map(
+        ResultAsync.fromPromise(writeSessionMove(session.id, start, session.duration_minutes), (error) => error).map(
           () => refreshCoachingSessions()
         );
       // The original start in the target's zone, so Undo writes back the same instant.
