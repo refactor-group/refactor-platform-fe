@@ -91,8 +91,8 @@ export interface EnrichedCoachingSession extends CoachingSession {
   /** None when absent from the read (not requested, or not in a series); callers can't tell which. */
   series?: Option<CoachingSessionSeriesSummary>;
 
-  /** Topics (included when include=topics) */
-  topics?: CoachingSessionTopic[];
+  /** None when not included (include=topics). */
+  topics: Option<CoachingSessionTopic[]>;
 }
 
 export function isCoachingSession(value: unknown): value is CoachingSession {
@@ -180,7 +180,7 @@ export type CoachingSessionWire = Omit<
  * the EnrichedCoachingSession include-fields (coach/coachee/goals/…) pass
  * through untouched when this is reused for the enriched list endpoint. */
 export function transformCoachingSession(raw: any): EnrichedCoachingSession {
-  if (raw == null) return defaultCoachingSession();
+  if (raw == null) return { ...defaultCoachingSession(), topics: None };
   return {
     ...raw,
     title: typeof raw.title === "string" ? Some(raw.title) : None,
@@ -201,8 +201,8 @@ export function transformCoachingSession(raw: any): EnrichedCoachingSession {
       typeof raw.ical_recurrence_id === "string" ? Some(raw.ical_recurrence_id) : None,
     series: transformSeriesSummary(raw.series),
     topics: Array.isArray(raw.topics)
-      ? raw.topics.map(transformCoachingSessionTopic)
-      : undefined,
+      ? Some(raw.topics.map(transformCoachingSessionTopic))
+      : None,
   };
 }
 
@@ -218,7 +218,7 @@ function transformSeriesSummary(raw: any): Option<CoachingSessionSeriesSummary> 
 
 /** Converts a CoachingSession to wire format, unwrapping the Option title. */
 export function serializeCoachingSession(
-  session: EnrichedCoachingSession
+  session: CoachingSession & Partial<Pick<EnrichedCoachingSession, "series" | "topics">>
 ): CoachingSessionWire {
   // display_title, series, organization_id and topics are read-only — never send them back.
   const {

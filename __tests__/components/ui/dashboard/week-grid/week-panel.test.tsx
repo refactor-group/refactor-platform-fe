@@ -16,7 +16,7 @@ const TZ = "America/Chicago";
 const NOW = new Date("2026-08-18T18:45:00Z");
 
 const session = (id: string, date: string) =>
-  createMockEnrichedSession({ id, date, duration_minutes: 50, topics: [] });
+  createMockEnrichedSession({ id, date, duration_minutes: 50, topics: Some([]) });
 const LATE_TODAY = session("late-today", "2026-08-18T21:30:00");
 const EARLY_TODAY = session("early-today", "2026-08-18T15:00:00");
 const THURSDAY = session("thursday", "2026-08-20T15:00:00");
@@ -173,6 +173,15 @@ describe("WeekPanel", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the week's seven days on screen while it loads", () => {
+    result = { ...result, sessions: [], isLoading: true };
+    renderPanel();
+    const days = screen.getAllByRole("group", { name: /, August/ });
+    expect(days).toHaveLength(7);
+    expect(days[1]).toHaveAccessibleName("Tuesday, August 18");
+    expect(screen.queryAllByTestId(/^session-card-/)).toHaveLength(0);
+  });
+
   it("marks the panel busy while loading, without a count", () => {
     result = { ...result, sessions: [], isLoading: true };
     renderPanel();
@@ -309,6 +318,15 @@ describe("WeekPanel card clicks", () => {
     expect(run).toHaveBeenCalledWith(SessionAction.Reschedule, THURSDAY);
   });
 
+  it("opens a session that's under way on a single click", () => {
+    const underway = session("underway", "2026-08-18T18:25:00");
+    result = { ...result, sessions: [underway] };
+    renderPanel();
+    fireEvent.click(screen.getByTestId("session-card-underway"));
+    act(() => vi.advanceTimersByTime(260));
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, underway);
+  });
+
   it("opens the session on a double-click, without rescheduling", () => {
     renderPanel();
     const card = screen.getByTestId("session-card-thursday");
@@ -333,7 +351,7 @@ const SAM_FRIDAY = createMockEnrichedSession({
   id: "sam-friday",
   date: "2026-08-21T15:00:00",
   duration_minutes: 50,
-  topics: [],
+  topics: Some([]),
   coaching_relationship_id: "rel-sam",
 });
 

@@ -34,8 +34,12 @@ const relationships = [
   createMockRelationship({ id: "rel-2", coach_id: "user-3", coachee_id: "user-1" }),
   createMockRelationship({ id: "rel-other", coach_id: "user-8", coachee_id: "user-9" }),
 ];
+let relationshipsState = { isLoading: false, isError: false };
 vi.mock("@/lib/api/coaching-relationships", () => ({
-  useCoachingRelationshipList: () => ({ relationships, isLoading: false, isError: false }),
+  useCoachingRelationshipList: () => ({
+    relationships: relationshipsState.isLoading || relationshipsState.isError ? [] : relationships,
+    ...relationshipsState,
+  }),
 }));
 
 const TZ = "America/Chicago";
@@ -45,6 +49,7 @@ const NEXT_MONDAY = "2026-08-24T05:00:00Z";
 const at = (utc: string) => createMockEnrichedSession({ date: utc });
 
 beforeEach(() => {
+  relationshipsState = { isLoading: false, isError: false };
   queries.length = 0;
   byAround = {};
 });
@@ -75,6 +80,18 @@ describe("useWeekEdges", () => {
       [MONDAY]: { sessions: [], isLoading: true, isError: false },
       [NEXT_MONDAY]: { sessions: [], isLoading: false, isError: true },
     };
+    const { result } = renderHook(() => useWeekEdges(week));
+    expect(result.current).toEqual({ hasEarlier: true, hasLater: true });
+  });
+
+  it("leaves both arrows usable while relationships load", () => {
+    relationshipsState = { isLoading: true, isError: false };
+    const { result } = renderHook(() => useWeekEdges(week));
+    expect(result.current).toEqual({ hasEarlier: true, hasLater: true });
+  });
+
+  it("leaves both arrows usable when relationships fail to load", () => {
+    relationshipsState = { isLoading: false, isError: true };
     const { result } = renderHook(() => useWeekEdges(week));
     expect(result.current).toEqual({ hasEarlier: true, hasLater: true });
   });
