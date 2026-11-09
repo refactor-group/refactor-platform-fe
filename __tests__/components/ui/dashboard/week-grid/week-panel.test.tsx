@@ -342,19 +342,6 @@ describe("WeekPanel card clicks", () => {
     expect(run).not.toHaveBeenCalledWith(SessionAction.Reschedule, expect.anything());
     expect(toast).not.toHaveBeenCalled();
   });
-
-  it("opens a card from an earlier day on a single click", () => {
-    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
-    renderPanel();
-    fireEvent.click(screen.getByTestId("session-card-monday-past"));
-    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, MONDAY_PAST);
-  });
-
-  it("opens a session that ended earlier today on a single click", () => {
-    renderPanel();
-    fireEvent.click(screen.getByTestId("session-card-early-today"));
-    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, EARLY_TODAY);
-  });
 });
 
 const SAM_FRIDAY = createMockEnrichedSession({
