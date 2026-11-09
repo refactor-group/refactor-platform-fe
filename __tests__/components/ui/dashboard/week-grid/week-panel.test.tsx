@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DateTime } from "ts-luxon";
 import type { Week } from "@/lib/week-grid/week";
 import { SessionAction } from "@/lib/session-actions";
+import { MoveScope } from "@/lib/scheduling";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { WeekPanel } from "@/components/ui/dashboard/week-grid/week-panel";
 import { WeekGridStoreProvider, useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
@@ -553,12 +554,13 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(within(screen.getByTestId("session-card-thursday")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
   });
 
-  it("moves the session to a picked slot through the sheet", () => {
+  it("moves the session to a picked time through the sheet", () => {
     renderPanel();
     fireEvent.click(pill("Thursday, August 20"));
     fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
-    expect(within(moveSheet()).getByRole("button", { name: "10:00 AM, current" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(within(moveSheet()).getByRole("button", { name: "11:00 AM" }));
+    const time = within(moveSheet()).getByLabelText("Start time");
+    expect(time).toHaveValue("10:00");
+    fireEvent.change(time, { target: { value: "11:00" } });
     fireEvent.click(within(moveSheet()).getByRole("button", { name: "Move session" }));
     expect(moveSession).toHaveBeenCalledTimes(1);
     const [{ session, name, to }] = moveSession.mock.calls[0];
@@ -577,13 +579,20 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(moveSheet()).toBeInTheDocument();
   });
 
-  it("names other sessions' slots as taken", () => {
+  it("sends a time that overlaps another session to the reschedule dialog's overlap step", () => {
     result = { ...result, sessions: [THURSDAY, { ...SAM_FRIDAY, id: "sam-thursday", date: "2026-08-20T17:00:00" }] };
     renderPanel();
     fireEvent.click(pill("Thursday, August 20"));
     fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
-    const taken = within(moveSheet()).getByRole("button", { name: /^12:00 PM/ });
-    expect(taken).toBeDisabled();
+    fireEvent.change(within(moveSheet()).getByLabelText("Start time"), { target: { value: "12:15" } });
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "Resolve overlap…" }));
+    expect(moveSession).not.toHaveBeenCalled();
+    expect(onReschedule).toHaveBeenCalledTimes(1);
+    const [session, scope, target] = onReschedule.mock.calls[0];
+    expect(session).toBe(THURSDAY);
+    expect(scope).toBe(MoveScope.This);
+    expect(target.some && target.val.toISO()).toBe(DateTime.fromISO("2026-08-20T12:15", { zone: TZ }).toISO());
+    expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
   });
 });
 

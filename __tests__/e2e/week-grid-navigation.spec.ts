@@ -56,6 +56,29 @@ test.describe('Week grid navigation and clicks', () => {
     await expect(panel(page, 'Last week')).toBeVisible()
   })
 
+  test('on a phone the week arrows hold still across weeks, even while one loads', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    let delay = 0
+    await page.route(
+      (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
+      async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        await route.fulfill(json([THURSDAY, MONDAY_PAST]))
+      }
+    )
+    const next = page.getByRole('button', { name: 'Next week' })
+    const top = async () => (await next.boundingBox())!.y
+    const home = await top()
+    for (const title of ['Next week', 'Week of Nov 2', 'Week of Nov 9']) {
+      delay = 1500
+      await next.click()
+      await expect(panel(page, title)).toHaveAttribute('aria-busy', 'true')
+      expect(await top()).toBe(home)
+      await expect(panel(page, title)).toHaveAttribute('aria-busy', 'false')
+      expect(await top()).toBe(home)
+    }
+  })
+
   test('a single click opens an upcoming session', async ({ page }) => {
     await page.getByTestId('session-card-thursday').click()
     await page.waitForURL('**/coaching-sessions/thursday')
