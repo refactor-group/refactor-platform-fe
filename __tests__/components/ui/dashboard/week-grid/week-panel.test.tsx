@@ -216,6 +216,15 @@ describe("WeekPanel", () => {
     expect(screen.getByText("No sessions today")).toBeInTheDocument();
   });
 
+  it("explains how to open a card only when the week has cards", () => {
+    const { unmount } = renderPanel();
+    expect(screen.getByText(/^Enter opens the session/)).toBeInTheDocument();
+    unmount();
+    result = { ...result, sessions: [] };
+    renderPanel();
+    expect(screen.queryByText(/^Enter opens the session/)).not.toBeInTheDocument();
+  });
+
   it("keeps the week's seven days on screen while it loads", () => {
     result = { ...result, sessions: [], isLoading: true };
     renderPanel();
