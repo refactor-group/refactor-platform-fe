@@ -13,11 +13,11 @@ import {
 const oneOff = createMockEnrichedSession();
 const inSeries = createMockEnrichedSession({ coaching_session_series_id: Some("series-1") });
 
-const COACH_UPCOMING = { isCoach: true, isPast: false, isCompact: false };
-const COACH_PAST = { isCoach: true, isPast: true, isCompact: false };
-const COACHEE_UPCOMING = { isCoach: false, isPast: false, isCompact: false };
-const COACHEE_PAST = { isCoach: false, isPast: true, isCompact: false };
-const COACH_UPCOMING_COMPACT = { isCoach: true, isPast: false, isCompact: true };
+const COACH_UPCOMING = { isCoach: true, isLocked: false, isCompact: false };
+const COACH_PAST = { isCoach: true, isLocked: true, isCompact: false };
+const COACHEE_UPCOMING = { isCoach: false, isLocked: false, isCompact: false };
+const COACHEE_PAST = { isCoach: false, isLocked: true, isCompact: false };
+const COACH_UPCOMING_COMPACT = { isCoach: true, isLocked: false, isCompact: true };
 
 const actions = (session = oneOff, context = COACH_UPCOMING) =>
   sessionActionsFor(session, context).map((i) => i.action);

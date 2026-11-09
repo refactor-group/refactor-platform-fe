@@ -12,11 +12,12 @@ export interface DayAgendaProps {
   handlers: SessionCardHandlers;
   onSchedule: Option<(day: DateTime) => void>;
   now: Option<DateTime>;
+  isUnloaded: boolean;
 }
 
-export function DayAgenda({ group, handlers, onSchedule, now }: DayAgendaProps) {
+export function DayAgenda({ group, handlers, onSchedule, now, isUnloaded }: DayAgendaProps) {
   const headingId = useId();
-  const nodes = withNowLine(agendaNodes(group, handlers, onSchedule), group.items, now);
+  const nodes = withNowLine(agendaNodes(group, handlers, onSchedule, isUnloaded), group.items, now);
   return (
     <section aria-labelledby={headingId} className="mt-6 flex flex-col gap-2.5">
       <h3 id={headingId} className="text-sm font-semibold text-foreground">
@@ -30,9 +31,11 @@ export function DayAgenda({ group, handlers, onSchedule, now }: DayAgendaProps) 
 function agendaNodes(
   group: DayGroup<GridCard>,
   handlers: SessionCardHandlers,
-  onSchedule: Option<(day: DateTime) => void>
+  onSchedule: Option<(day: DateTime) => void>,
+  isUnloaded: boolean
 ) {
   if (group.items.length === 0) {
+    if (isUnloaded) return [];
     return [<NoSessions key="none" day={group.day} onSchedule={scheduleOn(group, onSchedule)} />];
   }
   return group.items.map((card) => (
