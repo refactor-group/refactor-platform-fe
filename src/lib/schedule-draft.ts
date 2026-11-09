@@ -26,7 +26,7 @@ import {
   type EnrichedCoachingSession,
   defaultCoachingSession,
 } from "@/types/coaching-session";
-import { coachingSessionTitle } from "@/types/coaching-session-title";
+import { coachingSessionTitle, enrichedTitleSource } from "@/types/coaching-session-title";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import type { Provider } from "@/types/provider";
@@ -93,7 +93,7 @@ function fullName(user: User): string {
 
 function otherName(session: EnrichedCoachingSession, userId: Id): string {
   const other = session.relationship?.coach_id === userId ? session.coachee : session.coach;
-  return other ? fullName(other) : coachingSessionTitle(session);
+  return other ? fullName(other) : coachingSessionTitle(enrichedTitleSource(session));
 }
 
 export function busySessions(

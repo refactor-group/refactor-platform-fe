@@ -1,5 +1,6 @@
 import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { CardView } from "@/lib/week-grid/card";
 import type { DayGroup } from "@/lib/week-grid/week";
 import { type Option, None, Some } from "@/types/option";
@@ -10,9 +11,10 @@ export interface DayColumnProps {
   group: DayGroup<CardView>;
   handlers: SessionCardHandlers;
   onSchedule: Option<(day: DateTime) => void>;
+  isLoading: boolean;
 }
 
-export function DayColumn({ group, handlers, onSchedule }: DayColumnProps) {
+export function DayColumn({ group, handlers, onSchedule, isLoading }: DayColumnProps) {
   return (
     <div
       role="group"
@@ -24,7 +26,9 @@ export function DayColumn({ group, handlers, onSchedule }: DayColumnProps) {
       )}
     >
       <DayLabel group={group} />
-      {group.items.length === 0 ? (
+      {isLoading ? (
+        <Skeleton className="h-32 rounded-xl" />
+      ) : group.items.length === 0 ? (
         <EmptyDay day={group.day} onSchedule={scheduleOn(group, onSchedule)} />
       ) : (
         group.items.map((view) => <SessionCard key={view.session.id} view={view} {...handlers} />)

@@ -49,7 +49,7 @@ import type {
   CoachingSession,
   EnrichedCoachingSession,
 } from "@/types/coaching-session";
-import { coachingSessionTitle } from "@/types/coaching-session-title";
+import { coachingSessionTitle, enrichedTitleSource } from "@/types/coaching-session-title";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import { SessionUrgency } from "@/types/session-display";
@@ -122,7 +122,7 @@ export function toMenuSession(session: EnrichedCoachingSession, timezone: string
     title:
       session.display_title && session.display_title.some
         ? session.display_title.val
-        : coachingSessionTitle(session),
+        : coachingSessionTitle(enrichedTitleSource(session)),
     liveness: livenessFromUrgency(calculateSessionUrgency(session)),
   };
 }

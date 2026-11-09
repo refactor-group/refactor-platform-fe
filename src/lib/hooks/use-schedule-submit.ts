@@ -16,7 +16,7 @@ import {
 import { CoachingSessionApi } from "@/lib/api/coaching-sessions";
 import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { SessionWrite, sessionWriteFailure } from "@/lib/api/coaching-session-errors";
-import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
+import { revalidateEndpointCaches, useRefreshCoachingSessions } from "@/lib/hooks/use-sse-cache-invalidation";
 import { followingPayload } from "@/lib/move-draft";
 import { seriesPayload, sessionPayload } from "@/lib/schedule-draft";
 import type { RepeatChoice } from "@/lib/scheduling";
@@ -169,6 +169,7 @@ export interface ScheduleSubmit {
 export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
   const router = useRouter();
   const { mutate } = useSWRConfig();
+  const refreshCoachingSessions = useRefreshCoachingSessions();
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false);
 
@@ -203,7 +204,7 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
       .andThen(() => moveOtherWrite(plan))
       .match(
         (moved) => {
-          void revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/coaching_sessions");
+          refreshCoachingSessions();
           // A reschedule can split the series under a new id.
           if (plan.kind === "following") {
             void revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, "/coaching_session_series");
