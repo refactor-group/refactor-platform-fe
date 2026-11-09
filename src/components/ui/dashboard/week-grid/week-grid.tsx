@@ -16,7 +16,7 @@ const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
 
 export function WeekGrid({ days, handlers, onSchedule, isLoading }: WeekGridProps) {
   return (
-    <SessionCardHint>
+    <SessionCardHint active={days.some((d) => d.items.length > 0)}>
       <div className={WEEK_GRID_CLASS}>
         {days.map((group) => (
           <DayColumn
