@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DateTime } from "ts-luxon";
 import { Some } from "@/types/option";
@@ -83,14 +83,15 @@ describe("SessionCard", () => {
   });
 
   it("links Ready to the session page, as a pill like Prepare", () => {
+    const shape = (el: HTMLElement) =>
+      el.className.split(" ").filter((c) => c && !/^(bg|text|hover:bg)-/.test(c)).sort();
+    const prepareShape = shape(within(renderCard(view("2026-08-19T15:00:00", 0)).card).getByRole("link", { name: /Prepare/ }));
+    cleanup();
     const { card } = renderCard();
     const ready = within(card).getByRole("link", { name: /Ready/ });
     expect(ready).toHaveAttribute("href", "/coaching-sessions/s-1");
     expect(within(card).queryByRole("link", { name: /Prepare/ })).not.toBeInTheDocument();
-    const prepare = within(renderCard(view("2026-08-19T15:00:00", 0)).card).getByRole("link", { name: /Prepare/ });
-    expect(ready.className.split(" ").filter((c) => !/^(bg|text|hover:bg)-/.test(c)).sort()).toEqual(
-      prepare.className.split(" ").filter((c) => !/^(bg|text|hover:bg)-/.test(c)).sort()
-    );
+    expect(shape(ready)).toEqual(prepareShape);
   });
 
   it("leaves Ready to its own link, like Prepare", () => {
