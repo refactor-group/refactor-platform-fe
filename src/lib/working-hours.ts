@@ -1,13 +1,14 @@
 import { DateTime } from "ts-luxon";
 import type { WorkingHours } from "@/lib/scheduling";
 import { type Option, None, Some } from "@/types/option";
-import type { User } from "@/types/user";
+import {
+  type User,
+  WORKING_HOURS_END_FALLBACK,
+  WORKING_HOURS_START_FALLBACK,
+} from "@/types/user";
 
 const STEP_MINUTES = 30;
 const CLOCK = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-// The backend's default for a user who hasn't set their hours.
-export const WORKING_HOURS_FALLBACK: WorkingHours = { start: 8 * 60, end: 17 * 60 + 30 };
 
 export function parseClock(text: string): Option<number> {
   const match = CLOCK.exec(text);
@@ -15,6 +16,17 @@ export function parseClock(text: string): Option<number> {
   const minutes = Number(match[1]) * 60 + Number(match[2]);
   return minutes % STEP_MINUTES === 0 ? Some(minutes) : None;
 }
+
+function fallbackMinutes(clock: string): number {
+  const minutes = parseClock(clock);
+  if (minutes.none) throw new Error(`Invalid fallback clock: ${clock}`);
+  return minutes.val;
+}
+
+export const WORKING_HOURS_FALLBACK: WorkingHours = {
+  start: fallbackMinutes(WORKING_HOURS_START_FALLBACK),
+  end: fallbackMinutes(WORKING_HOURS_END_FALLBACK),
+};
 
 function atMinutes(minutes: number): DateTime {
   return DateTime.fromObject({ hour: Math.floor(minutes / 60), minute: minutes % 60 });
