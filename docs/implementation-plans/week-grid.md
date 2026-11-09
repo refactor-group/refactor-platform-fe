@@ -8,12 +8,12 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 
 | Phase | Scope | State |
 | --- | --- | --- |
-| 1a | Extract `useNow` and the session actions, with no behavior change | Done (`aea3a6b8`), approved |
-| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (`57a8c48e`), approved |
-| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (`6fe0e8be`), approved |
-| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (`feat/week-grid-nav`, through `8964e5da`), approved |
+| 1a | Extract `useNow` and the session actions, with no behavior change | Done (PR #536), approved |
+| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (PR #536), approved |
+| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (PR #536), approved |
+| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (PR #536), approved |
 | 3 | Prepare pill, Ready footer, live note | Folded into PRs 1 and 2 (Jim, 2026-11-05); Part 3 of the test plan runs with PR 2 |
-| 4 | Person filter, chip, dimmed cards | Done (`feat/week-grid-filter`, through `d9961f3e`), approved |
+| 4 | Person filter, chip, dimmed cards | Done (PR #537), approved |
 | BE 1 | Working hours on the user (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); backend builds this first |
 | BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
 | 5 | Drag to move, Undo, working hours in Settings and the dialog | Not started |
