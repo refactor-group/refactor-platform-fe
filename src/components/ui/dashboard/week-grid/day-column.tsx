@@ -67,7 +67,14 @@ function DayBody({ group, handlers, onSchedule, drag, justDragged, now, isLoadin
   if (drag.kind === "over") return <DropSlots slots={drag.slots} hovered={drag.hovered} name={drag.name} />;
   const nodes =
     group.items.length === 0
-      ? [<EmptyDay key="empty" day={group.day} onSchedule={scheduleOn(group, onSchedule)} />]
+      ? [
+          <EmptyDay
+            key="empty"
+            day={group.day}
+            isToday={group.isToday}
+            onSchedule={scheduleOn(group, onSchedule)}
+          />,
+        ]
       : group.items.map((card) => (
           <SessionCard
             key={card.session.id}
