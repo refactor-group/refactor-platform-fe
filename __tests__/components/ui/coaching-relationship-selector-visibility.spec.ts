@@ -21,7 +21,7 @@ test.describe('Dashboard relationship state', () => {
     await page.goto('/dashboard')
 
     await expect(
-      page.getByText('Coaching Sessions', { exact: true })
+      page.getByRole('region', { name: 'This week' })
     ).toBeVisible({ timeout: 15_000 })
 
     // The selector trigger should not exist on the dashboard at all.
@@ -40,7 +40,7 @@ test.describe('Dashboard relationship state', () => {
     await page.goto('/dashboard')
 
     await expect(
-      page.getByText('Coaching Sessions', { exact: true })
+      page.getByRole('region', { name: 'This week' })
     ).toBeVisible({ timeout: 15_000 })
 
     // The Zustand persist middleware flushes asynchronously, so poll until
