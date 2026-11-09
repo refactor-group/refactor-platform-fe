@@ -8,9 +8,9 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 
 | Phase | Scope | State |
 | --- | --- | --- |
-| 1a | Extract `useNow` and the session actions, with no behavior change | Done (`aea3a6b8`), approved |
-| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (`57a8c48e`), approved |
-| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (`6fe0e8be`), approved |
+| 1a | Extract `useNow` and the session actions, with no behavior change | Done (PR #536), approved |
+| 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (PR #536), approved |
+| 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (PR #536), approved |
 | 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | In progress (`feat/week-grid-nav`, stacked on PR 1) |
 | 3 | Prepare pill, Ready footer, live note | Not started |
 | 4 | Person filter, chip, dimmed cards | Not started |
