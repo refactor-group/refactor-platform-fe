@@ -57,7 +57,7 @@ import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
 import type { Id } from "@/types/general";
-import { type Option, None, Some } from "@/types/option";
+import { type Option, None, Some, unwrapOr } from "@/types/option";
 import { validateRecurrence, weekdayFromLuxon } from "@/types/recurrence";
 
 const DEFAULT_UNTIL_WEEKS = 8;
@@ -86,7 +86,7 @@ export function useNewSessionDialog(
 ): NewSessionDialogModel {
   const series = seriesLoad.kind === "loaded" ? Some(seriesLoad.series) : None;
   const seriesFailed = seriesLoad.kind === "error";
-  const desktop = useMediaQuery(MODAL_DESKTOP_QUERY);
+  const desktop = unwrapOr(useMediaQuery(MODAL_DESKTOP_QUERY), false);
   const zone = useScheduleTimezone();
   const [initial] = useState(() => initialDraft(request, zone));
   const moving = request.kind === "move" ? Some(request.session) : None;
