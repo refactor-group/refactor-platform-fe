@@ -175,25 +175,25 @@ Hover a past empty day of this week, and an empty day of last week.
 
 **Pass:** no hover affordance, and a click does nothing.
 
-### Case 2.7: click versus double-click
+### Case 2.7: a click opens any session
 
-Single-click C's card, then close the dialog. Double-click C's card.
+Click C's card (upcoming), then come back and click D's (past), then B's while it's under way.
+
+**Pass:** each single click opens that session's page straight away. No dialog opens, nothing reschedules, and there's no delay.
+
+### Case 2.8: rescheduling from a card
+
+Right-click C's card and choose **Reschedule…**. Do the same on A's card.
 
 **Pass:**
-- The single click opens the dialog in Reschedule mode, prefilled with C's day, time and length.
-- The double-click opens C's session page, with no dialog flashing first.
+- The dialog opens in Reschedule mode, prefilled with C's day, time and length.
+- On A, the series card, its Applies to step offers "this session" or "this and following".
 
-### Case 2.8: series card click
+### Case 2.9: keyboard
 
-Single-click A's card.
+Tab to a card and press Enter.
 
-**Pass:** the dialog's Applies to step offers "this session" or "this and following".
-
-### Case 2.9: past card click
-
-Single-click D's card, then double-click it.
-
-**Pass:** the single click does nothing, with no toast and no dialog. The double-click opens the session page.
+**Pass:** the session opens, the same as a click.
 
 ### Case 2.10: after rescheduling
 
@@ -272,7 +272,7 @@ Use a real mouse, then a real trackpad. Synthetic drags don't count.
 
 Press and release C's card quickly, without moving.
 
-**Pass:** it behaves as a click (the reschedule dialog). No drag starts.
+**Pass:** it behaves as a click and opens the session page. No drag starts.
 
 ### Case 5.2: drag start
 
@@ -414,7 +414,7 @@ Log in as the coachee-only user.
 **Pass:**
 - There's no Schedule session button and no filter.
 - Empty days have no hover affordance, and cards don't drag.
-- Card click does nothing; double-click opens the session.
+- A card click opens the session.
 - The context menu offers only Open session, on upcoming and past cards alike.
 - Week arrows still page.
 
@@ -477,7 +477,7 @@ Run on `main` with every PR merged, on desktop and then on a real phone, in Ligh
    1. Drag C to a free slot, and Undo (5.4, 5.5).
    2. Drag A's occurrence to another day (5.6).
    3. Drop onto a taken slot, and resolve through the dialog (5.7).
-   4. Reschedule a session by clicking it (2.7).
+   4. Reschedule a session from its menu (2.8).
 4. **Clean up:**
    1. Cancel an upcoming session (1.8).
    2. Remove a past one (1.9).
