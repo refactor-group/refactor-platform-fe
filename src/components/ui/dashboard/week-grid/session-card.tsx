@@ -157,6 +157,7 @@ function CardFooterPill({
       )}
     >
       {children}
+      <ArrowRight className="h-3 w-3" aria-hidden />
     </Link>
   );
 }
@@ -174,7 +175,6 @@ function CardFooterLine({ footer, sessionId }: { footer: CardFooter; sessionId: 
       return (
         <CardFooterPill sessionId={sessionId} tone={PillTone.Neutral}>
           Prepare
-          <ArrowRight className="h-3 w-3" aria-hidden />
         </CardFooterPill>
       );
     case CardFooter.Done:
