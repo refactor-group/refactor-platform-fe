@@ -1,44 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { useNearestEachCoachingSessions } from "@/lib/api/coaching-sessions";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { usePeopleActivity } from "@/lib/hooks/use-people-activity";
 import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
-import { type PersonEntry, activityByPerson, schedulablePeople } from "@/lib/people";
+import { schedulablePeople } from "@/lib/people";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
-import { utcInstant } from "@/lib/session-window";
 import { type FilterPerson, filterPeople } from "@/lib/week-grid/filter";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 
 interface WeekFilterState {
   people: FilterPerson[];
+  /** Whether people are sorted into activity groups yet; false until `load` settles. */
+  grouped: boolean;
   selected: Option<FilterPerson>;
   select: (userId: Id) => void;
   clear: () => void;
-}
-
-function usePersonActivity(userId: Id, entries: PersonEntry[]) {
-  const timezone = useScheduleTimezone();
-  const [openedAt] = useState(() => DateTime.now().setZone(timezone));
-  const nearest = useNearestEachCoachingSessions(
-    entries.length > 0
-      ? Some({
-          userId,
-          relationshipIds: entries.flatMap((e) => e.relationshipIds),
-          around: utcInstant(openedAt),
-          fetchedFor: String(openedAt.toMillis()),
-        })
-      : None
-  );
-  const settled = !nearest.isLoading && !nearest.isError;
-  return useMemo(
-    () => (settled ? Some(activityByPerson(entries, nearest.sessions, openedAt, timezone)) : None),
-    [settled, entries, nearest.sessions, openedAt, timezone]
-  );
+  /** Asks for activity around now; later calls keep the first answer. */
+  load: () => void;
 }
 
 function resolve(people: FilterPerson[], id: Option<Id>): Option<FilterPerson> {
@@ -52,7 +35,14 @@ export function useWeekFilter(): WeekFilterState {
   const { currentOrganizationId } = useCurrentOrganization();
   const { relationships, isLoading, isError } = useCoachingRelationshipList(currentOrganizationId);
   const entries = useMemo(() => schedulablePeople(userId, relationships), [userId, relationships]);
-  const activity = usePersonActivity(userId, entries);
+  const timezone = useScheduleTimezone();
+  const [around, setAround] = useState<Option<DateTime>>(None);
+  const load = useCallback(
+    () => setAround((prev) => (prev.some ? prev : Some(DateTime.now().setZone(timezone)))),
+    [timezone]
+  );
+  const { activity, isLoading: activityLoading } = usePeopleActivity(userId, entries, around, timezone);
+  const grouped = around.some && !activityLoading;
   const people = useMemo(() => filterPeople(entries, activity), [entries, activity]);
 
   const personFilter = useWeekGridStore((s) => s.personFilter);
@@ -66,5 +56,5 @@ export function useWeekFilter(): WeekFilterState {
     if (stale) clear();
   }, [stale, clear]);
 
-  return { people, selected, select, clear };
+  return { people, grouped, selected, select, clear, load };
 }

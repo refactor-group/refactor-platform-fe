@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { DateTime } from "ts-luxon";
 import type {
@@ -16,10 +16,10 @@ import {
   type NearestWindow,
   useCoachingSession,
   useNearestCoachingSessions,
-  useNearestEachCoachingSessions,
 } from "@/lib/api/coaching-sessions";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { usePeopleActivity } from "@/lib/hooks/use-people-activity";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
@@ -38,8 +38,8 @@ import {
   utcInstant,
 } from "@/lib/session-window";
 import {
+  type ActivityByPerson,
   type PersonEntry,
-  activityByPerson,
   menuPerson,
   peopleFor,
 } from "@/lib/people";
@@ -186,8 +186,6 @@ export function windowQuery(input: WindowQueryInput): NearestWindow {
     after: 2,
   };
 }
-
-type ActivityByPerson = ReturnType<typeof activityByPerson>;
 
 const NO_SESSIONS: PersonActivity = { kind: "inactive", last: None };
 
@@ -345,22 +343,15 @@ export function useJoinSessionMenu(): JoinSessionMenuModel {
   const now = DateTime.now().setZone(timezone);
 
   const everyone = peopleFor(userId, relationshipList.relationships);
-  const activity = useNearestEachCoachingSessions(
-    hasOpened && everyone.length > 0
-      ? Some({
-          userId,
-          relationshipIds: everyone.flatMap((p) => p.relationshipIds),
-          around: utcInstant(openedAt),
-          fetchedFor: String(openedAt.toMillis()),
-        })
-      : None
-  );
+  const around = useMemo(() => (hasOpened ? Some(openedAt) : None), [hasOpened, openedAt]);
   // Without activity (loading or failed) the carousel keeps name order and hides no one.
-  const activitySettled = !activity.isLoading;
-  const activities: Option<ActivityByPerson> =
-    hasOpened && activitySettled && !activity.isError
-      ? Some(activityByPerson(everyone, activity.sessions, now, timezone))
-      : None;
+  const { activity: activities, isLoading: activityLoading } = usePeopleActivity(
+    userId,
+    everyone,
+    around,
+    timezone
+  );
+  const activitySettled = !activityLoading;
   const people = activities.some
     ? byActivity(everyone, (p) => activities.val.get(p.person.userId) ?? NO_SESSIONS)
     : everyone;
