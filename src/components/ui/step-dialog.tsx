@@ -10,7 +10,7 @@ import { CheckDisc } from "@/components/ui/check-disc";
 import { Spinner } from "@/components/ui/spinner";
 import { MODAL_DESKTOP_QUERY } from "@/lib/breakpoints";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
-import type { Option } from "@/types/option";
+import { type Option, unwrapOr } from "@/types/option";
 
 export interface StepRailItem {
   id: string;
@@ -368,7 +368,7 @@ function StepDialogContent({ desktop, ...props }: StepDialogProps & { desktop: b
 
 /** The shared stepped modal: a two-pane dialog at ≥900px, a full-screen step view below. */
 export function StepDialog(props: StepDialogProps) {
-  const desktop = useMediaQuery(MODAL_DESKTOP_QUERY);
+  const desktop = unwrapOr(useMediaQuery(MODAL_DESKTOP_QUERY), false);
   return (
     <DialogPrimitive.Root open={props.open} onOpenChange={(open) => !open && props.onClose()}>
       <DialogPrimitive.Portal>
