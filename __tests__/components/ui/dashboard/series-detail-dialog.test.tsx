@@ -41,8 +41,8 @@ function renderDialog(list = sessions(), state: { isLoading?: boolean; isError?:
   });
   render(
     <SeriesDetailDialog
-      series={SERIES}
-      person={Some({ userId: "user-jane", fullName: "Jane Smith" })}
+      series={Some(SERIES)}
+      person={Some({ userId: "user-jane", firstName: "Jane", fullName: "Jane Smith", initials: "JS" })}
       userTimezone={TZ}
       onClose={vi.fn()}
     />
@@ -137,9 +137,21 @@ describe("SeriesDetailDialog", () => {
     expect(dialog()).toHaveTextContent("This series has no sessions.");
   });
 
+  it("shows the person's own initials, not ones rebuilt from the full name", () => {
+    mockUseSeries.mockReturnValue({ series: { coaching_sessions: sessions() }, isLoading: false, isError: false });
+    const person = { userId: "user-jan", firstName: "Jan", fullName: "Jan Van Dyke", initials: "JV" };
+    render(<SeriesDetailDialog series={Some(SERIES)} person={Some(person)} userTimezone={TZ} onClose={vi.fn()} />);
+    expect(dialog()).toHaveTextContent("JV");
+  });
+
+  it("renders nothing until the series has loaded", () => {
+    render(<SeriesDetailDialog series={None} person={None} userTimezone={TZ} onClose={vi.fn()} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("leaves the person out when they're unknown", () => {
     mockUseSeries.mockReturnValue({ series: { coaching_sessions: sessions() }, isLoading: false, isError: false });
-    render(<SeriesDetailDialog series={SERIES} person={None} userTimezone={TZ} onClose={vi.fn()} />);
+    render(<SeriesDetailDialog series={Some(SERIES)} person={None} userTimezone={TZ} onClose={vi.fn()} />);
     expect(dialog()).toHaveTextContent("Weekly on Tue");
   });
 });

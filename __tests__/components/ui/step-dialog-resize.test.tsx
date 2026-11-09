@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
+import { StepDialog, StepDialogHeight, StepDialogVariant } from "@/components/ui/step-dialog";
 import { Some } from "@/types/option";
 
 /** A matchMedia whose answer the test can flip, notifying the hook like a real resize. */
@@ -39,6 +39,7 @@ function renderDialog() {
       onPrev={Some(vi.fn())}
       onNext={Some(vi.fn())}
       height={StepDialogHeight.Tall}
+      variant={StepDialogVariant.Steps}
     >
       <input aria-label="Find a person" />
     </StepDialog>

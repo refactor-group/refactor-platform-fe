@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { DeleteSeriesDialog } from "@/components/ui/dashboard/delete-series-dialog";
 import { defaultCoachingSessionSeries } from "@/types/coaching-session-series";
 import { Frequency } from "@/types/recurrence";
+import { None, Some } from "@/types/option";
 
 function makeSeries(frequency: Frequency = Frequency.Weekly) {
   const base = defaultCoachingSessionSeries();
@@ -15,8 +16,8 @@ function makeSeries(frequency: Frequency = Frequency.Weekly) {
 
 function renderDialog(overrides?: Partial<React.ComponentProps<typeof DeleteSeriesDialog>>) {
   const props = {
-    series: makeSeries(),
-    participantName: "Caleb Bourg",
+    series: Some(makeSeries()),
+    participantName: Some("Caleb Bourg"),
     isDeleting: false,
     onCancel: vi.fn(),
     onConfirm: vi.fn(),
@@ -38,17 +39,17 @@ describe("DeleteSeriesDialog", () => {
   });
 
   it("reflects the series frequency", () => {
-    renderDialog({ series: makeSeries(Frequency.Monthly) });
+    renderDialog({ series: Some(makeSeries(Frequency.Monthly)) });
     expect(screen.getByRole("alertdialog")).toHaveTextContent("monthly series with Caleb Bourg");
   });
 
   it("drops the with clause when the counterpart is unresolved", () => {
-    renderDialog({ participantName: "" });
+    renderDialog({ participantName: None });
     expect(screen.getByRole("alertdialog")).toHaveTextContent("weekly series from today onward");
   });
 
   it("renders nothing when no series is pending", () => {
-    renderDialog({ series: undefined });
+    renderDialog({ series: None });
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
@@ -61,13 +62,13 @@ describe("DeleteSeriesDialog", () => {
   it("fires onConfirm and reflects the in-flight state", () => {
     const onConfirm = vi.fn();
     const { rerender } = render(
-      <DeleteSeriesDialog series={makeSeries()} participantName="Caleb Bourg" isDeleting={false} onCancel={vi.fn()} onConfirm={onConfirm} />
+      <DeleteSeriesDialog series={Some(makeSeries())} participantName={Some("Caleb Bourg")} isDeleting={false} onCancel={vi.fn()} onConfirm={onConfirm} />
     );
     fireEvent.click(screen.getByRole("button", { name: "Cancel series" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
 
     rerender(
-      <DeleteSeriesDialog series={makeSeries()} participantName="Caleb Bourg" isDeleting onCancel={vi.fn()} onConfirm={onConfirm} />
+      <DeleteSeriesDialog series={Some(makeSeries())} participantName={Some("Caleb Bourg")} isDeleting onCancel={vi.fn()} onConfirm={onConfirm} />
     );
     expect(screen.getByRole("button", { name: "Cancelling…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Keep series" })).toBeDisabled();
