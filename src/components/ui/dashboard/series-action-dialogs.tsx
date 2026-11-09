@@ -2,19 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "@/lib/toast";
+import type { MenuPerson } from "@/components/ui/join-session/types";
 import { DeleteSeriesDialog } from "@/components/ui/dashboard/delete-series-dialog";
 import { SeriesDetailDialog } from "@/components/ui/dashboard/series-detail-dialog";
 import {
   useCoachingSessionSeries,
   useCoachingSessionSeriesMutation,
 } from "@/lib/api/coaching-session-series";
-import {
-  CoachingRelationshipWithUserNames,
-  getOtherPersonId,
-  getOtherPersonName,
-} from "@/types/coaching-relationship";
+import { otherParticipant } from "@/lib/people";
+import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import type { CoachingSessionSeries } from "@/types/coaching-session-series";
 import { Id } from "@/types/general";
-import { None, Some } from "@/types/option";
+import { None, type Option, Some } from "@/types/option";
 
 export type SeriesAction =
   | { kind: "closed" }
@@ -103,19 +102,15 @@ function SeriesActionDialogsInner({
 
   // Open the dialogs only once the real series has loaded; until then the hook
   // returns a default with an empty id.
-  const loaded = !isLoading && series.id === seriesId ? series : null;
+  const loaded: Option<CoachingSessionSeries> =
+    !isLoading && series.id === seriesId ? Some(series) : None;
 
-  const relationship = loaded
-    ? relationships.find((r) => r.id === loaded.coaching_relationship_id)
+  const relationship = loaded.some
+    ? relationships.find((r) => r.id === loaded.val.coaching_relationship_id)
     : undefined;
-  const person =
-    relationship && viewerId
-      ? Some({
-          userId: getOtherPersonId(relationship, viewerId),
-          fullName: getOtherPersonName(relationship, viewerId),
-        })
-      : None;
-  const participantName = person.some ? person.val.fullName : "";
+  const person: Option<MenuPerson> =
+    relationship && viewerId ? Some(otherParticipant(relationship, viewerId)) : None;
+  const participantName: Option<string> = person.some ? Some(person.val.fullName) : None;
 
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
@@ -143,7 +138,7 @@ function SeriesActionDialogsInner({
 
   return (
     <DeleteSeriesDialog
-      series={loaded ?? undefined}
+      series={loaded}
       participantName={participantName}
       isDeleting={isDeleting}
       onCancel={onClose}

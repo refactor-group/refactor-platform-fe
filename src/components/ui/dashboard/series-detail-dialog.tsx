@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { PersonHeader } from "@/components/ui/person-header";
 import { Pill } from "@/components/ui/pill";
 import { Spinner } from "@/components/ui/spinner";
-import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
+import { StepDialog, StepDialogHeight, StepDialogVariant } from "@/components/ui/step-dialog";
+import type { MenuPerson } from "@/components/ui/join-session/types";
 import { useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
-import { initialsOf } from "@/lib/people";
 import { relativeDayText } from "@/lib/scheduling-copy";
 import { sessionStartIn } from "@/lib/session-window";
 import { type CoachingSession, isPastSession } from "@/types/coaching-session";
@@ -20,17 +20,11 @@ import {
   seriesEndText,
   seriesRepeatsText,
 } from "@/types/coaching-session-series";
-import type { Id } from "@/types/general";
 import { None, type Option } from "@/types/option";
 
-interface SeriesPerson {
-  userId: Id;
-  fullName: string;
-}
-
 export interface SeriesDetailDialogProps {
-  series: CoachingSessionSeries | null;
-  person: Option<SeriesPerson>;
+  series: Option<CoachingSessionSeries>;
+  person: Option<MenuPerson>;
   userTimezone: string;
   onClose: () => void;
 }
@@ -81,11 +75,6 @@ function sessionCountsText(rows: SessionRow[]): string {
   return `${rows.length - done} upcoming · ${done} done`;
 }
 
-function fullNameInitials(fullName: string): string {
-  const names = fullName.trim().split(/\s+/);
-  return initialsOf(names[0], names.length > 1 ? names[names.length - 1] : "");
-}
-
 function sessionsLoad(
   sessions: CoachingSession[],
   { isLoading, isError }: { isLoading: boolean; isError: boolean }
@@ -107,13 +96,13 @@ function seriesFacts(series: CoachingSessionSeries, load: SessionsLoad): Fact[] 
 
 // ─── Rail ────────────────────────────────────────────────────────────
 
-function SeriesRailHeader({ person, facts }: { person: Option<SeriesPerson>; facts: Fact[] }) {
+function SeriesRailHeader({ person, facts }: { person: Option<MenuPerson>; facts: Fact[] }) {
   return (
     <div className="space-y-4">
       {person.some && (
         <PersonHeader
           userId={person.val.userId}
-          initials={fullNameInitials(person.val.fullName)}
+          initials={person.val.initials}
           fullName={person.val.fullName}
           detail={None}
         />
@@ -219,8 +208,8 @@ function SessionsBody({ load, timezone }: { load: SessionsLoad; timezone: string
 // ─── Dialog ──────────────────────────────────────────────────────────
 
 export function SeriesDetailDialog({ series, ...props }: SeriesDetailDialogProps) {
-  if (!series) return null;
-  return <SeriesDetailView key={series.id} series={series} {...props} />;
+  if (series.none) return null;
+  return <SeriesDetailView key={series.val.id} series={series.val} {...props} />;
 }
 
 /** Mounted only with a loaded series, so the fetch always gets a real id. */
@@ -238,6 +227,7 @@ function SeriesDetailView({
       onClose={onClose}
       title="Recurring series"
       height={StepDialogHeight.Standard}
+      variant={StepDialogVariant.Single}
       railHeader={<SeriesRailHeader person={person} facts={seriesFacts(series, load)} />}
       steps={[]}
       stepTitle="Sessions"

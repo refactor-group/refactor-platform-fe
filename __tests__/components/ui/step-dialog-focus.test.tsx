@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
+import { StepDialog, StepDialogHeight, StepDialogVariant } from "@/components/ui/step-dialog";
 import { None } from "@/types/option";
 
 function viewport(desktop: boolean) {
@@ -27,6 +27,7 @@ describe("StepDialog focus on open", () => {
         onPrev={None}
         onNext={None}
         height={StepDialogHeight.Tall}
+        variant={StepDialogVariant.Steps}
       >
         <button type="button">First control</button>
       </StepDialog>

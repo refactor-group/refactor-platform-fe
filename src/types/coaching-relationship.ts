@@ -192,7 +192,7 @@ export function getRelationshipsForUser(
  * Returns the display name of the other participant in a relationship
  * relative to the given user.
  */
-export function getOtherPersonName(
+function getOtherPersonName(
   rel: CoachingRelationshipWithUserNames,
   userId: Id
 ): string {
@@ -200,14 +200,6 @@ export function getOtherPersonName(
     return `${rel.coachee_first_name} ${rel.coachee_last_name}`.trim();
   }
   return `${rel.coach_first_name} ${rel.coach_last_name}`.trim();
-}
-
-/** The other participant's user id in a relationship, relative to the given user. */
-export function getOtherPersonId(
-  rel: CoachingRelationshipWithUserNames,
-  userId: Id
-): Id {
-  return rel.coach_id === userId ? rel.coachee_id : rel.coach_id;
 }
 
 /**

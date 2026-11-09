@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import {
   StepDialog,
   StepDialogHeight,
+  StepDialogVariant,
   type StepDialogLead,
   type StepRailItem,
 } from "@/components/ui/step-dialog";
@@ -35,6 +36,7 @@ function renderDialog(overrides: Partial<Parameters<typeof StepDialog>[0]> = {})
     onPrev: Some(vi.fn()),
     onNext: Some(vi.fn()),
     height: StepDialogHeight.Tall,
+    variant: StepDialogVariant.Steps,
     children: <p>Step body</p>,
     ...overrides,
   };
@@ -106,17 +108,34 @@ describe("StepDialog on desktop", () => {
     expect(screen.getByRole("button", { name: "Next step" })).toBeDisabled();
   });
 
-  it("shows no position or arrows for a single-step dialog", () => {
+  it("shows no position, arrows or footer for a single view, even with arrows passed", () => {
     viewport(true);
-    renderDialog({ position: { index: 1, total: 1 }, onPrev: None, onNext: None });
+    renderDialog({ variant: StepDialogVariant.Single, position: { index: 1, total: 1 }, lead: confirm() });
+    expect(screen.queryByRole("button", { name: "Schedule session" })).not.toBeInTheDocument();
     expect(screen.queryByText("1 of 1")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Previous step" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Next step" })).not.toBeInTheDocument();
   });
 
-  it("shows no position or arrows for a single-step dialog on a phone either", () => {
-    viewport(false);
+  it("lists no steps and ignores Enter in a single view", () => {
+    viewport(true);
+    const lead = confirm();
+    renderDialog({ variant: StepDialogVariant.Single, lead });
+    expect(screen.queryByRole("list", { name: "Steps" })).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByText("Step body"), { key: "Enter" });
+    expect(lead.kind === "confirm" && lead.onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("keeps the position and arrows for a one-step flow", () => {
+    viewport(true);
     renderDialog({ position: { index: 1, total: 1 }, onPrev: None, onNext: None });
+    expect(screen.getByText("1 of 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next step" })).toBeDisabled();
+  });
+
+  it("shows no position or arrows for a single view on a phone either", () => {
+    viewport(false);
+    renderDialog({ variant: StepDialogVariant.Single, position: { index: 1, total: 1 } });
     expect(screen.queryByText(/1 of 1/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Previous step" })).not.toBeInTheDocument();
   });
