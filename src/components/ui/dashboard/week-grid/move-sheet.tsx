@@ -2,29 +2,29 @@
 
 import { useState } from "react";
 import type { DateTime } from "ts-luxon";
-import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import { DayCircle } from "@/components/ui/day-circle";
+import { BusyNote } from "@/components/ui/new-session/busy-note";
+import { TimeField } from "@/components/ui/new-session/time-field";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { timeOfDay } from "@/lib/session-window";
-import type { DaySlot, SlotState } from "@/lib/week-grid/slots";
+import type { MoveChoices } from "@/lib/week-grid/move-choices";
 import { type Option, None, Some } from "@/types/option";
 
-export interface MoveSheetModel {
+export interface MoveSheetModel extends MoveChoices {
   name: string;
   current: DateTime;
+  now: DateTime;
   days: { day: DateTime; past: boolean }[];
-  slotsFor: (day: DateTime) => DaySlot[];
 }
 
 export interface MoveSheetProps {
   model: Option<MoveSheetModel>;
   onConfirm: (start: DateTime) => void;
+  onResolve: (start: DateTime) => void;
   onClose: () => void;
 }
 
-export function MoveSheet({ model, onConfirm, onClose }: MoveSheetProps) {
+export function MoveSheet({ model, onConfirm, onResolve, onClose }: MoveSheetProps) {
   const { shown, openCount } = useShownModel(model);
   return (
     <Sheet open={model.some} onOpenChange={(open) => !open && onClose()}>
@@ -34,7 +34,7 @@ export function MoveSheet({ model, onConfirm, onClose }: MoveSheetProps) {
         className="flex max-h-[85vh] flex-col gap-0 rounded-t-card p-0"
       >
         <div aria-hidden className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-border" />
-        {shown.some && <MoveSheetBody key={openCount} model={shown.val} onConfirm={onConfirm} />}
+        {shown.some && <MoveSheetBody key={openCount} model={shown.val} onConfirm={onConfirm} onResolve={onResolve} />}
       </SheetContent>
     </Sheet>
   );
@@ -56,17 +56,26 @@ function useShownModel(model: Option<MoveSheetModel>) {
 interface MoveSheetBodyProps {
   model: MoveSheetModel;
   onConfirm: (start: DateTime) => void;
+  onResolve: (start: DateTime) => void;
 }
 
-function MoveSheetBody({ model, onConfirm }: MoveSheetBodyProps) {
-  const { name, current, days, slotsFor } = model;
+const asTime = (start: DateTime): string => start.toFormat("HH:mm");
+
+function startAt(day: DateTime, time: string): DateTime {
+  const [hour, minute] = time.split(":").map(Number);
+  return day.set({ hour, minute });
+}
+
+function MoveSheetBody({ model, onConfirm, onResolve }: MoveSheetBodyProps) {
+  const { name, current, days, suggestionsFor, busyOn, clashAt } = model;
   const [day, setDay] = useState(current.startOf("day"));
-  const [pick, setPick] = useState(current);
-  const isPicked = (start: DateTime) => start.equals(pick);
-  // A pick belongs to the shown day; a new day starts over from the current slot.
+  const [time, setTime] = useState<Option<string>>(Some(asTime(current)));
+  const start = time.some ? Some(startAt(day, time.val)) : None;
+  const clash = start.some ? clashAt(start.val) : None;
+  // A time belongs to the shown day; a new day starts over without one.
   const showDay = (next: DateTime) => {
     setDay(next);
-    setPick(current);
+    setTime(None);
   };
   return (
     <>
@@ -84,68 +93,41 @@ function MoveSheetBody({ model, onConfirm }: MoveSheetBodyProps) {
             />
           ))}
         </div>
-        <div className="flex flex-wrap gap-x-1.5 gap-y-2.5">
-          {slotsFor(day).map((slot) => (
-            <SlotChip key={slot.start.toMillis()} slot={slot} picked={isPicked(slot.start)} onPick={setPick} />
-          ))}
-        </div>
+        <BusyNote
+          day={day}
+          sessions={busyOn(day)}
+          clash={clash}
+          onUseInstead={(instead) => setTime(Some(asTime(instead)))}
+        />
+        <TimeField suggestions={suggestionsFor(day)} value={time} onChange={(t) => setTime(Some(t))} />
       </div>
       <div className="shrink-0 border-t px-5 py-4">
-        <Button className="w-full" disabled={pick.equals(current)} onClick={() => onConfirm(pick)}>
-          Move session
-        </Button>
+        <MoveSheetAction model={model} start={start} clash={clash.some} onConfirm={onConfirm} onResolve={onResolve} />
       </div>
     </>
   );
 }
 
-interface SlotChipProps {
-  slot: DaySlot;
-  picked: boolean;
-  onPick: (start: DateTime) => void;
+interface MoveSheetActionProps {
+  model: MoveSheetModel;
+  start: Option<DateTime>;
+  clash: boolean;
+  onConfirm: (start: DateTime) => void;
+  onResolve: (start: DateTime) => void;
 }
 
-function SlotChip({ slot, picked, onPick }: SlotChipProps) {
-  const time = timeOfDay(slot.start);
-  const look = slotLook(slot.state, time);
-  return (
-    <Chip
-      size="md"
-      selected={picked}
-      aria-label={look.label}
-      disabled={look.disabled}
-      onClick={() => onPick(slot.start)}
-      className={cn("tabular-nums", look.className)}
-    >
-      {time}
-      {look.holder.some && <span className="ml-1.5 font-normal text-faint">{look.holder.val}</span>}
-    </Chip>
-  );
-}
-
-interface SlotLook {
-  label: string;
-  disabled: boolean;
-  className: string;
-  holder: Option<string>;
-}
-
-const CURRENT_SLOT_CLASS = "border border-dashed border-brand bg-brand-tint text-brand-strong hover:bg-brand-tint";
-
-function slotLook(state: SlotState, time: string): SlotLook {
-  const plain = { label: time, disabled: false, className: "", holder: None };
-  switch (state.kind) {
-    case "free":
-      return plain;
-    case "current":
-      return { ...plain, label: `${time}, current`, className: CURRENT_SLOT_CLASS };
-    case "taken":
-      return { ...plain, label: `${time}, ${state.holder}`, disabled: true, holder: Some(state.holder) };
-    case "past":
-      return { ...plain, disabled: true };
-    default: {
-      const _exhaustive: never = state;
-      throw new Error(`Unhandled slot state: ${JSON.stringify(_exhaustive)}`);
-    }
+function MoveSheetAction({ model, start, clash, onConfirm, onResolve }: MoveSheetActionProps) {
+  if (start.some && clash) {
+    return (
+      <Button className="w-full" onClick={() => onResolve(start.val)}>
+        Resolve overlap…
+      </Button>
+    );
   }
+  const canMove = start.some && start.val.toMillis() !== model.current.toMillis() && start.val >= model.now;
+  return (
+    <Button className="w-full" disabled={!canMove} onClick={() => start.some && onConfirm(start.val)}>
+      Move session
+    </Button>
+  );
 }

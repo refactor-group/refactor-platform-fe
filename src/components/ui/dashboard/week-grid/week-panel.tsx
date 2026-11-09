@@ -30,6 +30,7 @@ import {
   type GridCard,
 } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
+import { moveChoices } from "@/lib/week-grid/move-choices";
 import { slotsForMove, type MoveSlotsContext } from "@/lib/week-grid/slots";
 import {
   agendaDay,
@@ -86,8 +87,9 @@ function moveSheetModel(view: CardView, days: DayGroup<GridCard>[], context: Mov
   return {
     name: firstNameOf(view.name),
     current: view.start,
+    now: context.now,
     days: days.map((d) => ({ day: d.day, past: d.isPast })),
-    slotsFor: slotsForMove(view.session, context),
+    ...moveChoices(view.session, context),
   };
 }
 
@@ -173,6 +175,11 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     selectDay(to.toFormat(ISO_DATE));
     closeMove();
   };
+  const resolveMove = (to: DateTime) => {
+    if (moveTarget.none) return;
+    closeMove();
+    onReschedule(moveTarget.val.session, MoveScope.This, Some(to));
+  };
 
   const titleId = useId();
   const header = {
@@ -225,7 +232,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
         drag={drag}
       />
       <SessionActionDialogs {...actions.dialogs} />
-      <MoveSheet model={moveModel} onConfirm={confirmMove} onClose={closeMove} />
+      <MoveSheet model={moveModel} onConfirm={confirmMove} onResolve={resolveMove} onClose={closeMove} />
     </section>
   );
 }

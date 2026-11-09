@@ -1,7 +1,8 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FilterChip } from "@/components/ui/chip";
-import type { Option } from "@/types/option";
+import { type Option, None } from "@/types/option";
 import { WeekFilter, type WeekFilterProps } from "./week-filter";
 
 export interface WeekNavigation {
@@ -35,20 +36,26 @@ export function WeekPanelHeader({
   onSchedule,
   readOnly,
 }: WeekPanelHeaderProps) {
+  const chip = filter.some && filter.val.selected.some ? filter.val.selected : None;
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
       <div>
-        <div className="flex flex-wrap items-baseline gap-3">
+        <div className="flex flex-col gap-x-3 lg:flex-row lg:flex-wrap lg:items-baseline lg:gap-y-3">
           <h2 id={titleId} className="text-section font-normal">
             {title}
           </h2>
           <span className="text-card-title tabular-nums text-ink-2">{range}</span>
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-2 empty:hidden">
-          {subline.some && <p className="text-sm tabular-nums text-muted-foreground">{subline.val}</p>}
-          {filter.some && filter.val.selected.some && (
-            <FilterChip label={filter.val.selected.val.fullName} onClear={filter.val.onClear} />
+        {/* Below lg the row keeps its height while loading, so the arrows hold still. */}
+        <div className={cn("mt-1 flex flex-wrap items-center gap-2", subline.none && chip.none && "lg:hidden")}>
+          {subline.some ? (
+            <p className="text-sm tabular-nums text-muted-foreground">{subline.val}</p>
+          ) : (
+            <p aria-hidden className="invisible text-sm lg:hidden">
+              &nbsp;
+            </p>
           )}
+          {filter.some && chip.some && <FilterChip label={chip.val.fullName} onClear={filter.val.onClear} />}
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-4">
