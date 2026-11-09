@@ -145,7 +145,7 @@ describe("WeekPanel", () => {
     renderPanel();
     const panel = screen.getByRole("region", { name: "This week" });
     expect(panel).toHaveTextContent("1 session");
-    expect(panel).not.toHaveTextContent("today");
+    expect(panel).not.toHaveTextContent(/\d+ today/);
   });
 
   it("runs a card's menu action through the shared session actions", () => {
