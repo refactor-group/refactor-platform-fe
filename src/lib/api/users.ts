@@ -8,6 +8,7 @@ import {
   User,
   NewUserPassword,
   UserLookupResult,
+  UserPreferencesUpdate,
   defaultUser,
 } from "@/types/user";
 import { buildQueryString } from "./query-params";
@@ -120,6 +121,17 @@ export const useUserPasswordMutation = () => {
   return EntityApi.useEntityMutation<NewUserPassword, User>(USERS_BASEURL, {
     update: async (id: Id, data: NewUserPassword): Promise<User> =>
       EntityApi.updateFn<NewUserPassword, User>(`${USERS_BASEURL}/${id}/password`, data),
+  });
+};
+
+/**
+ * Hook for saving a user's preferences.
+ * Sends only the fields given, so it can't overwrite fields changed elsewhere.
+ */
+export const useUserPreferencesMutation = () => {
+  return EntityApi.useEntityMutation<UserPreferencesUpdate, User>(USERS_BASEURL, {
+    update: async (id: Id, changes: UserPreferencesUpdate): Promise<User> =>
+      EntityApi.updateFn<UserPreferencesUpdate, User>(`${USERS_BASEURL}/${id}`, changes),
   });
 };
 

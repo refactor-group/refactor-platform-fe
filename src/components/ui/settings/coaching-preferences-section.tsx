@@ -5,7 +5,7 @@ import type { FC } from "react";
 import { ChevronDown } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useUser, useUserMutation } from "@/lib/api/users";
+import { useUser, useUserPreferencesMutation } from "@/lib/api/users";
 import {
   FieldSet,
   FieldGroup,
@@ -28,7 +28,7 @@ import {
   PERMISSION_DENIED_MESSAGE,
 } from "@/types/entity-api-error";
 import { type Option, None, Some } from "@/types/option";
-import type { User } from "@/types/user";
+import type { User, UserPreferencesUpdate } from "@/types/user";
 import { clockLabel, formatClock, halfHourClocks, parseClock, workingHoursOf } from "@/lib/working-hours";
 
 const AUTOSAVE_DEBOUNCE_MS = 400;
@@ -64,9 +64,36 @@ function startsBeforeEnd(prefs: Preferences): boolean {
   return start.some && end.some && start.val < end.val;
 }
 
-function saveErrorMessage(error: unknown, hours: boolean): string {
+// The duration if it changed, and both hours together if either did.
+function changedPreferences(shown: Preferences, saved: Preferences): UserPreferencesUpdate {
+  const duration = shown.default_coaching_session_duration_minutes;
+  return {
+    ...(duration !== saved.default_coaching_session_duration_minutes
+      ? { default_coaching_session_duration_minutes: duration }
+      : {}),
+    ...(hoursChanged(shown, saved)
+      ? { working_hours_start: shown.working_hours_start, working_hours_end: shown.working_hours_end }
+      : {}),
+  };
+}
+
+// Drops the edits a save sent, keeping any made while it was in flight.
+function withoutSent(edits: UserPreferencesUpdate, sent: UserPreferencesUpdate): UserPreferencesUpdate {
+  const kept = { ...edits };
+  for (const key of Object.keys(sent) as (keyof UserPreferencesUpdate)[]) {
+    if (kept[key] === sent[key]) delete kept[key];
+  }
+  return kept;
+}
+
+// The backend answers a bad duration and bad hours with the same 422, so
+// only a save of one field can name it.
+function saveErrorMessage(error: unknown, sent: UserPreferencesUpdate): string {
   if (isForbiddenError(error)) return PERMISSION_DENIED_MESSAGE;
   if (isDurationValidationError(error)) {
+    const duration = "default_coaching_session_duration_minutes" in sent;
+    const hours = "working_hours_start" in sent;
+    if (duration && hours) return "Your preferences didn't save · Check the duration and hours";
     return hours
       ? "Those hours didn't save · Start must be before end"
       : "That length isn't allowed · Pick a different duration";
@@ -112,44 +139,43 @@ const ClockSelect: FC<ClockSelectProps> = ({ id, label, value, disabled, onChang
 export const CoachingPreferencesSection: FC = () => {
   const { isACoach, userId } = useAuthStore((state) => state);
   const { user, isLoading, refresh } = useUser(userId);
-  const { update, isLoading: isSaving } = useUserMutation();
+  const { update, isLoading: isSaving } = useUserPreferencesMutation();
 
   const saved = useMemo(() => savedPreferences(user), [user]);
-  const [draft, setDraft] = useState<Preferences>(saved);
-  // A server that drops a field leaves the draft dirty, so a sent draft waits for the next edit.
+  // Only the unsaved edits, so a re-read user still shows through untouched fields.
+  const [edits, setEdits] = useState<UserPreferencesUpdate>({});
+  const shown = useMemo<Preferences>(() => ({ ...saved, ...edits }), [saved, edits]);
+  const changes = useMemo(() => changedPreferences(shown, saved), [shown, saved]);
+  // A server that drops a field leaves it changed, so a sent value waits for the next edit.
   const sent = useRef<Option<Preferences>>(None);
 
-  useEffect(() => {
-    setDraft(saved);
-  }, [saved]);
-
-  const durationMinutes = draft.default_coaching_session_duration_minutes;
+  const durationMinutes = shown.default_coaching_session_duration_minutes;
   const durationValidation = validateDurationMinutes(durationMinutes);
-  const durationDirty = durationMinutes !== saved.default_coaching_session_duration_minutes;
-  const hoursDirty = hoursChanged(draft, saved);
-  const hoursValid = startsBeforeEnd(draft);
-  const isDirty = durationDirty || hoursDirty;
+  const durationDirty = "default_coaching_session_duration_minutes" in changes;
+  const hoursValid = startsBeforeEnd(shown);
+  const isDirty = Object.keys(changes).length > 0;
   const isValid = durationValidation.isOk() && hoursValid;
-  const edit = (patch: Partial<Preferences>) => setDraft((prev) => ({ ...prev, ...patch }));
+  const edit = (patch: UserPreferencesUpdate) => setEdits((prev) => ({ ...prev, ...patch }));
 
   // Debounced so rapid edits coalesce into one PUT; `isSaving` stops a second
   // PUT when `update`'s identity changes mid-request and reruns the effect.
   useEffect(() => {
     if (!user || !isDirty || !isValid || isSaving) return;
-    if (sent.current.some && samePreferences(sent.current.val, draft)) return;
+    if (sent.current.some && samePreferences(sent.current.val, shown)) return;
     const timer = setTimeout(() => {
-      sent.current = Some(draft);
+      sent.current = Some(shown);
       void (async () => {
         try {
-          await update(userId, { ...user, ...draft });
-          refresh();
+          await update(userId, changes);
+          await refresh();
+          setEdits((prev) => withoutSent(prev, changes));
         } catch (error) {
-          toast.error(saveErrorMessage(error, hoursDirty));
+          toast.error(saveErrorMessage(error, changes));
         }
       })();
     }, AUTOSAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [draft, hoursDirty, isDirty, isValid, isSaving, user, userId, update, refresh]);
+  }, [changes, shown, isDirty, isValid, isSaving, user, userId, update, refresh]);
 
   if (!isACoach) {
     return null;
@@ -197,7 +223,7 @@ export const CoachingPreferencesSection: FC = () => {
             <ClockSelect
               id="working-hours-start"
               label="Working hours start"
-              value={draft.working_hours_start}
+              value={shown.working_hours_start}
               disabled={isLoading}
               onChange={(value) => edit({ working_hours_start: value })}
             />
@@ -210,7 +236,7 @@ export const CoachingPreferencesSection: FC = () => {
             <ClockSelect
               id="working-hours-end"
               label="Working hours end"
-              value={draft.working_hours_end}
+              value={shown.working_hours_end}
               disabled={isLoading}
               onChange={(value) => edit({ working_hours_end: value })}
             />
