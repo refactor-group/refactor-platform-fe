@@ -2,7 +2,8 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { DateTime } from "ts-luxon";
-import { None, Some } from "@/types/option";
+import { None, Some, type Option } from "@/types/option";
+import type { NearestQuery } from "@/lib/api/coaching-sessions";
 import { PersonGroup } from "@/lib/week-grid/filter";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
 import { WeekGridStoreProvider } from "@/lib/providers/week-grid-store-provider";
@@ -32,16 +33,22 @@ vi.mock("@/lib/api/coaching-relationships", () => ({
 }));
 
 let nearest = { sessions: [] as ReturnType<typeof createMockEnrichedSession>[], isLoading: false, isError: false };
+const nearestQueries: Option<NearestQuery>[] = [];
 vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/coaching-sessions")>()),
-  useNearestEachCoachingSessions: () => nearest,
+  useNearestEachCoachingSessions: (query: Option<NearestQuery>) => {
+    nearestQueries.push(query);
+    return query.some ? nearest : { sessions: [], isLoading: false, isError: false };
+  },
 }));
 
 const wrapper = ({ children }: { children: ReactNode }) => <WeekGridStoreProvider>{children}</WeekGridStoreProvider>;
 const setup = () => renderHook(() => useWeekFilter(), { wrapper });
+const lastQuery = () => nearestQueries[nearestQueries.length - 1];
 
 beforeEach(() => {
   sessionStorage.clear();
+  nearestQueries.length = 0;
   relationshipsLoading = false;
   const soon = DateTime.now().plus({ days: 2 }).toUTC().toFormat("yyyy-LL-dd'T'HH:mm:ss");
   nearest = {
@@ -52,17 +59,44 @@ beforeEach(() => {
 });
 
 describe("useWeekFilter", () => {
-  it("offers only the people the viewer coaches, grouped by activity", () => {
+  it("doesn't ask for activity until the filter first opens", () => {
     const { result } = setup();
+    expect(nearestQueries.length).toBeGreaterThan(0);
+    expect(nearestQueries.every((q) => q.none)).toBe(true);
+    expect(result.current.grouped).toBe(false);
+  });
+
+  it("asks once, around the first open, and keeps that answer on later opens", () => {
+    const { result } = setup();
+    act(() => result.current.load());
+    const first = lastQuery();
+    expect(first.some && first.val.relationshipIds).toEqual(["rel-alex", "rel-erin"]);
+    act(() => result.current.load());
+    expect(lastQuery()).toEqual(first);
+  });
+
+  it("offers only the people the viewer coaches, grouped by activity once loaded", () => {
+    const { result } = setup();
+    act(() => result.current.load());
+    expect(result.current.grouped).toBe(true);
     expect(result.current.people.map((p) => [p.fullName, p.group])).toEqual([
       ["Alex Chen", PersonGroup.Coachees],
       ["Erin Park", PersonGroup.Inactive],
     ]);
   });
 
-  it("keeps everyone under Coachees while activity loads", () => {
+  it("isn't grouped while activity loads", () => {
     nearest = { sessions: [], isLoading: true, isError: false };
     const { result } = setup();
+    act(() => result.current.load());
+    expect(result.current.grouped).toBe(false);
+  });
+
+  it("falls back to everyone under Coachees when activity fails", () => {
+    nearest = { sessions: [], isLoading: false, isError: true };
+    const { result } = setup();
+    act(() => result.current.load());
+    expect(result.current.grouped).toBe(true);
     expect(result.current.people.every((p) => p.group === PersonGroup.Coachees)).toBe(true);
   });
 

@@ -10,15 +10,27 @@ const people: FilterPerson[] = [
   { userId: "u-erin", fullName: "Erin Park", relationshipIds: ["rel-erin"], group: PersonGroup.Inactive },
 ];
 
-function renderFilter(selected: Option<FilterPerson> = None) {
+function renderFilter(selected: Option<FilterPerson> = None, grouped = true) {
   const onSelect = vi.fn();
   const onClear = vi.fn();
-  render(<WeekFilter people={people} selected={selected} onSelect={onSelect} onClear={onClear} />);
-  return { onSelect, onClear };
+  const onOpen = vi.fn();
+  render(
+    <WeekFilter
+      people={people}
+      grouped={grouped}
+      selected={selected}
+      onSelect={onSelect}
+      onClear={onClear}
+      onOpen={onOpen}
+    />
+  );
+  return { onSelect, onClear, onOpen };
 }
 
 const open = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
 const popover = () => screen.getByRole("dialog");
+const list = () => within(popover()).getByRole("group", { name: "Filter by person" });
+const choice = (name: string) => within(list()).getByRole("button", { name });
 
 describe("WeekFilter", () => {
   it("labels the pill All sessions, or the selected name", () => {
@@ -39,7 +51,25 @@ describe("WeekFilter", () => {
     expect(within(panel).getByRole("group", { name: "Coachees" })).toHaveTextContent("Alex Chen");
     expect(within(panel).getByRole("group", { name: "Coachees" })).toHaveTextContent("Sam Ruiz");
     expect(within(panel).getByRole("group", { name: "Inactive" })).toHaveTextContent("Erin Park");
-    expect(within(panel).getByRole("option", { name: "All sessions" })).toHaveAttribute("aria-selected", "true");
+    expect(choice("All sessions")).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).queryByRole("listbox")).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("asks for activity when it opens", () => {
+    const { onOpen } = renderFilter();
+    expect(onOpen).not.toHaveBeenCalled();
+    open("All sessions");
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("holds the people back until they're grouped, so the list never shifts", () => {
+    renderFilter(None, false);
+    open("All sessions");
+    expect(choice("All sessions")).toBeInTheDocument();
+    expect(within(popover()).getByRole("status", { name: "Loading people" })).toBeInTheDocument();
+    expect(within(popover()).queryByText("Alex Chen")).not.toBeInTheDocument();
+    expect(within(popover()).queryByRole("group", { name: "Coachees" })).not.toBeInTheDocument();
   });
 
   it("narrows by search and says when no one matches", () => {
@@ -47,7 +77,7 @@ describe("WeekFilter", () => {
     open("All sessions");
     const search = within(popover()).getByRole("searchbox", { name: "Find a person" });
     fireEvent.change(search, { target: { value: "sam" } });
-    expect(within(popover()).getAllByRole("option").map((o) => o.textContent)).toEqual(["All sessions", "Sam Ruiz"]);
+    expect(within(list()).getAllByRole("button").map((o) => o.textContent)).toEqual(["All sessions", "Sam Ruiz"]);
     fireEvent.change(search, { target: { value: "zzz" } });
     expect(within(popover()).getByText("No one matches.")).toBeInTheDocument();
   });
@@ -55,7 +85,7 @@ describe("WeekFilter", () => {
   it("selects a person and closes", () => {
     const { onSelect } = renderFilter();
     open("All sessions");
-    fireEvent.click(within(popover()).getByRole("option", { name: "Erin Park" }));
+    fireEvent.click(choice("Erin Park"));
     expect(onSelect).toHaveBeenCalledWith("u-erin");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
@@ -63,8 +93,9 @@ describe("WeekFilter", () => {
   it("marks the selected person and clears from All sessions", () => {
     const { onClear } = renderFilter(Some(people[1]));
     open("Sam Ruiz");
-    expect(within(popover()).getByRole("option", { name: "Sam Ruiz" })).toHaveAttribute("aria-selected", "true");
-    fireEvent.click(within(popover()).getByRole("option", { name: "All sessions" }));
+    expect(choice("Sam Ruiz")).toHaveAttribute("aria-pressed", "true");
+    expect(choice("All sessions")).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(choice("All sessions"));
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 });

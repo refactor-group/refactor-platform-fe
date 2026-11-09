@@ -173,7 +173,14 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     range: weekRange(week),
     navigation,
     filter: canSchedule
-      ? Some({ people: filter.people, selected, onSelect: filter.select, onClear: filter.clear })
+      ? Some({
+          people: filter.people,
+          grouped: filter.grouped,
+          selected,
+          onSelect: filter.select,
+          onClear: filter.clear,
+          onOpen: filter.load,
+        })
       : None,
     onSchedule: canSchedule ? Some(() => onSchedule(None)) : None,
   };
