@@ -104,7 +104,7 @@ export function WeekGrid({ days, handlers, onSchedule, drag, isLoading }: WeekGr
   };
 
   return (
-    <SessionCardHint>
+    <SessionCardHint active={days.some((d) => d.items.length > 0)}>
       <DndContext
         sensors={sensors}
         collisionDetection={collision}

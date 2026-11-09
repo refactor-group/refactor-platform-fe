@@ -53,12 +53,12 @@ function useCardHintIds(): CardHintIds {
 }
 
 /** Renders the cards' descriptions once for every card inside it to reference. */
-export function SessionCardHint({ children }: { children: ReactNode }) {
+export function SessionCardHint({ children, active = true }: { children: ReactNode; active?: boolean }) {
   const ids = useCardHintIds();
   const shared = useMemo(() => Some(ids), [ids]);
   return (
     <CardHintContext.Provider value={shared}>
-      <CardHintText ids={ids} />
+      {active && <CardHintText ids={ids} />}
       {children}
     </CardHintContext.Provider>
   );
