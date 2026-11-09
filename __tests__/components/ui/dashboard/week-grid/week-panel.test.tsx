@@ -53,7 +53,14 @@ let selectedPerson: Option<FilterPerson> = None;
 const selectPerson = vi.fn();
 const clearPerson = vi.fn();
 vi.mock("@/lib/hooks/use-week-filter", () => ({
-  useWeekFilter: () => ({ people: [ALEX, SAM], selected: selectedPerson, select: selectPerson, clear: clearPerson }),
+  useWeekFilter: () => ({
+    people: [ALEX, SAM],
+    grouped: true,
+    selected: selectedPerson,
+    select: selectPerson,
+    clear: clearPerson,
+    load: vi.fn(),
+  }),
 }));
 
 const toast = vi.fn();
