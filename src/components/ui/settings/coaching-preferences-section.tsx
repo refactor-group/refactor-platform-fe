@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FC } from "react";
+import { ChevronDown } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useUser, useUserMutation } from "@/lib/api/users";
@@ -68,6 +69,8 @@ function saveErrorMessage(error: unknown, hours: boolean): string {
 }
 
 const CLOCKS = halfHourClocks();
+// Labels differ in length, so a fixed width keeps the controls lined up.
+const CONTROL_WIDTH = "w-36 flex-none sm:w-72";
 
 interface ClockSelectProps {
   id: string;
@@ -78,20 +81,26 @@ interface ClockSelectProps {
 }
 
 const ClockSelect: FC<ClockSelectProps> = ({ id, label, value, disabled, onChange }) => (
-  <select
-    id={id}
-    aria-label={label}
-    value={value}
-    disabled={disabled}
-    onChange={(e) => onChange(e.target.value)}
-    className="flex h-10 w-full rounded-input border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-  >
-    {CLOCKS.map((m) => (
-      <option key={m} value={formatClock(m)}>
-        {clockLabel(m)}
-      </option>
-    ))}
-  </select>
+  <div className="relative">
+    <select
+      id={id}
+      aria-label={label}
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(e.target.value)}
+      className="flex h-10 w-full appearance-none rounded-input border border-input bg-background py-2 pl-3 pr-9 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+    >
+      {CLOCKS.map((m) => (
+        <option key={m} value={formatClock(m)}>
+          {clockLabel(m)}
+        </option>
+      ))}
+    </select>
+    <ChevronDown
+      aria-hidden
+      className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+    />
+  </div>
 );
 
 export const CoachingPreferencesSection: FC = () => {
@@ -147,7 +156,7 @@ export const CoachingPreferencesSection: FC = () => {
 
         <Field orientation="horizontal">
           <FieldLabel htmlFor="default-duration">Default duration</FieldLabel>
-          <FieldContent>
+          <FieldContent className={CONTROL_WIDTH}>
             <CoachingSessionDurationInput
               id="default-duration"
               value={durationMinutes}
@@ -174,7 +183,7 @@ export const CoachingPreferencesSection: FC = () => {
 
         <Field orientation="horizontal">
           <FieldLabel htmlFor="working-hours-start">Start</FieldLabel>
-          <FieldContent>
+          <FieldContent className={CONTROL_WIDTH}>
             <ClockSelect
               id="working-hours-start"
               label="Working hours start"
@@ -187,7 +196,7 @@ export const CoachingPreferencesSection: FC = () => {
 
         <Field orientation="horizontal">
           <FieldLabel htmlFor="working-hours-end">End</FieldLabel>
-          <FieldContent>
+          <FieldContent className={CONTROL_WIDTH}>
             <ClockSelect
               id="working-hours-end"
               label="Working hours end"
