@@ -58,6 +58,7 @@ The pure model lives in `src/lib/week-grid/`: `week.ts`, `card.ts`, `filter.ts` 
 | D15 | The overseer runs implementers as subagents. Jim approves each phase. |
 | D16 | User-facing copy says "Cancel session" and "Cancel series", never "Delete". |
 | D17 | A coach can still remove a past session: "Remove session…" in the menu, using the same dialog with past-tense copy. |
+| D22 | Ready is a pill link like Prepare, in the positive tint with a check (Jim, 2026-11-09). Both open the session page, and later the Session glance. |
 | D20 | A live card keeps its topic status beside the countdown: "in 45 min · No topics yet" (the second part in amber) or "in 45 min · 3 topics" (Jim, 2026-11-06). |
 | D19 | Today's column shows a "now" line with the current time (Jim, 2026-11-06). Columns aren't time-scaled, so it sits between cards: above the first session that hasn't started. It appears on the current week only, in the grid and in today's agenda, and follows the profile time zone and the 30-second clock. |
 | D18 | A session that ended earlier today stays editable (Jim, 2026-11-06). It keeps the past look and "Done", but drag, Move and the full menu still work, and it cancels like any session still to change: "Cancel session…" with the Cancel dialog (Jim, 2026-11-08). Only locked sessions from earlier days say Remove. Sessions from earlier days stay locked. "Today" is judged in the profile time zone. |
