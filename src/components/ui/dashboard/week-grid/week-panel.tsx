@@ -196,9 +196,10 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const scheduleDay = canSchedule ? Some((day: DateTime) => onSchedule(Some(day))) : None;
   const noMatches = selected.some && visibleCount(days) === 0;
   const hasSessions = sessions.length > 0;
+  // A failed read with nothing cached must not call the week or its days empty.
+  const isUnloaded = readOnly && !hasSessions;
   const busy = isLoading || width.none;
-  // A failed read with nothing cached must not claim "0 sessions".
-  const subline = busy || (readOnly && !hasSessions) ? None : Some(sublineFor(days, isCurrentWeek));
+  const subline = busy || isUnloaded ? None : Some(sublineFor(days, isCurrentWeek));
 
   return (
     <section
@@ -220,6 +221,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
         handlers={handlers}
         onSchedule={scheduleDay}
         noMatches={noMatches}
+        isUnloaded={isUnloaded}
         drag={drag}
       />
       <SessionActionDialogs {...actions.dialogs} />
@@ -236,24 +238,24 @@ interface WeekBodyProps extends WeekAgendaProps {
 
 /** Until the width is known, both loading layouts render and CSS shows one. */
 function WeekBody({ width, isLoading, drag, ...agenda }: WeekBodyProps) {
-  const { days, now, handlers, onSchedule, noMatches } = agenda;
+  const { days, now, handlers, onSchedule, noMatches, isUnloaded } = agenda;
   if (width.none) return <PendingLayouts {...agenda} drag={drag} />;
   const wide = width.val;
-  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading /> : <DayAgendaSkeleton />;
+  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading isUnloaded={isUnloaded} /> : <DayAgendaSkeleton />;
   if (!wide) return <WeekAgenda {...agenda} />;
   return (
     <div className="relative">
-      <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading={false} />
+      <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading={false} isUnloaded={isUnloaded} />
       {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
     </div>
   );
 }
 
-function PendingLayouts({ days, now, handlers, onSchedule, drag }: WeekAgendaProps & { drag: GridDrag }) {
+function PendingLayouts({ days, now, handlers, onSchedule, isUnloaded, drag }: WeekAgendaProps & { drag: GridDrag }) {
   return (
     <>
       <div data-testid="week-grid-pending" className="hidden lg:block">
-        <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading />
+        <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading isUnloaded={isUnloaded} />
       </div>
       <div data-testid="day-agenda-pending" className="lg:hidden">
         <DayAgendaSkeleton />
@@ -269,9 +271,10 @@ interface WeekAgendaProps {
   handlers: SessionCardHandlers;
   onSchedule: Option<(day: DateTime) => void>;
   noMatches: boolean;
+  isUnloaded: boolean;
 }
 
-function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches }: WeekAgendaProps) {
+function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches, isUnloaded }: WeekAgendaProps) {
   const selectedDay = useWeekGridStore((s) => s.selectedDay);
   const selectDay = useWeekGridStore((s) => s.selectDay);
   const day = agendaDay(week, selectedDay, now);
@@ -280,7 +283,13 @@ function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches }: WeekAg
     <>
       <DayStrip days={days} selected={day} onSelect={(d) => selectDay(d.toFormat(ISO_DATE))} />
       {noMatches && <NoMatches className="mt-4" />}
-      <DayAgenda group={group} handlers={handlers} onSchedule={onSchedule} now={nowLineOn(group, now)} />
+      <DayAgenda
+        group={group}
+        handlers={handlers}
+        onSchedule={onSchedule}
+        now={nowLineOn(group, now)}
+        isUnloaded={isUnloaded}
+      />
     </>
   );
 }

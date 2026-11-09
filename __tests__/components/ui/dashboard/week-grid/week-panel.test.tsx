@@ -196,6 +196,26 @@ describe("WeekPanel", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
+  it("doesn't call a day empty when nothing loaded", () => {
+    result = { ...result, sessions: [], isError: true };
+    renderPanel();
+    expect(screen.queryByText("No sessions today")).not.toBeInTheDocument();
+  });
+
+  it("doesn't call a phone's day empty when nothing loaded", () => {
+    wide = false;
+    result = { ...result, sessions: [], isError: true };
+    renderPanel();
+    expect(screen.getByRole("heading", { name: "Tuesday, August 18" })).toBeInTheDocument();
+    expect(screen.queryByText("No sessions")).not.toBeInTheDocument();
+  });
+
+  it("says No sessions today when today loaded empty", () => {
+    result = { ...result, sessions: [THURSDAY] };
+    renderPanel();
+    expect(screen.getByText("No sessions today")).toBeInTheDocument();
+  });
+
   it("keeps the week's seven days on screen while it loads", () => {
     result = { ...result, sessions: [], isLoading: true };
     renderPanel();

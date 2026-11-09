@@ -45,6 +45,7 @@ export interface WeekGridProps {
   drag: GridDrag;
   now: DateTime;
   isLoading: boolean;
+  isUnloaded: boolean;
 }
 
 const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
@@ -62,7 +63,7 @@ const AUTO_SCROLL = { threshold: { x: 0, y: 0.1 } };
 // The keyboard has no pointer, so it falls back to the dragged rect.
 const collision: CollisionDetection = (args) => (args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args));
 
-export function WeekGrid({ days, handlers, onSchedule, drag, now, isLoading }: WeekGridProps) {
+export function WeekGrid({ days, handlers, onSchedule, drag, now, isLoading, isUnloaded }: WeekGridProps) {
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { keyboardCodes: KEYBOARD_CODES })
@@ -128,6 +129,7 @@ export function WeekGrid({ days, handlers, onSchedule, drag, now, isLoading }: W
               justDragged={justDragged}
               now={nowLineOn(group, now)}
               isLoading={isLoading}
+              isUnloaded={isUnloaded}
             />
           ))}
         </div>

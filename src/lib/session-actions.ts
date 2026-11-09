@@ -26,8 +26,8 @@ export enum SessionRemoval {
 
 export interface SessionActionContext {
   isCoach: boolean;
-  /** Locked: only Open session and the delete item remain. */
-  isPast: boolean;
+  /** Locked (see `sessionLocked`): only Open session and the delete item remain. */
+  isLocked: boolean;
   isCompact: boolean;
 }
 
@@ -44,7 +44,7 @@ interface SessionActionRule {
 
 const inSeries = (session: EnrichedCoachingSession) => session.coaching_session_series_id.some;
 
-const coachUpcoming = (c: SessionActionContext) => c.isCoach && !c.isPast;
+const coachUpcoming = (c: SessionActionContext) => c.isCoach && !c.isLocked;
 
 const RULES: SessionActionRule[] = [
   { action: SessionAction.OpenSession, group: SessionActionGroup.Navigate, shown: () => true },
@@ -100,8 +100,8 @@ export function sessionActionsFor(
   }));
 }
 
-export function sessionRemovalFor(isPast: boolean): SessionRemoval {
-  return isPast ? SessionRemoval.Remove : SessionRemoval.Cancel;
+export function sessionRemovalFor(isLocked: boolean): SessionRemoval {
+  return isLocked ? SessionRemoval.Remove : SessionRemoval.Cancel;
 }
 
 function removalLabel(removal: SessionRemoval): string {
@@ -134,7 +134,7 @@ export function sessionActionLabel(
     case SessionAction.ResendInvite:
       return inSeries(session) ? "Resend series invite" : "Resend invite";
     case SessionAction.DeleteSession:
-      return removalLabel(sessionRemovalFor(context.isPast));
+      return removalLabel(sessionRemovalFor(context.isLocked));
     case SessionAction.DeleteSeries:
       return "Cancel series…";
   }
