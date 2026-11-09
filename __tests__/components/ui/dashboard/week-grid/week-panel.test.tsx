@@ -327,6 +327,13 @@ describe("WeekPanel card clicks", () => {
     expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, id === "thursday" ? THURSDAY : EARLY_TODAY);
   });
 
+  it("opens a card from an earlier day on a single click", () => {
+    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
+    renderPanel();
+    fireEvent.click(screen.getByTestId("session-card-monday-past"));
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, MONDAY_PAST);
+  });
+
   it("opens a session that's under way on a single click", () => {
     const underway = session("underway", "2026-08-18T18:25:00");
     result = { ...result, sessions: [underway] };
