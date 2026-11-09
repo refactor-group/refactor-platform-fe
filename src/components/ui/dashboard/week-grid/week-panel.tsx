@@ -112,14 +112,6 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const { selected } = filter;
   const wide = useMediaQuery(WEEK_GRID_QUERY);
 
-  const onSessionsChanged = useRefreshCoachingSessions();
-  const actions = useSessionActions({
-    userTimezone: timezone,
-    onReschedule,
-    onSessionsChanged,
-    onSeriesMutated,
-  });
-
   const recentlyMoved = useWeekGridStore((s) => s.recentlyMoved);
   const clearMoved = useWeekGridStore((s) => s.clearMoved);
   useEffect(() => clearMoved, [clearMoved]);
@@ -141,20 +133,33 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     [days]
   );
 
+  const onSessionsChanged = useRefreshCoachingSessions();
+  const actions = useSessionActions({
+    userTimezone: timezone,
+    onReschedule,
+    onMove: openMove,
+    onSessionsChanged,
+    onSeriesMutated,
+  });
+
   const { run } = actions;
   const handlers = useMemo<SessionCardHandlers>(
     () => ({
-      onAction: (action, session) => (action === SessionAction.Move ? openMove(session) : run(action, session)),
+      onAction: run,
       onOpen: (view) => run(SessionAction.OpenSession, view.session),
       ...(canSchedule && { onMove: (view: CardView) => setMoveTarget(Some(view)) }),
     }),
-    [run, openMove, canSchedule]
+    [run, canSchedule]
   );
 
   const hours = useWorkingHours();
-  const moveModel = moveTarget.some
-    ? Some(moveSheetModel(moveTarget.val, { days, sessions, viewerId, timezone, hours, now }))
-    : None;
+  const moveModel = useMemo(
+    () =>
+      moveTarget.some
+        ? Some(moveSheetModel(moveTarget.val, { days, sessions, viewerId, timezone, hours, now }))
+        : None,
+    [moveTarget, days, sessions, viewerId, timezone, hours, now]
+  );
   const moveSession = useMoveSession();
   const selectDay = useWeekGridStore((s) => s.selectDay);
   const closeMove = () => setMoveTarget(None);

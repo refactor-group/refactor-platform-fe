@@ -21,7 +21,6 @@ import { followingPayload } from "@/lib/move-draft";
 import { seriesPayload, sessionPayload } from "@/lib/schedule-draft";
 import { writeSessionMove } from "@/lib/session-move";
 import type { RepeatChoice } from "@/lib/scheduling";
-import { toSessionDate } from "@/lib/session-window";
 import { toast } from "@/lib/toast";
 import { siteConfig } from "@/site.config";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -88,7 +87,7 @@ function firstWrite(plan: SessionPlan): Promise<unknown> {
         : CoachingSessionApi.create(sessionPayload(plan));
     }
     case "move":
-      return writeSessionMove(plan.session, plan.start, plan.minutes);
+      return writeSessionMove(plan.session.id, plan.start, plan.minutes);
     case "following":
       return CoachingSessionSeriesApi.reschedule(
         plan.seriesId,
@@ -121,7 +120,7 @@ function moveOtherWrite(plan: SessionPlan): ResultAsync<MoveOutcome, never> {
   if (plan.moveOther.none) return okAsync({ kind: "none" });
   const { session, personName, start } = plan.moveOther.val;
   return ResultAsync.fromPromise(
-    CoachingSessionApi.update(session.id, { ...session, date: toSessionDate(start) }),
+    writeSessionMove(session.id, start, session.duration_minutes),
     (error) => error
   )
     .map((): MoveOutcome => ({ kind: "moved", otherMove: { personName, start } }))
