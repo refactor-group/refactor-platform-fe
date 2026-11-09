@@ -97,6 +97,7 @@ export function SessionCard({
   const ownHintIds = useCardHintIds();
   const hintIds = sharedHint.some ? sharedHint.val : ownHintIds;
   const time = timeOfDay(view.start);
+  const length = durationText(view.session.duration_minutes);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: view.session.id, disabled: !draggable });
   const onClick = () => {
     if (justDragged.some && justDragged.val.current) return;
@@ -117,7 +118,7 @@ export function SessionCard({
           data-dimmed={String(dimmed)}
           data-draggable={String(draggable)}
           tabIndex={0}
-          aria-label={`${time}, ${view.name}`}
+          aria-label={`${time}, ${length}, ${view.name}`}
           aria-describedby={[
             ...(dimmed ? [hintIds.filteredOut] : []),
             hintIds.hint,
@@ -139,11 +140,11 @@ export function SessionCard({
         >
           <span
             className={cn(
-              "truncate text-xs tabular-nums",
+              "flex flex-wrap gap-x-1 text-xs tabular-nums",
               isPast ? "text-faint" : "text-muted-foreground"
             )}
           >
-            {time} · {durationText(view.session.duration_minutes)}
+            <span>{time}</span> <span className="whitespace-nowrap">· {length}</span>
           </span>
           <span
             className={cn(
