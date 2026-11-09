@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { Chip } from "@/components/ui/chip";
+import { durationText } from "@/lib/scheduling-copy";
 import {
   DURATION_CHIPS,
   DURATION_FIELD_MAX,
@@ -35,7 +36,7 @@ function DurationChips({ value, onChange }: DurationFieldProps) {
           onClick={() => onChange(minutes)}
           className="tabular-nums"
         >
-          {minutes} min
+          {durationText(minutes)}
         </Chip>
       ))}
     </>

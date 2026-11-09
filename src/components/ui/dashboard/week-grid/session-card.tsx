@@ -8,6 +8,7 @@ import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
 import { useClickOrDoubleClick } from "@/lib/hooks/use-click-or-double-click";
+import { durationText } from "@/lib/scheduling-copy";
 import { timeOfDay } from "@/lib/session-window";
 import {
   CardFooter,
@@ -99,11 +100,11 @@ export function SessionCard({
       >
         <span
           className={cn(
-            "text-xs tabular-nums",
+            "truncate text-xs tabular-nums",
             isPast ? "text-faint" : "text-muted-foreground"
           )}
         >
-          {time}
+          {time} · {durationText(view.session.duration_minutes)}
         </span>
         <span
           className={cn(

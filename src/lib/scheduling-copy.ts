@@ -13,6 +13,11 @@ export function sessionCount(count: number): string {
   return `${count} session${count === 1 ? "" : "s"}`;
 }
 
+/** A session length, "50 min". */
+export function durationText(minutes: number): string {
+  return `${minutes} min`;
+}
+
 export function firstNameOf(fullName: string): string {
   return fullName.trim().split(/\s+/)[0];
 }
