@@ -32,7 +32,7 @@ export function menuPerson(userId: Id, first: string, last: string): MenuPerson 
   };
 }
 
-function otherParticipant(rel: CoachingRelationshipWithUserNames, userId: Id): MenuPerson {
+export function otherParticipant(rel: CoachingRelationshipWithUserNames, userId: Id): MenuPerson {
   return rel.coach_id === userId
     ? menuPerson(rel.coachee_id, rel.coachee_first_name, rel.coachee_last_name)
     : menuPerson(rel.coach_id, rel.coach_first_name, rel.coach_last_name);

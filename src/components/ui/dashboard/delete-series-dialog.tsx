@@ -13,11 +13,12 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { CoachingSessionSeries } from "@/types/coaching-session-series";
+import type { Option } from "@/types/option";
 import { frequencyLabel } from "@/types/recurrence";
 
 export interface DeleteSeriesDialogProps {
-  series: CoachingSessionSeries | undefined;
-  participantName: string;
+  series: Option<CoachingSessionSeries>;
+  participantName: Option<string>;
   isDeleting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -30,14 +31,13 @@ export function DeleteSeriesDialog({
   onCancel,
   onConfirm,
 }: DeleteSeriesDialogProps) {
-  const open = series !== undefined;
-  const frequency = series
-    ? frequencyLabel(series.rule.recurrence.frequency).toLowerCase()
+  const frequency = series.some
+    ? frequencyLabel(series.val.rule.recurrence.frequency).toLowerCase()
     : "";
 
   return (
     <AlertDialog
-      open={open}
+      open={series.some}
       onOpenChange={(next) => {
         if (!next && !isDeleting) onCancel();
       }}
@@ -49,12 +49,12 @@ export function DeleteSeriesDialog({
             This cancels the{" "}
             <span className="font-medium text-foreground">{frequency}</span>{" "}
             series
-            {participantName && (
+            {participantName.some && (
               <>
                 {" "}
                 with{" "}
                 <span className="font-medium text-foreground">
-                  {participantName}
+                  {participantName.val}
                 </span>
               </>
             )}{" "}

@@ -8,7 +8,7 @@ import { ScheduleSummary } from "@/components/ui/new-session/schedule-summary";
 import { WhenStep } from "@/components/ui/new-session/when-step";
 import { WhoStep } from "@/components/ui/new-session/who-step";
 import { PersonHeader } from "@/components/ui/person-header";
-import { StepDialog, StepDialogHeight } from "@/components/ui/step-dialog";
+import { StepDialog, StepDialogHeight, StepDialogVariant } from "@/components/ui/step-dialog";
 import { useNewSessionDialog } from "@/lib/hooks/use-new-session-dialog";
 import { NO_SERIES, type SeriesLoad, useLoadedSeries } from "@/lib/hooks/use-schedule-data";
 import type { MoverModel, NewSessionDialogModel } from "@/lib/new-session-dialog-model";
@@ -94,6 +94,7 @@ function NewSessionDialogView({
       onClose={onClose}
       title={model.title}
       height={StepDialogHeight.Tall}
+      variant={StepDialogVariant.Steps}
       railHeader={model.mover.some ? <MoverHeader {...model.mover.val} /> : undefined}
       steps={model.rail}
       railFooter={railFooter(model)}
