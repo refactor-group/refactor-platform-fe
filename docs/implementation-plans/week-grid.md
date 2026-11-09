@@ -58,6 +58,7 @@ The pure model lives in `src/lib/week-grid/`: `week.ts`, `card.ts`, `filter.ts` 
 | D15 | The overseer runs implementers as subagents. Jim approves each phase. |
 | D16 | User-facing copy says "Cancel session" and "Cancel series", never "Delete". |
 | D17 | A coach can still remove a past session: "Remove session…" in the menu, using the same dialog with past-tense copy. |
+| D22 | Ready is a pill link like Prepare, in the positive tint with a check (Jim, 2026-11-09). Both open the session page, and later the Session glance. |
 
 ## Reuse rules
 
