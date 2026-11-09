@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
+import { Some } from "@/types/option";
 import { createMockEnrichedSession } from "../../test-utils";
 import { defaultCoachingSessionTopic } from "@/types/coaching-session-topic";
 import { CardFooter, CardTense, cardNoteText, cardView, type CardContext } from "@/lib/week-grid/card";
@@ -14,7 +15,7 @@ const topics = (n: number) => Array.from({ length: n }, () => defaultCoachingSes
 
 // Backend dates are naive UTC strings.
 function session(utc: string, topicCount: number, minutes = 50) {
-  return createMockEnrichedSession({ date: utc, duration_minutes: minutes, topics: topics(topicCount) });
+  return createMockEnrichedSession({ date: utc, duration_minutes: minutes, topics: Some(topics(topicCount)) });
 }
 
 describe("cardView", () => {

@@ -4,7 +4,7 @@ import type { GridCard } from "@/lib/week-grid/card";
 import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
 import type { Option } from "@/types/option";
 import { ScheduleDayButton } from "./empty-day";
-import { SessionCard, SessionCardLayout, type SessionCardHandlers } from "./session-card";
+import { SessionCard, SessionCardHint, SessionCardLayout, type SessionCardHandlers } from "./session-card";
 
 export interface DayAgendaProps {
   group: DayGroup<GridCard>;
@@ -22,15 +22,17 @@ export function DayAgenda({ group, handlers, onSchedule }: DayAgendaProps) {
       {group.items.length === 0 ? (
         <NoSessions day={group.day} onSchedule={scheduleOn(group, onSchedule)} />
       ) : (
-        group.items.map((card) => (
-          <SessionCard
-            key={card.session.id}
-            view={card}
-            dimmed={card.dimmed}
-            layout={SessionCardLayout.Agenda}
-            {...handlers}
-          />
-        ))
+        <SessionCardHint>
+          {group.items.map((card) => (
+            <SessionCard
+              key={card.session.id}
+              view={card}
+              dimmed={card.dimmed}
+              layout={SessionCardLayout.Agenda}
+              {...handlers}
+            />
+          ))}
+        </SessionCardHint>
       )}
     </section>
   );

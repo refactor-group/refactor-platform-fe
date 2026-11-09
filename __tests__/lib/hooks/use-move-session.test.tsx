@@ -15,7 +15,7 @@ vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => {
 const revalidate = vi.fn();
 vi.mock("@/lib/hooks/use-sse-cache-invalidation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/hooks/use-sse-cache-invalidation")>()),
-  revalidateEndpointCaches: (...a: unknown[]) => revalidate(...a),
+  useRefreshCoachingSessions: () => () => revalidate(vi.fn(), "", "/coaching_sessions"),
 }));
 
 const { toast } = vi.hoisted(() => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
