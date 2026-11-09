@@ -22,7 +22,7 @@ function view(utc: string, topicCount: number, context = COACH, series = false) 
       id: "s-1",
       date: utc,
       duration_minutes: 50,
-      topics: topics(topicCount),
+      topics: Some(topics(topicCount)),
       ...(series && { coaching_session_series_id: Some("series-1") }),
     }),
     context
@@ -53,6 +53,12 @@ describe("SessionCard", () => {
     expect(card).toHaveTextContent("10:00 AM");
     expect(card).toHaveTextContent("Alex Chen");
     expect(card).toHaveTextContent("3 topics");
+  });
+
+  it("tells keyboard and screen reader users how to act on it", () => {
+    const { card } = renderCard();
+    expect(card).toHaveAccessibleDescription(/Enter opens the session/);
+    expect(card).toHaveAccessibleDescription(/Shift\+F10 shows actions/);
   });
 
   it("is keyboard focusable and carries its tense", () => {

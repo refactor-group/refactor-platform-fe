@@ -138,6 +138,7 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - A single click waits 260ms for a possible double-click:
   - on an upcoming session the viewer coaches, it opens Reschedule;
   - otherwise it does nothing. A past session will open the Session glance once that's designed (Jim, 2026-11-05).
+- A session that's under way opens on a single click, for anyone (review of #536, 2026-11-08).
 - A double-click or Enter opens the session page.
 - This week is disabled while on the current week, which gives it its faint look.
 
