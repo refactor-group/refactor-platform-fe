@@ -51,7 +51,7 @@ Open the dashboard as the coach.
 - Seven equal columns, Monday through Sunday.
 - Today's column is tinted, and its date number sits in a filled accent pill.
 - Day labels before today are faded.
-- An empty day shows a dashed placeholder.
+- An empty day shows a dashed placeholder. An empty today also reads "No sessions today" in faint text.
 
 ### Case 1.3: every session once, on the right day and time
 
@@ -176,7 +176,7 @@ Click **Schedule session**.
 Hover an empty day from today on, in this week and in a week two or more weeks ahead, then click it.
 
 **Pass:**
-- On hover, the dashed border turns lavender and "+ Schedule" appears.
+- On hover, the dashed border turns lavender and "+ Schedule" appears. On an empty today it replaces "No sessions today".
 - The click opens the dialog on Who. After a person is picked, When shows that day.
 
 ### Case 2.6: empty days that aren't schedulable
