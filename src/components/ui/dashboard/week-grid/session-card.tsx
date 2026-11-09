@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
-import { useClickOrDoubleClick } from "@/lib/hooks/use-click-or-double-click";
 import { timeOfDay } from "@/lib/session-window";
 import {
   CardFooter,
@@ -20,7 +19,6 @@ import { SessionCardMenu, type OnSessionAction } from "./session-card-menu";
 
 export interface SessionCardHandlers {
   onAction: OnSessionAction;
-  onSelect: (view: CardView) => void;
   onOpen: (view: CardView) => void;
 }
 
@@ -52,16 +50,12 @@ function CardHintText({ id }: { id: string }) {
   );
 }
 
-export function SessionCard({ view, onAction, onSelect, onOpen }: SessionCardProps) {
+export function SessionCard({ view, onAction, onOpen }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const sharedHint = useContext(CardHintContext);
   const ownHintId = useId();
   const hintId = sharedHint.some ? sharedHint.val : ownHintId;
   const time = timeOfDay(view.start);
-  const clicks = useClickOrDoubleClick(
-    () => onSelect(view),
-    () => onOpen(view)
-  );
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && e.target === e.currentTarget) onOpen(view);
   };
@@ -75,12 +69,10 @@ export function SessionCard({ view, onAction, onSelect, onOpen }: SessionCardPro
           tabIndex={0}
           aria-label={`${time}, ${view.name}`}
           aria-describedby={hintId}
-          onClick={clicks.onClick}
-          onDoubleClick={clicks.onDoubleClick}
+          onClick={() => onOpen(view)}
           onKeyDown={onKeyDown}
           className={cn(
-            "flex min-h-[104px] flex-col gap-1.5 rounded-xl p-[11px] outline-none",
-            (view.underway || (!isPast && view.canManage)) && "cursor-pointer",
+            "flex min-h-[104px] cursor-pointer flex-col gap-1.5 rounded-xl p-[11px] outline-none",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             isPast ? "bg-well" : "bg-card shadow-card"
           )}

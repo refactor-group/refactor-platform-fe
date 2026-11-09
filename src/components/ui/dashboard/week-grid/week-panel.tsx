@@ -14,8 +14,7 @@ import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
 import { SessionAction } from "@/lib/session-actions";
 import type { MoveScope } from "@/lib/scheduling";
-import { toast } from "@/lib/toast";
-import { CardClick, cardClick, cardView, type CardView } from "@/lib/week-grid/card";
+import { cardView, type CardView } from "@/lib/week-grid/card";
 import {
   groupByDay,
   weekOf,
@@ -28,7 +27,6 @@ import {
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { type Option, None, Some } from "@/types/option";
 import type { SessionCardHandlers } from "./session-card";
-import type { OnSessionAction } from "./session-card-menu";
 import { WeekGrid } from "./week-grid";
 import { WeekPanelHeader, type WeekNavigation } from "./week-panel-header";
 
@@ -39,7 +37,6 @@ export interface WeekPanelProps {
 }
 
 const CURRENT_WEEK = 0;
-const PAST_HINT = "Past session · double-click to open its notes";
 
 // Keyed on the local date so the fetch key holds steady across clock ticks.
 function useWeekAt(offset: number, now: DateTime, timezone: string): Week {
@@ -87,7 +84,6 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const handlers = useMemo<SessionCardHandlers>(
     () => ({
       onAction: run,
-      onSelect: (view) => onCardSelect(view, run),
       onOpen: (view) => run(SessionAction.OpenSession, view.session),
     }),
     [run]
@@ -133,27 +129,6 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
       <SessionActionDialogs {...actions.dialogs} />
     </section>
   );
-}
-
-function onCardSelect(view: CardView, run: OnSessionAction) {
-  const click = cardClick(view);
-  switch (click) {
-    case CardClick.Open:
-      run(SessionAction.OpenSession, view.session);
-      return;
-    case CardClick.Reschedule:
-      run(SessionAction.Reschedule, view.session);
-      return;
-    case CardClick.PastHint:
-      toast(PAST_HINT);
-      return;
-    case CardClick.Nothing:
-      return;
-    default: {
-      const _exhaustive: never = click;
-      throw new Error(`Unhandled card click: ${_exhaustive}`);
-    }
-  }
 }
 
 function sublineFor(days: DayGroup<CardView>[], isCurrentWeek: boolean): string {
