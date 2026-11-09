@@ -47,7 +47,7 @@ vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => {
     ...actual,
     useNearestEachCoachingSessions: vi.fn(),
     useEnrichedCoachingSessionsForUser: vi.fn(),
-    CoachingSessionApi: { ...actual.CoachingSessionApi, create: vi.fn(), update: vi.fn() },
+    CoachingSessionApi: { ...actual.CoachingSessionApi, create: vi.fn(), update: vi.fn(), move: vi.fn() },
   };
 });
 vi.mock("@/lib/api/coaching-session-series", async (importOriginal) => {
@@ -57,7 +57,7 @@ vi.mock("@/lib/api/coaching-session-series", async (importOriginal) => {
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const create = vi.mocked(CoachingSessionApi.create);
-const update = vi.mocked(CoachingSessionApi.update);
+const move = vi.mocked(CoachingSessionApi.move);
 const createSeries = vi.mocked(CoachingSessionSeriesApi.create);
 const push = vi.fn();
 
@@ -107,7 +107,7 @@ beforeEach(() => {
     refresh: vi.fn(),
   } as unknown as ReturnType<typeof useOAuthConnections>);
   create.mockResolvedValue(createMockSession({ id: "new" }));
-  update.mockResolvedValue(createMockSession({ id: "e-18" }));
+  move.mockResolvedValue(createMockSession({ id: "e-18" }));
   createSeries.mockResolvedValue({ coaching_sessions: Array(8).fill(createMockSession()) } as unknown as Awaited<
     ReturnType<typeof CoachingSessionSeriesApi.create>
   >);
@@ -313,8 +313,8 @@ describe("NewSessionDialog: Resolve overlap", () => {
         provider: "google",
       })
     );
-    expect(update).toHaveBeenCalledWith("e-18", expect.objectContaining({ id: "e-18", date: "2026-08-18T20:30:00" }));
-    expect(create.mock.invocationCallOrder[0]).toBeLessThan(update.mock.invocationCallOrder[0]);
+    expect(move).toHaveBeenCalledWith("e-18", expect.objectContaining({ date: "2026-08-18T20:30:00" }));
+    expect(create.mock.invocationCallOrder[0]).toBeLessThan(move.mock.invocationCallOrder[0]);
     expect(toast.success).toHaveBeenCalledWith(
       "Scheduled · Priya Raman · Tuesday, August 18 · 2:30 PM · 50 min · Ehab moves to Tue 18, 3:30 PM"
     );
@@ -348,12 +348,12 @@ describe("NewSessionDialog: Resolve overlap", () => {
     expect(railRow("Resolve overlap")).toHaveTextContent("Keep both at 2:30 PM");
     fireEvent.click(screen.getByRole("button", { name: "Schedule session" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(update).not.toHaveBeenCalled();
+    expect(move).not.toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith("Scheduled · Priya Raman · Tuesday, August 18 · 2:30 PM · 50 min");
   });
 
   it("keeps the new session when the move fails", async () => {
-    update.mockRejectedValue(apiError(500));
+    move.mockRejectedValue(apiError(500));
     const onClose = toResolve();
     fireEvent.click(screen.getByRole("button", { name: "3:30 PM" }));
     fireEvent.click(screen.getByRole("button", { name: "Schedule session" }));
