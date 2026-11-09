@@ -68,8 +68,9 @@ const moveSession = vi.fn();
 vi.mock("@/lib/hooks/use-move-session", () => ({ useMoveSession: () => moveSession }));
 
 let wide = true;
+let widthKnown = true;
 vi.mock("@/lib/hooks/use-media-query", () => ({
-  useMediaQuery: (query: string) => (query === "(min-width: 1024px)" ? wide : false),
+  useMediaQuery: (query: string) => (query === "(min-width: 1024px)" ? (widthKnown ? Some(wide) : None) : Some(false)),
 }));
 
 const toast = vi.fn();
@@ -109,6 +110,7 @@ beforeEach(() => {
   edges = { hasEarlier: true, hasLater: true };
   selectedPerson = None;
   wide = true;
+  widthKnown = true;
   result = {
     sessions: [LATE_TODAY, THURSDAY, EARLY_TODAY, NEXT_WEEK],
     isLoading: false,
@@ -209,6 +211,32 @@ describe("WeekPanel", () => {
     const panel = screen.getByRole("region", { name: "This week" });
     expect(panel).toHaveAttribute("aria-busy", "true");
     expect(panel).not.toHaveTextContent(/\d+ sessions?\b/);
+  });
+});
+
+describe("WeekPanel before the screen width is known", () => {
+  it("shows both loading layouts, letting CSS pick one, and no cards yet", () => {
+    widthKnown = false;
+    renderPanel();
+    const grid = screen.getByTestId("week-grid-pending");
+    expect(grid).toHaveClass("hidden", "lg:block");
+    expect(within(grid).getAllByRole("group", { name: /, August/ })).toHaveLength(7);
+    expect(screen.getByTestId("day-agenda-pending")).toHaveClass("lg:hidden");
+    expect(screen.queryAllByTestId(/^session-card-/)).toHaveLength(0);
+    expect(screen.getByRole("region", { name: "This week" })).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("hides Back to this week on wide screens with CSS until the width is known", () => {
+    widthKnown = false;
+    renderPanel();
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("button", { name: "Back to this week" })).toHaveClass("lg:hidden");
+  });
+
+  it("renders the chosen layout alone once the width is known", () => {
+    renderPanel();
+    expect(screen.queryByTestId("week-grid-pending")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("day-agenda-pending")).not.toBeInTheDocument();
   });
 });
 
