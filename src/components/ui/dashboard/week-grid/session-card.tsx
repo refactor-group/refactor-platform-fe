@@ -29,33 +29,49 @@ export interface SessionCardProps extends SessionCardHandlers {
 
 const CARD_HINT = "Enter opens the session. Shift+F10 shows actions.";
 
-const CardHintContext = createContext<Option<string>>(None);
+interface CardHintIds {
+  hint: string;
+  filteredOut: string;
+}
 
-/** Renders the cards' keyboard hint once for every card inside it to reference. */
-export function SessionCardHint({ children }: { children: ReactNode }) {
+const CardHintContext = createContext<Option<CardHintIds>>(None);
+
+function useCardHintIds(): CardHintIds {
   const id = useId();
-  const hintId = useMemo(() => Some(id), [id]);
+  return useMemo(() => ({ hint: `${id}hint`, filteredOut: `${id}filtered` }), [id]);
+}
+
+/** Renders the cards' descriptions once for every card inside it to reference. */
+export function SessionCardHint({ children }: { children: ReactNode }) {
+  const ids = useCardHintIds();
+  const shared = useMemo(() => Some(ids), [ids]);
   return (
-    <CardHintContext.Provider value={hintId}>
-      <CardHintText id={id} />
+    <CardHintContext.Provider value={shared}>
+      <CardHintText ids={ids} />
       {children}
     </CardHintContext.Provider>
   );
 }
 
-function CardHintText({ id }: { id: string }) {
+function CardHintText({ ids }: { ids: CardHintIds }) {
   return (
-    <span id={id} className="sr-only">
-      {CARD_HINT}
-    </span>
+    <>
+      <span id={ids.hint} className="sr-only">
+        {CARD_HINT}
+      </span>
+      {/* Hidden, so it's read only as a dimmed card's description. */}
+      <span id={ids.filteredOut} hidden>
+        Filtered out.
+      </span>
+    </>
   );
 }
 
 export function SessionCard({ view, dimmed = false, onAction, onOpen }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const sharedHint = useContext(CardHintContext);
-  const ownHintId = useId();
-  const hintId = sharedHint.some ? sharedHint.val : ownHintId;
+  const ownHintIds = useCardHintIds();
+  const hintIds = sharedHint.some ? sharedHint.val : ownHintIds;
   const time = timeOfDay(view.start);
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && e.target === e.currentTarget) onOpen(view);
@@ -70,7 +86,7 @@ export function SessionCard({ view, dimmed = false, onAction, onOpen }: SessionC
           data-dimmed={String(dimmed)}
           tabIndex={0}
           aria-label={`${time}, ${view.name}`}
-          aria-describedby={hintId}
+          aria-describedby={dimmed ? `${hintIds.filteredOut} ${hintIds.hint}` : hintIds.hint}
           onClick={() => onOpen(view)}
           onKeyDown={onKeyDown}
           className={cn(
@@ -102,7 +118,7 @@ export function SessionCard({ view, dimmed = false, onAction, onOpen }: SessionC
           </div>
         </div>
       </SessionCardMenu>
-      {sharedHint.none && <CardHintText id={ownHintId} />}
+      {sharedHint.none && <CardHintText ids={ownHintIds} />}
     </>
   );
 }
