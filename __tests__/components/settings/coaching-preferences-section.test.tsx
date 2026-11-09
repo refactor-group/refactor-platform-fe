@@ -267,6 +267,21 @@ describe("CoachingPreferencesSection", () => {
       expect(mockUpdate).toHaveBeenCalledTimes(1);
     });
 
+    it("doesn't send the same change again while the save is still settling", async () => {
+      const pending = vi.fn(() => new Promise<void>(() => {}));
+      mockUserState = { ...mockUserState, refresh: pending };
+      const { rerender } = render(<CoachingPreferencesSection />);
+      fireEvent.change(start(), { target: { value: "09:00" } });
+      for (let i = 0; i < 3; i += 1) {
+        await act(async () => {
+          vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+        });
+        mockUserState = { ...mockUserState, refresh: vi.fn(() => new Promise<void>(() => {})) };
+        rerender(<CoachingPreferencesSection />);
+      }
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+    });
+
     it("a failed save shows the saved value again, and picking the same value retries", async () => {
       mockUpdate.mockRejectedValue(makeApiError(403, { status_code: 403, error: "forbidden" }));
       const { rerender } = render(<CoachingPreferencesSection />);
