@@ -39,12 +39,12 @@ vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => {
     ...actual,
     useNearestEachCoachingSessions: vi.fn(),
     useEnrichedCoachingSessionsForUser: vi.fn(),
-    CoachingSessionApi: { ...actual.CoachingSessionApi, update: vi.fn() },
+    CoachingSessionApi: { ...actual.CoachingSessionApi, update: vi.fn(), move: vi.fn() },
   };
 });
 vi.mock("@/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-const update = vi.mocked(CoachingSessionApi.update);
+const move = vi.mocked(CoachingSessionApi.move);
 const push = vi.fn();
 const originalNow = Settings.now;
 
@@ -116,7 +116,7 @@ describe("NewSessionDialog: move draft", () => {
 
 describe("NewSessionDialog: move errors", () => {
   it("sends a revoked Google connection to Settings", async () => {
-    update.mockRejectedValue(apiError(409, { error: "oauth_token_revoked" }));
+    move.mockRejectedValue(apiError(409, { error: "oauth_token_revoked" }));
     const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() => expect(push).toHaveBeenCalledWith("/settings/integrations"));
@@ -125,7 +125,7 @@ describe("NewSessionDialog: move errors", () => {
   });
 
   it("doesn't send another conflict to Settings", async () => {
-    update.mockRejectedValue(apiError(409, { error: "other_conflict" }));
+    move.mockRejectedValue(apiError(409, { error: "other_conflict" }));
     const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() =>
@@ -136,7 +136,7 @@ describe("NewSessionDialog: move errors", () => {
   });
 
   it("shows the update copy on a validation error, not the backend's message", async () => {
-    update.mockRejectedValue(
+    move.mockRejectedValue(
       apiError(422, { error: "validation_error", message: "duration_minutes must be between 1 and 480" })
     );
     const onClose = renderMove(ONE_OFF);
@@ -149,7 +149,7 @@ describe("NewSessionDialog: move errors", () => {
 
   it("only logs an error that isn't from the API", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    update.mockRejectedValue(new Error("Unexpected"));
+    move.mockRejectedValue(new Error("Unexpected"));
     const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() => expect(consoleError).toHaveBeenCalled());

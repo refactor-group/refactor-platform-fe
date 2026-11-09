@@ -28,9 +28,9 @@ export interface DaySlotsInput {
   now: DateTime;
 }
 
-function workingStarts(day: DateTime, hours: WorkingHours): DateTime[] {
+function workingStarts(day: DateTime, hours: WorkingHours, minutes: number): DateTime[] {
   const starts: DateTime[] = [];
-  for (let minute = hours.start; minute <= hours.end; minute += SLOT_STEP_MINUTES) {
+  for (let minute = hours.start; minute + minutes <= hours.end; minute += SLOT_STEP_MINUTES) {
     starts.push(atMinute(day, minute));
   }
   return starts;
@@ -53,7 +53,7 @@ export function daySlots(input: DaySlotsInput): DaySlot[] {
   const { day, moving, busy, hours } = input;
   const minutes = moving.end.diff(moving.start, "minutes").minutes;
   const others = busy.filter((b) => b.id !== moving.id);
-  return withCurrent(workingStarts(day, hours), day, moving.start).map((start) => ({
+  return withCurrent(workingStarts(day, hours, minutes), day, moving.start).map((start) => ({
     start,
     state: stateOf({ start, minutes }, input, others),
   }));

@@ -63,6 +63,11 @@ function MoveSheetBody({ model, onConfirm }: MoveSheetBodyProps) {
   const [day, setDay] = useState(current.startOf("day"));
   const [pick, setPick] = useState(current);
   const isPicked = (start: DateTime) => start.equals(pick);
+  // A pick belongs to the shown day; a new day starts over from the current slot.
+  const showDay = (next: DateTime) => {
+    setDay(next);
+    setPick(current);
+  };
   return (
     <>
       <SheetTitle className="shrink-0 px-5 pb-1 pt-3 text-base">Move {name}&apos;s session</SheetTitle>
@@ -74,7 +79,7 @@ function MoveSheetBody({ model, onConfirm }: MoveSheetBodyProps) {
               day={d.day}
               past={d.past}
               selected={d.day.hasSame(day, "day")}
-              onSelect={setDay}
+              onSelect={showDay}
               className="h-11 w-11"
             />
           ))}
