@@ -82,10 +82,23 @@ describe("SessionCard", () => {
     expect(card).not.toHaveTextContent("Ready");
   });
 
-  it("reads Ready with at least one topic, with no Prepare link", () => {
+  it("links Ready to the session page, as a pill like Prepare", () => {
     const { card } = renderCard();
-    expect(card).toHaveTextContent("Ready");
+    const ready = within(card).getByRole("link", { name: /Ready/ });
+    expect(ready).toHaveAttribute("href", "/coaching-sessions/s-1");
     expect(within(card).queryByRole("link", { name: /Prepare/ })).not.toBeInTheDocument();
+    const prepare = within(renderCard(view("2026-08-19T15:00:00", 0)).card).getByRole("link", { name: /Prepare/ });
+    expect(ready.className.split(" ").filter((c) => !/^(bg|text|hover:bg)-/.test(c)).sort()).toEqual(
+      prepare.className.split(" ").filter((c) => !/^(bg|text|hover:bg)-/.test(c)).sort()
+    );
+  });
+
+  it("leaves Ready to its own link, like Prepare", () => {
+    const { card, onOpen } = renderCard();
+    const ready = within(card).getByRole("link", { name: /Ready/ });
+    fireEvent.keyDown(ready, { key: "Enter" });
+    fireEvent.click(ready);
+    expect(onOpen).not.toHaveBeenCalled();
   });
 
   it("reads Done once past", () => {

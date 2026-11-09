@@ -68,7 +68,7 @@ Open the dashboard as the coach.
 
 **Pass:**
 - **B:** pulsing dot and "in 40 min" (or close to it), plus a **Prepare** pill.
-- **C:** "3 topics" and a green **✓ Ready**.
+- **C:** "3 topics" and a green **✓ Ready** pill, the same shape as Prepare, that opens the session.
 - **A** (when more than 2 hours away): **No topics yet** in amber, plus Prepare.
 - **D:** grey background with no shadow, faint time, muted name, "2 topics", and **Done**.
 
