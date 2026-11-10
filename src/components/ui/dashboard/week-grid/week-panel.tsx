@@ -248,8 +248,8 @@ function WeekBody({ width, isLoading, drag, ...agenda }: WeekBodyProps) {
   const { days, now, handlers, onSchedule, noMatches, isUnloaded } = agenda;
   if (width.none) return <PendingLayouts {...agenda} drag={drag} />;
   const wide = width.val;
-  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading isUnloaded={isUnloaded} /> : <DayAgendaSkeleton />;
-  if (!wide) return <WeekAgenda {...agenda} />;
+  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading isUnloaded={isUnloaded} /> : <WeekAgenda {...agenda} noMatches={false} isLoading />;
+  if (!wide) return <WeekAgenda {...agenda} isLoading={false} />;
   return (
     <div className="relative">
       <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading={false} isUnloaded={isUnloaded} />
@@ -281,7 +281,8 @@ interface WeekAgendaProps {
   isUnloaded: boolean;
 }
 
-function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches, isUnloaded }: WeekAgendaProps) {
+/** While a week loads, its dates still show; only the day's sessions wait. */
+function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches, isUnloaded, isLoading }: WeekAgendaProps & { isLoading: boolean }) {
   const selectedDay = useWeekGridStore((s) => s.selectedDay);
   const selectDay = useWeekGridStore((s) => s.selectDay);
   const day = agendaDay(week, selectedDay, now);
@@ -296,6 +297,7 @@ function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches, isUnload
         onSchedule={onSchedule}
         now={nowLineOn(group, now)}
         isUnloaded={isUnloaded}
+        isLoading={isLoading}
       />
     </>
   );
