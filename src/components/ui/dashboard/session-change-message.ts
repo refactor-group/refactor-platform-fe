@@ -43,6 +43,10 @@ function removedVerb(removal: SessionRemoval): string {
       return "Cancelled";
     case SessionRemoval.Remove:
       return "Removed";
+    default: {
+      const _exhaustive: never = removal;
+      throw new Error(`Unhandled removal: ${_exhaustive}`);
+    }
   }
 }
 

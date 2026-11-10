@@ -110,6 +110,10 @@ function removalLabel(removal: SessionRemoval): string {
       return "Cancel session…";
     case SessionRemoval.Remove:
       return "Remove session…";
+    default: {
+      const _exhaustive: never = removal;
+      throw new Error(`Unhandled removal: ${_exhaustive}`);
+    }
   }
 }
 
@@ -137,5 +141,9 @@ export function sessionActionLabel(
       return removalLabel(sessionRemovalFor(context.isLocked));
     case SessionAction.DeleteSeries:
       return "Cancel series…";
+    default: {
+      const _exhaustive: never = action;
+      throw new Error(`Unhandled action: ${_exhaustive}`);
+    }
   }
 }

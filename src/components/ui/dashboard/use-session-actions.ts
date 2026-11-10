@@ -48,6 +48,10 @@ function removalFailedMessage(removal: SessionRemoval): string {
       return "Couldn't cancel the session · Try again";
     case SessionRemoval.Remove:
       return "Couldn't remove the session · Try again";
+    default: {
+      const _exhaustive: never = removal;
+      throw new Error(`Unhandled removal: ${_exhaustive}`);
+    }
   }
 }
 
@@ -139,6 +143,10 @@ export function useSessionActions({
         case SessionAction.DeleteSeries:
           if (seriesId.some) setSeriesAction({ kind: "delete", seriesId: seriesId.val });
           return;
+        default: {
+          const _exhaustive: never = action;
+          throw new Error(`Unhandled action: ${_exhaustive}`);
+        }
       }
     },
     [router, onReschedule, onMove, editSeries, requestResend, userTimezone]
