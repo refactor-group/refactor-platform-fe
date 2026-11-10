@@ -32,7 +32,7 @@ export interface SeriesDetailDialogProps {
 const PAGE_SIZE = 10;
 
 enum SessionRowStatus {
-  Done = "done",
+  Previous = "previous",
   Soonest = "soonest",
   Later = "later",
 }
@@ -60,19 +60,19 @@ function sessionRowText(start: DateTime, now: DateTime): string {
   return `${start.toFormat("ccc, LLL d")}${year} · ${start.toFormat("h:mm a")}`;
 }
 
-/** Past sessions are done; the first one after them is the soonest. */
+/** Past sessions are previous; the first one after them is the soonest. */
 function sessionRows(sessions: CoachingSession[]): SessionRow[] {
   const past = sessions.map((session) => isPastSession(session));
   const soonestIndex = past.indexOf(false);
   return sessions.map((session, i) => ({
     session,
-    status: past[i] ? SessionRowStatus.Done : i === soonestIndex ? SessionRowStatus.Soonest : SessionRowStatus.Later,
+    status: past[i] ? SessionRowStatus.Previous : i === soonestIndex ? SessionRowStatus.Soonest : SessionRowStatus.Later,
   }));
 }
 
 function sessionCountsText(rows: SessionRow[]): string {
-  const done = rows.filter((row) => row.status === SessionRowStatus.Done).length;
-  return `${rows.length - done} upcoming · ${done} done`;
+  const previous = rows.filter((row) => row.status === SessionRowStatus.Previous).length;
+  return `${rows.length - previous} upcoming · ${previous} previous`;
 }
 
 function sessionsLoad(
@@ -123,8 +123,8 @@ function SeriesRailHeader({ person, facts }: { person: Option<MenuPerson>; facts
 
 function RowStatusLabel({ status, start, now }: { status: SessionRowStatus; start: DateTime; now: DateTime }) {
   switch (status) {
-    case SessionRowStatus.Done:
-      return <span className="text-xs text-muted-foreground">Done</span>;
+    case SessionRowStatus.Previous:
+      return <span className="text-xs text-muted-foreground">Previous</span>;
     case SessionRowStatus.Soonest:
       return <Pill className="bg-brand-tint text-brand-strong">{relativeDayText(start, now)}</Pill>;
     case SessionRowStatus.Later:
@@ -146,7 +146,7 @@ function SessionRowLink({ row, timezone, now }: { row: SessionRow; timezone: str
       <span
         className={cn(
           "flex-1 text-item font-medium tabular-nums",
-          row.status === SessionRowStatus.Done ? "text-muted-foreground" : "text-foreground"
+          row.status === SessionRowStatus.Previous ? "text-muted-foreground" : "text-foreground"
         )}
       >
         {sessionRowText(start, now)}

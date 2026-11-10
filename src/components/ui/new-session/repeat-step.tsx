@@ -82,9 +82,9 @@ function EndFields({ labelledBy, end, defaultEnd, lastSession, onEndChange }: En
       onValueChange={(kind) =>
         onEndChange(kind === "until" ? { kind: "until", until } : { kind: "count", count })
       }
-      className="gap-1"
+      className="gap-3 modal:gap-1"
     >
-      <div className="flex h-11 items-center gap-2.5 modal:h-10">
+      <div className="flex min-h-11 items-center gap-2.5 modal:min-h-10">
         <RadioGroupItem id={`${id}-count`} value="count" className={RADIO_CLASSES} />
         <label htmlFor={`${id}-count`} className={LABEL_CLASSES}>
           After
@@ -99,7 +99,7 @@ function EndFields({ labelledBy, end, defaultEnd, lastSession, onEndChange }: En
         />
         <span className="text-sm text-muted-foreground">{sessions}</span>
       </div>
-      <div className="flex h-11 items-center gap-2.5 modal:h-10">
+      <div className="flex min-h-11 items-center gap-2.5 modal:min-h-10">
         <RadioGroupItem id={`${id}-until`} value="until" className={RADIO_CLASSES} />
         <label htmlFor={`${id}-until`} className={LABEL_CLASSES}>
           On
