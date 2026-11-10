@@ -11,6 +11,10 @@ function toneClasses(tone: PulsingDotTone): { ring: string; dot: string } {
       return { ring: "bg-foreground/40", dot: "bg-foreground/70" };
     case PulsingDotTone.Accent:
       return { ring: "bg-brand/40", dot: "bg-brand" };
+    default: {
+      const _exhaustive: never = tone;
+      throw new Error(`Unhandled tone: ${_exhaustive}`);
+    }
   }
 }
 
