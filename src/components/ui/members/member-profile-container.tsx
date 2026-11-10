@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useUser, useUserMutation } from "@/lib/api/users"
+import { useUser, useUserProfileMutation } from "@/lib/api/users"
 import { ProfileInfoUpdateForm } from "@/components/ui/members/profile-info-update-form"
 import { PasswordUpdateForm } from "@/components/ui/members/password-update-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from "@/lib/toast"
 import { useAuthStore } from "@/lib/providers/auth-store-provider"
 import { Id } from "@/types/general"
-import { User, NewUserPassword } from "@/types/user"
+import { NewUserPassword, UserProfileUpdate } from "@/types/user"
 import { useUserPasswordMutation } from "@/lib/api/users"
 import { useLogoutUser } from "@/lib/hooks/use-logout-user"
 import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general"
@@ -17,21 +17,21 @@ import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general"
 export function MemberProfileContainer({ userId }: { userId: Id }) {
     const { userId: currentUserId, setTimezone } = useAuthStore((state) => state)
     const { user, isLoading, refresh } = useUser(userId)
-    const { update: updateUser, isLoading: isUpdating } = useUserMutation()
+    const { update: updateProfile, isLoading: isUpdating } = useUserProfileMutation()
     const { update: updatePassword } = useUserPasswordMutation()
     const [activeTab, setActiveTab] = useState("profile")
     const logoutUser = useLogoutUser()
 
     const handleProfileUpdate = async (
-        updatedUser: User
+        profile: UserProfileUpdate
     ) => {
         try {
-            await updateUser(userId, updatedUser)
+            await updateProfile(userId, profile)
             toast("Profile updated")
             
             // Update auth store timezone if it was changed
-            if (updatedUser.timezone) {
-                setTimezone(updatedUser.timezone)
+            if (profile.timezone) {
+                setTimezone(profile.timezone)
             }
             
             refresh()
