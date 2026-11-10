@@ -227,6 +227,8 @@ describe("WeekPanel", () => {
     expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledTimes(1);
+    // SWR's refresh treats an argument as new data; the click must not reach it.
+    expect(refresh).toHaveBeenCalledWith();
   });
 
   it("doesn't call a day empty when nothing loaded", () => {
@@ -794,6 +796,18 @@ describe("WeekPanel when the server can't be reached (read only)", () => {
     );
     expect(screen.queryByText(/Can't reach the server|Couldn't load this week/)).not.toBeInTheDocument();
     expect(button("Schedule session")).toBeEnabled();
+  });
+});
+
+describe("WeekPanel sessions starting soon", () => {
+  it("still offers the invite resend before the session starts", () => {
+    // 2:15 PM in Chicago, half an hour after now: Live, but not started.
+    result = { ...result, sessions: [session("soon", "2026-08-18T19:15:00")] };
+    renderPanel();
+    const card = screen.getByTestId("session-card-soon");
+    expect(card).toHaveAttribute("data-tense", "live");
+    fireEvent.contextMenu(card);
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toContain("Resend invite");
   });
 });
 

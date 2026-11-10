@@ -39,6 +39,12 @@ describe("cardView", () => {
     expect(view.note).toEqual({ kind: "relative", text: "in 45 min", pulse: true, topicCount: 0 });
   });
 
+  it("knows whether the session has started: not while it's only coming up soon", () => {
+    expect(cardView(session("2026-08-18T19:30:00", 0), COACH).started).toBe(false);
+    expect(cardView(session("2026-08-18T18:30:00", 0), COACH).started).toBe(true);
+    expect(cardView(session("2026-08-18T21:30:00", 0), COACH).started).toBe(false);
+  });
+
   it("reads now while the session is under way", () => {
     const view = cardView(session("2026-08-18T18:30:00", 2), COACH);
     expect(view.tense).toBe(CardTense.Live);
