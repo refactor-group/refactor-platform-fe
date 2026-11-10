@@ -155,12 +155,13 @@ export function SessionCard({
             {view.name}
           </span>
           <CardNoteLine note={view.note} />
-          <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-1.5">
             <CardFooterLine footer={view.footer} sessionId={view.session.id} />
             {isAgenda && (
-              <div className="ml-auto flex items-center gap-2">
-                {canMove && onMove && <CardButton label="Move" onClick={() => onMove(view)} />}
-                <CardButton label="Open session" onClick={() => onOpen(view)} />
+              <div className="ml-auto flex items-center gap-1.5">
+                {canMove && onMove && <CardButton label="Move" name="Move" onClick={() => onMove(view)} />}
+                {/* "Open" fits beside Ready and Move on a phone; the name keeps "session". */}
+                <CardButton label="Open" name="Open session" onClick={() => onOpen(view)} />
               </div>
             )}
           </div>
@@ -175,12 +176,13 @@ function stopPropagation(e: SyntheticEvent) {
   e.stopPropagation();
 }
 
-function CardButton({ label, onClick }: { label: string; onClick: () => void }) {
+function CardButton({ label, name, onClick }: { label: string; name: string; onClick: () => void }) {
   return (
     <Button
       variant="secondary"
       size="sm"
-      className="text-[13px]"
+      aria-label={name}
+      className="px-3 text-[13px]"
       onClick={(e) => {
         e.stopPropagation();
         onClick();
