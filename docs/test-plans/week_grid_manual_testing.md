@@ -42,7 +42,7 @@ Results go in the PR for the layer under test, not in this plan.
 Open the dashboard as the coach.
 
 **Pass:**
-- Below the Upcoming Session and Goals cards, a white panel titled **This week** shows the range, for example "Aug 17 – 23".
+- Below the Upcoming Session and Goals cards, a white panel titled **This week** shows the range with its year, for example "Aug 17 – 23, 2026".
 - The old Coaching Sessions card is gone: no Upcoming or Previous tabs, no buckets, no hover preview.
 
 ### Case 1.2: days and today
@@ -149,8 +149,9 @@ Click next, then previous.
 
 **Pass:**
 - Titles read Next week, This week, Last week, then "Week of …".
-- The range is right, including "Aug 31 – Sep 6" across months.
+- The range is right, with its year, including "Aug 31 – Sep 6, 2026" across months.
 - The range crosses a month boundary at least once.
+- Paging into January shows both years across the boundary, for example "Dec 28, 2026 – Jan 3, 2027", then the new year alone.
 
 ### Case 2.2: This week
 

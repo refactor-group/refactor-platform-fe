@@ -52,11 +52,13 @@ export function weekTitle(offset: number, week: Week): string {
   }
 }
 
+/** "Aug 17 – 23, 2026", "Aug 31 – Sep 6, 2026", or "Dec 28, 2026 – Jan 3, 2027". */
 export function weekRange(week: Week): string {
   const first = week.days[0];
   const last = week.days[DAYS_IN_WEEK - 1];
-  const lastFormat = first.hasSame(last, "month") ? "d" : "LLL d";
-  return `${first.toFormat("LLL d")} – ${last.toFormat(lastFormat)}`;
+  const firstFormat = first.hasSame(last, "year") ? "LLL d" : "LLL d, yyyy";
+  const lastFormat = first.hasSame(last, "month") ? "d, yyyy" : "LLL d, yyyy";
+  return `${first.toFormat(firstFormat)} – ${last.toFormat(lastFormat)}`;
 }
 
 export function weekSubline(visible: number, today: Option<number>): string {
