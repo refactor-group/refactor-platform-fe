@@ -235,6 +235,16 @@ describe("WeekPanel", () => {
     expect(screen.queryAllByTestId(/^session-card-/)).toHaveLength(0);
   });
 
+  it("keeps a phone's day strip and day heading while a week loads", () => {
+    wide = false;
+    result = { ...result, sessions: [], isLoading: true };
+    renderPanel();
+    expect(screen.getByRole("button", { name: "Tuesday, August 18" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Tuesday, August 18" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading sessions" })).toBeInTheDocument();
+    expect(screen.queryByText("No sessions")).not.toBeInTheDocument();
+  });
+
   it("marks the panel busy while loading, without a count", () => {
     result = { ...result, sessions: [], isLoading: true };
     renderPanel();
