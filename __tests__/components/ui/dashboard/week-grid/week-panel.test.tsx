@@ -464,6 +464,22 @@ describe("WeekPanel person filter", () => {
     expect(screen.getByText("No sessions match this week.")).toBeInTheDocument();
   });
 
+  it("offers no invite resend on a session that ended earlier today, though it can still be rescheduled", () => {
+    renderPanel();
+    fireEvent.contextMenu(screen.getByTestId("session-card-early-today"));
+    const items = screen.getAllByRole("menuitem").map((i) => i.textContent?.trim());
+    expect(items).toContain("Reschedule…");
+    expect(items).not.toContain("Resend invite");
+  });
+
+  it("doesn't say nothing matches when the week failed to load", () => {
+    selectedPerson = Some(SAM);
+    result = { ...result, sessions: [], isError: true };
+    renderPanel();
+    expect(screen.getByText("Couldn't load this week's sessions.")).toBeInTheDocument();
+    expect(screen.queryByText("No sessions match this week.")).not.toBeInTheDocument();
+  });
+
   it("stays quiet when nothing is filtered", () => {
     result = { ...result, sessions: [] };
     renderPanel();
@@ -566,6 +582,21 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(name).toBe("Alex Chen");
     expect(to.toISO()).toBe(DateTime.fromISO("2026-08-20T11:00", { zone: TZ }).toISO());
     expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
+  });
+
+  it("closes an open Move sheet when the week's read fails, so nothing moves on stale times", () => {
+    const { rerender } = renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    expect(moveSheet()).toBeInTheDocument();
+    result = { ...result, isError: true };
+    rerender(
+      <WeekGridStoreProvider>
+        <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />
+      </WeekGridStoreProvider>
+    );
+    expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
+    expect(moveSession).not.toHaveBeenCalled();
   });
 
   it("opens the same sheet from the long-press menu's Move…", () => {
