@@ -196,6 +196,17 @@ test.describe('Week grid on a phone for someone who coaches', () => {
     await expect(page.getByTestId('session-card-jane-today').getByRole('button', { name: 'Move' })).toBeVisible()
   })
 
+  test("a long press opens the card's menu without selecting its text or showing iOS's callout", async ({ page }) => {
+    const style = await page.getByTestId('session-card-jane-today').getByText('Jane Smith').evaluate((el) => {
+      const s = getComputedStyle(el)
+      return {
+        userSelect: s.userSelect || s.getPropertyValue('-webkit-user-select'),
+        callout: CSS.supports('-webkit-touch-callout', 'none') ? s.getPropertyValue('-webkit-touch-callout') : 'none',
+      }
+    })
+    expect(style).toEqual({ userSelect: 'none', callout: 'none' })
+  })
+
   test('a Ready card keeps its pill, Move and Open on one line', async ({ page }) => {
     const card = page.getByTestId('session-card-jane-ready')
     const parts = [
