@@ -47,6 +47,19 @@ const ROSA_MONDAY = session('rosa-monday', '2026-10-19T15:00:00', COACHED_BY_ROS
 const ROSA_SERIES_FRIDAY = session('rosa-series-friday', '2026-10-23T18:00:00', COACHED_BY_ROSA, 'series-rosa')
 const JANE_FRIDAY = session('jane-friday', '2026-10-23T15:00:00', COACHING_JANE)
 const JANE_TODAY = session('jane-today', '2026-10-21T20:00:00', COACHING_JANE)
+const TOPIC = (sessionId: string) => ({
+  id: `topic-${sessionId}`,
+  coaching_session_id: sessionId,
+  user_id: 'user-jane',
+  body: 'Quarterly goals',
+  priority: null,
+  status: 'open',
+  moved_from_session_id: null,
+  created_at: '2026-10-20T12:00:00Z',
+  updated_at: '2026-10-20T12:00:00Z',
+})
+// The widest footer a coach's agenda card gets: Ready, Move and Open.
+const JANE_READY = { ...session('jane-ready', '2026-10-21T22:00:00', COACHING_JANE), topics: [TOPIC('jane-ready')] }
 const FAR_AHEAD = session('far-ahead', '2027-01-04T15:00:00', COACHED_BY_ROSA)
 
 const json = (data: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) })
@@ -172,11 +185,28 @@ test.describe('Week grid on a phone for someone who coaches', () => {
     await open(page, context, {
       isACoach: true,
       relationships: [COACHED_BY_ROSA, COACHING_JANE],
-      sessions: [JANE_TODAY],
+      sessions: [JANE_TODAY, JANE_READY],
     })
   })
 
   test("today's agenda offers Move on a session they coach", async ({ page }) => {
     expect(await menuItems(page, 'jane-today')).toContain('Move…')
+  })
+
+  test('a Ready card keeps its pill, Move and Open on one line', async ({ page }) => {
+    const card = page.getByTestId('session-card-jane-ready')
+    const parts = [
+      card.getByRole('link', { name: /Ready/ }),
+      card.getByRole('button', { name: 'Move' }),
+      card.getByRole('button', { name: 'Open session' }),
+    ]
+    const rows = async () =>
+      new Set(await Promise.all(parts.map(async (p) => {
+        const b = (await p.boundingBox())!
+        return Math.round(b.y + b.height / 2)
+      }))).size
+    expect(await rows()).toBe(1)
+    await page.setViewportSize({ width: 360, height: 780 })
+    expect(await rows()).toBe(1)
   })
 })
