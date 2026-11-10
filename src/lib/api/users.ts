@@ -9,6 +9,7 @@ import {
   NewUserPassword,
   UserLookupResult,
   UserPreferencesUpdate,
+  UserProfileUpdate,
   defaultUser,
 } from "@/types/user";
 import { buildQueryString } from "./query-params";
@@ -100,20 +101,6 @@ export const useUser = (id: Id) => {
 };
 
 /**
- * Hook for user mutations.
- * Provides methods to create, update, and delete users.
- */
-export const useUserMutation = () => {
-  return EntityApi.useEntityMutation<User>(USERS_BASEURL, {
-    create: UserApi.create,
-    createNested: UserApi.createNested,
-    update: UserApi.update,
-    delete: UserApi.delete,
-    deleteNested: UserApi.deleteNested,
-  });
-};
-
-/**
  * Hook for user password mutations.
  * Provides methods to update user password.
  */
@@ -128,12 +115,15 @@ export const useUserPasswordMutation = () => {
  * Hook for saving a user's preferences.
  * Sends only the fields given, so it can't overwrite fields changed elsewhere.
  */
-export const useUserPreferencesMutation = () => {
-  return EntityApi.useEntityMutation<UserPreferencesUpdate, User>(USERS_BASEURL, {
-    update: async (id: Id, changes: UserPreferencesUpdate): Promise<User> =>
-      EntityApi.updateFn<UserPreferencesUpdate, User>(`${USERS_BASEURL}/${id}`, changes),
+export const useUserPreferencesMutation = () => usePartialUserMutation<UserPreferencesUpdate>();
+
+/** Hook for saving the profile form's fields, and only those. */
+export const useUserProfileMutation = () => usePartialUserMutation<UserProfileUpdate>();
+
+const usePartialUserMutation = <T,>() =>
+  EntityApi.useEntityMutation<T, User>(USERS_BASEURL, {
+    update: async (id: Id, changes: T): Promise<User> => EntityApi.updateFn<T, User>(`${USERS_BASEURL}/${id}`, changes),
   });
-};
 
 /** Ours, not the backend's: its 429 prose names neither the cause nor what to do. */
 export const USER_LOOKUP_RATE_LIMITED_MESSAGE =
