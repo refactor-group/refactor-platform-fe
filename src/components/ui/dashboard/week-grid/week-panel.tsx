@@ -282,7 +282,7 @@ interface WeekAgendaProps {
 }
 
 /** While a week loads, its dates still show; only the day's sessions wait. */
-function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches, isUnloaded, isLoading }: WeekAgendaProps & { isLoading: boolean }) {
+function WeekAgenda({ days, week, now, handlers, noMatches, isUnloaded, isLoading }: WeekAgendaProps & { isLoading: boolean }) {
   const selectedDay = useWeekGridStore((s) => s.selectedDay);
   const selectDay = useWeekGridStore((s) => s.selectDay);
   const day = agendaDay(week, selectedDay, now);
@@ -294,7 +294,6 @@ function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches, isUnload
       <DayAgenda
         group={group}
         handlers={handlers}
-        onSchedule={onSchedule}
         now={nowLineOn(group, now)}
         isUnloaded={isUnloaded}
         isLoading={isLoading}

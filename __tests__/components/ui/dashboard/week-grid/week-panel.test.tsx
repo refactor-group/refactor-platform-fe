@@ -507,12 +507,12 @@ describe("WeekPanel below 1024px", () => {
     expect(screen.getAllByTestId(/^session-card-/).map((c) => c.dataset.testid)).toEqual(["session-card-thursday"]);
   });
 
-  it("says No sessions on an empty day, with Schedule from today on", () => {
+  it("says No sessions on an empty day, leaving scheduling to Schedule session", () => {
     renderPanel();
     fireEvent.click(pill("Wednesday, August 19"));
     expect(screen.getByText("No sessions")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Schedule on Wednesday, August 19" }));
-    expect(onSchedule).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schedule session" })).toBeInTheDocument();
   });
 
   it("opens a session from its agenda card", () => {
