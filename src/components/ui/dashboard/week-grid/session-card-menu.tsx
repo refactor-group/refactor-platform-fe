@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, Fragment, type ReactNode } from "react";
+import { createElement, Fragment, useRef, type ReactNode } from "react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -32,6 +32,19 @@ export interface SessionCardMenuProps {
   children: ReactNode;
 }
 
+// Long enough for a tap's click to follow its pointerdown.
+const TAP_CLICK_WINDOW_MS = 1000;
+
+/** On touch, the tap that closes the menu still clicks what it lands on once the menu is gone; swallow that click. */
+function swallowNextClick() {
+  const swallow = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  document.addEventListener("click", swallow, { capture: true, once: true });
+  setTimeout(() => document.removeEventListener("click", swallow, { capture: true }), TAP_CLICK_WINDOW_MS);
+}
+
 const DESTRUCTIVE_ITEM_CLASS = "text-destructive focus:text-destructive focus:bg-destructive/10";
 
 export function SessionCardMenu({ view, onAction, children }: SessionCardMenuProps) {
@@ -41,11 +54,13 @@ export function SessionCardMenu({ view, onAction, children }: SessionCardMenuPro
     hasStarted: view.started,
   };
   const items = sessionActionsFor(view.session, context);
+  // A closing menu still sees outside pointerdowns while it fades out; those clicks are real.
+  const isOpen = useRef(false);
 
   return (
-    <ContextMenu>
+    <ContextMenu onOpenChange={(open) => (isOpen.current = open)}>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent>
+      <ContextMenuContent onPointerDownOutside={() => isOpen.current && swallowNextClick()}>
         {items.map((item, i) => (
           <Fragment key={item.action}>
             {i > 0 && items[i - 1].group !== item.group && <ContextMenuSeparator />}
