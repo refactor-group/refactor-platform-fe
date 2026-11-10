@@ -33,10 +33,14 @@ interface WeekSessionsResult {
 const refresh = vi.fn();
 let result: WeekSessionsResult;
 const requestedWeeks: Week[] = [];
+const prefetchedAround: Week[] = [];
 vi.mock("@/lib/hooks/use-week-sessions", () => ({
   useWeekSessions: (week: Week) => {
     requestedWeeks.push(week);
     return result;
+  },
+  usePrefetchWeekSessions: (week: Week) => {
+    prefetchedAround.push(week);
   },
 }));
 
@@ -106,6 +110,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
   requestedWeeks.length = 0;
+  prefetchedAround.length = 0;
   vi.clearAllMocks();
   isACoach = true;
   edges = { hasEarlier: true, hasLater: true };
@@ -131,6 +136,24 @@ describe("WeekPanel", () => {
     expect(week.start.zoneName).toBe(TZ);
     expect(week.start.toISODate()).toBe("2026-08-17");
     expect(week.days).toHaveLength(7);
+  });
+
+  it("fetches the weeks either side of the shown one ahead of time", () => {
+    renderPanel();
+    expect(prefetchedAround.at(-1)?.start.toISODate()).toBe("2026-08-17");
+    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
+    expect(prefetchedAround.at(-1)?.start.toISODate()).toBe("2026-08-24");
+  });
+
+  it("shows no pulsing placeholder while a week loads, on either layout", () => {
+    result = { ...result, sessions: [], isLoading: true };
+    const { container, unmount } = renderPanel();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+    unmount();
+    wide = false;
+    const phone = renderPanel();
+    expect(phone.container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+    expect(screen.getByRole("status", { name: "Loading sessions" })).toBeInTheDocument();
   });
 
   it("titles the week and counts its sessions", () => {

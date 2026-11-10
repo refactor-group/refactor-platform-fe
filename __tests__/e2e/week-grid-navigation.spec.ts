@@ -58,24 +58,33 @@ test.describe('Week grid navigation and clicks', () => {
 
   test('on a phone the week arrows hold still across weeks, even while one loads', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
-    let delay = 0
+    // Held until released, prefetches included, so each new week is shown loading first.
+    const held: { from: string; release: () => void }[] = []
+    const release = (from?: string) =>
+      held.splice(0).forEach((h) => (from === undefined || h.from === from ? h.release() : held.push(h)))
     await page.route(
       (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
       async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, delay))
+        const from = new URL(route.request().url()).searchParams.get('from_date') ?? ''
+        await new Promise<void>((resolve) => held.push({ from, release: resolve }))
         await route.fulfill(json([THURSDAY, MONDAY_PAST]))
       }
     )
+    // Reload under the hold and let only this week through, so next week isn't cached yet.
+    await page.reload()
+    await expect.poll(() => held.some((h) => h.from === '2026-10-19')).toBe(true)
+    release('2026-10-19')
+    await expect(page.getByTestId('session-card-thursday')).toBeVisible()
     const next = page.getByRole('button', { name: 'Next week' })
     // Measured against the panel, so scrolling the arrow into view to click it doesn't count.
     const top = () =>
       next.evaluate((el) => el.getBoundingClientRect().top - el.closest('section')!.getBoundingClientRect().top)
     const home = await top()
     for (const title of ['Next week', 'Week of Nov 2', 'Week of Nov 9']) {
-      delay = 1500
       await next.click()
       await expect(panel(page, title)).toHaveAttribute('aria-busy', 'true')
       expect(await top()).toBe(home)
+      release()
       await expect(panel(page, title)).toHaveAttribute('aria-busy', 'false')
       expect(await top()).toBe(home)
     }

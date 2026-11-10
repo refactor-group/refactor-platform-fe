@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DateTime } from "ts-luxon";
 import { CoachingSessionInclude } from "@/types/coaching-session";
 import { weekOf } from "@/lib/week-grid/week";
-import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
+import { usePrefetchWeekSessions, useWeekSessions } from "@/lib/hooks/use-week-sessions";
 
 const listForUser = vi.fn();
 vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => ({
@@ -27,6 +27,24 @@ const refresh = vi.fn();
 beforeEach(() => {
   organizationId = "org-1";
   listForUser.mockReset().mockReturnValue({ enrichedSessions: [], isLoading: false, isError: false, refresh });
+});
+
+describe("usePrefetchWeekSessions", () => {
+  it("asks for the weeks either side, with the same query as showing them", () => {
+    renderHook(() => usePrefetchWeekSessions(week));
+    const ranges = listForUser.mock.calls.map(([, from, to]) => [(from as DateTime).toISODate(), (to as DateTime).toISODate()]);
+    expect(ranges).toEqual(
+      expect.arrayContaining([
+        ["2026-08-10", "2026-08-16"],
+        ["2026-08-24", "2026-08-30"],
+      ])
+    );
+    expect(ranges).toHaveLength(2);
+    renderHook(() => useWeekSessions(weekOf(1, DateTime.fromISO("2026-08-19T15:00:00Z"), TZ)));
+    const shown = listForUser.mock.calls.at(-1)!.slice(3);
+    const ahead = listForUser.mock.calls.find(([, from]) => (from as DateTime).toISODate() === "2026-08-24")!.slice(3);
+    expect(ahead).toEqual(shown);
+  });
 });
 
 describe("useWeekSessions", () => {
