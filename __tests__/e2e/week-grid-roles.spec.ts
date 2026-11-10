@@ -197,7 +197,7 @@ test.describe('Week grid on a phone for someone who coaches', () => {
   })
 
   test("a long press opens the card's menu without selecting its text or showing iOS's callout", async ({ page }) => {
-    const style = await page.getByTestId('session-card-jane-today').getByText('Jane Smith').evaluate((el) => {
+    const style = await page.getByTestId('session-card-jane-today').evaluate((el) => {
       const s = getComputedStyle(el)
       return {
         userSelect: s.userSelect || s.getPropertyValue('-webkit-user-select'),
