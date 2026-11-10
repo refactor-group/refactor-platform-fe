@@ -58,18 +58,19 @@ export function WeekPanelHeader({
           {filter.some && chip.some && <FilterChip label={chip.val.fullName} onClear={filter.val.onClear} />}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-4">
+      {/* Below lg one row of icons: filter, arrows, then a round Schedule at the far right. */}
+      <div className="flex w-full items-center gap-2 lg:w-auto lg:flex-wrap lg:gap-4">
         {filter.some && <WeekFilter {...filter.val} />}
         <WeekNavigationControls navigation={navigation} />
         {onSchedule.some && (
           <Button
             size="sm"
-            className="bg-brand px-4 text-[13px] hover:bg-brand/90"
+            className="ml-auto w-9 bg-brand px-0 text-[13px] hover:bg-brand/90 lg:ml-0 lg:w-auto lg:px-4"
             disabled={readOnly}
             onClick={onSchedule.val}
           >
             <Plus aria-hidden />
-            Schedule session
+            <span className="sr-only lg:not-sr-only">Schedule session</span>
           </Button>
         )}
       </div>
