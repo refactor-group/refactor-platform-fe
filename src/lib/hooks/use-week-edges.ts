@@ -8,7 +8,7 @@ import { weekEdges, type Week, type WeekEdges } from "@/lib/week-grid/week";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 
-const UNKNOWN_EDGES: WeekEdges = { hasEarlier: true, hasLater: true };
+const UNKNOWN_EDGES: WeekEdges = { hasEarlier: true };
 
 export function useWeekEdges(week: Week): WeekEdges {
   const userId = useAuthStore((s) => s.userId);
@@ -20,12 +20,9 @@ export function useWeekEdges(week: Week): WeekEdges {
   const aroundStart = useNearestEachCoachingSessions(
     nearestQuery(userId, relationshipIds, utcInstant(week.start))
   );
-  const aroundEnd = useNearestEachCoachingSessions(
-    nearestQuery(userId, relationshipIds, utcInstant(week.start.plus({ weeks: 1 })))
-  );
 
-  const settled = [relationshipList, aroundStart, aroundEnd].every((r) => !r.isLoading && !r.isError);
-  return settled ? weekEdges(aroundStart.sessions, aroundEnd.sessions, week) : UNKNOWN_EDGES;
+  const settled = [relationshipList, aroundStart].every((r) => !r.isLoading && !r.isError);
+  return settled ? weekEdges(aroundStart.sessions, week) : UNKNOWN_EDGES;
 }
 
 function nearestQuery(userId: Id, relationshipIds: Id[], around: string): Option<NearestEachQuery> {

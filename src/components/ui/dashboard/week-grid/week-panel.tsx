@@ -69,13 +69,11 @@ function useWeekAt(offset: number, now: DateTime, timezone: string): Week {
   );
 }
 
-function useWeekNavigation(isCurrentWeek: boolean, isCoach: boolean, week: Week): WeekNavigation {
+function useWeekNavigation(isCurrentWeek: boolean, week: Week): WeekNavigation {
   const { previousWeek, nextWeek, thisWeek } = useWeekGridStore((s) => s);
-  const { hasEarlier, hasLater } = useWeekEdges(week);
+  const { hasEarlier } = useWeekEdges(week);
   return {
     canGoEarlier: hasEarlier,
-    // A coach can always page ahead to schedule into an empty week.
-    canGoLater: isCoach || hasLater,
     isCurrentWeek,
     onPrevious: previousWeek,
     onNext: nextWeek,
@@ -100,7 +98,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const week = useWeekAt(weekOffset, now, timezone);
   const isCurrentWeek = weekOffset === CURRENT_WEEK;
   const isCoach = useAuthStore((s) => s.isACoach);
-  const navigation = useWeekNavigation(isCurrentWeek, isCoach, week);
+  const navigation = useWeekNavigation(isCurrentWeek, week);
   const { sessions, isLoading, isError, refresh } = useWeekSessions(week);
   usePrefetchWeekSessions(week);
   // SWR keeps the last sessions when a read fails, so they stay visible but can't be changed.

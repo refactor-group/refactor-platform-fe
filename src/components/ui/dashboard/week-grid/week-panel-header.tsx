@@ -7,7 +7,6 @@ import { WeekFilter, type WeekFilterProps } from "./week-filter";
 
 export interface WeekNavigation {
   canGoEarlier: boolean;
-  canGoLater: boolean;
   isCurrentWeek: boolean;
   onPrevious: () => void;
   onNext: () => void;
@@ -117,7 +116,6 @@ function WeekNavigationControls({ navigation }: { navigation: WeekNavigation }) 
         size="icon-sm"
         className={ARROW_CLASS}
         aria-label="Next week"
-        disabled={!navigation.canGoLater}
         onClick={navigation.onNext}
       >
         <ChevronRight aria-hidden />

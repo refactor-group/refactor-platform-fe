@@ -9,9 +9,9 @@ export interface Week {
   days: DateTime[];
 }
 
+/** Only the past has an edge: anyone can page ahead into weeks with nothing scheduled. */
 export interface WeekEdges {
   hasEarlier: boolean;
-  hasLater: boolean;
 }
 
 export interface DayGroup<T> {
@@ -66,18 +66,9 @@ export function weekSubline(visible: number, today: Option<number>): string {
   return today.some && today.val > 0 ? `${count} · ${today.val} today` : count;
 }
 
-export function weekEdges(
-  aroundStart: EnrichedCoachingSession[],
-  aroundEnd: EnrichedCoachingSession[],
-  week: Week
-): WeekEdges {
+export function weekEdges(aroundStart: EnrichedCoachingSession[], week: Week): WeekEdges {
   const zone = week.start.zoneName;
-  const nextStart = week.start.plus({ weeks: 1 });
-  const startOf = (s: EnrichedCoachingSession) => sessionStartIn(s.date, zone);
-  return {
-    hasEarlier: aroundStart.some((s) => startOf(s) < week.start),
-    hasLater: aroundEnd.some((s) => startOf(s) >= nextStart),
-  };
+  return { hasEarlier: aroundStart.some((s) => sessionStartIn(s.date, zone) < week.start) };
 }
 
 export function groupByDay<T>(

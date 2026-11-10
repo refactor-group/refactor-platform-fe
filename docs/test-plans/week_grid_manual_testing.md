@@ -161,11 +161,11 @@ Page away, then click **This week**.
 
 ### Case 2.3: arrow ends
 
-As the coach, page back until the previous arrow disables, then page forward ten weeks past F's session.
+As the coach, page back until the previous arrow disables, then page forward ten weeks past F's session. Repeat as a coachee with nothing scheduled ahead.
 
 **Pass:**
 - Previous disables on the week holding the earliest session.
-- Next never disables for the coach, so any future week can be reached.
+- Next never disables, for the coach or the coachee, so any future week can be reached.
 
 ### Case 2.4: Schedule session
 
