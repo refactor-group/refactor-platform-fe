@@ -124,7 +124,7 @@ afterEach(() => {
 
 function renderMove() {
   const onClose = vi.fn();
-  render(<NewSessionDialog request={{ kind: "move", session: ONE_OFF, scope: MoveScope.This }} onClose={onClose} />);
+  render(<NewSessionDialog request={{ kind: "move", session: ONE_OFF, scope: MoveScope.This, target: None }} onClose={onClose} />);
   return onClose;
 }
 

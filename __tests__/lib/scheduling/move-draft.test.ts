@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { moveChanged, moveHint, movePerson, moveRail } from "@/lib/move-draft";
 import { initialDraft } from "@/lib/new-session-dialog-model";
 import { peopleFor } from "@/lib/people";
-import { type BusySession, StepKind } from "@/lib/scheduling";
+import { type BusySession, MoveScope, StepKind } from "@/lib/scheduling";
 import { None, Some } from "@/types/option";
 import { E_18, ME, P_18, RELATIONSHIPS, ZONE, at, session } from "./roster";
 
@@ -93,12 +93,30 @@ describe("moveRail", () => {
 describe("initialDraft: move", () => {
   it("starts on the session's day, time, duration and month", () => {
     const later = session({ id: "e-x", relationshipId: "rel-e", person: EHAB, start: "2026-10-06T09:15", minutes: 90 });
-    const draft = initialDraft({ kind: "move", session: later }, ZONE);
+    const draft = initialDraft({ kind: "move", session: later, scope: MoveScope.This, target: None }, ZONE);
     expect(draft.day.some && draft.day.val.toISODate()).toBe("2026-10-06");
     expect(draft.month.some && draft.month.val.toISODate()).toBe("2026-10-01");
     expect(draft.time).toEqual(Some("09:15"));
     expect(draft.minutes).toEqual(Some(90));
     expect(draft.whenTouched).toBe(true);
+    expect(draft.step).toBe(StepKind.When);
+  });
+});
+
+describe("initialDraft for a move with a drop target", () => {
+  it("opens on Resolve with the dropped day and time", () => {
+    const target = at("2026-08-20T10:00");
+    const draft = initialDraft({ kind: "move", session: E_18, scope: MoveScope.This, target: Some(target) }, ZONE);
+    expect(draft.step).toBe(StepKind.Resolve);
+    expect(draft.day.some && draft.day.val.toISODate()).toBe("2026-08-20");
+    expect(draft.month.some && draft.month.val.toISODate()).toBe("2026-08-01");
+    expect(draft.time).toEqual(Some("10:00"));
+    expect(draft.minutes).toEqual(Some(E_18.duration_minutes));
+    expect(draft.whenTouched).toBe(true);
+  });
+
+  it("opens on When at the session's own time without one", () => {
+    const draft = initialDraft({ kind: "move", session: E_18, scope: MoveScope.This, target: None }, ZONE);
     expect(draft.step).toBe(StepKind.When);
   });
 });

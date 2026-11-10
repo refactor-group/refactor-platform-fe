@@ -14,12 +14,14 @@ import {
   sessionPayload,
   usualFor,
 } from "@/lib/schedule-draft";
-import { DEFAULT_WORKING_HOURS, StepKind } from "@/lib/scheduling";
+import { StepKind } from "@/lib/scheduling";
 import { type Option, None, Some } from "@/types/option";
 import { Provider } from "@/types/provider";
 import { Frequency, Weekday } from "@/types/recurrence";
 import { EHAB, PRIYA, at as fixtureAt } from "../../components/ui/new-session/fixtures";
 import { ALL, E_18, ME, NEAREST, NOW, P_18, RELATIONSHIPS, ZONE, at, session } from "./roster";
+
+const NINE_TO_FIVE = { start: 9 * 60, end: 17 * 60 };
 
 const iso = (dt: Option<{ toISO: () => string | null }>) => (dt.some ? dt.val.toISO() : "none");
 const times = (dts: { toFormat: (f: string) => string }[]) => dts.map((d) => d.toFormat("HH:mm"));
@@ -157,17 +159,17 @@ describe("clashFor", () => {
   const busy = [EHAB, PRIYA];
 
   it("returns the first overlapping session and the next free start", () => {
-    const clash = clashFor({ start: fixtureAt("2026-08-18T14:30"), minutes: 50 }, busy, DEFAULT_WORKING_HOURS);
+    const clash = clashFor({ start: fixtureAt("2026-08-18T14:30"), minutes: 50 }, busy, NINE_TO_FIVE);
     expect(clash.some && clash.val.session.id).toBe("s-ehab");
     expect(clash.some && iso(clash.val.instead)).toBe(fixtureAt("2026-08-18T15:30").toISO());
   });
 
   it("is None for a free slot", () => {
-    expect(clashFor({ start: fixtureAt("2026-08-18T15:30"), minutes: 50 }, busy, DEFAULT_WORKING_HOURS)).toEqual(None);
+    expect(clashFor({ start: fixtureAt("2026-08-18T15:30"), minutes: 50 }, busy, NINE_TO_FIVE)).toEqual(None);
   });
 
   it("offers no instead when nothing is free before the day ends", () => {
-    const clash = clashFor({ start: fixtureAt("2026-08-18T16:00"), minutes: 60 }, busy, DEFAULT_WORKING_HOURS);
+    const clash = clashFor({ start: fixtureAt("2026-08-18T16:00"), minutes: 60 }, busy, NINE_TO_FIVE);
     expect(clash.some && clash.val.session.id).toBe("s-priya");
     expect(clash.some && clash.val.instead).toEqual(None);
   });
@@ -198,7 +200,7 @@ describe("resolveSlots", () => {
       clash: EHAB,
       newSlot,
       busy: [EHAB, PRIYA],
-      hours: DEFAULT_WORKING_HOURS,
+      hours: NINE_TO_FIVE,
       now: fixtureAt("2026-08-17T10:00"),
     });
     expect(times(slots)).toEqual([
@@ -212,7 +214,7 @@ describe("resolveSlots", () => {
       clash: EHAB,
       newSlot,
       busy: [EHAB, PRIYA],
-      hours: DEFAULT_WORKING_HOURS,
+      hours: NINE_TO_FIVE,
       now: fixtureAt("2026-08-17T10:00"),
     });
     expect(slots).toHaveLength(15);

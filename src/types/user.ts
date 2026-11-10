@@ -23,6 +23,10 @@ export type UserRoleState =
   | { status: 'no_access'; role: null; hasAccess: false; reason: 'NO_ORG_ACCESS'; organizationId: string }
   | { status: 'no_org_selected'; role: null; hasAccess: false; reason: 'NO_ORG_SELECTED' };
 
+// The backend's default for a user who hasn't set their hours.
+export const WORKING_HOURS_START_FALLBACK = "08:00";
+export const WORKING_HOURS_END_FALLBACK = "17:30";
+
 export type InviteStatus = "active" | "pending" | "expired";
 
 // This must always reflect the Rust struct on the backend entity::users::Model
@@ -35,9 +39,20 @@ export interface User {
   display_name: string;
   timezone: string;
   default_coaching_session_duration_minutes: number;
+  /** "HH:MM" on a 30-minute step. */
+  working_hours_start: string;
+  working_hours_end: string;
   roles: UserRole[];
   invite_status: InviteStatus | null;
 }
+
+/** What the profile form edits; saved alone so it can't overwrite preferences set elsewhere. */
+export type UserProfileUpdate = Pick<User, "email" | "first_name" | "last_name" | "display_name" | "timezone">;
+
+/** A user PUT that changes only these fields; the backend leaves absent ones as they are. */
+export type UserPreferencesUpdate = Partial<
+  Pick<User, "default_coaching_session_duration_minutes" | "working_hours_start" | "working_hours_end">
+>;
 
 /**
  * Narrow projection returned by the email lookup. Deliberately not `User`: the
@@ -88,6 +103,8 @@ export function parseUser(data: unknown): User {
     timezone: data.timezone || "UTC",
     default_coaching_session_duration_minutes:
       data.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,
+    working_hours_start: data.working_hours_start ?? WORKING_HOURS_START_FALLBACK,
+    working_hours_end: data.working_hours_end ?? WORKING_HOURS_END_FALLBACK,
     roles: data.roles,
     invite_status: data.invite_status,
   };
@@ -119,6 +136,8 @@ export function defaultUser(): User {
     display_name: "",
     timezone: "UTC",
     default_coaching_session_duration_minutes: FALLBACK_DURATION_MINUTES,
+    working_hours_start: WORKING_HOURS_START_FALLBACK,
+    working_hours_end: WORKING_HOURS_END_FALLBACK,
     roles: [],
     invite_status: null,
   };

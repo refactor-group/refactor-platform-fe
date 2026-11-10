@@ -140,7 +140,7 @@ afterEach(() => {
 
 function renderMove(target: EnrichedCoachingSession, scope = MoveScope.This) {
   const onClose = vi.fn();
-  render(<NewSessionDialog request={{ kind: "move", session: target, scope }} onClose={onClose} />);
+  render(<NewSessionDialog request={{ kind: "move", session: target, scope, target: None }} onClose={onClose} />);
   return onClose;
 }
 

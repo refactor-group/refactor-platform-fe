@@ -25,6 +25,8 @@ export function createMockUser(overrides?: Partial<User>): User {
     display_name: "Jim Hodapp",
     timezone: "America/Los_Angeles",
     default_coaching_session_duration_minutes: 60,
+    working_hours_start: "08:00",
+    working_hours_end: "17:30",
     roles: [],
     invite_status: null,
     created_at: now.toISO() ?? '', // User expects string, handle null case

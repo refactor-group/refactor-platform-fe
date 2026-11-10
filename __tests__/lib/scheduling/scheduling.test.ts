@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_WORKING_HOURS,
   StepKind,
   busyOn,
   currentStep,
@@ -16,6 +15,8 @@ import {
 } from "@/lib/scheduling";
 import { None, Some } from "@/types/option";
 import { ALEX_WED, EHAB, NOW, PRIYA, TUESDAY, at, busy, hhmm } from "./fixtures";
+
+const NINE_TO_FIVE = { start: 9 * 60, end: 17 * 60 };
 
 const times = (...isos: string[]) => isos.map(at);
 
@@ -62,12 +63,12 @@ describe("overlapping", () => {
 
 describe("nextFreeStart", () => {
   it("steps forward 30 minutes at a time to the first free start", () => {
-    const next = nextFreeStart({ start: at("2026-08-18T14:30"), minutes: 50 }, [EHAB, PRIYA], DEFAULT_WORKING_HOURS);
+    const next = nextFreeStart({ start: at("2026-08-18T14:30"), minutes: 50 }, [EHAB, PRIYA], NINE_TO_FIVE);
     expect(next.some && next.val.toFormat("HH:mm")).toBe("15:30");
   });
 
   it("gives up when nothing free ends inside working hours", () => {
-    const next = nextFreeStart({ start: at("2026-08-18T16:00"), minutes: 50 }, [EHAB, PRIYA], DEFAULT_WORKING_HOURS);
+    const next = nextFreeStart({ start: at("2026-08-18T16:00"), minutes: 50 }, [EHAB, PRIYA], NINE_TO_FIVE);
     expect(next).toEqual(None);
   });
 });
@@ -84,7 +85,7 @@ describe("freeSlots", () => {
   });
 
   it("returns slots on the day, in its zone", () => {
-    const [first] = freeSlots(TUESDAY, [], 50, DEFAULT_WORKING_HOURS, NOW);
+    const [first] = freeSlots(TUESDAY, [], 50, NINE_TO_FIVE, NOW);
     expect(first.zoneName).toBe(TUESDAY.zoneName);
     expect(first.toISODate()).toBe("2026-08-18");
   });
@@ -123,7 +124,7 @@ describe("suggestTimes", () => {
     usual: None,
     coachStarts: [],
     busy: [EHAB, PRIYA],
-    hours: DEFAULT_WORKING_HOURS,
+    hours: NINE_TO_FIVE,
     now: NOW,
   };
 

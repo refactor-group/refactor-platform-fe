@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
 import type { BusySession } from "@/lib/scheduling";
-import { daySlots } from "@/lib/week-grid/slots";
+import { daySlots, dropOutcome } from "@/lib/week-grid/slots";
 
 const TZ = "America/Chicago";
 const at = (iso: string) => DateTime.fromISO(iso, { zone: TZ });
@@ -82,5 +82,22 @@ describe("daySlots", () => {
     const byTime = new Map(slots({ now: at("2026-08-18T10:15") }).map((s) => [label(s), s.state]));
     expect(byTime.get("10:00")).toEqual({ kind: "past" });
     expect(byTime.get("10:30")).toEqual({ kind: "free" });
+  });
+});
+
+describe("dropOutcome", () => {
+  const start = at("2026-08-20T10:00");
+
+  it("moves straight away onto a free slot", () => {
+    expect(dropOutcome({ start, state: { kind: "free" } })).toEqual({ kind: "move", start });
+  });
+
+  it("sends a taken slot to the reschedule dialog to resolve", () => {
+    expect(dropOutcome({ start, state: { kind: "taken", holder: "Priya" } })).toEqual({ kind: "resolve", start });
+  });
+
+  it("ignores the session's own slot and past slots", () => {
+    expect(dropOutcome({ start, state: { kind: "current" } })).toEqual({ kind: "ignore" });
+    expect(dropOutcome({ start, state: { kind: "past" } })).toEqual({ kind: "ignore" });
   });
 });

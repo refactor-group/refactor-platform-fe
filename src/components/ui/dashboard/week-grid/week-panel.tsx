@@ -19,13 +19,12 @@ import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
 import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
 import { useWorkingHours } from "@/lib/hooks/use-working-hours";
-import { busySessions } from "@/lib/schedule-draft";
 import { SessionAction } from "@/lib/session-actions";
-import type { MoveScope, WorkingHours } from "@/lib/scheduling";
+import { MoveScope } from "@/lib/scheduling";
 import { firstNameOf } from "@/lib/scheduling-copy";
 import { cardView, markMoved, type CardView, type GridCard } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
-import { daySlots } from "@/lib/week-grid/slots";
+import { slotsForMove, type MoveSlotsContext } from "@/lib/week-grid/slots";
 import {
   agendaDay,
   groupByDay,
@@ -37,17 +36,16 @@ import {
   type Week,
 } from "@/lib/week-grid/week";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import type { Id } from "@/types/general";
 import { type Option, None, Some, unwrapOr } from "@/types/option";
 import { DayAgenda } from "./day-agenda";
 import { DayStrip } from "./day-strip";
 import { MoveSheet, type MoveSheetModel } from "./move-sheet";
 import type { SessionCardHandlers } from "./session-card";
-import { WeekGrid } from "./week-grid";
+import { WeekGrid, type GridDrag } from "./week-grid";
 import { WeekPanelHeader, type WeekNavigation } from "./week-panel-header";
 
 export interface WeekPanelProps {
-  onReschedule: (session: EnrichedCoachingSession, scope?: MoveScope) => void;
+  onReschedule: (session: EnrichedCoachingSession, scope?: MoveScope, target?: Option<DateTime>) => void;
   onSeriesMutated: () => void;
   onSchedule: (date: Option<DateTime>) => void;
 }
@@ -77,24 +75,12 @@ function useWeekNavigation(isCurrentWeek: boolean, canSchedule: boolean, week: W
   };
 }
 
-interface MoveContext {
-  days: DayGroup<GridCard>[];
-  sessions: EnrichedCoachingSession[];
-  viewerId: Id;
-  timezone: string;
-  hours: WorkingHours;
-  now: DateTime;
-}
-
-function moveSheetModel(view: CardView, context: MoveContext): MoveSheetModel {
-  const { days, sessions, viewerId, timezone, hours, now } = context;
-  const busy = busySessions(sessions, viewerId, timezone);
-  const [moving] = busySessions([view.session], viewerId, timezone);
+function moveSheetModel(view: CardView, days: DayGroup<GridCard>[], context: MoveSlotsContext): MoveSheetModel {
   return {
     name: firstNameOf(view.name),
     current: view.start,
     days: days.map((d) => ({ day: d.day, past: d.isPast })),
-    slotsFor: (day) => daySlots({ day, moving, busy, hours, now }),
+    slotsFor: slotsForMove(view.session, context),
   };
 }
 
@@ -153,14 +139,20 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   );
 
   const hours = useWorkingHours();
+  const slotsContext = { sessions, viewerId, timezone, hours, now };
   const moveModel = useMemo(
     () =>
       moveTarget.some
-        ? Some(moveSheetModel(moveTarget.val, { days, sessions, viewerId, timezone, hours, now }))
+        ? Some(moveSheetModel(moveTarget.val, days, { sessions, viewerId, timezone, hours, now }))
         : None,
     [moveTarget, days, sessions, viewerId, timezone, hours, now]
   );
   const moveSession = useMoveSession();
+  const drag: GridDrag = {
+    slotsFor: (session) => slotsForMove(session, slotsContext),
+    onMove: ({ session, name }, to) => moveSession({ session, name, to }),
+    onResolve: ({ session }, to) => onReschedule(session, MoveScope.This, Some(to)),
+  };
   const selectDay = useWeekGridStore((s) => s.selectDay);
   const closeMove = () => setMoveTarget(None);
   const confirmMove = (to: DateTime) => {
@@ -215,6 +207,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
         handlers={handlers}
         onSchedule={scheduleDay}
         noMatches={noMatches}
+        drag={drag}
       />
       <SessionActionDialogs {...actions.dialogs} />
       <MoveSheet model={moveModel} onConfirm={confirmMove} onClose={closeMove} />
@@ -227,29 +220,30 @@ interface WeekBodyProps extends WeekAgendaProps {
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
+  drag: GridDrag;
 }
 
 /** Until the width is known, both loading layouts render and CSS shows one. */
-function WeekBody({ width, isLoading, isError, onRetry, ...agenda }: WeekBodyProps) {
+function WeekBody({ width, isLoading, isError, onRetry, drag, ...agenda }: WeekBodyProps) {
   const { days, handlers, onSchedule, noMatches } = agenda;
-  if (width.none) return <PendingLayouts {...agenda} />;
+  if (width.none) return <PendingLayouts {...agenda} drag={drag} />;
   const wide = width.val;
-  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} isLoading /> : <DayAgendaSkeleton />;
+  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading /> : <DayAgendaSkeleton />;
   if (isError) return <WeekPanelError onRetry={onRetry} />;
   if (!wide) return <WeekAgenda {...agenda} />;
   return (
     <div className="relative">
-      <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} isLoading={false} />
+      <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading={false} />
       {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
     </div>
   );
 }
 
-function PendingLayouts({ days, handlers, onSchedule }: WeekAgendaProps) {
+function PendingLayouts({ days, handlers, onSchedule, drag }: WeekAgendaProps & { drag: GridDrag }) {
   return (
     <>
       <div data-testid="week-grid-pending" className="hidden lg:block">
-        <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} isLoading />
+        <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading />
       </div>
       <div data-testid="day-agenda-pending" className="lg:hidden">
         <DayAgendaSkeleton />

@@ -9,11 +9,11 @@ import {
   type BusyClash,
   type BusySession,
   type Cadence,
-  DEFAULT_WORKING_HOURS,
   type MoveScope,
   type RepeatChoice,
   StepKind,
   type UsualSlot,
+  type WorkingHours,
 } from "@/lib/scheduling";
 import { currentlyLine, overlapsNewLine, overlapsNewLines, resolveSubline } from "@/lib/scheduling-copy";
 import { sessionStartIn } from "@/lib/session-window";
@@ -233,12 +233,13 @@ interface ResolveInput {
   movable: boolean;
   draft: ResolveDraft;
   busy: BusySession[];
+  hours: WorkingHours;
   now: DateTime;
   onChange: (draft: ResolveDraft) => void;
 }
 
 export function resolveModel(input: ResolveInput): ResolveModel {
-  const { clash, start, minutes, movable, draft, busy, now, onChange } = input;
+  const { clash, start, minutes, movable, draft, busy, hours, now, onChange } = input;
   const several = clash.others.length > 0;
   return {
     subline: several
@@ -257,7 +258,7 @@ export function resolveModel(input: ResolveInput): ResolveModel {
           clash: clash.session,
           newSlot: { start, minutes },
           busy,
-          hours: DEFAULT_WORKING_HOURS,
+          hours,
           now,
         })
       : [],
@@ -285,7 +286,7 @@ export function draftFor(
   return Some({ ...key, day: session.start.startOf("day"), resolution: UNRESOLVED });
 }
 
-/** The draft a request opens on; a move starts at the session itself, as if already picked. */
+/** The draft a request opens on; a move starts at its drop target or the session itself, as if already picked. */
 export interface InitialDraft {
   day: Option<DateTime>;
   month: Option<DateTime>;
@@ -307,14 +308,14 @@ export function initialDraft(request: NewSessionRequest, timezone: string): Init
         step: StepKind.Who,
       };
     case "move": {
-      const { day, time } = moveStart(request.session, timezone);
+      const { day, time } = moveStart(request.session, request.target, timezone);
       return {
         day: Some(day),
         month: Some(day.startOf("month")),
         time: Some(time),
         minutes: Some(request.session.duration_minutes),
         whenTouched: true,
-        step: StepKind.When,
+        step: request.target.some ? StepKind.Resolve : StepKind.When,
       };
     }
     default: {

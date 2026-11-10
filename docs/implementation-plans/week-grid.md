@@ -16,7 +16,7 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 4 | Person filter, chip, dimmed cards | Done (PR #537), approved |
 | BE 1 | Working hours on the user (rs) | refactor-platform-rs#472, verified by the frontend (`user_working_hours_fe_verified`) |
 | BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
-| 5 | Drag to move, Undo, working hours in Settings and the dialog | In review (PR #540) |
+| 5 | Drag to move, Undo, working hours in Settings and the dialog | In review (PR #540); live checks wait on BE 2 (Part 8) and a live Settings save |
 | 6 | Mobile day strip, agenda, Move sheet | Done (PR #538), approved |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Done (PR #539), approved; test plan 7.1 corrected to Open session only (Jim, 2026-11-06) |
 
@@ -165,11 +165,31 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - The moved marks clear when the week panel unmounts.
 - **6b, entry points:** "Move" on agenda cards, and "Move…" in the narrow-layout menu, for upcoming sessions the viewer coaches. The sheet only allows free slots, so a clash can't happen there.
 
+## PR 5 rules
+
+- **5a, working hours end to end:**
+  - `User` gains `working_hours_start` and `working_hours_end` (`"HH:MM"`).
+  - `src/lib/working-hours.ts` parses and formats them; unreadable or backwards hours fall back to 8:00 to 17:30.
+  - `useWorkingHours()` reads the signed-in user, with that same fallback while loading.
+  - The New session dialog's after-hours checks and suggestions use it, which retires `DEFAULT_WORKING_HOURS` (D5).
+  - Settings > Coaching preferences gets two half-hour selects that autosave together, like the default duration.
+  - Tests that relied on 9 to 5 now pass an explicit `NINE_TO_FIVE` fixture or mock a 9-to-5 user.
+- **5b, drag (wide layout only):**
+  - **Sensors:** dnd-kit with `MouseSensor` (6px to start, left button only) and `KeyboardSensor`. Touch never drags, and right-click never drags.
+  - **What drags:** upcoming cards the viewer coaches (`data-draggable`).
+  - **While dragging:** the hovered non-past day unfolds into `daySlots` (`drop-slot-<date>-<HH:mm>`), and a tilted ghost follows the pointer.
+  - **Drops:** `dropOutcome` decides.
+    - A free slot moves the session via `useMoveSession`.
+    - A taken slot opens the reschedule dialog on Resolve, at the dropped time, through `openMoveSession(session, This, Some(target))`.
+    - Anything else is ignored.
+  - **Trailing click:** a drag never also counts as a click.
+
 ## Follow-ups
 
 - 1c: remove `useSessionActions.openSeries`, the row's copy of the action switch, and the two comments naming the row and the card, once the buckets are gone.
 - The store (week offset, filter, recently moved) comes with the first phase that reads it (PR 2), so it never ships unused.
 - Live uses the app's urgency levels: under way, imminent, or soon (within 2 hours). The handoff says "within the hour"; the shared thresholds win.
 
+- **Keyboard drag is weak:** Space, the arrows, then Space works, and screen readers hear "Picked up …", each slot, and the result. But it takes several presses to reach the next day, and the picked-up card's own day unfolds. A drop that never moved counts as "Not moved". Keyboard users are better served by the menu's Reschedule…; improve this only if it's asked for.
 - **Session glance (needs design):** a single click on a past card should open a dashboard dialog showing that session at a glance: its most important insights, actions assigned, suggested actions still waiting, agreements made, and topics discussed. Until it exists, a single click opens the session page. The design system names a "Session glance" modal in the shared modal shell, and a bottom sheet on mobile, but there's no spec yet. It waits on a design handoff.
 - The backend's `/coaching_sessions/counts` loses its only caller after 1c. Raise it on the board.

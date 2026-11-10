@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
-import type { User } from "@/types/user";
+import type { User, UserProfileUpdate } from "@/types/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ import { getBrowserTimezone } from "@/lib/timezone-utils";
 
 interface ProfileInfoFormProps {
   user: User;
-  onSubmit: (updatedUser: User) => Promise<void>;
+  onSubmit: (profile: UserProfileUpdate) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -25,17 +25,12 @@ export function ProfileInfoUpdateForm({
   onSubmit,
   isSubmitting,
 }: ProfileInfoFormProps) {
-  const [formData, setFormData] = useState<User>({
-    id: user.id,
+  const [formData, setFormData] = useState<UserProfileUpdate>({
     email: user.email,
     first_name: user.first_name,
     last_name: user.last_name,
     display_name: user.display_name,
     timezone: user.timezone || getBrowserTimezone(),
-    default_coaching_session_duration_minutes:
-      user.default_coaching_session_duration_minutes,
-    roles: user.roles,
-    invite_status: user.invite_status,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

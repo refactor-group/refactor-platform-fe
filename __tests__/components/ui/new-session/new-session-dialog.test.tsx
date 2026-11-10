@@ -35,7 +35,7 @@ vi.mock("@/lib/api/oauth-connection", () => ({ useOAuthConnections: vi.fn() }));
 vi.mock("@/lib/api/users", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/users")>()),
   useUser: () => ({
-    user: { id: "me", default_coaching_session_duration_minutes: 50 },
+    user: { id: "me", default_coaching_session_duration_minutes: 50, working_hours_start: "09:00", working_hours_end: "17:00" },
     isLoading: false,
     isError: undefined,
     refresh: vi.fn(),
