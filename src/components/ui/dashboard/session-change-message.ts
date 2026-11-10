@@ -4,6 +4,7 @@ import { firstNameOf, repeatLabel, shortDay } from "@/lib/scheduling-copy";
 import { sessionStartIn, shortDate, timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 import { getCoacheeName } from "@/lib/utils/relationship";
+import { SessionRemoval } from "@/lib/session-actions";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
 import type { Option } from "@/types/option";
@@ -36,13 +37,27 @@ function theSession(
   return `the ${startsAt(session, timezone)} session${withCoachee(relationships, session.coaching_relationship_id)}`;
 }
 
-/** e.g. "Removed the Nov 4 @ 11 AM session with James Hodapp". */
+function removedVerb(removal: SessionRemoval): string {
+  switch (removal) {
+    case SessionRemoval.Cancel:
+      return "Cancelled";
+    case SessionRemoval.Remove:
+      return "Removed";
+    default: {
+      const _exhaustive: never = removal;
+      throw new Error(`Unhandled removal: ${_exhaustive}`);
+    }
+  }
+}
+
+/** e.g. "Cancelled the Nov 4 @ 11 AM session with James Hodapp". */
 export function sessionRemovedMessage(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
-  timezone: string
+  timezone: string,
+  removal: SessionRemoval
 ): string {
-  return `Removed ${theSession(session, relationships, timezone)}`;
+  return `${removedVerb(removal)} ${theSession(session, relationships, timezone)}`;
 }
 
 export interface OtherMove {

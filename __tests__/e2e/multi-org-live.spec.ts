@@ -186,7 +186,7 @@ test("e: Ehab schedules a BigTable coaching session with Jim", async ({ page }) 
   await submit.click();
 
   // Assert the session actually exists, not merely that the word "session" is on
-  // screen: the dashboard already says "Coaching Sessions", which makes a loose
+  // screen: the dashboard already shows a session count, which makes a loose
   // text assertion pass against a no-op.
   await expect(page.getByRole("dialog")).toBeHidden({ timeout: 20000 });
 

@@ -52,10 +52,8 @@ async function openSchedule(page: Page) {
   await expect(dialog(page)).toBeVisible()
 }
 
-async function openRowAction(page: Page, sessionId: string, testId: string) {
-  const row = page.getByRole('region', { name: 'Today' }).getByTestId(`session-row-${sessionId}`)
-  await row.hover()
-  await row.getByRole('button', { name: 'Session actions' }).click()
+async function openCardAction(page: Page, sessionId: string, testId: string) {
+  await page.getByTestId(`session-card-${sessionId}`).click({ button: 'right' })
   await page.getByTestId(testId).click()
   await expect(dialog(page)).toBeVisible()
 }
@@ -244,7 +242,7 @@ for (const viewport of VIEWPORTS) {
 
     test('Reschedule a one-off: unchanged, changed', async ({ page, context }) => {
       await start(page, context, viewport)
-      await openRowAction(page, ALEX_TODAY.id, 'session-row-reschedule')
+      await openCardAction(page, ALEX_TODAY.id, 'session-action-reschedule')
       await inState(page, viewport, 'Move › When unchanged (hint)', async () => {
         await expect(dialog(page).getByText('Alex Chen')).toBeVisible()
         await expect(dialog(page).getByText(/^Currently /)).toBeVisible()
@@ -258,7 +256,7 @@ for (const viewport of VIEWPORTS) {
 
     test('Reschedule a series session: Applies to, this and following', async ({ page, context }) => {
       await start(page, context, viewport)
-      await openRowAction(page, EHAB_TODAY.id, 'session-row-reschedule')
+      await openCardAction(page, EHAB_TODAY.id, 'session-action-reschedule')
       await expect(stepTitle(page, 'When')).toBeVisible()
       await next(page)
       await inState(page, viewport, 'Series › Applies to', async () => {
@@ -277,7 +275,7 @@ for (const viewport of VIEWPORTS) {
 
     test('Edit series opens on this and following', async ({ page, context }) => {
       await start(page, context, viewport)
-      await openRowAction(page, EHAB_TODAY.id, 'session-row-edit-series')
+      await openCardAction(page, EHAB_TODAY.id, 'session-action-edit-series')
       await inState(page, viewport, 'Edit series › When', async () => {
         await expect(stepTitle(page, 'When')).toBeVisible()
       })

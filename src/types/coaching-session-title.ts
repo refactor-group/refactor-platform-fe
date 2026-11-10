@@ -1,4 +1,5 @@
 import { type Option } from "@/types/option";
+import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
 import type { Goal } from "@/types/goal";
 
@@ -41,4 +42,9 @@ export function coachingSessionTitle(
 ): string {
   if (session.title.some) return session.title.val;
   return session.topics?.[0]?.body || session.goals?.[0]?.title || fallback;
+}
+
+/** An enriched read as a title source; topics that weren't included count as none. */
+export function enrichedTitleSource(session: EnrichedCoachingSession): CoachingSessionTitleSource {
+  return { ...session, topics: session.topics.some ? session.topics.val : [] };
 }

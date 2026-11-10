@@ -53,6 +53,14 @@ export function revalidateEndpointCaches(
   );
 }
 
+/** A stable callback that revalidates every coaching session cache. */
+export function useRefreshCoachingSessions(): () => void {
+  const { mutate } = useSWRConfig();
+  return useCallback(() => {
+    void revalidateEndpointCaches(mutate, siteConfig.env.backendServiceURL, '/coaching_sessions');
+  }, [mutate]);
+}
+
 /**
  * Returns true when the given SWR cache URL is one of `sessionId`'s transcript
  * suggestion lists, with or without a query string or subpath.
@@ -106,30 +114,6 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   const invalidateEndpoint = useCallback((endpointPath: string, eventName: string) => {
     revalidateEndpointCaches(mutate, baseUrl, endpointPath);
     console.log(`[SSE] Revalidated ${endpointPath} cache after ${eventName}`);
-  }, [mutate, baseUrl]);
-
-  /**
-   * Invalidates the coaching session caches that surface a title — the single
-   * read (/coaching_sessions/{id}) and the enriched list reads
-   * (/users/{id}/coaching_sessions, /coaching_sessions?coaching_relationship_id=).
-   *
-   * Like invalidateEndpoint('/coaching_sessions', ...) but excludes the month
-   * count caches (/users/{id}/coaching_sessions/counts): a title rename cannot
-   * change a month's session count, so refetching them would be pure waste.
-   */
-  const invalidateCoachingSessionTitle = useCallback((eventName: string) => {
-    mutate(
-      (key) => {
-        const url = typeof key === 'string' ? key : Array.isArray(key) ? key[0] : null;
-        if (typeof url !== 'string') return false;
-        if (url.includes('/coaching_sessions/counts')) return false;
-        return matchesEndpoint(url, baseUrl, '/coaching_sessions');
-      },
-      undefined,
-      // See invalidateEndpoint: don't blank the cache, just revalidate.
-      { revalidate: true, populateCache: false }
-    );
-    console.log(`[SSE] Revalidated /coaching_sessions cache after ${eventName}`);
   }, [mutate, baseUrl]);
 
   /**
@@ -280,18 +264,17 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   // TOPIC EVENTS - Invalidate session-scoped topic lists
   // (/coaching_sessions/{id}/topics). Coarse-by-design: the event carries no
   // topic data, so we refetch. Covers the other participant's edits AND the
-  // server-side carry-over copy on a new session's first read.
+  // server-side carry-over copy on a new session's first read. Session lists
+  // refresh too: they carry each session's topics (counts and readiness).
   useSSEEventHandler(eventSource, 'topics_changed', () => {
     invalidateEndpoint('/topics', 'topics_changed');
+    invalidateEndpoint('/coaching_sessions', 'topics_changed');
   });
 
-  // COACHING SESSION TITLE EVENTS - Invalidate the coaching session caches.
-  // Coarse-by-design (parity with topics_changed): the event carries no title,
-  // so we refetch the single read and the enriched list reads that surface
-  // display_title. The month count caches are excluded — a rename can't change
-  // a count — so we don't over-match them.
+  // COACHING SESSION TITLE EVENTS - Coarse (parity with topics_changed): the
+  // event carries no title, so refetch the reads that surface display_title.
   useSSEEventHandler(eventSource, 'coaching_session_title_updated', () => {
-    invalidateCoachingSessionTitle('coaching_session_title_updated');
+    invalidateEndpoint('/coaching_sessions', 'coaching_session_title_updated');
   });
 
   // TRANSCRIPT SUGGESTION EVENTS - Coarse: refetch the session's suggestion lists.

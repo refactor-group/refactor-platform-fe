@@ -3,10 +3,7 @@ import { ReactNode } from "react";
 import { DateTime } from "ts-luxon";
 import { renderHook, waitFor } from "@testing-library/react";
 import { SWRConfig } from "swr";
-import {
-  useEnrichedCoachingSessionsForUser,
-  useEnrichedCoachingSessionsForUserCounts,
-} from "@/lib/api/coaching-sessions";
+import { useEnrichedCoachingSessionsForUser } from "@/lib/api/coaching-sessions";
 import { EntityApi } from "@/lib/api/entity-api";
 
 // Real SWR, stubbed HTTP boundary: asserts the outgoing request and lets an
@@ -25,15 +22,11 @@ const USER_ID = "user-1";
 
 describe("user coaching sessions are scoped by organization", () => {
   let listNestedFn: ReturnType<typeof vi.spyOn>;
-  let getFn: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     listNestedFn = vi
       .spyOn(EntityApi, "listNestedFn")
       .mockResolvedValue([] as never);
-    getFn = vi
-      .spyOn(EntityApi, "getFn")
-      .mockResolvedValue({ counts: [] } as never);
   });
 
   afterEach(() => {
@@ -109,24 +102,5 @@ describe("user coaching sessions are scoped by organization", () => {
     await waitFor(() => expect(listNestedFn).toHaveBeenCalledTimes(2));
     const [, , , options] = listNestedFn.mock.calls[1];
     expect(options.params.organization_id).toBe("org-2");
-  });
-
-  it("sends organization_id on the counts request", async () => {
-    renderHook(
-      () =>
-        useEnrichedCoachingSessionsForUserCounts(
-          USER_ID,
-          FROM,
-          TO,
-          "America/Los_Angeles",
-          undefined,
-          "org-1"
-        ),
-      { wrapper: SwrWrapper }
-    );
-
-    await waitFor(() => expect(getFn).toHaveBeenCalled());
-    const [, options] = getFn.mock.calls[0];
-    expect(options.params.organization_id).toBe("org-1");
   });
 });

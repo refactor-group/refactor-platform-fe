@@ -210,7 +210,6 @@ export async function setupDashboard(page: Page, context: BrowserContext, relati
     (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions/nearest`,
     (route) => route.fulfill(json(nearestTo(new URL(route.request().url()))))
   )
-  await page.route('**/coaching_sessions/counts**', (route) => route.fulfill(json({ counts: [] })))
   await page.route(
     (url) => url.pathname === `/coaching_session_series/${EHAB_SERIES_ID}`,
     (route) => route.fulfill(json(EHAB_SERIES))

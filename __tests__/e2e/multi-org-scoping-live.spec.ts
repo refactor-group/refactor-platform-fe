@@ -17,7 +17,7 @@ const SESSION_WITH_JIM = /^Session with (James|Jim) Hodapp$/;
 
 /**
  * Browser time is pinned for every test in this file. The seeded BigTable
- * sessions sit at fixed instants (2026-08-07 and 2026-09-15), so which bucket
+ * sessions sit at fixed instants (2026-08-07 and 2026-09-15), so which week
  * they land in, and whether either is still "upcoming", otherwise depends on the
  * day the suite happens to run. Both assertions below broke exactly that way
  * once the date rolled over.
@@ -121,24 +121,19 @@ test("session requests carry the selected organization and refetch on switch", a
 });
 
 // Ehab's sessions all live in BigTable, so Refactor Group must render empty.
-test("the Upcoming and Previous tabs are empty in the organization that has no sessions", async ({
-  page,
-}) => {
+// PINNED_NOW is the Thursday before the Aug 7 session, so it falls in this week.
+test("the week panel is empty in the organization that has no sessions", async ({ page }) => {
   await login(page, EHAB);
-
-  // The week bucket's trigger carries a count and stays in the DOM whether or
-  // not the accordion is expanded, unlike the session rows themselves. Its text
-  // is title case in the DOM and uppercased only by CSS.
-  const weekBucket = page.getByRole("button").filter({ hasText: /This Week ·/ });
+  const week = page.getByRole("region", { name: "This week" });
+  const cards = week.getByTestId(/^session-card-/);
 
   await selectOrganization(page, "Refactor Group");
-  await expect(page.getByText(/No upcoming sessions scheduled for today/)).toBeVisible({
-    timeout: 15000,
-  });
-  await expect(weekBucket).toHaveCount(0);
+  await expect(week).toContainText("0 sessions", { timeout: 15000 });
+  await expect(cards).toHaveCount(0);
 
   await selectOrganization(page, "BigTable");
-  await expect(weekBucket).toContainText("(1)", { timeout: 15000 });
+  await expect(week).toContainText("1 session", { timeout: 15000 });
+  await expect(cards).toHaveCount(1);
 });
 
 test("the Upcoming Session card is empty in the organization that has no sessions", async ({
@@ -187,7 +182,7 @@ test("a cold dashboard load never requests sessions without an organization", as
   // Fresh context, so the organization is not known until /organizations returns.
   await login(page, EHAB);
   await expect(organizationLink(page)).toHaveAccessibleName(/Refactor Group|BigTable/);
-  await expect(page.getByText(/Coaching Sessions/).first()).toBeVisible({
+  await expect(page.getByRole("region", { name: "This week" })).toBeVisible({
     timeout: 15000,
   });
 

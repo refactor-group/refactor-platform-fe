@@ -5,6 +5,8 @@ import { setupAuthentication, mockCommonApiRoutes, MOCK_USER_ID, SINGLE_RELATION
 test.use({ timezoneId: 'America/Chicago', locale: 'en-US' })
 
 const NOW = '2026-08-25T19:00:00Z' // 2:00 PM in Chicago
+// The dashboard week grid asks /nearest around this week's and next week's Monday midnights for its arrows.
+const WEEK_EDGES = ['2026-08-24T05:00:00Z', '2026-08-31T05:00:00Z']
 
 const PEOPLE = [
   ['rel-a', 'alex', 'Alex', 'Chen'],
@@ -92,10 +94,15 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
  * from then on. The carousel's one-either-side requests land in `activity` and
  * are always served.
  */
-type NearestControl = { requests: NearestRequest[]; activity: NearestRequest[]; handle: NearestHandler }
+type NearestControl = {
+  requests: NearestRequest[]
+  activity: NearestRequest[]
+  weekEdges: string[]
+  handle: NearestHandler
+}
 
 async function setup(page: Page, context: Parameters<typeof setupAuthentication>[1]) {
-  const nearest: NearestControl = { requests: [], activity: [], handle: serveNearest }
+  const nearest: NearestControl = { requests: [], activity: [], weekEdges: [], handle: serveNearest }
   await page.clock.setFixedTime(NOW)
   await setupAuthentication(page, context)
   await mockCommonApiRoutes(page, { relationships: RELATIONSHIPS })
@@ -104,7 +111,6 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
     (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
     (route) => route.fulfill(json([EHAB_TODAY]))
   )
-  await page.route('**/coaching_sessions/counts**', (route) => route.fulfill(json({ counts: [] })))
   await page.route(
     (url) => url.pathname === `/coaching_sessions/${DANIEL_KICKOFF.id}`,
     (route) => route.fulfill(json(DANIEL_KICKOFF))
@@ -117,6 +123,10 @@ async function setup(page: Page, context: Parameters<typeof setupAuthentication>
       around: params.get('around') ?? '',
       before: params.get('before') ?? '',
       after: params.get('after') ?? '',
+    }
+    if (WEEK_EDGES.includes(request.around)) {
+      nearest.weekEdges.push(request.around)
+      return serveNearest(route, relationshipId)
     }
     if (request.before === '1' && request.after === '1') {
       nearest.activity.push(request)
@@ -158,6 +168,7 @@ test.describe('Join session menu', () => {
     await page.waitForLoadState('networkidle')
     expect(requests).toEqual([])
     expect(nearest.activity).toEqual([])
+    expect([...new Set(nearest.weekEdges)].sort()).toEqual(WEEK_EDGES)
     await openMenu(page)
 
     const today = menu(page).locator('section').filter({ hasText: 'Today' }).first()

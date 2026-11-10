@@ -1,12 +1,10 @@
-import { useState } from "react";
-import { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { useInterval } from "@/lib/hooks/use-interval";
+import { useNow } from "@/lib/hooks/use-now";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 
 /**
@@ -34,16 +32,13 @@ export function useTodaysSessions(
   const timezone = userSession?.timezone || getBrowserTimezone();
   const { currentOrganizationId } = useCurrentOrganization();
 
-  // Force re-render every 30 seconds to update urgency messages in real-time
-  const [tick, setTick] = useState(0);
-  useInterval(() => {
-    setTick(prev => prev + 1);
-  }, 30000);
+  // Re-renders every 30 seconds to update urgency messages in real-time
+  const now = useNow(30_000);
 
   // Today's calendar date in the user's timezone. The API sends dates only, so
   // `tz` makes the backend read it as that local day; UTC dates would cover
   // whichever UTC days the local day overlaps (e.g. tomorrow's sessions in the US).
-  const today = DateTime.now().setZone(timezone);
+  const today = now.setZone(timezone);
 
   // TypeScript non-null assertion: middleware guarantees userId exists on protected routes
   // If userId is briefly undefined during hydration, SWR will show loading state
@@ -68,7 +63,5 @@ export function useTodaysSessions(
     isLoading,
     error: isError,
     refresh,
-    // Include tick to ensure consumers re-render when urgency updates
-    _tick: tick,
   };
 }

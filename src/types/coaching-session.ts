@@ -9,6 +9,10 @@ import { Agreement } from "@/types/agreement";
 import { Provider } from "@/types/provider";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
 import { type Option, Some, None } from "@/types/option";
+import {
+  type CoachingSessionTopic,
+  transformCoachingSessionTopic,
+} from "@/types/coaching-session-topic";
 
 // This must always reflect the Rust struct on the backend
 // entity::coaching_sessions::Model
@@ -43,10 +47,11 @@ export enum CoachingSessionInclude {
   Goal = "goal",
   Agreements = "agreements",
   Series = "series",
+  Topics = "topics",
 }
 
 /** The part of a session's series the list view needs. */
-export interface CoachingSessionSeriesSummary {
+interface CoachingSessionSeriesSummary {
   id: Id;
   last_session_date: DateTime; // parsed as UTC, like session.date
 }
@@ -85,6 +90,9 @@ export interface EnrichedCoachingSession extends CoachingSession {
 
   /** None when absent from the read (not requested, or not in a series); callers can't tell which. */
   series?: Option<CoachingSessionSeriesSummary>;
+
+  /** None when not included (include=topics). */
+  topics: Option<CoachingSessionTopic[]>;
 }
 
 export function isCoachingSession(value: unknown): value is CoachingSession {
@@ -172,7 +180,7 @@ export type CoachingSessionWire = Omit<
  * the EnrichedCoachingSession include-fields (coach/coachee/goals/…) pass
  * through untouched when this is reused for the enriched list endpoint. */
 export function transformCoachingSession(raw: any): EnrichedCoachingSession {
-  if (raw == null) return defaultCoachingSession();
+  if (raw == null) return { ...defaultCoachingSession(), topics: None };
   return {
     ...raw,
     title: typeof raw.title === "string" ? Some(raw.title) : None,
@@ -192,6 +200,9 @@ export function transformCoachingSession(raw: any): EnrichedCoachingSession {
     ical_recurrence_id:
       typeof raw.ical_recurrence_id === "string" ? Some(raw.ical_recurrence_id) : None,
     series: transformSeriesSummary(raw.series),
+    topics: Array.isArray(raw.topics)
+      ? Some(raw.topics.map(transformCoachingSessionTopic))
+      : None,
   };
 }
 
@@ -207,13 +218,14 @@ function transformSeriesSummary(raw: any): Option<CoachingSessionSeriesSummary> 
 
 /** Converts a CoachingSession to wire format, unwrapping the Option title. */
 export function serializeCoachingSession(
-  session: EnrichedCoachingSession
+  session: CoachingSession & Partial<Pick<EnrichedCoachingSession, "series" | "topics">>
 ): CoachingSessionWire {
-  // display_title, series and organization_id are read-only — never send them back.
+  // display_title, series, organization_id and topics are read-only — never send them back.
   const {
     display_title: _displayTitle,
     series: _series,
     organization_id: _organizationId,
+    topics: _topics,
     ...rest
   } = session;
   return {

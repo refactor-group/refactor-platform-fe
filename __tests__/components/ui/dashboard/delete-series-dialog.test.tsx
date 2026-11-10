@@ -9,16 +9,11 @@ function makeSeries(frequency: Frequency = Frequency.Weekly) {
   return {
     ...base,
     id: "series-1",
-    rule: {
-      ...base.rule,
-      recurrence: { ...base.rule.recurrence, frequency },
-    },
+    rule: { ...base.rule, recurrence: { ...base.rule.recurrence, frequency } },
   };
 }
 
-function renderDialog(
-  overrides?: Partial<React.ComponentProps<typeof DeleteSeriesDialog>>
-) {
+function renderDialog(overrides?: Partial<React.ComponentProps<typeof DeleteSeriesDialog>>) {
   const props = {
     series: makeSeries(),
     participantName: "Caleb Bourg",
@@ -32,71 +27,49 @@ function renderDialog(
 }
 
 describe("DeleteSeriesDialog", () => {
-  it("names the frequency and counterpart, mirroring the session-delete copy", () => {
-    renderDialog({ series: makeSeries(Frequency.Weekly), participantName: "Caleb Bourg" });
-
-    const dialog = screen.getByRole("alertdialog");
-    expect(dialog).toHaveTextContent(
-      "permanently remove the weekly series with Caleb Bourg from today onward"
-    );
-    expect(dialog).toHaveTextContent(
-      "along with all of its notes and completed actions"
-    );
+  it("asks to cancel the series, naming its frequency and counterpart", () => {
+    renderDialog();
+    const dialog = screen.getByRole("alertdialog", { name: "Cancel this recurring series?" });
+    expect(dialog).toHaveTextContent("weekly series with Caleb Bourg from today onward");
+    expect(dialog).toHaveTextContent(/notes and actions/);
     expect(dialog).toHaveTextContent("can't be undone");
-    // The counterpart is emphasized like the session dialog does.
+    expect(dialog).not.toHaveTextContent(/delet/i);
     expect(screen.getByText("Caleb Bourg")).toBeInTheDocument();
   });
 
-  it("reflects the series frequency in the copy", () => {
+  it("reflects the series frequency", () => {
     renderDialog({ series: makeSeries(Frequency.Monthly) });
-
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      "remove the monthly series with Caleb Bourg from today onward"
-    );
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("monthly series with Caleb Bourg");
   });
 
-  it("drops the 'with <name>' clause when the counterpart is unresolved", () => {
-    renderDialog({ series: makeSeries(Frequency.Weekly), participantName: "" });
-
-    const dialog = screen.getByRole("alertdialog");
-    // "series" runs straight into "from today onward" with no dangling "with".
-    expect(dialog).toHaveTextContent(
-      "remove the weekly series from today onward"
-    );
-    expect(screen.queryByText("Caleb Bourg")).not.toBeInTheDocument();
+  it("drops the with clause when the counterpart is unresolved", () => {
+    renderDialog({ participantName: "" });
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("weekly series from today onward");
   });
 
-  it("renders nothing when no series is pending (series undefined)", () => {
+  it("renders nothing when no series is pending", () => {
     renderDialog({ series: undefined });
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("Keep series calls onCancel", () => {
+    const { onCancel } = renderDialog();
+    fireEvent.click(screen.getByRole("button", { name: "Keep series" }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
   it("fires onConfirm and reflects the in-flight state", () => {
     const onConfirm = vi.fn();
     const { rerender } = render(
-      <DeleteSeriesDialog
-        series={makeSeries()}
-        participantName="Caleb Bourg"
-        isDeleting={false}
-        onCancel={vi.fn()}
-        onConfirm={onConfirm}
-      />
+      <DeleteSeriesDialog series={makeSeries()} participantName="Caleb Bourg" isDeleting={false} onCancel={vi.fn()} onConfirm={onConfirm} />
     );
-
-    fireEvent.click(screen.getByRole("button", { name: "Delete series" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel series" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
 
     rerender(
-      <DeleteSeriesDialog
-        series={makeSeries()}
-        participantName="Caleb Bourg"
-        isDeleting={true}
-        onCancel={vi.fn()}
-        onConfirm={onConfirm}
-      />
+      <DeleteSeriesDialog series={makeSeries()} participantName="Caleb Bourg" isDeleting onCancel={vi.fn()} onConfirm={onConfirm} />
     );
-
-    const confirm = screen.getByRole("button", { name: "Deleting…" });
-    expect(confirm).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancelling…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Keep series" })).toBeDisabled();
   });
 });
