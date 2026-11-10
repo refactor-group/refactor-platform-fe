@@ -69,12 +69,22 @@ describe("weekTitle", () => {
 });
 
 describe("weekRange", () => {
-  it("names the month once inside a month", () => {
-    expect(weekRange(weekOf(0, NOW, TZ))).toBe("Aug 17 – 23");
+  it("names the month once inside a month, with the year", () => {
+    expect(weekRange(weekOf(0, NOW, TZ))).toBe("Aug 17 – 23, 2026");
   });
 
   it("names both months across a month boundary", () => {
-    expect(weekRange(weekOf(2, NOW, TZ))).toBe("Aug 31 – Sep 6");
+    expect(weekRange(weekOf(2, NOW, TZ))).toBe("Aug 31 – Sep 6, 2026");
+  });
+
+  it("names both years across a year boundary", () => {
+    const newYear = weekOf(0, DateTime.fromISO("2026-12-30T12:00:00", { zone: TZ }), TZ);
+    expect(weekRange(newYear)).toBe("Dec 28, 2026 – Jan 3, 2027");
+  });
+
+  it("shows the year for weeks in a later year", () => {
+    const january = weekOf(0, DateTime.fromISO("2027-01-13T12:00:00", { zone: TZ }), TZ);
+    expect(weekRange(january)).toBe("Jan 11 – 17, 2027");
   });
 });
 
