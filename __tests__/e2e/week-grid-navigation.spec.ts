@@ -90,6 +90,20 @@ test.describe('Week grid navigation and clicks', () => {
     }
   })
 
+  test('on a phone the filter, week arrows and Schedule share one row inside the panel', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const section = panel(page, 'This week')
+    const panelBox = (await section.boundingBox())!
+    const controls = ['All sessions', 'Previous week', 'Back to current week', 'Next week', 'Schedule session']
+    const boxes = await Promise.all(controls.map(async (name) => (await section.getByRole('button', { name }).boundingBox())!))
+    const middles = boxes.map((b) => Math.round(b.y + b.height / 2))
+    expect(new Set(middles).size).toBe(1)
+    for (const b of boxes) {
+      expect(b.x).toBeGreaterThanOrEqual(panelBox.x)
+      expect(b.x + b.width).toBeLessThanOrEqual(panelBox.x + panelBox.width)
+    }
+  })
+
   test('a single click opens an upcoming session', async ({ page }) => {
     await page.getByTestId('session-card-thursday').click()
     await page.waitForURL('**/coaching-sessions/thursday')
