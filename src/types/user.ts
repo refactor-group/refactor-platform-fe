@@ -46,6 +46,9 @@ export interface User {
   invite_status: InviteStatus | null;
 }
 
+/** What the profile form edits; saved alone so it can't overwrite preferences set elsewhere. */
+export type UserProfileUpdate = Pick<User, "email" | "first_name" | "last_name" | "display_name" | "timezone">;
+
 /** A user PUT that changes only these fields; the backend leaves absent ones as they are. */
 export type UserPreferencesUpdate = Partial<
   Pick<User, "default_coaching_session_duration_minutes" | "working_hours_start" | "working_hours_end">
