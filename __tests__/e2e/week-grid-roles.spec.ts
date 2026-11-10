@@ -47,6 +47,19 @@ const ROSA_MONDAY = session('rosa-monday', '2026-10-19T15:00:00', COACHED_BY_ROS
 const ROSA_SERIES_FRIDAY = session('rosa-series-friday', '2026-10-23T18:00:00', COACHED_BY_ROSA, 'series-rosa')
 const JANE_FRIDAY = session('jane-friday', '2026-10-23T15:00:00', COACHING_JANE)
 const JANE_TODAY = session('jane-today', '2026-10-21T20:00:00', COACHING_JANE)
+const TOPIC = (sessionId: string) => ({
+  id: `topic-${sessionId}`,
+  coaching_session_id: sessionId,
+  user_id: 'user-jane',
+  body: 'Quarterly goals',
+  priority: null,
+  status: 'open',
+  moved_from_session_id: null,
+  created_at: '2026-10-20T12:00:00Z',
+  updated_at: '2026-10-20T12:00:00Z',
+})
+// The widest footer a coach's agenda card gets: Ready, Move and Open.
+const JANE_READY = { ...session('jane-ready', '2026-10-21T22:00:00', COACHING_JANE), topics: [TOPIC('jane-ready')] }
 const FAR_AHEAD = session('far-ahead', '2027-01-04T15:00:00', COACHED_BY_ROSA)
 
 const json = (data: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) })
@@ -172,11 +185,59 @@ test.describe('Week grid on a phone for someone who coaches', () => {
     await open(page, context, {
       isACoach: true,
       relationships: [COACHED_BY_ROSA, COACHING_JANE],
-      sessions: [JANE_TODAY],
+      sessions: [JANE_TODAY, JANE_READY],
     })
   })
 
-  test("today's agenda offers Move on a session they coach", async ({ page }) => {
-    expect(await menuItems(page, 'jane-today')).toContain('Move…')
+  test("today's agenda leaves Move to the card, not the menu", async ({ page }) => {
+    const items = await menuItems(page, 'jane-today')
+    expect(items).toContain('Reschedule…')
+    expect(items).not.toContain('Move…')
+    await expect(page.getByTestId('session-card-jane-today').getByRole('button', { name: 'Move' })).toBeVisible()
+  })
+
+  test("a long press opens the card's menu without selecting its text or showing iOS's callout", async ({ page }) => {
+    const style = await page.getByTestId('session-card-jane-today').evaluate((el) => {
+      const s = getComputedStyle(el)
+      return {
+        userSelect: s.userSelect || s.getPropertyValue('-webkit-user-select'),
+        callout: CSS.supports('-webkit-touch-callout', 'none') ? s.getPropertyValue('-webkit-touch-callout') : 'none',
+      }
+    })
+    expect(style).toEqual({ userSelect: 'none', callout: 'none' })
+  })
+
+  test("a tap that closes the card's menu doesn't open the session; the next tap does", async ({ page, hasTouch }) => {
+    test.skip(!hasTouch, 'Touch only: a mouse click outside the menu never reaches the card.')
+    // A finger lands wherever it lands, so tap by position, not through the menu's overlay.
+    const name = card(page, 'jane-today').getByText('Jane Smith')
+    await name.scrollIntoViewIfNeeded()
+    const box = (await name.boundingBox())!
+    const tapName = () => page.touchscreen.tap(box.x + 8, box.y + box.height / 2)
+    await card(page, 'jane-today').click({ button: 'right' })
+    await expect(page.getByRole('menu')).toBeVisible()
+    await tapName()
+    await expect(page.getByRole('menu')).toBeHidden()
+    await page.waitForTimeout(300)
+    expect(new URL(page.url()).pathname).toBe('/dashboard')
+    await tapName()
+    await expect(page).toHaveURL(/\/coaching-sessions\/jane-today/)
+  })
+
+  test('a Ready card keeps its pill, Move and Open on one line', async ({ page }) => {
+    const card = page.getByTestId('session-card-jane-ready')
+    const parts = [
+      card.getByRole('link', { name: /Ready/ }),
+      card.getByRole('button', { name: 'Move' }),
+      card.getByRole('button', { name: 'Open session' }),
+    ]
+    const rows = async () =>
+      new Set(await Promise.all(parts.map(async (p) => {
+        const b = (await p.boundingBox())!
+        return Math.round(b.y + b.height / 2)
+      }))).size
+    expect(await rows()).toBe(1)
+    await page.setViewportSize({ width: 360, height: 780 })
+    expect(await rows()).toBe(1)
   })
 })

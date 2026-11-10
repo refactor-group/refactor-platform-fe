@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent, ReactNode } from "react";
+import { type CSSProperties, type KeyboardEvent, type ReactNode, type RefObject, useEffect, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 
@@ -10,6 +10,7 @@ import { CheckDisc } from "@/components/ui/check-disc";
 import { Spinner } from "@/components/ui/spinner";
 import { MODAL_DESKTOP_QUERY } from "@/lib/breakpoints";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
+import { useVisibleViewport, type VisibleViewport } from "@/lib/hooks/use-visible-viewport";
 import { type Option, unwrapOr } from "@/types/option";
 
 export interface StepRailItem {
@@ -24,6 +25,12 @@ export interface StepRailItem {
 export enum StepDialogHeight {
   Tall = "tall",
   Standard = "standard",
+}
+
+/** Single is a read-only view: no position, arrows, footer or step list. */
+export enum StepDialogVariant {
+  Steps = "steps",
+  Single = "single",
 }
 
 export type StepDialogLead =
@@ -53,6 +60,7 @@ interface StepDialogProps {
   onPrev: Option<() => void>;
   onNext: Option<() => void>;
   height: StepDialogHeight;
+  variant: StepDialogVariant;
 }
 
 const TYPING_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT", "BUTTON", "A"]);
@@ -178,11 +186,13 @@ function Rail({
     <div className="flex min-h-0 flex-col border-r border-rail-border bg-card pb-6 pl-6 pr-4 pt-7">
       <DialogPrimitive.Title className="text-card-title font-semibold">{title}</DialogPrimitive.Title>
       {railHeader && <div className="mt-3.5">{railHeader}</div>}
-      <ol aria-label="Steps" className="-mx-2 mt-[18px]">
-        {steps.map((step) => (
-          <RailRow key={step.id} step={step} />
-        ))}
-      </ol>
+      {steps.length > 0 && (
+        <ol aria-label="Steps" className="-mx-2 mt-[18px]">
+          {steps.map((step) => (
+            <RailRow key={step.id} step={step} />
+          ))}
+        </ol>
+      )}
       {railFooter && <div className="mt-auto border-t border-hairline pt-3.5">{railFooter}</div>}
     </div>
   );
@@ -237,14 +247,22 @@ function PaneFooter({
 
 // ─── Mobile: full-screen step view ───────────────────────────────────
 
-function MobileTopBar({ title, position }: Pick<StepDialogProps, "title" | "position">) {
+function MobileTopBar({
+  title,
+  position,
+  single,
+}: Pick<StepDialogProps, "title" | "position"> & { single: boolean }) {
   return (
     <div className="flex h-14 shrink-0 items-center border-b border-hairline bg-card px-4">
       <DialogPrimitive.Title className="text-item font-medium">{title}</DialogPrimitive.Title>
-      <span aria-hidden className="mx-1.5 text-muted-foreground">
-        ·
-      </span>
-      <span className="text-item tabular-nums text-muted-foreground">{positionText(position)}</span>
+      {!single && (
+        <>
+          <span aria-hidden className="mx-1.5 text-muted-foreground">
+            ·
+          </span>
+          <span className="text-item tabular-nums text-muted-foreground">{positionText(position)}</span>
+        </>
+      )}
       <div className="flex-1" />
       <CloseButton size="icon-md" />
     </div>
@@ -262,11 +280,7 @@ function MobileFooterAction({ lead, onNext }: Pick<StepDialogProps, "lead" | "on
   return lead.kind === "confirm" ? <ConfirmButton lead={lead} size="xl" /> : null;
 }
 
-function MobileFooter({
-  lead,
-  onPrev,
-  onNext,
-}: Pick<StepDialogProps, "lead" | "onPrev" | "onNext">) {
+function MobileFooter({ lead, onPrev, onNext }: Pick<StepDialogProps, "lead" | "onPrev" | "onNext">) {
   return (
     <div className="flex shrink-0 items-center gap-3 border-t border-hairline bg-card px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
       <StepArrow direction="prev" onStep={onPrev} />
@@ -296,23 +310,50 @@ function contentClass(desktop: boolean, height: StepDialogHeight): string {
     : cn("fixed inset-0 z-50 flex flex-col bg-well outline-none", ANIMATE);
 }
 
+/** Above the keyboard, the phone view takes only the visible part of the screen, and the focused field scrolls into it. */
+function useAboveKeyboard(desktop: boolean, ref: RefObject<HTMLDivElement | null>): CSSProperties | undefined {
+  const visible = useVisibleViewport(!desktop);
+  const height = visible.some ? visible.val.height : 0;
+  useEffect(() => {
+    const focused = document.activeElement;
+    if (height > 0 && focused instanceof HTMLElement && ref.current?.contains(focused)) {
+      focused.scrollIntoView({ block: "center" });
+    }
+  }, [height, ref]);
+  return visible.some ? visibleStyle(visible.val) : undefined;
+}
+
+function visibleStyle({ top, height }: VisibleViewport): CSSProperties {
+  return { top, height, bottom: "auto" };
+}
+
 /**
  * Both layouts share one element tree, so crossing 900px restyles the step body instead of
  * remounting it, and anything held in it (a search, a half-typed value) survives.
  */
 function StepDialogContent({ desktop, ...props }: StepDialogProps & { desktop: boolean }) {
+  const single = props.variant === StepDialogVariant.Single;
+  const contentRef = useRef<HTMLDivElement>(null);
+  const aboveKeyboard = useAboveKeyboard(desktop, contentRef);
   return (
     <DialogPrimitive.Content
+      ref={contentRef}
+      style={aboveKeyboard}
       tabIndex={-1}
       onOpenAutoFocus={focusContent}
       aria-describedby={undefined}
-      onKeyDown={confirmOnEnter(props.lead)}
+      onKeyDown={single ? undefined : confirmOnEnter(props.lead)}
       className={contentClass(desktop, props.height)}
     >
       {desktop ? (
-        <Rail title={props.title} railHeader={props.railHeader} steps={props.steps} railFooter={props.railFooter} />
+        <Rail
+          title={props.title}
+          railHeader={props.railHeader}
+          steps={single ? [] : props.steps}
+          railFooter={props.railFooter}
+        />
       ) : (
-        <MobileTopBar title={props.title} position={props.position} />
+        <MobileTopBar title={props.title} position={props.position} single={single} />
       )}
       <div
         className={
@@ -328,13 +369,15 @@ function StepDialogContent({ desktop, ...props }: StepDialogProps & { desktop: b
         <div className={desktop ? "-mx-1 -mb-1 mt-5 min-h-0 flex-1 overflow-y-auto p-1" : "mt-6"}>
           {props.children}
         </div>
-        {desktop ? (
-          <PaneFooter lead={props.lead} position={props.position} onPrev={props.onPrev} onNext={props.onNext} />
-        ) : (
-          props.railFooter && <div className="mt-8">{props.railFooter}</div>
-        )}
+        {desktop
+          ? !single && (
+              <PaneFooter lead={props.lead} position={props.position} onPrev={props.onPrev} onNext={props.onNext} />
+            )
+          : props.railFooter && <div className="mt-8">{props.railFooter}</div>}
       </div>
-      {!desktop && <MobileFooter lead={props.lead} onPrev={props.onPrev} onNext={props.onNext} />}
+      {!desktop && !single && (
+        <MobileFooter lead={props.lead} onPrev={props.onPrev} onNext={props.onNext} />
+      )}
     </DialogPrimitive.Content>
   );
 }

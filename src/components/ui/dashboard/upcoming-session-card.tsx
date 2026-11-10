@@ -22,6 +22,7 @@ import {
   getUrgencyMessage,
   selectNextUpcomingSession,
 } from "@/lib/utils/session";
+import { durationText } from "@/lib/scheduling-copy";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import { type EnrichedCoachingSession } from "@/types/coaching-session";
@@ -274,7 +275,7 @@ function HeaderRow({
           {timeStr}
         </span>
         <span className="text-[11px] text-muted-foreground/60 tabular-nums whitespace-nowrap">
-          {durationMinutes} min
+          {durationText(durationMinutes)}
         </span>
       </div>
     </div>

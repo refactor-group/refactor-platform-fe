@@ -39,9 +39,30 @@ Then authenticate if needed:
 ### 3. Capture the live implementation
 - Use Playwright MCP to navigate to the target route
 - Take a full-page screenshot at desktop width (1280px)
-- Take additional screenshots at tablet (768px) and mobile (375px) viewports using `browser_resize`
+- Take additional screenshots at tablet (768px) and phone (390px) viewports using `browser_resize`
 - If interactive states are relevant (hover, focus, modals, dropdowns), trigger them with
   `browser_click`/`browser_hover` and capture before/after screenshots
+
+### 3b. Phone pass
+At 390px and 360px, check:
+- **No horizontal overflow:** `document.documentElement.scrollWidth <= innerWidth`.
+- **Nothing jumps:** controls the user taps repeatedly hold their position across loading, empty
+  and changed states.
+- **No loading flash:** page through, open dialogs, and watch for skeletons.
+- **No duplicate actions:** nothing is offered both on an item and in its menu or header.
+- **Rows with inputs** use `min-h-*`, not fixed heights (iOS draws its inputs taller).
+- **Long-press targets** can't have their text selected (`user-select: none` on the target itself;
+  Firefox reports `auto` on its children).
+
+Playwright's Mobile Safari is desktop WebKit with a phone viewport, not iOS. These need a real
+iPhone, so list them in the report for the user to check:
+- the keyboard covering a focused field;
+- iOS's long-press callout;
+- the order iOS sends taps in, including a tap that closes a menu;
+- wheel pickers for date and time.
+
+When testing taps in Playwright, `page.touchscreen.tap(x, y)` reaches through overlays the way a
+finger does, but scroll the target into view before measuring it.
 
 ### 4. Compare and analyze
 Compare the live screenshots against the design reference (Figma or description). Evaluate:

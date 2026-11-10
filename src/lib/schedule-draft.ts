@@ -296,6 +296,7 @@ export function resolveSlots(input: ResolveSlotsInput): DateTime[] {
 interface OccurrenceInput {
   start: DateTime;
   frequency: Frequency;
+  interval: number;
   byWeekdays: Weekday[];
   end: RecurrenceEnd;
 }
@@ -304,17 +305,23 @@ function weeksBetween(a: DateTime, b: DateTime): number {
   return Math.round(b.startOf("week").diff(a.startOf("week"), "weeks").weeks);
 }
 
+function monthsBetween(a: DateTime, b: DateTime): number {
+  return (b.year - a.year) * 12 + (b.month - a.month);
+}
+
+// Steps by the interval the way the backend expands a rule; a fortnightly cadence doubles it.
 function occursOn(day: DateTime, input: OccurrenceInput): boolean {
-  const { start, frequency, byWeekdays } = input;
+  const { start, frequency, interval, byWeekdays } = input;
+  const onWeekday = () => byWeekdays.includes(weekdayFromLuxon(day.weekday));
   switch (frequency) {
     case Frequency.Daily:
-      return true;
+      return Math.round(day.diff(start.startOf("day"), "days").days) % interval === 0;
     case Frequency.Weekly:
-      return byWeekdays.includes(weekdayFromLuxon(day.weekday));
+      return onWeekday() && weeksBetween(start, day) % interval === 0;
     case Frequency.Biweekly:
-      return byWeekdays.includes(weekdayFromLuxon(day.weekday)) && weeksBetween(start, day) % 2 === 0;
+      return onWeekday() && weeksBetween(start, day) % (2 * interval) === 0;
     case Frequency.Monthly:
-      return day.day === start.day;
+      return day.day === start.day && monthsBetween(start, day) % interval === 0;
     default: {
       const _exhaustive: never = frequency;
       throw new Error(`Unhandled frequency: ${_exhaustive}`);
@@ -329,20 +336,44 @@ export function swapStartWeekday(days: Weekday[], from: Weekday, to: Weekday): W
   return WEEKDAYS_ORDERED.filter((d) => next.includes(d));
 }
 
+// Past the backend's span cap the series is invalid anyway; stop walking there.
+function* occurrenceDays(input: OccurrenceInput): Generator<DateTime> {
+  const first = input.start.startOf("day");
+  for (let offset = 0; offset < MAX_SPAN_DAYS + 1; offset += 1) {
+    const day = first.plus({ days: offset });
+    if (occursOn(day, input)) yield day;
+  }
+}
+
 export function occurrenceCount(input: OccurrenceInput): number {
   const { start, end } = input;
   if (end.kind === "count") return end.count;
-  const first = start.startOf("day");
   const until = DateTime.fromISO(end.until, { zone: start.zone }).startOf("day");
   if (!until.isValid) return 0;
   let count = 0;
-  // Past the backend's span cap the series is invalid anyway; stop counting there.
-  for (let offset = 0; offset < MAX_SPAN_DAYS + 1; offset += 1) {
-    const day = first.plus({ days: offset });
+  for (const day of occurrenceDays(input)) {
     if (day > until) break;
-    if (occursOn(day, input)) count += 1;
+    count += 1;
   }
   return count;
+}
+
+export function lastOccurrence(input: OccurrenceInput): Option<DateTime> {
+  const { start, end } = input;
+  if (end.kind !== "count" || !Number.isInteger(end.count) || end.count < 1) return None;
+  let seen = 0;
+  for (const day of occurrenceDays(input)) {
+    seen += 1;
+    if (seen === end.count) {
+      return Some(day.set({ hour: start.hour, minute: start.minute, second: start.second, millisecond: start.millisecond }));
+    }
+  }
+  return None;
+}
+
+export function lastSessionText(last: DateTime, start: DateTime): string {
+  const format = last.year === start.year ? "ccc, LLL d" : "ccc, LLL d, yyyy";
+  return `the last on ${last.toFormat(format)}`;
 }
 
 // ─── Payloads ────────────────────────────────────────────────────────

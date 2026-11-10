@@ -214,12 +214,13 @@ export async function mockCommonApiRoutes(
   // Route handlers are matched in LIFO order (last registered wins).
   // Register the catch-all first, then more specific patterns.
   //
-  // The backend runs at http://localhost:4000 with no /api/ prefix, so
-  // route patterns must match that URL structure.
+  // The backend runs on port 4000 with no /api/ prefix, so route patterns
+  // must match that URL structure. Matched by port, not host, so a dev server
+  // pointed at another host (a phone test over Tailscale) still stays mocked.
 
   // Catch-all for any backend requests not handled below (actions,
   // user_coaching_roles, etc.) to prevent hanging requests.
-  await page.route('**/localhost:4000/**', async (route) => {
+  await page.route((url) => url.port === '4000', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

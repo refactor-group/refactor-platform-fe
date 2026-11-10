@@ -130,7 +130,10 @@ Inter. Headings are **regular weight** with `-0.01em` tracking (baked into the s
   overlay, `shadow-modal`, dark adds a 1px `border`. Below 900px (`modal` screen) it becomes a
   full-screen step view: 56px top bar ("Title · n of m" + 44px close), 26px step title, scrolling
   body, sticky footer with a 48px back circle and a Next or confirm pill. Step arrows always
-  show, disabled at the ends.
+  show, disabled at the ends, except `StepDialogVariant.Single` (a read-only view) shows no
+  position, arrows, footer or step list (`series-detail-dialog.tsx`). While an on-screen keyboard
+  is up, the phone view shrinks to the visible area and scrolls the focused field into it
+  (`useVisibleViewport`).
 - Page width comes from `PageContainer` (`max-w-screen-2xl`); don't set your own max width.
 - Loading, empty and error states render inside the **same** card chrome so the grid never
   jumps (`GoalsOverviewCardSkeleton`, `GoalsOverviewCardError`).
@@ -199,6 +202,31 @@ className={cn(
 
 Full-width header button; chevron `transition-transform duration-200`, `rotate-180` when open
 (`goals-overview-card.tsx`).
+
+### Phones (below 900px or `lg`)
+
+Calm and steady:
+
+- **One way to do a thing.** Drop a per-item action when a header button or the card already
+  does it. Example: Move lives on the agenda card, not also in its menu.
+- **A few good choices plus an exact input**, not every option (Move sheet: ≤5 suggested times
+  and a time field).
+- **Controls tapped repeatedly hold still.** Week arrows keep their position across loading and
+  range changes. Reserve a line's height rather than letting text appear and disappear.
+- **No loading flashes.** Prefetch what the next tap needs; when something must load, use a quiet
+  placeholder shaped like the result, not a pulsing grey skeleton.
+- Tap targets are 44px; no horizontal scroll at 360px.
+
+iOS Safari:
+
+- **Rows grow with their controls.** iOS draws date, time and number inputs taller than their CSS
+  height, and labels wrap, so use `min-h-*` on rows, never a fixed `h-*` (`repeat-step.tsx`).
+- **Long-press targets** that open a menu set `select-none [-webkit-touch-callout:none]`, so a
+  press doesn't also select text or show iOS's Copy/Cut callout (`session-card.tsx`).
+- **The tap that closes a menu only closes it.** On touch, its click lands once the menu is gone;
+  swallow it while the menu is open (`session-card-menu.tsx`).
+- **Full-screen fixed views** follow the visible viewport while the keyboard is up, or fields
+  near the bottom can't be scrolled into view (`useVisibleViewport`).
 
 ---
 

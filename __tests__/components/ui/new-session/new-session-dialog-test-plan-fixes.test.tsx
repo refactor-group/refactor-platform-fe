@@ -213,7 +213,7 @@ describe("Accessible names on the step controls", () => {
     typeTime("09:00");
     next();
     fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
-    expect(screen.getByRole("toolbar", { name: "On these days" })).toBeInTheDocument();
+    expect(screen.getByRole("toolbar", { name: "Repeats on" })).toBeInTheDocument();
     expect(screen.getByRole("radiogroup", { name: "Ends" })).toBeInTheDocument();
   });
 

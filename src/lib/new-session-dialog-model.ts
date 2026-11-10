@@ -4,7 +4,15 @@ import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
 import type { ScheduleData } from "@/lib/hooks/use-schedule-data";
 import { moveStart } from "@/lib/move-draft";
 import type { PersonEntry } from "@/lib/people";
-import { type Resolution, occurrenceCount, resolveDays, resolveSlots, usualFor } from "@/lib/schedule-draft";
+import {
+  type Resolution,
+  lastOccurrence,
+  lastSessionText,
+  occurrenceCount,
+  resolveDays,
+  resolveSlots,
+  usualFor,
+} from "@/lib/schedule-draft";
 import {
   type BusyClash,
   type BusySession,
@@ -77,6 +85,8 @@ export interface RepeatModel {
   /** The series' own rhythm when no standard choice matches it. */
   seriesCadence: Option<Cadence>;
   error: Option<string>;
+  /** When a counted series' last session falls, as text. */
+  lastSession: Option<string>;
   onRepeatChange: (cadence: Option<Cadence>) => void;
   onWeekdaysChange: (days: Weekday[]) => void;
   onEndChange: (end: RecurrenceEnd) => void;
@@ -201,8 +211,14 @@ export function createsCount(repeat: RepeatChoice, start: Option<DateTime>, byWe
   if (repeat.kind === "none") return 1;
   if (repeat.end.kind === "count") return repeat.end.count;
   return start.some
-    ? occurrenceCount({ start: start.val, frequency: repeat.frequency, byWeekdays, end: repeat.end })
+    ? occurrenceCount({ start: start.val, frequency: repeat.frequency, interval: repeat.interval, byWeekdays, end: repeat.end })
     : 1;
+}
+
+export function lastSessionOf(repeat: RepeatChoice, start: Option<DateTime>, byWeekdays: Weekday[]): Option<string> {
+  if (repeat.kind === "none" || start.none) return None;
+  const last = lastOccurrence({ start: start.val, frequency: repeat.frequency, interval: repeat.interval, byWeekdays, end: repeat.end });
+  return last.some ? Some(lastSessionText(last.val, start.val)) : None;
 }
 
 export function summaryOf(entry: PersonEntry, count: number, provider: Option<Provider>): SummaryModel {

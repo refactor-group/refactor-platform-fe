@@ -5,8 +5,8 @@ import { setupAuthentication, mockCommonApiRoutes, MOCK_USER_ID, SINGLE_RELATION
 test.use({ timezoneId: 'America/Chicago', locale: 'en-US' })
 
 const NOW = '2026-08-25T19:00:00Z' // 2:00 PM in Chicago
-// The dashboard week grid asks /nearest around this week's and next week's Monday midnights for its arrows.
-const WEEK_EDGES = ['2026-08-24T05:00:00Z', '2026-08-31T05:00:00Z']
+// The dashboard week grid asks /nearest around this week's Monday midnight for its back arrow.
+const WEEK_EDGES = ['2026-08-24T05:00:00Z']
 
 const PEOPLE = [
   ['rel-a', 'alex', 'Alex', 'Chen'],

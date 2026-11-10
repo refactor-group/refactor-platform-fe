@@ -26,6 +26,7 @@ import {
   draftFor,
   entryFor,
   initialDraft,
+  lastSessionOf,
   leadFor,
   moverOf,
   peopleEntries,
@@ -313,6 +314,7 @@ export function useNewSessionDialog(
       defaultEnd: { count: DEFAULT_REPEAT_COUNT, until: untilAfter(start.some ? start.val : now) },
       seriesCadence: seriesCadenceOf(prefill.some ? Some(prefill.val.repeat) : None),
       error,
+      lastSession: lastSessionOf(repeat, start, recurrence.byWeekdays),
       onRepeatChange: (choice) => {
         setRepeating(choice.some);
         if (choice.some) recurrence.setCadence(choice.val);

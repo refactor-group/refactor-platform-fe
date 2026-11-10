@@ -192,7 +192,7 @@ export function getRelationshipsForUser(
  * Returns the display name of the other participant in a relationship
  * relative to the given user.
  */
-export function getOtherPersonName(
+function getOtherPersonName(
   rel: CoachingRelationshipWithUserNames,
   userId: Id
 ): string {

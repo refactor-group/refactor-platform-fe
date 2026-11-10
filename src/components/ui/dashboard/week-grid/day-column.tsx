@@ -2,7 +2,6 @@ import type { RefObject } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { GridCard } from "@/lib/week-grid/card";
 import type { DaySlot, DropTarget } from "@/lib/week-grid/slots";
 import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
@@ -65,7 +64,7 @@ export function DayColumn({ group, handlers, onSchedule, drag, justDragged, now,
 }
 
 function DayBody({ group, handlers, onSchedule, drag, justDragged, now, isLoading, isUnloaded }: DayColumnProps) {
-  if (isLoading) return <Skeleton className="h-32 rounded-xl" />;
+  if (isLoading) return <UnloadedDay />;
   if (drag.kind === "over") return <DropSlots slots={drag.slots} hovered={drag.hovered} name={drag.name} />;
   const nodes =
     group.items.length === 0

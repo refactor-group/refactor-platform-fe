@@ -268,6 +268,14 @@ describe("NewSessionDialog: Repeat", () => {
     expect(screen.getByRole("button", { name: "Schedule 8 sessions" })).toBeEnabled();
   });
 
+  it("names the last session beside the count, and follows it", () => {
+    toRepeat();
+    fireEvent.click(screen.getByRole("button", { name: "Weekly" }));
+    expect(screen.getByText("sessions, the last on Thu, Oct 8")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Number of sessions" }), { target: { value: "2" } });
+    expect(screen.getByText("sessions, the last on Thu, Aug 27")).toBeInTheDocument();
+  });
+
   it("blocks an invalid end with one inline message", () => {
     toRepeat();
     fireEvent.click(screen.getByRole("button", { name: "Weekly" }));

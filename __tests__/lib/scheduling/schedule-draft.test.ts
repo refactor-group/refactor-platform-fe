@@ -227,19 +227,20 @@ describe("occurrenceCount", () => {
 
   it("is the count when the series ends after a number of sessions", () => {
     expect(
-      occurrenceCount({ start, frequency: Frequency.Weekly, byWeekdays: [Weekday.Thu], end: { kind: "count", count: 8 } })
+      occurrenceCount({ start, frequency: Frequency.Weekly, interval: 1, byWeekdays: [Weekday.Thu], end: { kind: "count", count: 8 } })
     ).toBe(8);
   });
 
   it("counts dates through an end date, inclusive", () => {
     const until = (date: string) => ({ kind: "until" as const, until: date });
-    expect(occurrenceCount({ start, frequency: Frequency.Weekly, byWeekdays: [Weekday.Thu], end: until("2026-09-10") })).toBe(4);
+    expect(occurrenceCount({ start, frequency: Frequency.Weekly, interval: 1, byWeekdays: [Weekday.Thu], end: until("2026-09-10") })).toBe(4);
     expect(
-      occurrenceCount({ start, frequency: Frequency.Weekly, byWeekdays: [Weekday.Tue, Weekday.Thu], end: until("2026-09-01") })
+      occurrenceCount({ start, frequency: Frequency.Weekly, interval: 1, byWeekdays: [Weekday.Tue, Weekday.Thu], end: until("2026-09-01") })
     ).toBe(4);
-    expect(occurrenceCount({ start, frequency: Frequency.Biweekly, byWeekdays: [Weekday.Thu], end: until("2026-09-17") })).toBe(3);
-    expect(occurrenceCount({ start, frequency: Frequency.Monthly, byWeekdays: [], end: until("2026-12-15") })).toBe(4);
-    expect(occurrenceCount({ start, frequency: Frequency.Weekly, byWeekdays: [Weekday.Thu], end: until("2026-08-19") })).toBe(0);
+    expect(occurrenceCount({ start, frequency: Frequency.Biweekly, interval: 1, byWeekdays: [Weekday.Thu], end: until("2026-09-17") })).toBe(3);
+    expect(occurrenceCount({ start, frequency: Frequency.Monthly, interval: 1, byWeekdays: [], end: until("2026-12-15") })).toBe(4);
+    expect(occurrenceCount({ start, frequency: Frequency.Weekly, interval: 1, byWeekdays: [Weekday.Thu], end: until("2026-08-19") })).toBe(0);
+    expect(occurrenceCount({ start, frequency: Frequency.Weekly, interval: 3, byWeekdays: [Weekday.Thu], end: until("2026-10-01") })).toBe(3);
   });
 });
 

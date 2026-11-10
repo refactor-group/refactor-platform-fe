@@ -8,6 +8,7 @@ import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
+import { durationText } from "@/lib/scheduling-copy";
 import { timeOfDay } from "@/lib/session-window";
 import {
   CardFooter,
@@ -96,6 +97,7 @@ export function SessionCard({
   const ownHintIds = useCardHintIds();
   const hintIds = sharedHint.some ? sharedHint.val : ownHintIds;
   const time = timeOfDay(view.start);
+  const length = durationText(view.session.duration_minutes);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: view.session.id, disabled: !draggable });
   const onClick = () => {
     if (justDragged.some && justDragged.val.current) return;
@@ -108,7 +110,7 @@ export function SessionCard({
 
   return (
     <>
-      <SessionCardMenu view={view} isCompact={isAgenda} onAction={onAction}>
+      <SessionCardMenu view={view} onAction={onAction}>
         <div
           ref={setNodeRef}
           data-testid={`session-card-${view.session.id}`}
@@ -116,7 +118,7 @@ export function SessionCard({
           data-dimmed={String(dimmed)}
           data-draggable={String(draggable)}
           tabIndex={0}
-          aria-label={`${time}, ${view.name}`}
+          aria-label={`${time}, ${length}, ${view.name}`}
           aria-describedby={[
             ...(dimmed ? [hintIds.filteredOut] : []),
             hintIds.hint,
@@ -127,7 +129,8 @@ export function SessionCard({
           onClick={onClick}
           onKeyDown={onKeyDown}
           className={cn(
-            "flex cursor-pointer flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+            // A long press opens the card's menu, so it mustn't also select text or show iOS's callout.
+            "flex cursor-pointer select-none flex-col gap-1.5 rounded-xl p-[11px] outline-none [-webkit-touch-callout:none]",
             layout === SessionCardLayout.Grid && "min-h-32",
             draggable && "cursor-grab",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -138,11 +141,11 @@ export function SessionCard({
         >
           <span
             className={cn(
-              "text-xs tabular-nums",
+              "flex flex-wrap gap-x-1 text-xs tabular-nums",
               isPast ? "text-faint" : "text-muted-foreground"
             )}
           >
-            {time}
+            <span>{time}</span> <span className="whitespace-nowrap">· {length}</span>
           </span>
           <span
             className={cn(
@@ -153,12 +156,13 @@ export function SessionCard({
             {view.name}
           </span>
           <CardNoteLine note={view.note} />
-          <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-1.5">
             <CardFooterLine footer={view.footer} sessionId={view.session.id} />
             {isAgenda && (
-              <div className="ml-auto flex items-center gap-2">
-                {canMove && onMove && <CardButton label="Move" onClick={() => onMove(view)} />}
-                <CardButton label="Open session" onClick={() => onOpen(view)} />
+              <div className="ml-auto flex items-center gap-1.5">
+                {canMove && onMove && <CardButton label="Move" name="Move" onClick={() => onMove(view)} />}
+                {/* "Open" fits beside Ready and Move on a phone; the name keeps "session". */}
+                <CardButton label="Open" name="Open session" onClick={() => onOpen(view)} />
               </div>
             )}
           </div>
@@ -173,12 +177,13 @@ function stopPropagation(e: SyntheticEvent) {
   e.stopPropagation();
 }
 
-function CardButton({ label, onClick }: { label: string; onClick: () => void }) {
+function CardButton({ label, name, onClick }: { label: string; name: string; onClick: () => void }) {
   return (
     <Button
       variant="secondary"
       size="sm"
-      className="text-[13px]"
+      aria-label={name}
+      className="px-3 text-[13px]"
       onClick={(e) => {
         e.stopPropagation();
         onClick();

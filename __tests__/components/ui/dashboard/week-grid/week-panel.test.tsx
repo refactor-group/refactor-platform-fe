@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DateTime } from "ts-luxon";
 import type { Week } from "@/lib/week-grid/week";
 import { SessionAction } from "@/lib/session-actions";
+import { MoveScope } from "@/lib/scheduling";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { WeekPanel } from "@/components/ui/dashboard/week-grid/week-panel";
 import { WeekGridStoreProvider, useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
@@ -32,10 +33,21 @@ interface WeekSessionsResult {
 const refresh = vi.fn();
 let result: WeekSessionsResult;
 const requestedWeeks: Week[] = [];
+const prefetchedAround: Week[] = [];
+let adjacent: EnrichedCoachingSession[] = [];
+let adjacentLoaded = true;
 vi.mock("@/lib/hooks/use-week-sessions", () => ({
   useWeekSessions: (week: Week) => {
     requestedWeeks.push(week);
     return result;
+  },
+  useAdjacentWeekSessions: (week: Week) => {
+    prefetchedAround.push(week);
+    const span = adjacentLoaded ? 1 : 0;
+    return {
+      sessions: adjacent,
+      known: { from: week.start.minus({ weeks: span }), to: week.start.plus({ weeks: 1 + span }) },
+    };
   },
 }));
 
@@ -45,7 +57,7 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
     select({ userId: "coach-1", isACoach, userSession: { id: "coach-1", timezone: TZ } }),
 }));
 
-let edges: WeekEdges = { hasEarlier: true, hasLater: true };
+let edges: WeekEdges = { hasEarlier: true };
 vi.mock("@/lib/hooks/use-week-edges", () => ({ useWeekEdges: () => edges }));
 
 const ALEX: FilterPerson = { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-1"], group: PersonGroup.Coachees };
@@ -78,10 +90,7 @@ vi.mock("@/lib/toast", () => ({ toast: (...args: unknown[]) => toast(...args) })
 vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => TZ }));
 
 let actionsInput: Record<string, unknown> = {};
-// Like the real hook, Move goes to the onMove the panel hands it.
-const run = vi.fn((action: SessionAction, session: EnrichedCoachingSession) => {
-  if (action === SessionAction.Move) (actionsInput.onMove as (s: EnrichedCoachingSession) => void)(session);
-});
+const run = vi.fn();
 vi.mock("@/components/ui/dashboard/use-session-actions", () => ({
   useSessionActions: (input: Record<string, unknown>) => {
     actionsInput = input;
@@ -105,9 +114,12 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
   requestedWeeks.length = 0;
+  prefetchedAround.length = 0;
+  adjacent = [];
+  adjacentLoaded = true;
   vi.clearAllMocks();
   isACoach = true;
-  edges = { hasEarlier: true, hasLater: true };
+  edges = { hasEarlier: true };
   selectedPerson = None;
   wide = true;
   widthKnown = true;
@@ -130,6 +142,24 @@ describe("WeekPanel", () => {
     expect(week.start.zoneName).toBe(TZ);
     expect(week.start.toISODate()).toBe("2026-08-17");
     expect(week.days).toHaveLength(7);
+  });
+
+  it("fetches the weeks either side of the shown one ahead of time", () => {
+    renderPanel();
+    expect(prefetchedAround.at(-1)?.start.toISODate()).toBe("2026-08-17");
+    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
+    expect(prefetchedAround.at(-1)?.start.toISODate()).toBe("2026-08-24");
+  });
+
+  it("shows no pulsing placeholder while a week loads, on either layout", () => {
+    result = { ...result, sessions: [], isLoading: true };
+    const { container, unmount } = renderPanel();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+    unmount();
+    wide = false;
+    const phone = renderPanel();
+    expect(phone.container.querySelectorAll(".animate-pulse")).toHaveLength(0);
+    expect(screen.getByRole("status", { name: "Loading sessions" })).toBeInTheDocument();
   });
 
   it("titles the week and counts its sessions", () => {
@@ -194,6 +224,8 @@ describe("WeekPanel", () => {
     expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledTimes(1);
+    // SWR's refresh treats an argument as new data; the click must not reach it.
+    expect(refresh).toHaveBeenCalledWith();
   });
 
   it("doesn't call a day empty when nothing loaded", () => {
@@ -234,6 +266,16 @@ describe("WeekPanel", () => {
     expect(screen.queryAllByTestId(/^session-card-/)).toHaveLength(0);
   });
 
+  it("keeps a phone's day strip and day heading while a week loads", () => {
+    wide = false;
+    result = { ...result, sessions: [], isLoading: true };
+    renderPanel();
+    expect(screen.getByRole("button", { name: "Tuesday, August 18" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Tuesday, August 18" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading sessions" })).toBeInTheDocument();
+    expect(screen.queryByText("No sessions")).not.toBeInTheDocument();
+  });
+
   it("marks the panel busy while loading, without a count", () => {
     result = { ...result, sessions: [], isLoading: true };
     renderPanel();
@@ -255,11 +297,17 @@ describe("WeekPanel before the screen width is known", () => {
     expect(screen.getByRole("region", { name: "This week" })).toHaveAttribute("aria-busy", "true");
   });
 
-  it("hides Back to this week on wide screens with CSS until the width is known", () => {
+  it("puts a phone's way back between the week arrows, disabled on the current week", () => {
     widthKnown = false;
     renderPanel();
+    const home = screen.getByRole("button", { name: "Back to current week" });
+    expect(home).toBeDisabled();
+    expect(home).toHaveClass("lg:hidden");
+    expect(home.textContent).toBe("");
+    expect(button("Previous week").nextElementSibling?.nextElementSibling).toBe(home);
+    expect(home.nextElementSibling).toBe(button("Next week"));
     fireEvent.click(button("Next week"));
-    expect(screen.getByRole("button", { name: "Back to this week" })).toHaveClass("lg:hidden");
+    expect(screen.getByRole("button", { name: "Back to current week" })).toBeEnabled();
   });
 
   it("renders the chosen layout alone once the width is known", () => {
@@ -311,23 +359,23 @@ describe("WeekPanel paging", () => {
   });
 
   it("stops the previous arrow at the viewer's first session", () => {
-    edges = { hasEarlier: false, hasLater: true };
+    edges = { hasEarlier: false };
     renderPanel();
     expect(button("Previous week")).toBeDisabled();
     expect(button("Next week")).toBeEnabled();
   });
 
   it("never stops a coach paging forward, so any future week can be scheduled", () => {
-    edges = { hasEarlier: true, hasLater: false };
     renderPanel();
     expect(button("Next week")).toBeEnabled();
   });
 
-  it("stops a coachee's next arrow at their last session", () => {
+  it("lets a coachee page forward too, even with nothing left scheduled", () => {
     isACoach = false;
-    edges = { hasEarlier: true, hasLater: false };
     renderPanel();
-    expect(button("Next week")).toBeDisabled();
+    expect(button("Next week")).toBeEnabled();
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("region", { name: "Next week" })).toBeInTheDocument();
   });
 });
 
@@ -504,12 +552,12 @@ describe("WeekPanel below 1024px", () => {
     expect(screen.getAllByTestId(/^session-card-/).map((c) => c.dataset.testid)).toEqual(["session-card-thursday"]);
   });
 
-  it("says No sessions on an empty day, with Schedule from today on", () => {
+  it("says No sessions on an empty day, leaving scheduling to Schedule session", () => {
     renderPanel();
     fireEvent.click(pill("Wednesday, August 19"));
     expect(screen.getByText("No sessions")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Schedule on Wednesday, August 19" }));
-    expect(onSchedule).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schedule session" })).toBeInTheDocument();
   });
 
   it("opens a session from its agenda card", () => {
@@ -521,10 +569,10 @@ describe("WeekPanel below 1024px", () => {
 
   it("selects Monday on another week, and offers a way back", () => {
     renderPanel();
-    expect(screen.queryByRole("button", { name: "Back to this week" })).not.toBeInTheDocument();
+    expect(button("Back to current week")).toBeDisabled();
     fireEvent.click(button("Next week"));
     expect(pill("Monday, August 24")).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(button("Back to this week"));
+    fireEvent.click(button("Back to current week"));
     expect(screen.getByRole("region", { name: "This week" })).toBeInTheDocument();
     expect(pill("Tuesday, August 18")).toHaveAttribute("aria-pressed", "true");
   });
@@ -561,12 +609,13 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(within(screen.getByTestId("session-card-thursday")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
   });
 
-  it("moves the session to a picked slot through the sheet", () => {
+  it("moves the session to a picked time through the sheet", () => {
     renderPanel();
     fireEvent.click(pill("Thursday, August 20"));
     fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
-    expect(within(moveSheet()).getByRole("button", { name: "10:00 AM, current" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(within(moveSheet()).getByRole("button", { name: "11:00 AM" }));
+    const time = within(moveSheet()).getByLabelText("Start time");
+    expect(time).toHaveValue("10:00");
+    fireEvent.change(time, { target: { value: "11:00" } });
     fireEvent.click(within(moveSheet()).getByRole("button", { name: "Move session" }));
     expect(moveSession).toHaveBeenCalledTimes(1);
     const [{ session, name, to }] = moveSession.mock.calls[0];
@@ -574,6 +623,26 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(name).toBe("Alex Chen");
     expect(to.toISO()).toBe(DateTime.fromISO("2026-08-20T11:00", { zone: TZ }).toISO());
     expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
+  });
+
+  it("checks a move that runs into next week against next week's sessions", () => {
+    adjacent = [session("next-monday", "2026-08-24T05:00:00")];
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "Sunday, August 23" }));
+    fireEvent.change(within(moveSheet()).getByLabelText("Start time"), { target: { value: "23:45" } });
+    expect(within(moveSheet()).getByRole("button", { name: "Resolve overlap…" })).toBeEnabled();
+  });
+
+  it("won't move into next week before next week's sessions have loaded", () => {
+    adjacentLoaded = false;
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "Sunday, August 23" }));
+    fireEvent.change(within(moveSheet()).getByLabelText("Start time"), { target: { value: "23:45" } });
+    expect(within(moveSheet()).getByRole("button", { name: "Move session" })).toBeDisabled();
   });
 
   it("closes an open Move sheet when the week's read fails, so nothing moves on stale times", () => {
@@ -591,22 +660,29 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(moveSession).not.toHaveBeenCalled();
   });
 
-  it("opens the same sheet from the long-press menu's Move…", () => {
+  it("leaves Move to the card: the long-press menu has no Move…", () => {
     renderPanel();
     fireEvent.click(pill("Thursday, August 20"));
+    expect(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" })).toBeInTheDocument();
     fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Move…" }));
-    expect(run).toHaveBeenCalledWith(SessionAction.Move, THURSDAY);
-    expect(moveSheet()).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Reschedule…" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Move…" })).not.toBeInTheDocument();
   });
 
-  it("names other sessions' slots as taken", () => {
+  it("sends a time that overlaps another session to the reschedule dialog's overlap step", () => {
     result = { ...result, sessions: [THURSDAY, { ...SAM_FRIDAY, id: "sam-thursday", date: "2026-08-20T17:00:00" }] };
     renderPanel();
     fireEvent.click(pill("Thursday, August 20"));
     fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
-    const taken = within(moveSheet()).getByRole("button", { name: /^12:00 PM/ });
-    expect(taken).toBeDisabled();
+    fireEvent.change(within(moveSheet()).getByLabelText("Start time"), { target: { value: "12:15" } });
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "Resolve overlap…" }));
+    expect(moveSession).not.toHaveBeenCalled();
+    expect(onReschedule).toHaveBeenCalledTimes(1);
+    const [session, scope, target] = onReschedule.mock.calls[0];
+    expect(session).toBe(THURSDAY);
+    expect(scope).toBe(MoveScope.This);
+    expect(target.some && target.val.toISO()).toBe(DateTime.fromISO("2026-08-20T12:15", { zone: TZ }).toISO());
+    expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
   });
 });
 
@@ -717,6 +793,18 @@ describe("WeekPanel when the server can't be reached (read only)", () => {
     );
     expect(screen.queryByText(/Can't reach the server|Couldn't load this week/)).not.toBeInTheDocument();
     expect(button("Schedule session")).toBeEnabled();
+  });
+});
+
+describe("WeekPanel sessions starting soon", () => {
+  it("still offers the invite resend before the session starts", () => {
+    // 2:15 PM in Chicago, half an hour after now: Live, but not started.
+    result = { ...result, sessions: [session("soon", "2026-08-18T19:15:00")] };
+    renderPanel();
+    const card = screen.getByTestId("session-card-soon");
+    expect(card).toHaveAttribute("data-tense", "live");
+    fireEvent.contextMenu(card);
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toContain("Resend invite");
   });
 });
 

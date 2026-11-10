@@ -78,6 +78,19 @@ test.describe('Week grid drag to move', () => {
     await expect(page.getByTestId('session-card-thursday')).toBeVisible()
   })
 
+  test('the narrowest grid shows a card\'s length in full', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 900 })
+    const card = page.getByTestId('session-card-thursday')
+    const length = card.getByText('· 50 min', { exact: true })
+    await expect(length).toBeVisible()
+    const clipped = await length.evaluate((el) => {
+      const box = el.getBoundingClientRect()
+      const cardBox = el.closest('[data-testid]')!.getBoundingClientRect()
+      return el.scrollWidth > el.clientWidth || box.right > cardBox.right
+    })
+    expect(clipped).toBe(false)
+  })
+
   test('dropping on a free slot moves this session, and Undo puts it back', async ({ page }) => {
     await dragTo(page, page.getByTestId('session-card-thursday'), day(page, 'Friday, October 23'), () =>
       slot(page, '2026-10-23', '10:00')

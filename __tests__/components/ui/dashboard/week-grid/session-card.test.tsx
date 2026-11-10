@@ -54,6 +54,12 @@ describe("SessionCard", () => {
     expect(card).toHaveTextContent("3 topics");
   });
 
+  it("shows how long the session runs beside its start", () => {
+    const { card } = renderCard();
+    expect(card).toHaveTextContent("10:00 AM · 50 min");
+    expect(card).toHaveAccessibleName("10:00 AM, 50 min, Alex Chen");
+  });
+
   it("tells keyboard and screen reader users how to act on it", () => {
     const { card } = renderCard();
     expect(card).toHaveAccessibleDescription(/Enter opens the session/);

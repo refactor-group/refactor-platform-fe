@@ -66,13 +66,15 @@ interface EndFieldsProps {
   labelledBy: string;
   end: RecurrenceEnd;
   defaultEnd: RepeatModel["defaultEnd"];
+  lastSession: Option<string>;
   onEndChange: (end: RecurrenceEnd) => void;
 }
 
-function EndFields({ labelledBy, end, defaultEnd, onEndChange }: EndFieldsProps) {
+function EndFields({ labelledBy, end, defaultEnd, lastSession, onEndChange }: EndFieldsProps) {
   const id = useId();
   const count = end.kind === "count" ? end.count : defaultEnd.count;
   const until = end.kind === "until" ? end.until : defaultEnd.until;
+  const sessions = end.kind === "count" && lastSession.some ? `sessions, ${lastSession.val}` : "sessions";
   return (
     <RadioGroup
       aria-labelledby={labelledBy}
@@ -80,9 +82,9 @@ function EndFields({ labelledBy, end, defaultEnd, onEndChange }: EndFieldsProps)
       onValueChange={(kind) =>
         onEndChange(kind === "until" ? { kind: "until", until } : { kind: "count", count })
       }
-      className="gap-1"
+      className="gap-3 modal:gap-1"
     >
-      <div className="flex h-11 items-center gap-2.5 modal:h-10">
+      <div className="flex min-h-11 items-center gap-2.5 modal:min-h-10">
         <RadioGroupItem id={`${id}-count`} value="count" className={RADIO_CLASSES} />
         <label htmlFor={`${id}-count`} className={LABEL_CLASSES}>
           After
@@ -95,9 +97,9 @@ function EndFields({ labelledBy, end, defaultEnd, onEndChange }: EndFieldsProps)
           onChange={(event) => onEndChange({ kind: "count", count: parseInt(event.target.value, 10) })}
           className={cn(FIELD_CLASSES, "w-16")}
         />
-        <span className="text-sm text-muted-foreground">sessions</span>
+        <span className="text-sm text-muted-foreground">{sessions}</span>
       </div>
-      <div className="flex h-11 items-center gap-2.5 modal:h-10">
+      <div className="flex min-h-11 items-center gap-2.5 modal:min-h-10">
         <RadioGroupItem id={`${id}-until`} value="until" className={RADIO_CLASSES} />
         <label htmlFor={`${id}-until`} className={LABEL_CLASSES}>
           On
@@ -122,7 +124,10 @@ export function RepeatStep(model: RepeatModel) {
       <FrequencyChips {...model} />
       {repeat.kind === "repeat" && frequencySupportsWeekdays(repeat.frequency) && (
         <div className="flex flex-col gap-2.5">
-          <SectionLabel id={`${id}-days`}>On these days</SectionLabel>
+          <div className="flex items-baseline gap-1.5">
+            <SectionLabel id={`${id}-days`}>Repeats on</SectionLabel>
+            <span className="text-label text-faint">(select 1 or more)</span>
+          </div>
           <WeekdayPicker
             labelledBy={`${id}-days`}
             value={model.byWeekdays}
@@ -134,7 +139,13 @@ export function RepeatStep(model: RepeatModel) {
       {repeat.kind === "repeat" && (
         <div className="flex flex-col gap-2.5">
           <SectionLabel id={`${id}-ends`}>Ends</SectionLabel>
-          <EndFields labelledBy={`${id}-ends`} end={repeat.end} defaultEnd={model.defaultEnd} onEndChange={model.onEndChange} />
+          <EndFields
+            labelledBy={`${id}-ends`}
+            end={repeat.end}
+            defaultEnd={model.defaultEnd}
+            lastSession={model.lastSession}
+            onEndChange={model.onEndChange}
+          />
           {error.some && (
             <p role="alert" className="text-xs text-destructive">
               {error.val}

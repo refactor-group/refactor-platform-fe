@@ -3,7 +3,6 @@ import type { EnrichedCoachingSession } from "@/types/coaching-session";
 export enum SessionAction {
   OpenSession = "open-session",
   Reschedule = "reschedule",
-  Move = "move",
   ViewSeries = "view-series",
   EditSeries = "edit-series",
   ShareLink = "share-link",
@@ -30,7 +29,6 @@ export interface SessionActionContext {
   isLocked: boolean;
   /** Its start has passed: a one-off's invite can't be resent, though the session may still be edited today. */
   hasStarted: boolean;
-  isCompact: boolean;
 }
 
 export interface SessionActionItem {
@@ -54,11 +52,6 @@ const RULES: SessionActionRule[] = [
     action: SessionAction.Reschedule,
     group: SessionActionGroup.Schedule,
     shown: (_s, c) => coachUpcoming(c),
-  },
-  {
-    action: SessionAction.Move,
-    group: SessionActionGroup.Schedule,
-    shown: (_s, c) => c.isCompact && coachUpcoming(c),
   },
   {
     action: SessionAction.ViewSeries,
@@ -130,8 +123,6 @@ export function sessionActionLabel(
       return "Open session";
     case SessionAction.Reschedule:
       return "Reschedule…";
-    case SessionAction.Move:
-      return "Move…";
     case SessionAction.ViewSeries:
       return "View series";
     case SessionAction.EditSeries:
