@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent, ReactNode } from "react";
+import { type CSSProperties, type KeyboardEvent, type ReactNode, type RefObject, useEffect, useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 
@@ -10,6 +10,7 @@ import { CheckDisc } from "@/components/ui/check-disc";
 import { Spinner } from "@/components/ui/spinner";
 import { MODAL_DESKTOP_QUERY } from "@/lib/breakpoints";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
+import { useVisibleViewport, type VisibleViewport } from "@/lib/hooks/use-visible-viewport";
 import { type Option, unwrapOr } from "@/types/option";
 
 export interface StepRailItem {
@@ -309,14 +310,35 @@ function contentClass(desktop: boolean, height: StepDialogHeight): string {
     : cn("fixed inset-0 z-50 flex flex-col bg-well outline-none", ANIMATE);
 }
 
+/** Above the keyboard, the phone view takes only the visible part of the screen, and the focused field scrolls into it. */
+function useAboveKeyboard(desktop: boolean, ref: RefObject<HTMLDivElement | null>): CSSProperties | undefined {
+  const visible = useVisibleViewport(!desktop);
+  const height = visible.some ? visible.val.height : 0;
+  useEffect(() => {
+    const focused = document.activeElement;
+    if (height > 0 && focused instanceof HTMLElement && ref.current?.contains(focused)) {
+      focused.scrollIntoView({ block: "center" });
+    }
+  }, [height, ref]);
+  return visible.some ? visibleStyle(visible.val) : undefined;
+}
+
+function visibleStyle({ top, height }: VisibleViewport): CSSProperties {
+  return { top, height, bottom: "auto" };
+}
+
 /**
  * Both layouts share one element tree, so crossing 900px restyles the step body instead of
  * remounting it, and anything held in it (a search, a half-typed value) survives.
  */
 function StepDialogContent({ desktop, ...props }: StepDialogProps & { desktop: boolean }) {
   const single = props.variant === StepDialogVariant.Single;
+  const contentRef = useRef<HTMLDivElement>(null);
+  const aboveKeyboard = useAboveKeyboard(desktop, contentRef);
   return (
     <DialogPrimitive.Content
+      ref={contentRef}
+      style={aboveKeyboard}
       tabIndex={-1}
       onOpenAutoFocus={focusContent}
       aria-describedby={undefined}
