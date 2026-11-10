@@ -464,14 +464,6 @@ describe("WeekPanel person filter", () => {
     expect(screen.getByText("No sessions match this week.")).toBeInTheDocument();
   });
 
-  it("offers no invite resend on a session that ended earlier today, though it can still be rescheduled", () => {
-    renderPanel();
-    fireEvent.contextMenu(screen.getByTestId("session-card-early-today"));
-    const items = screen.getAllByRole("menuitem").map((i) => i.textContent?.trim());
-    expect(items).toContain("Reschedule…");
-    expect(items).not.toContain("Resend invite");
-  });
-
   it("doesn't say nothing matches when the week failed to load", () => {
     selectedPerson = Some(SAM);
     result = { ...result, sessions: [], isError: true };
@@ -729,7 +721,7 @@ describe("WeekPanel when the server can't be reached (read only)", () => {
 });
 
 describe("WeekPanel sessions that ended earlier today", () => {
-  it("keep the full menu, cancel like any session still to change, and still drag", () => {
+  it("keep the menu but its invite resend, cancel like any session still to change, and still drag", () => {
     renderPanel();
     const card = screen.getByTestId("session-card-early-today");
     expect(card).toHaveAttribute("data-tense", "past");
@@ -739,7 +731,6 @@ describe("WeekPanel sessions that ended earlier today", () => {
       "Open session",
       "Reschedule…",
       "Share link",
-      "Resend invite",
       "Cancel session…",
     ]);
   });
