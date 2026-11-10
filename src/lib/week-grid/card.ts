@@ -144,7 +144,7 @@ function footerOf(urgency: SessionUrgency, topicCount: number): CardFooter {
   return isReady(topicCount) ? CardFooter.Ready : CardFooter.Prepare;
 }
 
-// Interim readiness rule (plan D3): any topic counts as prepared.
+// Temporary readiness rule until the server supplies it.
 function isReady(topicCount: number): boolean {
   return topicCount >= 1;
 }
