@@ -76,10 +76,11 @@ describe("SeriesDetailDialog", () => {
     expect(d).toHaveTextContent("Jane Smith");
     expect(d).toHaveTextContent("Weekly on Tue");
     expect(d).toHaveTextContent("Until Nov 17, 2026");
-    expect(d).toHaveTextContent("2 upcoming · 2 done");
+    expect(d).toHaveTextContent("2 upcoming · 2 previous");
+    expect(d).not.toHaveTextContent(/done/i);
   });
 
-  it("lists each session with its day and time, marking done and when the next one is", () => {
+  it("lists each session with its day and time, marking previous ones and when the next one is", () => {
     renderDialog();
     const rows = within(dialog()).getAllByRole("listitem");
     expect(rows.map((r) => r.textContent)).toEqual([
@@ -88,11 +89,11 @@ describe("SeriesDetailDialog", () => {
       expect.stringContaining("Tue, Nov 10 · 4:30 PM"),
       expect.stringContaining("Tue, Nov 17 · 4:30 PM"),
     ]);
-    expect(rows[0]).toHaveTextContent("Done");
-    expect(rows[1]).toHaveTextContent("Done");
+    expect(rows[0]).toHaveTextContent("Previous");
+    expect(rows[1]).toHaveTextContent("Previous");
     expect(rows[2]).toHaveTextContent("Tomorrow");
     expect(rows[2]).not.toHaveTextContent("Next");
-    expect(rows[3]).not.toHaveTextContent(/Done|Tomorrow|In \d/);
+    expect(rows[3]).not.toHaveTextContent(/Previous|Done|Tomorrow|In \d/);
   });
 
   it("says how far off the next session is", () => {

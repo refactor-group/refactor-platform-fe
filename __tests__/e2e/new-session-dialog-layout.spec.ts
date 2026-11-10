@@ -199,6 +199,13 @@ for (const viewport of VIEWPORTS) {
         await expect(dialog(page).getByLabel('End date')).toBeEnabled()
         await expect(button(page, 'Schedule series')).toBeVisible()
       })
+      await test.step("Repeat › Ends rows don't overlap with iOS's taller date box", async () => {
+        await page.addStyleTag({ content: 'input[type="date"] { height: 58px !important; }' })
+        const box = async (label: string) => (await dialog(page).getByLabel(label).boundingBox())!
+        const count = await box('Number of sessions')
+        const date = await box('End date')
+        expect.soft(date.y, sizeOf(viewport)).toBeGreaterThanOrEqual(count.y + count.height + 4)
+      })
       await inState(page, viewport, 'Repeat › invalid count', async () => {
         await dialog(page).getByRole('radio', { name: 'After' }).click()
         await dialog(page).getByLabel('Number of sessions').fill('0')
