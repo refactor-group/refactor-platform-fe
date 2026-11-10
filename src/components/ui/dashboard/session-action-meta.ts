@@ -27,6 +27,10 @@ export function sessionActionIcon(action: SessionAction): LucideIcon {
     case SessionAction.DeleteSession:
     case SessionAction.DeleteSeries:
       return CalendarX2;
+    default: {
+      const _exhaustive: never = action;
+      throw new Error(`Unhandled action: ${_exhaustive}`);
+    }
   }
 }
 
@@ -42,5 +46,9 @@ export function isDestructive(group: SessionActionGroup): boolean {
       return false;
     case SessionActionGroup.Destructive:
       return true;
+    default: {
+      const _exhaustive: never = group;
+      throw new Error(`Unhandled group: ${_exhaustive}`);
+    }
   }
 }
