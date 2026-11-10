@@ -50,7 +50,7 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
     select({ userId: "coach-1", isACoach, userSession: { id: "coach-1", timezone: TZ } }),
 }));
 
-let edges: WeekEdges = { hasEarlier: true, hasLater: true };
+let edges: WeekEdges = { hasEarlier: true };
 vi.mock("@/lib/hooks/use-week-edges", () => ({ useWeekEdges: () => edges }));
 
 const ALEX: FilterPerson = { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-1"], group: PersonGroup.Coachees };
@@ -113,7 +113,7 @@ beforeEach(() => {
   prefetchedAround.length = 0;
   vi.clearAllMocks();
   isACoach = true;
-  edges = { hasEarlier: true, hasLater: true };
+  edges = { hasEarlier: true };
   selectedPerson = None;
   wide = true;
   widthKnown = true;
@@ -351,23 +351,23 @@ describe("WeekPanel paging", () => {
   });
 
   it("stops the previous arrow at the viewer's first session", () => {
-    edges = { hasEarlier: false, hasLater: true };
+    edges = { hasEarlier: false };
     renderPanel();
     expect(button("Previous week")).toBeDisabled();
     expect(button("Next week")).toBeEnabled();
   });
 
   it("never stops a coach paging forward, so any future week can be scheduled", () => {
-    edges = { hasEarlier: true, hasLater: false };
     renderPanel();
     expect(button("Next week")).toBeEnabled();
   });
 
-  it("stops a coachee's next arrow at their last session", () => {
+  it("lets a coachee page forward too, even with nothing left scheduled", () => {
     isACoach = false;
-    edges = { hasEarlier: true, hasLater: false };
     renderPanel();
-    expect(button("Next week")).toBeDisabled();
+    expect(button("Next week")).toBeEnabled();
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("region", { name: "Next week" })).toBeInTheDocument();
   });
 });
 

@@ -45,7 +45,6 @@ vi.mock("@/lib/api/coaching-relationships", () => ({
 const TZ = "America/Chicago";
 const week = weekOf(0, DateTime.fromISO("2026-08-19T12:00:00", { zone: TZ }), TZ);
 const MONDAY = "2026-08-17T05:00:00Z";
-const NEXT_MONDAY = "2026-08-24T05:00:00Z";
 const at = (utc: string) => createMockEnrichedSession({ date: utc });
 
 beforeEach(() => {
@@ -55,10 +54,10 @@ beforeEach(() => {
 });
 
 describe("useWeekEdges", () => {
-  it("asks around this Monday and next Monday for every relationship the viewer is in", () => {
+  it("asks around this Monday, and only that, for every relationship the viewer is in", () => {
     renderHook(() => useWeekEdges(week));
     const arounds = queries.filter((q) => q.some).map((q) => q.some && q.val.around);
-    expect(arounds.sort()).toEqual([MONDAY, NEXT_MONDAY]);
+    expect(arounds).toEqual([MONDAY]);
     for (const q of queries) {
       if (q.none) continue;
       expect(q.val.userId).toBe("user-1");
@@ -66,33 +65,29 @@ describe("useWeekEdges", () => {
     }
   });
 
-  it("reports what lies either side of the week", () => {
-    byAround = {
-      [MONDAY]: { sessions: [at("2026-08-10T15:00:00")], isLoading: false, isError: false },
-      [NEXT_MONDAY]: { sessions: [], isLoading: false, isError: false },
-    };
-    const { result } = renderHook(() => useWeekEdges(week));
-    expect(result.current).toEqual({ hasEarlier: true, hasLater: false });
+  it("reports whether anything lies before the week", () => {
+    byAround = { [MONDAY]: { sessions: [at("2026-08-10T15:00:00")], isLoading: false, isError: false } };
+    expect(renderHook(() => useWeekEdges(week)).result.current).toEqual({ hasEarlier: true });
+    byAround = { [MONDAY]: { sessions: [], isLoading: false, isError: false } };
+    expect(renderHook(() => useWeekEdges(week)).result.current).toEqual({ hasEarlier: false });
   });
 
-  it("leaves both arrows usable while a read is loading or failed", () => {
-    byAround = {
-      [MONDAY]: { sessions: [], isLoading: true, isError: false },
-      [NEXT_MONDAY]: { sessions: [], isLoading: false, isError: true },
-    };
-    const { result } = renderHook(() => useWeekEdges(week));
-    expect(result.current).toEqual({ hasEarlier: true, hasLater: true });
+  it("leaves the arrow usable while the read is loading or failed", () => {
+    byAround = { [MONDAY]: { sessions: [], isLoading: true, isError: false } };
+    expect(renderHook(() => useWeekEdges(week)).result.current).toEqual({ hasEarlier: true });
+    byAround = { [MONDAY]: { sessions: [], isLoading: false, isError: true } };
+    expect(renderHook(() => useWeekEdges(week)).result.current).toEqual({ hasEarlier: true });
   });
 
-  it("leaves both arrows usable while relationships load", () => {
+  it("leaves the arrow usable while relationships load", () => {
     relationshipsState = { isLoading: true, isError: false };
     const { result } = renderHook(() => useWeekEdges(week));
-    expect(result.current).toEqual({ hasEarlier: true, hasLater: true });
+    expect(result.current).toEqual({ hasEarlier: true });
   });
 
-  it("leaves both arrows usable when relationships fail to load", () => {
+  it("leaves the arrow usable when relationships fail to load", () => {
     relationshipsState = { isLoading: false, isError: true };
     const { result } = renderHook(() => useWeekEdges(week));
-    expect(result.current).toEqual({ hasEarlier: true, hasLater: true });
+    expect(result.current).toEqual({ hasEarlier: true });
   });
 });
