@@ -13,11 +13,13 @@ import {
 const oneOff = createMockEnrichedSession();
 const inSeries = createMockEnrichedSession({ coaching_session_series_id: Some("series-1") });
 
-const COACH_UPCOMING = { isCoach: true, isLocked: false, isCompact: false };
-const COACH_PAST = { isCoach: true, isLocked: true, isCompact: false };
-const COACHEE_UPCOMING = { isCoach: false, isLocked: false, isCompact: false };
-const COACHEE_PAST = { isCoach: false, isLocked: true, isCompact: false };
-const COACH_UPCOMING_COMPACT = { isCoach: true, isLocked: false, isCompact: true };
+const COACH_UPCOMING = { isCoach: true, isLocked: false, hasStarted: false, isCompact: false };
+const COACH_PAST = { isCoach: true, isLocked: true, hasStarted: true, isCompact: false };
+const COACHEE_UPCOMING = { isCoach: false, isLocked: false, hasStarted: false, isCompact: false };
+const COACHEE_PAST = { isCoach: false, isLocked: true, hasStarted: true, isCompact: false };
+const COACH_UPCOMING_COMPACT = { isCoach: true, isLocked: false, hasStarted: false, isCompact: true };
+// Ended earlier today: still editable, but its invite can no longer be resent.
+const COACH_STARTED_TODAY = { isCoach: true, isLocked: false, hasStarted: true, isCompact: false };
 
 const actions = (session = oneOff, context = COACH_UPCOMING) =>
   sessionActionsFor(session, context).map((i) => i.action);
@@ -49,6 +51,16 @@ describe("sessionActionsFor", () => {
   it("gives a coach only Open and Remove on a past session, series or not", () => {
     expect(actions(oneOff, COACH_PAST)).toEqual([SessionAction.OpenSession, SessionAction.DeleteSession]);
     expect(actions(inSeries, COACH_PAST)).toEqual([SessionAction.OpenSession, SessionAction.DeleteSession]);
+  });
+
+  it("keeps a started one-off editable today but stops offering its invite", () => {
+    const items = actions(oneOff, COACH_STARTED_TODAY);
+    expect(items).toContain(SessionAction.Reschedule);
+    expect(items).not.toContain(SessionAction.ResendInvite);
+  });
+
+  it("still offers the series invite from a series session that started today", () => {
+    expect(actions(inSeries, COACH_STARTED_TODAY)).toContain(SessionAction.ResendInvite);
   });
 
   it("gives a coachee only Open session", () => {
