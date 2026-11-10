@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, House, Plus } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
 import { FilterChip } from "@/components/ui/chip";
@@ -40,13 +40,11 @@ export function WeekPanelHeader({
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
       <div>
-        {/* Below lg the link spans the title and range lines, so wrapping never adds height. */}
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 lg:flex lg:flex-row lg:flex-wrap lg:items-baseline lg:gap-y-3">
-          <h2 id={titleId} className="col-start-1 row-start-1 text-section font-normal">
+        <div className="flex flex-col gap-x-3 lg:flex-row lg:flex-wrap lg:items-baseline lg:gap-y-3">
+          <h2 id={titleId} className="text-section font-normal">
             {title}
           </h2>
-          {!navigation.isCurrentWeek && <BackToCurrentWeek onClick={navigation.onThisWeek} />}
-          <span className="col-start-1 row-start-2 text-card-title tabular-nums text-ink-2">{range}</span>
+          <span className="text-card-title tabular-nums text-ink-2">{range}</span>
         </div>
         {/* Below lg the row keeps its height while loading, so the arrows hold still. */}
         <div className={cn("mt-1 flex flex-wrap items-center gap-2", subline.none && chip.none && "lg:hidden")}>
@@ -79,19 +77,6 @@ export function WeekPanelHeader({
   );
 }
 
-/** Phone only; beside a long title it wraps rather than push the arrows down. */
-function BackToCurrentWeek({ onClick }: { onClick: () => void }) {
-  return (
-    <Button
-      variant="link"
-      className="col-start-2 row-span-2 row-start-1 h-auto min-w-0 self-center justify-self-end whitespace-normal p-0 text-right text-[13px] leading-tight lg:hidden"
-      onClick={onClick}
-    >
-      Back to current week
-    </Button>
-  );
-}
-
 const ARROW_CLASS = "[&_svg]:size-[15px]";
 
 function WeekNavigationControls({ navigation }: { navigation: WeekNavigation }) {
@@ -115,6 +100,16 @@ function WeekNavigationControls({ navigation }: { navigation: WeekNavigation }) 
         onClick={navigation.onThisWeek}
       >
         This week
+      </Button>
+      <Button
+        variant="secondary"
+        size="icon-sm"
+        className={cn(ARROW_CLASS, "disabled:text-faint disabled:opacity-100 lg:hidden")}
+        aria-label="Back to current week"
+        disabled={navigation.isCurrentWeek}
+        onClick={navigation.onThisWeek}
+      >
+        <House aria-hidden />
       </Button>
       <Button
         variant="secondary"

@@ -418,7 +418,7 @@ Long-press a card.
 
 Page to next week, then to a week titled "Week of …".
 
-**Pass:** a "Back to current week" link appears at the right of the week title, and it returns to the current week. The week arrows don't move when it appears.
+**Pass:** on a phone, the home button between the week arrows is disabled on the current week and enabled elsewhere, and it returns to the current week. The arrows don't move as you page.
 
 ### Case 6.7: shared state
 
