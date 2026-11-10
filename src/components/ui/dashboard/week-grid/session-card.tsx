@@ -129,7 +129,8 @@ export function SessionCard({
           onClick={onClick}
           onKeyDown={onKeyDown}
           className={cn(
-            "flex cursor-pointer flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+            // A long press opens the card's menu, so it mustn't also select text or show iOS's callout.
+            "flex cursor-pointer select-none flex-col gap-1.5 rounded-xl p-[11px] outline-none [-webkit-touch-callout:none]",
             layout === SessionCardLayout.Grid && "min-h-32",
             draggable && "cursor-grab",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
