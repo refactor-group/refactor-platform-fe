@@ -44,7 +44,7 @@ import {
   type Week,
 } from "@/lib/week-grid/week";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import { type Option, None, Some, unwrapOr } from "@/types/option";
+import { type Option, None, Some } from "@/types/option";
 import { DayAgenda } from "./day-agenda";
 import { DayStrip } from "./day-strip";
 import { MoveSheet, type MoveSheetModel } from "./move-sheet";
@@ -216,9 +216,6 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
       className="rounded-card border bg-card p-7"
     >
       <WeekPanelHeader {...header} subline={subline} />
-      {!isCurrentWeek && !unwrapOr(width, false) && (
-        <BackToThisWeek pending={width.none} onClick={navigation.onThisWeek} />
-      )}
       {!busy && readOnly && <ReadOnlyNotice hasSessions={hasSessions} onRetry={refresh} />}
       <WeekBody
         width={width}
@@ -304,14 +301,6 @@ function WeekAgenda({ days, week, now, handlers, noMatches, isUnloaded, isLoadin
 }
 
 const ISO_DATE = "yyyy-MM-dd";
-
-function BackToThisWeek({ pending, onClick }: { pending: boolean; onClick: () => void }) {
-  return (
-    <Button variant="link" className={cn("mt-3 h-auto px-0 text-[13px]", pending && "lg:hidden")} onClick={onClick}>
-      Back to this week
-    </Button>
-  );
-}
 
 const visible = (cards: GridCard[]) => cards.filter((c) => !c.dimmed).length;
 

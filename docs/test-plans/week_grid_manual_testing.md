@@ -414,11 +414,11 @@ Long-press a card.
 
 **Pass:** the context menu opens. It has Move…, which opens the same sheet. Nothing drags.
 
-### Case 6.6: back to this week
+### Case 6.6: back to current week
 
-Page to next week.
+Page to next week, then to a week titled "Week of …".
 
-**Pass:** a "Back to this week" link appears, and it returns to the current week.
+**Pass:** a "Back to current week" link appears at the right of the week title, and it returns to the current week. The week arrows don't move when it appears.
 
 ### Case 6.7: shared state
 
