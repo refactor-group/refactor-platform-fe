@@ -207,6 +207,23 @@ test.describe('Week grid on a phone for someone who coaches', () => {
     expect(style).toEqual({ userSelect: 'none', callout: 'none' })
   })
 
+  test("a tap that closes the card's menu doesn't open the session; the next tap does", async ({ page, hasTouch }) => {
+    test.skip(!hasTouch, 'Touch only: a mouse click outside the menu never reaches the card.')
+    // A finger lands wherever it lands, so tap by position, not through the menu's overlay.
+    const name = card(page, 'jane-today').getByText('Jane Smith')
+    await name.scrollIntoViewIfNeeded()
+    const box = (await name.boundingBox())!
+    const tapName = () => page.touchscreen.tap(box.x + 8, box.y + box.height / 2)
+    await card(page, 'jane-today').click({ button: 'right' })
+    await expect(page.getByRole('menu')).toBeVisible()
+    await tapName()
+    await expect(page.getByRole('menu')).toBeHidden()
+    await page.waitForTimeout(300)
+    expect(new URL(page.url()).pathname).toBe('/dashboard')
+    await tapName()
+    await expect(page).toHaveURL(/\/coaching-sessions\/jane-today/)
+  })
+
   test('a Ready card keeps its pill, Move and Open on one line', async ({ page }) => {
     const card = page.getByTestId('session-card-jane-ready')
     const parts = [
