@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import type { DateTime } from "ts-luxon";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
   useEnrichedCoachingSessionsForUser,
@@ -45,8 +47,26 @@ function shiftWeek(week: Week, weeks: number): Week {
   return { start: week.start.plus({ weeks }), days: week.days.map((day) => day.plus({ weeks })) };
 }
 
-/** Loads the weeks either side of `week` into the cache, so paging to them doesn't wait. */
-export function usePrefetchWeekSessions(week: Week): void {
-  useWeekSessions(shiftWeek(week, -1));
-  useWeekSessions(shiftWeek(week, 1));
+export interface AdjacentWeeks {
+  sessions: EnrichedCoachingSession[];
+  /** The span whose sessions are loaded: the shown week, plus each neighbour that loaded. */
+  known: { from: DateTime; to: DateTime };
+}
+
+/** Loads the weeks either side of `week`, so paging doesn't wait and a move can be checked across the edge. */
+export function useAdjacentWeekSessions(week: Week): AdjacentWeeks {
+  const before = useWeekSessions(shiftWeek(week, -1));
+  const after = useWeekSessions(shiftWeek(week, 1));
+  const beforeLoaded = !before.isLoading && !before.isError;
+  const afterLoaded = !after.isLoading && !after.isError;
+  return useMemo(() => {
+    const weekEnd = week.start.plus({ weeks: 1 });
+    return {
+      sessions: [...(beforeLoaded ? before.sessions : []), ...(afterLoaded ? after.sessions : [])],
+      known: {
+        from: beforeLoaded ? week.start.minus({ weeks: 1 }) : week.start,
+        to: afterLoaded ? weekEnd.plus({ weeks: 1 }) : weekEnd,
+      },
+    };
+  }, [week.start, before.sessions, after.sessions, beforeLoaded, afterLoaded]);
 }

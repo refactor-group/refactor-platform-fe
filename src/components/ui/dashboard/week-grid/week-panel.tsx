@@ -17,7 +17,7 @@ import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { useRefreshCoachingSessions } from "@/lib/hooks/use-sse-cache-invalidation";
 import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
-import { usePrefetchWeekSessions, useWeekSessions } from "@/lib/hooks/use-week-sessions";
+import { useAdjacentWeekSessions, useWeekSessions } from "@/lib/hooks/use-week-sessions";
 import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import { SessionAction } from "@/lib/session-actions";
 import { MoveScope } from "@/lib/scheduling";
@@ -30,8 +30,8 @@ import {
   type GridCard,
 } from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
-import { moveChoices } from "@/lib/week-grid/move-choices";
-import { slotsForMove, type MoveSlotsContext } from "@/lib/week-grid/slots";
+import { moveChoices, type MoveChoicesContext } from "@/lib/week-grid/move-choices";
+import { slotsForMove } from "@/lib/week-grid/slots";
 import {
   agendaDay,
   groupByDay,
@@ -81,7 +81,7 @@ function useWeekNavigation(isCurrentWeek: boolean, week: Week): WeekNavigation {
   };
 }
 
-function moveSheetModel(view: CardView, days: DayGroup<GridCard>[], context: MoveSlotsContext): MoveSheetModel {
+function moveSheetModel(view: CardView, days: DayGroup<GridCard>[], context: MoveChoicesContext): MoveSheetModel {
   return {
     name: firstNameOf(view.name),
     current: view.start,
@@ -100,7 +100,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const isCoach = useAuthStore((s) => s.isACoach);
   const navigation = useWeekNavigation(isCurrentWeek, week);
   const { sessions, isLoading, isError, refresh } = useWeekSessions(week);
-  usePrefetchWeekSessions(week);
+  const adjacent = useAdjacentWeekSessions(week);
   // SWR keeps the last sessions when a read fails, so they stay visible but can't be changed.
   const readOnly = isError;
   const canSchedule = isCoach && !readOnly;
@@ -155,9 +155,18 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const moveModel = useMemo(
     () =>
       moveTarget.some
-        ? Some(moveSheetModel(moveTarget.val, days, { sessions, viewerId, timezone, hours, now }))
+        ? Some(
+            moveSheetModel(moveTarget.val, days, {
+              sessions: [...sessions, ...adjacent.sessions],
+              viewerId,
+              timezone,
+              hours,
+              now,
+              known: adjacent.known,
+            })
+          )
         : None,
-    [moveTarget, days, sessions, viewerId, timezone, hours, now]
+    [moveTarget, days, sessions, adjacent, viewerId, timezone, hours, now]
   );
   const moveSession = useMoveSession();
   const drag: GridDrag = {

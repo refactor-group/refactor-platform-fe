@@ -117,7 +117,8 @@ interface MoveSheetActionProps {
 }
 
 function MoveSheetAction({ model, start, clash, onConfirm, onResolve }: MoveSheetActionProps) {
-  const ahead = start.some && start.val >= model.now;
+  // Ahead of now, and where the overlaps are known.
+  const ahead = start.some && start.val >= model.now && model.covers(start.val);
   if (start.some && ahead && clash) {
     return (
       <Button className="w-full" onClick={() => onResolve(start.val)}>

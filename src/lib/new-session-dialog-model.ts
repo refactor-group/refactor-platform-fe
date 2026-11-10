@@ -211,13 +211,13 @@ export function createsCount(repeat: RepeatChoice, start: Option<DateTime>, byWe
   if (repeat.kind === "none") return 1;
   if (repeat.end.kind === "count") return repeat.end.count;
   return start.some
-    ? occurrenceCount({ start: start.val, frequency: repeat.frequency, byWeekdays, end: repeat.end })
+    ? occurrenceCount({ start: start.val, frequency: repeat.frequency, interval: repeat.interval, byWeekdays, end: repeat.end })
     : 1;
 }
 
 export function lastSessionOf(repeat: RepeatChoice, start: Option<DateTime>, byWeekdays: Weekday[]): Option<string> {
   if (repeat.kind === "none" || start.none) return None;
-  const last = lastOccurrence({ start: start.val, frequency: repeat.frequency, byWeekdays, end: repeat.end });
+  const last = lastOccurrence({ start: start.val, frequency: repeat.frequency, interval: repeat.interval, byWeekdays, end: repeat.end });
   return last.some ? Some(lastSessionText(last.val, start.val)) : None;
 }
 
