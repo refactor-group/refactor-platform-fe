@@ -37,7 +37,7 @@ export interface CardView {
   note: CardNote;
   footer: CardFooter;
   canManage: boolean;
-  /** Not ended, or started today: still open to reschedule, drag and Move (D18). */
+  /** Not ended, or started today: still open to reschedule, drag and Move. */
   editable: boolean;
 }
 
