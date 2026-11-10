@@ -57,6 +57,10 @@ function removalCopy(removal: SessionRemoval): RemovalCopy {
         confirm: "Remove session",
         busy: "Removing…",
       };
+    default: {
+      const _exhaustive: never = removal;
+      throw new Error(`Unhandled removal: ${_exhaustive}`);
+    }
   }
 }
 
