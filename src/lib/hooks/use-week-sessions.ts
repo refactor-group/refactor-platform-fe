@@ -40,3 +40,13 @@ export function useWeekSessions(week: Week): WeekSessions {
 
   return { sessions: enrichedSessions, isLoading, isError, refresh };
 }
+
+function shiftWeek(week: Week, weeks: number): Week {
+  return { start: week.start.plus({ weeks }), days: week.days.map((day) => day.plus({ weeks })) };
+}
+
+/** Loads the weeks either side of `week` into the cache, so paging to them doesn't wait. */
+export function usePrefetchWeekSessions(week: Week): void {
+  useWeekSessions(shiftWeek(week, -1));
+  useWeekSessions(shiftWeek(week, 1));
+}

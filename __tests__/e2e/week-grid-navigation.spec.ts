@@ -56,6 +56,54 @@ test.describe('Week grid navigation and clicks', () => {
     await expect(panel(page, 'Last week')).toBeVisible()
   })
 
+  test('on a phone the week arrows hold still across weeks, even while one loads', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    // Held until released, prefetches included, so each new week is shown loading first.
+    const held: { from: string; release: () => void }[] = []
+    const release = (from: string) => held.splice(0).forEach((h) => (h.from === from ? h.release() : held.push(h)))
+    await page.route(
+      (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
+      async (route) => {
+        const from = new URL(route.request().url()).searchParams.get('from_date') ?? ''
+        await new Promise<void>((resolve) => held.push({ from, release: resolve }))
+        await route.fulfill(json([THURSDAY, MONDAY_PAST]))
+      }
+    )
+    // Reload under the hold and let only this week through, so next week isn't cached yet.
+    await page.reload()
+    await expect.poll(() => held.some((h) => h.from === '2026-10-19')).toBe(true)
+    release('2026-10-19')
+    await expect(panel(page, 'This week')).toHaveAttribute('aria-busy', 'false')
+    const next = page.getByRole('button', { name: 'Next week' })
+    // Measured against the panel, so scrolling the arrow into view to click it doesn't count.
+    const top = () =>
+      next.evaluate((el) => el.getBoundingClientRect().top - el.closest('section')!.getBoundingClientRect().top)
+    const home = await top()
+    for (const [title, from] of [['Next week', '2026-10-26'], ['Week of Nov 2', '2026-11-02'], ['Week of Nov 9', '2026-11-09']]) {
+      await next.click()
+      await expect(panel(page, title)).toHaveAttribute('aria-busy', 'true')
+      expect(await top()).toBe(home)
+      await expect.poll(() => held.some((h) => h.from === from)).toBe(true)
+      release(from)
+      await expect(panel(page, title)).toHaveAttribute('aria-busy', 'false')
+      expect(await top()).toBe(home)
+    }
+  })
+
+  test('on a phone the filter, week arrows and Schedule share one row inside the panel', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const section = panel(page, 'This week')
+    const panelBox = (await section.boundingBox())!
+    const controls = ['All sessions', 'Previous week', 'Back to current week', 'Next week', 'Schedule session']
+    const boxes = await Promise.all(controls.map(async (name) => (await section.getByRole('button', { name }).boundingBox())!))
+    const middles = boxes.map((b) => Math.round(b.y + b.height / 2))
+    expect(new Set(middles).size).toBe(1)
+    for (const b of boxes) {
+      expect(b.x).toBeGreaterThanOrEqual(panelBox.x)
+      expect(b.x + b.width).toBeLessThanOrEqual(panelBox.x + panelBox.width)
+    }
+  })
+
   test('a single click opens an upcoming session', async ({ page }) => {
     await page.getByTestId('session-card-thursday').click()
     await page.waitForURL('**/coaching-sessions/thursday')

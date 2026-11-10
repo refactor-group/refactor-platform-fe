@@ -9,9 +9,9 @@ export interface Week {
   days: DateTime[];
 }
 
+/** Only the past has an edge: anyone can page ahead into weeks with nothing scheduled. */
 export interface WeekEdges {
   hasEarlier: boolean;
-  hasLater: boolean;
 }
 
 export interface DayGroup<T> {
@@ -52,11 +52,13 @@ export function weekTitle(offset: number, week: Week): string {
   }
 }
 
+/** "Aug 17 – 23, 2026", "Aug 31 – Sep 6, 2026", or "Dec 28, 2026 – Jan 3, 2027". */
 export function weekRange(week: Week): string {
   const first = week.days[0];
   const last = week.days[DAYS_IN_WEEK - 1];
-  const lastFormat = first.hasSame(last, "month") ? "d" : "LLL d";
-  return `${first.toFormat("LLL d")} – ${last.toFormat(lastFormat)}`;
+  const firstFormat = first.hasSame(last, "year") ? "LLL d" : "LLL d, yyyy";
+  const lastFormat = first.hasSame(last, "month") ? "d, yyyy" : "LLL d, yyyy";
+  return `${first.toFormat(firstFormat)} – ${last.toFormat(lastFormat)}`;
 }
 
 export function weekSubline(visible: number, today: Option<number>): string {
@@ -64,18 +66,9 @@ export function weekSubline(visible: number, today: Option<number>): string {
   return today.some && today.val > 0 ? `${count} · ${today.val} today` : count;
 }
 
-export function weekEdges(
-  aroundStart: EnrichedCoachingSession[],
-  aroundEnd: EnrichedCoachingSession[],
-  week: Week
-): WeekEdges {
+export function weekEdges(aroundStart: EnrichedCoachingSession[], week: Week): WeekEdges {
   const zone = week.start.zoneName;
-  const nextStart = week.start.plus({ weeks: 1 });
-  const startOf = (s: EnrichedCoachingSession) => sessionStartIn(s.date, zone);
-  return {
-    hasEarlier: aroundStart.some((s) => startOf(s) < week.start),
-    hasLater: aroundEnd.some((s) => startOf(s) >= nextStart),
-  };
+  return { hasEarlier: aroundStart.some((s) => sessionStartIn(s.date, zone) < week.start) };
 }
 
 export function groupByDay<T>(

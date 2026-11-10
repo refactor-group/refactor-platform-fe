@@ -43,10 +43,18 @@ export function WeekFilter({ people, grouped, selected, onSelect, onClear, onOpe
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="secondary" size="sm" className="max-w-[240px] text-[13px]">
+        {/* Below lg an icon, with a dot when someone is picked; the label stays for screen readers. */}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="relative w-9 max-w-[240px] px-0 text-[13px] lg:w-auto lg:px-3.5"
+        >
           <ListFilter aria-hidden />
-          <span className="truncate">{filterLabel(selected)}</span>
-          <ChevronDown aria-hidden className="text-faint" />
+          <span className="sr-only truncate lg:not-sr-only">{filterLabel(selected)}</span>
+          <ChevronDown aria-hidden className="hidden text-faint lg:block" />
+          {selected.some && (
+            <span aria-hidden className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-brand lg:hidden" />
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={6} className="w-[280px] p-1.5">

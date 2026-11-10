@@ -42,7 +42,7 @@ Results go in the PR for the layer under test, not in this plan.
 Open the dashboard as the coach.
 
 **Pass:**
-- Below the Upcoming Session and Goals cards, a white panel titled **This week** shows the range, for example "Aug 17 – 23".
+- Below the Upcoming Session and Goals cards, a white panel titled **This week** shows the range with its year, for example "Aug 17 – 23, 2026".
 - The old Coaching Sessions card is gone: no Upcoming or Previous tabs, no buckets, no hover preview.
 
 ### Case 1.2: days and today
@@ -58,6 +58,7 @@ Open the dashboard as the coach.
 **Pass:**
 - A's Tuesday, B today, C Thursday and D's earlier day each appear once, in the right column.
 - Times match the profile time zone, not the machine's.
+- Each card shows its length after the time, for example "2:30 PM · 50 min".
 - Within a day, cards sort by start time.
 
 ### Case 1.4: subline
@@ -148,8 +149,9 @@ Click next, then previous.
 
 **Pass:**
 - Titles read Next week, This week, Last week, then "Week of …".
-- The range is right, including "Aug 31 – Sep 6" across months.
+- The range is right, with its year, including "Aug 31 – Sep 6, 2026" across months.
 - The range crosses a month boundary at least once.
+- Paging into January shows both years across the boundary, for example "Dec 28, 2026 – Jan 3, 2027", then the new year alone.
 
 ### Case 2.2: This week
 
@@ -159,11 +161,11 @@ Page away, then click **This week**.
 
 ### Case 2.3: arrow ends
 
-As the coach, page back until the previous arrow disables, then page forward ten weeks past F's session.
+As the coach, page back until the previous arrow disables, then page forward ten weeks past F's session. Repeat as a coachee with nothing scheduled ahead.
 
 **Pass:**
 - Previous disables on the week holding the earliest session.
-- Next never disables for the coach, so any future week can be reached.
+- Next never disables, for the coach or the coachee, so any future week can be reached.
 
 ### Case 2.4: Schedule session
 
@@ -413,11 +415,11 @@ Long-press a card.
 
 **Pass:** the context menu opens. It has Move…, which opens the same sheet. Nothing drags.
 
-### Case 6.6: back to this week
+### Case 6.6: back to current week
 
-Page to next week.
+Page to next week, then to a week titled "Week of …".
 
-**Pass:** a "Back to this week" link appears, and it returns to the current week.
+**Pass:** on a phone, the home button between the week arrows is disabled on the current week and enabled elsewhere, and it returns to the current week. The arrows don't move as you page.
 
 ### Case 6.7: shared state
 

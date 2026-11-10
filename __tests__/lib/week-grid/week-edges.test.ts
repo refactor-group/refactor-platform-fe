@@ -9,23 +9,15 @@ const week = weekOf(0, DateTime.fromISO("2026-08-19T12:00:00", { zone: TZ }), TZ
 const at = (utc: string) => createMockEnrichedSession({ date: utc });
 
 describe("weekEdges", () => {
-  it("has nothing either side when both reads come back empty", () => {
-    expect(weekEdges([], [], week)).toEqual({ hasEarlier: false, hasLater: false });
+  it("has nothing earlier when the read comes back empty", () => {
+    expect(weekEdges([], week)).toEqual({ hasEarlier: false });
   });
 
   it("finds an earlier session before Monday's local midnight", () => {
-    expect(weekEdges([at("2026-08-17T04:59:00")], [], week).hasEarlier).toBe(true);
+    expect(weekEdges([at("2026-08-17T04:59:00")], week).hasEarlier).toBe(true);
   });
 
   it("ignores a session from Monday itself when looking back", () => {
-    expect(weekEdges([at("2026-08-17T05:00:00")], [], week).hasEarlier).toBe(false);
-  });
-
-  it("finds a later session from next Monday's local midnight", () => {
-    expect(weekEdges([], [at("2026-08-24T05:00:00")], week).hasLater).toBe(true);
-  });
-
-  it("ignores a session still inside this week when looking ahead", () => {
-    expect(weekEdges([], [at("2026-08-24T04:59:00")], week).hasLater).toBe(false);
+    expect(weekEdges([at("2026-08-17T05:00:00")], week).hasEarlier).toBe(false);
   });
 });

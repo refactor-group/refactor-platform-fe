@@ -13,7 +13,7 @@ export interface EmptyDayProps {
 const EMPTY_DAY_CLASS = "grid h-32 w-full place-items-center rounded-xl border border-dashed border-border";
 const STACKED = "[grid-area:1/1] transition-opacity duration-150";
 
-/** A day whose sessions didn't load: neither empty nor schedulable. */
+/** A day whose sessions aren't known yet, or didn't load: neither empty nor schedulable. */
 export function UnloadedDay() {
   return <div className={EMPTY_DAY_CLASS} />;
 }

@@ -1,6 +1,6 @@
 import type { DateTime } from "ts-luxon";
 import type { RepeatChoice } from "@/lib/scheduling";
-import { firstNameOf, repeatLabel, shortDay } from "@/lib/scheduling-copy";
+import { durationText, firstNameOf, repeatLabel, shortDay } from "@/lib/scheduling-copy";
 import { sessionStartIn, shortDate, timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
 import { getCoacheeName } from "@/lib/utils/relationship";
@@ -86,7 +86,7 @@ export function scheduledMessage(input: {
     personName,
     formatWeekdayDate(start),
     timeOfDay(start),
-    `${minutes} min`,
+    durationText(minutes),
     ...(repeat.kind === "repeat" ? [repeatLabel(repeat)] : []),
     ...otherMoveParts(otherMove),
   ].join(" · ");
@@ -124,7 +124,7 @@ export function updatedMessage(input: {
     "Updated",
     firstNameOf(personName),
     `${formatWeekdayDate(start)}, ${timeOfDay(start)}`,
-    `${minutes} min`,
+    durationText(minutes),
     ...otherMoveParts(otherMove),
   ].join(" · ");
 }
