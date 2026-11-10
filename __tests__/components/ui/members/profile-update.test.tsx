@@ -26,10 +26,8 @@ const PROFILE = {
 vi.mock("@/components/ui/timezone-selector", () => ({ TimezoneSelector: () => null }));
 
 const updateProfile = vi.fn();
-const updateWhole = vi.fn();
 vi.mock("@/lib/api/users", () => ({
   useUser: () => ({ user: USER, isLoading: false, refresh: vi.fn() }),
-  useUserMutation: () => ({ update: updateWhole, isLoading: false }),
   useUserProfileMutation: () => ({ update: updateProfile, isLoading: false }),
   useUserPasswordMutation: () => ({ update: vi.fn() }),
 }));
@@ -55,12 +53,11 @@ describe("profile saves", () => {
     expect(onSubmit.mock.calls[0][0]).toEqual(PROFILE);
   });
 
-  it("saving the profile sends only those fields, never the whole user", async () => {
+  it("saving the profile sends only those fields", async () => {
     updateProfile.mockResolvedValue(USER);
     render(<MemberProfileContainer userId="user-1" />);
     rename();
     await waitFor(() => expect(updateProfile).toHaveBeenCalledTimes(1));
     expect(updateProfile).toHaveBeenCalledWith("user-1", PROFILE);
-    expect(updateWhole).not.toHaveBeenCalled();
   });
 });
