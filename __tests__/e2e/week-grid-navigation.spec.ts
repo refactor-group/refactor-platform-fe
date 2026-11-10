@@ -60,8 +60,7 @@ test.describe('Week grid navigation and clicks', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     // Held until released, prefetches included, so each new week is shown loading first.
     const held: { from: string; release: () => void }[] = []
-    const release = (from?: string) =>
-      held.splice(0).forEach((h) => (from === undefined || h.from === from ? h.release() : held.push(h)))
+    const release = (from: string) => held.splice(0).forEach((h) => (h.from === from ? h.release() : held.push(h)))
     await page.route(
       (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
       async (route) => {
@@ -74,17 +73,18 @@ test.describe('Week grid navigation and clicks', () => {
     await page.reload()
     await expect.poll(() => held.some((h) => h.from === '2026-10-19')).toBe(true)
     release('2026-10-19')
-    await expect(page.getByTestId('session-card-thursday')).toBeVisible()
+    await expect(panel(page, 'This week')).toHaveAttribute('aria-busy', 'false')
     const next = page.getByRole('button', { name: 'Next week' })
     // Measured against the panel, so scrolling the arrow into view to click it doesn't count.
     const top = () =>
       next.evaluate((el) => el.getBoundingClientRect().top - el.closest('section')!.getBoundingClientRect().top)
     const home = await top()
-    for (const title of ['Next week', 'Week of Nov 2', 'Week of Nov 9']) {
+    for (const [title, from] of [['Next week', '2026-10-26'], ['Week of Nov 2', '2026-11-02'], ['Week of Nov 9', '2026-11-09']]) {
       await next.click()
       await expect(panel(page, title)).toHaveAttribute('aria-busy', 'true')
       expect(await top()).toBe(home)
-      release()
+      await expect.poll(() => held.some((h) => h.from === from)).toBe(true)
+      release(from)
       await expect(panel(page, title)).toHaveAttribute('aria-busy', 'false')
       expect(await top()).toBe(home)
     }

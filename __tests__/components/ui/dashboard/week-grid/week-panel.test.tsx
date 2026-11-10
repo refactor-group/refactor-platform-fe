@@ -289,11 +289,14 @@ describe("WeekPanel before the screen width is known", () => {
     expect(screen.getByRole("region", { name: "This week" })).toHaveAttribute("aria-busy", "true");
   });
 
-  it("hides Back to this week on wide screens with CSS until the width is known", () => {
+  it("puts Back to current week on the title's line, hidden on wide screens", () => {
     widthKnown = false;
     renderPanel();
     fireEvent.click(button("Next week"));
-    expect(screen.getByRole("button", { name: "Back to this week" })).toHaveClass("lg:hidden");
+    const back = screen.getByRole("button", { name: "Back to current week" });
+    expect(back).toHaveClass("lg:hidden");
+    const title = screen.getByRole("heading", { name: "Next week", level: 2 });
+    expect(title.parentElement).toContainElement(back);
   });
 
   it("renders the chosen layout alone once the width is known", () => {
@@ -547,10 +550,10 @@ describe("WeekPanel below 1024px", () => {
 
   it("selects Monday on another week, and offers a way back", () => {
     renderPanel();
-    expect(screen.queryByRole("button", { name: "Back to this week" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Back to current week" })).not.toBeInTheDocument();
     fireEvent.click(button("Next week"));
     expect(pill("Monday, August 24")).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(button("Back to this week"));
+    fireEvent.click(button("Back to current week"));
     expect(screen.getByRole("region", { name: "This week" })).toBeInTheDocument();
     expect(pill("Tuesday, August 18")).toHaveAttribute("aria-pressed", "true");
   });
