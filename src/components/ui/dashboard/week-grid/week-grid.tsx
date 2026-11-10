@@ -12,8 +12,7 @@ export interface WeekGridProps {
   isLoading: boolean;
 }
 
-// Below lg the columns stack.
-const WEEK_GRID_CLASS = "mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-7";
+const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
 
 export function WeekGrid({ days, handlers, onSchedule, isLoading }: WeekGridProps) {
   return (

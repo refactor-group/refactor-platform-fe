@@ -143,3 +143,8 @@ export function seriesUpdatedMessage(input: {
     ...otherMoveParts(otherMove),
   ].join(" · ");
 }
+
+/** e.g. "Moved Ehab to Thu, 10:00 AM · this session only". */
+export function movedMessage(personName: string, start: DateTime): string {
+  return `Moved ${firstNameOf(personName)} to ${start.toFormat("ccc")}, ${timeOfDay(start)} · this session only`;
+}

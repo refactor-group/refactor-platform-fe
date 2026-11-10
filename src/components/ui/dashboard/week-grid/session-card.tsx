@@ -5,6 +5,7 @@ import type { KeyboardEvent, ReactNode, SyntheticEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { cn } from "@/components/lib/utils";
+import { Button } from "@/components/ui/button";
 import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
 import { timeOfDay } from "@/lib/session-window";
 import {
@@ -20,11 +21,18 @@ import { SessionCardMenu, type OnSessionAction } from "./session-card-menu";
 export interface SessionCardHandlers {
   onAction: OnSessionAction;
   onOpen: (view: CardView) => void;
+  onMove?: (view: CardView) => void;
+}
+
+export enum SessionCardLayout {
+  Grid = "grid",
+  Agenda = "agenda",
 }
 
 export interface SessionCardProps extends SessionCardHandlers {
   view: CardView;
   dimmed?: boolean;
+  layout?: SessionCardLayout;
 }
 
 const CARD_HINT = "Enter opens the session. Shift+F10 shows actions.";
@@ -67,8 +75,17 @@ function CardHintText({ ids }: { ids: CardHintIds }) {
   );
 }
 
-export function SessionCard({ view, dimmed = false, onAction, onOpen }: SessionCardProps) {
+export function SessionCard({
+  view,
+  dimmed = false,
+  layout = SessionCardLayout.Grid,
+  onAction,
+  onOpen,
+  onMove,
+}: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
+  const isAgenda = layout === SessionCardLayout.Agenda;
+  const canMove = !isPast && view.canManage;
   const sharedHint = useContext(CardHintContext);
   const ownHintIds = useCardHintIds();
   const hintIds = sharedHint.some ? sharedHint.val : ownHintIds;
@@ -79,7 +96,7 @@ export function SessionCard({ view, dimmed = false, onAction, onOpen }: SessionC
 
   return (
     <>
-      <SessionCardMenu view={view} onAction={onAction}>
+      <SessionCardMenu view={view} isCompact={isAgenda} onAction={onAction}>
         <div
           data-testid={`session-card-${view.session.id}`}
           data-tense={view.tense}
@@ -90,7 +107,8 @@ export function SessionCard({ view, dimmed = false, onAction, onOpen }: SessionC
           onClick={() => onOpen(view)}
           onKeyDown={onKeyDown}
           className={cn(
-            "flex min-h-[104px] cursor-pointer flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+            "flex cursor-pointer flex-col gap-1.5 rounded-xl p-[11px] outline-none",
+            layout === SessionCardLayout.Grid && "min-h-[104px]",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             isPast ? "bg-well" : "bg-card shadow-card",
             dimmed && "opacity-[.28]"
@@ -113,8 +131,14 @@ export function SessionCard({ view, dimmed = false, onAction, onOpen }: SessionC
             {view.name}
           </span>
           <CardNoteLine note={view.note} />
-          <div className="mt-auto">
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
             <CardFooterLine footer={view.footer} sessionId={view.session.id} />
+            {isAgenda && (
+              <div className="ml-auto flex items-center gap-2">
+                {canMove && onMove && <CardButton label="Move" onClick={() => onMove(view)} />}
+                <CardButton label="Open session" onClick={() => onOpen(view)} />
+              </div>
+            )}
           </div>
         </div>
       </SessionCardMenu>
@@ -125,6 +149,23 @@ export function SessionCard({ view, dimmed = false, onAction, onOpen }: SessionC
 
 function stopPropagation(e: SyntheticEvent) {
   e.stopPropagation();
+}
+
+function CardButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      className="text-[13px]"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onKeyDown={stopPropagation}
+    >
+      {label}
+    </Button>
+  );
 }
 
 function CardNoteLine({ note }: { note: CardNote }) {

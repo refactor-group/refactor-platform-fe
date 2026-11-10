@@ -28,16 +28,18 @@ export type OnSessionAction = (action: SessionAction, session: EnrichedCoachingS
 
 export interface SessionCardMenuProps {
   view: CardView;
+  isCompact: boolean;
   onAction: OnSessionAction;
   children: ReactNode;
 }
 
 const DESTRUCTIVE_ITEM_CLASS = "text-destructive focus:text-destructive focus:bg-destructive/10";
 
-export function SessionCardMenu({ view, onAction, children }: SessionCardMenuProps) {
+export function SessionCardMenu({ view, isCompact, onAction, children }: SessionCardMenuProps) {
   const context: SessionActionContext = {
     isCoach: view.canManage,
     isPast: view.tense === CardTense.Past,
+    isCompact,
   };
   const items = sessionActionsFor(view.session, context);
 

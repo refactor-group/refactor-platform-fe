@@ -2,7 +2,7 @@ import { DateTime } from "ts-luxon";
 import { sessionCount } from "@/lib/scheduling-copy";
 import { sessionStartIn } from "@/lib/session-window";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import type { Option } from "@/types/option";
+import { type Option, None, Some } from "@/types/option";
 
 export interface Week {
   start: DateTime;
@@ -28,6 +28,15 @@ export function weekOf(offset: number, now: DateTime, timezone: string): Week {
   // Calendar-day steps keep local midnights across DST changes.
   const days = Array.from({ length: DAYS_IN_WEEK }, (_, i) => start.plus({ days: i }));
   return { start, days };
+}
+
+export function agendaDay(week: Week, selected: Option<string>, now: DateTime): DateTime {
+  const today = now.setZone(week.start.zone);
+  return (
+    week.days.find((d) => selected.some && d.toISODate() === selected.val) ??
+    week.days.find((d) => d.hasSame(today, "day")) ??
+    week.days[0]
+  );
 }
 
 export function weekTitle(offset: number, week: Week): string {
@@ -84,4 +93,11 @@ export function groupByDay<T>(
     isPast: day < today,
     items: sorted.filter((item) => startOf(item).setZone(zone).hasSame(day, "day")),
   }));
+}
+
+export function scheduleOn<T>(
+  group: DayGroup<T>,
+  onSchedule: Option<(day: DateTime) => void>
+): Option<() => void> {
+  return onSchedule.some && !group.isPast ? Some(() => onSchedule.val(group.day)) : None;
 }

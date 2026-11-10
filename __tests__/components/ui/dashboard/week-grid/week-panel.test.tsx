@@ -5,7 +5,7 @@ import type { Week } from "@/lib/week-grid/week";
 import { SessionAction } from "@/lib/session-actions";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { WeekPanel } from "@/components/ui/dashboard/week-grid/week-panel";
-import { WeekGridStoreProvider } from "@/lib/providers/week-grid-store-provider";
+import { WeekGridStoreProvider, useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
 import type { WeekEdges } from "@/lib/week-grid/week";
 import { PersonGroup, type FilterPerson } from "@/lib/week-grid/filter";
 import { None, Some, type Option } from "@/types/option";
@@ -63,12 +63,24 @@ vi.mock("@/lib/hooks/use-week-filter", () => ({
   }),
 }));
 
+const moveSession = vi.fn();
+vi.mock("@/lib/hooks/use-move-session", () => ({ useMoveSession: () => moveSession }));
+
+let wide = true;
+let widthKnown = true;
+vi.mock("@/lib/hooks/use-media-query", () => ({
+  useMediaQuery: (query: string) => (query === "(min-width: 1024px)" ? (widthKnown ? Some(wide) : None) : Some(false)),
+}));
+
 const toast = vi.fn();
 vi.mock("@/lib/toast", () => ({ toast: (...args: unknown[]) => toast(...args) }));
 vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => TZ }));
 
-const run = vi.fn();
 let actionsInput: Record<string, unknown> = {};
+// Like the real hook, Move goes to the onMove the panel hands it.
+const run = vi.fn((action: SessionAction, session: EnrichedCoachingSession) => {
+  if (action === SessionAction.Move) (actionsInput.onMove as (s: EnrichedCoachingSession) => void)(session);
+});
 vi.mock("@/components/ui/dashboard/use-session-actions", () => ({
   useSessionActions: (input: Record<string, unknown>) => {
     actionsInput = input;
@@ -96,6 +108,8 @@ beforeEach(() => {
   isACoach = true;
   edges = { hasEarlier: true, hasLater: true };
   selectedPerson = None;
+  wide = true;
+  widthKnown = true;
   result = {
     sessions: [LATE_TODAY, THURSDAY, EARLY_TODAY, NEXT_WEEK],
     isLoading: false,
@@ -204,6 +218,32 @@ describe("WeekPanel", () => {
     const panel = screen.getByRole("region", { name: "This week" });
     expect(panel).toHaveAttribute("aria-busy", "true");
     expect(panel).not.toHaveTextContent(/\d+ sessions?\b/);
+  });
+});
+
+describe("WeekPanel before the screen width is known", () => {
+  it("shows both loading layouts, letting CSS pick one, and no cards yet", () => {
+    widthKnown = false;
+    renderPanel();
+    const grid = screen.getByTestId("week-grid-pending");
+    expect(grid).toHaveClass("hidden", "lg:block");
+    expect(within(grid).getAllByRole("group", { name: /, August/ })).toHaveLength(7);
+    expect(screen.getByTestId("day-agenda-pending")).toHaveClass("lg:hidden");
+    expect(screen.queryAllByTestId(/^session-card-/)).toHaveLength(0);
+    expect(screen.getByRole("region", { name: "This week" })).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("hides Back to this week on wide screens with CSS until the width is known", () => {
+    widthKnown = false;
+    renderPanel();
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("button", { name: "Back to this week" })).toHaveClass("lg:hidden");
+  });
+
+  it("renders the chosen layout alone once the width is known", () => {
+    renderPanel();
+    expect(screen.queryByTestId("week-grid-pending")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("day-agenda-pending")).not.toBeInTheDocument();
   });
 });
 
@@ -402,3 +442,160 @@ describe("WeekPanel person filter", () => {
   });
 });
 
+describe("WeekPanel below 1024px", () => {
+  beforeEach(() => {
+    wide = false;
+  });
+
+  const pill = (name: string) => screen.getByRole("button", { name });
+
+  it("swaps the columns for a day strip and today's agenda", () => {
+    renderPanel();
+    expect(screen.queryAllByRole("group", { name: /, August/ })).toHaveLength(0);
+    expect(pill("Tuesday, August 18")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("heading", { name: "Tuesday, August 18" })).toBeInTheDocument();
+    expect(screen.getAllByTestId(/^session-card-/).map((c) => c.dataset.testid)).toEqual([
+      "session-card-early-today",
+      "session-card-late-today",
+    ]);
+  });
+
+  it("shows another day's sessions when its pill is tapped", () => {
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    expect(screen.getByRole("heading", { name: "Thursday, August 20" })).toBeInTheDocument();
+    expect(screen.getAllByTestId(/^session-card-/).map((c) => c.dataset.testid)).toEqual(["session-card-thursday"]);
+  });
+
+  it("says No sessions on an empty day, with Schedule from today on", () => {
+    renderPanel();
+    fireEvent.click(pill("Wednesday, August 19"));
+    expect(screen.getByText("No sessions")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Schedule on Wednesday, August 19" }));
+    expect(onSchedule).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens a session from its agenda card", () => {
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Open session" }));
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
+  });
+
+  it("selects Monday on another week, and offers a way back", () => {
+    renderPanel();
+    expect(screen.queryByRole("button", { name: "Back to this week" })).not.toBeInTheDocument();
+    fireEvent.click(button("Next week"));
+    expect(pill("Monday, August 24")).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(button("Back to this week"));
+    expect(screen.getByRole("region", { name: "This week" })).toBeInTheDocument();
+    expect(pill("Tuesday, August 18")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the filter's dimming in the agenda", () => {
+    selectedPerson = Some(SAM);
+    renderPanel();
+    expect(screen.getByTestId("session-card-late-today")).toHaveAttribute("data-dimmed", "true");
+  });
+});
+
+describe("WeekPanel Move sheet below 1024px", () => {
+  beforeEach(() => {
+    wide = false;
+  });
+
+  const pill = (name: string) => screen.getByRole("button", { name });
+  const moveSheet = () => screen.getByRole("dialog", { name: "Move Alex's session" });
+
+  it("offers Move on an upcoming agenda card the viewer coaches, and not on a past one", () => {
+    renderPanel();
+    expect(within(screen.getByTestId("session-card-early-today")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
+    fireEvent.click(pill("Thursday, August 20"));
+    expect(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" })).toBeInTheDocument();
+  });
+
+  it("offers no Move to someone who coaches nobody", () => {
+    isACoach = false;
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    expect(within(screen.getByTestId("session-card-thursday")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
+  });
+
+  it("moves the session to a picked slot through the sheet", () => {
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    expect(within(moveSheet()).getByRole("button", { name: "10:00 AM, current" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "11:00 AM" }));
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "Move session" }));
+    expect(moveSession).toHaveBeenCalledTimes(1);
+    const [{ session, name, to }] = moveSession.mock.calls[0];
+    expect(session).toBe(THURSDAY);
+    expect(name).toBe("Alex Chen");
+    expect(to.toISO()).toBe(DateTime.fromISO("2026-08-20T11:00", { zone: TZ }).toISO());
+    expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
+  });
+
+  it("opens the same sheet from the long-press menu's Move…", () => {
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Move…" }));
+    expect(run).toHaveBeenCalledWith(SessionAction.Move, THURSDAY);
+    expect(moveSheet()).toBeInTheDocument();
+  });
+
+  it("names other sessions' slots as taken", () => {
+    result = { ...result, sessions: [THURSDAY, { ...SAM_FRIDAY, id: "sam-thursday", date: "2026-08-20T17:00:00" }] };
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    const taken = within(moveSheet()).getByRole("button", { name: /^12:00 PM/ });
+    expect(taken).toBeDisabled();
+  });
+});
+
+describe("WeekPanel desktop menu", () => {
+  it("has no Move… on the wide layout", () => {
+    renderPanel();
+    fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
+    expect(screen.queryByRole("menuitem", { name: "Move…" })).not.toBeInTheDocument();
+  });
+});
+
+function MarkMoved({ id }: { id: string }) {
+  const markMoved = useWeekGridStore((s) => s.markMoved);
+  return <button onClick={() => markMoved(id)}>mark {id}</button>;
+}
+function MovedCount() {
+  return <output aria-label="moved count">{useWeekGridStore((s) => s.recentlyMoved.length)}</output>;
+}
+
+describe("WeekPanel moved cards (D10)", () => {
+  it("reads Moved on a card the viewer just moved", () => {
+    render(
+      <WeekGridStoreProvider>
+        <MarkMoved id="thursday" />
+        <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />
+      </WeekGridStoreProvider>
+    );
+    fireEvent.click(screen.getByRole("button", { name: "mark thursday" }));
+    expect(screen.getByTestId("session-card-thursday")).toHaveTextContent("Moved");
+    expect(screen.getByTestId("session-card-late-today")).not.toHaveTextContent("Moved");
+  });
+
+  it("forgets moved cards once the panel goes away", () => {
+    const tree = (withPanel: boolean) => (
+      <WeekGridStoreProvider>
+        <MarkMoved id="thursday" />
+        <MovedCount />
+        {withPanel && <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />}
+      </WeekGridStoreProvider>
+    );
+    const { rerender } = render(tree(true));
+    fireEvent.click(screen.getByRole("button", { name: "mark thursday" }));
+    expect(screen.getByLabelText("moved count")).toHaveTextContent("1");
+    rerender(tree(false));
+    expect(screen.getByLabelText("moved count")).toHaveTextContent("0");
+  });
+});

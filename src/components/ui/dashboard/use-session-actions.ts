@@ -30,6 +30,7 @@ type DeleteDialogState =
 export interface UseSessionActionsInput {
   userTimezone: string;
   onReschedule: (session: EnrichedCoachingSession, scope?: MoveScope) => void;
+  onMove: (session: EnrichedCoachingSession) => void;
   onSessionsChanged: () => void;
   onSeriesMutated?: () => void;
 }
@@ -56,6 +57,7 @@ function removalFailedMessage(removal: SessionRemoval): string {
 export function useSessionActions({
   userTimezone,
   onReschedule,
+  onMove,
   onSessionsChanged,
   onSeriesMutated,
 }: UseSessionActionsInput): SessionActions {
@@ -114,6 +116,9 @@ export function useSessionActions({
         case SessionAction.Reschedule:
           onReschedule(session);
           return;
+        case SessionAction.Move:
+          onMove(session);
+          return;
         case SessionAction.ViewSeries:
           if (seriesId.some) setSeriesAction({ kind: "view", seriesId: seriesId.val });
           return;
@@ -142,7 +147,7 @@ export function useSessionActions({
         }
       }
     },
-    [router, onReschedule, editSeries, requestResend]
+    [router, onReschedule, onMove, editSeries, requestResend]
   );
 
   return {

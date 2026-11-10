@@ -2,8 +2,8 @@ import type { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GridCard } from "@/lib/week-grid/card";
-import type { DayGroup } from "@/lib/week-grid/week";
-import { type Option, None, Some } from "@/types/option";
+import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
+import type { Option } from "@/types/option";
 import { EmptyDay } from "./empty-day";
 import { SessionCard, type SessionCardHandlers } from "./session-card";
 
@@ -37,13 +37,6 @@ export function DayColumn({ group, handlers, onSchedule, isLoading }: DayColumnP
       )}
     </div>
   );
-}
-
-function scheduleOn(
-  group: DayGroup<GridCard>,
-  onSchedule: Option<(day: DateTime) => void>
-): Option<() => void> {
-  return onSchedule.some && !group.isPast ? Some(() => onSchedule.val(group.day)) : None;
 }
 
 function DayLabel({ group }: { group: DayGroup<GridCard> }) {
