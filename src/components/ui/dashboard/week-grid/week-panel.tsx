@@ -17,7 +17,7 @@ import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { useRefreshCoachingSessions } from "@/lib/hooks/use-sse-cache-invalidation";
 import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
-import { useWeekSessions } from "@/lib/hooks/use-week-sessions";
+import { usePrefetchWeekSessions, useWeekSessions } from "@/lib/hooks/use-week-sessions";
 import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import { SessionAction } from "@/lib/session-actions";
 import { MoveScope } from "@/lib/scheduling";
@@ -102,6 +102,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const isCoach = useAuthStore((s) => s.isACoach);
   const navigation = useWeekNavigation(isCurrentWeek, isCoach, week);
   const { sessions, isLoading, isError, refresh } = useWeekSessions(week);
+  usePrefetchWeekSessions(week);
   // SWR keeps the last sessions when a read fails, so they stay visible but can't be changed.
   const readOnly = isError;
   const canSchedule = isCoach && !readOnly;

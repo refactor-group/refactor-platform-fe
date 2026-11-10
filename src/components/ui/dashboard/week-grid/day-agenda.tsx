@@ -1,5 +1,4 @@
 import { useId } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { DateTime } from "ts-luxon";
 import type { GridCard } from "@/lib/week-grid/card";
 import type { DayGroup } from "@/lib/week-grid/week";
@@ -18,7 +17,7 @@ export interface DayAgendaProps {
 export function DayAgenda({ group, handlers, now, isUnloaded, isLoading }: DayAgendaProps) {
   const headingId = useId();
   const nodes = isLoading
-    ? [<Skeleton key="loading" role="status" aria-label="Loading sessions" className="min-h-14 rounded-xl" />]
+    ? [<div key="loading" role="status" aria-label="Loading sessions" className="min-h-14 rounded-xl border border-dashed border-border" />]
     : withNowLine(agendaNodes(group, handlers, isUnloaded), group.items, now);
   return (
     <section aria-labelledby={headingId} className="mt-6 flex flex-col gap-2.5">
