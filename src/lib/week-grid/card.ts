@@ -34,6 +34,8 @@ export interface CardView {
   start: DateTime;
   name: string;
   tense: CardTense;
+  /** Its start has passed. A Live card may still be minutes away. */
+  started: boolean;
   note: CardNote;
   footer: CardFooter;
   canManage: boolean;
@@ -59,6 +61,7 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
     start,
     name: participant?.participantName ?? "Unknown",
     tense,
+    started: start.toMillis() <= context.now.toMillis(),
     note: noteOf(urgency, minutesUntil(start, context.now), topicCount),
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,

@@ -216,8 +216,8 @@ export const CoachingPreferencesSection: FC = () => {
       <FieldGroup>
         <FieldTitle className="text-base">Working hours</FieldTitle>
         <FieldDescription>
-          Sets the time slots you can move sessions into, and when the
-          scheduler warns that a time is outside your day.
+          Sets the time slots you can move sessions into, and the times
+          the scheduler suggests.
         </FieldDescription>
 
         <Field orientation="horizontal">

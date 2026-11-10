@@ -224,7 +224,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
       className="rounded-card border bg-card p-7"
     >
       <WeekPanelHeader {...header} subline={subline} />
-      {!busy && readOnly && <ReadOnlyNotice hasSessions={hasSessions} onRetry={refresh} />}
+      {!busy && readOnly && <ReadOnlyNotice hasSessions={hasSessions} onRetry={() => refresh()} />}
       <WeekBody
         width={width}
         isLoading={isLoading}

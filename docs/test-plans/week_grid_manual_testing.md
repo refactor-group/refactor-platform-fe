@@ -119,11 +119,11 @@ Ask someone who hasn't seen this plan to cancel C's session from the dashboard.
 
 **Pass:** note whether they find the right-click menu, and how long it takes. Record it in the PR; it decides whether a ⋮ button is added.
 
-### Case 1.12: interim narrow layout
+### Case 1.12: narrow layout
 
 At 1023px and at 390px.
 
-**Pass:** columns stack vertically, one day per row. Nothing scrolls sideways.
+**Pass:** the phone layout (day strip and agenda, Part 6) replaces the grid. Nothing scrolls sideways.
 
 ### Case 1.13: loading and error
 
@@ -220,7 +220,7 @@ Use a session from earlier today that has already ended.
 **Pass:**
 - It still looks past (grey, with Done).
 - It drags on desktop or offers Move on a phone.
-- Its menu has every item, including **Cancel session…**, and the dialog asks "Cancel this coaching session?".
+- Its menu has every item but Resend invite (a one-off's invite can't be resent once it has started), including **Cancel session…**, and the dialog asks "Cancel this coaching session?".
 - A session from yesterday stays locked: Open session and Remove session… only.
 
 ## 4. Part 3: Prepare and readiness (PR 3)
@@ -361,7 +361,7 @@ In Settings › Coaching preferences, set working hours to 7:00 AM to 3:00 PM an
 
 **Pass:**
 - The slots run from 7:00 AM to 3:00 PM.
-- In the New session dialog, 7:30 AM no longer shows an after-hours warning.
+- The New session dialog suggests times within 7:00 AM to 3:00 PM.
 
 ### Case 5.11: Moved note lifetime
 
@@ -391,7 +391,7 @@ Run this part at 390×844, then on a real phone.
 Tap days.
 
 **Pass:**
-- That day's sessions show as full-width cards in time order, each with Prepare, Open session and Move.
+- That day's sessions show as full-width cards in time order, each with Prepare, Move and Open.
 - An empty day reads "No sessions".
 
 ### Case 6.3: Move sheet
@@ -400,12 +400,13 @@ Tap **Move** on C.
 
 **Pass:**
 - A bottom sheet titled "Move C's session" opens.
-- It shows the day pills, with past days disabled, and the 30-minute slots, with C's own slot marked current and taken slots named.
-- **Move session** stays disabled until the day or time differs.
+- It shows the day pills, with past days disabled; the day's other sessions, or "Nothing else on …"; up to five suggested times; and a time field holding C's current time.
+- **Move session** stays disabled until a different time is picked, and never targets a time already past.
+- A time that overlaps another session names it, offers "Use … instead", and turns the button into **Resolve overlap…**, which opens the reschedule dialog on its overlap step.
 
 ### Case 6.4: confirming a move
 
-Pick Friday at 10:00 and confirm.
+Pick Friday, then 10:00, and confirm.
 
 **Pass:** Friday becomes selected, C is there, and the Undo toast appears.
 
