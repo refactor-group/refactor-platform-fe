@@ -28,6 +28,8 @@ export interface SessionActionContext {
   isCoach: boolean;
   /** Locked (see `sessionLocked`): only Open session and the delete item remain. */
   isLocked: boolean;
+  /** Its start has passed: a one-off's invite can't be resent, though the session may still be edited today. */
+  hasStarted: boolean;
   isCompact: boolean;
 }
 
@@ -76,7 +78,8 @@ const RULES: SessionActionRule[] = [
   {
     action: SessionAction.ResendInvite,
     group: SessionActionGroup.Share,
-    shown: (_s, c) => coachUpcoming(c),
+    // The series resend covers its later sessions; a one-off has none once it starts.
+    shown: (s, c) => coachUpcoming(c) && (inSeries(s) || !c.hasStarted),
   },
   {
     action: SessionAction.DeleteSession,

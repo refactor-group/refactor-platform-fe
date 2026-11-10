@@ -194,10 +194,11 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     readOnly,
   };
   const scheduleDay = canSchedule ? Some((day: DateTime) => onSchedule(Some(day))) : None;
-  const noMatches = selected.some && visibleCount(days) === 0;
   const hasSessions = sessions.length > 0;
   // A failed read with nothing cached must not call the week or its days empty.
   const isUnloaded = readOnly && !hasSessions;
+  // Nothing loaded is not the same as nothing matching.
+  const noMatches = selected.some && !isUnloaded && visibleCount(days) === 0;
   const busy = isLoading || width.none;
   const subline = busy || isUnloaded ? None : Some(sublineFor(days, isCurrentWeek));
 
@@ -225,7 +226,8 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
         drag={drag}
       />
       <SessionActionDialogs {...actions.dialogs} />
-      <MoveSheet model={moveModel} onConfirm={confirmMove} onClose={closeMove} />
+      {/* A failed read leaves availability untrusted, so an open sheet closes. */}
+      <MoveSheet model={readOnly ? None : moveModel} onConfirm={confirmMove} onClose={closeMove} />
     </section>
   );
 }
