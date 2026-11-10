@@ -12,8 +12,10 @@ const OTHER = createMockEnrichedSession({ id: "other", date: "2026-08-20T15:00:0
 const TUESDAY = at("2026-08-18T00:00");
 const THURSDAY = at("2026-08-20T00:00");
 
-const choices = (now = at("2026-08-17T07:00")) =>
-  moveChoices(MOVING, { sessions: [MOVING, OTHER], viewerId: "coach-1", timezone: TZ, hours: HOURS, now });
+// The shown week and whatever of its neighbours has loaded.
+const THIS_WEEK = { from: at("2026-08-17T00:00"), to: at("2026-08-24T00:00") };
+const choices = (now = at("2026-08-17T07:00"), sessions = [MOVING, OTHER], known = THIS_WEEK) =>
+  moveChoices(MOVING, { sessions, viewerId: "coach-1", timezone: TZ, hours: HOURS, now, known });
 const clock = (times: DateTime[]) => times.map((t) => t.toFormat("HH:mm"));
 
 describe("moveChoices", () => {
@@ -51,5 +53,20 @@ describe("moveChoices", () => {
 
   it("doesn't count the moving session as an overlap", () => {
     expect(choices().clashAt(at("2026-08-18T14:45")).none).toBe(true);
+  });
+
+  it("sees an overlap in the next week when that week's sessions are passed in", () => {
+    // Monday, August 24, midnight in Chicago.
+    const nextMonday = createMockEnrichedSession({ id: "next-monday", date: "2026-08-24T05:00:00", duration_minutes: 50 });
+    const known = { from: THIS_WEEK.from, to: at("2026-08-31T00:00") };
+    const clash = choices(undefined, [MOVING, OTHER, nextMonday], known).clashAt(at("2026-08-23T23:45"));
+    expect(clash.some && clash.val.session.id).toBe("next-monday");
+  });
+
+  it("covers only times whose whole session falls inside the loaded span", () => {
+    expect(choices().covers(at("2026-08-23T10:00"))).toBe(true);
+    expect(choices().covers(at("2026-08-23T23:45"))).toBe(false);
+    const known = { from: THIS_WEEK.from, to: at("2026-08-31T00:00") };
+    expect(choices(undefined, undefined, known).covers(at("2026-08-23T23:45"))).toBe(true);
   });
 });

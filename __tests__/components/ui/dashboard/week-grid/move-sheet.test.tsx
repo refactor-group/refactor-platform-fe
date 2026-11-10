@@ -25,6 +25,8 @@ const MODEL: MoveSheetModel = {
     start >= PRIYA.start && start < PRIYA.end
       ? Some({ session: PRIYA, others: [], instead: Some(at("2026-08-20T10:00")) })
       : None,
+  // Sessions are known through Saturday; a Sunday time can't be checked yet.
+  covers: (start) => start < at("2026-08-23T00:00"),
 };
 
 function renderSheet(model: Option<MoveSheetModel> = Some(MODEL)) {
@@ -93,6 +95,13 @@ describe("MoveSheet", () => {
     renderSheet();
     fireEvent.click(chip("4:00 PM"));
     fireEvent.change(timeInput(), { target: { value: "14:30" } });
+    expect(confirm()).toBeDisabled();
+  });
+
+  it("won't move to a time whose surroundings haven't loaded", () => {
+    renderSheet();
+    fireEvent.click(dayButton("Sunday, August 23"));
+    fireEvent.change(timeInput(), { target: { value: "10:00" } });
     expect(confirm()).toBeDisabled();
   });
 

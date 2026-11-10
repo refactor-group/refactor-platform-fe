@@ -34,13 +34,20 @@ const refresh = vi.fn();
 let result: WeekSessionsResult;
 const requestedWeeks: Week[] = [];
 const prefetchedAround: Week[] = [];
+let adjacent: EnrichedCoachingSession[] = [];
+let adjacentLoaded = true;
 vi.mock("@/lib/hooks/use-week-sessions", () => ({
   useWeekSessions: (week: Week) => {
     requestedWeeks.push(week);
     return result;
   },
-  usePrefetchWeekSessions: (week: Week) => {
+  useAdjacentWeekSessions: (week: Week) => {
     prefetchedAround.push(week);
+    const span = adjacentLoaded ? 1 : 0;
+    return {
+      sessions: adjacent,
+      known: { from: week.start.minus({ weeks: span }), to: week.start.plus({ weeks: 1 + span }) },
+    };
   },
 }));
 
@@ -111,6 +118,8 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   requestedWeeks.length = 0;
   prefetchedAround.length = 0;
+  adjacent = [];
+  adjacentLoaded = true;
   vi.clearAllMocks();
   isACoach = true;
   edges = { hasEarlier: true };
@@ -615,6 +624,26 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(name).toBe("Alex Chen");
     expect(to.toISO()).toBe(DateTime.fromISO("2026-08-20T11:00", { zone: TZ }).toISO());
     expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
+  });
+
+  it("checks a move that runs into next week against next week's sessions", () => {
+    adjacent = [session("next-monday", "2026-08-24T05:00:00")];
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "Sunday, August 23" }));
+    fireEvent.change(within(moveSheet()).getByLabelText("Start time"), { target: { value: "23:45" } });
+    expect(within(moveSheet()).getByRole("button", { name: "Resolve overlap…" })).toBeEnabled();
+  });
+
+  it("won't move into next week before next week's sessions have loaded", () => {
+    adjacentLoaded = false;
+    renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    fireEvent.click(within(moveSheet()).getByRole("button", { name: "Sunday, August 23" }));
+    fireEvent.change(within(moveSheet()).getByLabelText("Start time"), { target: { value: "23:45" } });
+    expect(within(moveSheet()).getByRole("button", { name: "Move session" })).toBeDisabled();
   });
 
   it("closes an open Move sheet when the week's read fails, so nothing moves on stale times", () => {
