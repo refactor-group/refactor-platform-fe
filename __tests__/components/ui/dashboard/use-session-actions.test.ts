@@ -41,6 +41,7 @@ function renderActions() {
   const input: UseSessionActionsInput = {
     userTimezone: "America/Chicago",
     onReschedule: vi.fn(),
+    onMove: vi.fn(),
     onSessionsChanged,
   };
   const hook = renderHook(() => useSessionActions(input));
