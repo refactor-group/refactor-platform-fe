@@ -59,6 +59,9 @@ The pure model lives in `src/lib/week-grid/`: `week.ts`, `card.ts`, `filter.ts` 
 | D16 | User-facing copy says "Cancel session" and "Cancel series", never "Delete". |
 | D17 | A coach can still remove a past session: "Remove session…" in the menu, using the same dialog with past-tense copy. |
 | D22 | Ready is a pill link like Prepare, in the positive tint with a check (Jim, 2026-11-09). Both open the session page, and later the Session glance. |
+| D20 | A live card keeps its topic status beside the countdown: "in 45 min · No topics yet" (the second part in amber) or "in 45 min · 3 topics" (Jim, 2026-11-06). |
+| D19 | Today's column shows a "now" line with the current time (Jim, 2026-11-06). Columns aren't time-scaled, so it sits between cards: above the first session that hasn't started. It appears on the current week only, in the grid and in today's agenda, and follows the profile time zone and the 30-second clock. |
+| D18 | A session that ended earlier today stays editable (Jim, 2026-11-06). It keeps the past look and "Done", but drag, Move and the full menu still work, and it cancels like any session still to change: "Cancel session…" with the Cancel dialog (Jim, 2026-11-08). Only locked sessions from earlier days say Remove. Sessions from earlier days stay locked. "Today" is judged in the profile time zone. |
 
 ## Reuse rules
 
@@ -183,6 +186,19 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
     - A taken slot opens the reschedule dialog on Resolve, at the dropped time, through `openMoveSession(session, This, Some(target))`.
     - Anything else is ignored.
   - **Trailing click:** a drag never also counts as a click.
+
+## Offline (read only), Jim 2026-11-06
+
+When the session read fails, the panel keeps working instead of collapsing to an error.
+- **Already-loaded week:** SWR still holds the sessions, so they stay on screen with "Can't reach the server right now. These sessions may be out of date." and Try again.
+- **Week never loaded:** it shows the seven empty days, with "Couldn't load this week's sessions." and Try again.
+- **Read only either way:**
+  - no drag, Move or empty-day Schedule;
+  - Schedule session is disabled;
+  - the menu offers Open session only.
+- **Still works:** the filter, and paging to weeks already loaded.
+- It returns to normal on the next successful read: SWR retries failed reads with backoff, and Try again or paging also refetch. Nothing is saved to disk, so it doesn't survive a reload.
+- Built on `feat/week-grid-offline`, which lands in PR #541.
 
 ## Follow-ups
 

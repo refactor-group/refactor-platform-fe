@@ -235,6 +235,74 @@ describe("CoachingPreferencesSection", () => {
       expect(mockRefresh).toHaveBeenCalled();
     });
 
+    it("sends a change once, even if the saved user comes back unchanged", async () => {
+      // A refresh returns a new user object with the old values, as a server that ignored the change would.
+      mockRefresh.mockImplementation(() => {
+        mockUserState = { ...mockUserState, user: { ...mockUserState.user } };
+      });
+      const { rerender } = render(<CoachingPreferencesSection />);
+      fireEvent.change(start(), { target: { value: "09:00" } });
+      for (let i = 0; i < 4; i += 1) {
+        await act(async () => {
+          vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+        });
+        rerender(<CoachingPreferencesSection />);
+      }
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it("sends a change once when the saved user keeps its identity and the save effect reruns", async () => {
+      // SWR keeps the same user object when the server returns identical data, while the save
+      // hooks hand back new values each render, so the effect reruns with the draft still dirty.
+      mockRefresh.mockReset();
+      const { rerender } = render(<CoachingPreferencesSection />);
+      fireEvent.change(start(), { target: { value: "09:00" } });
+      for (let i = 0; i < 4; i += 1) {
+        await act(async () => {
+          vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+        });
+        mockUserState = { ...mockUserState, refresh: vi.fn() };
+        rerender(<CoachingPreferencesSection />);
+      }
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it("doesn't send the same change again while the save is still settling", async () => {
+      const pending = vi.fn(() => new Promise<void>(() => {}));
+      mockUserState = { ...mockUserState, refresh: pending };
+      const { rerender } = render(<CoachingPreferencesSection />);
+      fireEvent.change(start(), { target: { value: "09:00" } });
+      for (let i = 0; i < 3; i += 1) {
+        await act(async () => {
+          vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+        });
+        mockUserState = { ...mockUserState, refresh: vi.fn(() => new Promise<void>(() => {})) };
+        rerender(<CoachingPreferencesSection />);
+      }
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it("a failed save shows the saved value again, and picking the same value retries", async () => {
+      mockUpdate.mockRejectedValue(makeApiError(403, { status_code: 403, error: "forbidden" }));
+      const { rerender } = render(<CoachingPreferencesSection />);
+      fireEvent.change(start(), { target: { value: "09:00" } });
+      for (let i = 0; i < 4; i += 1) {
+        await act(async () => {
+          vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+        });
+        mockUserState = { ...mockUserState, refresh: vi.fn() };
+        rerender(<CoachingPreferencesSection />);
+      }
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+      expect(mockToastError).toHaveBeenCalledTimes(1);
+      expect(start()).toHaveValue("08:00");
+      fireEvent.change(start(), { target: { value: "09:00" } });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+      expect(mockUpdate).toHaveBeenCalledTimes(2);
+    });
+
     it("doesn't save when the start isn't before the end, and says why", async () => {
       render(<CoachingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "18:00" } });

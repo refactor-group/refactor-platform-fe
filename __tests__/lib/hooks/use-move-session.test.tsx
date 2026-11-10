@@ -68,6 +68,7 @@ describe("useMoveSession", () => {
     expect(move).toHaveBeenCalledTimes(2);
     expect(move.mock.calls[1][1]).toEqual({ date: "2026-08-18T19:30:00", duration_minutes: 50 });
     expect(revalidate).toHaveBeenCalledTimes(2);
+    expect(result.current.moved).toEqual([]);
   });
 
   it("says so when the move fails, and marks nothing", async () => {

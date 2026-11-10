@@ -82,6 +82,18 @@ describe("SessionCard", () => {
     expect(card).toHaveTextContent("in 45 min");
   });
 
+  it("keeps the topic status beside the countdown on a live card, flagging none", () => {
+    const empty = renderCard(view("2026-08-18T19:30:00", 0)).card;
+    expect(empty).toHaveTextContent("in 45 min · No topics yet");
+    expect(within(empty).getByText("No topics yet")).toHaveClass("text-warning-text");
+  });
+
+  it("shows the topic count beside the countdown when topics are set", () => {
+    const ready = renderCard(view("2026-08-18T19:30:00", 3)).card;
+    expect(ready).toHaveTextContent("in 45 min · 3 topics");
+    expect(within(ready).getByText("3 topics")).not.toHaveClass("text-warning-text");
+  });
+
   it("flags an upcoming card with no topics", () => {
     expect(renderCard(view("2026-08-19T15:00:00", 0)).card).toHaveTextContent("No topics yet");
   });

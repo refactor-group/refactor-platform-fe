@@ -4,38 +4,43 @@ import type { GridCard } from "@/lib/week-grid/card";
 import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
 import type { Option } from "@/types/option";
 import { ScheduleDayButton } from "./empty-day";
+import { withNowLine } from "./now-line";
 import { SessionCard, SessionCardHint, SessionCardLayout, type SessionCardHandlers } from "./session-card";
 
 export interface DayAgendaProps {
   group: DayGroup<GridCard>;
   handlers: SessionCardHandlers;
   onSchedule: Option<(day: DateTime) => void>;
+  now: Option<DateTime>;
+  isUnloaded: boolean;
 }
 
-export function DayAgenda({ group, handlers, onSchedule }: DayAgendaProps) {
+export function DayAgenda({ group, handlers, onSchedule, now, isUnloaded }: DayAgendaProps) {
   const headingId = useId();
+  const nodes = withNowLine(agendaNodes(group, handlers, onSchedule, isUnloaded), group.items, now);
   return (
     <section aria-labelledby={headingId} className="mt-6 flex flex-col gap-2.5">
       <h3 id={headingId} className="text-sm font-semibold text-foreground">
         {group.day.toFormat("cccc, LLLL d")}
       </h3>
-      {group.items.length === 0 ? (
-        <NoSessions day={group.day} onSchedule={scheduleOn(group, onSchedule)} />
-      ) : (
-        <SessionCardHint>
-          {group.items.map((card) => (
-            <SessionCard
-              key={card.session.id}
-              view={card}
-              dimmed={card.dimmed}
-              layout={SessionCardLayout.Agenda}
-              {...handlers}
-            />
-          ))}
-        </SessionCardHint>
-      )}
+      {group.items.length > 0 ? <SessionCardHint>{nodes}</SessionCardHint> : nodes}
     </section>
   );
+}
+
+function agendaNodes(
+  group: DayGroup<GridCard>,
+  handlers: SessionCardHandlers,
+  onSchedule: Option<(day: DateTime) => void>,
+  isUnloaded: boolean
+) {
+  if (group.items.length === 0) {
+    if (isUnloaded) return [];
+    return [<NoSessions key="none" day={group.day} onSchedule={scheduleOn(group, onSchedule)} />];
+  }
+  return group.items.map((card) => (
+    <SessionCard key={card.session.id} view={card} dimmed={card.dimmed} layout={SessionCardLayout.Agenda} {...handlers} />
+  ));
 }
 
 function NoSessions({ day, onSchedule }: { day: DateTime; onSchedule: Option<() => void> }) {

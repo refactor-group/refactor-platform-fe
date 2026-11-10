@@ -21,6 +21,8 @@ export interface WeekPanelHeaderProps {
   navigation: WeekNavigation;
   filter: Option<WeekFilterProps>;
   onSchedule: Option<() => void>;
+  /** The server can't be reached, so Schedule session stays visible but disabled. */
+  readOnly: boolean;
 }
 
 export function WeekPanelHeader({
@@ -31,6 +33,7 @@ export function WeekPanelHeader({
   navigation,
   filter,
   onSchedule,
+  readOnly,
 }: WeekPanelHeaderProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
@@ -52,7 +55,12 @@ export function WeekPanelHeader({
         {filter.some && <WeekFilter {...filter.val} />}
         <WeekNavigationControls navigation={navigation} />
         {onSchedule.some && (
-          <Button size="sm" className="bg-brand px-4 text-[13px] hover:bg-brand/90" onClick={onSchedule.val}>
+          <Button
+            size="sm"
+            className="bg-brand px-4 text-[13px] hover:bg-brand/90"
+            disabled={readOnly}
+            onClick={onSchedule.val}
+          >
             <Plus aria-hidden />
             Schedule session
           </Button>

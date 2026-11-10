@@ -67,7 +67,7 @@ Open the dashboard as the coach.
 ### Case 1.5: card contents
 
 **Pass:**
-- **B:** pulsing dot and "in 40 min" (or close to it), plus a **Prepare** pill.
+- **B:** pulsing dot and "in 40 min · No topics yet" (or close to it), with "No topics yet" in amber, plus a **Prepare** pill.
 - **C:** "3 topics" and a green **✓ Ready** pill, the same shape as Prepare, that opens the session.
 - **A** (when more than 2 hours away): **No topics yet** in amber, plus Prepare.
 - **D:** grey background with no shadow, faint time, muted name, "2 topics", and **Done**.
@@ -129,6 +129,16 @@ At 1023px and at 390px.
 Reload with the user sessions request blocked.
 
 **Pass:** the panel shows an error state with a retry, not an empty week. Unblock it and retry: the week loads.
+
+### Case 1.14: now line
+
+On the current week, look at today's column, then wait a minute.
+
+**Pass:**
+- A thin brand line with the current time sits between the sessions that have started and those still to come. Before any session it sits on top, and after the last one it sits at the bottom.
+- The time on it advances without a reload.
+- No other day or week shows it.
+- On a phone, today's agenda shows the same line.
 
 ## 3. Part 2: Navigation and scheduling (PR 2)
 
@@ -200,6 +210,16 @@ Tab to a card and press Enter.
 Reschedule C to Friday through the dialog.
 
 **Pass:** the card moves to Friday without a reload.
+
+### Case 2.11: a session that ended earlier today
+
+Use a session from earlier today that has already ended.
+
+**Pass:**
+- It still looks past (grey, with Done).
+- It drags on desktop or offers Move on a phone.
+- Its menu has every item, including **Cancel session…**, and the dialog asks "Cancel this coaching session?".
+- A session from yesterday stays locked: Open session and Remove session… only.
 
 ## 4. Part 3: Prepare and readiness (PR 3)
 

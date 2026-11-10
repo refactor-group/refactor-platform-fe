@@ -18,7 +18,7 @@ export enum CardFooter {
 }
 
 export type CardNote =
-  | { kind: "relative"; text: string; pulse: boolean }
+  | { kind: "relative"; text: string; pulse: boolean; topicCount: number }
   | { kind: "topics"; count: number }
   | { kind: "noTopics" }
   | { kind: "moved" };
@@ -37,6 +37,8 @@ export interface CardView {
   note: CardNote;
   footer: CardFooter;
   canManage: boolean;
+  /** Not ended, or started today: still open to reschedule, drag and Move. */
+  editable: boolean;
 }
 
 export interface GridCard extends CardView {
@@ -44,31 +46,40 @@ export interface GridCard extends CardView {
 }
 
 const MINUTES_PER_HOUR = 60;
+const NO_TOPICS_YET = "No topics yet";
 
 export function cardView(session: EnrichedCoachingSession, context: CardContext): CardView {
   const urgency = calculateSessionUrgency(session, context.now);
   const start = sessionStartIn(session.date, context.timezone);
+  const tense = tenseOf(urgency);
   const topicCount = session.topics.some ? session.topics.val.length : 0;
   const participant = getSessionParticipantInfo(session, context.viewerId);
   return {
     session,
     start,
     name: participant?.participantName ?? "Unknown",
-    tense: tenseOf(urgency),
+    tense,
     note: noteOf(urgency, minutesUntil(start, context.now), topicCount),
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,
+    editable: !sessionLocked(session, context.now, context.timezone),
   };
+}
+
+/** Ended, and not started on today's date in the zone: only Open session and Remove remain. */
+export function sessionLocked(session: EnrichedCoachingSession, now: DateTime, timezone: string): boolean {
+  const ended = calculateSessionUrgency(session, now) === SessionUrgency.Past;
+  return ended && !sessionStartIn(session.date, timezone).hasSame(now.setZone(timezone), "day");
 }
 
 export function cardNoteText(note: CardNote): string {
   switch (note.kind) {
     case "relative":
-      return note.text;
+      return `${note.text} · ${liveTopicsText(note.topicCount)}`;
     case "topics":
       return topicCountText(note.count);
     case "noTopics":
-      return "No topics yet";
+      return NO_TOPICS_YET;
     case "moved":
       return "Moved";
     default: {
@@ -78,9 +89,19 @@ export function cardNoteText(note: CardNote): string {
   }
 }
 
+/** A live card's topic status, flagged in the card when there are none. */
+export function liveTopicsText(count: number): string {
+  return count === 0 ? NO_TOPICS_YET : topicCountText(count);
+}
+
 export function markMoved(view: CardView): CardView {
   const tense = view.tense === CardTense.Live ? CardTense.Upcoming : view.tense;
   return { ...view, tense, note: { kind: "moved" } };
+}
+
+/** A card nobody can change: no reschedule, no drag, and a menu of Open session only. */
+export function readOnlyView(view: CardView): CardView {
+  return { ...view, canManage: false };
 }
 
 function tenseOf(urgency: SessionUrgency): CardTense {
@@ -103,10 +124,10 @@ function tenseOf(urgency: SessionUrgency): CardTense {
 function noteOf(urgency: SessionUrgency, minutes: number, topicCount: number): CardNote {
   switch (urgency) {
     case SessionUrgency.Underway:
-      return { kind: "relative", text: "now", pulse: true };
+      return { kind: "relative", text: "now", pulse: true, topicCount };
     case SessionUrgency.Imminent:
     case SessionUrgency.Soon:
-      return { kind: "relative", text: relativeStartText(minutes), pulse: true };
+      return { kind: "relative", text: relativeStartText(minutes), pulse: true, topicCount };
     case SessionUrgency.Later:
       return topicCount > 0 ? { kind: "topics", count: topicCount } : { kind: "noTopics" };
     case SessionUrgency.Past:

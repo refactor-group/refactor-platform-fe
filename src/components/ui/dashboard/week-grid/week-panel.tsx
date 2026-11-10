@@ -22,12 +22,19 @@ import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import { SessionAction } from "@/lib/session-actions";
 import { MoveScope } from "@/lib/scheduling";
 import { firstNameOf } from "@/lib/scheduling-copy";
-import { cardView, markMoved, type CardView, type GridCard } from "@/lib/week-grid/card";
+import {
+  cardView,
+  markMoved,
+  readOnlyView,
+  type CardView,
+  type GridCard,
+} from "@/lib/week-grid/card";
 import { isFilteredOut } from "@/lib/week-grid/filter";
 import { slotsForMove, type MoveSlotsContext } from "@/lib/week-grid/slots";
 import {
   agendaDay,
   groupByDay,
+  nowLineOn,
   weekOf,
   weekRange,
   weekSubline,
@@ -61,13 +68,13 @@ function useWeekAt(offset: number, now: DateTime, timezone: string): Week {
   );
 }
 
-function useWeekNavigation(isCurrentWeek: boolean, canSchedule: boolean, week: Week): WeekNavigation {
+function useWeekNavigation(isCurrentWeek: boolean, isCoach: boolean, week: Week): WeekNavigation {
   const { previousWeek, nextWeek, thisWeek } = useWeekGridStore((s) => s);
   const { hasEarlier, hasLater } = useWeekEdges(week);
   return {
     canGoEarlier: hasEarlier,
     // A coach can always page ahead to schedule into an empty week.
-    canGoLater: canSchedule || hasLater,
+    canGoLater: isCoach || hasLater,
     isCurrentWeek,
     onPrevious: previousWeek,
     onNext: nextWeek,
@@ -90,9 +97,12 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const weekOffset = useWeekGridStore((s) => s.weekOffset);
   const week = useWeekAt(weekOffset, now, timezone);
   const isCurrentWeek = weekOffset === CURRENT_WEEK;
-  const canSchedule = useAuthStore((s) => s.isACoach);
-  const navigation = useWeekNavigation(isCurrentWeek, canSchedule, week);
+  const isCoach = useAuthStore((s) => s.isACoach);
+  const navigation = useWeekNavigation(isCurrentWeek, isCoach, week);
   const { sessions, isLoading, isError, refresh } = useWeekSessions(week);
+  // SWR keeps the last sessions when a read fails, so they stay visible but can't be changed.
+  const readOnly = isError;
+  const canSchedule = isCoach && !readOnly;
   const viewerId = useAuthStore((s) => s.userId);
   const filter = useWeekFilter();
   const { selected } = filter;
@@ -104,11 +114,12 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
 
   const days = useMemo(() => {
     const cards = sessions.map((s): GridCard => {
-      const view = cardView(s, { viewerId, now, timezone });
+      const base = cardView(s, { viewerId, now, timezone });
+      const view = readOnly ? readOnlyView(base) : base;
       return { ...(recentlyMoved.includes(s.id) ? markMoved(view) : view), dimmed: isFilteredOut(s, selected) };
     });
     return groupByDay(cards, (c) => c.start, week, now);
-  }, [sessions, viewerId, now, timezone, week, selected, recentlyMoved]);
+  }, [sessions, viewerId, now, timezone, week, selected, recentlyMoved, readOnly]);
 
   const [moveTarget, setMoveTarget] = useState<Option<CardView>>(None);
   const openMove = useCallback(
@@ -169,7 +180,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     title: weekTitle(weekOffset, week),
     range: weekRange(week),
     navigation,
-    filter: canSchedule
+    filter: isCoach
       ? Some({
           people: filter.people,
           grouped: filter.grouped,
@@ -179,12 +190,17 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
           onOpen: filter.load,
         })
       : None,
-    onSchedule: canSchedule ? Some(() => onSchedule(None)) : None,
+    onSchedule: isCoach ? Some(() => onSchedule(None)) : None,
+    readOnly,
   };
   const scheduleDay = canSchedule ? Some((day: DateTime) => onSchedule(Some(day))) : None;
-  const noMatches = selected.some && visibleCount(days) === 0;
+  const hasSessions = sessions.length > 0;
+  // A failed read with nothing cached must not call the week or its days empty.
+  const isUnloaded = readOnly && !hasSessions;
+  // Nothing loaded is not the same as nothing matching.
+  const noMatches = selected.some && !isUnloaded && visibleCount(days) === 0;
   const busy = isLoading || width.none;
-  const subline = busy || isError ? None : Some(sublineFor(days, isCurrentWeek));
+  const subline = busy || isUnloaded ? None : Some(sublineFor(days, isCurrentWeek));
 
   return (
     <section
@@ -196,21 +212,22 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
       {!isCurrentWeek && !unwrapOr(width, false) && (
         <BackToThisWeek pending={width.none} onClick={navigation.onThisWeek} />
       )}
+      {!busy && readOnly && <ReadOnlyNotice hasSessions={hasSessions} onRetry={refresh} />}
       <WeekBody
         width={width}
         isLoading={isLoading}
-        isError={isError}
-        onRetry={refresh}
         days={days}
         week={week}
         now={now}
         handlers={handlers}
         onSchedule={scheduleDay}
         noMatches={noMatches}
+        isUnloaded={isUnloaded}
         drag={drag}
       />
       <SessionActionDialogs {...actions.dialogs} />
-      <MoveSheet model={moveModel} onConfirm={confirmMove} onClose={closeMove} />
+      {/* A failed read leaves availability untrusted, so an open sheet closes. */}
+      <MoveSheet model={readOnly ? None : moveModel} onConfirm={confirmMove} onClose={closeMove} />
     </section>
   );
 }
@@ -218,32 +235,29 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
 interface WeekBodyProps extends WeekAgendaProps {
   width: Option<boolean>;
   isLoading: boolean;
-  isError: boolean;
-  onRetry: () => void;
   drag: GridDrag;
 }
 
 /** Until the width is known, both loading layouts render and CSS shows one. */
-function WeekBody({ width, isLoading, isError, onRetry, drag, ...agenda }: WeekBodyProps) {
-  const { days, handlers, onSchedule, noMatches } = agenda;
+function WeekBody({ width, isLoading, drag, ...agenda }: WeekBodyProps) {
+  const { days, now, handlers, onSchedule, noMatches, isUnloaded } = agenda;
   if (width.none) return <PendingLayouts {...agenda} drag={drag} />;
   const wide = width.val;
-  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading /> : <DayAgendaSkeleton />;
-  if (isError) return <WeekPanelError onRetry={onRetry} />;
+  if (isLoading) return wide ? <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading isUnloaded={isUnloaded} /> : <DayAgendaSkeleton />;
   if (!wide) return <WeekAgenda {...agenda} />;
   return (
     <div className="relative">
-      <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading={false} />
+      <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading={false} isUnloaded={isUnloaded} />
       {noMatches && <NoMatches className="pointer-events-none absolute inset-0 flex items-center justify-center" />}
     </div>
   );
 }
 
-function PendingLayouts({ days, handlers, onSchedule, drag }: WeekAgendaProps & { drag: GridDrag }) {
+function PendingLayouts({ days, now, handlers, onSchedule, isUnloaded, drag }: WeekAgendaProps & { drag: GridDrag }) {
   return (
     <>
       <div data-testid="week-grid-pending" className="hidden lg:block">
-        <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} isLoading />
+        <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading isUnloaded={isUnloaded} />
       </div>
       <div data-testid="day-agenda-pending" className="lg:hidden">
         <DayAgendaSkeleton />
@@ -259,9 +273,10 @@ interface WeekAgendaProps {
   handlers: SessionCardHandlers;
   onSchedule: Option<(day: DateTime) => void>;
   noMatches: boolean;
+  isUnloaded: boolean;
 }
 
-function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches }: WeekAgendaProps) {
+function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches, isUnloaded }: WeekAgendaProps) {
   const selectedDay = useWeekGridStore((s) => s.selectedDay);
   const selectDay = useWeekGridStore((s) => s.selectDay);
   const day = agendaDay(week, selectedDay, now);
@@ -270,7 +285,13 @@ function WeekAgenda({ days, week, now, handlers, onSchedule, noMatches }: WeekAg
     <>
       <DayStrip days={days} selected={day} onSelect={(d) => selectDay(d.toFormat(ISO_DATE))} />
       {noMatches && <NoMatches className="mt-4" />}
-      <DayAgenda group={group} handlers={handlers} onSchedule={onSchedule} />
+      <DayAgenda
+        group={group}
+        handlers={handlers}
+        onSchedule={onSchedule}
+        now={nowLineOn(group, now)}
+        isUnloaded={isUnloaded}
+      />
     </>
   );
 }
@@ -314,11 +335,17 @@ function DayAgendaSkeleton() {
   );
 }
 
-function WeekPanelError({ onRetry }: { onRetry: () => void }) {
+function readOnlyNoticeText(hasSessions: boolean): string {
+  return hasSessions
+    ? "Can't reach the server right now. These sessions may be out of date."
+    : "Couldn't load this week's sessions.";
+}
+
+function ReadOnlyNotice({ hasSessions, onRetry }: { hasSessions: boolean; onRetry: () => void }) {
   return (
-    <div className="mt-6 flex flex-col items-start gap-3">
-      <p className="text-sm text-muted-foreground">Couldn&apos;t load this week&apos;s sessions.</p>
-      <Button variant="secondary" onClick={onRetry}>
+    <div role="status" className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <p className="text-sm text-muted-foreground">{readOnlyNoticeText(hasSessions)}</p>
+      <Button variant="secondary" size="sm" onClick={onRetry}>
         Try again
       </Button>
     </div>

@@ -95,6 +95,17 @@ export function groupByDay<T>(
   }));
 }
 
+/** Where the now line goes: above the first item that hasn't started. */
+export function nowLineIndex<T>(items: T[], startOf: (item: T) => DateTime, now: DateTime): number {
+  const next = items.findIndex((item) => startOf(item) > now);
+  return next === -1 ? items.length : next;
+}
+
+/** The now line's time for a day, shown only on today. */
+export function nowLineOn<T>(group: DayGroup<T>, now: DateTime): Option<DateTime> {
+  return group.isToday ? Some(now.setZone(group.day.zone)) : None;
+}
+
 export function scheduleOn<T>(
   group: DayGroup<T>,
   onSchedule: Option<(day: DateTime) => void>

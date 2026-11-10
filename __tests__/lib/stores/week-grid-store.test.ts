@@ -87,6 +87,14 @@ describe("week grid store", () => {
     expect(store.getState().recentlyMoved).toEqual([]);
   });
 
+  it("forgets one moved session when its move is undone", () => {
+    const store = createWeekGridStore();
+    store.getState().markMoved("s-1");
+    store.getState().markMoved("s-2");
+    store.getState().unmarkMoved("s-1");
+    expect(store.getState().recentlyMoved).toEqual(["s-2"]);
+  });
+
   it("gives each store its own week", () => {
     const a = createWeekGridStore();
     const b = createWeekGridStore();

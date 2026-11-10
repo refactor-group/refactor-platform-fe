@@ -13,6 +13,7 @@ import {
   CardFooter,
   CardTense,
   cardNoteText,
+  liveTopicsText,
   type CardNote,
   type CardView,
 } from "@/lib/week-grid/card";
@@ -89,7 +90,7 @@ export function SessionCard({
 }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const isAgenda = layout === SessionCardLayout.Agenda;
-  const canMove = !isPast && view.canManage;
+  const canMove = view.editable && view.canManage;
   const draggable = canMove && justDragged.some;
   const sharedHint = useContext(CardHintContext);
   const ownHintIds = useCardHintIds();
@@ -127,7 +128,7 @@ export function SessionCard({
           onKeyDown={onKeyDown}
           className={cn(
             "flex cursor-pointer flex-col gap-1.5 rounded-xl p-[11px] outline-none",
-            layout === SessionCardLayout.Grid && "min-h-[104px]",
+            layout === SessionCardLayout.Grid && "min-h-32",
             draggable && "cursor-grab",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             isPast ? "bg-well" : "bg-card shadow-card",
@@ -200,7 +201,16 @@ function CardNoteLine({ note }: { note: CardNote }) {
       {note.kind === "relative" && note.pulse && (
         <PulsingDot tone={PulsingDotTone.Accent} className="h-1.5 w-1.5" />
       )}
-      {cardNoteText(note)}
+      {note.kind === "relative" ? <RelativeNote text={note.text} topicCount={note.topicCount} /> : cardNoteText(note)}
+    </span>
+  );
+}
+
+function RelativeNote({ text, topicCount }: { text: string; topicCount: number }) {
+  return (
+    <span>
+      {text} ·{" "}
+      <span className={cn(topicCount === 0 && "text-warning-text")}>{liveTopicsText(topicCount)}</span>
     </span>
   );
 }

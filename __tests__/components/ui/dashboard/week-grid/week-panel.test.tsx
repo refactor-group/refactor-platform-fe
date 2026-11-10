@@ -19,6 +19,7 @@ const session = (id: string, date: string) =>
   createMockEnrichedSession({ id, date, duration_minutes: 50, topics: Some([]) });
 const LATE_TODAY = session("late-today", "2026-08-18T21:30:00");
 const EARLY_TODAY = session("early-today", "2026-08-18T15:00:00");
+const MONDAY_PAST = session("monday-past", "2026-08-17T15:00:00");
 const THURSDAY = session("thursday", "2026-08-20T15:00:00");
 const NEXT_WEEK = session("next-week", "2026-08-25T15:00:00");
 
@@ -184,14 +185,35 @@ describe("WeekPanel", () => {
     expect(typeof actionsInput.onSessionsChanged).toBe("function");
   });
 
-  it("shows an error with a retry instead of an empty week", () => {
+  it("keeps the seven days on a failed first load, with a retry", () => {
     result = { ...result, sessions: [], isError: true };
     renderPanel();
-    expect(screen.getByText("Couldn't load this week's sessions.")).toBeInTheDocument();
+    expect(screen.getByText("Couldn't load this week's sessions.").closest('[role="status"]')).not.toBeNull();
     expect(screen.queryByText(/0 sessions/)).not.toBeInTheDocument();
-    expect(screen.queryAllByRole("group", { name: /, August/ })).toHaveLength(0);
+    expect(screen.getAllByRole("group", { name: /, August/ })).toHaveLength(7);
+    expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't call a day empty when nothing loaded", () => {
+    result = { ...result, sessions: [], isError: true };
+    renderPanel();
+    expect(screen.queryByText("No sessions today")).not.toBeInTheDocument();
+  });
+
+  it("doesn't call a phone's day empty when nothing loaded", () => {
+    wide = false;
+    result = { ...result, sessions: [], isError: true };
+    renderPanel();
+    expect(screen.getByRole("heading", { name: "Tuesday, August 18" })).toBeInTheDocument();
+    expect(screen.queryByText("No sessions")).not.toBeInTheDocument();
+  });
+
+  it("says No sessions today when today loaded empty", () => {
+    result = { ...result, sessions: [THURSDAY] };
+    renderPanel();
+    expect(screen.getByText("No sessions today")).toBeInTheDocument();
   });
 
   it("explains how to open a card only when the week has cards", () => {
@@ -372,6 +394,13 @@ describe("WeekPanel card clicks", () => {
     expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, id === "thursday" ? THURSDAY : EARLY_TODAY);
   });
 
+  it("opens a card from an earlier day on a single click", () => {
+    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
+    renderPanel();
+    fireEvent.click(screen.getByTestId("session-card-monday-past"));
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, MONDAY_PAST);
+  });
+
   it("opens a session that's under way on a single click", () => {
     const underway = session("underway", "2026-08-18T18:25:00");
     result = { ...result, sessions: [underway] };
@@ -433,6 +462,14 @@ describe("WeekPanel person filter", () => {
     selectedPerson = Some(SAM);
     renderPanel();
     expect(screen.getByText("No sessions match this week.")).toBeInTheDocument();
+  });
+
+  it("doesn't say nothing matches when the week failed to load", () => {
+    selectedPerson = Some(SAM);
+    result = { ...result, sessions: [], isError: true };
+    renderPanel();
+    expect(screen.getByText("Couldn't load this week's sessions.")).toBeInTheDocument();
+    expect(screen.queryByText("No sessions match this week.")).not.toBeInTheDocument();
   });
 
   it("stays quiet when nothing is filtered", () => {
@@ -507,9 +544,12 @@ describe("WeekPanel Move sheet below 1024px", () => {
   const pill = (name: string) => screen.getByRole("button", { name });
   const moveSheet = () => screen.getByRole("dialog", { name: "Move Alex's session" });
 
-  it("offers Move on an upcoming agenda card the viewer coaches, and not on a past one", () => {
+  it("offers Move on an agenda card the viewer can still change, and not on an earlier day's", () => {
+    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
     renderPanel();
-    expect(within(screen.getByTestId("session-card-early-today")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("session-card-early-today")).getByRole("button", { name: "Move" })).toBeInTheDocument();
+    fireEvent.click(pill("Monday, August 17"));
+    expect(within(screen.getByTestId("session-card-monday-past")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
     fireEvent.click(pill("Thursday, August 20"));
     expect(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" })).toBeInTheDocument();
   });
@@ -534,6 +574,21 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(name).toBe("Alex Chen");
     expect(to.toISO()).toBe(DateTime.fromISO("2026-08-20T11:00", { zone: TZ }).toISO());
     expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
+  });
+
+  it("closes an open Move sheet when the week's read fails, so nothing moves on stale times", () => {
+    const { rerender } = renderPanel();
+    fireEvent.click(pill("Thursday, August 20"));
+    fireEvent.click(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" }));
+    expect(moveSheet()).toBeInTheDocument();
+    result = { ...result, isError: true };
+    rerender(
+      <WeekGridStoreProvider>
+        <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />
+      </WeekGridStoreProvider>
+    );
+    expect(screen.queryByRole("dialog", { name: "Move Alex's session" })).not.toBeInTheDocument();
+    expect(moveSession).not.toHaveBeenCalled();
   });
 
   it("opens the same sheet from the long-press menu's Move…", () => {
@@ -597,5 +652,131 @@ describe("WeekPanel moved cards (D10)", () => {
     expect(screen.getByLabelText("moved count")).toHaveTextContent("1");
     rerender(tree(false));
     expect(screen.getByLabelText("moved count")).toHaveTextContent("0");
+  });
+});
+
+describe("WeekPanel when the server can't be reached (read only)", () => {
+  beforeEach(() => {
+    result = { ...result, isError: true };
+  });
+
+  it("keeps showing the sessions it already loaded, with a notice and a retry", () => {
+    renderPanel();
+    expect(screen.getAllByTestId(/^session-card-/)).toHaveLength(3);
+    expect(screen.getByRole("region", { name: "This week" })).toHaveTextContent("3 sessions · 2 today");
+    expect(
+      screen.getByText("Can't reach the server right now. These sessions may be out of date.").closest('[role="status"]')
+    ).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables scheduling and hides the empty-day schedule", () => {
+    renderPanel();
+    expect(button("Schedule session")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^Schedule on/ })).not.toBeInTheDocument();
+  });
+
+  it("offers only Open session in the menu, and a single click opens the session", () => {
+    renderPanel();
+    fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual(["Open session"]);
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    fireEvent.click(screen.getByTestId("session-card-thursday"));
+    expect(run).toHaveBeenCalledWith(SessionAction.OpenSession, THURSDAY);
+  });
+
+  it("doesn't let cards drag", () => {
+    renderPanel();
+    expect(screen.getByTestId("session-card-thursday")).toHaveAttribute("data-draggable", "false");
+  });
+
+  it("still filters and pages", () => {
+    selectedPerson = Some(SAM);
+    renderPanel();
+    expect(screen.getByTestId("session-card-thursday")).toHaveAttribute("data-dimmed", "true");
+    fireEvent.click(button("Next week"));
+    expect(screen.getByRole("region", { name: "Next week" })).toBeInTheDocument();
+  });
+
+  it("offers no Move in the agenda", () => {
+    wide = false;
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "Thursday, August 20" }));
+    expect(within(screen.getByTestId("session-card-thursday")).queryByRole("button", { name: "Move" })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Open session" })).toBeInTheDocument();
+  });
+
+  it("goes back to normal once a read succeeds", () => {
+    const { rerender } = renderPanel();
+    result = { ...result, isError: false };
+    rerender(
+      <WeekGridStoreProvider>
+        <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />
+      </WeekGridStoreProvider>
+    );
+    expect(screen.queryByText(/Can't reach the server|Couldn't load this week/)).not.toBeInTheDocument();
+    expect(button("Schedule session")).toBeEnabled();
+  });
+});
+
+describe("WeekPanel sessions that ended earlier today", () => {
+  it("keep the menu but its invite resend, cancel like any session still to change, and still drag", () => {
+    renderPanel();
+    const card = screen.getByTestId("session-card-early-today");
+    expect(card).toHaveAttribute("data-tense", "past");
+    expect(card).toHaveAttribute("data-draggable", "true");
+    fireEvent.contextMenu(card);
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual([
+      "Open session",
+      "Reschedule…",
+      "Share link",
+      "Cancel session…",
+    ]);
+  });
+
+  it("leave an earlier day's sessions locked", () => {
+    result = { ...result, sessions: [...result.sessions, MONDAY_PAST] };
+    renderPanel();
+    const card = screen.getByTestId("session-card-monday-past");
+    expect(card).toHaveAttribute("data-draggable", "false");
+    fireEvent.contextMenu(card);
+    expect(screen.getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual(["Open session", "Remove session…"]);
+  });
+});
+
+describe("WeekPanel now line", () => {
+  const nowLine = () => screen.getByRole("separator", { name: "Now, 1:45 PM" });
+
+  it("sits in today's column between the session that started and the one still to come", () => {
+    renderPanel();
+    const today = day("Tuesday, August 18");
+    const order = Array.from(today.querySelectorAll('[data-testid^="session-card-"], [role="separator"]')).map(
+      (el) => el.getAttribute("data-testid") ?? "now"
+    );
+    expect(order).toEqual(["session-card-early-today", "now", "session-card-late-today"]);
+    expect(within(today).getByRole("separator", { name: "Now, 1:45 PM" })).toHaveTextContent("1:45 PM");
+  });
+
+  it("shows only once, and never on another day or week", () => {
+    renderPanel();
+    expect(screen.getAllByRole("separator", { name: /^Now,/ })).toHaveLength(1);
+    expect(within(day("Thursday, August 20")).queryByRole("separator")).not.toBeInTheDocument();
+    fireEvent.click(button("Next week"));
+    expect(screen.queryByRole("separator", { name: /^Now,/ })).not.toBeInTheDocument();
+  });
+
+  it("sits above the dashed box on an empty today", () => {
+    result = { ...result, sessions: [THURSDAY] };
+    renderPanel();
+    expect(within(day("Tuesday, August 18")).getByRole("separator", { name: "Now, 1:45 PM" })).toBeInTheDocument();
+  });
+
+  it("shows in today's agenda below 1024px too", () => {
+    wide = false;
+    renderPanel();
+    expect(nowLine()).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Thursday, August 20" }));
+    expect(screen.queryByRole("separator", { name: /^Now,/ })).not.toBeInTheDocument();
   });
 });

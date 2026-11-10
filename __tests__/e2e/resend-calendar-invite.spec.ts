@@ -6,7 +6,7 @@ import {
   SINGLE_RELATIONSHIP,
 } from './helpers'
 
-test.use({ timezoneId: 'America/Chicago', locale: 'en-US' })
+test.use({ timezoneId: 'America/Chicago', locale: 'en-US', viewport: { width: 1280, height: 900 } })
 
 const RELATIONSHIP = { ...SINGLE_RELATIONSHIP[0], coach_id: MOCK_USER_ID }
 const COACHEE = { id: RELATIONSHIP.coachee_id, first_name: 'Jane', last_name: 'Smith', display_name: 'Jane Smith' }
@@ -29,7 +29,8 @@ const SERIES_SESSION = session('series-session', '2026-10-21T21:00:00', {
   id: 'series-1',
   last_session_date: '2026-12-30T21:00:00',
 })
-const PAST_ONE_OFF = session('past-one-off', '2026-10-21T14:00:00', null)
+// Yesterday: sessions that ended earlier today stay editable, so a locked one is from an earlier day.
+const PAST_ONE_OFF = session('past-one-off', '2026-10-20T14:00:00', null)
 
 const json = (data: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) })
 

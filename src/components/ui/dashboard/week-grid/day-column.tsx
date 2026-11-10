@@ -8,7 +8,8 @@ import type { DaySlot, DropTarget } from "@/lib/week-grid/slots";
 import { scheduleOn, type DayGroup } from "@/lib/week-grid/week";
 import { type Option, Some } from "@/types/option";
 import { DropSlots } from "./drop-slots";
-import { EmptyDay } from "./empty-day";
+import { EmptyDay, UnloadedDay } from "./empty-day";
+import { withNowLine } from "./now-line";
 import { SessionCard, type SessionCardHandlers } from "./session-card";
 
 /** How a column looks while a card is dragged. */
@@ -23,10 +24,12 @@ export interface DayColumnProps {
   onSchedule: Option<(day: DateTime) => void>;
   drag: ColumnDrag;
   justDragged: RefObject<boolean>;
+  now: Option<DateTime>;
   isLoading: boolean;
+  isUnloaded: boolean;
 }
 
-export function DayColumn({ group, handlers, onSchedule, drag, justDragged, isLoading }: DayColumnProps) {
+export function DayColumn({ group, handlers, onSchedule, drag, justDragged, now, isLoading, isUnloaded }: DayColumnProps) {
   const { setNodeRef } = useDroppable({
     id: `day:${group.day.toISODate()}`,
     data: { kind: "day", day: group.day } satisfies DropTarget,
@@ -53,40 +56,55 @@ export function DayColumn({ group, handlers, onSchedule, drag, justDragged, isLo
         onSchedule={onSchedule}
         drag={drag}
         justDragged={justDragged}
+        now={now}
         isLoading={isLoading}
+        isUnloaded={isUnloaded}
       />
     </div>
   );
 }
 
-function DayBody({ group, handlers, onSchedule, drag, justDragged, isLoading }: DayColumnProps) {
+function DayBody({ group, handlers, onSchedule, drag, justDragged, now, isLoading, isUnloaded }: DayColumnProps) {
   if (isLoading) return <Skeleton className="h-32 rounded-xl" />;
   if (drag.kind === "over") return <DropSlots slots={drag.slots} hovered={drag.hovered} name={drag.name} />;
-  if (group.items.length === 0)
-    return <EmptyDay day={group.day} isToday={group.isToday} onSchedule={scheduleOn(group, onSchedule)} />;
-  return group.items.map((card) => (
-    <SessionCard
-      key={card.session.id}
-      view={card}
-      dimmed={card.dimmed}
-      justDragged={Some(justDragged)}
-      {...handlers}
-    />
-  ));
+  const nodes =
+    group.items.length === 0
+      ? [
+          isUnloaded ? (
+            <UnloadedDay key="empty" />
+          ) : (
+            <EmptyDay
+              key="empty"
+              day={group.day}
+              isToday={group.isToday}
+              onSchedule={scheduleOn(group, onSchedule)}
+            />
+          ),
+        ]
+      : group.items.map((card) => (
+          <SessionCard
+            key={card.session.id}
+            view={card}
+            dimmed={card.dimmed}
+            justDragged={Some(justDragged)}
+            {...handlers}
+          />
+        ));
+  return withNowLine(nodes, group.items, now);
 }
 
 function DayLabel({ group }: { group: DayGroup<GridCard> }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-1 text-[13px] tabular-nums",
+        "flex h-5 items-center gap-1.5 text-[12.5px] tabular-nums",
         group.isToday ? "font-semibold text-foreground" : "font-medium text-muted-foreground/60",
         group.isPast && "opacity-[.55]"
       )}
     >
       <span>{group.day.toFormat("ccc")}</span>
       {group.isToday ? (
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-primary-foreground">
+        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-[5px] text-[11px] font-semibold text-primary-foreground">
           {group.day.toFormat("d")}
         </span>
       ) : (

@@ -38,7 +38,8 @@ const DESTRUCTIVE_ITEM_CLASS = "text-destructive focus:text-destructive focus:bg
 export function SessionCardMenu({ view, isCompact, onAction, children }: SessionCardMenuProps) {
   const context: SessionActionContext = {
     isCoach: view.canManage,
-    isPast: view.tense === CardTense.Past,
+    isLocked: !view.editable,
+    hasStarted: view.tense !== CardTense.Upcoming,
     isCompact,
   };
   const items = sessionActionsFor(view.session, context);
