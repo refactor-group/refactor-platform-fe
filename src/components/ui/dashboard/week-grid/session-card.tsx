@@ -110,7 +110,7 @@ export function SessionCard({
 
   return (
     <>
-      <SessionCardMenu view={view} isCompact={isAgenda} onAction={onAction}>
+      <SessionCardMenu view={view} onAction={onAction}>
         <div
           ref={setNodeRef}
           data-testid={`session-card-${view.session.id}`}

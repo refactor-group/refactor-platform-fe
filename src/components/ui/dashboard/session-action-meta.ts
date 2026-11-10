@@ -6,7 +6,6 @@ import {
   CalendarX2,
   Link2,
   MailPlus,
-  MoveRight,
   type LucideIcon,
 } from "lucide-react";
 import { SessionAction, SessionActionGroup } from "@/lib/session-actions";
@@ -17,8 +16,6 @@ export function sessionActionIcon(action: SessionAction): LucideIcon {
       return ArrowUpRight;
     case SessionAction.Reschedule:
       return CalendarClock;
-    case SessionAction.Move:
-      return MoveRight;
     case SessionAction.ViewSeries:
       return CalendarRange;
     case SessionAction.EditSeries:

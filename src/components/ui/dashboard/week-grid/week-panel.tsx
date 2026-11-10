@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
 import { cn } from "@/components/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -123,19 +123,11 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   }, [sessions, viewerId, now, timezone, week, selected, recentlyMoved, readOnly]);
 
   const [moveTarget, setMoveTarget] = useState<Option<CardView>>(None);
-  const openMove = useCallback(
-    (session: EnrichedCoachingSession) => {
-      const view = days.flatMap((d) => d.items).find((c) => c.session.id === session.id);
-      if (view) setMoveTarget(Some(view));
-    },
-    [days]
-  );
 
   const onSessionsChanged = useRefreshCoachingSessions();
   const actions = useSessionActions({
     userTimezone: timezone,
     onReschedule,
-    onMove: openMove,
     onSessionsChanged,
     onSeriesMutated,
   });
