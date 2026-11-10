@@ -11,11 +11,11 @@ The build runs with the overseer-handoff workflow. One overseer owns this plan, 
 | 1a | Extract `useNow` and the session actions, with no behavior change | Done (PR #536), approved |
 | 1b | `week.ts`, `card.ts`, topics on the session read, `calculateSessionUrgency(now)`, plus frozen tests | Done (PR #536), approved |
 | 1c | Grid UI, swap into the dashboard, context menu, Cancel/Remove copy, deletions | Done (PR #536), approved |
-| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | In progress (`feat/week-grid-nav`, stacked on PR 1) |
-| 3 | Prepare pill, Ready footer, live note | Not started |
-| 4 | Person filter, chip, dimmed cards | Not started |
-| BE 1 | Working hours on the user (rs) | Not started |
-| BE 2 | One reschedule email once changes settle (rs) | Not started |
+| 2 | Paging and bounds, Schedule session, empty-day click, card click and double-click | Done (PR #536), approved |
+| 3 | Prepare pill, Ready footer, live note | Folded into PRs 1 and 2 (Jim, 2026-11-05); Part 3 of the test plan runs with PR 2 |
+| 4 | Person filter, chip, dimmed cards | Done (PR #537), approved |
+| BE 1 | Working hours on the user (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); backend builds this first |
+| BE 2 | One reschedule email once changes settle (rs) | Agreed with refactor-platform-rs-51 (topic `week-grid`); built after BE 1 |
 | 5 | Drag to move, Undo, working hours in Settings and the dialog | Not started |
 | 6 | Mobile day strip, agenda, Move sheet | Not started |
 | 7 | Coachee-only e2e and the manual test plan's roles part | Not started |
@@ -46,7 +46,7 @@ The pure model lives in `src/lib/week-grid/`: `week.ts`, `card.ts`, `filter.ts` 
 | D3 | Ready means the session has at least one topic (`include=topics`). It lives in one function, to be swapped for a server value later. |
 | D4 | An empty-day click opens the dialog at Who, with the day preset (`openSchedule(day)`). It works on any empty day from today on, in any week (Jim, 2026-11-05). |
 | D5 | Working hours are stored on the user and editable in Settings. They drive both the drop slots and the dialog's after-hours checks. |
-| D6 | Rights are per session. Drag, click-to-reschedule and the full menu appear only where the viewer coaches. Schedule and the filter appear when the viewer coaches anyone. |
+| D6 | Rights are per session. Drag, Move and the full menu appear only where the viewer coaches. Schedule and the filter appear when the viewer coaches anyone. |
 | D7 | Below `lg` (1024px), the grid becomes the day strip and agenda. |
 | D8 | Prepare works on any week. |
 | D9 | The handoff stays in Claude Docs and is linked from each PR. |
@@ -97,6 +97,11 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - Adds `users.working_hours_start` and `users.working_hours_end` as local `TIME`, defaulting to 08:00 and 17:30, on 30-minute steps.
   - Exposed on `GET /users/{id}` and `PUT /users/{id}`.
   - Board topic: `UserWorkingHours`.
+  - Agreed details:
+    - strict `HH:MM`, and the latest end is `23:30`;
+    - a single field is checked against the stored other one;
+    - the fields appear wherever the full user does;
+    - a violation is a 422.
 - **BE 2: settled reschedule emails.**
   - A single-session move no longer emails straight away. `coaching_sessions` gains:
     - `notified_date` and `notified_duration_minutes`;
@@ -106,6 +111,12 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
   - An Undo means nothing is due. Claims follow `claim_due_reminders`.
   - The reminder sweep skips sessions whose new time hasn't been announced yet.
   - Board topic: `SessionRescheduleNoticeSettle`.
+  - Agreed details:
+    - it also covers dialog reschedules, so they email 60 to 75 seconds later;
+    - a session starting within 5 minutes skips the wait;
+    - an immediate send (this and following, a series edit, resend) absorbs a pending move;
+    - a failed send retries up to 3 times;
+    - the timings are set by `SESSION_RESCHEDULE_SETTLE_SECONDS` and `SESSION_RESCHEDULE_SETTLE_MAX_SECONDS`.
 
 ## Phase 1c rules
 
@@ -117,7 +128,7 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 
 ## PR 2 rules
 
-- `useWeekGridStore` holds only the week offset for now. Its provider wraps the dashboard, so leaving the dashboard resets it, and logout needs no reset. It isn't persisted.
+- `useWeekGridStore` holds the week offset (PR 2) and the person filter (PR 4).
 - The previous arrow asks `/nearest` around this Monday, for every relationship the viewer is in. It disables once nothing is earlier.
 - For a coach, the next arrow never disables, so any future week can be scheduled. For a coachee, it disables once nothing is later, read from `/nearest` around next Monday.
 - While a read is loading or has failed, its arrow stays enabled.
@@ -125,10 +136,23 @@ Every PR runs `npx tsc --noEmit`, `npm run lint` and `npx -y knip`. The knip res
 - A single click or Enter opens the session, whether it's past, under way or upcoming, for anyone. There is no double-click and no click delay. Rescheduling is done through the menu's Reschedule…, drag, or Move (Jim, 2026-11-09; replaces 8a's click-to-reschedule).
 - This week is disabled while on the current week, which gives it its faint look.
 
+## PR 4 rules
+
+- Test plan case 4.6 needs the filter to survive leaving the dashboard and to reset at logout. So the store's provider moves from the dashboard to the app-wide `providers.tsx`.
+  - Only the filter is kept in `sessionStorage`, under the key `week-grid-store`.
+  - The week offset lives in memory, so it survives in-app navigation but not a reload.
+  - Logout calls `resetWeekGrid`.
+- The filter lists the people the viewer coaches (`schedulablePeople`), in name order. Coachees and Inactive come from `activityByPerson` and `isInactive`, read from `/nearest` around now. Peers stay deferred.
+- A saved filter for someone the viewer no longer coaches is dropped once relationships load.
+- Filtered-out cards stay in place at 28% opacity. The subline and today's count include only visible cards. With a filter on and nothing visible, "No sessions match this week." shows.
+- The filter applies to the week grid only, since the briefing it was meant to share with isn't built.
+- The search field and the name match are extracted from `person-picker.tsx`, so the dialog and the filter share them.
+
 ## Follow-ups
 
 - 1c: remove `useSessionActions.openSeries`, the row's copy of the action switch, and the two comments naming the row and the card, once the buckets are gone.
 - The store (week offset, filter, recently moved) comes with the first phase that reads it (PR 2), so it never ships unused.
 - Live uses the app's urgency levels: under way, imminent, or soon (within 2 hours). The handoff says "within the hour"; the shared thresholds win.
 
+- **Session glance (needs design):** a single click on a past card should open a dashboard dialog showing that session at a glance: its most important insights, actions assigned, suggested actions still waiting, agreements made, and topics discussed. Until it exists, a single click opens the session page. The design system names a "Session glance" modal in the shared modal shell, and a bottom sheet on mobile, but there's no spec yet. It waits on a design handoff.
 - The backend's `/coaching_sessions/counts` loses its only caller after 1c. Raise it on the board.

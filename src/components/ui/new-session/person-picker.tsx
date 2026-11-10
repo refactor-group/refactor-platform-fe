@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Search } from "lucide-react";
 import { cn } from "@/components/lib/utils";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { CheckDisc } from "@/components/ui/check-disc";
+import { PersonSearchField, PersonSearchSize } from "@/components/ui/person-search";
+import { matchesPersonName } from "@/lib/people";
 import type { Id } from "@/types/general";
 import type { Option } from "@/types/option";
 
@@ -32,28 +33,8 @@ function visiblePeople(
   showInactive: boolean,
   selectedId: Option<Id>
 ): PickerPerson[] {
-  const needle = query.trim().toLowerCase();
-  if (needle) return people.filter((p) => p.fullName.toLowerCase().includes(needle));
+  if (query.trim()) return people.filter((p) => matchesPersonName(p.fullName, query));
   return people.filter((p) => !p.inactive || showInactive || isSelected(p, selectedId));
-}
-
-function SearchField({ query, onQueryChange }: { query: string; onQueryChange: (query: string) => void }) {
-  return (
-    <div className="relative max-w-[360px]">
-      <Search
-        aria-hidden
-        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
-      />
-      <input
-        type="search"
-        aria-label="Find a person"
-        placeholder="Find a person"
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        className="h-11 w-full rounded-input border bg-card pl-9 pr-3 text-item transition-colors duration-150 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring modal:h-10 motion-reduce:transition-none"
-      />
-    </div>
-  );
 }
 
 const CLOCK_TIME = /(\d{1,2}:\d{2} [AP]M)/;
@@ -131,7 +112,7 @@ export function PersonPicker({ people, selectedId, onSelect }: PersonPickerProps
 
   return (
     <div>
-      <SearchField query={query} onQueryChange={setQuery} />
+      <PersonSearchField query={query} onQueryChange={setQuery} size={PersonSearchSize.Regular} />
       {shown.length === 0 ? (
         <p className="mt-4 text-xs text-muted-foreground">No matches</p>
       ) : (

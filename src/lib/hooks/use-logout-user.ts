@@ -2,6 +2,7 @@ import { useUserSessionMutation } from "@/lib/api/user-sessions";
 import { useAuthStore, useAuthStoreApi } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
+import { useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
 import { EntityApi } from "@/lib/api/entity-api";
 import { useRouter } from "next/navigation";
 import { logoutCleanupRegistry } from "./logout-cleanup-registry";
@@ -20,6 +21,7 @@ export function useLogoutUser() {
   const resetOrganizationState = useOrganizationStateStore(
     (s) => s.resetOrganizationState
   );
+  const resetWeekGrid = useWeekGridStore((s) => s.resetWeekGrid);
   const clearCache = EntityApi.useClearCache();
 
   return async () => {
@@ -61,6 +63,7 @@ export function useLogoutUser() {
     for (const teardown of [
       resetOrganizationState,
       resetCoachingRelationshipState,
+      resetWeekGrid,
       clearCache,
     ]) {
       try {

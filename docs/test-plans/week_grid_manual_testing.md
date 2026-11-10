@@ -272,7 +272,7 @@ Use a real mouse, then a real trackpad. Synthetic drags don't count.
 
 Press and release C's card quickly, without moving.
 
-**Pass:** it behaves as a click (the reschedule dialog). No drag starts.
+**Pass:** it behaves as a click and opens the session page. No drag starts.
 
 ### Case 5.2: drag start
 
@@ -414,7 +414,7 @@ Log in as the coachee-only user.
 **Pass:**
 - There's no Schedule session button and no filter.
 - Empty days have no hover affordance, and cards don't drag.
-- Card click does nothing; double-click opens the session.
+- A card click opens the session.
 - The context menu offers only Open session, Share link and View series.
 - Week arrows still page.
 
@@ -477,7 +477,7 @@ Run on `main` with every PR merged, on desktop and then on a real phone, in Ligh
    1. Drag C to a free slot, and Undo (5.4, 5.5).
    2. Drag A's occurrence to another day (5.6).
    3. Drop onto a taken slot, and resolve through the dialog (5.7).
-   4. Reschedule a session by clicking it (2.7).
+   4. Reschedule a session from its menu (2.8).
 4. **Clean up:**
    1. Cancel an upcoming session (1.8).
    2. Remove a past one (1.9).

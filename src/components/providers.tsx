@@ -6,6 +6,7 @@ import { OrganizationStateStoreProvider } from '@/lib/providers/organization-sta
 import { CoachingRelationshipStateStoreProvider } from '@/lib/providers/coaching-relationship-state-store-provider';
 import { UiPreferencesStoreProvider } from '@/lib/providers/ui-preferences-state-store-provider';
 import { NewSessionDialogStoreProvider } from '@/lib/providers/new-session-dialog-store-provider';
+import { WeekGridStoreProvider } from '@/lib/providers/week-grid-store-provider';
 import { NewSessionDialogHost } from '@/components/ui/new-session/new-session-dialog-host';
 import { SessionCleanupProvider } from '@/lib/providers/session-cleanup-provider';
 import { SSEProvider } from '@/lib/providers/sse-provider';
@@ -28,22 +29,24 @@ export function Providers({ children }: ProvidersProps) {
         <CoachingRelationshipStateStoreProvider>
           <UiPreferencesStoreProvider>
             <NewSessionDialogStoreProvider>
-              <SessionCleanupProvider>
-                <SWRConfig
-                  value={{
-                    revalidateIfStale: true,
-                    focusThrottleInterval: 10000,
-                    provider: () => new Map(),
-                  }}
-                >
-                  <UserSessionSync>
-                    <SSEProvider>
-                      {children}
-                      <NewSessionDialogHost />
-                    </SSEProvider>
-                  </UserSessionSync>
-                </SWRConfig>
-              </SessionCleanupProvider>
+              <WeekGridStoreProvider>
+                <SessionCleanupProvider>
+                  <SWRConfig
+                    value={{
+                      revalidateIfStale: true,
+                      focusThrottleInterval: 10000,
+                      provider: () => new Map(),
+                    }}
+                  >
+                    <UserSessionSync>
+                      <SSEProvider>
+                        {children}
+                        <NewSessionDialogHost />
+                      </SSEProvider>
+                    </UserSessionSync>
+                  </SWRConfig>
+                </SessionCleanupProvider>
+              </WeekGridStoreProvider>
             </NewSessionDialogStoreProvider>
           </UiPreferencesStoreProvider>
         </CoachingRelationshipStateStoreProvider>
