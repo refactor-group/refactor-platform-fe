@@ -90,10 +90,7 @@ vi.mock("@/lib/toast", () => ({ toast: (...args: unknown[]) => toast(...args) })
 vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => TZ }));
 
 let actionsInput: Record<string, unknown> = {};
-// Like the real hook, Move goes to the onMove the panel hands it.
-const run = vi.fn((action: SessionAction, session: EnrichedCoachingSession) => {
-  if (action === SessionAction.Move) (actionsInput.onMove as (s: EnrichedCoachingSession) => void)(session);
-});
+const run = vi.fn();
 vi.mock("@/components/ui/dashboard/use-session-actions", () => ({
   useSessionActions: (input: Record<string, unknown>) => {
     actionsInput = input;
@@ -663,13 +660,13 @@ describe("WeekPanel Move sheet below 1024px", () => {
     expect(moveSession).not.toHaveBeenCalled();
   });
 
-  it("opens the same sheet from the long-press menu's Move…", () => {
+  it("leaves Move to the card: the long-press menu has no Move…", () => {
     renderPanel();
     fireEvent.click(pill("Thursday, August 20"));
+    expect(within(screen.getByTestId("session-card-thursday")).getByRole("button", { name: "Move" })).toBeInTheDocument();
     fireEvent.contextMenu(screen.getByTestId("session-card-thursday"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Move…" }));
-    expect(run).toHaveBeenCalledWith(SessionAction.Move, THURSDAY);
-    expect(moveSheet()).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Reschedule…" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Move…" })).not.toBeInTheDocument();
   });
 
   it("sends a time that overlaps another session to the reschedule dialog's overlap step", () => {

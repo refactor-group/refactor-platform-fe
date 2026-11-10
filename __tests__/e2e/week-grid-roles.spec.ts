@@ -189,8 +189,11 @@ test.describe('Week grid on a phone for someone who coaches', () => {
     })
   })
 
-  test("today's agenda offers Move on a session they coach", async ({ page }) => {
-    expect(await menuItems(page, 'jane-today')).toContain('Move…')
+  test("today's agenda leaves Move to the card, not the menu", async ({ page }) => {
+    const items = await menuItems(page, 'jane-today')
+    expect(items).toContain('Reschedule…')
+    expect(items).not.toContain('Move…')
+    await expect(page.getByTestId('session-card-jane-today').getByRole('button', { name: 'Move' })).toBeVisible()
   })
 
   test('a Ready card keeps its pill, Move and Open on one line', async ({ page }) => {

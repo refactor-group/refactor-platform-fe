@@ -414,7 +414,7 @@ Pick Friday, then 10:00, and confirm.
 
 Long-press a card.
 
-**Pass:** the context menu opens. It has Move…, which opens the same sheet. Nothing drags.
+**Pass:** the context menu opens without Move…, since the card's Move button covers it. Nothing drags.
 
 ### Case 6.6: back to current week
 
