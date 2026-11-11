@@ -22,8 +22,11 @@ write them into this file.
   `OTHER_COACH`, `MEMBER`, `ADMIN`, `OUTSIDER`, `SUPER`, `REMOVED`, R1–R3, S1–S3, SR1, A1–A6, G1,
   G2, AG1, T1, T2, SG1, SG2. Put `kumquat` in bodies and titles, as that plan says.
 - **Extra for this plan:**
-  - S1 is today, at least an hour away, so the after-session lock rows can run on a past
-    session `SP1` in R1.
+  - S1 is today, at least an hour away.
+  - `SP1`: a session in R1 dated yesterday or earlier, for the after-session lock rows (DASH-13,
+    TOPIC-06, PANEL-07, PANEL-08, GAP-01). Create it as COACH with `POST /coaching_sessions`
+    before the run; the backend accepts a past date. Give it one agreement, one action and one goal
+    link so the lock has something to hide.
   - SG1 and SG2 need a transcription on S1 (backend `TRN` prerequisites).
   - Section 3.10 has its own setup.
 - **Email:** leave Resend unconfigured (`RESEND_API_KEY` unset). Several rows create, move or cancel
@@ -34,7 +37,7 @@ write them into this file.
 Each of these has produced a false result before:
 
 1. **Prove the response recorder works before trusting a clean run.** Record backend responses with
-   `page.on('response')` registered in the same `browser_run_code` call that navigates, then fetch a
+   `page.on('response')` registered in the same `browser_run_code_unsafe` call that navigates, then fetch a
    known 404 (`GET /notes/<random uuid>`) and confirm it is recorded. A listener left over from an
    earlier call can silently record nothing.
 2. **Log in through the form, and wait for the page to settle first** (`waitForLoadState('networkidle')`).
@@ -87,8 +90,8 @@ Each of these has produced a false result before:
 |---|---|---|---|---|
 | NEW-01 | Who list | COACH | COACHEE and REMOVED: the people COACH coaches in the selected org, removed members included | REL-01, SES-09 |
 | NEW-02 | Dialog entry points | COACHEE | None: Add New, Schedule session and Schedule on {day} are all hidden (DASH-03, DASH-08) | SES-10 |
-| NEW-04 | Clash step: one overlapping session the viewer coaches | COACH | Day circles and time chips to move the other session, plus "Or keep both at …" | SES-15 |
-| NEW-06 | Submit | COACH | `POST /coaching_sessions` (or `/coaching_session_series` when repeating) returns 200, and the session appears on the grid | SES-09, SER-01 |
+| NEW-03 | Clash step: one overlapping session the viewer coaches | COACH | Prompt "Pick a new time for {name}, or keep both.", day circles and time chips to move the other session, and the button "Or keep both at {time}" | SES-15 |
+| NEW-04 | Submit | COACH | `POST /coaching_sessions` (or `/coaching_session_series` when repeating) returns 200, and the session appears on the grid | SES-09, SER-01 |
 
 ### 3.3 Session page header (`HDR`)
 
@@ -203,6 +206,7 @@ marked `[membership]`).
 | MEM-08 | Open the S3 URL | REMOVED | "Coaching Session Access Denied" page | SES-06 |
 
 The phase M email rules (MAIL-01, MAIL-03 to MAIL-09, MAIL-11) have no UI surface; the backend plan covers them.
+Neither does `GET /users/{self}/goals`, which phase M also scopes: the FE never calls it, and session goals are read per relationship.
 
 ### 3.11 Confirmed as intended (`INT`)
 
