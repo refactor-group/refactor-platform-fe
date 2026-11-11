@@ -66,6 +66,7 @@ import {
   organizationArchivedMessage,
   roleChangeInvalidMessage,
   userBelongsToMultipleOrganizationsMessage,
+  userHasCoachingHistory,
 } from "@/lib/api/organization-errors";
 import { toast } from "@/lib/toast";
 
@@ -165,6 +166,12 @@ export function MemberCard({
       toast.success("Member deleted");
       onRefresh();
     } catch (error) {
+      if (userHasCoachingHistory(error)) {
+        toast.error(`${firstName} ${lastName} has coaching history · Remove them from this organization instead`, {
+          action: { label: "Remove from organization", onClick: () => setRemoveDialogOpen(true) },
+        });
+        return;
+      }
       console.error("Error deleting member:", error);
       toast.error(
         userBelongsToMultipleOrganizationsMessage(error) ??

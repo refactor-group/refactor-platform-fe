@@ -73,6 +73,12 @@ export const userBelongsToMultipleOrganizationsMessage = (
     "They belong to other organizations · Remove them from this one instead"
   );
 
+/** A member with coaching sessions can't be deleted, only removed from the organization. */
+export const userHasCoachingHistory = (error: unknown): boolean =>
+  EntityApiError.isEntityApiError(error) &&
+  error.status === 409 &&
+  error.data?.details?.reason === "user_has_coaching_history";
+
 /** Longest organization name the backend accepts (characters, trimmed). */
 export const ORGANIZATION_NAME_MAX_LENGTH = 255;
 
