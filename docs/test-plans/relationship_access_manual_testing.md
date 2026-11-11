@@ -218,8 +218,8 @@ Two behaviors look inconsistent but are intended. These rows pin them so nobody 
 Recorded as they are today. Each is a UI inconsistency, not an access hole: the backend decides
 every write. Re-check them when the rule they touch changes.
 
-| ID | Behavior (issue) | Viewer | Expected today | BE |
-|---|---|---|---|---|
-| GAP-01 | #545: the note editor's "Add as …" selection bubble ignores the after-session lock | COACHEE on SP1 | The agreement, action or goal add form opens and saves, although the panel's **Add** is hidden | AGR-05, ACT-28 |
-| GAP-02 | #546: the topic delete toast's **Undo** is shown to the coach after deleting T2 | COACH | Undo returns 404, the toast "Couldn't restore the topic" appears, and T2 stays deleted | TOP-18 |
-| GAP-03 | #547: session panel when the relationship read fails | any participant | The viewer is treated as coachee: no rating, no deleting others' topics, coachee Join | |
+| ID | Behavior | Viewer | Expected today | BE | Issue |
+|---|---|---|---|---|---|
+| GAP-01 | The note editor's "Add as …" selection bubble ignores the after-session lock | COACHEE on SP1 | The agreement, action or goal add form opens and saves, although the panel's **Add** is hidden | AGR-05, ACT-28 | [#545](https://github.com/refactor-group/refactor-platform-fe/issues/545) |
+| GAP-02 | The topic delete toast's **Undo** is shown to the coach after deleting T2 | COACH | Undo returns 404, the toast "Couldn't restore the topic" appears, and T2 stays deleted | TOP-18 | [#546](https://github.com/refactor-group/refactor-platform-fe/issues/546) |
+| GAP-03 | Session panel when the relationship read fails | any participant | The viewer is treated as coachee: no rating, no deleting others' topics, coachee Join | | [#547](https://github.com/refactor-group/refactor-platform-fe/issues/547) |
