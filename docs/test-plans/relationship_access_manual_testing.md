@@ -191,8 +191,9 @@ marked `[membership]`).
 **Setup** (destructive, run last or on disposable data):
 1. Give COACH a `User` role in O2 (`ORG-03` against O2).
 2. Create relationship R5 (COACH to OUTSIDER, O2) and a session S5 at a different hour on S1's day.
-3. Then remove COACH from O1 (`ORG-04` with COACH's id).
-4. Separately, use REMOVED, who holds no role anywhere.
+3. Run MEM-09 now, while COACH is still in O1.
+4. Then remove COACH from O1 (`ORG-04` with COACH's id).
+5. Separately, use REMOVED, who holds no role anywhere.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
@@ -204,6 +205,7 @@ marked `[membership]`).
 | MEM-06 | Search for `kumquat` | COACH | No R1 or R3 hits | SRCH-06 |
 | MEM-07 | Log in | REMOVED (no org) | Toast "Your account has no access yet · Contact support". The dashboard shows no sessions | REL-17, SES-30, ACT-21 |
 | MEM-08 | Open the S3 URL | REMOVED | "Coaching Session Access Denied" page | SES-06 |
+| MEM-09 | Card menu on S3 › **Resend invite** (and **Resend series invite** on any R3 series) | COACH, while REMOVED is out of O1 | The error toast "{Name} is no longer in this organization · Add them back to resend the invite", and no email to anyone. Not "Try again in a moment" | SES-24, SER-14 |
 
 The phase M email rules (MAIL-01, MAIL-03 to MAIL-09, MAIL-11) have no UI surface; the backend plan covers them.
 Neither does `GET /users/{self}/goals`, which phase M also scopes: the FE never calls it, and session goals are read per relationship.
