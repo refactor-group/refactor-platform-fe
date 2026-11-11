@@ -88,7 +88,7 @@ Each of these has produced a false result before:
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| NEW-01 | Who list | COACH | COACHEE and REMOVED: the people COACH coaches in the selected org, removed members included | REL-01, SES-09 |
+| NEW-01 | Who list | COACH | COACHEE only. REMOVED (R3) is not offered: scheduling with someone who left the org is refused (MEM-10) | REL-01, SES-09 |
 | NEW-02 | Dialog entry points | COACHEE | None: Add New, Schedule session and Schedule on {day} are all hidden (DASH-03, DASH-08) | SES-10 |
 | NEW-03 | Clash step: one overlapping session the viewer coaches | COACH | Prompt "Pick a new time for {name}, or keep both.", day circles and time chips to move the other session, and the button "Or keep both at {time}" | SES-15 |
 | NEW-04 | Submit | COACH | `POST /coaching_sessions` (or `/coaching_session_series` when repeating) returns 200, and the session appears on the grid | SES-09, SER-01 |
@@ -191,7 +191,7 @@ marked `[membership]`).
 **Setup** (destructive, run last or on disposable data):
 1. Give COACH a `User` role in O2 (`ORG-03` against O2).
 2. Create relationship R5 (COACH to OUTSIDER, O2) and a session S5 at a different hour on S1's day.
-3. Run MEM-09 now, while COACH is still in O1.
+3. Run MEM-09 to MEM-17 now, while COACH is still in O1. They need `SR3`, a series in R3 created before REMOVED was removed (`ORG-04` for REMOVED).
 4. Then remove COACH from O1 (`ORG-04` with COACH's id).
 5. Separately, use REMOVED, who holds no role anywhere.
 
@@ -205,7 +205,15 @@ marked `[membership]`).
 | MEM-06 | Search for `kumquat` | COACH | No R1 or R3 hits | SRCH-06 |
 | MEM-07 | Log in | REMOVED (no org) | Toast "Your account has no access yet · Contact support". The dashboard shows no sessions | REL-17, SES-30, ACT-21 |
 | MEM-08 | Open the S3 URL | REMOVED | "Coaching Session Access Denied" page | SES-06 |
-| MEM-09 | Card menu on S3 › **Resend invite** (and **Resend series invite** on any R3 series) | COACH, while REMOVED is out of O1 | The error toast "{Name} is no longer in this organization · Add them back to resend the invite", and no email to anyone. Not "Try again in a moment" | SES-24, SER-14 |
+| MEM-09 | Card menu on an S3 or SR3 session | COACH, while REMOVED is out of O1 | **Open session**, **Share link**, **Cancel session…** (and **Cancel series…** on SR3). No Reschedule…, Edit series…, Resend invite or Resend series invite. A short note in the menu says REMOVED is no longer in the organization | SES-21, SER-12 |
+| MEM-10 | New session dialog Who list | COACH | REMOVED is not offered | SES-09 |
+| MEM-11 | Week grid and upcoming card on S3 | COACH | S3 is not draggable, has no phone **Move**, and the upcoming card has no **Reschedule** | SES-15 |
+| MEM-12 | Clash step, when the overlap is S3 | COACH | S3 is not movable: only "Keep both at {time}" | SES-15 |
+| MEM-13 | S3 page: action assignee picker | COACH | REMOVED can't be newly assigned. A6 keeps REMOVED as its assignee, and editing A6's body or status still saves | ACT-29, ACT-36 |
+| MEM-14 | S3 page: title edit | COACH | Saves | SES-19 |
+| MEM-15 | Cancel S3, then cancel SR3 | COACH | Both succeed and disappear from the grid | SES-21, SER-12 |
+| MEM-16 | Stale tab: open S3's card menu or the S3 page before removing REMOVED, then try **Reschedule**, **Resend invite** and assigning REMOVED | COACH | Each is refused with the toast "{Name} is no longer in this organization · Add them back first". Nothing changes and no email is sent. Never "Try again in a moment" | SES-24, SER-14, ACT-28 |
+| MEM-17 | Accept a suggestion that assigns REMOVED (with a transcription on S3) | COACH | REMOVED can't be chosen as assignee; a stale accept gets the MEM-16 toast | TRN-11 |
 
 The phase M email rules (MAIL-01, MAIL-03 to MAIL-09, MAIL-11) have no UI surface; the backend plan covers them.
 Neither does `GET /users/{self}/goals`, which phase M also scopes: the FE never calls it, and session goals are read per relationship.
