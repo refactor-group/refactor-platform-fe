@@ -10,6 +10,7 @@ import { EntityApi, type ApiResponse } from "@/lib/api/entity-api";
 import { useApiSWR } from "@/lib/hooks/use-api-swr";
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
+import { membershipRefusalOf } from "@/lib/membership-refusal";
 import {
   transformActionWithAssignees,
   type Action,
@@ -59,6 +60,7 @@ function listUrl(sessionId: Id, status: SuggestionStatus): string {
 /** A failed suggestion mutation, reduced to what the review UI needs. */
 export type SuggestionFailure =
   | { kind: "no_longer_pending" }
+  | { kind: "not_a_member"; error: unknown } // an assignee left the organization
   | { kind: "forbidden" }
   | { kind: "not_found" }
   | { kind: "invalid" }
@@ -69,6 +71,7 @@ function toSuggestionFailure(error: unknown): SuggestionFailure {
   if (!axios.isAxiosError(error)) return { kind: "unexpected", status: None };
   if (!error.response) return { kind: "network" };
   const { status } = error.response;
+  if (membershipRefusalOf(error).some) return { kind: "not_a_member", error };
   switch (status) {
     case 409:
       return { kind: "no_longer_pending" };

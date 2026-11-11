@@ -22,6 +22,8 @@ import { seriesPayload, sessionPayload } from "@/lib/schedule-draft";
 import { writeSessionMove } from "@/lib/session-move";
 import type { RepeatChoice } from "@/lib/scheduling";
 import { toast } from "@/lib/toast";
+import { RefusedWrite } from "@/lib/membership-refusal";
+import { useMembershipRefusal } from "@/lib/hooks/use-membership-refusal";
 import { siteConfig } from "@/site.config";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
@@ -168,8 +170,13 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
   const refreshCoachingSessions = useRefreshCoachingSessions();
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false);
+  const announceRefusal = useMembershipRefusal();
 
   const onFailed = (plan: SessionPlan, error: unknown) => {
+    if (announceRefusal(error, RefusedWrite.Schedule, () => Some(plan.personName))) {
+      onClose();
+      return;
+    }
     const failure = sessionWriteFailure(error, writeKind(plan));
     const logMessage = `Failed to ${plan.kind === "schedule" ? "schedule" : "reschedule"} coaching session:`;
     switch (failure.kind) {

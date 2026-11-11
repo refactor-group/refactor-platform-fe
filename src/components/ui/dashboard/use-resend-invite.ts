@@ -8,6 +8,9 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { CoachingSessionApi } from "@/lib/api/coaching-sessions";
 import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
+import { RefusedWrite } from "@/lib/membership-refusal";
+import { useMembershipRefusal } from "@/lib/hooks/use-membership-refusal";
+import { Some } from "@/types/option";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import {
   ResendInviteRefusal,
@@ -23,11 +26,12 @@ interface ResendContext {
   session: EnrichedCoachingSession;
   participantName: string;
   isSeries: boolean;
+  announceRefusal: ReturnType<typeof useMembershipRefusal>;
 }
 
-function resendSessionInvite(session: EnrichedCoachingSession, participantName: string) {
-  void CoachingSessionApi.resendInvite(session.id).then((result) =>
-    announceResendResult(result, { session, participantName, isSeries: false })
+function resendSessionInvite(ctx: ResendContext) {
+  void CoachingSessionApi.resendInvite(ctx.session.id).then((result) =>
+    announceResendResult(result, { ...ctx, isSeries: false })
   );
 }
 
@@ -40,13 +44,17 @@ function announceResendResult(
     return;
   }
   const failure = result.error;
+  if (failure.kind === "not_a_member") {
+    ctx.announceRefusal(failure.error, RefusedWrite.Resend, () => Some(ctx.participantName));
+    return;
+  }
   const cause = failure.kind === "refused" ? failure.reason : failure.kind;
   switch (cause) {
     case ResendInviteRefusal.LegacySeries:
       sonnerToast.error("This series can't be resent · Resend this session instead", {
         action: {
           label: "Resend this session",
-          onClick: () => resendSessionInvite(ctx.session, ctx.participantName),
+          onClick: () => resendSessionInvite(ctx),
         },
       });
       return;
@@ -74,6 +82,7 @@ function announceResendResult(
 export function useResendInvite() {
   const viewerId = useAuthStore((s) => s.userSession?.id);
   const [state, setState] = useState<ResendDialogState>({ kind: "closed" });
+  const announceRefusal = useMembershipRefusal();
 
   const participantName = useMemo(() => {
     if (state.kind === "closed" || !viewerId) return "";
@@ -95,9 +104,9 @@ export function useResendInvite() {
     const result = seriesId.some
       ? await CoachingSessionSeriesApi.resendInvite(seriesId.val)
       : await CoachingSessionApi.resendInvite(session.id);
-    announceResendResult(result, { session, participantName, isSeries: seriesId.some });
+    announceResendResult(result, { session, participantName, isSeries: seriesId.some, announceRefusal });
     setState({ kind: "closed" });
-  }, [state, participantName]);
+  }, [state, participantName, announceRefusal]);
 
   const dialogProps: ResendInviteDialogProps = {
     open: state.kind !== "closed",

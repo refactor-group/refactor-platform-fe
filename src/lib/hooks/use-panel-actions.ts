@@ -4,6 +4,8 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import { toast as sonnerToast } from "@/lib/toast";
 import { actionPreview } from "@/lib/utils/action-preview";
 import { actionErrorMessage } from "@/lib/utils/action-error-message";
+import { RefusedWrite } from "@/lib/membership-refusal";
+import { useMembershipRefusal, type RefusedNameOf } from "@/lib/hooks/use-membership-refusal";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
 import { useRevalidateGoalProgress } from "@/lib/api/goal-progress";
@@ -179,16 +181,26 @@ function useReviewWindow(
 interface ActionCrudParams {
   userId: Id;
   coachingSessionId: Id;
+  refusedNameOf: RefusedNameOf;
 }
 
 /** Provides create, update-field, and delete-with-undo handlers. */
 function useActionCrud(
-  { userId, coachingSessionId }: ActionCrudParams,
+  { userId, coachingSessionId, refusedNameOf }: ActionCrudParams,
   sessionActions: Action[],
   allRelationshipActions: Action[],
   refresh: () => void
 ) {
   const { create, update, delete: deleteAction } = useActionMutation();
+  const announceRefusal = useMembershipRefusal();
+
+  const fail = useCallback(
+    (err: unknown, verb: string) => {
+      if (announceRefusal(err, RefusedWrite.Assign, refusedNameOf)) return;
+      sonnerToast.error(actionErrorMessage(verb, err));
+    },
+    [announceRefusal, refusedNameOf]
+  );
 
   const updateField = useCallback(
     async (id: Id, fields: Partial<Action>, verb: string) => {
@@ -198,10 +210,10 @@ function useActionCrud(
         await update(id, { ...action, ...fields });
         refresh();
       } catch (err) {
-        sonnerToast.error(actionErrorMessage(verb, err));
+        fail(err, verb);
       }
     },
-    [sessionActions, allRelationshipActions, update, refresh]
+    [sessionActions, allRelationshipActions, update, refresh, fail]
   );
 
   const revalidateGoalProgress = useRevalidateGoalProgress();
@@ -225,10 +237,10 @@ function useActionCrud(
           revalidateGoalProgress();
         }
       } catch (err) {
-        sonnerToast.error(actionErrorMessage("create the action", err));
+        fail(err, "create the action");
       }
     },
-    [coachingSessionId, userId, create, refresh, revalidateGoalProgress]
+    [coachingSessionId, userId, create, refresh, revalidateGoalProgress, fail]
   );
 
   const handleGoalChange = useCallback(
@@ -326,6 +338,7 @@ interface UsePanelActionsParams {
   coachingRelationshipId: Id;
   /** May be undefined while the session is still loading from SWR */
   sessionDate: string | undefined;
+  refusedNameOf: RefusedNameOf;
 }
 
 export function usePanelActions(params: UsePanelActionsParams) {

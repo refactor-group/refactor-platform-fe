@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { AddMemberDialog } from "./add-member-dialog";
+import { AddMemberDialog, AddMemberTab } from "./add-member-dialog";
+import type { Option } from "@/types/option";
 import { User, UserRoleState } from "@/types/user";
 
 interface AddMemberButtonProps {
   onMemberAdded: () => void;
-  /// Force the AddMemberDialog to open
-  openAddMemberDialog: boolean;
+  /// Opens the AddMemberDialog on this tab
+  openAddMemberDialog: Option<AddMemberTab>;
   currentUserRoleState: UserRoleState;
   /// Candidates offered when pre-assigning a coach
   organizationMembers?: User[];
@@ -30,7 +31,7 @@ export function AddMemberButton({
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    setOpen(openAddMemberDialog);
+    setOpen(openAddMemberDialog.some);
   }, [openAddMemberDialog]);
 
   return (
@@ -47,6 +48,7 @@ export function AddMemberButton({
         organizationMembers={organizationMembers}
         productName={productName}
         canAddExistingMembers={canAddExistingMembers}
+        initialTab={openAddMemberDialog.some ? openAddMemberDialog.val : AddMemberTab.Create}
       />
     </>
   );

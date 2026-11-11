@@ -3,6 +3,7 @@ import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { User } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
 import type { Id } from "@/types/general";
+import { None, Some, type Option } from "@/types/option";
 
 /**
  * Relationship Utility Functions
@@ -122,5 +123,15 @@ export function buildRelationshipWithUserNames(
     coach_last_name: coach?.last_name ?? "",
     coachee_first_name: coachee?.first_name ?? "Unknown",
     coachee_last_name: coachee?.last_name ?? "",
+  };
+}
+
+/** Resolves a participant's full name from a user id that may be absent. */
+export function participantNameOf(relationship: CoachingRelationshipWithUserNames) {
+  return (userId: Option<Id>): Option<string> => {
+    if (userId.none) return None;
+    if (userId.val === relationship.coach_id) return Some(getCoachName(relationship));
+    if (userId.val === relationship.coachee_id) return Some(getCoacheeName(relationship));
+    return None;
   };
 }

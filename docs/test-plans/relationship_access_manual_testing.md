@@ -205,14 +205,14 @@ marked `[membership]`).
 | MEM-06 | Search for `kumquat` | COACH | No R1 or R3 hits | SRCH-06 |
 | MEM-07 | Log in | REMOVED (no org) | Toast "Your account has no access yet · Contact support". The dashboard shows no sessions | REL-17, SES-30, ACT-21 |
 | MEM-08 | Open the S3 URL | REMOVED | "Coaching Session Access Denied" page | SES-06 |
-| MEM-09 | Card menu on an S3 or SR3 session | COACH, while REMOVED is out of O1 | **Open session**, **Share link**, **Cancel session…** (and **Cancel series…** on SR3). No Reschedule…, Edit series…, Resend invite or Resend series invite. A short note in the menu says REMOVED is no longer in the organization | SES-21, SER-12 |
+| MEM-09 | Card menu on an S3 or SR3 session | COACH, while REMOVED is out of O1 | **Open session**, **Share link**, **Cancel session…** (and **Cancel series…** on SR3). **Resend invite** / **Resend series invite** shown but disabled. No Reschedule… or Edit series…. A short note in the menu says REMOVED is no longer in the organization | SES-21, SER-12, SES-24, SER-14 |
 | MEM-10 | New session dialog Who list | COACH | REMOVED is not offered | SES-09 |
 | MEM-11 | Week grid and upcoming card on S3 | COACH | S3 is not draggable, has no phone **Move**, and the upcoming card has no **Reschedule** | SES-15 |
 | MEM-12 | Clash step, when the overlap is S3 | COACH | S3 is not movable: only "Keep both at {time}" | SES-15 |
 | MEM-13 | S3 page: action assignee picker | COACH | REMOVED can't be newly assigned. A6 keeps REMOVED as its assignee, and editing A6's body or status still saves | ACT-29, ACT-36 |
 | MEM-14 | S3 page: title edit | COACH | Saves | SES-19 |
 | MEM-15 | Cancel S3, then cancel SR3 | COACH | Both succeed and disappear from the grid | SES-21, SER-12 |
-| MEM-16 | Stale tab: open S3's card menu or the S3 page before removing REMOVED, then try **Reschedule**, **Resend invite** and assigning REMOVED | COACH | Each is refused with the toast "{Name} is no longer in this organization · Add them back first". Nothing changes and no email is sent. Never "Try again in a moment" | SES-24, SER-14, ACT-28 |
+| MEM-16 | Stale tab: open S3's card menu or the S3 page before removing REMOVED, then try **Reschedule**, **Resend invite** and assigning REMOVED | COACH | Each is refused with an error toast naming REMOVED: "{Name} is no longer in this organization · Ask an admin to add {Name} back". A coach who is also an org admin instead sees "Add {Name} back to schedule sessions" (or "to resend the invite", "to assign actions") and an **Add back** button that opens Add existing member. Nothing changes, no email is sent, and the refused option disappears without a reload. Never "Try again" | SES-24, SER-14, ACT-28 |
 | MEM-17 | Accept a suggestion that assigns REMOVED (with a transcription on S3) | COACH | REMOVED can't be chosen as assignee; a stale accept gets the MEM-16 toast | TRN-11 |
 
 The phase M email rules (MAIL-01, MAIL-03 to MAIL-09, MAIL-11) have no UI surface; the backend plan covers them.

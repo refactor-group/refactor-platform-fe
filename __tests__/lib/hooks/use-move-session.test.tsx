@@ -21,6 +21,9 @@ vi.mock("@/lib/hooks/use-sse-cache-invalidation", async (importOriginal) => ({
 const { toast } = vi.hoisted(() => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 vi.mock("@/lib/toast", () => ({ toast }));
 
+const announceRefusal = vi.fn(() => false);
+vi.mock("@/lib/hooks/use-membership-refusal", () => ({ useMembershipRefusal: () => announceRefusal }));
+
 const TZ = "America/Chicago";
 const session = createMockEnrichedSession({ id: "s-1", date: "2026-08-18T19:30:00", duration_minutes: 50 });
 const TO = DateTime.fromISO("2026-08-20T10:00", { zone: TZ });
@@ -35,6 +38,7 @@ beforeEach(() => {
   sessionStorage.clear();
   vi.clearAllMocks();
   move.mockResolvedValue({});
+  announceRefusal.mockReturnValue(false);
 });
 
 describe("useMoveSession", () => {
@@ -77,6 +81,19 @@ describe("useMoveSession", () => {
     act(() => result.current.move({ session, name: "Ehab Bandar", to: TO }));
     await flush();
     expect(toast.error).toHaveBeenCalledWith("Couldn't move the session · Try again");
+    expect(result.current.moved).toEqual([]);
+  });
+
+  it("leaves a refusal over someone who left the organization to the refusal toast", async () => {
+    const error = new Error("409");
+    move.mockRejectedValue(error);
+    announceRefusal.mockReturnValue(true);
+    const { result } = setup();
+    act(() => result.current.move({ session, name: "Ehab Bandar", to: TO }));
+    await flush();
+    expect(announceRefusal).toHaveBeenCalledWith(error, "schedule", expect.any(Function));
+    expect(announceRefusal.mock.calls[0][2]()).toEqual({ some: true, none: false, val: "Ehab Bandar" });
+    expect(toast.error).not.toHaveBeenCalled();
     expect(result.current.moved).toEqual([]);
   });
 });

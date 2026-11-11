@@ -164,6 +164,15 @@ describe("typed failures", () => {
     });
   });
 
+  it("a 409 refusing an assignee who left the organization is not_a_member, not no_longer_pending", async () => {
+    const error = httpError(409, { details: { reason: "assignee_not_a_member", user_id: "coachee-1" } });
+    vi.mocked(sessionGuard.post).mockRejectedValue(error);
+    expect(await failureOf(TranscriptSuggestionApi.accept("s-1", "sug-1", None))).toEqual({
+      kind: "not_a_member",
+      error,
+    });
+  });
+
   it("403 on dismiss is forbidden", async () => {
     vi.mocked(sessionGuard.post).mockRejectedValue(httpError(403));
     expect(await failureOf(TranscriptSuggestionApi.dismiss("s-1", "sug-1"))).toEqual({

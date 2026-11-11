@@ -1,6 +1,7 @@
 import axios from "axios";
 import { err, ok, type Result } from "neverthrow";
 import { None, Some, type Option } from "@/types/option";
+import { membershipRefusalOf } from "@/lib/membership-refusal";
 
 /** Why the backend refused a resend; values match the 409 body's `details.reason`. */
 export enum ResendInviteRefusal {
@@ -11,6 +12,7 @@ export enum ResendInviteRefusal {
 
 export type ResendInviteFailure =
   | { kind: "refused"; reason: ResendInviteRefusal }
+  | { kind: "not_a_member"; error: unknown } // the coachee left the organization
   | { kind: "not_delivered" } // 502
   | { kind: "network" } // no response
   | { kind: "unexpected"; status: Option<number> };
@@ -29,6 +31,7 @@ export function toResendInviteFailure(error: unknown): ResendInviteFailure {
   if (!error.response) return { kind: "network" };
   const { status, data } = error.response;
   if (status === 409) {
+    if (membershipRefusalOf(error).some) return { kind: "not_a_member", error };
     const reason = refusalOf(data);
     return reason.some
       ? { kind: "refused", reason: reason.val }
