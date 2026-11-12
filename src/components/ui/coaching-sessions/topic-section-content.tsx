@@ -227,7 +227,7 @@ const TopicRow = memo(function TopicRow({
 
         {/* Always render the action row — keeping it visible while editing
             keeps the card's footprint stable instead of jumping. */}
-        <div className="flex items-center gap-1.5 px-1.5">
+        <div className="flex items-center gap-0.5 px-1.5">
           <TopicStatusControls
             status={topic.status}
             editable={!readOnly}
