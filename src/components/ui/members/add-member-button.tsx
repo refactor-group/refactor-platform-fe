@@ -29,14 +29,22 @@ export function AddMemberButton({
   canAddExistingMembers,
 }: AddMemberButtonProps) {
   const [open, setOpen] = useState(false);
+  // The link's tab applies to the dialog it opens; the button always starts on Create.
+  const [tab, setTab] = useState(AddMemberTab.Create);
 
   useEffect(() => {
     setOpen(openAddMemberDialog.some);
+    if (openAddMemberDialog.some) setTab(openAddMemberDialog.val);
   }, [openAddMemberDialog]);
+
+  const openFromButton = () => {
+    setTab(AddMemberTab.Create);
+    setOpen(true);
+  };
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button onClick={openFromButton}>
         <Plus className="mr-2 h-4 w-4" />
         Add Member
       </Button>
@@ -48,7 +56,7 @@ export function AddMemberButton({
         organizationMembers={organizationMembers}
         productName={productName}
         canAddExistingMembers={canAddExistingMembers}
-        initialTab={openAddMemberDialog.some ? openAddMemberDialog.val : AddMemberTab.Create}
+        initialTab={tab}
       />
     </>
   );

@@ -216,6 +216,8 @@ marked `[membership]`).
 | MEM-17 | Accept a suggestion that assigns REMOVED (with a transcription on S3) | COACH | REMOVED can't be chosen as assignee; a stale accept gets the MEM-16 toast | TRN-11 |
 
 The phase M email rules (MAIL-01, MAIL-03 to MAIL-09, MAIL-11) have no UI surface; the backend plan covers them.
+In short: scheduled, rescheduled, resent and action-assigned emails go to current members only, while
+cancellation emails (MEM-15 included) still reach both participants so a removed member's calendar is cleaned up.
 Neither does `GET /users/{self}/goals`, which phase M also scopes: the FE never calls it, and session goals are read per relationship.
 
 ### 3.11 Confirmed as intended (`INT`)

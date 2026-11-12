@@ -22,8 +22,9 @@ import { seriesPayload, sessionPayload } from "@/lib/schedule-draft";
 import { writeSessionMove } from "@/lib/session-move";
 import type { RepeatChoice } from "@/lib/scheduling";
 import { toast } from "@/lib/toast";
-import { RefusedWrite } from "@/lib/membership-refusal";
-import { useMembershipRefusal } from "@/lib/hooks/use-membership-refusal";
+import { AddBackPurpose } from "@/lib/api/membership-errors";
+import { useNotAMemberToast } from "@/lib/hooks/use-not-a-member-toast";
+import { notAMemberRefusalOf } from "@/types/membership";
 import { siteConfig } from "@/site.config";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
@@ -170,10 +171,12 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
   const refreshCoachingSessions = useRefreshCoachingSessions();
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false);
-  const announceRefusal = useMembershipRefusal();
+  const showNotAMember = useNotAMemberToast();
 
   const onFailed = (plan: SessionPlan, error: unknown) => {
-    if (announceRefusal(error, RefusedWrite.Schedule, () => Some(plan.personName))) {
+    const notAMember = notAMemberRefusalOf(error);
+    if (notAMember.some) {
+      showNotAMember(notAMember.val, AddBackPurpose.ScheduleSessions, () => Some(plan.personName));
       onClose();
       return;
     }

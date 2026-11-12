@@ -1,4 +1,5 @@
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import type { NameLookup } from "@/types/membership";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { User } from "@/types/user";
 import { RelationshipRole } from "@/types/relationship-role";
@@ -129,8 +130,8 @@ export function buildRelationshipWithUserNames(
 }
 
 /** Resolves a participant's full name from a user id that may be absent. */
-export function participantNameOf(relationship: CoachingRelationshipWithUserNames) {
-  return (userId: Option<Id>): Option<string> => {
+export function participantNameOf(relationship: CoachingRelationshipWithUserNames): NameLookup {
+  return (userId) => {
     if (userId.none) return None;
     if (userId.val === relationship.coach_id) return Some(getCoachName(relationship));
     if (userId.val === relationship.coachee_id) return Some(getCoacheeName(relationship));

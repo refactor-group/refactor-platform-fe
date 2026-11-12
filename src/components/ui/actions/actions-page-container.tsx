@@ -7,8 +7,9 @@ import { DateTime } from "ts-luxon";
 import { toast } from "@/lib/toast";
 import { actionErrorMessage } from "@/lib/utils/action-error-message";
 import { participantNameOf } from "@/lib/utils/relationship";
-import { RefusedWrite } from "@/lib/membership-refusal";
-import { useMembershipRefusal } from "@/lib/hooks/use-membership-refusal";
+import { AddBackPurpose } from "@/lib/api/membership-errors";
+import { useNotAMemberToast } from "@/lib/hooks/use-not-a-member-toast";
+import { notAMemberRefusalOf } from "@/types/membership";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -190,7 +191,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // ---------------------------------------------------------------------------
 
   const { update: updateAction, delete: deleteAction } = useActionMutation();
-  const announceRefusal = useMembershipRefusal();
+  const showNotAMember = useNotAMemberToast();
 
   const handleStatusChange = useCallback(
     async (id: Id, newStatus: ItemStatus) => {
@@ -237,11 +238,12 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, { ...ctx.action, assignee_ids: assigneeIds });
         refresh();
       } catch (err) {
-        if (announceRefusal(err, RefusedWrite.Assign, participantNameOf(ctx.relationship))) return;
+        const notAMember = notAMemberRefusalOf(err);
+        if (notAMember.some) return showNotAMember(notAMember.val, AddBackPurpose.AssignActions, participantNameOf(ctx.relationship));
         toast.error(actionErrorMessage("update the assignees", err));
       }
     },
-    [actionsWithContext, updateAction, refresh, announceRefusal]
+    [actionsWithContext, updateAction, refresh, showNotAMember]
   );
 
   const handleBodyChange = useCallback(
@@ -259,11 +261,12 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         await updateAction(id, updated);
         refresh();
       } catch (err) {
-        if (announceRefusal(err, RefusedWrite.Assign, participantNameOf(ctx.relationship))) return;
+        const notAMember = notAMemberRefusalOf(err);
+        if (notAMember.some) return showNotAMember(notAMember.val, AddBackPurpose.AssignActions, participantNameOf(ctx.relationship));
         toast.error(actionErrorMessage("update the action", err));
       }
     },
-    [actionsWithContext, updateAction, refresh, announceRefusal]
+    [actionsWithContext, updateAction, refresh, showNotAMember]
   );
 
   const handleGoalChange = useCallback(

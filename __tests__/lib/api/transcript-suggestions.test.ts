@@ -169,7 +169,7 @@ describe("typed failures", () => {
     vi.mocked(sessionGuard.post).mockRejectedValue(error);
     expect(await failureOf(TranscriptSuggestionApi.accept("s-1", "sug-1", None))).toEqual({
       kind: "not_a_member",
-      error,
+      refusal: { reason: "assignee_not_a_member", userId: Some("coachee-1"), organizationId: None },
     });
   });
 

@@ -174,3 +174,25 @@ export function httpStatusOf(error: unknown): Option<number> {
     ?.status;
   return typeof status === "number" ? Some(status) : None;
 }
+
+/** The response body from either error shape: {@link EntityApiError} or a raw axios error. */
+function responseBodyOf(error: unknown): unknown {
+  if (error instanceof EntityApiError) return error.data;
+  return (error as { response?: { data?: unknown } })?.response?.data;
+}
+
+/** A 409's `details` object, which carries the backend's structured refusal. */
+export function conflictDetailsOf(error: unknown): Option<Record<string, unknown>> {
+  const status = httpStatusOf(error);
+  if (status.none || status.val !== 409) return None;
+  const details = (responseBodyOf(error) as { details?: unknown } | undefined)?.details;
+  return typeof details === "object" && details !== null
+    ? Some(details as Record<string, unknown>)
+    : None;
+}
+
+/** A 409's `details.reason`: which refusal the backend made. */
+export function conflictReasonOf(error: unknown): Option<string> {
+  const details = conflictDetailsOf(error);
+  return details.some && typeof details.val.reason === "string" ? Some(details.val.reason) : None;
+}
