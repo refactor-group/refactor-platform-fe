@@ -29,7 +29,7 @@ describe("DeleteSessionDialog", () => {
     renderDialog();
     const dialog = screen.getByRole("alertdialog", { name: "Cancel this coaching session?" });
     expect(dialog).toHaveTextContent("Alex Chen");
-    expect(dialog).toHaveTextContent(/notes and actions/);
+    expect(dialog).not.toHaveTextContent(/notes and actions/);
     expect(dialog).toHaveTextContent("can't be undone");
     expect(screen.getByRole("button", { name: "Cancel session" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep session" })).toBeInTheDocument();
@@ -37,8 +37,7 @@ describe("DeleteSessionDialog", () => {
 
   it("asks to remove a past session", () => {
     renderDialog({ removal: SessionRemoval.Remove });
-    const dialog = screen.getByRole("alertdialog", { name: "Remove this coaching session?" });
-    expect(dialog).toHaveTextContent(/notes and actions/);
+    screen.getByRole("alertdialog", { name: "Remove this coaching session?" });
     expect(screen.getByRole("button", { name: "Remove session" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep session" })).toBeInTheDocument();
   });

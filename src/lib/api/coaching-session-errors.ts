@@ -49,9 +49,14 @@ function toastMessage(error: EntityApiError, write: SessionWrite): string {
   return `Couldn't ${verb(write)} the session · Try again`;
 }
 
-function hasContentConflict(error: EntityApiError, write: SessionWrite): boolean {
+/** A 409 refusing to delete sessions that hold notes, actions or agreements. */
+export function hasSessionContent(error: unknown): boolean {
   const reason = conflictReasonOf(error);
-  return write === SessionWrite.RescheduleSeries && reason.some && reason.val === "sessions_have_content";
+  return reason.some && reason.val === "sessions_have_content";
+}
+
+function hasContentConflict(error: EntityApiError, write: SessionWrite): boolean {
+  return write === SessionWrite.RescheduleSeries && hasSessionContent(error);
 }
 
 export function sessionWriteFailure(error: unknown, write: SessionWrite): SessionWriteFailure {
