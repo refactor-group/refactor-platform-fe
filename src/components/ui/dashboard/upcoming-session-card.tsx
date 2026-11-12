@@ -233,7 +233,7 @@ function PopulatedBody({
       <FooterRow
         urgencyMessage={urgencyMessage}
         showPulsingDot={showPulsingDot}
-        showReschedule={participant.isCoach}
+        showReschedule={participant.isCoach && participant.counterpartIsMember}
         onReschedule={onReschedule ? () => onReschedule(session) : undefined}
         sessionId={session.id}
       />

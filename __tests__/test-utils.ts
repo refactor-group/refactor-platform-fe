@@ -77,6 +77,8 @@ export function createMockRelationship(
     coachee_last_name: "Bourg",
     created_at: now, // CoachingRelationship expects DateTime object
     updated_at: now,
+    coach_is_member: true,
+    coachee_is_member: true,
     ...overrides,
   };
 }
@@ -137,6 +139,8 @@ export function createMockEnrichedSession(
       organization_id: "org-1",
       created_at: now,
       updated_at: now,
+      coach_is_member: true,
+      coachee_is_member: true,
     },
     coach: {
       id: "coach-1",

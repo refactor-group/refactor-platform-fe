@@ -4,8 +4,13 @@ import { memo } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/components/lib/utils";
+import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { isUserCoachInRelationship, isUserCoacheeInRelationship } from "@/types/coaching-relationship";
+import {
+  isUserCoachInRelationship,
+  isUserCoacheeInRelationship,
+  nonMemberIdsOf,
+} from "@/types/coaching-relationship";
 import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
@@ -62,24 +67,26 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
         </span>
       </div>
 
-      <CompactActionCard
-        action={ctx.action}
-        locale={locale}
-        coachId={ctx.relationship.coach_id}
-        coachName={getCoachName(ctx.relationship)}
-        coacheeId={ctx.relationship.coachee_id}
-        coacheeName={getCoacheeName(ctx.relationship)}
-        onStatusChange={onStatusChange}
-        onDueDateChange={onDueDateChange}
-        onAssigneesChange={onAssigneesChange}
-        onBodyChange={onBodyChange}
-        onGoalChange={onGoalChange}
-        onDelete={onDelete}
-        variant="current"
-        sourceSessionId={ctx.sourceSession.coachingSessionId}
-        sourceSessionDate={ctx.sourceSession.sessionDate}
-        className="rounded-t-none"
-      />
+      <NonMemberIdsProvider ids={nonMemberIdsOf(ctx.relationship)}>
+        <CompactActionCard
+          action={ctx.action}
+          locale={locale}
+          coachId={ctx.relationship.coach_id}
+          coachName={getCoachName(ctx.relationship)}
+          coacheeId={ctx.relationship.coachee_id}
+          coacheeName={getCoacheeName(ctx.relationship)}
+          onStatusChange={onStatusChange}
+          onDueDateChange={onDueDateChange}
+          onAssigneesChange={onAssigneesChange}
+          onBodyChange={onBodyChange}
+          onGoalChange={onGoalChange}
+          onDelete={onDelete}
+          variant="current"
+          sourceSessionId={ctx.sourceSession.coachingSessionId}
+          sourceSessionDate={ctx.sourceSession.sessionDate}
+          className="rounded-t-none"
+        />
+      </NonMemberIdsProvider>
     </>
   );
 });

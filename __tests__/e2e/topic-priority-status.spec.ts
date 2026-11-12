@@ -34,6 +34,8 @@ const COACHEE_RELATIONSHIP = {
   coachee_last_name: 'Smith',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
+  coach_is_member: true,
+  coachee_is_member: true,
 }
 
 const makeTopic = (over: Record<string, unknown> = {}) => ({

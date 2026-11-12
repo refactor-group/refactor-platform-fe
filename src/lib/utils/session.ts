@@ -1,6 +1,7 @@
 import { DateTime } from "ts-luxon";
 import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import { Id } from "@/types/general";
+import { isMember } from "@/types/coaching-relationship";
 import { SessionUrgency } from "@/types/session-display";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { RelationshipRole } from "@/types/relationship-role";
@@ -269,6 +270,8 @@ export type SessionParticipantInfo = {
   /** True when the counterpart user object was not loaded; participantName
    *  in that case is a "(data not loaded)" placeholder, not a real name. */
   readonly isMissing: boolean;
+  /** The participant is still in the organization; if not, nothing new can be scheduled with them. */
+  readonly counterpartIsMember: boolean;
 } | null;
 
 /**
@@ -289,6 +292,7 @@ export function getSessionParticipantInfo(
   const isCoach = relationship.coach_id === userId;
   const userRole = isCoach ? RelationshipRole.Coach : RelationshipRole.Coachee;
   const participant = isCoach ? session.coachee : session.coach;
+  const counterpartIsMember = isMember(relationship, isCoach ? relationship.coachee_id : relationship.coach_id);
 
   if (!participant) {
     return {
@@ -298,6 +302,7 @@ export function getSessionParticipantInfo(
       userRole,
       isCoach,
       isMissing: true,
+      counterpartIsMember,
     };
   }
 
@@ -312,6 +317,7 @@ export function getSessionParticipantInfo(
     userRole,
     isCoach,
     isMissing: false,
+    counterpartIsMember,
   };
 }
 

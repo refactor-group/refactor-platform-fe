@@ -22,6 +22,8 @@ import {
   PICKER_ROW,
 } from "@/components/ui/card-field";
 import { Id } from "@/types/general";
+import { useNonMemberIds } from "@/components/ui/coaching-sessions/non-member-ids-context";
+import { notAMemberText } from "@/lib/api/membership-errors";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
@@ -139,7 +141,17 @@ export function AssigneePickerPopover({
   disabled = false,
   disabledReasons = {},
 }: AssigneePickerPopoverProps) {
-  const reasons = [...new Set(Object.values(disabledReasons))].filter(
+  const nonMemberIds = useNonMemberIds();
+  // A non-member can still be unassigned, never newly assigned.
+  const reasonsById: Partial<Record<Id, string>> = {
+    ...Object.fromEntries(
+      allAssignees
+        .filter((a) => nonMemberIds.includes(a.id) && !assigneeIds.includes(a.id))
+        .map((a) => [a.id, notAMemberText(a.name)])
+    ),
+    ...disabledReasons,
+  };
+  const reasons = [...new Set(Object.values(reasonsById))].filter(
     (r): r is string => r !== undefined
   );
   return (
@@ -173,7 +185,7 @@ export function AssigneePickerPopover({
         <div role="listbox" aria-label="Assignees" aria-multiselectable="true" className="flex flex-col">
           {allAssignees.map((assignee) => {
             const isAssigned = assigneeIds.includes(assignee.id);
-            const reason = disabledReasons[assignee.id];
+            const reason = reasonsById[assignee.id];
             return (
               <div
                 key={assignee.id}

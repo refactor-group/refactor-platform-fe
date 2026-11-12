@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { Check, Copy, FileText, Lock, Sparkles } from "lucide-react";
 import type { DateTime } from "ts-luxon";
 import { Button } from "@/components/ui/button";
+import { useNonMemberIds } from "@/components/ui/coaching-sessions/non-member-ids-context";
 import {
   Tooltip,
   TooltipContent,
@@ -24,7 +25,7 @@ import type { Id } from "@/types/general";
 import type { Goal } from "@/types/goal";
 import { None, Some, type Option } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
-import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
+import { proposalEdits, type ActionEdits, type ActionSuggestion } from "@/types/transcript-suggestion";
 
 const markdownComponents = {
   a: ({ href, children, ...props }: ComponentPropsWithoutRef<"a">) => (
@@ -91,7 +92,14 @@ function SuggestionView({
 }: SuggestedActionCardProps & { onEdit: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const { proposal, quote, segment, duplicate_of: duplicateOf } = suggestion;
-  const assigneeIds = proposal.assignee_ids ?? [];
+  const assigneeIds = memberAssignees(proposal.assignee_ids, useNonMemberIds());
+  // Accepting as proposed would assign a non-member, so accept without them.
+  const acceptProposal = (accept: NonNullable<typeof onAccept>) => () =>
+    accept(
+      assigneeIds.length === (proposal.assignee_ids ?? []).length
+        ? None
+        : Some(proposalEdits(proposal, { assignee_ids: assigneeIds }))
+    );
   const mayAct = mayActOnSuggestion(
     viewerRole,
     { coachId, coacheeId },
@@ -175,7 +183,7 @@ function SuggestionView({
             body={duplicateOf.val.body}
             pending={pending}
             onShowAction={showAction}
-            onAddAnyway={run(onAccept && (() => onAccept(None)))}
+            onAddAnyway={run(onAccept && acceptProposal(onAccept))}
             onKeepExisting={run(onDismiss)}
             onCancel={() => setConfirming(false)}
           />
@@ -185,7 +193,7 @@ function SuggestionView({
               size="sm"
               className={CARD_BUTTON}
               disabled={pending}
-              onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && (() => onAccept(None)))}
+              onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && acceptProposal(onAccept))}
             >
               <Check className="!h-3 !w-3" aria-hidden />
               Accept
@@ -243,7 +251,8 @@ function SuggestionEditBack({
 }) {
   const { proposal, duplicate_of: duplicateOf } = suggestion;
   const [picked, setPicked] = useState<Option<DateTime>>(None);
-  const [assigneeIds, setAssigneeIds] = useState<Id[]>(proposal.assignee_ids ?? []);
+  const nonMemberIds = useNonMemberIds();
+  const [assigneeIds, setAssigneeIds] = useState<Id[]>(() => memberAssignees(proposal.assignee_ids, nonMemberIds));
   const [goalId, setGoalId] = useState<Option<Id>>(proposal.goal_id);
   const [confirming, setConfirming] = useState<Option<ActionEdits>>(None);
   const { pending, run } = useInFlight();
@@ -270,13 +279,13 @@ function SuggestionEditBack({
     );
 
   const accept = async (body: string, ids: Id[]) => {
-    const edits: ActionEdits = {
+    const edits = proposalEdits(proposal, {
       body,
       // An unspoken date stays unspoken unless the reviewer picks one.
       due_by: picked.some ? picked : proposal.due_by,
       assignee_ids: ids,
       goal_id: goalId,
-    };
+    });
     if (duplicateOf.some) setConfirming(Some(edits));
     else await onAccept(Some(edits));
   };
@@ -504,4 +513,9 @@ function SuggestionDueLabel({
       </TooltipContent>
     </Tooltip>
   );
+}
+
+/** The proposed assignees still in the organization. */
+function memberAssignees(ids: Id[] | undefined, nonMemberIds: readonly Id[]): Id[] {
+  return (ids ?? []).filter((id) => !nonMemberIds.includes(id));
 }

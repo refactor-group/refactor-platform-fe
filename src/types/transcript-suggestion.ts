@@ -63,6 +63,8 @@ export function isScanStatus(value: unknown): value is ScanStatus {
 
 /** The Action a suggestion would create, plus the spoken due phrase. */
 export interface ActionProposal extends Action {
+  /** Required here: a suggestion always proposes some text. */
+  body: string;
   due_phrase: Option<string>;
 }
 
@@ -144,7 +146,19 @@ function parseProposal(value: unknown): ActionProposal {
   const { due_phrase } = value as { due_phrase?: unknown };
   return {
     ...transformActionWithAssignees(value as unknown as ActionWithAssigneesWire),
+    body: requireString(value as unknown as Wire, "body", "ActionSuggestion proposal"),
     due_phrase: typeof due_phrase === "string" ? Some(due_phrase) : None,
+  };
+}
+
+/** The proposal as accept edits, with the reviewer's changes applied. */
+export function proposalEdits(proposal: ActionProposal, changes: Partial<ActionEdits> = {}): ActionEdits {
+  return {
+    body: proposal.body,
+    due_by: proposal.due_by,
+    assignee_ids: proposal.assignee_ids ?? [],
+    goal_id: proposal.goal_id,
+    ...changes,
   };
 }
 

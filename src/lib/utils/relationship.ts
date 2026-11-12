@@ -120,6 +120,8 @@ export function buildRelationshipWithUserNames(
     organization_id: relationship.organization_id,
     created_at: relationship.created_at,
     updated_at: relationship.updated_at,
+    coach_is_member: relationship.coach_is_member,
+    coachee_is_member: relationship.coachee_is_member,
     coach_first_name: coach?.first_name ?? "Unknown",
     coach_last_name: coach?.last_name ?? "",
     coachee_first_name: coachee?.first_name ?? "Unknown",

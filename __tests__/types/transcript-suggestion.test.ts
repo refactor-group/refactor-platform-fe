@@ -6,6 +6,7 @@ import { DateTime } from "ts-luxon";
 import {
   DueSource,
   parseActionSuggestion,
+  proposalEdits,
   serializeActionEdits,
   UndatedReason,
 } from "@/types/transcript-suggestion";
@@ -174,5 +175,28 @@ describe("serializeActionEdits", () => {
     expect(
       serializeActionEdits({ body: "Send it", due_by: None, assignee_ids: [], goal_id: None })
     ).toEqual({ body: "Send it", due_by: null, assignee_ids: [], goal_id: null });
+  });
+});
+
+describe("proposalEdits", () => {
+  const { proposal } = parseActionSuggestion(wireActionSuggestion());
+
+  it("is the proposal as edits when nothing changes", () => {
+    expect(proposalEdits(proposal)).toEqual({
+      body: "Send the hiring plan to Dana",
+      due_by: proposal.due_by,
+      assignee_ids: ["coachee-1"],
+      goal_id: None,
+    });
+  });
+
+  it("applies the reviewer's changes over the proposal", () => {
+    expect(proposalEdits(proposal, { assignee_ids: [] }).assignee_ids).toEqual([]);
+  });
+
+  it("rejects a proposal with no body", () => {
+    const wire = wireActionSuggestion();
+    const { body: _body, ...bodiless } = wire.proposal;
+    expect(() => parseActionSuggestion({ ...wire, proposal: bodiless })).toThrow(/body/);
   });
 });

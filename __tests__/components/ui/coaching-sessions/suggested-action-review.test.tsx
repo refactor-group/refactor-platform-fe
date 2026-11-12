@@ -16,6 +16,7 @@ import { Some, None, type Option } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
 import { createMockAction } from "../../../test-utils";
+import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 // Stand-in date picker: shows the preselected date and picks a fixed one.
@@ -189,6 +190,29 @@ describe("SuggestedActionCard actions", () => {
     ).toBeGreaterThan(0);
     await userEvent.click(coach);
     expect(coach).toHaveAttribute("aria-selected", "false");
+  });
+});
+
+describe("SuggestedActionCard when a proposed assignee is no longer a member", () => {
+  it("accepts without them", async () => {
+    const onAccept = vi.fn().mockResolvedValue(undefined);
+    render(
+      <Wrapper>
+        <NonMemberIdsProvider ids={[COACHEE_ID]}>
+          <SuggestedActionCard
+            suggestion={makeSuggestion({ assignees: [COACH_ID, COACHEE_ID] })}
+            viewerRole={RelationshipRole.Coach}
+            {...people}
+            onAccept={onAccept}
+          />
+        </NonMemberIdsProvider>
+      </Wrapper>
+    );
+
+    await userEvent.click(screen.getByRole("button", ACCEPT));
+
+    const sent: Option<ActionEdits> = onAccept.mock.calls[0][0];
+    expect(sent.some && sent.val.assignee_ids).toEqual([COACH_ID]);
   });
 });
 

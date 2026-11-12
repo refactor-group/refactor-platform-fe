@@ -113,3 +113,17 @@ describe("cardNoteText", () => {
     expect(cardNoteText(note)).toBe(text);
   });
 });
+
+describe("cardView counterpartIsMember", () => {
+  const withMembership = (coachIsMember: boolean, coacheeIsMember: boolean) => {
+    const s = session("2026-08-18T21:30:00", 0);
+    return { ...s, relationship: { ...s.relationship!, coach_is_member: coachIsMember, coachee_is_member: coacheeIsMember } };
+  };
+
+  it("reads the coachee's membership for the coach, and the coach's for the coachee", () => {
+    expect(cardView(withMembership(true, false), COACH).counterpartIsMember).toBe(false);
+    expect(cardView(withMembership(true, false), COACHEE).counterpartIsMember).toBe(true);
+    expect(cardView(withMembership(false, true), COACHEE).counterpartIsMember).toBe(false);
+    expect(cardView(withMembership(true, true), COACH).counterpartIsMember).toBe(true);
+  });
+});

@@ -8,6 +8,7 @@ import { AssigneePickerPopover, DueDatePicker } from "@/components/ui/coaching-s
 import { DateTime } from "ts-luxon";
 import { GoalPill } from "@/components/ui/goal-pill";
 import { createMockGoal } from "../../../test-utils";
+import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
@@ -200,6 +201,44 @@ describe("AssigneePickerPopover", () => {
     expect(screen.getByText("Only your coach can assign an action to themselves.")).toBeInTheDocument();
     await userEvent.click(jim);
     expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  describe("with a participant who is no longer a member", () => {
+    function renderLeft(assigneeIds: string[]) {
+      const onToggle = vi.fn();
+      render(
+        <Wrapper>
+          <NonMemberIdsProvider ids={["coachee-1"]}>
+            <AssigneePickerPopover
+              allAssignees={PEOPLE}
+              resolvedAssignees={PEOPLE.filter((p) => assigneeIds.includes(p.id))}
+              assigneeIds={assigneeIds}
+              onToggle={onToggle}
+            />
+          </NonMemberIdsProvider>
+        </Wrapper>
+      );
+      return onToggle;
+    }
+
+    it("can't newly assign them, and says why", async () => {
+      const onToggle = renderLeft(["coach-1"]);
+      await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
+
+      const caleb = screen.getByRole("option", { name: /Caleb Bourg/ });
+      expect(caleb).toHaveAttribute("aria-disabled", "true");
+      expect(screen.getByText("Caleb Bourg is no longer in this organization")).toBeInTheDocument();
+      await userEvent.click(caleb);
+      expect(onToggle).not.toHaveBeenCalled();
+    });
+
+    it("can still unassign them", async () => {
+      const onToggle = renderLeft(["coachee-1"]);
+      await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
+
+      await userEvent.click(screen.getByRole("option", { name: /Caleb Bourg/ }));
+      expect(onToggle).toHaveBeenCalledWith("coachee-1");
+    });
   });
 });
 
