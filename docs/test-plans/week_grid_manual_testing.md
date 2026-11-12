@@ -104,8 +104,17 @@ Right-click D's card.
 
 **Pass:**
 - The menu shows Open session and **Remove session…** only.
-- The dialog reads "Remove this coaching session?". It says notes and actions go too, with **Remove session** and **Keep session**.
+- The dialog reads "Remove this coaching session?", with **Remove session** and **Keep session**.
 - Confirming removes the card, and the toast reads "Removed …".
+
+### Case 1.9a: a session with content can't be cancelled
+
+Needs a backend with refactor-platform-rs#487. Add an action to C's session, then choose Cancel session… on C's card and confirm. Then add an agreement to D's session, choose Remove session… on D's card and confirm.
+
+**Pass:**
+- The toast reads "Couldn't cancel the session · It has notes, actions or agreements" for C, and "Couldn't remove the session · It has notes, actions or agreements" for D.
+- Both cards stay, and the session page still shows the action, the agreement and the notes.
+- Delete the action and the agreement afterwards so Cases 1.8 and 1.9 still apply.
 
 ### Case 1.10: keyboard opens the menu
 

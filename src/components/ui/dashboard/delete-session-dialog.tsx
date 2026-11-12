@@ -104,7 +104,7 @@ export function DeleteSessionDialog({
             <span className="font-medium text-foreground tabular-nums">
               {dateLabel}
             </span>
-            , along with its notes and actions. This can&apos;t be undone.
+            . This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -14,6 +14,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCoachingSessionMutation } from "@/lib/api/coaching-sessions";
+import { hasSessionContent } from "@/lib/api/coaching-session-errors";
 import { SessionAction, SessionRemoval, sessionRemovalFor } from "@/lib/session-actions";
 import type { MoveScope } from "@/lib/scheduling";
 import { getSessionParticipantInfo } from "@/lib/utils/session";
@@ -41,17 +42,22 @@ export interface SessionActions {
   dialogs: SessionActionDialogsProps;
 }
 
-function removalFailedMessage(removal: SessionRemoval): string {
+function removalVerb(removal: SessionRemoval): string {
   switch (removal) {
     case SessionRemoval.Cancel:
-      return "Couldn't cancel the session · Try again";
+      return "cancel";
     case SessionRemoval.Remove:
-      return "Couldn't remove the session · Try again";
+      return "remove";
     default: {
       const _exhaustive: never = removal;
       throw new Error(`Unhandled removal: ${_exhaustive}`);
     }
   }
+}
+
+function removalFailedMessage(removal: SessionRemoval, error: unknown): string {
+  const next = hasSessionContent(error) ? "It has notes, actions or agreements" : "Try again";
+  return `Couldn't ${removalVerb(removal)} the session · ${next}`;
 }
 
 /** Runs a session's menu actions and owns the confirmation dialogs they open. */
@@ -100,7 +106,7 @@ export function useSessionActions({
       sonnerToast.success(sessionRemovedMessage(session, relationships, userTimezone, removal));
     } catch (err) {
       console.error("Failed to delete coaching session:", err);
-      sonnerToast.error(removalFailedMessage(removal));
+      sonnerToast.error(removalFailedMessage(removal, err));
       setDeleteState({ kind: "closed" });
     }
   }, [deleteState, deleteSession, onSessionsChanged, relationships, userTimezone]);
