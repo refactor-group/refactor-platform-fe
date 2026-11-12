@@ -1,5 +1,7 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
+import type { AddMemberTab } from "./add-member-dialog";
+import type { Option } from "@/types/option";
 import {
   User,
   canAddExistingMembers,
@@ -19,7 +21,7 @@ interface MemberContainerProps {
   userSession: UserSession;
   onRefresh: () => void;
   isLoading: boolean;
-  openAddMemberDialog: boolean;
+  openAddMemberDialog: Option<AddMemberTab>;
   productName: string;
 }
 
@@ -29,7 +31,7 @@ export function MemberContainer({
   userSession,
   onRefresh,
   isLoading,
-  /// Force the AddMemberDialog to open
+  /// Opens the AddMemberDialog on this tab
   openAddMemberDialog,
   productName,
 }: MemberContainerProps) {

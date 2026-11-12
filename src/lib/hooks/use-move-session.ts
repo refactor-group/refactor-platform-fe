@@ -9,6 +9,10 @@ import { useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
 import { writeSessionMove } from "@/lib/session-move";
 import { sessionStartIn } from "@/lib/session-window";
 import { toast } from "@/lib/toast";
+import { AddBackPurpose } from "@/lib/api/membership-errors";
+import { useNotAMemberToast } from "@/lib/hooks/use-not-a-member-toast";
+import { notAMemberRefusalOf } from "@/types/membership";
+import { Some } from "@/types/option";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 
 export interface MoveSessionInput {
@@ -23,9 +27,16 @@ export function useMoveSession(): (input: MoveSessionInput) => void {
   const refreshCoachingSessions = useRefreshCoachingSessions();
   const markMoved = useWeekGridStore((s) => s.markMoved);
   const unmarkMoved = useWeekGridStore((s) => s.unmarkMoved);
+  const showNotAMember = useNotAMemberToast();
 
   return useCallback(
     ({ session, name, to }: MoveSessionInput) => {
+      const failed = (error: unknown) => {
+        const notAMember = notAMemberRefusalOf(error);
+        if (notAMember.some) return showNotAMember(notAMember.val, AddBackPurpose.ScheduleSessions, () => Some(name));
+        console.error("Failed to move coaching session:", error);
+        toast.error(MOVE_FAILED);
+      };
       const write = (start: DateTime) =>
         ResultAsync.fromPromise(writeSessionMove(session.id, start, session.duration_minutes), (error) => error).map(
           () => refreshCoachingSessions()
@@ -42,11 +53,6 @@ export function useMoveSession(): (input: MoveSessionInput) => void {
         failed
       );
     },
-    [refreshCoachingSessions, markMoved, unmarkMoved]
+    [refreshCoachingSessions, markMoved, unmarkMoved, showNotAMember]
   );
-}
-
-function failed(error: unknown) {
-  console.error("Failed to move coaching session:", error);
-  toast.error(MOVE_FAILED);
 }

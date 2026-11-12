@@ -7,6 +7,9 @@ import {
   type SuggestionFailure,
 } from "@/lib/api/transcript-suggestions";
 import type { Action } from "@/types/action";
+import { AddBackPurpose, notAMemberMessage } from "@/lib/api/membership-errors";
+import { useNotAMemberToast } from "@/lib/hooks/use-not-a-member-toast";
+import type { NameLookup } from "@/types/membership";
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
 import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
@@ -17,6 +20,8 @@ export function suggestionFailureMessage(op: SuggestionOp, f: SuggestionFailure)
   switch (f.kind) {
     case "no_longer_pending":
       return "Someone already handled this suggestion";
+    case "not_a_member":
+      return notAMemberMessage(AddBackPurpose.AssignActions, None, false);
     case "forbidden":
       return "Only your coach can change this suggestion";
     case "not_found":
@@ -45,6 +50,7 @@ export interface UseSuggestionReviewArgs {
   refreshActions: () => void;
   /** Called after an accept creates an action linked to a goal. */
   refreshGoalProgress?: () => void;
+  nameOf: NameLookup;
 }
 
 export function useSuggestionReview({
@@ -52,13 +58,19 @@ export function useSuggestionReview({
   refreshSuggestions,
   refreshActions,
   refreshGoalProgress,
+  nameOf,
 }: UseSuggestionReviewArgs) {
+  const showNotAMember = useNotAMemberToast();
   const reportFailure = useCallback(
     (op: SuggestionOp, f: SuggestionFailure) => {
+      if (f.kind === "not_a_member") {
+        showNotAMember(f.refusal, AddBackPurpose.AssignActions, nameOf);
+        return;
+      }
       toast.error(suggestionFailureMessage(op, f));
       if (isStale(f)) refreshSuggestions();
     },
-    [refreshSuggestions]
+    [refreshSuggestions, showNotAMember, nameOf]
   );
 
   const accept = useCallback(

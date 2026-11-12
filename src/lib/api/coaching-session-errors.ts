@@ -2,6 +2,7 @@ import { organizationArchivedMessage } from "@/lib/api/organization-errors";
 import {
   EntityApiError,
   PERMISSION_DENIED_MESSAGE,
+  conflictReasonOf,
   isForbiddenError,
 } from "@/types/entity-api-error";
 
@@ -49,11 +50,8 @@ function toastMessage(error: EntityApiError, write: SessionWrite): string {
 }
 
 function hasContentConflict(error: EntityApiError, write: SessionWrite): boolean {
-  return (
-    write === SessionWrite.RescheduleSeries &&
-    error.status === 409 &&
-    error.data?.details?.reason === "sessions_have_content"
-  );
+  const reason = conflictReasonOf(error);
+  return write === SessionWrite.RescheduleSeries && reason.some && reason.val === "sessions_have_content";
 }
 
 export function sessionWriteFailure(error: unknown, write: SessionWrite): SessionWriteFailure {
