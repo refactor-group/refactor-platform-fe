@@ -58,8 +58,7 @@ export function DeleteSeriesDialog({
                 </span>
               </>
             )}{" "}
-            from today onward, along with its notes and actions. This
-            can&apos;t be undone.
+            from today onward. This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
