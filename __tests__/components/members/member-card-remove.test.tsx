@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -181,5 +181,39 @@ describe("MemberCard – remove from organization", () => {
     expect(toast.error).not.toHaveBeenCalledWith(
       "This user is the only admin of this organization. Assign another admin before removing them."
     );
+  });
+
+  it("offers removal when the account can't be deleted for its coaching history", async () => {
+    const { accountCalls } = captureDeletes(() => HttpResponse.json({ status_code: 200, data: null }));
+    server.use(
+      http.delete("*/organizations/:organizationId/users/:userId", ({ request }) => {
+        accountCalls.push(request.url);
+        return HttpResponse.json(
+          {
+            error: "conflict",
+            details: { reason: "user_has_coaching_history", user_id: "user-1", relationship_count: 1 },
+          },
+          { status: 409 }
+        );
+      })
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const user = userEvent.setup();
+    renderCard();
+
+    await user.click(screen.getByRole("button"));
+    await user.click(await screen.findByText("Delete"));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    const [message, options] = vi.mocked(toast.error).mock.calls[0];
+    expect(message).toBe(
+      "Ada Lovelace has coaching history · Remove them from this organization instead"
+    );
+    expect(accountCalls).toHaveLength(1);
+
+    const { action } = options as { action: { label: string; onClick: () => void } };
+    expect(action.label).toBe("Remove from organization");
+    act(() => action.onClick());
+    expect(await screen.findByText(/Remove Ada Lovelace from Acme Corp/)).toBeInTheDocument();
   });
 });
