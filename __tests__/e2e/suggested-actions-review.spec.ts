@@ -299,7 +299,6 @@ const editingCard = (scope: Locator, page: Page): Locator =>
 async function openActionsPanel(page: Page): Promise<Locator> {
   await page.goto(`/coaching-sessions/${SESSION_ID}`)
   const panel = page.locator('div.hidden.md\\:block')
-  // The coachee's Topics section adds a Priority combobox after the section picker.
   await panel.getByRole('combobox').first().click()
   await page.getByRole('option', { name: /Actions/ }).click()
   await expect(panel.getByTestId('suggested-actions-group')).toBeVisible()

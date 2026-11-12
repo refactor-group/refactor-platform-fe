@@ -18,7 +18,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/lib/utils";
-import { TopicPrioritySelect } from "@/components/ui/coaching-sessions/topic-priority-select";
 import { TopicStatusControls } from "@/components/ui/coaching-sessions/topic-status-controls";
 import {
   TopicAuthorBadge,
@@ -28,11 +27,9 @@ import { useAutosizeTextarea } from "@/lib/hooks/use-autosize-textarea";
 import { TopicStatus } from "@/types/coaching-session-topic";
 import type {
   CoachingSessionTopic,
-  TopicPriority,
   LastViewedAnchor,
 } from "@/types/coaching-session-topic";
 import type { Id } from "@/types/general";
-import type { Option } from "@/types/option";
 
 export interface TopicSectionContentProps {
   topics: CoachingSessionTopic[];
@@ -45,11 +42,8 @@ export interface TopicSectionContentProps {
   /** Disables only the add-new-topic affordance (e.g. after the session ends),
    *  while existing topics stay editable. Independent of `readOnly`. */
   addDisabled?: boolean;
-  /** True only for the coachee; the priority control is read-only otherwise. */
-  canRate?: boolean;
   /** True for the coach: may delete ANY topic, not just their own. */
   canDeleteAny?: boolean;
-  onPriority?: (id: Id, priority: Option<TopicPriority>) => void;
   /** Lifecycle (Open/Discussed/Deferred) — either participant may set it. */
   onStatus?: (id: Id, status: TopicStatus) => void;
   /** Inserts the topic body into the coaching notes as an H3 heading. */
@@ -84,7 +78,7 @@ export function reorderTopicIds(
   return arrayMove(orderedIds.slice(), from, to);
 }
 
-// Memoized so a list-level re-render (e.g. one topic's priority changing)
+// Memoized so a list-level re-render (e.g. one topic's status changing)
 // repaints only the row whose props actually changed, not every row.
 // Row actions: the 28px menu icon button, faint, shown on hover or focus.
 const TOPIC_ROW_ICON =
@@ -97,11 +91,9 @@ const TopicRow = memo(function TopicRow({
   authorName,
   viewedAnchor,
   readOnly,
-  canRate,
   canDeleteAny,
   onEdit,
   onDelete,
-  onPriority,
   onStatus,
   onInsertToNotes,
 }: {
@@ -111,11 +103,9 @@ const TopicRow = memo(function TopicRow({
   authorName: string;
   viewedAnchor: LastViewedAnchor;
   readOnly: boolean;
-  canRate: boolean;
   canDeleteAny: boolean;
   onEdit: (id: Id, body: string) => void;
   onDelete: (id: Id) => void;
-  onPriority: (id: Id, priority: Option<TopicPriority>) => void;
   onStatus: (id: Id, status: TopicStatus) => void;
   onInsertToNotes?: (body: string) => void;
 }) {
@@ -237,33 +227,28 @@ const TopicRow = memo(function TopicRow({
 
         {/* Always render the action row — keeping it visible while editing
             keeps the card's footprint stable instead of jumping. */}
-        <div className="flex items-center gap-1.5 px-1.5">
-          <TopicPrioritySelect
-            priority={topic.priority}
-            editable={canRate && !readOnly}
-            onChange={(p) => onPriority(topic.id, p)}
-          />
+        <div className="flex items-center gap-0.5 px-1.5">
           <TopicStatusControls
             status={topic.status}
             editable={!readOnly}
             onChange={(s) => onStatus(topic.id, s)}
           />
 
-          <div className="ml-auto flex shrink-0 items-center gap-0.5">
-            {!readOnly && onInsertToNotes && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-menu"
-                aria-label="Insert into notes"
-                title="Insert into notes at the cursor"
-                onClick={() => onInsertToNotes(topic.body)}
-                className={TOPIC_ROW_ICON}
-              >
-                <TextCursorInput aria-hidden />
-              </Button>
-            )}
+          {!readOnly && onInsertToNotes && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-menu"
+              aria-label="Insert into notes"
+              title="Insert into notes at the cursor"
+              onClick={() => onInsertToNotes(topic.body)}
+              className="text-faint"
+            >
+              <TextCursorInput aria-hidden />
+            </Button>
+          )}
 
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
             {(isAuthor || canDeleteAny) && !readOnly && (
               <Button
                 type="button"
@@ -292,9 +277,7 @@ export function TopicSectionContent({
   onReorder,
   readOnly = false,
   addDisabled = false,
-  canRate = false,
   canDeleteAny = false,
-  onPriority = () => {},
   onStatus = () => {},
   onInsertToNotes,
   resolveAuthorName = () => "",
@@ -349,11 +332,9 @@ export function TopicSectionContent({
       authorName={resolveAuthorName(topic.user_id)}
       viewedAnchor={viewedAnchor}
       readOnly={readOnly}
-      canRate={canRate}
       canDeleteAny={canDeleteAny}
       onEdit={onEdit}
       onDelete={onDelete}
-      onPriority={onPriority}
       onStatus={onStatus}
       onInsertToNotes={onInsertToNotes}
     />

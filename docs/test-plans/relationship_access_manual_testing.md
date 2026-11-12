@@ -109,8 +109,6 @@ Each of these has produced a false result before:
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
 | TOPIC-01 | Add, edit any topic, reorder, Discussed, Defer | COACH, COACHEE | All usable on S1 | TOP-03, TOP-05 to TOP-07, TOP-16 |
-| TOPIC-02 | Priority select | COACHEE | Editable | TOP-13 |
-| TOPIC-03 | Priority | COACH | Static chip: the label, or "Priority Not Set" | TOP-14 |
 | TOPIC-04 | **Delete topic** on T1 (authored by COACH) | COACH, COACHEE | COACH: shown. COACHEE: hidden | TOP-09, TOP-11 |
 | TOPIC-05 | **Delete topic** on T2 (authored by COACHEE) | COACH, COACHEE | Shown to both | TOP-09, TOP-10 |
 | TOPIC-06 | Add topic on past session SP1 | COACH, COACHEE | Field and button visible but disabled for both | |
@@ -238,4 +236,4 @@ every write. Re-check them when the rule they touch changes.
 |---|---|---|---|---|---|
 | GAP-01 | The note editor's "Add as …" selection bubble ignores the after-session lock | COACHEE on SP1 | The agreement, action or goal add form opens and saves, although the panel's **Add** is hidden | AGR-05, ACT-28 | [#545](https://github.com/refactor-group/refactor-platform-fe/issues/545) |
 | GAP-02 | The topic delete toast's **Undo** is shown to the coach after deleting T2 | COACH | Undo returns 404, the toast "Couldn't restore the topic" appears, and T2 stays deleted | TOP-18 | [#546](https://github.com/refactor-group/refactor-platform-fe/issues/546) |
-| GAP-03 | Session panel when the relationship read fails | any participant | The viewer is treated as coachee: no rating, no deleting others' topics, coachee Join | | [#547](https://github.com/refactor-group/refactor-platform-fe/issues/547) |
+| GAP-03 | Session panel when the relationship read fails | any participant | The viewer is treated as coachee: no deleting others' topics, coachee Join | | [#547](https://github.com/refactor-group/refactor-platform-fe/issues/547) |

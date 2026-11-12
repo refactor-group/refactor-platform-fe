@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { CalendarClock, Check } from "lucide-react";
-import { cn } from "@/components/lib/utils";
+import { Button } from "@/components/ui/button";
 import { TopicStatus } from "@/types/coaching-session-topic";
 
 interface StatusButtonProps {
@@ -14,8 +14,8 @@ interface StatusButtonProps {
   onClick: () => void;
 }
 
-// Circular toggle echoing the chips it replaces: muted/dashed when off, tinted
-// when on. Either participant may toggle; read-only renders state only.
+// Same ghost icon button as the row's other actions; a tint marks the active state.
+// Either participant may toggle; read-only renders state only.
 function StatusButton({
   icon: Icon,
   active,
@@ -25,24 +25,19 @@ function StatusButton({
   onClick,
 }: StatusButtonProps) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-menu"
       aria-label={label}
       aria-pressed={active}
       title={label}
       disabled={!editable}
       onClick={editable ? onClick : undefined}
-      className={cn(
-        "grid h-6 w-6 shrink-0 place-items-center rounded-full border transition-colors",
-        editable && "hover:border-foreground/40",
-        active
-          ? activeClass
-          : "border-dashed border-border bg-transparent text-muted-foreground/50",
-        !editable && "cursor-default"
-      )}
+      className={active ? activeClass : "text-faint"}
     >
-      <Icon className="h-3.5 w-3.5" />
-    </button>
+      <Icon aria-hidden />
+    </Button>
   );
 }
 
@@ -63,7 +58,7 @@ export function TopicStatusControls({
     onChange(status === target ? TopicStatus.Open : target);
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-0.5">
       <StatusButton
         icon={Check}
         active={status === TopicStatus.Discussed}
@@ -73,7 +68,7 @@ export function TopicStatusControls({
             ? "Mark as not discussed"
             : "Mark as discussed"
         }
-        activeClass="border-emerald-500/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+        activeClass="bg-positive-tint text-positive hover:bg-positive-tint disabled:text-positive"
         onClick={() => toggle(TopicStatus.Discussed)}
       />
       <StatusButton
@@ -85,7 +80,7 @@ export function TopicStatusControls({
             ? "Undo defer"
             : "Defer to next session"
         }
-        activeClass="border-sky-500/60 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+        activeClass="bg-brand-tint text-brand-strong hover:bg-brand-tint disabled:text-brand-strong"
         onClick={() => toggle(TopicStatus.Deferred)}
       />
     </div>

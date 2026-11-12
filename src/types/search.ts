@@ -4,7 +4,7 @@
 
 import { Id, ItemStatus } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
-import { TopicPriority, TopicStatus } from "@/types/coaching-session-topic";
+import { TopicStatus } from "@/types/coaching-session-topic";
 
 /** Hit variants the frontend knows how to render and link to. */
 export enum SearchHitType {
@@ -97,7 +97,6 @@ export interface TopicHit extends SearchHitBase {
   type: SearchHitType.Topic;
   coaching_session_id: Option<Id>;
   status: TopicStatus;
-  priority: Option<TopicPriority>;
 }
 
 /** Always pending: there is no `status`, since accepted and dismissed suggestions never match. */
@@ -200,7 +199,6 @@ function parseBase(obj: Raw): SearchHitBase {
 
 const ITEM_STATUSES = Object.values(ItemStatus);
 const TOPIC_STATUSES = Object.values(TopicStatus);
-const TOPIC_PRIORITIES = Object.values(TopicPriority);
 const SUGGESTION_TARGETS = Object.values(TranscriptSuggestionTarget);
 
 /**
@@ -251,9 +249,6 @@ export function parseSearchHit(value: unknown): Option<SearchHit> {
         type: SearchHitType.Topic,
         coaching_session_id: optionalString(value.coaching_session_id),
         status: parseEnum(TOPIC_STATUSES, value.status, TopicStatus.Open),
-        priority: TOPIC_PRIORITIES.includes(value.priority as TopicPriority)
-          ? Some(value.priority as TopicPriority)
-          : None,
       });
     case SearchHitType.TranscriptSuggestion:
       return Some({

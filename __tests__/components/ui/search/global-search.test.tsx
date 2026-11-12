@@ -87,7 +87,6 @@ const topicHit: SearchHit = {
   coaching_relationship_id: Some("rel-1"),
   coaching_session_id: Some("sess-2"),
   status: TopicStatus.Open,
-  priority: None,
 };
 
 const secondActionHit: SearchHit = { ...actionHit, id: "action-2", title: "Book the weekly slot" };

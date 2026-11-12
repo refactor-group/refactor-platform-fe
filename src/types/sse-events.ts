@@ -152,7 +152,7 @@ export type CoachingSessionTitleUpdatedEvent = BaseSSEEvent<
 // ==================== TOPIC EVENTS (session-scoped) ====================
 
 // Coarse, like meeting_recording/transcription: carries only the session id.
-// Fires on ANY topic mutation (add/edit/delete/reorder/priority/status) and on
+// Fires on ANY topic mutation (add/edit/delete/reorder/status) and on
 // the server-side carry-over copy. On receipt, refetch that session's topics.
 export type TopicsChangedEvent = BaseSSEEvent<
   'topics_changed',

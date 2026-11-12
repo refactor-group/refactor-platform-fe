@@ -4,7 +4,6 @@ import { siteConfig } from "@/site.config";
 import { Id } from "@/types/general";
 import {
   CoachingSessionTopic,
-  TopicPriority,
   TopicStatus,
   transformCoachingSessionTopic,
 } from "@/types/coaching-session-topic";
@@ -16,22 +15,9 @@ const COACHING_SESSIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/c
 const topicsUrl = (coachingSessionId: Id): string =>
   `${COACHING_SESSIONS_BASEURL}/${coachingSessionId}/topics`;
 
-// PUT body is body-only; priority goes through the dedicated rating sub-route,
-// status through the dedicated status sub-route.
+// PUT body is body-only; status goes through the dedicated status sub-route.
 interface UpdateTopicFields {
   body: string;
-}
-
-// Coachee-only. Send `priority` to set; `null` to clear; omit for a no-op.
-interface RateTopicFields {
-  priority?: TopicPriority | null;
-}
-
-// POST body: `body` required; `priority` optional so an undo can recreate a
-// deleted topic with its priority intact. Omitting it leaves the topic unset.
-interface CreateTopicBody {
-  body: string;
-  priority?: TopicPriority;
 }
 
 /**
@@ -51,21 +37,17 @@ export const CoachingSessionTopicApi = {
       )
     ).map(transformCoachingSessionTopic),
 
-  // `priority` is optional; supply it to recreate a topic with its priority
-  // preserved (undo of a delete).
   create: async (
     coachingSessionId: Id,
-    body: string,
-    priority?: TopicPriority
+    body: string
   ): Promise<CoachingSessionTopic> =>
     transformCoachingSessionTopic(
-      await EntityApi.createFn<CreateTopicBody, CoachingSessionTopic>(
+      await EntityApi.createFn<UpdateTopicFields, CoachingSessionTopic>(
         topicsUrl(coachingSessionId),
-        priority ? { body, priority } : { body }
+        { body }
       )
     ),
 
-  // PUT carries only the body; rating is a separate route (see `rate`).
   update: async (
     coachingSessionId: Id,
     topicId: Id,
@@ -102,20 +84,6 @@ export const CoachingSessionTopicApi = {
     return res.data.data.map(transformCoachingSessionTopic);
   },
 
-  // Coachee-only priority (BE-enforced; coach write → 403). Dedicated sub-route;
-  // `priority: null` clears, omitting it is a no-op.
-  rate: async (
-    coachingSessionId: Id,
-    topicId: Id,
-    fields: RateTopicFields
-  ): Promise<CoachingSessionTopic> => {
-    const res = await sessionGuard.patch<ApiResponse<any>>(
-      `${topicsUrl(coachingSessionId)}/${topicId}/rating`,
-      fields
-    );
-    return transformCoachingSessionTopic(res.data.data);
-  },
-
   // Lifecycle write (Open/Discussed/Deferred). Either participant may set it.
   // Setting Deferred re-parents the topic into the next session (or holds it
   // when none exists yet). The response is the topic at its NEW location, so
@@ -135,7 +103,7 @@ export const CoachingSessionTopicApi = {
   // Unified undo (either participant; author-only when undoing a delete).
   // State-derived: reverses whatever undoable op last happened to the topic —
   // a defer/move (returns it to origin, status restored) OR a delete (faithful
-  // soft-delete restore: same id/status/priority/position). 422 if nothing to
+  // soft-delete restore: same id/status/position). 422 if nothing to
   // undo. Address it at the topic's CURRENT session. No body.
   undo: async (
     coachingSessionId: Id,
@@ -175,7 +143,7 @@ export const useCoachingSessionTopicList = (coachingSessionId: Id) => {
 /**
  * Mutation operations for a coaching session's topics, scoped to one session.
  * Composes useEntityMutation (keyed on the topics URL so its successful
- * mutations invalidate the topic list) and adds reorder + rate alongside.
+ * mutations invalidate the topic list) and adds reorder, status and undo alongside.
  */
 export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
   const mutation = EntityApi.useEntityMutation<
@@ -197,8 +165,6 @@ export const useCoachingSessionTopicMutation = (coachingSessionId: Id) => {
     delete: (topicId: Id) => mutation.delete(topicId),
     reorder: (orderedIds: Id[]) =>
       CoachingSessionTopicApi.reorder(coachingSessionId, orderedIds),
-    rate: (topicId: Id, fields: RateTopicFields) =>
-      CoachingSessionTopicApi.rate(coachingSessionId, topicId, fields),
     setStatus: (topicId: Id, status: TopicStatus) =>
       CoachingSessionTopicApi.setStatus(coachingSessionId, topicId, status),
     // Address undo at the topic's CURRENT session — after a move that's the

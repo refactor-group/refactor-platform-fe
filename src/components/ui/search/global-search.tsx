@@ -101,7 +101,6 @@ function hitMeta(hit: SearchHit): Option<string> {
       break;
     case SearchHitType.Topic:
       parts.push(hit.status);
-      if (hit.priority.some) parts.push(`${hit.priority.val} priority`);
       break;
     case SearchHitType.TranscriptSuggestion:
       parts.push("Pending review", hit.session_title);

@@ -45,7 +45,7 @@ describe("useCoachingSessionTopicMutation — hook-specific mapping", () => {
       wrapper: TestProviders,
     });
 
-  it("create wraps a bare body (never sends a priority)", async () => {
+  it("create wraps a bare body", async () => {
     const { result } = render();
     await act(async () => {
       await result.current.create("Talk about the reorg");

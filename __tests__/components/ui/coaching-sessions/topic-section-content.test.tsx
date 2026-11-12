@@ -3,7 +3,7 @@
 // <TopicSectionContent> — list render, empty state, inline add, click-to-edit,
 // and the load-bearing permission rule **delete: your own topic, or ANY topic
 // when you're the coach** (`canDeleteAny`). Reorder
-// (Phase 3b), rating chips (Phase 4), and provenance/"new" dot (Phase 5) are
+// (Phase 3b) and provenance/"new" dot (Phase 5) are
 // NOT part of this phase. Data wiring (Phase 1 hooks -> props, panel-switcher
 // integration) lives in the data-connected section + panel host and is covered
 // by a separate non-frozen test.

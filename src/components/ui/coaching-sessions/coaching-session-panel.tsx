@@ -56,7 +56,6 @@ import {
 } from "@/types/after-session-lock";
 import {
   type CoachingSessionTopic,
-  type TopicPriority,
   type LastViewedAnchor,
   TopicStatus,
   resolveLastViewedAnchor,
@@ -109,11 +108,8 @@ export interface CoachingSessionPanelSharedProps {
   onTopicEdit: (id: Id, body: string) => void;
   onTopicDelete: (id: Id) => void;
   onTopicReorder: (orderedIds: Id[]) => void;
-  /** True only when the viewer is the coachee; priority is coachee-only. */
-  canRateTopics: boolean;
   /** Coach-only: may delete ANY topic; the coachee may delete only their own. */
   canDeleteAnyTopic: boolean;
-  onTopicPriority: (id: Id, priority: Option<TopicPriority>) => void;
   /** Lifecycle (Open/Discussed/Deferred) — either participant may set it. */
   onTopicStatus: (id: Id, status: TopicStatus) => void;
   /** Inserts the topic's text into the notes as an H3 heading at the cursor. */
@@ -494,7 +490,6 @@ export function CoachingSessionPanel({
     update: updateTopic,
     delete: deleteTopic,
     reorder: reorderTopics,
-    rate: rateTopic,
     setStatus: setTopicStatus,
     undo: undoTopic,
   } = useCoachingSessionTopicMutation(coachingSessionId);
@@ -1017,7 +1012,7 @@ export function CoachingSessionPanel({
             : topic.body
           : "Topic";
         // Delete is a soft-delete server-side; undo faithfully restores the
-        // exact row (id, status, priority, position, timestamps). Delete never
+        // exact row (id, status, position, timestamps). Delete never
         // moves the topic, so undo is addressed at this session.
         sonnerToast(`"${preview}" deleted`, {
           action: {
@@ -1061,31 +1056,6 @@ export function CoachingSessionPanel({
       }
     },
     [topics, reorderTopics, refreshTopics]
-  );
-
-  const handleTopicPriority = useCallback(
-    async (id: Id, priority: Option<TopicPriority>) => {
-      const next = priority.some ? priority.val : null;
-      // Splice the new priority into the cached list in place; no refetch.
-      try {
-        await refreshTopics(
-          rateTopic(id, { priority: next }).then((updated) =>
-            topics.map((t) => (t.id === id ? updated : t))
-          ),
-          {
-            optimisticData: topics.map((t) =>
-              t.id === id ? { ...t, priority: next ? Some(next) : None } : t
-            ),
-            revalidate: false,
-            rollbackOnError: true,
-          }
-        );
-      } catch (err) {
-        console.error("Failed to set topic priority:", err);
-        sonnerToast.error("Couldn't save the priority");
-      }
-    },
-    [topics, rateTopic, refreshTopics]
   );
 
   const handleTopicStatus = useCallback(
@@ -1166,9 +1136,7 @@ export function CoachingSessionPanel({
     onTopicEdit: handleTopicEdit,
     onTopicDelete: handleTopicDelete,
     onTopicReorder: handleTopicReorder,
-    canRateTopics: Boolean(userId && coacheeId && userId === coacheeId),
     canDeleteAnyTopic: Boolean(userId && coachId && userId === coachId),
-    onTopicPriority: handleTopicPriority,
     onTopicStatus: handleTopicStatus,
     onTopicInsertToNotes: handleTopicInsertToNotes,
     resolveTopicAuthorName,
