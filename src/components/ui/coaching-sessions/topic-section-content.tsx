@@ -242,7 +242,7 @@ const TopicRow = memo(function TopicRow({
               aria-label="Insert into notes"
               title="Insert into notes at the cursor"
               onClick={() => onInsertToNotes(topic.body)}
-              className={TOPIC_ROW_ICON}
+              className="text-faint"
             >
               <TextCursorInput aria-hidden />
             </Button>
