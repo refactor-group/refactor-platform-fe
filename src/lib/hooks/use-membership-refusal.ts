@@ -4,8 +4,8 @@ import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
 import { siteConfig } from "@/site.config";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
 import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
 import {
   membershipRefusalMessage,
@@ -15,7 +15,7 @@ import {
 import { toast } from "@/lib/toast";
 import type { Id } from "@/types/general";
 import { None, type Option } from "@/types/option";
-import { isAdminOrSuperAdmin } from "@/types/user";
+import { getUserRoleForOrganization, Role } from "@/types/user";
 
 /** Resolves the refused person's display name; the id is absent on older backends. */
 export type RefusedNameOf = (userId: Option<Id>) => Option<string>;
@@ -31,7 +31,7 @@ export function useMembershipRefusal(): (
 ) => boolean {
   const router = useRouter();
   const { mutate } = useSWRConfig();
-  const canAddBack = isAdminOrSuperAdmin(useCurrentUserRole());
+  const roles = useAuthStore((s) => s.userSession.roles);
   const { currentOrganizationId } = useCurrentOrganization();
 
   return useCallback(
@@ -39,8 +39,9 @@ export function useMembershipRefusal(): (
       const refusal = membershipRefusalOf(error);
       if (refusal.none) return false;
 
+      // The refusal may come from another organization than the one being viewed.
       const orgId = refusal.val.organizationId.some ? refusal.val.organizationId.val : currentOrganizationId;
-      const offerAddBack = canAddBack && Boolean(orgId);
+      const offerAddBack = Boolean(orgId) && canAddMembers(getUserRoleForOrganization(roles, orgId));
       toast.error(membershipRefusalMessage(write, nameOf(refusal.val.userId), offerAddBack), {
         action: offerAddBack
           ? {
@@ -56,8 +57,10 @@ export function useMembershipRefusal(): (
       void revalidateEndpointCaches(mutate, base, "/coaching_sessions");
       return true;
     },
-    [router, mutate, canAddBack, currentOrganizationId]
+    [router, mutate, roles, currentOrganizationId]
   );
 }
 
 export const unnamed: RefusedNameOf = () => None;
+
+const canAddMembers = (role: Role | null): boolean => role === Role.Admin || role === Role.SuperAdmin;
