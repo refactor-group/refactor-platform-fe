@@ -4,12 +4,6 @@ import { type Option, Some, None } from "@/types/option";
 
 // Wire values are PascalCase to match Rust serde (same convention as goal
 // `status`).
-export enum TopicPriority {
-  Low = "Low",
-  Medium = "Medium",
-  High = "High",
-}
-
 export enum TopicStatus {
   Open = "Open",
   Discussed = "Discussed",
@@ -23,8 +17,6 @@ export interface CoachingSessionTopic {
   coaching_session_id: Id;
   user_id: Id;
   body: string;
-  // Coachee-set; None = unset (no forced rating).
-  priority: Option<TopicPriority>;
   // Always present; lifecycle defaults to Open. Deferred only persists while
   // the topic is held (no next session to move into yet).
   status: TopicStatus;
@@ -43,11 +35,6 @@ const toDateTime = (value: unknown): DateTime => {
   return DateTime.now();
 };
 
-const toPriority = (value: unknown): Option<TopicPriority> =>
-  Object.values(TopicPriority).includes(value as TopicPriority)
-    ? Some(value as TopicPriority)
-    : None;
-
 const toStatus = (value: unknown): TopicStatus =>
   Object.values(TopicStatus).includes(value as TopicStatus)
     ? (value as TopicStatus)
@@ -64,7 +51,6 @@ export function transformCoachingSessionTopic(data: any): CoachingSessionTopic {
     coaching_session_id: data.coaching_session_id,
     user_id: data.user_id,
     body: data.body,
-    priority: toPriority(data.priority),
     status: toStatus(data.status),
     moved_from_session_id: toOptionalId(data.moved_from_session_id),
     created_at: toDateTime(data.created_at),
@@ -128,7 +114,6 @@ export function defaultCoachingSessionTopic(): CoachingSessionTopic {
     coaching_session_id: "",
     user_id: "",
     body: "",
-    priority: None,
     status: TopicStatus.Open,
     moved_from_session_id: None,
     created_at: now,

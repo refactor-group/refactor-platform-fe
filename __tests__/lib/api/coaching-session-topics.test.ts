@@ -1,5 +1,5 @@
 // ACCEPTANCE TEST — re-baselined to the CoachingSessionTopics v4 contract
-// (single `priority` + `status` lifecycle; `relevance`/`immediacy` removed).
+// (`status` lifecycle; ordering is the only prioritisation).
 // Defines the wire contract for CoachingSessionTopicApi.
 //
 // Pattern mirrors __tests__/lib/api/goals.test.ts: mock EntityApi + siteConfig +
@@ -10,7 +10,7 @@ import {
   CoachingSessionTopicApi,
   useCoachingSessionTopicList,
 } from "@/lib/api/coaching-session-topics";
-import { TopicPriority, TopicStatus } from "@/types/coaching-session-topic";
+import { TopicStatus } from "@/types/coaching-session-topic";
 import { EntityApi } from "@/lib/api/entity-api";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import { renderHook } from "@testing-library/react";
@@ -55,39 +55,6 @@ describe("CoachingSessionTopicApi", () => {
     expect(EntityApi.createFn).toHaveBeenCalledWith(`${BASE}/s1/topics`, {
       body: "Talk about the reorg",
     });
-  });
-
-  it("create includes priority when supplied (restore path)", async () => {
-    vi.mocked(EntityApi.createFn).mockResolvedValue({});
-    await CoachingSessionTopicApi.create("s1", "Restored topic", TopicPriority.High);
-    expect(EntityApi.createFn).toHaveBeenCalledWith(`${BASE}/s1/topics`, {
-      body: "Restored topic",
-      priority: "High",
-    });
-  });
-
-  it("rate PATCHes the dedicated rating sub-route with the PascalCase priority", async () => {
-    vi.mocked(sessionGuard.patch).mockResolvedValue({
-      data: { data: {} },
-    } as never);
-    await CoachingSessionTopicApi.rate("s1", "t1", {
-      priority: TopicPriority.High,
-    });
-    expect(sessionGuard.patch).toHaveBeenCalledWith(
-      `${BASE}/s1/topics/t1/rating`,
-      { priority: "High" }
-    );
-  });
-
-  it("rate PATCHes priority: null to clear", async () => {
-    vi.mocked(sessionGuard.patch).mockResolvedValue({
-      data: { data: {} },
-    } as never);
-    await CoachingSessionTopicApi.rate("s1", "t1", { priority: null });
-    expect(sessionGuard.patch).toHaveBeenCalledWith(
-      `${BASE}/s1/topics/t1/rating`,
-      { priority: null }
-    );
   });
 
   it("setStatus PATCHes the dedicated status sub-route with the PascalCase status", async () => {

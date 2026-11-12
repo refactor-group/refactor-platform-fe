@@ -8,7 +8,7 @@ import {
   splitSnippet,
 } from "@/types/search";
 import { ItemStatus } from "@/types/general";
-import { TopicPriority, TopicStatus } from "@/types/coaching-session-topic";
+import { TopicStatus } from "@/types/coaching-session-topic";
 
 const base = {
   id: "hit-1",
@@ -69,17 +69,15 @@ describe("parseSearchHit", () => {
     expect(hit.val.due_by.none).toBe(true);
   });
 
-  it("parses topic status and priority", () => {
+  it("parses topic status", () => {
     const hit = parseSearchHit({
       ...base,
       type: "topic",
       coaching_session_id: "sess-1",
       status: "Discussed",
-      priority: "High",
     });
     if (!hit.some || hit.val.type !== SearchHitType.Topic) throw new Error("expected topic");
     expect(hit.val.status).toBe(TopicStatus.Discussed);
-    expect(hit.val.priority).toEqual({ some: true, none: false, val: TopicPriority.High });
   });
 
   it("parses a transcript suggestion hit", () => {

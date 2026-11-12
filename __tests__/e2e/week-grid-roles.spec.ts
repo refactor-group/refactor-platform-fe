@@ -52,7 +52,6 @@ const TOPIC = (sessionId: string) => ({
   coaching_session_id: sessionId,
   user_id: 'user-jane',
   body: 'Quarterly goals',
-  priority: null,
   status: 'open',
   moved_from_session_id: null,
   created_at: '2026-10-20T12:00:00Z',

@@ -1,23 +1,18 @@
-// Panel-host WIRING test (non-frozen, has teeth) for the v4 topic controls.
+// Panel-host WIRING test (non-frozen, has teeth) for the topic controls.
 //
-// Proves the panel routes:
-//  - a coachee's PRIORITY pick to `rate` with the exact `{ priority }` payload,
-//    and a clear to `{ priority: null }`. Priority is coachee-only — a coach's
-//    priority control is disabled.
-//  - a STATUS toggle (Discussed/Defer) to `setStatus`, for EITHER participant
-//    (here proven with a coach viewer, who may set status but not priority).
+// Proves the panel routes a STATUS toggle (Discussed/Defer) to `setStatus` for
+// EITHER participant, and gates delete by author/coach.
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel";
 import {
   defaultCoachingSessionTopic,
-  TopicPriority,
   TopicStatus,
 } from "@/types/coaching-session-topic";
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic";
-import { Some, None } from "@/types/option";
+import { None } from "@/types/option";
 
 // Desktop viewport so the desktop layout renders (the mobile sheet is closed).
 Object.defineProperty(window, "matchMedia", {
@@ -60,7 +55,6 @@ vi.mock("@/lib/api/agreements", () => ({
 }));
 
 const mockRefreshTopics = vi.fn();
-const mockRateTopic = vi.fn();
 const mockSetStatus = vi.fn();
 const mockUndo = vi.fn();
 
@@ -71,7 +65,6 @@ vi.mock("@/lib/api/coaching-session-topics", () => ({
     update: vi.fn(),
     delete: vi.fn(),
     reorder: vi.fn(),
-    rate: mockRateTopic,
     setStatus: mockSetStatus,
     undo: mockUndo,
     isLoading: false,
@@ -191,58 +184,6 @@ function renderPanel() {
 // The desktop + (closed) mobile layouts each mount a control; pick the first.
 const firstByRole = (role: string, name: RegExp) =>
   screen.getAllByRole(role, { name })[0];
-
-describe("CoachingSessionPanel — priority wiring (coachee-only)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUserId = "coachee-1";
-  });
-
-  it("routes a coachee's priority pick to rate with the exact payload", async () => {
-    const user = userEvent.setup();
-    setTopics([topic({ id: "t1", user_id: "coachee-1", body: "Reorg" })]);
-    renderPanel();
-
-    await user.click(firstByRole("combobox", /priority/i));
-    const listbox = screen.getByRole("listbox");
-    await user.click(within(listbox).getByText("High"));
-
-    await waitFor(() => {
-      expect(mockRateTopic).toHaveBeenCalledWith("t1", {
-        priority: TopicPriority.High,
-      });
-    });
-  });
-
-  it("routes a clear to rate with priority: null", async () => {
-    const user = userEvent.setup();
-    setTopics([
-      topic({ id: "t1", user_id: "coachee-1", body: "Reorg", priority: Some(TopicPriority.High) }),
-    ]);
-    renderPanel();
-
-    await user.click(firstByRole("combobox", /priority/i));
-    const listbox = screen.getByRole("listbox");
-    await user.click(within(listbox).getByText("Clear"));
-
-    await waitFor(() => {
-      expect(mockRateTopic).toHaveBeenCalledWith("t1", { priority: null });
-    });
-  });
-
-  it("shows priority read-only (no dropdown) for a coach viewer", () => {
-    mockUserId = "coach-1";
-    setTopics([
-      topic({ id: "t1", user_id: "coachee-1", body: "Reorg", priority: Some(TopicPriority.High) }),
-    ]);
-    renderPanel();
-    // The coach gets a static chip, never an editable Priority dropdown.
-    expect(
-      screen.queryByRole("combobox", { name: /priority/i })
-    ).not.toBeInTheDocument();
-    expect(screen.getAllByText("High").length).toBeGreaterThanOrEqual(1);
-  });
-});
 
 describe("CoachingSessionPanel — status wiring (either participant)", () => {
   beforeEach(() => vi.clearAllMocks());

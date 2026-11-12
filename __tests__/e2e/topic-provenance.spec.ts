@@ -5,10 +5,8 @@ import {
   MOCK_USER_ID,
 } from './helpers'
 
-// e2e coverage for the two CoachingSessionTopics v4 behaviors that are flaky or
-// impossible to assert in jsdom: the real Radix Select priority interaction,
-// and the carried-over provenance line that only renders inside the Radix
-// HoverCard on hover. Strike-through + payload shapes are covered by unit tests.
+// The carried-over provenance line only renders inside the Radix HoverCard on
+// hover, which jsdom can't assert.
 
 const SESSION_ID = 'session-topics-1'
 const REL_ID = 'rel-1'
@@ -21,8 +19,6 @@ const MOCK_SESSION = {
   updated_at: '2026-03-01T00:00:00Z',
 }
 
-// The viewer (MOCK_USER_ID) must be the coachee for the priority control to be
-// editable (priority is coachee-only).
 const COACHEE_RELATIONSHIP = {
   id: REL_ID,
   coach_id: 'coach-1',
@@ -43,7 +39,6 @@ const makeTopic = (over: Record<string, unknown> = {}) => ({
   coaching_session_id: SESSION_ID,
   user_id: MOCK_USER_ID,
   body: 'Discuss the roadmap',
-  priority: null,
   status: 'Open',
   moved_from_session_id: null,
   created_at: '2026-03-10T00:00:00Z',
@@ -51,11 +46,8 @@ const makeTopic = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
-// Register topic routes AFTER mockCommonApiRoutes so they win (LIFO). Returns a
-// list that captures every rating PATCH payload for assertion.
+// Registered AFTER mockCommonApiRoutes so it wins (LIFO).
 async function mockTopicRoutes(page: Page, topics: unknown[]) {
-  const ratingPayloads: unknown[] = []
-
   await page.route('**/coaching_sessions/*/topics', async (route) => {
     await route.fulfill({
       status: 200,
@@ -63,20 +55,9 @@ async function mockTopicRoutes(page: Page, topics: unknown[]) {
       body: JSON.stringify({ data: topics }),
     })
   })
-
-  await page.route('**/topics/*/rating', async (route) => {
-    ratingPayloads.push(route.request().postDataJSON())
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: makeTopic({ priority: 'High' }) }),
-    })
-  })
-
-  return { ratingPayloads }
 }
 
-test.describe('CoachingSessionTopics v5 — priority + defer/move (e2e)', () => {
+test.describe('CoachingSessionTopics — moved-topic provenance (e2e)', () => {
   test.beforeEach(async ({ page, context }) => {
     // Force the desktop layout so the inline Topics panel renders (mobile keeps
     // it in a closed sheet).
@@ -95,8 +76,7 @@ test.describe('CoachingSessionTopics v5 — priority + defer/move (e2e)', () => 
       coachingSessions: [MOCK_SESSION],
     })
     // The relationship *detail* fetch returns a single object (the array route
-    // from mockCommonApiRoutes would otherwise win); the panel reads
-    // coachee_id from it to decide priority is editable. Registered last → wins.
+    // from mockCommonApiRoutes would otherwise win). Registered last → wins.
     await page.route('**/coaching_relationships/*', async (route) => {
       await route.fulfill({
         status: 200,
@@ -104,21 +84,6 @@ test.describe('CoachingSessionTopics v5 — priority + defer/move (e2e)', () => 
         body: JSON.stringify({ data: COACHEE_RELATIONSHIP }),
       })
     })
-  })
-
-  test('coachee sets a priority via the dropdown → PATCH carries the wire value', async ({
-    page,
-  }) => {
-    const { ratingPayloads } = await mockTopicRoutes(page, [makeTopic()])
-
-    await page.goto(`/coaching-sessions/${SESSION_ID}`)
-    await expect(page.getByText('Discuss the roadmap')).toBeVisible()
-
-    await page.getByRole('combobox', { name: 'Priority' }).click()
-    await page.getByRole('option', { name: 'High' }).click()
-
-    await expect.poll(() => ratingPayloads.length).toBeGreaterThan(0)
-    expect(ratingPayloads[0]).toEqual({ priority: 'High' })
   })
 
   test('moved-over topic shows its provenance line on avatar hover', async ({

@@ -28,7 +28,6 @@ const topic = {
   coaching_session_id: "s-1",
   user_id: "u-1",
   body: "Hiring plan",
-  priority: null,
   status: "Discussed",
   moved_from_session_id: null,
   display_order: 3,

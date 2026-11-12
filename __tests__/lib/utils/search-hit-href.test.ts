@@ -74,7 +74,6 @@ describe("searchHitHref", () => {
       type: SearchHitType.Topic,
       coaching_session_id: Some("s"),
       status: TopicStatus.Open,
-      priority: None,
     };
     expect(searchHitHref(topic)).toEqual(Some("/coaching-sessions/s"));
   });

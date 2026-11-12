@@ -4,10 +4,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel"
 import {
   defaultCoachingSessionTopic,
-  TopicPriority,
 } from "@/types/coaching-session-topic"
 import type { CoachingSessionTopic } from "@/types/coaching-session-topic"
-import { Some, None } from "@/types/option"
+import { None } from "@/types/option"
 
 // Desktop viewport so the desktop layout (and its inline Topics add) renders.
 Object.defineProperty(window, "matchMedia", {
@@ -271,7 +270,7 @@ describe("CoachingSessionPanel — Topics wiring", () => {
     const user = userEvent.setup()
     setTopics([
       topic({ id: "t1", user_id: "user-1", body: "First topic" }),
-      topic({ id: "t2", user_id: "user-1", body: "Middle topic", priority: Some(TopicPriority.High) }),
+      topic({ id: "t2", user_id: "user-1", body: "Middle topic" }),
       topic({ id: "t3", user_id: "user-1", body: "Last topic" }),
     ])
     renderPanel()
@@ -288,7 +287,7 @@ describe("CoachingSessionPanel — Topics wiring", () => {
 
     // v6: faithful soft-delete restore via the unified undo endpoint, addressed
     // at the topic's session — no FE re-create, no reorder (the BE restores the
-    // exact row incl. id/status/priority/position).
+    // exact row incl. id/status/position).
     await waitFor(() => expect(mockUndoTopic).toHaveBeenCalledWith("session-1", "t2"))
     expect(mockReorderTopics).not.toHaveBeenCalled()
   })
