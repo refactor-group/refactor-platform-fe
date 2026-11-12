@@ -93,10 +93,9 @@ vi.mock('@/lib/hooks/use-sync-user-session', () => ({
 }))
 
 // Reads the auth and organization stores, which most suites don't provide.
-// Unhandled by default; its own suite and the wiring tests re-import the real one.
-vi.mock('@/lib/hooks/use-membership-refusal', () => ({
-  useMembershipRefusal: () => () => false,
-  unnamed: () => ({ some: false, none: true }),
+// A no-op by default; its own suite and the wiring tests re-import the real one.
+vi.mock('@/lib/hooks/use-not-a-member-toast', () => ({
+  useNotAMemberToast: () => () => {},
 }))
 
 // Setup MSW

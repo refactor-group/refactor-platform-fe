@@ -189,8 +189,13 @@ export function getUserRoleForOrganization(
  * @param roleState - The user's role state from useCurrentUserRole
  * @returns true if user is Admin or SuperAdmin
  */
+/** Admins and SuperAdmins manage an organization's members. */
+export function isAdminRole(role: Role | null): boolean {
+  return role === Role.Admin || role === Role.SuperAdmin;
+}
+
 export function isAdminOrSuperAdmin(roleState: UserRoleState): boolean {
-  return roleState.hasAccess && (roleState.role === Role.Admin || roleState.role === Role.SuperAdmin);
+  return roleState.hasAccess && isAdminRole(roleState.role);
 }
 
 /**

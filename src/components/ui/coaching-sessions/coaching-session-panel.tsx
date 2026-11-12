@@ -41,7 +41,7 @@ import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-sess
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getCoachName, getCoacheeName, participantNameOf } from "@/lib/utils/relationship";
-import { unnamed } from "@/lib/hooks/use-membership-refusal";
+import { noName } from "@/types/membership";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
@@ -391,8 +391,8 @@ export function CoachingSessionPanel({
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
 
   const sessionDate = currentCoachingSession?.date;
-  const refusedNameOf = useMemo(
-    () => (currentCoachingRelationship ? participantNameOf(currentCoachingRelationship) : unnamed),
+  const nameOf = useMemo(
+    () => (currentCoachingRelationship ? participantNameOf(currentCoachingRelationship) : noName),
     [currentCoachingRelationship]
   );
   const coachId = currentCoachingRelationship?.coach_id;
@@ -805,7 +805,7 @@ export function CoachingSessionPanel({
     coachingSessionId,
     coachingRelationshipId,
     sessionDate,
-    refusedNameOf,
+    nameOf,
   });
   const { suggestions: actionSuggestions, refresh: refreshPending } =
     useActionSuggestionList(coachingSessionId);
@@ -822,7 +822,7 @@ export function CoachingSessionPanel({
     refreshSuggestions,
     refreshActions: refreshActionLists,
     refreshGoalProgress: revalidateGoalProgress,
-    refusedNameOf,
+    nameOf,
   });
   const { status: scanStatus, refresh: refreshScanStatus } = useScanStatus(coachingSessionId);
   const suggestionScan = useSuggestionScan(coachingSessionId, refreshScanStatus);

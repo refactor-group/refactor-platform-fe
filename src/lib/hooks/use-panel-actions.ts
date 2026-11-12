@@ -4,8 +4,9 @@ import { useMemo, useState, useCallback, useEffect } from "react";
 import { toast as sonnerToast } from "@/lib/toast";
 import { actionPreview } from "@/lib/utils/action-preview";
 import { actionErrorMessage } from "@/lib/utils/action-error-message";
-import { RefusedWrite } from "@/lib/membership-refusal";
-import { useMembershipRefusal, type RefusedNameOf } from "@/lib/hooks/use-membership-refusal";
+import { AddBackPurpose } from "@/lib/api/membership-errors";
+import { useNotAMemberToast } from "@/lib/hooks/use-not-a-member-toast";
+import { notAMemberRefusalOf, type NameLookup } from "@/types/membership";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { useActionMutation } from "@/lib/api/actions";
 import { useRevalidateGoalProgress } from "@/lib/api/goal-progress";
@@ -181,25 +182,26 @@ function useReviewWindow(
 interface ActionCrudParams {
   userId: Id;
   coachingSessionId: Id;
-  refusedNameOf: RefusedNameOf;
+  nameOf: NameLookup;
 }
 
 /** Provides create, update-field, and delete-with-undo handlers. */
 function useActionCrud(
-  { userId, coachingSessionId, refusedNameOf }: ActionCrudParams,
+  { userId, coachingSessionId, nameOf }: ActionCrudParams,
   sessionActions: Action[],
   allRelationshipActions: Action[],
   refresh: () => void
 ) {
   const { create, update, delete: deleteAction } = useActionMutation();
-  const announceRefusal = useMembershipRefusal();
+  const showNotAMember = useNotAMemberToast();
 
   const fail = useCallback(
     (err: unknown, verb: string) => {
-      if (announceRefusal(err, RefusedWrite.Assign, refusedNameOf)) return;
+      const notAMember = notAMemberRefusalOf(err);
+      if (notAMember.some) return showNotAMember(notAMember.val, AddBackPurpose.AssignActions, nameOf);
       sonnerToast.error(actionErrorMessage(verb, err));
     },
-    [announceRefusal, refusedNameOf]
+    [showNotAMember, nameOf]
   );
 
   const updateField = useCallback(
@@ -338,7 +340,7 @@ interface UsePanelActionsParams {
   coachingRelationshipId: Id;
   /** May be undefined while the session is still loading from SWR */
   sessionDate: string | undefined;
-  refusedNameOf: RefusedNameOf;
+  nameOf: NameLookup;
 }
 
 export function usePanelActions(params: UsePanelActionsParams) {
