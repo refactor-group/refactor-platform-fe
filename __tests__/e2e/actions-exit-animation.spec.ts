@@ -26,6 +26,8 @@ const ENRICHED_SESSION = {
     organization_id: 'org-1',
     created_at: '2026-02-01T00:00:00Z',
     updated_at: '2026-02-01T00:00:00Z',
+    coach_is_member: true,
+    coachee_is_member: true,
   },
   coach: {
     id: 'coach-1',
