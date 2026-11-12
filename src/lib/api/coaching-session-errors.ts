@@ -49,7 +49,7 @@ function toastMessage(error: EntityApiError, write: SessionWrite): string {
   return `Couldn't ${verb(write)} the session · Try again`;
 }
 
-/** A 409 refusing to delete sessions that hold notes, actions or agreements. */
+/** A 409 refusing a delete or series reschedule because sessions hold notes, actions or agreements. */
 export function hasSessionContent(error: unknown): boolean {
   const reason = conflictReasonOf(error);
   return reason.some && reason.val === "sessions_have_content";
