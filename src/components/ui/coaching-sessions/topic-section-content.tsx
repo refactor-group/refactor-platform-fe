@@ -234,21 +234,21 @@ const TopicRow = memo(function TopicRow({
             onChange={(s) => onStatus(topic.id, s)}
           />
 
-          <div className="ml-auto flex shrink-0 items-center gap-0.5">
-            {!readOnly && onInsertToNotes && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-menu"
-                aria-label="Insert into notes"
-                title="Insert into notes at the cursor"
-                onClick={() => onInsertToNotes(topic.body)}
-                className={TOPIC_ROW_ICON}
-              >
-                <TextCursorInput aria-hidden />
-              </Button>
-            )}
+          {!readOnly && onInsertToNotes && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-menu"
+              aria-label="Insert into notes"
+              title="Insert into notes at the cursor"
+              onClick={() => onInsertToNotes(topic.body)}
+              className={TOPIC_ROW_ICON}
+            >
+              <TextCursorInput aria-hidden />
+            </Button>
+          )}
 
+          <div className="ml-auto flex shrink-0 items-center gap-0.5">
             {(isAuthor || canDeleteAny) && !readOnly && (
               <Button
                 type="button"
