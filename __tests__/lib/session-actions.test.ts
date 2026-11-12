@@ -13,12 +13,14 @@ import {
 const oneOff = createMockEnrichedSession();
 const inSeries = createMockEnrichedSession({ coaching_session_series_id: Some("series-1") });
 
-const COACH_UPCOMING = { isCoach: true, isLocked: false, hasStarted: false };
-const COACH_PAST = { isCoach: true, isLocked: true, hasStarted: true };
-const COACHEE_UPCOMING = { isCoach: false, isLocked: false, hasStarted: false };
-const COACHEE_PAST = { isCoach: false, isLocked: true, hasStarted: true };
+const COACH_UPCOMING = { isCoach: true, isLocked: false, hasStarted: false, participantLeft: false };
+const COACH_PAST = { isCoach: true, isLocked: true, hasStarted: true, participantLeft: false };
+const COACHEE_UPCOMING = { isCoach: false, isLocked: false, hasStarted: false, participantLeft: false };
+const COACHEE_PAST = { isCoach: false, isLocked: true, hasStarted: true, participantLeft: false };
 // Ended earlier today: still editable, but its invite can no longer be resent.
-const COACH_STARTED_TODAY = { isCoach: true, isLocked: false, hasStarted: true };
+const COACH_STARTED_TODAY = { isCoach: true, isLocked: false, hasStarted: true, participantLeft: false };
+// The coachee left the organization.
+const COACH_COACHEE_LEFT = { ...COACH_UPCOMING, participantLeft: true };
 
 const actions = (session = oneOff, context = COACH_UPCOMING) =>
   sessionActionsFor(session, context).map((i) => i.action);
@@ -111,5 +113,30 @@ describe("sessionRemovalFor", () => {
   it("cancels an upcoming session and removes a past one", () => {
     expect(sessionRemovalFor(false)).toBe(SessionRemoval.Cancel);
     expect(sessionRemovalFor(true)).toBe(SessionRemoval.Remove);
+  });
+});
+
+describe("sessionActionsFor when the coachee left the organization", () => {
+  const items = (session = oneOff) => sessionActionsFor(session, COACH_COACHEE_LEFT);
+
+  it("drops Reschedule and Edit series, keeping open, share and cancel", () => {
+    expect(items(inSeries).map((i) => i.action)).toEqual([
+      SessionAction.OpenSession,
+      SessionAction.ViewSeries,
+      SessionAction.ShareLink,
+      SessionAction.ResendInvite,
+      SessionAction.DeleteSession,
+      SessionAction.DeleteSeries,
+    ]);
+  });
+
+  it("keeps Resend invite in place but disabled", () => {
+    const resend = items().find((i) => i.action === SessionAction.ResendInvite);
+    expect(resend?.enabled).toBe(false);
+    expect(items().filter((i) => !i.enabled).map((i) => i.action)).toEqual([SessionAction.ResendInvite]);
+  });
+
+  it("enables every item while both are members", () => {
+    expect(sessionActionsFor(inSeries, COACH_UPCOMING).every((i) => i.enabled)).toBe(true);
   });
 });

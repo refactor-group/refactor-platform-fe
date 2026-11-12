@@ -113,3 +113,17 @@ describe("cardNoteText", () => {
     expect(cardNoteText(note)).toBe(text);
   });
 });
+
+describe("cardView participantLeft", () => {
+  const left = (coachIsMember: boolean, coacheeIsMember: boolean) => {
+    const s = session("2026-08-18T21:30:00", 0);
+    return { ...s, relationship: { ...s.relationship!, coach_is_member: coachIsMember, coachee_is_member: coacheeIsMember } };
+  };
+
+  it("flags the coachee leaving for the coach, and the coach leaving for the coachee", () => {
+    expect(cardView(left(true, false), COACH).participantLeft).toBe(true);
+    expect(cardView(left(true, false), COACHEE).participantLeft).toBe(false);
+    expect(cardView(left(false, true), COACHEE).participantLeft).toBe(true);
+    expect(cardView(left(true, true), COACH).participantLeft).toBe(false);
+  });
+});

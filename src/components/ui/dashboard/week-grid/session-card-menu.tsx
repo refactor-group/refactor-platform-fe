@@ -9,6 +9,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { cn } from "@/components/lib/utils";
+import { departedReason } from "@/components/ui/coaching-sessions/departed-members-context";
 import {
   isDestructive,
   sessionActionIcon,
@@ -52,6 +53,7 @@ export function SessionCardMenu({ view, onAction, children }: SessionCardMenuPro
     isCoach: view.canManage,
     isLocked: !view.editable,
     hasStarted: view.started,
+    participantLeft: view.participantLeft,
   };
   const items = sessionActionsFor(view.session, context);
   // A closing menu still sees outside pointerdowns while it fades out; those clicks are real.
@@ -71,6 +73,14 @@ export function SessionCardMenu({ view, onAction, children }: SessionCardMenuPro
             />
           </Fragment>
         ))}
+        {view.participantLeft && (
+          <>
+            <ContextMenuSeparator />
+            <p className="max-w-56 px-2 py-1.5 text-xs text-muted-foreground">
+              {departedReason(view.name)}
+            </p>
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -88,6 +98,7 @@ function SessionCardMenuItem({
   return (
     <ContextMenuItem
       onSelect={onSelect}
+      disabled={!item.enabled}
       data-testid={sessionActionTestId(item.action)}
       className={cn(isDestructive(item.group) && DESTRUCTIVE_ITEM_CLASS)}
     >

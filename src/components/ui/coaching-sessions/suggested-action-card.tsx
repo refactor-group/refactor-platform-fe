@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { Check, Copy, FileText, Lock, Sparkles } from "lucide-react";
 import type { DateTime } from "ts-luxon";
 import { Button } from "@/components/ui/button";
+import { useDepartedMembers } from "@/components/ui/coaching-sessions/departed-members-context";
 import {
   Tooltip,
   TooltipContent,
@@ -91,7 +92,19 @@ function SuggestionView({
 }: SuggestedActionCardProps & { onEdit: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const { proposal, quote, segment, duplicate_of: duplicateOf } = suggestion;
-  const assigneeIds = proposal.assignee_ids ?? [];
+  const assigneeIds = assignableOf(proposal.assignee_ids, useDepartedMembers());
+  // Accepting as proposed would assign someone who left, so accept without them.
+  const acceptProposal = (accept: NonNullable<typeof onAccept>) => () =>
+    accept(
+      assigneeIds.length === (proposal.assignee_ids ?? []).length
+        ? None
+        : Some({
+            body: proposal.body ?? "",
+            due_by: proposal.due_by,
+            assignee_ids: assigneeIds,
+            goal_id: proposal.goal_id,
+          })
+    );
   const mayAct = mayActOnSuggestion(
     viewerRole,
     { coachId, coacheeId },
@@ -175,7 +188,7 @@ function SuggestionView({
             body={duplicateOf.val.body}
             pending={pending}
             onShowAction={showAction}
-            onAddAnyway={run(onAccept && (() => onAccept(None)))}
+            onAddAnyway={run(onAccept && acceptProposal(onAccept))}
             onKeepExisting={run(onDismiss)}
             onCancel={() => setConfirming(false)}
           />
@@ -185,7 +198,7 @@ function SuggestionView({
               size="sm"
               className={CARD_BUTTON}
               disabled={pending}
-              onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && (() => onAccept(None)))}
+              onClick={duplicateOf.some ? () => setConfirming(true) : run(onAccept && acceptProposal(onAccept))}
             >
               <Check className="!h-3 !w-3" aria-hidden />
               Accept
@@ -243,7 +256,8 @@ function SuggestionEditBack({
 }) {
   const { proposal, duplicate_of: duplicateOf } = suggestion;
   const [picked, setPicked] = useState<Option<DateTime>>(None);
-  const [assigneeIds, setAssigneeIds] = useState<Id[]>(proposal.assignee_ids ?? []);
+  const departed = useDepartedMembers();
+  const [assigneeIds, setAssigneeIds] = useState<Id[]>(() => assignableOf(proposal.assignee_ids, departed));
   const [goalId, setGoalId] = useState<Option<Id>>(proposal.goal_id);
   const [confirming, setConfirming] = useState<Option<ActionEdits>>(None);
   const { pending, run } = useInFlight();
@@ -504,4 +518,9 @@ function SuggestionDueLabel({
       </TooltipContent>
     </Tooltip>
   );
+}
+
+/** The proposed assignees still in the organization. */
+function assignableOf(ids: Id[] | undefined, departed: ReadonlySet<Id>): Id[] {
+  return (ids ?? []).filter((id) => !departed.has(id));
 }

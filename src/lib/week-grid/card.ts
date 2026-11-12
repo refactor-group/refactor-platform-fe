@@ -41,6 +41,8 @@ export interface CardView {
   canManage: boolean;
   /** Not ended, or started today: still open to reschedule, drag and Move. */
   editable: boolean;
+  /** The other participant left the organization: no reschedule, drag or Move. */
+  participantLeft: boolean;
 }
 
 export interface GridCard extends CardView {
@@ -66,6 +68,7 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
     footer: footerOf(urgency, topicCount),
     canManage: participant?.isCoach ?? false,
     editable: !sessionLocked(session, context.now, context.timezone),
+    participantLeft: participant?.participantLeft ?? false,
   };
 }
 

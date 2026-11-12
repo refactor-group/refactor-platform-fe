@@ -9,6 +9,9 @@ export interface CoachingRelationship {
   organization_id: Id;
   created_at: DateTime;
   updated_at: DateTime;
+  /** False once they leave the organization: nothing new can be scheduled with or assigned to them. */
+  coach_is_member: boolean;
+  coachee_is_member: boolean;
 }
 
 // This must always reflect the Rust struct on the backend
@@ -94,6 +97,8 @@ export function defaultCoachingRelationshipWithUserNames(): CoachingRelationship
     coachee_last_name: "",
     created_at: now,
     updated_at: now,
+    coach_is_member: true,
+    coachee_is_member: true,
   };
 }
 

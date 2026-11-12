@@ -15,7 +15,8 @@ import { DueSource, type ActionEdits, type ActionSuggestion } from "@/types/tran
 import { Some, None, type Option } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, createMockRelationship } from "../../../test-utils";
+import { DepartedMembersProvider } from "@/components/ui/coaching-sessions/departed-members-context";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 // Stand-in date picker: shows the preselected date and picks a fixed one.
@@ -189,6 +190,31 @@ describe("SuggestedActionCard actions", () => {
     ).toBeGreaterThan(0);
     await userEvent.click(coach);
     expect(coach).toHaveAttribute("aria-selected", "false");
+  });
+});
+
+describe("SuggestedActionCard when a proposed assignee left the organization", () => {
+  it("accepts without them", async () => {
+    const onAccept = vi.fn().mockResolvedValue(undefined);
+    render(
+      <Wrapper>
+        <DepartedMembersProvider
+          relationship={createMockRelationship({ coach_id: COACH_ID, coachee_id: COACHEE_ID, coachee_is_member: false })}
+        >
+          <SuggestedActionCard
+            suggestion={makeSuggestion({ assignees: [COACH_ID, COACHEE_ID] })}
+            viewerRole={RelationshipRole.Coach}
+            {...people}
+            onAccept={onAccept}
+          />
+        </DepartedMembersProvider>
+      </Wrapper>
+    );
+
+    await userEvent.click(screen.getByRole("button", ACCEPT));
+
+    const sent: Option<ActionEdits> = onAccept.mock.calls[0][0];
+    expect(sent.some && sent.val.assignee_ids).toEqual([COACH_ID]);
   });
 });
 

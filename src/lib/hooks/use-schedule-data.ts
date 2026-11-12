@@ -86,7 +86,11 @@ export function useScheduleData(range: BusyRange): ScheduleData {
   const { currentOrganizationId } = useCurrentOrganization();
   const relationships = useCoachingRelationshipList(currentOrganizationId);
   const relationshipList = relationships.relationships;
-  const entries = useMemo(() => schedulablePeople(userId, relationshipList), [userId, relationshipList]);
+  // Coachees who left the organization can't be scheduled with.
+  const entries = useMemo(
+    () => schedulablePeople(userId, relationshipList.filter((r) => r.coachee_is_member)),
+    [userId, relationshipList]
+  );
 
   const activity = useNearestEachCoachingSessions(
     entries.length > 0

@@ -148,7 +148,12 @@ export function useNewSessionDialog(
   const other = clash.some ? data.busySource.find((s) => s.id === clash.val.session.id) : undefined;
   // Moving one of several overlapped sessions wouldn't clear the time, so several can only be kept.
   const several = clash.some && clash.val.others.length > 0;
-  const movable = !several && other !== undefined && other.relationship?.coach_id === data.userId;
+  // Only the viewer's own session can move, and not once its coachee has left the organization.
+  const movable =
+    !several &&
+    other?.relationship !== undefined &&
+    other.relationship.coach_id === data.userId &&
+    other.relationship.coachee_is_member;
   const overlap = { clash: clashSession, keepOnly: !movable, several, resolution };
 
   // A drop onto a taken slot opens on Resolve; hold it there until the busy read can find the overlap.

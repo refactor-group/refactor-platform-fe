@@ -269,6 +269,8 @@ export type SessionParticipantInfo = {
   /** True when the counterpart user object was not loaded; participantName
    *  in that case is a "(data not loaded)" placeholder, not a real name. */
   readonly isMissing: boolean;
+  /** The participant is no longer in the organization: nothing new can be scheduled with them. */
+  readonly participantLeft: boolean;
 } | null;
 
 /**
@@ -289,6 +291,7 @@ export function getSessionParticipantInfo(
   const isCoach = relationship.coach_id === userId;
   const userRole = isCoach ? RelationshipRole.Coach : RelationshipRole.Coachee;
   const participant = isCoach ? session.coachee : session.coach;
+  const participantLeft = !(isCoach ? relationship.coachee_is_member : relationship.coach_is_member);
 
   if (!participant) {
     return {
@@ -298,6 +301,7 @@ export function getSessionParticipantInfo(
       userRole,
       isCoach,
       isMissing: true,
+      participantLeft,
     };
   }
 
@@ -312,6 +316,7 @@ export function getSessionParticipantInfo(
     userRole,
     isCoach,
     isMissing: false,
+    participantLeft,
   };
 }
 

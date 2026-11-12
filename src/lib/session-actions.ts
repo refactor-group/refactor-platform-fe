@@ -29,29 +29,36 @@ export interface SessionActionContext {
   isLocked: boolean;
   /** Its start has passed: a one-off's invite can't be resent, though the session may still be edited today. */
   hasStarted: boolean;
+  /** The other participant left the organization: nothing can be rescheduled or resent. */
+  participantLeft: boolean;
 }
 
 export interface SessionActionItem {
   action: SessionAction;
   group: SessionActionGroup;
+  enabled: boolean;
 }
 
 interface SessionActionRule {
   action: SessionAction;
   group: SessionActionGroup;
   shown: (session: EnrichedCoachingSession, context: SessionActionContext) => boolean;
+  /** Shown but unavailable. Defaults to always enabled. */
+  enabled?: (context: SessionActionContext) => boolean;
 }
 
 const inSeries = (session: EnrichedCoachingSession) => session.coaching_session_series_id.some;
 
 const coachUpcoming = (c: SessionActionContext) => c.isCoach && !c.isLocked;
 
+const coachCanSchedule = (c: SessionActionContext) => coachUpcoming(c) && !c.participantLeft;
+
 const RULES: SessionActionRule[] = [
   { action: SessionAction.OpenSession, group: SessionActionGroup.Navigate, shown: () => true },
   {
     action: SessionAction.Reschedule,
     group: SessionActionGroup.Schedule,
-    shown: (_s, c) => coachUpcoming(c),
+    shown: (_s, c) => coachCanSchedule(c),
   },
   {
     action: SessionAction.ViewSeries,
@@ -61,7 +68,7 @@ const RULES: SessionActionRule[] = [
   {
     action: SessionAction.EditSeries,
     group: SessionActionGroup.Schedule,
-    shown: (s, c) => inSeries(s) && coachUpcoming(c),
+    shown: (s, c) => inSeries(s) && coachCanSchedule(c),
   },
   {
     action: SessionAction.ShareLink,
@@ -73,6 +80,8 @@ const RULES: SessionActionRule[] = [
     group: SessionActionGroup.Share,
     // The series resend covers its later sessions; a one-off has none once it starts.
     shown: (s, c) => coachUpcoming(c) && (inSeries(s) || !c.hasStarted),
+    // Kept in place, disabled, so the note beside it explains why.
+    enabled: (c) => !c.participantLeft,
   },
   {
     action: SessionAction.DeleteSession,
@@ -90,9 +99,10 @@ export function sessionActionsFor(
   session: EnrichedCoachingSession,
   context: SessionActionContext
 ): SessionActionItem[] {
-  return RULES.filter((rule) => rule.shown(session, context)).map(({ action, group }) => ({
+  return RULES.filter((rule) => rule.shown(session, context)).map(({ action, group, enabled }) => ({
     action,
     group,
+    enabled: enabled ? enabled(context) : true,
   }));
 }
 

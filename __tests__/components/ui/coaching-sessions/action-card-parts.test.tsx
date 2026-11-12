@@ -7,7 +7,8 @@ import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
 import { AssigneePickerPopover, DueDatePicker } from "@/components/ui/coaching-sessions/action-card-parts";
 import { DateTime } from "ts-luxon";
 import { GoalPill } from "@/components/ui/goal-pill";
-import { createMockGoal } from "../../../test-utils";
+import { createMockGoal, createMockRelationship } from "../../../test-utils";
+import { DepartedMembersProvider } from "@/components/ui/coaching-sessions/departed-members-context";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
@@ -200,6 +201,50 @@ describe("AssigneePickerPopover", () => {
     expect(screen.getByText("Only your coach can assign an action to themselves.")).toBeInTheDocument();
     await userEvent.click(jim);
     expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  describe("with a participant who left the organization", () => {
+    const relationship = createMockRelationship({
+      coach_id: "coach-1",
+      coachee_id: "coachee-1",
+      coachee_is_member: false,
+    });
+
+    function renderLeft(assigneeIds: string[]) {
+      const onToggle = vi.fn();
+      render(
+        <Wrapper>
+          <DepartedMembersProvider relationship={relationship}>
+            <AssigneePickerPopover
+              allAssignees={PEOPLE}
+              resolvedAssignees={PEOPLE.filter((p) => assigneeIds.includes(p.id))}
+              assigneeIds={assigneeIds}
+              onToggle={onToggle}
+            />
+          </DepartedMembersProvider>
+        </Wrapper>
+      );
+      return onToggle;
+    }
+
+    it("can't newly assign them, and says why", async () => {
+      const onToggle = renderLeft(["coach-1"]);
+      await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
+
+      const caleb = screen.getByRole("option", { name: /Caleb Bourg/ });
+      expect(caleb).toHaveAttribute("aria-disabled", "true");
+      expect(screen.getByText("Caleb Bourg is no longer in this organization")).toBeInTheDocument();
+      await userEvent.click(caleb);
+      expect(onToggle).not.toHaveBeenCalled();
+    });
+
+    it("can still unassign them", async () => {
+      const onToggle = renderLeft(["coachee-1"]);
+      await userEvent.click(screen.getByRole("button", { name: "Assignees" }));
+
+      await userEvent.click(screen.getByRole("option", { name: /Caleb Bourg/ }));
+      expect(onToggle).toHaveBeenCalledWith("coachee-1");
+    });
   });
 });
 

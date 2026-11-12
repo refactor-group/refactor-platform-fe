@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast as sonnerToast } from "@/lib/toast";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
+import { DepartedMembersProvider } from "@/components/ui/coaching-sessions/departed-members-context";
 import { CompactGoalCard } from "@/components/ui/coaching-sessions/goal-card-compact";
 import { GoalBrowseView } from "@/components/ui/coaching-sessions/goal-browse-view";
 import { GoalCreateForm } from "@/components/ui/coaching-sessions/goal-create-form";
@@ -1212,13 +1213,13 @@ export function CoachingSessionPanel({
   };
 
   return (
-    <>
+    <DepartedMembersProvider relationship={currentCoachingRelationship ?? undefined}>
       <CoachingSessionPanelDesktop
         {...sharedProps}
         collapsed={collapsed}
         onToggleCollapsed={onToggleCollapsed}
       />
       <CoachingSessionPanelMobile {...sharedProps} />
-    </>
+    </DepartedMembersProvider>
   );
 }
