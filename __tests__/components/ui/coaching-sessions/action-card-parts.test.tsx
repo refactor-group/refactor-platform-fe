@@ -7,8 +7,8 @@ import { GoalPickerPopover } from "@/components/ui/goal-picker-popover";
 import { AssigneePickerPopover, DueDatePicker } from "@/components/ui/coaching-sessions/action-card-parts";
 import { DateTime } from "ts-luxon";
 import { GoalPill } from "@/components/ui/goal-pill";
-import { createMockGoal, createMockRelationship } from "../../../test-utils";
-import { DepartedMembersProvider } from "@/components/ui/coaching-sessions/departed-members-context";
+import { createMockGoal } from "../../../test-utils";
+import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
@@ -203,25 +203,19 @@ describe("AssigneePickerPopover", () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 
-  describe("with a participant who left the organization", () => {
-    const relationship = createMockRelationship({
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      coachee_is_member: false,
-    });
-
+  describe("with a participant who is no longer a member", () => {
     function renderLeft(assigneeIds: string[]) {
       const onToggle = vi.fn();
       render(
         <Wrapper>
-          <DepartedMembersProvider relationship={relationship}>
+          <NonMemberIdsProvider ids={["coachee-1"]}>
             <AssigneePickerPopover
               allAssignees={PEOPLE}
               resolvedAssignees={PEOPLE.filter((p) => assigneeIds.includes(p.id))}
               assigneeIds={assigneeIds}
               onToggle={onToggle}
             />
-          </DepartedMembersProvider>
+          </NonMemberIdsProvider>
         </Wrapper>
       );
       return onToggle;

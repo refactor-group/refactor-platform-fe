@@ -22,10 +22,8 @@ import {
   PICKER_ROW,
 } from "@/components/ui/card-field";
 import { Id } from "@/types/general";
-import {
-  departedReason,
-  useDepartedMembers,
-} from "@/components/ui/coaching-sessions/departed-members-context";
+import { useNonMemberIds } from "@/components/ui/coaching-sessions/non-member-ids-context";
+import { notAMemberText } from "@/lib/api/membership-errors";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
 
@@ -143,13 +141,13 @@ export function AssigneePickerPopover({
   disabled = false,
   disabledReasons = {},
 }: AssigneePickerPopoverProps) {
-  const departed = useDepartedMembers();
-  // Someone who left can still be unassigned, never newly assigned.
+  const nonMemberIds = useNonMemberIds();
+  // A non-member can still be unassigned, never newly assigned.
   const reasonsById: Partial<Record<Id, string>> = {
     ...Object.fromEntries(
       allAssignees
-        .filter((a) => departed.has(a.id) && !assigneeIds.includes(a.id))
-        .map((a) => [a.id, departedReason(a.name)])
+        .filter((a) => nonMemberIds.includes(a.id) && !assigneeIds.includes(a.id))
+        .map((a) => [a.id, notAMemberText(a.name)])
     ),
     ...disabledReasons,
   };

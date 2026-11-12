@@ -15,8 +15,8 @@ import { DueSource, type ActionEdits, type ActionSuggestion } from "@/types/tran
 import { Some, None, type Option } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
-import { createMockAction, createMockRelationship } from "../../../test-utils";
-import { DepartedMembersProvider } from "@/components/ui/coaching-sessions/departed-members-context";
+import { createMockAction } from "../../../test-utils";
+import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 // Stand-in date picker: shows the preselected date and picks a fixed one.
@@ -193,21 +193,19 @@ describe("SuggestedActionCard actions", () => {
   });
 });
 
-describe("SuggestedActionCard when a proposed assignee left the organization", () => {
+describe("SuggestedActionCard when a proposed assignee is no longer a member", () => {
   it("accepts without them", async () => {
     const onAccept = vi.fn().mockResolvedValue(undefined);
     render(
       <Wrapper>
-        <DepartedMembersProvider
-          relationship={createMockRelationship({ coach_id: COACH_ID, coachee_id: COACHEE_ID, coachee_is_member: false })}
-        >
+        <NonMemberIdsProvider ids={[COACHEE_ID]}>
           <SuggestedActionCard
             suggestion={makeSuggestion({ assignees: [COACH_ID, COACHEE_ID] })}
             viewerRole={RelationshipRole.Coach}
             {...people}
             onAccept={onAccept}
           />
-        </DepartedMembersProvider>
+        </NonMemberIdsProvider>
       </Wrapper>
     );
 

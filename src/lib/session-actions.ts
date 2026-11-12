@@ -29,8 +29,8 @@ export interface SessionActionContext {
   isLocked: boolean;
   /** Its start has passed: a one-off's invite can't be resent, though the session may still be edited today. */
   hasStarted: boolean;
-  /** The other participant left the organization: nothing can be rescheduled or resent. */
-  participantLeft: boolean;
+  /** The other participant is still in the organization; if not, nothing can be rescheduled or resent. */
+  counterpartIsMember: boolean;
 }
 
 export interface SessionActionItem {
@@ -51,7 +51,7 @@ const inSeries = (session: EnrichedCoachingSession) => session.coaching_session_
 
 const coachUpcoming = (c: SessionActionContext) => c.isCoach && !c.isLocked;
 
-const coachCanSchedule = (c: SessionActionContext) => coachUpcoming(c) && !c.participantLeft;
+const coachCanSchedule = (c: SessionActionContext) => coachUpcoming(c) && c.counterpartIsMember;
 
 const RULES: SessionActionRule[] = [
   { action: SessionAction.OpenSession, group: SessionActionGroup.Navigate, shown: () => true },
@@ -81,7 +81,7 @@ const RULES: SessionActionRule[] = [
     // The series resend covers its later sessions; a one-off has none once it starts.
     shown: (s, c) => coachUpcoming(c) && (inSeries(s) || !c.hasStarted),
     // Kept in place, disabled, so the note beside it explains why.
-    enabled: (c) => !c.participantLeft,
+    enabled: (c) => c.counterpartIsMember,
   },
   {
     action: SessionAction.DeleteSession,

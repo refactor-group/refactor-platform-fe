@@ -13,14 +13,14 @@ import {
 const oneOff = createMockEnrichedSession();
 const inSeries = createMockEnrichedSession({ coaching_session_series_id: Some("series-1") });
 
-const COACH_UPCOMING = { isCoach: true, isLocked: false, hasStarted: false, participantLeft: false };
-const COACH_PAST = { isCoach: true, isLocked: true, hasStarted: true, participantLeft: false };
-const COACHEE_UPCOMING = { isCoach: false, isLocked: false, hasStarted: false, participantLeft: false };
-const COACHEE_PAST = { isCoach: false, isLocked: true, hasStarted: true, participantLeft: false };
+const COACH_UPCOMING = { isCoach: true, isLocked: false, hasStarted: false, counterpartIsMember: true };
+const COACH_PAST = { isCoach: true, isLocked: true, hasStarted: true, counterpartIsMember: true };
+const COACHEE_UPCOMING = { isCoach: false, isLocked: false, hasStarted: false, counterpartIsMember: true };
+const COACHEE_PAST = { isCoach: false, isLocked: true, hasStarted: true, counterpartIsMember: true };
 // Ended earlier today: still editable, but its invite can no longer be resent.
-const COACH_STARTED_TODAY = { isCoach: true, isLocked: false, hasStarted: true, participantLeft: false };
-// The coachee left the organization.
-const COACH_COACHEE_LEFT = { ...COACH_UPCOMING, participantLeft: true };
+const COACH_STARTED_TODAY = { isCoach: true, isLocked: false, hasStarted: true, counterpartIsMember: true };
+// The coachee is no longer a member of the organization.
+const COACH_COACHEE_NOT_MEMBER = { ...COACH_UPCOMING, counterpartIsMember: false };
 
 const actions = (session = oneOff, context = COACH_UPCOMING) =>
   sessionActionsFor(session, context).map((i) => i.action);
@@ -116,8 +116,8 @@ describe("sessionRemovalFor", () => {
   });
 });
 
-describe("sessionActionsFor when the coachee left the organization", () => {
-  const items = (session = oneOff) => sessionActionsFor(session, COACH_COACHEE_LEFT);
+describe("sessionActionsFor when the coachee is no longer a member", () => {
+  const items = (session = oneOff) => sessionActionsFor(session, COACH_COACHEE_NOT_MEMBER);
 
   it("drops Reschedule and Edit series, keeping open, share and cancel", () => {
     expect(items(inSeries).map((i) => i.action)).toEqual([

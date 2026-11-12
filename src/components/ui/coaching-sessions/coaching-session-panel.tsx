@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/components/lib/utils";
 import { toast as sonnerToast } from "@/lib/toast";
 import { useEditorCache } from "@/components/ui/coaching-sessions/editor-cache-context";
-import { DepartedMembersProvider } from "@/components/ui/coaching-sessions/departed-members-context";
+import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 import { CompactGoalCard } from "@/components/ui/coaching-sessions/goal-card-compact";
 import { GoalBrowseView } from "@/components/ui/coaching-sessions/goal-browse-view";
 import { GoalCreateForm } from "@/components/ui/coaching-sessions/goal-create-form";
@@ -43,6 +43,7 @@ import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getCoachName, getCoacheeName, participantNameOf } from "@/lib/utils/relationship";
 import { noName } from "@/types/membership";
+import { nonMemberIdsOf } from "@/types/coaching-relationship";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
@@ -1213,13 +1214,13 @@ export function CoachingSessionPanel({
   };
 
   return (
-    <DepartedMembersProvider relationship={currentCoachingRelationship ?? undefined}>
+    <NonMemberIdsProvider ids={currentCoachingRelationship ? nonMemberIdsOf(currentCoachingRelationship) : []}>
       <CoachingSessionPanelDesktop
         {...sharedProps}
         collapsed={collapsed}
         onToggleCollapsed={onToggleCollapsed}
       />
       <CoachingSessionPanelMobile {...sharedProps} />
-    </DepartedMembersProvider>
+    </NonMemberIdsProvider>
   );
 }

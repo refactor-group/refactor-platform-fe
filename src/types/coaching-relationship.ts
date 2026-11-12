@@ -219,3 +219,15 @@ export function sortRelationshipsByParticipantName(
     getOtherPersonName(a, userId).localeCompare(getOtherPersonName(b, userId))
   );
 }
+
+/** Whether a participant of the relationship is still a member of its organization. */
+export function isMember(relationship: CoachingRelationship, userId: Id): boolean {
+  if (userId === relationship.coach_id) return relationship.coach_is_member;
+  if (userId === relationship.coachee_id) return relationship.coachee_is_member;
+  return false;
+}
+
+/** The participants no longer in the organization: they keep existing assignments but can't be newly assigned. */
+export function nonMemberIdsOf(relationship: CoachingRelationship): Id[] {
+  return [relationship.coach_id, relationship.coachee_id].filter((id) => !isMember(relationship, id));
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
+import { isMember, nonMemberIdsOf, sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
 import { createMockRelationship } from "../test-utils";
 
 describe("sortRelationshipsByParticipantName", () => {
@@ -102,3 +102,17 @@ describe("sortRelationshipsByParticipantName", () => {
   });
 });
 
+describe("isMember / nonMemberIdsOf", () => {
+  const rel = createMockRelationship({ coach_id: "c", coachee_id: "e", coachee_is_member: false });
+
+  it("reads each participant's membership", () => {
+    expect(isMember(rel, "c")).toBe(true);
+    expect(isMember(rel, "e")).toBe(false);
+    expect(isMember(rel, "someone-else")).toBe(false);
+  });
+
+  it("lists the participants who are no longer members", () => {
+    expect(nonMemberIdsOf(rel)).toEqual(["e"]);
+    expect(nonMemberIdsOf(createMockRelationship())).toEqual([]);
+  });
+});
