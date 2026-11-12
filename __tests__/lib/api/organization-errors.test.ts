@@ -7,6 +7,7 @@ import {
   organizationNameInvalidMessage,
   validateOrganizationName,
   ORGANIZATION_NAME_MAX_LENGTH,
+  coachingHistoryMessage,
 } from "@/lib/api/organization-errors";
 
 function apiError(status: number, data: unknown): EntityApiError {
@@ -132,5 +133,22 @@ describe("validateOrganizationName", () => {
   it("trims before measuring length", () => {
     const padded = `  ${"a".repeat(ORGANIZATION_NAME_MAX_LENGTH)}  `;
     expect(validateOrganizationName(padded)).toBeNull();
+  });
+});
+
+describe("coachingHistoryMessage", () => {
+  it("matches the 409 refusing to delete a member with coaching sessions", () => {
+    const err = apiError(409, {
+      error: "conflict",
+      details: { reason: "user_has_coaching_history", user_id: "u-1", relationship_count: 2 },
+    });
+    expect(coachingHistoryMessage(err, "Ada Lovelace")).toBe(
+      "Ada Lovelace has coaching history · Remove them from this organization instead"
+    );
+  });
+
+  it("ignores other conflicts", () => {
+    expect(coachingHistoryMessage(apiError(409, { error: "user_belongs_to_multiple_organizations" }), "Ada")).toBeNull();
+    expect(coachingHistoryMessage(new Error("boom"), "Ada")).toBeNull();
   });
 });
