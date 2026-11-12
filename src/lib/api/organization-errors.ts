@@ -1,4 +1,4 @@
-import { EntityApiError } from "@/types/entity-api-error";
+import { EntityApiError, conflictReasonOf } from "@/types/entity-api-error";
 
 /**
  * Structured 409 discriminators the backend returns for organization writes
@@ -72,6 +72,14 @@ export const userBelongsToMultipleOrganizationsMessage = (
     "user_belongs_to_multiple_organizations",
     "They belong to other organizations · Remove them from this one instead"
   );
+
+/** A member with coaching sessions can't be deleted, only removed from the organization. */
+export const coachingHistoryMessage = (error: unknown, name: string): string | null => {
+  const reason = conflictReasonOf(error);
+  return reason.some && reason.val === "user_has_coaching_history"
+    ? `${name} has coaching history · Remove them from this organization instead`
+    : null;
+};
 
 /** Longest organization name the backend accepts (characters, trimmed). */
 export const ORGANIZATION_NAME_MAX_LENGTH = 255;
