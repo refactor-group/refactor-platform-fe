@@ -32,7 +32,7 @@ describe("DeleteSeriesDialog", () => {
     renderDialog();
     const dialog = screen.getByRole("alertdialog", { name: "Cancel this recurring series?" });
     expect(dialog).toHaveTextContent("weekly series with Caleb Bourg from today onward");
-    expect(dialog).toHaveTextContent(/notes and actions/);
+    expect(dialog).not.toHaveTextContent(/notes and actions/);
     expect(dialog).toHaveTextContent("can't be undone");
     expect(dialog).not.toHaveTextContent(/delet/i);
     expect(screen.getByText("Caleb Bourg")).toBeInTheDocument();

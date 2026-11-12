@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionAction, SessionRemoval } from "@/lib/session-actions";
 import { useSessionActions, type UseSessionActionsInput } from "@/components/ui/dashboard/use-session-actions";
+import { EntityApiError } from "@/types/entity-api-error";
 import { createMockEnrichedSession } from "../../../test-utils";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -36,7 +37,21 @@ vi.mock("@/lib/toast", () => ({
 const NOW = new Date("2026-08-18T18:00:00Z");
 const UPCOMING = createMockEnrichedSession({ id: "s-upcoming", date: "2026-08-20T15:00:00" });
 
-function renderActions() {
+const PAST = createMockEnrichedSession({ id: "s-past", date: "2026-08-10T15:00:00" });
+
+function hasContentError(): EntityApiError {
+  const axiosLike = Object.assign(new Error("Request failed"), {
+    isAxiosError: true,
+    response: {
+      status: 409,
+      statusText: "Conflict",
+      data: { details: { reason: "sessions_have_content", coaching_session_id: "s-upcoming" } },
+    },
+  });
+  return new EntityApiError("DELETE", "/coaching_sessions/s-upcoming", axiosLike);
+}
+
+function renderActions(session = UPCOMING) {
   const onSessionsChanged = vi.fn();
   const input: UseSessionActionsInput = {
     userTimezone: "America/Chicago",
@@ -44,7 +59,7 @@ function renderActions() {
     onSessionsChanged,
   };
   const hook = renderHook(() => useSessionActions(input));
-  act(() => hook.result.current.run(SessionAction.DeleteSession, UPCOMING));
+  act(() => hook.result.current.run(SessionAction.DeleteSession, session));
   return { hook, onSessionsChanged };
 }
 
@@ -87,6 +102,21 @@ describe("useSessionActions cancelling a session", () => {
     expect(toastError).toHaveBeenCalledWith("Couldn't cancel the session · Try again");
     expect(onSessionsChanged).not.toHaveBeenCalled();
     expect(hook.result.current.dialogs.deleteSession.session).toBeUndefined();
+  });
+
+  it("says why when the session has notes, actions or agreements", async () => {
+    deleteSession.mockRejectedValueOnce(hasContentError());
+    const { hook, onSessionsChanged } = renderActions();
+    await act(() => hook.result.current.dialogs.deleteSession.onConfirm());
+    expect(toastError).toHaveBeenCalledWith("Couldn't cancel the session · It has notes, actions or agreements");
+    expect(onSessionsChanged).not.toHaveBeenCalled();
+  });
+
+  it("names a past session's refusal as a removal", async () => {
+    deleteSession.mockRejectedValueOnce(hasContentError());
+    const { hook } = renderActions(PAST);
+    await act(() => hook.result.current.dialogs.deleteSession.onConfirm());
+    expect(toastError).toHaveBeenCalledWith("Couldn't remove the session · It has notes, actions or agreements");
   });
 
   it("deletes nothing when the dialog is dismissed", () => {
