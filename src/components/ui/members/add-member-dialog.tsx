@@ -46,6 +46,12 @@ import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 /// Sentinel for the "no coach" option, since Select cannot hold an empty value.
 const NO_COACH = "none";
 
+/** Values match the members page's `?addMember=` param. */
+export enum AddMemberTab {
+  Create = "create",
+  Existing = "existing",
+}
+
 interface AddMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,6 +65,7 @@ interface AddMemberDialogProps {
   /// False hides the add-existing-member tab, which has nothing to offer an
   /// admin of a single organization.
   canAddExistingMembers: boolean;
+  initialTab?: AddMemberTab;
 }
 
 export function AddMemberDialog({
@@ -69,6 +76,7 @@ export function AddMemberDialog({
   organizationMembers,
   productName,
   canAddExistingMembers,
+  initialTab = AddMemberTab.Create,
 }: AddMemberDialogProps) {
   const { currentOrganizationId, currentOrganization } =
     useCurrentOrganization();
@@ -416,15 +424,15 @@ export function AddMemberDialog({
           </DialogDescription>
         </DialogHeader>
         {canAddExisting ? (
-          <Tabs defaultValue="create" className="w-full">
+          <Tabs defaultValue={initialTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="create">Create new member</TabsTrigger>
-              <TabsTrigger value="existing">Add existing member</TabsTrigger>
+              <TabsTrigger value={AddMemberTab.Create}>Create new member</TabsTrigger>
+              <TabsTrigger value={AddMemberTab.Existing}>Add existing member</TabsTrigger>
             </TabsList>
-            <TabsContent value="create" className="mt-4">
+            <TabsContent value={AddMemberTab.Create} className="mt-4">
               {createMemberForm}
             </TabsContent>
-            <TabsContent value="existing" className="mt-4">
+            <TabsContent value={AddMemberTab.Existing} className="mt-4">
               {addExistingForm}
             </TabsContent>
           </Tabs>

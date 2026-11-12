@@ -15,6 +15,15 @@ import { MemberContainer } from "@/components/ui/members/member-container";
 import { PageContainer } from "@/components/ui/page-container";
 import { shouldDenyMembersPageAccess } from "./access-control";
 import { siteConfig } from "@/site.config";
+import { AddMemberTab } from "@/components/ui/members/add-member-dialog";
+import { None, Some, type Option } from "@/types/option";
+
+/** `?addMember=true` keeps opening the create tab, as links from the header do. */
+function addMemberTabOf(param: string | null): Option<AddMemberTab> {
+  if (param === "true") return Some(AddMemberTab.Create);
+  if (param === AddMemberTab.Existing) return Some(AddMemberTab.Existing);
+  return None;
+}
 
 export default function MembersPage({
   params,
@@ -22,9 +31,7 @@ export default function MembersPage({
   params: Promise<{ id: Id }>;
 }) {
   const searchParams = useSearchParams();
-  const [openAddMemberDialog] = useState(
-    searchParams.get("addMember") === "true"
-  );
+  const [openAddMemberDialog] = useState(() => addMemberTabOf(searchParams.get("addMember")));
 
   const organizationId = use(params).id;
   const { currentOrganizationId, setCurrentOrganizationId } = useCurrentOrganization();

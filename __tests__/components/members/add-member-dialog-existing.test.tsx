@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test-utils/msw-server";
-import { AddMemberDialog } from "@/components/ui/members/add-member-dialog";
+import { AddMemberDialog, AddMemberTab } from "@/components/ui/members/add-member-dialog";
 import { Role, type User, type UserRoleState } from "@/types/user";
 import { USER_LOOKUP_RATE_LIMITED_MESSAGE } from "@/lib/api/users";
 import { toast } from "@/lib/toast";
@@ -72,7 +72,8 @@ const GRACE = {
 function renderDialog(
   currentUserRoleState?: UserRoleState,
   organizationMembers?: User[],
-  canAddExistingMembers = true
+  canAddExistingMembers = true,
+  initialTab?: AddMemberTab
 ) {
   render(
     <AddMemberDialog
@@ -83,6 +84,7 @@ function renderDialog(
       currentUserRoleState={currentUserRoleState}
       organizationMembers={organizationMembers}
       canAddExistingMembers={canAddExistingMembers}
+      initialTab={initialTab}
     />
   );
 }
@@ -120,6 +122,20 @@ describe("AddMemberDialog – add existing member gating", () => {
     expect(
       screen.getByRole("tab", { name: "Add existing member" })
     ).toBeInTheDocument();
+  });
+});
+
+describe("AddMemberDialog – initial tab", () => {
+  it("opens on Add existing member when asked, as Add back links do", () => {
+    renderDialog(adminRole, undefined, true, AddMemberTab.Existing);
+
+    expect(screen.getByRole("tab", { name: "Add existing member" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("opens on Create new member by default", () => {
+    renderDialog(adminRole);
+
+    expect(screen.getByRole("tab", { name: "Create new member" })).toHaveAttribute("aria-selected", "true");
   });
 });
 

@@ -92,6 +92,12 @@ vi.mock('@/lib/hooks/use-sync-user-session', () => ({
   useSyncUserSession: () => {}
 }))
 
+// Reads the auth and organization stores, which most suites don't provide.
+// A no-op by default; its own suite and the wiring tests re-import the real one.
+vi.mock('@/lib/hooks/use-not-a-member-toast', () => ({
+  useNotAMemberToast: () => () => {},
+}))
+
 // Setup MSW
 // `error`, not the default `warn`: an unmatched request under `warn` is passed
 // through to the real network, so unit tests silently hit whatever is running
