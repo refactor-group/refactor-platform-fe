@@ -182,6 +182,11 @@ export function getUserRoleForOrganization(
   return orgRole?.role ?? null;
 }
 
+/** Admins and SuperAdmins manage an organization's members. */
+export function isAdminRole(role: Role | null): boolean {
+  return role === Role.Admin || role === Role.SuperAdmin;
+}
+
 /**
  * Checks if the user has administrative privileges (Admin or SuperAdmin).
  * Note: Admin has org-scoped privileges, SuperAdmin has global privileges.
@@ -189,11 +194,6 @@ export function getUserRoleForOrganization(
  * @param roleState - The user's role state from useCurrentUserRole
  * @returns true if user is Admin or SuperAdmin
  */
-/** Admins and SuperAdmins manage an organization's members. */
-export function isAdminRole(role: Role | null): boolean {
-  return role === Role.Admin || role === Role.SuperAdmin;
-}
-
 export function isAdminOrSuperAdmin(roleState: UserRoleState): boolean {
   return roleState.hasAccess && isAdminRole(roleState.role);
 }
