@@ -37,6 +37,7 @@ import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "@/lib/toast";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
+import { NotFoundError } from "@/components/ui/errors/not-found-error";
 import { EntityApiError, type Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
 import { isPastSession } from "@/types/coaching-session";
@@ -278,12 +279,22 @@ export default function CoachingSessionsPage() {
     refresh,
   ]);
 
-  // Check for 403 Forbidden error AFTER all hooks are called
-  if (isError && isError instanceof EntityApiError && isError.status === 403) {
+  // Check for 403 / 404 AFTER all hooks are called
+  if (isError instanceof EntityApiError && isError.isForbidden()) {
     return (
       <ForbiddenError
         title="Coaching Session Access Denied"
         message="You don't have permission to access this coaching session. Only the coach and coachee can view this session."
+      />
+    );
+  }
+
+  // Returning before the editor mounts also stops its collab-token retries.
+  if (isError instanceof EntityApiError && isError.isNotFound()) {
+    return (
+      <NotFoundError
+        title="Coaching Session Not Found"
+        message="This coaching session doesn't exist or was cancelled."
       />
     );
   }

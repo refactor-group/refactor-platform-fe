@@ -135,6 +135,13 @@ export class EntityApiError extends Error {
   public isForbidden(): boolean {
     return this.status === 403;
   }
+
+  /**
+   * Returns true if this error represents a not found error (404)
+   */
+  public isNotFound(): boolean {
+    return this.status === 404;
+  }
 }
 
 /**
