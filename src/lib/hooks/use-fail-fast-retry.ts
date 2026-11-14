@@ -7,9 +7,10 @@ import { httpStatusOf } from "@/types/entity-api-error";
 /**
  * Statuses no amount of retrying can fix. 403 means the caller lacks
  * permission (e.g. their organization membership was revoked mid-session);
- * 401 is already being handled by the session guard logging them out.
+ * 401 is already being handled by the session guard logging them out; 404
+ * means the resource doesn't exist.
  */
-export const TERMINAL_RETRY_STATUSES: readonly number[] = [401, 403];
+export const TERMINAL_RETRY_STATUSES: readonly number[] = [401, 403, 404];
 
 type OnErrorRetry = NonNullable<SWRConfiguration["onErrorRetry"]>;
 

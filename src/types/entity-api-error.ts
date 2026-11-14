@@ -167,6 +167,11 @@ export function isForbiddenError(error: unknown): error is EntityApiError {
   return error instanceof EntityApiError && error.isForbidden();
 }
 
+/** Type-safe check for a 404 Not Found error from an arbitrary thrown value. */
+export function isNotFoundError(error: unknown): error is EntityApiError {
+  return error instanceof EntityApiError && error.isNotFound();
+}
+
 /**
  * Extracts the HTTP status from an arbitrary thrown value. Reads
  * {@link EntityApiError.status} first, then falls back to the raw axios

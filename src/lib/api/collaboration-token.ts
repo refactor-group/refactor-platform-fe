@@ -32,7 +32,7 @@ const isTerminal = (error: EntityApiError): boolean => {
 /**
  * Same request with the backoff the provider needs on reconnect: the socket
  * often reopens before the backend is reachable again, and a single failed
- * fetch there would tear down a working editor. Terminal statuses (401/403)
+ * fetch there would tear down a working editor. Terminal statuses (401/403/404)
  * fail fast. Yields the last error once retries are exhausted.
  */
 export const fetchCollaborationTokenWithRetry = (

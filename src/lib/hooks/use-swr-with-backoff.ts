@@ -12,10 +12,8 @@ import { TERMINAL_RETRY_STATUSES } from "@/lib/hooks/use-fail-fast-retry";
 // rather than a silent runtime drift.
 type SupportedKey = string | readonly unknown[] | null;
 
-// Defaults tuned for "resource being provisioned asynchronously" cases — the
-// first caller is useCollaborationToken, where the TipTap document is created
-// lazily on first join. ~9.3s of total backoff fits inside the editor's 10s
-// sync timeout. Other callers can override per call site.
+// Defaults tuned for useCollaborationToken: ~9.3s of total backoff fits inside
+// the editor's 10s sync timeout. Other callers can override per call site.
 const DEFAULT_MAX_RETRIES = 5;
 const DEFAULT_BASE_MS = 300;
 
@@ -28,7 +26,7 @@ export interface UseSwrWithBackoffOptions<Data>
   maxRetries?: number;
   /** Base delay (ms) for exponential backoff: `baseMs * 2 ** (retryCount - 1)`. Default: 300. */
   baseMs?: number;
-  /** HTTP statuses that fail fast and skip retries. Default: [401, 403]. */
+  /** HTTP statuses that fail fast and skip retries. Default: TERMINAL_RETRY_STATUSES. */
   skipStatuses?: readonly number[];
 }
 

@@ -38,7 +38,7 @@ import ShareSessionLink from "@/components/ui/share-session-link";
 import { toast } from "@/lib/toast";
 import { ForbiddenError } from "@/components/ui/errors/forbidden-error";
 import { NotFoundError } from "@/components/ui/errors/not-found-error";
-import { EntityApiError, type Id } from "@/types/general";
+import { isForbiddenError, isNotFoundError, type Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
 import { isPastSession } from "@/types/coaching-session";
 import type { CoachingSession } from "@/types/coaching-session";
@@ -280,7 +280,7 @@ export default function CoachingSessionsPage() {
   ]);
 
   // Check for 403 / 404 AFTER all hooks are called
-  if (isError instanceof EntityApiError && isError.isForbidden()) {
+  if (isForbiddenError(isError)) {
     return (
       <ForbiddenError
         title="Coaching Session Access Denied"
@@ -290,7 +290,7 @@ export default function CoachingSessionsPage() {
   }
 
   // Returning before the editor mounts also stops its collab-token retries.
-  if (isError instanceof EntityApiError && isError.isNotFound()) {
+  if (isNotFoundError(isError)) {
     return (
       <NotFoundError
         title="Coaching Session Not Found"
