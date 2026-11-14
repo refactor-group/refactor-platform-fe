@@ -10,6 +10,7 @@ import { useCurrentRelationshipRole } from '@/lib/hooks/use-current-relationship
 import { createMockCoachingSession } from '../../factories/coaching-session.factory'
 import { Some } from '@/types/option'
 import { RelationshipRole } from '@/types/relationship-role'
+import { EntityApiError } from '@/types/entity-api-error'
 
 // Mock Next.js navigation hooks
 vi.mock('next/navigation', () => ({
@@ -733,5 +734,75 @@ describe('CoachingSessionsPage - Add from notes selection', () => {
       expect.stringContaining('panel='),
       expect.anything()
     )
+  })
+})
+
+describe('CoachingSessionsPage - session load errors', () => {
+  const sessionError = (status: number) =>
+    new EntityApiError(
+      'GET',
+      '/coaching_sessions/session-123',
+      Object.assign(new Error('Request failed'), {
+        isAxiosError: true,
+        response: { status, statusText: 'Error', data: {} },
+      })
+    )
+
+  const renderWithSessionError = (status: number) => {
+    vi.mocked(useCurrentCoachingSession).mockReturnValue({
+      currentCoachingSessionId: 'session-123',
+      currentCoachingSession: null,
+      isError: sessionError(status),
+      isLoading: false,
+      refresh: vi.fn(),
+    })
+    render(
+      <TestProviders>
+        <CoachingSessionsPage />
+      </TestProviders>
+    )
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    ;(useRouter as any).mockReturnValue({ push: vi.fn(), replace: vi.fn(), back: vi.fn() })
+    ;(useParams as any).mockReturnValue({ id: 'session-123' })
+    ;(useSearchParams as any).mockReturnValue(new URLSearchParams())
+    ;(usePathname as any).mockReturnValue('/coaching-sessions/session-123')
+    mockRoleAsCoach()
+
+    vi.mocked(useCurrentCoachingRelationship).mockReturnValue({
+      currentCoachingRelationshipId: 'rel-123',
+      setCurrentCoachingRelationshipId: vi.fn(),
+      currentCoachingRelationship: null,
+      isLoading: false,
+      isError: false,
+      currentOrganizationId: 'org-123',
+      resetCoachingRelationshipState: vi.fn(),
+      refresh: vi.fn(),
+    })
+  })
+
+  it('shows not found, not the editor, for an unknown session', () => {
+    renderWithSessionError(404)
+
+    expect(screen.getByRole('heading', { name: 'Coaching Session Not Found' })).toBeInTheDocument()
+    expect(screen.queryByText('Coaching Session Access Denied')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('join-meeting-button')).not.toBeInTheDocument()
+  })
+
+  it('shows access denied for a session the viewer cannot open', () => {
+    renderWithSessionError(403)
+
+    expect(screen.getByRole('heading', { name: 'Coaching Session Access Denied' })).toBeInTheDocument()
+    expect(screen.queryByText('Coaching Session Not Found')).not.toBeInTheDocument()
+  })
+
+  it('keeps the session page up on a retryable 503', () => {
+    renderWithSessionError(503)
+
+    expect(screen.queryByText('Coaching Session Not Found')).not.toBeInTheDocument()
+    expect(screen.queryByText('Coaching Session Access Denied')).not.toBeInTheDocument()
+    expect(screen.getByTestId('join-meeting-button')).toBeInTheDocument()
   })
 })

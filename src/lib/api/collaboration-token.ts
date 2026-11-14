@@ -32,7 +32,7 @@ const isTerminal = (error: EntityApiError): boolean => {
 /**
  * Same request with the backoff the provider needs on reconnect: the socket
  * often reopens before the backend is reachable again, and a single failed
- * fetch there would tear down a working editor. Terminal statuses (401/403)
+ * fetch there would tear down a working editor. Terminal statuses (401/403/404)
  * fail fast. Yields the last error once retries are exhausted.
  */
 export const fetchCollaborationTokenWithRetry = (
@@ -67,12 +67,9 @@ const fetcher = ([, coachingSessionId]: FetcherArgs): Promise<Jwt> =>
 /**
  * Custom hook to fetch a collaboration token for a given coaching session ID.
  *
- * On first-join of a freshly-created session, the TipTap document is being
- * created asynchronously server-side and the token endpoint may transiently
- * 404 or 5xx. `useSwrWithBackoff` defaults give ~9.3s of retries
- * (300, 600, 1.2s, 2.4s, 4.8s with exponential backoff), which sits inside
- * the editor's 10s sync timeout so the user never sees the failure state
- * while the doc is still being provisioned.
+ * `useSwrWithBackoff` defaults give ~9.3s of retries (300, 600, 1.2s, 2.4s,
+ * 4.8s with exponential backoff), inside the editor's 10s sync timeout, so a
+ * transient 5xx doesn't surface as a failure state.
  *
  * @param coachingSessionId - The ID of the coaching session.
  * @returns An object containing the token, loading state, error state, and a

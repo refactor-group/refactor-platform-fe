@@ -58,7 +58,7 @@ describe("httpStatusOf", () => {
 });
 
 describe("useFailFastRetry", () => {
-  it.each([401, 403])("stops retrying on %i", (status) => {
+  it.each([401, 403, 404])("stops retrying on %i", (status) => {
     const defaultRetry = vi.fn();
     const { result } = renderFailFastRetry(defaultRetry);
 
@@ -76,7 +76,7 @@ describe("useFailFastRetry", () => {
     expect(defaultRetry).not.toHaveBeenCalled();
   });
 
-  it.each([404, 500, 503])("delegates a retryable %i to SWR", (status) => {
+  it.each([500, 503])("delegates a retryable %i to SWR", (status) => {
     const defaultRetry = vi.fn();
     const { result } = renderFailFastRetry(defaultRetry);
 

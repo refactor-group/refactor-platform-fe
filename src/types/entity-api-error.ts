@@ -135,6 +135,13 @@ export class EntityApiError extends Error {
   public isForbidden(): boolean {
     return this.status === 403;
   }
+
+  /**
+   * Returns true if this error represents a not found error (404)
+   */
+  public isNotFound(): boolean {
+    return this.status === 404;
+  }
 }
 
 /**
@@ -158,6 +165,11 @@ export const viewPermissionDeniedMessage = (resource: string): string =>
  */
 export function isForbiddenError(error: unknown): error is EntityApiError {
   return error instanceof EntityApiError && error.isForbidden();
+}
+
+/** Type-safe check for a 404 Not Found error from an arbitrary thrown value. */
+export function isNotFoundError(error: unknown): error is EntityApiError {
+  return error instanceof EntityApiError && error.isNotFound();
 }
 
 /**

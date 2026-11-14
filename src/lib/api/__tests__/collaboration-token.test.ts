@@ -93,8 +93,8 @@ describe("useCollaborationToken", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it("surfaces isError immediately on a 403 — does not retry", async () => {
-    mockedGet.mockRejectedValue(httpError(403));
+  it.each([403, 404])("surfaces isError immediately on a %i — does not retry", async (status) => {
+    mockedGet.mockRejectedValue(httpError(status));
 
     const { result } = renderHook(() => useCollaborationToken("session-1"), {
       wrapper,
@@ -110,7 +110,7 @@ describe("useCollaborationToken", () => {
 
   it("suppresses isError during transient failures and recovers when a retry succeeds", async () => {
     mockedGet
-      .mockRejectedValueOnce(httpError(404))
+      .mockRejectedValueOnce(httpError(502))
       .mockRejectedValueOnce(httpError(503))
       .mockResolvedValueOnce(okResponse());
 
@@ -237,11 +237,11 @@ describe("fetchCollaborationTokenWithRetry", () => {
     expect(noDelay.mock.calls.map(([ms]) => ms)).toEqual([300, 600]);
   });
 
-  it("fails fast on a 401 without retrying", async () => {
-    mockedGet.mockRejectedValue(httpError(401));
+  it.each([401, 404])("fails fast on a %i without retrying", async (status) => {
+    mockedGet.mockRejectedValue(httpError(status));
 
     const result = await fetchCollaborationTokenWithRetry("session-9", noDelay);
-    expect(httpStatusOf(result._unsafeUnwrapErr())).toEqual(Some(401));
+    expect(httpStatusOf(result._unsafeUnwrapErr())).toEqual(Some(status));
     expect(mockedGet).toHaveBeenCalledTimes(1);
     expect(noDelay).not.toHaveBeenCalled();
   });
