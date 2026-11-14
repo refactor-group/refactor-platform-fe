@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { ResultAsync } from "neverthrow";
 import { siteConfig } from "@/site.config";
+import { logoutCleanupRegistry } from "@/lib/hooks/logout-cleanup-registry";
 import { EntityApi, EntityApiError } from "./entity-api";
 import {
   SearchErrorCode,
@@ -131,10 +132,69 @@ export interface UseSearchResult {
   loadMore: () => void;
 }
 
+type LoadedSearch = Extract<SearchState, { kind: "loaded" }>;
+
+interface SettledSearch {
+  query: string;
+  filtersKey: string;
+  state: Extract<SearchState, { kind: "loaded" | "error" }>;
+}
+
+// ─── Result cache ────────────────────────────────────────────────────
+// /search is rate-limited per IP, so a retyped query must not cost a request.
+
+/** After this, a repeated query refetches so edits made elsewhere show up. */
+export const SEARCH_CACHE_TTL_MS = 30_000;
+const SEARCH_CACHE_MAX_ENTRIES = 50;
+
+interface CacheEntry {
+  state: LoadedSearch;
+  storedAt: number;
+}
+
+// Insertion order doubles as recency: a read re-inserts, so the first key is the stalest.
+const resultCache = new Map<string, CacheEntry>();
+
+const cacheKey = (q: string, filtersKey: string): string => `${filtersKey}\u0000${q}`;
+
+function readCache(key: string): Option<LoadedSearch> {
+  const entry = resultCache.get(key);
+  if (entry === undefined) return None;
+  if (Date.now() - entry.storedAt > SEARCH_CACHE_TTL_MS) {
+    resultCache.delete(key);
+    return None;
+  }
+  resultCache.delete(key);
+  resultCache.set(key, entry);
+  return Some(entry.state);
+}
+
+function writeCache(key: string, state: LoadedSearch): void {
+  resultCache.delete(key);
+  resultCache.set(key, {
+    // A hit must never resurrect a spinner or a stale "Try again".
+    state: { ...state, isLoadingMore: false, loadMoreError: None },
+    storedAt: Date.now(),
+  });
+  if (resultCache.size > SEARCH_CACHE_MAX_ENTRIES) {
+    const stalest = resultCache.keys().next();
+    if (!stalest.done) resultCache.delete(stalest.value);
+  }
+}
+
+/** Forgets every cached result; runs on logout so results never cross sessions. */
+export function clearSearchCache(): void {
+  resultCache.clear();
+}
+
+logoutCleanupRegistry.register(clearSearchCache);
+
 /**
  * Debounced, cancellable keyword search. Any change to `query` or `filters`
  * resets to page one; `loadMore` appends the next keyset page. Queries the
- * backend would reject as too short resolve to `idle` without a request.
+ * backend would reject as too short resolve to `idle` without a request, and
+ * a query answered within the last `SEARCH_CACHE_TTL_MS` resolves from the
+ * cache without the debounce or a request.
  */
 export function useSearch(
   query: string,
@@ -153,7 +213,7 @@ export function useSearch(
   });
 
   const runPage = useCallback(
-    (q: string, key: string, cursor: Option<string>) => {
+    (q: string, key: string, cursor: Option<string>, previousHits: SearchHit[]) => {
       controllerRef.current?.abort();
       const controller = new AbortController();
       controllerRef.current = controller;
@@ -167,79 +227,71 @@ export function useSearch(
       SearchApi.search(params, controller.signal).match(
         (response) => {
           if (controller.signal.aborted) return;
-          setResult((prev) => {
-            const previousHits =
-              cursor.some && prev.some && prev.val.state.kind === "loaded"
-                ? prev.val.state.hits
-                : [];
-            return Some({
-              query: q,
-              filtersKey: key,
-              state: {
-                kind: "loaded",
-                query: q,
-                hits: [...previousHits, ...response.hits],
-                nextCursor: response.next_cursor,
-                isLoadingMore: false,
-                loadMoreError: None,
-              },
-            });
-          });
+          const loaded: LoadedSearch = {
+            kind: "loaded",
+            query: q,
+            hits: [...previousHits, ...response.hits],
+            nextCursor: response.next_cursor,
+            isLoadingMore: false,
+            loadMoreError: None,
+          };
+          writeCache(cacheKey(q, key), loaded);
+          setResult(Some({ query: q, filtersKey: key, state: loaded }));
         },
         (error) => {
           if (controller.signal.aborted) return;
-          setResult((prev) =>
-            cursor.some && prev.some && prev.val.state.kind === "loaded"
-              ? Some({
-                  ...prev.val,
-                  state: { ...prev.val.state, isLoadingMore: false, loadMoreError: Some(error) },
-                })
-              : Some({ query: q, filtersKey: key, state: { kind: "error", query: q, error } })
-          );
+          // A failed later page keeps what was loaded and the cursor for a retry.
+          const state: SettledSearch["state"] = cursor.some
+            ? {
+                kind: "loaded",
+                query: q,
+                hits: previousHits,
+                nextCursor: cursor,
+                isLoadingMore: false,
+                loadMoreError: Some(error),
+              }
+            : { kind: "error", query: q, error };
+          setResult(Some({ query: q, filtersKey: key, state }));
         }
       );
     },
     []
   );
 
+  const searchable = isSearchableQuery(query);
+  const isCurrent =
+    result.some && result.val.query === query && result.val.filtersKey === filtersKey;
+  const cached = searchable && !isCurrent ? readCache(cacheKey(query, filtersKey)) : None;
+
   useEffect(() => {
-    if (!isSearchableQuery(query)) {
+    if (!searchable) {
       controllerRef.current?.abort();
       return;
     }
+    // Not a dependency: a later page making the hook's own result current must not refire this.
+    if (readCache(cacheKey(query, filtersKey)).some) return;
     // Sent untrimmed: a trailing space is the backend's opt-out of prefix matching.
-    const timer = setTimeout(() => runPage(query, filtersKey, None), debounceMs);
+    const timer = setTimeout(() => runPage(query, filtersKey, None, []), debounceMs);
     return () => clearTimeout(timer);
-  }, [query, filtersKey, debounceMs, runPage]);
+  }, [searchable, query, filtersKey, debounceMs, runPage]);
 
   useEffect(() => () => controllerRef.current?.abort(), []);
 
-  const isCurrent =
-    result.some && result.val.query === query && result.val.filtersKey === filtersKey;
-
-  const state: SearchState = !isSearchableQuery(query)
+  const state: SearchState = !searchable
     ? { kind: "idle" }
     : isCurrent
       ? result.val.state
-      : { kind: "loading", query };
+      : cached.some
+        ? cached.val
+        : { kind: "loading", query };
 
-  const loadMore = useCallback(() => {
-    if (!isCurrent) return;
-    const current = result.val.state;
-    if (current.kind !== "loaded" || current.isLoadingMore || current.nextCursor.none) {
-      return;
-    }
+  const loadMore = () => {
+    if (state.kind !== "loaded" || state.isLoadingMore || state.nextCursor.none) return;
     setResult(
-      Some({ ...result.val, state: { ...current, isLoadingMore: true, loadMoreError: None } })
+      Some({ query, filtersKey, state: { ...state, isLoadingMore: true, loadMoreError: None } })
     );
-    runPage(current.query, filtersKey, Some(current.nextCursor.val));
-  }, [isCurrent, result, filtersKey, runPage]);
+    runPage(query, filtersKey, Some(state.nextCursor.val), state.hits);
+  };
 
   return { state, loadMore };
-}
-
-interface SettledSearch {
-  query: string;
-  filtersKey: string;
-  state: Extract<SearchState, { kind: "loaded" | "error" }>;
 }
