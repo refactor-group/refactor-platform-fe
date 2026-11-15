@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
-import type { PickerPerson } from "@/components/ui/new-session/person-picker";
+import type { PickerPerson } from "@/components/ui/person-picker";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import {
   CoachingSessionInclude,

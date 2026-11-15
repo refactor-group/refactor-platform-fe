@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MemberCard } from "@/components/ui/members/member-card";
 import { EntityApiError } from "@/types/entity-api-error";
 import { Role, type UserRoleState } from "@/types/user";
@@ -89,28 +89,34 @@ function renderCard(userOverrides = {}, users = undefined as unknown) {
   );
 }
 
-// Drives the "Assign Coach" flow: open the row menu, pick Assign Coach, choose a
-// member in the dialog's Select, then submit. Leaves the createRelationship
+// Drives Add relationship to make Bob Ada's coach. Leaves the createRelationship
 // rejection to the caller.
-async function submitAssignCoach(user: ReturnType<typeof userEvent.setup>) {
+async function submitAddCoach(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button")); // row actions menu (icon-only)
-  await user.click(await screen.findByText("Assign Coach")); // menu item → opens dialog
-  await user.click(screen.getByRole("combobox")); // open member Select
-  await user.click(await screen.findByText("Bob Jones")); // choose assignee
-  await user.click(screen.getByRole("button", { name: /assign as coach/i }));
+  await user.click(await screen.findByText("Add relationship…"));
+  await user.click(screen.getByRole("radio", { name: "Coachee" }));
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await user.click(screen.getByRole("button", { name: /Bob Jones/ }));
+  await user.click(screen.getByRole("button", { name: "Add relationship" }));
 }
 
 // ── Test setup ────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The dialog's phone layout, whose footer has a labelled Next button.
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+  );
   vi.spyOn(console, "error").mockImplementation(() => {});
-  vi.spyOn(console, "log").mockImplementation(() => {});
   mockAuthStore.mockReturnValue({
     isACoach: true,
     userSession: { id: "me" },
   });
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -142,7 +148,7 @@ describe("MemberCard – resend invite error handling", () => {
   });
 });
 
-describe("MemberCard – assign relationship error handling", () => {
+describe("MemberCard – add relationship error handling", () => {
   it("shows our archived copy, not the backend message, when the org is archived", async () => {
     mockCreateRelationship.mockRejectedValueOnce(
       apiError(409, {
@@ -153,7 +159,7 @@ describe("MemberCard – assign relationship error handling", () => {
     const user = userEvent.setup();
     renderCard();
 
-    await submitAssignCoach(user);
+    await submitAddCoach(user);
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
@@ -170,7 +176,7 @@ describe("MemberCard – assign relationship error handling", () => {
     const user = userEvent.setup();
     renderCard();
 
-    await submitAssignCoach(user);
+    await submitAddCoach(user);
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
@@ -179,15 +185,15 @@ describe("MemberCard – assign relationship error handling", () => {
     );
   });
 
-  it("falls back to the generic assign message for other errors", async () => {
+  it("falls back to the generic message for other errors", async () => {
     mockCreateRelationship.mockRejectedValueOnce(new Error("boom"));
     const user = userEvent.setup();
     renderCard();
 
-    await submitAssignCoach(user);
+    await submitAddCoach(user);
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith("Error assigning Coach")
+      expect(toast.error).toHaveBeenCalledWith("Couldn't add the relationship")
     );
   });
 });

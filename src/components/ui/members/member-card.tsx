@@ -19,6 +19,7 @@ import {
 import {
   MoreHorizontal,
   Send,
+  UserPlus,
   ShieldCheck,
   ShieldOff,
   Trash2,
@@ -34,21 +35,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { AuthStore } from "@/lib/stores/auth-store";
 import { Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
@@ -59,8 +45,6 @@ import {
   isAdminOrSuperAdmin,
   UserRoleState,
 } from "@/types/user";
-import { RelationshipRole, relationshipRoleLabel } from "@/types/relationship-role";
-import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import {
   lastOrganizationAdminMessage,
   organizationArchivedMessage,
@@ -69,6 +53,7 @@ import {
   coachingHistoryMessage,
 } from "@/lib/api/organization-errors";
 import { toast } from "@/lib/toast";
+import { AddRelationshipDialog } from "@/components/ui/members/add-relationship-dialog";
 
 interface MemberCardProps {
   user: User;
@@ -77,12 +62,6 @@ interface MemberCardProps {
   onRefresh: () => void;
   users: User[];
   currentUserRoleState: UserRoleState;
-}
-
-interface Member {
-  id: Id;
-  first_name: string;
-  last_name: string;
 }
 
 export function MemberCard({
@@ -147,8 +126,6 @@ export function MemberCard({
       setPendingRole(null);
     }
   };
-  const { createNested: createRelationship } =
-    useCoachingRelationshipMutation(currentOrganizationId);
 
   // Only admins and super admins can delete users (but not themselves)
   const canDeleteUser =
@@ -238,60 +215,9 @@ export function MemberCard({
   const canResendInvite =
     user.invite_status === "expired" && isAdminOrSuperAdmin(currentUserRoleState);
 
-  const handleAssignMember = (val: string) => {
-    const user = users.find((m) => m.id === val);
-    if (!user) return;
-    const member: Member = {
-      id: user.id,
-      first_name: user.first_name,
-      last_name: user.last_name,
-    };
-    setAssignedMember(member);
-  };
-
-  // Placeholder – actual UI flows will be implemented later
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [assignMode, setAssignMode] = useState<RelationshipRole>(RelationshipRole.Coach);
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const [assignedMember, setAssignedMember] = useState<Member | null>(null);
+  const [addRelationshipOpen, setAddRelationshipOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
-
-  const handleCreateCoachingRelationship = async () => {
-    if (!selectedMember || !assignedMember) return;
-
-    try {
-      if (assignMode === RelationshipRole.Coach) {
-        console.log("Assign", selectedMember.id, "as coach for", userId);
-        await createRelationship(currentOrganizationId, {
-          coach_id: assignedMember.id,
-          coachee_id: selectedMember.id,
-        });
-      } else {
-        console.log("Assign", selectedMember.id, "as coachee for", userId);
-        await createRelationship(currentOrganizationId, {
-          coach_id: selectedMember.id,
-          coachee_id: assignedMember.id,
-        });
-      }
-
-      toast.success(
-        `${assignedMember.first_name} ${assignedMember.last_name} is now ${selectedMember.first_name} ${selectedMember.last_name}'s ${assignMode}`
-      );
-      onRefresh();
-      setAssignDialogOpen(false);
-      setSelectedMember(null);
-      setAssignedMember(null);
-    } catch (error) {
-      toast.error(
-        organizationArchivedMessage(error) ??
-          (isForbiddenError(error)
-            ? PERMISSION_DENIED_MESSAGE
-            : `Error assigning ${relationshipRoleLabel(assignMode)}`)
-      );
-      console.error("Error creating coaching relationship:", error);
-    }
-  };
 
   return (
     <div className="flex items-center p-4 hover:bg-accent/50 transition-colors">
@@ -349,36 +275,9 @@ export function MemberCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {isAdminOrSuperAdmin(currentUserRoleState) && (
-              <>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setAssignMode(RelationshipRole.Coach);
-                    setAssignDialogOpen(true);
-                    setSelectedMember({
-                      id: userId,
-                      first_name: firstName,
-                      last_name: lastName,
-                    });
-                  }}
-                >
-                  Assign Coach
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    setAssignMode(RelationshipRole.Coachee);
-                    setAssignDialogOpen(true);
-                    setSelectedMember({
-                      id: userId,
-                      first_name: firstName,
-                      last_name: lastName,
-                    });
-                  }}
-                >
-                  Assign Coachee
-                </DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuItem onClick={() => setAddRelationshipOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" /> Add relationship…
+            </DropdownMenuItem>
             {/* Gated locally as well as by the menu's own admin check, so the
                 guarantee survives a restructure of this menu. */}
             {isAdminOrSuperAdmin(currentUserRoleState) &&
@@ -458,43 +357,16 @@ export function MemberCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Assign Coach/Coachee Modal */}
-      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Assign {relationshipRoleLabel(assignMode)}
-            </DialogTitle>
-            <DialogDescription>
-              Select a member to be their{" "}
-              {assignMode}
-            </DialogDescription>
-          </DialogHeader>
-          <Select
-            onValueChange={(val) => handleAssignMember(val)}
-            value={assignedMember?.id?.toString()}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a member" />
-            </SelectTrigger>
-            <SelectContent>
-              {users
-                .filter((m) => m.id !== userId)
-                .map((m) => (
-                  <SelectItem
-                    key={m.id}
-                    value={m.id.toString()}
-                  >{`${m.first_name} ${m.last_name}`}</SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-          <DialogFooter>
-            <Button onClick={handleCreateCoachingRelationship}>
-              Assign as {relationshipRoleLabel(assignMode)}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {addRelationshipOpen && (
+        <AddRelationshipDialog
+          organizationId={currentOrganizationId}
+          member={user}
+          members={users}
+          relationships={userRelationships}
+          onClose={() => setAddRelationshipOpen(false)}
+          onAdded={onRefresh}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { PersonPicker } from "@/components/ui/new-session/person-picker";
+import { PersonPicker } from "@/components/ui/person-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { WhoModel } from "@/lib/new-session-dialog-model";
 
