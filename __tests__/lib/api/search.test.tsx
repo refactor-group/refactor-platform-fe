@@ -4,11 +4,14 @@ import { AxiosError, type AxiosRequestConfig } from "axios";
 import { EntityApi } from "@/lib/api/entity-api";
 import { EntityApiError } from "@/types/entity-api-error";
 import {
+  SEARCH_CACHE_TTL_MS,
   SearchApi,
   buildSearchQuery,
+  clearSearchCache,
   toSearchError,
   useSearch,
 } from "@/lib/api/search";
+import { logoutCleanupRegistry } from "@/lib/hooks/logout-cleanup-registry";
 import { SearchErrorCode, SearchableType } from "@/types/search";
 import { Some } from "@/types/option";
 
@@ -20,6 +23,15 @@ vi.mock("@/lib/api/entity-api", async (importOriginal) => {
 vi.mock("@/site.config", () => ({
   siteConfig: { env: { backendServiceURL: "http://localhost:3000" } },
 }));
+
+const auth = vi.hoisted(() => ({ isLoggedIn: true }));
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: (selector: (state: { isLoggedIn: boolean }) => unknown) =>
+    selector({ isLoggedIn: auth.isLoggedIn }),
+}));
+beforeEach(() => {
+  auth.isLoggedIn = true;
+});
 
 const goalHit = (id: string) => ({
   type: "goal",
@@ -115,6 +127,7 @@ describe("useSearch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    clearSearchCache();
   });
   afterEach(() => vi.useRealTimers());
 
@@ -258,5 +271,279 @@ describe("useSearch", () => {
       await vi.runAllTimersAsync();
     });
     expect(vi.mocked(EntityApi.getFn).mock.calls[1][0]).toContain("types=actions");
+  });
+});
+
+describe("useSearch result cache", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-14T12:00:00Z"));
+    clearSearchCache();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  /** Searches `q` to completion so later hooks can hit the cache. */
+  async function warm(q: string, filters = {}) {
+    const hook = renderHook(() => useSearch(q, filters, 250));
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    return hook;
+  }
+
+  it("a repeated query renders from the cache with no debounce and no request", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [goalHit("g1")], next_cursor: null });
+    const { unmount } = await warm("plan");
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
+    unmount();
+
+    const { result } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toMatchObject({ kind: "loaded", hits: [{ id: "g1" }] });
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("backspacing and retyping does not refetch the earlier query", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [goalHit("g1")], next_cursor: null });
+    const { result, rerender } = renderHook(({ q }) => useSearch(q, {}, 250), {
+      initialProps: { q: "plan" },
+    });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    rerender({ q: "pla" });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
+
+    rerender({ q: "plan" });
+    expect(result.current.state).toMatchObject({ kind: "loaded", query: "plan" });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("an expired entry refetches", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [], next_cursor: null });
+    const { unmount } = await warm("plan");
+    unmount();
+
+    act(() => vi.advanceTimersByTime(SEARCH_CACHE_TTL_MS + 1));
+    const { result } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toEqual({ kind: "loading", query: "plan" });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("a displayed hit survives its entry expiring while the hook stays mounted", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [goalHit("g1")], next_cursor: null });
+    const { unmount } = await warm("plan");
+    unmount();
+
+    const { result, rerender } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toMatchObject({ kind: "loaded", hits: [{ id: "g1" }] });
+
+    // Blur or focus re-renders the field after the TTL without changing the query.
+    act(() => vi.advanceTimersByTime(SEARCH_CACHE_TTL_MS + 1));
+    rerender();
+    expect(result.current.state).toMatchObject({ kind: "loaded", hits: [{ id: "g1" }] });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("a cache hit aborts the request still in flight for the previous query", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [goalHit("g1")], next_cursor: null });
+    const { unmount } = await warm("plan");
+    unmount();
+
+    vi.mocked(EntityApi.getFn).mockImplementationOnce(() => new Promise(() => {}));
+    const { result, rerender } = renderHook(({ q }) => useSearch(q, {}, 250), {
+      initialProps: { q: "pla" },
+    });
+    act(() => vi.advanceTimersByTime(250));
+    const pending = (vi.mocked(EntityApi.getFn).mock.calls[1][1] as AxiosRequestConfig).signal;
+
+    rerender({ q: "plan" });
+    expect(result.current.state).toMatchObject({ kind: "loaded", query: "plan" });
+    expect(pending?.aborted).toBe(true);
+  });
+
+  it("different filters miss, as does a trailing space", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [], next_cursor: null });
+    await warm("plan", { types: [SearchableType.Goals] });
+
+    const { result } = renderHook(() => useSearch("plan", { types: [SearchableType.Actions] }, 250));
+    expect(result.current.state).toEqual({ kind: "loading", query: "plan" });
+    const { result: spaced } = renderHook(() => useSearch("plan ", { types: [SearchableType.Goals] }, 250));
+    expect(spaced.current.state).toEqual({ kind: "loading", query: "plan " });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(3);
+  });
+
+  it("loadMore from a cached state continues from its cursor and recaches both pages", async () => {
+    vi.mocked(EntityApi.getFn)
+      .mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g1")], next_cursor: "CUR" })
+      .mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g2")], next_cursor: null });
+    const { unmount } = await warm("plan");
+    unmount();
+
+    const { result } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toMatchObject({ kind: "loaded", nextCursor: Some("CUR") });
+    act(() => result.current.loadMore());
+    expect(result.current.state).toMatchObject({ kind: "loaded", isLoadingMore: true });
+    expect(vi.mocked(EntityApi.getFn).mock.calls[1][0]).toContain("cursor=CUR");
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    if (result.current.state.kind === "loaded") {
+      expect(result.current.state.hits.map((h) => h.id)).toEqual(["g1", "g2"]);
+    }
+
+    const { result: later } = renderHook(() => useSearch("plan", {}, 250));
+    expect(later.current.state).toMatchObject({ kind: "loaded", isLoadingMore: false });
+    if (later.current.state.kind === "loaded") {
+      expect(later.current.state.hits.map((h) => h.id)).toEqual(["g1", "g2"]);
+      expect(later.current.state.nextCursor.none).toBe(true);
+    }
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("typing away and back during a page load restores the cached page instead of a stuck spinner", async () => {
+    vi.mocked(EntityApi.getFn)
+      .mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g1")], next_cursor: "CUR" })
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const { result, rerender } = renderHook(({ q }) => useSearch(q, {}, 250), {
+      initialProps: { q: "plan" },
+    });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    act(() => result.current.loadMore());
+    expect(result.current.state).toMatchObject({ kind: "loaded", isLoadingMore: true });
+    const page = (vi.mocked(EntityApi.getFn).mock.calls[1][1] as AxiosRequestConfig).signal;
+
+    rerender({ q: "plans" });
+    act(() => vi.advanceTimersByTime(100));
+    rerender({ q: "plan" });
+    expect(page?.aborted).toBe(true);
+    expect(result.current.state).toMatchObject({
+      kind: "loaded",
+      isLoadingMore: false,
+      hits: [{ id: "g1" }],
+      nextCursor: Some("CUR"),
+    });
+
+    vi.mocked(EntityApi.getFn).mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g2")], next_cursor: null });
+    act(() => result.current.loadMore());
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    if (result.current.state.kind === "loaded") {
+      expect(result.current.state.hits.map((h) => h.id)).toEqual(["g1", "g2"]);
+    }
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(3);
+  });
+
+  it("a failed later page is not written to the cache", async () => {
+    vi.mocked(EntityApi.getFn)
+      .mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g1")], next_cursor: "CUR" })
+      .mockRejectedValueOnce(httpError(503));
+    const { result, unmount } = await warm("plan");
+    act(() => result.current.loadMore());
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(result.current.state).toMatchObject({ loadMoreError: Some({ kind: "unavailable" }) });
+    unmount();
+
+    const { result: again } = renderHook(() => useSearch("plan", {}, 250));
+    expect(again.current.state).toMatchObject({
+      kind: "loaded",
+      nextCursor: Some("CUR"),
+      loadMoreError: { none: true },
+    });
+  });
+
+  it("errors are not cached", async () => {
+    vi.mocked(EntityApi.getFn).mockRejectedValue(httpError(429));
+    const { unmount } = await warm("plan");
+    unmount();
+
+    const { result } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toEqual({ kind: "loading", query: "plan" });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("logout clears the cache", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [], next_cursor: null });
+    const { unmount } = await warm("plan");
+    unmount();
+
+    await logoutCleanupRegistry.executeAll();
+    const { result } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toEqual({ kind: "loading", query: "plan" });
+  });
+
+  it("logging out aborts the in-flight search and starts no more before the header unmounts", async () => {
+    vi.mocked(EntityApi.getFn).mockImplementationOnce(() => new Promise(() => {}));
+    const { result, rerender } = renderHook(({ q }) => useSearch(q, {}, 250), {
+      initialProps: { q: "plan" },
+    });
+    act(() => vi.advanceTimersByTime(250));
+    const pending = (vi.mocked(EntityApi.getFn).mock.calls[0][1] as AxiosRequestConfig).signal;
+
+    // The auth store flips before cleanup and navigation; typing continues meanwhile.
+    auth.isLoggedIn = false;
+    rerender({ q: "plan" });
+    expect(pending?.aborted).toBe(true);
+    expect(result.current.state).toEqual({ kind: "idle" });
+
+    rerender({ q: "plans" });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("a search still in flight at logout does not refill the cache", async () => {
+    let respond: (value: unknown) => void = () => {};
+    vi.mocked(EntityApi.getFn).mockImplementationOnce(
+      () => new Promise((resolve) => { respond = resolve; })
+    );
+    const { unmount } = renderHook(() => useSearch("plan", {}, 250));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
+
+    // Cleanup runs before the session delete is awaited, so the old response lands afterwards.
+    await logoutCleanupRegistry.executeAll();
+    await act(async () => {
+      respond({ query: "plan", limit: 25, hits: [goalHit("g1")], next_cursor: null });
+    });
+    unmount();
+
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [], next_cursor: null });
+    const { result } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toEqual({ kind: "loading", query: "plan" });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
   });
 });
