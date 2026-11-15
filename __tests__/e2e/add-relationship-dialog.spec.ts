@@ -5,7 +5,7 @@ import {
   MOCK_USER_ID,
 } from './helpers'
 
-// The member row's "Add relationship…" dialog: the real StepDialog flow, the
+// The member row's "Pair with…" dialog: the real StepDialog flow, the
 // exact POST it sends, and an existing coach shown but not pickable.
 
 const ORG_ID = 'org-1'
@@ -103,20 +103,18 @@ async function mockMemberRoutes(
   return posts
 }
 
-async function openAddRelationship(page: Page, name: string): Promise<void> {
+async function openPairWith(page: Page, name: string): Promise<void> {
   await page.goto(`/organizations/${ORG_ID}/members`)
   await page
     .locator('div.flex.items-center.p-4')
     .filter({ hasText: name })
     .getByRole('button', { name: `Actions for ${name}` })
     .click()
-  await page.getByRole('menuitem', { name: 'Add relationship…' }).click()
-  await expect(
-    page.getByRole('dialog', { name: 'Add relationship' })
-  ).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Pair with…' }).click()
+  await expect(page.getByRole('dialog', { name: `Pair ${name}` })).toBeVisible()
 }
 
-test.describe('Members: add a relationship (e2e)', () => {
+test.describe('Members: pair with someone (e2e)', () => {
   test.beforeEach(async ({ page, context }) => {
     await setupAuthentication(page, context)
     await page.addInitScript((auth) => {
@@ -129,8 +127,8 @@ test.describe('Members: add a relationship (e2e)', () => {
     page,
   }) => {
     const posts = await mockMemberRoutes(page, [])
-    await openAddRelationship(page, 'Cara Test')
-    const dialog = page.getByRole('dialog', { name: 'Add relationship' })
+    await openPairWith(page, 'Cara Test')
+    const dialog = page.getByRole('dialog', { name: 'Pair Cara Test' })
 
     await dialog.getByRole('radio', { name: 'Coachee' }).click()
     await dialog.getByRole('button', { name: /^Next/ }).click()
@@ -138,7 +136,7 @@ test.describe('Members: add a relationship (e2e)', () => {
     await expect(
       dialog.getByText('Pat Coach will coach Cara Test')
     ).toBeVisible()
-    await dialog.getByRole('button', { name: 'Add relationship' }).click()
+    await dialog.getByRole('button', { name: 'Pair them' }).click()
 
     await expect.poll(() => posts.length).toBe(1)
     expect(posts[0]).toEqual({ coach_id: PAT_ID, coachee_id: CARA_ID })
@@ -152,8 +150,8 @@ test.describe('Members: add a relationship (e2e)', () => {
     page,
   }) => {
     await mockMemberRoutes(page, [PAT_COACHES_CARA])
-    await openAddRelationship(page, 'Cara Test')
-    const dialog = page.getByRole('dialog', { name: 'Add relationship' })
+    await openPairWith(page, 'Cara Test')
+    const dialog = page.getByRole('dialog', { name: 'Pair Cara Test' })
 
     await dialog.getByRole('radio', { name: 'Coachee' }).click()
     await dialog.getByRole('button', { name: /^Next/ }).click()

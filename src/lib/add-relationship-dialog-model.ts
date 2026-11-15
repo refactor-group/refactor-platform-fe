@@ -110,7 +110,7 @@ export function roleDescription(member: Member, role: MemberRole): string {
 export function stepTitle(step: AddRelationshipStep, member: Member, role: Option<MemberRole>): string {
   switch (step) {
     case AddRelationshipStep.Role:
-      return `${member.firstName}'s role`;
+      return `How ${member.firstName} fits in`;
     case AddRelationshipStep.Person:
       if (role.none) return `Who ${member.firstName} works with`;
       return role.val === RelationshipRole.Coachee
@@ -168,5 +168,5 @@ interface LeadInput {
 
 export function leadOf({ step, complete, submitting, onConfirm }: LeadInput): StepDialogLead {
   if (step !== AddRelationshipStep.Person) return { kind: "none" };
-  return { kind: "confirm", label: "Add relationship", disabled: !complete, pending: submitting, onConfirm };
+  return { kind: "confirm", label: "Pair them", disabled: !complete, pending: submitting, onConfirm };
 }

@@ -80,7 +80,7 @@ describe("selectedPartner", () => {
 
 describe("copy", () => {
   it("titles the person step from the role", () => {
-    expect(stepTitle(AddRelationshipStep.Role, CARA, None)).toBe("Cara's role");
+    expect(stepTitle(AddRelationshipStep.Role, CARA, None)).toBe("How Cara fits in");
     expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coachee))).toBe("Cara's coach");
     expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coach))).toBe("Who Cara coaches");
   });
@@ -124,7 +124,7 @@ describe("leadOf", () => {
   it("disables confirm until both choices are made", () => {
     expect(leadOf({ step: AddRelationshipStep.Person, complete: false, submitting: false, onConfirm })).toMatchObject({
       kind: "confirm",
-      label: "Add relationship",
+      label: "Pair them",
       disabled: true,
     });
   });

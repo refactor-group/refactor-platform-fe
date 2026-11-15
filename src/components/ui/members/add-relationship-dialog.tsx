@@ -32,7 +32,7 @@ function roleOf(value: string): MemberRole {
 function RoleStep({ member, role, onRoleChange }: Pick<AddRelationshipDialogModel, "member" | "role" | "onRoleChange">) {
   return (
     <RadioGroup
-      aria-label={`${member.firstName}'s role`}
+      aria-label={`How ${member.firstName} fits in`}
       value={role.some ? role.val : ""}
       onValueChange={(value) => onRoleChange(roleOf(value))}
       className="gap-2.5"
@@ -65,7 +65,7 @@ function StepBody(model: AddRelationshipDialogModel) {
 function Summary({ partner, line }: RelationshipSummary) {
   return (
     <div>
-      <p className="text-xs font-medium text-muted-foreground">Adding</p>
+      <p className="text-xs font-medium text-muted-foreground">Pairing</p>
       <div className="mt-2.5 flex items-center gap-3">
         <PersonAvatar userId={partner.userId} initials={partner.initials} size={36} />
         <p className="line-clamp-2 min-w-0 break-words text-item font-medium">{line}</p>
@@ -93,7 +93,7 @@ export function AddRelationshipDialog(props: AddRelationshipDialogProps) {
     <StepDialog
       open
       onClose={props.onClose}
-      title="Add relationship"
+      title={`Pair ${model.member.fullName}`}
       height={StepDialogHeight.Standard}
       variant={StepDialogVariant.Steps}
       railHeader={<MemberHeader {...model.member} />}

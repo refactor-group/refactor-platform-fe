@@ -276,7 +276,7 @@ export function MemberCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setAddRelationshipOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" /> Add relationship…
+              <UserPlus className="mr-2 h-4 w-4" /> Pair with…
             </DropdownMenuItem>
             {/* Gated locally as well as by the menu's own admin check, so the
                 guarantee survives a restructure of this menu. */}

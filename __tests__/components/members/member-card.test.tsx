@@ -89,15 +89,15 @@ function renderCard(userOverrides = {}, users = undefined as unknown) {
   );
 }
 
-// Drives Add relationship to make Bob Ada's coach. Leaves the createRelationship
+// Drives Pair with… to make Bob Ada's coach. Leaves the createRelationship
 // rejection to the caller.
 async function submitAddCoach(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button")); // row actions menu (icon-only)
-  await user.click(await screen.findByText("Add relationship…"));
+  await user.click(await screen.findByText("Pair with…"));
   await user.click(screen.getByRole("radio", { name: "Coachee" }));
   await user.click(screen.getByRole("button", { name: "Next" }));
   await user.click(screen.getByRole("button", { name: /Bob Jones/ }));
-  await user.click(screen.getByRole("button", { name: "Add relationship" }));
+  await user.click(screen.getByRole("button", { name: "Pair them" }));
 }
 
 // ── Test setup ────────────────────────────────────────────────────────────────

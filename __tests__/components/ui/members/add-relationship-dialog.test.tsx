@@ -36,7 +36,7 @@ function renderDialog(relationships: CoachingRelationshipWithUserNames[] = []) {
 }
 
 const next = () => fireEvent.click(screen.getByRole("button", { name: "Next" }));
-const confirm = () => screen.getByRole("button", { name: "Add relationship" });
+const confirm = () => screen.getByRole("button", { name: "Pair them" });
 
 describe("AddRelationshipDialog", () => {
   beforeEach(() => {
