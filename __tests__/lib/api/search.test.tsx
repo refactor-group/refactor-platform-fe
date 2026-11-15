@@ -334,6 +334,24 @@ describe("useSearch result cache", () => {
     expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
   });
 
+  it("a displayed hit survives its entry expiring while the hook stays mounted", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [goalHit("g1")], next_cursor: null });
+    const { unmount } = await warm("plan");
+    unmount();
+
+    const { result, rerender } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toMatchObject({ kind: "loaded", hits: [{ id: "g1" }] });
+
+    // Blur or focus re-renders the field after the TTL without changing the query.
+    act(() => vi.advanceTimersByTime(SEARCH_CACHE_TTL_MS + 1));
+    rerender();
+    expect(result.current.state).toMatchObject({ kind: "loaded", hits: [{ id: "g1" }] });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
+  });
+
   it("different filters miss, as does a trailing space", async () => {
     vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [], next_cursor: null });
     await warm("plan", { types: [SearchableType.Goals] });

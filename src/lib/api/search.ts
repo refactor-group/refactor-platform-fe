@@ -262,6 +262,8 @@ export function useSearch(
   const isCurrent =
     result.some && result.val.query === query && result.val.filtersKey === filtersKey;
   const cached = searchable && !isCurrent ? readCache(cacheKey(query, filtersKey)) : None;
+  // Adopted into state so the hit outlives its cache entry, like a fetched result would.
+  if (cached.some) setResult(Some({ query, filtersKey, state: cached.val }));
 
   useEffect(() => {
     if (!searchable) {
