@@ -436,4 +436,31 @@ describe("useSearch result cache", () => {
     const { result } = renderHook(() => useSearch("plan", {}, 250));
     expect(result.current.state).toEqual({ kind: "loading", query: "plan" });
   });
+
+  it("a search still in flight at logout does not refill the cache", async () => {
+    let respond: (value: unknown) => void = () => {};
+    vi.mocked(EntityApi.getFn).mockImplementationOnce(
+      () => new Promise((resolve) => { respond = resolve; })
+    );
+    const { unmount } = renderHook(() => useSearch("plan", {}, 250));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
+
+    // Cleanup runs before the session delete is awaited, so the old response lands afterwards.
+    await logoutCleanupRegistry.executeAll();
+    await act(async () => {
+      respond({ query: "plan", limit: 25, hits: [goalHit("g1")], next_cursor: null });
+    });
+    unmount();
+
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [], next_cursor: null });
+    const { result } = renderHook(() => useSearch("plan", {}, 250));
+    expect(result.current.state).toEqual({ kind: "loading", query: "plan" });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
+  });
 });

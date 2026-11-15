@@ -154,6 +154,8 @@ interface CacheEntry {
 
 // Insertion order doubles as recency: a read re-inserts, so the first key is the stalest.
 const resultCache = new Map<string, CacheEntry>();
+// Bumped by clearSearchCache so a search still in flight at logout cannot write afterwards.
+let cacheGeneration = 0;
 
 const cacheKey = (q: string, filtersKey: string): string => `${filtersKey}\u0000${q}`;
 
@@ -169,7 +171,8 @@ function readCache(key: string): Option<LoadedSearch> {
   return Some(entry.state);
 }
 
-function writeCache(key: string, state: LoadedSearch): void {
+function writeCache(key: string, state: LoadedSearch, generation: number): void {
+  if (generation !== cacheGeneration) return;
   resultCache.delete(key);
   resultCache.set(key, {
     // A hit must never resurrect a spinner or a stale "Try again".
@@ -182,9 +185,10 @@ function writeCache(key: string, state: LoadedSearch): void {
   }
 }
 
-/** Forgets every cached result; runs on logout so results never cross sessions. */
+/** Forgets every cached result and drops in-flight ones; runs on logout so results never cross sessions. */
 export function clearSearchCache(): void {
   resultCache.clear();
+  cacheGeneration += 1;
 }
 
 logoutCleanupRegistry.register(clearSearchCache);
@@ -217,6 +221,7 @@ export function useSearch(
       controllerRef.current?.abort();
       const controller = new AbortController();
       controllerRef.current = controller;
+      const generation = cacheGeneration;
 
       const params: SearchParams = {
         ...filtersRef.current,
@@ -235,7 +240,7 @@ export function useSearch(
             isLoadingMore: false,
             loadMoreError: None,
           };
-          writeCache(cacheKey(q, key), loaded);
+          writeCache(cacheKey(q, key), loaded, generation);
           setResult(Some({ query: q, filtersKey: key, state: loaded }));
         },
         (error) => {
