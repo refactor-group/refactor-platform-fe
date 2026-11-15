@@ -4,6 +4,7 @@ import {
   type Member,
   addedMessage,
   alreadyPaired,
+  roleDescription,
   leadOf,
   newRelationship,
   partnerChoices,
@@ -83,6 +84,15 @@ describe("copy", () => {
     expect(stepTitle(AddRelationshipStep.Role, CARA, None)).toBe("Cara's role");
     expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coachee))).toBe("Cara's coach");
     expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coach))).toBe("Who Cara coaches");
+  });
+
+  it("describes each role against the next step", () => {
+    expect(roleDescription(CARA, RelationshipRole.Coachee)).toBe(
+      "Cara is coached by the person you pair them with in the next step."
+    );
+    expect(roleDescription(CARA, RelationshipRole.Coach)).toBe(
+      "Cara coaches the person you pair them with in the next step."
+    );
   });
 
   it("says who will coach whom", () => {

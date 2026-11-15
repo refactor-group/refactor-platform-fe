@@ -103,8 +103,8 @@ export function selectedPartner(
 
 export function roleDescription(member: Member, role: MemberRole): string {
   return role === RelationshipRole.Coachee
-    ? `${member.firstName} is coached by the person you pick next.`
-    : `${member.firstName} coaches the person you pick next.`;
+    ? `${member.firstName} is coached by the person you pair them with in the next step.`
+    : `${member.firstName} coaches the person you pair them with in the next step.`;
 }
 
 export function stepTitle(step: AddRelationshipStep, member: Member, role: Option<MemberRole>): string {
