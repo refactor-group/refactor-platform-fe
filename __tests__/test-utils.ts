@@ -2,7 +2,7 @@ import { DateTime } from "ts-luxon";
 import { Action } from "@/types/action";
 import { Agreement } from "@/types/agreement";
 import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
-import { CoachingRelationshipWithUserNames } from "@/types/coaching_relationship";
+import { CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
 import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
@@ -77,6 +77,7 @@ export function createMockRelationship(
     coachee_last_name: "Bourg",
     created_at: now, // CoachingRelationship expects DateTime object
     updated_at: now,
+    kind: RelationshipKind.Coaching,
     coach_is_member: true,
     coachee_is_member: true,
     ...overrides,
@@ -139,6 +140,7 @@ export function createMockEnrichedSession(
       organization_id: "org-1",
       created_at: now,
       updated_at: now,
+      kind: RelationshipKind.Coaching,
       coach_is_member: true,
       coachee_is_member: true,
     },

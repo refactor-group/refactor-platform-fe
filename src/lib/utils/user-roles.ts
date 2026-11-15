@@ -15,6 +15,9 @@ export type DisplayRole = Role | RelationshipRole
 const ROLE_DISPLAY_NAMES: Partial<Record<DisplayRole, string>> = {
   [Role.User]: "Member",
   [Role.SuperAdmin]: "Super Admin",
+  [RelationshipRole.Coach]: "Coach",
+  [RelationshipRole.Coachee]: "Coachee",
+  [RelationshipRole.Colleague]: "Colleague",
 };
 
 /**

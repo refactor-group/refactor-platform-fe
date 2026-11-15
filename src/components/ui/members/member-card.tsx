@@ -276,7 +276,7 @@ export function MemberCard({
       }
 
       toast.success(
-        `${assignedMember.first_name} ${assignedMember.last_name} is now ${selectedMember.first_name} ${selectedMember.last_name}'s ${assignMode.toLowerCase()}`
+        `${assignedMember.first_name} ${assignedMember.last_name} is now ${selectedMember.first_name} ${selectedMember.last_name}'s ${assignMode}`
       );
       onRefresh();
       setAssignDialogOpen(false);
@@ -287,7 +287,7 @@ export function MemberCard({
         organizationArchivedMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
-            : `Error assigning ${assignMode}`)
+            : `Error assigning ${assignMode === RelationshipRole.Coach ? "Coach" : "Coachee"}`)
       );
       console.error("Error creating coaching relationship:", error);
     }
@@ -467,7 +467,7 @@ export function MemberCard({
             </DialogTitle>
             <DialogDescription>
               Select a member to be their{" "}
-              {assignMode.toLowerCase()}
+              {assignMode}
             </DialogDescription>
           </DialogHeader>
           <Select

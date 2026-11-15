@@ -1,6 +1,7 @@
 import { ALL_SPEAKERS } from "@/lib/hooks/use-speaker-filter";
 import { None, Some, type Option } from "@/types/option";
-import type { SpeakerRole, TranscriptSegment } from "@/types/transcription";
+import type { RelationshipRole } from "@/types/relationship-role";
+import type { TranscriptSegment } from "@/types/transcription";
 
 /**
  * What the download endpoint can be asked for, given the panel's selection.
@@ -9,7 +10,7 @@ import type { SpeakerRole, TranscriptSegment } from "@/types/transcription";
  */
 export type DownloadScope =
   | { kind: "all" }
-  | { kind: "role"; role: SpeakerRole; label: string }
+  | { kind: "role"; role: RelationshipRole; label: string }
   | { kind: "unmapped"; label: string };
 
 export function downloadScopeFor(

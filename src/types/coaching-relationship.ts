@@ -2,11 +2,18 @@ import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import { User } from "@/types/user";
 
+export enum RelationshipKind {
+  Coaching = "coaching",
+  Colleague = "colleague",
+}
+
 export interface CoachingRelationship {
   id: Id;
   coach_id: Id;
   coachee_id: Id;
   organization_id: Id;
+  /** Read-only: the backend ignores it on create and update. */
+  kind: RelationshipKind;
   created_at: DateTime;
   updated_at: DateTime;
   /** False once they leave the organization: nothing new can be scheduled with or assigned to them. */
@@ -93,6 +100,7 @@ export function defaultCoachingRelationshipWithUserNames(): CoachingRelationship
     coach_first_name: "",
     coach_last_name: "",
     organization_id: "",
+    kind: RelationshipKind.Coaching,
     coachee_first_name: "",
     coachee_last_name: "",
     created_at: now,

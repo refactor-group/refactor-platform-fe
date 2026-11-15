@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 
 import { None, Some } from "@/types/option";
-import { parseTranscriptSegment, SpeakerRole } from "@/types/transcription";
+import { parseTranscriptSegment } from "@/types/transcription";
+import { RelationshipRole } from "@/types/relationship-role";
 
 function wire(
   overrides: Record<string, unknown> = {},
@@ -27,7 +28,7 @@ describe("parseTranscriptSegment attribution", () => {
     const parsed = parseTranscriptSegment(wire());
 
     expect(parsed.speaker_user_id).toEqual(Some("coach-id"));
-    expect(parsed.speaker_role).toEqual(Some(SpeakerRole.Coach));
+    expect(parsed.speaker_role).toEqual(Some(RelationshipRole.Coach));
     expect(parsed.speaker_label).toBe("Jim H");
   });
 
@@ -36,7 +37,7 @@ describe("parseTranscriptSegment attribution", () => {
       wire({ speaker_user_id: "coachee-id", speaker_role: "coachee" }),
     );
 
-    expect(parsed.speaker_role).toEqual(Some(SpeakerRole.Coachee));
+    expect(parsed.speaker_role).toEqual(Some(RelationshipRole.Coachee));
   });
 
   it("maps null attribution to None for a guest", () => {
@@ -75,6 +76,6 @@ describe("parseTranscriptSegment attribution", () => {
     const parsed = parseTranscriptSegment(wire({ sentiment: "ecstatic" }));
 
     expect(parsed.sentiment).toBeUndefined();
-    expect(parsed.speaker_role).toEqual(Some(SpeakerRole.Coach));
+    expect(parsed.speaker_role).toEqual(Some(RelationshipRole.Coach));
   });
 });
