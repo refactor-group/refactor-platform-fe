@@ -32,7 +32,7 @@ function roleOf(value: string): MemberRole {
 function RoleStep({ member, role, onRoleChange }: Pick<AddRelationshipDialogModel, "member" | "role" | "onRoleChange">) {
   return (
     <RadioGroup
-      aria-label={`How ${member.firstName} fits in`}
+      aria-label={`${member.firstName}'s role`}
       value={role.some ? role.val : ""}
       onValueChange={(value) => onRoleChange(roleOf(value))}
       className="gap-2.5"

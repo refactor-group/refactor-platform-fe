@@ -80,7 +80,7 @@ describe("selectedPartner", () => {
 
 describe("copy", () => {
   it("titles the person step from the role", () => {
-    expect(stepTitle(AddRelationshipStep.Role, CARA, None)).toBe("How Cara fits in");
+    expect(stepTitle(AddRelationshipStep.Role, CARA, None)).toBe("Cara's role");
     expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coachee))).toBe("Cara's coach");
     expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coach))).toBe("Who Cara coaches");
   });

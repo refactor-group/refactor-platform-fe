@@ -110,7 +110,7 @@ export function roleDescription(member: Member, role: MemberRole): string {
 export function stepTitle(step: AddRelationshipStep, member: Member, role: Option<MemberRole>): string {
   switch (step) {
     case AddRelationshipStep.Role:
-      return `How ${member.firstName} fits in`;
+      return `${member.firstName}'s role`;
     case AddRelationshipStep.Person:
       if (role.none) return `Who ${member.firstName} works with`;
       return role.val === RelationshipRole.Coachee
