@@ -5,19 +5,16 @@ import {
   isUserCoachee,
   getRelationshipsAsCoachee,
 } from "@/types/coaching-relationship";
-import { RelationshipRole } from "@/types/relationship-role";
+import { RelationshipRole, isRelationshipRole, relationshipRoleLabel } from "@/types/relationship-role";
 import { Id } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 
 export type DisplayRole = Role | RelationshipRole
 
 /** Roles whose enum value differs from the word shown to a user; anything absent falls through. */
-const ROLE_DISPLAY_NAMES: Partial<Record<DisplayRole, string>> = {
+const ROLE_DISPLAY_NAMES: Partial<Record<Role, string>> = {
   [Role.User]: "Member",
   [Role.SuperAdmin]: "Super Admin",
-  [RelationshipRole.Coach]: "Coach",
-  [RelationshipRole.Coachee]: "Coachee",
-  [RelationshipRole.Colleague]: "Colleague",
 };
 
 /**
@@ -57,7 +54,7 @@ export function getUserDisplayRoles(
   }
 
   return Array.from(roles)
-    .map(role => ROLE_DISPLAY_NAMES[role] ?? role)
+    .map(role => isRelationshipRole(role) ? relationshipRoleLabel(role) : ROLE_DISPLAY_NAMES[role] ?? role)
     .sort();
 }
 

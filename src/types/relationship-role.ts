@@ -11,3 +11,18 @@ export enum RelationshipRole {
 export function isRelationshipRole(value: unknown): value is RelationshipRole {
   return Object.values(RelationshipRole).includes(value as RelationshipRole);
 }
+
+export function relationshipRoleLabel(role: RelationshipRole): string {
+  switch (role) {
+    case RelationshipRole.Coach:
+      return "Coach";
+    case RelationshipRole.Coachee:
+      return "Coachee";
+    case RelationshipRole.Colleague:
+      return "Colleague";
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled relationship role: ${_exhaustive}`);
+    }
+  }
+}

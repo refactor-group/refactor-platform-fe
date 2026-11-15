@@ -59,7 +59,7 @@ import {
   isAdminOrSuperAdmin,
   UserRoleState,
 } from "@/types/user";
-import { RelationshipRole } from "@/types/relationship-role";
+import { RelationshipRole, relationshipRoleLabel } from "@/types/relationship-role";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import {
   lastOrganizationAdminMessage,
@@ -287,7 +287,7 @@ export function MemberCard({
         organizationArchivedMessage(error) ??
           (isForbiddenError(error)
             ? PERMISSION_DENIED_MESSAGE
-            : `Error assigning ${assignMode === RelationshipRole.Coach ? "Coach" : "Coachee"}`)
+            : `Error assigning ${relationshipRoleLabel(assignMode)}`)
       );
       console.error("Error creating coaching relationship:", error);
     }
@@ -463,7 +463,7 @@ export function MemberCard({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {assignMode === RelationshipRole.Coach ? "Assign Coach" : "Assign Coachee"}
+              Assign {relationshipRoleLabel(assignMode)}
             </DialogTitle>
             <DialogDescription>
               Select a member to be their{" "}
@@ -490,7 +490,7 @@ export function MemberCard({
           </Select>
           <DialogFooter>
             <Button onClick={handleCreateCoachingRelationship}>
-              {assignMode === RelationshipRole.Coach ? "Assign as Coach" : "Assign as Coachee"}
+              Assign as {relationshipRoleLabel(assignMode)}
             </Button>
           </DialogFooter>
         </DialogContent>
