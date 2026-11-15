@@ -5,7 +5,7 @@ import { TranscriptionApi, readErrorSlug } from "@/lib/api/transcriptions";
 import { sessionGuard } from "@/lib/auth/session-guard";
 import type { DownloadScope } from "@/lib/utils/transcript-speaker-roles";
 import { None, Some } from "@/types/option";
-import { SpeakerRole } from "@/types/transcription";
+import { RelationshipRole } from "@/types/relationship-role";
 
 vi.mock("@/lib/auth/session-guard", () => ({
   sessionGuard: { get: vi.fn() },
@@ -51,7 +51,7 @@ describe("TranscriptionApi.downloadText — request shape", () => {
     vi.mocked(sessionGuard.get).mockResolvedValue(okResponse() as never);
     const scope: DownloadScope = {
       kind: "role",
-      role: SpeakerRole.Coach,
+      role: RelationshipRole.Coach,
       label: "Jim H",
     };
     await TranscriptionApi.downloadText("s1", "t1", scope);

@@ -228,7 +228,7 @@ describe("getOtherParticipantName", () => {
 });
 
 describe("getUserRoleInRelationship", () => {
-  it("returns 'Coach' when user is the coach", () => {
+  it("returns coach when user is the coach", () => {
     const user = createMockUser({ id: "coach-1" });
     const relationship = createMockRelationship({
       coach_id: "coach-1",
@@ -236,10 +236,10 @@ describe("getUserRoleInRelationship", () => {
     });
 
     const role = getUserRoleInRelationship(relationship, user);
-    expect(role).toBe("Coach");
+    expect(role).toBe("coach");
   });
 
-  it("returns 'Coachee' when user is the coachee", () => {
+  it("returns coachee when user is the coachee", () => {
     const user = createMockUser({ id: "coachee-1" });
     const relationship = createMockRelationship({
       coach_id: "coach-1",
@@ -247,7 +247,7 @@ describe("getUserRoleInRelationship", () => {
     });
 
     const role = getUserRoleInRelationship(relationship, user);
-    expect(role).toBe("Coachee");
+    expect(role).toBe("coachee");
   });
 });
 

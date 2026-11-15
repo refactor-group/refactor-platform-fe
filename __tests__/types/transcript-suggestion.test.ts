@@ -10,7 +10,7 @@ import {
   serializeActionEdits,
   UndatedReason,
 } from "@/types/transcript-suggestion";
-import { SpeakerRole } from "@/types/transcription";
+import { RelationshipRole } from "@/types/relationship-role";
 import { Some, None } from "@/types/option";
 
 const wireActionSuggestion = () => ({
@@ -63,7 +63,7 @@ describe("parseActionSuggestion", () => {
     expect(s.segment).toEqual({
       id: "seg-9",
       start_ms: 754000,
-      speaker_role: Some(SpeakerRole.Coachee),
+      speaker_role: Some(RelationshipRole.Coachee),
       speaker_label: "Caleb Bourg",
     });
 

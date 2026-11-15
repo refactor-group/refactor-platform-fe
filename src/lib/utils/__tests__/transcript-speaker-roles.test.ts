@@ -6,13 +6,14 @@ import {
   downloadScopeFor,
 } from "@/lib/utils/transcript-speaker-roles";
 import { None, Some } from "@/types/option";
-import { SpeakerRole, type TranscriptSegment } from "@/types/transcription";
+import { type TranscriptSegment } from "@/types/transcription";
+import { RelationshipRole } from "@/types/relationship-role";
 
 let nextId = 0;
 
 function segment(
   speakerLabel: string,
-  role: SpeakerRole | null,
+  role: RelationshipRole | null,
   userId: string | null,
 ): TranscriptSegment {
   return {
@@ -29,11 +30,11 @@ function segment(
 }
 
 const SEGMENTS = [
-  segment("Jim H", SpeakerRole.Coach, "coach-id"),
-  segment("Caleb Bourg", SpeakerRole.Coachee, "coachee-id"),
+  segment("Jim H", RelationshipRole.Coach, "coach-id"),
+  segment("Caleb Bourg", RelationshipRole.Coachee, "coachee-id"),
   segment("Jim H (2)", null, null),
   segment("Guest 1", null, null),
-  segment("Jim H", SpeakerRole.Coach, "coach-id"),
+  segment("Jim H", RelationshipRole.Coach, "coach-id"),
 ];
 
 describe("downloadScopeFor", () => {
@@ -44,12 +45,12 @@ describe("downloadScopeFor", () => {
   it("maps a selected speaker to the role on their segments", () => {
     expect(downloadScopeFor("Jim H", SEGMENTS)).toEqual({
       kind: "role",
-      role: SpeakerRole.Coach,
+      role: RelationshipRole.Coach,
       label: "Jim H",
     });
     expect(downloadScopeFor("Caleb Bourg", SEGMENTS)).toEqual({
       kind: "role",
-      role: SpeakerRole.Coachee,
+      role: RelationshipRole.Coachee,
       label: "Caleb Bourg",
     });
   });
@@ -86,7 +87,7 @@ describe("blockedReasonFor", () => {
     expect(
       blockedReasonFor({
         kind: "role",
-        role: SpeakerRole.Coach,
+        role: RelationshipRole.Coach,
         label: "Jim H",
       }),
     ).toEqual(None);
@@ -113,7 +114,7 @@ describe("downloadLabelFor", () => {
     expect(
       downloadLabelFor({
         kind: "role",
-        role: SpeakerRole.Coach,
+        role: RelationshipRole.Coach,
         label: "Jim H",
       }),
     ).toBe("Download Jim H's transcript");
@@ -123,7 +124,7 @@ describe("downloadLabelFor", () => {
     expect(
       downloadLabelFor({
         kind: "role",
-        role: SpeakerRole.Coach,
+        role: RelationshipRole.Coach,
         label: "Jim (Refactor Group)",
       }),
     ).toBe("Download Jim (Refactor Group)'s transcript");

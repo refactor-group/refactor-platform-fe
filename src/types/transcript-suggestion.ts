@@ -7,7 +7,7 @@ import {
   type Action,
   type ActionWithAssigneesWire,
 } from "@/types/action";
-import { isSpeakerRole, type SpeakerRole } from "@/types/transcription";
+import { isRelationshipRole, type RelationshipRole } from "@/types/relationship-role";
 
 // Must always reflect the Rust types on the backend.
 // See refactor-platform-rs PR #441:
@@ -73,7 +73,7 @@ export interface SourceSegment {
   id: Id;
   /** Start offset within the recording, in milliseconds. */
   start_ms: number;
-  speaker_role: Option<SpeakerRole>;
+  speaker_role: Option<RelationshipRole>;
   speaker_label: string;
 }
 
@@ -172,7 +172,7 @@ function parseSegment(value: unknown): SourceSegment {
   return {
     id: requireString(value, "id", "ActionSuggestion segment"),
     start_ms: value.start_ms,
-    speaker_role: isSpeakerRole(value.speaker_role) ? Some(value.speaker_role) : None,
+    speaker_role: isRelationshipRole(value.speaker_role) ? Some(value.speaker_role) : None,
     speaker_label: requireString(value, "speaker_label", "ActionSuggestion segment"),
   };
 }

@@ -505,7 +505,7 @@ describe('CoachingSessionsPage - after-session lock scopes', () => {
 
   it('locks sections (coachee) and new-topic (both) once the session has ended', () => {
     const panel = renderForSessionDate(pastDate)
-    expect(panel).toHaveAttribute('data-sections-scope', 'Coachee')
+    expect(panel).toHaveAttribute('data-sections-scope', 'coachee')
     expect(panel).toHaveAttribute('data-newtopic-scope', 'Both')
   })
 
