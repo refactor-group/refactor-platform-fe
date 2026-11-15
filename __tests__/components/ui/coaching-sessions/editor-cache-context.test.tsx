@@ -518,7 +518,7 @@ describe('EditorCacheProvider', () => {
               presence: {
                 userId: 'user-1',
                 name: 'Test User',
-                relationshipRole: 'Coach',
+                relationshipRole: 'coach',
                 color: '#ff0000',
                 status: 'connected'
               }
@@ -528,7 +528,7 @@ describe('EditorCacheProvider', () => {
               presence: {
                 userId: 'user-2',
                 name: 'Other User',
-                relationshipRole: 'Coachee',
+                relationshipRole: 'coachee',
                 color: '#00ff00',
                 status: 'connected'
               }
@@ -585,7 +585,7 @@ describe('EditorCacheProvider', () => {
               presence: {
                 userId: 'user-1',
                 name: 'Test User',
-                relationshipRole: 'Coach',
+                relationshipRole: 'coach',
                 color: '#ff0000',
                 isConnected: true
               }
@@ -595,7 +595,7 @@ describe('EditorCacheProvider', () => {
               presence: {
                 userId: 'user-2',
                 name: 'Other User',
-                relationshipRole: 'Coachee',
+                relationshipRole: 'coachee',
                 color: '#00ff00',
                 isConnected: true
               }
@@ -617,7 +617,7 @@ describe('EditorCacheProvider', () => {
               presence: {
                 userId: 'user-1',
                 name: 'Test User',
-                relationshipRole: 'Coach',
+                relationshipRole: 'coach',
                 color: '#ff0000',
                 isConnected: true
               }
@@ -935,7 +935,7 @@ describe('EditorCacheProvider', () => {
 
       // No presence broadcast should have happened — the role is unknown and there
       // is nothing correct to broadcast yet. Prior to the fix, this would have
-      // broadcast relationshipRole: 'Coachee' (the incorrect default).
+      // broadcast relationshipRole: 'coachee' (the incorrect default).
       expect(mockProvider.setAwarenessField).not.toHaveBeenCalledWith(
         'presence',
         expect.anything()

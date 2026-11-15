@@ -1,16 +1,28 @@
 /**
- * Represents the role of a user within a coaching relationship.
- * This is distinct from the system-level Role (Admin/User) and is
- * determined by the relationship context between two users.
+ * What a participant is to their coaching relationship. Distinct from the
+ * system-level Role (Admin/User). Values are the backend's wire values.
  */
 export enum RelationshipRole {
-  Coach = 'Coach',
-  Coachee = 'Coachee'
+  Coach = "coach",
+  Coachee = "coachee",
+  Colleague = "colleague",
 }
 
-/**
- * Helper to get the opposite role in a relationship
- */
-export function getOppositeRole(role: RelationshipRole): RelationshipRole {
-  return role === RelationshipRole.Coach ? RelationshipRole.Coachee : RelationshipRole.Coach;
+export function isRelationshipRole(value: unknown): value is RelationshipRole {
+  return Object.values(RelationshipRole).includes(value as RelationshipRole);
+}
+
+export function relationshipRoleLabel(role: RelationshipRole): string {
+  switch (role) {
+    case RelationshipRole.Coach:
+      return "Coach";
+    case RelationshipRole.Coachee:
+      return "Coachee";
+    case RelationshipRole.Colleague:
+      return "Colleague";
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled relationship role: ${_exhaustive}`);
+    }
+  }
 }

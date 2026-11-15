@@ -9,7 +9,7 @@ import { TranscriptionApi } from "@/lib/api/transcriptions";
 import { saveBlobAs } from "@/lib/utils/transcript-download-file";
 import type { DownloadScope } from "@/lib/utils/transcript-speaker-roles";
 import { None, Some } from "@/types/option";
-import { SpeakerRole } from "@/types/transcription";
+import { RelationshipRole } from "@/types/relationship-role";
 
 vi.mock("@/lib/api/transcriptions", () => ({
   TranscriptionApi: { downloadText: vi.fn() },
@@ -31,7 +31,7 @@ function renderButton(scope: DownloadScope) {
 const ALL: DownloadScope = { kind: "all" };
 const COACH: DownloadScope = {
   kind: "role",
-  role: SpeakerRole.Coach,
+  role: RelationshipRole.Coach,
   label: "Jim H",
 };
 const UNMAPPED: DownloadScope = { kind: "unmapped", label: "Speaker A" };

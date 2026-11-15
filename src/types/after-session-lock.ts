@@ -38,7 +38,14 @@ export function isLockedFor(
     case LockExtent.Both:
       return true;
     case RelationshipRole.Coach:
+      // A colleague holds the coach's privileges.
+      return (
+        viewerRole === RelationshipRole.Coach ||
+        viewerRole === RelationshipRole.Colleague
+      );
     case RelationshipRole.Coachee:
-      return scope === viewerRole;
+      return viewerRole === RelationshipRole.Coachee;
+    case RelationshipRole.Colleague:
+      return viewerRole === RelationshipRole.Colleague;
   }
 }

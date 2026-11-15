@@ -1,5 +1,6 @@
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
+import { isRelationshipRole, type RelationshipRole } from "@/types/relationship-role";
 
 // Must always reflect the Rust entity types on the backend.
 // See refactor-platform-rs PR #254:
@@ -83,7 +84,7 @@ export interface TranscriptSegment {
   transcription_id: Id;
   speaker_label: string;
   speaker_user_id: Option<Id>;
-  speaker_role: Option<SpeakerRole>;
+  speaker_role: Option<RelationshipRole>;
   text: string;
   /** Start offset within the recording, in milliseconds. */
   start_ms: number;
@@ -137,19 +138,6 @@ export function parseTranscriptSegment(value: unknown): TranscriptSegment {
     ...rest,
     ...(isTranscriptSegmentSentiment(sentiment) ? { sentiment } : {}),
     speaker_user_id: typeof userId === "string" ? Some(userId) : None,
-    speaker_role: isSpeakerRole(role) ? Some(role) : None,
+    speaker_role: isRelationshipRole(role) ? Some(role) : None,
   };
-}
-
-/**
- * Which participant in the coaching relationship a speaker was attributed to.
- * Values are the exact query-param strings the download endpoint accepts.
- */
-export enum SpeakerRole {
-  Coach = "coach",
-  Coachee = "coachee",
-}
-
-export function isSpeakerRole(value: unknown): value is SpeakerRole {
-  return value === SpeakerRole.Coach || value === SpeakerRole.Coachee;
 }

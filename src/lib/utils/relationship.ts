@@ -118,6 +118,7 @@ export function buildRelationshipWithUserNames(
     coach_id: relationship.coach_id,
     coachee_id: relationship.coachee_id,
     organization_id: relationship.organization_id,
+    kind: relationship.kind,
     created_at: relationship.created_at,
     updated_at: relationship.updated_at,
     coach_is_member: relationship.coach_is_member,

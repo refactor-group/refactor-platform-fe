@@ -11,7 +11,6 @@ import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
-import { SpeakerRole } from "@/types/transcription";
 import { Some, None } from "@/types/option";
 import type { Id } from "@/types/general";
 import { createMockAction } from "../../../test-utils";
@@ -61,7 +60,7 @@ function makeSuggestion(
     segment: {
       id: "seg-9",
       start_ms: 754000,
-      speaker_role: Some(SpeakerRole.Coachee),
+      speaker_role: Some(RelationshipRole.Coachee),
       speaker_label: "Caleb Bourg",
     },
     default_due: { at: noon("2026-10-18"), source: Some(overrides.source ?? DueSource.NextSession) },
