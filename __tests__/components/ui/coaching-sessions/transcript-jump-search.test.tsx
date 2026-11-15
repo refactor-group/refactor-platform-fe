@@ -6,7 +6,8 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TranscriptPanel } from "@/components/ui/coaching-sessions/transcript-panel";
-import { SpeakerRole, type TranscriptSegment } from "@/types/transcription";
+import { type TranscriptSegment } from "@/types/transcription";
+import { RelationshipRole } from "@/types/relationship-role";
 import { Some } from "@/types/option";
 
 vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
@@ -15,11 +16,11 @@ vi.mock("@/lib/api/meeting-recordings", () => ({
   useMeetingRecording: () => ({ recording: null, isLoading: false, isError: undefined }),
 }));
 
-const segment = (id: string, role: SpeakerRole, text: string, startMs: number): TranscriptSegment => ({
+const segment = (id: string, role: RelationshipRole, text: string, startMs: number): TranscriptSegment => ({
   id,
   transcription_id: "tx-1",
-  speaker_label: role === SpeakerRole.Coach ? "Jim Hodapp" : "Caleb Bourg",
-  speaker_user_id: Some(role === SpeakerRole.Coach ? "coach-1" : "coachee-1"),
+  speaker_label: role === RelationshipRole.Coach ? "Jim Hodapp" : "Caleb Bourg",
+  speaker_user_id: Some(role === RelationshipRole.Coach ? "coach-1" : "coachee-1"),
   speaker_role: Some(role),
   text,
   start_ms: startMs,
@@ -28,9 +29,9 @@ const segment = (id: string, role: SpeakerRole, text: string, startMs: number): 
 });
 
 const SEGMENTS = [
-  segment("seg-1", SpeakerRole.Coach, "How did the week go?", 1000),
-  segment("seg-2", SpeakerRole.Coachee, "I should get time with Dana by end of next week.", 81000),
-  segment("seg-3", SpeakerRole.Coach, "Sounds good.", 90000),
+  segment("seg-1", RelationshipRole.Coach, "How did the week go?", 1000),
+  segment("seg-2", RelationshipRole.Coachee, "I should get time with Dana by end of next week.", 81000),
+  segment("seg-3", RelationshipRole.Coach, "Sounds good.", 90000),
 ];
 
 vi.mock("@/lib/api/transcriptions", () => ({

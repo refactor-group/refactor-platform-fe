@@ -103,7 +103,7 @@ function setupDefault() {
     participantName: "Alex Chen",
     firstName: "Alex",
     lastName: "Chen",
-    userRole: "Coach",
+    userRole: "coach",
     isCoach: true,
     isMissing: false,
   });
@@ -229,7 +229,7 @@ describe("GoalsOverviewCard", () => {
       participantName: "Bob Coach",
       firstName: "Bob",
       lastName: "Coach",
-      userRole: "Coachee",
+      userRole: "coachee",
       isCoach: false,
       isMissing: false,
     });
@@ -437,7 +437,7 @@ describe("GoalsOverviewCard", () => {
       participantName: "Alex Chen",
       firstName: "Alex",
       lastName: "Chen",
-      userRole: "Coach",
+      userRole: "coach",
       isCoach: true,
       isMissing: false,
     });

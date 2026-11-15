@@ -19,6 +19,7 @@ interface MockCoachingRelationship {
   coachee_last_name: string
   created_at: string
   updated_at: string
+  kind: string
   coach_is_member: boolean
   coachee_is_member: boolean
 }
@@ -118,6 +119,7 @@ export function mockRelationship(
     coachee_last_name: 'Smith',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
+    kind: 'coaching',
     coach_is_member: true,
     coachee_is_member: true,
     ...overrides,

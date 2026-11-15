@@ -22,9 +22,14 @@ describe("isLockedFor", () => {
     expect(isLockedFor(RelationshipRole.Coachee, RelationshipRole.Coach)).toBe(false);
   });
 
-  it("Coach locks only the coach", () => {
+  it("Coach locks the coach and colleagues", () => {
     expect(isLockedFor(RelationshipRole.Coach, RelationshipRole.Coach)).toBe(true);
+    expect(isLockedFor(RelationshipRole.Coach, RelationshipRole.Colleague)).toBe(true);
     expect(isLockedFor(RelationshipRole.Coach, RelationshipRole.Coachee)).toBe(false);
+  });
+
+  it("Coachee leaves colleagues unlocked", () => {
+    expect(isLockedFor(RelationshipRole.Coachee, RelationshipRole.Colleague)).toBe(false);
   });
 
   it("NO_AFTER_SESSION_LOCK locks nothing for anyone", () => {
