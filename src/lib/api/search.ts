@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { ResultAsync } from "neverthrow";
 import { siteConfig } from "@/site.config";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { logoutCleanupRegistry } from "@/lib/hooks/logout-cleanup-registry";
 import { EntityApi, EntityApiError } from "./entity-api";
 import {
@@ -196,7 +197,8 @@ logoutCleanupRegistry.register(clearSearchCache);
 /**
  * Debounced, cancellable keyword search. Any change to `query` or `filters`
  * resets to page one; `loadMore` appends the next keyset page. Queries the
- * backend would reject as too short resolve to `idle` without a request, and
+ * backend would reject as too short resolve to `idle` without a request, as
+ * does any query once the user is logged out, and
  * a query answered within the last `SEARCH_CACHE_TTL_MS` resolves from the
  * cache without the debounce or a request.
  */
@@ -263,7 +265,9 @@ export function useSearch(
     []
   );
 
-  const searchable = isSearchableQuery(query);
+  // Logout flips this before cleanup and navigation, so no request starts or lands in that window.
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const searchable = isLoggedIn && isSearchableQuery(query);
   const isCurrent =
     result.some && result.val.query === query && result.val.filtersKey === filtersKey;
   const cached = searchable && !isCurrent ? readCache(cacheKey(query, filtersKey)) : None;
@@ -276,7 +280,11 @@ export function useSearch(
       return;
     }
     // Not a dependency: a later page making the hook's own result current must not refire this.
-    if (readCache(cacheKey(query, filtersKey)).some) return;
+    if (readCache(cacheKey(query, filtersKey)).some) {
+      // The previous query's request would otherwise land and replace the adopted hit.
+      controllerRef.current?.abort();
+      return;
+    }
     // Sent untrimmed: a trailing space is the backend's opt-out of prefix matching.
     const timer = setTimeout(() => runPage(query, filtersKey, None, []), debounceMs);
     return () => clearTimeout(timer);

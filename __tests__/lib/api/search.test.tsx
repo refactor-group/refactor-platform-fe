@@ -24,6 +24,15 @@ vi.mock("@/site.config", () => ({
   siteConfig: { env: { backendServiceURL: "http://localhost:3000" } },
 }));
 
+const auth = vi.hoisted(() => ({ isLoggedIn: true }));
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: (selector: (state: { isLoggedIn: boolean }) => unknown) =>
+    selector({ isLoggedIn: auth.isLoggedIn }),
+}));
+beforeEach(() => {
+  auth.isLoggedIn = true;
+});
+
 const goalHit = (id: string) => ({
   type: "goal",
   id,
@@ -352,6 +361,23 @@ describe("useSearch result cache", () => {
     expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
   });
 
+  it("a cache hit aborts the request still in flight for the previous query", async () => {
+    vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [goalHit("g1")], next_cursor: null });
+    const { unmount } = await warm("plan");
+    unmount();
+
+    vi.mocked(EntityApi.getFn).mockImplementationOnce(() => new Promise(() => {}));
+    const { result, rerender } = renderHook(({ q }) => useSearch(q, {}, 250), {
+      initialProps: { q: "pla" },
+    });
+    act(() => vi.advanceTimersByTime(250));
+    const pending = (vi.mocked(EntityApi.getFn).mock.calls[1][1] as AxiosRequestConfig).signal;
+
+    rerender({ q: "plan" });
+    expect(result.current.state).toMatchObject({ kind: "loaded", query: "plan" });
+    expect(pending?.aborted).toBe(true);
+  });
+
   it("different filters miss, as does a trailing space", async () => {
     vi.mocked(EntityApi.getFn).mockResolvedValue({ query: "plan", limit: 25, hits: [], next_cursor: null });
     await warm("plan", { types: [SearchableType.Goals] });
@@ -435,6 +461,27 @@ describe("useSearch result cache", () => {
     await logoutCleanupRegistry.executeAll();
     const { result } = renderHook(() => useSearch("plan", {}, 250));
     expect(result.current.state).toEqual({ kind: "loading", query: "plan" });
+  });
+
+  it("logging out aborts the in-flight search and starts no more before the header unmounts", async () => {
+    vi.mocked(EntityApi.getFn).mockImplementationOnce(() => new Promise(() => {}));
+    const { result, rerender } = renderHook(({ q }) => useSearch(q, {}, 250), {
+      initialProps: { q: "plan" },
+    });
+    act(() => vi.advanceTimersByTime(250));
+    const pending = (vi.mocked(EntityApi.getFn).mock.calls[0][1] as AxiosRequestConfig).signal;
+
+    // The auth store flips before cleanup and navigation; typing continues meanwhile.
+    auth.isLoggedIn = false;
+    rerender({ q: "plan" });
+    expect(pending?.aborted).toBe(true);
+    expect(result.current.state).toEqual({ kind: "idle" });
+
+    rerender({ q: "plans" });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(1);
   });
 
   it("a search still in flight at logout does not refill the cache", async () => {
