@@ -420,6 +420,42 @@ describe("useSearch result cache", () => {
     expect(EntityApi.getFn).toHaveBeenCalledTimes(2);
   });
 
+  it("typing away and back during a page load restores the cached page instead of a stuck spinner", async () => {
+    vi.mocked(EntityApi.getFn)
+      .mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g1")], next_cursor: "CUR" })
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const { result, rerender } = renderHook(({ q }) => useSearch(q, {}, 250), {
+      initialProps: { q: "plan" },
+    });
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    act(() => result.current.loadMore());
+    expect(result.current.state).toMatchObject({ kind: "loaded", isLoadingMore: true });
+    const page = (vi.mocked(EntityApi.getFn).mock.calls[1][1] as AxiosRequestConfig).signal;
+
+    rerender({ q: "plans" });
+    act(() => vi.advanceTimersByTime(100));
+    rerender({ q: "plan" });
+    expect(page?.aborted).toBe(true);
+    expect(result.current.state).toMatchObject({
+      kind: "loaded",
+      isLoadingMore: false,
+      hits: [{ id: "g1" }],
+      nextCursor: Some("CUR"),
+    });
+
+    vi.mocked(EntityApi.getFn).mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g2")], next_cursor: null });
+    act(() => result.current.loadMore());
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+    if (result.current.state.kind === "loaded") {
+      expect(result.current.state.hits.map((h) => h.id)).toEqual(["g1", "g2"]);
+    }
+    expect(EntityApi.getFn).toHaveBeenCalledTimes(3);
+  });
+
   it("a failed later page is not written to the cache", async () => {
     vi.mocked(EntityApi.getFn)
       .mockResolvedValueOnce({ query: "plan", limit: 1, hits: [goalHit("g1")], next_cursor: "CUR" })

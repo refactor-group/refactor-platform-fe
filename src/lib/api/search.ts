@@ -268,9 +268,19 @@ export function useSearch(
   // Logout flips this before cleanup and navigation, so no request starts or lands in that window.
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const searchable = isLoggedIn && isSearchableQuery(query);
+  const key = cacheKey(query, filtersKey);
+  // A key change abandons any page in flight (the effects below cancel it), so the held
+  // result must not keep saying "loading more" should the user type straight back to it.
+  const [seenKey, setSeenKey] = useState(key);
+  if (seenKey !== key) {
+    setSeenKey(key);
+    if (result.some && result.val.state.kind === "loaded" && result.val.state.isLoadingMore) {
+      setResult(Some({ ...result.val, state: { ...result.val.state, isLoadingMore: false } }));
+    }
+  }
   const isCurrent =
     result.some && result.val.query === query && result.val.filtersKey === filtersKey;
-  const cached = searchable && !isCurrent ? readCache(cacheKey(query, filtersKey)) : None;
+  const cached = searchable && !isCurrent ? readCache(key) : None;
   // Adopted into state so the hit outlives its cache entry, like a fetched result would.
   if (cached.some) setResult(Some({ query, filtersKey, state: cached.val }));
 
@@ -280,15 +290,15 @@ export function useSearch(
       return;
     }
     // Not a dependency: a later page making the hook's own result current must not refire this.
-    if (readCache(cacheKey(query, filtersKey)).some) {
-      // The previous query's request would otherwise land and replace the adopted hit.
+    if (readCache(key).some) {
+      // Anything in flight is for another query or an abandoned page; it must not land over the hit.
       controllerRef.current?.abort();
       return;
     }
     // Sent untrimmed: a trailing space is the backend's opt-out of prefix matching.
     const timer = setTimeout(() => runPage(query, filtersKey, None, []), debounceMs);
     return () => clearTimeout(timer);
-  }, [searchable, query, filtersKey, debounceMs, runPage]);
+  }, [searchable, query, filtersKey, key, debounceMs, runPage]);
 
   useEffect(() => () => controllerRef.current?.abort(), []);
 
