@@ -32,8 +32,9 @@ them into this file.
 - **Extra for this plan:**
   - `RC`: the colleague relationship of COACH and MEMBER, created through the UI in COL-01.
     MEMBER has no other relationship, so MEMBER is a colleague-only user.
-  - `RC2`: COACHEE and OTHER_COACH as colleagues (Pair with…). COACHEE is then coached in R1 and a
-    colleague in RC2, for section 3.4a.
+  - `KID` and `RC2`: add KID with Relationship Coachee, coached by COACH; then pair KID and
+    OTHER_COACH as colleagues (`RC2`). KID is coached in one relationship and a colleague in
+    another, for section 3.4a. (COACHEE can't be used: R2 already makes OTHER_COACH their coach.)
   - Two transcripts for section 3.7: a completed one on an RC session, and one on an R1 session.
   - Timezones and defaults for section 3.8, set as the backend plan's SER-25 and SCHED-17 say:
     COACH in `Asia/Tokyo`, MEMBER in `America/New_York`, different default session lengths.
@@ -46,8 +47,10 @@ The access plan's warnings apply (`relationship_access_manual_testing.md`, secti
 response recorder works, log in through the form after the page settles, switch users with
 `clearCookies()` plus `localStorage.clear()`, and drive another user's changes with curl.
 
-For the live-update rows, keep the second colleague in a **second browser context**, not curl,
-so their view is the one checked.
+Keep the second colleague in a **second browser context**, not curl, so their view is the one
+checked. Session and series changes reach the other person on their next read (page or grid
+change, refresh), as for coaching: there are no live session events. Title, topic and action
+changes arrive live.
 
 ---
 
@@ -115,11 +118,11 @@ dashboard open in the second context.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| COL-30 | New session with the other colleague | COACH, MEMBER | Both have the entry points (Add New, Schedule session, Schedule on {day}). It saves and appears for the other without a reload | SES-09 |
-| COL-31 | New series with the other colleague | COACH, MEMBER | Saves; the sessions appear for the other live | SER-01 |
-| COL-32 | Edit title, reschedule one session (dialog and week grid drag) | COACH, MEMBER | Saves; the other sees the move live | SES-15, SES-19 |
-| COL-33 | Reschedule this and following, from a session the other colleague created | COACH, MEMBER | Saves; the other sees the change live | SER-26 |
-| COL-34 | Cancel session, cancel series | COACH, MEMBER | Both work for either colleague; the other sees them leave the grid | SES-21, SER-12 |
+| COL-30 | New session with the other colleague | COACH, MEMBER | Both have the entry points (Add New, Schedule session, Schedule on {day}); Who lists the other colleague. It saves, and the other sees it after a refresh | SES-09 |
+| COL-31 | New series with the other colleague | COACH, MEMBER | Saves; the other sees the sessions after a refresh | SER-01 |
+| COL-32 | Edit title, reschedule one session (dialog and week grid drag) | COACH, MEMBER | Saves. The title reaches the other live; the move after a refresh | SES-15, SES-19 |
+| COL-33 | Reschedule this and following, from a session the other colleague created | COACH, MEMBER | Saves; the other sees the change after a refresh | SER-26 |
+| COL-34 | Cancel session, cancel series | COACH, MEMBER | Both work for either colleague; after a refresh they're gone for the other | SES-21, SER-12 |
 | COL-35 | Resend invite, resend series invite | COACH, MEMBER | Both offered and succeed | SES-24, SER-14 |
 | COL-36 | Join with transcription, stop recording | COACH, MEMBER | Both get the recording controls (either participant may record, both kinds) | TRN-18 to TRN-20 |
 | COL-37 | Delete the other colleague's topic | COACH, MEMBER | Offered and works for both | TOP-09 |
@@ -128,15 +131,15 @@ dashboard open in the second context.
 
 ### 3.4a Powers stay inside the colleague relationship (`COL-3xa`)
 
-COACHEE is coached in R1 and a colleague in RC2.
+KID is coached by COACH and a colleague of OTHER_COACH in RC2.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| COL-30a | Add New, Schedule session; the New session **Who** list | COACHEE | Entry points shown; Who lists OTHER_COACH only, never COACH | SES-09 |
-| COL-31a | R1 session card menu, upcoming card, week grid drag | COACHEE | Open session only; no Reschedule or drag, as before phase 4 | SES-16 |
-| COL-32a | A past R1 session | COACHEE | The after-session lock still applies | |
-| COL-33a | RC2 session | COACHEE | Reschedule, cancel, resend, recording controls; no lock | SES-15 |
-| COL-34a | Actions page | COACHEE | No My/Coachee toggle (not a coach) | ACT-01 |
+| COL-30a | Add New, Schedule session; the New session **Who** list | KID | Entry points shown; Who lists OTHER_COACH only, never COACH | SES-09 |
+| COL-31a | KID's coaching session: card menu, upcoming card, week grid drag | KID | Open session only; no Reschedule or drag, as before phase 4 | SES-16 |
+| COL-32a | A past coaching session of KID's | KID | The after-session lock still applies | |
+| COL-33a | RC2 session | KID | Reschedule, cancel, resend, recording controls; no lock | SES-15 |
+| COL-34a | Actions page | KID | No My/Coachee toggle (not a coach) | ACT-01 |
 
 ### 3.5 Actions (`COL-4x`)
 
