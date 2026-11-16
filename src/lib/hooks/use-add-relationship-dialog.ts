@@ -5,6 +5,7 @@ import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { organizationArchivedMessage } from "@/lib/api/organization-errors";
+import { pairAlreadyRelatedMessage } from "@/lib/api/relationship-errors";
 import {
   AddRelationshipStep,
   type Member,
@@ -58,8 +59,9 @@ export interface AddRelationshipDialogModel {
   onNext: Option<() => void>;
 }
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, member: Member, partner: Member): string {
   return (
+    pairAlreadyRelatedMessage(error, member.fullName, partner.fullName) ??
     organizationArchivedMessage(error) ??
     (isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Couldn't add the relationship")
   );
@@ -95,7 +97,7 @@ export function useAddRelationshipDialog({
       onClose();
     } catch (error) {
       console.error("Error adding relationship:", error);
-      toast.error(errorMessage(error));
+      toast.error(errorMessage(error, member, partner.val));
     } finally {
       setSubmitting(false);
     }

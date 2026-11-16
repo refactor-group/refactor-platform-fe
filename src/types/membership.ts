@@ -5,6 +5,8 @@ import { None, Some, type Option } from "@/types/option";
 /** Values match a 409 body's `details.reason`. */
 export enum NotAMemberReason {
   Coachee = "coachee_not_a_member",
+  /** The other colleague in a colleague relationship. */
+  Participant = "participant_not_a_member",
   Assignee = "assignee_not_a_member",
 }
 

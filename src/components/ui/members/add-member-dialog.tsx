@@ -200,7 +200,7 @@ function StepBody(model: AddMemberDialogModel) {
         />
       );
     case AddMemberStep.With:
-      return <PersonPicker people={model.people} selectedId={model.coachId} onSelect={model.onCoachSelect} />;
+      return <PersonPicker people={model.people} selectedId={model.partnerId} onSelect={model.onPartnerSelect} />;
     default: {
       const _exhaustive: never = model.step;
       throw new Error(`Unhandled add member step: ${_exhaustive}`);
@@ -220,7 +220,7 @@ function Summary({ line }: { line: string }) {
 interface AddMemberDialogProps {
   onClose: () => void;
   onMemberAdded: () => void;
-  /** Coach candidates. */
+  /** Who they can be paired with. */
   organizationMembers: User[];
   /** False offers only creating a new account. */
   canAddExisting: boolean;

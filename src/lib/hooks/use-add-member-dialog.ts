@@ -10,7 +10,7 @@ import {
   JoinRelationship,
   type Joiner,
   type NewPersonFields,
-  coachIdOf,
+  inviteRelationshipOf,
   isComplete,
   joinerOf,
   leadOf,
@@ -27,6 +27,7 @@ import {
   userAlreadyInOrganizationMessage,
 } from "@/lib/api/organization-errors";
 import { useUserMutation } from "@/lib/api/organizations/users";
+import { pairAlreadyRelatedMessage } from "@/lib/api/relationship-errors";
 import { UserApi, userLookupRateLimitedMessage } from "@/lib/api/users";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
@@ -38,7 +39,7 @@ import { Role, type User, type UserLookupResult } from "@/types/user";
 interface AddMemberInput {
   onClose: () => void;
   onMemberAdded: () => void;
-  /** Coach candidates. Empty skips the relationship step. */
+  /** Who they can be paired with. Empty skips the relationship step. */
   organizationMembers: User[];
   canAddExisting: boolean;
   initialMode: AddMemberMode;
@@ -68,8 +69,8 @@ export interface AddMemberDialogModel {
   relationship: JoinRelationship;
   onRelationshipChange: (relationship: JoinRelationship) => void;
   people: PickerPerson[];
-  coachId: Option<Id>;
-  onCoachSelect: (userId: Id) => void;
+  partnerId: Option<Id>;
+  onPartnerSelect: (userId: Id) => void;
   summary: Option<string>;
   step: AddMemberStep;
   stepTitle: string;
@@ -80,7 +81,7 @@ export interface AddMemberDialogModel {
   onNext: Option<() => void>;
 }
 
-function coachChoices(members: readonly Member[]): PickerPerson[] {
+function partnerChoices(members: readonly Member[]): PickerPerson[] {
   return [...members]
     .sort((a, b) => a.fullName.localeCompare(b.fullName))
     .map((m) => ({
@@ -93,8 +94,9 @@ function coachChoices(members: readonly Member[]): PickerPerson[] {
     }));
 }
 
-function addErrorMessage(error: unknown): string {
+function addErrorMessage(error: unknown, joiner: Joiner, partner: Option<Member>): string {
   return (
+    (partner.some ? pairAlreadyRelatedMessage(error, joiner.fullName, partner.val.fullName) : null) ??
     userAlreadyInOrganizationMessage(error) ??
     organizationArchivedMessage(error) ??
     (isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Couldn't add the member")
@@ -170,36 +172,36 @@ export function useAddMemberDialog({
   const [fields, setFields] = useState(EMPTY_NEW_PERSON);
   const [role, setRole] = useState(Role.User);
   const [relationship, setRelationship] = useState(JoinRelationship.None);
-  const [pickedCoachId, setPickedCoachId] = useState<Option<Id>>(None);
+  const [pickedPartnerId, setPickedPartnerId] = useState<Option<Id>>(None);
   const [step, setStep] = useState(AddMemberStep.Person);
   const [submitting, setSubmitting] = useState(false);
 
   const organizationName = currentOrganization?.name ?? "this organization";
   const members = organizationMembers.map(memberOf);
-  const people = coachChoices(members);
-  const coach = selectedPartner(pickedCoachId, people, members);
+  const people = partnerChoices(members);
+  const partner = selectedPartner(pickedPartnerId, people, members);
   const joiner = joinerOf(mode, fields, lookup.found);
   const order = stepOrder(mode, relationship, people.length > 0);
   const index = Math.max(order.indexOf(step), 0);
-  const complete = isComplete(joiner, relationship, coach);
-  const coachId = coachIdOf(relationship, coach);
+  const complete = isComplete(joiner, relationship, partner);
+  const invite = inviteRelationshipOf(relationship, partner);
 
   const submit = async () => {
     if (joiner.none || !complete) return;
     setSubmitting(true);
     try {
       if (mode === AddMemberMode.Existing && lookup.found.some) {
-        await attachExisting(currentOrganizationId, lookup.found.val.id, role, coachId.some ? coachId.val : undefined);
+        await attachExisting(currentOrganizationId, lookup.found.val.id, role, invite);
         toast.success(`${joiner.val.fullName} added to this organization`);
       } else {
-        await createNested(currentOrganizationId, newUserOf(fields, getBrowserTimezone(), coachId));
+        await createNested(currentOrganizationId, newUserOf(fields, getBrowserTimezone(), invite));
         toast.success(`${joiner.val.fullName} added`);
       }
       onMemberAdded();
       onClose();
     } catch (error) {
       console.error("Error adding member:", error);
-      toast.error(addErrorMessage(error));
+      toast.error(addErrorMessage(error, joiner.val, partner));
     } finally {
       setSubmitting(false);
     }
@@ -225,14 +227,14 @@ export function useAddMemberDialog({
     relationship,
     onRelationshipChange: setRelationship,
     people,
-    coachId: coach.some ? Some(coach.val.userId) : None,
-    onCoachSelect: (userId) => setPickedCoachId(Some(userId)),
+    partnerId: partner.some ? Some(partner.val.userId) : None,
+    onPartnerSelect: (userId) => setPickedPartnerId(Some(userId)),
     summary: joiner.some
-      ? Some(summaryLine(joiner.val, organizationName, role, relationship, coach))
+      ? Some(summaryLine(joiner.val, organizationName, role, relationship, partner))
       : None,
     step,
-    stepTitle: stepTitle(step, joiner, organizationName),
-    rail: railOf({ step, order, mode, joiner, role, relationship, coach }),
+    stepTitle: stepTitle(step, joiner, organizationName, relationship),
+    rail: railOf({ step, order, mode, joiner, role, relationship, partner }),
     lead: leadOf({ step, order, mode, joiner, complete, submitting, onConfirm: submit }),
     position: { index: index + 1, total: order.length },
     onPrev: index > 0 ? Some(() => setStep(order[index - 1])) : None,

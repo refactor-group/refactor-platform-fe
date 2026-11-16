@@ -46,8 +46,18 @@ export type CoachingRelationshipWithUsers = CoachingRelationship & {
 };
 
 export interface NewCoachingRelationship {
+  /** For a colleague relationship, either person; the pair is unordered. */
   coach_id: Id;
   coachee_id: Id;
+  kind: RelationshipKind;
+}
+
+/** Whether two people already share a relationship of any kind, either way round. */
+export function isPairOf(relationship: CoachingRelationshipWithUserNames, a: Id, b: Id): boolean {
+  return (
+    (relationship.coach_id === a && relationship.coachee_id === b) ||
+    (relationship.coach_id === b && relationship.coachee_id === a)
+  );
 }
 
 export function isCoachingRelationshipWithUserNames(

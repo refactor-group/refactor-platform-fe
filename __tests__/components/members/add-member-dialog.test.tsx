@@ -155,13 +155,36 @@ describe("AddMemberDialog – creating a member", () => {
     await user.click(addButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(created[0]).toMatchObject({ first_name: "Ada", email: "new@example.com", timezone: "UTC", coach_id: GRACE.id });
+    expect(created[0]).toMatchObject({
+      first_name: "Ada",
+      email: "new@example.com",
+      timezone: "UTC",
+      relationship: { with_user_id: GRACE.id, kind: "coaching" },
+    });
+    expect(created[0]).not.toHaveProperty("coach_id");
     expect(relationships).toHaveLength(0);
     expect(onMemberAdded).toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith("Ada Lovelace added");
   });
 
-  it("omits coach_id entirely when no relationship is chosen", async () => {
+  it("makes the new member a colleague in the same request", async () => {
+    const { created } = captureAdds();
+    const user = userEvent.setup();
+    renderDialog();
+
+    await fillNewPerson(user);
+    await next(user);
+    await user.click(screen.getByRole("radio", { name: "Colleague" }));
+    await next(user);
+    expect(screen.getByRole("heading", { name: "Choose Ada's colleague" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Grace Hopper/ }));
+    await user.click(addButton());
+
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect(created[0]).toMatchObject({ relationship: { with_user_id: GRACE.id, kind: "colleague" } });
+  });
+
+  it("omits the relationship entirely when none is chosen", async () => {
     const { created } = captureAdds();
     const user = userEvent.setup();
     renderDialog();
@@ -171,7 +194,7 @@ describe("AddMemberDialog – creating a member", () => {
     await user.click(addButton());
 
     await waitFor(() => expect(created).toHaveLength(1));
-    expect(created[0]).not.toHaveProperty("coach_id");
+    expect(created[0]).not.toHaveProperty("relationship");
   });
 
   it("confirms on the first step when there's nobody to pair with", async () => {
@@ -372,8 +395,23 @@ describe("AddMemberDialog – attaching an existing account", () => {
     await user.click(addButton());
 
     await waitFor(() => expect(attached).toHaveLength(1));
-    expect(attached[0].body).toEqual({ role: "User", coach_id: GRACE.id });
+    expect(attached[0].body).toEqual({ role: "User", relationship: { with_user_id: GRACE.id, kind: "coaching" } });
     expect(relationships).toHaveLength(0);
+  });
+
+  it("names the pair when they already have a relationship", async () => {
+    captureAdds({ status: 409, body: { error: "conflict", details: { reason: "pair_already_related", relationship_id: "rel-9" } } });
+    const user = userEvent.setup();
+    const { onClose } = renderDialog();
+
+    await findAda(user);
+    await next(user);
+    await next(user);
+    await pickGrace(user);
+    await user.click(addButton());
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Ada Lovelace and Grace Hopper already have a relationship"));
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("surfaces the already-a-member conflict rather than a generic error", async () => {
