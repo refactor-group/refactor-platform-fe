@@ -23,9 +23,9 @@ import { type Option, Some, None, unwrapOr } from "@/types/option";
  */
 export function assignmentFilterToRelationshipActionsParams(
   filter: AssignmentFilter,
-  assigneeScope: Option<AssigneeScope>
+  assigneeScope: Option<AssigneeScope | Id>
 ): {
-  assignee?: AssigneeScope;
+  assignee?: AssigneeScope | Id;
   assigneeFilter?: UserActionsAssigneeFilter;
 } {
   const scope = unwrapOr(assigneeScope, undefined);
@@ -49,17 +49,19 @@ export function assignmentFilterToRelationshipActionsParams(
 }
 
 /**
- * None = the broad view; lets the backend's visibility predicate narrow. A colleague
- * relationship has no coach or coachee side, so filtering to one never sends a scope.
+ * None = the broad view; lets the backend's visibility predicate narrow.
+ * My Actions is the coach's own id: everything assigned to them in every relationship,
+ * coaching or colleague. A colleague relationship has no coachee side, so Coachee
+ * Actions filtered to one sends no scope.
  */
 function selectAssigneeScope(
+  userId: Id,
   isACoach: boolean,
   isCoacheeMode: boolean,
   filteredToColleagues: boolean
-): Option<AssigneeScope> {
-  if (filteredToColleagues) return None;
-  if (isCoacheeMode) return Some(AssigneeScope.Coachee);
-  if (isACoach) return Some(AssigneeScope.Coach);
+): Option<AssigneeScope | Id> {
+  if (isCoacheeMode) return filteredToColleagues ? None : Some(AssigneeScope.Coachee);
+  if (isACoach) return Some(userId);
   return None;
 }
 
@@ -67,7 +69,7 @@ function selectAssigneeScope(
  * Fetches actions via the batch relationship-actions endpoint.
  *
  * All views hit the same endpoint, differentiated by `assignee`:
- * - Coach "My Actions" toggle: assignee=coach (strict-contains)
+ * - Coach "My Actions" toggle: assignee=<own user id>, across coaching and colleague relationships
  * - Coach "Coachee Actions" toggle: assignee=coachee (strict-contains)
  * - Coachee broad view: assignee omitted (backend visibility predicate returns
  *   self-assigned ∪ unassigned)
@@ -101,7 +103,7 @@ export function useActionsFetch(
   const filteredToColleagues = relationships.some(
     (r) => r.id === relationshipId && r.kind === RelationshipKind.Colleague
   );
-  const assigneeScope = selectAssigneeScope(coachesAnyone(relationships), isCoacheeMode, filteredToColleagues);
+  const assigneeScope = selectAssigneeScope(userId, coachesAnyone(relationships), isCoacheeMode, filteredToColleagues);
 
   const params = assignmentFilterToRelationshipActionsParams(assignmentFilter, assigneeScope);
 
