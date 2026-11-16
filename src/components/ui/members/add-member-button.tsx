@@ -3,19 +3,19 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { AddMemberDialog, AddMemberTab } from "./add-member-dialog";
+import { AddMemberDialog } from "./add-member-dialog";
+import { AddMemberMode } from "@/lib/add-member-dialog-model";
 import type { Option } from "@/types/option";
-import { User, UserRoleState } from "@/types/user";
+import { User, UserRoleState, isAdminOrSuperAdmin } from "@/types/user";
 
 interface AddMemberButtonProps {
   onMemberAdded: () => void;
-  /// Opens the AddMemberDialog on this tab
-  openAddMemberDialog: Option<AddMemberTab>;
+  /// Opens the AddMemberDialog in this mode
+  openAddMemberDialog: Option<AddMemberMode>;
   currentUserRoleState: UserRoleState;
   /// Candidates offered when pre-assigning a coach
   organizationMembers?: User[];
-  productName: string;
-  /// False hides the add-existing-member tab, which has nothing to offer an
+  /// False hides adding an existing account, which has nothing to offer an
   /// admin of a single organization.
   canAddExistingMembers: boolean;
 }
@@ -25,20 +25,19 @@ export function AddMemberButton({
   openAddMemberDialog,
   currentUserRoleState,
   organizationMembers,
-  productName,
   canAddExistingMembers,
 }: AddMemberButtonProps) {
   const [open, setOpen] = useState(false);
-  // The link's tab applies to the dialog it opens; the button always starts on Create.
-  const [tab, setTab] = useState(AddMemberTab.Create);
+  // The link's mode applies to the dialog it opens; the button always starts on Create.
+  const [mode, setMode] = useState(AddMemberMode.Create);
 
   useEffect(() => {
     setOpen(openAddMemberDialog.some);
-    if (openAddMemberDialog.some) setTab(openAddMemberDialog.val);
+    if (openAddMemberDialog.some) setMode(openAddMemberDialog.val);
   }, [openAddMemberDialog]);
 
   const openFromButton = () => {
-    setTab(AddMemberTab.Create);
+    setMode(AddMemberMode.Create);
     setOpen(true);
   };
 
@@ -48,16 +47,15 @@ export function AddMemberButton({
         <Plus className="mr-2 h-4 w-4" />
         Add Member
       </Button>
-      <AddMemberDialog
-        open={open}
-        onOpenChange={setOpen}
-        onMemberAdded={onMemberAdded}
-        currentUserRoleState={currentUserRoleState}
-        organizationMembers={organizationMembers}
-        productName={productName}
-        canAddExistingMembers={canAddExistingMembers}
-        initialTab={tab}
-      />
+      {open && (
+        <AddMemberDialog
+          onClose={() => setOpen(false)}
+          onMemberAdded={onMemberAdded}
+          organizationMembers={organizationMembers ?? []}
+          canAddExisting={isAdminOrSuperAdmin(currentUserRoleState) && canAddExistingMembers}
+          initialMode={mode}
+        />
+      )}
     </>
   );
 }

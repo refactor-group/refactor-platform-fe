@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /**
- * Live end-to-end for the add-existing-member tab gate, against the real backend
+ * Live end-to-end for the add-existing-member mode gate, against the real backend
  * and the seeded local users.
  *
  * Read-only for the @single-org cases. The @multi-org cases require an operator
@@ -33,15 +33,17 @@ async function login(page: Page, email: string, password = PASSWORD) {
 async function openMembers(page: Page, organizationId: string) {
   await page.goto(`/organizations/${organizationId}/members`);
   await page.click('button:has-text("Add Member")');
-  await expect(page.getByRole("heading", { name: "Add New Member" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Add member", exact: true })).toBeVisible();
 }
 
 const existingTab = (page: Page) =>
-  page.getByRole("tab", { name: "Add existing member" });
+  page.getByRole("button", { name: "Has an account" });
 
-// ── Tab hidden: admins of exactly one organization ───────────────────────────
+const nextStep = (page: Page) => page.getByRole("button", { name: "Next step" });
 
-test("@single-org jim, admin of Refactor Group only, sees no existing-member tab", async ({
+// ── Choice hidden: admins of exactly one organization ───────────────────────────
+
+test("@single-org jim, admin of Refactor Group only, sees no existing-account choice", async ({
   page,
 }) => {
   await login(page, "jim@refactorgroup.com");
@@ -49,11 +51,11 @@ test("@single-org jim, admin of Refactor Group only, sees no existing-member tab
 
   await expect(existingTab(page)).toHaveCount(0);
   // The create form is still fully available.
-  await expect(page.getByLabel("First Name")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Create Member" })).toBeVisible();
+  await expect(page.getByLabel("First name")).toBeVisible();
+  await expect(page.getByText("Fill in their details")).toBeVisible();
 });
 
-test("@single-org ehab, admin of BigTable only, sees no existing-member tab", async ({
+test("@single-org ehab, admin of BigTable only, sees no existing-account choice", async ({
   page,
 }) => {
   await login(page, "ehab.bandar@gmail.com");
@@ -62,7 +64,7 @@ test("@single-org ehab, admin of BigTable only, sees no existing-member tab", as
   await expect(existingTab(page)).toHaveCount(0);
 });
 
-test("@single-org caleb, admin of Acme only, sees no existing-member tab", async ({
+test("@single-org caleb, admin of Acme only, sees no existing-account choice", async ({
   page,
 }) => {
   await login(page, "calebbourg2@gmail.com");
@@ -81,9 +83,9 @@ test("@single-org a plain member cannot reach the members page at all", async ({
   await expect(page.getByRole("button", { name: "Add Member" })).toHaveCount(0);
 });
 
-// ── Tab shown: super admin ───────────────────────────────────────────────────
+// ── Choice shown: super admin ───────────────────────────────────────────────────
 
-test("@single-org the super admin sees the existing-member tab", async ({ page }) => {
+test("@single-org the super admin sees the existing-account choice", async ({ page }) => {
   await login(page, "admin@refactorcoach.com");
   await openMembers(page, ORG.refactorGroup);
 
@@ -101,9 +103,7 @@ test("@single-org an unknown email reports no user found", async ({ page }) => {
   await page.click('button:has-text("Find")');
 
   await expect(page.getByText("No user found with that email.")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Add to organization" })
-  ).toBeDisabled();
+  await expect(nextStep(page)).toBeDisabled();
 });
 
 test("@single-org an existing member is rejected at lookup, not on submit", async ({
@@ -124,9 +124,7 @@ test("@single-org an existing member is rejected at lookup, not on submit", asyn
   await expect(
     page.getByRole("dialog").getByText("Jim Hodapp", { exact: true })
   ).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Add to organization" })
-  ).toBeDisabled();
+  await expect(nextStep(page)).toBeDisabled();
 });
 
 test("@single-org a findable non-member shows a card that Clear discards", async ({
@@ -141,20 +139,16 @@ test("@single-org a findable non-member shows a card that Clear discards", async
   await page.click('button:has-text("Find")');
 
   await expect(page.getByText("Caleb Bourg")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Add to organization" })
-  ).toBeEnabled();
+  await expect(nextStep(page)).toBeEnabled();
 
   await page.getByRole("button", { name: /^Clear/ }).click();
   await expect(page.getByText("Caleb Bourg")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Add to organization" })
-  ).toBeDisabled();
+  await expect(nextStep(page)).toBeDisabled();
 });
 
 // ── Multi-org admin: the driving use case ────────────────────────────────────
 
-test("@multi-org ehab, now admin of two organizations, sees the tab", async ({
+test("@multi-org ehab, now admin of two organizations, sees the choice", async ({
   page,
 }) => {
   await login(page, "ehab.bandar@gmail.com");
@@ -176,7 +170,10 @@ test("@multi-org ehab adds a Refactor Group member into BigTable", async ({
   await page.click('button:has-text("Find")');
   await expect(page.getByText("Caleb Bourg")).toBeVisible();
 
-  await page.click('button:has-text("Add to organization")');
+  // Access and relationship keep their defaults: Member, none.
+  await nextStep(page).click();
+  await nextStep(page).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Add member", exact: true }).click();
 
   await expect(page.getByRole("dialog")).toBeHidden({ timeout: 20000 });
   await expect(page.getByText("Caleb Bourg").first()).toBeVisible({

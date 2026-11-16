@@ -87,10 +87,10 @@ describe("copy", () => {
   });
 
   it("describes each role against the next step", () => {
-    expect(roleDescription(CARA, RelationshipRole.Coachee)).toBe(
+    expect(roleDescription(CARA.firstName, RelationshipRole.Coachee)).toBe(
       "Cara is coached by the person you pair them with in the next step."
     );
-    expect(roleDescription(CARA, RelationshipRole.Coach)).toBe(
+    expect(roleDescription(CARA.firstName, RelationshipRole.Coach)).toBe(
       "Cara coaches the person you pair them with in the next step."
     );
   });

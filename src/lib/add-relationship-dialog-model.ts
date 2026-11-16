@@ -101,10 +101,10 @@ export function selectedPartner(
   return pickable && partner ? Some(partner) : None;
 }
 
-export function roleDescription(member: Member, role: MemberRole): string {
+export function roleDescription(firstName: string, role: MemberRole): string {
   return role === RelationshipRole.Coachee
-    ? `${member.firstName} is coached by the person you pair them with in the next step.`
-    : `${member.firstName} coaches the person you pair them with in the next step.`;
+    ? `${firstName} is coached by the person you pair them with in the next step.`
+    : `${firstName} coaches the person you pair them with in the next step.`;
 }
 
 export function stepTitle(step: AddRelationshipStep, member: Member, role: Option<MemberRole>): string {
